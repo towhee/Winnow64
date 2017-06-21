@@ -349,7 +349,7 @@ void MW::createActions()
     openAction = new QAction(tr("Open Folder"), this);
     openAction->setObjectName("openFolder");
 //    openAction->setIcon(QIcon::fromTheme("document-open", QIcon(":/images/open.png")));
-//    connect(openAction, SIGNAL(triggered()), this, SLOT(openOp()));
+    connect(openAction, SIGNAL(triggered()), this, SLOT(openOp()));
 
     // temp hijack to test refresh thumbs
     connect(openAction, SIGNAL(triggered()), this, SLOT(openOp()));
@@ -373,9 +373,10 @@ void MW::createActions()
 //    connect(deleteAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
 
     // Place keeper for now
-    openInFinderAction = new QAction(tr("Open in Finder"), this);
-    openInFinderAction->setObjectName("openInFinder");
-//    connect(openInFinder, SIGNAL(triggered()), this, SLOT(openOp()));
+    revealFileAction = new QAction(tr("Reveal in finder/explorer"), this);
+    revealFileAction->setObjectName("openInFinder");
+    connect(revealFileAction, SIGNAL(triggered()),
+        this, SLOT(revealFile()));
 
     subFoldersAction = new QAction(tr("Include Sub-folders"), this);
     subFoldersAction->setObjectName("subFolders");
@@ -756,7 +757,7 @@ void MW::createMenus()
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
     openWithMenu->addAction(newAppAction);
     openWithMenu->addAction(deleteAppAction);
-    fileMenu->addAction(openInFinderAction);
+    fileMenu->addAction(revealFileAction);
     fileMenu->addAction(subFoldersAction);
     fileMenu->addAction(addBookmarkAction);
     fileMenu->addSeparator();
@@ -994,7 +995,7 @@ void MW::createMenus()
     openWithMenu = fileSubMenu->addMenu(tr("Open with..."));
     openWithMenu->addAction(newAppAction);
     openWithMenu->addAction(deleteAppAction);
-    fileSubMenu->addAction(openInFinderAction);
+    fileSubMenu->addAction(revealFileAction);
     fileSubMenu->addAction(subFoldersAction);
     fileSubMenu->addAction(addBookmarkAction);
     fileSubMenu->addSeparator();
@@ -2449,6 +2450,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         upThumbAction->setShortcut(QKeySequence("Up"));
         randomImageAction->setShortcut(QKeySequence("Ctrl+D"));
         openAction->setShortcut(QKeySequence("Return"));
+        revealFileAction->setShortcut(QKeySequence("Ctrl+F"));
         zoomOutAction->setShortcut(QKeySequence("-"));
         zoomInAction->setShortcut(QKeySequence("+"));
         zoomFitAction->setShortcut(QKeySequence("*"));
@@ -3164,7 +3166,9 @@ void MW::openOp()
     #endif
     }
 
-    thumbView->refreshThumbs();
+    takeCentralWidget();
+    setCentralWidget(thumbView);
+//    thumbView->refreshThumbs();
 
 //    if (GData::layoutMode == imageViewIdx) {
 //        hideViewer();
@@ -3197,9 +3201,77 @@ void MW::openOp()
 //    }
 }
 
+void MW::revealFile()
+{
 
+    // See http://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
+    // for details
 
+    QString pathToReveal = thumbView->getCurrentFilename();
 
+    // Mac, Windows support folder or file.
+#if defined(Q_OS_WIN)
+    const QString explorer = Environment::systemEnvironment().searchInPath(QLatin1String("explorer.exe"));
+    if (explorer.isEmpty()) {
+        QMessageBox::warning(this,
+                             tr("Launching Windows Explorer failed"),
+                             tr("Could not find explorer.exe in path to launch Windows Explorer."));
+        return;
+    }
+    QString param;
+    if (!QFileInfo(pathIn).isDir())
+        param = QLatin1String("/select,");
+    param += QDir::toNativeSeparators(pathIn);
+    QString command = explorer + " " + param;
+    QString command = explorer + " " + param;
+    QProcess::startDetached(command);
+
+#elif defined(Q_OS_MAC)
+    Q_UNUSED(this)
+    QStringList scriptArgs;
+    scriptArgs << QLatin1String("-e")
+            << QString::fromLatin1("tell application \"Finder\" to reveal POSIX file \"%1\"")
+            .arg(pathToReveal);
+    QProcess::execute(QLatin1String("/usr/bin/osascript"), scriptArgs);
+    scriptArgs.clear();
+    scriptArgs << QLatin1String("-e")
+            << QLatin1String("tell application \"Finder\" to activate");
+    QProcess::execute("/usr/bin/osascript", scriptArgs);
+#else
+    // we cannot select a file here, because no file browser really supports it...
+    const QFileInfo fileInfo(pathIn);
+    const QString folder = fileInfo.absoluteFilePath();
+    const QString app = Utils::UnixUtils::fileBrowser(Core::ICore::instance()->settings());
+    QProcess browserProc;
+    const QString browserArgs = Utils::UnixUtils::substituteFileBrowserParameters(app, folder);
+    if (debug)
+        qDebug() <<  browserArgs;
+    bool success = browserProc.startDetached(browserArgs);
+    const QString error = QString::fromLocal8Bit(browserProc.readAllStandardError());
+    success = success && error.isEmpty();
+    if (!success)
+        showGraphicalShellError(parent, app, error);
+#endif
+
+}
+
+void MW::openInFinder()
+{
+    takeCentralWidget();
+    setCentralWidget(imageView);
+}
+
+void MW::openInExplorer()
+{
+    QString path = "C:/exampleDir/example.txt";
+
+    QStringList args;
+
+    args << "/select," << QDir::toNativeSeparators(path);
+
+    QProcess *process = new QProcess(this);
+    process->start("explorer.exe", args);
+}
 
 
 // End MW

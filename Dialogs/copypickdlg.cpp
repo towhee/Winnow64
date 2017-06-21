@@ -40,7 +40,10 @@ void CopyPickDlg::accept()
     ui->progressBar->setVisible(true);
     QString prefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
     for (int i=0; i < pickList.size(); ++i) {
-        ui->progressBar->setValue((i+1)*100/(pickList.size()+1));
+        int progress = (i+1)*100/(pickList.size()+1);
+        ui->progressBar->setValue(progress);
+        qApp->processEvents();
+        qDebug() << "progressBar->value()" << ui->progressBar->value();
         QFileInfo fileInfo = pickList.at(i);
         QString sequence = "_" + QString("%1").arg(i+1, 4 ,10, QChar('0'));
         QString suffix = "." + fileInfo.completeSuffix();

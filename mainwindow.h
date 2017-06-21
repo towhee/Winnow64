@@ -162,6 +162,9 @@ private slots:
     void setAllDocksLockMode();
 
     void openOp();
+    void revealFile();
+    void openInFinder();
+    void openInExplorer();
 
     void newWorkspace();
     QString fixDupWorkspaceName(QString name);
@@ -224,7 +227,7 @@ private:
 
     // File menu
     QAction *openAction;
-    QAction *openInFinderAction;
+    QAction *revealFileAction;
     QAction *subFoldersAction;
     QAction *addBookmarkAction;
     QAction *removeBookmarkAction;
