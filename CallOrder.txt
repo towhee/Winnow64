@@ -1,0 +1,1643 @@
+metadataCache open  "/Users/roryhill/Pictures/2048JPG/2017-01-27_0001.jpg"
+msDelay = 0 offsetThumb = 0
+metadataCache open  "/Users/roryhill/Pictures/2048JPG/2017-01-28_0029.jpg"
+metadataCache open  "/Users/roryhill/Pictures/2048JPG/2017-05-02_0032_small.jpg"
+msDelay = 1 offsetThumb = 1258
+ThumbCache loaded  "/Users/roryhill/Pictures/2048JPG/2017-01-27_0001.jpg"
+msDelay = 0 offsetThumb = 932
+ThumbCache loaded  "/Users/roryhill/Pictures/2048JPG/2017-01-28_0029.jpg"
+msDelay = 0 offsetThumb = 1052
+ThumbCache loaded  "/Users/roryhill/Pictures/2048JPG/2017-05-02_0032_small.jpg"
+ImageCache loaded  "/Users/roryhill/Pictures/2048JPG/2017-01-27_0001.jpg"
+ImageCache loaded  "/Users/roryhill/Pictures/2048JPG/2017-01-28_0029.jpg"
+ImageCache loaded  "/Users/roryhill/Pictures/2048JPG/2017-05-02_0032_small.jpg"
+
+
+Starting /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_8_0_clang_64bit-Debug/winnow.app/Contents/MacOS/winnow...
+-9223195953280 , MW::MW
+0 , MW::readSettings
+2 , MW::createThumbView
+1 , ThumbView::ThumbView
+1 , ThumbViewDelegate::setThumbDimensions
+QObject::connect: No such signal ThumbView::setStatus(QString) in ../Winnow64/mainwindow.cpp:1039
+QObject::connect:  (sender name:   'ImageView')
+193 , MW::createActions
+5 , MW::createImageView
+0 , ImageView::ImageView
+0 , MW::createMenus
+30 , MW::createStatusBar
+14 , MW::createFSTree
+0 , FSTree::FSTree
+0 , FSTree::setModelFlags
+QWidget::insertAction: Attempt to insert null action
+0 , MW::createBookmarks
+0 , BookMarks::BookMarks
+0 , BookMarks::reloadBookmarks
+QWidget::insertAction: Attempt to insert null action
+1 , MW::createImageTags
+0 , MW::updateExternalApps
+0 , MW::loadShortcuts
+2 , MW::setupDocks
+5 , MW::setTagsDockVisibility
+libpng warning: iCCP: known incorrect sRGB profile
+18 , MW::handleStartupArgs
+4 , MW::setIiDockVisibility
+1 , MW::setFsDockVisibility
+1 , MW::setBmDockVisibility
+1 , MW::setPvDockVisibility
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::showEvent
+180 , MW::updateActions
+5727 , MW::updateActions
+31 , MW::bookmarkClicked
+0 , FSTree::resizeTreeColumn
+0 , FSTree::resizeTreeColumn
+0 , FSTree::resizeTreeColumn
+12 , FSTree::resizeTreeColumn
+2 , MW::folderSelectionChange
+0 , MW::getSelectedPath
+0 , ThumbView::load
+0 , ThumbView::loadPrepare
+0 , ThumbView::initThumbs
+1 , ThumbView::selectThumb(row) 0
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , MW::fileSelectionChange
+0 , ImageView::loadImage
+0 , ImageView::reload
+0 , ImageView::loadPixmap
+30 , ImageView::transform
+0 , ImageView::rotateByExifRotation
+6 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+4 , MW::updatepick
+0 , ThumbViewDelegate::sizeHint
+0 , MW::setStatus
+2 , MetadataCache::stopMetadateCache
+0 , MetadataCache::loadMetadataCache
+0 , MetadataCache::run
+## Loaded metadata for row 0 File: "/Users/roryhill/Pictures/2048JPG/2017-01-27_0001.jpg"
+## Loaded metadata for row 1 File: "/Users/roryhill/Pictures/2048JPG/2017-01-28_0029.jpg"
+## Loaded metadata for row 2 File: "/Users/roryhill/Pictures/2048JPG/2017-05-02_0032_small.jpg"
+6 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::paint QModelIndex(0,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+0 , ThumbViewDelegate::paint QModelIndex(2,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+0 , ThumbViewDelegate::paint QModelIndex(1,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+127 , MW::loadThumbCache
+0 , ThumbCache::stopThumbCache
+0 , ThumbCache::loadThumbCache
+0 , ThumbCache::run
+QObject::connect: Cannot queue arguments of type 'QVector<int>'
+(Make sure 'QVector<int>' is registered using qRegisterMetaType().)
+QObject::connect: Cannot queue arguments of type 'QVector<int>'
+(Make sure 'QVector<int>' is registered using qRegisterMetaType().)
+## Loaded thumb cache for row 0 File: "/Users/roryhill/Pictures/2048JPG/2017-01-27_0001.jpg"
+## Loaded thumb cache for row 1 File: "/Users/roryhill/Pictures/2048JPG/2017-01-28_0029.jpg"
+## Loaded thumb cache for row 2 File: "/Users/roryhill/Pictures/2048JPG/2017-05-02_0032_small.jpg"
+QBasicTimer::start: Timers cannot be started from another thread
+4 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::paint QModelIndex(0,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+0 , ThumbViewDelegate::paint QModelIndex(2,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+0 , ThumbViewDelegate::paint QModelIndex(1,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+94 , MW::loadImageCache
+0 , ImageView::initImageCache
+0 , ImageView::updateImageCache
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxMid
+0 , ImageCache::getImCacheSize
+0 , ImageCache::setPriorities
+0 , ImageCache::setTargetRange
+0 , ImageCache::prioritySort
+0 , ImageCache::prioritySort
+0 , ImageCache::keySort
+0 , ImageCache::keySort
+0 , ImageCache::run
+0 , ImageCache::nextToCache
+0 , ImageCache::loadPixmap
+2 , ThumbViewDelegate::paint QModelIndex(0,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+0 , ThumbViewDelegate::paint QModelIndex(2,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+0 , ThumbViewDelegate::paint QModelIndex(1,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+27 , ImageCache::getImCacheSize
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxStart
+0 , ImageCache::pxMid
+## Loaded Image to cache for File: "/Users/roryhill/Pictures/2048JPG/2017-01-27_0001.jpg"
+0 , ImageCache::nextToCache
+0 , ImageCache::loadPixmap
+23 , ThumbViewDelegate::sizeHint
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+8 , ThumbViewDelegate::paint QModelIndex(0,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+0 , ThumbViewDelegate::paint QModelIndex(2,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+0 , ThumbViewDelegate::paint QModelIndex(1,0,0x7fd78afab130,QSortFilterProxyModel(0x7fd78ac3b350))
+3 , ImageCache::getImCacheSize
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxStart
+0 , ImageCache::pxStart
+0 , ImageCache::pxMid
+## Loaded Image to cache for File: "/Users/roryhill/Pictures/2048JPG/2017-01-28_0029.jpg"
+0 , ImageCache::nextToCache
+0 , ImageCache::loadPixmap
+47 , ImageCache::getImCacheSize
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxStart
+0 , ImageCache::pxStart
+0 , ImageCache::pxStart
+0 , ImageCache::pxMid
+## Loaded Image to cache for File: "/Users/roryhill/Pictures/2048JPG/2017-05-02_0032_small.jpg"
+0 , ImageCache::nextToCache
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxStart
+0 , ImageCache::pxStart
+0 , ImageCache::pxStart
+0 , ImageCache::pxMid
+
+thumbView.cpp
+*********************************************
+ThumbView::ThumbView
+ThumbView::abort
+ThumbView::getCurrentRow
+ThumbView::getNextRow
+ThumbView::getPrevRow
+ThumbView::initThumbs
+ThumbView::load
+ThumbView::loadPrepare
+ThumbView::mousePressEvent
+ImageTags::resetTagsState
+ThumbView::selectThumbByRow
+ThumbView::selectCurrentIndex
+ThumbView::setCurrentIndexByRow
+ThumbView::setCurrentRow
+ThumbView::setImageView
+ThumbView::setImageviewWindowTitle
+ThumbView::setNeedScroll
+ThumbView::updateThumbsCount
+
+Shrink/enlarge thumbs
+***********************************************
+6141 , MW::thumbsShrink
+MW::thumbsShrink() before   GData::thumbWidth = 129 GData::thumbHeight = 129
+MW::thumbsShrink() after   GData::thumbWidth = 116 GData::thumbHeight = 116
+0 , ThumbViewDelegate::setThumbSize
+
+6810 , MW::thumbsEnlarge
+0 , ThumbViewDelegate::setThumbSize
+
+Right arrow in thumbView
+**************************************
+Key press = 16777236 keyEvent->key() == Qt::Key(Key_Right) true
+19892 , ThumbView::getNextRow
+0 , ThumbView::setCurrentIndexByRow
+Current row =  1
+0 , ThumbView::setCurrentRow
+0 , MW::fileSelectionChange
+0 , ImageView::loadImage
+0 , ImageView::reload
+0 , ImageView::loadPixmap
+35 , ImageView::transform
+0 , ImageView::rotateByExifRotation
+6 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , MW::updatepick
+thumbViewWrapping =  true
+0 , ThumbView::setCurrentIndexByRow
+Current row =  1
+0 , ThumbView::setCurrentRow
+0 , ThumbView::getCurrentRow
+0 , MW::setStatus
+7 , ThumbViewDelegate::paint QModelIndex(0,0,0x7faefd92ce50,QSortFilterProxyModel(0x7faef8e5ddc0))
+0 , ThumbViewDelegate::paint QModelIndex(1,0,0x7faefd92ce50,QSortFilterProxyModel(0x7faef8e5ddc0))
+
+Key press = 16777236 keyEvent->key() == Qt::Key(Key_Right) true // event override
+12764 , ThumbView::getNextRow
+0 , ThumbView::setCurrentIndexByRow
+Current row =  2
+0 , ThumbView::setCurrentRow
+*******************************************
+
+Starting /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_8_0_clang_64bit-Debug/winnow.app/Contents/MacOS/winnow...
+-9223334174856 , MW::MW
+0 , MW::readSettings
+2 , MW::createThumbView
+8 , ThumbView::ThumbView
+2 , ThumbViewDelegate::setThumbSize
+253 , MW::createActions
+4 , MW::createImageView
+0 , ImageView::ImageView
+10 , ThumbView::setImageView
+0 , MW::createMenus
+57 , MW::createStatusBar
+36 , MW::createFSTree
+3 , FSTree::FSTree
+0 , FSTree::setModelFlags
+QWidget::insertAction: Attempt to insert null action
+1 , MW::createBookmarks
+2 , BookMarks::BookMarks
+0 , BookMarks::reloadBookmarks
+QWidget::insertAction: Attempt to insert null action
+3 , MW::createImageTags
+0 , ImageTags::ImageTags
+2 , MW::updateExternalApps
+0 , MW::loadShortcuts
+2 , MW::setupDocks
+8 , MW::setTagsDockVisibility
+libpng warning: iCCP: known incorrect sRGB profile
+29 , MW::handleStartupArgs
+8 , MW::setIiDockVisibility
+11 , MW::setFsDockVisibility
+1 , MW::setBmDockVisibility
+1 , MW::setPvDockVisibility
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::showEvent
+223 , MW::updateActions
+27710 , MW::setFsDockVisibility
+1 , MW::setBmDockVisibility
+5944 , MW::updateActions
+44 , MW::bookmarkClicked
+0 , FSTree::resizeTreeColumn
+0 , FSTree::resizeTreeColumn
+0 , FSTree::resizeTreeColumn
+16 , FSTree::resizeTreeColumn
+0 , MW::folderSelectionChange
+0 , MW::getSelectedPath
+0 , ThumbView::setNeedScroll
+0 , ThumbView::load
+0 , ThumbView::loadPrepare
+0 , ImageTags::resetTagsState
+0 , ThumbView::initThumbs
+0 , ThumbView::selectThumbByRow
+0 , ThumbView::setCurrentIndexByRow
+0 , ThumbView::setCurrentRow
+0 , ThumbView::selectCurrentIndex
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+
+0 , MW::fileSelectionChange
+0 , ThumbView::updateThumbsCount
+0 , MetadataCache::stopMetadateCache
+0 , MetadataCache::loadMetadataCache
+0 , MetadataCache::run
+10 , ThumbCache::stopThumbCache
+0 , ThumbCache::loadThumbCache
+0 , ThumbCache::run
+TIFFReadDirectory: Warning, Photometric tag is missing, assuming data is YCbCr.
+TIFFReadDirectory: Warning, SamplesPerPixel tag is missing, applying correct SamplesPerPixel value of 3.
+foo: Old-style JPEG compression support is not configured.
+Orientation for  "/Users/roryhill/Pictures/2017-05-03/2017-05-03_0030.CR2"  =  1
+QObject::connect: Cannot queue arguments of type 'QVector<int>'
+(Make sure 'QVector<int>' is registered using qRegisterMetaType().)
+QObject::connect: Cannot queue arguments of type 'QVector<int>'
+(Make sure 'QVector<int>' is registered using qRegisterMetaType().)
+10 , MW::fileSelectionChange
+0 , ImageView::loadImage
+0 , ImageView::reload
+0 , ImageView::loadPixmap
+275 , ImageView::rotateByExifRotation
+57 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+23 , MW::updatepick
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbView::setCurrentIndexByRow
+0 , ThumbView::setCurrentRow
+0 , ThumbView::getCurrentRow
+0 , MW::setStatus
+7 , MW::loadImageCache
+0 , ImageView::initImageCache
+0 , ImageView::updateImageCache
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxMid
+0 , ImageCache::getImCacheSize
+0 , ImageCache::setPriorities
+0 , ImageCache::setTargetRange
+0 , ImageCache::run
+0 , ImageCache::nextToCache
+0 , ImageCache::loadPixmap
+18 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+1 , ThumbViewDelegate::sizeHint
+257 , ImageCache::getImCacheSize
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxStart
+0 , ImageCache::pxMid
+0 , ImageCache::nextToCache
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxStart
+0 , ImageCache::pxMid
+30 , ThumbViewDelegate::sizeHint
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+25 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+3337 , MW::setBmDockVisibility
+2 , MW::setIiDockVisibility
+5506 , MW::updateActions
+0 , ImageView::mousePressEvent
+0 , ImageView::setMouseMoveData
+0 , MW::mousePressEvent
+96 , ImageView::mouseReleaseEvent
+0 , ImageView::setMouseMoveData
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+2 , ImageView::moveImage
+0 , ImageView::setInfo
+3007 , ImageView::mousePressEvent
+0 , ImageView::setMouseMoveData
+0 , MW::mousePressEvent
+421 , ImageView::mouseMoveEvent
+97 , ImageView::mouseMoveEvent
+95 , ImageView::mouseMoveEvent
+22 , ImageView::mouseMoveEvent
+177 , ImageView::mouseMoveEvent
+18 , ImageView::mouseMoveEvent
+93 , ImageView::mouseMoveEvent
+83 , ImageView::mouseMoveEvent
+84 , ImageView::mouseMoveEvent
+168 , ImageView::mouseReleaseEvent
+6517 , MW::updateActions
+0 , ThumbView::mousePressEvent
+0 , ThumbView::getCurrentRow
+6 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+523 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+1609 , ThumbView::mousePressEvent
+0 , ThumbView::getCurrentRow
+511 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+14604 , MW::updateActions
+0 , ImageView::mousePressEvent
+0 , ImageView::setMouseMoveData
+0 , MW::mousePressEvent
+6 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+102 , ImageView::mouseReleaseEvent
+0 , ImageView::setMouseMoveData
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+1 , ImageView::centerImage
+0 , ImageView::setInfo
+6632 , MW::toggleFullScreen
+test
+105 , ThumbViewDelegate::sizeHint
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+73 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+301 , ImageView::setCursorHiding
+0 , MW::toggleFiles
+0 , MW::setFsDockVisibility
+0 , MW::toggleFiles
+0 , MW::toggleFavs
+0 , MW::setBmDockVisibility
+0 , MW::toggleMetadata
+0 , MW::setIiDockVisibility
+0 , MW::toggleMenuBar
+0 , MW::toggleStatusBar
+0 , MW::lockDocks
+2 , ThumbViewDelegate::sizeHint
+12 , ThumbViewDelegate::sizeHint
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+206 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+302 , ImageView::monitorCursorState
+525 , ImageView::monitorCursorState
+525 , ImageView::monitorCursorState
+524 , ImageView::monitorCursorState
+33 , MW::toggleFullScreen
+test
+54 , ThumbViewDelegate::sizeHint
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+14 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+24 , ThumbViewDelegate::sizeHint
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+10 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+203 , ImageView::setCursorHiding
+0 , MW::toggleFiles
+0 , MW::setFsDockVisibility
+0 , ThumbViewDelegate::sizeHint
+0 , MW::setFsDockVisibility
+0 , MW::toggleFiles
+0 , MW::toggleFavs
+1 , MW::setBmDockVisibility
+0 , MW::toggleMetadata
+1 , MW::setIiDockVisibility
+1 , MW::setIiDockVisibility
+0 , MW::toggleMenuBar
+0 , MW::toggleStatusBar
+0 , ThumbViewDelegate::sizeHint
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , MW::lockDocks
+8 , ThumbViewDelegate::sizeHint
+204 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+7726 , MW::updateActions
+0 , ThumbView::mousePressEvent
+0 , ThumbView::getCurrentRow
+35 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+441 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+
+File name =/Users/roryhill/Pictures/2017-05-03/2017-05-03_0030.CR2
+3531 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+
+*******************************IFD0*******************************
+  Offset  tagId  tagType  tagCount  tagValue   tagDescription
+      1E    256        3         1      5472   ImageWidth
+      2A    257        3         1      3648   ImageLength
+      36    258        3         3       238   BitsPerSample
+      42    259        3         1         6   Compression
+      4E    271        2         6       244   Make
+      5A    272        2        23       250   Model
+      66    273        4         1     62216   StripOffsets
+      72    274        3         1         1   Orientation
+      7E    279        4         1   2497460   StripByteCount
+      8A    282        5         1       282   XResolution
+      96    283        5         1       290   YResolution
+      A2    296        3         1         2   ResolutionUnit
+      AE    306        2        20       298   DateTime
+      BA    315        2        10       318   Artist
+      C6    700        1      8192     45584   XMP
+      D2  33432        2        15       382   Copyright
+      DE  34665        4         1       446   Exif IFD
+      EA  34853        4         1     43454   GPS IFD
+      EE nextIFDOffset = B0C0
+
+*******************************IFD1*******************************
+  Offset  tagId  tagType  tagCount  tagValue   tagDescription
+    B0CE    513        4         1     53776   JPEGInterchangeFormat
+    B0DA    514        4         1      8436   JPEGInterchangeFormatLength
+    B0DE nextIFDOffset = B0DE
+
+*******************************IFD2*******************************
+  Offset  tagId  tagType  tagCount  tagValue   tagDescription
+    B0EC    256        3         1       464   ImageWidth
+    B0F8    257        3         1       309   ImageLength
+    B104    258        3         3     45440   BitsPerSample
+    B110    259        3         1         1   Compression
+    B11C    262        3         1         2   PhotometricInterpretation
+    B128    273        4         1   2559680   StripOffsets
+    B134    277        3         1         3   ResolutionUnit
+    B140    278        3         1       309   RowsPerStrip
+    B14C    279        4         1    860256   StripByteCount
+    B158    284        3         1         1   PlanarConfiguration
+    B164  50649        4         1         2   Undefined tag
+    B170  50885        4         1         3   Undefined tag
+    B17C  50908        4         4     45446   Undefined tag
+    B180 nextIFDOffset = B196
+
+*******************************IFD3*******************************
+  Offset  tagId  tagType  tagCount  tagValue   tagDescription
+    B1A4    256        3         1      5568   ImageWidth
+    B1B0    257        3         1      3708   ImageLength
+    B1BC    259        3         1         6   Compression
+    B1C8    273        4         1   3419936   StripOffsets
+    B1D4    279        4         1  22263543   StripByteCount
+    B1E0  50648        4         1         1   Undefined tag
+    B1EC  50656        4         1         1   Undefined tag
+    B1F8  50752        3         3     45576   Undefined tag
+    B204  50885        4         1         1   Undefined tag
+    B208 nextIFDOffset = 0
+
+*******************************IFD Exif*******************************
+  Offset  tagId  tagType  tagCount  tagValue   tagDescription
+     1CC  33434        5         1       908   ExposureTime
+     1D8  33437        5         1       916   FNumber
+     1E4  34850        3         1         1   ExposureProgram
+     1F0  34855        3         1      2000   ISOSpeedRatings
+     1FC  34864        3         1         2   Undefined tag
+     208  34866        4         1      2000   Undefined tag
+     214  36864        7         4 808661552   ExifVersion
+     220  36867        2        20       924   DateTimeOriginal
+     22C  36868        2        20       944   DateTimeDigitized
+     238  37121        7         4    197121   ComponentsConfiguration
+     244  37377       10         1       964   ShutterSpeedValue
+     250  37378        5         1       972   ApertureValue
+     25C  37380       10         1       980   ExposureBiasValue
+     268  37383        3         1         5   MeteringMode
+     274  37385        3         1        16   Flash
+     280  37386        5         1       988   FocalLength
+     28C  37500        7     41966       996   MakerNote
+     298  37510        7       264     42962   UserComment
+     2A4  37520        2         3     13625   SubsecTime
+     2B0  37521        2         3     13625   SubsecTimeOriginal
+     2BC  37522        2         3     13625   SubsecTimeDigitized
+     2C8  40960        7         4 808464688   FlashpixVersion
+     2D4  40961        3         1     65535   ColorSpace
+     2E0  40962        3         1      5472   PixelXDimension
+     2EC  40963        3         1      3648   PixelYDimension
+     2F8  40965        4         1     43226   Undefined tag
+     304  41486        5         1     43256   FocalPlaneXResolution
+     310  41487        5         1     43264   FocalPlaneYResolution
+     31C  41488        3         1         2   FocalPlaneResolutionUnit
+     328  41985        3         1         0   CustomRendered
+     334  41986        3         1         1   ExposureMode
+     340  41987        3         1         0   WhiteBalance
+     34C  41990        3         1         0   SceneCaptureType
+     358  42032        2         1         0   Undefined tag
+     364  42033        2        13     43304   Undefined tag
+     370  42034        5         4     43336   Undefined tag
+     37C  42036        2        33     43368   Undefined tag
+     388  42037        2        11     43442   Undefined tag
+     38C nextIFDOffset = 0
+
+offsetFullJPG   62216
+lengthFullJPG   2497460
+offsetThumbJPG  53776
+lengthThumbJPG  8436
+offsetSmallJPG  2559680
+lengthSmallJPG  860256
+orientation     1
+width           5472
+height          3648
+dateTime        2017:05:03 18:21:24
+model           Canon EOS-1D X Mark II
+exposureTime    1/640 sec
+aperture        f/5.6
+ISO             ISO 2000
+focalLength     840mm
+6120 , ThumbView::mousePressEvent
+0 , ThumbView::getCurrentRow
+20 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+508 , ThumbViewDelegate::paint QModelIndex(0,0,0x7f9b11e7dbd0,QSortFilterProxyModel(0x7f9b11f9eaf0))
+4254 , MW::openOp
+0 , MW::loadImagefromThumb
+0 , ThumbView::setCurrentRow
+0 , MW::showViewer
+1 , MW::updateActions
+0 , MW::setDocksVisibility
+0 , MW::setFsDockVisibility
+0 , MW::setBmDockVisibility
+0 , MW::setIiDockVisibility
+0 , MW::setPvDockVisibility
+4 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , MW::updateActions
+0 , ImageView::loadImage
+0 , ImageView::reload
+68 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setImageviewWindowTitle
+10092 , MW::toggleThumbs
+MW::toggleThumbs
+21484 , ImageView::mousePressEvent
+0 , MW::mousePressEvent
+14095 , MW::escapeFullScreen
+MW::escapeFullScreen
+0 , MW::toggleFullScreen
+test
+0 , ImageView::setCursorHiding
+0 , MW::toggleFiles
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , MW::setFsDockVisibility
+0 , MW::toggleFiles
+0 , MW::toggleFavs
+0 , MW::setBmDockVisibility
+0 , MW::toggleMetadata
+1 , MW::setIiDockVisibility
+0 , MW::toggleMenuBar
+0 , MW::toggleStatusBar
+0 , ImageView::resizeEvent
+0 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , MW::lockDocks
+5025 , MW::toggleThumbs
+MW::toggleThumbs
+2 , MW::setPvDockVisibility
+12933 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+12 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+3 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+10 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+5 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+5 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+9 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+6 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+9 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+5 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+15 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+31 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+53 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+10 , MW::mousePressEvent
+53 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+6 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+7 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+8 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+7 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+7 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+8 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+7 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+9 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+6 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+9 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+6 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+7 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+7 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+8 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+8 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+7 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+6 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+7 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+8 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+7 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+8 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+7 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+8 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+6 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+9 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+6 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+16 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+125 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+6 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+9 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+6 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+9 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+6 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+9 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+6 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+6 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+6 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+9 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+6 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+10 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+2626 , MW::setFsDockVisibility
+1 , MW::setBmDockVisibility
+7190 , MW::updateActions
+118 , MW::bookmarkClicked
+3 , MW::folderSelectionChange
+0 , MW::getSelectedPath
+0 , ThumbView::setNeedScroll
+0 , ThumbView::load
+0 , ThumbView::loadPrepare
+0 , ImageTags::resetTagsState
+0 , ThumbView::initThumbs
+1 , ThumbView::selectThumbByRow
+0 , ThumbView::setCurrentIndexByRow
+0 , ThumbView::setCurrentRow
+0 , ThumbView::selectCurrentIndex
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbViewDelegate::sizeHint
+0 , MW::fileSelectionChange
+0 , ThumbView::updateThumbsCount
+0 , MetadataCache::stopMetadateCache
+0 , MetadataCache::loadMetadataCache
+0 , MetadataCache::run
+11 , ThumbCache::stopThumbCache
+0 , ThumbCache::loadThumbCache
+0 , ThumbCache::run
+Orientation for  "/Users/roryhill/Pictures/2048JPG/2017-01-27_0001.jpg"  =  1
+Orientation for  "/Users/roryhill/Pictures/2048JPG/2017-01-28_0029.jpg"  =  1
+Orientation for  "/Users/roryhill/Pictures/2048JPG/2017-05-02_0032_small.jpg"  =  1
+10 , MW::fileSelectionChange
+0 , ImageView::loadImage
+0 , ImageView::reload
+0 , ImageView::loadPixmap
+36 , ImageView::transform
+0 , ImageView::rotateByExifRotation
+25 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , MW::updatepick
+0 , ThumbViewDelegate::sizeHint
+0 , ThumbView::setCurrentIndexByRow
+0 , ThumbView::setCurrentRow
+0 , ThumbView::getCurrentRow
+0 , MW::setStatus
+6 , MW::loadImageCache
+0 , ImageView::initImageCache
+11 , ImageView::updateImageCache
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxMid
+0 , ImageCache::getImCacheSize
+0 , ImageCache::setPriorities
+0 , ImageCache::setTargetRange
+0 , ImageCache::prioritySort
+0 , ImageCache::prioritySort
+0 , ImageCache::keySort
+0 , ImageCache::keySort
+0 , ImageCache::run
+0 , ImageCache::nextToCache
+0 , ImageCache::loadPixmap
+37 , ImageCache::getImCacheSize
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxStart
+0 , ImageCache::pxMid
+0 , ImageCache::nextToCache
+0 , ImageCache::loadPixmap
+48 , ImageCache::getImCacheSize
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxStart
+0 , ImageCache::pxStart
+0 , ImageCache::pxMid
+0 , ImageCache::nextToCache
+0 , ImageCache::loadPixmap
+62 , ImageCache::getImCacheSize
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxStart
+0 , ImageCache::pxStart
+0 , ImageCache::pxStart
+0 , ImageCache::pxMid
+0 , ImageCache::nextToCache
+0 , ImageCache::cacheStatus
+0 , ImageCache::pxStart
+0 , ImageCache::pxEnd
+0 , ImageCache::pxStart
+0 , ImageCache::pxStart
+0 , ImageCache::pxStart
+0 , ImageCache::pxMid
+1281 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+6 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+18 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+5 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+6 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+6 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+9 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+5 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+7 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+8 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+30 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+12 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+133 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+15 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+46 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+102 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+7 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , ThumbView::setImageviewWindowTitle
+33 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+10 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+1 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+9 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+1 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , ThumbView::setImageviewWindowTitle
+199 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+8 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+124 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+13 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , ThumbView::setImageviewWindowTitle
+134 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+8 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+1 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , ThumbView::setImageviewWindowTitle
+42 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+81 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+8 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+32 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+10 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+1 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , ThumbView::setImageviewWindowTitle
+116 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+77 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+8 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+39 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+6 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , ThumbView::setImageviewWindowTitle
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+8 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+105 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+4 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , ThumbView::setImageviewWindowTitle
+0 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+8 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+196 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+9 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , ThumbView::setImageviewWindowTitle
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+1098 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+102 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+5 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+1 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+119 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+9 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+2 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+47 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+89 , MW::wheelEvent
+0 , MW::loadNextImage
+0 , ThumbView::getNextRow
+426 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+5 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+0 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , ThumbView::setImageviewWindowTitle
+0 , MW::wheelEvent
+0 , MW::loadPrevImage
+0 , ThumbView::getPrevRow
+0 , ImageView::loadImage
+0 , ImageView::reload
+6 , ImageView::resizeImage
+0 , ImageView::getWidthByHeight
+0 , ImageView::getWidthByHeight
+1 , ImageView::centerImage
+0 , ImageView::setInfo
+0 , ThumbView::setCurrentRow
+0 , ThumbView::setImageviewWindowTitle
+8153 , MW::closeEvent
+0 , ThumbView::abort
+0 , MW::writeSettings
+15 , MW::updateActions
+3 , MW::setFsDockVisibility
+0 , MW::setIiDockVisibility
+0 , MW::setBmDockVisibility
+0 , MW::setPvDockVisibility
+/Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_8_0_clang_64bit-Debug/winnow.app/Contents/MacOS/winnow exited with code 0
+

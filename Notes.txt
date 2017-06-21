@@ -1,0 +1,455 @@
+To do:
+- eliminate global variables
+- Tweak context menus
+- Define minimum thumb size
+- Progress bar not updating when copying
+- Deal with files cannot read or find embedded jpg using error msg in metadata
+- Clean up startupDir and currentViewDir
+- Change thumb dock header to vertical when dock to bottom or top
+- Get title, comment and copywrite metadata
+- Recent copy to folders in copy dialog
+- Check for Tif support in Qt
+- Disable menu "add bookmark" when folders not selected??
+- Go to file in explorer/finder
+- Redirect report metadata to a text window so Qt Creator not req'd
+- Not reading metadata from iphone jpgs
+- Add more raw file formats
+- Eject card
+- When sort thumbs no thumbnails visible
+- Copy to clipboard and drag'n'drop images to new folder
+- Ingest including token builder
+- remove copy/paste image data
+- add QCompleter for direct navigation to a folder
+- deleteop, removeBookmarkAction cleanup
+- Clip black area on canon thumbs
+- Compare 2-9 images
+- Hide/show cursor, always show if ESC
+- Done: Save working spaces and default workspace
+- Done: Save dock lock status (TitleBar) for each dock separately
+- Done: Clean up GData variables
+- Done: redo the options dialog
+- Done: Is updateActions function req'd
+- Done: Shaw hand when panning
+- Done: Image cache/decache does not follow many file selection jumps
+- Done: The first thumb in folder does not show all metadata until reselect
+- Done: Zoom and pan on mouse click event in thumbnail
+- Done: Add items to main Go menu
+- Done: Up and down arrows not working in thumb grid
+- Done: Modify ImageView to zoom any amount and work with view coordinates
+- Done: Hesitation when zoom, hand icon flickers
+- Done: Cache not tracking ahead and behind direction properly
+- Done: Clean up unused functions esp in thumbview
+- Done: Sort bookmarks so they list in the same order all the time
+- Done: Zoom to thumb mouse click pos not working
+- Done: ImageCache not reinitializing after multiple folder selections
+- Done: Fix thumbs from iphone jpgs not showing
+- Done: Set Esc to leave full screen mode as well as toggle F
+- Done: Lock docks not sticky
+- Done: Comment out pasteThumbs, copyMoveImages, moveImagesTo, cutThumbs, copyThumbs,
+        copyOrCutThumbs, setCopyCutActions, setDeleteAction
+- Done: Improved thumbnail performance by using jpg file embedded thumbnails
+- Done: Added Sony file support
+- Done: Eliminated thumbReader.size().isValid for raw files in ThumbCache?
+- Done: Added Olympus file support
+- Done: Fix loupe view for first image conflict with thumb cache
+- Done: Honour metadata rotation
+- Done: Crash when click on image/view with no image
+- Done: Shrink/Enlarge thumbs not working
+- Done: Thumbs size to fit
+- Done: Show labels causes all thumbs to go blank plus thumbs should resize
+- Done: Read metadata with thumbs or separate thread
+- Done: Toggle filter picks - return to previous thumb position
+- Done: ESC when in fullscreen mode
+- Done: Make context menus consistent with main menu (parent issue?)
+- Done: Show x of y in statusbar
+- Done: Not zoom if click on label outside image
+- Done: Basic copy to folder
+- Done: Prevent zoom100% when image smaller than canvas
+- Done: When zoomed sync with mouse click location on thumb
+- Done: Stay zoomed when move to next
+- Done: Filtered thumbs out of synch with imageview
+- Done: Thumbs not drawing properly until invoke setwrapping at end
+- Done: Zoom in/out from current pan position, not center of image
+- Done: move thumbnail generation to a separate thread
+- Done: Error end of row in thumbnails
+- Done: Draw pretty thumbnails
+- Done: Picks and thumb highlighting
+- Done: Understand thumbViewModel
+- Done: Not sure how... Crash when right click on scroll bar
+- Done: Figure out how to process events before update cache first time
+- Done: Cache full size images in QCache
+- Done: Show first image in folder when selected
+- Done: Remove extraneous menus and functions
+- Done: Add thumbview and image cache status to status bar
+- Done: move image caching to a separate thread
+- DONE: Update menu enabled status when close dock
+- DONE: Full size previews for raw files
+- DONE: zoom to mouse click
+- DONE: Thumbs to dock
+- DONE: Change default docking locations including tabify
+- DONE: Move styles.css to resources
+
+Preferences
+*********************************************************
+
+thumb width
+thumb height
+thumb spacing
+icon padding
+show thumb label
+thumb label text size
+slideshow delay
+random images
+Cache: amount, strategy, show status
+
+
+
+{
+#ifdef ISDEBUG
+qDebug() << "ProgressDialog::";
+#endif
+}
+
+Make QLabel background transparent
+    QWidget::setAttribute(Qt::WA_TranslucentBackground);
+
+Data structures:
+*********************************************************
+ThumbFileInfoList = list of thumb path names
+fileFilters = list of legal file types
+
+mdCache = list of metadata for each image
+    - tags (keywords)
+    - orientation
+    - add camera shooting info???
+    - add preview pixmap???
+
+    fields: file path -> imageMetadata
+
+    ImageMetadata is class defined in mdcache.h
+
+In initThumbs and addThumb
+    thumbViewModel appears to be a list of thumbItem
+
+    thumbItem QStandardItem:
+        - Loaded Role (true/false)
+        - SortRole (file index - path?)
+        - FilePath
+        - FileName
+        - pixmap (Icon)
+
+Key variables
+    - displayPixmap QPixmap (see ImageView::refresh)
+    - origImage QImage (see ImageView::reload)
+
+Window structure:
+*********************************************************
+MainWindow
+- menubar
+- editToolBar
+- goToolBar
+- viewToolBar
+- imageToolBar
+
+- mainLayout QVBoxLayout
+
+- imageView (Widget) - an instance of ImageView Class?
+- fsDock (FileSystem)
+- iiDock (ImageInfo)
+- bmDock (Bookmark)
+- pvDock (Viewer)
+    - imageViewContainer QVBoxLayout (see MW::setupDocks)
+- tagsDock (Tags/Keywords)
+
+In Imageview::ImageView
+    - sets MainWindow as parent
+    - imageLabel
+    - scrollLayout QVBoxLayout
+    - scrlArea QScrollArea
+    - infoLabel
+    - feedbackLabel
+
+brew installer use: brew xyz on mac
+
+*************************************************************
+Show or hide:
+- all docks         F3      toggleDockAct
+- file dock         F4      toggleFilesAct
+- fav dock          F5      toggleFavsAct
+- metadata dock     F6      toggleMetadataAct
+- thumbs dock       F7      toggleThumbsAct
+- title bar         F8      toggleWindowsTitleBarAct
+- menu bar          F9      toggleMenuBarAct
+- status bar        F10     toggleStatusBarAct (create)
+
+- full screen       F       fullScreenAct
+- show file list
+  or thumbnails     T       toggleIconsListAct
+
+
+******************************************************************************
+thumbViewModel
+--------------------------------------------------------------------------
+Role 0: DisplayRole     QString, "20041205_0065.jpg"
+     1: DecorationRole  QIcon, QIcon(availableSizes[normal,Off]=(QSize(129, 100)),cacheKey=0x8100000000)
+     2: EditRole        QString, "20041205_0065.jpg"
+     6: FontRole        QFont, QFont("Segoe UI,8,-1,5,25,0,0,0,0,0")
+     7: TextAlignment   int, 132
+     8: BackgroundRole  QBrush, QBrush(QColor(ARGB 1, 1, 0, 0),SolidPattern)
+    13: SizeHintRole    QSize, QSize(133, 125)
+
+QStyledItemDelegate::initStyleOption  this is where icon mode is set to disabled, selected or normal
+
+"20041205_0065.jpg" (State) QFlags<QStyle::StateFlag>(State_Enabled|State_Selected)
+
+******************************************************************************
+Menu Process:
+- QAction item in mainwindow.h
+- addmenu in MW::createMenus
+- QAction in MW::createActions
+- function to execute action
+
+if hide/show ui element
+- create global parameter (
+- create toggle/set function
+- create read/write for parameter
+- update global parameter
+- update QAction
+
+******************************************************************************
+Styles:
+
+/*   */
+MainWindow {
+background-color: rgb(97, 97, 97);
+        color: rgb(229, 229, 229);
+}
+
+QMainWindow::separator {
+    background: rgb(111, 111, 111);
+    width: 0px; /* when vertical */
+    height: 1px; /* when horizontal */
+}
+
+QMenu {
+    background-color: rgb(111,111,111);
+    border: 1px solid gray;
+}
+
+QMenu::item {
+    background-color: transparent;
+}
+
+QMenu::item:selected {
+    background-color: gray;
+}
+
+QMenuBar {
+    background-color: rgb(95,95,95);
+    color: rgb(229,229,229);
+    border: 1px solid grey;
+}
+
+QMenuBar::item {
+    spacing: 3px;
+    padding: 6px 6px;
+    background: transparent;
+    border-radius: 4px;
+}
+
+QMenuBar::item:selected {
+    background: rgb(168,168,168);
+}
+
+QMenuBar::item:pressed {
+    background: rgb(136,136,136);
+}
+
+QStatusBar {
+    background-color: rgb(95,95,95);
+    color: rgb(229,229,229);
+    border: 1px solid grey;
+}
+
+QStatusBar QLabel {
+    color: rgb(229,229,229);
+}
+
+QSizeGrip {
+    image: url(:/images/sizegrip.png);
+}
+
+QWidget {
+    background-color: rgb(95,95,95);
+    color: rgb(229,229,229);
+}
+
+QHeaderView::section {
+background-color: rgb(95,95,95);
+color: rgb(229,229,229);
+border: 1px solid rgb(95,95,95);
+}
+
+/* Not working */
+QTabWidget::pane { /* The tab widget frame */
+    border-top: 2px solid #C2C7CB;
+    position: absolute;
+    top: -0.5em;
+}
+
+/* Not working */
+QTabWidget::tab-bar {
+    alignment: left;
+}
+
+QTabBar::tab {
+    background-color: rgb(95,95,95);
+    border: 1px solid grey;
+    padding: 4px 4px;
+}
+
+QTabBar::tab:selected {
+    background-color: rgb(111,111,111);
+}
+
+
+QScrollBar:vertical {
+    border: 1px solid gray;
+    background-color: rgb(77,77,77);
+    margin-top: 0px;
+    margin-bottom: 0px;
+    width: 14px;
+}
+
+QScrollBar::handle:vertical {
+    border: 0px solid grey;
+    min-height: 20px;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical{
+    background-color: gray;
+}
+
+QScrollBar::add-line:vertical {
+    border: 0px solid grey;
+    height: 0px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::sub-line:vertical {
+    border: 0px solid grey;
+    height: 0px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+    width: 0px;
+    height: 0px;
+    background: lightGray;
+}
+
+
+
+
+
+QScrollBar:horizontal {
+    border: 1px solid gray;
+    background-color: rgb(77,77,77);
+    margin-left: 0px;
+    margin-right: 0px;
+    height: 14px;
+}
+
+QScrollBar::handle:horizontal {
+    border: 0px solid grey;
+    min-width: 20px;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal{
+    background-color: gray;
+}
+
+QScrollBar::add-line:horizontal {
+    border: 0px solid grey;
+    width: 0px;
+    subcontrol-position: right;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::sub-line:horizontal {
+    border: 0px solid grey;
+    width: 0px;
+    subcontrol-position: left;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::up-arrow:horizontal, QScrollBar::down-arrow:horizontal {
+    width: 0px;
+    height: 0px;
+    background: lightGray;
+}
+*/
+
+
+/* End of working styles  */
+/*
+QScrollArea {
+    background-color: rgb(95,95,95);
+    color: rgb(229,229,229);
+}
+
+
+QDockWidget::title {
+    background: lightgray;
+    background-color: rgb(63, 63, 63);
+}
+*/
+
+
+/*
+QDockWidget {
+    color: rgb(229,229,229);
+    background-color: rgb(95, 95, 95);
+}
+
+QTreeView {
+    background-color: rgb(95, 95, 95);
+    color: rgb(229, 229, 229);
+}
+
+QListView {
+    background-color: blue);
+    color: rgb(229, 229, 229);
+    alternate-background-color: yellow;
+}
+
+QListView::item:selected {
+    border: 1px solid yellow;
+}
+
+QListView::item {
+    border: 1px solid red;
+    background-color: green;
+}
+
+*/
+QComboBox
+{
+    background-color: rgb(111,111,111);
+    selection-backgroucnd-color: lightgray;
+}
+
+QSpinBox::up-button, QSpinBox::down-button {
+    subcontrol-origin: border;
+/*    subcontrol-position: top right; /* position at the top right corner */
+
+    width: 16px; /* 16 + 2*1px border-width = 15px padding + 3px parent border */
+/*    border-image: url(:/images/spinup.png) 1;
+    border-width: 1px;*/
+    border: 1px solid gray;
+    image: QStyle::SP_ArrowUp;
+    image: QStyle::SP_ArrowDown;
+}
+

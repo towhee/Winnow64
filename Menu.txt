@@ -1,0 +1,75 @@
+File
+- Open Folder…
+- Open with ...
+- Recent Folders*
+- Show in finder/explorer*
+- Include Subfolders
+- Add to Favourites
+- Copy Picks  (Ingest)
+- Rename*
+- Run droplet* ?
+- Report Metadata
+- Exit
+
+Edit
+- Select All
+- Deselect All* ??
+- Invert Selection
+—
+- Pick Image
+- Filter on Picks
+- Rotate CW
+- Rotate CCW
+- Edit in …*
+- Preferences
+- Shortcuts*
+
+Go
+- Next
+- Previous
+- Up
+- Down
+- First
+- Last
+—
+- Next Pick*
+- Previous Pick*
+
+View
+- Slideshow
+- Full Screen
+- Escape full screen
+—
+- Zoom in
+- Zoom out
+- Fit/Actual
+—
+- Shooting Info
+—
+- As List
+- As Thumbs
+- Enlarge ThumbNails
+- Shrink thumbnails
+- Thumb labels
+- Reverse sort
+
+Window
+- Workspace
+   - Default Workspace
+   - New Workspace…*
+   - Delete Workspace…
+   - added workspaces
+—
+- Thumbnail panel
+- Folders panel
+- Favourites panel
+- Metadata panel
+—
+- Window Title Bar
+- Menu Bar (win only)
+- Status Bar
+
+Help
+- About Winnow
+- Winnow Help*
+

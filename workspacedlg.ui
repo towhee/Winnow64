@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Workspacedlg</class>
+ <widget class="QDialog" name="Workspacedlg">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>445</width>
+    <height>162</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Manage Workspaces</string>
+  </property>
+  <widget class="QComboBox" name="workspaceCB">
+   <property name="geometry">
+    <rect>
+     <x>95</x>
+     <y>35</y>
+     <width>310</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="editable">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>21</x>
+     <y>40</y>
+     <width>69</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Workspace</string>
+   </property>
+  </widget>
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>90</y>
+     <width>381</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QPushButton" name="deleteBtn">
+      <property name="text">
+       <string>Delete</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="reassignBtn">
+      <property name="text">
+       <string>Reassign</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="doneBtn">
+      <property name="text">
+       <string>Done</string>
+      </property>
+      <property name="default">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QLabel" name="status">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>130</y>
+     <width>381</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>doneBtn</sender>
+   <signal>pressed()</signal>
+   <receiver>Workspacedlg</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>346</x>
+     <y>105</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>222</x>
+     <y>80</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
