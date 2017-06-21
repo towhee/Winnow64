@@ -17,7 +17,8 @@ public:
     ~Prefdlg();
 
 signals:
-    void updateThumbs();
+    void updateThumbs(int thumbWidth, int thumbHeight, int thumbSpacing,
+            int thumbPadding, int labelFontSize, bool showThumbLabels);
 
 private slots:
     // thumbs
@@ -46,6 +47,14 @@ private:
     Ui::Prefdlg *ui;
     void accept();
     bool okToUpdate;
+
+    int thumbWidth;
+    int thumbHeight;
+    int thumbSpacing;
+    int thumbPadding;
+    int labelFontSize;
+    bool showThumbLabels;
+
 };
 
 #endif // PREFDLG_H

@@ -26,12 +26,12 @@ namespace G
     extern bool rememberLastDir;
 
     // preferences: thumbs
-    extern unsigned int thumbSpacing;
-    extern int thumbPadding;
-    extern int thumbWidth;
-    extern int thumbHeight;
-    extern int labelFontSize;
-    extern bool showThumbLabels;
+//    extern unsigned int thumbSpacing;
+//    extern int thumbPadding;
+//    extern int thumbWidth;
+//    extern int thumbHeight;
+//    extern int labelFontSize;
+//    extern bool showThumbLabels;
 
     // preferences: slideshow
     extern int slideShowDelay;

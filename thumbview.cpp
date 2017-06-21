@@ -56,7 +56,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
 //    mainWindow = parent;
     this->metadata = metadata;
 
-//    thumbWidth = G::thumbWidth;
+    thumbWidth = 666;
 //    thumbHeight = G::thumbHeight;
     pickFilter = false;
     if (G::isIconView) setViewMode(QListView::IconMode);
@@ -83,8 +83,8 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
     thumbViewSelection = selectionModel();
 
     thumbViewDelegate = new ThumbViewDelegate(this);
-    thumbViewDelegate->setThumbDimensions(G::thumbWidth, G::thumbHeight,
-        G::thumbPadding, G::labelFontSize, G::showThumbLabels);
+    thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+        thumbPadding, labelFontSize, showThumbLabels);
     setItemDelegate(thumbViewDelegate);
 
     connect(this->selectionModel(),
@@ -125,7 +125,10 @@ bool ThumbView::event(QEvent *event)
     if (!override) return QListView::event(event);
 }
 
-void ThumbView::setThumbSize()
+void ThumbView::setThumbParameters(
+        int thumbWidth, int thumbHeight,
+        int thumbSpacing,int thumbPadding, int labelFontSize,
+        bool showThumbLabels)
 {
     {
     #ifdef ISDEBUG
@@ -136,10 +139,19 @@ void ThumbView::setThumbSize()
     // used G::thumbWidth ...
 //    thumbWidth = G::thumbWidth;
 //    thumbHeight = G::thumbHeight;
-    this->setSpacing(G::thumbSpacing);
-    thumbViewDelegate->setThumbDimensions(G::thumbWidth, G::thumbHeight,
-        G::thumbPadding, G::labelFontSize, G::showThumbLabels);
+    this->setSpacing(thumbSpacing);
+    thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+        thumbPadding, labelFontSize, showThumbLabels);
 //    qDebug() << "Changed thumbs to" << thumbWidth << "x" << thumbHeight;
+}
+
+void ThumbView::setThumbParameters()
+/*
+Helper function for in class calls where thumb parameters already defined
+*/
+{
+    thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+        thumbPadding, labelFontSize, showThumbLabels);
 }
 
 // debugging
@@ -392,7 +404,7 @@ bool ThumbView::initThumbs()
     static QPixmap emptyPixMap;
 
     // rgh not working
-    emptyPixMap = QPixmap::fromImage(emptyImg).scaled(G::thumbWidth, G::thumbHeight);
+    emptyPixMap = QPixmap::fromImage(emptyImg).scaled(thumbWidth, thumbHeight);
 
     for (fileIndex = 0; fileIndex < thumbFileInfoList.size(); ++fileIndex) {
         thumbFileInfo = thumbFileInfoList.at(fileIndex);
@@ -535,9 +547,59 @@ void ThumbView::refreshThumbs() {
     #endif
     }
     // if workspace invoked with diff thumb parameters
-    setThumbSize();
+    setThumbParameters();
     this->dataChanged(thumbViewFilter->index(0, 0, QModelIndex()),
       thumbViewFilter->index(getLastRow(), 0, QModelIndex()));
+}
+
+void ThumbView::thumbsEnlarge()
+{
+    if (thumbWidth == 0) thumbWidth = 40;
+    if (thumbHeight ==0) thumbHeight = 40;
+    if (thumbWidth < 160 && thumbHeight < 160)
+    {
+        thumbWidth *= 1.1;
+        thumbHeight *= 1.1;
+//        thumbsEnlargeAction->setEnabled(true);
+        if (thumbWidth > 160) thumbWidth = 160;
+        if (thumbHeight > 160) thumbHeight = 160;
+        setThumbParameters();
+    }
+}
+
+void ThumbView::thumbsShrink()
+{
+    if (thumbWidth > 40  && thumbHeight > 40)
+    {
+        thumbWidth *= 0.9;
+        thumbHeight *= 0.9;
+//        thumbsEnlargeAction->setEnabled(true);
+        if (thumbWidth < 40) thumbWidth = 40;
+        if (thumbHeight < 40) thumbHeight = 40;
+        setThumbParameters();
+    }
+}
+
+void ThumbView::thumbsFit()
+{
+//    int imthumbWidth = imageView->getImagethumbWidth();
+//    int imthumbHeight = imageView->getImagethumbHeight();
+//    float aspect = (float)imthumbHeight/imthumbWidth;
+//    if (thumbHeight < thumbWidth)
+//        thumbHeight = thumbWidth * aspect;
+//    else
+//        thumbWidth = (float)thumbHeight / aspect;
+//    if (thumbWidth > 160) {
+//        float adj = 160 / thumbWidth;
+//        thumbWidth = 160;
+//        thumbHeight *= adj;
+//    }
+//    if (thumbHeight > 160) {
+//        float adj = 160 / thumbHeight;
+//        thumbHeight = 160;
+//        thumbWidth *= adj;
+//    }
+//    thumbView->refreshThumbs();
 }
 
 void ThumbView::wheelEvent(QWheelEvent *event)

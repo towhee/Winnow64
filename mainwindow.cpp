@@ -3,8 +3,8 @@
 #include "mainwindow.h"
 #include "global.h"
 
-#define THUMB_SIZE_MIN	50
-#define THUMB_SIZE_MAX	300
+#define THUMB_SIZE_MIN	40
+#define THUMB_SIZE_MAX	160
 
 MW::MW(QWidget *parent) : QMainWindow(parent)
 {
@@ -13,8 +13,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     qDebug() << "MW::MW";
     #endif
     }
-
-    thumbWidth = 42;
 
     /* Note ISDEBUG is in globals.h
        Deactivate debug reporting by commenting ISDEBUG  */
@@ -550,20 +548,20 @@ void MW::createActions()
 
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
-    connect(thumbsEnlargeAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
+    connect(thumbsEnlargeAction, SIGNAL(triggered()), thumbView, SLOT(thumbsEnlarge()));
     if (thumbView->thumbSize == THUMB_SIZE_MAX)
         thumbsEnlargeAction->setEnabled(false);
 
     thumbsShrinkAction = new QAction(tr("Shrink thumbs"), this);
     thumbsShrinkAction->setObjectName("shrinkThumbs");
-    connect(thumbsShrinkAction, SIGNAL(triggered()), this, SLOT(thumbsShrink()));
+    connect(thumbsShrinkAction, SIGNAL(triggered()), thumbView, SLOT(thumbsShrink()));
     if (thumbView->thumbSize == THUMB_SIZE_MIN)
             thumbsShrinkAction->setEnabled(false);
 
     // is this used - not in menu
     thumbsFitAction = new QAction(tr("Fit Current Thumbnail"), this);
     thumbsFitAction->setObjectName("thumbsZoomOut");
-    connect(thumbsFitAction, SIGNAL(triggered()), this, SLOT(thumbsFit()));
+    connect(thumbsFitAction, SIGNAL(triggered()), thumbView, SLOT(thumbsFit()));
     if (thumbView->thumbSize == THUMB_SIZE_MIN)
             thumbsFitAction->setEnabled(false);
 
@@ -1407,12 +1405,12 @@ workspace with a matching name to the action is used.
             metadataDockLockAction->setChecked(ws.isMetadataDockLocked);
             thumbDockLockAction->setChecked( ws.isThumbDockLocked);
             updateState();
-            G::thumbSpacing = ws.thumbSpacing;
-            G::thumbPadding = ws.thumbPadding;
-            G::thumbWidth = ws.thumbWidth;
-            G::thumbHeight = ws.thumbHeight;
-            G::labelFontSize = ws.labelFontSize;
-            G::showThumbLabels = ws.showThumbLabels;
+            thumbView->thumbSpacing = ws.thumbSpacing;
+            thumbView->thumbPadding = ws.thumbPadding;
+            thumbView->thumbWidth = ws.thumbWidth;
+            thumbView->thumbHeight = ws.thumbHeight;
+            thumbView->labelFontSize = ws.labelFontSize;
+            thumbView->showThumbLabels = ws.showThumbLabels;
             thumbView->refreshThumbs();
             reportWorkspace(i);         // rgh remove after debugging
         }
@@ -1534,12 +1532,12 @@ app is "stranded" on secondary monitors that are not attached.
 
     resizeDocks({thumbDock}, {160}, Qt::Vertical);
 
-    G::thumbSpacing = 0;
-    G::thumbPadding = 0;
-    G::thumbWidth = 120;
-    G::thumbHeight = 120;
-    G::labelFontSize = 8;
-    G::showThumbLabels = true;
+    thumbView->thumbSpacing = 0;
+    thumbView->thumbPadding = 0;
+    thumbView->thumbWidth = 120;
+    thumbView->thumbHeight = 120;
+    thumbView->labelFontSize = 8;
+    thumbView->showThumbLabels = true;
 }
 
 void MW::renameWorkspace(int n, QString name)
@@ -1574,12 +1572,12 @@ void MW::populateWorkspace(int n, QString name)
     (*workspaces)[n].isFavDockLocked = favDockLockAction->isChecked();
     (*workspaces)[n].isMetadataDockLocked = metadataDockLockAction->isChecked();
     (*workspaces)[n].isThumbDockLocked = thumbDockLockAction;
-    (*workspaces)[n].thumbSpacing = G::thumbSpacing;
-    (*workspaces)[n].thumbPadding = G::thumbPadding;
-    (*workspaces)[n].thumbWidth = G::thumbWidth;
-    (*workspaces)[n].thumbHeight = G::thumbHeight;
-    (*workspaces)[n].labelFontSize = G::labelFontSize;
-    (*workspaces)[n].showThumbLabels = G::showThumbLabels;
+    (*workspaces)[n].thumbSpacing = thumbView->thumbSpacing;
+    (*workspaces)[n].thumbPadding = thumbView->thumbPadding;
+    (*workspaces)[n].thumbWidth = thumbView->thumbWidth;
+    (*workspaces)[n].thumbHeight = thumbView->thumbHeight;
+    (*workspaces)[n].labelFontSize = thumbView->labelFontSize;
+    (*workspaces)[n].showThumbLabels = thumbView->showThumbLabels;
 }
 
 void MW::reportWorkspace(int n)
@@ -1794,12 +1792,11 @@ void MW::preferences()
     qDebug() << "MW::preferences";
     #endif
     }
+//    pref.thumbWidth = thumbView->thumbWidth;
     Prefdlg *prefdlg = new Prefdlg(this);
-
-    connect(prefdlg, SIGNAL(updateThumbs()),
-            thumbView, SLOT(refreshThumbs()));
-    if (prefdlg->exec()) {
-    }
+    connect(prefdlg, SIGNAL(updateThumbs(int, int, int, int, int, bool)),
+        thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
+    prefdlg->exec();
     qDebug() << "thumbWidth" << thumbWidth;
 }
 
@@ -1872,85 +1869,6 @@ void MW::selectAllThumbs()
     thumbView->selectAll();
 }
 
-void MW::thumbsEnlarge()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::thumbsEnlarge";
-    #endif
-    }
-    int width = G::thumbWidth;
-    if (width == 0) width = 40;
-    int height = G::thumbHeight;
-    if (height ==0) height = 40;
-    if (width < 160 && height < 160)
-    {
-        width *= 1.1;
-        height *= 1.1;
-        thumbsEnlargeAction->setEnabled(true);
-        if (width > 160) width = 160;
-        if (height > 160) height = 160;
-        G::thumbWidth = width;
-        G::thumbHeight = height;
-        thumbView->setThumbSize();
-    }
-}
-
-void MW::thumbsShrink()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::thumbsShrink";
-    #endif
-    }
-//    if (thumbView->thumbSize > THUMB_SIZE_MIN)
-    qDebug() << "MW::thumbsShrink() before  "
-             << "GData::thumbWidth =" << G::thumbWidth
-             << "GData::thumbHeight =" << G::thumbHeight;
-    int width = G::thumbWidth;
-    int height = G::thumbHeight;
-    if (width > 40  && height > 40)
-    {
-        width *= 0.9;
-        height *= 0.9;
-        thumbsEnlargeAction->setEnabled(true);
-        if (width < 40) width = 40;
-        if (height < 40) height = 40;
-        G::thumbWidth = width;
-        G::thumbHeight = height;
-        qDebug() << "MW::thumbsShrink() after  "
-                 << "GData::thumbWidth =" << G::thumbWidth
-                 << "GData::thumbHeight =" << G::thumbHeight;
-        thumbView->setThumbSize();
-    }
-}
-
-void MW::thumbsFit()
-{
-    int width = G::thumbWidth;
-    int height = G::thumbHeight;
-    int imWidth = imageView->getImageWidth();
-    int imHeight = imageView->getImageHeight();
-    float aspect = (float)imHeight/imWidth;
-    if (height < width)
-        height = width * aspect;
-    else
-        width = (float)height / aspect;
-    if (width > 160) {
-        float adj = 160 / width;
-        width = 160;
-        height *= adj;
-    }
-    if (height > 160) {
-        float adj = 160 / height;
-        height = 160;
-        width *= adj;
-    }
-    G::thumbWidth = width;
-    G::thumbHeight = height;
-    thumbView->refreshThumbs();
-}
-// end move to thumbView
 
 void MW::zoomOut()
 {
@@ -2098,11 +2016,11 @@ void MW::writeSettings()
     G::setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
     G::setting->setValue("lastDir", G::lastDir);
     // thumbs
-    G::setting->setValue("thumbSpacing", (int)G::thumbSpacing);
-    G::setting->setValue("thumbPadding", (int)G::thumbPadding);
-    G::setting->setValue("thumbWidth", (int)G::thumbWidth);
-    G::setting->setValue("thumbHeight", (int)G::thumbHeight);
-    G::setting->setValue("labelFontSize", (int)G::labelFontSize);
+    G::setting->setValue("thumbSpacing", thumbView->thumbSpacing);
+    G::setting->setValue("thumbPadding", thumbView->thumbPadding);
+    G::setting->setValue("thumbWidth", thumbView->thumbWidth);
+    G::setting->setValue("thumbHeight", thumbView->thumbHeight);
+    G::setting->setValue("labelFontSize", thumbView->labelFontSize);
     G::setting->setValue("showLabels", (bool)showThumbLabelsAction->isChecked());
     // slideshow
     G::setting->setValue("slideShowDelay", (int)G::slideShowDelay);
@@ -2241,12 +2159,12 @@ void MW::loadSettings()
     G::showHiddenFiles = G::setting->value("showHiddenFiles").toBool();
     G::lastDir = G::setting->value("lastDir").toString();
     // thumbs
-    G::thumbSpacing = G::setting->value("thumbSpacing").toInt();
-    G::thumbPadding = G::setting->value("thumbPadding").toInt();
-    G::thumbWidth = G::setting->value("thumbWidth").toInt();
-    G::thumbHeight = G::setting->value("thumbHeight").toInt();
-    G::labelFontSize = G::setting->value("labelFontSize").toInt();
-    G::showThumbLabels = G::setting->value("showThumbLabels").toBool();
+    thumbView->thumbSpacing = G::setting->value("thumbSpacing").toInt();
+    thumbView->thumbPadding = G::setting->value("thumbPadding").toInt();
+    thumbView->thumbWidth = G::setting->value("thumbWidth").toInt();
+    thumbView->thumbHeight = G::setting->value("thumbHeight").toInt();
+    thumbView->labelFontSize = G::setting->value("labelFontSize").toInt();
+    thumbView->showThumbLabels = G::setting->value("showThumbLabels").toBool();
     // slideshow
     G::slideShowDelay = G::setting->value("slideShowDelay").toInt();
     G::slideShowRandom = G::setting->value("slideShowRandom").toBool();

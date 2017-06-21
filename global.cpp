@@ -15,12 +15,12 @@ namespace G
     bool rememberLastDir;
 
     // preferences: thumbs
-    unsigned int thumbSpacing;
-    int thumbPadding;
-    int thumbWidth = 160;
-    int thumbHeight = 160;
-    int labelFontSize;
-    bool showThumbLabels;
+//    unsigned int thumbSpacing;
+//    int thumbPadding;
+//    int thumbWidth = 160;
+//    int thumbHeight = 160;
+//    int labelFontSize;
+//    bool showThumbLabels;
 
     // preferences: slideshow
     int slideShowDelay;

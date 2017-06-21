@@ -22,12 +22,12 @@ public:
 
     ThumbView(QWidget *parent, Metadata *metadata);
 
-//    int thumbWidth;
-//    int thumbHeight;
-//    int thumbSpacing;
-//    int thumbPadding;
-//    int labelFontSize;
-//    bool showThumbLabels;
+    int thumbWidth;
+    int thumbHeight;
+    int thumbSpacing;
+    int thumbPadding;
+    int labelFontSize;
+    bool showThumbLabels;
 
     bool load();
 
@@ -41,8 +41,6 @@ public:
     void selectFirst();
     void selectLast();
     void selectRandom();
-
-    void setThumbSize();                        //now in ThumbViewDelegate so prob not reqd
 
     int getNearestPick();
     QFileInfoList getPicks();
@@ -68,6 +66,7 @@ protected:
 private:
     void loadPrepare();
     bool initThumbs();
+    void setThumbParameters();
     bool isSelectedItem();          // call before getting row or index
     void reportThumb();                             //debugging thumb roles
 
@@ -89,9 +88,14 @@ signals:
     void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent
 
 public slots:
+    void thumbsEnlarge();
+    void thumbsShrink();
+    void thumbsFit();
     void invertSelection();                         //in use
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
     void refreshThumbs();
+    void setThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
+             int thumbPadding, int labelFontSize, bool showThumbLabels);
 
 private slots:
 };

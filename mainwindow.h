@@ -37,6 +37,15 @@ public:
     int thumbWidth;
     int thumbHeight;
 
+    struct prefData {
+        int thumbWidth;
+        int thumbHeight;
+        int thumbSpacing;
+        int thumbPadding;
+        int labelFontSize;
+        bool showThumbLabels;
+    } pref;
+
     struct workspaceData {
         QString accelNum;       // for accelerator
         QString name;           // used for menu
@@ -127,9 +136,6 @@ private slots:
     void loadRandomImage();
     void selectAllThumbs();
     void removeBookmark();
-    void thumbsEnlarge();
-    void thumbsShrink();
-    void thumbsFit();
     void zoomIn();
     void zoomOut();
     void zoom100();

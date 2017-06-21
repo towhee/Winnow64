@@ -1,4 +1,6 @@
 To do:
+- thumbs fit
+- goto next pick, previous pick not working
 - swap thumbs/viewer (see hideVieweer and showViewer)
 - eliminate global variables
 - Tweak context menus
@@ -23,6 +25,7 @@ To do:
 - Clip black area on canon thumbs
 - Compare 2-9 images
 - Hide/show cursor, always show if ESC
+- Done: eliminated thumb global variables
 - Done: Progress bar not updating when copying
 - Done: Reveal file in explorer/finder
 - Done: Save working spaces and default workspace

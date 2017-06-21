@@ -10,19 +10,22 @@ Prefdlg::Prefdlg(QWidget *parent) :
     ui(new Ui::Prefdlg)
 {
     MW *mw = qobject_cast<MW*>(parent);
-    qDebug() << "MW::thumbWidth" << mw->thumbWidth;
-    mw->thumbWidth = 99;  //this works
+    thumbWidth = mw->thumbView->thumbWidth;
+    thumbHeight = mw->thumbView->thumbHeight;
+    thumbSpacing = mw->thumbView->thumbSpacing;
+    thumbPadding = mw->thumbView->thumbPadding;
+    labelFontSize = mw->thumbView->labelFontSize;
+    showThumbLabels = mw->thumbView->showThumbLabels;
 
-//    qDebug() << "test" << mw->test;
     okToUpdate = false;
     ui->setupUi(this);
     // thumbs
-    ui->iconWidthSlider->setValue(G::thumbWidth);
-    ui->iconHeightSlider->setValue(G::thumbHeight);
-    ui->iconPaddingSlider->setValue(G::thumbPadding);
-    ui->thumbSpacingSlider->setValue(G::thumbSpacing);
-    ui->fontSizeSlider->setValue(G::labelFontSize);
-    ui->showThumbLabelChk->setChecked(G::showThumbLabels);
+    ui->iconWidthSlider->setValue(thumbWidth);
+    ui->iconHeightSlider->setValue(thumbHeight);
+    ui->iconPaddingSlider->setValue(thumbPadding);
+    ui->thumbSpacingSlider->setValue(thumbSpacing);
+    ui->fontSizeSlider->setValue(labelFontSize);
+    ui->showThumbLabelChk->setChecked(showThumbLabels);
     // slideshow
     ui->slideshowDelaySpinbox->setValue(G::slideShowDelay);
     ui->slideshowRandomChk->setChecked(G::slideShowRandom);
@@ -55,40 +58,44 @@ void Prefdlg::accept()
 void Prefdlg::on_iconWidthSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        G::thumbWidth = ui->iconWidthSlider->value();
+        thumbWidth = ui->iconWidthSlider->value();
         if (ui->lockDimChk->isChecked()) {
-            ui->iconHeightSlider->setValue(G::thumbWidth);
-            G::thumbHeight = G::thumbWidth;
+            ui->iconHeightSlider->setValue(thumbWidth);
+            thumbHeight = thumbWidth;
         }
-        emit updateThumbs();
+        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+                          thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
 
 void Prefdlg::on_iconHeightSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        G::thumbHeight = ui->iconHeightSlider->value();
+        thumbHeight = ui->iconHeightSlider->value();
         if (ui->lockDimChk->isChecked()) {
-            ui->iconWidthSlider->setValue(G::thumbHeight);
-            G::thumbWidth = G::thumbHeight;
+            ui->iconWidthSlider->setValue(thumbHeight);
+            thumbWidth = thumbHeight;
         }
-        emit updateThumbs();
+        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+                          thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
 
 void Prefdlg::on_thumbSpacingSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        G::thumbSpacing = ui->thumbSpacingSlider->value();
-        emit updateThumbs();
+        thumbSpacing = ui->thumbSpacingSlider->value();
+        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+                          thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
 
 void Prefdlg::on_iconPaddingSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        G::thumbPadding = ui->iconPaddingSlider->value();
-        emit updateThumbs();
+        thumbPadding = ui->iconPaddingSlider->value();
+        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+                          thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
 
@@ -96,16 +103,18 @@ void Prefdlg::on_iconPaddingSlider_valueChanged(int value)
 void Prefdlg::on_showThumbLabelChk_clicked()
 {
     if (okToUpdate) {
-        G::showThumbLabels = ui->showThumbLabelChk->isChecked();
-        emit updateThumbs();
+        showThumbLabels = ui->showThumbLabelChk->isChecked();
+        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+                          thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
 
 void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        G::labelFontSize = ui->fontSizeSlider->value();
-        emit updateThumbs();
+        labelFontSize = ui->fontSizeSlider->value();
+        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+                          thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
 
