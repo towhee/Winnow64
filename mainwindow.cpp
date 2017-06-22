@@ -26,7 +26,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     G::appName = "Winnow";
     //    GData::isDebug = true;        // is this used or just #ifdef ISDEBUG in global.h
     G::isTimer = false;
-    G::isIconView = true;
+    isIconView = true;                  // rgh for now
 
     // Global timer for testing
     #ifdef ISDEBUG
@@ -41,10 +41,11 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     workspaces = new QList<workspaceData>;
     G::setting = new QSettings("Winnow", "winnow_100");
     qDebug() << G::setting->fileName();
-    createThumbView();
-    createActions();
+    // must come first so persistant action settings can be updated
     if (!resetSettings) loadSettings();
+    createThumbView();
     createImageView();
+    createActions();
     createMenus();
     createStatusBar();
     createFSTree();
@@ -79,7 +80,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
 
-//    if (GData::isIconView) thumbDock->setWindowTitle("Thumbnails");
+//    if (isIconView) thumbDock->setWindowTitle("Thumbnails");
 //    else thumbDock->setWindowTitle("Image Files");
     thumbDock->setWindowTitle(" ");
 
@@ -379,7 +380,7 @@ void MW::createActions()
 
     subFoldersAction = new QAction(tr("Include Sub-folders"), this);
     subFoldersAction->setObjectName("subFolders");
-    subFoldersAction->setCheckable(true);
+    subFoldersAction->setChecked(mwd.includeSubfolders);    // from QSettings
     connect(subFoldersAction, SIGNAL(triggered()), this, SLOT(setIncludeSubFolders()));
 
     addBookmarkAction = new QAction(tr("Add Bookmark"), this);
@@ -536,16 +537,22 @@ void MW::createActions()
     infoVisibleAction = new QAction(tr("Shooting Info"), this);
     infoVisibleAction->setObjectName("toggleInfo");
     infoVisibleAction->setCheckable(true);
-//    infoVisibleAction->setChecked(shootingInfoVisible);
+    infoVisibleAction->setChecked(mwd.isImageInfoVisible);  // from QSettings
     connect(infoVisibleAction, SIGNAL(triggered()), this, SLOT(setShootingInfo()));
 
+
     asListAction = new QAction(tr("As list"), this);
-    asListAction->setObjectName("thumbsZoomIn");
+    asListAction->setCheckable(true);
 //    connect(asListAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
 
     asThumbsAction = new QAction(tr("As thumbs"), this);
-    asThumbsAction->setObjectName("thumbsZoomIn");
+    asThumbsAction->setCheckable(true);
 //    connect(thumbsEnlargeAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
+
+    iconGroupAction = new QActionGroup(this);
+    iconGroupAction->setExclusive(true);
+    iconGroupAction->addAction(asListAction);
+    iconGroupAction->addAction(asThumbsAction);
 
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
@@ -606,49 +613,50 @@ void MW::createActions()
     windowsTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
     windowsTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
     windowsTitleBarVisibleAction->setCheckable(true);
-    windowsTitleBarVisibleAction->setChecked(true);
+    windowsTitleBarVisibleAction->setChecked(mwd.isWindowTitleBarVisible);
     connect(windowsTitleBarVisibleAction, SIGNAL(triggered()), this, SLOT(setWindowsTitleBarVisibility()));
 
     menuBarVisibleAction = new QAction(tr("Menubar"), this);
     menuBarVisibleAction->setObjectName("toggleMenuBar");
     menuBarVisibleAction->setCheckable(true);
-    menuBarVisibleAction->setChecked(true);
+    menuBarVisibleAction->setChecked(mwd.isMenuBarVisible);
     connect(menuBarVisibleAction, SIGNAL(triggered()), this, SLOT(setMenuBarVisibility()));
 
     statusBarVisibleAction = new QAction(tr("Statusbar"), this);
     statusBarVisibleAction->setObjectName("toggleStatusBar");
     statusBarVisibleAction->setCheckable(true);
-    statusBarVisibleAction->setChecked(true);
+    statusBarVisibleAction->setChecked(mwd.isStatusBarVisible);
     connect(statusBarVisibleAction, SIGNAL(triggered()), this, SLOT(setStatusBarVisibility()));
 
     folderDockLockAction = new QAction(tr("Lock Files"), this);
     folderDockLockAction->setObjectName("lockDockFiles");
     folderDockLockAction->setCheckable(true);
-//    folderDockLockAction->setChecked(G::isFolderDockLocked);
+    folderDockLockAction->setChecked(mwd.isFolderDockLocked);
     connect(folderDockLockAction, SIGNAL(triggered()), this, SLOT(setFolderDockLockMode()));
 
     favDockLockAction = new QAction(tr("Lock Favourites"), this);
     favDockLockAction->setObjectName("lockDockFavs");
     favDockLockAction->setCheckable(true);
-//    favDockLockAction->setChecked(G::isFavsDockLocked);
+    favDockLockAction->setChecked(mwd.isFavDockLocked);
     connect(favDockLockAction, SIGNAL(triggered()), this, SLOT(setFavDockLockMode()));
 
     metadataDockLockAction = new QAction(tr("Lock Metadata"), this);
     metadataDockLockAction->setObjectName("lockDockMetadata");
     metadataDockLockAction->setCheckable(true);
-//    metadataDockLockAction->setChecked(G::isMetadataDockLocked);
+    metadataDockLockAction->setChecked(mwd.isMetadataDockLocked);
     connect(metadataDockLockAction, SIGNAL(triggered()), this, SLOT(setMetadataDockLockMode()));
 
     thumbDockLockAction = new QAction(tr("Lock Thumbs"), this);
     thumbDockLockAction->setObjectName("lockDockThumbs");
     thumbDockLockAction->setCheckable(true);
-//    thumbDockLockAction->setChecked(G::isThumbDockLocked);
+    thumbDockLockAction->setChecked(mwd.isThumbDockLocked);
     connect(thumbDockLockAction, SIGNAL(triggered()), this, SLOT(setThumbDockLockMode()));
 
     allDocksLockAction = new QAction(tr("Lock all docks"), this);
     allDocksLockAction->setObjectName("lockDocks");
     allDocksLockAction->setCheckable(true);
-//    allDocksLockAction->setChecked(G::isLockAllDocks);
+    if (mwd.isFolderDockLocked && mwd.isFavDockLocked && mwd.isMetadataDockLocked && mwd.isThumbDockLocked)
+        allDocksLockAction->setChecked(true);
     connect(allDocksLockAction, SIGNAL(triggered()), this, SLOT(setAllDocksLockMode()));
 
     // Workspace submenu of Window menu
@@ -683,6 +691,8 @@ void MW::createActions()
         if (i < n) {
             workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
             workspaceActions.at(i)->setObjectName(objName);
+            workspaceActions.at(i)->setText(name);
+            workspaceActions.at(i)->setVisible(true);
         }
         if (i >= n) workspaceActions.at(i)->setVisible(false);
         workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
@@ -1022,8 +1032,14 @@ void MW::createThumbView()
     #endif
     }
     metadata = new Metadata;
-    thumbView = new ThumbView(this, metadata);
+    thumbView = new ThumbView(this, metadata, true);
     thumbView->setObjectName("ImageView");  //rgh need to fix??
+    thumbView->thumbSpacing = mwd.thumbSpacing;
+    thumbView->thumbPadding = mwd.thumbPadding;
+    thumbView->thumbWidth = mwd.thumbWidth;
+    thumbView->thumbHeight = mwd.thumbHeight;
+    thumbView->labelFontSize = mwd.labelFontSize;
+    thumbView->showThumbLabels = mwd.showThumbLabels;
     metadataCacheThread = new MetadataCache(this, thumbView, metadata);
     thumbCacheThread = new ThumbCache(this, thumbView, metadata);
     infoView = new InfoView(this, metadata);
@@ -1056,7 +1072,7 @@ void MW:: createImageView()
     #endif
     }
     imageCacheThread = new ImageCache(this, metadata);
-    imageView = new ImageView(this, metadata, imageCacheThread, infoVisibleAction->isChecked());
+    imageView = new ImageView(this, metadata, imageCacheThread, mwd.isImageInfoVisible);
 //    connect(copyImageAction, SIGNAL(triggered()), imageView, SLOT(copyImage()));
 //    connect(pasteImageAction, SIGNAL(triggered()), imageView, SLOT(pasteImage()));
     connect(metadataCacheThread, SIGNAL(updateIsRunning(bool)),
@@ -2175,16 +2191,15 @@ void MW::loadSettings()
 
     // files
 //    G::showHiddenFiles = G::setting->value("showHiddenFiles").toBool();
-    subFoldersAction->setChecked(G::setting->value("includeSubfolders").toBool());
     rememberLastDir = G::setting->value("rememberLastDir").toBool();
     lastDir = G::setting->value("lastDir").toString();
     // thumbs
-    thumbView->thumbSpacing = G::setting->value("thumbSpacing").toInt();
-    thumbView->thumbPadding = G::setting->value("thumbPadding").toInt();
-    thumbView->thumbWidth = G::setting->value("thumbWidth").toInt();
-    thumbView->thumbHeight = G::setting->value("thumbHeight").toInt();
-    thumbView->labelFontSize = G::setting->value("labelFontSize").toInt();
-    thumbView->showThumbLabels = G::setting->value("showThumbLabels").toBool();
+    mwd.thumbSpacing = G::setting->value("thumbSpacing").toInt();
+    mwd.thumbPadding = G::setting->value("thumbPadding").toInt();
+    mwd.thumbWidth = G::setting->value("thumbWidth").toInt();
+    mwd.thumbHeight = G::setting->value("thumbHeight").toInt();
+    mwd.labelFontSize = G::setting->value("labelFontSize").toInt();
+    mwd.showThumbLabels = G::setting->value("showThumbLabels").toBool();
     // slideshow
     slideShowDelay = G::setting->value("slideShowDelay").toInt();
     slideShowRandom = G::setting->value("slideShowRandom").toBool();
@@ -2197,24 +2212,22 @@ void MW::loadSettings()
     // load state
     shouldMaximize = G::setting->value("shouldMaximize").toBool();  // req'd? Only in MW
 
+    mwd.isWindowTitleBarVisible = G::setting->value("isWindowTitleBarVisible").toBool();
+    mwd.isMenuBarVisible = G::setting->value("isMenuBarBarVisible").toBool();
+    mwd.isStatusBarVisible = G::setting->value("isStatusBarVisible").toBool();
 
-    windowsTitleBarVisibleAction->setChecked(G::setting->value("isWindowTitleBarVisible").toBool());
-    menuBarVisibleAction->setChecked(G::setting->value("isMenuBarBarVisible").toBool());
-    statusBarVisibleAction->setChecked(G::setting->value("isStatusBarVisible").toBool());
+    mwd.isFolderDockVisible = G::setting->value("isFolderDockVisible").toBool();
+    mwd.isFavDockVisible = G::setting->value("isFavDockVisible").toBool();
+    mwd.isMetadataDockVisible = G::setting->value("isMetadataDockVisible").toBool();
+    mwd.isThumbDockVisible = G::setting->value("isThumbDockVisible").toBool();
 
-    folderDockVisibleAction->setChecked(G::setting->value("isFolderDockVisible").toBool());
-    favDockVisibleAction->setChecked(G::setting->value("isFavDockVisible").toBool());
-    metadataDockVisibleAction->setChecked(G::setting->value("isMetadataDockVisible").toBool());
-    thumbDockVisibleAction->setChecked(G::setting->value("isThumbDockVisible").toBool());
-    folderDockLockAction->setChecked(G::setting->value("isFolderDockLocked").toBool());
-    favDockLockAction->setChecked(G::setting->value("isFavDockLocked").toBool());
-    metadataDockLockAction->setChecked(G::setting->value("isMetadataDockLocked").toBool());
-    thumbDockLockAction->setChecked(G::setting->value("isThumbDockLocked").toBool());
-//    allDocksLockAction->setChecked(G::setting->value("LockDocks").toBool());
+    mwd.isFolderDockLocked = G::setting->value("isFolderDockLocked").toBool();
+    mwd.isFavDockLocked = G::setting->value("isFavDockLocked").toBool();
+    mwd.isMetadataDockLocked = G::setting->value("isMetadataDockLocked").toBool();
+    mwd.isThumbDockLocked = G::setting->value("isThumbDockLocked").toBool();
 
-    infoVisibleAction->setChecked(G::setting->value("isImageInfoVisible").toBool());
-    // not persistent
-//    GData::slideShowActive = false; // only used in MW
+    mwd.includeSubfolders = G::setting->value("includeSubfolders").toBool();
+    mwd.isImageInfoVisible = G::setting->value("isImageInfoVisible").toBool();
 
     /* read external apps */
     G::setting->beginGroup("ExternalApps");
@@ -2259,8 +2272,6 @@ void MW::loadSettings()
         ws.showThumbLabels = G::setting->value("showThumbLabels").toBool();
         ws.isImageInfoVisible = G::setting->value("isImageInfoVisible").toBool();
         workspaces->append(ws);
-        workspaceActions.at(i)->setText(ws.name);
-        workspaceActions.at(i)->setVisible(true);
     }
     G::setting->endArray();
 }
@@ -2601,9 +2612,9 @@ void MW::setWindowsTitleBarVisibility() {
 //    #endif
 //    }
 //    if(toggleIconsListAction->isChecked()) {
-//        GData::isIconView = false;    }
+//        isIconView = false;    }
 //    else {
-//        GData::isIconView = true;
+//        isIconView = true;
 //    }
 //}
 

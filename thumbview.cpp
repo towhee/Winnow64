@@ -46,7 +46,7 @@ thumb per row, not the view in the dock, where there can be many thumbs per row
 
   */
 
-ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
+ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconView) : QListView(parent)
 {
     {
     #ifdef ISDEBUG
@@ -56,14 +56,14 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
 //    mainWindow = parent;
     this->metadata = metadata;
 
-    thumbWidth = 666;
+    isIconView = iconView;
 //    thumbHeight = G::thumbHeight;
     pickFilter = false;
-    if (G::isIconView) setViewMode(QListView::IconMode);
+    if (isIconView) setViewMode(QListView::IconMode);
     else setViewMode(QListView::ListMode);
 
     setSelectionMode(QAbstractItemView::ExtendedSelection);
-    if (G::isIconView) setResizeMode(QListView::Adjust);
+    if (isIconView) setResizeMode(QListView::Adjust);
     this->setLayoutMode(QListView::Batched);
     setBatchSize(4);
     setWordWrap(true);
@@ -102,7 +102,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
     thumbsDir = new QDir();
     fileFilters = new QStringList;
 
-    if (G::isIconView) emptyImg.load(":/images/no_image.png");
+    if (isIconView) emptyImg.load(":/images/no_image.png");
 
     QTime time = QTime::currentTime();
 }
@@ -336,7 +336,7 @@ thumbCache.
     }
 
     // exit here if just display file list instead of icons
-    if (!G::isIconView) return true;
+    if (!isIconView) return true;
 
     setWrapping(true);
     if (includeSubfolders) {
@@ -367,7 +367,7 @@ void ThumbView::loadPrepare()
     qDebug() << "ThumbView::loadPrepare";
     #endif
     }
-    if (!G::isIconView) thumbHeight = 0;
+    if (!isIconView) thumbHeight = 0;
 
     fileFilters->clear();
     foreach (const QString &str, metadata->supportedFormats)

@@ -20,7 +20,7 @@ public:
         ThumbRectRole   // is this needed anymore ??
     };
 
-    ThumbView(QWidget *parent, Metadata *metadata);
+    ThumbView(QWidget *parent, Metadata *metadata, bool iconView);
 
     int thumbWidth;
     int thumbHeight;
@@ -83,6 +83,7 @@ private:
     QFileInfo thumbFileInfo;
     QImage emptyImg;
     Metadata *metadata;
+    bool isIconView;
 
 signals:
     void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent

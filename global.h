@@ -44,7 +44,7 @@ namespace G
 //    extern int cacheStatusWidth;
 //    extern int cacheWtAhead;
 
-    extern bool shootingInfoVisible;
+//    extern bool shootingInfoVisible;
     extern bool isIconView;
 
     // make persistent
@@ -64,7 +64,7 @@ namespace G
 }
 
 
-//#define ISDEBUG        // Uncomment this line to show debugging output
+#define ISDEBUG        // Uncomment this line to show debugging output
 
 #endif // GLOBAL_H
 

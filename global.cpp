@@ -33,7 +33,7 @@ namespace G
 //    int cacheStatusWidth;
 //    int cacheWtAhead;
 
-    bool shootingInfoVisible;
+//    bool shootingInfoVisible;
     bool isIconView;
 
     // not persistent

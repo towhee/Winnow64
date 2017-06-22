@@ -33,25 +33,6 @@ public:
 
     int copyCutCount;   // req'd?
 
-    // persistant data
-    // preferences: files
-//    bool includeSubFolders;   // use action
-//    bool isShowHiddenFiles;     // needed?
-    bool rememberLastDir;
-    QString lastDir;
-
-    // preferences: slideshow
-    int slideShowDelay;
-    bool slideShowRandom;
-
-    // preferences: cache
-    int cacheSizeMB;
-    bool isShowCacheStatus;
-    int cacheStatusWidth;
-    int cacheWtAhead;
-
-//    bool shootingInfoVisible;   // use action
-    bool isIconView;            // use action
 
     struct workspaceData {
         QString accelNum;       // for accelerator
@@ -77,10 +58,37 @@ public:
         int labelFontSize;
         bool showThumbLabels;
         bool isImageInfoVisible;
+        bool includeSubfolders;
     };
-
-    workspaceData ws;    // should this be a pointer?
+    workspaceData ws;   // hold values for workspace n
     QList<workspaceData> *workspaces;
+
+    // persistant data
+
+    // action surogates
+    /*
+    Some persistent values are required for class creation and for actions
+    that are mutually dependent - so which one do we do first?  Save the
+    values in struct mwd and use later.
+     */
+    workspaceData mwd;  // hold the persistent start values from QSettings
+
+//    bool isShowHiddenFiles;     // needed?
+    // preferences: files
+    bool rememberLastDir;
+    QString lastDir;
+
+    // preferences: slideshow
+    int slideShowDelay;
+    bool slideShowRandom;
+
+    // preferences: cache
+    int cacheSizeMB;
+    bool isShowCacheStatus;
+    int cacheStatusWidth;
+    int cacheWtAhead;
+
+    bool isIconView;            // use action
 
 protected:
     void closeEvent(QCloseEvent *event);
@@ -289,6 +297,7 @@ private:
     QAction *zoomOrigAction;
     QAction *zoomFitAction;
     QAction *infoVisibleAction;
+    QActionGroup *iconGroupAction;
     QAction *asListAction;
     QAction *asThumbsAction;
     QAction *thumbsEnlargeAction;
