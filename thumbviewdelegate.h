@@ -28,6 +28,7 @@ signals:
     void update(const QModelIndex index, QRect iconRect) const;
 
 private:
+    bool delegateShowThumbLabels;
     QFont font;
     QSize thumbSize;
     QSize thumbSpace;

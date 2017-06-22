@@ -29,7 +29,7 @@ public:
     int labelFontSize;
     bool showThumbLabels;
 
-    bool load();
+    bool load(bool inclSubfolders);
 
     void selectThumb(QModelIndex idx);
     void selectThumb(int row);

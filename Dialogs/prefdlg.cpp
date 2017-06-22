@@ -9,17 +9,17 @@ Prefdlg::Prefdlg(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Prefdlg)
 {
+    okToUpdate = false;
+    ui->setupUi(this);
+    // this works because friend class of MW
     MW *mw = qobject_cast<MW*>(parent);
+    // thumbs
     thumbWidth = mw->thumbView->thumbWidth;
     thumbHeight = mw->thumbView->thumbHeight;
     thumbSpacing = mw->thumbView->thumbSpacing;
     thumbPadding = mw->thumbView->thumbPadding;
     labelFontSize = mw->thumbView->labelFontSize;
     showThumbLabels = mw->thumbView->showThumbLabels;
-
-    okToUpdate = false;
-    ui->setupUi(this);
-    // thumbs
     ui->iconWidthSlider->setValue(thumbWidth);
     ui->iconHeightSlider->setValue(thumbHeight);
     ui->iconPaddingSlider->setValue(thumbPadding);
@@ -27,13 +27,19 @@ Prefdlg::Prefdlg(QWidget *parent) :
     ui->fontSizeSlider->setValue(labelFontSize);
     ui->showThumbLabelChk->setChecked(showThumbLabels);
     // slideshow
-    ui->slideshowDelaySpinbox->setValue(G::slideShowDelay);
-    ui->slideshowRandomChk->setChecked(G::slideShowRandom);
+    slideShowDelay = mw->slideShowDelay;
+    slideShowRandom = mw->slideShowRandom;
+    ui->slideshowDelaySpinbox->setValue(slideShowDelay);
+    ui->slideshowRandomChk->setChecked(slideShowRandom);
     // cache
-    ui->cacheSizeSpinbox->setValue(G::cacheSizeMB);
-    ui->showCacheStatusChk->setChecked(G::showCacheStatus);
-    ui->cacheStatusWidthSpin->setValue(G::cacheStatusWidth);
-    switch (G::cacheWtAhead) {
+    cacheSizeMB = mw->cacheSizeMB;
+    isShowCacheStatus = mw->isShowCacheStatus;
+    cacheStatusWidth = mw->cacheStatusWidth;
+    cacheWtAhead = mw->cacheWtAhead;
+    ui->cacheSizeSpinbox->setValue(cacheSizeMB);
+    ui->showCacheStatusChk->setChecked(isShowCacheStatus);
+    ui->cacheStatusWidthSpin->setValue(cacheStatusWidth);
+    switch (cacheWtAhead) {
     case 5: ui->cache50AheadRadio->setChecked(true); break;
     case 6: ui->cache60AheadRadio->setChecked(true); break;
     case 7: ui->cache70AheadRadio->setChecked(true); break;
@@ -63,7 +69,7 @@ void Prefdlg::on_iconWidthSlider_valueChanged(int value)
             ui->iconHeightSlider->setValue(thumbWidth);
             thumbHeight = thumbWidth;
         }
-        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
                           thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
@@ -76,7 +82,7 @@ void Prefdlg::on_iconHeightSlider_valueChanged(int value)
             ui->iconWidthSlider->setValue(thumbHeight);
             thumbWidth = thumbHeight;
         }
-        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
                           thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
@@ -85,7 +91,7 @@ void Prefdlg::on_thumbSpacingSlider_valueChanged(int value)
 {
     if (okToUpdate) {
         thumbSpacing = ui->thumbSpacingSlider->value();
-        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
                           thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
@@ -94,7 +100,7 @@ void Prefdlg::on_iconPaddingSlider_valueChanged(int value)
 {
     if (okToUpdate) {
         thumbPadding = ui->iconPaddingSlider->value();
-        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
                           thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
@@ -104,7 +110,7 @@ void Prefdlg::on_showThumbLabelChk_clicked()
 {
     if (okToUpdate) {
         showThumbLabels = ui->showThumbLabelChk->isChecked();
-        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
                           thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
@@ -113,7 +119,7 @@ void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 {
     if (okToUpdate) {
         labelFontSize = ui->fontSizeSlider->value();
-        emit updateThumbs(thumbWidth, thumbHeight, thumbPadding,
+        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
                           thumbSpacing, labelFontSize, showThumbLabels);
     }
 }
@@ -122,16 +128,16 @@ void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 void Prefdlg::on_slideshowDelaySpinbox_valueChanged(int value)
 {
     if (okToUpdate) {
-        G::slideShowDelay = ui->slideshowDelaySpinbox->value();
-        qDebug() << "G::slideShowDelay =" << G::slideShowDelay;
+        slideShowDelay = ui->slideshowDelaySpinbox->value();
+        emit updateSlideShowParameters(slideShowDelay, slideShowRandom);
     }
 }
 
 void Prefdlg::on_slideshowRandomChk_clicked()
 {
     if (okToUpdate) {
-        G::slideShowRandom = ui->slideshowRandomChk->isChecked();
-        qDebug() << "G::slideShowRandom =" << G::slideShowRandom;
+        slideShowRandom = ui->slideshowRandomChk->isChecked();
+        emit updateSlideShowParameters(slideShowDelay, slideShowRandom);
     }
 }
 
@@ -139,51 +145,80 @@ void Prefdlg::on_slideshowRandomChk_clicked()
 void Prefdlg::on_cacheSizeSpinbox_valueChanged(int value)
 {
     if (okToUpdate) {
-        G::cacheSizeMB = value;
+        cacheSizeMB = value;
+        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
+            cacheWtAhead);
     }
 }
 
 void Prefdlg::on_showCacheStatusChk_clicked()
 {
     if (okToUpdate) {
-        G::showCacheStatus = ui->showCacheStatusChk->isChecked();
-        qDebug() << "G::showCacheStatus =" << G::showCacheStatus;
+        isShowCacheStatus = ui->showCacheStatusChk->isChecked();
+        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
+            cacheWtAhead);
     }
 }
 
 void Prefdlg::on_cacheStatusWidthSpin_valueChanged(int value)
 {
     if (okToUpdate) {
-        G::cacheStatusWidth = value;
+        cacheStatusWidth = value;
+        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
+            cacheWtAhead);
     }
 }
 
 void Prefdlg::on_cache50AheadRadio_clicked()
 {
-    if (okToUpdate) G::cacheWtAhead = 5;
+    if (okToUpdate) {
+        cacheWtAhead = 5;
+        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
+            cacheWtAhead);
+    }
 }
 
 void Prefdlg::on_cache60AheadRadio_clicked()
 {
-    if (okToUpdate) G::cacheWtAhead = 6;
+    if (okToUpdate) {
+        cacheWtAhead = 6;
+        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
+            cacheWtAhead);
+    }
 }
 
 void Prefdlg::on_cache70AheadRadio_clicked()
 {
-    if (okToUpdate) G::cacheWtAhead = 7;
+    if (okToUpdate) {
+        cacheWtAhead = 7;
+        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
+            cacheWtAhead);
+    }
 }
 
 void Prefdlg::on_cache80AheadRadio_clicked()
 {
-    if (okToUpdate) G::cacheWtAhead = 8;
+    if (okToUpdate) {
+        cacheWtAhead = 8;
+        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
+            cacheWtAhead);
+    }
 }
 
 void Prefdlg::on_cache90AheadRadio_clicked()
 {
-    if (okToUpdate) G::cacheWtAhead = 9;
+    if (okToUpdate) {
+        cacheWtAhead = 9;
+        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
+            cacheWtAhead);
+    }
 }
 
 void Prefdlg::on_cache100AheadRadio_clicked()
 {
-    if (okToUpdate) G::cacheWtAhead = 10;
+    if (okToUpdate) {
+        cacheWtAhead = 10;
+        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
+            cacheWtAhead);
+    }
 }

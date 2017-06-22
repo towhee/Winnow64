@@ -114,7 +114,7 @@ void FSTree::setModelFlags()
     #endif
     }
 	fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot);
-	if (G::showHiddenFiles)
-		fsModel->setFilter(fsModel->filter() | QDir::Hidden);
+//	if (G::showHiddenFiles)
+//		fsModel->setFilter(fsModel->filter() | QDir::Hidden);
 }
 

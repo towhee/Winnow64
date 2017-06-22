@@ -474,7 +474,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 
 	// Image Info
 	imageInfoCb = new QCheckBox(tr("Show image file name in viewer"), this);
-    imageInfoCb->setChecked(G::shootingInfoVisible);
+//    imageInfoCb->setChecked(G::shootingInfoVisible);
 
 	// Viewer options
 	QVBoxLayout *viewerOptsBox = new QVBoxLayout;
@@ -541,7 +541,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 	QLabel *thumbSpacingLab = new QLabel(tr("Add space between thumbnails:"));
 	thumbSpacingSpin = new QSpinBox;
 	thumbSpacingSpin->setRange(0, 15);
-	thumbSpacingSpin->setValue(G::thumbSpacing);
+//	thumbSpacingSpin->setValue(G::thumbSpacing);
 	QHBoxLayout *thumbSpacingHbox = new QHBoxLayout;
 	thumbSpacingHbox->addWidget(thumbSpacingLab);
 	thumbSpacingHbox->addWidget(thumbSpacingSpin);
@@ -579,7 +579,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 	QLabel *slideDelayLab = new QLabel(tr("Delay between slides in seconds:"));
 	slideDelaySpin = new QSpinBox;
 	slideDelaySpin->setRange(1, 3600);
-	slideDelaySpin->setValue(G::slideShowDelay);
+//	slideDelaySpin->setValue(G::slideShowDelay);
 	QHBoxLayout *slideDelayHbox = new QHBoxLayout;
 	slideDelayHbox->addWidget(slideDelayLab);
 	slideDelayHbox->addWidget(slideDelaySpin);
@@ -587,7 +587,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 
 	// Slide show random
 	slideRandomCb = new QCheckBox(tr("Show random images"), this);
-	slideRandomCb->setChecked(G::slideShowRandom);
+//	slideRandomCb->setChecked(G::slideShowRandom);
 
 	// Slide show options
 	QVBoxLayout *slideShowVbox = new QVBoxLayout;

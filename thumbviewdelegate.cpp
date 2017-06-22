@@ -14,6 +14,7 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     qDebug() << "ThumbViewDelegate::setThumbDimensions";
     #endif
     }
+    delegateShowThumbLabels = showThumbLabels;
     iconPadding = thumbPadding;
     font = QApplication::font();
     font.setPixelSize(labelFontSize);
@@ -93,7 +94,7 @@ void ThumbViewDelegate::paint(
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->setRenderHint(QPainter::TextAntialiasing, true);
 
-    if (G::showThumbLabels) {
+    if (delegateShowThumbLabels) {
         painter->setFont(font);
         painter->drawText(textRect, Qt::AlignHCenter, fName);
     }

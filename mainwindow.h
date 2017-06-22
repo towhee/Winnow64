@@ -33,18 +33,25 @@ public:
 
     int copyCutCount;   // req'd?
 
-    // persistant data test
-    int thumbWidth;
-    int thumbHeight;
+    // persistant data
+    // preferences: files
+//    bool includeSubFolders;   // use action
+//    bool isShowHiddenFiles;     // needed?
+    bool rememberLastDir;
+    QString lastDir;
 
-    struct prefData {
-        int thumbWidth;
-        int thumbHeight;
-        int thumbSpacing;
-        int thumbPadding;
-        int labelFontSize;
-        bool showThumbLabels;
-    } pref;
+    // preferences: slideshow
+    int slideShowDelay;
+    bool slideShowRandom;
+
+    // preferences: cache
+    int cacheSizeMB;
+    bool isShowCacheStatus;
+    int cacheStatusWidth;
+    int cacheWtAhead;
+
+//    bool shootingInfoVisible;   // use action
+    bool isIconView;            // use action
 
     struct workspaceData {
         QString accelNum;       // for accelerator
@@ -69,6 +76,7 @@ public:
         int thumbHeight;
         int labelFontSize;
         bool showThumbLabels;
+        bool isImageInfoVisible;
     };
 
     workspaceData ws;    // should this be a pointer?
@@ -125,8 +133,10 @@ private slots:
     void togglePick();
     void updatePick();
     void toggleFilterPick();
+    void setSlideShowParameters(int delay, bool isRandom);
     void slideShow();
     void slideShowHandler();
+    void setCacheParameters(int size, bool show, int width, int wtAhead);
     void loadNextImage();
     void loadPrevImage();
     void loadUpImage();
@@ -146,7 +156,7 @@ private slots:
 //    void setDocksVisibility(bool visible);
 
     void showHiddenFiles();
-    void toggleLabels();
+    void setThumbLabels();
     void chooseExternalApp();
     void updateExternalApps();
     void runExternalApp();

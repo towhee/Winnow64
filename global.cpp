@@ -10,9 +10,10 @@ namespace G
     QSet<QString> bookmarkPaths;
 
     // preferences: files
-    bool includeSubFolders;
-    bool showHiddenFiles;
-    bool rememberLastDir;
+//    bool includeSubFolders;
+//    bool showHiddenFiles;
+//    bool rememberLastDir;
+//    QString lastDir;
 
     // preferences: thumbs
 //    unsigned int thumbSpacing;
@@ -23,17 +24,14 @@ namespace G
 //    bool showThumbLabels;
 
     // preferences: slideshow
-    int slideShowDelay;
-    bool slideShowRandom;
+//    int slideShowDelay;
+//    bool slideShowRandom;
 
     // preferences: cache
-    int cacheSizeMB;
-    bool showCacheStatus;
-    int cacheStatusWidth;
-    int cacheWtAhead;
-
-    // persistant: files
-    QString lastDir;
+//    int cacheSizeMB;
+//    bool showCacheStatus;
+//    int cacheStatusWidth;
+//    int cacheWtAhead;
 
     bool shootingInfoVisible;
     bool isIconView;

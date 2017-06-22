@@ -463,7 +463,8 @@ int ImageCache::pxEnd(int key)
     return qRound((float)cache.pxUnitWidth * (key+1));
 }
 
-void ImageCache::initImageCache(QFileInfoList &imageList)
+void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
+     bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead)
 {
     {
     #ifdef ISDEBUG
@@ -486,11 +487,12 @@ void ImageCache::initImageCache(QFileInfoList &imageList)
     // the cache defaults to the first image and a forward selection direction
     cache.isForward = true;
     // the amount of memory to allocate to the cache
-    cache.maxMB = G::cacheSizeMB;
-    cache.wtAhead = G::cacheWtAhead;
+    cache.maxMB = cacheSizeMB;
+    cache.isShowCacheStatus = isShowCacheStatus;
+    cache.wtAhead = cacheWtAhead;
     // the width of the status progress bar representing all the images
     // to be cached
-    cache.pxTotWidth = G::cacheStatusWidth;
+    cache.pxTotWidth = cacheStatusWidth;
     // the status bar width of a single image
     cache.pxUnitWidth = (float)cache.pxTotWidth/(imageList.size());
     cache.totFiles = imageList.size();

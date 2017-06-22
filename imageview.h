@@ -12,7 +12,8 @@ class ImageView : public QWidget
     Q_OBJECT
 
 public:
-    ImageView(QWidget *parent, Metadata *metadata, ImageCache *imageCacheThread);
+    ImageView(QWidget *parent, Metadata *metadata, ImageCache *imageCacheThread,
+              bool isShootingInfoVisible);
 
     QScrollArea *scrlArea;
     QLabel *infoLabel;
@@ -96,6 +97,7 @@ private:
     pt mouse;
 
     QString currentImagePath;
+    bool shootingInfoVisible;
 
     bool cursorIsHidden;        // use for slideshow and full screen - review rgh
     bool moveImageLocked;       // control when con drag image around

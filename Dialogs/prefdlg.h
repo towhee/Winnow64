@@ -17,8 +17,11 @@ public:
     ~Prefdlg();
 
 signals:
-    void updateThumbs(int thumbWidth, int thumbHeight, int thumbSpacing,
+    void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
             int thumbPadding, int labelFontSize, bool showThumbLabels);
+    void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
+    void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
+            int cacheStatusWidth, int cacheWtAhead);
 
 private slots:
     // thumbs
@@ -54,6 +57,15 @@ private:
     int thumbPadding;
     int labelFontSize;
     bool showThumbLabels;
+
+    int slideShowDelay;
+    bool slideShowRandom;
+
+    int cacheSizeMB;
+    bool isShowCacheStatus;
+    int cacheStatusWidth;
+    int cacheWtAhead;
+
 
 };
 

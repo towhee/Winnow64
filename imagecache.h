@@ -20,7 +20,8 @@ public:
     ImageCache(QObject *parent, Metadata *metadata);
     ~ImageCache();
 
-    void initImageCache(QFileInfoList &imageList);
+    void initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
+             bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead);
     void updateImageCache(QFileInfoList &imageList, QString  &currentImageFullPath);
     void stopImageCache();
     QHash<QString, QImage> imCache;
@@ -59,7 +60,7 @@ private:
         uint prevKey;               // used to establish directionof travel
         QString dir;                // compare to input to see if different
         uint toCacheKey;            // next file to cache
-        uint toDecacheKey;           // next file to remove fromc ache
+        uint toDecacheKey;          // next file to remove fromc ache
         bool isForward;             // direction of travel in folder
         float wtAhead;              // ratio cache ahead vs behind
         int totFiles;               // number of images available
@@ -70,6 +71,7 @@ private:
         int targetLast;             // end of the target range to cache
         int pxTotWidth;             // width in pixels of graphic in statusbar
         float pxUnitWidth;          // width of one file on graphic in statusbar
+        bool isShowCacheStatus;     // show in app status bar
     } cache;
 
     QList<uint>toCache;

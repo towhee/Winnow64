@@ -21,9 +21,10 @@ namespace G
     extern QSet<QString> bookmarkPaths;
 
     // preferences: files
-    extern bool includeSubFolders;
-    extern bool showHiddenFiles;
-    extern bool rememberLastDir;
+//    extern bool includeSubFolders;
+//    extern bool showHiddenFiles;
+//    extern bool rememberLastDir;
+//    extern QString lastDir;
 
     // preferences: thumbs
 //    extern unsigned int thumbSpacing;
@@ -34,17 +35,14 @@ namespace G
 //    extern bool showThumbLabels;
 
     // preferences: slideshow
-    extern int slideShowDelay;
-    extern bool slideShowRandom;
+//    extern int slideShowDelay;
+//    extern bool slideShowRandom;
 
     // preferences: cache
-    extern int cacheSizeMB;
-    extern bool showCacheStatus;
-    extern int cacheStatusWidth;
-    extern int cacheWtAhead;
-
-    // persistant: files
-    extern QString lastDir;
+//    extern int cacheSizeMB;
+//    extern bool showCacheStatus;
+//    extern int cacheStatusWidth;
+//    extern int cacheWtAhead;
 
     extern bool shootingInfoVisible;
     extern bool isIconView;
@@ -66,7 +64,7 @@ namespace G
 }
 
 
-#define ISDEBUG        // Uncomment this line to show debugging output
+//#define ISDEBUG        // Uncomment this line to show debugging output
 
 #endif // GLOBAL_H
 

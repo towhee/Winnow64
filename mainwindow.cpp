@@ -187,7 +187,7 @@ void MW::folderSelectionChange()
     // need to gather directory file info first (except icon/thumb) which is
     // loaded by loadThumbCache.  If no images in new folder then cleanup and
     // exit.
-    if (!thumbView->load()) {
+    if (!thumbView->load(subFoldersAction->isChecked())) {
         updateStatus("No images in this folder");
         infoView->clearInfo();
         imageView->clear();
@@ -273,7 +273,8 @@ void MW::loadImageCache()
 
     QString fPath = indexesList.first().data(thumbView->FileNameRole).toString();
     // imageChacheThread checks if already running and restarts
-    imageCacheThread->initImageCache(thumbView->thumbFileInfoList);
+    imageCacheThread->initImageCache(thumbView->thumbFileInfoList, cacheSizeMB,
+        isShowCacheStatus, cacheStatusWidth, cacheWtAhead);
     imageCacheThread->updateImageCache(thumbView->
         thumbFileInfoList, fPath);
 }
@@ -535,7 +536,7 @@ void MW::createActions()
     infoVisibleAction = new QAction(tr("Shooting Info"), this);
     infoVisibleAction->setObjectName("toggleInfo");
     infoVisibleAction->setCheckable(true);
-    infoVisibleAction->setChecked(G::shootingInfoVisible);
+//    infoVisibleAction->setChecked(shootingInfoVisible);
     connect(infoVisibleAction, SIGNAL(triggered()), this, SLOT(setShootingInfo()));
 
     asListAction = new QAction(tr("As list"), this);
@@ -568,8 +569,8 @@ void MW::createActions()
     showThumbLabelsAction = new QAction(tr("Thumb labels"), this);
     showThumbLabelsAction->setObjectName("showLabels");
     showThumbLabelsAction->setCheckable(true);
-    showThumbLabelsAction->setChecked(G::showThumbLabels);
-    connect(showThumbLabelsAction, SIGNAL(triggered()), this, SLOT(toggleLabels()));
+    showThumbLabelsAction->setChecked(thumbView->showThumbLabels);
+    connect(showThumbLabelsAction, SIGNAL(triggered()), this, SLOT(setThumbLabels()));
     showThumbLabelsAction->setEnabled(true);
 
     reverseSortAction = new QAction(tr("Reverse order"), this);
@@ -755,6 +756,7 @@ void MW::createMenus()
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
     openWithMenu->addAction(newAppAction);
     openWithMenu->addAction(deleteAppAction);
+    fileMenu->addSeparator();
     fileMenu->addAction(revealFileAction);
     fileMenu->addAction(subFoldersAction);
     fileMenu->addAction(addBookmarkAction);
@@ -1054,7 +1056,7 @@ void MW:: createImageView()
     #endif
     }
     imageCacheThread = new ImageCache(this, metadata);
-    imageView = new ImageView(this, metadata, imageCacheThread);
+    imageView = new ImageView(this, metadata, imageCacheThread, infoVisibleAction->isChecked());
 //    connect(copyImageAction, SIGNAL(triggered()), imageView, SLOT(copyImage()));
 //    connect(pasteImageAction, SIGNAL(triggered()), imageView, SLOT(pasteImage()));
     connect(metadataCacheThread, SIGNAL(updateIsRunning(bool)),
@@ -1114,7 +1116,13 @@ void MW::createStatusBar()
     statusBar()->addWidget(stateLabel);
 }
 
-
+void MW::setCacheParameters(int size, bool show, int width, int wtAhead)
+{
+    cacheSizeMB = size;
+    isShowCacheStatus = show;
+    cacheStatusWidth = width;
+    cacheWtAhead = wtAhead;
+}
 
 void MW::updateStatus(QString s)
 {
@@ -1268,14 +1276,14 @@ void MW::sortThumbnails()
 //    refreshThumbs(false);
 }
 
-void MW::setIncludeSubFolders()
+void MW::setIncludeSubFolders() // rgh not req'd
 {
     {
     #ifdef ISDEBUG
     qDebug() << "MW::setIncludeSubFolders";
     #endif
     }
-    G::includeSubFolders = subFoldersAction->isChecked();
+//    G::includeSubFolders = subFoldersAction->isChecked();
 }
 
 void MW::showHiddenFiles()
@@ -1288,14 +1296,14 @@ void MW::showHiddenFiles()
     fsTree->setModelFlags();
 }
 
-void MW::toggleLabels()
+void MW::setThumbLabels()   // move to thumbView
 {
     {
     #ifdef ISDEBUG
     qDebug() << "MW::showLabels";
     #endif
     }
-    G::showThumbLabels = showThumbLabelsAction->isChecked();
+//    G::showThumbLabels = showThumbLabelsAction->isChecked();
 }
 
 /* WORKSPACES
@@ -1404,6 +1412,7 @@ workspace with a matching name to the action is used.
             favDockLockAction->setChecked(ws.isFavDockLocked);
             metadataDockLockAction->setChecked(ws.isMetadataDockLocked);
             thumbDockLockAction->setChecked( ws.isThumbDockLocked);
+            infoVisibleAction->setChecked(ws.isImageInfoVisible);
             updateState();
             thumbView->thumbSpacing = ws.thumbSpacing;
             thumbView->thumbPadding = ws.thumbPadding;
@@ -1578,6 +1587,7 @@ void MW::populateWorkspace(int n, QString name)
     (*workspaces)[n].thumbHeight = thumbView->thumbHeight;
     (*workspaces)[n].labelFontSize = thumbView->labelFontSize;
     (*workspaces)[n].showThumbLabels = thumbView->showThumbLabels;
+    (*workspaces)[n].isImageInfoVisible = infoVisibleAction->isChecked();
 }
 
 void MW::reportWorkspace(int n)
@@ -1603,7 +1613,8 @@ void MW::reportWorkspace(int n)
              << "\nthumbWidth" << ws.thumbWidth
              << "\nthumbHeight" << ws.thumbHeight
              << "\nlabelFontSize" << ws.labelFontSize
-             << "\nshowThumbLabels" << ws.showThumbLabels;
+             << "\nshowThumbLabels" << ws.showThumbLabels
+             << "\nshowShootingInfo" << ws.isImageInfoVisible;
 }
 
 
@@ -1787,17 +1798,22 @@ void MW::chooseExternalApp()
 
 void MW::preferences()
 {
+/*
+
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::preferences";
     #endif
     }
-//    pref.thumbWidth = thumbView->thumbWidth;
     Prefdlg *prefdlg = new Prefdlg(this);
-    connect(prefdlg, SIGNAL(updateThumbs(int, int, int, int, int, bool)),
+    connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool)),
         thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
+    connect(prefdlg, SIGNAL(updateSlideShowParameters(int,bool)),
+            this, SLOT(setSlideShowParameters(int,bool)));
+    connect(prefdlg, SIGNAL(updateCacheParameters(int,bool,int,int)),
+            this, SLOT(setCacheParameters(int,bool,int,int)));
     prefdlg->exec();
-    qDebug() << "thumbWidth" << thumbWidth;
 }
 
 void MW::oldPreferences()
@@ -2013,8 +2029,10 @@ void MW::writeSettings()
     G::setting->setValue("Geometry", saveGeometry());
     G::setting->setValue("WindowState", saveState());
     // files
-    G::setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
-    G::setting->setValue("lastDir", G::lastDir);
+//    G::setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
+    G::setting->setValue("rememberLastDir", rememberLastDir);
+    G::setting->setValue("lastDir", lastDir);
+    G::setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     // thumbs
     G::setting->setValue("thumbSpacing", thumbView->thumbSpacing);
     G::setting->setValue("thumbPadding", thumbView->thumbPadding);
@@ -2023,13 +2041,13 @@ void MW::writeSettings()
     G::setting->setValue("labelFontSize", thumbView->labelFontSize);
     G::setting->setValue("showLabels", (bool)showThumbLabelsAction->isChecked());
     // slideshow
-    G::setting->setValue("slideShowDelay", (int)G::slideShowDelay);
-    G::setting->setValue("slideShowRandom", (bool)G::slideShowRandom);
+    G::setting->setValue("slideShowDelay", (int)slideShowDelay);
+    G::setting->setValue("slideShowRandom", (bool)slideShowRandom);
     // cache
-    G::setting->setValue("cacheSizeMB", (int)G::cacheSizeMB);
-    G::setting->setValue("showCacheStatus", (bool)G::showCacheStatus);
-    G::setting->setValue("cacheStatusWidth", (int)G::cacheStatusWidth);
-    G::setting->setValue("cacheWtAhead", (int)G::cacheWtAhead);
+    G::setting->setValue("cacheSizeMB", (int)cacheSizeMB);
+    G::setting->setValue("isShowCacheStatus", (bool)isShowCacheStatus);
+    G::setting->setValue("cacheStatusWidth", (int)cacheStatusWidth);
+    G::setting->setValue("cacheWtAhead", (int)cacheWtAhead);
     // state
     G::setting->setValue("isWindowTitleBarVisible", (bool)windowsTitleBarVisibleAction->isChecked());
     G::setting->setValue("isMenuBarVisible", (bool)menuBarVisibleAction->isChecked());
@@ -2043,10 +2061,9 @@ void MW::writeSettings()
     G::setting->setValue("isMetadaDockLocked", (bool)metadataDockLockAction->isChecked());
     G::setting->setValue("isThumbDockLocked", (bool)thumbDockLockAction->isChecked());
 //    GData::setting->setValue("LockDocks", (bool)GData::isLockAllDocks);
-    G::setting->setValue("imageInfoVisible", (bool)infoVisibleAction->isChecked());
+    G::setting->setValue("isImageInfoVisible", (bool)infoVisibleAction->isChecked());
 
     // not req'd
-    //    GData::appSettings->setValue("lastDir", GData::startupDir == GData::rememberLastDir?
     G::setting->setValue("shouldMaximize", (bool)isMaximized());
     G::setting->setValue("thumbsSortFlags", (int)thumbView->thumbsSortFlags);
     G::setting->setValue("thumbsZoomVal", (int)thumbView->thumbSize);
@@ -2106,6 +2123,7 @@ void MW::writeSettings()
         G::setting->setValue("thumbHeight", ws.thumbHeight);
         G::setting->setValue("labelFontSize", ws.labelFontSize);
         G::setting->setValue("showThumbLabels", ws.showThumbLabels);
+        G::setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
     }
     G::setting->endArray();
 }
@@ -2146,7 +2164,7 @@ void MW::loadSettings()
         G::setting->setValue("bmDockVisible", (bool)true);
         G::setting->setValue("iiDockVisible", (bool)true);
         G::setting->setValue("pvDockVisible", (bool)true);
-        G::setting->setValue("imageInfoVisible", (bool)true);
+        G::setting->setValue("isImageInfoVisible", (bool)true);
         G::setting->setValue("fsDockLocked", (bool)false);
         G::setting->setValue("bmDockLocked", (bool)false);
         G::setting->setValue("iiDockLocked", (bool)false);
@@ -2156,8 +2174,10 @@ void MW::loadSettings()
     }
 
     // files
-    G::showHiddenFiles = G::setting->value("showHiddenFiles").toBool();
-    G::lastDir = G::setting->value("lastDir").toString();
+//    G::showHiddenFiles = G::setting->value("showHiddenFiles").toBool();
+    subFoldersAction->setChecked(G::setting->value("includeSubfolders").toBool());
+    rememberLastDir = G::setting->value("rememberLastDir").toBool();
+    lastDir = G::setting->value("lastDir").toString();
     // thumbs
     thumbView->thumbSpacing = G::setting->value("thumbSpacing").toInt();
     thumbView->thumbPadding = G::setting->value("thumbPadding").toInt();
@@ -2166,13 +2186,13 @@ void MW::loadSettings()
     thumbView->labelFontSize = G::setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = G::setting->value("showThumbLabels").toBool();
     // slideshow
-    G::slideShowDelay = G::setting->value("slideShowDelay").toInt();
-    G::slideShowRandom = G::setting->value("slideShowRandom").toBool();
+    slideShowDelay = G::setting->value("slideShowDelay").toInt();
+    slideShowRandom = G::setting->value("slideShowRandom").toBool();
     // cache
-    G::cacheSizeMB = G::setting->value("cacheSizeMB").toInt();
-    G::showCacheStatus = G::setting->value("showCacheStatus").toBool();
-    G::cacheStatusWidth = G::setting->value("cacheStatusWidth").toInt();
-    G::cacheWtAhead = G::setting->value("cacheWtAhead").toInt();
+    cacheSizeMB = G::setting->value("cacheSizeMB").toInt();
+    isShowCacheStatus = G::setting->value("isShowCacheStatus").toBool();
+    cacheStatusWidth = G::setting->value("cacheStatusWidth").toInt();
+    cacheWtAhead = G::setting->value("cacheWtAhead").toInt();
 
     // load state
     shouldMaximize = G::setting->value("shouldMaximize").toBool();  // req'd? Only in MW
@@ -2192,7 +2212,7 @@ void MW::loadSettings()
     thumbDockLockAction->setChecked(G::setting->value("isThumbDockLocked").toBool());
 //    allDocksLockAction->setChecked(G::setting->value("LockDocks").toBool());
 
-    infoVisibleAction->setChecked(G::setting->value("imageInfoVisible").toBool());
+    infoVisibleAction->setChecked(G::setting->value("isImageInfoVisible").toBool());
     // not persistent
 //    GData::slideShowActive = false; // only used in MW
 
@@ -2237,6 +2257,7 @@ void MW::loadSettings()
         ws.thumbHeight = G::setting->value("thumbHeight").toInt();
         ws.labelFontSize = G::setting->value("labelFontSize").toInt();
         ws.showThumbLabels = G::setting->value("showThumbLabels").toBool();
+        ws.isImageInfoVisible = G::setting->value("isImageInfoVisible").toBool();
         workspaces->append(ws);
         workspaceActions.at(i)->setText(ws.name);
         workspaceActions.at(i)->setVisible(true);
@@ -2458,6 +2479,7 @@ void MW::updateState()
     setFavDockLockMode();
     setMetadataDockLockMode();
     setThumbDockLockMode();
+    setShootingInfo();
 }
 
 /*****************************************************************************************
@@ -2772,6 +2794,12 @@ void MW::copyPicks()
          "Oops", "There are no picks to copy.    ", QMessageBox::Ok);
 }
 
+void MW::setSlideShowParameters(int delay, bool isRandom)
+{
+    slideShowDelay = delay;
+    slideShowRandom = isRandom;
+}
+
 void MW::slideShow()
 {
     {
@@ -2809,7 +2837,7 @@ void MW::slideShow()
 
         SlideShowTimer = new QTimer(this);
         connect(SlideShowTimer, SIGNAL(timeout()), this, SLOT(slideShowHandler()));
-        SlideShowTimer->start(G::slideShowDelay * 1000);
+        SlideShowTimer->start(slideShowDelay * 1000);
 
         slideShowAction->setText(tr("Stop Slide Show"));
 //        imageView->setFeedback(tr("Slide show started"));

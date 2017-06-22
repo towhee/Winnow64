@@ -52,7 +52,7 @@ the view is as 100%, the same as the original image.
  */
 
 ImageView::ImageView(QWidget *parent, Metadata *metadata,
-                     ImageCache *imageCacheThread) : QWidget(parent)
+                     ImageCache *imageCacheThread, bool isShootingInfoVisible) : QWidget(parent)
 {
     {
     #ifdef ISDEBUG
@@ -64,6 +64,7 @@ ImageView::ImageView(QWidget *parent, Metadata *metadata,
     this->metadata = metadata;
     this->imageCacheThread = imageCacheThread;
 
+    shootingInfoVisible = isShootingInfoVisible;
     cursorIsHidden = false;
     moveImageLocked = false;
     imageLabel = new QLabel;
@@ -92,13 +93,13 @@ ImageView::ImageView(QWidget *parent, Metadata *metadata,
     this->setLayout(scrollLayout);
 
     infoDropShadow = new DropShadowLabel(this);
-    infoDropShadow->setVisible(G::shootingInfoVisible);
+    infoDropShadow->setVisible(shootingInfoVisible);
     infoDropShadow->setAttribute(Qt::WA_TranslucentBackground);
 
     infoLabel = new QLabel(this);
-    infoLabel->setVisible(G::shootingInfoVisible);
+    infoLabel->setVisible(shootingInfoVisible);
     infoLabelShadow = new QLabel(this);
-    infoLabelShadow->setVisible(G::shootingInfoVisible);
+    infoLabelShadow->setVisible(shootingInfoVisible);
     infoLabel->setAttribute(Qt::WA_TranslucentBackground);
     infoLabelShadow->setAttribute(Qt::WA_TranslucentBackground);
 

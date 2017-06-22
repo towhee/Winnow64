@@ -1,4 +1,5 @@
 To do:
+- slideshow
 - thumbs fit
 - goto next pick, previous pick not working
 - swap thumbs/viewer (see hideVieweer and showViewer)

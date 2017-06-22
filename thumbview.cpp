@@ -318,7 +318,7 @@ useful.
     return SelectedThumbsPaths;
 }
 
-bool ThumbView::load()
+bool ThumbView::load(bool includeSubfolders)
 {
 /* When a new folder is selected load it into the thumbView.  This clears the
 model and populates the QListView with all the cached thumbnail pixmaps from
@@ -339,7 +339,7 @@ thumbCache.
     if (!G::isIconView) return true;
 
     setWrapping(true);
-    if (G::includeSubFolders) {
+    if (includeSubfolders) {
         QDirIterator iterator(G::currentViewDir, QDirIterator::Subdirectories);
         while (iterator.hasNext()) {
             iterator.next();
@@ -367,7 +367,7 @@ void ThumbView::loadPrepare()
     qDebug() << "ThumbView::loadPrepare";
     #endif
     }
-    if (!G::isIconView) G::thumbHeight = 0;
+    if (!G::isIconView) thumbHeight = 0;
 
     fileFilters->clear();
     foreach (const QString &str, metadata->supportedFormats)
@@ -610,9 +610,9 @@ void ThumbView::wheelEvent(QWheelEvent *event)
     #endif
     }
     if (event->delta() < 0)
-        verticalScrollBar()->setValue(verticalScrollBar()->value() + G::thumbHeight);
+        verticalScrollBar()->setValue(verticalScrollBar()->value() + thumbHeight);
     else
-        verticalScrollBar()->setValue(verticalScrollBar()->value() - G::thumbHeight);
+        verticalScrollBar()->setValue(verticalScrollBar()->value() - thumbHeight);
 }
 
 void ThumbView::mousePressEvent(QMouseEvent *event)
