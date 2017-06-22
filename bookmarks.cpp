@@ -2,13 +2,14 @@
 
 #include "bookmarks.h"
 
-BookMarks::BookMarks(QWidget *parent) : QTreeWidget(parent)
+BookMarks::BookMarks(QWidget *parent, QSet<QString> bmPaths) : QTreeWidget(parent)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "BookMarks::BookMarks";
     #endif
     }
+    bookmarkPaths = bmPaths;
 	setAcceptDrops(true);
 	setDragEnabled(false);
 	setDragDropMode(QAbstractItemView::DropOnly);
@@ -33,7 +34,7 @@ void BookMarks::reloadBookmarks()
     #endif
     }
 	clear();
-	QSetIterator<QString> it(G::bookmarkPaths);
+    QSetIterator<QString> it(bookmarkPaths);
 	while (it.hasNext()) {
 		QString itemPath = it.next();
 	    QTreeWidgetItem *item = new QTreeWidgetItem(this);
@@ -62,7 +63,7 @@ void BookMarks::removeBookmark()
     #endif
     }
 	if (selectedItems().size() == 1) {
-		G::bookmarkPaths.remove(selectedItems().at(0)->toolTip(0));
+        bookmarkPaths.remove(selectedItems().at(0)->toolTip(0));
 		reloadBookmarks();
 	}
 }

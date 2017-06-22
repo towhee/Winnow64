@@ -11,8 +11,9 @@ class BookMarks : public QTreeWidget
 	Q_OBJECT
 
 public:
-	BookMarks(QWidget *parent);
+    BookMarks(QWidget *parent, QSet<QString> bmPaths);
 	void reloadBookmarks();
+    QSet<QString> bookmarkPaths;
 
 public slots:
 	void removeBookmark();

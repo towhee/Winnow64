@@ -15,10 +15,10 @@
 
 namespace G
 {
-    extern QSettings *setting;  // not req'd - move usage in thumbview to MW
-    extern QMap<QString, QAction *> actionKeys;
-    extern QMap<QString, QString> externalApps;
-    extern QSet<QString> bookmarkPaths;
+//    extern QSettings *setting;  // not req'd - move usage in thumbview to MW
+//    extern QMap<QString, QAction *> actionKeys;
+//    extern QMap<QString, QString> externalApps;
+//    extern QSet<QString> bookmarkPaths;
 
     // preferences: files
 //    extern bool includeSubFolders;
@@ -45,7 +45,7 @@ namespace G
 //    extern int cacheWtAhead;
 
 //    extern bool shootingInfoVisible;
-    extern bool isIconView;
+//    extern bool isIconView;
 
     // make persistent
 

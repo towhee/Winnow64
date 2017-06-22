@@ -21,7 +21,6 @@ HEADERS += \
     thumbview.h \
     thumbviewdelegate.h \
     thumbviewfilter.h \
-    Dialogs/dialogs.h \
     Dialogs/prefdlg.h \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
@@ -43,7 +42,6 @@ SOURCES += \
     thumbview.cpp \
     thumbviewdelegate.cpp \
     thumbviewfilter.cpp \
-    Dialogs/dialogs.cpp \
     Dialogs/prefdlg.cpp \
     Dialogs/workspacedlg.cpp \
     Dialogs/copypickdlg.cpp

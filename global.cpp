@@ -4,10 +4,10 @@
 
 namespace G
 {
-    QSettings *setting;
-    QMap<QString, QAction *> actionKeys;
-    QMap<QString, QString> externalApps;
-    QSet<QString> bookmarkPaths;
+//    QSettings *setting;
+//    QMap<QString, QAction *> actionKeys;
+//    QMap<QString, QString> externalApps;
+//    QSet<QString> bookmarkPaths;
 
     // preferences: files
 //    bool includeSubFolders;
@@ -34,7 +34,7 @@ namespace G
 //    int cacheWtAhead;
 
 //    bool shootingInfoVisible;
-    bool isIconView;
+//    bool isIconView;
 
     // not persistent
     bool isThreadTrackingOn;

@@ -91,6 +91,8 @@ public:
     bool isShowCacheStatus;
     int cacheStatusWidth;
     int cacheWtAhead;
+    
+    bool slideShowActiv
 
 protected:
     void closeEvent(QCloseEvent *event);

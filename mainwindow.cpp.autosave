@@ -1804,9 +1804,9 @@ void MW::chooseExternalApp()
     }
 //    AppMgmtDialog *dialog = new AppMgmtDialog(this);
 
-    if (G::slideShowActive)
-        slideShow();
-    imageView->setCursorHiding(false);
+//    if (G::slideShowActive)
+//        slideShow();
+//    imageView->setCursorHiding(false);
 
 //    dialog->exec();
     updateExternalApps();
