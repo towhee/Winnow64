@@ -13,7 +13,10 @@ WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList, QWidget *parent) :
 
     for (int i=0; i < wsList->count(); i++) {
         ui->workspaceCB->addItem(wsList->at(i));
+        qDebug() << "ui->workspaceCB i" << i
+                 << ui->workspaceCB->currentIndex();
     }
+    editMode = true;
 }
 
 WorkspaceDlg::~WorkspaceDlg()
@@ -29,9 +32,7 @@ void WorkspaceDlg::on_deleteBtn_clicked()
     #endif
     }
     int n = ui->workspaceCB->currentIndex();
-    QString name = ui->workspaceCB->itemText(n);
-    qDebug() << "WorkspaceDlg::on_deleteBtn_clicked  Item count" << ui->workspaceCB->count()
-             << "Current index" << n;;
+//    QString name = ui->workspaceCB->itemText(n);
     emit deleteWorkspace(n);
     ui->workspaceCB->removeItem(n);
 }
@@ -54,42 +55,17 @@ void WorkspaceDlg::clearStatus()
     ui->status->setText("");
 }
 
-void WorkspaceDlg::on_workspaceCB_activated(int idx)
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "WorkspaceDlg::on_workspaceCB_activated";
-    #endif
-    }
-    qDebug() << "on_workspaceCB_activated" << idx;
-//    currentName = name;
-    activatedIdx = idx;
-}
-
 void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "WorkspaceDlg::workspaceCB_editTextChanged";
+    qDebug() << "WorkspaceDlg::on_workspaceCB_editTextChanged";
     #endif
     }
-    bool isOkay = true;
-    // check for re-entry when editing text in combo
-    static int x = 0;
-    int n = ui->workspaceCB->currentIndex();
-    qDebug() << "WorkspaceDlg::workspaceCB_editTextChanged"
-             << "name =" << name << "currentName =" << currentName
-             << "x =" << x;
-    // n = current item, activatedIdx = prev item (activated event is called
-    // after editTextChanged event)
-    if (!(n == activatedIdx)) {
-        // New item triggered editTextChanged, ignore
-        x = 0;
-        return;
-    }
-    // edit text is happening
-    ui->workspaceCB->setStyleSheet("QComboBox {color:rgb(229,229,229);}");
-    if (x > 0) {
+    if (editMode) {
+        bool isOkay = true;
+        int n = ui->workspaceCB->currentIndex();
+        ui->workspaceCB->setStyleSheet("QComboBox {color:rgb(229,229,229);}");
         // make sure another workspace name is not being duplicated
         for (int i=0; i<ui->workspaceCB->count(); i++) {
             // ignore current item
@@ -103,6 +79,25 @@ void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
         if (isOkay) emit renameWorkspace(n, name);
         ui->workspaceCB->setItemText(ui->workspaceCB->currentIndex(), name);
     }
-    x++;
+    editMode = true;
 }
 
+void WorkspaceDlg::on_workspaceCB_highlighted(int index)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "WorkspaceDlg::on_workspaceCB_highlighted";
+    #endif
+    }
+    editMode = false;
+}
+
+void WorkspaceDlg::report(QString signalName)
+{
+    int n = ui->workspaceCB->currentIndex();
+    QString text = ui->workspaceCB->currentText();
+    qDebug() << signalName
+             << "currentIndex =" << n
+             << "editMode =" << editMode
+             << "text =" << text;
+}

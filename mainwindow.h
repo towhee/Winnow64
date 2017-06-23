@@ -92,6 +92,11 @@ public:
     int cacheStatusWidth;
     int cacheWtAhead;
 
+    QString currentViewDir;
+
+    bool isSlideShowActive;
+    bool copyOp;
+
 protected:
     void closeEvent(QCloseEvent *event);
 
@@ -445,6 +450,7 @@ private:
     void addBookmark(QString path);
     void copyMoveImages(bool move);
     void populateWorkspace(int n, QString name);
+    void syncWorkspaceMenu();
     void reportWorkspace(int n);
 
     //    void refreshThumbs(bool noScroll);

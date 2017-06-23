@@ -318,7 +318,7 @@ useful.
     return SelectedThumbsPaths;
 }
 
-bool ThumbView::load(bool includeSubfolders)
+bool ThumbView::load(QString &dir, bool includeSubfolders)
 {
 /* When a new folder is selected load it into the thumbView.  This clears the
 model and populates the QListView with all the cached thumbnail pixmaps from
@@ -329,6 +329,8 @@ thumbCache.
     qDebug() << "ThumbView::load";
     #endif
     }
+    currentViewDir = dir;
+    qDebug() << "currentViewDir" << currentViewDir;
     if (!pickFilter) {
         loadPrepare();
         // exit if no images, otherwise get thumb info
@@ -340,7 +342,7 @@ thumbCache.
 
     setWrapping(true);
     if (includeSubfolders) {
-        QDirIterator iterator(G::currentViewDir, QDirIterator::Subdirectories);
+        QDirIterator iterator(currentViewDir, QDirIterator::Subdirectories);
         while (iterator.hasNext()) {
             iterator.next();
             if (iterator.fileInfo().isDir() && iterator.fileName() != "." && iterator.fileName() != "..") {
@@ -378,7 +380,7 @@ void ThumbView::loadPrepare()
 //		thumbsDir->setFilter(thumbsDir->filter() | QDir::Hidden);
 //	}
 
-    thumbsDir->setPath(G::currentViewDir);
+    thumbsDir->setPath(currentViewDir);
 
 //    QDir::SortFlags tempThumbsSortFlags = thumbsSortFlags;
 //    if (tempThumbsSortFlags & QDir::Size || tempThumbsSortFlags & QDir::Time) {

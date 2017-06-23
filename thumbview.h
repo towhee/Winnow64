@@ -29,7 +29,7 @@ public:
     int labelFontSize;
     bool showThumbLabels;
 
-    bool load(bool inclSubfolders);
+    bool load(QString &dir, bool inclSubfolders);
 
     void selectThumb(QModelIndex idx);
     void selectThumb(int row);
@@ -75,6 +75,7 @@ private:
     int getLastRow();                           //not used? Seems handy
     int getRandomRow();                         //not used? Seems handy
 
+    QString currentViewDir;
     QDir *thumbsDir;
     QStringList *fileFilters;
     QList<QStandardItem*> *thumbList;

@@ -26,13 +26,13 @@ private slots:
     void on_deleteBtn_clicked();
     void on_reassignBtn_clicked();
     void on_workspaceCB_editTextChanged(const QString &name);
-    void on_workspaceCB_activated(int idx);
     void clearStatus();
+    void on_workspaceCB_highlighted(int index);
 
 private:
     QWidget *mainWindow;
-    QString currentName;
-    int activatedIdx;
+    bool editMode;
+    void report(QString signalName);
 };
 
 #endif // WORKSPACEDLG_H

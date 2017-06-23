@@ -51,7 +51,7 @@ FORMS += \
     workspacedlg.ui
 
 RESOURCES += winnow.qrc
-ICON =
+ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
 icon.files = images/winnow.png

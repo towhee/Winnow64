@@ -177,8 +177,8 @@ void MW::folderSelectionChange()
     }
 
     // ignore if present folder is rechosen
-    if (dirPath == G::currentViewDir) return;
-    else G::currentViewDir = dirPath;
+    if (dirPath == currentViewDir) return;
+    else currentViewDir = dirPath;
 
     // We do not want to update the imageCache while metadata is still being
     // loaded.  The imageCache update is triggered in fileSelectionChange,
@@ -188,7 +188,7 @@ void MW::folderSelectionChange()
     // need to gather directory file info first (except icon/thumb) which is
     // loaded by loadThumbCache.  If no images in new folder then cleanup and
     // exit.
-    if (!thumbView->load(subFoldersAction->isChecked())) {
+    if (!thumbView->load(currentViewDir, subFoldersAction->isChecked())) {
         updateStatus("No images in this folder");
         infoView->clearInfo();
         imageView->clear();
@@ -311,9 +311,9 @@ void MW::checkDirState(const QModelIndex &, int, int)
 //        thumbView->abort();
 //    }
 
-    if (!QDir().exists(G::currentViewDir))
+    if (!QDir().exists(currentViewDir))
     {
-        G::currentViewDir = "";
+        currentViewDir = "";
 //		QTimer::singleShot(0, this, SLOT(reloadThumbsSlot()));
 //        reloadThumbsSlot();
     }
@@ -1489,6 +1489,11 @@ void MW::deleteWorkspace(int n)
 
     // sync menus by rebuilding.  Tried to use indexes but had problems so
     // resorted to brute force solution
+    syncWorkspaceMenu();
+}
+
+void MW::syncWorkspaceMenu()
+{
     int count = workspaces->count();
     for (int i=0; i<10; i++) {
         if (i < count) {
@@ -1500,6 +1505,7 @@ void MW::deleteWorkspace(int n)
             workspaceActions.at(i)->setText("Future workspace"  + QString::number(i));
             workspaceActions.at(i)->setVisible(false);
         }
+        qDebug() << "sync menu" << i << workspaceActions.at(i)->text();
     }
 }
 
@@ -1576,11 +1582,14 @@ void MW::renameWorkspace(int n, QString name)
     qDebug() << "MW::renameWorkspace";
     #endif
     }
-    qDebug() << "MW::renameWorkspace";
+    qDebug() << "MW::renameWorkspace" << n << name;
+    // do not rename if duplicate
     if (workspaces->count() > 0) {
+        for (int i=1; i<workspaces->count(); i++) {
+            if (workspaces->at(i).name == name) return;
+        }
         (*workspaces)[n].name = name;
-        qDebug() << "Rename workspace" << n << workspaces->at(n).name;
-        workspaceActions.at(n)->setText(name);
+        syncWorkspaceMenu();
     }
 }
 
@@ -1804,9 +1813,9 @@ void MW::chooseExternalApp()
     }
 //    AppMgmtDialog *dialog = new AppMgmtDialog(this);
 
-    if (G::slideShowActive)
-        slideShow();
-    imageView->setCursorHiding(false);
+//    if (isSlideShowActive)
+//        slideShow();
+//    imageView->setCursorHiding(false);
 
 //    dialog->exec();
     updateExternalApps();
@@ -2824,8 +2833,8 @@ void MW::slideShow()
     qDebug() << "MW::slideShow";
     #endif
     }
-    if (G::slideShowActive) {
-        G::slideShowActive = false;
+    if (isSlideShowActive) {
+        isSlideShowActive = false;
         slideShowAction->setText(tr("Slide Show"));
 //        imageView->setFeedback(tr("Slide show stopped"));
 
@@ -2850,7 +2859,7 @@ void MW::slideShow()
 //            showViewer();
 //        }
 
-        G::slideShowActive = true;
+        isSlideShowActive = true;
 
         SlideShowTimer = new QTimer(this);
         connect(SlideShowTimer, SIGNAL(timeout()), this, SLOT(slideShowHandler()));
@@ -2975,7 +2984,7 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
     #endif
     }
     QApplication::restoreOverrideCursor();
-    G::copyOp = (keyMods == Qt::ControlModifier);
+    copyOp = (keyMods == Qt::ControlModifier);
     QMessageBox msgBox;
     QString destDir;
 
@@ -2999,7 +3008,7 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
         return;
     }
 
-    if (destDir == 	G::currentViewDir) {
+    if (destDir == 	currentViewDir) {
         msgBox.critical(this, tr("Error"), tr("Destination folder is same as source."));
         return;
     }
@@ -3056,7 +3065,7 @@ void MW::selectCurrentViewDir()
     #endif
     }
 
-    QModelIndex idx = fsTree->fsModel->index(G::currentViewDir);
+    QModelIndex idx = fsTree->fsModel->index(currentViewDir);
     if (idx.isValid()){
         fsTree->expand(idx);
         fsTree->setCurrentIndex(idx);
