@@ -130,6 +130,9 @@ private slots:
     void oldPreferences();
     void toggleFullScreen();
     void escapeFullScreen();
+    void compareView();
+    void loupeView();
+    void gridView();
 //    void updateActions();
     void updateStatus(QString s1);
     void updateMetadataThreadRunStatus(bool isRun);
@@ -299,14 +302,18 @@ private:
     QAction *randomImageAction; // req'd by slideshow
     QAction *fullScreenAction;
     QAction *escapeFullScreenAction;
+    QAction *infoVisibleAction;
+    QActionGroup *centralGroupAction;
+    QAction *asGridAction;
+    QAction *asLoupeAction;
+    QAction *asCompareAction;
+    QActionGroup *iconGroupAction;
+    QAction *asListAction;
+    QAction *asThumbsAction;
     QAction *zoomInAction;
     QAction *zoomOutAction;
     QAction *zoomOrigAction;
     QAction *zoomFitAction;
-    QAction *infoVisibleAction;
-    QActionGroup *iconGroupAction;
-    QAction *asListAction;
-    QAction *asThumbsAction;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
     QAction *thumbsFitAction;   // used?? rgh

@@ -47,6 +47,7 @@ public:
     bool isPick();
     QStringList getSelectedThumbsList();        //used by tags, might be useful
     QString getCurrentFilename();       //not used, but might be handy
+    void setThumbParameters();
 
     QStandardItemModel *thumbViewModel;
     QSortFilterProxyModel *thumbViewFilter;
@@ -66,7 +67,6 @@ protected:
 private:
     void loadPrepare();
     bool initThumbs();
-    void setThumbParameters();
     bool isSelectedItem();          // call before getting row or index
     void reportThumb();                             //debugging thumb roles
 

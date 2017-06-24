@@ -518,28 +518,33 @@ void MW::createActions()
     escapeFullScreenAction->setObjectName("escapeFullScreenAct");
     connect(escapeFullScreenAction, SIGNAL(triggered()), this, SLOT(escapeFullScreen()));
 
-    zoomOutAction = new QAction(tr("Zoom Out"), this);
-    zoomOutAction->setObjectName("zoomOut");
-    connect(zoomOutAction, SIGNAL(triggered()), this, SLOT(zoomOut()));
-
-    zoomInAction = new QAction(tr("Zoom In"), this);
-    zoomInAction->setObjectName("zoomIn");
-    connect(zoomInAction, SIGNAL(triggered()), this, SLOT(zoomIn()));
-
-    zoomFitAction = new QAction(tr("Reset Zoom"), this);
-    zoomFitAction->setObjectName("resetZoom");
-    connect(zoomFitAction, SIGNAL(triggered()), this, SLOT(zoomToFit()));
-
-    zoomOrigAction = new QAction(tr("Original Size"), this);
-    zoomOrigAction->setObjectName("origZoom");
-    connect(zoomOrigAction, SIGNAL(triggered()), this, SLOT(zoom100()));
-
     infoVisibleAction = new QAction(tr("Shooting Info"), this);
     infoVisibleAction->setObjectName("toggleInfo");
     infoVisibleAction->setCheckable(true);
     infoVisibleAction->setChecked(mwd.isImageInfoVisible);  // from QSettings
     connect(infoVisibleAction, SIGNAL(triggered()), this, SLOT(setShootingInfo()));
 
+
+    asGridAction = new QAction(tr("Grid"), this);
+    asGridAction->setCheckable(true);
+//    asGridAction->setChecked(!mwd.isIconView);
+    connect(asGridAction, SIGNAL(triggered()), this, SLOT(gridView()));
+
+    asLoupeAction = new QAction(tr("Loupe"), this);
+    asLoupeAction->setCheckable(true);
+    asLoupeAction->setChecked(true);
+    connect(asLoupeAction, SIGNAL(triggered()), this, SLOT(loupeView()));
+
+    asCompareAction = new QAction(tr("Compare"), this);
+    asCompareAction->setCheckable(true);
+    asCompareAction->setChecked(!mwd.isIconView);
+//    connect(asCompareAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
+
+    centralGroupAction = new QActionGroup(this);
+    centralGroupAction->setExclusive(true);
+    centralGroupAction->addAction(asLoupeAction);
+    centralGroupAction->addAction(asGridAction);
+    centralGroupAction->addAction(asCompareAction);
 
     asListAction = new QAction(tr("As list"), this);
     asListAction->setCheckable(true);
@@ -555,6 +560,22 @@ void MW::createActions()
     iconGroupAction->setExclusive(true);
     iconGroupAction->addAction(asListAction);
     iconGroupAction->addAction(asThumbsAction);
+
+    zoomOutAction = new QAction(tr("Zoom Out"), this);
+    zoomOutAction->setObjectName("zoomOut");
+    connect(zoomOutAction, SIGNAL(triggered()), this, SLOT(zoomOut()));
+
+    zoomInAction = new QAction(tr("Zoom In"), this);
+    zoomInAction->setObjectName("zoomIn");
+    connect(zoomInAction, SIGNAL(triggered()), this, SLOT(zoomIn()));
+
+    zoomFitAction = new QAction(tr("Reset Zoom"), this);
+    zoomFitAction->setObjectName("resetZoom");
+    connect(zoomFitAction, SIGNAL(triggered()), this, SLOT(zoomToFit()));
+
+    zoomOrigAction = new QAction(tr("Original Size"), this);
+    zoomOrigAction->setObjectName("origZoom");
+    connect(zoomOrigAction, SIGNAL(triggered()), this, SLOT(zoom100()));
 
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
@@ -812,16 +833,19 @@ void MW::createMenus()
     viewMenu->addAction(fullScreenAction);
     viewMenu->addAction(escapeFullScreenAction);
     viewMenu->addSeparator();
+    viewMenu->addAction(infoVisibleAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(asLoupeAction);
+    viewMenu->addAction(asGridAction);
+    viewMenu->addAction(asCompareAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(asListAction);
+    viewMenu->addAction(asThumbsAction);
+    viewMenu->addSeparator();
     viewMenu->addAction(zoomInAction);
     viewMenu->addAction(zoomOutAction);
     viewMenu->addAction(zoomOrigAction);
     viewMenu->addAction(zoomFitAction);
-
-    viewMenu->addSeparator();
-    viewMenu->addAction(infoVisibleAction);
-    viewMenu->addSeparator();
-    viewMenu->addAction(asListAction);
-    viewMenu->addAction(asThumbsAction);
     viewMenu->addSeparator();
     viewMenu->addAction(thumbsEnlargeAction);
     viewMenu->addAction(thumbsShrinkAction);
@@ -1042,6 +1066,7 @@ void MW::createThumbView()
     thumbView->thumbHeight = mwd.thumbHeight;
     thumbView->labelFontSize = mwd.labelFontSize;
     thumbView->showThumbLabels = mwd.showThumbLabels;
+    thumbView->setThumbParameters();
     metadataCacheThread = new MetadataCache(this, thumbView, metadata);
     thumbCacheThread = new ThumbCache(this, thumbView, metadata);
     infoView = new InfoView(this, metadata);
@@ -1441,7 +1466,7 @@ workspace with a matching name to the action is used.
             thumbView->labelFontSize = ws.labelFontSize;
             thumbView->showThumbLabels = ws.showThumbLabels;
             thumbView->refreshThumbs();
-            reportWorkspace(i);         // rgh remove after debugging
+//            reportWorkspace(i);         // rgh remove after debugging
         }
     }
 }
@@ -2402,7 +2427,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
         togglePickAction->setShortcut(QKeySequence("`"));
         toggleFilterPickAction->setShortcut(QKeySequence("Ctrl+`"));
-        ingestAction->setShortcut(QKeySequence("C"));
+        ingestAction->setShortcut(QKeySequence("Q"));
         reportMetadataAction->setShortcut(QKeySequence("Ctrl+R"));
         slideShowAction->setShortcut(QKeySequence("Ctrl+E"));
         thumbsEnlargeAction->setShortcut(QKeySequence("}"));
@@ -2415,6 +2440,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
         upThumbAction->setShortcut(QKeySequence("Up"));
         randomImageAction->setShortcut(QKeySequence("Ctrl+D"));
         openAction->setShortcut(QKeySequence("Return"));
+        asLoupeAction->setShortcut(QKeySequence("E"));
+        asGridAction->setShortcut(QKeySequence("G"));
+        asCompareAction->setShortcut(QKeySequence("C"));
         revealFileAction->setShortcut(QKeySequence("Ctrl+F"));
         zoomOutAction->setShortcut(QKeySequence("-"));
         zoomInAction->setShortcut(QKeySequence("+"));
@@ -2511,6 +2539,43 @@ void MW::updateState()
 /*****************************************************************************************
  * HIDE/SHOW UI ELEMENTS
  * **************************************************************************************/
+
+void MW::loupeView()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::loupeView";
+    #endif
+    }
+    qDebug() << "MW::loupeView";
+    imageView->setVisible(true);
+    thumbDock->setWidget(thumbView);
+    thumbDockVisibleAction->setChecked(true);
+    setThumbDockVisibity();
+}
+
+void MW::gridView()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::gridView";
+    #endif
+    }
+    imageView->setVisible(false);
+    mainLayout->addWidget(thumbView);
+    thumbDockVisibleAction->setChecked(false);
+    setThumbDockVisibity();
+}
+
+void MW::compareView()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::compareView";
+    #endif
+    }
+
+}
 
 void MW::setShootingInfo() {
     {

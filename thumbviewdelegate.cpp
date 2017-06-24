@@ -22,13 +22,20 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     fontHt = fm.height();
     thumbSize.setWidth(thumbWidth);
     thumbSize.setHeight(thumbHeight);
-    thumbSpace.setWidth(thumbSize.width() + iconPadding*2 + penWidth*4);
-    thumbSpace.setHeight(thumbSize.height() + iconPadding*2 + penWidth*4);
+    thumbSpace.setWidth(thumbWidth + iconPadding*2 + penWidth*4);
+    thumbSpace.setHeight(thumbHeight + iconPadding*2 + penWidth*4);
+//    thumbSpace.setWidth(thumbSize.width() + iconPadding*2 + penWidth*4);
+//    thumbSpace.setHeight(thumbSize.height() + iconPadding*2 + penWidth*4);
     if (showThumbLabels)
         thumbSpace.setHeight(thumbSize.height() + iconPadding*2
             + penWidth*2 + fontHt + iconPadding);
 //    else thumbSpace.setHeight(thumbSize.height() + iconPadding*2
 //            + penWidth*2);
+    qDebug() << "w =" << thumbWidth
+             << "h =" << thumbHeight
+             << "p =" << thumbPadding
+             << "l =" << showThumbLabels
+             << "s =" << thumbSpace;
 }
 
 QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
@@ -41,6 +48,7 @@ QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
     }
     QFont font = QApplication::font();
     QFontMetrics fm(font);
+    qDebug() << "sizehint: thumbspace" << thumbSpace;
     return thumbSpace;
 }
 

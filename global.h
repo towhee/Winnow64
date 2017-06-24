@@ -22,7 +22,7 @@ namespace G
 }
 
 
-//#define ISDEBUG        // Uncomment this line to show debugging output
+#define ISDEBUG        // Uncomment this line to show debugging output
 
 #endif // GLOBAL_H
 
