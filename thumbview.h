@@ -84,7 +84,7 @@ private:
     QFileInfo thumbFileInfo;
     QImage emptyImg;
     Metadata *metadata;
-    bool isIconView;
+    bool isIconDisplay;
 
 signals:
     void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent

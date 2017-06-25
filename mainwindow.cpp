@@ -42,7 +42,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     qDebug() << setting->fileName();
     // must come first so persistant action settings can be updated
     if (!resetSettings) loadSettings();
-//    mwd.isIconView = true;                  // rgh for now
+//    mwd.isIconDisplay = true;                  // rgh for now
     createThumbView();
     createImageView();
     createActions();
@@ -80,7 +80,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
 
-//    if (isIconView) thumbDock->setWindowTitle("Thumbnails");
+//    if (isIconDisplay) thumbDock->setWindowTitle("Thumbnails");
 //    else thumbDock->setWindowTitle("Image Files");
     thumbDock->setWindowTitle(" ");
 
@@ -525,20 +525,19 @@ void MW::createActions()
     connect(infoVisibleAction, SIGNAL(triggered()), this, SLOT(setShootingInfo()));
 
 
-    asGridAction = new QAction(tr("Grid"), this);
-    asGridAction->setCheckable(true);
-//    asGridAction->setChecked(!mwd.isIconView);
-    connect(asGridAction, SIGNAL(triggered()), this, SLOT(gridView()));
-
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setCheckable(true);
     asLoupeAction->setChecked(true);
-    connect(asLoupeAction, SIGNAL(triggered()), this, SLOT(loupeView()));
+    connect(asLoupeAction, SIGNAL(triggered()), this, SLOT(loupeDisplay()));
+
+    asGridAction = new QAction(tr("Grid"), this);
+    asGridAction->setCheckable(true);
+    connect(asGridAction, SIGNAL(triggered()), this, SLOT(gridDisplay()));
 
     asCompareAction = new QAction(tr("Compare"), this);
     asCompareAction->setCheckable(true);
-    asCompareAction->setChecked(!mwd.isIconView);
-//    connect(asCompareAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
+    asCompareAction->setChecked(!mwd.isIconDisplay);
+//    connect(asCompareAction, SIGNAL(triggered()), this, SLOT(compareDisplay()));
 
     centralGroupAction = new QActionGroup(this);
     centralGroupAction->setExclusive(true);
@@ -548,18 +547,18 @@ void MW::createActions()
 
     asListAction = new QAction(tr("As list"), this);
     asListAction->setCheckable(true);
-    asListAction->setChecked(!mwd.isIconView);
+    asListAction->setChecked(!mwd.isIconDisplay);
 //    connect(asListAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
 
-    asThumbsAction = new QAction(tr("As thumbs"), this);
-    asThumbsAction->setCheckable(true);
-    asThumbsAction->setChecked(mwd.isIconView);
+    asIconsAction = new QAction(tr("As thumbs"), this);
+    asIconsAction->setCheckable(true);
+    asIconsAction->setChecked(mwd.isIconDisplay);
 //    connect(thumbsEnlargeAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
 
     iconGroupAction = new QActionGroup(this);
     iconGroupAction->setExclusive(true);
     iconGroupAction->addAction(asListAction);
-    iconGroupAction->addAction(asThumbsAction);
+    iconGroupAction->addAction(asIconsAction);
 
     zoomOutAction = new QAction(tr("Zoom Out"), this);
     zoomOutAction->setObjectName("zoomOut");
@@ -840,7 +839,7 @@ void MW::createMenus()
     viewMenu->addAction(asCompareAction);
     viewMenu->addSeparator();
     viewMenu->addAction(asListAction);
-    viewMenu->addAction(asThumbsAction);
+    viewMenu->addAction(asIconsAction);
     viewMenu->addSeparator();
     viewMenu->addAction(zoomInAction);
     viewMenu->addAction(zoomOutAction);
@@ -1018,7 +1017,7 @@ void MW::createMenus()
     viewSubMenu->addAction(infoVisibleAction);
     viewSubMenu->addSeparator();
     viewSubMenu->addAction(asListAction);
-    viewSubMenu->addAction(asThumbsAction);
+    viewSubMenu->addAction(asIconsAction);
     viewSubMenu->addSeparator();
     viewSubMenu->addAction(reverseSortAction);
 
@@ -1456,8 +1455,11 @@ workspace with a matching name to the action is used.
             metadataDockLockAction->setChecked(ws.isMetadataDockLocked);
             thumbDockLockAction->setChecked( ws.isThumbDockLocked);
             infoVisibleAction->setChecked(ws.isImageInfoVisible);
-            asListAction->setChecked(!ws.isIconView);
-            asThumbsAction->setChecked(ws.isIconView);
+            asListAction->setChecked(!ws.isIconDisplay);
+            asIconsAction->setChecked(ws.isIconDisplay);
+            asLoupeAction->setChecked(ws.isLoupeDisplay);
+            asGridAction->setChecked(ws.isGridDisplay);
+            asCompareAction->setChecked(ws.isCompareDisplay);
             updateState();
             thumbView->thumbSpacing = ws.thumbSpacing;
             thumbView->thumbPadding = ws.thumbPadding;
@@ -1669,7 +1671,10 @@ void MW::reportWorkspace(int n)
              << "\nlabelFontSize" << ws.labelFontSize
              << "\nshowThumbLabels" << ws.showThumbLabels
              << "\nshowShootingInfo" << ws.isImageInfoVisible
-             << "\nisIconView" << ws.isImageInfoVisible;
+             << "\nisIconDisplay" << ws.isIconDisplay
+             << "\nisLoupeDisplay" << ws.isLoupeDisplay
+             << "\nisGridDisplay" << ws.isGridDisplay
+             << "\nisCompareDisplay" << ws.isCompareDisplay;
 }
 
 
@@ -2117,7 +2122,10 @@ void MW::writeSettings()
     setting->setValue("isThumbDockLocked", (bool)thumbDockLockAction->isChecked());
 //    GData::setting->setValue("LockDocks", (bool)GData::isLockAllDocks);
     setting->setValue("isImageInfoVisible", (bool)infoVisibleAction->isChecked());
-    setting->setValue("isIconView", (bool)asThumbsAction->isChecked());
+    setting->setValue("isIconDisplay", (bool)asIconsAction->isChecked());
+    setting->setValue("isloupeDisplay", (bool)asLoupeAction->isChecked());
+    setting->setValue("isGridiew", (bool)asGridAction->isChecked());
+    setting->setValue("iscompareDisplay", (bool)asCompareAction->isChecked());
 
     // not req'd
     setting->setValue("shouldMaximize", (bool)isMaximized());
@@ -2180,7 +2188,10 @@ void MW::writeSettings()
         setting->setValue("labelFontSize", ws.labelFontSize);
         setting->setValue("showThumbLabels", ws.showThumbLabels);
         setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
-        setting->setValue("isIconView", ws.isIconView);
+        setting->setValue("isIconDisplay", ws.isIconDisplay);
+        setting->setValue("isLoupeDisplay", ws.isLoupeDisplay);
+        setting->setValue("isGridDisplay", ws.isGridDisplay);
+        setting->setValue("isCompareDisplay", ws.isCompareDisplay);
     }
     setting->endArray();
 }
@@ -2197,36 +2208,16 @@ void MW::loadSettings()
 
     // default values for first time use
     if (!setting->contains("cacheSizeMB")) {
-        resize(800, 600);
+        defaultWorkspace();
         setting->setValue("thumbsSortFlags", (int)0);
-        setting->setValue("thumbsZoomVal", (int)150);
-        // thumbs
-        setting->setValue("thumbSpacing", (int)10);
-        setting->setValue("thumbPadding", (int)6);
-        setting->setValue("thumbWidth", (int)160);
-        setting->setValue("thumbHeight", (int)120);
-        setting->setValue("labelFontSize", (int)12);
-        setting->setValue("showThumbLabels", (bool)true);
-        // slideshow
+      // slideshow
         setting->setValue("slideShowDelay", (int)5);
         setting->setValue("slideShowRandom", (bool)false);
         // cache
         setting->setValue("cacheSizeMB", (int)1000);
-        setting->setValue("showCacheStatus", (bool)true);
+        setting->setValue("isShowCacheStatus", (bool)true);
         setting->setValue("cacheStatusWidth", (int)200);
         setting->setValue("cacheWtAhead", (int)5);
-        // state
-        setting->setValue("showHiddenFiles", (bool)false);
-        setting->setValue("fsDockVisible", (bool)true);
-        setting->setValue("bmDockVisible", (bool)true);
-        setting->setValue("iiDockVisible", (bool)true);
-        setting->setValue("pvDockVisible", (bool)true);
-        setting->setValue("isImageInfoVisible", (bool)true);
-        setting->setValue("fsDockLocked", (bool)false);
-        setting->setValue("bmDockLocked", (bool)false);
-        setting->setValue("iiDockLocked", (bool)false);
-        setting->setValue("thumbDockLocked", (bool)false);
-        setting->setValue("LockDocks", (bool)false);
         bookmarkPaths.insert(QDir::homePath());
     }
 
@@ -2269,7 +2260,10 @@ void MW::loadSettings()
 
     mwd.includeSubfolders = setting->value("includeSubfolders").toBool();
     mwd.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-    mwd.isIconView = setting->value("isIconView").toBool();
+    mwd.isIconDisplay = setting->value("isIconDisplay").toBool();     // thumb dock
+    mwd.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();    // central widget
+    mwd.isGridDisplay = setting->value("isGridDisplay").toBool();     // central widget
+    mwd.isCompareDisplay = setting->value("isCompareDisplay").toBool();  // central widget
 
     /* read external apps */
     setting->beginGroup("ExternalApps");
@@ -2313,7 +2307,10 @@ void MW::loadSettings()
         ws.labelFontSize = setting->value("labelFontSize").toInt();
         ws.showThumbLabels = setting->value("showThumbLabels").toBool();
         ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-        ws.isIconView = setting->value("isIconView").toBool();
+        ws.isIconDisplay = setting->value("isIconDisplay").toBool();
+        ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
+        ws.isGridDisplay = setting->value("isGridDisplay").toBool();
+        ws.isCompareDisplay = setting->value("isCompareDisplay").toBool();
         workspaces->append(ws);
     }
     setting->endArray();
@@ -2438,7 +2435,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         lastThumbAction->setShortcut(QKeySequence("End"));
         downThumbAction->setShortcut(QKeySequence("Down"));
         upThumbAction->setShortcut(QKeySequence("Up"));
-        randomImageAction->setShortcut(QKeySequence("Ctrl+D"));
+        randomImageAction->setShortcut(QKeySequence("Ctrl+Right"));
         openAction->setShortcut(QKeySequence("Return"));
         asLoupeAction->setShortcut(QKeySequence("E"));
         asGridAction->setShortcut(QKeySequence("G"));
@@ -2446,8 +2443,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         revealFileAction->setShortcut(QKeySequence("Ctrl+F"));
         zoomOutAction->setShortcut(QKeySequence("-"));
         zoomInAction->setShortcut(QKeySequence("+"));
-        zoomFitAction->setShortcut(QKeySequence("*"));
-        zoomOrigAction->setShortcut(QKeySequence("/"));
+        zoomFitAction->setShortcut(QKeySequence("Ctrl+0"));
+        zoomOrigAction->setShortcut(QKeySequence("Ctrl+Shift+0"));
         rotateLeftAction->setShortcut(QKeySequence("Ctrl+Left"));
         rotateRightAction->setShortcut(QKeySequence("Ctrl+Right"));
 //        moveLeftAct->setShortcut(QKeySequence("Left"));
@@ -2514,11 +2511,6 @@ void MW::setupDocks()
     // match opening state from loadSettings
     updateState();
 //    setWindowsTitleBarVisibility();  // image area shrinks
-
-//    // rgh chk if docs were locked and open the same way
-//    if (allDocksLockAction->isChecked()) {
-//        setAllDocksLockMode();
-//    }
 }
 
 void MW::updateState()
@@ -2540,25 +2532,25 @@ void MW::updateState()
  * HIDE/SHOW UI ELEMENTS
  * **************************************************************************************/
 
-void MW::loupeView()
+void MW::loupeDisplay()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::loupeView";
+    qDebug() << "MW::loupeDisplay";
     #endif
     }
-    qDebug() << "MW::loupeView";
+    qDebug() << "MW::loupeDisplay";
     imageView->setVisible(true);
     thumbDock->setWidget(thumbView);
     thumbDockVisibleAction->setChecked(true);
     setThumbDockVisibity();
 }
 
-void MW::gridView()
+void MW::gridDisplay()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::gridView";
+    qDebug() << "MW::gridDisplay";
     #endif
     }
     imageView->setVisible(false);
@@ -2567,14 +2559,21 @@ void MW::gridView()
     setThumbDockVisibity();
 }
 
-void MW::compareView()
+void MW::compareDisplay()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::compareView";
+    qDebug() << "MW::compareDisplay";
     #endif
     }
 
+}
+
+void MW::setCentralView()
+{
+    if (mwd.isLoupeDisplay) loupeDisplay();
+    if (mwd.isGridDisplay) gridDisplay();
+    if (mwd.isCompareDisplay) compareDisplay();
 }
 
 void MW::setShootingInfo() {
@@ -2692,9 +2691,9 @@ void MW::setWindowsTitleBarVisibility() {
 //    #endif
 //    }
 //    if(toggleIconsListAction->isChecked()) {
-//        isIconView = false;    }
+//        isIconDisplay = false;    }
 //    else {
-//        isIconView = true;
+//        isIconDisplay = true;
 //    }
 //}
 

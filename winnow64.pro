@@ -63,9 +63,9 @@ INSTALLS += target icon icon16 iconPixmaps desktop
 DISTFILES += Notes.txt CallOrder.txt Errors \
     Menu.txt \
     teststyle.css \
-    Scratch1.txt \
     qss/WinnowStyle.css \
-    qss/WinnowStyle.css
+    qss/WinnowStyle.css \
+    Shortcuts.txt
 
 macx {
     QMAKE_MAC_SDK = macosx10.12

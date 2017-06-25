@@ -24,18 +24,14 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     thumbSize.setHeight(thumbHeight);
     thumbSpace.setWidth(thumbWidth + iconPadding*2 + penWidth*4);
     thumbSpace.setHeight(thumbHeight + iconPadding*2 + penWidth*4);
-//    thumbSpace.setWidth(thumbSize.width() + iconPadding*2 + penWidth*4);
-//    thumbSpace.setHeight(thumbSize.height() + iconPadding*2 + penWidth*4);
     if (showThumbLabels)
         thumbSpace.setHeight(thumbSize.height() + iconPadding*2
             + penWidth*2 + fontHt + iconPadding);
-//    else thumbSpace.setHeight(thumbSize.height() + iconPadding*2
-//            + penWidth*2);
-    qDebug() << "w =" << thumbWidth
+/*    qDebug() << "w =" << thumbWidth
              << "h =" << thumbHeight
              << "p =" << thumbPadding
              << "l =" << showThumbLabels
-             << "s =" << thumbSpace;
+             << "s =" << thumbSpace;   */
 }
 
 QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
@@ -48,7 +44,6 @@ QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
     }
     QFont font = QApplication::font();
     QFontMetrics fm(font);
-    qDebug() << "sizehint: thumbspace" << thumbSpace;
     return thumbSpace;
 }
 
@@ -78,7 +73,6 @@ void ThumbViewDelegate::paint(
                    option.rect.bottomRight() - strokeOffset);
 
     // The thumb rect is padded inside the item rect
-    QPoint iconPadOffset(iconPadding, iconPadding);
     QRect thumbRect(itemRect.left() + iconPadding,
                     itemRect.top() + iconPadding,
                     thumbSize.width(),
@@ -97,8 +91,6 @@ void ThumbViewDelegate::paint(
     QPainterPath textPath;
     textPath.addRoundedRect(textRect, 8, 8);
 
-//    painter->drawRect(textRect);
-
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->setRenderHint(QPainter::TextAntialiasing, true);
 
@@ -108,7 +100,6 @@ void ThumbViewDelegate::paint(
     }
 
     QColor borderGray(95, 95, 95, 255);
-//    painter->setPen(borderGray);
     QPen notPick(borderGray);
     painter->setClipping(true);
     painter->setClipPath(iconPath);

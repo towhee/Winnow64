@@ -1,0 +1,43 @@
+Function                     Key  ⌘  ⇧  ⌥  ⇧⌘  ⇧⌥  ⌥⌘  ⇧⌥⌘
+Escape full screen           ⎋
+Zoom fit                     0    ⌘
+Zoom 100%                    0             ⇧⌘
+Compare view                 C
+Slideshow                    E    ⌘
+Full screen                  F
+Reveal folder                F    ⌘
+Grid view                    G
+Loupe view                   L
+All docks lock               L    ⌘
+Ingest / Copy to folder      Q
+Quit program                 Q    ⌘
+Report metadata              R    ⌘
+New workspace                W
+Manage workspace             W    ⌘
+Default workspace            W             ⇧⌘
+Folder dock                  F4
+Folder dock lock             F4      ⇧
+Fav dock                     F5
+Fav dock lock                F5      ⇧
+Metadata dock                F6
+Metadata dock lock           F6      ⇧
+Thumb dock                   F7
+Thumb lock dock              F7      ⇧
+Window title bar             F8
+Menu bar                     F9
+Status bar                   F10
+Preferences                  ,    ⌘
+Pick (toggle)                `
+Filter picks (toggle)        `    ⌘
+Enlarge Thumb                }
+Shrink thumb                 {
+Zoom out                     -
+Zoom in                      +
+Next thumb                   →
+Previous thumb               ←
+Above thumb                  ↑
+Below thumb                  ↓
+First thumb                  ↖︎
+Last thumb                   ↘︎
+Random thumb                 →             ⇧⌘
+Loupe view                   ↩︎

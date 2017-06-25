@@ -1,8 +1,10 @@
 To do:
+- Enlarge/shrink thumbs not working
+- Fix settings for load first time
+- Add image/gridview to workspace
 - Slideshow
 - Thumbs fit
 - Goto next pick, previous pick not working
-- Swap thumbs/viewer (see hideVieweer and showViewer)
 - Recent files
 - Open folder
 - Open with another app
@@ -32,6 +34,7 @@ To do:
 - Clip black area on canon thumbs
 - Compare 2-9 images
 - Hide/show cursor, always show if ESC
+- Done: Swap thumbs/viewer (see hideVieweer and showViewer)
 - Done: eliminate global variables
 - Done: eliminated thumb global variables
 - Done: Progress bar not updating when copying

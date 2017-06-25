@@ -62,7 +62,10 @@ public:
         bool showThumbLabels;
         bool isImageInfoVisible;
         bool includeSubfolders;
-        bool isIconView;
+        bool isIconDisplay;            // list vs icon in thumbView
+        bool isLoupeDisplay;
+        bool isGridDisplay;
+        bool isCompareDisplay;
     };
     workspaceData ws;   // hold values for workspace n
     QList<workspaceData> *workspaces;
@@ -130,9 +133,9 @@ private slots:
     void oldPreferences();
     void toggleFullScreen();
     void escapeFullScreen();
-    void compareView();
-    void loupeView();
-    void gridView();
+    void loupeDisplay();
+    void gridDisplay();
+    void compareDisplay();
 //    void updateActions();
     void updateStatus(QString s1);
     void updateMetadataThreadRunStatus(bool isRun);
@@ -181,7 +184,7 @@ private slots:
     void cleanupSender();
     void externalAppError();
 
-
+    void setCentralView();
     void setThumbDockVisibity();
     void setFolderDockVisibility();
     void setFavDockVisibility();
@@ -309,7 +312,7 @@ private:
     QAction *asCompareAction;
     QActionGroup *iconGroupAction;
     QAction *asListAction;
-    QAction *asThumbsAction;
+    QAction *asIconsAction;
     QAction *zoomInAction;
     QAction *zoomOutAction;
     QAction *zoomOrigAction;
