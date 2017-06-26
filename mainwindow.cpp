@@ -37,6 +37,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     G::devicePixelRatio = 2;
     #endif
 
+    isInitializing = true;
     workspaces = new QList<workspaceData>;
     setting = new QSettings("Winnow", "winnow_100");
 
@@ -57,7 +58,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     handleStartupArgs();
     setupMainWindow(resetSettings);
     updateState();
-    initComplete = true;
+    folderSelectionChange();
 }
 
 void MW::setupMainWindow(bool resetSettings)
@@ -160,15 +161,30 @@ void MW::folderSelectionChange()
     thumbCacheThread->stopThumbCache();
     imageCacheThread->stopImageCache();
 
-    QString dirPath = getSelectedPath();
+    QString dirPath;
     QDir testDir;
-    testDir.setPath(dirPath);
-    // check if unmounted USB drive
-    if (!testDir.isReadable()) return;
+    if (isInitializing) {
+        isInitializing = false;
+        if (!rememberLastDir) return;
+        dirPath = lastDir;
+        fsTree->setCurrentIndex(fsTree->fsModel->index(dirPath));
+    }
+    else {
+        dirPath = getSelectedPath();
+    }
 
-    if (dirPath == "") {
+    testDir.setPath(dirPath);
+
+    if (!testDir.exists()) {
         QMessageBox msgBox;
         msgBox.critical(this, tr("Error"), tr("The folder does not exist or is not available"));
+        return;
+    }
+
+    // check if unmounted USB drive
+    if (!testDir.isReadable()) {
+        QMessageBox msgBox;
+        msgBox.critical(this, tr("Error"), tr("The folder is not readable"));
         return;
     }
 
@@ -297,9 +313,7 @@ void MW::checkDirState(const QModelIndex &, int, int)
     qDebug() << "MW::checkDirState";
     #endif
     }
-    if (!initComplete) {
-        return;
-    }
+    if (isInitializing) return;
 
     if (!QDir().exists(currentViewDir))
     {
@@ -1885,13 +1899,21 @@ void MW::preferences()
     #endif
     }
     Prefdlg *prefdlg = new Prefdlg(this);
+    connect(prefdlg, SIGNAL(updateGeneralParameters(bool,bool)),
+        this, SLOT(setGeneralParameters(bool, bool)));
     connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool)),
-        thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
+            thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
     connect(prefdlg, SIGNAL(updateSlideShowParameters(int,bool)),
             this, SLOT(setSlideShowParameters(int,bool)));
     connect(prefdlg, SIGNAL(updateCacheParameters(int,bool,int,int)),
             this, SLOT(setCacheParameters(int,bool,int,int)));
     prefdlg->exec();
+}
+
+void MW::setGeneralParameters(bool prefRememberFolder, bool prefInclSubfolders)
+{
+    rememberLastDir = prefRememberFolder;
+    inclSubfolders = prefInclSubfolders;
 }
 
 void MW::oldPreferences()
@@ -2109,7 +2131,7 @@ void MW::writeSettings()
     // files
 //    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
     setting->setValue("rememberLastDir", rememberLastDir);
-    setting->setValue("lastDir", lastDir);
+    setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     // thumbs
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
@@ -2221,7 +2243,6 @@ void MW::loadSettings()
     qDebug() << "MW::loadSettings";
     #endif
     }
-    initComplete = false;
     needThumbsRefresh = false;
 
     // default values for first time use

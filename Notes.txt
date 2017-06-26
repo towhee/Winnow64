@@ -1,7 +1,5 @@
 To do:
-- Enlarge/shrink thumbs not working
 - Fix settings for load first time
-- Add image/gridview to workspace
 - Slideshow
 - Thumbs fit
 - Goto next pick, previous pick not working
@@ -34,6 +32,8 @@ To do:
 - Clip black area on canon thumbs
 - Compare 2-9 images
 - Hide/show cursor, always show if ESC
+- Done: Add image/gridview to workspace
+- Done: Enlarge/shrink thumbs not working
 - Done: Swap thumbs/viewer (see hideVieweer and showViewer)
 - Done: eliminate global variables
 - Done: eliminated thumb global variables

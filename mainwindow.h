@@ -84,6 +84,7 @@ public:
     // preferences: files
     bool rememberLastDir;
     QString lastDir;
+    bool inclSubfolders;
 
     // preferences: slideshow
     int slideShowDelay;
@@ -154,6 +155,7 @@ private slots:
     void togglePick();
     void updatePick();
     void toggleFilterPick();
+    void setGeneralParameters(bool rememberFolder, bool inclSubfolders);
     void setSlideShowParameters(int delay, bool isRandom);
     void slideShow();
     void slideShowHandler();
@@ -426,7 +428,8 @@ private:
         imageViewIdx
     };
 
-    bool initComplete;              // req'd?
+    bool isInitializing;
+
     bool needThumbsRefresh;         // req'd?
     bool thumbViewBusy;             // req'd?
     bool shouldMaximize;            // req'd?

@@ -13,6 +13,8 @@ Prefdlg::Prefdlg(QWidget *parent) :
     ui->setupUi(this);
     // this works because friend class of MW
     MW *mw = qobject_cast<MW*>(parent);
+    // general
+    ui->rememberFolderChk->setChecked(mw->rememberLastDir);
     // thumbs
     thumbWidth = mw->thumbView->thumbWidth;
     thumbHeight = mw->thumbView->thumbHeight;
@@ -221,4 +223,9 @@ void Prefdlg::on_cache100AheadRadio_clicked()
         emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
             cacheWtAhead);
     }
+}
+
+void Prefdlg::on_rememberFolderChk_clicked()
+{
+    emit updateGeneralParameters(ui->rememberFolderChk->isChecked(), false);
 }

@@ -34,6 +34,37 @@
    <property name="currentIndex">
     <number>0</number>
    </property>
+   <widget class="QWidget" name="tab">
+    <attribute name="title">
+     <string>General</string>
+    </attribute>
+    <widget class="QWidget" name="">
+     <property name="geometry">
+      <rect>
+       <x>50</x>
+       <y>50</y>
+       <width>186</width>
+       <height>61</height>
+      </rect>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QCheckBox" name="rememberFolderChk">
+        <property name="text">
+         <string>Remember previous folder</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="inclSubFoldersChk">
+        <property name="text">
+         <string>Include subfolders</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </widget>
    <widget class="QWidget" name="thumbTab">
     <attribute name="title">
      <string> Thumbnails </string>

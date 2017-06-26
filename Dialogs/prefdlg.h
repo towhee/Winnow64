@@ -17,6 +17,7 @@ public:
     ~Prefdlg();
 
 signals:
+    void updateGeneralParameters(bool rememberFolder, bool inclSubfolders);
     void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
             int thumbPadding, int labelFontSize, bool showThumbLabels);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
@@ -44,6 +45,8 @@ private slots:
     void on_cache80AheadRadio_clicked();
     void on_cache90AheadRadio_clicked();
     void on_cache100AheadRadio_clicked();
+
+    void on_rememberFolderChk_clicked();
 
 private:
 
