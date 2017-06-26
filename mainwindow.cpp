@@ -39,9 +39,10 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     workspaces = new QList<workspaceData>;
     setting = new QSettings("Winnow", "winnow_100");
-    qDebug() << setting->fileName();
+
     // must come first so persistant action settings can be updated
     if (!resetSettings) loadSettings();
+
 //    mwd.isIconDisplay = true;                  // rgh for now
     createThumbView();
     createImageView();
@@ -53,11 +54,18 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     updateExternalApps();
     loadShortcuts(true);            // dependent on createActions
     setupDocks();
+    handleStartupArgs();
+    setupMainWindow(resetSettings);
+    updateState();
+    initComplete = true;
+}
 
-    //    connect(qApp, SIGNAL(focusChanged(QWidget*, QWidget*)), this, SLOT(updateCache()));
-
-    if (!resetSettings) restoreGeometry(setting->value("Geometry").toByteArray());
-    if (!resetSettings) restoreState(setting->value("WindowState").toByteArray());
+void MW::setupMainWindow(bool resetSettings)
+{
+    if (!resetSettings) {
+        restoreGeometry(setting->value("Geometry").toByteArray());
+        restoreState(setting->value("WindowState").toByteArray());
+    }
 
     #ifdef Q_OS_LINIX
 
@@ -80,24 +88,12 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
 
-//    if (isIconDisplay) thumbDock->setWindowTitle("Thumbnails");
-//    else thumbDock->setWindowTitle("Image Files");
     thumbDock->setWindowTitle(" ");
 
     // add error trapping for file io  rgh todo
     QFile fStyle(":/qss/teststyle.css");
     fStyle.open(QIODevice::ReadOnly);
     this->setStyleSheet(fStyle.readAll());
-
-    handleStartupArgs();
-
-//    copyMoveToDialog = 0;       // rgh req'd?
-    initComplete = true;
-    interfaceDisabled = false;
-
-//    if (GData::layoutMode == thumbViewIdx)
-//     thumbView->setFocus(Qt::OtherFocusReason);
-
 }
 
 // Do we need this?  rgh
@@ -199,7 +195,7 @@ void MW::folderSelectionChange()
     // Must load metadata first, as it contains the file offsets and lengths
     // for the thumbnail and full size embedded jpgs and the image width
     // and height, req'd in imageCache to manage cache max size.  Triggers
-    // loadThumbCache and loadImageCache when finishes metadata cache.
+    // loadThumbCache and loadImageCache when finished metadata cache.
     // The thumb cache includes icons (thumbnails) for all the images in
     // the folder.
     // The image cache holds as many full size images in memory as possible.
@@ -223,8 +219,7 @@ void MW::fileSelectionChange()
     // use cache if image loaded, else read it from file
     if (imageView->loadImage(fPath)) {
         if (G::isThreadTrackingOn) qDebug()
-            << "MW::fileSelectionChange - loaded image file "
-            << fPath;
+            << "MW::fileSelectionChange - loaded image file " << fPath;
         updatePick();
         infoView->updateInfo(fPath);
     }
@@ -306,16 +301,9 @@ void MW::checkDirState(const QModelIndex &, int, int)
         return;
     }
 
-//    if (thumbView->busy)
-//    {
-//        thumbView->abort();
-//    }
-
     if (!QDir().exists(currentViewDir))
     {
         currentViewDir = "";
-//		QTimer::singleShot(0, this, SLOT(reloadThumbsSlot()));
-//        reloadThumbsSlot();
     }
 }
 
@@ -405,6 +393,8 @@ void MW::createActions()
     // Place keeper for now
     runDropletAction = new QAction(tr("Run Droplet"), this);
     runDropletAction->setObjectName("runDroplet");
+    runDropletAction->setShortcut(QKeySequence("A"));
+    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(reportState()));
 //    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(runDroplet()));
 
     reportMetadataAction = new QAction(tr("Report Metadata"), this);
@@ -527,16 +517,17 @@ void MW::createActions()
 
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setCheckable(true);
-    asLoupeAction->setChecked(true);
+    asLoupeAction->setChecked(mwd.isLoupeDisplay);
     connect(asLoupeAction, SIGNAL(triggered()), this, SLOT(loupeDisplay()));
 
     asGridAction = new QAction(tr("Grid"), this);
     asGridAction->setCheckable(true);
+    asGridAction->setChecked(mwd.isGridDisplay);
     connect(asGridAction, SIGNAL(triggered()), this, SLOT(gridDisplay()));
 
     asCompareAction = new QAction(tr("Compare"), this);
     asCompareAction->setCheckable(true);
-    asCompareAction->setChecked(!mwd.isIconDisplay);
+    asCompareAction->setChecked(mwd.isCompareDisplay);
 //    connect(asCompareAction, SIGNAL(triggered()), this, SLOT(compareDisplay()));
 
     centralGroupAction = new QActionGroup(this);
@@ -546,7 +537,7 @@ void MW::createActions()
     centralGroupAction->addAction(asCompareAction);
 
     asListAction = new QAction(tr("As list"), this);
-    asListAction->setCheckable(true);
+    asListAction->setCheckable(false);
     asListAction->setChecked(!mwd.isIconDisplay);
 //    connect(asListAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
 
@@ -581,12 +572,14 @@ void MW::createActions()
     connect(thumbsEnlargeAction, SIGNAL(triggered()), thumbView, SLOT(thumbsEnlarge()));
     if (thumbView->thumbSize == THUMB_SIZE_MAX)
         thumbsEnlargeAction->setEnabled(false);
+//    addAction(thumbsEnlargeAction);
 
     thumbsShrinkAction = new QAction(tr("Shrink thumbs"), this);
     thumbsShrinkAction->setObjectName("shrinkThumbs");
     connect(thumbsShrinkAction, SIGNAL(triggered()), thumbView, SLOT(thumbsShrink()));
     if (thumbView->thumbSize == THUMB_SIZE_MIN)
             thumbsShrinkAction->setEnabled(false);
+//    addAction(thumbsShrinkAction);
 
     // is this used - not in menu
     thumbsFitAction = new QAction(tr("Fit Current Thumbnail"), this);
@@ -609,29 +602,6 @@ void MW::createActions()
 
     // Window menu
 
-    thumbDockVisibleAction = new QAction(tr("Thumbnails"), this);
-    thumbDockVisibleAction->setCheckable(true);
-    thumbDockVisibleAction->setChecked(true);
-    connect(thumbDockVisibleAction, SIGNAL(triggered()), this, SLOT(setThumbDockVisibity()));
-
-    folderDockVisibleAction = new QAction(tr("Folder"), this);
-    folderDockVisibleAction->setObjectName("toggleFiless");
-    folderDockVisibleAction->setCheckable(true);
-    folderDockVisibleAction->setChecked(true);
-    connect(folderDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFolderDockVisibility()));
-
-    favDockVisibleAction = new QAction(tr("Favourites"), this);
-    favDockVisibleAction->setObjectName("toggleFavs");
-    favDockVisibleAction->setCheckable(true);
-    favDockVisibleAction->setChecked(true);
-    connect(favDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFavDockVisibility()));
-
-    metadataDockVisibleAction = new QAction(tr("Metadata"), this);
-    metadataDockVisibleAction->setObjectName("toggleMetadata");
-    metadataDockVisibleAction->setCheckable(true);
-    metadataDockVisibleAction->setChecked(true);
-    connect(metadataDockVisibleAction, SIGNAL(triggered()), this, SLOT(setMetadataDockVisibility()));
-
     windowsTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
     windowsTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
     windowsTitleBarVisibleAction->setCheckable(true);
@@ -649,6 +619,29 @@ void MW::createActions()
     statusBarVisibleAction->setCheckable(true);
     statusBarVisibleAction->setChecked(mwd.isStatusBarVisible);
     connect(statusBarVisibleAction, SIGNAL(triggered()), this, SLOT(setStatusBarVisibility()));
+
+    folderDockVisibleAction = new QAction(tr("Folder"), this);
+    folderDockVisibleAction->setObjectName("toggleFiless");
+    folderDockVisibleAction->setCheckable(true);
+    folderDockVisibleAction->setChecked(mwd.isFolderDockVisible);
+    connect(folderDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFolderDockVisibility()));
+
+    favDockVisibleAction = new QAction(tr("Favourites"), this);
+    favDockVisibleAction->setObjectName("toggleFavs");
+    favDockVisibleAction->setCheckable(true);
+    favDockVisibleAction->setChecked(mwd.isFavDockVisible);
+    connect(favDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFavDockVisibility()));
+
+    metadataDockVisibleAction = new QAction(tr("Metadata"), this);
+    metadataDockVisibleAction->setObjectName("toggleMetadata");
+    metadataDockVisibleAction->setCheckable(true);
+    metadataDockVisibleAction->setChecked(mwd.isMetadataDockVisible);
+    connect(metadataDockVisibleAction, SIGNAL(triggered()), this, SLOT(setMetadataDockVisibility()));
+
+    thumbDockVisibleAction = new QAction(tr("Thumbnails"), this);
+    thumbDockVisibleAction->setCheckable(true);
+    thumbDockVisibleAction->setChecked(mwd.isThumbDockVisible);
+    connect(thumbDockVisibleAction, SIGNAL(triggered()), this, SLOT(setThumbDockVisibity()));
 
     folderDockLockAction = new QAction(tr("Lock Files"), this);
     folderDockLockAction->setObjectName("lockDockFiles");
@@ -1677,6 +1670,31 @@ void MW::reportWorkspace(int n)
              << "\nisCompareDisplay" << ws.isCompareDisplay;
 }
 
+void MW::reportState()
+{
+    qDebug() << "\nisWindowTitleBarVisible" << mwd.isWindowTitleBarVisible
+             << "\nisMenuBarVisible" << mwd.isMenuBarVisible
+             << "\nisStatusBarVisible" << mwd.isStatusBarVisible
+             << "\nisFolderDockVisible" << mwd.isFolderDockVisible
+             << "\nisFavDockVisible" << mwd.isFavDockVisible
+             << "\nisMetadataDockVisible" << mwd.isMetadataDockVisible
+             << "\nisThumbDockVisible" << mwd.isThumbDockVisible
+             << "\nisFolderLocked" << mwd.isFolderDockLocked
+             << "\nisFavLocked" << mwd.isFavDockLocked
+             << "\nisMetadataLocked" << mwd.isMetadataDockLocked
+             << "\nisThumbsLocked" << mwd.isThumbDockLocked
+             << "\nthumbSpacing" << mwd.thumbSpacing
+             << "\nthumbPadding" << mwd.thumbPadding
+             << "\nthumbWidth" << mwd.thumbWidth
+             << "\nthumbHeight" << mwd.thumbHeight
+             << "\nlabelFontSize" << mwd.labelFontSize
+             << "\nshowThumbLabels" << mwd.showThumbLabels
+             << "\nshowShootingInfo" << mwd.isImageInfoVisible
+             << "\nisIconDisplay" << mwd.isIconDisplay
+             << "\nisLoupeDisplay" << mwd.isLoupeDisplay
+             << "\nisGridDisplay" << mwd.isGridDisplay
+             << "\nisCompareDisplay" << mwd.isCompareDisplay;
+}
 
 void MW::reportMetadata()
 {
@@ -2123,9 +2141,9 @@ void MW::writeSettings()
 //    GData::setting->setValue("LockDocks", (bool)GData::isLockAllDocks);
     setting->setValue("isImageInfoVisible", (bool)infoVisibleAction->isChecked());
     setting->setValue("isIconDisplay", (bool)asIconsAction->isChecked());
-    setting->setValue("isloupeDisplay", (bool)asLoupeAction->isChecked());
-    setting->setValue("isGridiew", (bool)asGridAction->isChecked());
-    setting->setValue("iscompareDisplay", (bool)asCompareAction->isChecked());
+    setting->setValue("isLoupeDisplay", (bool)asLoupeAction->isChecked());
+    setting->setValue("isGridDisplay", (bool)asGridAction->isChecked());
+    setting->setValue("isCompareDisplay", (bool)asCompareAction->isChecked());
 
     // not req'd
     setting->setValue("shouldMaximize", (bool)isMaximized());
@@ -2509,7 +2527,7 @@ void MW::setupDocks()
     MW::tabifyDockWidget(favDock, metadataDock);
 
     // match opening state from loadSettings
-    updateState();
+//    updateState();
 //    setWindowsTitleBarVisibility();  // image area shrinks
 }
 
@@ -2526,6 +2544,8 @@ void MW::updateState()
     setMetadataDockLockMode();
     setThumbDockLockMode();
     setShootingInfo();
+    setCentralView();
+    reportState();
 }
 
 /*****************************************************************************************
@@ -2571,6 +2591,11 @@ void MW::compareDisplay()
 
 void MW::setCentralView()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setCentralView";
+    #endif
+    }
     if (mwd.isLoupeDisplay) loupeDisplay();
     if (mwd.isGridDisplay) gridDisplay();
     if (mwd.isCompareDisplay) compareDisplay();
@@ -2579,10 +2604,10 @@ void MW::setCentralView()
 void MW::setShootingInfo() {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::toggleInfo";
+    qDebug() << "MW::setShootingInfo";
     #endif
     }
-    qDebug() << "MW::toggleInfo";
+    qDebug() << "MW::setShootingInfo";
     imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
 }
 
@@ -2590,10 +2615,11 @@ void MW::setThumbDockVisibity()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::toggleThumbs";
+    qDebug() << "MW::setThumbDockVisibity";
     #endif
     }
-    qDebug() << "MW::toggleThumbs";
+    qDebug() << "MW::setThumbDockVisibity thumbDockVisibleAction->isChecked()"
+             << thumbDockVisibleAction->isChecked();
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
     setThumbDockLockMode();
 }
@@ -2601,7 +2627,7 @@ void MW::setThumbDockVisibity()
 void MW::setFolderDockVisibility() {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::toggleFiles";
+    qDebug() << "MW::setFolderDockVisibility";
     #endif
     }
     folderDock->setVisible(folderDockVisibleAction->isChecked());
@@ -2610,7 +2636,7 @@ void MW::setFolderDockVisibility() {
 void MW::setFavDockVisibility() {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::toggleFavs";
+    qDebug() << "MW::setFavDockVisibility";
     #endif
     }
     favDock->setVisible(favDockVisibleAction->isChecked());
@@ -2619,7 +2645,7 @@ void MW::setFavDockVisibility() {
 void MW::setMetadataDockVisibility() {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::toggleMetadata";
+    qDebug() << "MW::setMetadataDockVisibility";
     #endif
     }
     metadataDock->setVisible(metadataDockVisibleAction->isChecked());
@@ -2647,7 +2673,7 @@ void MW::setMenuBarVisibility() {
 
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::toggleMenuBar";
+    qDebug() << "MW::setMenuBarVisibility";
     #endif
     }
     menuBar()->setVisible(menuBarVisibleAction->isChecked());
@@ -2657,7 +2683,7 @@ void MW::setStatusBarVisibility() {
 
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::toggleStatusBar";
+    qDebug() << "MW::setStatusBarVisibility";
     #endif
     }
     statusBar()->setVisible(statusBarVisibleAction->isChecked());
@@ -2668,7 +2694,7 @@ void MW::setWindowsTitleBarVisibility() {
 
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::toggleWindowsTitleBar";
+    qDebug() << "MW::setWindowsTitleBarVisibility";
     #endif
     }
     if(windowsTitleBarVisibleAction->isChecked()) {
@@ -2699,6 +2725,11 @@ void MW::setWindowsTitleBarVisibility() {
 
 void MW::setFolderDockLockMode()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setFolderDockLockMode";
+    #endif
+    }
     if (folderDockLockAction->isChecked()) {
         folderDock->setTitleBarWidget(folderDockEmptyWidget);
 //        G::isFolderDockLocked = true;
@@ -2711,6 +2742,11 @@ void MW::setFolderDockLockMode()
 
 void MW::setFavDockLockMode()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setFavDockLockMode";
+    #endif
+    }
     if (favDockLockAction->isChecked()) {
         favDock->setTitleBarWidget(favDockEmptyWidget);
 //        G::isFavsDockLocked = true;
@@ -2723,6 +2759,11 @@ void MW::setFavDockLockMode()
 
 void MW::setMetadataDockLockMode()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setMetadataDockLockMode";
+    #endif
+    }
     if (metadataDockLockAction->isChecked()) {
         metadataDock->setTitleBarWidget(metadataDockEmptyWidget);
 //        G::isMetadataDockLocked = true;
@@ -2735,6 +2776,11 @@ void MW::setMetadataDockLockMode()
 
 void MW::setThumbDockLockMode()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setThumbDockLockMode";
+    #endif
+    }
     if (thumbDockLockAction->isChecked()) {
         thumbDock->setTitleBarWidget(thumbDockEmptyWidget);
 //        G::isThumbDockLocked = true;

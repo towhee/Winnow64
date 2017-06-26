@@ -197,6 +197,7 @@ private slots:
     void setMetadataDockLockMode();
     void setThumbDockLockMode();
     void setAllDocksLockMode();
+    void reportState();
 
     void openOp();
     void revealFile();
@@ -418,7 +419,6 @@ private:
     QWidget *thumbDockEmptyWidget;
     QVBoxLayout *imageViewContainer;
 
-    bool interfaceDisabled;         // req'd?
     bool metadataLoaded;
 
     enum CentralWidgets	{           // req'd?
@@ -434,6 +434,7 @@ private:
     QMovie *busyMovie;              // req'd?
     QLabel *busyLabel;              // req'd?
 
+    void setupMainWindow(bool resetSettings);
     void loadShortcuts(bool defaultShortcuts);
     void setupDocks();
     void updateState();

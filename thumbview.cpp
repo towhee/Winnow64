@@ -125,6 +125,18 @@ bool ThumbView::event(QEvent *event)
     if (!override) return QListView::event(event);
 }
 
+void ThumbView::refreshThumbs() {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::refreshThumbs";
+    #endif
+    }
+    // if workspace invoked with diff thumb parameters
+    setThumbParameters();
+    this->dataChanged(thumbViewFilter->index(0, 0, QModelIndex()),
+      thumbViewFilter->index(getLastRow(), 0, QModelIndex()));
+}
+
 void ThumbView::setThumbParameters(
         int thumbWidth, int thumbHeight,
         int thumbSpacing,int thumbPadding, int labelFontSize,
@@ -150,6 +162,7 @@ void ThumbView::setThumbParameters()
 Helper function for in class calls where thumb parameters already defined
 */
 {
+    this->setSpacing(thumbSpacing);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels);
 }
@@ -542,20 +555,13 @@ void ThumbView::selectRandom()
     if (isSelectedItem()) selectThumb(getRandomRow());
 }
 
-void ThumbView::refreshThumbs() {
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::refreshThumbs";
-    #endif
-    }
-    // if workspace invoked with diff thumb parameters
-    setThumbParameters();
-    this->dataChanged(thumbViewFilter->index(0, 0, QModelIndex()),
-      thumbViewFilter->index(getLastRow(), 0, QModelIndex()));
-}
-
 void ThumbView::thumbsEnlarge()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::thumbsEnlarge";
+    #endif
+    }
     if (thumbWidth == 0) thumbWidth = 40;
     if (thumbHeight ==0) thumbHeight = 40;
     if (thumbWidth < 160 && thumbHeight < 160)
@@ -565,25 +571,34 @@ void ThumbView::thumbsEnlarge()
 //        thumbsEnlargeAction->setEnabled(true);
         if (thumbWidth > 160) thumbWidth = 160;
         if (thumbHeight > 160) thumbHeight = 160;
-        setThumbParameters();
+        refreshThumbs();
     }
 }
 
 void ThumbView::thumbsShrink()
 {
-    if (thumbWidth > 40  && thumbHeight > 40)
     {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::thumbsShrink";
+    #endif
+    }
+    if (thumbWidth > 40  && thumbHeight > 40) {
         thumbWidth *= 0.9;
         thumbHeight *= 0.9;
 //        thumbsEnlargeAction->setEnabled(true);
         if (thumbWidth < 40) thumbWidth = 40;
         if (thumbHeight < 40) thumbHeight = 40;
-        setThumbParameters();
+        refreshThumbs();
     }
 }
 
 void ThumbView::thumbsFit()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::thumbsFit";
+    #endif
+    }
 //    int imthumbWidth = imageView->getImagethumbWidth();
 //    int imthumbHeight = imageView->getImagethumbHeight();
 //    float aspect = (float)imthumbHeight/imthumbWidth;

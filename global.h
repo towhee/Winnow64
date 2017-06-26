@@ -7,10 +7,8 @@
 #include <QtGlobal>
 #include <QElapsedTimer>
 
-
 namespace G
 {
-    // not persistent
     extern bool isThreadTrackingOn;
     extern qreal devicePixelRatio;
     extern QModelIndexList copyCutIdxList;  // req'd?
@@ -18,9 +16,7 @@ namespace G
     extern QElapsedTimer t;
     extern QString appName;                 // may be req'd for mult workspaces + be persistent
     extern bool isTimer;
-
 }
-
 
 #define ISDEBUG        // Uncomment this line to show debugging output
 

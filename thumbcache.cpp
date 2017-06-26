@@ -212,11 +212,11 @@ void ThumbCache::run()
         // record any errors
         mutex.lock();
 
-/*following line generates comment in app output only first time in loop
-QObject::connect: Cannot queue arguments of type 'QVector<int>'
-(Make sure 'QVector<int>' is registered using qRegisterMetaType().)*/
+        /*following line generates comment in app output only first time in loop
+        QObject::connect: Cannot queue arguments of type 'QVector<int>'
+        (Make sure 'QVector<int>' is registered using qRegisterMetaType().)*/
         item->setIcon(QPixmap::fromImage(thumb));
-/*this doesn't work either
+        /*this doesn't work either
         QPixmap pm;
         typedef QVector<QVector<int> > pm;
         qRegisterMetaType<MyArray>("pm");
@@ -233,8 +233,11 @@ QObject::connect: Cannot queue arguments of type 'QVector<int>'
             if (G::isThreadTrackingOn) track(fPath, "Success:");
         }
 
-        // somethimes QListView does not refresh icons...
-        thumbView->refreshThumbs();
+        // sometimes QListView does not refresh icons...
+//        if (row % 8 == 0) {
+//            thumbView->refreshThumbs();
+//            qApp->processEvents();
+//        }
 
         mutex.unlock();
 
@@ -242,4 +245,5 @@ QObject::connect: Cannot queue arguments of type 'QVector<int>'
 //        qDebug() << "Thumbnail cached " << fName;
     }
     emit updateIsRunning(false);
+    thumbView->refreshThumbs();
 }

@@ -133,5 +133,6 @@
         <file>images/winnow288.png</file>
         <file>images/down-arrow3.png</file>
         <file>qss/winnow.css</file>
+        <file>images/winnow.ico</file>
     </qresource>
 </RCC>

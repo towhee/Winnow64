@@ -140,22 +140,24 @@ bool ImageView::loadImage(QString fPath)
     // No folder selected yet
     if (fPath == "") return false;
 
-    bool isLoaded;
+    bool isLoaded = false;
     // load the image from the image cache if available
     if (imageCacheThread->imCache.contains(fPath)) {
-//    if (metadata->isLoaded(fPath)) {
-        displayPixmap = QPixmap::fromImage(imageCacheThread->
-                        imCache.value(fPath));
+        displayPixmap = QPixmap::fromImage(imageCacheThread->imCache.value(fPath));
         (displayPixmap.isNull()) ? isLoaded = false : isLoaded = true;
     }
     // load the image from the image file
     if (!isLoaded) {
-        isLoaded = loadPixmap(fPath, displayPixmap);
+        for (int i=0; i<10000; i++) {
+            isLoaded = loadPixmap(fPath, displayPixmap);
+            if (isLoaded) break;
+        }
     }
-
-    displayPixmap.setDevicePixelRatio(G::devicePixelRatio);
-    imageLabel->setPixmap(displayPixmap);
-    resizeImage();
+    if (isLoaded) {
+        displayPixmap.setDevicePixelRatio(G::devicePixelRatio);
+        imageLabel->setPixmap(displayPixmap);
+        resizeImage();
+    }
     return isLoaded;
 }
 
