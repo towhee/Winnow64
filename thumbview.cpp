@@ -65,7 +65,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     if (isIconDisplay) setResizeMode(QListView::Adjust);
     this->setLayoutMode(QListView::Batched);
-    setBatchSize(4);
+//    setBatchSize(2);
     setWordWrap(true);
     setDragEnabled(true);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -91,6 +91,9 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
             SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
             parent, SLOT(fileSelectionChange()));
 
+//    connect(this, SIGNAL(activated(QModelIndex)),
+//            this, SLOT(activate(QModelIndex)));
+
 //    connect(this, SIGNAL(doubleClicked(const QModelIndex &)), parent,
 //            SLOT(loadImagefromThumb(const QModelIndex &)));
 
@@ -111,6 +114,14 @@ bool ThumbView::event(QEvent *event)
 {
 /* Just in case we need to override a keystroke in the thumbview */
     bool override = false;
+    qDebug() << "treeView events:" << event;
+    if (event->type() == QEvent::UpdateLater ||
+        event->type() == QEvent::Paint) {
+        forceScroll(0);
+    }
+    if (event->type() == QEvent::Resize) {
+        forceScroll(40);
+    }
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
 //        if (keyEvent->key() == Qt::Key_Right) {
@@ -123,6 +134,16 @@ bool ThumbView::event(QEvent *event)
 //        }
     }
     if (!override) return QListView::event(event);
+}
+
+void ThumbView::reportThumbs()
+{
+//    QModelIndex idx;
+//    qDebug() << "List all thumbs";
+//    for (int i=0; i<thumbViewFilter->rowCount(); i++) {
+//        idx = thumbViewFilter->index(i, 0, QModelIndex());
+//        qDebug() << i << idx.data(FileNameRole).toString();
+//    }
 }
 
 void ThumbView::refreshThumbs() {
@@ -364,6 +385,9 @@ thumbCache.
             }
         }
     }
+    if (thumbFileInfoList.size() && selectionModel()->selectedIndexes().size() == 0) {
+        selectThumb(0);
+    }
     return true;
 }
 
@@ -403,6 +427,7 @@ void ThumbView::loadPrepare()
     thumbsDir->setSorting(QDir::Name);
 
     thumbViewModel->clear();
+    thumbFileInfoList.clear();
 }
 
 bool ThumbView::initThumbs()
@@ -412,8 +437,8 @@ bool ThumbView::initThumbs()
     qDebug() << "ThumbView::initThumbs";
     #endif
     }
-    thumbFileInfoList = thumbsDir->entryInfoList();
-    if (thumbFileInfoList.size() == 0) return false;
+    dirFileInfoList = thumbsDir->entryInfoList();
+    if (dirFileInfoList.size() == 0) return false;
     static QStandardItem *item;
     static int fileIndex;
     static QPixmap emptyPixMap;
@@ -421,8 +446,9 @@ bool ThumbView::initThumbs()
     // rgh not working
     emptyPixMap = QPixmap::fromImage(emptyImg).scaled(thumbWidth, thumbHeight);
 
-    for (fileIndex = 0; fileIndex < thumbFileInfoList.size(); ++fileIndex) {
-        thumbFileInfo = thumbFileInfoList.at(fileIndex);
+    for (fileIndex = 0; fileIndex < dirFileInfoList.size(); ++fileIndex) {
+        thumbFileInfo = dirFileInfoList.at(fileIndex);
+        thumbFileInfoList.append(thumbFileInfo);
         item = new QStandardItem();
         item->setData(false, LoadedRole);
         item->setData(fileIndex, SortRole);
@@ -434,14 +460,8 @@ bool ThumbView::initThumbs()
         item->setData(thumbFileInfo.fileName(), Qt::DisplayRole);
         thumbViewModel->appendRow(item);
     }
-
-    if (thumbFileInfoList.size() && selectionModel()->selectedIndexes().size() == 0) {
-        selectThumb(0);
-    }
-
     return true;
 }
-
 
 // Used by thumbnail navigation (left, right, up, down etc)
 void ThumbView::selectThumb(QModelIndex idx)
@@ -451,6 +471,7 @@ void ThumbView::selectThumb(QModelIndex idx)
     qDebug() << "ThumbView::selectThumb(index)" << idx;
     #endif
     }
+    qDebug() << "ThumbView::selectThumb(index)" << idx;
     if (idx.isValid()) {
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
@@ -464,8 +485,11 @@ void ThumbView::selectThumb(int row)
     qDebug() << "ThumbView::selectThumb(row)" << row;
     #endif
     }
+    setFocus();
+    qDebug() << "ThumbView::selectThumb(row)" << row;
     QModelIndex idx = thumbViewFilter->index(row, 0, QModelIndex());
     setCurrentIndex(idx);
+//    forceScroll(10);
     if (idx.isValid()) scrollTo(idx, ScrollHint::PositionAtCenter);
 }
 
@@ -619,6 +643,34 @@ void ThumbView::thumbsFit()
 //    thumbView->refreshThumbs();
 }
 
+void ThumbView::forceScroll(int row)
+{
+
+    QScrollBar *sb;
+    sb = verticalScrollBar();
+    int tot = thumbViewFilter->rowCount();
+    int sbVal = ((float)row / tot) * sb->maximum();
+    QSize tSize = thumbViewDelegate->getThumbSize();
+    QSize wSize = this->size();
+    int perRow = wSize.width() / tSize.width();
+    int rowsReqd = ((float)tot / perRow) + 1;
+    int sbMaxCalc = rowsReqd * tSize.height();
+    qDebug() << "sb->minimum" << sb->minimum()
+             << "sb->maximum" << sb->maximum()
+             << "sb->singleStep" << sb->singleStep()
+             << "sb->pageStep" << sb->pageStep()
+             << "sb->value" << sb->value()
+             << "tSize" << tSize
+             << "wSize" << size()
+             << "perRow" << perRow
+             << "rowsReqd" << rowsReqd
+             << "maxCalc" << sbMaxCalc
+             << "sbVal" << sbVal;
+//    sb->setValue(sbVal);
+//    selectThumb(row);
+}
+
+
 void ThumbView::wheelEvent(QWheelEvent *event)
 {
     {
@@ -662,6 +714,12 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
         thumbClick(xPct, yPct);    //signal used in ThumbView::mousePressEvent
     }
 //    reportThumb();
+}
+
+void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    emit displayLoupe();
+    QWidget::mouseDoubleClickEvent(event);
 }
 
 void ThumbView::updateThumbRectRole(const QModelIndex index, QRect iconRect)

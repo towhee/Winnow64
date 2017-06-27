@@ -48,10 +48,12 @@ public:
     QStringList getSelectedThumbsList();        //used by tags, might be useful
     QString getCurrentFilename();       //not used, but might be handy
     void setThumbParameters();
+    void forceScroll(int row);
 
     QStandardItemModel *thumbViewModel;
     QSortFilterProxyModel *thumbViewFilter;
     QFileInfoList thumbFileInfoList;
+    QFileInfoList dirFileInfoList;
     QDir::SortFlags thumbsSortFlags;
 
     int thumbSize;
@@ -62,6 +64,7 @@ protected:
     void startDrag(Qt::DropActions);
     void wheelEvent(QWheelEvent *event);
     void mousePressEvent(QMouseEvent *event);
+    void mouseDoubleClickEvent(QMouseEvent *event);
     bool event(QEvent* event);      // key capture
 
 private:
@@ -85,9 +88,11 @@ private:
     QImage emptyImg;
     Metadata *metadata;
     bool isIconDisplay;
+    QSize treeViewSize;
 
 signals:
     void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent
+    void displayLoupe();
 
 public slots:
     void thumbsEnlarge();
@@ -98,6 +103,7 @@ public slots:
     void refreshThumbs();
     void setThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
              int thumbPadding, int labelFontSize, bool showThumbLabels);
+    void reportThumbs();
 
 private slots:
 };

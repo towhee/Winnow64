@@ -9,6 +9,7 @@ Reveal folder                F    ⌘
 Grid view                    G
 Loupe view                   L
 All docks lock               L    ⌘
+Open folder                  O
 Ingest / Copy to folder      Q
 Quit program                 Q    ⌘
 Report metadata              R    ⌘

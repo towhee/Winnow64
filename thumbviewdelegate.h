@@ -24,6 +24,8 @@ public:
     void setThumbDimensions(int thumbWidth, int thumbHeight,
           int thumbPadding, int labelFontSize, bool showThumbLabels);
 
+    QSize getThumbSize();
+
 signals:
     void update(const QModelIndex index, QRect iconRect) const;
 

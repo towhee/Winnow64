@@ -437,8 +437,6 @@ void ImageView::resizeImage()
     // update status with current zoom magnification
     QString msg = QString::number(zoom*100, 'f', 0) + "%";
     emit updateStatus(msg);
-
-
 }
 
 void ImageView::movePickIcon()

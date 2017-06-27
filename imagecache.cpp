@@ -413,7 +413,8 @@ void ImageCache::reportCacheManager(QString title)
     }
     qDebug() << "\n" << title << "Key:" << cache.key
              <<  "cacheMB:" << cache.currMB
-             << "Wt:" << cache.wtAhead;
+             << "Wt:" << cache.wtAhead
+             << "Total files:" << cache.totFiles;
     qDebug() << "\nIndex      Key     OrigKey     Priority     Target     Cached       SizeMB    Width      Height      FName";
     for (int i=0; i<cache.totFiles; ++i) {
         qDebug() << i << "\t"
@@ -503,10 +504,11 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     // the total memory size of all the images in the folder currently selected
     float folderMB = 0;
     // get some intel on the new folder image list
+//    qDebug() << "Index       Path";
     for (int i=0; i < imageList.size(); ++i) {
         QFileInfo fileInfo = imageList.at(i);
         QString fPath = fileInfo.absoluteFilePath();
-
+//        qDebug() << i << "\t" << fPath;
         /* cacheManager is a list of cacheItem used to track the current
            cache status and make future caching decisions for each image  */
         cacheItem.key = i;              // need to be able to sync with imageList
@@ -539,13 +541,22 @@ void ImageCache::updateImageCache(QFileInfoList &imageList, QString &currentImag
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
 
-    cache.key = imageList.indexOf(currentImageFullPath);
+//    cache.key = imageList.indexOf(currentImageFullPath);
+
+    for (int i=0; i<cacheMgr.count(); i++) {
+        if (cacheMgr.at(i).fName == currentImageFullPath) {
+            cache.key = i;
+            continue;
+        }
+    }
     cacheStatus();
     if (cache.key == cache.prevKey &&
             imageList.at(0).absolutePath() == cache.dir) return;
     cache.isForward = (cache.key >= cache.prevKey);
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();
+//    qDebug() << "currentImageFullPath" << currentImageFullPath;
+//    reportCacheManager("Debugging index out of range");
     setPriorities(cache.key);
     setTargetRange();
     start(LowestPriority);

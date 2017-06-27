@@ -61,6 +61,25 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     folderSelectionChange();
 }
 
+bool MW::event(QEvent *event)
+{
+/* Patch for bug in Qt where scrollTo not working when switch
+ownershop of thumbView from dock to central widget and back.  scrollTo
+tries to scroll before all the treeView events have executed.  The last
+event is the key release and it works after that.  The shortcuts are
+E (loupe) and G (grid).
+*/
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_G ||
+        keyEvent->key() == Qt::Key_E) {
+//            qDebug() << "%%%%%%%%%%%%%% Try this %%%%%%%%%%%%%%%%";
+            thumbView->selectThumb(thumbView->currentIndex());
+        }
+    }
+    return QMainWindow::event(event);
+}
+
 void MW::setupMainWindow(bool resetSettings)
 {
     if (!resetSettings) {
@@ -167,13 +186,16 @@ void MW::folderSelectionChange()
         isInitializing = false;
         if (!rememberLastDir) return;
         dirPath = lastDir;
+        testDir.setPath(dirPath);
+        // unmounted drive or renamed folder
+        if (!testDir.exists() || !testDir.isReadable()) return;
         fsTree->setCurrentIndex(fsTree->fsModel->index(dirPath));
     }
     else {
         dirPath = getSelectedPath();
+        testDir.setPath(dirPath);
     }
 
-    testDir.setPath(dirPath);
 
     if (!testDir.exists()) {
         QMessageBox msgBox;
@@ -216,6 +238,7 @@ void MW::folderSelectionChange()
     // the folder.
     // The image cache holds as many full size images in memory as possible.
     loadMetadataCache();
+    thumbView->selectFirst();
 }
 
 // triggered when file selection changes (folder change selects new image)
@@ -287,8 +310,7 @@ void MW::loadImageCache()
     // imageChacheThread checks if already running and restarts
     imageCacheThread->initImageCache(thumbView->thumbFileInfoList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead);
-    imageCacheThread->updateImageCache(thumbView->
-        thumbFileInfoList, fPath);
+    imageCacheThread->updateImageCache(thumbView->thumbFileInfoList, fPath);
 }
 
 // called by signal itemClicked in bookmark
@@ -382,6 +404,7 @@ void MW::createActions()
 
     subFoldersAction = new QAction(tr("Include Sub-folders"), this);
     subFoldersAction->setObjectName("subFolders");
+    subFoldersAction->setCheckable(true);
     subFoldersAction->setChecked(mwd.includeSubfolders);    // from QSettings
     connect(subFoldersAction, SIGNAL(triggered()), this, SLOT(setIncludeSubFolders()));
 
@@ -413,6 +436,8 @@ void MW::createActions()
 
     reportMetadataAction = new QAction(tr("Report Metadata"), this);
     reportMetadataAction->setObjectName("reportMetadata");
+//    connect(reportMetadataAction, SIGNAL(triggered()),
+//            thumbView, SLOT(reportThumbs()));
     connect(reportMetadataAction, SIGNAL(triggered()),
             this, SLOT(reportMetadata()));
 
@@ -532,6 +557,9 @@ void MW::createActions()
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setCheckable(true);
     asLoupeAction->setChecked(mwd.isLoupeDisplay);
+    // add secondary shortcut (primary defined in loadShortcuts)
+    QShortcut *enter = new QShortcut(QKeySequence("Return"), this);
+    connect(enter, SIGNAL(activated()), asLoupeAction, SLOT(trigger()));
     connect(asLoupeAction, SIGNAL(triggered()), this, SLOT(loupeDisplay()));
 
     asGridAction = new QAction(tr("Grid"), this);
@@ -740,6 +768,11 @@ void MW::createActions()
     helpAction = new QAction(tr("Winnow Help"), this);
     helpAction->setObjectName("help");
 //    connect(helpAction, SIGNAL(triggered()), this, SLOT(about()));
+
+//    enterAction = new QAction(tr("Enter"), this);
+//    enterAction->setObjectName("enterAction");
+//    enterAction->setShortcut(QKeySequence("X"));
+//    connect(enterAction, SIGNAL(triggered()), this, SLOT(enter()));
 
     // used in fsTree and bookmarks
     pasteAction = new QAction(tr("Paste files"), this);
@@ -1079,6 +1112,8 @@ void MW::createThumbView()
     thumbView->thumbsSortFlags = (QDir::SortFlags)setting->value("thumbsSortFlags").toInt();
     thumbView->thumbsSortFlags |= QDir::IgnoreCase;
 
+    connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
+
     connect(metadataCacheThread, SIGNAL(loadThumbCache()),
             this, SLOT(loadThumbCache()));
 
@@ -1088,6 +1123,8 @@ void MW::createThumbView()
     metadataDock = new QDockWidget(tr("  Metadata  "), this);
     metadataDock->setObjectName("Image Info");
     metadataDock->setWidget(infoView);
+
+    infoView->setMaximumWidth(folderMaxWidth);
 }
 
 void MW::addMenuSeparator(QWidget *widget)
@@ -1253,6 +1290,8 @@ void MW::createFSTree()
     folderDock->setWidget(fsTree);
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
 
+    fsTree->setMaximumWidth(folderMaxWidth);
+
     // Context menu
     fsTree->addAction(openAction);
     addMenuSeparator(fsTree);
@@ -1287,6 +1326,8 @@ void MW::createBookmarks()
     favDock->setObjectName("Bookmarks");
     bookmarks = new BookMarks(favDock, bookmarkPaths);
     favDock->setWidget(bookmarks);
+
+    bookmarks->setMaximumWidth(folderMaxWidth);
 
     connect(bookmarks, SIGNAL(itemClicked(QTreeWidgetItem *, int)),
             this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
@@ -1717,11 +1758,19 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-//    QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
+
+    thumbView->forceScroll(100);
+
+//    qDebug() << "imageView->hasFocus" << imageView->hasFocus();
+//    qDebug() << "thumbView->hasFocus" << thumbView->hasFocus();
+//    QWidget * fw = qApp->focusWidget();
+//    qDebug() << "Focus Widget =" << fw->objectName();
+
+    //    QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 //    const QString imagePath = indexesList.first().data(thumbView->FileNameRole).toString();
 
-    QString imagePath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
-    metadata->readMetadata(true, imagePath);
+//    QString imagePath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
+//    metadata->readMetadata(true, imagePath);
 
 //    QString hdr = "Test header";
 //    std::stringstream os;
@@ -2475,7 +2524,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         downThumbAction->setShortcut(QKeySequence("Down"));
         upThumbAction->setShortcut(QKeySequence("Up"));
         randomImageAction->setShortcut(QKeySequence("Ctrl+Right"));
-        openAction->setShortcut(QKeySequence("Return"));
+        openAction->setShortcut(QKeySequence("O"));
         asLoupeAction->setShortcut(QKeySequence("E"));
         asGridAction->setShortcut(QKeySequence("G"));
         asCompareAction->setShortcut(QKeySequence("C"));
@@ -2524,9 +2573,12 @@ void MW::setupDocks()
     thumbDock = new QDockWidget(tr("Thumbnails"), this);
     thumbDock->setObjectName("Viewer");
 
+    connect(thumbDock, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
+            this, SLOT(thumbDockMoved(Qt::DockWidgetArea)));
+
     imageViewContainer = new QVBoxLayout;
     imageViewContainer->setContentsMargins(0, 0, 0, 0);
-    imageViewContainer->addWidget(thumbView);
+    imageViewContainer->addWidget(imageView);
     QWidget *imageViewContainerWidget = new QWidget;
     imageViewContainerWidget->setLayout(imageViewContainer);
     thumbDock->setWidget(imageViewContainerWidget);
@@ -2534,10 +2586,10 @@ void MW::setupDocks()
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
 
-    fsDockOrigWidget = folderDock->titleBarWidget();
-    bmDockOrigWidget = favDock->titleBarWidget();
-    iiDockOrigWidget = metadataDock->titleBarWidget();
-    pvDockOrigWidget = thumbDock->titleBarWidget();
+    folderDockOrigWidget = folderDock->titleBarWidget();
+    favDockOrigWidget = favDock->titleBarWidget();
+    metadataDockOrigWidget = metadataDock->titleBarWidget();
+    thumbDockOrigWidget = thumbDock->titleBarWidget();
     folderDockEmptyWidget = new QWidget;
     favDockEmptyWidget = new QWidget;
     metadataDockEmptyWidget = new QWidget;
@@ -2573,6 +2625,31 @@ void MW::updateState()
  * HIDE/SHOW UI ELEMENTS
  * **************************************************************************************/
 
+//void MW::enter()
+//{
+//    QWidget * fw = qApp->focusWidget();
+//    if (fw->objectName() == "ThumbView") loupeDisplay();
+//    qDebug() << "Focus Widget =" << fw->objectName();
+//}
+
+void MW::thumbDockMoved(Qt::DockWidgetArea area)
+{
+    qDebug() << "Dock area" << area;
+    if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea) {
+        thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
+                               QDockWidget::DockWidgetMovable  |
+                               QDockWidget::DockWidgetFloatable |
+                               QDockWidget::DockWidgetVerticalTitleBar);
+        thumbView->setWrapping(false);
+    }
+    if (area == Qt::LeftDockWidgetArea || area == Qt::RightDockWidgetArea) {
+        thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
+                               QDockWidget::DockWidgetMovable  |
+                               QDockWidget::DockWidgetFloatable);
+        thumbView->setWrapping(true);
+    }
+}
+
 void MW::loupeDisplay()
 {
     {
@@ -2580,7 +2657,6 @@ void MW::loupeDisplay()
     qDebug() << "MW::loupeDisplay";
     #endif
     }
-    qDebug() << "MW::loupeDisplay";
     imageView->setVisible(true);
     thumbDock->setWidget(thumbView);
     thumbDockVisibleAction->setChecked(true);
@@ -2598,6 +2674,17 @@ void MW::gridDisplay()
     mainLayout->addWidget(thumbView);
     thumbDockVisibleAction->setChecked(false);
     setThumbDockVisibity();
+}
+
+void MW::selectThumb()  // delete when patch confirmed
+// attempt to get scrollTo to work
+{
+    thumbView->setFocus();
+    qDebug() << "singleshot from gridDisplay";
+    thumbView->forceScroll(500);
+//    thumbView->scrollToBottom();   // no help here
+//    thumbView->scrollTo(idx, ThumbView::ScrollHint::EnsureVisible);
+//    thumbView->selectThumb(idx);
 }
 
 void MW::compareDisplay()
@@ -2756,7 +2843,7 @@ void MW::setFolderDockLockMode()
 //        G::isFolderDockLocked = true;
     }
     else {
-        folderDock->setTitleBarWidget(fsDockOrigWidget);
+        folderDock->setTitleBarWidget(folderDockOrigWidget);
 //        G::isFolderDockLocked = false;
     }
 }
@@ -2773,7 +2860,7 @@ void MW::setFavDockLockMode()
 //        G::isFavsDockLocked = true;
     }
     else {
-        favDock->setTitleBarWidget(bmDockOrigWidget);
+        favDock->setTitleBarWidget(favDockOrigWidget);
 //        G::isFavsDockLocked = false;
     }
 }
@@ -2790,7 +2877,7 @@ void MW::setMetadataDockLockMode()
 //        G::isMetadataDockLocked = true;
     }
     else {
-        metadataDock->setTitleBarWidget(iiDockOrigWidget);
+        metadataDock->setTitleBarWidget(metadataDockOrigWidget);
 //        G::isMetadataDockLocked = false;
     }
 }
@@ -2807,7 +2894,7 @@ void MW::setThumbDockLockMode()
 //        G::isThumbDockLocked = true;
     }
     else {
-        thumbDock->setTitleBarWidget(pvDockOrigWidget);
+        thumbDock->setTitleBarWidget(thumbDockOrigWidget);
 //        G::isThumbDockLocked = false;
     }
 }
@@ -2833,10 +2920,10 @@ void MW::setAllDocksLockMode()
         thumbDockLockAction->setChecked(true);
 //        G::isLockAllDocks = true;
     } else {
-        folderDock->setTitleBarWidget(fsDockOrigWidget);
-        favDock->setTitleBarWidget(bmDockOrigWidget);
-        metadataDock->setTitleBarWidget(iiDockOrigWidget);
-        thumbDock->setTitleBarWidget(pvDockOrigWidget);
+        folderDock->setTitleBarWidget(folderDockOrigWidget);
+        favDock->setTitleBarWidget(favDockOrigWidget);
+        metadataDock->setTitleBarWidget(metadataDockOrigWidget);
+        thumbDock->setTitleBarWidget(thumbDockOrigWidget);
         folderDockLockAction->setChecked(false);
         favDockLockAction->setChecked(false);
         metadataDockLockAction->setChecked(false);

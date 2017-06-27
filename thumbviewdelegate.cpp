@@ -34,6 +34,11 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
              << "s =" << thumbSpace;   */
 }
 
+QSize ThumbViewDelegate::getThumbSize()
+{
+    return thumbSpace;
+}
+
 QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
                               const QModelIndex &index) const
 {

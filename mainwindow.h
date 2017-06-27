@@ -85,6 +85,7 @@ public:
     bool rememberLastDir;
     QString lastDir;
     bool inclSubfolders;
+    int folderMaxWidth = 600;
 
     // preferences: slideshow
     int slideShowDelay;
@@ -199,6 +200,7 @@ private slots:
     void setMetadataDockLockMode();
     void setThumbDockLockMode();
     void setAllDocksLockMode();
+    void thumbDockMoved(Qt::DockWidgetArea area);
     void reportState();
 
     void openOp();
@@ -215,6 +217,9 @@ private slots:
     void reassignWorkspace(int n);
     void defaultWorkspace();
 
+    void selectThumb();
+
+//    void enter();
 
     //    void reloadThumbsSlot();
     //    void refreshThumbsFromCache(QModelIndex &idx, QImage &thumb);
@@ -352,6 +357,8 @@ private:
     QAction *aboutAction;
     QAction *helpAction;
 
+    // General
+
     // Might need
     QAction *openWithMenuAction;
     QAction *pasteAction;
@@ -411,10 +418,10 @@ private:
     CopyPickDlg *copyPickDlg;
     WorkspaceDlg *workspaceDlg;
     QTimer *SlideShowTimer;
-    QWidget *fsDockOrigWidget;
-    QWidget *bmDockOrigWidget;
-    QWidget *iiDockOrigWidget;
-    QWidget *pvDockOrigWidget;
+    QWidget *folderDockOrigWidget;
+    QWidget *favDockOrigWidget;
+    QWidget *metadataDockOrigWidget;
+    QWidget *thumbDockOrigWidget;
     QWidget *folderDockEmptyWidget;
     QWidget *favDockEmptyWidget;
     QWidget *metadataDockEmptyWidget;
@@ -458,6 +465,7 @@ private:
     bool isValidPath(QString &path);
     QString getSelectedPath();
     void wheelEvent(QWheelEvent *event);
+    bool event(QEvent *event);
     void copyOrCutThumbs(bool copy);
     void showNewImageWarning(QWidget *parent);
     bool removeDirOp(QString dirToDelete);
