@@ -61,25 +61,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     folderSelectionChange();
 }
 
-bool MW::event(QEvent *event)
-{
-/* Patch for bug in Qt where scrollTo not working when switch
-ownershop of thumbView from dock to central widget and back.  scrollTo
-tries to scroll before all the treeView events have executed.  The last
-event is the key release and it works after that.  The shortcuts are
-E (loupe) and G (grid).
-*/
-    if (event->type() == QEvent::KeyRelease) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-        if (keyEvent->key() == Qt::Key_G ||
-        keyEvent->key() == Qt::Key_E) {
-//            qDebug() << "%%%%%%%%%%%%%% Try this %%%%%%%%%%%%%%%%";
-            thumbView->selectThumb(thumbView->currentIndex());
-        }
-    }
-    return QMainWindow::event(event);
-}
-
 void MW::setupMainWindow(bool resetSettings)
 {
     if (!resetSettings) {
@@ -124,11 +105,6 @@ void MW::handleStartupArgs()
     qDebug() << "MW::handleStartupArgs";
     #endif
     }
-//    if (GData::startupDir == GData::specifiedDir)
-//        GData::currentViewDir = GData::specifiedStartDir;
-//    else if (GData::startupDir == GData::rememberLastDir)
-//        GData::currentViewDir = GData::appSettings->value("lastDir").toString();
-//    selectCurrentViewDir();   // rgh 2017-04-04
 }
 
 /**************************************************************************
@@ -2574,7 +2550,10 @@ void MW::setupDocks()
     thumbDock->setObjectName("Viewer");
 
     connect(thumbDock, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
-            this, SLOT(thumbDockMoved(Qt::DockWidgetArea)));
+            this, SLOT(setThumbDockFeatures(Qt::DockWidgetArea)));
+
+    connect(thumbDock, SIGNAL(topLevelChanged(bool)),
+            this, SLOT(setThumbDockFloatFeatures(bool)));
 
     imageViewContainer = new QVBoxLayout;
     imageViewContainer->setContentsMargins(0, 0, 0, 0);
@@ -2618,6 +2597,7 @@ void MW::updateState()
     setThumbDockLockMode();
     setShootingInfo();
     setCentralView();
+    setThumbDockFeatures(dockWidgetArea(thumbDock));
     reportState();
 }
 
@@ -2632,8 +2612,23 @@ void MW::updateState()
 //    qDebug() << "Focus Widget =" << fw->objectName();
 //}
 
-void MW::thumbDockMoved(Qt::DockWidgetArea area)
+void MW::setThumbDockFloatFeatures(bool isFloat)
 {
+    if (isFloat) {
+        thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
+                               QDockWidget::DockWidgetMovable  |
+                               QDockWidget::DockWidgetFloatable);
+        thumbView->setWrapping(true);
+    }
+}
+
+void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::thumbDockMoved";
+    #endif
+    }
     qDebug() << "Dock area" << area;
     if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea) {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -2641,12 +2636,17 @@ void MW::thumbDockMoved(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
         thumbView->setWrapping(false);
+        qDebug() << "\ntop/bottom\n";
     }
-    if (area == Qt::LeftDockWidgetArea || area == Qt::RightDockWidgetArea) {
+    if (area == Qt::LeftDockWidgetArea ||
+            area == Qt::RightDockWidgetArea ||
+            thumbDock->isFloating())
+    {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
         thumbView->setWrapping(true);
+        qDebug() << "\nleft/right/float\n";
     }
 }
 
@@ -2659,6 +2659,7 @@ void MW::loupeDisplay()
     }
     imageView->setVisible(true);
     thumbDock->setWidget(thumbView);
+    setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(true);
     setThumbDockVisibity();
 }
@@ -2673,18 +2674,11 @@ void MW::gridDisplay()
     imageView->setVisible(false);
     mainLayout->addWidget(thumbView);
     thumbDockVisibleAction->setChecked(false);
+    thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
+                           QDockWidget::DockWidgetMovable  |
+                           QDockWidget::DockWidgetFloatable);
+    thumbView->setWrapping(true);
     setThumbDockVisibity();
-}
-
-void MW::selectThumb()  // delete when patch confirmed
-// attempt to get scrollTo to work
-{
-    thumbView->setFocus();
-    qDebug() << "singleshot from gridDisplay";
-    thumbView->forceScroll(500);
-//    thumbView->scrollToBottom();   // no help here
-//    thumbView->scrollTo(idx, ThumbView::ScrollHint::EnsureVisible);
-//    thumbView->selectThumb(idx);
 }
 
 void MW::compareDisplay()
@@ -3288,6 +3282,27 @@ void MW::selectCurrentViewDir()
         fsTree->expand(idx);
         fsTree->setCurrentIndex(idx);
     }
+}
+
+bool MW::event(QEvent *event)
+{
+/* Patch for bug in Qt where scrollTo not working when switch
+ownershop of thumbView from dock to central widget and back.  scrollTo
+tries to scroll before all the treeView events have executed.  The last
+event is the key release and it works after that.  The shortcuts are
+E (loupe) and G (grid).
+*/
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_G ||
+            keyEvent->key() == Qt::Key_E ||
+            keyEvent->key() == Qt::Key_Return)
+        {
+            qDebug() << "\n" << event << "\n";
+            thumbView->selectThumb(thumbView->currentIndex());
+        }
+    }
+    return QMainWindow::event(event);
 }
 
 void MW::wheelEvent(QWheelEvent *event)

@@ -115,6 +115,8 @@ public slots:
     void setStatus(QString state);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void showCacheStatus(const QImage &imCacheStatus, QString mb);
+    void setThumbDockFeatures(Qt::DockWidgetArea area);
+    void setThumbDockFloatFeatures(bool isFloat);
 
     //    bool event(QEvent *event);
     //    void fileSelectionChange(const QItemSelection& selection);
@@ -200,7 +202,6 @@ private slots:
     void setMetadataDockLockMode();
     void setThumbDockLockMode();
     void setAllDocksLockMode();
-    void thumbDockMoved(Qt::DockWidgetArea area);
     void reportState();
 
     void openOp();
@@ -217,39 +218,9 @@ private slots:
     void reassignWorkspace(int n);
     void defaultWorkspace();
 
-    void selectThumb();
-
-//    void enter();
-
-    //    void reloadThumbsSlot();
-    //    void refreshThumbsFromCache(QModelIndex &idx, QImage &thumb);
-    //    void refreshThumbsFromCache();
-    //    void setAppWindowTitle();
-    //    void newImage();
-    //    void updateIndexByViewerImage();
     //    void cutThumbs();
     //    void copyThumbs();
     //    void pasteThumbs();
-    //    void keepZoom();
-    //    void keepTransformClicked();
-    //    void moveRight();
-    //    void moveLeft();
-    //    void moveUp();
-    //    void moveDown();
-    //    void goTop();
-    //    void goBottom();
-    //    void setClassicThumbs();
-    //    void setCompactThumbs();
-    //    void setSquarishThumbs();
-    //    void setFsDockVisibility();
-    //    void setBmDockVisibility();
-    //    void setTagsDockVisibility();
-    //    void setIiDockVisibility();
-    //    void setPvDockVisibility();
-    //    void toggleAllDocks();
-    //    void toggleIconsList();
-    //    void copyImagesTo();
-    //    void moveImagesTo();
 
 private:
 
@@ -370,25 +341,6 @@ private:
     QAction *actType;
 
     // Not needed
-    //    QAction *toggleIconsListAction;
-    //    QActionGroup *thumbLayoutsGroup;
-    //    QAction *refreshAction;
-    //    QAction *thumbsGoTopAct;
-    //    QAction *thumbsGoBottomAct;
-    //    QAction *closeImageAct;
-    //    QAction *zoomSubMenuAct;
-    //    QAction *keepZoomAct;
-    //    QAction *keepTransformAct;
-    //    QAction *transformSubMenuAct;
-    //    QAction *viewSubMenuAct;
-    //    QAction *actClassic;
-    //    QAction *actCompact;
-    //    QAction *actSquarish;
-    //    QAction *actShowHidden;
-    //    QAction *actSmallIcons;
-    //    QAction *toggleAllDocksAct;
-    //    QAction *createDirAction;
-
     //    QAction *cutAction;
     //    QAction *copyAction;
     //    QAction *copyToAction;
@@ -475,9 +427,6 @@ private:
     void syncWorkspaceMenu();
     void reportWorkspace(int n);
 
-    //    void refreshThumbs(bool noScroll);
-    //    void loadCurrentImage(int currentRow);
-    //    void createImageTags();
     //    void setCopyCutActions(bool setEnabled);
     //    void setDeleteAction(bool setEnabled);
     //    void setInterfaceEnabled(bool enable);
