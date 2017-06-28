@@ -97,6 +97,41 @@ void MW::setupMainWindow(bool resetSettings)
     this->setStyleSheet(fStyle.readAll());
 }
 
+bool MW::event(QEvent *event)
+{
+/* Patch for bug in Qt where scrollTo not working when switch
+ownershop of thumbView from dock to central widget and back.  scrollTo
+tries to scroll before all the treeView events have executed.  The last
+event is the key release and it works after that.  The shortcuts are
+E (loupe) and G (grid).
+*/
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_G ||
+            keyEvent->key() == Qt::Key_E ||
+            keyEvent->key() == Qt::Key_Return)
+        {
+            qDebug() << "\n" << event << "\n";
+            thumbView->selectThumb(thumbView->currentIndex());
+        }
+        if (keyEvent->key() == Qt::Key_Escape) {
+            if (isSlideShowActive) slideShow();
+        }
+        if (isSlideShowActive) {
+            int n = keyEvent->key() - 48;
+            if (n >= 0 && n <=9) {
+                slideShowDelay = n;
+                slideShowTimer->setInterval(n * 1000);
+                QString msg = "Reset slideshow interval to ";
+                msg += QString::number(n) + " seconds";
+                popUp->runPopup(this, msg, 1000, 0.5);
+//                popUp->show();
+            }
+        }
+    }
+    return QMainWindow::event(event);
+}
+
 // Do we need this?  rgh
 void MW::handleStartupArgs()
 {
@@ -1178,6 +1213,24 @@ void MW::createStatusBar()
     statusBar()->addWidget(stateLabel);
 }
 
+void MW::setThumbDockParameters(bool isThumbWrap, bool isVerticalTitle)
+{
+    mwd.isThumbWrap = isThumbWrap;
+    mwd.isVerticalTitle = isVerticalTitle;
+    thumbView->setWrapping(isThumbWrap);
+    if (isVerticalTitle) {
+        thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
+                               QDockWidget::DockWidgetMovable  |
+                               QDockWidget::DockWidgetFloatable |
+                               QDockWidget::DockWidgetVerticalTitleBar);
+    }
+    else {
+        thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
+                               QDockWidget::DockWidgetMovable  |
+                               QDockWidget::DockWidgetFloatable);
+    }
+}
+
 void MW::setCacheParameters(int size, bool show, int width, int wtAhead)
 {
     cacheSizeMB = size;
@@ -1667,6 +1720,8 @@ void MW::populateWorkspace(int n, QString name)
     (*workspaces)[n].thumbHeight = thumbView->thumbHeight;
     (*workspaces)[n].labelFontSize = thumbView->labelFontSize;
     (*workspaces)[n].showThumbLabels = thumbView->showThumbLabels;
+    (*workspaces)[n].isThumbWrap = mwd.isThumbWrap;
+    (*workspaces)[n].isVerticalTitle = mwd.isVerticalTitle;
     (*workspaces)[n].isImageInfoVisible = infoVisibleAction->isChecked();
 }
 
@@ -1694,6 +1749,8 @@ void MW::reportWorkspace(int n)
              << "\nthumbHeight" << ws.thumbHeight
              << "\nlabelFontSize" << ws.labelFontSize
              << "\nshowThumbLabels" << ws.showThumbLabels
+             << "\nsisThumbWrap" << ws.isThumbWrap
+             << "\nisVerticalTitle" << ws.isVerticalTitle
              << "\nshowShootingInfo" << ws.isImageInfoVisible
              << "\nisIconDisplay" << ws.isIconDisplay
              << "\nisLoupeDisplay" << ws.isLoupeDisplay
@@ -1720,6 +1777,8 @@ void MW::reportState()
              << "\nthumbHeight" << mwd.thumbHeight
              << "\nlabelFontSize" << mwd.labelFontSize
              << "\nshowThumbLabels" << mwd.showThumbLabels
+             << "\nisThumbWrap" << mwd.isThumbWrap
+             << "\nisVerticalTitle" << mwd.isVerticalTitle
              << "\nshowShootingInfo" << mwd.isImageInfoVisible
              << "\nisIconDisplay" << mwd.isIconDisplay
              << "\nisLoupeDisplay" << mwd.isLoupeDisplay
@@ -1928,10 +1987,12 @@ void MW::preferences()
         this, SLOT(setGeneralParameters(bool, bool)));
     connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool)),
             thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
-    connect(prefdlg, SIGNAL(updateSlideShowParameters(int,bool)),
-            this, SLOT(setSlideShowParameters(int,bool)));
-    connect(prefdlg, SIGNAL(updateCacheParameters(int,bool,int,int)),
-            this, SLOT(setCacheParameters(int,bool,int,int)));
+    connect(prefdlg, SIGNAL(updateThumbDockParameters(bool, bool)),
+            this, SLOT(setThumbDockParameters(bool, bool)));
+    connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
+            this, SLOT(setSlideShowParameters(int, bool)));
+    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int)),
+            this, SLOT(setCacheParameters(int, bool, int, int)));
     prefdlg->exec();
 }
 
@@ -2165,6 +2226,8 @@ void MW::writeSettings()
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showLabels", (bool)showThumbLabelsAction->isChecked());
+    setting->setValue("isThumbWrap", (bool)mwd.isThumbWrap);
+    setting->setValue("isVerticalTitle", (bool)mwd.isVerticalTitle);
     // slideshow
     setting->setValue("slideShowDelay", (int)slideShowDelay);
     setting->setValue("slideShowRandom", (bool)slideShowRandom);
@@ -2252,6 +2315,8 @@ void MW::writeSettings()
         setting->setValue("thumbHeight", ws.thumbHeight);
         setting->setValue("labelFontSize", ws.labelFontSize);
         setting->setValue("showThumbLabels", ws.showThumbLabels);
+        setting->setValue("isThumbWrap", ws.isThumbWrap);
+        setting->setValue("isVerticalTitle", ws.isVerticalTitle);
         setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
         setting->setValue("isIconDisplay", ws.isIconDisplay);
         setting->setValue("isLoupeDisplay", ws.isLoupeDisplay);
@@ -2296,6 +2361,8 @@ void MW::loadSettings()
     mwd.thumbHeight = setting->value("thumbHeight").toInt();
     mwd.labelFontSize = setting->value("labelFontSize").toInt();
     mwd.showThumbLabels = setting->value("showThumbLabels").toBool();
+    mwd.isThumbWrap = setting->value("isThumbWrap").toBool();
+    mwd.isVerticalTitle = setting->value("isVerticalTitle").toBool();
     // slideshow
     slideShowDelay = setting->value("slideShowDelay").toInt();
     slideShowRandom = setting->value("slideShowRandom").toBool();
@@ -2370,6 +2437,8 @@ void MW::loadSettings()
         ws.thumbHeight = setting->value("thumbHeight").toInt();
         ws.labelFontSize = setting->value("labelFontSize").toInt();
         ws.showThumbLabels = setting->value("showThumbLabels").toBool();
+        ws.isThumbWrap = setting->value("isThumbWrap").toBool();
+        ws.isVerticalTitle = setting->value("isVerticalTitle").toBool();
         ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
         ws.isIconDisplay = setting->value("isIconDisplay").toBool();
         ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
@@ -2490,7 +2559,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         toggleFilterPickAction->setShortcut(QKeySequence("Ctrl+`"));
         ingestAction->setShortcut(QKeySequence("Q"));
         reportMetadataAction->setShortcut(QKeySequence("Ctrl+R"));
-        slideShowAction->setShortcut(QKeySequence("Ctrl+E"));
+        slideShowAction->setShortcut(QKeySequence("S"));
         thumbsEnlargeAction->setShortcut(QKeySequence("}"));
         thumbsShrinkAction->setShortcut(QKeySequence("{"));
         nextThumbAction->setShortcut(QKeySequence("Right"));
@@ -3048,68 +3117,46 @@ void MW::slideShow()
     if (isSlideShowActive) {
         isSlideShowActive = false;
         slideShowAction->setText(tr("Slide Show"));
-//        imageView->setFeedback(tr("Slide show stopped"));
-
-        SlideShowTimer->stop();
-        delete SlideShowTimer;
-        slideShowAction->setIcon(QIcon::fromTheme("media-playback-start", QIcon(":/images/play.png")));
+        popUp->runPopup(this, "Stopping slideshow", 1000, 0.5);
+//        popUp->show();
+        slideShowTimer->stop();
+        delete slideShowTimer;
     } else {
-        if (thumbView->thumbViewModel->rowCount() <= 0) {
-            return;
-        }
-
-//        if (GData::layoutMode == thumbViewIdx) {
-            QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
-            if (indexesList.size() != 1) {
-//                    thumbView->setCurrentRow(0);
-                    thumbView->selectThumb(0);
-            } else {
-//                    thumbView->setCurrentRow(indexesList.first().row());
-                    thumbView->selectThumb(indexesList.first().row());
-            }
-
-//            showViewer();
-//        }
-
         isSlideShowActive = true;
+        popUp = new PopUp;
 
-        SlideShowTimer = new QTimer(this);
-        connect(SlideShowTimer, SIGNAL(timeout()), this, SLOT(slideShowHandler()));
-        SlideShowTimer->start(slideShowDelay * 1000);
+        QString msg = "Starting slideshow";
+        msg += "\nInterval =" + QString::number(slideShowDelay) + " second(s)";
+        if (slideShowRandom)  msg += "\nRandom selection";
+        else msg += "\nLinear selection";
+        if (slideShowWrap) msg += "\nWrap at end of slides";
+        else msg += "\nStop at end of slides";
+        popUp->runPopup(this, msg, 4000, 0.5);
+//        popUp->show();
 
         slideShowAction->setText(tr("Stop Slide Show"));
-//        imageView->setFeedback(tr("Slide show started"));
-        slideShowAction->setIcon(QIcon::fromTheme("media-playback-stop", QIcon(":/images/stop.png")));
-
-        slideShowHandler();
+        slideShowTimer = new QTimer(this);
+        connect(slideShowTimer, SIGNAL(timeout()), this, SLOT(nextSlide()));
+        slideShowTimer->start(slideShowDelay * 1000);
+        nextSlide();
     }
 }
 
-// rgh redo based on tweaked thumbview
-void MW::slideShowHandler()
+void MW::nextSlide()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::slideShowHandler";
+    qDebug() << "MW::nextSlide";
     #endif
     }
-//    if (GData::slideShowActive) {
-//        if (GData::slideShowRandom) {
-//            thumbView->selectRandom();
-//        } else {
-//            int currentRow = thumbView->currentIndex().row();
-//            imageView->loadImage(thumbView->thumbViewModel->item(currentRow)->data(thumbView->FileNameRole).toString());
-//            if (thumbView->getNextRow() > 0) {
-//                thumbView->selectThumb(thumbView->getNextRow());
-//            } else {
-//                if (GData::wrapImageList) {
-//                    thumbView->selectThumb(0);
-//                } else {
-//                    slideShow();
-//                }
-//            }
-//        }
-//    }
+    int totSlides = thumbView->thumbViewFilter->rowCount();
+    if (slideShowRandom) thumbView->selectRandom();
+    else {
+        if (thumbView->getCurrentRow() == totSlides - 1)
+            thumbView->selectFirst();
+        else
+            thumbView->selectNext();
+    }
 }
 
 void MW::loadNextImage()
@@ -3282,27 +3329,6 @@ void MW::selectCurrentViewDir()
         fsTree->expand(idx);
         fsTree->setCurrentIndex(idx);
     }
-}
-
-bool MW::event(QEvent *event)
-{
-/* Patch for bug in Qt where scrollTo not working when switch
-ownershop of thumbView from dock to central widget and back.  scrollTo
-tries to scroll before all the treeView events have executed.  The last
-event is the key release and it works after that.  The shortcuts are
-E (loupe) and G (grid).
-*/
-    if (event->type() == QEvent::KeyRelease) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-        if (keyEvent->key() == Qt::Key_G ||
-            keyEvent->key() == Qt::Key_E ||
-            keyEvent->key() == Qt::Key_Return)
-        {
-            qDebug() << "\n" << event << "\n";
-            thumbView->selectThumb(thumbView->currentIndex());
-        }
-    }
-    return QMainWindow::event(event);
 }
 
 void MW::wheelEvent(QWheelEvent *event)

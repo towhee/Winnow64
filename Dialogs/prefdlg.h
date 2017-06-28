@@ -20,6 +20,7 @@ signals:
     void updateGeneralParameters(bool rememberFolder, bool inclSubfolders);
     void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
             int thumbPadding, int labelFontSize, bool showThumbLabels);
+    void updateThumbDockParameters(bool isThumbWrap, bool isVerticalTitle);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
             int cacheStatusWidth, int cacheWtAhead);
@@ -48,6 +49,10 @@ private slots:
 
     void on_rememberFolderChk_clicked();
 
+    void on_wrapThumbsChk_clicked();
+
+    void on_vertTitleChk_clicked();
+
 private:
 
     Ui::Prefdlg *ui;
@@ -60,6 +65,9 @@ private:
     int thumbPadding;
     int labelFontSize;
     bool showThumbLabels;
+
+    bool isThumbWrap;
+    bool isVerticalTitle;
 
     int slideShowDelay;
     bool slideShowRandom;

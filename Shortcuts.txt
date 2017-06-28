@@ -3,7 +3,6 @@ Escape full screen           ⎋
 Zoom fit                     0    ⌘
 Zoom 100%                    0             ⇧⌘
 Compare view                 C
-Slideshow                    E    ⌘
 Full screen                  F
 Reveal folder                F    ⌘
 Grid view                    G
@@ -13,6 +12,7 @@ Open folder                  O
 Ingest / Copy to folder      Q
 Quit program                 Q    ⌘
 Report metadata              R    ⌘
+Slideshow                    S
 New workspace                W
 Manage workspace             W    ⌘
 Default workspace            W             ⇧⌘

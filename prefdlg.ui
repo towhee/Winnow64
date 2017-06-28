@@ -32,19 +32,19 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>3</number>
    </property>
    <widget class="QWidget" name="tab">
     <attribute name="title">
      <string>General</string>
     </attribute>
-    <widget class="QWidget" name="">
+    <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
        <x>50</x>
        <y>50</y>
-       <width>186</width>
-       <height>61</height>
+       <width>401</width>
+       <height>151</height>
       </rect>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -62,6 +62,20 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QCheckBox" name="checkBox">
+        <property name="text">
+         <string>CheckBox</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBox_2">
+        <property name="text">
+         <string>CheckBox</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </widget>
@@ -73,7 +87,7 @@
      <property name="geometry">
       <rect>
        <x>380</x>
-       <y>160</y>
+       <y>150</y>
        <width>30</width>
        <height>16</height>
       </rect>
@@ -97,7 +111,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>70</y>
+       <y>60</y>
        <width>91</width>
        <height>16</height>
       </rect>
@@ -115,7 +129,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>140</y>
+       <y>130</y>
        <width>121</width>
        <height>16</height>
       </rect>
@@ -133,7 +147,7 @@
      <property name="geometry">
       <rect>
        <x>200</x>
-       <y>160</y>
+       <y>150</y>
        <width>160</width>
        <height>22</height>
       </rect>
@@ -173,7 +187,7 @@
      <property name="geometry">
       <rect>
        <x>380</x>
-       <y>50</y>
+       <y>40</y>
        <width>30</width>
        <height>16</height>
       </rect>
@@ -197,7 +211,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>250</y>
+       <y>190</y>
        <width>161</width>
        <height>16</height>
       </rect>
@@ -215,7 +229,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>50</y>
+       <y>40</y>
        <width>91</width>
        <height>16</height>
       </rect>
@@ -233,7 +247,7 @@
      <property name="geometry">
       <rect>
        <x>200</x>
-       <y>140</y>
+       <y>130</y>
        <width>160</width>
        <height>22</height>
       </rect>
@@ -273,7 +287,7 @@
      <property name="geometry">
       <rect>
        <x>200</x>
-       <y>70</y>
+       <y>60</y>
        <width>160</width>
        <height>22</height>
       </rect>
@@ -313,7 +327,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>160</y>
+       <y>150</y>
        <width>121</width>
        <height>16</height>
       </rect>
@@ -331,7 +345,7 @@
      <property name="geometry">
       <rect>
        <x>380</x>
-       <y>70</y>
+       <y>60</y>
        <width>30</width>
        <height>16</height>
       </rect>
@@ -355,7 +369,7 @@
      <property name="geometry">
       <rect>
        <x>200</x>
-       <y>250</y>
+       <y>190</y>
        <width>70</width>
        <height>17</height>
       </rect>
@@ -368,7 +382,7 @@
      <property name="geometry">
       <rect>
        <x>380</x>
-       <y>140</y>
+       <y>130</y>
        <width>30</width>
        <height>16</height>
       </rect>
@@ -392,7 +406,7 @@
      <property name="geometry">
       <rect>
        <x>200</x>
-       <y>50</y>
+       <y>40</y>
        <width>160</width>
        <height>22</height>
       </rect>
@@ -432,7 +446,7 @@
      <property name="geometry">
       <rect>
        <x>200</x>
-       <y>200</y>
+       <y>216</y>
        <width>160</width>
        <height>22</height>
       </rect>
@@ -472,7 +486,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>200</y>
+       <y>216</y>
        <width>121</width>
        <height>16</height>
       </rect>
@@ -490,7 +504,7 @@
      <property name="geometry">
       <rect>
        <x>380</x>
-       <y>200</y>
+       <y>216</y>
        <width>30</width>
        <height>16</height>
       </rect>
@@ -514,7 +528,7 @@
      <property name="geometry">
       <rect>
        <x>200</x>
-       <y>100</y>
+       <y>90</y>
        <width>70</width>
        <height>17</height>
       </rect>
@@ -527,7 +541,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>100</y>
+       <y>90</y>
        <width>161</width>
        <height>16</height>
       </rect>
@@ -539,6 +553,42 @@
      </property>
      <property name="text">
       <string>Lock width = height</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="wrapThumbsChk">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>270</y>
+       <width>121</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Wrap thumbs</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="vertTitleChk">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>300</y>
+       <width>321</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Vertical titlebar when docked on top or bottom</string>
      </property>
     </widget>
    </widget>
@@ -671,73 +721,6 @@
       <number>4999</number>
      </property>
     </widget>
-    <widget class="QGroupBox" name="cacheStrategyGroupBox">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>130</y>
-       <width>471</width>
-       <height>191</height>
-      </rect>
-     </property>
-     <property name="title">
-      <string>Cache strategy</string>
-     </property>
-     <widget class="QWidget" name="layoutWidget">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>25</y>
-        <width>131</width>
-        <height>151</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <widget class="QRadioButton" name="cache50AheadRadio">
-         <property name="text">
-          <string>50% ahead</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="cache60AheadRadio">
-         <property name="text">
-          <string>60% ahead</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="cache70AheadRadio">
-         <property name="text">
-          <string>70% ahead</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="cache80AheadRadio">
-         <property name="text">
-          <string>80% ahead</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="cache90AheadRadio">
-         <property name="text">
-          <string>90% ahead</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="cache100AheadRadio">
-         <property name="text">
-          <string>100% ahead</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </widget>
     <widget class="QSpinBox" name="cacheStatusWidthSpin">
      <property name="geometry">
       <rect>
@@ -776,6 +759,108 @@
      </property>
      <property name="text">
       <string>Cache status width (px)</string>
+     </property>
+    </widget>
+    <widget class="QWidget" name="layoutWidget">
+     <property name="geometry">
+      <rect>
+       <x>200</x>
+       <y>130</y>
+       <width>131</width>
+       <height>151</height>
+      </rect>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QRadioButton" name="cache50AheadRadio">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>50% ahead</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="cache60AheadRadio">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>60% ahead</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="cache70AheadRadio">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>70% ahead</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="cache80AheadRadio">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>80% ahead</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="cache90AheadRadio">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>90% ahead</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="cache100AheadRadio">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>100% ahead</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+    <widget class="QLabel" name="label">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>134</y>
+       <width>111</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Cache strategy</string>
      </property>
     </widget>
    </widget>

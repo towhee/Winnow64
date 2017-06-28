@@ -28,6 +28,11 @@ Prefdlg::Prefdlg(QWidget *parent) :
     ui->thumbSpacingSlider->setValue(thumbSpacing);
     ui->fontSizeSlider->setValue(labelFontSize);
     ui->showThumbLabelChk->setChecked(showThumbLabels);
+    // thumb dock
+    isThumbWrap = mw->mwd.isThumbWrap;
+    isVerticalTitle = mw->mwd.isVerticalTitle;
+    ui->wrapThumbsChk->setChecked(isThumbWrap);
+    ui->vertTitleChk->setChecked(isVerticalTitle);
     // slideshow
     slideShowDelay = mw->slideShowDelay;
     slideShowRandom = mw->slideShowRandom;
@@ -228,4 +233,22 @@ void Prefdlg::on_cache100AheadRadio_clicked()
 void Prefdlg::on_rememberFolderChk_clicked()
 {
     emit updateGeneralParameters(ui->rememberFolderChk->isChecked(), false);
+}
+
+// thumb dock
+
+void Prefdlg::on_wrapThumbsChk_clicked()
+{
+    if (okToUpdate) {
+        isThumbWrap = ui->wrapThumbsChk->isChecked();
+        emit updateThumbDockParameters(isThumbWrap, isVerticalTitle);
+    }
+}
+
+void Prefdlg::on_vertTitleChk_clicked()
+{
+    if (okToUpdate) {
+        isVerticalTitle = ui->vertTitleChk->isChecked();
+        emit updateThumbDockParameters(isThumbWrap, isVerticalTitle);
+    }
 }

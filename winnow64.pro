@@ -24,7 +24,7 @@ HEADERS += \
     Dialogs/prefdlg.h \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
-    ../build-winnow64-Desktop_Qt_5_9_0_clang_64bit-Debug/ui_prefdlg.h
+    Dialogs/popup.h
 SOURCES += \
     bookmarks.cpp \
     dircompleter.cpp \
@@ -44,7 +44,8 @@ SOURCES += \
     thumbviewfilter.cpp \
     Dialogs/prefdlg.cpp \
     Dialogs/workspacedlg.cpp \
-    Dialogs/copypickdlg.cpp
+    Dialogs/copypickdlg.cpp \
+    Dialogs/popup.cpp
 FORMS += \
     copypickdlg.ui \
     prefdlg.ui \

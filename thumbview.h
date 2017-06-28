@@ -46,6 +46,7 @@ public:
     QFileInfoList getPicks();
     bool isPick();
     QStringList getSelectedThumbsList();        //used by tags, might be useful
+    int getCurrentRow();
     QString getCurrentFilename();       //not used, but might be handy
     void setThumbParameters();
     void forceScroll(int row);
@@ -86,6 +87,7 @@ private:
     ThumbViewDelegate *thumbViewDelegate;
     QFileInfo thumbFileInfo;
     QImage emptyImg;
+    QWidget *mw;
     Metadata *metadata;
     bool isIconDisplay;
     QSize treeViewSize;
@@ -106,6 +108,7 @@ public slots:
     void reportThumbs();
 
 private slots:
+    void delaySelectCurrentThumb();
 };
 
 #endif // THUMBVIEW_H

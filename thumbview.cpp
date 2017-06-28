@@ -53,7 +53,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     qDebug() << "ThumbView::ThumbView";
     #endif
     }
-//    mainWindow = parent;
+    mw = parent;
     this->metadata = metadata;
 
     isIconDisplay = iconDisplay;
@@ -206,6 +206,11 @@ void ThumbView::reportThumb()
     for (int i=0; i<15; ++i) {
         qDebug() << i << ":  " << thumbViewModel->item(currThumb)->data(i);
     }
+}
+
+int ThumbView::getCurrentRow()
+{
+    return currentIndex().row();
 }
 
 int ThumbView::getNextRow()
@@ -718,8 +723,26 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
 
 void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::mouseDoubleClickEvent";
+    #endif
+    }
     emit displayLoupe();
-    QWidget::mouseDoubleClickEvent(event);
+    // delay reqd
+    QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
+}
+
+void ThumbView::delaySelectCurrentThumb()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::delaySelectCurrentThumb";
+    #endif
+    }
+//    QKeyEvent *key = new QKeyEvent (QEvent::KeyRelease, Qt::Key_E, Qt::NoModifier, "E");
+//    qApp->postEvent(mw, (QEvent *)key);
+    selectThumb(currentIndex());
 }
 
 void ThumbView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
@@ -727,6 +750,11 @@ void ThumbView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
 /* thumbViewDelegate triggers this to provide rect data to calc thumb mouse
 click position that is then sent to imageView to zoom to the same spot
 */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::updateThumbRectRole";
+    #endif
+    }
     thumbViewFilter->setData(index, iconRect, ThumbRectRole);
 }
 
@@ -736,6 +764,11 @@ void ThumbView::invertSelection()
 /* inverts/toggles which thumbs are selected.  Called from
  * MW::invertSelectionAct
 */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::invertSelection";
+    #endif
+    }
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::invertSelection";

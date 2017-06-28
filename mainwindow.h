@@ -14,7 +14,7 @@
 #include "copypickdlg.h"
 #include "prefdlg.h"
 #include "workspacedlg.h"
-
+#include "popup.h"
 #include "bookmarks.h"
 #include "infoview.h"
 #include "sstream"
@@ -60,6 +60,8 @@ public:
         int thumbHeight;
         int labelFontSize;
         bool showThumbLabels;
+        bool isThumbWrap;
+        bool isVerticalTitle;
         bool isImageInfoVisible;
         bool includeSubfolders;
         bool isIconDisplay;            // list vs icon in thumbView
@@ -90,6 +92,7 @@ public:
     // preferences: slideshow
     int slideShowDelay;
     bool slideShowRandom;
+    bool slideShowWrap = true;
 
     // preferences: cache
     int cacheSizeMB;
@@ -161,8 +164,9 @@ private slots:
     void setGeneralParameters(bool rememberFolder, bool inclSubfolders);
     void setSlideShowParameters(int delay, bool isRandom);
     void slideShow();
-    void slideShowHandler();
+    void nextSlide();
     void setCacheParameters(int size, bool show, int width, int wtAhead);
+    void setThumbDockParameters(bool isThumbWrap, bool isVerticalTitle);
     void loadNextImage();
     void loadPrevImage();
     void loadUpImage();
@@ -369,7 +373,8 @@ private:
     InfoView *infoView;
     CopyPickDlg *copyPickDlg;
     WorkspaceDlg *workspaceDlg;
-    QTimer *SlideShowTimer;
+    PopUp *popUp;
+    QTimer *slideShowTimer;
     QWidget *folderDockOrigWidget;
     QWidget *favDockOrigWidget;
     QWidget *metadataDockOrigWidget;
