@@ -15,6 +15,7 @@ Prefdlg::Prefdlg(QWidget *parent) :
     MW *mw = qobject_cast<MW*>(parent);
     // general
     ui->rememberFolderChk->setChecked(mw->rememberLastDir);
+    ui->maxRecentSB->setValue(mw->maxRecentFolders);
     // thumbs
     thumbWidth = mw->thumbView->thumbWidth;
     thumbHeight = mw->thumbView->thumbHeight;
@@ -232,7 +233,9 @@ void Prefdlg::on_cache100AheadRadio_clicked()
 
 void Prefdlg::on_rememberFolderChk_clicked()
 {
-    emit updateGeneralParameters(ui->rememberFolderChk->isChecked(), false);
+    if (okToUpdate) {
+        emit updateRememberFolder(ui->rememberFolderChk->isChecked());
+    }
 }
 
 // thumb dock
@@ -250,5 +253,24 @@ void Prefdlg::on_vertTitleChk_clicked()
     if (okToUpdate) {
         isVerticalTitle = ui->vertTitleChk->isChecked();
         emit updateThumbDockParameters(isThumbWrap, isVerticalTitle);
+    }
+}
+
+void Prefdlg::on_maxRecentSB_valueChanged(int arg1)
+{
+//    if (okToUpdate) {
+//        emit updateMaxRecentFolders(ui->maxRecentSB->value());
+//    }
+}
+
+void Prefdlg::on_maxRecentSB_destroyed()
+{
+    /* Do not update until dialog closing.  If the previous value was 10 and
+     * then changed to 50 this would be two updates: 5 and 50.  The change to
+     * 5 would result in the list from 6-10 being pruned in the menu before
+     * the max was increased to 50.
+     */
+    if (okToUpdate) {
+        emit updateMaxRecentFolders(ui->maxRecentSB->value());
     }
 }

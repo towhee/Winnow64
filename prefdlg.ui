@@ -32,7 +32,7 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>3</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="tab">
     <attribute name="title">
@@ -41,10 +41,10 @@
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>50</x>
-       <y>50</y>
+       <x>30</x>
+       <y>30</y>
        <width>401</width>
-       <height>151</height>
+       <height>61</height>
       </rect>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -62,21 +62,36 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QCheckBox" name="checkBox">
-        <property name="text">
-         <string>CheckBox</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="checkBox_2">
-        <property name="text">
-         <string>CheckBox</string>
-        </property>
-       </widget>
-      </item>
      </layout>
+    </widget>
+    <widget class="QSpinBox" name="maxRecentSB">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>111</y>
+       <width>48</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>5</number>
+     </property>
+     <property name="maximum">
+      <number>50</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_13">
+     <property name="geometry">
+      <rect>
+       <x>32</x>
+       <y>115</y>
+       <width>147</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Maximum recent folders</string>
+     </property>
     </widget>
    </widget>
    <widget class="QWidget" name="thumbTab">

@@ -26,6 +26,7 @@ protected:
 signals:
     void updateIsRunning(bool);
     void updateStatus(QString, QString, QString);
+    void refreshThumbs();
 
 private:
     QMutex mutex;

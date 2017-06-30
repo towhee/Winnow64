@@ -406,7 +406,7 @@ void MW::createActions()
     // MacOS will not allow runtime menu insertions.  Cludge workaround
     // add 10 dummy menu items and then hide until use.
     int n = recentFolders->count();
-    for (int i=0; i<10; i++) {
+    for (int i = 0; i < maxRecentFolders; i++) {
         QString name;
         QString objName = "";
         if (i < n) {
@@ -873,7 +873,7 @@ void MW::createMenus()
     fileMenu->addAction(addBookmarkAction);
     recentFoldersMenu = fileMenu->addMenu(tr("Recent folders"));
     // add 10 dummy menu items for custom workspaces
-    for (int i=0; i<10; i++) {
+    for (int i = 0; i < maxRecentFolders; i++) {
         recentFoldersMenu->addAction(recentFolderActions.at(i));
     }
     connect(recentFoldersMenu, SIGNAL(triggered(QAction*)),
@@ -1171,6 +1171,9 @@ void MW::createThumbView()
     connect(thumbCacheThread, SIGNAL(updateStatus(QString, QString, QString)),
             this, SLOT(updateStatus(QString, QString, QString)));
 
+    connect(thumbCacheThread, SIGNAL(refreshThumbs()),
+            thumbView, SLOT(refreshThumbs()));
+
     metadataDock = new QDockWidget(tr("  Metadata  "), this);
     metadataDock->setObjectName("Image Info");
     metadataDock->setWidget(infoView);
@@ -1439,16 +1442,6 @@ void MW::sortThumbnails()
 //    refreshThumbs(false);
 }
 
-void MW::setIncludeSubFolders() // rgh not req'd
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::setIncludeSubFolders";
-    #endif
-    }
-//    G::includeSubFolders = subFoldersAction->isChecked();
-}
-
 void MW::showHiddenFiles()
 {
     {
@@ -1482,13 +1475,8 @@ void MW::addRecentFolder(QString fPath)
     }
     if (!recentFolders->contains(fPath))
         recentFolders->prepend(fPath);
-
-    // trim excess items
-    while (recentFolders->count() > 10)
-        recentFolders->removeAt(recentFolders->count() - 1);
-
-    // sync menu items
-    syncRecentFoldersMenu();
+        // sync menu items
+        syncRecentFoldersMenu();
 }
 
 void MW::invokeRecentFolder(QAction *recentFolderActions)
@@ -1511,8 +1499,12 @@ void MW::syncRecentFoldersMenu()
     qDebug() << "MW::syncRecentFoldersMenu";
     #endif
     }
+    // trim excess items
+    while (recentFolders->count() > maxRecentFolders) {
+        recentFolders->removeAt(recentFolders->count() - 1);
+    }
     int count = recentFolders->count();
-    for (int i=0; i<10; i++) {
+    for (int i = 0; i < maxRecentFolders; i++) {
         if (i < count) {
             recentFolderActions.at(i)->setText(recentFolders->at(i));
             recentFolderActions.at(i)->setVisible(true);
@@ -2085,8 +2077,14 @@ void MW::preferences()
     #endif
     }
     Prefdlg *prefdlg = new Prefdlg(this);
-    connect(prefdlg, SIGNAL(updateGeneralParameters(bool,bool)),
-        this, SLOT(setGeneralParameters(bool, bool)));
+//    connect(prefdlg, SIGNAL(updateGeneralParameters(bool,bool)),
+//        this, SLOT(setGeneralParameters(bool, bool, int)));
+    connect(prefdlg, SIGNAL(updateInclSubfolders(bool)),
+            this, SLOT(setIncludeSubFolders(bool)));
+    connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
+            this, SLOT(setRememberLastDir(bool)));
+    connect(prefdlg, SIGNAL(updateMaxRecentFolders(int)),
+            this, SLOT(setMaxRecentFolders(int)));
     connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool)),
             thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
     connect(prefdlg, SIGNAL(updateThumbDockParameters(bool, bool)),
@@ -2098,11 +2096,29 @@ void MW::preferences()
     prefdlg->exec();
 }
 
-void MW::setGeneralParameters(bool prefRememberFolder, bool prefInclSubfolders)
+void MW::setIncludeSubFolders(bool prefInclSubfolders)
 {
-    rememberLastDir = prefRememberFolder;
     inclSubfolders = prefInclSubfolders;
 }
+
+void MW::setRememberLastDir(bool prefRememberFolder)
+{
+    rememberLastDir = prefRememberFolder;
+}
+
+void MW::setMaxRecentFolders(int prefMaxRecentFolders)
+{
+    maxRecentFolders = prefMaxRecentFolders;
+    syncRecentFoldersMenu();
+}
+
+//void MW::setGeneralParameters(bool prefRememberFolder, bool prefInclSubfolders,
+//                              int prefMaxRecentFolders)
+//{
+//    rememberLastDir = prefRememberFolder;
+//    inclSubfolders = prefInclSubfolders;
+//    maxRecentFolders = prefMaxRecentFolders;
+//}
 
 void MW::oldPreferences()
 {
@@ -2278,6 +2294,7 @@ void MW::writeSettings()
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
+    setting->setValue("maxRecentFolders", maxRecentFolders);
     // thumbs
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
     setting->setValue("thumbPadding", thumbView->thumbPadding);
@@ -2415,6 +2432,7 @@ void MW::loadSettings()
         setting->setValue("isShowCacheStatus", (bool)true);
         setting->setValue("cacheStatusWidth", (int)200);
         setting->setValue("cacheWtAhead", (int)5);
+        setting->setValue("maxRecentFolders", (int)10);
         bookmarkPaths.insert(QDir::homePath());
     }
 
@@ -2422,6 +2440,7 @@ void MW::loadSettings()
 //    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();
     rememberLastDir = setting->value("rememberLastDir").toBool();
     lastDir = setting->value("lastDir").toString();
+    maxRecentFolders = setting->value("maxRecentFolders").toInt();
     // thumbs
     mwd.thumbSpacing = setting->value("thumbSpacing").toInt();
     mwd.thumbPadding = setting->value("thumbPadding").toInt();

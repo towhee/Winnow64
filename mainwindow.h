@@ -82,10 +82,12 @@ public:
     workspaceData mwd;  // hold the persistent start values from QSettings
 
 //    bool isShowHiddenFiles;     // needed?
+
     // preferences: files
     bool rememberLastDir;
     QString lastDir;
     bool inclSubfolders;
+    int maxRecentFolders = 10;
     int folderMaxWidth = 600;
 
     // preferences: slideshow
@@ -102,7 +104,6 @@ public:
     QString currentViewDir;
 
     bool isSlideShowActive;
-    int maxRecentFolders = 10;
     bool copyOp;
 
 protected:
@@ -135,7 +136,6 @@ private slots:
     void copyPicks();
     void sortThumbnails();
 //    void reload();
-    void setIncludeSubFolders();
     void preferences();
     void oldPreferences();
     void toggleFullScreen();
@@ -160,7 +160,10 @@ private slots:
     void setShootingInfo();
     void togglePick();
     void updatePick();
-    void setGeneralParameters(bool rememberFolder, bool inclSubfolders);
+    void setRememberLastDir(bool prefRememberFolder);
+    void setIncludeSubFolders(bool prefInclSubfolders);
+    void setMaxRecentFolders(int prefMaxRecentFolders);
+//    void setGeneralParameters(bool rememberFolder, bool inclSubfolders, int prefMaxRecentFolders);
     void setSlideShowParameters(int delay, bool isRandom);
     void slideShow();
     void nextSlide();

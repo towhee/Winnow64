@@ -234,10 +234,13 @@ void ThumbCache::run()
         }
 
         // sometimes QListView does not refresh icons...
-//        if (row % 8 == 0) {
+        if (row % 20 == 0) {
+            refreshThumbs();
+//            thumbView->hide();
+//            thumbView->show();
 //            thumbView->refreshThumbs();
 //            qApp->processEvents();
-//        }
+        }
 
         mutex.unlock();
         emit updateStatus("", "Loaded thumb " + QString::number(row),

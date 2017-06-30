@@ -154,7 +154,7 @@ void ThumbView::refreshThumbs() {
     #endif
     }
     // if workspace invoked with diff thumb parameters
-    setThumbParameters();
+//    setThumbParameters();
     this->dataChanged(thumbViewFilter->index(0, 0, QModelIndex()),
       thumbViewFilter->index(getLastRow(), 0, QModelIndex()));
 }

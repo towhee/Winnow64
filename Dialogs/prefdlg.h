@@ -17,7 +17,11 @@ public:
     ~Prefdlg();
 
 signals:
-    void updateGeneralParameters(bool rememberFolder, bool inclSubfolders);
+//    void updateGeneralParameters(bool rememberFolder, bool inclSubfolders,
+//                                 int maxRecent);
+    void updateRememberFolder(bool rememberFolder);
+    void updateInclSubfolders(bool inclSubfolders);
+    void updateMaxRecentFolders(int maxRecentFolders);
     void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
             int thumbPadding, int labelFontSize, bool showThumbLabels);
     void updateThumbDockParameters(bool isThumbWrap, bool isVerticalTitle);
@@ -26,6 +30,9 @@ signals:
             int cacheStatusWidth, int cacheWtAhead);
 
 private slots:
+    // general
+    void on_rememberFolderChk_clicked();
+    void on_maxRecentSB_destroyed();
     // thumbs
     void on_iconWidthSlider_valueChanged(int value);
     void on_iconHeightSlider_valueChanged(int value);
@@ -33,6 +40,8 @@ private slots:
     void on_iconPaddingSlider_valueChanged(int value);
     void on_showThumbLabelChk_clicked();
     void on_fontSizeSlider_valueChanged(int value);
+    void on_wrapThumbsChk_clicked();
+    void on_vertTitleChk_clicked();
     // slideshow
     void on_slideshowDelaySpinbox_valueChanged(int value);
     void on_slideshowRandomChk_clicked();
@@ -47,11 +56,8 @@ private slots:
     void on_cache90AheadRadio_clicked();
     void on_cache100AheadRadio_clicked();
 
-    void on_rememberFolderChk_clicked();
 
-    void on_wrapThumbsChk_clicked();
-
-    void on_vertTitleChk_clicked();
+    void on_maxRecentSB_valueChanged(int arg1);
 
 private:
 
