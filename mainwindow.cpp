@@ -39,6 +39,9 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     isInitializing = true;
     workspaces = new QList<workspaceData>;
+    recentFolders = new QStringList;
+//    addRecentFolder("");    // temp for testing
+
     setting = new QSettings("Winnow", "winnow_100");
 
     // must come first so persistant action settings can be updated
@@ -226,6 +229,9 @@ void MW::folderSelectionChange()
     if (dirPath == currentViewDir) return;
     else currentViewDir = dirPath;
 
+    // add to recent folders
+    addRecentFolder(currentViewDir);
+
     // We do not want to update the imageCache while metadata is still being
     // loaded.  The imageCache update is triggered in fileSelectionChange,
     // which is also executed when the change file event is fired.
@@ -386,11 +392,39 @@ void MW::createActions()
     openAction->setObjectName("openFolder");
     connect(openAction, SIGNAL(triggered()), this, SLOT(openFolder()));
 
-    // rgh check out if dup
     openWithMenu = new QMenu(tr("Open With..."));
     openWithMenuAction = new QAction(tr("Open With..."), this);
     openWithMenuAction->setObjectName("openWithMenu");
     openWithMenuAction->setMenu(openWithMenu);
+
+    recentFoldersMenu = new QMenu(tr("Recent folders..."));
+    recentFoldersAction = new QAction(tr("Recent folders..."), this);
+    recentFoldersAction->setObjectName("recentFoldersAction");
+    recentFoldersAction->setMenu(recentFoldersMenu);
+
+    // general connection to handle invoking new recent folders
+    // MacOS will not allow runtime menu insertions.  Cludge workaround
+    // add 10 dummy menu items and then hide until use.
+    int n = recentFolders->count();
+    for (int i=0; i<10; i++) {
+        QString name;
+        QString objName = "";
+        if (i < n) {
+            name = recentFolders->at(i);
+            objName = "recentFolder" + QString::number(i);
+        }
+        else name = "Future recent folder" + QString::number(i);
+        recentFolderActions.append(new QAction(name, this));
+        if (i < n) {
+//            recentFolderActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
+            recentFolderActions.at(i)->setObjectName(objName);
+            recentFolderActions.at(i)->setText(name);
+            recentFolderActions.at(i)->setVisible(true);
+        }
+        if (i >= n) recentFolderActions.at(i)->setVisible(false);
+//        recentFolderActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
+    }
+    addActions(recentFolderActions);
 
     chooseAppAction = new QAction(tr("Manage External Applications"), this);
     chooseAppAction->setObjectName("chooseApp");
@@ -533,15 +567,13 @@ void MW::createActions()
     randomImageAction->setObjectName("randomImage");
     connect(randomImageAction, SIGNAL(triggered()), thumbView, SLOT(selectRandom()));
 
-    // Place keeper
     nextPickAction = new QAction(tr("Next Pick"), this);
     nextPickAction->setObjectName("nextPick");
-//    connect(nextPickAction, SIGNAL(triggered()), this, SLOT(nextPick()));
+    connect(nextPickAction, SIGNAL(triggered()), thumbView, SLOT(selectNextPick()));
 
-    // Place keeper
     prevPickAction = new QAction(tr("Previous Pick"), this);
     prevPickAction->setObjectName("prevPick");
-//    connect(prevPickAction, SIGNAL(triggered()), this, SLOT(prevPick()));
+    connect(prevPickAction, SIGNAL(triggered()), thumbView, SLOT(selectPrevPick()));
 
     // View menu
     slideShowAction = new QAction(tr("Slide Show"), this);
@@ -741,7 +773,7 @@ void MW::createActions()
     // general connection to handle invoking new workspaces
     // MacOS will not allow runtime menu insertions.  Cludge workaround
     // add 10 dummy menu items and then hide until use.
-    int n = workspaces->count();
+    n = workspaces->count();
     for (int i=0; i<10; i++) {
         QString name;
         QString objName = "";
@@ -750,17 +782,19 @@ void MW::createActions()
             objName = "workspace" + QString::number(i);
         }
         else name = "Future Workspace" + QString::number(i);
-        workspaceActions.append(new QAction(name, this));
-        if (i < n) {
-            workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
-            workspaceActions.at(i)->setObjectName(objName);
-            workspaceActions.at(i)->setText(name);
-            workspaceActions.at(i)->setVisible(true);
-        }
-        if (i >= n) workspaceActions.at(i)->setVisible(false);
+
+    workspaceActions.append(new QAction(name, this));
+    if (i < n) {
         workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
+        workspaceActions.at(i)->setObjectName(objName);
+        workspaceActions.at(i)->setText(name);
+        workspaceActions.at(i)->setVisible(true);
     }
-    addActions(workspaceActions);
+    if (i >= n) workspaceActions.at(i)->setVisible(false);
+    workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
+}
+addActions(workspaceActions);
+
     // connection moved to after menu creation as will not work before
 //    connect(workspaceMenu, SIGNAL(triggered(QAction*)),
 //            SLOT(invokeWorkspace(QAction*)));
@@ -830,7 +864,6 @@ void MW::createMenus()
     }
     fileMenu = menuBar()->addMenu(tr("&File"));
     fileMenu->addAction(openAction);
-    recentFoldersMenu = fileMenu->addMenu(tr("Recent folders"));
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
     openWithMenu->addAction(newAppAction);
     openWithMenu->addAction(deleteAppAction);
@@ -838,6 +871,14 @@ void MW::createMenus()
     fileMenu->addAction(revealFileAction);
     fileMenu->addAction(subFoldersAction);
     fileMenu->addAction(addBookmarkAction);
+    recentFoldersMenu = fileMenu->addMenu(tr("Recent folders"));
+    // add 10 dummy menu items for custom workspaces
+    for (int i=0; i<10; i++) {
+        recentFoldersMenu->addAction(recentFolderActions.at(i));
+    }
+    connect(recentFoldersMenu, SIGNAL(triggered(QAction*)),
+            SLOT(invokeRecentFolder(QAction*)));
+
     fileMenu->addSeparator();
     fileMenu->addAction(ingestAction);
     fileMenu->addAction(renameAction);
@@ -1427,6 +1468,64 @@ void MW::setThumbLabels()   // move to thumbView
     }
 //    G::showThumbLabels = showThumbLabelsAction->isChecked();
 }
+
+/* RECENT MENU
+ *
+ */
+
+void MW::addRecentFolder(QString fPath)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::addRecentFolder";
+    #endif
+    }
+    if (!recentFolders->contains(fPath))
+        recentFolders->prepend(fPath);
+
+    // trim excess items
+    while (recentFolders->count() > 10)
+        recentFolders->removeAt(recentFolders->count() - 1);
+
+    // sync menu items
+    syncRecentFoldersMenu();
+}
+
+void MW::invokeRecentFolder(QAction *recentFolderActions)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::invokeRecentFolder";
+    #endif
+    }
+    qDebug() << recentFolderActions->text();
+    QString dir = recentFolderActions->text();
+    fsTree->setCurrentIndex(fsTree->fsModel->index(dir));
+    folderSelectionChange();
+}
+
+void MW::syncRecentFoldersMenu()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::syncRecentFoldersMenu";
+    #endif
+    }
+    int count = recentFolders->count();
+    for (int i=0; i<10; i++) {
+        if (i < count) {
+            recentFolderActions.at(i)->setText(recentFolders->at(i));
+            recentFolderActions.at(i)->setVisible(true);
+        }
+        else {
+            recentFolderActions.at(i)->setText("Future recent folder" + QString::number(i));
+            recentFolderActions.at(i)->setVisible(false);
+        }
+        qDebug() << "sync menu" << i << recentFolderActions.at(i)->text();
+    }
+}
+
+
 
 /* WORKSPACES
 Need to track:
@@ -2249,6 +2348,15 @@ void MW::writeSettings()
     }
     setting->endGroup();
 
+    /* save recent folders */
+    setting->beginGroup("RecentFolders");
+    setting->remove("");
+    for (int i=0; i < recentFolders->count(); i++) {
+        setting->setValue("recentFolder" + QString::number(i+1),
+                          recentFolders->at(i));
+    }
+    setting->endGroup();
+
     // save workspaces
     setting->beginWriteArray("workspaces");
     for (int i = 0; i < workspaces->count(); ++i) {
@@ -2369,6 +2477,14 @@ void MW::loadSettings()
     QStringList paths = setting->childKeys();
     for (int i = 0; i < paths.size(); ++i) {
         bookmarkPaths.insert(setting->value(paths.at(i)).toString());
+    }
+    setting->endGroup();
+
+    /* read recent folders */
+    setting->beginGroup("RecentFolders");
+    QStringList recentList = setting->childKeys();
+    for (int i = 0; i < recentList.size(); ++i) {
+        recentFolders->append(setting->value(recentList.at(i)).toString());
     }
     setting->endGroup();
 
@@ -2527,7 +2643,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
         lastThumbAction->setShortcut(QKeySequence("End"));
         downThumbAction->setShortcut(QKeySequence("Down"));
         upThumbAction->setShortcut(QKeySequence("Up"));
-        randomImageAction->setShortcut(QKeySequence("Ctrl+Right"));
+        randomImageAction->setShortcut(QKeySequence("Ctrl+Alt+Right"));
+        nextPickAction->setShortcut(QKeySequence("Alt+Right"));
+        prevPickAction->setShortcut(QKeySequence("Alt+Left"));
         openAction->setShortcut(QKeySequence("O"));
         asLoupeAction->setShortcut(QKeySequence("E"));
         asGridAction->setShortcut(QKeySequence("G"));
@@ -2536,8 +2654,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         zoomOutAction->setShortcut(QKeySequence("-"));
         zoomInAction->setShortcut(QKeySequence("+"));
         zoomToggleAction->setShortcut(QKeySequence("Z"));
-        rotateLeftAction->setShortcut(QKeySequence("Ctrl+Left"));
-        rotateRightAction->setShortcut(QKeySequence("Ctrl+Right"));
+        rotateLeftAction->setShortcut(QKeySequence("["));
+        rotateRightAction->setShortcut(QKeySequence("]"));
 //        moveLeftAct->setShortcut(QKeySequence("Left"));
 //        moveRightAct->setShortcut(QKeySequence("Right"));
 //        copyToAction->setShortcut(QKeySequence("Ctrl+Y"));

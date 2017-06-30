@@ -102,6 +102,7 @@ public:
     QString currentViewDir;
 
     bool isSlideShowActive;
+    int maxRecentFolders = 10;
     bool copyOp;
 
 protected:
@@ -200,6 +201,7 @@ private slots:
     void newWorkspace();
     QString fixDupWorkspaceName(QString name);
     void invokeWorkspace(QAction *workAction);
+    void invokeRecentFolder(QAction *recentFolderActions);
     void manageWorkspaces();
     void deleteWorkspace(int n);
     void renameWorkspace(int n, QString name);
@@ -216,24 +218,28 @@ private:
 
     QMenuBar *thumbsMenuBar;
     QMenu *fileMenu;
-    QMenu *recentFoldersMenu;
+        QMenu *openWithMenu;
+        QMenu *recentFoldersMenu;
     QMenu *editMenu;
     QMenu *goMenu;
     QMenu *sortMenu;
     QMenu *viewMenu;
+       QMenu *zoomSubMenu;
     QMenu *windowMenu;
-    QMenu *workspaceMenu;
+        QMenu *workspaceMenu;
     QMenu *helpMenu;
-    QMenu *zoomSubMenu;
-    QMenu *transformSubMenu;
+
     QMenu *viewSubMenu;
     QMenu *imageFileSubMenu;
     QMenu *MirroringSubMenu;
-    QMenu *openWithMenu;
+    QMenu *transformSubMenu;
 
     // File menu
     QAction *openAction;
     QAction *revealFileAction;
+    QAction *openWithMenuAction;
+    QAction *recentFoldersAction;
+    QList<QAction *> recentFolderActions;
     QAction *subFoldersAction;
     QAction *addBookmarkAction;
     QAction *removeBookmarkAction;
@@ -320,7 +326,6 @@ private:
     // General
 
     // Might need
-    QAction *openWithMenuAction;
     QAction *pasteAction;
     QAction *pasteImageAction;
     QActionGroup *sortTypesGroup;
@@ -371,6 +376,7 @@ private:
     QVBoxLayout *imageViewContainer;
 
     QStringList *subfolders;
+    QStringList *recentFolders;
 
     bool metadataLoaded;
 
@@ -419,6 +425,9 @@ private:
     void syncWorkspaceMenu();
     void reportWorkspace(int n);
     void getSubfolders(QString fPath);
+
+    void addRecentFolder(QString fPath);
+    void syncRecentFoldersMenu();
 
     bool isStressTest = false;
     void stressTest();

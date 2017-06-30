@@ -309,6 +309,11 @@ QFileInfoList ThumbView::getPicks()
 MW, passing the list on to the copyPicksDlg for ingestion/copying to another
 folder.
 */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getPicks";
+    #endif
+    }
     QFileInfoList fileInfoList;
     for (int row = 0; row < thumbViewFilter->rowCount(); ++row) {
         QModelIndex idx = thumbViewFilter->index(row, 0, QModelIndex());
@@ -320,9 +325,50 @@ folder.
     return fileInfoList;
 }
 
+int ThumbView::getNextPick()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getNextPick";
+    #endif
+    }
+    int frwd = currentIndex().row() + 1;
+    int rowCount = thumbViewFilter->rowCount();
+    QModelIndex idx;
+    while (frwd < rowCount) {
+        idx = thumbViewFilter->index(frwd, 0, QModelIndex());
+        if (idx.data(PickedRole).toString() == "true") return frwd;
+        ++frwd;
+    }
+    return -1;
+}
+
+int ThumbView::getPrevPick()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getNextPick";
+    #endif
+    }
+    int back = currentIndex().row() - 1;
+    int rowCount = thumbViewFilter->rowCount();
+    QModelIndex idx;
+    while (back >= 0) {
+        idx = thumbViewFilter->index(back, 0, QModelIndex());
+        if (idx.data(PickedRole).toString() == "true") return back;
+        --back;
+    }
+    return -1;
+}
+
 int ThumbView::getNearestPick()
 {
-/* Returns the model row of the nearest pick, used in MW::toggleFilterPick */
+/* Returns the model row of the nearest pick, used in toggleFilterPick */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getNearestPick";
+    #endif
+    }
     int frwd = currentIndex().row();
     int back = frwd;
     int rowCount = thumbViewFilter->rowCount();
@@ -342,15 +388,13 @@ void ThumbView::toggleFilterPick(bool isFilter)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::toggleFilterPick";
+    qDebug() << "ThumbView::toggleFilterPick";
     #endif
     }
     pickFilter = isFilter;
     if (pickFilter) {
         int row = getNearestPick();
-//        qDebug() << "Nearest pick = row" << row;
         selectThumb(row);
-//        if (row > 0) thumbView->selectThumb(row);
         thumbViewFilter->setFilterRegExp("true");   // show only picked items
     }
     else
@@ -511,6 +555,8 @@ void ThumbView::selectThumb(int row)
     qDebug() << "ThumbView::selectThumb(row)" << row;
     #endif
     }
+    // some operations assign row = -1 if not found
+    if (row < 0) return;
     setFocus();
 //    qDebug() << "ThumbView::selectThumb(row)" << row;
     QModelIndex idx = thumbViewFilter->index(row, 0, QModelIndex());
@@ -603,6 +649,26 @@ void ThumbView::selectRandom()
     #endif
     }
     if (isSelectedItem()) selectThumb(getRandomRow());
+}
+
+void ThumbView::selectNextPick()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::selectNextPick";
+    #endif
+    }
+    if (isSelectedItem()) selectThumb(getNextPick());
+}
+
+void ThumbView::selectPrevPick()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::selectPrevPick";
+    #endif
+    }
+    if (isSelectedItem()) selectThumb(getPrevPick());
 }
 
 void ThumbView::thumbsEnlarge()

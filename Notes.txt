@@ -1,12 +1,10 @@
 To do:
-- Fix settings for load first time
+- Tweak settings for load first time
 - Thumbs fit
-- Goto next pick, previous pick not working
 - Recent files
 - Open with another app
 - Rename selected images
 - Tweak context menus
-- Define minimum thumb size
 - Run droplet
 - Rotate selected images
 - Deal with files cannot read or find embedded jpg using error msg in metadata
@@ -27,6 +25,7 @@ To do:
 - Clip black area on canon thumbs
 - Compare 2-9 images
 - Hide/show cursor, always show if ESC
+- Done: Goto next pick, previous pick not working
 - Done: Add a help window
 - Done: Open folder
 - Done: Change thumb dock header to vertical when dock to bottom or top

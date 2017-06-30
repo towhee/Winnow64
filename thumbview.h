@@ -35,7 +35,6 @@ public:
     void selectThumb(int row);
     void selectThumb(QString &filePath);
 
-    int getNearestPick();
     QFileInfoList getPicks();
     bool isPick();
     QStringList getSelectedThumbsList();        //used by tags, might be useful
@@ -72,6 +71,8 @@ public slots:
     void selectFirst();
     void selectLast();
     void selectRandom();
+    void selectNextPick();
+    void selectPrevPick();
 
 private slots:
     void delaySelectCurrentThumb();
@@ -93,6 +94,10 @@ private:
     int getPrevRow();
     int getLastRow();                           //not used? Seems handy
     int getRandomRow();                         //not used? Seems handy
+
+    int getNearestPick();
+    int getNextPick();
+    int getPrevPick();
 
     QString currentViewDir;
     QDir *thumbsDir;

@@ -32,15 +32,19 @@ Status bar                   F10
 Preferences                  ,    ⌘
 Pick (toggle)                `
 Filter picks (toggle)        `    ⌘
+Rotate left                  [
+Rotate right                 ]
 Enlarge Thumb                }
 Shrink thumb                 {
 Zoom out                     -
 Zoom in                      +
 Next thumb                   →
+Next pick                    →          ⌥
+Random thumb                 →             ⇧⌘
 Previous thumb               ←
+Previous pick                ←          ⌥
 Above thumb                  ↑
 Below thumb                  ↓
 First thumb                  ↖︎
 Last thumb                   ↘︎
-Random thumb                 →             ⇧⌘
 Loupe view                   ↩︎
