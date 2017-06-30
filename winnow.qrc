@@ -134,5 +134,6 @@
         <file>images/down-arrow3.png</file>
         <file>qss/winnow.css</file>
         <file>images/winnow.ico</file>
+        <file>Docs/Winnow help.html</file>
     </qresource>
 </RCC>

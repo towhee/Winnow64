@@ -25,6 +25,7 @@ protected:
 
 signals:
     void updateIsRunning(bool);
+    void updateStatus(QString, QString, QString);
 
 private:
     QMutex mutex;

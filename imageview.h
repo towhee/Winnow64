@@ -28,12 +28,6 @@ public:
     int getImageWidth();    // used for make thumbs fit which may be toast
     int getImageHeight();
 
-    void zoomIn();
-    void zoomOut();
-    void zoomToFit();
-    void zoom100();
-    void zoomTo(float zoomTo);
-
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void setInfo(QString infoString);
     QLabel *pickLabel;      // visibility controlled in MW
@@ -43,10 +37,16 @@ public slots:
     void copyImage();
     void pasteImage();
     void thumbClick(float xPct, float yPct);
+    void zoomIn();
+    void zoomOut();
+    void zoomToFit();
+    void zoom100();
+    void zoomTo(float zoomTo);
+    void zoomToggle();
 
 signals:
     void togglePick();
-    void updateStatus(QString);
+    void updateStatus(QString, QString, QString);
 
 private slots:
 

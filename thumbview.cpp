@@ -11,7 +11,7 @@ resized.
 
 ThumbView does the following:
 
-    Manages the file list of eligible image types, including attributes for
+    Manages the file list of eligible images, including attributes for
     selected and picked. Picked files are shown in green and can be filtered
     and copied to another folder via the copyPickDlg class.
 
@@ -20,12 +20,13 @@ ThumbView does the following:
     Sorts the list based on date acquired, filename and forward/reverse
 
     Provides functions to navigate the list, including current index, next item,
-    previous item, first item and last item.
+    previous item, first item, last item and random item.
 
     Changes in selection trigger the MW::fileSelectionChange which loads the new
     selection in imageView and updates status.
 
-    Keyboard and mouse events are intercepted for navigation.
+    The mouse click location within the thumb is used in ImageView to pan a
+    zoomed image.
 
 QStandardItemModel roles used:
 
@@ -114,13 +115,13 @@ bool ThumbView::event(QEvent *event)
 {
 /* Just in case we need to override a keystroke in the thumbview */
     bool override = false;
-    qDebug() << "treeView events:" << event;
+//    qDebug() << "treeView events:" << event;
     if (event->type() == QEvent::UpdateLater ||
         event->type() == QEvent::Paint) {
-        forceScroll(0);
+//        forceScroll(0);
     }
     if (event->type() == QEvent::Resize) {
-        forceScroll(40);
+//        forceScroll(40);
     }
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
@@ -337,7 +338,25 @@ int ThumbView::getNearestPick()
     return 0;
 }
 
-// used by tags which may not be used ... however, looks useful
+void ThumbView::toggleFilterPick(bool isFilter)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::toggleFilterPick";
+    #endif
+    }
+    pickFilter = isFilter;
+    if (pickFilter) {
+        int row = getNearestPick();
+//        qDebug() << "Nearest pick = row" << row;
+        selectThumb(row);
+//        if (row > 0) thumbView->selectThumb(row);
+        thumbViewFilter->setFilterRegExp("true");   // show only picked items
+    }
+    else
+        thumbViewFilter->setFilterRegExp("");       // no filter - show all
+}
+
 QStringList ThumbView::getSelectedThumbsList()
 {
 /* This was used by the eliminated tags class and is not used but looks
@@ -369,31 +388,33 @@ thumbCache.
     #endif
     }
     currentViewDir = dir;
-    qDebug() << "currentViewDir" << currentViewDir;
     if (!pickFilter) {
         loadPrepare();
         // exit if no images, otherwise get thumb info
-        if (!initThumbs()) return false;
+        if (!initThumbs() && !includeSubfolders) return false;
     }
 
     // exit here if just display file list instead of icons
     if (!isIconDisplay) return true;
 
-    setWrapping(true);
+//    setWrapping(true);
     if (includeSubfolders) {
+        qDebug() << "ThumbView::load including subfolders";
         QDirIterator iterator(currentViewDir, QDirIterator::Subdirectories);
         while (iterator.hasNext()) {
             iterator.next();
             if (iterator.fileInfo().isDir() && iterator.fileName() != "." && iterator.fileName() != "..") {
                 thumbsDir->setPath(iterator.filePath());
+                qDebug() << "ITERATING FOLDER" << iterator.filePath();
                 initThumbs();
             }
         }
     }
     if (thumbFileInfoList.size() && selectionModel()->selectedIndexes().size() == 0) {
         selectThumb(0);
+        return true;
     }
-    return true;
+    return false;   // no images found in any folder
 }
 
 void ThumbView::loadPrepare()
@@ -491,7 +512,7 @@ void ThumbView::selectThumb(int row)
     #endif
     }
     setFocus();
-    qDebug() << "ThumbView::selectThumb(row)" << row;
+//    qDebug() << "ThumbView::selectThumb(row)" << row;
     QModelIndex idx = thumbViewFilter->index(row, 0, QModelIndex());
     setCurrentIndex(idx);
 //    forceScroll(10);
@@ -660,17 +681,17 @@ void ThumbView::forceScroll(int row)
     int perRow = wSize.width() / tSize.width();
     int rowsReqd = ((float)tot / perRow) + 1;
     int sbMaxCalc = rowsReqd * tSize.height();
-    qDebug() << "sb->minimum" << sb->minimum()
-             << "sb->maximum" << sb->maximum()
-             << "sb->singleStep" << sb->singleStep()
-             << "sb->pageStep" << sb->pageStep()
-             << "sb->value" << sb->value()
-             << "tSize" << tSize
-             << "wSize" << size()
-             << "perRow" << perRow
-             << "rowsReqd" << rowsReqd
-             << "maxCalc" << sbMaxCalc
-             << "sbVal" << sbVal;
+//    qDebug() << "sb->minimum" << sb->minimum()
+//             << "sb->maximum" << sb->maximum()
+//             << "sb->singleStep" << sb->singleStep()
+//             << "sb->pageStep" << sb->pageStep()
+//             << "sb->value" << sb->value()
+//             << "tSize" << tSize
+//             << "wSize" << size()
+//             << "perRow" << perRow
+//             << "rowsReqd" << rowsReqd
+//             << "maxCalc" << sbMaxCalc
+//             << "sbVal" << sbVal;
 //    sb->setValue(sbVal);
 //    selectThumb(row);
 }

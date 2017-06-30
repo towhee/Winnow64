@@ -49,7 +49,8 @@ SOURCES += \
 FORMS += \
     copypickdlg.ui \
     prefdlg.ui \
-    workspacedlg.ui
+    workspacedlg.ui \
+    helpform.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns

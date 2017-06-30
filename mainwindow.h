@@ -1,5 +1,3 @@
-
-
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
@@ -17,6 +15,7 @@
 #include "popup.h"
 #include "bookmarks.h"
 #include "infoview.h"
+#include "ui_helpform.h"
 #include "sstream"
 #include <iostream>
 #include <iomanip>
@@ -144,7 +143,7 @@ private slots:
     void gridDisplay();
     void compareDisplay();
 //    void updateActions();
-    void updateStatus(QString s1);
+    void updateStatus(QString s1, QString s2, QString s3);
     void updateMetadataThreadRunStatus(bool isRun);
     void updateThumbThreadRunStatus(bool isRun);
     void updateImageThreadRunStatus(bool isRun);
@@ -160,31 +159,16 @@ private slots:
     void setShootingInfo();
     void togglePick();
     void updatePick();
-    void toggleFilterPick();
     void setGeneralParameters(bool rememberFolder, bool inclSubfolders);
     void setSlideShowParameters(int delay, bool isRandom);
     void slideShow();
     void nextSlide();
     void setCacheParameters(int size, bool show, int width, int wtAhead);
     void setThumbDockParameters(bool isThumbWrap, bool isVerticalTitle);
-    void loadNextImage();
-    void loadPrevImage();
-    void loadUpImage();
-    void loadDownImage();
-    void loadFirstImage();
-    void loadLastImage();
-    void loadRandomImage();
     void selectAllThumbs();
     void removeBookmark();
-    void zoomIn();
-    void zoomOut();
-    void zoom100();
-    void zoomToFit();
     void rotateLeft();
     void rotateRight();
-
-//    void setDocksVisibility(bool visible);
-
     void showHiddenFiles();
     void setThumbLabels();
     void chooseExternalApp();
@@ -208,7 +192,7 @@ private slots:
     void setAllDocksLockMode();
     void reportState();
 
-    void openOp();
+    void openFolder();
     void revealFile();
     void openInFinder();
     void openInExplorer();
@@ -221,6 +205,8 @@ private slots:
     void renameWorkspace(int n, QString name);
     void reassignWorkspace(int n);
     void defaultWorkspace();
+
+    void help();
 
     //    void cutThumbs();
     //    void copyThumbs();
@@ -298,8 +284,7 @@ private:
     QAction *asIconsAction;
     QAction *zoomInAction;
     QAction *zoomOutAction;
-    QAction *zoomOrigAction;
-    QAction *zoomFitAction;
+    QAction *zoomToggleAction;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
     QAction *thumbsFitAction;   // used?? rgh
@@ -385,6 +370,8 @@ private:
     QWidget *thumbDockEmptyWidget;
     QVBoxLayout *imageViewContainer;
 
+    QStringList *subfolders;
+
     bool metadataLoaded;
 
     enum CentralWidgets	{           // req'd?
@@ -431,6 +418,10 @@ private:
     void populateWorkspace(int n, QString name);
     void syncWorkspaceMenu();
     void reportWorkspace(int n);
+    void getSubfolders(QString fPath);
+
+    bool isStressTest = false;
+    void stressTest();
 
     //    void setCopyCutActions(bool setEnabled);
     //    void setDeleteAction(bool setEnabled);

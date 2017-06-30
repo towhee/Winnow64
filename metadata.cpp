@@ -35,9 +35,15 @@ void Metadata::initSupportedFiles()
     #endif
     }
     // add raw file types here as they are supported
-    rawFormats << "arw" << "cr2" << "nef" << "orf";
+//    rawFormats << "arw" << "cr2" << "nef" << "orf";
+        rawFormats << "cr2" << "nef" << "orf";
 
-    supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
+//    supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
+//    "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
+//    "orf" << "pbm" << "pgm" << "png" << "ppm" << "svg" << "svgz" << "tga" <<
+//    "wbmp" << "webp" << "xbm" << "xpm";
+
+    supportedFormats << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
     "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
     "orf" << "pbm" << "pgm" << "png" << "ppm" << "svg" << "svgz" << "tga" <<
     "wbmp" << "webp" << "xbm" << "xpm";
@@ -1414,7 +1420,7 @@ ulong Metadata::getOffsetThumbJPG(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getOffsetThumbJPG";
+    qDebug() << "Metadata::getOffsetThumbJPG" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].offsetThumbJPG;

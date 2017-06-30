@@ -29,7 +29,7 @@ How the Image Cache works:
     . = all the images in the folder = all the thumbnails
     * = the current thumbnail selected
     T = all the images targeted to cache.  The sum of T fills the assigned
-        memory available for the cache ie 1000MB
+        memory available for the cache ie 3000MB
     C = the images currently cached, which can be fragmented if the user
         is jumping around, selecting images willy-nilly
 
@@ -447,7 +447,7 @@ int ImageCache::pxStart(int key)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::pxStart";
+    qDebug() << "ImageCache::pxStart" << cacheMgr.at(key).fName;
     #endif
     }
     return qRound((float)cache.pxUnitWidth * key);
@@ -476,11 +476,11 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
 
-    // check if still in same folder
-    if (imageList.at(0).absolutePath() == cache.dir) return;
-
     imCache.clear();
     cacheMgr.clear();
+
+    // check if still in same folder
+    if (imageList.at(0).absolutePath() == cache.dir) return;
 
     // cache is a structure to hold cache management parameters
     cache.key = 0;
@@ -549,6 +549,7 @@ void ImageCache::updateImageCache(QFileInfoList &imageList, QString &currentImag
             continue;
         }
     }
+    qDebug() << "updateImageCache" << currentImageFullPath;
     cacheStatus();
     if (cache.key == cache.prevKey &&
             imageList.at(0).absolutePath() == cache.dir) return;
@@ -615,6 +616,7 @@ void ImageCache::run()
             mutex.unlock();
             if (!toCache.isEmpty()) toCache.removeFirst();
             cache.currMB = getImCacheSize();
+            qDebug() << "ImageCache::run" << fPath;
             cacheStatus();
             delete image;
         }
@@ -622,6 +624,7 @@ void ImageCache::run()
     }
     checkForOrphans();
     cacheStatus();
+    qDebug() << "ImageCache completed";
     emit updateIsRunning(false);
 //    reportCacheManager("Image cache updated for " + cache.dir);
 }
@@ -653,7 +656,7 @@ bool ImageCache::loadPixmap(QString &fPath, QImage &image)
     */
         {
         #ifdef ISDEBUG
-        qDebug() << "ImageView::loadPixmap";
+        qDebug() << "ImageCache::loadPixmap" << fPath;
         #endif
         }
 

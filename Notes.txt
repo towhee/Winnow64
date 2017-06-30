@@ -1,10 +1,8 @@
 To do:
 - Fix settings for load first time
-- Slideshow
 - Thumbs fit
 - Goto next pick, previous pick not working
 - Recent files
-- Open folder
 - Open with another app
 - Rename selected images
 - Tweak context menus
@@ -12,7 +10,6 @@ To do:
 - Run droplet
 - Rotate selected images
 - Deal with files cannot read or find embedded jpg using error msg in metadata
-- Change thumb dock header to vertical when dock to bottom or top
 - Get title, comment and copywrite metadata
 - Recent copy to folders in copy dialog
 - Check for Tif support in Qt
@@ -30,6 +27,10 @@ To do:
 - Clip black area on canon thumbs
 - Compare 2-9 images
 - Hide/show cursor, always show if ESC
+- Done: Add a help window
+- Done: Open folder
+- Done: Change thumb dock header to vertical when dock to bottom or top
+- Done: Slideshow
 - Done: Clean up startupDir and currentViewDir
 - Done: Include subfolders
 - Done: Add image/gridview to workspace

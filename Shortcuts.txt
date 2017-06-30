@@ -2,6 +2,7 @@ Function                     Key  ⌘  ⇧  ⌥  ⇧⌘  ⇧⌥  ⌥⌘  ⇧⌥�
 Escape full screen           ⎋
 Zoom fit                     0    ⌘
 Zoom 100%                    0             ⇧⌘
+During slideshow interval    0-9
 Compare view                 C
 Full screen                  F
 Reveal folder                F    ⌘
@@ -16,6 +17,7 @@ Slideshow                    S
 New workspace                W
 Manage workspace             W    ⌘
 Default workspace            W             ⇧⌘
+Zoom fit <-> 100%            Z
 Folder dock                  F4
 Folder dock lock             F4      ⇧
 Fav dock                     F5

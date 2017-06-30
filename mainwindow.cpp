@@ -58,6 +58,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     handleStartupArgs();
     setupMainWindow(resetSettings);
     updateState();
+    getSubfolders("/users/roryhill/pictures");
     folderSelectionChange();
 }
 
@@ -234,7 +235,7 @@ void MW::folderSelectionChange()
     // loaded by loadThumbCache.  If no images in new folder then cleanup and
     // exit.
     if (!thumbView->load(currentViewDir, subFoldersAction->isChecked())) {
-        updateStatus("No images in this folder");
+        updateStatus("No images in this folder", "", "");
         infoView->clearInfo();
         imageView->clear();
         cacheLabel->setVisible(false);
@@ -273,7 +274,7 @@ void MW::fileSelectionChange()
         updatePick();
         infoView->updateInfo(fPath);
     }
-    else updateStatus("Could not read " + fPath);
+    else updateStatus("Could not read " + fPath, "", "");
 
     // If the metadataCache is finished then update the imageCache,
     // recalculating the target images to cache, decaching and caching to keep
@@ -383,11 +384,7 @@ void MW::createActions()
     //rgh need slot function
     openAction = new QAction(tr("Open Folder"), this);
     openAction->setObjectName("openFolder");
-//    openAction->setIcon(QIcon::fromTheme("document-open", QIcon(":/images/open.png")));
-    connect(openAction, SIGNAL(triggered()), this, SLOT(openOp()));
-
-    // temp hijack to test refresh thumbs
-    connect(openAction, SIGNAL(triggered()), this, SLOT(openOp()));
+    connect(openAction, SIGNAL(triggered()), this, SLOT(openFolder()));
 
     // rgh check out if dup
     openWithMenu = new QMenu(tr("Open With..."));
@@ -478,7 +475,9 @@ void MW::createActions()
     toggleFilterPickAction->setObjectName("toggleFilterPick");
     toggleFilterPickAction->setCheckable(true);
     toggleFilterPickAction->setChecked(false);
-    connect(toggleFilterPickAction, SIGNAL(triggered()), this, SLOT(toggleFilterPick()));
+    connect(toggleFilterPickAction, SIGNAL(triggered(bool)),
+            thumbView, SLOT(toggleFilterPick(bool)));
+//    connect(toggleFilterPickAction, SIGNAL(triggered()), this, SLOT(toggleFilterPick()));
 
     // Place keeper for now
     copyImagesAction = new QAction(tr("Copy to clipboard"), this);
@@ -507,32 +506,32 @@ void MW::createActions()
     nextThumbAction = new QAction(tr("Next Image"), this);
     nextThumbAction->setObjectName("nextImage");
     nextThumbAction->setEnabled(true);
-    connect(nextThumbAction, SIGNAL(triggered()), this, SLOT(loadNextImage()));
+    connect(nextThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectNext()));
 
     prevThumbAction = new QAction(tr("Previous"), this);
     prevThumbAction->setObjectName("prevImage");
-    connect(prevThumbAction, SIGNAL(triggered()), this, SLOT(loadPrevImage()));
+    connect(prevThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectPrev()));
 
     upThumbAction = new QAction(tr("Move Up"), this);
     upThumbAction->setObjectName("moveUp");
-    connect(upThumbAction, SIGNAL(triggered()), this, SLOT(loadUpImage()));
+    connect(upThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectUp()));
 
     downThumbAction = new QAction(tr("Move Down"), this);
     downThumbAction->setObjectName("moveDown");
-    connect(downThumbAction, SIGNAL(triggered()), this, SLOT(loadDownImage()));
+    connect(downThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectDown()));
 
     firstThumbAction = new QAction(tr("First"), this);
     firstThumbAction->setObjectName("firstImage");
-    connect(firstThumbAction, SIGNAL(triggered()), this, SLOT(loadFirstImage()));
+    connect(firstThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectFirst()));
 
     lastThumbAction = new QAction(tr("Last"), this);
     lastThumbAction->setObjectName("lastImage");
-    connect(lastThumbAction, SIGNAL(triggered()), this, SLOT(loadLastImage()));
+    connect(lastThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectLast()));
 
     // Not a menu item - used by slide show
     randomImageAction = new QAction(tr("Random"), this);
     randomImageAction->setObjectName("randomImage");
-    connect(randomImageAction, SIGNAL(triggered()), this, SLOT(loadRandomImage()));
+    connect(randomImageAction, SIGNAL(triggered()), thumbView, SLOT(selectRandom()));
 
     // Place keeper
     nextPickAction = new QAction(tr("Next Pick"), this);
@@ -606,19 +605,15 @@ void MW::createActions()
 
     zoomOutAction = new QAction(tr("Zoom Out"), this);
     zoomOutAction->setObjectName("zoomOut");
-    connect(zoomOutAction, SIGNAL(triggered()), this, SLOT(zoomOut()));
+    connect(zoomOutAction, SIGNAL(triggered()), imageView, SLOT(zoomOut()));
 
     zoomInAction = new QAction(tr("Zoom In"), this);
     zoomInAction->setObjectName("zoomIn");
-    connect(zoomInAction, SIGNAL(triggered()), this, SLOT(zoomIn()));
+    connect(zoomInAction, SIGNAL(triggered()), imageView, SLOT(zoomIn()));
 
-    zoomFitAction = new QAction(tr("Reset Zoom"), this);
-    zoomFitAction->setObjectName("resetZoom");
-    connect(zoomFitAction, SIGNAL(triggered()), this, SLOT(zoomToFit()));
-
-    zoomOrigAction = new QAction(tr("Original Size"), this);
-    zoomOrigAction->setObjectName("origZoom");
-    connect(zoomOrigAction, SIGNAL(triggered()), this, SLOT(zoom100()));
+    zoomToggleAction = new QAction(tr("Zoom fit <-> 100%"), this);
+    zoomToggleAction->setObjectName("resetZoom");
+    connect(zoomToggleAction, SIGNAL(triggered()), imageView, SLOT(zoomToggle()));
 
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
@@ -778,7 +773,7 @@ void MW::createActions()
 
     helpAction = new QAction(tr("Winnow Help"), this);
     helpAction->setObjectName("help");
-//    connect(helpAction, SIGNAL(triggered()), this, SLOT(about()));
+    connect(helpAction, SIGNAL(triggered()), this, SLOT(help()));
 
 //    enterAction = new QAction(tr("Enter"), this);
 //    enterAction->setObjectName("enterAction");
@@ -788,7 +783,7 @@ void MW::createActions()
     // used in fsTree and bookmarks
     pasteAction = new QAction(tr("Paste files"), this);
     pasteAction->setObjectName("paste");
-    //    connect(pasteAction, SIGNAL(triggered()), this, SLOT(about()));
+//        connect(pasteAction, SIGNAL(triggered()), this, SLOT(about()));
 
 
     // Possibly needed actions
@@ -894,8 +889,7 @@ void MW::createMenus()
     viewMenu->addSeparator();
     viewMenu->addAction(zoomInAction);
     viewMenu->addAction(zoomOutAction);
-    viewMenu->addAction(zoomOrigAction);
-    viewMenu->addAction(zoomFitAction);
+    viewMenu->addAction(zoomToggleAction);
     viewMenu->addSeparator();
     viewMenu->addAction(thumbsEnlargeAction);
     viewMenu->addAction(thumbsShrinkAction);
@@ -984,8 +978,7 @@ void MW::createMenus()
     zoomGroupAct->setMenu(zoomSubMenu);
     zoomSubMenu->addAction(zoomInAction);
     zoomSubMenu->addAction(zoomOutAction);
-    zoomSubMenu->addAction(zoomOrigAction);
-    zoomSubMenu->addAction(zoomFitAction);
+    zoomSubMenu->addAction(zoomToggleAction);
 
     QMenu *transformSubMenu = new QMenu(imageView);
     QAction *transformGroupAct = new QAction("Rotate", this);
@@ -1131,6 +1124,12 @@ void MW::createThumbView()
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));
 
+    connect(thumbView, SIGNAL(updateStatus(QString, QString, QString)),
+            this, SLOT(updateStatus(QString, QString, QString)));
+
+    connect(thumbCacheThread, SIGNAL(updateStatus(QString, QString, QString)),
+            this, SLOT(updateStatus(QString, QString, QString)));
+
     metadataDock = new QDockWidget(tr("  Metadata  "), this);
     metadataDock->setObjectName("Image Info");
     metadataDock->setWidget(infoView);
@@ -1165,8 +1164,8 @@ void MW:: createImageView()
     connect(imageCacheThread, SIGNAL(showCacheStatus(const QImage, QString)),
             this, SLOT(showCacheStatus(const QImage, QString)));
     connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
-    connect(imageView, SIGNAL(updateStatus(QString)),
-            this, SLOT(updateStatus(QString)));
+    connect(imageView, SIGNAL(updateStatus(QString, QString, QString)),
+            this, SLOT(updateStatus(QString, QString, QString)));
     connect(thumbView, SIGNAL(thumbClick(float,float)), imageView, SLOT(thumbClick(float,float)));
 }
 
@@ -1239,7 +1238,7 @@ void MW::setCacheParameters(int size, bool show, int width, int wtAhead)
     cacheWtAhead = wtAhead;
 }
 
-void MW::updateStatus(QString s)
+void MW::updateStatus(QString s1, QString s2, QString s3)
 {
     QString status = "";
     QString spacer = "   ";
@@ -1257,11 +1256,15 @@ void MW::updateStatus(QString s)
         fileCount = QString::number(row) + " of "
             + QString::number(rowCount);
     }
+
+    QString subFolders;
+    if (subFoldersAction->isChecked()) subFolders = " including subfolders" ;
     QString magnify = "🔎";
 //    QString fileSym = "📁";
     QString fileSym = "📷";
 
-    status = " " + fileCount + spacer + " " + s + " zoom";
+//    status = " " + fileCount + spacer + " " + s + " slides";
+    status = " " + fileCount + subFolders + spacer + " " + s1 + " zoom" + s2 + s3;
     stateLabel->setText(status);
 }
 
@@ -1794,7 +1797,7 @@ void MW::reportMetadata()
     #endif
     }
 
-    thumbView->forceScroll(100);
+//    thumbView->forceScroll(100);
 
 //    qDebug() << "imageView->hasFocus" << imageView->hasFocus();
 //    qDebug() << "thumbView->hasFocus" << thumbView->hasFocus();
@@ -2069,49 +2072,6 @@ void MW::selectAllThumbs()
     #endif
     }
     thumbView->selectAll();
-}
-
-
-void MW::zoomOut()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::zoomOut";
-    #endif
-    }
-    imageView->zoomOut();
-}
-
-void MW::zoomIn()
-{
-    {
-    #ifdef ISDEBUG
-    #endif
-    }
-    qDebug() << "MW::zoomIn";
-    imageView->zoomIn();
-}
-
-void MW::zoomToFit()
-// zooms to fit full image in viewImage window
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::resetZoom";
-    #endif
-    }
-    imageView->zoomToFit();
-}
-
-void MW::zoom100()
-// zooms imageView so one image pixel = 1 screen pixel
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::origZoom";
-    #endif
-    }
-    imageView->zoom100();
 }
 
 void MW::rotateLeft()
@@ -2389,7 +2349,7 @@ void MW::loadSettings()
     mwd.isMetadataDockLocked = setting->value("isMetadataDockLocked").toBool();
     mwd.isThumbDockLocked = setting->value("isThumbDockLocked").toBool();
 
-    mwd.includeSubfolders = setting->value("includeSubfolders").toBool();
+//    mwd.includeSubfolders = setting->value("includeSubfolders").toBool();
     mwd.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
     mwd.isIconDisplay = setting->value("isIconDisplay").toBool();     // thumb dock
     mwd.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();    // central widget
@@ -2486,8 +2446,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[openAction->objectName()] = openAction;
     actionKeys[zoomOutAction->objectName()] = zoomOutAction;
     actionKeys[zoomInAction->objectName()] = zoomInAction;
-    actionKeys[zoomFitAction->objectName()] = zoomFitAction;
-    actionKeys[zoomOrigAction->objectName()] = zoomOrigAction;
+    actionKeys[zoomToggleAction->objectName()] = zoomToggleAction;
     actionKeys[rotateLeftAction->objectName()] = rotateLeftAction;
     actionKeys[rotateRightAction->objectName()] = rotateRightAction;
 //    actionKeys[moveRightAct->objectName()] = moveRightAct;
@@ -2576,8 +2535,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         revealFileAction->setShortcut(QKeySequence("Ctrl+F"));
         zoomOutAction->setShortcut(QKeySequence("-"));
         zoomInAction->setShortcut(QKeySequence("+"));
-        zoomFitAction->setShortcut(QKeySequence("Ctrl+0"));
-        zoomOrigAction->setShortcut(QKeySequence("Ctrl+Shift+0"));
+        zoomToggleAction->setShortcut(QKeySequence("Z"));
         rotateLeftAction->setShortcut(QKeySequence("Ctrl+Left"));
         rotateRightAction->setShortcut(QKeySequence("Ctrl+Right"));
 //        moveLeftAct->setShortcut(QKeySequence("Left"));
@@ -2602,6 +2560,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         metadataDockLockAction->setShortcut(QKeySequence("Shift+F6"));
         thumbDockLockAction->setShortcut(QKeySequence("Shift+F7"));
         allDocksLockAction->setShortcut(QKeySequence("Ctrl+L"));
+        helpAction->setShortcut(QKeySequence("?"));
 //        toggleIconsListAction->setShortcut(QKeySequence("Ctrl+T"));
     }
 
@@ -3070,28 +3029,14 @@ void MW::updatePick()
              : imageView->pickLabel->setVisible(false);
 }
 
-void MW::toggleFilterPick()
+void MW::copyPicks()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::toggleFilterPick";
+    qDebug() << "MW::copyPicks";
     #endif
     }
-    thumbView->pickFilter = toggleFilterPickAction->isChecked();
-    if (toggleFilterPickAction->isChecked()) {
-        int row = thumbView->getNearestPick();
-//        qDebug() << "Nearest pick = row" << row;
-        if (row > 0) thumbView->selectThumb(row);
-        thumbView->thumbViewFilter->setFilterRegExp("true");// show only picked items
-    }
-    else
-        thumbView->thumbViewFilter->setFilterRegExp("");    // no filter - show all
-}
-
-void MW::copyPicks()
-{
     if (thumbView->isPick()) {
-        // rgh2017-04-30 commented out because crashing on OSX
         QFileInfoList imageList = thumbView->getPicks();
         copyPickDlg = new CopyPickDlg(this, imageList, metadata);
         copyPickDlg->exec();
@@ -3099,6 +3044,34 @@ void MW::copyPicks()
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to copy.    ", QMessageBox::Ok);
+}
+
+void MW::getSubfolders(QString fPath)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::getSubfolders";
+    #endif
+    }
+    subfolders = new QStringList;
+    subfolders->append(fPath);
+    qDebug() << "Appending" << fPath;
+    QDirIterator iterator(fPath, QDirIterator::Subdirectories);
+    while (iterator.hasNext()) {
+        iterator.next();
+        fPath = iterator.filePath();
+        if (iterator.fileInfo().isDir() && iterator.fileName() != "." && iterator.fileName() != "..") {
+            subfolders->append(fPath);
+            qDebug() << "Appending" << fPath;
+        }
+    }
+}
+
+void MW::stressTest()
+{
+    getSubfolders("/users/roryhill/pictures");
+    QString fPath;
+    fPath = subfolders->at(qrand() % (subfolders->count()));
 }
 
 void MW::setSlideShowParameters(int delay, bool isRandom)
@@ -3118,27 +3091,28 @@ void MW::slideShow()
         isSlideShowActive = false;
         slideShowAction->setText(tr("Slide Show"));
         popUp->runPopup(this, "Stopping slideshow", 1000, 0.5);
-//        popUp->show();
         slideShowTimer->stop();
         delete slideShowTimer;
+//        delete popUp;
     } else {
         isSlideShowActive = true;
         popUp = new PopUp;
 
         QString msg = "Starting slideshow";
-        msg += "\nInterval =" + QString::number(slideShowDelay) + " second(s)";
+        msg += "\nInterval = " + QString::number(slideShowDelay) + " second(s)";
         if (slideShowRandom)  msg += "\nRandom selection";
         else msg += "\nLinear selection";
         if (slideShowWrap) msg += "\nWrap at end of slides";
         else msg += "\nStop at end of slides";
         popUp->runPopup(this, msg, 4000, 0.5);
-//        popUp->show();
+
+        if (isStressTest) getSubfolders("/users/roryhill/pictures");
 
         slideShowAction->setText(tr("Stop Slide Show"));
         slideShowTimer = new QTimer(this);
         connect(slideShowTimer, SIGNAL(timeout()), this, SLOT(nextSlide()));
         slideShowTimer->start(slideShowDelay * 1000);
-        nextSlide();
+//        nextSlide();
     }
 }
 
@@ -3149,90 +3123,26 @@ void MW::nextSlide()
     qDebug() << "MW::nextSlide";
     #endif
     }
+    static int counter = 0;
     int totSlides = thumbView->thumbViewFilter->rowCount();
     if (slideShowRandom) thumbView->selectRandom();
     else {
         if (thumbView->getCurrentRow() == totSlides - 1)
             thumbView->selectFirst();
-        else
-            thumbView->selectNext();
+        else thumbView->selectNext();
     }
-}
+    counter++;
+    updateStatus("", "Slide # ", QString::number(counter));
 
-void MW::loadNextImage()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::loadNextImage";
-    #endif
+    if (isStressTest) {
+        if (counter % 50 == 0) {
+            int n = qrand() % (subfolders->count());
+            QString fPath = subfolders->at(n);
+            fsTree->setCurrentIndex(fsTree->fsModel->index(fPath));
+//            qDebug() << "STRESS TEST NEW FOLDER:" << fPath;
+            folderSelectionChange();
+        }
     }
-    thumbView->selectNext();
-}
-
-void MW::loadPrevImage()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::loadPrevImage";
-    #endif
-    }
-    thumbView->selectPrev();
-}
-
-void MW::loadUpImage()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::loadUpImage";
-    #endif
-    }
-    thumbView->selectUp();
-}
-
-void MW::loadDownImage()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::loadDownImage";
-    #endif
-    }
-    thumbView->selectDown();
-}
-
-void MW::loadFirstImage()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::loadFirstImage";
-    #endif
-    }
-    if (thumbView->thumbViewFilter->rowCount() <= 0) {
-        return;
-    }
-    thumbView->selectFirst();
-}
-
-void MW::loadLastImage()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::loadLastImage";
-    #endif
-    }
-    thumbView->selectLast();
-}
-
-void MW::loadRandomImage()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::loadRandomImage";
-    #endif
-    }
-    if (thumbView->thumbViewFilter->rowCount() <= 0) {
-        return;
-    }
-    thumbView->selectRandom();
 }
 
 void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
@@ -3348,9 +3258,9 @@ void MW::wheelEvent(QWheelEvent *event)
         else if (nextThumbAction->isEnabled())
         {
             if (event->delta() < 0)
-                loadNextImage();
+                thumbView->selectNext();
             else
-                loadPrevImage();
+                thumbView->selectPrev();
         }
 }
 
@@ -3388,48 +3298,17 @@ void MW::addBookmark(QString path)
     bookmarks->reloadBookmarks();
 }
 
-// not implemented yet, temp use for refresh thumbs test
-void MW::openOp()
+void MW::openFolder()
 {
     {
     #ifdef ISDEBUG
     qDebug() << "MW::openOp";
     #endif
     }
-
-    takeCentralWidget();
-    setCentralWidget(thumbView);
-//    thumbView->refreshThumbs();
-
-//    if (GData::layoutMode == imageViewIdx) {
-//        hideViewer();
-//        return;
-//    }
-
-//    if (QApplication::focusWidget() == fsTree) {
-//        folderSelectionChange();
-//        return;
-//    } else if (QApplication::focusWidget() == thumbView
-//                || QApplication::focusWidget() == imageView->scrlArea)
-//    {
-//        QModelIndex idx;
-//        QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
-//        if (indexesList.size() > 0) {
-//            idx = indexesList.first();
-//        } else {
-//            if (thumbView->thumbViewModel->rowCount() == 0) {
-//                setStatus(tr("No images"));
-//                return;
-//            }
-//            // rgh change to call thumbView::selectThumbByRow
-//            idx = thumbView->thumbViewModel->indexFromItem(thumbView->thumbViewModel->item(0));
-//            thumbView->selectionModel()->select(idx, QItemSelectionModel::Toggle);
-////            thumbView->setCurrentRow(0);
-//        }
-
-////        loadImagefromThumb(idx);
-//        return;
-//    }
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Open Folder"),
+         "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    fsTree->setCurrentIndex(fsTree->fsModel->index(dir));
+    folderSelectionChange();
 }
 
 void MW::revealFile()
@@ -3504,6 +3383,13 @@ void MW::openInExplorer()
     process->start("explorer.exe", args);
 }
 
+void MW::help()
+{
+    QWidget *helpDoc = new QWidget;
+    Ui::helpForm ui;
+    ui.setupUi(helpDoc);
+    helpDoc->show();
+}
 
 // End MW
 

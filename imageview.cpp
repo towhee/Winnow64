@@ -427,16 +427,18 @@ void ImageView::resizeImage()
              << "\nzoom factor  =" << zoom << "zoomFit =" << zoomFit;
 */
 
-    // realign image based on mouse click position or to center
-    // if fit or smaller than window container
-    if (zoom > zoomFit) moveImage(imgSize);
+    /* realign image based on mouse click position or to center
+    - if fit or smaller than window container or coord outside image
+    - if zoom using keyboard "Z" then no mouse coord so zoom to center
+    */
+    if (zoom > zoomFit && (mouse.x > 0 || mouse.y > 0)) moveImage(imgSize);
     else centerImage(imgSize);
     movePickIcon();
     setInfo(metadata->getShootingInfo(currentImagePath));
 
     // update status with current zoom magnification
     QString msg = QString::number(zoom*100, 'f', 0) + "%";
-    emit updateStatus(msg);
+    emit updateStatus(msg, "", "");
 }
 
 void ImageView::movePickIcon()
@@ -549,7 +551,7 @@ See top of file for coordinate spaces info.
     v.y = mouse.y - vAdj.h;
 
     // get the image coordinates
-    i.x = (int)((float)(v.x)*  i.w / v.w);
+    i.x = (int)((float)(v.x) *  i.w / v.w);
     i.y = (int)((float)(v.y * i.h) / v.h);
 
     // calc the adjustment from the origin
@@ -645,6 +647,14 @@ void ImageView::zoomTo(float zoomTo)
     zoom < 0.05 ? 0.05 : zoom;
     zoom > 8 ? 8: zoom;
     mouseZoomFit = false;
+    resizeImage();
+}
+
+void ImageView::zoomToggle()
+{
+    qDebug() << "zoomToggle  isZoom =" << isZoom;
+    mouseZoomFit = isZoom;
+    if (!isZoom) zoom = 1;
     resizeImage();
 }
 

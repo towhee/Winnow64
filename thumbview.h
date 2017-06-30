@@ -34,13 +34,6 @@ public:
     void selectThumb(QModelIndex idx);
     void selectThumb(int row);
     void selectThumb(QString &filePath);
-    void selectNext();
-    void selectPrev();
-    void selectUp();
-    void selectDown();
-    void selectFirst();
-    void selectLast();
-    void selectRandom();
 
     int getNearestPick();
     QFileInfoList getPicks();
@@ -60,6 +53,28 @@ public:
     int thumbSize;
     QString filterStr;
     bool pickFilter;
+
+public slots:
+    void thumbsEnlarge();
+    void thumbsShrink();
+    void thumbsFit();
+    void toggleFilterPick(bool isFilter);
+    void invertSelection();                         //in use
+    void updateThumbRectRole(const QModelIndex index, QRect iconRect);
+    void refreshThumbs();
+    void setThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
+             int thumbPadding, int labelFontSize, bool showThumbLabels);
+    void reportThumbs();
+    void selectNext();
+    void selectPrev();
+    void selectUp();
+    void selectDown();
+    void selectFirst();
+    void selectLast();
+    void selectRandom();
+
+private slots:
+    void delaySelectCurrentThumb();
 
 protected:
     void startDrag(Qt::DropActions);
@@ -95,20 +110,7 @@ private:
 signals:
     void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent
     void displayLoupe();
-
-public slots:
-    void thumbsEnlarge();
-    void thumbsShrink();
-    void thumbsFit();
-    void invertSelection();                         //in use
-    void updateThumbRectRole(const QModelIndex index, QRect iconRect);
-    void refreshThumbs();
-    void setThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
-             int thumbPadding, int labelFontSize, bool showThumbLabels);
-    void reportThumbs();
-
-private slots:
-    void delaySelectCurrentThumb();
+    void updateStatus(QString, QString, QString);
 };
 
 #endif // THUMBVIEW_H
