@@ -73,7 +73,6 @@ public:
 
     // persistant data
 
-    // action surogates
     /*
     Some persistent values are required for class creation and for actions
     that are mutually dependent - so which one do we do first?  Save the
@@ -144,7 +143,7 @@ private slots:
     void gridDisplay();
     void compareDisplay();
 //    void updateActions();
-    void updateStatus(QString s1, QString s2, QString s3);
+    void updateStatus(bool showFileCount, QString s);
     void updateMetadataThreadRunStatus(bool isRun);
     void updateThumbThreadRunStatus(bool isRun);
     void updateImageThreadRunStatus(bool isRun);
@@ -214,7 +213,7 @@ private slots:
     void help();
 
     //    void cutThumbs();
-    //    void copyThumbs();
+//    void copyThumbs();
     //    void pasteThumbs();
 
 private:

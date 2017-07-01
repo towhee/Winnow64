@@ -25,7 +25,7 @@ protected:
 
 signals:
     void updateIsRunning(bool);
-    void updateStatus(QString, QString, QString);
+    void updateStatus(bool, QString);
     void refreshThumbs();
 
 private:

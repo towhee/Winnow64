@@ -73,6 +73,7 @@ public slots:
     void selectRandom();
     void selectNextPick();
     void selectPrevPick();
+    void copyThumbs();
 
 private slots:
     void delaySelectCurrentThumb();
@@ -115,7 +116,7 @@ private:
 signals:
     void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent
     void displayLoupe();
-    void updateStatus(QString, QString, QString);
+    void updateStatus(bool, QString);
 };
 
 #endif // THUMBVIEW_H

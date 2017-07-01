@@ -195,6 +195,9 @@ void MW::folderSelectionChange()
     thumbCacheThread->stopThumbCache();
     imageCacheThread->stopImageCache();
 
+    // stop slideshow if a new folder is selected
+    if (isSlideShowActive) slideShow();
+
     QString dirPath;
     QDir testDir;
     if (isInitializing) {
@@ -241,7 +244,7 @@ void MW::folderSelectionChange()
     // loaded by loadThumbCache.  If no images in new folder then cleanup and
     // exit.
     if (!thumbView->load(currentViewDir, subFoldersAction->isChecked())) {
-        updateStatus("No images in this folder", "", "");
+        updateStatus(false, "No images in this folder");
         infoView->clearInfo();
         imageView->clear();
         cacheLabel->setVisible(false);
@@ -280,7 +283,7 @@ void MW::fileSelectionChange()
         updatePick();
         infoView->updateInfo(fPath);
     }
-    else updateStatus("Could not read " + fPath, "", "");
+    else updateStatus(false, "Could not read " + fPath);
 
     // If the metadataCache is finished then update the imageCache,
     // recalculating the target images to cache, decaching and caching to keep
@@ -397,6 +400,19 @@ void MW::createActions()
     openWithMenuAction->setObjectName("openWithMenu");
     openWithMenuAction->setMenu(openWithMenu);
 
+    chooseAppAction = new QAction(tr("Manage External Applications"), this);
+    chooseAppAction->setObjectName("chooseApp");
+    connect(chooseAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
+//    chooseAppAction->setMenu(openWithMenu);
+
+    newAppAction = new QAction(tr("New app"), this);
+    newAppAction->setObjectName("newApp");
+//    connect(newAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
+
+    deleteAppAction = new QAction(tr("Delete app"), this);
+    deleteAppAction->setObjectName("deleteApp");
+//    connect(deleteAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
+
     recentFoldersMenu = new QMenu(tr("Recent folders..."));
     recentFoldersAction = new QAction(tr("Recent folders..."), this);
     recentFoldersAction->setObjectName("recentFoldersAction");
@@ -425,18 +441,6 @@ void MW::createActions()
 //        recentFolderActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
     }
     addActions(recentFolderActions);
-
-    chooseAppAction = new QAction(tr("Manage External Applications"), this);
-    chooseAppAction->setObjectName("chooseApp");
-    connect(chooseAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
-
-    newAppAction = new QAction(tr("New app"), this);
-    newAppAction->setObjectName("newApp");
-//    connect(newAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
-
-    deleteAppAction = new QAction(tr("Delete app"), this);
-    deleteAppAction->setObjectName("deleteApp");
-//    connect(deleteAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
 
     // Place keeper for now
     revealFileAction = new QAction(tr("Reveal in finder/explorer"), this);
@@ -517,7 +521,7 @@ void MW::createActions()
     copyImagesAction = new QAction(tr("Copy to clipboard"), this);
     copyImagesAction->setObjectName("copyImages");
     copyImagesAction->setShortcut(QKeySequence("Ctrl+C"));
-    //    connect(copyImagesAction, SIGNAL(triggered()), this, SLOT(copyImagesorSomething()));
+        connect(copyImagesAction, SIGNAL(triggered()), thumbView, SLOT(copyThumbs()));
 
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
@@ -865,6 +869,7 @@ void MW::createMenus()
     fileMenu = menuBar()->addMenu(tr("&File"));
     fileMenu->addAction(openAction);
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
+    openWithMenu->addAction(chooseAppAction);
     openWithMenu->addAction(newAppAction);
     openWithMenu->addAction(deleteAppAction);
     fileMenu->addSeparator();
@@ -1165,11 +1170,11 @@ void MW::createThumbView()
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));
 
-    connect(thumbView, SIGNAL(updateStatus(QString, QString, QString)),
-            this, SLOT(updateStatus(QString, QString, QString)));
+    connect(thumbView, SIGNAL(updateStatus(bool, QString)),
+            this, SLOT(updateStatus(bool, QString)));
 
-    connect(thumbCacheThread, SIGNAL(updateStatus(QString, QString, QString)),
-            this, SLOT(updateStatus(QString, QString, QString)));
+    connect(thumbCacheThread, SIGNAL(updateStatus(bool, QString)),
+            this, SLOT(updateStatus(bool, QString)));
 
     connect(thumbCacheThread, SIGNAL(refreshThumbs()),
             thumbView, SLOT(refreshThumbs()));
@@ -1208,8 +1213,8 @@ void MW:: createImageView()
     connect(imageCacheThread, SIGNAL(showCacheStatus(const QImage, QString)),
             this, SLOT(showCacheStatus(const QImage, QString)));
     connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
-    connect(imageView, SIGNAL(updateStatus(QString, QString, QString)),
-            this, SLOT(updateStatus(QString, QString, QString)));
+    connect(imageView, SIGNAL(updateStatus(bool, QString)),
+            this, SLOT(updateStatus(bool, QString)));
     connect(thumbView, SIGNAL(thumbClick(float,float)), imageView, SLOT(thumbClick(float,float)));
 }
 
@@ -1282,33 +1287,40 @@ void MW::setCacheParameters(int size, bool show, int width, int wtAhead)
     cacheWtAhead = wtAhead;
 }
 
-void MW::updateStatus(QString s1, QString s2, QString s3)
+void MW::updateStatus(bool keepBase, QString s)
 {
-    QString status = "";
+    QString status;
+    QString fileCount = "";
+    QString zoomPct = "";
+    QString base = "";
     QString spacer = "   ";
 
-    // Possible status info
-    QModelIndex idx = thumbView->currentIndex();
-    QString fName = idx.data(Qt::EditRole).toString();
-    QString fPath = idx.data(thumbView->FileNameRole).toString();
-    QString shootingInfo = metadata->getShootingInfo(fPath);
-    QString err = metadata->getErr(fPath);
-    long rowCount = thumbView->thumbViewFilter->rowCount();
-    QString fileCount = "";
-    if (rowCount > 0) {
-        int row = idx.row() + 1;
-        fileCount = QString::number(row) + " of "
-            + QString::number(rowCount);
+/* Possible status info
+
+QString fName = idx.data(Qt::EditRole).toString();
+QString fPath = idx.data(thumbView->FileNameRole).toString();
+QString shootingInfo = metadata->getShootingInfo(fPath);
+QString err = metadata->getErr(fPath);
+QString magnify = "🔎";
+QString fileSym = "📁";
+QString fileSym = "📷";
+*/
+
+    // image of total: fileCount
+    if (keepBase) {
+        QModelIndex idx = thumbView->currentIndex();
+        long rowCount = thumbView->thumbViewFilter->rowCount();
+        if (rowCount > 0) {
+            int row = idx.row() + 1;
+            fileCount = QString::number(row) + " of "
+                + QString::number(rowCount);
+        }
+        if (subFoldersAction->isChecked()) fileCount += " including subfolders";
+        zoomPct = QString::number(imageView->zoom*100, 'f', 0) + "% zoom";
+        base = fileCount + spacer + zoomPct + spacer;
     }
 
-    QString subFolders;
-    if (subFoldersAction->isChecked()) subFolders = " including subfolders" ;
-    QString magnify = "🔎";
-//    QString fileSym = "📁";
-    QString fileSym = "📷";
-
-//    status = " " + fileCount + spacer + " " + s + " slides";
-    status = " " + fileCount + subFolders + spacer + " " + s1 + " zoom" + s2 + s3;
+    status = " " + base + s;
     stateLabel->setText(status);
 }
 
@@ -1516,8 +1528,6 @@ void MW::syncRecentFoldersMenu()
         qDebug() << "sync menu" << i << recentFolderActions.at(i)->text();
     }
 }
-
-
 
 /* WORKSPACES
 Need to track:
@@ -2051,19 +2061,21 @@ void MW::chooseExternalApp()
     qDebug() << "MW::chooseExternalApp";
     #endif
     }
-//    AppMgmtDialog *dialog = new AppMgmtDialog(this);
 
-//    if (isSlideShowActive)
-//        slideShow();
-//    imageView->setCursorHiding(false);
+    qDebug() << "MW::chooseExternalApp";
 
-//    dialog->exec();
-    updateExternalApps();
-//    delete(dialog);
+    // in terminal this works:
+    //open -a 'Adobe Photoshop CC 2015.5.app' /Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg
 
-//    if (isFullScreen()) {
-//        imageView->setCursorHiding(true);
-//    }
+    // this launches photoshop but does not open jpg
+    QProcess *process = new QProcess(this);
+//    QString program = "/Applications/Preview.app";
+//    QString program = "/Applications/Adobe Photoshop CC 2015.5/Adobe Photoshop CC 2015.5.app";
+    QString program = "/Applications/Google Chrome.app";
+    QStringList args;
+//    args << "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg";
+    args << "/Users/roryhill/Pictures/Eva/2016-10-25_0198.jpg";
+    process->start(program, args);
 }
 
 void MW::preferences()
@@ -3269,7 +3281,7 @@ void MW::nextSlide()
         else thumbView->selectNext();
     }
     counter++;
-    updateStatus("", "Slide # ", QString::number(counter));
+    updateStatus(true, "Slide # "+ QString::number(counter));
 
     if (isStressTest) {
         if (counter % 50 == 0) {

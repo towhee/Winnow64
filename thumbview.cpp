@@ -562,7 +562,8 @@ void ThumbView::selectThumb(int row)
     QModelIndex idx = thumbViewFilter->index(row, 0, QModelIndex());
     setCurrentIndex(idx);
 //    forceScroll(10);
-    if (idx.isValid()) scrollTo(idx, ScrollHint::PositionAtCenter);
+    scrollTo(idx, ScrollHint::PositionAtCenter);
+//    if (idx.isValid()) scrollTo(idx, ScrollHint::PositionAtCenter);
 }
 
 void ThumbView::selectThumb(QString &fName)
@@ -868,9 +869,30 @@ void ThumbView::invertSelection()
     selectionModel()->select(toggleSelection, QItemSelectionModel::Toggle);
 }
 
+void ThumbView::copyThumbs()
+{
+    QModelIndexList indexesList = selectionModel()->selectedIndexes();
+    if (indexesList.isEmpty()) {
+        return;
+    }
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QMimeData *mimeData = new QMimeData;
+    QList<QUrl> urls;
+    for (QModelIndexList::const_iterator it = indexesList.constBegin(),
+         end = indexesList.constEnd();
+         it != end; ++it)
+    {
+        urls << QUrl(it->data(FileNameRole).toString());
+    }
+    mimeData->setUrls(urls);
+    clipboard->setMimeData(mimeData);
+}
+
 void ThumbView::startDrag(Qt::DropActions)
 {
-    // not in use but want to implement
+/* Drag and drop thumbs to another program.
+ */
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::startDrag";
@@ -885,9 +907,9 @@ void ThumbView::startDrag(Qt::DropActions)
     QMimeData *mimeData = new QMimeData;
     QList<QUrl> urls;
     for (QModelIndexList::const_iterator it = indexesList.constBegin(),
-                                        end = indexesList.constEnd(); it != end; ++it)
+         end = indexesList.constEnd();
+         it != end; ++it)
     {
-//        urls << QUrl(thumbViewModel->item(it->row())->data(FileNameRole).toString());
         urls << QUrl(it->data(FileNameRole).toString());
     }
     mimeData->setUrls(urls);
@@ -901,7 +923,7 @@ void ThumbView::startDrag(Qt::DropActions)
         painter.setPen(QPen(Qt::white, 2));
         int x = 0, y = 0, xMax = 0, yMax = 0;
         for (int i = 0; i < qMin(5, indexesList.count()); ++i) {
-            QPixmap pix = thumbViewModel->item(indexesList.at(i).row())->icon().pixmap(72); //rgh filter instead???
+            QPixmap pix = thumbViewModel->item(indexesList.at(i).row())->icon().pixmap(72);
             if (i == 4) {
                 x = (xMax - pix.width()) / 2;
                 y = (yMax - pix.height()) / 2;

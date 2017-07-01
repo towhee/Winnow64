@@ -16,7 +16,6 @@ To do:
 - Add more raw file formats
 - Eject card
 - When sort thumbs no thumbnails visible
-- Copy to clipboard and drag'n'drop images to new folder
 - Ingest including token builder
 - remove copy/paste image data
 - Add QCompleter for direct navigation to a folder
@@ -24,6 +23,9 @@ To do:
 - Clip black area on canon thumbs
 - Compare 2-9 images
 - Hide/show cursor, always show if ESC
+- Done: Copy to clipboard
+- Done: drag'n'drop images to another app
+- Done: Fixed thumb update issue when caching a new folder
 - Done: Recent files
 - Done: Goto next pick, previous pick not working
 - Done: Add a help window

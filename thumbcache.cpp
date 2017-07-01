@@ -243,7 +243,7 @@ void ThumbCache::run()
         }
 
         mutex.unlock();
-        emit updateStatus("", "Loaded thumb " + QString::number(row),
+        emit updateStatus(false, "Loaded thumb " + QString::number(row) +
              " of " + QString::number(thumbView->thumbViewModel->rowCount()));
         restart = false;
 //        qDebug() << "Thumbnail cached " << fName;

@@ -19,6 +19,7 @@ public:
     QLabel *infoLabel;
     QLabel *infoLabelShadow;
     DropShadowLabel *infoDropShadow;
+    float zoom;
 
     bool loadPixmap(QString &imageFullPath, QPixmap &pm);
     bool loadImage(QString imageFileName);
@@ -46,7 +47,7 @@ public slots:
 
 signals:
     void togglePick();
-    void updateStatus(QString, QString, QString);
+    void updateStatus(bool, QString);
 
 private slots:
 
@@ -108,7 +109,6 @@ private:
     bool isMouseDoubleClick;
     bool isMouseClickInLabel;
 
-    float zoom;
     float zoomFit;
     float zoomInc = 0.1;    // 10% delta
     float zoomMin = 0.05;   // 5% of original  rgh add to pref
