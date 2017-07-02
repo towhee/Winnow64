@@ -30,8 +30,8 @@ Prefdlg::Prefdlg(QWidget *parent) :
     ui->fontSizeSlider->setValue(labelFontSize);
     ui->showThumbLabelChk->setChecked(showThumbLabels);
     // thumb dock
-    isThumbWrap = mw->mwd.isThumbWrap;
-    isVerticalTitle = mw->mwd.isVerticalTitle;
+    isThumbWrap = mw->thumbView->isThumbWrap;
+    isVerticalTitle = mw->isThumbDockVerticalTitle;
     ui->wrapThumbsChk->setChecked(isThumbWrap);
     ui->vertTitleChk->setChecked(isVerticalTitle);
     // slideshow

@@ -69,6 +69,7 @@ public:
         bool isCompareDisplay;
     };
     workspaceData ws;   // hold values for workspace n
+    workspaceData *w;
     QList<workspaceData> *workspaces;
 
     // persistant data
@@ -81,13 +82,16 @@ public:
     workspaceData mwd;  // hold the persistent start values from QSettings
 
 //    bool isShowHiddenFiles;     // needed?
+    int folderMaxWidth = 600;       // not in preferences or QSetting
 
     // preferences: files
     bool rememberLastDir;
     QString lastDir;
     bool inclSubfolders;
     int maxRecentFolders = 10;
-    int folderMaxWidth = 600;
+
+    // preferences: docks
+    bool isThumbDockVerticalTitle;
 
     // preferences: slideshow
     int slideShowDelay;
@@ -120,6 +124,7 @@ public slots:
     void showCacheStatus(const QImage &imCacheStatus, QString mb);
     void setThumbDockFeatures(Qt::DockWidgetArea area);
     void setThumbDockFloatFeatures(bool isFloat);
+
 
     //    bool event(QEvent *event);
     //    void fileSelectionChange(const QItemSelection& selection);
@@ -205,12 +210,13 @@ private slots:
     void invokeWorkspaceFromAction(QAction *workAction);
     void invokeWorkspace(const workspaceData &w);
     void invokeRecentFolder(QAction *recentFolderActions);
-    void snapshotWorkspace();
+    void snapshotWorkspace(workspaceData &wsd);
     void manageWorkspaces();
     void deleteWorkspace(int n);
     void renameWorkspace(int n, QString name);
     void reassignWorkspace(int n);
     void defaultWorkspace();
+    void reportWorkspace(int n);
 
     void help();
 
@@ -427,7 +433,6 @@ private:
     void copyMoveImages(bool move);
     void populateWorkspace(int n, QString name);
     void syncWorkspaceMenu();
-    void reportWorkspace(int n);
     void getSubfolders(QString fPath);
 
     void addRecentFolder(QString fPath);

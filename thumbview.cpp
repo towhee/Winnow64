@@ -692,7 +692,7 @@ void ThumbView::thumbsEnlarge()
 //        thumbsEnlargeAction->setEnabled(true);
         if (thumbWidth > 160) thumbWidth = 160;
         if (thumbHeight > 160) thumbHeight = 160;
-        refreshThumbs();
+        setThumbParameters();
     }
 }
 
@@ -709,7 +709,7 @@ void ThumbView::thumbsShrink()
 //        thumbsEnlargeAction->setEnabled(true);
         if (thumbWidth < 40) thumbWidth = 40;
         if (thumbHeight < 40) thumbHeight = 40;
-        refreshThumbs();
+        setThumbParameters();
     }
 }
 

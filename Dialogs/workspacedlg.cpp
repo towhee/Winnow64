@@ -13,8 +13,8 @@ WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList, QWidget *parent) :
 
     for (int i=0; i < wsList->count(); i++) {
         ui->workspaceCB->addItem(wsList->at(i));
-        qDebug() << "ui->workspaceCB i" << i
-                 << ui->workspaceCB->currentIndex();
+//        qDebug() << "ui->workspaceCB i" << i
+//                 << ui->workspaceCB->currentIndex();
     }
     editMode = true;
 }
@@ -31,10 +31,14 @@ void WorkspaceDlg::on_deleteBtn_clicked()
     qDebug() << "WorkspaceDlg::on_deleteBtn_clicked";
     #endif
     }
+    //    QString name = ui->workspaceCB->itemText(n);
+
     int n = ui->workspaceCB->currentIndex();
-//    QString name = ui->workspaceCB->itemText(n);
-    emit deleteWorkspace(n);
-    ui->workspaceCB->removeItem(n);
+    emit reportWorkspace(n);
+
+//    int n = ui->workspaceCB->currentIndex();
+//    emit deleteWorkspace(n);
+//    ui->workspaceCB->removeItem(n);
 }
 
 void WorkspaceDlg::on_reassignBtn_clicked()
@@ -100,4 +104,15 @@ void WorkspaceDlg::report(QString signalName)
              << "currentIndex =" << n
              << "editMode =" << editMode
              << "text =" << text;
+}
+
+void WorkspaceDlg::on_doneBtn_clicked()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "WorkspaceDlg::on_doneBtn_clicked";
+    #endif
+    }
+    int n = ui->workspaceCB->currentIndex();
+    emit reportWorkspace(n);
 }

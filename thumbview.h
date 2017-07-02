@@ -29,6 +29,8 @@ public:
     int labelFontSize;
     bool showThumbLabels;
 
+    bool isThumbWrap;
+
     bool load(QString &dir, bool inclSubfolders);
 
     void selectThumb(QModelIndex idx);

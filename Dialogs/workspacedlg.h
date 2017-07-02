@@ -21,6 +21,7 @@ signals:
     void deleteWorkspace(int);
     void reassignWorkspace(int);
     void renameWorkspace(int, QString);
+    void reportWorkspace(int n);
 
 private slots:
     void on_deleteBtn_clicked();
@@ -28,6 +29,8 @@ private slots:
     void on_workspaceCB_editTextChanged(const QString &name);
     void clearStatus();
     void on_workspaceCB_highlighted(int index);
+
+    void on_doneBtn_clicked();
 
 private:
     QWidget *mainWindow;

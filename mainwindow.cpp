@@ -48,7 +48,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     // must come first so persistant action settings can be updated
     if (!resetSettings) loadSettings();
 
-//    mwd.isIconDisplay = true;                  // rgh for now
     createThumbView();
     createImageView();
     createActions();
@@ -453,7 +452,7 @@ void MW::createActions()
     subFoldersAction = new QAction(tr("Include Sub-folders"), this);
     subFoldersAction->setObjectName("subFolders");
     subFoldersAction->setCheckable(true);
-    subFoldersAction->setChecked(mwd.includeSubfolders);    // from QSettings
+    subFoldersAction->setChecked(setting->value("includeSubfolders").toBool());
     connect(subFoldersAction, SIGNAL(triggered()), this, SLOT(setIncludeSubFolders()));
 
     addBookmarkAction = new QAction(tr("Add Bookmark"), this);
@@ -598,13 +597,13 @@ void MW::createActions()
     infoVisibleAction = new QAction(tr("Shooting Info"), this);
     infoVisibleAction->setObjectName("toggleInfo");
     infoVisibleAction->setCheckable(true);
-    infoVisibleAction->setChecked(mwd.isImageInfoVisible);  // from QSettings
+    infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());  // from QSettings
     connect(infoVisibleAction, SIGNAL(triggered()), this, SLOT(setShootingInfo()));
 
 
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setCheckable(true);
-    asLoupeAction->setChecked(mwd.isLoupeDisplay);
+    asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool());
     // add secondary shortcut (primary defined in loadShortcuts)
     QShortcut *enter = new QShortcut(QKeySequence("Return"), this);
     connect(enter, SIGNAL(activated()), asLoupeAction, SLOT(trigger()));
@@ -612,12 +611,12 @@ void MW::createActions()
 
     asGridAction = new QAction(tr("Grid"), this);
     asGridAction->setCheckable(true);
-    asGridAction->setChecked(mwd.isGridDisplay);
+    asGridAction->setChecked(setting->value("isGridDisplay").toBool());
     connect(asGridAction, SIGNAL(triggered()), this, SLOT(gridDisplay()));
 
     asCompareAction = new QAction(tr("Compare"), this);
     asCompareAction->setCheckable(true);
-    asCompareAction->setChecked(mwd.isCompareDisplay);
+    asCompareAction->setChecked(setting->value("isCompareDisplay").toBool());
 //    connect(asCompareAction, SIGNAL(triggered()), this, SLOT(compareDisplay()));
 
     centralGroupAction = new QActionGroup(this);
@@ -628,12 +627,12 @@ void MW::createActions()
 
     asListAction = new QAction(tr("As list"), this);
     asListAction->setCheckable(false);
-    asListAction->setChecked(!mwd.isIconDisplay);
+    asListAction->setChecked(!setting->value("isIconDisplay").toBool());
 //    connect(asListAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
 
     asIconsAction = new QAction(tr("As thumbs"), this);
     asIconsAction->setCheckable(true);
-    asIconsAction->setChecked(mwd.isIconDisplay);
+    asIconsAction->setChecked(setting->value("isIconDisplay").toBool());
 //    connect(thumbsEnlargeAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
 
     iconGroupAction = new QActionGroup(this);
@@ -656,15 +655,15 @@ void MW::createActions()
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
     connect(thumbsEnlargeAction, SIGNAL(triggered()), thumbView, SLOT(thumbsEnlarge()));
-    if (thumbView->thumbSize == THUMB_SIZE_MAX)
-        thumbsEnlargeAction->setEnabled(false);
+//    if (thumbView->thumbSize == THUMB_SIZE_MAX)
+//        thumbsEnlargeAction->setEnabled(false);
 //    addAction(thumbsEnlargeAction);
 
     thumbsShrinkAction = new QAction(tr("Shrink thumbs"), this);
     thumbsShrinkAction->setObjectName("shrinkThumbs");
     connect(thumbsShrinkAction, SIGNAL(triggered()), thumbView, SLOT(thumbsShrink()));
-    if (thumbView->thumbSize == THUMB_SIZE_MIN)
-            thumbsShrinkAction->setEnabled(false);
+//    if (thumbView->thumbSize == THUMB_SIZE_MIN)
+//            thumbsShrinkAction->setEnabled(false);
 //    addAction(thumbsShrinkAction);
 
     // is this used - not in menu
@@ -691,72 +690,75 @@ void MW::createActions()
     windowTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
     windowTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
     windowTitleBarVisibleAction->setCheckable(true);
-    windowTitleBarVisibleAction->setChecked(mwd.isWindowTitleBarVisible);
+    windowTitleBarVisibleAction->setChecked(setting->value("isWindowTitleBarVisible").toBool());
     connect(windowTitleBarVisibleAction, SIGNAL(triggered()), this, SLOT(setWindowsTitleBarVisibility()));
 
     menuBarVisibleAction = new QAction(tr("Menubar"), this);
     menuBarVisibleAction->setObjectName("toggleMenuBar");
     menuBarVisibleAction->setCheckable(true);
-    menuBarVisibleAction->setChecked(mwd.isMenuBarVisible);
+    menuBarVisibleAction->setChecked(setting->value("isMenuBarBarVisible").toBool());
     connect(menuBarVisibleAction, SIGNAL(triggered()), this, SLOT(setMenuBarVisibility()));
 
     statusBarVisibleAction = new QAction(tr("Statusbar"), this);
     statusBarVisibleAction->setObjectName("toggleStatusBar");
     statusBarVisibleAction->setCheckable(true);
-    statusBarVisibleAction->setChecked(mwd.isStatusBarVisible);
+    statusBarVisibleAction->setChecked(setting->value("isStatusBarVisible").toBool());
     connect(statusBarVisibleAction, SIGNAL(triggered()), this, SLOT(setStatusBarVisibility()));
 
     folderDockVisibleAction = new QAction(tr("Folder"), this);
     folderDockVisibleAction->setObjectName("toggleFiless");
     folderDockVisibleAction->setCheckable(true);
-    folderDockVisibleAction->setChecked(mwd.isFolderDockVisible);
+    folderDockVisibleAction->setChecked(setting->value("isFolderDockVisible").toBool());
     connect(folderDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFolderDockVisibility()));
 
     favDockVisibleAction = new QAction(tr("Favourites"), this);
     favDockVisibleAction->setObjectName("toggleFavs");
     favDockVisibleAction->setCheckable(true);
-    favDockVisibleAction->setChecked(mwd.isFavDockVisible);
+    favDockVisibleAction->setChecked(setting->value("isFavDockVisible").toBool());
     connect(favDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFavDockVisibility()));
 
     metadataDockVisibleAction = new QAction(tr("Metadata"), this);
     metadataDockVisibleAction->setObjectName("toggleMetadata");
     metadataDockVisibleAction->setCheckable(true);
-    metadataDockVisibleAction->setChecked(mwd.isMetadataDockVisible);
+    metadataDockVisibleAction->setChecked(setting->value("isMetadataDockVisible").toBool());
     connect(metadataDockVisibleAction, SIGNAL(triggered()), this, SLOT(setMetadataDockVisibility()));
 
     thumbDockVisibleAction = new QAction(tr("Thumbnails"), this);
     thumbDockVisibleAction->setCheckable(true);
-    thumbDockVisibleAction->setChecked(mwd.isThumbDockVisible);
+    thumbDockVisibleAction->setChecked(setting->value("isThumbDockVisible").toBool());
     connect(thumbDockVisibleAction, SIGNAL(triggered()), this, SLOT(setThumbDockVisibity()));
 
     folderDockLockAction = new QAction(tr("Lock Files"), this);
     folderDockLockAction->setObjectName("lockDockFiles");
     folderDockLockAction->setCheckable(true);
-    folderDockLockAction->setChecked(mwd.isFolderDockLocked);
+    folderDockLockAction->setChecked(setting->value("isFolderDockLocked").toBool());
     connect(folderDockLockAction, SIGNAL(triggered()), this, SLOT(setFolderDockLockMode()));
 
     favDockLockAction = new QAction(tr("Lock Favourites"), this);
     favDockLockAction->setObjectName("lockDockFavs");
     favDockLockAction->setCheckable(true);
-    favDockLockAction->setChecked(mwd.isFavDockLocked);
+    favDockLockAction->setChecked(setting->value("isFavDockLocked").toBool());
     connect(favDockLockAction, SIGNAL(triggered()), this, SLOT(setFavDockLockMode()));
 
     metadataDockLockAction = new QAction(tr("Lock Metadata"), this);
     metadataDockLockAction->setObjectName("lockDockMetadata");
     metadataDockLockAction->setCheckable(true);
-    metadataDockLockAction->setChecked(mwd.isMetadataDockLocked);
+    metadataDockLockAction->setChecked(setting->value("isMetadataDockLocked").toBool());
     connect(metadataDockLockAction, SIGNAL(triggered()), this, SLOT(setMetadataDockLockMode()));
 
     thumbDockLockAction = new QAction(tr("Lock Thumbs"), this);
     thumbDockLockAction->setObjectName("lockDockThumbs");
     thumbDockLockAction->setCheckable(true);
-    thumbDockLockAction->setChecked(mwd.isThumbDockLocked);
+    thumbDockLockAction->setChecked(setting->value("isThumbDockLocked").toBool());
     connect(thumbDockLockAction, SIGNAL(triggered()), this, SLOT(setThumbDockLockMode()));
 
     allDocksLockAction = new QAction(tr("Lock all docks"), this);
     allDocksLockAction->setObjectName("lockDocks");
     allDocksLockAction->setCheckable(true);
-    if (mwd.isFolderDockLocked && mwd.isFavDockLocked && mwd.isMetadataDockLocked && mwd.isThumbDockLocked)
+    if (folderDockLockAction->isChecked() &&
+                favDockLockAction->isChecked() &&
+                metadataDockLockAction->isChecked() &&
+                thumbDockLockAction->isChecked())
         allDocksLockAction->setChecked(true);
     connect(allDocksLockAction, SIGNAL(triggered()), this, SLOT(setAllDocksLockMode()));
 
@@ -1152,12 +1154,13 @@ void MW::createThumbView()
     metadata = new Metadata;
     thumbView = new ThumbView(this, metadata, true);
     thumbView->setObjectName("ImageView");  //rgh need to fix??
-    thumbView->thumbSpacing = mwd.thumbSpacing;
-    thumbView->thumbPadding = mwd.thumbPadding;
-    thumbView->thumbWidth = mwd.thumbWidth;
-    thumbView->thumbHeight = mwd.thumbHeight;
-    thumbView->labelFontSize = mwd.labelFontSize;
-    thumbView->showThumbLabels = mwd.showThumbLabels;
+    thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
+    thumbView->thumbPadding = setting->value("thumbPadding").toInt();
+    thumbView->thumbWidth = setting->value("thumbWidth").toInt();
+    thumbView->thumbHeight = setting->value("thumbHeight").toInt();
+    thumbView->labelFontSize = setting->value("labelFontSize").toInt();
+    thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
+    thumbView->isThumbWrap = setting->value("isThumbWrap").toBool();
     thumbView->setThumbParameters();
     metadataCacheThread = new MetadataCache(this, thumbView, metadata);
     thumbCacheThread = new ThumbCache(this, thumbView, metadata);
@@ -1204,7 +1207,7 @@ void MW:: createImageView()
     #endif
     }
     imageCacheThread = new ImageCache(this, metadata);
-    imageView = new ImageView(this, metadata, imageCacheThread, mwd.isImageInfoVisible);
+    imageView = new ImageView(this, metadata, imageCacheThread, setting->value("isImageInfoVisible").toBool());
 //    connect(copyImageAction, SIGNAL(triggered()), imageView, SLOT(copyImage()));
 //    connect(pasteImageAction, SIGNAL(triggered()), imageView, SLOT(pasteImage()));
     connect(metadataCacheThread, SIGNAL(updateIsRunning(bool)),
@@ -1266,8 +1269,8 @@ void MW::createStatusBar()
 
 void MW::setThumbDockParameters(bool isThumbWrap, bool isVerticalTitle)
 {
-    mwd.isThumbWrap = isThumbWrap;
-    mwd.isVerticalTitle = isVerticalTitle;
+    thumbView->isThumbWrap = isThumbWrap;       // is this needed?
+//    mwd.isVerticalTitle = isVerticalTitle;
     thumbView->setWrapping(isThumbWrap);
     if (isVerticalTitle) {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -1574,6 +1577,7 @@ void MW::newWorkspace()
     QString workspaceName = wsNew->getText(this, tr("New Workspace"),
         tr("Name:                                                            "),
         QLineEdit::Normal, "", &ok);
+
     // duplicate names illegal
     workspaceName = fixDupWorkspaceName(workspaceName);
     if (ok && !workspaceName.isEmpty() && n < 10) {
@@ -1651,48 +1655,48 @@ workspace with a matching name to the action is used.
     asLoupeAction->setChecked(w.isLoupeDisplay);
     asGridAction->setChecked(w.isGridDisplay);
     asCompareAction->setChecked(w.isCompareDisplay);
+    thumbView->setThumbParameters(w.thumbWidth,
+                                  w.thumbHeight,
+                                  w.thumbSpacing,
+                                  w.thumbPadding,
+                                  w.labelFontSize,
+                                  w.showThumbLabels);
     updateState();
-    thumbView->thumbSpacing = w.thumbSpacing;
-    thumbView->thumbPadding = w.thumbPadding;
-    thumbView->thumbWidth = w.thumbWidth;
-    thumbView->thumbHeight = w.thumbHeight;
-    thumbView->labelFontSize = w.labelFontSize;
-    thumbView->showThumbLabels = w.showThumbLabels;
-    thumbView->refreshThumbs();
 //            reportWorkspace(i);         // rgh remove after debugging
 }
 
-void MW::snapshotWorkspace()
+void MW::snapshotWorkspace(workspaceData &wsd)
 {
-    ws.geometry = saveGeometry();
-    ws.state = saveState();
-    ws.isWindowTitleBarVisible = windowTitleBarVisibleAction->isChecked();
-    ws.isMenuBarVisible = menuBarVisibleAction->isChecked();
-    ws.isStatusBarVisible = statusBarVisibleAction->isChecked();
-    ws.isFolderDockVisible = folderDockVisibleAction->isChecked();
-    ws.isFavDockVisible = favDockVisibleAction->isChecked();
-    ws.isMetadataDockVisible = metadataDockVisibleAction->isChecked();
-    ws.isThumbDockVisible = thumbDockVisibleAction->isChecked();
-    ws.isFolderDockLocked = folderDockLockAction->isChecked();
-    ws.isFavDockLocked = favDockLockAction->isChecked();
-    ws.isMetadataDockLocked = metadataDockLockAction->isChecked();
-    ws.isThumbDockLocked = thumbDockLockAction->isChecked();
-    ws.isImageInfoVisible = infoVisibleAction->isChecked();
-    ws.isIconDisplay = asIconsAction->isChecked();
+    wsd.geometry = saveGeometry();
+    wsd.state = saveState();
+    wsd.isWindowTitleBarVisible = windowTitleBarVisibleAction->isChecked();
+    wsd.isMenuBarVisible = menuBarVisibleAction->isChecked();
+    wsd.isStatusBarVisible = statusBarVisibleAction->isChecked();
+    wsd.isFolderDockVisible = folderDockVisibleAction->isChecked();
+    wsd.isFavDockVisible = favDockVisibleAction->isChecked();
+    wsd.isMetadataDockVisible = metadataDockVisibleAction->isChecked();
+    wsd.isThumbDockVisible = thumbDockVisibleAction->isChecked();
+    wsd.isFolderDockLocked = folderDockLockAction->isChecked();
+    wsd.isFavDockLocked = favDockLockAction->isChecked();
+    wsd.isMetadataDockLocked = metadataDockLockAction->isChecked();
+    wsd.isThumbDockLocked = thumbDockLockAction->isChecked();
+    wsd.isImageInfoVisible = infoVisibleAction->isChecked();
+    wsd.isIconDisplay = asIconsAction->isChecked();
 
-    ws.isLoupeDisplay = asLoupeAction->isChecked();
-    ws.isGridDisplay = asGridAction->isChecked();
-    ws.isCompareDisplay = asCompareAction->isChecked();
+    wsd.isLoupeDisplay = asLoupeAction->isChecked();
+    wsd.isGridDisplay = asGridAction->isChecked();
+    wsd.isCompareDisplay = asCompareAction->isChecked();
 
-    ws.thumbSpacing = thumbView->thumbSpacing;
-    ws.thumbPadding = thumbView->thumbPadding;
-    ws.thumbWidth = thumbView->thumbWidth;
-    ws.thumbHeight = thumbView->thumbHeight;
-    ws.labelFontSize = thumbView->labelFontSize;
-    ws.showThumbLabels = thumbView->showThumbLabels;
-    ws.isThumbWrap = mwd.isThumbWrap;
-    ws.isVerticalTitle = mwd.isVerticalTitle;
-    ws.isImageInfoVisible = infoVisibleAction->isChecked();
+    wsd.thumbSpacing = thumbView->thumbSpacing;
+    wsd.thumbPadding = thumbView->thumbPadding;
+    wsd.thumbWidth = thumbView->thumbWidth;
+    wsd.thumbHeight = thumbView->thumbHeight;
+    wsd.labelFontSize = thumbView->labelFontSize;
+    wsd.showThumbLabels = thumbView->showThumbLabels;
+    wsd.isThumbWrap = thumbView->isThumbWrap;
+
+    wsd.isVerticalTitle = isThumbDockVerticalTitle; // rgh thumbDock->titleBarWidget()->is;
+    wsd.isImageInfoVisible = infoVisibleAction->isChecked();
 }
 
 void MW::manageWorkspaces()
@@ -1720,6 +1724,8 @@ Delete, rename and reassign workspaces.
             this, SLOT(reassignWorkspace(int)));
     connect(workspaceDlg, SIGNAL(renameWorkspace(int, QString)),
             this, SLOT(renameWorkspace(int, QString)));
+    connect(workspaceDlg, SIGNAL(reportWorkspace(int)),
+            this, SLOT(reportWorkspace(int)));
     workspaceDlg->exec();
     delete workspaceDlg;
 }
@@ -1822,6 +1828,7 @@ app is "stranded" on secondary monitors that are not attached.
     thumbView->thumbHeight = 120;
     thumbView->labelFontSize = 8;
     thumbView->showThumbLabels = true;
+    thumbView->setWrapping(true);
 }
 
 void MW::renameWorkspace(int n, QString name)
@@ -1844,8 +1851,8 @@ void MW::renameWorkspace(int n, QString name)
 
 void MW::populateWorkspace(int n, QString name)
 {
-    snapshotWorkspace();
-    (*workspaces)[n] = ws;
+    snapshotWorkspace((*workspaces)[n]);
+//    (*workspaces)[n] = ws;
     (*workspaces)[n].accelNum = QString::number(n);
     (*workspaces)[n].name = name;
 //    (*workspaces)[n].geometry = saveGeometry();
@@ -1868,12 +1875,17 @@ void MW::populateWorkspace(int n, QString name)
 //    (*workspaces)[n].labelFontSize = thumbView->labelFontSize;
 //    (*workspaces)[n].showThumbLabels = thumbView->showThumbLabels;
 //    (*workspaces)[n].isThumbWrap = mwd.isThumbWrap;
-//    (*workspaces)[n].isVerticalTitle = mwd.isVerticalTitle;
+//    (*workspaces)[n].isVerticalTitle = isThumbDockVerticalTitle;
 //    (*workspaces)[n].isImageInfoVisible = infoVisibleAction->isChecked();
 }
 
 void MW::reportWorkspace(int n)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::reportWorkspace";
+    #endif
+    }
     ws = workspaces->at(n);
     qDebug() << "\n\nName" << ws.name
              << "\nAccel#" << ws.accelNum
@@ -1903,34 +1915,68 @@ void MW::reportWorkspace(int n)
              << "\nisLoupeDisplay" << ws.isLoupeDisplay
              << "\nisGridDisplay" << ws.isGridDisplay
              << "\nisCompareDisplay" << ws.isCompareDisplay;
+
+//    const workspaceData *w = new workspaceData;
+//    w = &workspaces->at(n);
+//    qDebug() << "\n\nName" << w->name
+//             << "\nAccel#" << w->accelNum
+//             << "\nGeometry" << w->geometry
+//             << "\nState" << w->state
+//             << "\nisWindowTitleBarVisible" << w->isWindowTitleBarVisible
+//             << "\nisMenuBarVisible" << w->isMenuBarVisible
+//             << "\nisStatusBarVisible" << w->isStatusBarVisible
+//             << "\nisFolderDockVisible" << w->isFolderDockVisible
+//             << "\nisFavDockVisible" << w->isFavDockVisible
+//             << "\nisMetadataDockVisible" << w->isMetadataDockVisible
+//             << "\nisThumbDockVisible" << w->isThumbDockVisible
+//             << "\nisFolderLocked" << w->isFolderDockLocked
+//             << "\nisFavLocked" << w->isFavDockLocked
+//             << "\nisMetadataLocked" << w->isMetadataDockLocked
+//             << "\nisThumbsLocked" << w->isThumbDockLocked
+//             << "\nthumbSpacing" << w->thumbSpacing
+//             << "\nthumbPadding" << w->thumbPadding
+//             << "\nthumbWidth" << w->thumbWidth
+//             << "\nthumbHeight" << w->thumbHeight
+//             << "\nlabelFontSize" << w->labelFontSize
+//             << "\nshowThumbLabels" << w->showThumbLabels
+//             << "\nsisThumbWrap" << w->isThumbWrap
+//             << "\nisVerticalTitle" << w->isVerticalTitle
+//             << "\nshowShootingInfo" << w->isImageInfoVisible
+//             << "\nisIconDisplay" << w->isIconDisplay
+//             << "\nisLoupeDisplay" << w->isLoupeDisplay
+//             << "\nisGridDisplay" << w->isGridDisplay
+//             << "\nisCompareDisplay" << w->isCompareDisplay;
+//    delete w;
 }
 
 void MW::reportState()
 {
-    qDebug() << "\nisWindowTitleBarVisible" << mwd.isWindowTitleBarVisible
-             << "\nisMenuBarVisible" << mwd.isMenuBarVisible
-             << "\nisStatusBarVisible" << mwd.isStatusBarVisible
-             << "\nisFolderDockVisible" << mwd.isFolderDockVisible
-             << "\nisFavDockVisible" << mwd.isFavDockVisible
-             << "\nisMetadataDockVisible" << mwd.isMetadataDockVisible
-             << "\nisThumbDockVisible" << mwd.isThumbDockVisible
-             << "\nisFolderLocked" << mwd.isFolderDockLocked
-             << "\nisFavLocked" << mwd.isFavDockLocked
-             << "\nisMetadataLocked" << mwd.isMetadataDockLocked
-             << "\nisThumbsLocked" << mwd.isThumbDockLocked
-             << "\nthumbSpacing" << mwd.thumbSpacing
-             << "\nthumbPadding" << mwd.thumbPadding
-             << "\nthumbWidth" << mwd.thumbWidth
-             << "\nthumbHeight" << mwd.thumbHeight
-             << "\nlabelFontSize" << mwd.labelFontSize
-             << "\nshowThumbLabels" << mwd.showThumbLabels
-             << "\nisThumbWrap" << mwd.isThumbWrap
-             << "\nisVerticalTitle" << mwd.isVerticalTitle
-             << "\nshowShootingInfo" << mwd.isImageInfoVisible
-             << "\nisIconDisplay" << mwd.isIconDisplay
-             << "\nisLoupeDisplay" << mwd.isLoupeDisplay
-             << "\nisGridDisplay" << mwd.isGridDisplay
-             << "\nisCompareDisplay" << mwd.isCompareDisplay;
+    workspaceData w;
+    snapshotWorkspace(w);
+    qDebug() << "\nisWindowTitleBarVisible" << w.isWindowTitleBarVisible
+             << "\nisMenuBarVisible" << w.isMenuBarVisible
+             << "\nisStatusBarVisible" << w.isStatusBarVisible
+             << "\nisFolderDockVisible" << w.isFolderDockVisible
+             << "\nisFavDockVisible" << w.isFavDockVisible
+             << "\nisMetadataDockVisible" << w.isMetadataDockVisible
+             << "\nisThumbDockVisible" << w.isThumbDockVisible
+             << "\nisFolderLocked" << w.isFolderDockLocked
+             << "\nisFavLocked" << w.isFavDockLocked
+             << "\nisMetadataLocked" << w.isMetadataDockLocked
+             << "\nisThumbsLocked" << w.isThumbDockLocked
+             << "\nthumbSpacing" << w.thumbSpacing
+             << "\nthumbPadding" << w.thumbPadding
+             << "\nthumbWidth" << w.thumbWidth
+             << "\nthumbHeight" << w.thumbHeight
+             << "\nlabelFontSize" << w.labelFontSize
+             << "\nshowThumbLabels" << w.showThumbLabels
+             << "\nisThumbWrap" << w.isThumbWrap
+             << "\nisVerticalTitle" << isThumbDockVerticalTitle
+             << "\nshowShootingInfo" << w.isImageInfoVisible
+             << "\nisIconDisplay" << w.isIconDisplay
+             << "\nisLoupeDisplay" << w.isLoupeDisplay
+             << "\nisGridDisplay" << w.isGridDisplay
+             << "\nisCompareDisplay" << w.isCompareDisplay;
 }
 
 void MW::reportMetadata()
@@ -2355,11 +2401,12 @@ void MW::writeSettings()
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showLabels", (bool)showThumbLabelsAction->isChecked());
-    setting->setValue("isThumbWrap", (bool)mwd.isThumbWrap);
-    setting->setValue("isVerticalTitle", (bool)mwd.isVerticalTitle);
+    setting->setValue("isThumbWrap", (bool)thumbView->isWrapping());
+    setting->setValue("isVerticalTitle", (bool)isThumbDockVerticalTitle);
     // slideshow
     setting->setValue("slideShowDelay", (int)slideShowDelay);
     setting->setValue("slideShowRandom", (bool)slideShowRandom);
+    setting->setValue("slideShowWrap", (bool)slideShowWrap);
     // cache
     setting->setValue("cacheSizeMB", (int)cacheSizeMB);
     setting->setValue("isShowCacheStatus", (bool)isShowCacheStatus);
@@ -2465,6 +2512,16 @@ void MW::writeSettings()
 
 void MW::loadSettings()
 {
+/* Persistant settings from QSettings fall into tow categories:
+1.  Action settings
+2.  Preferences
+
+Action settings are maintained by the actions ie action->isChecked();
+They are updated on creation.
+
+Preferences are located in the relevant class and updated here.
+
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::loadSettings";
@@ -2494,17 +2551,18 @@ void MW::loadSettings()
     lastDir = setting->value("lastDir").toString();
     maxRecentFolders = setting->value("maxRecentFolders").toInt();
     // thumbs
-    mwd.thumbSpacing = setting->value("thumbSpacing").toInt();
-    mwd.thumbPadding = setting->value("thumbPadding").toInt();
-    mwd.thumbWidth = setting->value("thumbWidth").toInt();
-    mwd.thumbHeight = setting->value("thumbHeight").toInt();
-    mwd.labelFontSize = setting->value("labelFontSize").toInt();
-    mwd.showThumbLabels = setting->value("showThumbLabels").toBool();
-    mwd.isThumbWrap = setting->value("isThumbWrap").toBool();
-    mwd.isVerticalTitle = setting->value("isVerticalTitle").toBool();
+//    mwd.thumbSpacing = setting->value("thumbSpacing").toInt();
+//    mwd.thumbPadding = setting->value("thumbPadding").toInt();
+//    mwd.thumbWidth = setting->value("thumbWidth").toInt();
+//    mwd.thumbHeight = setting->value("thumbHeight").toInt();
+//    mwd.labelFontSize = setting->value("labelFontSize").toInt();
+//    mwd.showThumbLabels = setting->value("showThumbLabels").toBool();
+//    mwd.isThumbWrap = setting->value("isThumbWrap").toBool();
+    isThumbDockVerticalTitle = setting->value("isVerticalTitle").toBool();
     // slideshow
     slideShowDelay = setting->value("slideShowDelay").toInt();
     slideShowRandom = setting->value("slideShowRandom").toBool();
+    slideShowWrap = setting->value("slideShowWrap").toBool();
     // cache
     cacheSizeMB = setting->value("cacheSizeMB").toInt();
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
@@ -2514,26 +2572,26 @@ void MW::loadSettings()
     // load state
     shouldMaximize = setting->value("shouldMaximize").toBool();  // req'd? Only in MW
 
-    mwd.isWindowTitleBarVisible = setting->value("isWindowTitleBarVisible").toBool();
-    mwd.isMenuBarVisible = setting->value("isMenuBarBarVisible").toBool();
-    mwd.isStatusBarVisible = setting->value("isStatusBarVisible").toBool();
+//    mwd.isWindowTitleBarVisible = setting->value("isWindowTitleBarVisible").toBool();
+//    mwd.isMenuBarVisible = setting->value("isMenuBarBarVisible").toBool();
+//    mwd.isStatusBarVisible = setting->value("isStatusBarVisible").toBool();
 
-    mwd.isFolderDockVisible = setting->value("isFolderDockVisible").toBool();
-    mwd.isFavDockVisible = setting->value("isFavDockVisible").toBool();
-    mwd.isMetadataDockVisible = setting->value("isMetadataDockVisible").toBool();
-    mwd.isThumbDockVisible = setting->value("isThumbDockVisible").toBool();
+//    mwd.isFolderDockVisible = setting->value("isFolderDockVisible").toBool();
+//    mwd.isFavDockVisible = setting->value("isFavDockVisible").toBool();
+//    mwd.isMetadataDockVisible = setting->value("isMetadataDockVisible").toBool();
+//    mwd.isThumbDockVisible = setting->value("isThumbDockVisible").toBool();
 
-    mwd.isFolderDockLocked = setting->value("isFolderDockLocked").toBool();
-    mwd.isFavDockLocked = setting->value("isFavDockLocked").toBool();
-    mwd.isMetadataDockLocked = setting->value("isMetadataDockLocked").toBool();
-    mwd.isThumbDockLocked = setting->value("isThumbDockLocked").toBool();
+//    mwd.isFolderDockLocked = setting->value("isFolderDockLocked").toBool();
+//    mwd.isFavDockLocked = setting->value("isFavDockLocked").toBool();
+//    mwd.isMetadataDockLocked = setting->value("isMetadataDockLocked").toBool();
+//    mwd.isThumbDockLocked = setting->value("isThumbDockLocked").toBool();
 
 //    mwd.includeSubfolders = setting->value("includeSubfolders").toBool();
-    mwd.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-    mwd.isIconDisplay = setting->value("isIconDisplay").toBool();     // thumb dock
-    mwd.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();    // central widget
-    mwd.isGridDisplay = setting->value("isGridDisplay").toBool();     // central widget
-    mwd.isCompareDisplay = setting->value("isCompareDisplay").toBool();  // central widget
+//    mwd.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
+//    mwd.isIconDisplay = setting->value("isIconDisplay").toBool();     // thumb dock
+//    mwd.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();    // central widget
+//    mwd.isGridDisplay = setting->value("isGridDisplay").toBool();     // central widget
+//    mwd.isCompareDisplay = setting->value("isCompareDisplay").toBool();  // central widget
 
     /* read external apps */
     setting->beginGroup("ExternalApps");
@@ -2572,7 +2630,7 @@ void MW::loadSettings()
         ws.isStatusBarVisible = setting->value("isStatusBarVisible").toBool();
         ws.isFolderDockVisible = setting->value("isFolderDockVisible").toBool();
         ws.isFavDockVisible = setting->value("isFavDockVisible").toBool();
-        ws.isMetadataDockVisible = setting->value("isMetadaDockVisible").toBool();
+        ws.isMetadataDockVisible = setting->value("isMetadataDockVisible").toBool();
         ws.isThumbDockVisible = setting->value("isThumbDockVisible").toBool();
         ws.isFolderDockLocked = setting->value("isFolderDockLocked").toBool();
         ws.isFavDockLocked = setting->value("isFavDockLocked").toBool();
@@ -2916,9 +2974,12 @@ void MW::setCentralView()
     qDebug() << "MW::setCentralView";
     #endif
     }
-    if (mwd.isLoupeDisplay) loupeDisplay();
-    if (mwd.isGridDisplay) gridDisplay();
-    if (mwd.isCompareDisplay) compareDisplay();
+    if (asLoupeAction->isChecked()) loupeDisplay();
+    if (asGridAction->isChecked()) gridDisplay();
+    if (asCompareAction->isChecked()) compareDisplay();
+//    if (mwd.isLoupeDisplay) loupeDisplay();
+//    if (mwd.isGridDisplay) gridDisplay();
+//    if (mwd.isCompareDisplay) compareDisplay();
 }
 
 void MW::setShootingInfo() {
