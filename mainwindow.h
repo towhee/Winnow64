@@ -160,7 +160,7 @@ private slots:
     void togglePick();
     void updatePick();
     void setRememberLastDir(bool prefRememberFolder);
-    void setIncludeSubFolders(bool prefInclSubfolders);
+    void setIncludeSubFolders();
     void setMaxRecentFolders(int prefMaxRecentFolders);
 //    void setGeneralParameters(bool rememberFolder, bool inclSubfolders, int prefMaxRecentFolders);
     void setSlideShowParameters(int delay, bool isRandom);
@@ -202,8 +202,10 @@ private slots:
 
     void newWorkspace();
     QString fixDupWorkspaceName(QString name);
-    void invokeWorkspace(QAction *workAction);
+    void invokeWorkspaceFromAction(QAction *workAction);
+    void invokeWorkspace(const workspaceData &w);
     void invokeRecentFolder(QAction *recentFolderActions);
+    void snapshotWorkspace();
     void manageWorkspaces();
     void deleteWorkspace(int n);
     void renameWorkspace(int n, QString name);
@@ -309,7 +311,7 @@ private:
     QAction *favDockVisibleAction;
     QAction *metadataDockVisibleAction;
     QAction *thumbDockVisibleAction;
-    QAction *windowsTitleBarVisibleAction;
+    QAction *windowTitleBarVisibleAction;
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
 
@@ -431,7 +433,7 @@ private:
     void addRecentFolder(QString fPath);
     void syncRecentFoldersMenu();
 
-    bool isStressTest = false;
+    bool isStressTest;
     void stressTest();
 
     //    void setCopyCutActions(bool setEnabled);

@@ -17,7 +17,6 @@ To do:
 - Eject card
 - When sort thumbs no thumbnails visible
 - Ingest including token builder
-- remove copy/paste image data
 - Add QCompleter for direct navigation to a folder
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs

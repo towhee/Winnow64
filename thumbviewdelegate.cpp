@@ -27,11 +27,14 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     if (showThumbLabels)
         thumbSpace.setHeight(thumbSize.height() + iconPadding*2
             + penWidth*2 + fontHt + iconPadding);
-/*    qDebug() << "w =" << thumbWidth
-             << "h =" << thumbHeight
-             << "p =" << thumbPadding
-             << "l =" << showThumbLabels
-             << "s =" << thumbSpace;   */
+}
+
+void ThumbViewDelegate::reportThumbAttributes()
+{
+   qDebug() << "thumbSize    =" << thumbSize
+            << "thumbSpace   =" << thumbSpace
+            << "thumbPadding =" << iconPadding
+            << "Font height =" << fontHt;
 }
 
 QSize ThumbViewDelegate::getThumbSize()

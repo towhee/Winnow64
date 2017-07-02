@@ -22,6 +22,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     // used here for testing/debugging
     bool resetSettings = false;
+    isStressTest = false;
 
     G::appName = "Winnow";
     //    GData::isDebug = true;        // is this used or just #ifdef ISDEBUG in global.h
@@ -61,7 +62,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     handleStartupArgs();
     setupMainWindow(resetSettings);
     updateState();
-    getSubfolders("/users/roryhill/pictures");
+//    getSubfolders("/users/roryhill/pictures");
     folderSelectionChange();
 }
 
@@ -92,8 +93,6 @@ void MW::setupMainWindow(bool resetSettings)
     QWidget *centralWidget = new QWidget;
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
-
-    thumbDock->setWindowTitle(" ");
 
     // add error trapping for file io  rgh todo
     QFile fStyle(":/qss/teststyle.css");
@@ -187,7 +186,7 @@ void MW::folderSelectionChange()
 {
     {
     #ifdef ISDEBUG
-        qDebug() << "MW::folderSelectionChange";
+        qDebug() << "\nMW::folderSelectionChange";
     #endif
     }
     // Stop any threads that might be running.
@@ -196,7 +195,7 @@ void MW::folderSelectionChange()
     imageCacheThread->stopImageCache();
 
     // stop slideshow if a new folder is selected
-    if (isSlideShowActive) slideShow();
+    if (isSlideShowActive && !isStressTest) slideShow();
 
     QString dirPath;
     QDir testDir;
@@ -292,6 +291,10 @@ void MW::fileSelectionChange()
         imageCacheThread->updateImageCache(thumbView->
         thumbFileInfoList, fPath);
     }
+
+//    thumbView->setWrapping(true);
+//    setThumbDockVisibity();
+
 }
 
 void MW::loadMetadataCache()
@@ -442,7 +445,6 @@ void MW::createActions()
     }
     addActions(recentFolderActions);
 
-    // Place keeper for now
     revealFileAction = new QAction(tr("Reveal in finder/explorer"), this);
     revealFileAction->setObjectName("openInFinder");
     connect(revealFileAction, SIGNAL(triggered()),
@@ -686,11 +688,11 @@ void MW::createActions()
 
     // Window menu
 
-    windowsTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
-    windowsTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
-    windowsTitleBarVisibleAction->setCheckable(true);
-    windowsTitleBarVisibleAction->setChecked(mwd.isWindowTitleBarVisible);
-    connect(windowsTitleBarVisibleAction, SIGNAL(triggered()), this, SLOT(setWindowsTitleBarVisibility()));
+    windowTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
+    windowTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
+    windowTitleBarVisibleAction->setCheckable(true);
+    windowTitleBarVisibleAction->setChecked(mwd.isWindowTitleBarVisible);
+    connect(windowTitleBarVisibleAction, SIGNAL(triggered()), this, SLOT(setWindowsTitleBarVisibility()));
 
     menuBarVisibleAction = new QAction(tr("Menubar"), this);
     menuBarVisibleAction->setObjectName("toggleMenuBar");
@@ -799,7 +801,7 @@ void MW::createActions()
 }
 addActions(workspaceActions);
 
-    // connection moved to after menu creation as will not work before
+// connection moved to after menu creation as will not work before
 //    connect(workspaceMenu, SIGNAL(triggered(QAction*)),
 //            SLOT(invokeWorkspace(QAction*)));
 
@@ -813,6 +815,8 @@ addActions(workspaceActions);
     helpAction->setObjectName("help");
     connect(helpAction, SIGNAL(triggered()), this, SLOT(help()));
 
+    // Possibly needed actions
+
 //    enterAction = new QAction(tr("Enter"), this);
 //    enterAction->setObjectName("enterAction");
 //    enterAction->setShortcut(QKeySequence("X"));
@@ -824,7 +828,6 @@ addActions(workspaceActions);
 //        connect(pasteAction, SIGNAL(triggered()), this, SLOT(about()));
 
 
-    // Possibly needed actions
 
 
     // Sort actions
@@ -966,13 +969,13 @@ void MW::createMenus()
         workspaceMenu->addAction(workspaceActions.at(i));
     }
     connect(workspaceMenu, SIGNAL(triggered(QAction*)),
-            SLOT(invokeWorkspace(QAction*)));
+            SLOT(invokeWorkspaceFromAction(QAction*)));
     windowMenu->addAction(folderDockVisibleAction);
     windowMenu->addAction(favDockVisibleAction);
     windowMenu->addAction(metadataDockVisibleAction);
     windowMenu->addAction(thumbDockVisibleAction);
     windowMenu->addSeparator();
-    windowMenu->addAction(windowsTitleBarVisibleAction);
+    windowMenu->addAction(windowTitleBarVisibleAction);
     windowMenu->addAction(menuBarVisibleAction);
     windowMenu->addAction(statusBarVisibleAction);
     windowMenu->addSeparator();
@@ -1074,7 +1077,7 @@ void MW::createMenus()
         workspaceSubMenu->addAction(workspaceActions.at(i));
     }
     connect(workspaceSubMenu, SIGNAL(triggered(QAction*)),
-            SLOT(invokeWorkspace(QAction*)));
+            SLOT(invokeWorkspaceFromAction(QAction*)));
 
     QMenu *windowSubMenu = new QMenu(imageView);
     QAction *windowGroupAct = new QAction("Window", this);
@@ -1085,7 +1088,7 @@ void MW::createMenus()
     windowSubMenu->addAction(metadataDockVisibleAction);
     windowSubMenu->addAction(thumbDockVisibleAction);
     addMenuSeparator(windowSubMenu);
-    windowSubMenu->addAction(windowsTitleBarVisibleAction);
+    windowSubMenu->addAction(windowTitleBarVisibleAction);
     windowSubMenu->addAction(menuBarVisibleAction);
     windowSubMenu->addAction(statusBarVisibleAction);
     addMenuSeparator(windowSubMenu);
@@ -1525,7 +1528,7 @@ void MW::syncRecentFoldersMenu()
             recentFolderActions.at(i)->setText("Future recent folder" + QString::number(i));
             recentFolderActions.at(i)->setVisible(false);
         }
-        qDebug() << "sync menu" << i << recentFolderActions.at(i)->text();
+//        qDebug() << "sync menu" << i << recentFolderActions.at(i)->text();
     }
 }
 
@@ -1606,7 +1609,18 @@ with "_1" appended also might exist.
     return name;
 }
 
-void MW::invokeWorkspace(QAction *workAction)
+void MW::invokeWorkspaceFromAction(QAction *workAction)
+{
+    qDebug() << "Invoke" << workAction;     // rgh remove when debugged
+    for (int i=0; i<workspaces->count(); i++) {
+        if (workspaces->at(i).name == workAction->text()) {
+            invokeWorkspace(workspaces->at(i));
+            return;
+        }
+    }
+}
+
+void MW::invokeWorkspace(const workspaceData &w)
 {
 /*
 invokeWorkspace is called from a workspace action. Since the workspace actions
@@ -1618,40 +1632,67 @@ workspace with a matching name to the action is used.
     qDebug() << "MW::invokeWorkspace";
     #endif
     }
-    qDebug() << "Invoke" << workAction;     // rgh remove when debugged
-    for (int i=0; i<workspaces->count(); i++) {
-        if (workspaces->at(i).name == workAction->text()) {
-            ws = workspaces->at(i);
-            restoreGeometry(ws.geometry);
-            restoreState(ws.state);
-            windowsTitleBarVisibleAction->setChecked(ws.isWindowTitleBarVisible);
-            menuBarVisibleAction->setChecked(ws.isMenuBarVisible);
-            statusBarVisibleAction->setChecked(ws.isStatusBarVisible);
-            folderDockVisibleAction->setChecked(ws.isFolderDockVisible);
-            favDockVisibleAction->setChecked(ws.isFavDockVisible);
-            metadataDockVisibleAction->setChecked(ws.isMetadataDockVisible);
-            thumbDockVisibleAction->setChecked(ws.isThumbDockVisible);
-            folderDockLockAction->setChecked(ws.isFolderDockLocked);
-            favDockLockAction->setChecked(ws.isFavDockLocked);
-            metadataDockLockAction->setChecked(ws.isMetadataDockLocked);
-            thumbDockLockAction->setChecked( ws.isThumbDockLocked);
-            infoVisibleAction->setChecked(ws.isImageInfoVisible);
-            asListAction->setChecked(!ws.isIconDisplay);
-            asIconsAction->setChecked(ws.isIconDisplay);
-            asLoupeAction->setChecked(ws.isLoupeDisplay);
-            asGridAction->setChecked(ws.isGridDisplay);
-            asCompareAction->setChecked(ws.isCompareDisplay);
-            updateState();
-            thumbView->thumbSpacing = ws.thumbSpacing;
-            thumbView->thumbPadding = ws.thumbPadding;
-            thumbView->thumbWidth = ws.thumbWidth;
-            thumbView->thumbHeight = ws.thumbHeight;
-            thumbView->labelFontSize = ws.labelFontSize;
-            thumbView->showThumbLabels = ws.showThumbLabels;
-            thumbView->refreshThumbs();
+    restoreGeometry(w.geometry);
+    restoreState(w.state);
+    windowTitleBarVisibleAction->setChecked(w.isWindowTitleBarVisible);
+    menuBarVisibleAction->setChecked(w.isMenuBarVisible);
+    statusBarVisibleAction->setChecked(w.isStatusBarVisible);
+    folderDockVisibleAction->setChecked(w.isFolderDockVisible);
+    favDockVisibleAction->setChecked(w.isFavDockVisible);
+    metadataDockVisibleAction->setChecked(w.isMetadataDockVisible);
+    thumbDockVisibleAction->setChecked(w.isThumbDockVisible);
+    folderDockLockAction->setChecked(w.isFolderDockLocked);
+    favDockLockAction->setChecked(w.isFavDockLocked);
+    metadataDockLockAction->setChecked(w.isMetadataDockLocked);
+    thumbDockLockAction->setChecked( w.isThumbDockLocked);
+    infoVisibleAction->setChecked(w.isImageInfoVisible);
+    asListAction->setChecked(!w.isIconDisplay);
+    asIconsAction->setChecked(w.isIconDisplay);
+    asLoupeAction->setChecked(w.isLoupeDisplay);
+    asGridAction->setChecked(w.isGridDisplay);
+    asCompareAction->setChecked(w.isCompareDisplay);
+    updateState();
+    thumbView->thumbSpacing = w.thumbSpacing;
+    thumbView->thumbPadding = w.thumbPadding;
+    thumbView->thumbWidth = w.thumbWidth;
+    thumbView->thumbHeight = w.thumbHeight;
+    thumbView->labelFontSize = w.labelFontSize;
+    thumbView->showThumbLabels = w.showThumbLabels;
+    thumbView->refreshThumbs();
 //            reportWorkspace(i);         // rgh remove after debugging
-        }
-    }
+}
+
+void MW::snapshotWorkspace()
+{
+    ws.geometry = saveGeometry();
+    ws.state = saveState();
+    ws.isWindowTitleBarVisible = windowTitleBarVisibleAction->isChecked();
+    ws.isMenuBarVisible = menuBarVisibleAction->isChecked();
+    ws.isStatusBarVisible = statusBarVisibleAction->isChecked();
+    ws.isFolderDockVisible = folderDockVisibleAction->isChecked();
+    ws.isFavDockVisible = favDockVisibleAction->isChecked();
+    ws.isMetadataDockVisible = metadataDockVisibleAction->isChecked();
+    ws.isThumbDockVisible = thumbDockVisibleAction->isChecked();
+    ws.isFolderDockLocked = folderDockLockAction->isChecked();
+    ws.isFavDockLocked = favDockLockAction->isChecked();
+    ws.isMetadataDockLocked = metadataDockLockAction->isChecked();
+    ws.isThumbDockLocked = thumbDockLockAction->isChecked();
+    ws.isImageInfoVisible = infoVisibleAction->isChecked();
+    ws.isIconDisplay = asIconsAction->isChecked();
+
+    ws.isLoupeDisplay = asLoupeAction->isChecked();
+    ws.isGridDisplay = asGridAction->isChecked();
+    ws.isCompareDisplay = asCompareAction->isChecked();
+
+    ws.thumbSpacing = thumbView->thumbSpacing;
+    ws.thumbPadding = thumbView->thumbPadding;
+    ws.thumbWidth = thumbView->thumbWidth;
+    ws.thumbHeight = thumbView->thumbHeight;
+    ws.labelFontSize = thumbView->labelFontSize;
+    ws.showThumbLabels = thumbView->showThumbLabels;
+    ws.isThumbWrap = mwd.isThumbWrap;
+    ws.isVerticalTitle = mwd.isVerticalTitle;
+    ws.isImageInfoVisible = infoVisibleAction->isChecked();
 }
 
 void MW::manageWorkspaces()
@@ -1744,7 +1785,7 @@ app is "stranded" on secondary monitors that are not attached.
     resize(0.75 * desktop.width(), 0.75 * desktop.height());
     setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
         size(), desktop));
-    windowsTitleBarVisibleAction->setChecked(true);
+    windowTitleBarVisibleAction->setChecked(true);
     menuBarVisibleAction->setChecked(true);
     statusBarVisibleAction->setChecked(true);
 
@@ -1803,30 +1844,32 @@ void MW::renameWorkspace(int n, QString name)
 
 void MW::populateWorkspace(int n, QString name)
 {
+    snapshotWorkspace();
+    (*workspaces)[n] = ws;
     (*workspaces)[n].accelNum = QString::number(n);
     (*workspaces)[n].name = name;
-    (*workspaces)[n].geometry = saveGeometry();
-    (*workspaces)[n].state = saveState();
-    (*workspaces)[n].isWindowTitleBarVisible = windowsTitleBarVisibleAction->isChecked();
-    (*workspaces)[n].isMenuBarVisible = menuBarVisibleAction->isChecked();
-    (*workspaces)[n].isStatusBarVisible = statusBarVisibleAction->isChecked();
-    (*workspaces)[n].isFolderDockVisible = folderDockVisibleAction->isChecked();
-    (*workspaces)[n].isFavDockVisible = favDockVisibleAction->isChecked();
-    (*workspaces)[n].isMetadataDockVisible = metadataDockVisibleAction->isChecked();
-    (*workspaces)[n].isThumbDockVisible = thumbDockVisibleAction->isChecked();
-    (*workspaces)[n].isFolderDockLocked = folderDockLockAction->isChecked();
-    (*workspaces)[n].isFavDockLocked = favDockLockAction->isChecked();
-    (*workspaces)[n].isMetadataDockLocked = metadataDockLockAction->isChecked();
-    (*workspaces)[n].isThumbDockLocked = thumbDockLockAction;
-    (*workspaces)[n].thumbSpacing = thumbView->thumbSpacing;
-    (*workspaces)[n].thumbPadding = thumbView->thumbPadding;
-    (*workspaces)[n].thumbWidth = thumbView->thumbWidth;
-    (*workspaces)[n].thumbHeight = thumbView->thumbHeight;
-    (*workspaces)[n].labelFontSize = thumbView->labelFontSize;
-    (*workspaces)[n].showThumbLabels = thumbView->showThumbLabels;
-    (*workspaces)[n].isThumbWrap = mwd.isThumbWrap;
-    (*workspaces)[n].isVerticalTitle = mwd.isVerticalTitle;
-    (*workspaces)[n].isImageInfoVisible = infoVisibleAction->isChecked();
+//    (*workspaces)[n].geometry = saveGeometry();
+//    (*workspaces)[n].state = saveState();
+//    (*workspaces)[n].isWindowTitleBarVisible = windowTitleBarVisibleAction->isChecked();
+//    (*workspaces)[n].isMenuBarVisible = menuBarVisibleAction->isChecked();
+//    (*workspaces)[n].isStatusBarVisible = statusBarVisibleAction->isChecked();
+//    (*workspaces)[n].isFolderDockVisible = folderDockVisibleAction->isChecked();
+//    (*workspaces)[n].isFavDockVisible = favDockVisibleAction->isChecked();
+//    (*workspaces)[n].isMetadataDockVisible = metadataDockVisibleAction->isChecked();
+//    (*workspaces)[n].isThumbDockVisible = thumbDockVisibleAction->isChecked();
+//    (*workspaces)[n].isFolderDockLocked = folderDockLockAction->isChecked();
+//    (*workspaces)[n].isFavDockLocked = favDockLockAction->isChecked();
+//    (*workspaces)[n].isMetadataDockLocked = metadataDockLockAction->isChecked();
+//    (*workspaces)[n].isThumbDockLocked = thumbDockLockAction;
+//    (*workspaces)[n].thumbSpacing = thumbView->thumbSpacing;
+//    (*workspaces)[n].thumbPadding = thumbView->thumbPadding;
+//    (*workspaces)[n].thumbWidth = thumbView->thumbWidth;
+//    (*workspaces)[n].thumbHeight = thumbView->thumbHeight;
+//    (*workspaces)[n].labelFontSize = thumbView->labelFontSize;
+//    (*workspaces)[n].showThumbLabels = thumbView->showThumbLabels;
+//    (*workspaces)[n].isThumbWrap = mwd.isThumbWrap;
+//    (*workspaces)[n].isVerticalTitle = mwd.isVerticalTitle;
+//    (*workspaces)[n].isImageInfoVisible = infoVisibleAction->isChecked();
 }
 
 void MW::reportWorkspace(int n)
@@ -2108,9 +2151,9 @@ void MW::preferences()
     prefdlg->exec();
 }
 
-void MW::setIncludeSubFolders(bool prefInclSubfolders)
+void MW::setIncludeSubFolders()
 {
-    inclSubfolders = prefInclSubfolders;
+    inclSubfolders = subFoldersAction->isChecked();
 }
 
 void MW::setRememberLastDir(bool prefRememberFolder)
@@ -2169,12 +2212,11 @@ void MW::toggleFullScreen()
         showFullScreen();
         imageView->setCursorHiding(true);
         folderDockVisibleAction->setChecked(false);       setFolderDockVisibility();
-        folderDockVisibleAction->setChecked(false);       setFolderDockVisibility();
         favDockVisibleAction->setChecked(false);        setFavDockVisibility();
         metadataDockVisibleAction->setChecked(false);    setMetadataDockVisibility();
         menuBarVisibleAction->setChecked(false);     setMenuBarVisibility();
         statusBarVisibleAction->setChecked(false);   setStatusBarVisibility();
-        allDocksLockAction->setChecked(true);    setAllDocksLockMode();
+//        allDocksLockAction->setChecked(true);    setAllDocksLockMode();
     }
     else
     {
@@ -2182,12 +2224,11 @@ void MW::toggleFullScreen()
         if (shouldMaximize) showMaximized();
         imageView->setCursorHiding(false);
         folderDockVisibleAction->setChecked(true);       setFolderDockVisibility();
-        folderDockVisibleAction->setChecked(true);       setFolderDockVisibility();
         favDockVisibleAction->setChecked(true);        setFavDockVisibility();
         metadataDockVisibleAction->setChecked(true);    setMetadataDockVisibility();
         menuBarVisibleAction->setChecked(true);     setMenuBarVisibility();
         statusBarVisibleAction->setChecked(true);   setStatusBarVisibility();
-        allDocksLockAction->setChecked(false);  setAllDocksLockMode();
+//        allDocksLockAction->setChecked(false);  setAllDocksLockMode();
     }
 }
 
@@ -2325,18 +2366,17 @@ void MW::writeSettings()
     setting->setValue("cacheStatusWidth", (int)cacheStatusWidth);
     setting->setValue("cacheWtAhead", (int)cacheWtAhead);
     // state
-    setting->setValue("isWindowTitleBarVisible", (bool)windowsTitleBarVisibleAction->isChecked());
+    setting->setValue("isWindowTitleBarVisible", (bool)windowTitleBarVisibleAction->isChecked());
     setting->setValue("isMenuBarVisible", (bool)menuBarVisibleAction->isChecked());
     setting->setValue("isStatusBarVisible", (bool)statusBarVisibleAction->isChecked());
     setting->setValue("isFolderDockVisible", (bool)folderDockVisibleAction->isChecked());
     setting->setValue("isFavDockVisible", (bool)favDockVisibleAction->isChecked());
-    setting->setValue("isMetadaDockVisible", (bool)metadataDockVisibleAction->isChecked());
+    setting->setValue("isMetadataDockVisible", (bool)metadataDockVisibleAction->isChecked());
     setting->setValue("isThumbDockVisible", (bool)thumbDockVisibleAction->isChecked());
     setting->setValue("isFolderDockLocked", (bool)folderDockLockAction->isChecked());
     setting->setValue("isFavDockLocked", (bool)favDockLockAction->isChecked());
     setting->setValue("isMetadaDockLocked", (bool)metadataDockLockAction->isChecked());
     setting->setValue("isThumbDockLocked", (bool)thumbDockLockAction->isChecked());
-//    GData::setting->setValue("LockDocks", (bool)GData::isLockAllDocks);
     setting->setValue("isImageInfoVisible", (bool)infoVisibleAction->isChecked());
     setting->setValue("isIconDisplay", (bool)asIconsAction->isChecked());
     setting->setValue("isLoupeDisplay", (bool)asLoupeAction->isChecked());
@@ -2405,7 +2445,7 @@ void MW::writeSettings()
         setting->setValue("isFolderDockLocked", ws.isFolderDockLocked);
         setting->setValue("isFavDockLocked", ws.isFavDockLocked);
         setting->setValue("isMetadataDockLocked", ws.isMetadataDockLocked);
-        setting->setValue("isThumbDockLocked", ws.isWindowTitleBarVisible);
+        setting->setValue("isThumbDockLocked", ws.isThumbDockLocked);
         setting->setValue("thumbSpacing", ws.thumbSpacing);
         setting->setValue("thumbPadding", ws.thumbPadding);
         setting->setValue("thumbWidth", ws.thumbWidth);
@@ -2607,7 +2647,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[favDockVisibleAction->objectName()] = favDockVisibleAction;
     actionKeys[metadataDockVisibleAction->objectName()] = metadataDockVisibleAction;
     actionKeys[thumbDockVisibleAction->objectName()] = thumbDockVisibleAction;
-    actionKeys[windowsTitleBarVisibleAction->objectName()] = windowsTitleBarVisibleAction;
+    actionKeys[windowTitleBarVisibleAction->objectName()] = windowTitleBarVisibleAction;
     actionKeys[menuBarVisibleAction->objectName()] = menuBarVisibleAction;
     actionKeys[statusBarVisibleAction->objectName()] = statusBarVisibleAction;
 //    actionKeys[toggleIconsListAction->objectName()] = toggleIconsListAction;
@@ -2701,7 +2741,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         favDockVisibleAction->setShortcut(QKeySequence("F5"));
         metadataDockVisibleAction->setShortcut(QKeySequence("F6"));
         thumbDockVisibleAction->setShortcut(QKeySequence("F7"));
-        windowsTitleBarVisibleAction->setShortcut(QKeySequence("F8"));
+        windowTitleBarVisibleAction->setShortcut(QKeySequence("F8"));
         menuBarVisibleAction->setShortcut(QKeySequence("F9"));
         statusBarVisibleAction->setShortcut(QKeySequence("F10"));
         folderDockLockAction->setShortcut(QKeySequence("Shift+F4"));
@@ -2737,7 +2777,8 @@ void MW::setupDocks()
     imageViewContainer->addWidget(imageView);
     QWidget *imageViewContainerWidget = new QWidget;
     imageViewContainerWidget->setLayout(imageViewContainer);
-    thumbDock->setWidget(imageViewContainerWidget);
+    thumbDock->setWidget(thumbView);
+    thumbDock->setWindowTitle(" ");
 
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
@@ -2803,7 +2844,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::thumbDockMoved";
+    qDebug() << "MW::setThumbDockFeatures";
     #endif
     }
     qDebug() << "Dock area" << area;
@@ -2813,7 +2854,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
         thumbView->setWrapping(false);
-        qDebug() << "\ntop/bottom\n";
+//        qDebug() << "\ntop/bottom\n";
     }
     if (area == Qt::LeftDockWidgetArea ||
             area == Qt::RightDockWidgetArea ||
@@ -2823,7 +2864,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
         thumbView->setWrapping(true);
-        qDebug() << "\nleft/right/float\n";
+//        qDebug() << "\nleft/right/float\n";
     }
 }
 
@@ -2976,7 +3017,7 @@ void MW::setWindowsTitleBarVisibility() {
     qDebug() << "MW::setWindowsTitleBarVisibility";
     #endif
     }
-    if(windowsTitleBarVisibleAction->isChecked()) {
+    if(windowTitleBarVisibleAction->isChecked()) {
         hide();
         setWindowFlags(windowFlags() & ~Qt::FramelessWindowHint);
         show();    }
@@ -3260,6 +3301,7 @@ void MW::slideShow()
         slideShowAction->setText(tr("Stop Slide Show"));
         slideShowTimer = new QTimer(this);
         connect(slideShowTimer, SIGNAL(timeout()), this, SLOT(nextSlide()));
+//        if (isStressTest) slideShowDelay = 0.9;
         slideShowTimer->start(slideShowDelay * 1000);
 //        nextSlide();
     }
@@ -3284,7 +3326,7 @@ void MW::nextSlide()
     updateStatus(true, "Slide # "+ QString::number(counter));
 
     if (isStressTest) {
-        if (counter % 50 == 0) {
+        if (counter % 10 == 0) {
             int n = qrand() % (subfolders->count());
             QString fPath = subfolders->at(n);
             fsTree->setCurrentIndex(fsTree->fsModel->index(fPath));

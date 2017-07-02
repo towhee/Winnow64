@@ -439,7 +439,10 @@ thumbCache.
     }
 
     // exit here if just display file list instead of icons
-    if (!isIconDisplay) return true;
+    if (!isIconDisplay) {
+        qDebug() << "isIconDisplay =" << isIconDisplay << "Cancel load thumbView";
+        return true;
+    }
 
 //    setWrapping(true);
     if (includeSubfolders) {
@@ -454,6 +457,7 @@ thumbCache.
             }
         }
     }
+
     if (thumbFileInfoList.size() && selectionModel()->selectedIndexes().size() == 0) {
         selectThumb(0);
         return true;

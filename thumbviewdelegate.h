@@ -25,6 +25,7 @@ public:
           int thumbPadding, int labelFontSize, bool showThumbLabels);
 
     QSize getThumbSize();
+    void reportThumbAttributes();
 
 signals:
     void update(const QModelIndex index, QRect iconRect) const;
