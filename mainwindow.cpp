@@ -18,7 +18,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
        Deactivate debug reporting by commenting ISDEBUG  */
 
     // use this to show thread activity
-    G::isThreadTrackingOn = false;
+    G::isThreadTrackingOn = true;
 
     // used here for testing/debugging
     bool resetSettings = false;
@@ -212,7 +212,6 @@ void MW::folderSelectionChange()
         testDir.setPath(dirPath);
     }
 
-
     if (!testDir.exists()) {
         QMessageBox msgBox;
         msgBox.critical(this, tr("Error"), tr("The folder does not exist or is not available"));
@@ -325,7 +324,7 @@ void MW::loadImageCache()
     qDebug() << "MW::loadImageCache";
     #endif
     }
-//    qDebug() << "MW::loadImageCache";
+    qDebug() << "MW::loadImageCache";
     metadataLoaded = true;
     QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 
@@ -2201,6 +2200,7 @@ void MW::preferences()
 
 void MW::setIncludeSubFolders()
 {
+    // need inclSubFolders for passing to functions
     inclSubfolders = subFoldersAction->isChecked();
     currentViewDir = "";
     folderSelectionChange();

@@ -88,7 +88,7 @@ int CopyPickDlg::getSequenceStart(const QString &path)
     QDir dir;
     dir.setPath("/users/roryhill/Pictures/2048JPG");
 //    dir.setPath(folderPath);
-//    if (!dir.exists()) return;
+//    if (!dir.exists()) return 0;
     QStringList numbers;
     numbers << "0" << "1" << "2" << "3" << "4" << "5" << "6" << "7" << "8" <<"9";
     QString seq;    // existing number in file
@@ -116,4 +116,5 @@ int CopyPickDlg::getSequenceStart(const QString &path)
         }
         qDebug() << fName << fName.indexOf(".", 0) << seq << sequence;
     }
+    return sequence;
 }

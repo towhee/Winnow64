@@ -74,7 +74,7 @@ the image caching thread without a new one starting.*/
 
 void ImageCache::track(QString fPath, QString msg)
 {
-    qDebug() << "•• Thumb Caching  " << fPath << msg;
+    qDebug() << "••• Image Caching  " << fPath << msg;
 }
 
 
@@ -476,11 +476,15 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
 
+    // check if still in same folder with the same number of files.  This could change if
+    // inclSubFolders is changed or images have been added or removed from the folder(s)
+    if (imageList.at(0).absolutePath() == cache.dir) {
+//        qDebug() << "cacheMgr.size" << cacheMgr.size() << "folder now size" << imageList.size();
+        if (cacheMgr.size() == imageList.size()) return;
+    }
+
     imCache.clear();
     cacheMgr.clear();
-
-    // check if still in same folder
-    if (imageList.at(0).absolutePath() == cache.dir) return;
 
     // cache is a structure to hold cache management parameters
     cache.key = 0;

@@ -125,7 +125,7 @@ void ThumbCache::run()
                                     imFile.close();
                                     if (thumb.isNull() && G::isThreadTrackingOn )
                                         track(fPath, "Empty thumb");
-                                    if (G::isThreadTrackingOn) qDebug() << fPath << "Scaling:" << thumb.size();
+//                                    if (G::isThreadTrackingOn) qDebug() << fPath << "Scaling:" << thumb.size();
 
                                     thumb.scaled(thumbMax, Qt::KeepAspectRatio);
                                     success = true;
