@@ -33,12 +33,12 @@ void WorkspaceDlg::on_deleteBtn_clicked()
     }
     //    QString name = ui->workspaceCB->itemText(n);
 
-    int n = ui->workspaceCB->currentIndex();
-    emit reportWorkspace(n);
-
 //    int n = ui->workspaceCB->currentIndex();
-//    emit deleteWorkspace(n);
-//    ui->workspaceCB->removeItem(n);
+//    emit reportWorkspace(n);
+
+    int n = ui->workspaceCB->currentIndex();
+    emit deleteWorkspace(n);
+    ui->workspaceCB->removeItem(n);
 }
 
 void WorkspaceDlg::on_reassignBtn_clicked()
@@ -113,6 +113,18 @@ void WorkspaceDlg::on_doneBtn_clicked()
     qDebug() << "WorkspaceDlg::on_doneBtn_clicked";
     #endif
     }
+//    int n = ui->workspaceCB->currentIndex();
+//    emit reportWorkspace(n);
+}
+
+void WorkspaceDlg::on_workspaceLbl_linkActivated(const QString &link)
+{
+    int n = ui->workspaceCB->currentIndex();
+    emit reportWorkspace(n);
+}
+
+void WorkspaceDlg::on_reportLinkButton_clicked()
+{
     int n = ui->workspaceCB->currentIndex();
     emit reportWorkspace(n);
 }

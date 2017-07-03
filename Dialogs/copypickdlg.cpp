@@ -25,6 +25,7 @@ CopyPickDlg::CopyPickDlg(QWidget *parent, QFileInfoList &imageList,
     folderPath = "/users/roryhill/pictures/" + fileNameDatePrefix;
     updateFolderPath();
     ui->descriptionLineEdit->setFocus();
+    getSequenceStart("");
 }
 
 CopyPickDlg::~CopyPickDlg()
@@ -82,11 +83,37 @@ void CopyPickDlg::on_descriptionLineEdit_textChanged(const QString &arg1)
     updateFolderPath();
 }
 
-// to revert to default styles but not working
-void CopyPickDlg::paintEvent(QPaintEvent *e)
- {
-//     QStyleOption opt;
-//     opt.init(this);
-//     QPainter p(this);
-//     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
- }
+int CopyPickDlg::getSequenceStart(const QString &path)
+{
+    QDir dir;
+    dir.setPath("/users/roryhill/Pictures/2048JPG");
+//    dir.setPath(folderPath);
+//    if (!dir.exists()) return;
+    QStringList numbers;
+    numbers << "0" << "1" << "2" << "3" << "4" << "5" << "6" << "7" << "8" <<"9";
+    QString seq;    // existing number in file
+    QString ch;     // one character
+    int sequence = 0;
+    bool foundNumber;
+    for (int f = 0; f < dir.entryList().size(); ++f) {
+        seq = "";
+        QString fName = dir.entryList().at(f);
+        int period = fName.indexOf(".", 0);
+        if (period < 1) continue;
+        foundNumber = false;
+        for (int i = period; i > 0; i--) {
+            ch = fName.mid(i, 1);
+            if (numbers.contains(ch)) {
+                foundNumber = true;
+                seq.insert(0, ch);
+            }
+            else {
+                if (foundNumber) {
+                    if (seq.toInt() > sequence) sequence = seq.toInt();
+                    break;
+                }
+            }
+        }
+        qDebug() << fName << fName.indexOf(".", 0) << seq << sequence;
+    }
+}

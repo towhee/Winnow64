@@ -666,7 +666,7 @@ void Metadata::formatNikon()
     ulong offsetIfd0 = get4(file.read(4));
 
     // Nikon does not chaim IFDs
-//    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
+    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
 
 /*
     // test working

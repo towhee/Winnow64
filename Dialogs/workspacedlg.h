@@ -32,6 +32,10 @@ private slots:
 
     void on_doneBtn_clicked();
 
+    void on_workspaceLbl_linkActivated(const QString &link);
+
+    void on_reportLinkButton_clicked();
+
 private:
     QWidget *mainWindow;
     bool editMode;

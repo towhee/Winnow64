@@ -41,6 +41,7 @@ public:
         QString name;           // used for menu
         QByteArray geometry;
         QByteArray state;
+        bool isFullScreen;
         bool isWindowTitleBarVisible;
         bool isMenuBarVisible;
         bool isStatusBarVisible;
@@ -185,6 +186,7 @@ private slots:
     void cleanupSender();
     void externalAppError();
 
+    void setMaxNormal();
     void setCentralView();
     void setThumbDockVisibity();
     void setFolderDockVisibility();
@@ -399,7 +401,6 @@ private:
 
     bool needThumbsRefresh;         // req'd?
     bool thumbViewBusy;             // req'd?
-    bool shouldMaximize;            // req'd?
 
     QMovie *busyMovie;              // req'd?
     QLabel *busyLabel;              // req'd?

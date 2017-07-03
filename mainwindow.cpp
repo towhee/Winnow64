@@ -588,6 +588,7 @@ void MW::createActions()
     fullScreenAction = new QAction(tr("Full Screen"), this);
     fullScreenAction->setObjectName("fullScreenAct");
     fullScreenAction->setCheckable(true);
+    fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
     connect(fullScreenAction, SIGNAL(triggered()), this, SLOT(toggleFullScreen()));
 
     escapeFullScreenAction = new QAction(tr("Escape Full Screen"), this);
@@ -1636,6 +1637,8 @@ workspace with a matching name to the action is used.
     qDebug() << "MW::invokeWorkspace";
     #endif
     }
+    fullScreenAction->setChecked(w.isFullScreen);
+    setMaxNormal();
     restoreGeometry(w.geometry);
     restoreState(w.state);
     windowTitleBarVisibleAction->setChecked(w.isWindowTitleBarVisible);
@@ -1669,6 +1672,8 @@ void MW::snapshotWorkspace(workspaceData &wsd)
 {
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
+    wsd.isFullScreen = isFullScreen();
+//    wsd.isFullScreen = fullScreenAction->isChecked();
     wsd.isWindowTitleBarVisible = windowTitleBarVisibleAction->isChecked();
     wsd.isMenuBarVisible = menuBarVisibleAction->isChecked();
     wsd.isStatusBarVisible = statusBarVisibleAction->isChecked();
@@ -1891,6 +1896,7 @@ void MW::reportWorkspace(int n)
              << "\nAccel#" << ws.accelNum
              << "\nGeometry" << ws.geometry
              << "\nState" << ws.state
+             << "\niisFullScreen" << ws.isFullScreen
              << "\nisWindowTitleBarVisible" << ws.isWindowTitleBarVisible
              << "\nisMenuBarVisible" << ws.isMenuBarVisible
              << "\nisStatusBarVisible" << ws.isStatusBarVisible
@@ -1908,7 +1914,7 @@ void MW::reportWorkspace(int n)
              << "\nthumbHeight" << ws.thumbHeight
              << "\nlabelFontSize" << ws.labelFontSize
              << "\nshowThumbLabels" << ws.showThumbLabels
-             << "\nsisThumbWrap" << ws.isThumbWrap
+             << "\nisThumbWrap" << ws.isThumbWrap
              << "\nisVerticalTitle" << ws.isVerticalTitle
              << "\nshowShootingInfo" << ws.isImageInfoVisible
              << "\nisIconDisplay" << ws.isIconDisplay
@@ -1916,12 +1922,14 @@ void MW::reportWorkspace(int n)
              << "\nisGridDisplay" << ws.isGridDisplay
              << "\nisCompareDisplay" << ws.isCompareDisplay;
 
+//    qDebug() << "Window isMaximized: " << isFullScreen();
 //    const workspaceData *w = new workspaceData;
 //    w = &workspaces->at(n);
 //    qDebug() << "\n\nName" << w->name
 //             << "\nAccel#" << w->accelNum
 //             << "\nGeometry" << w->geometry
 //             << "\nState" << w->state
+//             << "\nisMaximized" << w->isFullScreen
 //             << "\nisWindowTitleBarVisible" << w->isWindowTitleBarVisible
 //             << "\nisMenuBarVisible" << w->isMenuBarVisible
 //             << "\nisStatusBarVisible" << w->isStatusBarVisible
@@ -1953,7 +1961,8 @@ void MW::reportState()
 {
     workspaceData w;
     snapshotWorkspace(w);
-    qDebug() << "\nisWindowTitleBarVisible" << w.isWindowTitleBarVisible
+    qDebug() << "\nisMaximized" << w.isFullScreen
+             << "\nisWindowTitleBarVisible" << w.isWindowTitleBarVisible
              << "\nisMenuBarVisible" << w.isMenuBarVisible
              << "\nisStatusBarVisible" << w.isStatusBarVisible
              << "\nisFolderDockVisible" << w.isFolderDockVisible
@@ -1987,18 +1996,11 @@ void MW::reportMetadata()
     #endif
     }
 
-//    thumbView->forceScroll(100);
-
-//    qDebug() << "imageView->hasFocus" << imageView->hasFocus();
-//    qDebug() << "thumbView->hasFocus" << thumbView->hasFocus();
-//    QWidget * fw = qApp->focusWidget();
-//    qDebug() << "Focus Widget =" << fw->objectName();
-
-    //    QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
+//    QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 //    const QString imagePath = indexesList.first().data(thumbView->FileNameRole).toString();
 
 //    QString imagePath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
-//    metadata->readMetadata(true, imagePath);
+    metadata->readMetadata(true, thumbView->getCurrentFilename());
 
 //    QString hdr = "Test header";
 //    std::stringstream os;
@@ -2200,6 +2202,8 @@ void MW::preferences()
 void MW::setIncludeSubFolders()
 {
     inclSubfolders = subFoldersAction->isChecked();
+    currentViewDir = "";
+    folderSelectionChange();
 }
 
 void MW::setRememberLastDir(bool prefRememberFolder)
@@ -2254,20 +2258,22 @@ void MW::toggleFullScreen()
     qDebug() << "test";
     if (fullScreenAction->isChecked())
     {
-        shouldMaximize = isMaximized();
         showFullScreen();
         imageView->setCursorHiding(true);
-        folderDockVisibleAction->setChecked(false);       setFolderDockVisibility();
-        favDockVisibleAction->setChecked(false);        setFavDockVisibility();
-        metadataDockVisibleAction->setChecked(false);    setMetadataDockVisibility();
-        menuBarVisibleAction->setChecked(false);     setMenuBarVisibility();
-        statusBarVisibleAction->setChecked(false);   setStatusBarVisibility();
-//        allDocksLockAction->setChecked(true);    setAllDocksLockMode();
+        folderDockVisibleAction->setChecked(false);
+        setFolderDockVisibility();
+        favDockVisibleAction->setChecked(false);
+        setFavDockVisibility();
+        metadataDockVisibleAction->setChecked(false);
+        setMetadataDockVisibility();
+        menuBarVisibleAction->setChecked(false);
+        setMenuBarVisibility();
+        statusBarVisibleAction->setChecked(false);
+        setStatusBarVisibility();
     }
     else
     {
         showNormal();
-        if (shouldMaximize) showMaximized();
         imageView->setCursorHiding(false);
         folderDockVisibleAction->setChecked(true);       setFolderDockVisibility();
         favDockVisibleAction->setChecked(true);        setFavDockVisibility();
@@ -2413,6 +2419,8 @@ void MW::writeSettings()
     setting->setValue("cacheStatusWidth", (int)cacheStatusWidth);
     setting->setValue("cacheWtAhead", (int)cacheWtAhead);
     // state
+    setting->setValue("isFullScreen", (bool)isFullScreen());
+//    setting->setValue("isFullScreen", (bool)fullScreenAction->isChecked());
     setting->setValue("isWindowTitleBarVisible", (bool)windowTitleBarVisibleAction->isChecked());
     setting->setValue("isMenuBarVisible", (bool)menuBarVisibleAction->isChecked());
     setting->setValue("isStatusBarVisible", (bool)statusBarVisibleAction->isChecked());
@@ -2431,7 +2439,6 @@ void MW::writeSettings()
     setting->setValue("isCompareDisplay", (bool)asCompareAction->isChecked());
 
     // not req'd
-    setting->setValue("shouldMaximize", (bool)isMaximized());
     setting->setValue("thumbsSortFlags", (int)thumbView->thumbsSortFlags);
     setting->setValue("thumbsZoomVal", (int)thumbView->thumbSize);
 
@@ -2482,6 +2489,7 @@ void MW::writeSettings()
         setting->setValue("name", ws.name);
         setting->setValue("geometry", ws.geometry);
         setting->setValue("state", ws.state);
+        setting->setValue("isFullScreen", ws.isFullScreen);
         setting->setValue("isWindowTitleBarVisible", ws.isWindowTitleBarVisible);
         setting->setValue("isMenuBarBarVisible", ws.isMenuBarVisible);
         setting->setValue("isStatusBarVisible", ws.isStatusBarVisible);
@@ -2532,10 +2540,12 @@ Preferences are located in the relevant class and updated here.
     // default values for first time use
     if (!setting->contains("cacheSizeMB")) {
         defaultWorkspace();
+
         setting->setValue("thumbsSortFlags", (int)0);
       // slideshow
         setting->setValue("slideShowDelay", (int)5);
         setting->setValue("slideShowRandom", (bool)false);
+        setting->setValue("slideShowWrap", (bool)true);
         // cache
         setting->setValue("cacheSizeMB", (int)1000);
         setting->setValue("isShowCacheStatus", (bool)true);
@@ -2550,7 +2560,8 @@ Preferences are located in the relevant class and updated here.
     rememberLastDir = setting->value("rememberLastDir").toBool();
     lastDir = setting->value("lastDir").toString();
     maxRecentFolders = setting->value("maxRecentFolders").toInt();
-    // thumbs
+
+    // thumbs (set in thumbView creation)
 //    mwd.thumbSpacing = setting->value("thumbSpacing").toInt();
 //    mwd.thumbPadding = setting->value("thumbPadding").toInt();
 //    mwd.thumbWidth = setting->value("thumbWidth").toInt();
@@ -2559,6 +2570,10 @@ Preferences are located in the relevant class and updated here.
 //    mwd.showThumbLabels = setting->value("showThumbLabels").toBool();
 //    mwd.isThumbWrap = setting->value("isThumbWrap").toBool();
     isThumbDockVerticalTitle = setting->value("isVerticalTitle").toBool();
+
+// rgh make sure to add thumb sort to workspaces when implemented
+//    setting->setValue("thumbsSortFlags", (int)0);
+
     // slideshow
     slideShowDelay = setting->value("slideShowDelay").toInt();
     slideShowRandom = setting->value("slideShowRandom").toBool();
@@ -2569,29 +2584,29 @@ Preferences are located in the relevant class and updated here.
     cacheStatusWidth = setting->value("cacheStatusWidth").toInt();
     cacheWtAhead = setting->value("cacheWtAhead").toInt();
 
-    // load state
-    shouldMaximize = setting->value("shouldMaximize").toBool();  // req'd? Only in MW
+    // load state (action->setChecked in action creation)
 
-//    mwd.isWindowTitleBarVisible = setting->value("isWindowTitleBarVisible").toBool();
-//    mwd.isMenuBarVisible = setting->value("isMenuBarBarVisible").toBool();
-//    mwd.isStatusBarVisible = setting->value("isStatusBarVisible").toBool();
+//    setting->value("isFullScreen").toBool();
+//    setting->value("isWindowTitleBarVisible").toBool();
+//    setting->value("isMenuBarBarVisible").toBool();
+//    setting->value("isStatusBarVisible").toBool();
 
-//    mwd.isFolderDockVisible = setting->value("isFolderDockVisible").toBool();
-//    mwd.isFavDockVisible = setting->value("isFavDockVisible").toBool();
-//    mwd.isMetadataDockVisible = setting->value("isMetadataDockVisible").toBool();
-//    mwd.isThumbDockVisible = setting->value("isThumbDockVisible").toBool();
+//    setting->value("isFolderDockVisible").toBool();
+//    setting->value("isFavDockVisible").toBool();
+//    setting->value("isMetadataDockVisible").toBool();
+//    setting->value("isThumbDockVisible").toBool();
 
-//    mwd.isFolderDockLocked = setting->value("isFolderDockLocked").toBool();
-//    mwd.isFavDockLocked = setting->value("isFavDockLocked").toBool();
-//    mwd.isMetadataDockLocked = setting->value("isMetadataDockLocked").toBool();
-//    mwd.isThumbDockLocked = setting->value("isThumbDockLocked").toBool();
+//    setting->value("isFolderDockLocked").toBool();
+//    setting->value("isFavDockLocked").toBool();
+//    setting->value("isMetadataDockLocked").toBool();
+//    setting->value("isThumbDockLocked").toBool();
 
-//    mwd.includeSubfolders = setting->value("includeSubfolders").toBool();
-//    mwd.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-//    mwd.isIconDisplay = setting->value("isIconDisplay").toBool();     // thumb dock
-//    mwd.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();    // central widget
-//    mwd.isGridDisplay = setting->value("isGridDisplay").toBool();     // central widget
-//    mwd.isCompareDisplay = setting->value("isCompareDisplay").toBool();  // central widget
+//    setting->value("includeSubfolders").toBool();
+//    setting->value("isImageInfoVisible").toBool();
+//    setting->value("isIconDisplay").toBool();     // thumb dock
+//    setting->value("isLoupeDisplay").toBool();    // central widget
+//    setting->value("isGridDisplay").toBool();     // central widget
+//    setting->value("isCompareDisplay").toBool();  // central widget
 
     /* read external apps */
     setting->beginGroup("ExternalApps");
@@ -2625,6 +2640,7 @@ Preferences are located in the relevant class and updated here.
         ws.name = setting->value("name").toString();
         ws.geometry = setting->value("geometry").toByteArray();
         ws.state = setting->value("state").toByteArray();
+        ws.isFullScreen = setting->value("isFullScreen").toBool();
         ws.isWindowTitleBarVisible = setting->value("isWindowTitleBarVisible").toBool();
         ws.isMenuBarVisible = setting->value("isMenuBarVisible").toBool();
         ws.isStatusBarVisible = setting->value("isStatusBarVisible").toBool();
@@ -2861,6 +2877,7 @@ void MW::setupDocks()
 
 void MW::updateState()
 {
+//    setMaxNormal();
     setMenuBarVisibility();
     setStatusBarVisibility();
     setFolderDockVisibility();
@@ -2965,6 +2982,12 @@ void MW::compareDisplay()
     #endif
     }
 
+}
+
+void MW::setMaxNormal()
+{
+    if (fullScreenAction->isChecked()) showFullScreen();
+    else showNormal();
 }
 
 void MW::setCentralView()

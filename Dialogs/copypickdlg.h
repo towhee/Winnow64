@@ -26,7 +26,8 @@ private slots:
 private:
     Ui::CopyPickDlg *ui;
     void accept();
-    void paintEvent(QPaintEvent *e);
+    int getSequenceStart(const QString &path);
+    QStringList *existFiles;
     QFileInfoList pickList;
     Metadata *metadata;
     QString folderPath;
