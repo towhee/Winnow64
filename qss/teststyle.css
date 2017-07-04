@@ -44,7 +44,7 @@ QMenuBar::item:pressed {
 }
 
 QFrame {
- /*   border: 2px solid green; */
+    /* must keep blank */
 }
 
 QMainWindow::separator {
@@ -116,7 +116,19 @@ QTabBar::tab:selected {
 }
 
 QListView {
-/*    border: 1px solid green; */
+    border: 1px solid rgb(85,85,85);
+}
+
+QStackedWidget {
+    border: 1px solid rgb(95,95,95);
+    border-radius: 5px;
+}
+
+QListWidget {
+    selection-color: rgb(225,225,0);
+    selection-background-color: rgb(85,85,85);
+
+    /*selection-background-color: rgb(95,95,95);*/
 }
 
 QTableView

@@ -24,6 +24,8 @@ signals:
     void updateMaxRecentFolders(int maxRecentFolders);
     void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
             int thumbPadding, int labelFontSize, bool showThumbLabels);
+    void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
+                               int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid);
     void updateThumbDockParameters(bool isThumbWrap, bool isVerticalTitle);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
@@ -42,6 +44,13 @@ private slots:
     void on_fontSizeSlider_valueChanged(int value);
     void on_wrapThumbsChk_clicked();
     void on_vertTitleChk_clicked();
+    // thumbsGrid
+    void on_iconWidthSlider_2_valueChanged(int value);
+    void on_iconHeightSlider_2_valueChanged(int value);
+    void on_thumbSpacingSlider_2_valueChanged(int value);
+    void on_iconPaddingSlider_2_valueChanged(int value);
+    void on_showThumbLabelChk_2_clicked();
+    void on_fontSizeSlider_2_valueChanged(int value);
     // slideshow
     void on_slideshowDelaySpinbox_valueChanged(int value);
     void on_slideshowRandomChk_clicked();
@@ -59,6 +68,8 @@ private slots:
 
     void on_maxRecentSB_valueChanged(int arg1);
 
+    void on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
+
 private:
 
     Ui::Prefdlg *ui;
@@ -71,6 +82,13 @@ private:
     int thumbPadding;
     int labelFontSize;
     bool showThumbLabels;
+
+    int thumbWidthGrid;
+    int thumbHeightGrid;
+    int thumbSpacingGrid;
+    int thumbPaddingGrid;
+    int labelFontSizeGrid;
+    bool showThumbLabelsGrid;
 
     bool isThumbWrap;
     bool isVerticalTitle;

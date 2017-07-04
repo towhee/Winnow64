@@ -18,7 +18,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
        Deactivate debug reporting by commenting ISDEBUG  */
 
     // use this to show thread activity
-    G::isThreadTrackingOn = true;
+    G::isThreadTrackingOn = false;
 
     // used here for testing/debugging
     bool resetSettings = false;
@@ -1154,14 +1154,25 @@ void MW::createThumbView()
     metadata = new Metadata;
     thumbView = new ThumbView(this, metadata, true);
     thumbView->setObjectName("ImageView");  //rgh need to fix??
+
     thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
     thumbView->thumbPadding = setting->value("thumbPadding").toInt();
     thumbView->thumbWidth = setting->value("thumbWidth").toInt();
     thumbView->thumbHeight = setting->value("thumbHeight").toInt();
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
+
+    thumbView->thumbSpacingGrid = setting->value("thumbSpacingGrid").toInt();
+    thumbView->thumbPaddingGrid = setting->value("thumbPaddingGrid").toInt();
+    thumbView->thumbWidthGrid = setting->value("thumbWidthGrid").toInt();
+    thumbView->thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
+    thumbView->labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
+    thumbView->showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
+
     thumbView->isThumbWrap = setting->value("isThumbWrap").toBool();
+
     thumbView->setThumbParameters();
+
     metadataCacheThread = new MetadataCache(this, thumbView, metadata);
     thumbCacheThread = new ThumbCache(this, thumbView, metadata);
     infoView = new InfoView(this, metadata);
@@ -1657,12 +1668,19 @@ workspace with a matching name to the action is used.
     asLoupeAction->setChecked(w.isLoupeDisplay);
     asGridAction->setChecked(w.isGridDisplay);
     asCompareAction->setChecked(w.isCompareDisplay);
-    thumbView->setThumbParameters(w.thumbWidth,
-                                  w.thumbHeight,
-                                  w.thumbSpacing,
-                                  w.thumbPadding,
-                                  w.labelFontSize,
-                                  w.showThumbLabels);
+    thumbView->thumbWidth = w.thumbWidth,
+    thumbView->thumbHeight = w.thumbHeight,
+    thumbView->thumbSpacing = w.thumbSpacing,
+    thumbView->thumbPadding = w.thumbPadding,
+    thumbView->labelFontSize = w.labelFontSize,
+    thumbView->showThumbLabels = w.showThumbLabels;
+    thumbView->thumbWidthGrid = w.thumbWidthGrid,
+    thumbView->thumbHeightGrid = w.thumbHeightGrid,
+    thumbView->thumbSpacingGrid = w.thumbSpacingGrid,
+    thumbView->thumbPaddingGrid = w.thumbPaddingGrid,
+    thumbView->labelFontSizeGrid = w.labelFontSizeGrid,
+    thumbView->showThumbLabelsGrid = w.showThumbLabelsGrid;
+    thumbView->setThumbParameters();
     updateState();
 //            reportWorkspace(i);         // rgh remove after debugging
 }
@@ -1697,6 +1715,15 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.thumbHeight = thumbView->thumbHeight;
     wsd.labelFontSize = thumbView->labelFontSize;
     wsd.showThumbLabels = thumbView->showThumbLabels;
+    wsd.isThumbWrap = thumbView->isThumbWrap;
+
+    wsd.thumbSpacingGrid = thumbView->thumbSpacingGrid;
+    wsd.thumbPaddingGrid = thumbView->thumbPaddingGrid;
+    wsd.thumbWidthGrid = thumbView->thumbWidthGrid;
+    wsd.thumbHeightGrid = thumbView->thumbHeightGrid;
+    wsd.labelFontSizeGrid = thumbView->labelFontSizeGrid;
+    wsd.showThumbLabelsGrid = thumbView->showThumbLabelsGrid;
+
     wsd.isThumbWrap = thumbView->isThumbWrap;
 
     wsd.isVerticalTitle = isThumbDockVerticalTitle; // rgh thumbDock->titleBarWidget()->is;
@@ -1832,6 +1859,14 @@ app is "stranded" on secondary monitors that are not attached.
     thumbView->thumbHeight = 120;
     thumbView->labelFontSize = 8;
     thumbView->showThumbLabels = true;
+
+    thumbView->thumbSpacingGrid = 0;
+    thumbView->thumbPaddingGrid = 0;
+    thumbView->thumbWidthGrid = 160;
+    thumbView->thumbHeightGrid = 160;
+    thumbView->labelFontSizeGrid = 8;
+    thumbView->showThumbLabelsGrid = true;
+
     thumbView->setWrapping(true);
 }
 
@@ -1913,6 +1948,12 @@ void MW::reportWorkspace(int n)
              << "\nthumbHeight" << ws.thumbHeight
              << "\nlabelFontSize" << ws.labelFontSize
              << "\nshowThumbLabels" << ws.showThumbLabels
+             << "\nthumbSpacingGrid" << ws.thumbSpacingGrid
+             << "\nthumbPaddingGrid" << ws.thumbPaddingGrid
+             << "\nthumbWidthGrid" << ws.thumbWidthGrid
+             << "\nthumbHeightGrid" << ws.thumbHeightGrid
+             << "\nlabelFontSizeGrid" << ws.labelFontSizeGrid
+             << "\nshowThumbLabelsGrid" << ws.showThumbLabelsGrid
              << "\nisThumbWrap" << ws.isThumbWrap
              << "\nisVerticalTitle" << ws.isVerticalTitle
              << "\nshowShootingInfo" << ws.isImageInfoVisible
@@ -1978,6 +2019,12 @@ void MW::reportState()
              << "\nthumbHeight" << w.thumbHeight
              << "\nlabelFontSize" << w.labelFontSize
              << "\nshowThumbLabels" << w.showThumbLabels
+             << "\nthumbSpacingGrid" << w.thumbSpacingGrid
+             << "\nthumbPaddingGrid" << w.thumbPaddingGrid
+             << "\nthumbWidthGrid" << w.thumbWidthGrid
+             << "\nthumbHeightGrid" << w.thumbHeightGrid
+             << "\nlabelFontSizeGrid" << w.labelFontSizeGrid
+             << "\nshowThumbLabelsGrid" << w.showThumbLabelsGrid
              << "\nisThumbWrap" << w.isThumbWrap
              << "\nisVerticalTitle" << isThumbDockVerticalTitle
              << "\nshowShootingInfo" << w.isImageInfoVisible
@@ -2189,6 +2236,8 @@ void MW::preferences()
             this, SLOT(setMaxRecentFolders(int)));
     connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool)),
             thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
+    connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool)),
+            thumbView, SLOT(setThumbGridParameters(int, int, int, int, int, bool)));
     connect(prefdlg, SIGNAL(updateThumbDockParameters(bool, bool)),
             this, SLOT(setThumbDockParameters(bool, bool)));
     connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
@@ -2407,6 +2456,12 @@ void MW::writeSettings()
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showLabels", (bool)showThumbLabelsAction->isChecked());
+    setting->setValue("thumbSpacingGrid", thumbView->thumbSpacingGrid);
+    setting->setValue("thumbPaddingGrid", thumbView->thumbPaddingGrid);
+    setting->setValue("thumbWidthGrid", thumbView->thumbWidthGrid);
+    setting->setValue("thumbHeightGrid", thumbView->thumbHeightGrid);
+    setting->setValue("labelFontSizeGrid", thumbView->labelFontSizeGrid);
+    setting->setValue("showLabelsGrid", (bool)thumbView->showThumbLabelsGrid);
     setting->setValue("isThumbWrap", (bool)thumbView->isWrapping());
     setting->setValue("isVerticalTitle", (bool)isThumbDockVerticalTitle);
     // slideshow
@@ -2507,6 +2562,12 @@ void MW::writeSettings()
         setting->setValue("thumbHeight", ws.thumbHeight);
         setting->setValue("labelFontSize", ws.labelFontSize);
         setting->setValue("showThumbLabels", ws.showThumbLabels);
+        setting->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
+        setting->setValue("thumbPaddingGrid", ws.thumbPaddingGrid);
+        setting->setValue("thumbWidthGrid", ws.thumbWidthGrid);
+        setting->setValue("thumbHeightGrid", ws.thumbHeightGrid);
+        setting->setValue("labelFontSizeGrid", ws.labelFontSizeGrid);
+        setting->setValue("showThumbLabelsGrid", ws.showThumbLabelsGrid);
         setting->setValue("isThumbWrap", ws.isThumbWrap);
         setting->setValue("isVerticalTitle", ws.isVerticalTitle);
         setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
@@ -2658,6 +2719,12 @@ Preferences are located in the relevant class and updated here.
         ws.thumbHeight = setting->value("thumbHeight").toInt();
         ws.labelFontSize = setting->value("labelFontSize").toInt();
         ws.showThumbLabels = setting->value("showThumbLabels").toBool();
+        ws.thumbSpacingGrid = setting->value("thumbSpacingGrid").toInt();
+        ws.thumbPaddingGrid = setting->value("thumbPaddingGrid").toInt();
+        ws.thumbWidthGrid = setting->value("thumbWidthGrid").toInt();
+        ws.thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
+        ws.labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
+        ws.showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
         ws.isThumbWrap = setting->value("isThumbWrap").toBool();
         ws.isVerticalTitle = setting->value("isVerticalTitle").toBool();
         ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
@@ -2954,6 +3021,8 @@ void MW::loupeDisplay()
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(true);
+    thumbView->isGrid = false;
+    thumbView->setThumbParameters();
     setThumbDockVisibity();
 }
 
@@ -2971,6 +3040,8 @@ void MW::gridDisplay()
                            QDockWidget::DockWidgetMovable  |
                            QDockWidget::DockWidgetFloatable);
     thumbView->setWrapping(true);
+    thumbView->isGrid = true;
+    thumbView->setThumbParameters();
     setThumbDockVisibity();
 }
 
@@ -2981,6 +3052,7 @@ void MW::compareDisplay()
     qDebug() << "MW::compareDisplay";
     #endif
     }
+    thumbView->isGrid = false;
 
 }
 

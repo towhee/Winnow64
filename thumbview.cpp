@@ -159,34 +159,57 @@ void ThumbView::refreshThumbs() {
       thumbViewFilter->index(getLastRow(), 0, QModelIndex()));
 }
 
-void ThumbView::setThumbParameters(
-        int thumbWidth, int thumbHeight,
-        int thumbSpacing,int thumbPadding, int labelFontSize,
-        bool showThumbLabels)
+void ThumbView::setThumbParameters()
+/*
+Helper function for in class calls where thumb parameters already defined
+*/
+{
+    if (isGrid) {
+        this->setSpacing(thumbSpacingGrid);
+        thumbViewDelegate->setThumbDimensions(thumbWidthGrid, thumbHeightGrid,
+            thumbPaddingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+    } else {
+        this->setSpacing(thumbSpacing);
+        thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+            thumbPadding, labelFontSize, showThumbLabels);
+    }
+    qDebug() << "ThumbView::setThumbParameters isGrid:" << isGrid;
+}
+
+void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
+        int _thumbSpacing, int _thumbPadding, int _labelFontSize,
+        bool _showThumbLabels)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::setThumbSize";
     #endif
     }
-    // rgh are thumbWidth/Height needed in thumbView since thumbViewDelegate
-    // used G::thumbWidth ...
-//    thumbWidth = G::thumbWidth;
-//    thumbHeight = G::thumbHeight;
-    this->setSpacing(thumbSpacing);
-    thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-        thumbPadding, labelFontSize, showThumbLabels);
-//    qDebug() << "Changed thumbs to" << thumbWidth << "x" << thumbHeight;
+    thumbWidth = _thumbWidth;
+    thumbHeight = _thumbHeight;
+    thumbSpacing = _thumbSpacing;
+    thumbPadding = _thumbPadding;
+    labelFontSize = _labelFontSize;
+    showThumbLabels = _showThumbLabels;
+
+    setThumbParameters();
 }
 
-void ThumbView::setThumbParameters()
+void ThumbView::setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid,
+                int _thumbSpacingGrid,int _thumbPaddingGrid, int _labelFontSizeGrid,
+                bool _showThumbLabelsGrid)
 /*
 Helper function for in class calls where thumb parameters already defined
 */
 {
-    this->setSpacing(thumbSpacing);
-    thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-        thumbPadding, labelFontSize, showThumbLabels);
+    thumbWidthGrid = _thumbWidthGrid;
+    thumbHeightGrid = _thumbHeightGrid;
+    thumbSpacingGrid = _thumbSpacingGrid;
+    thumbPaddingGrid = _thumbPaddingGrid;
+    labelFontSizeGrid = _labelFontSizeGrid;
+    showThumbLabelsGrid = _showThumbLabelsGrid;
+
+    setThumbParameters();
 }
 
 // debugging
@@ -683,17 +706,29 @@ void ThumbView::thumbsEnlarge()
     qDebug() << "ThumbView::thumbsEnlarge";
     #endif
     }
-    if (thumbWidth == 0) thumbWidth = 40;
-    if (thumbHeight ==0) thumbHeight = 40;
-    if (thumbWidth < 160 && thumbHeight < 160)
-    {
-        thumbWidth *= 1.1;
-        thumbHeight *= 1.1;
-//        thumbsEnlargeAction->setEnabled(true);
-        if (thumbWidth > 160) thumbWidth = 160;
-        if (thumbHeight > 160) thumbHeight = 160;
-        setThumbParameters();
+    if (isGrid) {
+        if (thumbWidthGrid == 0) thumbWidthGrid = 40;
+        if (thumbHeightGrid == 0) thumbHeightGrid = 40;
+        if (thumbWidthGrid < 160 && thumbHeightGrid < 160)
+        {
+            thumbWidthGrid *= 1.1;
+            thumbHeightGrid *= 1.1;
+            if (thumbWidthGrid > 160) thumbWidthGrid = 160;
+            if (thumbHeightGrid > 160) thumbHeightGrid = 160;
+        }
+    } else {
+        if (thumbWidth == 0) thumbWidth = 40;
+        if (thumbHeight ==0) thumbHeight = 40;
+        if (thumbWidth < 160 && thumbHeight < 160)
+        {
+            thumbWidth *= 1.1;
+            thumbHeight *= 1.1;
+            if (thumbWidth > 160) thumbWidth = 160;
+            if (thumbHeight > 160) thumbHeight = 160;
+        }
     }
+
+    setThumbParameters();
 }
 
 void ThumbView::thumbsShrink()

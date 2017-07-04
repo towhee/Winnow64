@@ -60,6 +60,12 @@ public:
         int thumbHeight;
         int labelFontSize;
         bool showThumbLabels;
+        int thumbSpacingGrid;
+        int thumbPaddingGrid;
+        int thumbWidthGrid;
+        int thumbHeightGrid;
+        int labelFontSizeGrid;
+        bool showThumbLabelsGrid;
         bool isThumbWrap;
         bool isVerticalTitle;
         bool isImageInfoVisible;

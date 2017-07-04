@@ -29,7 +29,15 @@ public:
     int labelFontSize;
     bool showThumbLabels;
 
+    int thumbWidthGrid;
+    int thumbHeightGrid;
+    int thumbSpacingGrid;
+    int thumbPaddingGrid;
+    int labelFontSizeGrid;
+    bool showThumbLabelsGrid;
+
     bool isThumbWrap;
+    bool isGrid;        // set by MW so know which thumb parameters to use
 
     bool load(QString &dir, bool inclSubfolders);
 
@@ -63,8 +71,10 @@ public slots:
     void invertSelection();                         //in use
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
     void refreshThumbs();
-    void setThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
-             int thumbPadding, int labelFontSize, bool showThumbLabels);
+    void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
+             int _thumbPadding, int _labelFontSize, bool _showThumbLabels);
+    void setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid, int _thumbSpacingGrid,
+                            int _thumbPaddingGrid, int _labelFontSizeGrid, bool _showThumbLabelsGrid);
     void reportThumbs();
     void selectNext();
     void selectPrev();

@@ -29,6 +29,19 @@ Prefdlg::Prefdlg(QWidget *parent) :
     ui->thumbSpacingSlider->setValue(thumbSpacing);
     ui->fontSizeSlider->setValue(labelFontSize);
     ui->showThumbLabelChk->setChecked(showThumbLabels);
+    // thumbsGrid
+    thumbWidthGrid = mw->thumbView->thumbWidthGrid;
+    thumbHeightGrid = mw->thumbView->thumbHeightGrid;
+    thumbSpacingGrid = mw->thumbView->thumbSpacingGrid;
+    thumbPaddingGrid = mw->thumbView->thumbPaddingGrid;
+    labelFontSizeGrid = mw->thumbView->labelFontSizeGrid;
+    showThumbLabelsGrid = mw->thumbView->showThumbLabelsGrid;
+    ui->iconWidthSlider_2->setValue(thumbWidthGrid);
+    ui->iconHeightSlider_2->setValue(thumbHeightGrid);
+    ui->iconPaddingSlider_2->setValue(thumbPaddingGrid);
+    ui->thumbSpacingSlider_2->setValue(thumbSpacingGrid);
+    ui->fontSizeSlider_2->setValue(labelFontSizeGrid);
+    ui->showThumbLabelChk_2->setChecked(showThumbLabelsGrid);
     // thumb dock
     isThumbWrap = mw->thumbView->isThumbWrap;
     isVerticalTitle = mw->isThumbDockVerticalTitle;
@@ -272,5 +285,72 @@ void Prefdlg::on_maxRecentSB_destroyed()
      */
     if (okToUpdate) {
         emit updateMaxRecentFolders(ui->maxRecentSB->value());
+    }
+}
+
+void Prefdlg::on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
+{
+    ui->stackedWidget->setCurrentIndex(ui->listWidget->row(current));
+}
+
+void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
+{
+    if (okToUpdate) {
+        thumbWidthGrid = ui->iconWidthSlider_2->value();
+        if (ui->lockDimChk_2->isChecked()) {
+            ui->iconHeightSlider_2->setValue(thumbWidthGrid);
+            thumbHeightGrid = thumbWidthGrid;
+        }
+        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+    }
+}
+
+void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
+{
+    if (okToUpdate) {
+        thumbHeightGrid = ui->iconHeightSlider_2->value();
+        if (ui->lockDimChk_2->isChecked()) {
+            ui->iconWidthSlider_2->setValue(thumbHeightGrid);
+            thumbWidthGrid = thumbHeightGrid;
+        }
+        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+    }
+}
+
+void Prefdlg::on_thumbSpacingSlider_2_valueChanged(int value)
+{
+    if (okToUpdate) {
+        thumbSpacingGrid = ui->thumbSpacingSlider_2->value();
+        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+    }
+}
+
+void Prefdlg::on_iconPaddingSlider_2_valueChanged(int value)
+{
+    if (okToUpdate) {
+        thumbPaddingGrid = ui->iconPaddingSlider_2->value();
+        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+    }
+}
+
+void Prefdlg::on_showThumbLabelChk_2_clicked()
+{
+    if (okToUpdate) {
+        showThumbLabelsGrid = ui->showThumbLabelChk_2->isChecked();
+        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+    }
+}
+
+void Prefdlg::on_fontSizeSlider_2_valueChanged(int value)
+{
+    if (okToUpdate) {
+        labelFontSizeGrid = ui->fontSizeSlider_2->value();
+        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     }
 }

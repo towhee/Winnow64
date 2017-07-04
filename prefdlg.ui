@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>545</width>
-    <height>440</height>
+    <width>683</width>
+    <height>450</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -22,27 +22,59 @@
   <property name="modal">
    <bool>true</bool>
   </property>
-  <widget class="QTabWidget" name="tabWidget">
+  <widget class="QPushButton" name="closeBtn">
    <property name="geometry">
     <rect>
-     <x>9</x>
-     <y>9</y>
-     <width>521</width>
+     <x>570</x>
+     <y>400</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Close</string>
+   </property>
+   <attribute name="buttonGroup">
+    <string notr="true">buttonGroup</string>
+   </attribute>
+  </widget>
+  <widget class="QStackedWidget" name="stackedWidget">
+   <property name="geometry">
+    <rect>
+     <x>190</x>
+     <y>20</y>
+     <width>481</width>
      <height>361</height>
     </rect>
    </property>
-   <property name="currentIndex">
-    <number>0</number>
+   <property name="frameShape">
+    <enum>QFrame::Panel</enum>
    </property>
-   <widget class="QWidget" name="tab">
-    <attribute name="title">
-     <string>General</string>
-    </attribute>
+   <property name="currentIndex">
+    <number>4</number>
+   </property>
+   <widget class="QWidget" name="pageGeneral">
+    <widget class="QSpinBox" name="maxRecentSB">
+     <property name="geometry">
+      <rect>
+       <x>270</x>
+       <y>110</y>
+       <width>48</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>5</number>
+     </property>
+     <property name="maximum">
+      <number>50</number>
+     </property>
+    </widget>
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>30</x>
-       <y>30</y>
+       <x>50</x>
+       <y>29</y>
        <width>401</width>
        <height>61</height>
       </rect>
@@ -64,27 +96,11 @@
       </item>
      </layout>
     </widget>
-    <widget class="QSpinBox" name="maxRecentSB">
-     <property name="geometry">
-      <rect>
-       <x>250</x>
-       <y>111</y>
-       <width>48</width>
-       <height>24</height>
-      </rect>
-     </property>
-     <property name="minimum">
-      <number>5</number>
-     </property>
-     <property name="maximum">
-      <number>50</number>
-     </property>
-    </widget>
     <widget class="QLabel" name="label_13">
      <property name="geometry">
       <rect>
-       <x>32</x>
-       <y>115</y>
+       <x>52</x>
+       <y>114</y>
        <width>147</width>
        <height>16</height>
       </rect>
@@ -94,613 +110,12 @@
      </property>
     </widget>
    </widget>
-   <widget class="QWidget" name="thumbTab">
-    <attribute name="title">
-     <string> Thumbnails </string>
-    </attribute>
-    <widget class="QLabel" name="iconPaddingLbl">
-     <property name="geometry">
-      <rect>
-       <x>380</x>
-       <y>150</y>
-       <width>30</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_3">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>60</y>
-       <width>91</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Icon height (px)</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_4">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>130</y>
-       <width>121</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Thumb spacing (px)</string>
-     </property>
-    </widget>
-    <widget class="QSlider" name="iconPaddingSlider">
-     <property name="geometry">
-      <rect>
-       <x>200</x>
-       <y>150</y>
-       <width>160</width>
-       <height>22</height>
-      </rect>
-     </property>
-     <property name="minimum">
-      <number>0</number>
-     </property>
-     <property name="maximum">
-      <number>10</number>
-     </property>
-     <property name="singleStep">
-      <number>1</number>
-     </property>
-     <property name="pageStep">
-      <number>5</number>
-     </property>
-     <property name="value">
-      <number>0</number>
-     </property>
-     <property name="sliderPosition">
-      <number>0</number>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="invertedAppearance">
-      <bool>false</bool>
-     </property>
-     <property name="tickPosition">
-      <enum>QSlider::NoTicks</enum>
-     </property>
-     <property name="tickInterval">
-      <number>5</number>
-     </property>
-    </widget>
-    <widget class="QLabel" name="iconWidthLbl">
-     <property name="geometry">
-      <rect>
-       <x>380</x>
-       <y>40</y>
-       <width>30</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_6">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>190</y>
-       <width>161</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Show thumbnail filename</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_2">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>40</y>
-       <width>91</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Icon width (px)</string>
-     </property>
-    </widget>
-    <widget class="QSlider" name="thumbSpacingSlider">
-     <property name="geometry">
-      <rect>
-       <x>200</x>
-       <y>130</y>
-       <width>160</width>
-       <height>22</height>
-      </rect>
-     </property>
-     <property name="minimum">
-      <number>0</number>
-     </property>
-     <property name="maximum">
-      <number>25</number>
-     </property>
-     <property name="singleStep">
-      <number>1</number>
-     </property>
-     <property name="pageStep">
-      <number>5</number>
-     </property>
-     <property name="value">
-      <number>24</number>
-     </property>
-     <property name="sliderPosition">
-      <number>24</number>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="invertedAppearance">
-      <bool>false</bool>
-     </property>
-     <property name="tickPosition">
-      <enum>QSlider::NoTicks</enum>
-     </property>
-     <property name="tickInterval">
-      <number>5</number>
-     </property>
-    </widget>
-    <widget class="QSlider" name="iconHeightSlider">
-     <property name="geometry">
-      <rect>
-       <x>200</x>
-       <y>60</y>
-       <width>160</width>
-       <height>22</height>
-      </rect>
-     </property>
-     <property name="minimum">
-      <number>40</number>
-     </property>
-     <property name="maximum">
-      <number>160</number>
-     </property>
-     <property name="singleStep">
-      <number>1</number>
-     </property>
-     <property name="pageStep">
-      <number>5</number>
-     </property>
-     <property name="value">
-      <number>41</number>
-     </property>
-     <property name="sliderPosition">
-      <number>41</number>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="invertedAppearance">
-      <bool>false</bool>
-     </property>
-     <property name="tickPosition">
-      <enum>QSlider::NoTicks</enum>
-     </property>
-     <property name="tickInterval">
-      <number>5</number>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_5">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>150</y>
-       <width>121</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Icon padding (px)</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="iconHeightLbl">
-     <property name="geometry">
-      <rect>
-       <x>380</x>
-       <y>60</y>
-       <width>30</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="showThumbLabelChk">
-     <property name="geometry">
-      <rect>
-       <x>200</x>
-       <y>190</y>
-       <width>70</width>
-       <height>17</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-    </widget>
-    <widget class="QLabel" name="thumbSpacingLbl">
-     <property name="geometry">
-      <rect>
-       <x>380</x>
-       <y>130</y>
-       <width>30</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QSlider" name="iconWidthSlider">
-     <property name="geometry">
-      <rect>
-       <x>200</x>
-       <y>40</y>
-       <width>160</width>
-       <height>22</height>
-      </rect>
-     </property>
-     <property name="minimum">
-      <number>40</number>
-     </property>
-     <property name="maximum">
-      <number>160</number>
-     </property>
-     <property name="singleStep">
-      <number>1</number>
-     </property>
-     <property name="pageStep">
-      <number>5</number>
-     </property>
-     <property name="value">
-      <number>41</number>
-     </property>
-     <property name="sliderPosition">
-      <number>41</number>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="invertedAppearance">
-      <bool>false</bool>
-     </property>
-     <property name="tickPosition">
-      <enum>QSlider::NoTicks</enum>
-     </property>
-     <property name="tickInterval">
-      <number>5</number>
-     </property>
-    </widget>
-    <widget class="QSlider" name="fontSizeSlider">
-     <property name="geometry">
-      <rect>
-       <x>200</x>
-       <y>216</y>
-       <width>160</width>
-       <height>22</height>
-      </rect>
-     </property>
-     <property name="minimum">
-      <number>6</number>
-     </property>
-     <property name="maximum">
-      <number>20</number>
-     </property>
-     <property name="singleStep">
-      <number>1</number>
-     </property>
-     <property name="pageStep">
-      <number>5</number>
-     </property>
-     <property name="value">
-      <number>6</number>
-     </property>
-     <property name="sliderPosition">
-      <number>6</number>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="invertedAppearance">
-      <bool>false</bool>
-     </property>
-     <property name="tickPosition">
-      <enum>QSlider::NoTicks</enum>
-     </property>
-     <property name="tickInterval">
-      <number>5</number>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_7">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>216</y>
-       <width>121</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Font size</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="fontSizeLbl">
-     <property name="geometry">
-      <rect>
-       <x>380</x>
-       <y>216</y>
-       <width>30</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="lockDimChk">
-     <property name="geometry">
-      <rect>
-       <x>200</x>
-       <y>90</y>
-       <width>70</width>
-       <height>17</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-    </widget>
-    <widget class="QLabel" name="lockIconDimensions">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>90</y>
-       <width>161</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Lock width = height</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="wrapThumbsChk">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>270</y>
-       <width>121</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Wrap thumbs</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="vertTitleChk">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>300</y>
-       <width>321</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Vertical titlebar when docked on top or bottom</string>
-     </property>
-    </widget>
-   </widget>
-   <widget class="QWidget" name="slideshowTab">
-    <attribute name="title">
-     <string> Slideshow </string>
-    </attribute>
-    <widget class="QWidget" name="layoutWidget">
-     <property name="geometry">
-      <rect>
-       <x>30</x>
-       <y>50</y>
-       <width>341</width>
-       <height>54</height>
-      </rect>
-     </property>
-     <layout class="QGridLayout" name="gridLayout">
-      <property name="horizontalSpacing">
-       <number>-1</number>
-      </property>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_11">
-        <property name="font">
-         <font>
-          <pointsize>12</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Delay (sec)</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QSpinBox" name="slideshowDelaySpinbox"/>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_12">
-        <property name="font">
-         <font>
-          <pointsize>12</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Show random order</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QCheckBox" name="slideshowRandomChk">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </widget>
-   <widget class="QWidget" name="cacheTab">
-    <attribute name="title">
-     <string> Cache </string>
-    </attribute>
-    <widget class="QCheckBox" name="showCacheStatusChk">
-     <property name="geometry">
-      <rect>
-       <x>200</x>
-       <y>60</y>
-       <width>70</width>
-       <height>17</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_8">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>24</y>
-       <width>151</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Cache size (MB)</string>
-     </property>
-    </widget>
+   <widget class="QWidget" name="pageCache">
     <widget class="QLabel" name="label_9">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>60</y>
+       <x>60</x>
+       <y>80</y>
        <width>161</width>
        <height>16</height>
       </rect>
@@ -717,8 +132,8 @@
     <widget class="QSpinBox" name="cacheSizeSpinbox">
      <property name="geometry">
       <rect>
-       <x>200</x>
-       <y>20</y>
+       <x>240</x>
+       <y>40</y>
        <width>111</width>
        <height>24</height>
       </rect>
@@ -736,51 +151,11 @@
       <number>4999</number>
      </property>
     </widget>
-    <widget class="QSpinBox" name="cacheStatusWidthSpin">
-     <property name="geometry">
-      <rect>
-       <x>200</x>
-       <y>90</y>
-       <width>71</width>
-       <height>24</height>
-      </rect>
-     </property>
-     <property name="minimum">
-      <number>100</number>
-     </property>
-     <property name="maximum">
-      <number>1000</number>
-     </property>
-     <property name="singleStep">
-      <number>25</number>
-     </property>
-     <property name="value">
-      <number>200</number>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_10">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>94</y>
-       <width>151</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Cache status width (px)</string>
-     </property>
-    </widget>
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>200</x>
-       <y>130</y>
+       <x>240</x>
+       <y>150</y>
        <width>131</width>
        <height>151</height>
       </rect>
@@ -860,11 +235,69 @@
       </item>
      </layout>
     </widget>
+    <widget class="QLabel" name="label_10">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>114</y>
+       <width>151</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Cache status width (px)</string>
+     </property>
+    </widget>
+    <widget class="QSpinBox" name="cacheStatusWidthSpin">
+     <property name="geometry">
+      <rect>
+       <x>240</x>
+       <y>110</y>
+       <width>71</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>100</number>
+     </property>
+     <property name="maximum">
+      <number>1000</number>
+     </property>
+     <property name="singleStep">
+      <number>25</number>
+     </property>
+     <property name="value">
+      <number>200</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_8">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>44</y>
+       <width>151</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Cache size (MB)</string>
+     </property>
+    </widget>
     <widget class="QLabel" name="label">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>134</y>
+       <x>60</x>
+       <y>154</y>
        <width>111</width>
        <height>16</height>
       </rect>
@@ -878,23 +311,1112 @@
       <string>Cache strategy</string>
      </property>
     </widget>
+    <widget class="QCheckBox" name="showCacheStatusChk">
+     <property name="geometry">
+      <rect>
+       <x>240</x>
+       <y>80</y>
+       <width>70</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="pageSlideshow">
+    <widget class="QWidget" name="layoutWidget">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>50</y>
+       <width>181</width>
+       <height>54</height>
+      </rect>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <property name="horizontalSpacing">
+       <number>-1</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_11">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Delay (sec)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QSpinBox" name="slideshowDelaySpinbox"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_12">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Show random order</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="slideshowRandomChk">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="pageThumbsDock">
+    <widget class="QLabel" name="iconWidthLbl">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>20</y>
+       <width>30</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="wrapThumbsChk">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>240</y>
+       <width>101</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Wrap thumbs</string>
+     </property>
+    </widget>
+    <widget class="QSlider" name="fontSizeSlider">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>190</y>
+       <width>160</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>6</number>
+     </property>
+     <property name="maximum">
+      <number>20</number>
+     </property>
+     <property name="singleStep">
+      <number>1</number>
+     </property>
+     <property name="pageStep">
+      <number>5</number>
+     </property>
+     <property name="value">
+      <number>6</number>
+     </property>
+     <property name="sliderPosition">
+      <number>6</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="invertedAppearance">
+      <bool>false</bool>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::NoTicks</enum>
+     </property>
+     <property name="tickInterval">
+      <number>5</number>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="vertTitleChk">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>270</y>
+       <width>291</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Vertical titlebar when docked on top or bottom</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="iconPaddingLbl">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>120</y>
+       <width>30</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="thumbSpacingLbl">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>100</y>
+       <width>30</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_4">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>100</y>
+       <width>121</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Thumb spacing (px)</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_5">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>120</y>
+       <width>121</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Icon padding (px)</string>
+     </property>
+    </widget>
+    <widget class="QSlider" name="iconWidthSlider">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>20</y>
+       <width>160</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>40</number>
+     </property>
+     <property name="maximum">
+      <number>160</number>
+     </property>
+     <property name="singleStep">
+      <number>1</number>
+     </property>
+     <property name="pageStep">
+      <number>5</number>
+     </property>
+     <property name="value">
+      <number>41</number>
+     </property>
+     <property name="sliderPosition">
+      <number>41</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="invertedAppearance">
+      <bool>false</bool>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::NoTicks</enum>
+     </property>
+     <property name="tickInterval">
+      <number>5</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_6">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>170</y>
+       <width>161</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Show thumbnail filename</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="showThumbLabelChk">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>170</y>
+       <width>70</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="fontSizeLbl">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>186</y>
+       <width>30</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QSlider" name="iconPaddingSlider">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>120</y>
+       <width>160</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>10</number>
+     </property>
+     <property name="singleStep">
+      <number>1</number>
+     </property>
+     <property name="pageStep">
+      <number>5</number>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="sliderPosition">
+      <number>0</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="invertedAppearance">
+      <bool>false</bool>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::NoTicks</enum>
+     </property>
+     <property name="tickInterval">
+      <number>5</number>
+     </property>
+    </widget>
+    <widget class="QSlider" name="thumbSpacingSlider">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>100</y>
+       <width>160</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>25</number>
+     </property>
+     <property name="singleStep">
+      <number>1</number>
+     </property>
+     <property name="pageStep">
+      <number>5</number>
+     </property>
+     <property name="value">
+      <number>24</number>
+     </property>
+     <property name="sliderPosition">
+      <number>24</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="invertedAppearance">
+      <bool>false</bool>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::NoTicks</enum>
+     </property>
+     <property name="tickInterval">
+      <number>5</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_2">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>20</y>
+       <width>91</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Icon width (px)</string>
+     </property>
+    </widget>
+    <widget class="QSlider" name="iconHeightSlider">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>40</y>
+       <width>160</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>40</number>
+     </property>
+     <property name="maximum">
+      <number>160</number>
+     </property>
+     <property name="singleStep">
+      <number>1</number>
+     </property>
+     <property name="pageStep">
+      <number>5</number>
+     </property>
+     <property name="value">
+      <number>41</number>
+     </property>
+     <property name="sliderPosition">
+      <number>41</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="invertedAppearance">
+      <bool>false</bool>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::NoTicks</enum>
+     </property>
+     <property name="tickInterval">
+      <number>5</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lockIconDimensions">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>70</y>
+       <width>161</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Lock width = height</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="lockDimChk">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>70</y>
+       <width>70</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_3">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>40</y>
+       <width>91</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Icon height (px)</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="iconHeightLbl">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>40</y>
+       <width>30</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_7">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>190</y>
+       <width>121</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Font size</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="pageThumbsGrid">
+    <widget class="QLabel" name="iconWidthLbl_2">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>20</y>
+       <width>30</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QSlider" name="fontSizeSlider_2">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>190</y>
+       <width>160</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>6</number>
+     </property>
+     <property name="maximum">
+      <number>20</number>
+     </property>
+     <property name="singleStep">
+      <number>1</number>
+     </property>
+     <property name="pageStep">
+      <number>5</number>
+     </property>
+     <property name="value">
+      <number>6</number>
+     </property>
+     <property name="sliderPosition">
+      <number>6</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="invertedAppearance">
+      <bool>false</bool>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::NoTicks</enum>
+     </property>
+     <property name="tickInterval">
+      <number>5</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="iconPaddingLbl_2">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>120</y>
+       <width>30</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="thumbSpacingLbl_2">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>100</y>
+       <width>30</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_14">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>100</y>
+       <width>121</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Thumb spacing (px)</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_15">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>120</y>
+       <width>121</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Icon padding (px)</string>
+     </property>
+    </widget>
+    <widget class="QSlider" name="iconWidthSlider_2">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>20</y>
+       <width>160</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>40</number>
+     </property>
+     <property name="maximum">
+      <number>160</number>
+     </property>
+     <property name="singleStep">
+      <number>1</number>
+     </property>
+     <property name="pageStep">
+      <number>5</number>
+     </property>
+     <property name="value">
+      <number>41</number>
+     </property>
+     <property name="sliderPosition">
+      <number>41</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="invertedAppearance">
+      <bool>false</bool>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::NoTicks</enum>
+     </property>
+     <property name="tickInterval">
+      <number>5</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_16">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>170</y>
+       <width>161</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Show thumbnail filename</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="showThumbLabelChk_2">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>170</y>
+       <width>70</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="fontSizeLbl_2">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>186</y>
+       <width>30</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QSlider" name="iconPaddingSlider_2">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>120</y>
+       <width>160</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>10</number>
+     </property>
+     <property name="singleStep">
+      <number>1</number>
+     </property>
+     <property name="pageStep">
+      <number>5</number>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="sliderPosition">
+      <number>0</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="invertedAppearance">
+      <bool>false</bool>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::NoTicks</enum>
+     </property>
+     <property name="tickInterval">
+      <number>5</number>
+     </property>
+    </widget>
+    <widget class="QSlider" name="thumbSpacingSlider_2">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>100</y>
+       <width>160</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>25</number>
+     </property>
+     <property name="singleStep">
+      <number>1</number>
+     </property>
+     <property name="pageStep">
+      <number>5</number>
+     </property>
+     <property name="value">
+      <number>24</number>
+     </property>
+     <property name="sliderPosition">
+      <number>24</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="invertedAppearance">
+      <bool>false</bool>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::NoTicks</enum>
+     </property>
+     <property name="tickInterval">
+      <number>5</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_17">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>20</y>
+       <width>91</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Icon width (px)</string>
+     </property>
+    </widget>
+    <widget class="QSlider" name="iconHeightSlider_2">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>40</y>
+       <width>160</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>40</number>
+     </property>
+     <property name="maximum">
+      <number>160</number>
+     </property>
+     <property name="singleStep">
+      <number>1</number>
+     </property>
+     <property name="pageStep">
+      <number>5</number>
+     </property>
+     <property name="value">
+      <number>41</number>
+     </property>
+     <property name="sliderPosition">
+      <number>41</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="invertedAppearance">
+      <bool>false</bool>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::NoTicks</enum>
+     </property>
+     <property name="tickInterval">
+      <number>5</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lockIconDimensions_2">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>70</y>
+       <width>161</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Lock width = height</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="lockDimChk_2">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>70</y>
+       <width>70</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_18">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>40</y>
+       <width>91</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Icon height (px)</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="iconHeightLbl_2">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>40</y>
+       <width>30</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_19">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>190</y>
+       <width>121</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Font size</string>
+     </property>
+    </widget>
    </widget>
   </widget>
-  <widget class="QPushButton" name="closeBtn">
+  <widget class="QStackedWidget" name="stackedWidget_2">
    <property name="geometry">
     <rect>
-     <x>420</x>
-     <y>393</y>
-     <width>75</width>
-     <height>23</height>
+     <x>10</x>
+     <y>20</y>
+     <width>170</width>
+     <height>360</height>
     </rect>
    </property>
-   <property name="text">
-    <string>Close</string>
+   <property name="frameShape">
+    <enum>QFrame::Box</enum>
    </property>
-   <attribute name="buttonGroup">
-    <string notr="true">buttonGroup</string>
-   </attribute>
+   <widget class="QWidget" name="page">
+    <widget class="QListWidget" name="listWidget">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>20</y>
+       <width>171</width>
+       <height>341</height>
+      </rect>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="spacing">
+      <number>4</number>
+     </property>
+     <item>
+      <property name="text">
+       <string>General</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Cache</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Slideshow</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Thumbs in Dock</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Thumbs in Grid View</string>
+      </property>
+     </item>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="page_2"/>
   </widget>
  </widget>
  <resources/>
