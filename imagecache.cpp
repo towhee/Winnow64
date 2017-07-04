@@ -620,7 +620,7 @@ void ImageCache::run()
             mutex.unlock();
             if (!toCache.isEmpty()) toCache.removeFirst();
             cache.currMB = getImCacheSize();
-            qDebug() << "ImageCache::run" << fPath;
+//            qDebug() << "ImageCache::run" << fPath;
             cacheStatus();
             delete image;
         }
@@ -628,7 +628,7 @@ void ImageCache::run()
     }
     checkForOrphans();
     cacheStatus();
-    qDebug() << "ImageCache completed";
+//    qDebug() << "ImageCache completed";
     emit updateIsRunning(false);
 //    reportCacheManager("Image cache updated for " + cache.dir);
 }

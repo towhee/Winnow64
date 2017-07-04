@@ -165,11 +165,12 @@ Helper function for in class calls where thumb parameters already defined
 */
 {
     if (isGrid) {
-        this->setSpacing(thumbSpacingGrid);
+        setWrapping(true);
+        setSpacing(thumbSpacingGrid);
         thumbViewDelegate->setThumbDimensions(thumbWidthGrid, thumbHeightGrid,
             thumbPaddingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     } else {
-        this->setSpacing(thumbSpacing);
+        setSpacing(thumbSpacing);
         thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
             thumbPadding, labelFontSize, showThumbLabels);
     }
@@ -706,6 +707,8 @@ void ThumbView::thumbsEnlarge()
     qDebug() << "ThumbView::thumbsEnlarge";
     #endif
     }
+    qDebug() << "thumbsEnlarge: isGrid/thumbWidthGrid"
+             << isGrid << thumbWidthGrid;
     if (isGrid) {
         if (thumbWidthGrid == 0) thumbWidthGrid = 40;
         if (thumbHeightGrid == 0) thumbHeightGrid = 40;
@@ -727,7 +730,6 @@ void ThumbView::thumbsEnlarge()
             if (thumbHeight > 160) thumbHeight = 160;
         }
     }
-
     setThumbParameters();
 }
 
@@ -738,14 +740,22 @@ void ThumbView::thumbsShrink()
     qDebug() << "ThumbView::thumbsShrink";
     #endif
     }
-    if (thumbWidth > 40  && thumbHeight > 40) {
-        thumbWidth *= 0.9;
-        thumbHeight *= 0.9;
-//        thumbsEnlargeAction->setEnabled(true);
-        if (thumbWidth < 40) thumbWidth = 40;
-        if (thumbHeight < 40) thumbHeight = 40;
-        setThumbParameters();
+    if (isGrid) {
+        if (thumbWidthGrid > 40  && thumbHeightGrid > 40) {
+            thumbWidthGrid *= 0.9;
+            thumbHeightGrid *= 0.9;
+            if (thumbWidthGrid < 40) thumbWidthGrid = 40;
+            if (thumbHeightGrid < 40) thumbHeightGrid = 40;
+        }
+    } else {
+        if (thumbWidth > 40  && thumbHeight > 40) {
+            thumbWidth *= 0.9;
+            thumbHeight *= 0.9;
+            if (thumbWidth < 40) thumbWidth = 40;
+            if (thumbHeight < 40) thumbHeight = 40;
+        }
     }
+    setThumbParameters();
 }
 
 void ThumbView::thumbsFit()

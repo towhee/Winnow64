@@ -1280,8 +1280,9 @@ void MW::createStatusBar()
 
 void MW::setThumbDockParameters(bool isThumbWrap, bool isVerticalTitle)
 {
+/* Signal from prefDlg when thumbWrap or verticalTitle changed
+*/
     thumbView->isThumbWrap = isThumbWrap;       // is this needed?
-//    mwd.isVerticalTitle = isVerticalTitle;
     thumbView->setWrapping(isThumbWrap);
     if (isVerticalTitle) {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -1680,6 +1681,7 @@ workspace with a matching name to the action is used.
     thumbView->thumbPaddingGrid = w.thumbPaddingGrid,
     thumbView->labelFontSizeGrid = w.labelFontSizeGrid,
     thumbView->showThumbLabelsGrid = w.showThumbLabelsGrid;
+    thumbView->isThumbWrap = w.isThumbWrap;
     thumbView->setThumbParameters();
     updateState();
 //            reportWorkspace(i);         // rgh remove after debugging
@@ -2225,9 +2227,9 @@ void MW::preferences()
     qDebug() << "MW::preferences";
     #endif
     }
-    Prefdlg *prefdlg = new Prefdlg(this);
-//    connect(prefdlg, SIGNAL(updateGeneralParameters(bool,bool)),
-//        this, SLOT(setGeneralParameters(bool, bool, int)));
+    Prefdlg *prefdlg = new Prefdlg(this, lastPrefPage);
+    connect(prefdlg, SIGNAL(updatePage(int)),
+        this, SLOT(setPrefPage(int)));
     connect(prefdlg, SIGNAL(updateInclSubfolders(bool)),
             this, SLOT(setIncludeSubFolders(bool)));
     connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
@@ -2253,6 +2255,11 @@ void MW::setIncludeSubFolders()
     inclSubfolders = subFoldersAction->isChecked();
     currentViewDir = "";
     folderSelectionChange();
+}
+
+void MW::setPrefPage(int page)
+{
+    lastPrefPage = page;
 }
 
 void MW::setRememberLastDir(bool prefRememberFolder)
@@ -2441,8 +2448,8 @@ void MW::writeSettings()
     qDebug() << "MW::writeSettings";
     #endif
     }
-    setting->setValue("Geometry", saveGeometry());
-    setting->setValue("WindowState", saveState());
+    // general
+    setting->setValue("lastPrefPage", (int)lastPrefPage);
     // files
 //    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
     setting->setValue("rememberLastDir", rememberLastDir);
@@ -2474,6 +2481,8 @@ void MW::writeSettings()
     setting->setValue("cacheStatusWidth", (int)cacheStatusWidth);
     setting->setValue("cacheWtAhead", (int)cacheWtAhead);
     // state
+    setting->setValue("Geometry", saveGeometry());
+    setting->setValue("WindowState", saveState());
     setting->setValue("isFullScreen", (bool)isFullScreen());
 //    setting->setValue("isFullScreen", (bool)fullScreenAction->isChecked());
     setting->setValue("isWindowTitleBarVisible", (bool)windowTitleBarVisibleAction->isChecked());
@@ -2601,7 +2610,7 @@ Preferences are located in the relevant class and updated here.
     // default values for first time use
     if (!setting->contains("cacheSizeMB")) {
         defaultWorkspace();
-
+        setting->setValue("lastPrefPage", (int)0);
         setting->setValue("thumbsSortFlags", (int)0);
       // slideshow
         setting->setValue("slideShowDelay", (int)5);
@@ -2616,6 +2625,8 @@ Preferences are located in the relevant class and updated here.
         bookmarkPaths.insert(QDir::homePath());
     }
 
+    // general
+    lastPrefPage = setting->value("lastPrefPage").toInt();
     // files
 //    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();
     rememberLastDir = setting->value("rememberLastDir").toBool();
@@ -2989,7 +3000,6 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     qDebug() << "MW::setThumbDockFeatures";
     #endif
     }
-    qDebug() << "Dock area" << area;
     if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea) {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
@@ -3008,6 +3018,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         thumbView->setWrapping(true);
 //        qDebug() << "\nleft/right/float\n";
     }
+    if (asGridAction->isChecked()) thumbView->setWrapping(true);
 }
 
 void MW::loupeDisplay()
@@ -3083,7 +3094,6 @@ void MW::setShootingInfo() {
     qDebug() << "MW::setShootingInfo";
     #endif
     }
-    qDebug() << "MW::setShootingInfo";
     imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
 }
 
@@ -3094,8 +3104,6 @@ void MW::setThumbDockVisibity()
     qDebug() << "MW::setThumbDockVisibity";
     #endif
     }
-    qDebug() << "MW::setThumbDockVisibity thumbDockVisibleAction->isChecked()"
-             << thumbDockVisibleAction->isChecked();
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
     setThumbDockLockMode();
 }

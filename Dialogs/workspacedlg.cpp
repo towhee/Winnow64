@@ -106,25 +106,13 @@ void WorkspaceDlg::report(QString signalName)
              << "text =" << text;
 }
 
-void WorkspaceDlg::on_doneBtn_clicked()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "WorkspaceDlg::on_doneBtn_clicked";
-    #endif
-    }
-//    int n = ui->workspaceCB->currentIndex();
-//    emit reportWorkspace(n);
-}
-
-void WorkspaceDlg::on_workspaceLbl_linkActivated(const QString &link)
-{
-    int n = ui->workspaceCB->currentIndex();
-    emit reportWorkspace(n);
-}
-
 void WorkspaceDlg::on_reportLinkButton_clicked()
 {
     int n = ui->workspaceCB->currentIndex();
     emit reportWorkspace(n);
+}
+
+void WorkspaceDlg::on_workspaceCB_currentIndexChanged(int index)
+{
+    ui->workspaceIndexLbl->setText(QString::number(index));
 }

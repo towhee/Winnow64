@@ -13,12 +13,11 @@ class Prefdlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit Prefdlg(QWidget *parent = 0);
+    explicit Prefdlg(QWidget *parent = 0, int lastPrefPage = 0);
     ~Prefdlg();
 
 signals:
-//    void updateGeneralParameters(bool rememberFolder, bool inclSubfolders,
-//                                 int maxRecent);
+    void updatePage(int page);
     void updateRememberFolder(bool rememberFolder);
     void updateInclSubfolders(bool inclSubfolders);
     void updateMaxRecentFolders(int maxRecentFolders);

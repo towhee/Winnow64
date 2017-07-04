@@ -5,12 +5,19 @@
 
 #include <QDebug>
 
-Prefdlg::Prefdlg(QWidget *parent) :
+Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     QDialog(parent),
     ui(new Ui::Prefdlg)
 {
     okToUpdate = false;
     ui->setupUi(this);
+
+    qDebug() << "lastPrefPage" << lastPrefPage
+             << "at index/item/row" << ui->listWidget->currentIndex()
+             << ui->listWidget->currentItem()
+             << ui->listWidget->currentRow();
+    ui->listWidget->setCurrentRow(lastPrefPage);
+//    ui->listWidget->setCurrentRow(lastPrefPage);
     // this works because friend class of MW
     MW *mw = qobject_cast<MW*>(parent);
     // general
@@ -82,6 +89,13 @@ void Prefdlg::accept()
     QDialog::accept();
 }
 
+void Prefdlg::on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
+{
+    ui->stackedWidget->setCurrentIndex(ui->listWidget->row(current));
+    emit updatePage(ui->listWidget->currentRow());
+}
+
+// Docked thumbs
 void Prefdlg::on_iconWidthSlider_valueChanged(int value)
 {
     if (okToUpdate) {
@@ -286,11 +300,6 @@ void Prefdlg::on_maxRecentSB_destroyed()
     if (okToUpdate) {
         emit updateMaxRecentFolders(ui->maxRecentSB->value());
     }
-}
-
-void Prefdlg::on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
-{
-    ui->stackedWidget->setCurrentIndex(ui->listWidget->row(current));
 }
 
 void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)

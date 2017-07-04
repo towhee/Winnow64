@@ -90,6 +90,8 @@ public:
 
 //    bool isShowHiddenFiles;     // needed?
     int folderMaxWidth = 600;       // not in preferences or QSetting
+    // general
+    int lastPrefPage;
 
     // preferences: files
     bool rememberLastDir;
@@ -171,6 +173,7 @@ private slots:
     void setShootingInfo();
     void togglePick();
     void updatePick();
+    void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
     void setIncludeSubFolders();
     void setMaxRecentFolders(int prefMaxRecentFolders);

@@ -30,11 +30,9 @@ private slots:
     void clearStatus();
     void on_workspaceCB_highlighted(int index);
 
-    void on_doneBtn_clicked();
-
-    void on_workspaceLbl_linkActivated(const QString &link);
-
     void on_reportLinkButton_clicked();
+
+    void on_workspaceCB_currentIndexChanged(int index);
 
 private:
     QWidget *mainWindow;
