@@ -2849,6 +2849,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         //        pasteImageAction->setShortcut(QKeySequence("Ctrl+Shift+V"));
         //        refreshAction->setShortcut(QKeySequence("Ctrl+F5"));
         //        pasteAction->setShortcut(QKeySequence("Ctrl+V"));
+        subFoldersAction->setShortcut(QKeySequence("Ctrl+I"));
         fullScreenAction->setShortcut(QKeySequence("F"));
         escapeFullScreenAction->setShortcut(QKeySequence("Esc"));
         prefAction->setShortcut(QKeySequence("Ctrl+P"));

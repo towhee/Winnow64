@@ -210,6 +210,9 @@ Helper function for in class calls where thumb parameters already defined
     labelFontSizeGrid = _labelFontSizeGrid;
     showThumbLabelsGrid = _showThumbLabelsGrid;
 
+    qDebug() << "thumbWidthGrid" << thumbWidthGrid
+             << "thumbHeightGrid" << thumbHeightGrid;
+
     setThumbParameters();
 }
 

@@ -310,7 +310,7 @@ void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
             ui->iconHeightSlider_2->setValue(thumbWidthGrid);
             thumbHeightGrid = thumbWidthGrid;
         }
-        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
                           thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     }
 }
@@ -323,7 +323,7 @@ void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
             ui->iconWidthSlider_2->setValue(thumbHeightGrid);
             thumbWidthGrid = thumbHeightGrid;
         }
-        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
                           thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     }
 }
@@ -332,7 +332,7 @@ void Prefdlg::on_thumbSpacingSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
         thumbSpacingGrid = ui->thumbSpacingSlider_2->value();
-        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
                           thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     }
 }
@@ -341,7 +341,7 @@ void Prefdlg::on_iconPaddingSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
         thumbPaddingGrid = ui->iconPaddingSlider_2->value();
-        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
                           thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     }
 }
@@ -350,7 +350,7 @@ void Prefdlg::on_showThumbLabelChk_2_clicked()
 {
     if (okToUpdate) {
         showThumbLabelsGrid = ui->showThumbLabelChk_2->isChecked();
-        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
                           thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     }
 }
@@ -359,7 +359,7 @@ void Prefdlg::on_fontSizeSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
         labelFontSizeGrid = ui->fontSizeSlider_2->value();
-        emit updateThumbParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
+        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
                           thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     }
 }

@@ -57,7 +57,7 @@
     <widget class="QSpinBox" name="maxRecentSB">
      <property name="geometry">
       <rect>
-       <x>270</x>
+       <x>260</x>
        <y>110</y>
        <width>48</width>
        <height>24</height>
@@ -70,36 +70,10 @@
       <number>50</number>
      </property>
     </widget>
-    <widget class="QWidget" name="layoutWidget">
-     <property name="geometry">
-      <rect>
-       <x>50</x>
-       <y>29</y>
-       <width>401</width>
-       <height>61</height>
-      </rect>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <widget class="QCheckBox" name="rememberFolderChk">
-        <property name="text">
-         <string>Remember previous folder</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="inclSubFoldersChk">
-        <property name="text">
-         <string>Include subfolders</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
     <widget class="QLabel" name="label_13">
      <property name="geometry">
       <rect>
-       <x>52</x>
+       <x>42</x>
        <y>114</y>
        <width>147</width>
        <height>16</height>
@@ -109,12 +83,38 @@
       <string>Maximum recent folders</string>
      </property>
     </widget>
+    <widget class="QCheckBox" name="rememberFolderChk">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>35</y>
+       <width>186</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Remember previous folder</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="inclSubFoldersChk">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>62</y>
+       <width>137</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Include subfolders</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QWidget" name="pageCache">
     <widget class="QLabel" name="label_9">
      <property name="geometry">
       <rect>
-       <x>60</x>
+       <x>40</x>
        <y>80</y>
        <width>161</width>
        <height>16</height>
@@ -132,7 +132,7 @@
     <widget class="QSpinBox" name="cacheSizeSpinbox">
      <property name="geometry">
       <rect>
-       <x>240</x>
+       <x>220</x>
        <y>40</y>
        <width>111</width>
        <height>24</height>
@@ -154,7 +154,7 @@
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>240</x>
+       <x>220</x>
        <y>150</y>
        <width>131</width>
        <height>151</height>
@@ -238,7 +238,7 @@
     <widget class="QLabel" name="label_10">
      <property name="geometry">
       <rect>
-       <x>60</x>
+       <x>40</x>
        <y>114</y>
        <width>151</width>
        <height>16</height>
@@ -256,7 +256,7 @@
     <widget class="QSpinBox" name="cacheStatusWidthSpin">
      <property name="geometry">
       <rect>
-       <x>240</x>
+       <x>220</x>
        <y>110</y>
        <width>71</width>
        <height>24</height>
@@ -278,7 +278,7 @@
     <widget class="QLabel" name="label_8">
      <property name="geometry">
       <rect>
-       <x>60</x>
+       <x>40</x>
        <y>44</y>
        <width>151</width>
        <height>16</height>
@@ -296,7 +296,7 @@
     <widget class="QLabel" name="label">
      <property name="geometry">
       <rect>
-       <x>60</x>
+       <x>40</x>
        <y>154</y>
        <width>111</width>
        <height>16</height>
@@ -314,7 +314,7 @@
     <widget class="QCheckBox" name="showCacheStatusChk">
      <property name="geometry">
       <rect>
-       <x>240</x>
+       <x>220</x>
        <y>80</y>
        <width>70</width>
        <height>17</height>
@@ -330,7 +330,7 @@
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>50</y>
+       <y>30</y>
        <width>181</width>
        <height>54</height>
       </rect>
@@ -1514,6 +1514,86 @@
     <hint type="destinationlabel">
      <x>406</x>
      <y>222</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>iconWidthSlider_2</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>iconWidthLbl_2</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>829</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>944</x>
+     <y>257</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>iconHeightSlider_2</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>iconHeightLbl_2</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>829</x>
+     <y>280</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>944</x>
+     <y>277</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>iconPaddingSlider_2</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>iconPaddingLbl_2</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>829</x>
+     <y>360</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>944</x>
+     <y>357</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>thumbSpacingSlider_2</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>thumbSpacingLbl_2</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>829</x>
+     <y>340</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>944</x>
+     <y>337</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fontSizeSlider_2</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>iconHeightLbl_2</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>829</x>
+     <y>430</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>944</x>
+     <y>277</y>
     </hint>
    </hints>
   </connection>
