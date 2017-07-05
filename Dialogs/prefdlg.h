@@ -29,6 +29,7 @@ signals:
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
             int cacheStatusWidth, int cacheWtAhead);
+    void updateFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs);
 
 private slots:
     // general
@@ -68,6 +69,14 @@ private slots:
     void on_maxRecentSB_valueChanged(int arg1);
 
     void on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
+
+    void on_foldersChk_clicked();
+
+    void on_favsChk_clicked();
+
+    void on_metadataChk_clicked();
+
+    void on_thumbsChk_clicked();
 
 private:
 

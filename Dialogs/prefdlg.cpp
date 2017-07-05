@@ -11,13 +11,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
 {
     okToUpdate = false;
     ui->setupUi(this);
-
-    qDebug() << "lastPrefPage" << lastPrefPage
-             << "at index/item/row" << ui->listWidget->currentIndex()
-             << ui->listWidget->currentItem()
-             << ui->listWidget->currentRow();
     ui->listWidget->setCurrentRow(lastPrefPage);
-//    ui->listWidget->setCurrentRow(lastPrefPage);
+
     // this works because friend class of MW
     MW *mw = qobject_cast<MW*>(parent);
     // general
@@ -36,6 +31,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->thumbSpacingSlider->setValue(thumbSpacing);
     ui->fontSizeSlider->setValue(labelFontSize);
     ui->showThumbLabelChk->setChecked(showThumbLabels);
+    ui->lockDimChk->setChecked(true);
     // thumbsGrid
     thumbWidthGrid = mw->thumbView->thumbWidthGrid;
     thumbHeightGrid = mw->thumbView->thumbHeightGrid;
@@ -49,6 +45,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->thumbSpacingSlider_2->setValue(thumbSpacingGrid);
     ui->fontSizeSlider_2->setValue(labelFontSizeGrid);
     ui->showThumbLabelChk_2->setChecked(showThumbLabelsGrid);
+    ui->lockDimChk_2->setChecked(true);
     // thumb dock
     isThumbWrap = mw->thumbView->isThumbWrap;
     isVerticalTitle = mw->isThumbDockVerticalTitle;
@@ -75,6 +72,12 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     case 9: ui->cache90AheadRadio->setChecked(true); break;
     case 10: ui->cache100AheadRadio->setChecked(true);
     }
+    // full screen
+    qDebug() << "mw->fullScreenDocks.isFolders" << mw->fullScreenDocks.isFolders;
+    ui->foldersChk->setChecked(mw->fullScreenDocks.isFolders);
+    ui->favsChk->setChecked(mw->fullScreenDocks.isFavs);
+    ui->metadataChk->setChecked(mw->fullScreenDocks.isMetadata);
+    ui->thumbsChk->setChecked(mw->fullScreenDocks.isThumbs);
 
     okToUpdate = true;
 }
@@ -362,4 +365,28 @@ void Prefdlg::on_fontSizeSlider_2_valueChanged(int value)
         emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
                           thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     }
+}
+
+void Prefdlg::on_foldersChk_clicked()
+{
+    emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
+                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked());
+}
+
+void Prefdlg::on_favsChk_clicked()
+{
+    emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
+                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked());
+}
+
+void Prefdlg::on_metadataChk_clicked()
+{
+    emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
+                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked());
+}
+
+void Prefdlg::on_thumbsChk_clicked()
+{
+    emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
+                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked());
 }

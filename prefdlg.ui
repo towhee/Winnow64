@@ -51,7 +51,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>4</number>
+    <number>5</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QSpinBox" name="maxRecentSB">
@@ -1360,8 +1360,69 @@
      </property>
     </widget>
    </widget>
+   <widget class="QWidget" name="pageFullScreen">
+    <widget class="QLabel" name="fullScreenExplanationLbl">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>341</width>
+       <height>61</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>When full screen is chosen, select which docks should be also visible.  Hiding all the docks will result in only the loupe view or grid of all the thumbnails being visible.</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QWidget" name="">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>90</y>
+       <width>221</width>
+       <height>101</height>
+      </rect>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QCheckBox" name="foldersChk">
+        <property name="text">
+         <string>Folders</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="favsChk">
+        <property name="text">
+         <string>Favourites</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="metadataChk">
+        <property name="text">
+         <string>Metadata</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="thumbsChk">
+        <property name="text">
+         <string>Thumbnails</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </widget>
   </widget>
-  <widget class="QStackedWidget" name="stackedWidget_2">
+  <widget class="QStackedWidget" name="listContainer">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -1412,6 +1473,11 @@
      <item>
       <property name="text">
        <string>Thumbs in Grid View</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Full screen default docks</string>
       </property>
      </item>
     </widget>

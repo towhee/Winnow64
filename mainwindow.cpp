@@ -2246,12 +2246,15 @@ void MW::preferences()
             this, SLOT(setSlideShowParameters(int, bool)));
     connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int)),
             this, SLOT(setCacheParameters(int, bool, int, int)));
+    connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool)),
+            this, SLOT(setFullScreenDocks(bool,bool,bool,bool)));
     prefdlg->exec();
 }
 
-void MW::setIncludeSubFolders()
+void MW::setIncludeSubFolders(bool include)
 {
     // need inclSubFolders for passing to functions
+    subFoldersAction->setChecked(include);
     inclSubfolders = subFoldersAction->isChecked();
     currentViewDir = "";
     folderSelectionChange();
@@ -2271,6 +2274,14 @@ void MW::setMaxRecentFolders(int prefMaxRecentFolders)
 {
     maxRecentFolders = prefMaxRecentFolders;
     syncRecentFoldersMenu();
+}
+
+void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs)
+{
+    fullScreenDocks.isFolders = isFolders;
+    fullScreenDocks.isFavs = isFavs;
+    fullScreenDocks.isMetadata = isMetadata;
+    fullScreenDocks.isThumbs = isThumbs;
 }
 
 //void MW::setGeneralParameters(bool prefRememberFolder, bool prefInclSubfolders,
@@ -2314,14 +2325,18 @@ void MW::toggleFullScreen()
     qDebug() << "test";
     if (fullScreenAction->isChecked())
     {
+        qDebug() << "fullScreenDocks.isThumbs" << fullScreenDocks.isThumbs;
+        snapshotWorkspace(ws);
         showFullScreen();
         imageView->setCursorHiding(true);
-        folderDockVisibleAction->setChecked(false);
+        folderDockVisibleAction->setChecked(fullScreenDocks.isFolders);
         setFolderDockVisibility();
-        favDockVisibleAction->setChecked(false);
+        favDockVisibleAction->setChecked(fullScreenDocks.isFavs);
         setFavDockVisibility();
-        metadataDockVisibleAction->setChecked(false);
+        metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
         setMetadataDockVisibility();
+        thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
+        setThumbDockVisibity();
         menuBarVisibleAction->setChecked(false);
         setMenuBarVisibility();
         statusBarVisibleAction->setChecked(false);
@@ -2330,12 +2345,13 @@ void MW::toggleFullScreen()
     else
     {
         showNormal();
-        imageView->setCursorHiding(false);
-        folderDockVisibleAction->setChecked(true);       setFolderDockVisibility();
-        favDockVisibleAction->setChecked(true);        setFavDockVisibility();
-        metadataDockVisibleAction->setChecked(true);    setMetadataDockVisibility();
-        menuBarVisibleAction->setChecked(true);     setMenuBarVisibility();
-        statusBarVisibleAction->setChecked(true);   setStatusBarVisibility();
+        invokeWorkspace(ws);
+//        imageView->setCursorHiding(false);
+//        folderDockVisibleAction->setChecked(true);       setFolderDockVisibility();
+//        favDockVisibleAction->setChecked(true);        setFavDockVisibility();
+//        metadataDockVisibleAction->setChecked(true);    setMetadataDockVisibility();
+//        menuBarVisibleAction->setChecked(true);     setMenuBarVisibility();
+//        statusBarVisibleAction->setChecked(true);   setStatusBarVisibility();
 //        allDocksLockAction->setChecked(false);  setAllDocksLockMode();
     }
 }
@@ -2480,6 +2496,11 @@ void MW::writeSettings()
     setting->setValue("isShowCacheStatus", (bool)isShowCacheStatus);
     setting->setValue("cacheStatusWidth", (int)cacheStatusWidth);
     setting->setValue("cacheWtAhead", (int)cacheWtAhead);
+    // full screen
+    setting->setValue("isFullScreenFolders", (bool)fullScreenDocks.isFolders);
+    setting->setValue("isFullScreenFavss", (bool)fullScreenDocks.isFavs);
+    setting->setValue("isFullScreenMetadata", (bool)fullScreenDocks.isMetadata);
+    setting->setValue("isFullScreenThumbs", (bool)fullScreenDocks.isThumbs);
     // state
     setting->setValue("Geometry", saveGeometry());
     setting->setValue("WindowState", saveState());
@@ -2655,6 +2676,11 @@ Preferences are located in the relevant class and updated here.
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
     cacheStatusWidth = setting->value("cacheStatusWidth").toInt();
     cacheWtAhead = setting->value("cacheWtAhead").toInt();
+    // full screen
+    fullScreenDocks.isFolders = setting->value("isFullScreenFolders").toBool();
+    fullScreenDocks.isFavs = setting->value("isFullScreenFavs").toBool();
+    fullScreenDocks.isMetadata = setting->value("isFullScreenMetadata").toBool();
+    fullScreenDocks.isThumbs = setting->value("isFullScreenThumbs").toBool();
 
     // load state (action->setChecked in action creation)
 

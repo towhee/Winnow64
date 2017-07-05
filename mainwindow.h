@@ -113,6 +113,14 @@ public:
     int cacheStatusWidth;
     int cacheWtAhead;
 
+    // full screen behavior
+    struct FullScreenDocks {
+        bool isFolders;
+        bool isFavs;
+        bool isMetadata;
+        bool isThumbs;
+    } fullScreenDocks, normalDocks;
+
     QString currentViewDir;
 
     bool isSlideShowActive;
@@ -175,10 +183,10 @@ private slots:
     void updatePick();
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
-    void setIncludeSubFolders();
+    void setIncludeSubFolders(bool include);
     void setMaxRecentFolders(int prefMaxRecentFolders);
-//    void setGeneralParameters(bool rememberFolder, bool inclSubfolders, int prefMaxRecentFolders);
     void setSlideShowParameters(int delay, bool isRandom);
+    void setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs);
     void slideShow();
     void nextSlide();
     void setCacheParameters(int size, bool show, int width, int wtAhead);

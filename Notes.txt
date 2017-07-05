@@ -6,7 +6,6 @@ To do:
 - Eject card
 - Tweak settings for load first time
 - Thumbs fit
-- Make workspace dlg combo 2 column
 - Open with another app
 - Rename selected images
 - Tweak context menus
