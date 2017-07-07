@@ -174,7 +174,7 @@ Helper function for in class calls where thumb parameters already defined
         thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
             thumbPadding, labelFontSize, showThumbLabels);
     }
-    qDebug() << "ThumbView::setThumbParameters isGrid:" << isGrid;
+//    qDebug() << "ThumbView::setThumbParameters isGrid:" << isGrid;
 }
 
 void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,

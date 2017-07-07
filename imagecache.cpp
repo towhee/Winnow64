@@ -553,7 +553,7 @@ void ImageCache::updateImageCache(QFileInfoList &imageList, QString &currentImag
             continue;
         }
     }
-    qDebug() << "updateImageCache" << currentImageFullPath;
+//    qDebug() << "updateImageCache" << currentImageFullPath;
     cacheStatus();
     if (cache.key == cache.prevKey &&
             imageList.at(0).absolutePath() == cache.dir) return;

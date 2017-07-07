@@ -365,7 +365,7 @@ void ImageView::resizeImage()
     QSize imgSize = imageLabel->pixmap()->size();
 
     // current image and window dimensions
-    // waait until after scaling to define view space.
+    // wait until after scaling to define view space.
     w.w = width();                  // window space
     w.h = height();
     i.w = imgSize.width();          // image space
@@ -656,6 +656,15 @@ void ImageView::zoomToggle()
     mouseZoomFit = isZoom;
     if (!isZoom) zoom = 1;
     resizeImage();
+}
+
+void ImageView::setImageLabelSize(QSize newSize)
+/* Req'd for placement in compare view where size is not known in advance  */
+{
+    qDebug() << "Before: this / imageLabel / newSize" << this->size() << imageLabel->size() << newSize;
+//    imageLabel->resize(newSize);
+    imageLabel->pixmap()->scaled(newSize);
+    qDebug() << "After:  this / imageLabel / newSize" << this->size() << imageLabel->size() << newSize;
 }
 
 void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)

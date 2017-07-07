@@ -29,6 +29,8 @@ public:
     int getImageWidth();    // used for make thumbs fit which may be toast
     int getImageHeight();
 
+    void setImageLabelSize(QSize newSize);
+
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void setInfo(QString infoString);
     QLabel *pickLabel;      // visibility controlled in MW

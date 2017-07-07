@@ -85,12 +85,12 @@ void MW::setupMainWindow(bool resetSettings)
     this->setWindowTitle("Winnow");
     this->setObjectName("WinnowMW");
 
-    mainLayout = new QHBoxLayout;
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-    mainLayout->setSpacing(0);
-    mainLayout->addWidget(imageView);
-    QWidget *centralWidget = new QWidget;
-    centralWidget->setLayout(mainLayout);
+    loupeLayout = new QHBoxLayout;
+    loupeLayout->setObjectName("loupeLayout");
+    loupeLayout->setContentsMargins(0, 0, 0, 0);
+    loupeLayout->addWidget(imageView);
+    centralWidget = new QWidget;
+    centralWidget->setLayout(loupeLayout);
     setCentralWidget(centralWidget);
 
     // add error trapping for file io  rgh todo
@@ -200,12 +200,14 @@ void MW::folderSelectionChange()
     QDir testDir;
     if (isInitializing) {
         isInitializing = false;
-        if (!rememberLastDir) return;
-        dirPath = lastDir;
-        testDir.setPath(dirPath);
-        // unmounted drive or renamed folder
-        if (!testDir.exists() || !testDir.isReadable()) return;
-        fsTree->setCurrentIndex(fsTree->fsModel->index(dirPath));
+        //        if (!rememberLastDir) return;
+        if (rememberLastDir) {
+            dirPath = lastDir;
+            testDir.setPath(dirPath);
+            // unmounted drive or renamed folder
+            if (!testDir.exists() || !testDir.isReadable()) return;
+            fsTree->setCurrentIndex(fsTree->fsModel->index(dirPath));
+        }
     }
     else {
         dirPath = getSelectedPath();
@@ -324,7 +326,7 @@ void MW::loadImageCache()
     qDebug() << "MW::loadImageCache";
     #endif
     }
-    qDebug() << "MW::loadImageCache";
+//    qDebug() << "MW::loadImageCache";
     metadataLoaded = true;
     QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 
@@ -617,7 +619,7 @@ void MW::createActions()
     asCompareAction = new QAction(tr("Compare"), this);
     asCompareAction->setCheckable(true);
     asCompareAction->setChecked(setting->value("isCompareDisplay").toBool());
-//    connect(asCompareAction, SIGNAL(triggered()), this, SLOT(compareDisplay()));
+    connect(asCompareAction, SIGNAL(triggered()), this, SLOT(compareDisplay()));
 
     centralGroupAction = new QActionGroup(this);
     centralGroupAction->setExclusive(true);
@@ -791,17 +793,17 @@ void MW::createActions()
         }
         else name = "Future Workspace" + QString::number(i);
 
-    workspaceActions.append(new QAction(name, this));
-    if (i < n) {
+        workspaceActions.append(new QAction(name, this));
+        if (i < n) {
+            workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
+            workspaceActions.at(i)->setObjectName(objName);
+            workspaceActions.at(i)->setText(name);
+            workspaceActions.at(i)->setVisible(true);
+        }
+        if (i >= n) workspaceActions.at(i)->setVisible(false);
         workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
-        workspaceActions.at(i)->setObjectName(objName);
-        workspaceActions.at(i)->setText(name);
-        workspaceActions.at(i)->setVisible(true);
     }
-    if (i >= n) workspaceActions.at(i)->setVisible(false);
-    workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
-}
-addActions(workspaceActions);
+    addActions(workspaceActions);
 
 // connection moved to after menu creation as will not work before
 //    connect(workspaceMenu, SIGNAL(triggered(QAction*)),
@@ -1233,6 +1235,71 @@ void MW:: createImageView()
     connect(imageView, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
     connect(thumbView, SIGNAL(thumbClick(float,float)), imageView, SLOT(thumbClick(float,float)));
+}
+
+void MW::compare()
+{
+    QModelIndexList sel = thumbView->selectionModel()->selectedIndexes();
+    int n = sel.count();
+    int row, rows, col, cols;
+    switch (n) {
+    case 2: rows = 1;   cols = 1;   break;
+    case 3: rows = 1;   cols = 3;   break;
+    case 4: rows = 2;   cols = 2;   break;
+    case 5: rows = 2;   cols = 3;   break;
+    case 6: rows = 2;   cols = 3;   break;
+    case 7: rows = 3;   cols = 3;   break;
+    case 8: rows = 3;   cols = 3;   break;
+    case 9: rows = 3;   cols = 3;   break;
+    }
+
+    QList<ImageView*> *ivList = new QList<ImageView*>;
+    QString fPath;
+    int i = 0;
+    for (row = 0; row < rows; ++row) {
+        for (col = 0; col < cols; ++col) {
+            fPath = sel.at(i).data(thumbView->FileNameRole).toString();
+            ImageView *iv = new ImageView(this, metadata, imageCacheThread, false);
+//            iv->loadImage(fPath);
+            ivList->append(iv);
+            delete iv;
+            ivList->at(i)->loadImage(fPath);
+            compareLayout->addWidget(ivList->at(i), row, col);
+            i++;
+            if (i == n) break;
+        }
+    }
+
+//    int row = thumbView->getCurrentRow();
+//    QString fPath1 = thumbView->thumbViewFilter->index(row+1,0,QModelIndex()).data(thumbView->FileNameRole).toString();
+//    QString fPath2 = thumbView->thumbViewFilter->index(row+2,0,QModelIndex()).data(thumbView->FileNameRole).toString();
+//    QString fPath3 = thumbView->thumbViewFilter->index(row+3,0,QModelIndex()).data(thumbView->FileNameRole).toString();
+
+//    ImageView *im1 = new ImageView(this, metadata, imageCacheThread, false);
+//    ImageView *im2 = new ImageView(this, metadata, imageCacheThread, false);
+//    ImageView *im3 = new ImageView(this, metadata, imageCacheThread, false);
+
+//    im1->loadImage(fPath1);
+//    im2->loadImage(fPath2);
+//    im3->loadImage(fPath3);
+
+//    QSize cellSize(centralWidget->width()/2, centralWidget->height()/2);
+////    im1->setImageLabelSize(cellSize);
+////    im1->zoomToFit();
+
+////    compareLayout->setColumnMinimumWidth(0, centralWidget->width()/2);
+////    compareLayout->setRowMinimumHeight(0, centralWidget->height()/2);
+////    compareLayout->setColumnStretch(0,1);
+
+//    compareLayout->addWidget(imageView, 0, 0);
+//    compareLayout->addWidget(im1, 0, 1);
+//    compareLayout->addWidget(im2, 1, 0);
+//    compareLayout->addWidget(im3, 1, 1);
+
+//    qDebug() << "compareLayout->cellRect(0, 1)" << compareLayout->cellRect(0, 1)
+//             << "im1" << im1->size()
+//             << "centralWidget" << centralWidget->size()
+//             << "calc cellSize" << cellSize;
 }
 
 void MW::createStatusBar()
@@ -2230,8 +2297,8 @@ void MW::preferences()
     Prefdlg *prefdlg = new Prefdlg(this, lastPrefPage);
     connect(prefdlg, SIGNAL(updatePage(int)),
         this, SLOT(setPrefPage(int)));
-    connect(prefdlg, SIGNAL(updateInclSubfolders(bool)),
-            this, SLOT(setIncludeSubFolders(bool)));
+//    connect(prefdlg, SIGNAL(updateInclSubfolders(bool)),
+//            this, SLOT(setIncludeSubFolders(bool)));
     connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
             this, SLOT(setRememberLastDir(bool)));
     connect(prefdlg, SIGNAL(updateMaxRecentFolders(int)),
@@ -2251,10 +2318,10 @@ void MW::preferences()
     prefdlg->exec();
 }
 
-void MW::setIncludeSubFolders(bool include)
+void MW::setIncludeSubFolders()
 {
     // need inclSubFolders for passing to functions
-    subFoldersAction->setChecked(include);
+//    subFoldersAction->setChecked(include);
     inclSubfolders = subFoldersAction->isChecked();
     currentViewDir = "";
     folderSelectionChange();
@@ -2861,7 +2928,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     }
     else    // default shortcuts
     {
-        qDebug() << "Default shortcuts";
+//        qDebug() << "Default shortcuts";
         //    formats to set shortcut
         //    nextThumbAction->setShortcut(QKeySequence("Right"));
         //    nextThumbAction->setShortcut((Qt::Key_Right);
@@ -2875,7 +2942,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         //        pasteImageAction->setShortcut(QKeySequence("Ctrl+Shift+V"));
         //        refreshAction->setShortcut(QKeySequence("Ctrl+F5"));
         //        pasteAction->setShortcut(QKeySequence("Ctrl+V"));
-        subFoldersAction->setShortcut(QKeySequence("Ctrl+I"));
+        subFoldersAction->setShortcut(QKeySequence("B"));
         fullScreenAction->setShortcut(QKeySequence("F"));
         escapeFullScreenAction->setShortcut(QKeySequence("Esc"));
         prefAction->setShortcut(QKeySequence("Ctrl+P"));
@@ -2996,7 +3063,7 @@ void MW::updateState()
     setShootingInfo();
     setCentralView();
     setThumbDockFeatures(dockWidgetArea(thumbDock));
-    reportState();
+//    reportState();
 }
 
 /*****************************************************************************************
@@ -3056,6 +3123,22 @@ void MW::loupeDisplay()
     #endif
     }
     imageView->setVisible(true);
+//    qDebug() << "layout" << centralWidget->layout();
+    QLayout *layout = centralWidget->layout();
+    if (layout->objectName() != "loupeLayout" && layout) {
+        while (layout->count() > 0) {
+//            qDebug() << "removing layout" << layout->itemAt(0)->widget();
+            QWidget *w = layout->itemAt(0)->widget();
+            layout->removeWidget(w);
+            if (w != imageView) delete w;
+        }
+        delete layout;
+        loupeLayout = new QHBoxLayout;
+        loupeLayout->setObjectName("loupeLayout");
+        loupeLayout->addWidget(imageView);
+        centralWidget->setLayout(loupeLayout);
+    }
+
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(true);
@@ -3072,7 +3155,23 @@ void MW::gridDisplay()
     #endif
     }
     imageView->setVisible(false);
-    mainLayout->addWidget(thumbView);
+
+    QLayout *layout = centralWidget->layout();
+    if (layout->objectName() != "loupeLayout" && layout) {
+        while (layout->count() > 0) {
+            qDebug() << "removing layout" << layout->itemAt(0)->widget();
+            QWidget *w = layout->itemAt(0)->widget();
+            layout->removeWidget(w);
+            if (w != imageView) delete w;
+        }
+        delete layout;
+        loupeLayout = new QHBoxLayout;
+        loupeLayout->setObjectName("loupeLayout");
+        loupeLayout->addWidget(imageView);
+        centralWidget->setLayout(loupeLayout);
+    }
+
+    loupeLayout->addWidget(thumbView);
     thumbDockVisibleAction->setChecked(false);
     thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                            QDockWidget::DockWidgetMovable  |
@@ -3090,8 +3189,20 @@ void MW::compareDisplay()
     qDebug() << "MW::compareDisplay";
     #endif
     }
+    if (centralWidget->layout()->objectName() == "loupeLayout") {
+        loupeLayout->removeWidget(imageView);
+        delete loupeLayout;
+        compareLayout = new QGridLayout;
+        centralWidget->setLayout(compareLayout);
+        compareLayout->setGeometry(centralWidget->geometry());
+        compareLayout->setMargin(0);
+        compareLayout->setSpacing(0);
+    }
+//    qDebug() << "MW::compareDisplay" << test;
+
     thumbView->isGrid = false;
 
+    compare();
 }
 
 void MW::setMaxNormal()

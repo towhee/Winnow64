@@ -3,6 +3,7 @@ Escape full screen           ⎋
 During slideshow interval    0-9
 Invoke workspace             0-9  ⌘
 Compare view                 C
+Loupe view                   E
 Full screen                  F
 Reveal folder                F    ⌘
 Grid view                    G

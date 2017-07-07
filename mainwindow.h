@@ -183,7 +183,7 @@ private slots:
     void updatePick();
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
-    void setIncludeSubFolders(bool include);
+    void setIncludeSubFolders();
     void setMaxRecentFolders(int prefMaxRecentFolders);
     void setSlideShowParameters(int delay, bool isRandom);
     void setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs);
@@ -381,11 +381,16 @@ private:
     QDockWidget *thumbDock;
     FSTree *fsTree;
     BookMarks *bookmarks;
-    QHBoxLayout *mainLayout;
+    QWidget *centralWidget;
+//    QStackedLayout *mainLayout;
+    QGridLayout *compareLayout;
+    QHBoxLayout *loupeLayout;
     QDockWidget *metadataDock;
     Metadata *metadata;
     ThumbView *thumbView;
     ImageView *imageView;
+//    ImageView *im1;
+//    ImageView *im2;
     MetadataCache *metadataCacheThread;
     ImageCache *imageCacheThread;
     ThumbCache *thumbCacheThread;
@@ -415,6 +420,7 @@ private:
     };
 
     bool isInitializing;
+    bool isStressTest;
 
     bool needThumbsRefresh;         // req'd?
     bool thumbViewBusy;             // req'd?
@@ -440,6 +446,9 @@ private:
     void createBookmarks();
     void writeSettings();
     void loadSettings();
+
+    void compare();
+
     bool isValidPath(QString &path);
     QString getSelectedPath();
     void wheelEvent(QWheelEvent *event);
@@ -456,7 +465,6 @@ private:
     void addRecentFolder(QString fPath);
     void syncRecentFoldersMenu();
 
-    bool isStressTest;
     void stressTest();
 
     //    void setCopyCutActions(bool setEnabled);

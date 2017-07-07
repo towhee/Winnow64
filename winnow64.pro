@@ -62,7 +62,7 @@ iconPixmaps.files = images/icon16/winnow.png
 
 INSTALLS += target icon icon16 iconPixmaps desktop
 
-DISTFILES += Notes.txt CallOrder.txt Errors \
+DISTFILES += Notes.txt Errors \
     Menu.txt \
     teststyle.css \
     qss/WinnowStyle.css \
