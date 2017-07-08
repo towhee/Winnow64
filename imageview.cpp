@@ -52,7 +52,9 @@ the view is as 100%, the same as the original image.
  */
 
 ImageView::ImageView(QWidget *parent, Metadata *metadata,
-                     ImageCache *imageCacheThread, bool isShootingInfoVisible) : QWidget(parent)
+                     ImageCache *imageCacheThread, ThumbView *thumbView,
+                     bool isShootingInfoVisible,
+                     bool isCompareMode) : QWidget(parent)
 {
     {
     #ifdef ISDEBUG
@@ -63,12 +65,17 @@ ImageView::ImageView(QWidget *parent, Metadata *metadata,
     this->mainWindow = parent;
     this->metadata = metadata;
     this->imageCacheThread = imageCacheThread;
+    this->thumbView = thumbView;
 
     shootingInfoVisible = isShootingInfoVisible;
+    if (isCompareMode) setMouseTracking(true);
+    setMouseTracking(true);
     cursorIsHidden = false;
     moveImageLocked = false;
+
     imageLabel = new QLabel;
     imageLabel->setScaledContents(true);
+    imageLabel->setMouseTracking(true);
 
     QHBoxLayout *mainLayout = new QHBoxLayout();
     mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -85,6 +92,7 @@ ImageView::ImageView(QWidget *parent, Metadata *metadata,
     scrlArea->setFrameStyle(0);
     scrlArea->setLayout(mainLayout);
     scrlArea->setWidgetResizable(true);
+    scrlArea->setMouseTracking(true);
 
     QVBoxLayout *scrollLayout = new QVBoxLayout;
     scrollLayout->setContentsMargins(0, 0, 0, 0);
@@ -124,7 +132,7 @@ ImageView::ImageView(QWidget *parent, Metadata *metadata,
     isMouseDoubleClick = false;
 }
 
-bool ImageView::loadImage(QString fPath)
+bool ImageView::loadImage(QModelIndex idx, QString fPath)
 {
     {
     #ifdef ISDEBUG
@@ -136,6 +144,7 @@ bool ImageView::loadImage(QString fPath)
      an image (when currentImagePath.isEmpty() == true) - for example when
      no folder has been chosen. */
     currentImagePath = fPath;
+    imageIndex = idx;
 
     // No folder selected yet
     if (fPath == "") return false;
@@ -344,6 +353,11 @@ bool ImageView::inImageView(QPoint canvasPt)
     #endif
     }
     return windowRect().contains(canvasPt, false);
+}
+
+QSize ImageView::imageSize()
+{
+    return QSize(imageLabel->pixmap()->size());
 }
 
 void ImageView::resizeImage()
@@ -921,6 +935,11 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     #ifdef ISDEBUG
     qDebug() << "ImageView::mouseMoveEvent";
     #endif
+    }
+
+//    qDebug() << hasMouseTracking() << imageIndex << thumbView->currentIndex();
+    if (imageIndex != thumbView->currentIndex()) {
+        thumbView->setCurrentIndex(imageIndex);
     }
     if (event->modifiers() == Qt::ControlModifier) {
     } else {

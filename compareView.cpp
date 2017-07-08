@@ -35,42 +35,135 @@ CompareView::CompareView(QWidget *parent, Metadata *metadata, ThumbView *thumbVi
 bool CompareView::load(const QSize &centralWidgetSize)
 {
     cw = centralWidgetSize;
-    qDebug() << "this vs sentralWidget size" << this->size() << cw;
     ivList->clear();
-    configureGrid(this->thumbView->selectionModel()->selectedIndexes());
-    loadGrid();
-}
-
-void CompareView::configureGrid(QModelIndexList sel)
-{
-    int n = thumbView->selectionModel()->selectedIndexes().count();
-
-    switch (n) {
-    case 2: rows = 1;   cols = 2;   break;
-    case 3: rows = 1;   cols = 3;   break;
-    case 4: rows = 2;   cols = 2;   break;
-    case 5: rows = 2;   cols = 3;   break;
-    case 6: rows = 2;   cols = 3;   break;
-    case 7: rows = 3;   cols = 3;   break;
-    case 8: rows = 3;   cols = 3;   break;
-    case 9: rows = 3;   cols = 3;   break;
+    while (gridLayout->count() > 0) {
+        QWidget *w = gridLayout->itemAt(0)->widget();
+        gridLayout->removeWidget(w);
     }
+    selection = this->thumbView->selectionModel()->selectedIndexes();
+    count = selection.count();
+    if (count > 9) count = 9;
+    for (int i = 0; i < count; ++i) {
+        ivList->append(new ImageView(this, metadata, imageCacheThread, thumbView, true, true));
+        QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
+        ivList->at(i)->loadImage(selection.at(i), fPath);
+    }
+    configureGrid();
+    loadGrid();
 }
 
 void CompareView::loadGrid()
 {
-    ivList = new QList<ImageView*>;
-    QModelIndexList sel = thumbView->selectionModel()->selectedIndexes();
-    int n = sel.count();
     int i = 0;
     int row, col;
     for (row = 0; row < rows; ++row) {
         for (col = 0; col < cols; ++col) {
-            ivList->append(new ImageView(this, metadata, imageCacheThread, false));
-            ivList->at(i)->loadImage(sel.at(i).data(thumbView->FileNameRole).toString());
             gridLayout->addWidget(ivList->at(i), row, col);
             i++;
-            if (i == n) break;
+            if (i == count) break;
         }
+        if (i == count) break;
     }
+}
+
+void CompareView::configureGrid()
+{
+    long area1, area2, area3;
+    switch (count) {
+    case 2:
+        if (area(1, 2) > area(2, 1)) {
+            rows = 1;
+            cols = 2;
+        }
+        else {
+            rows = 2;
+            cols = 1;
+        }
+        break;
+    case 3:
+        if (area(1, 3) > area(3, 1)) {
+            rows = 1;
+            cols = 3;
+        }
+        else {
+            rows = 3;
+            cols = 1;
+        }
+        break;
+    case 4:
+        area1 = area(2, 2);
+        area2 = area(1, 4);
+        area3 = area(4, 1);
+        if (area1 >= area2 && area1 >= area3) {
+            rows = 2;
+            cols = 2;
+            break;
+        }
+        if (area2 > area1 && area2 > area3) {
+            rows = 1;
+            cols = 4;
+            break;
+        }
+        if (area3 > area1 && area3 > area2) {
+            rows = 4;
+            cols = 1;
+            break;
+        }
+        break;
+    case 5:
+        if (area(2, 3) > area(3, 2)) {
+            rows = 3;
+            cols = 2;
+        }
+        else {
+            rows = 2;
+            cols = 3;
+        }
+        break;
+    case 6:
+        if (area(2, 3) > area(3, 2)) {
+            rows = 3;
+            cols = 2;
+        }
+        else {
+            rows = 2;
+            cols = 3;
+        }
+        break;
+    case 7: rows = 3;   cols = 3;   break;
+    case 8:
+        area1 = area(3, 3);
+        area2 = area(2, 4);
+        area3 = area(4, 2);
+        if (area1 >= area2 && area1 >= area3) {
+            rows = 3;
+            cols = 3;
+            break;
+        }
+        if (area2 > area1 && area2 > area3) {
+            rows = 2;
+            cols = 4;
+            break;
+        }
+        if (area3 > area1 && area3 > area2) {
+            rows = 4;
+            cols = 2;
+            break;
+        }
+        break;
+    case 9: rows = 3;   cols = 3;   break;
+    }
+}
+
+long CompareView::area(int rows, int cols)
+{
+    QSize cell(cw.width() / cols, cw.height() / rows);
+    long area = 0;
+
+    for (int i = 0; i < count; ++i) {
+        QSize imSize = ivList->at(i)->imageSize();
+        imSize.scale(cell, Qt::KeepAspectRatio);
+        area += imSize.width() * imSize.height();
+    }
+    return area;
 }

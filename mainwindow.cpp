@@ -41,6 +41,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     isInitializing = true;
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
+    popUp = new PopUp;
+//    this->setMouseTracking(true);
 //    addRecentFolder("");    // temp for testing
 
     setting = new QSettings("Winnow", "winnow_100");
@@ -86,12 +88,15 @@ void MW::setupMainWindow(bool resetSettings)
     this->setWindowTitle("Winnow");
     this->setObjectName("WinnowMW");
 
-    loupeLayout = new QHBoxLayout;
-    loupeLayout->setObjectName("loupeLayout");
-    loupeLayout->setContentsMargins(0, 0, 0, 0);
-    loupeLayout->addWidget(imageView);
+    centralLayout = new QHBoxLayout;
+    centralLayout->setObjectName("loupeLayout");
+    centralLayout->setContentsMargins(0, 0, 0, 0);
+    centralLayout->addWidget(imageView);
+    centralLayout->addWidget(compareView);
+    compareView->setVisible(false);
     centralWidget = new QWidget;
-    centralWidget->setLayout(loupeLayout);
+    centralWidget->setLayout(centralLayout);
+//    centralWidget->setMouseTracking(true);
     setCentralWidget(centralWidget);
 
     // add error trapping for file io  rgh todo
@@ -127,7 +132,7 @@ E (loupe) and G (grid).
                 slideShowTimer->setInterval(n * 1000);
                 QString msg = "Reset slideshow interval to ";
                 msg += QString::number(n) + " seconds";
-                popUp->runPopup(this, msg, 1000, 0.5);
+                popUp->showPopup(this, msg, 1000, 0.5);
 //                popUp->show();
             }
         }
@@ -277,7 +282,7 @@ void MW::fileSelectionChange()
     QString fPath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
 
     // use cache if image loaded, else read it from file
-    if (imageView->loadImage(fPath)) {
+    if (imageView->loadImage(thumbView->currentIndex(), fPath)) {
         if (G::isThreadTrackingOn) qDebug()
             << "MW::fileSelectionChange - loaded image file " << fPath;
         updatePick();
@@ -1222,7 +1227,8 @@ void MW:: createImageView()
     #endif
     }
     imageCacheThread = new ImageCache(this, metadata);
-    imageView = new ImageView(this, metadata, imageCacheThread, setting->value("isImageInfoVisible").toBool());
+    imageView = new ImageView(this, metadata, imageCacheThread, thumbView,
+                              setting->value("isImageInfoVisible").toBool(), false);
 //    connect(copyImageAction, SIGNAL(triggered()), imageView, SLOT(copyImage()));
 //    connect(pasteImageAction, SIGNAL(triggered()), imageView, SLOT(pasteImage()));
     connect(metadataCacheThread, SIGNAL(updateIsRunning(bool)),
@@ -1241,51 +1247,6 @@ void MW:: createImageView()
 void MW::createCompareView()
 {
     compareView = new CompareView(this, metadata, thumbView, imageCacheThread);
-}
-
-void MW::compare()
-{
-//    QHBoxLayout *mainLayout = new QHBoxLayout();
-//    mainLayout->setContentsMargins(0, 0, 0, 0);
-//    mainLayout->setSpacing(0);
-    QWidget *horizontalLayoutWidget = new QWidget;
-    loupeLayout->addWidget(horizontalLayoutWidget);
-//    horizontalLayoutWidget->setGeometry(QRect(0,0,500,500));
-    QFrame *frame = new QFrame(horizontalLayoutWidget);
-//    frame->setGeometry(QRect(0,0,500,500));
-    QGridLayout *gridLayout = new QGridLayout(frame);
-    gridLayout->setMargin(0);
-    gridLayout->setSpacing(0);
-
-    QModelIndexList sel = thumbView->selectionModel()->selectedIndexes();
-    int n = sel.count();
-
-    int row, rows, col, cols;
-    switch (n) {
-    case 2: rows = 1;   cols = 2;   break;
-    case 3: rows = 1;   cols = 3;   break;
-    case 4: rows = 2;   cols = 2;   break;
-    case 5: rows = 2;   cols = 3;   break;
-    case 6: rows = 2;   cols = 3;   break;
-    case 7: rows = 3;   cols = 3;   break;
-    case 8: rows = 3;   cols = 3;   break;
-    case 9: rows = 3;   cols = 3;   break;
-    }
-
-    QList<ImageView*> *ivList = new QList<ImageView*>;
-    QString fPath;
-
-    int i = 0;
-    for (row = 0; row < rows; ++row) {
-        for (col = 0; col < cols; ++col) {
-//            fPath = sel.at(i).data(thumbView->FileNameRole).toString();
-            ivList->append(new ImageView(this, metadata, imageCacheThread, false));
-            ivList->at(i)->loadImage(sel.at(i).data(thumbView->FileNameRole).toString());
-            gridLayout->addWidget(ivList->at(i), row, col);
-            i++;
-            if (i == n) break;
-        }
-    }
 }
 
 void MW::createStatusBar()
@@ -3109,21 +3070,7 @@ void MW::loupeDisplay()
     #endif
     }
     imageView->setVisible(true);
-
-//    QLayout *layout = centralWidget->layout();
-//    if (layout->objectName() != "loupeLayout" && layout) {
-//        while (layout->count() > 0) {
-//            QWidget *w = layout->itemAt(0)->widget();
-//            layout->removeWidget(w);
-//            if (w != imageView) delete w;
-//        }
-//        delete layout;
-//        loupeLayout = new QHBoxLayout;
-//        loupeLayout->setObjectName("loupeLayout");
-//        loupeLayout->addWidget(imageView);
-//        centralWidget->setLayout(loupeLayout);
-//    }
-
+    compareView->setVisible(false);
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(true);
@@ -3140,23 +3087,8 @@ void MW::gridDisplay()
     #endif
     }
     imageView->setVisible(false);
-
-//    QLayout *layout = centralWidget->layout();
-//    if (layout->objectName() != "loupeLayout" && layout) {
-//        while (layout->count() > 0) {
-//            qDebug() << "removing layout" << layout->itemAt(0)->widget();
-//            QWidget *w = layout->itemAt(0)->widget();
-//            layout->removeWidget(w);
-//            if (w != imageView) delete w;
-//        }
-//        delete layout;
-//        loupeLayout = new QHBoxLayout;
-//        loupeLayout->setObjectName("loupeLayout");
-//        loupeLayout->addWidget(imageView);
-//        centralWidget->setLayout(loupeLayout);
-//    }
-
-    loupeLayout->addWidget(thumbView);
+    compareView->setVisible(false);
+    centralLayout->addWidget(thumbView);
     thumbDockVisibleAction->setChecked(false);
     thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                            QDockWidget::DockWidgetMovable  |
@@ -3175,29 +3107,27 @@ void MW::compareDisplay()
     #endif
     }
     int n = thumbView->selectionModel()->selectedIndexes().count();
-    if (n < 2 || n > 9) return;
-
-//    if (centralWidget->layout()->objectName() == "loupeLayout") {
-//        loupeLayout->removeWidget(imageView);
-//        delete loupeLayout;
-//        compareLayout = new QGridLayout;
-//        centralWidget->setLayout(compareLayout);
-//        compareLayout->setGeometry(centralWidget->geometry());
-//        compareLayout->setMargin(0);
-//        compareLayout->setSpacing(0);
-//    }
-
+    if (n < 2) {
+        popUp->showPopup(this, "Select more than one image to compare.", 1000, 0.75);
+        return;
+    }
+    if (n > 9) {
+        QString msg = QString::number(n);
+        msg += " images have been selected.  Only the first 9 will be compared.";
+        popUp->showPopup(this, msg, 2000, 0.75);
+    }
     imageView->setVisible(false);
+    compareView->setVisible(true);
+
+    thumbDock->setWidget(thumbView);
+    setThumbDockFeatures(dockWidgetArea(thumbDock));
+    thumbDockVisibleAction->setChecked(true);
     thumbView->isGrid = false;
-//    centralWidget->setLayout(compareLayout);
-//    compareLayout->setGeometry(centralWidget->geometry());
-//    compareLayout->setMargin(0);
-//    compareLayout->setSpacing(0);
+    thumbView->setThumbParameters();
+    setThumbDockVisibity();
 
     compareView->load(centralWidget->size());
-    loupeLayout->addWidget(compareView);
-
-//    compare();
+//    centralLayout->addWidget(compareView);
 }
 
 void MW::setFullNormal()
@@ -3574,21 +3504,19 @@ void MW::slideShow()
     if (isSlideShowActive) {
         isSlideShowActive = false;
         slideShowAction->setText(tr("Slide Show"));
-        popUp->runPopup(this, "Stopping slideshow", 1000, 0.5);
+        popUp->showPopup(this, "Stopping slideshow", 1000, 0.5);
         slideShowTimer->stop();
         delete slideShowTimer;
 //        delete popUp;
     } else {
         isSlideShowActive = true;
-        popUp = new PopUp;
-
         QString msg = "Starting slideshow";
         msg += "\nInterval = " + QString::number(slideShowDelay) + " second(s)";
         if (slideShowRandom)  msg += "\nRandom selection";
         else msg += "\nLinear selection";
         if (slideShowWrap) msg += "\nWrap at end of slides";
         else msg += "\nStop at end of slides";
-        popUp->runPopup(this, msg, 4000, 0.5);
+        popUp->showPopup(this, msg, 4000, 0.5);
 
         if (isStressTest) getSubfolders("/users/roryhill/pictures");
 

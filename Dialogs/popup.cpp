@@ -116,7 +116,7 @@ void PopUp::setPopupDuration(int msDuration)
     popupDuration = msDuration;
 }
 
-void PopUp::runPopup(QWidget *widget, const QString &text, int msDuration, float opacity)
+void PopUp::showPopup(QWidget *widget, const QString &text, int msDuration, float opacity)
 {
     popupDuration = msDuration;
     popupOpacity = opacity;

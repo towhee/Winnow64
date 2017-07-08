@@ -385,7 +385,7 @@ private:
     QWidget *centralWidget;
 //    QStackedLayout *mainLayout;
     QGridLayout *compareLayout;
-    QHBoxLayout *loupeLayout;
+    QHBoxLayout *centralLayout;
     QDockWidget *metadataDock;
     Metadata *metadata;
     ThumbView *thumbView;
@@ -449,8 +449,6 @@ private:
     void createBookmarks();
     void writeSettings();
     void loadSettings();
-
-    void compare();
 
     bool isValidPath(QString &path);
     QString getSelectedPath();

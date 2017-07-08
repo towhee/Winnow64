@@ -25,13 +25,16 @@ private:
     QGridLayout *gridLayout;
 
     QList<ImageView*> *ivList;
+    QModelIndexList selection;
 
     QSize cw;       // central widget in parent
+    int count;      // number of images to compare
     int rows;
     int cols;
 
-    void configureGrid(QModelIndexList sel);
+    void configureGrid();
     void loadGrid();
+    long area(int rows, int cols);
 };
 
 #endif // COMPARE_H

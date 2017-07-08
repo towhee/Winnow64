@@ -5,6 +5,7 @@
 #include <QHash>
 #include "metadata.h"
 #include "imagecache.h"
+#include "thumbcache.h"
 #include "dropshadowlabel.h"
 
 class ImageView : public QWidget
@@ -13,23 +14,25 @@ class ImageView : public QWidget
 
 public:
     ImageView(QWidget *parent, Metadata *metadata, ImageCache *imageCacheThread,
-              bool isShootingInfoVisible);
+             ThumbView *thumbView, bool isShootingInfoVisible, bool isCompareMode);
 
     QScrollArea *scrlArea;
     QLabel *infoLabel;
     QLabel *infoLabelShadow;
     DropShadowLabel *infoDropShadow;
     float zoom;
+    QModelIndex imageIndex;
 
     bool loadPixmap(QString &imageFullPath, QPixmap &pm);
-    bool loadImage(QString imageFileName);
+    bool loadImage(QModelIndex idx, QString imageFileName);
     void clear();
     void setCursorHiding(bool hide);
     void refresh();
     int getImageWidth();    // used for make thumbs fit which may be toast
     int getImageHeight();
 
-    void setImageLabelSize(QSize newSize);
+    void setImageLabelSize(QSize newSize);      // req'd?
+    QSize imageSize();
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void setInfo(QString infoString);
@@ -65,6 +68,7 @@ private:
     QWidget *mainWindow;
     Metadata *metadata;
     ImageCache *imageCacheThread;
+    ThumbView *thumbView;
     QImageReader imageReader;
     QLabel *imageLabel;
     QPixmap displayPixmap;

@@ -19,7 +19,7 @@ public:
     void setPopupOpacity(float opacity);
     float getPopupOpacity() const;
     void setPopupDuration(int msDuration);
-    void runPopup(QWidget *widget, const QString &text, int msDuration, float opacity);
+    void showPopup(QWidget *widget, const QString &text, int msDuration, float opacity);
 
 protected:
     void paintEvent(QPaintEvent *event);    // The background will be drawn through the redraw method
