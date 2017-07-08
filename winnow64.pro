@@ -24,7 +24,8 @@ HEADERS += \
     Dialogs/prefdlg.h \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
-    Dialogs/popup.h
+    Dialogs/popup.h \
+    compareview.h
 SOURCES += \
     bookmarks.cpp \
     dircompleter.cpp \
@@ -45,7 +46,8 @@ SOURCES += \
     Dialogs/prefdlg.cpp \
     Dialogs/workspacedlg.cpp \
     Dialogs/copypickdlg.cpp \
-    Dialogs/popup.cpp
+    Dialogs/popup.cpp \
+    compareView.cpp
 FORMS += \
     copypickdlg.ui \
     prefdlg.ui \

@@ -15,6 +15,7 @@
 #include "popup.h"
 #include "bookmarks.h"
 #include "infoview.h"
+#include "compareview.h"
 #include "ui_helpform.h"
 #include "sstream"
 #include <iostream>
@@ -203,7 +204,7 @@ private slots:
     void cleanupSender();
     void externalAppError();
 
-    void setMaxNormal();
+    void setFullNormal();
     void setCentralView();
     void setThumbDockVisibity();
     void setFolderDockVisibility();
@@ -389,6 +390,7 @@ private:
     Metadata *metadata;
     ThumbView *thumbView;
     ImageView *imageView;
+    CompareView *compareView;
 //    ImageView *im1;
 //    ImageView *im2;
     MetadataCache *metadataCacheThread;
@@ -437,6 +439,7 @@ private:
     void handleStartupArgs();
     void addMenuSeparator(QWidget *widget);
     void createImageView();
+    void createCompareView();
     void createThumbView();
     void createActions();
     void createMenus();

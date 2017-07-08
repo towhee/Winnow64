@@ -1243,51 +1243,6 @@ void MW::createCompareView()
     compareView = new CompareView(this, metadata, thumbView, imageCacheThread);
 }
 
-void MW::compare()
-{
-//    QHBoxLayout *mainLayout = new QHBoxLayout();
-//    mainLayout->setContentsMargins(0, 0, 0, 0);
-//    mainLayout->setSpacing(0);
-    QWidget *horizontalLayoutWidget = new QWidget;
-    loupeLayout->addWidget(horizontalLayoutWidget);
-//    horizontalLayoutWidget->setGeometry(QRect(0,0,500,500));
-    QFrame *frame = new QFrame(horizontalLayoutWidget);
-//    frame->setGeometry(QRect(0,0,500,500));
-    QGridLayout *gridLayout = new QGridLayout(frame);
-    gridLayout->setMargin(0);
-    gridLayout->setSpacing(0);
-
-    QModelIndexList sel = thumbView->selectionModel()->selectedIndexes();
-    int n = sel.count();
-
-    int row, rows, col, cols;
-    switch (n) {
-    case 2: rows = 1;   cols = 2;   break;
-    case 3: rows = 1;   cols = 3;   break;
-    case 4: rows = 2;   cols = 2;   break;
-    case 5: rows = 2;   cols = 3;   break;
-    case 6: rows = 2;   cols = 3;   break;
-    case 7: rows = 3;   cols = 3;   break;
-    case 8: rows = 3;   cols = 3;   break;
-    case 9: rows = 3;   cols = 3;   break;
-    }
-
-    QList<ImageView*> *ivList = new QList<ImageView*>;
-    QString fPath;
-
-    int i = 0;
-    for (row = 0; row < rows; ++row) {
-        for (col = 0; col < cols; ++col) {
-//            fPath = sel.at(i).data(thumbView->FileNameRole).toString();
-            ivList->append(new ImageView(this, metadata, imageCacheThread, false));
-            ivList->at(i)->loadImage(sel.at(i).data(thumbView->FileNameRole).toString());
-            gridLayout->addWidget(ivList->at(i), row, col);
-            i++;
-            if (i == n) break;
-        }
-    }
-}
-
 void MW::createStatusBar()
 {
     {
