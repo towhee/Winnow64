@@ -9,7 +9,8 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-/*
+/*  COORDINATE SPACES
+
 The ImageView coordinate system (units are all pixels) and (0, 0) is the top
 left corner in each space.
 
@@ -18,7 +19,7 @@ being much larger than the display window (when zoomed in) to smaller when
 zoomed out.
 
 The window space: the area in the application that contains the image.  The
-window can be a different aspect ratio from the image.
+window can be a different aspect ratio from the image.  The object is the scrlArea.
 
 The view space: the portion of the scaled image within the window container.
 Since the scaled image can be smaller than the window space, for example, when the image aspect ratio
@@ -36,16 +37,19 @@ Naming convention
     i.w, i.h = image size
     w.w, w.h = window size
     v.w, v.h = view size
+    f.w, f,h = fit view (zoom so image just fits in the window, a special case of view space)
 
     i.x, i.y = image coordinate
     w.x, w.y = window coordinate
     v.x, v.y = view coordinates
+    f.x, f.y = fit coordinates
 
 Objects used
 
     image space  = imageLabel->pixmap()
     window space = this
     view space   = imageLabel  // scaled to window space
+    fit space    = imageLabel  // scaled to fit in window space
 
 The view scaling is controlled by the zoomFactor.  When zoomFactor = 1
 the view is as 100%, the same as the original image.
@@ -127,6 +131,7 @@ ImageView::ImageView(QWidget *parent, Metadata *metadata,
     mouseZoomFit = true;
     isMouseDrag = false;
     isMouseDoubleClick = false;
+    isResizeSourceMouseClick = false;
 }
 
 bool ImageView::loadImage(QModelIndex idx, QString fPath)
@@ -373,21 +378,23 @@ void ImageView::resizeImage()
     // Program opening - no folder selected yet
     if (currentImagePath == "") return;
 
-    qDebug() << "Start image resize"
-             << "isZoom" << isZoom
-             << "mouse" << mouse.x << mouse.y
-             << "geometry" << imageLabel->geometry();
+    if (isResizeSourceMouseClick) {
+        qDebug() << currentImagePath
+                 << "\nStart image resize"
+                 << "isZoom" << isZoom
+                 << "mouse" << mouse.x << mouse.y
+                 << "geometry" << imageLabel->geometry();
 
-    if (!isZoom) {
-        f.w = imageLabel->geometry().width();
-        f.h = imageLabel->geometry().height();
-        f.x = imageLabel->geometry().topLeft().x() - mouse.x;
-        f.y = imageLabel->geometry().topLeft().y() - mouse.y;
-        compareMouseRelLoc.setX((float)f.x / f.w);
-        compareMouseRelLoc.setY((float)f.y / f.h);
-        qDebug() << "compareMouseRelLoc" << compareMouseRelLoc;
+        if (!isZoom) {
+            f.w = imageLabel->geometry().width();
+            f.h = imageLabel->geometry().height();
+            f.x = mouse.x - imageLabel->geometry().topLeft().x();
+            f.y = mouse.y - imageLabel->geometry().topLeft().y();
+            compareMouseRelLoc.setX((float)f.x / f.w);
+            compareMouseRelLoc.setY((float)f.y / f.h);
+            qDebug() << "compareMouseRelLoc" << compareMouseRelLoc;
+        }
     }
-
     // get the size of the scaled image
     QSize imgSize = imageLabel->pixmap()->size();
 
@@ -867,13 +874,18 @@ void ImageView::compareZoomAtCoord(QPointF coord, bool isZoom)
 /* Same as when user mouse clicks on the image.  Called from compareView to
 replicate zoom in al compare images.
 */
-    qDebug() << "ImageView::compareZoomAtCoord";
+    qDebug() << "\n" << currentImagePath;
+    qDebug() << "ImageView::compareZoomAtCoord" << coord;
     zoom = 1.0;     // if zoomToFit then zoom reset in resize
     mouseZoomFit = !mouseZoomFit;
     f.w = imageLabel->geometry().width();
     f.h = imageLabel->geometry().height();
     mouse.x = imageLabel->geometry().topLeft().x() + coord.x() * f.w;
-    mouse.y = imageLabel->geometry().topLeft().y() + coord.x() * f.h;
+    mouse.y = imageLabel->geometry().topLeft().y() + coord.y() * f.h;
+    qDebug() << "imageLabel->geometry().topLeft().x()" << imageLabel->geometry().topLeft().x()
+             << "imageLabel->geometry().topLeft().y()" << imageLabel->geometry().topLeft().y()
+             << "w, h, mouse.x, mouse.y" << f.w << f.h
+             << mouse.x << mouse.y << "\n";
     isResizeSourceMouseClick = false;
     resizeImage();
 }
