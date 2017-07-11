@@ -133,6 +133,15 @@ void ThumbViewDelegate::paint(
         QPen selectedPen(Qt::white);
         selectedPen.setWidth(2);
         painter->setPen(selectedPen);
+//        if (index == currentIndex) {
+//            QPen selectedPen(Qt::white);
+//            selectedPen.setWidth(2);
+//            painter->setPen(selectedPen);
+//        } else {
+//            QPen selectedPen(Qt::darkGray);
+//            selectedPen.setWidth(2);
+//            painter->setPen(selectedPen);
+//        }
     } else {
         QPen activePen(borderGray);
         activePen.setWidth(1);

@@ -31,6 +31,8 @@ public:
     int getImageWidth();    // used for make thumbs fit which may be toast
     int getImageHeight();
 
+    void compareZoomAtCoord(QPointF coord, bool isZoom);
+
     void setImageLabelSize(QSize newSize);      // req'd?
     QSize imageSize();
 
@@ -53,6 +55,7 @@ public slots:
 signals:
     void togglePick();
     void updateStatus(bool, QString);
+    void compareZoom(QPointF coord, QModelIndex imageIndex, bool isZoom);
 
 private slots:
 
@@ -63,12 +66,14 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
+    void enterEvent(QEvent *event);
 
 private:
     QWidget *mainWindow;
     Metadata *metadata;
     ImageCache *imageCacheThread;
     ThumbView *thumbView;
+    bool isCompareMode;
     QImageReader imageReader;
     QLabel *imageLabel;
     QPixmap displayPixmap;
@@ -88,6 +93,7 @@ private:
     intSize i;     // image
     intSize v;     // view
     intSize w;     // canvas or label
+    intSize f;     // label in fit view
 
     struct floatSize
     {
@@ -103,6 +109,8 @@ private:
 
     pt mouse;
 
+    QPointF compareMouseRelLoc;
+
     QString currentImagePath;
     bool shootingInfoVisible;
 
@@ -114,6 +122,7 @@ private:
     bool isMouseDrag;
     bool isMouseDoubleClick;
     bool isMouseClickInLabel;
+    bool isResizeSourceMouseClick;
 
     float zoomFit;
     float zoomInc = 0.1;    // 10% delta

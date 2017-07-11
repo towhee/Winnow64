@@ -14,6 +14,11 @@ public:
     CompareView(QWidget *parent, Metadata *metadata, ThumbView *thumbView,
                 ImageCache *imageCacheThread);
     bool load(const QSize &centralWidgetSize);
+    void pick(bool isPick, QModelIndex idx);
+    void showShootingInfo(bool isVisible);
+
+public slots:
+    void zoom(QPointF coord, QModelIndex idx, bool isZoom);
 
 private:
     Metadata *metadata;

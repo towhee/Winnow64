@@ -3071,6 +3071,8 @@ void MW::loupeDisplay()
     }
     imageView->setVisible(true);
     compareView->setVisible(false);
+    thumbView->thumbViewDelegate->isCompare = true;
+
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(true);
@@ -3088,6 +3090,8 @@ void MW::gridDisplay()
     }
     imageView->setVisible(false);
     compareView->setVisible(false);
+    thumbView->thumbViewDelegate->isCompare = false;
+
     centralLayout->addWidget(thumbView);
     thumbDockVisibleAction->setChecked(false);
     thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -3126,6 +3130,7 @@ void MW::compareDisplay()
     thumbView->setThumbParameters();
     setThumbDockVisibity();
 
+    thumbView->thumbViewDelegate->isCompare = true;
     compareView->load(centralWidget->size());
 //    centralLayout->addWidget(compareView);
 }
@@ -3155,6 +3160,8 @@ void MW::setShootingInfo() {
     #endif
     }
     imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
+    if (asCompareAction->isChecked())
+        compareView->showShootingInfo(infoVisibleAction->isChecked());
 }
 
 void MW::setThumbDockVisibity()
@@ -3417,15 +3424,11 @@ void MW::togglePick()
                  ->setData(pickStatus, thumbView->UserRoles::PickedRole);
     }
 
-    if (indexesList.length() == 1) {
-        if (pickStatus == "true") {
-//            thumbView->thumbViewModel->item(index.row())->setBackground(Qt::red);
-            imageView->pickLabel->setVisible(true);
-        } else {
-//            thumbView->thumbViewModel->item(index.row())->setBackground(Qt::darkGray);
-            imageView->pickLabel->setVisible(false);
-        }
-    }
+    index = thumbView->currentIndex();
+    bool isPick = (pickStatus == "true");
+
+    imageView->pickLabel->setVisible(isPick);
+    if (asCompareAction->isChecked()) compareView->pick(isPick, index);
 }
 
 // When a new image is selected and shown in imageView update the visibility
@@ -3439,8 +3442,10 @@ void MW::updatePick()
     }
     QModelIndex idx = thumbView->currentIndex();
     bool isPick = qvariant_cast<bool>(idx.data(thumbView->PickedRole));
-    (isPick) ? imageView->pickLabel->setVisible(true)
-             : imageView->pickLabel->setVisible(false);
+    if (asLoupeAction->isChecked())
+        (isPick) ? imageView->pickLabel->setVisible(true)
+                 : imageView->pickLabel->setVisible(false);
+    if (asCompareAction->isChecked()) compareView->pick(isPick, idx);
 }
 
 void MW::copyPicks()

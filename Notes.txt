@@ -467,3 +467,70 @@ QSpinBox::up-button, QSpinBox::down-button {
     image: QStyle::SP_ArrowDown;
 }
 
+imageLabel = new QLabel;
+imageLabel->setScaledContents(true);
+imageLabel->setContentsMargins(9,9,9,9);
+//    imageLabel->setMargin();
+//    imageLabel->setFrameStyle(QFrame::Panel);
+//    imageLabel->setIndent(2);
+//    imageLabel->setMouseTracking(true);
+imageLabel->setStyleSheet(":hover {border: 1px solid white;}");  // not working
+
+    QHBoxLayout *mainLayout = new QHBoxLayout();
+    mainLayout->setContentsMargins(2,2,2,2);
+    mainLayout->setSpacing(0);
+        mainLayout->setAlignment(Qt::AlignCenter);
+    mainLayout->addWidget(imageLabel);
+
+//            this->setLayout(mainLayout);
+
+    scrlArea = new QScrollArea;
+//        scrlArea->setContentsMargins(0,0,0,0);
+//    scrlArea->setAlignment(Qt::AlignCenter);
+//        scrlArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+//        scrlArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+//        scrlArea->verticalScrollBar()->blockSignals(true);
+//        scrlArea->horizontalScrollBar()->blockSignals(true);
+//        scrlArea->setFrameStyle(0);       // just so can see frame
+    scrlArea->setLayout(mainLayout);
+//        scrlArea->setWidgetResizable(true);
+//    scrlArea->setStyleSheet(":hover {border: 1px solid yellow;}");
+//    scrlArea->setMouseTracking(true);
+
+    QHBoxLayout *scrollLayout = new QHBoxLayout;
+//    scrollLayout->setContentsMargins(9,9,9,9);
+//    scrollLayout->setSpacing(0);
+    scrollLayout->addWidget(scrlArea);
+    this->setLayout(scrollLayout);
+
+infoDropShadow = new DropShadowLabel(this);
+infoDropShadow->setVisible(shootingInfoVisible);
+infoDropShadow->setAttribute(Qt::WA_TranslucentBackground);
+
+infoLabel = new QLabel(this);
+infoLabel->setVisible(shootingInfoVisible);
+infoLabelShadow = new QLabel(this);
+infoLabelShadow->setVisible(shootingInfoVisible);
+infoLabel->setAttribute(Qt::WA_TranslucentBackground);
+infoLabelShadow->setAttribute(Qt::WA_TranslucentBackground);
+
+pickLabel = new QLabel(this);
+pickLabel->setFixedSize(40,48);
+pickLabel->setAttribute(Qt::WA_TranslucentBackground);
+thumbsUp.load(":/images/ThumbsUp48.png");
+pickLabel->setPixmap(QPixmap::fromImage(thumbsUp));
+pickLabel->setVisible(false);
+
+QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
+infoEffect->setOpacity(0.8);
+infoLabel->setGraphicsEffect(infoEffect);
+infoLabelShadow->setGraphicsEffect(infoEffect);
+infoDropShadow->setGraphicsEffect(infoEffect);
+
+mouseMovementTimer = new QTimer(this);
+connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
+
+mouseZoomFit = true;
+isMouseDrag = false;
+isMouseDoubleClick = false;
+}

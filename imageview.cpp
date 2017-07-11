@@ -2,6 +2,7 @@
 #include <math.h>
 #include "global.h"
 #include "imageview.h"
+#include <QApplication>
 
 #define CLIPBOARD_IMAGE_NAME		"clipboard.png"
 #define ROUND(x) ((int) ((x) + 0.5))
@@ -66,37 +67,33 @@ ImageView::ImageView(QWidget *parent, Metadata *metadata,
     this->metadata = metadata;
     this->imageCacheThread = imageCacheThread;
     this->thumbView = thumbView;
+    this->isCompareMode = isCompareMode;
 
     shootingInfoVisible = isShootingInfoVisible;
-    if (isCompareMode) setMouseTracking(true);
-    setMouseTracking(true);
     cursorIsHidden = false;
     moveImageLocked = false;
+//    setMouseTracking(true);
 
+    // imageLabel contains the image pixmap
     imageLabel = new QLabel;
     imageLabel->setScaledContents(true);
-    imageLabel->setMouseTracking(true);
+//    imageLabel->setAlignment(Qt::AlignLeft);
+    imageLabel->setContentsMargins(1,1,1,1);    // room for border when hover in compare mode
+    if (isCompareMode)
+        imageLabel->setStyleSheet(":hover {border: 1px solid white;}");
 
     QHBoxLayout *mainLayout = new QHBoxLayout();
-    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setContentsMargins(0,0,0,0);    // do not change or adjust coordinate calc
     mainLayout->setSpacing(0);
     mainLayout->addWidget(imageLabel);
 
     scrlArea = new QScrollArea;
-    scrlArea->setContentsMargins(0, 0, 0, 0);
-    scrlArea->setAlignment(Qt::AlignCenter);
-    scrlArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scrlArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scrlArea->verticalScrollBar()->blockSignals(true);
-    scrlArea->horizontalScrollBar()->blockSignals(true);
-    scrlArea->setFrameStyle(0);
+    scrlArea->setContentsMargins(0,0,0,0);
+    scrlArea->setFrameStyle(QFrame::NoFrame);
     scrlArea->setLayout(mainLayout);
-    scrlArea->setWidgetResizable(true);
-    scrlArea->setMouseTracking(true);
 
-    QVBoxLayout *scrollLayout = new QVBoxLayout;
-    scrollLayout->setContentsMargins(0, 0, 0, 0);
-    scrollLayout->setSpacing(0);
+    QHBoxLayout *scrollLayout = new QHBoxLayout;
+    scrollLayout->setContentsMargins(0,0,0,0);
     scrollLayout->addWidget(scrlArea);
     this->setLayout(scrollLayout);
 
@@ -375,17 +372,35 @@ void ImageView::resizeImage()
     // Program opening - no folder selected yet
     if (currentImagePath == "") return;
 
+    qDebug() << "Start image resize"
+             << "isZoom" << isZoom
+             << "mouse" << mouse.x << mouse.y
+             << "geometry" << imageLabel->geometry();
+
+    if (!isZoom) {
+        f.w = imageLabel->geometry().width();
+        f.h = imageLabel->geometry().height();
+        f.x = imageLabel->geometry().topLeft().x() - mouse.x;
+        f.y = imageLabel->geometry().topLeft().y() - mouse.y;
+        compareMouseRelLoc.setX((float)f.x / f.w);
+        compareMouseRelLoc.setY((float)f.y / f.h);
+        qDebug() << "compareMouseRelLoc" << compareMouseRelLoc;
+    }
+
     // get the size of the scaled image
     QSize imgSize = imageLabel->pixmap()->size();
 
     // current image and window dimensions
     // wait until after scaling to define view space.
-    w.w = width();                  // window space
-    w.h = height();
-    i.w = imgSize.width();          // image space
+    int left, top, right, bottom;
+    imageLabel->getContentsMargins(&left, &top, &right, &bottom);
+    w.w = scrlArea->width() - left - right;         // window space
+    w.h = scrlArea->height() - top - bottom;
+    i.w = imgSize.width();                          // image space
     i.h = imgSize.height();
 
     // get scale of view (imageLabel)
+
     if (mouseZoomFit) {
         // fit small images
         if (i.w < w.w && i.h < w.h)
@@ -432,7 +447,12 @@ void ImageView::resizeImage()
 //        canZoom = true;
 //    }
 
-/*    qDebug() << "AFTER RESIZE" << currentImagePath
+    qDebug() << "this->geometry" << this->geometry()
+             << "\nscrlArea->geometry" << scrlArea->geometry()
+             << "\nimageLabel->geometry" << imageLabel->geometry()
+             << "\n";
+
+    /*    qDebug() << "AFTER RESIZE" << currentImagePath
              << "\nimage width  ="  << i.w << "\timage height  =" << i.h
              << "\nview width   ="  << v.w <<  "\tview height   =" << v.h
              << "\nwindow width =" << w.w << "\twindow height =" << w.h
@@ -453,6 +473,15 @@ void ImageView::resizeImage()
     // update status with current zoom magnification (call back from status)
 //    QString msg = QString::number(zoom*100, 'f', 0) + "% zoom";
     emit updateStatus(true, "");
+
+    if (isCompareMode & isResizeSourceMouseClick) {
+    /* mouse click position as a percentage of the label width and height,
+    used in compareView to simulate zoom in other images that may not be
+    the same image dimensions.  */
+        qDebug() << "emit compareZoom";
+        emit compareZoom(compareMouseRelLoc, imageIndex, isZoom);
+        isResizeSourceMouseClick = false;
+    }
 }
 
 void ImageView::movePickIcon()
@@ -832,6 +861,22 @@ void ImageView::setCursorHiding(bool hide)
     }
 }
 
+void ImageView::compareZoomAtCoord(QPointF coord, bool isZoom)
+{
+/* Same as when user mouse clicks on the image.  Called from compareView to
+replicate zoom in al compare images.
+*/
+    qDebug() << "ImageView::compareZoomAtCoord";
+    zoom = 1.0;     // if zoomToFit then zoom reset in resize
+    mouseZoomFit = !mouseZoomFit;
+    f.w = imageLabel->geometry().width();
+    f.h = imageLabel->geometry().height();
+    mouse.x = imageLabel->geometry().topLeft().x() + coord.x() * f.w;
+    mouse.y = imageLabel->geometry().topLeft().y() + coord.x() * f.h;
+    isResizeSourceMouseClick = false;
+    resizeImage();
+}
+
 // MOUSE CONTROL
 
 // not used
@@ -899,6 +944,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         if (okToZoom) {
             zoom = 1.0;     // if zoomToFit then zoom reset in resize
             mouseZoomFit = !mouseZoomFit;
+            isResizeSourceMouseClick = true;
             setMouseMoveData(false, event->x(), event->y());
             resizeImage();
         }
@@ -927,6 +973,15 @@ void ImageView::setMouseMoveData(bool lockMove, int lMouseX, int lMouseY)
              */
 }
 
+void ImageView::enterEvent(QEvent *event)
+{
+    this->setFocus();
+//    qDebug() << qApp->focusWidget() << imageIndex << thumbView->currentIndex();
+    if (imageIndex != thumbView->currentIndex()) {
+        thumbView->setCurrentIndex(imageIndex);
+    }
+}
+
 void ImageView::mouseMoveEvent(QMouseEvent *event)
 {
 /* Pan the image during a mouse drag operation
@@ -937,10 +992,6 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     #endif
     }
 
-//    qDebug() << hasMouseTracking() << imageIndex << thumbView->currentIndex();
-    if (imageIndex != thumbView->currentIndex()) {
-        thumbView->setCurrentIndex(imageIndex);
-    }
     if (event->modifiers() == Qt::ControlModifier) {
     } else {
         if (moveImageLocked)

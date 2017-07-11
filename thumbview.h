@@ -41,6 +41,7 @@ public:
 
     bool load(QString &dir, bool inclSubfolders);
 
+    ThumbViewDelegate *thumbViewDelegate;
     void selectThumb(QModelIndex idx);
     void selectThumb(int row);
     void selectThumb(QString &filePath);
@@ -75,6 +76,7 @@ public slots:
              int _thumbPadding, int _labelFontSize, bool _showThumbLabels);
     void setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid, int _thumbSpacingGrid,
                             int _thumbPaddingGrid, int _labelFontSizeGrid, bool _showThumbLabelsGrid);
+
     void reportThumbs();
     void selectNext();
     void selectPrev();
@@ -117,7 +119,6 @@ private:
     QStringList *fileFilters;
     QList<QStandardItem*> *thumbList;
     QItemSelectionModel *thumbViewSelection;
-    ThumbViewDelegate *thumbViewDelegate;
     QFileInfo thumbFileInfo;
     QImage emptyImg;
     QWidget *mw;

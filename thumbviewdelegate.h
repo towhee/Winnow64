@@ -27,6 +27,10 @@ public:
     QSize getThumbSize();
     void reportThumbAttributes();
 
+    QModelIndex currentIndex;
+    bool isCompare;
+
+
 signals:
     void update(const QModelIndex index, QRect iconRect) const;
 

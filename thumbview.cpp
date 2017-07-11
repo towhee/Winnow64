@@ -575,6 +575,7 @@ void ThumbView::selectThumb(QModelIndex idx)
     qDebug() << "ThumbView::selectThumb(index)" << idx;
     if (idx.isValid()) {
         setCurrentIndex(idx);
+        thumbViewDelegate->currentIndex = idx;
         scrollTo(idx, ScrollHint::PositionAtCenter);
     }
 }
@@ -592,6 +593,7 @@ void ThumbView::selectThumb(int row)
 //    qDebug() << "ThumbView::selectThumb(row)" << row;
     QModelIndex idx = thumbViewFilter->index(row, 0, QModelIndex());
     setCurrentIndex(idx);
+    thumbViewDelegate->currentIndex = idx;
 //    forceScroll(10);
     scrollTo(idx, ScrollHint::PositionAtCenter);
 //    if (idx.isValid()) scrollTo(idx, ScrollHint::PositionAtCenter);
@@ -607,6 +609,7 @@ void ThumbView::selectThumb(QString &fName)
     QModelIndexList idxList =
         thumbViewModel->match(thumbViewModel->index(0, 0), FileNameRole, fName);
     QModelIndex idx = idxList[0];
+    thumbViewDelegate->currentIndex = idx;
     QItemSelection selection(idx, idx);
     thumbViewSelection->select(selection, QItemSelectionModel::Select);
     if (idx.isValid()) scrollTo(idx, ScrollHint::PositionAtCenter);

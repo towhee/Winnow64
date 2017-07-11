@@ -9,27 +9,23 @@ CompareView::CompareView(QWidget *parent, Metadata *metadata, ThumbView *thumbVi
     this->imageCacheThread = imageCacheThread;
 
     gridLayout = new QGridLayout;
+    gridLayout->setContentsMargins(0, 0, 0, 0);
     gridLayout->setMargin(0);
     gridLayout->setSpacing(0);
 
     scrlArea = new QScrollArea;
     scrlArea->setContentsMargins(0, 0, 0, 0);
-    scrlArea->setAlignment(Qt::AlignCenter);
-    scrlArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scrlArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scrlArea->verticalScrollBar()->blockSignals(true);
-    scrlArea->horizontalScrollBar()->blockSignals(true);
     scrlArea->setFrameStyle(0);
     scrlArea->setLayout(gridLayout);
-    scrlArea->setWidgetResizable(true);
 
     mainLayout = new QHBoxLayout();
     mainLayout->setContentsMargins(0, 0, 0, 0);
-    mainLayout->setSpacing(0);
+//    mainLayout->setSpacing(1);
     mainLayout->addWidget(scrlArea);
     this->setLayout(mainLayout);
 
     ivList = new QList<ImageView*>;
+
 }
 
 bool CompareView::load(const QSize &centralWidgetSize)
@@ -44,12 +40,18 @@ bool CompareView::load(const QSize &centralWidgetSize)
     count = selection.count();
     if (count > 9) count = 9;
     for (int i = 0; i < count; ++i) {
-        ivList->append(new ImageView(this, metadata, imageCacheThread, thumbView, true, true));
+        ivList->append(new ImageView(this, metadata, imageCacheThread, thumbView, false, true));
         QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
+        bool isPick = qvariant_cast<bool>(selection.at(i).data(thumbView->PickedRole));
+        ivList->at(i)->pickLabel->setVisible(isPick);
         ivList->at(i)->loadImage(selection.at(i), fPath);
+        connect(ivList->at(i), SIGNAL(compareZoom(QPointF, QModelIndex, bool)),
+                this, SLOT(zoom(QPointF, QModelIndex, bool)));
     }
     configureGrid();
     loadGrid();
+//    ivList->at(0)->setFocus();
+//    ivList->at(0)->setStyleSheet("QLabel {border: white;}");
 }
 
 void CompareView::loadGrid()
@@ -112,22 +114,22 @@ void CompareView::configureGrid()
         break;
     case 5:
         if (area(2, 3) > area(3, 2)) {
-            rows = 3;
-            cols = 2;
-        }
-        else {
             rows = 2;
             cols = 3;
+        }
+        else {
+            rows = 3;
+            cols = 2;
         }
         break;
     case 6:
         if (area(2, 3) > area(3, 2)) {
-            rows = 3;
-            cols = 2;
-        }
-        else {
             rows = 2;
             cols = 3;
+        }
+        else {
+            rows = 3;
+            cols = 2;
         }
         break;
     case 7: rows = 3;   cols = 3;   break;
@@ -167,3 +169,33 @@ long CompareView::area(int rows, int cols)
     }
     return area;
 }
+
+void CompareView::pick(bool isPick, QModelIndex idx)
+{
+    qDebug() << "CompareView::pick" << isPick << idx;
+    for (int i = 0; i < ivList->count(); ++i) {
+        if (ivList->at(i)->imageIndex == idx) {
+            ivList->at(i)->pickLabel->setVisible(isPick);
+        }
+    }
+}
+
+void CompareView::showShootingInfo(bool isVisible)
+{
+    for (int i = 0; i < ivList->count(); ++i) {
+//        if (ivList->at(i)->imageIndex == idx) {
+            ivList->at(i)->infoDropShadow->setVisible(isVisible);
+//        }
+    }
+}
+
+void CompareView::zoom(QPointF coord, QModelIndex idx, bool isZoom)
+{
+    qDebug() << "CompareView::zoom";
+    for (int i = 0; i < ivList->count(); ++i) {
+        if (ivList->at(i)->imageIndex != idx) {
+            ivList->at(i)->compareZoomAtCoord(coord, isZoom);
+        }
+    }
+}
+
