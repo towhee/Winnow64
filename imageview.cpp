@@ -149,7 +149,8 @@ bool ImageView::loadImage(QModelIndex idx, QString fPath)
     bool isLoaded = false;
     // load the image from the image cache if available
     if (imageCacheThread->imCache.contains(fPath)) {
-        displayPixmap = QPixmap::fromImage(imageCacheThread->imCache.value(fPath));
+        displayPixmap = imageCacheThread->imCache.value(fPath);
+//        displayPixmap = QPixmap::fromImage(imageCacheThread->imCache.value(fPath));
         (displayPixmap.isNull()) ? isLoaded = false : isLoaded = true;
     }
     // load the image from the image file

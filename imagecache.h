@@ -24,7 +24,7 @@ public:
              bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead);
     void updateImageCache(QFileInfoList &imageList, QString  &currentImageFullPath);
     void stopImageCache();
-    QHash<QString, QImage> imCache;
+    QHash<QString, QPixmap> imCache;
 
 signals:
     void showCacheStatus(QImage imCacheStatus, QString mb);

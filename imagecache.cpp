@@ -614,8 +614,10 @@ void ImageCache::run()
                 }
                 else break;
             }
+
             mutex.lock();
-            imCache.insert(fPath, *image);
+            imCache.insert(fPath, QPixmap::fromImage(*image));
+//            imCache.insert(fPath, *image);
             cacheMgr[cache.toCacheKey].isCached = true;
             mutex.unlock();
             if (!toCache.isEmpty()) toCache.removeFirst();

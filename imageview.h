@@ -114,15 +114,15 @@ private:
     QString currentImagePath;
     bool shootingInfoVisible;
 
-    bool cursorIsHidden;        // use for slideshow and full screen - review rgh
-    bool moveImageLocked;       // control when con drag image around
-    bool mouseZoom100Pct;       // flag in resize to scale to 100%
-    bool mouseZoomFit;          // flag in resize to scale to fit window
+    bool cursorIsHidden;                // use for slideshow and full screen - review rgh
+    bool moveImageLocked;               // control when con drag image around
+    bool mouseZoom100Pct;               // flag in resize to scale to 100%
+    bool mouseZoomFit;                  // flag in resize to scale to fit window
     bool isZoom;
     bool isMouseDrag;
     bool isMouseDoubleClick;
     bool isMouseClickInLabel;
-    bool isResizeSourceMouseClick;
+    bool isResizeSourceMouseClick;      // prevent recursive infinite loop
 
     float zoomFit;
     float zoomInc = 0.1;    // 10% delta
