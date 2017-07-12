@@ -1732,7 +1732,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo)
     s += "  " + imageMetadata.focalLength;
     s += "  " + imageMetadata.exposureTime;
     s += (imageMetadata.aperture == "") ? "" : " at " + imageMetadata.aperture;
-    s += (imageMetadata.ISO == "") ? "" : ", " + imageMetadata.ISO;
+    s += (imageMetadata.ISO == "") ? "" : ", ISO " + imageMetadata.ISO;
     shootingInfo = s;
 
     if (shootingInfo.length() > 0) imageMetadata.shootingInfo = shootingInfo;

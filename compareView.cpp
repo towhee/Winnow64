@@ -172,7 +172,7 @@ long CompareView::area(int rows, int cols)
 
 void CompareView::pick(bool isPick, QModelIndex idx)
 {
-    qDebug() << "CompareView::pick" << isPick << idx;
+//    qDebug() << "CompareView::pick" << isPick << idx;
     for (int i = 0; i < ivList->count(); ++i) {
         if (ivList->at(i)->imageIndex == idx) {
             ivList->at(i)->pickLabel->setVisible(isPick);
@@ -183,9 +183,7 @@ void CompareView::pick(bool isPick, QModelIndex idx)
 void CompareView::showShootingInfo(bool isVisible)
 {
     for (int i = 0; i < ivList->count(); ++i) {
-//        if (ivList->at(i)->imageIndex == idx) {
             ivList->at(i)->infoDropShadow->setVisible(isVisible);
-//        }
     }
 }
 

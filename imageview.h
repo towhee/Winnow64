@@ -27,6 +27,7 @@ public:
     bool loadImage(QModelIndex idx, QString imageFileName);
     void clear();
     void setCursorHiding(bool hide);
+    void setClickZoom(float clickZoom);
     void refresh();
     int getImageWidth();    // used for make thumbs fit which may be toast
     int getImageHeight();
@@ -48,7 +49,9 @@ public slots:
     void zoomIn();
     void zoomOut();
     void zoomToFit();
+    void zoom50();
     void zoom100();
+    void zoom200();
     void zoomTo(float zoomTo);
     void zoomToggle();
 
@@ -128,6 +131,7 @@ private:
     float zoomInc = 0.1;    // 10% delta
     float zoomMin = 0.05;   // 5% of original  rgh add to pref
     float zoomMax = 8.0;    // 800% of original
+    float clickZoom = 1.0;
 
     void resizeImage();
     void movePickIcon();

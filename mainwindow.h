@@ -120,6 +120,7 @@ public:
         bool isFavs;
         bool isMetadata;
         bool isThumbs;
+        bool isStatusBar;
     } fullScreenDocks, normalDocks;
 
     QString currentViewDir;
@@ -187,7 +188,7 @@ private slots:
     void setIncludeSubFolders();
     void setMaxRecentFolders(int prefMaxRecentFolders);
     void setSlideShowParameters(int delay, bool isRandom);
-    void setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs);
+    void setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs, bool isStatusBar);
     void slideShow();
     void nextSlide();
     void setCacheParameters(int size, bool show, int width, int wtAhead);
@@ -321,6 +322,9 @@ private:
     QAction *zoomInAction;
     QAction *zoomOutAction;
     QAction *zoomToggleAction;
+    QAction *zoom50PctAction;
+    QAction *zoom100PctAction;
+    QAction *zoom200PctAction;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
     QAction *thumbsFitAction;   // used?? rgh

@@ -379,11 +379,11 @@ void ImageView::resizeImage()
     if (currentImagePath == "") return;
 
     if (isResizeSourceMouseClick) {
-        qDebug() << currentImagePath
-                 << "\nStart image resize"
-                 << "isZoom" << isZoom
-                 << "mouse" << mouse.x << mouse.y
-                 << "geometry" << imageLabel->geometry();
+//        qDebug() << currentImagePath
+//                 << "\nStart image resize"
+//                 << "isZoom" << isZoom
+//                 << "mouse" << mouse.x << mouse.y
+//                 << "geometry" << imageLabel->geometry();
 
         if (!isZoom) {
             f.w = imageLabel->geometry().width();
@@ -392,7 +392,7 @@ void ImageView::resizeImage()
             f.y = mouse.y - imageLabel->geometry().topLeft().y();
             compareMouseRelLoc.setX((float)f.x / f.w);
             compareMouseRelLoc.setY((float)f.y / f.h);
-            qDebug() << "compareMouseRelLoc" << compareMouseRelLoc;
+//            qDebug() << "compareMouseRelLoc" << compareMouseRelLoc;
         }
     }
     // get the size of the scaled image
@@ -455,10 +455,10 @@ void ImageView::resizeImage()
 //        canZoom = true;
 //    }
 
-    qDebug() << "this->geometry" << this->geometry()
-             << "\nscrlArea->geometry" << scrlArea->geometry()
-             << "\nimageLabel->geometry" << imageLabel->geometry()
-             << "\n";
+//    qDebug() << "this->geometry" << this->geometry()
+//             << "\nscrlArea->geometry" << scrlArea->geometry()
+//             << "\nimageLabel->geometry" << imageLabel->geometry()
+//             << "\n";
 
     /*    qDebug() << "AFTER RESIZE" << currentImagePath
              << "\nimage width  ="  << i.w << "\timage height  =" << i.h
@@ -705,8 +705,25 @@ void ImageView::zoomToggle()
 {
     qDebug() << "zoomToggle  isZoom =" << isZoom;
     mouseZoomFit = isZoom;
-    if (!isZoom) zoom = 1;
+    if (!isZoom) zoom = clickZoom;
     resizeImage();
+}
+
+void ImageView::zoom50()
+{
+    zoomTo(0.5);
+    clickZoom = 0.5;
+}
+
+void ImageView::zoom200()
+{
+    zoomTo(2.0);
+    clickZoom = 2.0;
+}
+
+void ImageView::setClickZoom(float clickZoom)
+{
+    this->clickZoom = clickZoom;
 }
 
 void ImageView::setImageLabelSize(QSize newSize)
@@ -874,18 +891,18 @@ void ImageView::compareZoomAtCoord(QPointF coord, bool isZoom)
 /* Same as when user mouse clicks on the image.  Called from compareView to
 replicate zoom in al compare images.
 */
-    qDebug() << "\n" << currentImagePath;
-    qDebug() << "ImageView::compareZoomAtCoord" << coord;
-    zoom = 1.0;     // if zoomToFit then zoom reset in resize
+//    qDebug() << "\n" << currentImagePath;
+//    qDebug() << "ImageView::compareZoomAtCoord" << coord;
+    zoom = clickZoom;     // if zoomToFit then zoom reset in resize
     mouseZoomFit = !mouseZoomFit;
     f.w = imageLabel->geometry().width();
     f.h = imageLabel->geometry().height();
     mouse.x = imageLabel->geometry().topLeft().x() + coord.x() * f.w;
     mouse.y = imageLabel->geometry().topLeft().y() + coord.y() * f.h;
-    qDebug() << "imageLabel->geometry().topLeft().x()" << imageLabel->geometry().topLeft().x()
-             << "imageLabel->geometry().topLeft().y()" << imageLabel->geometry().topLeft().y()
-             << "w, h, mouse.x, mouse.y" << f.w << f.h
-             << mouse.x << mouse.y << "\n";
+//    qDebug() << "imageLabel->geometry().topLeft().x()" << imageLabel->geometry().topLeft().x()
+//             << "imageLabel->geometry().topLeft().y()" << imageLabel->geometry().topLeft().y()
+//             << "w, h, mouse.x, mouse.y" << f.w << f.h
+//             << mouse.x << mouse.y << "\n";
     isResizeSourceMouseClick = false;
     resizeImage();
 }
@@ -955,7 +972,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
                  << "mouseZoom100Pct =" << mouseZoom100Pct;
                  */
         if (okToZoom) {
-            zoom = 1.0;     // if zoomToFit then zoom reset in resize
+            zoom = clickZoom;     // if zoomToFit then zoom reset in resize
             mouseZoomFit = !mouseZoomFit;
             isResizeSourceMouseClick = true;
             setMouseMoveData(false, event->x(), event->y());

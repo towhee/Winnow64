@@ -78,6 +78,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->favsChk->setChecked(mw->fullScreenDocks.isFavs);
     ui->metadataChk->setChecked(mw->fullScreenDocks.isMetadata);
     ui->thumbsChk->setChecked(mw->fullScreenDocks.isThumbs);
+    ui->statusBarChk->setChecked(mw->fullScreenDocks.isStatusBar);
 
     okToUpdate = true;
 }
@@ -370,23 +371,35 @@ void Prefdlg::on_fontSizeSlider_2_valueChanged(int value)
 void Prefdlg::on_foldersChk_clicked()
 {
     emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
-                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked());
+                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked(),
+                               ui->statusBarChk->isChecked());
 }
 
 void Prefdlg::on_favsChk_clicked()
 {
     emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
-                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked());
+                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked(),
+                               ui->statusBarChk->isChecked());
 }
 
 void Prefdlg::on_metadataChk_clicked()
 {
     emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
-                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked());
+                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked(),
+                               ui->statusBarChk->isChecked());
 }
 
 void Prefdlg::on_thumbsChk_clicked()
 {
     emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
-                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked());
+                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked(),
+                               ui->statusBarChk->isChecked());
+}
+
+
+void Prefdlg::on_statusBarChk_clicked()
+{
+    emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
+                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked(),
+                               ui->statusBarChk->isChecked());
 }

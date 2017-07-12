@@ -51,7 +51,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>4</number>
+    <number>5</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QSpinBox" name="maxRecentSB">
@@ -1396,7 +1396,7 @@
        <x>30</x>
        <y>90</y>
        <width>221</width>
-       <height>101</height>
+       <height>131</height>
       </rect>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -1425,6 +1425,13 @@
        <widget class="QCheckBox" name="thumbsChk">
         <property name="text">
          <string>Thumbnails</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="statusBarChk">
+        <property name="text">
+         <string>Status Bar</string>
         </property>
        </widget>
       </item>

@@ -234,8 +234,14 @@ void MW::folderSelectionChange()
     }
 
     // ignore if present folder is rechosen
-    if (dirPath == currentViewDir) return;
-    else currentViewDir = dirPath;
+    if (dirPath == currentViewDir) {
+        if (!subFoldersAction->isChecked()) return;
+    }
+    else {
+        currentViewDir = dirPath;
+        // cannot accidentally see all subfolders - must set after selecting folder
+        subFoldersAction->setChecked(false);
+    }
 
     // add to recent folders
     addRecentFolder(currentViewDir);
@@ -661,6 +667,18 @@ void MW::createActions()
     zoomToggleAction->setObjectName("resetZoom");
     connect(zoomToggleAction, SIGNAL(triggered()), imageView, SLOT(zoomToggle()));
 
+    zoom50PctAction = new QAction(tr("Click zoom 50%"), this);
+    zoom50PctAction->setObjectName("50PctZoom");
+    connect(zoom50PctAction, SIGNAL(triggered()), imageView, SLOT(zoom50()));
+
+    zoom100PctAction = new QAction(tr("Click zoom 100%"), this);
+    zoom100PctAction->setObjectName("100PctZoom");
+    connect(zoom100PctAction, SIGNAL(triggered()), imageView, SLOT(zoom100()));
+
+    zoom200PctAction = new QAction(tr("Click zoom 200%"), this);
+    zoom200PctAction->setObjectName("200PctZoom");
+    connect(zoom200PctAction, SIGNAL(triggered()), imageView, SLOT(zoom200()));
+
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
     connect(thumbsEnlargeAction, SIGNAL(triggered()), thumbView, SLOT(thumbsEnlarge()));
@@ -950,6 +968,9 @@ void MW::createMenus()
     viewMenu->addAction(zoomInAction);
     viewMenu->addAction(zoomOutAction);
     viewMenu->addAction(zoomToggleAction);
+    viewMenu->addAction(zoom50PctAction);
+    viewMenu->addAction(zoom100PctAction);
+    viewMenu->addAction(zoom200PctAction);
     viewMenu->addSeparator();
     viewMenu->addAction(thumbsEnlargeAction);
     viewMenu->addAction(thumbsShrinkAction);
@@ -2260,8 +2281,8 @@ void MW::preferences()
             this, SLOT(setSlideShowParameters(int, bool)));
     connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int)),
             this, SLOT(setCacheParameters(int, bool, int, int)));
-    connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool)),
-            this, SLOT(setFullScreenDocks(bool,bool,bool,bool)));
+    connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool)),
+            this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool)));
     prefdlg->exec();
 }
 
@@ -2270,7 +2291,7 @@ void MW::setIncludeSubFolders()
     // need inclSubFolders for passing to functions
 //    subFoldersAction->setChecked(include);
     inclSubfolders = subFoldersAction->isChecked();
-    currentViewDir = "";
+//    currentViewDir = "";
     folderSelectionChange();
 }
 
@@ -2290,12 +2311,13 @@ void MW::setMaxRecentFolders(int prefMaxRecentFolders)
     syncRecentFoldersMenu();
 }
 
-void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs)
+void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs, bool isStatusBar)
 {
     fullScreenDocks.isFolders = isFolders;
     fullScreenDocks.isFavs = isFavs;
     fullScreenDocks.isMetadata = isMetadata;
     fullScreenDocks.isThumbs = isThumbs;
+    fullScreenDocks.isStatusBar = isStatusBar;
 }
 
 //void MW::setGeneralParameters(bool prefRememberFolder, bool prefInclSubfolders,
@@ -2353,7 +2375,7 @@ void MW::toggleFullScreen()
         setThumbDockVisibity();
         menuBarVisibleAction->setChecked(false);
         setMenuBarVisibility();
-        statusBarVisibleAction->setChecked(false);
+        statusBarVisibleAction->setChecked(fullScreenDocks.isThumbs);
         setStatusBarVisibility();
     }
     else
@@ -2515,6 +2537,7 @@ void MW::writeSettings()
     setting->setValue("isFullScreenFavss", (bool)fullScreenDocks.isFavs);
     setting->setValue("isFullScreenMetadata", (bool)fullScreenDocks.isMetadata);
     setting->setValue("isFullScreenThumbs", (bool)fullScreenDocks.isThumbs);
+    setting->setValue("isFullScreenStatusBar", (bool)fullScreenDocks.isStatusBar);
     // state
     setting->setValue("Geometry", saveGeometry());
     setting->setValue("WindowState", saveState());
@@ -2695,6 +2718,7 @@ Preferences are located in the relevant class and updated here.
     fullScreenDocks.isFavs = setting->value("isFullScreenFavs").toBool();
     fullScreenDocks.isMetadata = setting->value("isFullScreenMetadata").toBool();
     fullScreenDocks.isThumbs = setting->value("isFullScreenThumbs").toBool();
+    fullScreenDocks.isStatusBar = setting->value("isFullScreenStatusBar").toBool();
 
     // load state (action->setChecked in action creation)
 
@@ -2918,6 +2942,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
         zoomOutAction->setShortcut(QKeySequence("-"));
         zoomInAction->setShortcut(QKeySequence("+"));
         zoomToggleAction->setShortcut(QKeySequence("Z"));
+        zoom50PctAction->setShortcut(QKeySequence("5"));
+        zoom100PctAction->setShortcut(QKeySequence("0"));
+        zoom200PctAction->setShortcut(QKeySequence("2"));
         rotateLeftAction->setShortcut(QKeySequence("["));
         rotateRightAction->setShortcut(QKeySequence("]"));
 //        moveLeftAct->setShortcut(QKeySequence("Left"));

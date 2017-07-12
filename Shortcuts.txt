@@ -1,5 +1,8 @@
 Function                     Key  ⌘  ⇧  ⌥  ⇧⌘  ⇧⌥  ⌥⌘  ⇧⌥⌘
 Escape full screen           ⎋
+Mouse click zoom 50%         5
+Mouse click zoom 100%        0
+Mouse click zoom 200%        2
 During slideshow interval    0-9
 Invoke workspace             0-9  ⌘
 Compare view                 C
