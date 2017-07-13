@@ -345,7 +345,8 @@ void MW::loadImageCache()
     QString fPath = indexesList.first().data(thumbView->FileNameRole).toString();
     // imageChacheThread checks if already running and restarts
     imageCacheThread->initImageCache(thumbView->thumbFileInfoList, cacheSizeMB,
-        isShowCacheStatus, cacheStatusWidth, cacheWtAhead);
+        isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
+        cachePreviewWidth, cachePreviewHeight);
     imageCacheThread->updateImageCache(thumbView->thumbFileInfoList, fPath);
 }
 
@@ -1332,12 +1333,16 @@ void MW::setThumbDockParameters(bool isThumbWrap, bool isVerticalTitle)
     }
 }
 
-void MW::setCacheParameters(int size, bool show, int width, int wtAhead)
+void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
+                            bool isPreview, int previewWidth, int previewHeight)
 {
     cacheSizeMB = size;
     isShowCacheStatus = show;
     cacheStatusWidth = width;
     cacheWtAhead = wtAhead;
+    isCachePreview = isPreview;
+    cachePreviewWidth = previewWidth;
+    cachePreviewHeight = previewHeight;
 }
 
 void MW::updateStatus(bool keepBase, QString s)
@@ -2265,8 +2270,6 @@ void MW::preferences()
     Prefdlg *prefdlg = new Prefdlg(this, lastPrefPage);
     connect(prefdlg, SIGNAL(updatePage(int)),
         this, SLOT(setPrefPage(int)));
-//    connect(prefdlg, SIGNAL(updateInclSubfolders(bool)),
-//            this, SLOT(setIncludeSubFolders(bool)));
     connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
             this, SLOT(setRememberLastDir(bool)));
     connect(prefdlg, SIGNAL(updateMaxRecentFolders(int)),
@@ -2279,8 +2282,8 @@ void MW::preferences()
             this, SLOT(setThumbDockParameters(bool, bool)));
     connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
             this, SLOT(setSlideShowParameters(int, bool)));
-    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int)),
-            this, SLOT(setCacheParameters(int, bool, int, int)));
+    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, bool, int, int)),
+            this, SLOT(setCacheParameters(int, bool, int, int, bool, int, int)));
     connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool)),
             this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool)));
     prefdlg->exec();
@@ -2532,6 +2535,9 @@ void MW::writeSettings()
     setting->setValue("isShowCacheStatus", (bool)isShowCacheStatus);
     setting->setValue("cacheStatusWidth", (int)cacheStatusWidth);
     setting->setValue("cacheWtAhead", (int)cacheWtAhead);
+    setting->setValue("isCachePreview", (int)isCachePreview);
+    setting->setValue("cachePreviewWidth", (int)cachePreviewWidth);
+    setting->setValue("cachePreviewHeight", (int)cachePreviewHeight);
     // full screen
     setting->setValue("isFullScreenFolders", (bool)fullScreenDocks.isFolders);
     setting->setValue("isFullScreenFavss", (bool)fullScreenDocks.isFavs);
@@ -2679,6 +2685,8 @@ Preferences are located in the relevant class and updated here.
         setting->setValue("isShowCacheStatus", (bool)true);
         setting->setValue("cacheStatusWidth", (int)200);
         setting->setValue("cacheWtAhead", (int)5);
+        setting->setValue("isCachePreview", (bool)false);
+
         setting->setValue("maxRecentFolders", (int)10);
         bookmarkPaths.insert(QDir::homePath());
     }
@@ -2713,6 +2721,9 @@ Preferences are located in the relevant class and updated here.
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
     cacheStatusWidth = setting->value("cacheStatusWidth").toInt();
     cacheWtAhead = setting->value("cacheWtAhead").toInt();
+    isCachePreview = setting->value("isCachePreview").toBool();
+    cachePreviewWidth = setting->value("cachePreviewWidth").toInt();
+    cachePreviewHeight = setting->value("cachePreviewHeight").toInt();
     // full screen
     fullScreenDocks.isFolders = setting->value("isFullScreenFolders").toBool();
     fullScreenDocks.isFavs = setting->value("isFullScreenFavs").toBool();

@@ -113,6 +113,9 @@ public:
     bool isShowCacheStatus;
     int cacheStatusWidth;
     int cacheWtAhead;
+    bool isCachePreview;
+    int cachePreviewWidth;
+    int cachePreviewHeight;
 
     // full screen behavior
     struct FullScreenDocks {
@@ -191,7 +194,8 @@ private slots:
     void setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs, bool isStatusBar);
     void slideShow();
     void nextSlide();
-    void setCacheParameters(int size, bool show, int width, int wtAhead);
+    void setCacheParameters(int size, bool show, int width, int wtAhead,
+                            bool isCachePreview, int cachePreviewWidth, int cachePreviewHeight);
     void setThumbDockParameters(bool isThumbWrap, bool isVerticalTitle);
     void selectAllThumbs();
     void removeBookmark();

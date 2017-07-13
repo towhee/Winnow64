@@ -58,7 +58,7 @@
      <property name="geometry">
       <rect>
        <x>260</x>
-       <y>110</y>
+       <y>70</y>
        <width>48</width>
        <height>24</height>
       </rect>
@@ -74,7 +74,7 @@
      <property name="geometry">
       <rect>
        <x>42</x>
-       <y>114</y>
+       <y>74</y>
        <width>147</width>
        <height>16</height>
       </rect>
@@ -94,19 +94,6 @@
      </property>
      <property name="text">
       <string>Remember previous folder</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="inclSubFoldersChk">
-     <property name="geometry">
-      <rect>
-       <x>40</x>
-       <y>62</y>
-       <width>137</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Include subfolders</string>
      </property>
     </widget>
    </widget>
@@ -306,7 +293,7 @@
       <string>Show cache status</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="checkBox">
+    <widget class="QCheckBox" name="cachePreviewsChk">
      <property name="geometry">
       <rect>
        <x>40</x>
@@ -319,7 +306,7 @@
       <string>Cache previews scaled to monitor resolution</string>
      </property>
     </widget>
-    <widget class="QSpinBox" name="spinBox">
+    <widget class="QSpinBox" name="previewWidthSB">
      <property name="geometry">
       <rect>
        <x>150</x>
@@ -328,8 +315,20 @@
        <height>24</height>
       </rect>
      </property>
+     <property name="minimum">
+      <number>1000</number>
+     </property>
+     <property name="maximum">
+      <number>5000</number>
+     </property>
+     <property name="singleStep">
+      <number>200</number>
+     </property>
+     <property name="value">
+      <number>3000</number>
+     </property>
     </widget>
-    <widget class="QSpinBox" name="spinBox_2">
+    <widget class="QSpinBox" name="previewHeightSB">
      <property name="geometry">
       <rect>
        <x>280</x>
@@ -337,6 +336,18 @@
        <width>60</width>
        <height>24</height>
       </rect>
+     </property>
+     <property name="minimum">
+      <number>1000</number>
+     </property>
+     <property name="maximum">
+      <number>5000</number>
+     </property>
+     <property name="singleStep">
+      <number>200</number>
+     </property>
+     <property name="value">
+      <number>2000</number>
      </property>
     </widget>
     <widget class="QLabel" name="label_9">

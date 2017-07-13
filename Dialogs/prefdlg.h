@@ -28,7 +28,8 @@ signals:
     void updateThumbDockParameters(bool isThumbWrap, bool isVerticalTitle);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
-            int cacheStatusWidth, int cacheWtAhead);
+            int cacheStatusWidth, int cacheWtAhead, bool isPreview,
+                               int previewWidth, int previewHeight);
     void updateFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata,
                                bool isThumbs, bool isStatusBar);
 
@@ -65,7 +66,10 @@ private slots:
     void on_cache80AheadRadio_clicked();
     void on_cache90AheadRadio_clicked();
     void on_cache100AheadRadio_clicked();
-    void on_maxRecentSB_valueChanged(int arg1);
+    void on_cachePreviewsChk_clicked();
+    void on_previewWidthSB_valueChanged(int value);
+    void on_previewHeightSB_valueChanged(int value);
+    void on_maxRecentSB_valueChanged(int value);
     void on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
     void on_foldersChk_clicked();
     void on_favsChk_clicked();
@@ -79,30 +83,7 @@ private:
     void accept();
     bool okToUpdate;
 
-    int thumbWidth;
-    int thumbHeight;
-    int thumbSpacing;
-    int thumbPadding;
-    int labelFontSize;
-    bool showThumbLabels;
-
-    int thumbWidthGrid;
-    int thumbHeightGrid;
-    int thumbSpacingGrid;
-    int thumbPaddingGrid;
-    int labelFontSizeGrid;
-    bool showThumbLabelsGrid;
-
-    bool isThumbWrap;
-    bool isVerticalTitle;
-
-    int slideShowDelay;
-    bool slideShowRandom;
-
-    int cacheSizeMB;
-    bool isShowCacheStatus;
-    int cacheStatusWidth;
-    int cacheWtAhead;
+   int cacheWtAhead;
 
 
 };

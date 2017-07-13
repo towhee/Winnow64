@@ -19,52 +19,32 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->rememberFolderChk->setChecked(mw->rememberLastDir);
     ui->maxRecentSB->setValue(mw->maxRecentFolders);
     // thumbs
-    thumbWidth = mw->thumbView->thumbWidth;
-    thumbHeight = mw->thumbView->thumbHeight;
-    thumbSpacing = mw->thumbView->thumbSpacing;
-    thumbPadding = mw->thumbView->thumbPadding;
-    labelFontSize = mw->thumbView->labelFontSize;
-    showThumbLabels = mw->thumbView->showThumbLabels;
-    ui->iconWidthSlider->setValue(thumbWidth);
-    ui->iconHeightSlider->setValue(thumbHeight);
-    ui->iconPaddingSlider->setValue(thumbPadding);
-    ui->thumbSpacingSlider->setValue(thumbSpacing);
-    ui->fontSizeSlider->setValue(labelFontSize);
-    ui->showThumbLabelChk->setChecked(showThumbLabels);
+    ui->iconWidthSlider->setValue(mw->thumbView->thumbWidth);
+    ui->iconHeightSlider->setValue(mw->thumbView->thumbHeight);
+    ui->iconPaddingSlider->setValue(mw->thumbView->thumbPadding);
+    ui->thumbSpacingSlider->setValue(mw->thumbView->thumbSpacing);
+    ui->fontSizeSlider->setValue(mw->thumbView->labelFontSize);
+    ui->showThumbLabelChk->setChecked(mw->thumbView->showThumbLabels);
     ui->lockDimChk->setChecked(true);
     // thumbsGrid
-    thumbWidthGrid = mw->thumbView->thumbWidthGrid;
-    thumbHeightGrid = mw->thumbView->thumbHeightGrid;
-    thumbSpacingGrid = mw->thumbView->thumbSpacingGrid;
-    thumbPaddingGrid = mw->thumbView->thumbPaddingGrid;
-    labelFontSizeGrid = mw->thumbView->labelFontSizeGrid;
-    showThumbLabelsGrid = mw->thumbView->showThumbLabelsGrid;
-    ui->iconWidthSlider_2->setValue(thumbWidthGrid);
-    ui->iconHeightSlider_2->setValue(thumbHeightGrid);
-    ui->iconPaddingSlider_2->setValue(thumbPaddingGrid);
-    ui->thumbSpacingSlider_2->setValue(thumbSpacingGrid);
-    ui->fontSizeSlider_2->setValue(labelFontSizeGrid);
-    ui->showThumbLabelChk_2->setChecked(showThumbLabelsGrid);
+    ui->iconWidthSlider_2->setValue(mw->thumbView->thumbWidthGrid);
+    ui->iconHeightSlider_2->setValue(mw->thumbView->thumbHeightGrid);
+    ui->iconPaddingSlider_2->setValue(mw->thumbView->thumbPaddingGrid);
+    ui->thumbSpacingSlider_2->setValue(mw->thumbView->thumbSpacingGrid);
+    ui->fontSizeSlider_2->setValue(mw->thumbView->labelFontSizeGrid);
+    ui->showThumbLabelChk_2->setChecked(mw->thumbView->showThumbLabelsGrid);
     ui->lockDimChk_2->setChecked(true);
     // thumb dock
-    isThumbWrap = mw->thumbView->isThumbWrap;
-    isVerticalTitle = mw->isThumbDockVerticalTitle;
-    ui->wrapThumbsChk->setChecked(isThumbWrap);
-    ui->vertTitleChk->setChecked(isVerticalTitle);
+    ui->wrapThumbsChk->setChecked(mw->thumbView->isThumbWrap);
+    ui->vertTitleChk->setChecked(mw->isThumbDockVerticalTitle);
     // slideshow
-    slideShowDelay = mw->slideShowDelay;
-    slideShowRandom = mw->slideShowRandom;
-    ui->slideshowDelaySpinbox->setValue(slideShowDelay);
-    ui->slideshowRandomChk->setChecked(slideShowRandom);
+    ui->slideshowDelaySpinbox->setValue(mw->slideShowDelay);
+    ui->slideshowRandomChk->setChecked(mw->slideShowRandom);
     // cache
-    cacheSizeMB = mw->cacheSizeMB;
-    isShowCacheStatus = mw->isShowCacheStatus;
-    cacheStatusWidth = mw->cacheStatusWidth;
-    cacheWtAhead = mw->cacheWtAhead;
-    ui->cacheSizeSpinbox->setValue(cacheSizeMB);
-    ui->showCacheStatusChk->setChecked(isShowCacheStatus);
-    ui->cacheStatusWidthSpin->setValue(cacheStatusWidth);
-    switch (cacheWtAhead) {
+    ui->cacheSizeSpinbox->setValue(mw->cacheSizeMB);
+    ui->showCacheStatusChk->setChecked(mw->isShowCacheStatus);
+    ui->cacheStatusWidthSpin->setValue(mw->cacheStatusWidth);
+    switch (mw->cacheWtAhead) {
     case 5: ui->cache50AheadRadio->setChecked(true); break;
     case 6: ui->cache60AheadRadio->setChecked(true); break;
     case 7: ui->cache70AheadRadio->setChecked(true); break;
@@ -72,8 +52,10 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     case 9: ui->cache90AheadRadio->setChecked(true); break;
     case 10: ui->cache100AheadRadio->setChecked(true);
     }
+    ui->cachePreviewsChk->setChecked(mw->isCachePreview);
+    ui->previewWidthSB->setValue(mw->cachePreviewWidth);
+    ui->previewHeightSB->setValue(mw->cachePreviewHeight);
     // full screen
-    qDebug() << "mw->fullScreenDocks.isFolders" << mw->fullScreenDocks.isFolders;
     ui->foldersChk->setChecked(mw->fullScreenDocks.isFolders);
     ui->favsChk->setChecked(mw->fullScreenDocks.isFavs);
     ui->metadataChk->setChecked(mw->fullScreenDocks.isMetadata);
@@ -94,6 +76,7 @@ void Prefdlg::accept()
 }
 
 void Prefdlg::on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
+// sync preference category list and preference items in stacked form
 {
     ui->stackedWidget->setCurrentIndex(ui->listWidget->row(current));
     emit updatePage(ui->listWidget->currentRow());
@@ -103,44 +86,54 @@ void Prefdlg::on_listWidget_currentItemChanged(QListWidgetItem *current, QListWi
 void Prefdlg::on_iconWidthSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        thumbWidth = ui->iconWidthSlider->value();
         if (ui->lockDimChk->isChecked()) {
-            ui->iconHeightSlider->setValue(thumbWidth);
-            thumbHeight = thumbWidth;
+            ui->iconHeightSlider->setValue(ui->iconWidthSlider->value());
         }
-        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
-                          thumbSpacing, labelFontSize, showThumbLabels);
+        emit updateThumbParameters(ui->iconWidthSlider->value(),
+                                   ui->iconHeightSlider->value(),
+                                   ui->thumbSpacingSlider->value(),
+                                   ui->iconPaddingSlider->value(),
+                                   ui->fontSizeSlider->value(),
+                                   ui->showThumbLabelChk->isChecked());
     }
 }
 
 void Prefdlg::on_iconHeightSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        thumbHeight = ui->iconHeightSlider->value();
         if (ui->lockDimChk->isChecked()) {
-            ui->iconWidthSlider->setValue(thumbHeight);
-            thumbWidth = thumbHeight;
+            ui->iconWidthSlider->setValue(ui->iconHeightSlider->value());
         }
-        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
-                          thumbSpacing, labelFontSize, showThumbLabels);
+        emit updateThumbParameters(ui->iconWidthSlider->value(),
+                                   ui->iconHeightSlider->value(),
+                                   ui->thumbSpacingSlider->value(),
+                                   ui->iconPaddingSlider->value(),
+                                   ui->fontSizeSlider->value(),
+                                   ui->showThumbLabelChk->isChecked());
     }
 }
 
 void Prefdlg::on_thumbSpacingSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        thumbSpacing = ui->thumbSpacingSlider->value();
-        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
-                          thumbSpacing, labelFontSize, showThumbLabels);
+        emit updateThumbParameters(ui->iconWidthSlider->value(),
+                                   ui->iconHeightSlider->value(),
+                                   ui->thumbSpacingSlider->value(),
+                                   ui->iconPaddingSlider->value(),
+                                   ui->fontSizeSlider->value(),
+                                   ui->showThumbLabelChk->isChecked());
     }
 }
 
 void Prefdlg::on_iconPaddingSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        thumbPadding = ui->iconPaddingSlider->value();
-        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
-                          thumbSpacing, labelFontSize, showThumbLabels);
+        emit updateThumbParameters(ui->iconWidthSlider->value(),
+                                   ui->iconHeightSlider->value(),
+                                   ui->thumbSpacingSlider->value(),
+                                   ui->iconPaddingSlider->value(),
+                                   ui->fontSizeSlider->value(),
+                                   ui->showThumbLabelChk->isChecked());
     }
 }
 
@@ -148,18 +141,24 @@ void Prefdlg::on_iconPaddingSlider_valueChanged(int value)
 void Prefdlg::on_showThumbLabelChk_clicked()
 {
     if (okToUpdate) {
-        showThumbLabels = ui->showThumbLabelChk->isChecked();
-        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
-                          thumbSpacing, labelFontSize, showThumbLabels);
+        emit updateThumbParameters(ui->iconWidthSlider->value(),
+                                   ui->iconHeightSlider->value(),
+                                   ui->thumbSpacingSlider->value(),
+                                   ui->iconPaddingSlider->value(),
+                                   ui->fontSizeSlider->value(),
+                                   ui->showThumbLabelChk->isChecked());
     }
 }
 
 void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        labelFontSize = ui->fontSizeSlider->value();
-        emit updateThumbParameters(thumbWidth, thumbHeight, thumbPadding,
-                          thumbSpacing, labelFontSize, showThumbLabels);
+        emit updateThumbParameters(ui->iconWidthSlider->value(),
+                                   ui->iconHeightSlider->value(),
+                                   ui->thumbSpacingSlider->value(),
+                                   ui->iconPaddingSlider->value(),
+                                   ui->fontSizeSlider->value(),
+                                   ui->showThumbLabelChk->isChecked());
     }
 }
 
@@ -167,16 +166,16 @@ void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 void Prefdlg::on_slideshowDelaySpinbox_valueChanged(int value)
 {
     if (okToUpdate) {
-        slideShowDelay = ui->slideshowDelaySpinbox->value();
-        emit updateSlideShowParameters(slideShowDelay, slideShowRandom);
+        emit updateSlideShowParameters(ui->slideshowDelaySpinbox->value(),
+                                       ui->slideshowRandomChk->isChecked());
     }
 }
 
 void Prefdlg::on_slideshowRandomChk_clicked()
 {
     if (okToUpdate) {
-        slideShowRandom = ui->slideshowRandomChk->isChecked();
-        emit updateSlideShowParameters(slideShowDelay, slideShowRandom);
+        emit updateSlideShowParameters(ui->slideshowDelaySpinbox->value(),
+                                       ui->slideshowRandomChk->isChecked());
     }
 }
 
@@ -184,27 +183,39 @@ void Prefdlg::on_slideshowRandomChk_clicked()
 void Prefdlg::on_cacheSizeSpinbox_valueChanged(int value)
 {
     if (okToUpdate) {
-        cacheSizeMB = value;
-        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
-            cacheWtAhead);
+        emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                                   ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheStatusWidthSpin->value(),
+                                   cacheWtAhead,
+                                   ui->cachePreviewsChk->isChecked(),
+                                   ui->previewWidthSB->value(),
+                                   ui->previewHeightSB->value());
     }
 }
 
 void Prefdlg::on_showCacheStatusChk_clicked()
 {
     if (okToUpdate) {
-        isShowCacheStatus = ui->showCacheStatusChk->isChecked();
-        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
-            cacheWtAhead);
+        emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                                   ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheStatusWidthSpin->value(),
+                                   cacheWtAhead,
+                                   ui->cachePreviewsChk->isChecked(),
+                                   ui->previewWidthSB->value(),
+                                   ui->previewHeightSB->value());
     }
 }
 
 void Prefdlg::on_cacheStatusWidthSpin_valueChanged(int value)
 {
     if (okToUpdate) {
-        cacheStatusWidth = value;
-        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
-            cacheWtAhead);
+        emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                                   ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheStatusWidthSpin->value(),
+                                   cacheWtAhead,
+                                   ui->cachePreviewsChk->isChecked(),
+                                   ui->previewWidthSB->value(),
+                                   ui->previewHeightSB->value());
     }
 }
 
@@ -212,17 +223,27 @@ void Prefdlg::on_cache50AheadRadio_clicked()
 {
     if (okToUpdate) {
         cacheWtAhead = 5;
-        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
-            cacheWtAhead);
-    }
+        emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                                   ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheStatusWidthSpin->value(),
+                                   cacheWtAhead,
+                                   ui->cachePreviewsChk->isChecked(),
+                                   ui->previewWidthSB->value(),
+                                   ui->previewHeightSB->value());
+   }
 }
 
 void Prefdlg::on_cache60AheadRadio_clicked()
 {
     if (okToUpdate) {
         cacheWtAhead = 6;
-        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
-            cacheWtAhead);
+        emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                                   ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheStatusWidthSpin->value(),
+                                   cacheWtAhead,
+                                   ui->cachePreviewsChk->isChecked(),
+                                   ui->previewWidthSB->value(),
+                                   ui->previewHeightSB->value());
     }
 }
 
@@ -230,8 +251,13 @@ void Prefdlg::on_cache70AheadRadio_clicked()
 {
     if (okToUpdate) {
         cacheWtAhead = 7;
-        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
-            cacheWtAhead);
+        emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                                   ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheStatusWidthSpin->value(),
+                                   cacheWtAhead,
+                                   ui->cachePreviewsChk->isChecked(),
+                                   ui->previewWidthSB->value(),
+                                   ui->previewHeightSB->value());
     }
 }
 
@@ -239,8 +265,13 @@ void Prefdlg::on_cache80AheadRadio_clicked()
 {
     if (okToUpdate) {
         cacheWtAhead = 8;
-        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
-            cacheWtAhead);
+        emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                                   ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheStatusWidthSpin->value(),
+                                   cacheWtAhead,
+                                   ui->cachePreviewsChk->isChecked(),
+                                   ui->previewWidthSB->value(),
+                                   ui->previewHeightSB->value());
     }
 }
 
@@ -248,8 +279,13 @@ void Prefdlg::on_cache90AheadRadio_clicked()
 {
     if (okToUpdate) {
         cacheWtAhead = 9;
-        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
-            cacheWtAhead);
+        emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                                   ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheStatusWidthSpin->value(),
+                                   cacheWtAhead,
+                                   ui->cachePreviewsChk->isChecked(),
+                                   ui->previewWidthSB->value(),
+                                   ui->previewHeightSB->value());
     }
 }
 
@@ -257,9 +293,54 @@ void Prefdlg::on_cache100AheadRadio_clicked()
 {
     if (okToUpdate) {
         cacheWtAhead = 10;
-        emit updateCacheParameters(cacheSizeMB, isShowCacheStatus, cacheStatusWidth,
-            cacheWtAhead);
+        emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                                   ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheStatusWidthSpin->value(),
+                                   cacheWtAhead,
+                                   ui->cachePreviewsChk->isChecked(),
+                                   ui->previewWidthSB->value(),
+                                   ui->previewHeightSB->value());
     }
+}
+
+void Prefdlg::on_cachePreviewsChk_clicked()
+{
+    if (ui->cachePreviewsChk->isChecked()) {
+        ui->previewWidthSB->setEnabled(true);
+        ui->previewHeightSB->setEnabled(true);
+    } else {
+        ui->previewWidthSB->setEnabled(false);
+        ui->previewHeightSB->setEnabled(false);
+    }
+    emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                               ui->showCacheStatusChk->isChecked(),
+                               ui->cacheStatusWidthSpin->value(),
+                               cacheWtAhead,
+                               ui->cachePreviewsChk->isChecked(),
+                               ui->previewWidthSB->value(),
+                               ui->previewHeightSB->value());
+}
+
+void Prefdlg::on_previewWidthSB_valueChanged(int value)
+{
+    emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                               ui->showCacheStatusChk->isChecked(),
+                               ui->cacheStatusWidthSpin->value(),
+                               cacheWtAhead,
+                               ui->cachePreviewsChk->isChecked(),
+                               ui->previewWidthSB->value(),
+                               ui->previewHeightSB->value());
+}
+
+void Prefdlg::on_previewHeightSB_valueChanged(int value)
+{
+    emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                               ui->showCacheStatusChk->isChecked(),
+                               ui->cacheStatusWidthSpin->value(),
+                               cacheWtAhead,
+                               ui->cachePreviewsChk->isChecked(),
+                               ui->previewWidthSB->value(),
+                               ui->previewHeightSB->value());
 }
 
 void Prefdlg::on_rememberFolderChk_clicked()
@@ -274,20 +355,20 @@ void Prefdlg::on_rememberFolderChk_clicked()
 void Prefdlg::on_wrapThumbsChk_clicked()
 {
     if (okToUpdate) {
-        isThumbWrap = ui->wrapThumbsChk->isChecked();
-        emit updateThumbDockParameters(isThumbWrap, isVerticalTitle);
+        emit updateThumbDockParameters(ui->wrapThumbsChk->isChecked(),
+                                       ui->vertTitleChk->isChecked());
     }
 }
 
 void Prefdlg::on_vertTitleChk_clicked()
 {
     if (okToUpdate) {
-        isVerticalTitle = ui->vertTitleChk->isChecked();
-        emit updateThumbDockParameters(isThumbWrap, isVerticalTitle);
+        emit updateThumbDockParameters(ui->wrapThumbsChk->isChecked(),
+                                       ui->vertTitleChk->isChecked());
     }
 }
 
-void Prefdlg::on_maxRecentSB_valueChanged(int arg1)
+void Prefdlg::on_maxRecentSB_valueChanged(int value)
 {
 //    if (okToUpdate) {
 //        emit updateMaxRecentFolders(ui->maxRecentSB->value());
@@ -306,68 +387,86 @@ void Prefdlg::on_maxRecentSB_destroyed()
     }
 }
 
+// grid preferences
 void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
-        thumbWidthGrid = ui->iconWidthSlider_2->value();
         if (ui->lockDimChk_2->isChecked()) {
-            ui->iconHeightSlider_2->setValue(thumbWidthGrid);
-            thumbHeightGrid = thumbWidthGrid;
+            ui->iconHeightSlider_2->setValue(ui->iconWidthSlider_2->value());
         }
-        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
-                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+        emit updateThumbGridParameters(ui->iconWidthSlider_2->value(),
+                                       ui->iconHeightSlider_2->value(),
+                                       ui->iconPaddingSlider_2->value(),
+                                       ui->thumbSpacingSlider_2->value(),
+                                       ui->fontSizeSlider_2->value(),
+                                       ui->showThumbLabelChk_2->isChecked());
     }
 }
 
 void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
-        thumbHeightGrid = ui->iconHeightSlider_2->value();
         if (ui->lockDimChk_2->isChecked()) {
-            ui->iconWidthSlider_2->setValue(thumbHeightGrid);
-            thumbWidthGrid = thumbHeightGrid;
+            ui->iconWidthSlider_2->setValue(ui->iconHeightSlider_2->value());
         }
-        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
-                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+        emit updateThumbGridParameters(ui->iconWidthSlider_2->value(),
+                                       ui->iconHeightSlider_2->value(),
+                                       ui->iconPaddingSlider_2->value(),
+                                       ui->thumbSpacingSlider_2->value(),
+                                       ui->fontSizeSlider_2->value(),
+                                       ui->showThumbLabelChk_2->isChecked());
     }
 }
 
 void Prefdlg::on_thumbSpacingSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
-        thumbSpacingGrid = ui->thumbSpacingSlider_2->value();
-        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
-                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+        emit updateThumbGridParameters(ui->iconWidthSlider_2->value(),
+                                       ui->iconHeightSlider_2->value(),
+                                       ui->iconPaddingSlider_2->value(),
+                                       ui->thumbSpacingSlider_2->value(),
+                                       ui->fontSizeSlider_2->value(),
+                                       ui->showThumbLabelChk_2->isChecked());
     }
 }
 
 void Prefdlg::on_iconPaddingSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
-        thumbPaddingGrid = ui->iconPaddingSlider_2->value();
-        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
-                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+        emit updateThumbGridParameters(ui->iconWidthSlider_2->value(),
+                                       ui->iconHeightSlider_2->value(),
+                                       ui->iconPaddingSlider_2->value(),
+                                       ui->thumbSpacingSlider_2->value(),
+                                       ui->fontSizeSlider_2->value(),
+                                       ui->showThumbLabelChk_2->isChecked());
     }
 }
 
 void Prefdlg::on_showThumbLabelChk_2_clicked()
 {
     if (okToUpdate) {
-        showThumbLabelsGrid = ui->showThumbLabelChk_2->isChecked();
-        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
-                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+        emit updateThumbGridParameters(ui->iconWidthSlider_2->value(),
+                                       ui->iconHeightSlider_2->value(),
+                                       ui->iconPaddingSlider_2->value(),
+                                       ui->thumbSpacingSlider_2->value(),
+                                       ui->fontSizeSlider_2->value(),
+                                       ui->showThumbLabelChk_2->isChecked());
     }
 }
 
 void Prefdlg::on_fontSizeSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
-        labelFontSizeGrid = ui->fontSizeSlider_2->value();
-        emit updateThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbPaddingGrid,
-                          thumbSpacingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+        emit updateThumbGridParameters(ui->iconWidthSlider_2->value(),
+                                       ui->iconHeightSlider_2->value(),
+                                       ui->iconPaddingSlider_2->value(),
+                                       ui->thumbSpacingSlider_2->value(),
+                                       ui->fontSizeSlider_2->value(),
+                                       ui->showThumbLabelChk_2->isChecked());
     }
 }
 
+// full screen preferences
 void Prefdlg::on_foldersChk_clicked()
 {
     emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
@@ -403,3 +502,4 @@ void Prefdlg::on_statusBarChk_clicked()
                                ui->metadataChk->isChecked(), ui->thumbsChk->isChecked(),
                                ui->statusBarChk->isChecked());
 }
+

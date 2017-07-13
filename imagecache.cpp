@@ -473,7 +473,7 @@ int ImageCache::pxEnd(int key)
 }
 
 void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
-     bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead)
+     bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead, bool &isPreview, int &previewWidth, int &previewHeight)
 {
     {
     #ifdef ISDEBUG
@@ -510,8 +510,10 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     cache.pxUnitWidth = (float)cache.pxTotWidth/(imageList.size());
     cache.totFiles = imageList.size();
     cache.dir = imageList.at(0).absolutePath();
-    cache.monitorPreview = QSize(3000, 2000);
-    cache.isPreview = true;
+    cache.monitorPreview = QSize(previewWidth, previewHeight);
+    cache.isPreview = isPreview;
+
+    qDebug() << "isPreview, preview width, height" << cache.isPreview << cache.monitorPreview;
 
 //    qDebug() << "\n###### Initializing image cache for " << cache.dir << "######";
 

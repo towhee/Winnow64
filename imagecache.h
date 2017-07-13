@@ -21,7 +21,8 @@ public:
     ~ImageCache();
 
     void initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
-             bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead);
+             bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead,
+             bool &isPreview, int &previewWidth, int &previewHeight);
     void updateImageCache(QFileInfoList &imageList, QString  &currentImageFullPath);
     void stopImageCache();
     QHash<QString, QPixmap> imCache;
