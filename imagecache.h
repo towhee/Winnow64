@@ -55,6 +55,7 @@ private:
     } cacheItem ;
 
     QList<CacheItem> cacheMgr;
+
     struct Cache {
         uint key;                   // current image
         uint prevKey;               // used to establish directionof travel
@@ -72,12 +73,14 @@ private:
         int pxTotWidth;             // width in pixels of graphic in statusbar
         float pxUnitWidth;          // width of one file on graphic in statusbar
         bool isShowCacheStatus;     // show in app status bar
+        bool isPreview;             // cache smaller pixmap for speedier initial display
+        QSize monitorPreview;       // monitor display dimensions for scale of previews
     } cache;
 
     QList<uint>toCache;
     QList<uint>toDecache;
 
-    bool loadPixmap(QString &imageFullPath, QImage &im);
+    bool loadPixmap(QString &imageFullPath, QPixmap &pm);
     ulong getImCacheSize();         // add up total MB cached
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
@@ -90,6 +93,7 @@ private:
     int pxMid(int key);             // center current position on statusbar
     int pxStart(int key);           // start current position on statusbar
     int pxEnd(int key);             // end current position on statusbar
+    QSize scalePreview(ulong w, ulong h);
     void reportCacheManager(QString title);
     void track(QString fPath, QString msg);
 };

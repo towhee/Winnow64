@@ -462,7 +462,7 @@ void ImageView::resizeImage()
     }
 
     // resize the imageLabel
-    imageLabel->setVisible(false);
+    imageLabel->setVisible(false);          // req'd to reset size (move not work otherwise)
     imageLabel->setFixedSize(imgSize);
     imageLabel->setVisible(true);
 

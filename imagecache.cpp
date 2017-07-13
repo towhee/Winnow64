@@ -179,6 +179,14 @@ void ImageCache::cacheStatus()
     emit showCacheStatus(pmCacheStatus, mbCacheSize);
 }
 
+QSize ImageCache::scalePreview(ulong w, ulong h)
+{
+    QSize preview(w, h);
+    preview.scale(cache.monitorPreview.width(), cache.monitorPreview.height(),
+                  Qt::KeepAspectRatio);
+    return preview;
+}
+
 ulong ImageCache::getImCacheSize()
 {
     // return the current size of the cache
@@ -502,6 +510,8 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     cache.pxUnitWidth = (float)cache.pxTotWidth/(imageList.size());
     cache.totFiles = imageList.size();
     cache.dir = imageList.at(0).absolutePath();
+    cache.monitorPreview = QSize(3000, 2000);
+    cache.isPreview = true;
 
 //    qDebug() << "\n###### Initializing image cache for " << cache.dir << "######";
 
@@ -525,6 +535,12 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
         ulong w = metadata->getWidth(fPath);
         ulong h = metadata->getHeight(fPath);
         cacheItem.sizeMB = (float)w * h / 256000;
+        if (cache.isPreview) {
+            QSize p = scalePreview(w, h);
+            w = p.width();
+            h = p.height();
+            cacheItem.sizeMB += (float)w * h / 256000;
+        }
         cacheMgr.append(cacheItem);
 
         folderMB += cacheItem.sizeMB;
@@ -595,8 +611,8 @@ void ImageCache::run()
         QString fPath = cacheMgr.at(cache.toCacheKey).fName;
         if (fPath == prevFileName) return;
         if (G::isThreadTrackingOn) track(fPath, "Reading");
-        QImage *image = new QImage;
-        if (loadPixmap(fPath, *image)) {
+        QPixmap *pm = new QPixmap;
+        if (loadPixmap(fPath, *pm)) {
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
             uint roomRqd = cacheMgr.at(cache.toCacheKey).sizeMB;
@@ -614,17 +630,20 @@ void ImageCache::run()
                 }
                 else break;
             }
-
+            pm->setDevicePixelRatio(G::devicePixelRatio);
             mutex.lock();
-            imCache.insert(fPath, QPixmap::fromImage(*image));
-//            imCache.insert(fPath, *image);
+            imCache.insert(fPath, *pm);
+            if (cache.isPreview) {
+                imCache.insert(fPath + "_Preview", pm->scaled(cache.monitorPreview,
+                   Qt::KeepAspectRatio, Qt::FastTransformation));
+            }
             cacheMgr[cache.toCacheKey].isCached = true;
             mutex.unlock();
             if (!toCache.isEmpty()) toCache.removeFirst();
             cache.currMB = getImCacheSize();
 //            qDebug() << "ImageCache::run" << fPath;
             cacheStatus();
-            delete image;
+            delete pm;
         }
         prevFileName = fPath;
     }
@@ -635,7 +654,7 @@ void ImageCache::run()
 //    reportCacheManager("Image cache updated for " + cache.dir);
 }
 
-bool ImageCache::loadPixmap(QString &fPath, QImage &image)
+bool ImageCache::loadPixmap(QString &fPath, QPixmap &pm)
 {
     /*  Reads the embedded jpg (known offset and length) and converts it into a
         pixmap.
@@ -677,6 +696,7 @@ bool ImageCache::loadPixmap(QString &fPath, QImage &image)
 
         QString err;            // type of error
 
+        QImage image;
         ulong offsetFullJpg = 0;
 
 //        QImage image;         // not included in ImageCache::loadPixmap
@@ -780,7 +800,7 @@ bool ImageCache::loadPixmap(QString &fPath, QImage &image)
         }
 
 
-//        pm = QPixmap::fromImage(image);  // not included in ImageCache::loadPixmap
+        pm = QPixmap::fromImage(image);
 
         // record any errors
         if (!success) {
