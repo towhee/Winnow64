@@ -36,6 +36,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->lockDimChk_2->setChecked(true);
     // thumb dock
     ui->wrapThumbsChk->setChecked(mw->thumbView->isThumbWrap);
+    ui->autoFitChk->setChecked(mw->thumbView->isAutoFit);
+    ui->autoFit2Chk->setChecked(mw->thumbView->isAutoFit);
     ui->vertTitleChk->setChecked(mw->isThumbDockVerticalTitle);
     // slideshow
     ui->slideshowDelaySpinbox->setValue(mw->slideShowDelay);
@@ -356,6 +358,27 @@ void Prefdlg::on_wrapThumbsChk_clicked()
 {
     if (okToUpdate) {
         emit updateThumbDockParameters(ui->wrapThumbsChk->isChecked(),
+                                       ui->autoFitChk->isChecked(),
+                                       ui->vertTitleChk->isChecked());
+    }
+}
+
+void Prefdlg::on_autoFitChk_clicked()
+{
+    if (okToUpdate) {
+        ui->autoFit2Chk->setChecked(ui->autoFitChk->isChecked());
+        emit updateThumbDockParameters(ui->wrapThumbsChk->isChecked(),
+                                       ui->autoFitChk->isChecked(),
+                                       ui->vertTitleChk->isChecked());
+    }
+}
+
+void Prefdlg::on_autoFit2Chk_clicked()
+{
+    if (okToUpdate) {
+        ui->autoFitChk->setChecked(ui->autoFit2Chk->isChecked());
+        emit updateThumbDockParameters(ui->wrapThumbsChk->isChecked(),
+                                       ui->autoFitChk->isChecked(),
                                        ui->vertTitleChk->isChecked());
     }
 }
@@ -364,6 +387,7 @@ void Prefdlg::on_vertTitleChk_clicked()
 {
     if (okToUpdate) {
         emit updateThumbDockParameters(ui->wrapThumbsChk->isChecked(),
+                                       ui->autoFitChk->isChecked(),
                                        ui->vertTitleChk->isChecked());
     }
 }

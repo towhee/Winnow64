@@ -17,8 +17,9 @@ public:
     void pick(bool isPick, QModelIndex idx);
     void showShootingInfo(bool isVisible);
 
-public slots:
+private slots:
     void zoom(QPointF coord, QModelIndex idx, bool isZoom);
+    void pan(QPoint delta, QModelIndex idx);
 
 private:
     Metadata *metadata;
@@ -31,6 +32,13 @@ private:
 
     QList<ImageView*> *ivList;
     QModelIndexList selection;
+
+    // req'd to receive pt from imageView
+    struct pt
+    {
+        int x;
+        int y;
+    };
 
     QSize cw;       // central widget in parent
     int count;      // number of images to compare

@@ -3,6 +3,8 @@ To do:
 - Sort thumbs and add to workspaces
 - Add more raw file formats
 - Compare 2-9 images
+- Add zoom increment to preferences
+- Fix thumbSize in thumbView (maybe change to thumbWidth??
 - UI for changing compare click zoom amount
 - Eject card
 - Thumbs fit

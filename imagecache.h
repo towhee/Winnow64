@@ -25,6 +25,7 @@ public:
              bool &isPreview, int &previewWidth, int &previewHeight);
     void updateImageCache(QFileInfoList &imageList, QString  &currentImageFullPath);
     void stopImageCache();
+    QSize getPreviewSize();
     QHash<QString, QPixmap> imCache;
 
 signals:
@@ -75,7 +76,7 @@ private:
         float pxUnitWidth;          // width of one file on graphic in statusbar
         bool isShowCacheStatus;     // show in app status bar
         bool isPreview;             // cache smaller pixmap for speedier initial display
-        QSize monitorPreview;       // monitor display dimensions for scale of previews
+        QSize previewSize;       // monitor display dimensions for scale of previews
     } cache;
 
     QList<uint>toCache;

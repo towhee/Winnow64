@@ -182,9 +182,14 @@ void ImageCache::cacheStatus()
 QSize ImageCache::scalePreview(ulong w, ulong h)
 {
     QSize preview(w, h);
-    preview.scale(cache.monitorPreview.width(), cache.monitorPreview.height(),
+    preview.scale(cache.previewSize.width(), cache.previewSize.height(),
                   Qt::KeepAspectRatio);
     return preview;
+}
+
+QSize ImageCache::getPreviewSize()
+{
+    return cache.previewSize;
 }
 
 ulong ImageCache::getImCacheSize()
@@ -510,10 +515,10 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     cache.pxUnitWidth = (float)cache.pxTotWidth/(imageList.size());
     cache.totFiles = imageList.size();
     cache.dir = imageList.at(0).absolutePath();
-    cache.monitorPreview = QSize(previewWidth, previewHeight);
+    cache.previewSize = QSize(previewWidth, previewHeight);
     cache.isPreview = isPreview;
 
-    qDebug() << "isPreview, preview width, height" << cache.isPreview << cache.monitorPreview;
+//    qDebug() << "isPreview, preview width, height" << cache.isPreview << cache.monitorPreview;
 
 //    qDebug() << "\n###### Initializing image cache for " << cache.dir << "######";
 
@@ -636,7 +641,7 @@ void ImageCache::run()
             mutex.lock();
             imCache.insert(fPath, *pm);
             if (cache.isPreview) {
-                imCache.insert(fPath + "_Preview", pm->scaled(cache.monitorPreview,
+                imCache.insert(fPath + "_Preview", pm->scaled(cache.previewSize,
                    Qt::KeepAspectRatio, Qt::FastTransformation));
             }
             cacheMgr[cache.toCacheKey].isCached = true;

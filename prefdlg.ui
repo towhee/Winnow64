@@ -51,7 +51,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>1</number>
+    <number>4</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QSpinBox" name="maxRecentSB">
@@ -947,6 +947,19 @@
       <string>Font size</string>
      </property>
     </widget>
+    <widget class="QCheckBox" name="autoFitChk">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>310</y>
+       <width>131</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Auto fit thumbs</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QWidget" name="pageThumbsGrid">
     <widget class="QLabel" name="iconWidthLbl_2">
@@ -1419,6 +1432,19 @@
      </property>
      <property name="text">
       <string>Font size</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="autoFit2Chk">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>310</y>
+       <width>131</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Auto fit thumbs</string>
      </property>
     </widget>
    </widget>

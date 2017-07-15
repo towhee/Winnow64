@@ -38,6 +38,7 @@ public:
 
     bool isThumbWrap;
     bool isGrid;        // set by MW so know which thumb parameters to use
+    bool isAutoFit;
 
     bool load(QString &dir, bool inclSubfolders);
 
@@ -75,7 +76,7 @@ public slots:
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
              int _thumbPadding, int _labelFontSize, bool _showThumbLabels);
     void setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid, int _thumbSpacingGrid,
-                            int _thumbPaddingGrid, int _labelFontSizeGrid, bool _showThumbLabelsGrid);
+             int _thumbPaddingGrid, int _labelFontSizeGrid, bool _showThumbLabelsGrid);
 
     void reportThumbs();
     void selectNext();
@@ -97,6 +98,7 @@ protected:
     void wheelEvent(QWheelEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
+    void resizeEvent(QResizeEvent* event);
     bool event(QEvent* event);      // key capture
 
 private:

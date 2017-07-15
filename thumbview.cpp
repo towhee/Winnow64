@@ -714,7 +714,7 @@ void ThumbView::thumbsEnlarge()
     #endif
     }
     qDebug() << "thumbsEnlarge: isGrid/thumbWidthGrid"
-             << isGrid << thumbWidthGrid;
+             << isGrid << thumbWidthGrid << thumbHeightGrid;
     if (isGrid) {
         if (thumbWidthGrid == 0) thumbWidthGrid = 40;
         if (thumbHeightGrid == 0) thumbHeightGrid = 40;
@@ -764,6 +764,12 @@ void ThumbView::thumbsShrink()
     setThumbParameters();
 }
 
+void ThumbView::resizeEvent(QResizeEvent *event)
+{
+    QListView::resizeEvent(event);
+    if (isAutoFit) thumbsFit();
+}
+
 void ThumbView::thumbsFit()
 {
     {
@@ -771,24 +777,68 @@ void ThumbView::thumbsFit()
     qDebug() << "ThumbView::thumbsFit";
     #endif
     }
-//    int imthumbWidth = imageView->getImagethumbWidth();
-//    int imthumbHeight = imageView->getImagethumbHeight();
-//    float aspect = (float)imthumbHeight/imthumbWidth;
-//    if (thumbHeight < thumbWidth)
-//        thumbHeight = thumbWidth * aspect;
-//    else
-//        thumbWidth = (float)thumbHeight / aspect;
-//    if (thumbWidth > 160) {
-//        float adj = 160 / thumbWidth;
-//        thumbWidth = 160;
-//        thumbHeight *= adj;
-//    }
-//    if (thumbHeight > 160) {
-//        float adj = 160 / thumbHeight;
-//        thumbHeight = 160;
-//        thumbWidth *= adj;
-//    }
-//    thumbView->refreshThumbs();
+    if (isGrid) {
+        // adjust thumb width
+        if (thumbWidthGrid < 40 || thumbHeightGrid < 0) {
+            thumbWidthGrid = 100;
+            thumbHeightGrid = 100;
+        }
+        float aspect = thumbHeightGrid / thumbWidthGrid;
+        int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+        int width = viewport()->width() - scrollWidth - 2;
+        int thumbSpaceWidth = thumbViewDelegate->getThumbSize().width();
+        int thumbSpaceMargin = thumbSpaceWidth - thumbWidthGrid;
+        int thumbsPerRow = width / thumbSpaceWidth;
+        int rightSideGap = 99999;
+        if (thumbsPerRow > 3) {
+            int tswLower = 0.8 * thumbSpaceWidth;
+            if (tswLower < 40) tswLower = 40;
+            int tswUpper = 1.2 * thumbSpaceWidth;
+            if (tswUpper > 160) tswUpper = 160;
+            for (int w = tswLower; w <= tswUpper; ++w) {
+                int remainder = width % w;
+                if (remainder < rightSideGap) {
+                    rightSideGap = remainder;
+                    thumbSpaceWidth = w;
+                }
+            }
+            thumbWidthGrid = thumbSpaceWidth - thumbSpaceMargin;
+        }
+        else {
+            int remainder = width % thumbSpaceWidth;
+            int thumbWidthInc = remainder / thumbsPerRow;
+            thumbWidthGrid += thumbWidthInc;
+        }
+        thumbHeightGrid = thumbWidthGrid * aspect;
+        setThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbSpacingGrid,
+                               thumbPaddingGrid, labelFontSizeGrid, showThumbLabelsGrid);
+        return;
+    }
+    if (isThumbWrap) {
+        // adjust thumb width
+        float aspect = thumbHeight / thumbWidth;
+        int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+        int width = viewport()->width() - scrollWidth - 2;
+        int thumbSpaceWidth = thumbViewDelegate->getThumbSize().width();
+        int thumbsPerRow = width / thumbSpaceWidth;
+        int remainder = width % thumbSpaceWidth;
+        int thumbWidthInc = remainder / thumbsPerRow;
+        thumbWidth += thumbWidthInc;
+        thumbHeight = thumbWidth * aspect;
+        setThumbParameters();
+    }
+    else {
+        // adjust thumb height
+        float aspect = thumbWidth / thumbHeight;
+        int scrollHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+        int viewportHeight = viewport()->height() - scrollHeight;
+        int thumbSpaceHeight = thumbViewDelegate->getThumbSize().height();
+        int margin = thumbSpaceHeight - thumbHeight;
+        thumbSpaceHeight = viewportHeight;
+        thumbHeight = thumbSpaceHeight - margin;
+        thumbWidth = thumbHeight * aspect;
+        setThumbParameters();
+    }
 }
 
 void ThumbView::forceScroll(int row)

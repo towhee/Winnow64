@@ -24,8 +24,8 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     if (thumbHeight < 40) thumbHeight = 100;
     thumbSize.setWidth(thumbWidth);
     thumbSize.setHeight(thumbHeight);
-    thumbSpace.setWidth(thumbWidth + iconPadding*2 + penWidth*4);
-    thumbSpace.setHeight(thumbHeight + iconPadding*2 + penWidth*4);
+    thumbSpace.setWidth(thumbWidth + iconPadding*2 + penWidth*2);
+    thumbSpace.setHeight(thumbHeight + iconPadding*2 + penWidth*2);
     if (showThumbLabels)
         thumbSpace.setHeight(thumbSize.height() + iconPadding*2
             + penWidth*2 + fontHt + iconPadding);

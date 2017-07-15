@@ -81,6 +81,9 @@ QGroupBox::title {
 
 QDockWidget > QWidget {
     color: rgb(190,190,190);
+    margin: 0px;
+    padding: 0px;
+    spacing: 0px;
 }
 
 QDockWidget::title {
@@ -361,6 +364,11 @@ QSpinBox {
 
 QSpinBox:hover, QSpinBox:focus {
     border-color: silver;
+}
+
+QSpinBox:disabled {
+    color: rgb(77,77,77);
+    background-color: rgb(88,88,88);
 }
 
 QSpinBox::up-button, QSpinBox::down-button  {

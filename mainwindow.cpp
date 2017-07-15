@@ -695,11 +695,11 @@ void MW::createActions()
 //    addAction(thumbsShrinkAction);
 
     // is this used - not in menu
-    thumbsFitAction = new QAction(tr("Fit Current Thumbnail"), this);
+    thumbsFitAction = new QAction(tr("Fit thumbs"), this);
     thumbsFitAction->setObjectName("thumbsZoomOut");
-    connect(thumbsFitAction, SIGNAL(triggered()), thumbView, SLOT(thumbsFit()));
-    if (thumbView->thumbSize == THUMB_SIZE_MIN)
-            thumbsFitAction->setEnabled(false);
+    connect(thumbsFitAction, SIGNAL(triggered()), this, SLOT(setThumbsFit()));
+//    if (thumbView->thumbSize == THUMB_SIZE_MIN)
+//            thumbsFitAction->setEnabled(false);
 
     showThumbLabelsAction = new QAction(tr("Thumb labels"), this);
     showThumbLabelsAction->setObjectName("showLabels");
@@ -975,9 +975,10 @@ void MW::createMenus()
     viewMenu->addSeparator();
     viewMenu->addAction(thumbsEnlargeAction);
     viewMenu->addAction(thumbsShrinkAction);
-//    viewMenu->addAction(thumbsFitAction);
+    viewMenu->addAction(thumbsFitAction);
     viewMenu->addAction(showThumbLabelsAction);
     viewMenu->addAction(reverseSortAction);
+    viewMenu->addSeparator();
 
 /*    sortMenu = viewMenu->addMenu(tr("Sort By"));
     sortTypesGroup = new QActionGroup(this);
@@ -1201,6 +1202,7 @@ void MW::createThumbView()
     thumbView->showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
 
     thumbView->isThumbWrap = setting->value("isThumbWrap").toBool();
+    thumbView->isAutoFit = setting->value("isAutoFit").toBool();
 
     thumbView->setThumbParameters();
 
@@ -1314,11 +1316,13 @@ void MW::createStatusBar()
     statusBar()->addWidget(stateLabel);
 }
 
-void MW::setThumbDockParameters(bool isThumbWrap, bool isVerticalTitle)
+void MW::setThumbDockParameters(bool isThumbWrap, bool isAutoFit, bool isVerticalTitle)
 {
 /* Signal from prefDlg when thumbWrap or verticalTitle changed
 */
     thumbView->isThumbWrap = isThumbWrap;       // is this needed?
+    thumbView->isAutoFit = isAutoFit;
+    if (isAutoFit) setThumbsFit();
     thumbView->setWrapping(isThumbWrap);
     if (isVerticalTitle) {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -1340,6 +1344,7 @@ void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
     isShowCacheStatus = show;
     cacheStatusWidth = width;
     cacheWtAhead = wtAhead;
+    qDebug() << "MW::setCacheParameters cacheWtAhead" << cacheWtAhead;
     isCachePreview = isPreview;
     cachePreviewWidth = previewWidth;
     cachePreviewHeight = previewHeight;
@@ -1520,6 +1525,15 @@ void MW::showHiddenFiles()
     #endif
     }
     fsTree->setModelFlags();
+}
+
+void MW::setThumbsFit()
+{
+    thumbView->thumbsFit();
+//    if (asLoupeAction->isChecked() || asCompareAction->isChecked()) {
+//        if (!thumbDock->isVisible()) return;
+//        thumbView->thumbsFit(thumbDock);
+//    }
 }
 
 void MW::setThumbLabels()   // move to thumbView
@@ -1722,6 +1736,7 @@ workspace with a matching name to the action is used.
     thumbView->labelFontSizeGrid = w.labelFontSizeGrid,
     thumbView->showThumbLabelsGrid = w.showThumbLabelsGrid;
     thumbView->isThumbWrap = w.isThumbWrap;
+    thumbView->isAutoFit = w.isAutoFit;
     thumbView->setThumbParameters();
     updateState();
 //            reportWorkspace(i);         // rgh remove after debugging
@@ -1758,6 +1773,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.labelFontSize = thumbView->labelFontSize;
     wsd.showThumbLabels = thumbView->showThumbLabels;
     wsd.isThumbWrap = thumbView->isThumbWrap;
+    wsd.isAutoFit = thumbView->isAutoFit;
 
     wsd.thumbSpacingGrid = thumbView->thumbSpacingGrid;
     wsd.thumbPaddingGrid = thumbView->thumbPaddingGrid;
@@ -1767,6 +1783,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.showThumbLabelsGrid = thumbView->showThumbLabelsGrid;
 
     wsd.isThumbWrap = thumbView->isThumbWrap;
+    wsd.isAutoFit = thumbView->isAutoFit;
 
     wsd.isVerticalTitle = isThumbDockVerticalTitle; // rgh thumbDock->titleBarWidget()->is;
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
@@ -1997,6 +2014,7 @@ void MW::reportWorkspace(int n)
              << "\nlabelFontSizeGrid" << ws.labelFontSizeGrid
              << "\nshowThumbLabelsGrid" << ws.showThumbLabelsGrid
              << "\nisThumbWrap" << ws.isThumbWrap
+             << "\nisAutoFit" << ws.isAutoFit
              << "\nisVerticalTitle" << ws.isVerticalTitle
              << "\nshowShootingInfo" << ws.isImageInfoVisible
              << "\nisIconDisplay" << ws.isIconDisplay
@@ -2068,6 +2086,7 @@ void MW::reportState()
              << "\nlabelFontSizeGrid" << w.labelFontSizeGrid
              << "\nshowThumbLabelsGrid" << w.showThumbLabelsGrid
              << "\nisThumbWrap" << w.isThumbWrap
+             << "\nisAutoFit" << w.isAutoFit
              << "\nisVerticalTitle" << isThumbDockVerticalTitle
              << "\nshowShootingInfo" << w.isImageInfoVisible
              << "\nisIconDisplay" << w.isIconDisplay
@@ -2278,8 +2297,8 @@ void MW::preferences()
             thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
     connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool)),
             thumbView, SLOT(setThumbGridParameters(int, int, int, int, int, bool)));
-    connect(prefdlg, SIGNAL(updateThumbDockParameters(bool, bool)),
-            this, SLOT(setThumbDockParameters(bool, bool)));
+    connect(prefdlg, SIGNAL(updateThumbDockParameters(bool, bool, bool)),
+            this, SLOT(setThumbDockParameters(bool, bool, bool)));
     connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
             this, SLOT(setSlideShowParameters(int, bool)));
     connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, bool, int, int)),
@@ -2525,6 +2544,7 @@ void MW::writeSettings()
     setting->setValue("labelFontSizeGrid", thumbView->labelFontSizeGrid);
     setting->setValue("showLabelsGrid", (bool)thumbView->showThumbLabelsGrid);
     setting->setValue("isThumbWrap", (bool)thumbView->isWrapping());
+    setting->setValue("isAutoFit", (bool)thumbView->isAutoFit);
     setting->setValue("isVerticalTitle", (bool)isThumbDockVerticalTitle);
     // slideshow
     setting->setValue("slideShowDelay", (int)slideShowDelay);
@@ -2568,7 +2588,7 @@ void MW::writeSettings()
 
     // not req'd
     setting->setValue("thumbsSortFlags", (int)thumbView->thumbsSortFlags);
-    setting->setValue("thumbsZoomVal", (int)thumbView->thumbSize);
+//    setting->setValue("thumbsZoomVal", (int)thumbView->thumbSize);
 
     /* Action shortcuts */
 //    GData::appSettings->beginGroup("Shortcuts");
@@ -2642,6 +2662,7 @@ void MW::writeSettings()
         setting->setValue("labelFontSizeGrid", ws.labelFontSizeGrid);
         setting->setValue("showThumbLabelsGrid", ws.showThumbLabelsGrid);
         setting->setValue("isThumbWrap", ws.isThumbWrap);
+        setting->setValue("isAutoFit", ws.isAutoFit);
         setting->setValue("isVerticalTitle", ws.isVerticalTitle);
         setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
         setting->setValue("isIconDisplay", ws.isIconDisplay);
@@ -2721,6 +2742,7 @@ Preferences are located in the relevant class and updated here.
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
     cacheStatusWidth = setting->value("cacheStatusWidth").toInt();
     cacheWtAhead = setting->value("cacheWtAhead").toInt();
+    qDebug() << "cacheWtAhead" << cacheWtAhead;
     isCachePreview = setting->value("isCachePreview").toBool();
     cachePreviewWidth = setting->value("cachePreviewWidth").toInt();
     cachePreviewHeight = setting->value("cachePreviewHeight").toInt();
@@ -2812,6 +2834,7 @@ Preferences are located in the relevant class and updated here.
         ws.labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
         ws.showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
         ws.isThumbWrap = setting->value("isThumbWrap").toBool();
+        ws.isAutoFit = setting->value("isAutoFit").toBool();
         ws.isVerticalTitle = setting->value("isVerticalTitle").toBool();
         ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
         ws.isIconDisplay = setting->value("isIconDisplay").toBool();
@@ -2934,6 +2957,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         ingestAction->setShortcut(QKeySequence("Q"));
         reportMetadataAction->setShortcut(QKeySequence("Ctrl+R"));
         slideShowAction->setShortcut(QKeySequence("S"));
+        thumbsFitAction->setShortcut(QKeySequence("Ctrl+}"));
         thumbsEnlargeAction->setShortcut(QKeySequence("}"));
         thumbsShrinkAction->setShortcut(QKeySequence("{"));
         nextThumbAction->setShortcut(QKeySequence("Right"));
@@ -2995,7 +3019,7 @@ void MW::setupDocks()
     #endif
     }
     thumbDock = new QDockWidget(tr("Thumbnails"), this);
-    thumbDock->setObjectName("Viewer");
+    thumbDock->setObjectName("thumbDock");
 
     connect(thumbDock, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
             this, SLOT(setThumbDockFeatures(Qt::DockWidgetArea)));

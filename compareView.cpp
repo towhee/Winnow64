@@ -47,6 +47,8 @@ bool CompareView::load(const QSize &centralWidgetSize)
         ivList->at(i)->loadImage(selection.at(i), fPath);
         connect(ivList->at(i), SIGNAL(compareZoom(QPointF, QModelIndex, bool)),
                 this, SLOT(zoom(QPointF, QModelIndex, bool)));
+        connect(ivList->at(i), SIGNAL(comparePan(QPoint, QModelIndex)),
+                this, SLOT(pan(QPoint, QModelIndex)));
     }
     configureGrid();
     loadGrid();
@@ -197,3 +199,12 @@ void CompareView::zoom(QPointF coord, QModelIndex idx, bool isZoom)
     }
 }
 
+void CompareView::pan(QPoint delta, QModelIndex idx)
+{
+    qDebug() << "CompareView::pan";
+    for (int i = 0; i < ivList->count(); ++i) {
+        if (ivList->at(i)->imageIndex != idx) {
+            ivList->at(i)->deltaMoveImage(delta);
+        }
+    }
+}

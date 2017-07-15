@@ -68,6 +68,7 @@ public:
         int labelFontSizeGrid;
         bool showThumbLabelsGrid;
         bool isThumbWrap;
+        bool isAutoFit;
         bool isVerticalTitle;
         bool isImageInfoVisible;
         bool includeSubfolders;
@@ -196,13 +197,14 @@ private slots:
     void nextSlide();
     void setCacheParameters(int size, bool show, int width, int wtAhead,
                             bool isCachePreview, int cachePreviewWidth, int cachePreviewHeight);
-    void setThumbDockParameters(bool isThumbWrap, bool isVerticalTitle);
+    void setThumbDockParameters(bool isThumbWrap, bool isAutoFit, bool isVerticalTitle);
     void selectAllThumbs();
     void removeBookmark();
     void rotateLeft();
     void rotateRight();
     void showHiddenFiles();
     void setThumbLabels();
+    void setThumbsFit();
     void chooseExternalApp();
     void updateExternalApps();
     void runExternalApp();

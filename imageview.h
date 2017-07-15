@@ -33,6 +33,7 @@ public:
     int getImageHeight();
 
     void compareZoomAtCoord(QPointF coord, bool isZoom);
+    void deltaMoveImage(QPoint &delta);
 
     void setImageLabelSize(QSize newSize);      // req'd?
     QSize imageSize();
@@ -59,6 +60,7 @@ signals:
     void togglePick();
     void updateStatus(bool, QString);
     void compareZoom(QPointF coord, QModelIndex imageIndex, bool isZoom);
+    void comparePan(QPoint delta, QModelIndex imageIndex);
 
 private slots:
 
@@ -110,6 +112,7 @@ private:
         int y;
     };
 
+    typedef pt pt;
     pt mouse;
 
     QPointF compareMouseRelLoc;
@@ -126,6 +129,7 @@ private:
     bool isMouseDoubleClick;
     bool isMouseClickInLabel;
     bool isResizeSourceMouseClick;      // prevent recursive infinite loop
+    bool isPreview;
 
     float zoomFit;
     float zoomInc = 0.1;    // 10% delta
@@ -138,6 +142,7 @@ private:
     void setMouseMoveData(bool lockMove, int lMouseX, int lMouseY);
     void centerImage(QSize &imgSize);
     void moveImage(QSize &imgSize);
+    bool previewFitsZoom();
 
     QRect windowRect();
     bool inImageView(QPoint canvasPt);

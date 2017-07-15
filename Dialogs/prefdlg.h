@@ -25,7 +25,7 @@ signals:
             int thumbPadding, int labelFontSize, bool showThumbLabels);
     void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
                                int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid);
-    void updateThumbDockParameters(bool isThumbWrap, bool isVerticalTitle);
+    void updateThumbDockParameters(bool isThumbWrap, bool isAutoFit, bool isVerticalTitle);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
             int cacheStatusWidth, int cacheWtAhead, bool isPreview,
@@ -76,6 +76,10 @@ private slots:
     void on_metadataChk_clicked();
     void on_thumbsChk_clicked();
     void on_statusBarChk_clicked();
+
+    void on_autoFitChk_clicked();
+
+    void on_autoFit2Chk_clicked();
 
 private:
 
