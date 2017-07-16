@@ -2,8 +2,9 @@
 
 ThumbViewDelegate::ThumbViewDelegate(QObject *parent)
 {
-//    iconPadding = GData::thumbPadding;           //pixels
-    penWidth = 2;
+    itemBorderThickness = 2;
+    thumbBorderThickness = 2;
+    thumbBorderGap = 1;         // allow small gap between thumb and outer border
 }
 
 void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
@@ -24,11 +25,11 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     if (thumbHeight < 40) thumbHeight = 100;
     thumbSize.setWidth(thumbWidth);
     thumbSize.setHeight(thumbHeight);
-    thumbSpace.setWidth(thumbWidth + iconPadding*2 + penWidth*2);
-    thumbSpace.setHeight(thumbHeight + iconPadding*2 + penWidth*2);
+    thumbSpace.setWidth(thumbWidth + thumbBorderThickness*2 + iconPadding*2 + thumbBorderGap*2 + itemBorderThickness*2);
+    thumbSpace.setHeight(thumbHeight + thumbBorderThickness*2 + iconPadding*2 + thumbBorderGap*2 + itemBorderThickness*2);
     if (showThumbLabels)
         thumbSpace.setHeight(thumbSize.height() + iconPadding*2
-            + penWidth*2 + fontHt + iconPadding);
+            + itemBorderThickness*2 + thumbBorderGap*2 + thumbBorderThickness*2 + fontHt + iconPadding);
 }
 
 void ThumbViewDelegate::reportThumbAttributes()
@@ -39,7 +40,7 @@ void ThumbViewDelegate::reportThumbAttributes()
             << "Font height =" << fontHt;
 }
 
-QSize ThumbViewDelegate::getThumbSize()
+QSize ThumbViewDelegate::getThumbCell()
 {
     return thumbSpace;
 }
@@ -62,6 +63,16 @@ void ThumbViewDelegate::paint(
         const QStyleOptionViewItem &option,
         const QModelIndex &index) const
 {
+/* The delegate cell size is defined in setThumbDimensions and assigned in sizeHint.
+The thumbSize cell contains a number of cells or rectangles:
+
+Outer dimensions = thumbSpace or option.rect
+itemRect         = thumbSpace - itemBorderThickness
+thumbRect        = itemRect - thumbBorderGap - padding - thumbBorderThickness
+iconRect         = thumbRect - icon (icon has different aspect so either the
+                   width or height will have to be centered inside the thumbRect
+textRect         = a rectangle below itemRect
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbViewDelegate::paint" << index;
@@ -75,22 +86,26 @@ void ThumbViewDelegate::paint(
     QString fName = qvariant_cast<QString>(index.data(Qt::EditRole));
 
     // UserRoles defined in ThumbView header
-    bool isPicked = qvariant_cast<bool>(index.data(Qt::UserRole+4));
+    bool isPicked = qvariant_cast<bool>(index.data(Qt::UserRole + 4));
+
+    // define some offsets
+    QPoint itemBorderOffset(itemBorderThickness, itemBorderThickness);
+    QPoint thumbGapOffset(thumbBorderGap, thumbBorderGap);
+    QPoint thumbBorderOffset(thumbBorderThickness, thumbBorderThickness);
+    QPoint paddingOffset(iconPadding, iconPadding);
 
     // Make the item border rect smaller to accommodate the border.
-    QPoint strokeOffset(penWidth, penWidth);
-    QRect itemRect(option.rect.topLeft() + strokeOffset,
-                   option.rect.bottomRight() - strokeOffset);
+    QRect itemRect(option.rect.topLeft() + itemBorderOffset,
+                   option.rect.bottomRight() - itemBorderOffset);
 
     // The thumb rect is padded inside the item rect
-    QRect thumbRect(itemRect.left() + iconPadding,
-                    itemRect.top() + iconPadding,
-                    thumbSize.width(),
-                    thumbSize.height());
+    QRect thumbRect(itemRect.topLeft() + thumbBorderOffset +
+                    paddingOffset + thumbGapOffset, thumbSize);
 
-    int alignVertPad = (thumbRect.height()-iconsize.height())/2+2;
-    int alignHorPad = (thumbRect.width()-iconsize.width())/2+2;
-    QRect iconRect(thumbRect.left()+alignHorPad, thumbRect.top()+alignVertPad,
+    // the icon rect is aligned within the thumb rect
+    int alignVertPad = (thumbRect.height() - iconsize.height()) / 2;
+    int alignHorPad = (thumbRect.width() - iconsize.width()) / 2;
+    QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
                    iconsize.width(), iconsize.height());
 
     QPainterPath iconPath;
@@ -118,7 +133,7 @@ void ThumbViewDelegate::paint(
 
     if (isPicked) {
         QPen pick(Qt::green);
-        pick.setWidth(2);
+        pick.setWidth(thumbBorderThickness);
         painter->setPen(pick);
     }
     else painter->setPen(notPick);
@@ -131,7 +146,7 @@ void ThumbViewDelegate::paint(
 
     if (option.state.testFlag(QStyle::State_Selected)) {
         QPen selectedPen(Qt::white);
-        selectedPen.setWidth(2);
+        selectedPen.setWidth(itemBorderThickness);
         painter->setPen(selectedPen);
 //        if (index == currentIndex) {
 //            QPen selectedPen(Qt::white);
@@ -144,7 +159,7 @@ void ThumbViewDelegate::paint(
 //        }
     } else {
         QPen activePen(borderGray);
-        activePen.setWidth(1);
+        activePen.setWidth(itemBorderThickness / 2);
         painter->setPen(activePen);
     }
     painter->drawRoundedRect(itemRect, 8, 8);

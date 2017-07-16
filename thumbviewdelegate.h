@@ -24,7 +24,7 @@ public:
     void setThumbDimensions(int thumbWidth, int thumbHeight,
           int thumbPadding, int labelFontSize, bool showThumbLabels);
 
-    QSize getThumbSize();
+    QSize getThumbCell();
     void reportThumbAttributes();
 
     QModelIndex currentIndex;
@@ -40,7 +40,9 @@ private:
     QSize thumbSize;
     QSize thumbSpace;
     int iconPadding;
-    int penWidth;
+    int itemBorderThickness;
+    int thumbBorderThickness;
+    int thumbBorderGap;
 //    int maxThumbNailWidth = 160;
 //    int maxThumbNailHeight = 120;
     int fontHt;

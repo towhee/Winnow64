@@ -170,6 +170,7 @@ Helper function for in class calls where thumb parameters already defined
         thumbViewDelegate->setThumbDimensions(thumbWidthGrid, thumbHeightGrid,
             thumbPaddingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     } else {
+        setWrapping(isThumbWrap);
         setSpacing(thumbSpacing);
         thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
             thumbPadding, labelFontSize, showThumbLabels);
@@ -737,6 +738,7 @@ void ThumbView::thumbsEnlarge()
         }
     }
     setThumbParameters();
+    if (isAutoFit) thumbsFit();
 }
 
 void ThumbView::thumbsShrink()
@@ -762,6 +764,7 @@ void ThumbView::thumbsShrink()
         }
     }
     setThumbParameters();
+    if (isAutoFit) thumbsFit();
 }
 
 void ThumbView::resizeEvent(QResizeEvent *event)
@@ -783,48 +786,53 @@ void ThumbView::thumbsFit()
             thumbWidthGrid = 100;
             thumbHeightGrid = 100;
         }
-        float aspect = thumbHeightGrid / thumbWidthGrid;
         int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
         int width = viewport()->width() - scrollWidth - 2;
-        int thumbSpaceWidth = thumbViewDelegate->getThumbSize().width();
-        int thumbSpaceMargin = thumbSpaceWidth - thumbWidthGrid;
-        int thumbsPerRow = width / thumbSpaceWidth;
+        // get the thumb cell width with no padding
+        int thumbCellWidth = thumbViewDelegate->getThumbCell().width() - thumbPaddingGrid * 2;
+//        int thumbCellWidth = thumbWidthGrid + thumbSpacingGrid + 4;
         int rightSideGap = 99999;
-        if (thumbsPerRow > 3) {
-            int tswLower = 0.8 * thumbSpaceWidth;
-            if (tswLower < 40) tswLower = 40;
-            int tswUpper = 1.2 * thumbSpaceWidth;
-            if (tswUpper > 160) tswUpper = 160;
-            for (int w = tswLower; w <= tswUpper; ++w) {
-                int remainder = width % w;
-                if (remainder < rightSideGap) {
-                    rightSideGap = remainder;
-                    thumbSpaceWidth = w;
-                }
+        thumbPaddingGrid = 0;
+        int remain;
+        int padding = 0;
+        bool improving;
+        // increase padding until wrapping occurs
+        do {
+            improving = false;
+            int cellWidth = thumbCellWidth + padding * 2;
+            remain = width % cellWidth;
+            if (remain < rightSideGap) {
+                improving = true;
+                rightSideGap = remain;
+                thumbPaddingGrid = padding;
             }
-            thumbWidthGrid = thumbSpaceWidth - thumbSpaceMargin;
-        }
-        else {
-            int remainder = width % thumbSpaceWidth;
-            int thumbWidthInc = remainder / thumbsPerRow;
-            thumbWidthGrid += thumbWidthInc;
-        }
-        thumbHeightGrid = thumbWidthGrid * aspect;
+            padding++;
+        } while (improving);
         setThumbGridParameters(thumbWidthGrid, thumbHeightGrid, thumbSpacingGrid,
                                thumbPaddingGrid, labelFontSizeGrid, showThumbLabelsGrid);
         return;
     }
     if (isThumbWrap) {
         // adjust thumb width
-        float aspect = thumbHeight / thumbWidth;
         int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
         int width = viewport()->width() - scrollWidth - 2;
-        int thumbSpaceWidth = thumbViewDelegate->getThumbSize().width();
-        int thumbsPerRow = width / thumbSpaceWidth;
-        int remainder = width % thumbSpaceWidth;
-        int thumbWidthInc = remainder / thumbsPerRow;
-        thumbWidth += thumbWidthInc;
-        thumbHeight = thumbWidth * aspect;
+        int thumbCellWidth = thumbViewDelegate->getThumbCell().width() - thumbPadding * 2;
+        int rightSideGap = 99999;
+        thumbPadding = 0;
+        int remain;
+        int padding = 0;
+        bool improving;
+        do {
+            improving = false;
+            int cellWidth = thumbCellWidth + padding * 2;
+            remain = width % cellWidth;
+            if (remain < rightSideGap) {
+                improving = true;
+                rightSideGap = remain;
+                thumbPadding = padding;
+            }
+            padding++;
+        } while (improving);
         setThumbParameters();
     }
     else {
@@ -832,7 +840,7 @@ void ThumbView::thumbsFit()
         float aspect = thumbWidth / thumbHeight;
         int scrollHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
         int viewportHeight = viewport()->height() - scrollHeight;
-        int thumbSpaceHeight = thumbViewDelegate->getThumbSize().height();
+        int thumbSpaceHeight = thumbViewDelegate->getThumbCell().height();
         int margin = thumbSpaceHeight - thumbHeight;
         thumbSpaceHeight = viewportHeight;
         thumbHeight = thumbSpaceHeight - margin;
@@ -848,7 +856,7 @@ void ThumbView::forceScroll(int row)
     sb = verticalScrollBar();
     int tot = thumbViewFilter->rowCount();
     int sbVal = ((float)row / tot) * sb->maximum();
-    QSize tSize = thumbViewDelegate->getThumbSize();
+    QSize tSize = thumbViewDelegate->getThumbCell();
     QSize wSize = this->size();
     int perRow = wSize.width() / tSize.width();
     int rowsReqd = ((float)tot / perRow) + 1;
