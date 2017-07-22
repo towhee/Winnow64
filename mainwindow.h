@@ -388,7 +388,8 @@ private:
     QWidget *centralWidget;
 //    QStackedLayout *mainLayout;
     QGridLayout *compareLayout;
-    QHBoxLayout *centralLayout;
+    QStackedLayout *centralLayout;
+//    QHBoxLayout *centralLayout;
     QDockWidget *metadataDock;
     Metadata *metadata;
     ThumbView *thumbView;

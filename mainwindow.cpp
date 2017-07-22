@@ -52,8 +52,10 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     // centralWidget required by ImageView constructor
     centralWidget = new QWidget(this);
-    centralWidget->setObjectName("loupeLayout");
-    QHBoxLayout *centralLayout = new QHBoxLayout;
+    centralWidget->setObjectName("centralWidget");
+//    centralWidget->setObjectName("loupeLayout");
+    centralLayout = new QStackedLayout;
+//    QHBoxLayout *centralLayout = new QHBoxLayout;
     centralLayout->setContentsMargins(0, 0, 0, 0);
 
     createThumbView();
@@ -90,7 +92,9 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareView);
-    compareView->setVisible(false);
+    centralLayout->addWidget(thumbView);
+    centralLayout->setCurrentIndex(0);
+//    compareView->setVisible(false);
     centralWidget->setLayout(centralLayout);
 //    centralWidget->setMouseTracking(true);
     setCentralWidget(centralWidget);
@@ -3242,8 +3246,9 @@ void MW::loupeDisplay()
     qDebug() << "MW::loupeDisplay";
     #endif
     }
-    imageView->setVisible(true);
-    compareView->setVisible(false);
+//    imageView->setVisible(true);
+//    compareView->setVisible(false);
+    centralLayout->setCurrentIndex(0);
     thumbView->thumbViewDelegate->isCompare = false;
 
     thumbDock->setWidget(thumbView);
@@ -3261,11 +3266,13 @@ void MW::gridDisplay()
     qDebug() << "MW::gridDisplay";
     #endif
     }
+    centralLayout->addWidget(thumbView);
+    qDebug() << "centralLayout->count()" << centralLayout->count();
+    centralLayout->setCurrentIndex(2);
     imageView->setVisible(false);
-    compareView->setVisible(false);
+//    compareView->setVisible(false);
     thumbView->thumbViewDelegate->isCompare = false;
 
-    centralLayout->addWidget(thumbView);
     thumbDockVisibleAction->setChecked(false);
     thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                            QDockWidget::DockWidgetMovable  |
@@ -3283,6 +3290,8 @@ void MW::compareDisplay()
     qDebug() << "MW::compareDisplay";
     #endif
     }
+    centralLayout->setCurrentIndex(2);
+
     int n = thumbView->selectionModel()->selectedIndexes().count();
     if (n < 2) {
         popUp->showPopup(this, "Select more than one image to compare.", 1000, 0.75);
@@ -3293,10 +3302,10 @@ void MW::compareDisplay()
         msg += " images have been selected.  Only the first 9 will be compared.";
         popUp->showPopup(this, msg, 2000, 0.75);
     }
-    imageView->setVisible(false);
-    compareView->setVisible(true);
+//    imageView->setVisible(false);
+//    compareView->setVisible(true);
 
-    thumbDock->setWidget(thumbView);
+//    thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(true);
     thumbView->isGrid = false;
