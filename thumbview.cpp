@@ -111,31 +111,31 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     QTime time = QTime::currentTime();
 }
 
-bool ThumbView::event(QEvent *event)
-{
-/* Just in case we need to override a keystroke in the thumbview */
-    bool override = false;
-//    qDebug() << "treeView events:" << event;
-    if (event->type() == QEvent::UpdateLater ||
-        event->type() == QEvent::Paint) {
-//        forceScroll(0);
-    }
-    if (event->type() == QEvent::Resize) {
-//        forceScroll(40);
-    }
-    if (event->type() == QEvent::KeyPress) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-//        if (keyEvent->key() == Qt::Key_Right) {
-//            override = true;
-//            selectNext();
-//        }
-//        if (keyEvent->key() == Qt::Key_Left) {
-//            override = true;
-//            selectPrev();
-//        }
-    }
-    if (!override) return QListView::event(event);
-}
+//bool ThumbView::event(QEvent *event)
+//{
+///* Just in case we need to override a keystroke in the thumbview */
+//    bool override = false;
+////    qDebug() << "thumbView events:" << event;
+//    if (event->type() == QEvent::UpdateLater ||
+//        event->type() == QEvent::Paint) {
+////        forceScroll(0);
+//    }
+//    if (event->type() == QEvent::Resize) {
+////        forceScroll(40);
+//    }
+//    if (event->type() == QEvent::KeyPress) {
+//        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+////        if (keyEvent->key() == Qt::Key_Right) {
+////            override = true;
+////            selectNext();
+////        }
+////        if (keyEvent->key() == Qt::Key_Left) {
+////            override = true;
+////            selectPrev();
+////        }
+//    }
+//    if (!override) return QListView::event(event);
+//}
 
 void ThumbView::reportThumbs()
 {
@@ -160,10 +160,15 @@ void ThumbView::refreshThumbs() {
 }
 
 void ThumbView::setThumbParameters()
-/*
-Helper function for in class calls where thumb parameters already defined
-*/
 {
+    /*
+    Helper function for in class calls where thumb parameters already defined
+    */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::setThumbParameters";
+    #endif
+    }
     if (isGrid) {
         setWrapping(true);
         setSpacing(thumbSpacingGrid);
@@ -184,7 +189,7 @@ void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::setThumbSize";
+    qDebug() << "ThumbView::setThumbParameters with args";
     #endif
     }
     thumbWidth = _thumbWidth;
@@ -200,10 +205,15 @@ void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
 void ThumbView::setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid,
                 int _thumbSpacingGrid,int _thumbPaddingGrid, int _labelFontSizeGrid,
                 bool _showThumbLabelsGrid)
-/*
-Helper function for in class calls where thumb parameters already defined
-*/
 {
+    /*
+    Helper function for in class calls where thumb parameters already defined
+    */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::setThumbGridParameters";
+    #endif
+    }
     thumbWidthGrid = _thumbWidthGrid;
     thumbHeightGrid = _thumbHeightGrid;
     thumbSpacingGrid = _thumbSpacingGrid;
@@ -239,6 +249,11 @@ void ThumbView::reportThumb()
 
 int ThumbView::getCurrentRow()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getCurrentRow";
+    #endif
+    }
     return currentIndex().row();
 }
 
@@ -307,7 +322,7 @@ QString ThumbView::getCurrentFilename()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getSingleSelectionFilename";
+    qDebug() << "ThumbView::getCurrentFilename";
     #endif
     }
     return currentIndex().data(FileNameRole).toString();
@@ -375,7 +390,7 @@ int ThumbView::getPrevPick()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getNextPick";
+    qDebug() << "ThumbView::getPrevPick";
     #endif
     }
     int back = currentIndex().row() - 1;
@@ -437,6 +452,11 @@ useful.
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::getSelectedThumbsList";
+    #endif
+    }
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getSelectedThumbList";
     #endif
     }
     QModelIndexList indexesList = selectionModel()->selectedIndexes();
@@ -769,6 +789,11 @@ void ThumbView::thumbsShrink()
 
 void ThumbView::resizeEvent(QResizeEvent *event)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::resizeEvent";
+    #endif
+    }
     QListView::resizeEvent(event);
     if (isAutoFit) thumbsFit();
 }
@@ -851,6 +876,11 @@ void ThumbView::thumbsFit()
 
 void ThumbView::forceScroll(int row)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::forceScroll";
+    #endif
+    }
 
     QScrollBar *sb;
     sb = verticalScrollBar();
@@ -956,6 +986,11 @@ click position that is then sent to imageView to zoom to the same spot
     qDebug() << "ThumbView::updateThumbRectRole";
     #endif
     }
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::updateThumbRectRole";
+    #endif
+    }
     thumbViewFilter->setData(index, iconRect, ThumbRectRole);
 }
 
@@ -975,6 +1010,11 @@ void ThumbView::invertSelection()
     qDebug() << "ThumbView::invertSelection";
     #endif
     }
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::invertSelection";
+    #endif
+    }
     QItemSelection toggleSelection;
     QModelIndex firstIndex = thumbViewFilter->index(0, 0);
     QModelIndex lastIndex = thumbViewFilter->index(thumbViewFilter->rowCount() - 1, 0);
@@ -984,6 +1024,11 @@ void ThumbView::invertSelection()
 
 void ThumbView::copyThumbs()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::copyThumbs";
+    #endif
+    }
     QModelIndexList indexesList = selectionModel()->selectedIndexes();
     if (indexesList.isEmpty()) {
         return;
@@ -1006,6 +1051,11 @@ void ThumbView::startDrag(Qt::DropActions)
 {
 /* Drag and drop thumbs to another program.
  */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::startDrag";
+    #endif
+    }
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::startDrag";

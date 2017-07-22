@@ -22,7 +22,7 @@ public:
 
     void initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
              bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead,
-             bool &isPreview, int &previewWidth, int &previewHeight);
+             bool &usePreview, int &previewWidth, int &previewHeight);
     void updateImageCache(QFileInfoList &imageList, QString  &currentImageFullPath);
     void stopImageCache();
     QSize getPreviewSize();
@@ -75,8 +75,8 @@ private:
         int pxTotWidth;             // width in pixels of graphic in statusbar
         float pxUnitWidth;          // width of one file on graphic in statusbar
         bool isShowCacheStatus;     // show in app status bar
-        bool isPreview;             // cache smaller pixmap for speedier initial display
-        QSize previewSize;       // monitor display dimensions for scale of previews
+        bool usePreview;             // cache smaller pixmap for speedier initial display
+        QSize previewSize;          // monitor display dimensions for scale of previews
     } cache;
 
     QList<uint>toCache;

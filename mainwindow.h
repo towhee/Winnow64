@@ -35,7 +35,8 @@ public:
     QSettings *setting;
     QMap<QString, QAction *> actionKeys;
     QMap<QString, QString> externalApps;
-    QSet<QString> bookmarkPaths;
+    QSet<QString> bookmarkPaths;            // temp holder on opening for settings until passed
+                                            // to bookmarks class when instantiated
 
     struct workspaceData {
         QString accelNum;       // for accelerator
@@ -125,7 +126,7 @@ public:
         bool isMetadata;
         bool isThumbs;
         bool isStatusBar;
-    } fullScreenDocks, normalDocks;
+    } fullScreenDocks;
 
     QString currentViewDir;
 
@@ -147,14 +148,6 @@ public slots:
     void showCacheStatus(const QImage &imCacheStatus, QString mb);
     void setThumbDockFeatures(Qt::DockWidgetArea area);
     void setThumbDockFloatFeatures(bool isFloat);
-
-
-    //    bool event(QEvent *event);
-    //    void fileSelectionChange(const QItemSelection& selection);
-    //    void showViewer();
-    //    void loadImagefromThumb(const QModelIndex &idx);
-    //    void hideViewer();
-    //    void showBusyStatus(bool busy);
 
 signals:
 

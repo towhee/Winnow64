@@ -50,6 +50,12 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     // must come first so persistant action settings can be updated
     if (!resetSettings) loadSettings();
 
+    // centralWidget required by ImageView constructor
+    centralWidget = new QWidget(this);
+    centralWidget->setObjectName("loupeLayout");
+    QHBoxLayout *centralLayout = new QHBoxLayout;
+    centralLayout->setContentsMargins(0, 0, 0, 0);
+
     createThumbView();
     createImageView();
     createCompareView();
@@ -62,14 +68,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     loadShortcuts(true);            // dependent on createActions
     setupDocks();
     handleStartupArgs();
-    setupMainWindow(resetSettings);
-    updateState();
-//    getSubfolders("/users/roryhill/pictures");
-    folderSelectionChange();
-}
+//    setupMainWindow(resetSettings);
 
-void MW::setupMainWindow(bool resetSettings)
-{
     if (!resetSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
         restoreState(setting->value("WindowState").toByteArray());
@@ -88,13 +88,9 @@ void MW::setupMainWindow(bool resetSettings)
     this->setWindowTitle("Winnow");
     this->setObjectName("WinnowMW");
 
-    centralLayout = new QHBoxLayout;
-    centralLayout->setObjectName("loupeLayout");
-    centralLayout->setContentsMargins(0, 0, 0, 0);
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareView);
     compareView->setVisible(false);
-    centralWidget = new QWidget;
     centralWidget->setLayout(centralLayout);
 //    centralWidget->setMouseTracking(true);
     setCentralWidget(centralWidget);
@@ -103,6 +99,61 @@ void MW::setupMainWindow(bool resetSettings)
     QFile fStyle(":/qss/teststyle.css");
     fStyle.open(QIODevice::ReadOnly);
     this->setStyleSheet(fStyle.readAll());
+
+    if (asCompareAction->isChecked()) {
+        asCompareAction->setChecked(false);
+        asLoupeAction->setChecked(true);
+    }
+
+    updateState();
+    folderSelectionChange();
+}
+
+void MW::setupMainWindow(bool resetSettings)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setupMainWindow";
+    #endif
+    }
+    if (!resetSettings) {
+        restoreGeometry(setting->value("Geometry").toByteArray());
+        restoreState(setting->value("WindowState").toByteArray());
+    }
+
+    #ifdef Q_OS_LINIX
+
+    #endif
+    #ifdef Q_OS_WIN
+        setWindowIcon(QIcon(":/images/winnow.png"));
+    #endif
+    #ifdef Q_OS_MAC
+        setWindowIcon(QIcon(":/images/winnow.icns"));
+    #endif
+
+    this->setWindowTitle("Winnow");
+    this->setObjectName("WinnowMW");
+
+//    centralLayout = new QHBoxLayout;
+//    centralLayout->setObjectName("loupeLayout");
+//    centralLayout->setContentsMargins(0, 0, 0, 0);
+//    centralLayout->addWidget(imageView);
+//    centralLayout->addWidget(compareView);
+    compareView->setVisible(false);
+//    centralWidget = new QWidget;
+    centralWidget->setLayout(centralLayout);
+//    centralWidget->setMouseTracking(true);
+    setCentralWidget(centralWidget);
+
+    // add error trapping for file io  rgh todo
+    QFile fStyle(":/qss/teststyle.css");
+    fStyle.open(QIODevice::ReadOnly);
+    this->setStyleSheet(fStyle.readAll());
+
+    if (asCompareAction->isChecked()) {
+        asCompareAction->setChecked(false);
+        asLoupeAction->setChecked(true);
+    }
 }
 
 bool MW::event(QEvent *event)
@@ -202,6 +253,13 @@ void MW::folderSelectionChange()
     // stop slideshow if a new folder is selected
     if (isSlideShowActive && !isStressTest) slideShow();
 
+    // if previously in compare mode switch to loupe mode
+    if (asCompareAction->isChecked()) {
+        asCompareAction->setChecked(false);
+        asLoupeAction->setChecked(true);
+        updateState();
+    }
+
     QString dirPath;
     QDir testDir;
     if (isInitializing) {
@@ -257,7 +315,7 @@ void MW::folderSelectionChange()
     if (!thumbView->load(currentViewDir, subFoldersAction->isChecked())) {
         updateStatus(false, "No images in this folder");
         infoView->clearInfo();
-        imageView->clear();
+//        imageView->clear();
         cacheLabel->setVisible(false);
         return;
     }
@@ -305,7 +363,7 @@ void MW::fileSelectionChange()
     }
 
 //    thumbView->setWrapping(true);
-//    setThumbDockVisibity();
+//    setThumbDockVisibity();    qDebug() << "centralWidget->width()" << centralWidget->width();
 
 }
 
@@ -1251,7 +1309,7 @@ void MW:: createImageView()
     #endif
     }
     imageCacheThread = new ImageCache(this, metadata);
-    imageView = new ImageView(this, metadata, imageCacheThread, thumbView,
+    imageView = new ImageView(this, centralWidget, metadata, imageCacheThread, thumbView,
                               setting->value("isImageInfoVisible").toBool(), false);
 //    connect(copyImageAction, SIGNAL(triggered()), imageView, SLOT(copyImage()));
 //    connect(pasteImageAction, SIGNAL(triggered()), imageView, SLOT(pasteImage()));
@@ -1270,7 +1328,12 @@ void MW:: createImageView()
 }
 void MW::createCompareView()
 {
-    compareView = new CompareView(this, metadata, thumbView, imageCacheThread);
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::createCompareView";
+    #endif
+    }
+    compareView = new CompareView(this, centralWidget, metadata, thumbView, imageCacheThread);
 }
 
 void MW::createStatusBar()
@@ -1320,6 +1383,11 @@ void MW::setThumbDockParameters(bool isThumbWrap, bool isAutoFit, bool isVertica
 {
 /* Signal from prefDlg when thumbWrap or verticalTitle changed
 */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setThumbDockParameters";
+    #endif
+    }
     thumbView->isThumbWrap = isThumbWrap;       // is this needed?
     thumbView->isAutoFit = isAutoFit;
     if (isAutoFit) setThumbsFit();
@@ -1338,20 +1406,29 @@ void MW::setThumbDockParameters(bool isThumbWrap, bool isAutoFit, bool isVertica
 }
 
 void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
-                            bool isPreview, int previewWidth, int previewHeight)
+                            bool usePreview, int previewWidth, int previewHeight)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setCacheParameters";
+    #endif
+    }
     cacheSizeMB = size;
     isShowCacheStatus = show;
     cacheStatusWidth = width;
     cacheWtAhead = wtAhead;
-    qDebug() << "MW::setCacheParameters cacheWtAhead" << cacheWtAhead;
-    isCachePreview = isPreview;
+    isCachePreview = usePreview;
     cachePreviewWidth = previewWidth;
     cachePreviewHeight = previewHeight;
 }
 
 void MW::updateStatus(bool keepBase, QString s)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::updateStatus";
+    #endif
+    }
     QString status;
     QString fileCount = "";
     QString zoomPct = "";
@@ -1389,6 +1466,11 @@ QString fileSym = "📷";
 
 void MW::updateMetadataThreadRunStatus(bool isRunning)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::updataMetadataThreadRunStatus";
+    #endif
+    }
     if (isRunning)
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
     else
@@ -1398,6 +1480,11 @@ void MW::updateMetadataThreadRunStatus(bool isRunning)
 
 void MW::updateThumbThreadRunStatus(bool isRunning)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::updateThumbThreadRunningStatus";
+    #endif
+    }
     if (isRunning)
         thumbThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
     else
@@ -1407,6 +1494,11 @@ void MW::updateThumbThreadRunStatus(bool isRunning)
 
 void MW::updateImageThreadRunStatus(bool isRunning)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::updateImageThreadRunStatus";
+    #endif
+    }
     if (isRunning)
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
     else
@@ -1529,6 +1621,11 @@ void MW::showHiddenFiles()
 
 void MW::setThumbsFit()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setThuumbsFit";
+    #endif
+    }
     thumbView->thumbsFit();
 //    if (asLoupeAction->isChecked() || asCompareAction->isChecked()) {
 //        if (!thumbDock->isVisible()) return;
@@ -1670,6 +1767,11 @@ with "_1" appended also might exist.
     qDebug() << "MW::fixDupWorkspaceName";
     #endif
     }
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::fixDupWorkspaceName";
+    #endif
+    }
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == name) {
             name += "_1";
@@ -1681,6 +1783,11 @@ with "_1" appended also might exist.
 
 void MW::invokeWorkspaceFromAction(QAction *workAction)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::invokeWorkspaceFromAction";
+    #endif
+    }
     qDebug() << "Invoke" << workAction;     // rgh remove when debugged
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == workAction->text()) {
@@ -1697,6 +1804,11 @@ invokeWorkspace is called from a workspace action. Since the workspace actions
 are a list of actions, the workspaceMenu triggered signal is captured, and the
 workspace with a matching name to the action is used.
 */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::invokeWorkspace";
+    #endif
+    }
     {
     #ifdef ISDEBUG
     qDebug() << "MW::invokeWorkspace";
@@ -1744,6 +1856,11 @@ workspace with a matching name to the action is used.
 
 void MW::snapshotWorkspace(workspaceData &wsd)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::snapshotWorkspace";
+    #endif
+    }
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
     wsd.isFullScreen = isFullScreen();
@@ -1799,6 +1916,11 @@ Delete, rename and reassign workspaces.
     qDebug() << "MW::manageWorkspaces";
     #endif
     }
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::manageWorkspace";
+    #endif
+    }
     // rgh remove after debugging
     foreach(QAction *act, workspaceMenu->actions()) {
         qDebug() << act->objectName() << act;
@@ -1839,6 +1961,11 @@ void MW::deleteWorkspace(int n)
 
 void MW::syncWorkspaceMenu()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::syncWorkspaceMenu";
+    #endif
+    }
     int count = workspaces->count();
     for (int i=0; i<10; i++) {
         if (i < count) {
@@ -1949,32 +2076,14 @@ void MW::renameWorkspace(int n, QString name)
 
 void MW::populateWorkspace(int n, QString name)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::populateWorkspace";
+    #endif
+    }
     snapshotWorkspace((*workspaces)[n]);
-//    (*workspaces)[n] = ws;
     (*workspaces)[n].accelNum = QString::number(n);
     (*workspaces)[n].name = name;
-//    (*workspaces)[n].geometry = saveGeometry();
-//    (*workspaces)[n].state = saveState();
-//    (*workspaces)[n].isWindowTitleBarVisible = windowTitleBarVisibleAction->isChecked();
-//    (*workspaces)[n].isMenuBarVisible = menuBarVisibleAction->isChecked();
-//    (*workspaces)[n].isStatusBarVisible = statusBarVisibleAction->isChecked();
-//    (*workspaces)[n].isFolderDockVisible = folderDockVisibleAction->isChecked();
-//    (*workspaces)[n].isFavDockVisible = favDockVisibleAction->isChecked();
-//    (*workspaces)[n].isMetadataDockVisible = metadataDockVisibleAction->isChecked();
-//    (*workspaces)[n].isThumbDockVisible = thumbDockVisibleAction->isChecked();
-//    (*workspaces)[n].isFolderDockLocked = folderDockLockAction->isChecked();
-//    (*workspaces)[n].isFavDockLocked = favDockLockAction->isChecked();
-//    (*workspaces)[n].isMetadataDockLocked = metadataDockLockAction->isChecked();
-//    (*workspaces)[n].isThumbDockLocked = thumbDockLockAction;
-//    (*workspaces)[n].thumbSpacing = thumbView->thumbSpacing;
-//    (*workspaces)[n].thumbPadding = thumbView->thumbPadding;
-//    (*workspaces)[n].thumbWidth = thumbView->thumbWidth;
-//    (*workspaces)[n].thumbHeight = thumbView->thumbHeight;
-//    (*workspaces)[n].labelFontSize = thumbView->labelFontSize;
-//    (*workspaces)[n].showThumbLabels = thumbView->showThumbLabels;
-//    (*workspaces)[n].isThumbWrap = mwd.isThumbWrap;
-//    (*workspaces)[n].isVerticalTitle = isThumbDockVerticalTitle;
-//    (*workspaces)[n].isImageInfoVisible = infoVisibleAction->isChecked();
 }
 
 void MW::reportWorkspace(int n)
@@ -2021,44 +2130,15 @@ void MW::reportWorkspace(int n)
              << "\nisLoupeDisplay" << ws.isLoupeDisplay
              << "\nisGridDisplay" << ws.isGridDisplay
              << "\nisCompareDisplay" << ws.isCompareDisplay;
-
-//    qDebug() << "Window isMaximized: " << isFullScreen();
-//    const workspaceData *w = new workspaceData;
-//    w = &workspaces->at(n);
-//    qDebug() << "\n\nName" << w->name
-//             << "\nAccel#" << w->accelNum
-//             << "\nGeometry" << w->geometry
-//             << "\nState" << w->state
-//             << "\nisMaximized" << w->isFullScreen
-//             << "\nisWindowTitleBarVisible" << w->isWindowTitleBarVisible
-//             << "\nisMenuBarVisible" << w->isMenuBarVisible
-//             << "\nisStatusBarVisible" << w->isStatusBarVisible
-//             << "\nisFolderDockVisible" << w->isFolderDockVisible
-//             << "\nisFavDockVisible" << w->isFavDockVisible
-//             << "\nisMetadataDockVisible" << w->isMetadataDockVisible
-//             << "\nisThumbDockVisible" << w->isThumbDockVisible
-//             << "\nisFolderLocked" << w->isFolderDockLocked
-//             << "\nisFavLocked" << w->isFavDockLocked
-//             << "\nisMetadataLocked" << w->isMetadataDockLocked
-//             << "\nisThumbsLocked" << w->isThumbDockLocked
-//             << "\nthumbSpacing" << w->thumbSpacing
-//             << "\nthumbPadding" << w->thumbPadding
-//             << "\nthumbWidth" << w->thumbWidth
-//             << "\nthumbHeight" << w->thumbHeight
-//             << "\nlabelFontSize" << w->labelFontSize
-//             << "\nshowThumbLabels" << w->showThumbLabels
-//             << "\nsisThumbWrap" << w->isThumbWrap
-//             << "\nisVerticalTitle" << w->isVerticalTitle
-//             << "\nshowShootingInfo" << w->isImageInfoVisible
-//             << "\nisIconDisplay" << w->isIconDisplay
-//             << "\nisLoupeDisplay" << w->isLoupeDisplay
-//             << "\nisGridDisplay" << w->isGridDisplay
-//             << "\nisCompareDisplay" << w->isCompareDisplay;
-//    delete w;
 }
 
 void MW::reportState()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::reportState";
+    #endif
+    }
     workspaceData w;
     snapshotWorkspace(w);
     qDebug() << "\nisMaximized" << w.isFullScreen
@@ -2310,31 +2390,53 @@ void MW::preferences()
 
 void MW::setIncludeSubFolders()
 {
-    // need inclSubFolders for passing to functions
-//    subFoldersAction->setChecked(include);
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setIncludeSubFolders";
+    #endif
+    }
     inclSubfolders = subFoldersAction->isChecked();
-//    currentViewDir = "";
     folderSelectionChange();
 }
 
 void MW::setPrefPage(int page)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setPrefPage";
+    #endif
+    }
     lastPrefPage = page;
 }
 
 void MW::setRememberLastDir(bool prefRememberFolder)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setRememberLastDir";
+    #endif
+    }
     rememberLastDir = prefRememberFolder;
 }
 
 void MW::setMaxRecentFolders(int prefMaxRecentFolders)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setMaxRecentFolders";
+    #endif
+    }
     maxRecentFolders = prefMaxRecentFolders;
     syncRecentFoldersMenu();
 }
 
 void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs, bool isStatusBar)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setFullScreenDocks";
+    #endif
+    }
     fullScreenDocks.isFolders = isFolders;
     fullScreenDocks.isFavs = isFavs;
     fullScreenDocks.isMetadata = isMetadata;
@@ -2471,7 +2573,7 @@ void MW::removeBookmark()
 
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::deleteOp";
+    qDebug() << "MW::removeBookmark";
     #endif
     }
 //    if (QApplication::focusWidget() == thumbView->imageTags->tagsTree) {
@@ -2489,7 +2591,7 @@ void MW::setThumbsFilter()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::setThumbspick";
+    qDebug() << "MW::setThumbsFilter";
     #endif
     }
     thumbView->filterStr = filterBar->text();
@@ -2500,7 +2602,7 @@ void MW::clearThumbsFilter()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::clearThumbspick";
+    qDebug() << "MW::clearThumbsFilter";
     #endif
     }
     if (filterBar->text() == "")
@@ -2675,14 +2777,14 @@ void MW::writeSettings()
 
 void MW::loadSettings()
 {
-/* Persistant settings from QSettings fall into tow categories:
+/* Persistant settings from QSettings fall into two categories:
 1.  Action settings
 2.  Preferences
 
 Action settings are maintained by the actions ie action->isChecked();
 They are updated on creation.
 
-Preferences are located in the relevant class and updated here.
+Preferences are located in the prefdlg class and updated here.
 
 */
     {
@@ -2709,7 +2811,7 @@ Preferences are located in the relevant class and updated here.
         setting->setValue("isCachePreview", (bool)false);
 
         setting->setValue("maxRecentFolders", (int)10);
-        bookmarkPaths.insert(QDir::homePath());
+        bookmarks->bookmarkPaths.insert(QDir::homePath());
     }
 
     // general
@@ -2742,7 +2844,6 @@ Preferences are located in the relevant class and updated here.
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
     cacheStatusWidth = setting->value("cacheStatusWidth").toInt();
     cacheWtAhead = setting->value("cacheWtAhead").toInt();
-    qDebug() << "cacheWtAhead" << cacheWtAhead;
     isCachePreview = setting->value("isCachePreview").toBool();
     cachePreviewWidth = setting->value("cachePreviewWidth").toInt();
     cachePreviewHeight = setting->value("cachePreviewHeight").toInt();
@@ -3029,7 +3130,7 @@ void MW::setupDocks()
 
     imageViewContainer = new QVBoxLayout;
     imageViewContainer->setContentsMargins(0, 0, 0, 0);
-    imageViewContainer->addWidget(imageView);
+//    imageViewContainer->addWidget(imageView);
     QWidget *imageViewContainerWidget = new QWidget;
     imageViewContainerWidget->setLayout(imageViewContainer);
     thumbDock->setWidget(thumbView);
@@ -3058,6 +3159,11 @@ void MW::setupDocks()
 
 void MW::updateState()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::updateState";
+    #endif
+    }
 //    setMaxNormal();
     setMenuBarVisibility();
     setStatusBarVisibility();
@@ -3088,6 +3194,11 @@ void MW::updateState()
 
 void MW::setThumbDockFloatFeatures(bool isFloat)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setThumbDockFloatFeatures";
+    #endif
+    }
     if (isFloat) {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
@@ -3133,7 +3244,7 @@ void MW::loupeDisplay()
     }
     imageView->setVisible(true);
     compareView->setVisible(false);
-    thumbView->thumbViewDelegate->isCompare = true;
+    thumbView->thumbViewDelegate->isCompare = false;
 
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
@@ -3199,6 +3310,11 @@ void MW::compareDisplay()
 
 void MW::setFullNormal()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setFullNormal";
+    #endif
+    }
     if (fullScreenAction->isChecked()) showFullScreen();
     else showNormal();
 }
@@ -3263,24 +3379,6 @@ void MW::setMetadataDockVisibility() {
     }
     metadataDock->setVisible(metadataDockVisibleAction->isChecked());
 }
-
-// rgh think about this one
-//void MW::toggleAllDocks() {
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "MW::toggleNonThumbs";
-//    #endif
-//    }
-//    toggleThumbsAction->setChecked(!toggleThumbsAction->isChecked());
-//    thumbDock->setVisible(toggleThumbsAction->isChecked());
-//    toggleFilesAction->setChecked(!toggleFilesAction->isChecked());
-//    fsDock->setVisible(toggleFilesAction->isChecked());
-//    toggleFavsAction->setChecked(!toggleFavsAction->isChecked());
-//    bmDock->setVisible(toggleFavsAction->isChecked());
-//    toggleMetadataAction->setChecked(!toggleMetadataAction->isChecked());
-//    iiDock->setVisible(toggleMetadataAction->isChecked());
-////    tagsDock->setVisible(!tagsDock->isVisible());
-//}
 
 void MW::setMenuBarVisibility() {
 
@@ -3550,6 +3648,11 @@ void MW::getSubfolders(QString fPath)
 
 void MW::stressTest()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::stressTest";
+    #endif
+    }
     getSubfolders("/users/roryhill/pictures");
     QString fPath;
     fPath = subfolders->at(qrand() % (subfolders->count()));
@@ -3557,6 +3660,11 @@ void MW::stressTest()
 
 void MW::setSlideShowParameters(int delay, bool isRandom)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setSlideShowParameters";
+    #endif
+    }
     slideShowDelay = delay;
     slideShowRandom = isRandom;
 }
@@ -3728,20 +3836,20 @@ void MW::wheelEvent(QWheelEvent *event)
     qDebug() << "MW::wheelEvent";
     #endif
     }
-        if (event->modifiers() == Qt::ControlModifier)
-        {
-            if (event->delta() < 0)
-                imageView->zoomOut();
-            else
-                imageView->zoomIn();
-        }
-        else if (nextThumbAction->isEnabled())
-        {
-            if (event->delta() < 0)
-                thumbView->selectNext();
-            else
-                thumbView->selectPrev();
-        }
+//        if (event->modifiers() == Qt::ControlModifier)
+//        {
+//            if (event->delta() < 0)
+//                imageView->zoomOut();
+//            else
+//                imageView->zoomIn();
+//        }
+//        else if (nextThumbAction->isEnabled())
+//        {
+//            if (event->delta() < 0)
+//                thumbView->selectNext();
+//            else
+//                thumbView->selectPrev();
+//        }
 }
 
 // not req'd
@@ -3774,7 +3882,8 @@ void MW::addBookmark(QString path)
     qDebug() << "MW::addBookmark";
     #endif
     }
-    bookmarkPaths.insert(path);
+
+    bookmarks->bookmarkPaths.insert(path);
     bookmarks->reloadBookmarks();
 }
 
@@ -3793,6 +3902,11 @@ void MW::openFolder()
 
 void MW::revealFile()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::revealFile";
+    #endif
+    }
 
     // See http://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
     // for details

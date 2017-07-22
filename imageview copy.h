@@ -8,32 +8,35 @@
 #include "thumbcache.h"
 #include "dropshadowlabel.h"
 
-class ImageView : public QGraphicsView
+class ImageView : public QWidget
 {
     Q_OBJECT
 
 public:
-    ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata,
-              ImageCache *imageCacheThread, ThumbView *thumbView,
-              bool isShootingInfoVisible, bool isCompareMode);
+    ImageView(QWidget *parent, Metadata *metadata, ImageCache *imageCacheThread,
+             ThumbView *thumbView, bool isShootingInfoVisible, bool isCompareMode);
 
     QScrollArea *scrlArea;
     QLabel *infoLabel;
     QLabel *infoLabelShadow;
     DropShadowLabel *infoDropShadow;
-    qreal zoom;
+    float zoom;
     QModelIndex imageIndex;
 
     bool loadPixmap(QString &imageFullPath, QPixmap &pm);
     bool loadImage(QModelIndex idx, QString imageFileName);
+    void clear();
     void setCursorHiding(bool hide);
     void setClickZoom(float clickZoom);
+    void refresh();
+    int getImageWidth();    // used for make thumbs fit which may be toast
+    int getImageHeight();
 
     void compareZoomAtCoord(QPointF coord, bool isZoom);
-//    void deltaMoveImage(QPoint &delta);                   // used by compare
+    void deltaMoveImage(QPoint &delta);
 
-//    void setImageLabelSize(QSize newSize);                  // req'd by compare?
-    QSize imageSize();                                      // compare?
+    void setImageLabelSize(QSize newSize);      // req'd?
+    QSize imageSize();
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void setInfo(QString infoString);
@@ -42,6 +45,7 @@ public:
 public slots:
     void monitorCursorState();
     void copyImage();
+    void pasteImage();
     void thumbClick(float xPct, float yPct);
     void zoomIn();
     void zoomOut();
@@ -68,29 +72,17 @@ protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     void enterEvent(QEvent *event);
-    void paintEvent(QPaintEvent *event);
 
 private:
     QWidget *mainWindow;
-    QWidget *centralWidget;
     Metadata *metadata;
     ImageCache *imageCacheThread;
     ThumbView *thumbView;
     bool isCompareMode;
     QImageReader imageReader;
     QLabel *imageLabel;
-
-    QGraphicsScene *scene;
-    QGraphicsPixmapItem *pmItem;
-    QGraphicsTextItem *infoItem;
-    QMatrix matrix;
-    QRect loadTimeParentRect;
-//    qreal scaleFactor;
-//    qreal fitScaleFactor;
-//    QPointF viewCenter, sceneCtr, pmItemCenter;
-
     QPixmap displayPixmap;
-//    QImage origImage;
+    QImage origImage;
     QImage thumbsUp;
     QImage displayImage;
     QTimer *mouseMovementTimer;
@@ -126,40 +118,34 @@ private:
     QPointF compareMouseRelLoc;
 
     QString currentImagePath;
+    bool shootingInfoVisible;
 
     bool cursorIsHidden;                // use for slideshow and full screen - review rgh
     bool moveImageLocked;               // control when con drag image around
-//    bool mouseZoomFit;                  // flag in resize to scale to fit window
+    bool mouseZoom100Pct;               // flag in resize to scale to 100%
+    bool mouseZoomFit;                  // flag in resize to scale to fit window
     bool isZoom;
     bool isMouseDrag;
     bool isMouseDoubleClick;
-//    bool isMouseClickInLabel;
+    bool isMouseClickInLabel;
     bool isResizeSourceMouseClick;      // prevent recursive infinite loop
     bool isPreview;
 
-    qreal zoomFit;
-    qreal zoomInc = 0.1;    // 10% delta
-    qreal zoomMin = 0.05;   // 5% of original  rgh add to pref
-    qreal zoomMax = 8.0;    // 800% of original
-    qreal clickZoom = 1.0;
+    float zoomFit;
+    float zoomInc = 0.1;    // 10% delta
+    float zoomMin = 0.05;   // 5% of original  rgh add to pref
+    float zoomMax = 8.0;    // 800% of original
+    float clickZoom = 1.0;
 
-//    QPointF fitItemAnchor;
-//    QRectF fitSceneAnchor;
-
-
-    qreal getFitScaleFactor(QRectF container, QRectF content);
-    void scale();
-    qreal getZoom();
-
-//    void resizeImage();
+    void resizeImage();
     void movePickIcon();
     void setMouseMoveData(bool lockMove, int lMouseX, int lMouseY);
-//    void centerImage(QSize &imgSize);
-//    void moveImage(QSize &imgSize);
+    void centerImage(QSize &imgSize);
+    void moveImage(QSize &imgSize);
     bool previewFitsZoom();
 
-//    QRect windowRect();
-//    bool inImageView(QPoint canvasPt);
+    QRect windowRect();
+    bool inImageView(QPoint canvasPt);
     void transform();
 };
 

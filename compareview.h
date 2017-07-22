@@ -11,7 +11,7 @@ class CompareView : public QWidget
     Q_OBJECT
 
 public:
-    CompareView(QWidget *parent, Metadata *metadata, ThumbView *thumbView,
+    CompareView(QWidget *parent, QWidget *centralWidget, Metadata *metadata, ThumbView *thumbView,
                 ImageCache *imageCacheThread);
     bool load(const QSize &centralWidgetSize);
     void pick(bool isPick, QModelIndex idx);
@@ -25,6 +25,7 @@ private:
     Metadata *metadata;
     ThumbView *thumbView;
     ImageCache *imageCacheThread;
+    QWidget *centralWidget;
 
     QHBoxLayout *mainLayout;
     QScrollArea *scrlArea;

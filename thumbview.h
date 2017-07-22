@@ -99,7 +99,7 @@ protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
     void resizeEvent(QResizeEvent* event);
-    bool event(QEvent* event);      // key capture
+//    bool event(QEvent* event);      // key capture
 
 private:
     void loadPrepare();

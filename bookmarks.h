@@ -12,7 +12,7 @@ class BookMarks : public QTreeWidget
 
 public:
     BookMarks(QWidget *parent, QSet<QString> bmPaths);
-	void reloadBookmarks();
+    void reloadBookmarks();
     QSet<QString> bookmarkPaths;
 
 public slots:

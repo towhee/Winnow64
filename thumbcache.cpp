@@ -4,6 +4,11 @@
 ThumbCache::ThumbCache(QObject *parent, ThumbView *thumbView,
                        Metadata *metadata) : QThread(parent)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbCache::ThumbCache";
+    #endif
+    }
     this->thumbView = thumbView;
     this->metadata = metadata;
     restart = false;

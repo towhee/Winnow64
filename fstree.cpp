@@ -3,7 +3,12 @@
 
 bool FSModel::hasChildren(const QModelIndex &parent) const
 {
-	if (parent.column() > 0)
+    {
+    #ifdef ISDEBUG
+//    qDebug() << "FSTree::hasChildren";
+    #endif
+    }
+    if (parent.column() > 0)
 		return false;
 
 	if (!parent.isValid()) // drives

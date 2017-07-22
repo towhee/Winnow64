@@ -1,13 +1,14 @@
 To do:
+- Convert imageView to use QGraphicsView
+    - Prevent scrolling outside scene boundaries
+    - Why not automatically resizing
 - Get title, comment and copywrite metadata
 - Sort thumbs and add to workspaces
 - Add more raw file formats
 - Compare 2-9 images
 - Add zoom increment to preferences
-- Fix thumbSize in thumbView (maybe change to thumbWidth??
 - UI for changing compare click zoom amount
 - Eject card
-- Thumbs fit
 - Open with another app
 - Rename selected images
 - Tweak context menus
@@ -23,6 +24,9 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Set bookmark not working
+- Done: Thumbs fit
+- Done: Fix thumbSize in thumbView (maybe change to thumbWidth??
 - Done: Copy to clipboard
 - Done: drag'n'drop images to another app
 - Done: Fixed thumb update issue when caching a new folder
@@ -233,307 +237,82 @@ if hide/show ui element
 - update global parameter
 - update QAction
 
-******************************************************************************
-Styles:
-
-/*   */
-MainWindow {
-background-color: rgb(97, 97, 97);
-        color: rgb(229, 229, 229);
-}
-
-QMainWindow::separator {
-    background: rgb(111, 111, 111);
-    width: 0px; /* when vertical */
-    height: 1px; /* when horizontal */
-}
-
-QMenu {
-    background-color: rgb(111,111,111);
-    border: 1px solid gray;
-}
-
-QMenu::item {
-    background-color: transparent;
-}
-
-QMenu::item:selected {
-    background-color: gray;
-}
-
-QMenuBar {
-    background-color: rgb(95,95,95);
-    color: rgb(229,229,229);
-    border: 1px solid grey;
-}
-
-QMenuBar::item {
-    spacing: 3px;
-    padding: 6px 6px;
-    background: transparent;
-    border-radius: 4px;
-}
-
-QMenuBar::item:selected {
-    background: rgb(168,168,168);
-}
-
-QMenuBar::item:pressed {
-    background: rgb(136,136,136);
-}
-
-QStatusBar {
-    background-color: rgb(95,95,95);
-    color: rgb(229,229,229);
-    border: 1px solid grey;
-}
-
-QStatusBar QLabel {
-    color: rgb(229,229,229);
-}
-
-QSizeGrip {
-    image: url(:/images/sizegrip.png);
-}
-
-QWidget {
-    background-color: rgb(95,95,95);
-    color: rgb(229,229,229);
-}
-
-QHeaderView::section {
-background-color: rgb(95,95,95);
-color: rgb(229,229,229);
-border: 1px solid rgb(95,95,95);
-}
-
-/* Not working */
-QTabWidget::pane { /* The tab widget frame */
-    border-top: 2px solid #C2C7CB;
-    position: absolute;
-    top: -0.5em;
-}
-
-/* Not working */
-QTabWidget::tab-bar {
-    alignment: left;
-}
-
-QTabBar::tab {
-    background-color: rgb(95,95,95);
-    border: 1px solid grey;
-    padding: 4px 4px;
-}
-
-QTabBar::tab:selected {
-    background-color: rgb(111,111,111);
-}
-
-
-QScrollBar:vertical {
-    border: 1px solid gray;
-    background-color: rgb(77,77,77);
-    margin-top: 0px;
-    margin-bottom: 0px;
-    width: 14px;
-}
-
-QScrollBar::handle:vertical {
-    border: 0px solid grey;
-    min-height: 20px;
-}
-
-QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical{
-    background-color: gray;
-}
-
-QScrollBar::add-line:vertical {
-    border: 0px solid grey;
-    height: 0px;
-    subcontrol-position: bottom;
-    subcontrol-origin: margin;
-}
-
-QScrollBar::sub-line:vertical {
-    border: 0px solid grey;
-    height: 0px;
-    subcontrol-position: top;
-    subcontrol-origin: margin;
-}
-
-QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
-    width: 0px;
-    height: 0px;
-    background: lightGray;
-}
 
 
 
-
-
-QScrollBar:horizontal {
-    border: 1px solid gray;
-    background-color: rgb(77,77,77);
-    margin-left: 0px;
-    margin-right: 0px;
-    height: 14px;
-}
-
-QScrollBar::handle:horizontal {
-    border: 0px solid grey;
-    min-width: 20px;
-}
-
-QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal{
-    background-color: gray;
-}
-
-QScrollBar::add-line:horizontal {
-    border: 0px solid grey;
-    width: 0px;
-    subcontrol-position: right;
-    subcontrol-origin: margin;
-}
-
-QScrollBar::sub-line:horizontal {
-    border: 0px solid grey;
-    width: 0px;
-    subcontrol-position: left;
-    subcontrol-origin: margin;
-}
-
-QScrollBar::up-arrow:horizontal, QScrollBar::down-arrow:horizontal {
-    width: 0px;
-    height: 0px;
-    background: lightGray;
-}
-*/
-
-
-/* End of working styles  */
-/*
-QScrollArea {
-    background-color: rgb(95,95,95);
-    color: rgb(229,229,229);
-}
-
-
-QDockWidget::title {
-    background: lightgray;
-    background-color: rgb(63, 63, 63);
-}
-*/
-
-
-/*
-QDockWidget {
-    color: rgb(229,229,229);
-    background-color: rgb(95, 95, 95);
-}
-
-QTreeView {
-    background-color: rgb(95, 95, 95);
-    color: rgb(229, 229, 229);
-}
-
-QListView {
-    background-color: blue);
-    color: rgb(229, 229, 229);
-    alternate-background-color: yellow;
-}
-
-QListView::item:selected {
-    border: 1px solid yellow;
-}
-
-QListView::item {
-    border: 1px solid red;
-    background-color: green;
-}
-
-*/
-QComboBox
+@Canvas::Canvas(): QGraphicsScene(0,0,100,100)
 {
-    background-color: rgb(111,111,111);
-    selection-backgroucnd-color: lightgray;
+}
+@
+
+QPixmap tmpmap (fileName, 0, Qt::AutoColor);
+if (!pixmapItem) {
+pixmapItem = scene->addPixmap (tmpmap);
+ui->graphicsView_inputImage->setScene(scene);
+ui->graphicsView_inputImage->scale(ui->graphicsView_inputImage->width()/scene->width(),
+ui->graphicsView_inputImage ->height()/scene->height());
+} else {
+pixmapItem->setPixmap(tmpmap);
+}@
+
+void MainWindow::mousejustpressed(int x,int y)
+{
+
+ unsigned char value;
+
+    QImage image(scene->sceneRect().size().toSize(),
+    QImage::Format_RGB32);
+
+    QPainter painter(&image);
+    scene->render(&painter);
+
+    value=image.pixel(ui->graphicsView_inputImage->mapToScene(x,y).toPoint());
 }
 
-QSpinBox::up-button, QSpinBox::down-button {
-    subcontrol-origin: border;
-/*    subcontrol-position: top right; /* position at the top right corner */
+QGraphicsScene* scene = new QGraphicsScene();
+QGraphicsView* view = new QGraphicsView(scene);
+QGraphicsPixmapItem* item = new QGraphicsPixmapItem(QPixmap::fromImage(image));
+scene->addItem(item);
+view->show();
 
-    width: 16px; /* 16 + 2*1px border-width = 15px padding + 3px parent border */
-/*    border-image: url(:/images/spinup.png) 1;
-    border-width: 1px;*/
-    border: 1px solid gray;
-    image: QStyle::SP_ArrowUp;
-    image: QStyle::SP_ArrowDown;
-}
+MW::folderSelectionChange
+MetadataCache::stopMetadateCache
+ThumbCache::stopThumbCache
+ImageCache::stopImageCache
+MW::getSelectedPath
+MW::addRecentFolder
+MW::syncRecentFoldersMenu
+ThumbView::load
+ThumbView::loadPrepare
+ThumbView::initThumbs
+ThumbView::selectThumb(row) 0
+ThumbViewDelegate::sizeHint
+ThumbViewDelegate::sizeHint
+MW::fileSelectionChange
+ImageView::loadImage
+ImageView::loadPixmap
+Metadata::getImageOrientation
+ImageView::resizeImage
 
-imageLabel = new QLabel;
-imageLabel->setScaledContents(true);
-imageLabel->setContentsMargins(9,9,9,9);
-//    imageLabel->setMargin();
-//    imageLabel->setFrameStyle(QFrame::Panel);
-//    imageLabel->setIndent(2);
-//    imageLabel->setMouseTracking(true);
-imageLabel->setStyleSheet(":hover {border: 1px solid white;}");  // not working
+ "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+pmItem->pixmap().rect() QRect(0,0 3840x2160)
+centralWidget->rect() QRect(0,0 794x706)
+pmItem->boundingRect()) QRectF(0,0 3840x2160)
+zoom 0.20625
+mouseZoomFit true
 
-    QHBoxLayout *mainLayout = new QHBoxLayout();
-    mainLayout->setContentsMargins(2,2,2,2);
-    mainLayout->setSpacing(0);
-        mainLayout->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(imageLabel);
+---------------------------------------------------
 
-//            this->setLayout(mainLayout);
+ThumbView::isSelectedItem
+ThumbView::getNextRow
+ThumbView::selectThumb(row) 1
+MW::fileSelectionChange
+ImageView::loadImage
+ImageView::resizeImage
 
-    scrlArea = new QScrollArea;
-//        scrlArea->setContentsMargins(0,0,0,0);
-//    scrlArea->setAlignment(Qt::AlignCenter);
-//        scrlArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-//        scrlArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-//        scrlArea->verticalScrollBar()->blockSignals(true);
-//        scrlArea->horizontalScrollBar()->blockSignals(true);
-//        scrlArea->setFrameStyle(0);       // just so can see frame
-    scrlArea->setLayout(mainLayout);
-//        scrlArea->setWidgetResizable(true);
-//    scrlArea->setStyleSheet(":hover {border: 1px solid yellow;}");
-//    scrlArea->setMouseTracking(true);
-
-    QHBoxLayout *scrollLayout = new QHBoxLayout;
-//    scrollLayout->setContentsMargins(9,9,9,9);
-//    scrollLayout->setSpacing(0);
-    scrollLayout->addWidget(scrlArea);
-    this->setLayout(scrollLayout);
-
-infoDropShadow = new DropShadowLabel(this);
-infoDropShadow->setVisible(shootingInfoVisible);
-infoDropShadow->setAttribute(Qt::WA_TranslucentBackground);
-
-infoLabel = new QLabel(this);
-infoLabel->setVisible(shootingInfoVisible);
-infoLabelShadow = new QLabel(this);
-infoLabelShadow->setVisible(shootingInfoVisible);
-infoLabel->setAttribute(Qt::WA_TranslucentBackground);
-infoLabelShadow->setAttribute(Qt::WA_TranslucentBackground);
-
-pickLabel = new QLabel(this);
-pickLabel->setFixedSize(40,48);
-pickLabel->setAttribute(Qt::WA_TranslucentBackground);
-thumbsUp.load(":/images/ThumbsUp48.png");
-pickLabel->setPixmap(QPixmap::fromImage(thumbsUp));
-pickLabel->setVisible(false);
-
-QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
-infoEffect->setOpacity(0.8);
-infoLabel->setGraphicsEffect(infoEffect);
-infoLabelShadow->setGraphicsEffect(infoEffect);
-infoDropShadow->setGraphicsEffect(infoEffect);
-
-mouseMovementTimer = new QTimer(this);
-connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
-
-mouseZoomFit = true;
-isMouseDrag = false;
-isMouseDoubleClick = false;
-}
+ "/Users/roryhill/Pictures/2048JPG/2017-01-28_0029.jpg"
+pmItem->pixmap().rect() QRect(0,0 2048x1365)
+centralWidget->rect() QRect(0,0 794x706)
+pmItem->boundingRect()) QRectF(0,0 1024x683)
+zoom 0.386719
+mouseZoomFit true

@@ -15,7 +15,7 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTableView(parent)
     infoModel = new QStandardItemModel(this);
     setModel(infoModel);
 
-//    setSelectionBehavior(QAbstractItemView::SelectItems);
+//  setSelectionBehavior(QAbstractItemView::SelectItems);
 //	setSelectionMode(QAbstractItemView::ExtendedSelection);
     setSelectionMode(QAbstractItemView::NoSelection);
 	verticalHeader()->setVisible(false);
@@ -53,6 +53,11 @@ void InfoView::showInfoViewMenu(QPoint pt)
 
 void InfoView::tweakHeaders()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "InfoView::tweakHeaders";
+    #endif
+    }
 //    resizeColumnsToContents();
 //    infoModel->setHorizontalHeaderLabels({"", ""});   // rgh2017-04-30
     horizontalHeader()->setFixedHeight(1);
@@ -105,6 +110,11 @@ void InfoView::copyEntry()
 
 void InfoView::clearInfo()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "InfoView::clearInfo";
+    #endif
+    }
     infoModel->clear();
 }
 

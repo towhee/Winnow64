@@ -85,7 +85,12 @@ void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 
 void BookMarks::dragMoveEvent(QDragMoveEvent *event)
 {
-	setCurrentIndex(indexAt(event->pos()));
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Bookmarks::dragMoveEvent";
+    #endif
+    }
+    setCurrentIndex(indexAt(event->pos()));
 }
 
 void BookMarks::dropEvent(QDropEvent *event)

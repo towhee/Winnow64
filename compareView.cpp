@@ -1,12 +1,21 @@
 #include "compareview.h"
 #include "global.h"
 
-CompareView::CompareView(QWidget *parent, Metadata *metadata, ThumbView *thumbView,
+CompareView::CompareView(QWidget *parent,
+                         QWidget *centralWidget,
+                         Metadata *metadata,
+                         ThumbView *thumbView,
                          ImageCache *imageCacheThread)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::CompareView";
+    #endif
+    }
     this->metadata = metadata;
     this->thumbView = thumbView;
     this->imageCacheThread = imageCacheThread;
+    this->centralWidget = centralWidget;
 
     gridLayout = new QGridLayout;
     gridLayout->setContentsMargins(0, 0, 0, 0);
@@ -30,6 +39,11 @@ CompareView::CompareView(QWidget *parent, Metadata *metadata, ThumbView *thumbVi
 
 bool CompareView::load(const QSize &centralWidgetSize)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::load";
+    #endif
+    }
     cw = centralWidgetSize;
     ivList->clear();
     while (gridLayout->count() > 0) {
@@ -40,7 +54,7 @@ bool CompareView::load(const QSize &centralWidgetSize)
     count = selection.count();
     if (count > 9) count = 9;
     for (int i = 0; i < count; ++i) {
-        ivList->append(new ImageView(this, metadata, imageCacheThread, thumbView, false, true));
+        ivList->append(new ImageView(this, centralWidget, metadata, imageCacheThread, thumbView, false, true));
         QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
         bool isPick = qvariant_cast<bool>(selection.at(i).data(thumbView->PickedRole));
         ivList->at(i)->pickLabel->setVisible(isPick);
@@ -54,10 +68,16 @@ bool CompareView::load(const QSize &centralWidgetSize)
     loadGrid();
 //    ivList->at(0)->setFocus();
 //    ivList->at(0)->setStyleSheet("QLabel {border: white;}");
+    return true;
 }
 
 void CompareView::loadGrid()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::loadGrid";
+    #endif
+    }
     int i = 0;
     int row, col;
     for (row = 0; row < rows; ++row) {
@@ -72,6 +92,11 @@ void CompareView::loadGrid()
 
 void CompareView::configureGrid()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::configureGrid";
+    #endif
+    }
     long area1, area2, area3;
     switch (count) {
     case 2:
@@ -161,6 +186,11 @@ void CompareView::configureGrid()
 
 long CompareView::area(int rows, int cols)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::area";
+    #endif
+    }
     QSize cell(cw.width() / cols, cw.height() / rows);
     long area = 0;
 
@@ -174,6 +204,11 @@ long CompareView::area(int rows, int cols)
 
 void CompareView::pick(bool isPick, QModelIndex idx)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::pick";
+    #endif
+    }
 //    qDebug() << "CompareView::pick" << isPick << idx;
     for (int i = 0; i < ivList->count(); ++i) {
         if (ivList->at(i)->imageIndex == idx) {
@@ -184,6 +219,11 @@ void CompareView::pick(bool isPick, QModelIndex idx)
 
 void CompareView::showShootingInfo(bool isVisible)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::showShootingInfo";
+    #endif
+    }
     for (int i = 0; i < ivList->count(); ++i) {
             ivList->at(i)->infoDropShadow->setVisible(isVisible);
     }
@@ -191,6 +231,11 @@ void CompareView::showShootingInfo(bool isVisible)
 
 void CompareView::zoom(QPointF coord, QModelIndex idx, bool isZoom)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::zoom";
+    #endif
+    }
     qDebug() << "CompareView::zoom";
     for (int i = 0; i < ivList->count(); ++i) {
         if (ivList->at(i)->imageIndex != idx) {
@@ -201,10 +246,15 @@ void CompareView::zoom(QPointF coord, QModelIndex idx, bool isZoom)
 
 void CompareView::pan(QPoint delta, QModelIndex idx)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::pan";
+    #endif
+    }
     qDebug() << "CompareView::pan";
     for (int i = 0; i < ivList->count(); ++i) {
         if (ivList->at(i)->imageIndex != idx) {
-            ivList->at(i)->deltaMoveImage(delta);
+//            ivList->at(i)->deltaMoveImage(delta);
         }
     }
 }

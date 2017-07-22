@@ -2,6 +2,11 @@
 
 ImageCache::ImageCache(QObject *parent, Metadata *metadata) : QThread(parent)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ImageCache::ImageCache";
+    #endif
+    }
     this->metadata = metadata;
 
     restart = false;
@@ -181,6 +186,11 @@ void ImageCache::cacheStatus()
 
 QSize ImageCache::scalePreview(ulong w, ulong h)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ImageCache::scalePreview";
+    #endif
+    }
     QSize preview(w, h);
     preview.scale(cache.previewSize.width(), cache.previewSize.height(),
                   Qt::KeepAspectRatio);
@@ -189,6 +199,11 @@ QSize ImageCache::scalePreview(ulong w, ulong h)
 
 QSize ImageCache::getPreviewSize()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ImageCache::getPreviewSize";
+    #endif
+    }
     return cache.previewSize;
 }
 
@@ -390,6 +405,11 @@ void ImageCache::setPriorities(int key)
 
 void ImageCache::checkForOrphans()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ImageCache::checkForOrphans";
+    #endif
+    }
 /* If the user jumps around rapidly in a large folder, where the target cache
  * is smaller than the entire folder, it is possible for the nextToCache and
  * nextToDecache collections to get out of sync and leave orphans in the image
@@ -478,7 +498,7 @@ int ImageCache::pxEnd(int key)
 }
 
 void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
-     bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead, bool &isPreview, int &previewWidth, int &previewHeight)
+     bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight)
 {
     {
     #ifdef ISDEBUG
@@ -516,9 +536,9 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     cache.totFiles = imageList.size();
     cache.dir = imageList.at(0).absolutePath();
     cache.previewSize = QSize(previewWidth, previewHeight);
-    cache.isPreview = isPreview;
+    cache.usePreview = usePreview;
 
-//    qDebug() << "isPreview, preview width, height" << cache.isPreview << cache.monitorPreview;
+//    qDebug() << "usePreview, preview width, height" << cache.usePreview << cache.monitorPreview;
 
 //    qDebug() << "\n###### Initializing image cache for " << cache.dir << "######";
 
@@ -542,7 +562,7 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
         ulong w = metadata->getWidth(fPath);
         ulong h = metadata->getHeight(fPath);
         cacheItem.sizeMB = (float)w * h / 256000;
-        if (cache.isPreview) {
+        if (cache.usePreview) {
             QSize p = scalePreview(w, h);
             w = p.width();
             h = p.height();
@@ -618,8 +638,10 @@ void ImageCache::run()
         QString fPath = cacheMgr.at(cache.toCacheKey).fName;
         if (fPath == prevFileName) return;
         if (G::isThreadTrackingOn) track(fPath, "Reading");
-        QPixmap *pm = new QPixmap;
-        if (loadPixmap(fPath, *pm)) {
+        QPixmap pm;
+//        QPixmap *pm = new QPixmap;
+        if (loadPixmap(fPath, pm)) {
+//            if (loadPixmap(fPath, *pm)) {
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
             uint roomRqd = cacheMgr.at(cache.toCacheKey).sizeMB;
@@ -637,12 +659,16 @@ void ImageCache::run()
                 }
                 else break;
             }
-            pm->setDevicePixelRatio(G::devicePixelRatio);
+//            pm.setDevicePixelRatio(G::devicePixelRatio);
+//            pm->setDevicePixelRatio(G::devicePixelRatio);
             mutex.lock();
-            imCache.insert(fPath, *pm);
-            if (cache.isPreview) {
-                imCache.insert(fPath + "_Preview", pm->scaled(cache.previewSize,
+            imCache.insert(fPath, pm);
+//            imCache.insert(fPath, *pm);
+            if (cache.usePreview) {
+                imCache.insert(fPath + "_Preview", pm.scaled(cache.previewSize,
                    Qt::KeepAspectRatio, Qt::FastTransformation));
+//                imCache.insert(fPath + "_Preview", pm->scaled(cache.previewSize,
+//                  Qt::KeepAspectRatio, Qt::FastTransformation));
             }
             cacheMgr[cache.toCacheKey].isCached = true;
             mutex.unlock();
@@ -650,7 +676,7 @@ void ImageCache::run()
             cache.currMB = getImCacheSize();
 //            qDebug() << "ImageCache::run" << fPath;
             cacheStatus();
-            delete pm;
+//            delete pm;
         }
         prevFileName = fPath;
     }
@@ -694,7 +720,6 @@ bool ImageCache::loadPixmap(QString &fPath, QPixmap &pm)
 
         // !!!!!!!!!!!!!!!!
         // ImageView::loadPixmap and ImageCache::loadPixmap should be the same
-        // Except no pixmap pm in ImageCache::loadPixmap
 
         bool success = false;
         int totDelay = 500;     // milliseconds
@@ -703,10 +728,8 @@ bool ImageCache::loadPixmap(QString &fPath, QPixmap &pm)
 
         QString err;            // type of error
 
-        QImage image;
         ulong offsetFullJpg = 0;
-
-//        QImage image;         // not included in ImageCache::loadPixmap
+        QImage image;
         QFileInfo fileInfo(fPath);
         QString ext = fileInfo.completeSuffix().toLower();
         QFile imFile(fPath);
@@ -818,85 +841,4 @@ bool ImageCache::loadPixmap(QString &fPath, QPixmap &pm)
         else if (G::isThreadTrackingOn) track(fPath, "Success");
 
         return success;
-
 }
-
-//bool ImageCache::loadPixmap(QString &fPath, QImage &image)
-//{
-//    // Get the embedded jpg in raw files, use image.load for cooked files
-//    // and convert it into a pixmap in image.
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "ImageCache::loadPixmap";
-//    #endif
-//    }
-//    // this thread is competing with the metadataCache and thumbCache
-//    // threads to get information from each image file.  Consequently
-//    // have to be vigilant for open files.  When open wait a bit and try
-//    // again until successful.
-//    bool success = false;
-//    int totDelay = 50;     // milliseconds
-//    int msDelay = 0;            // total incremented delay
-//    int msInc = 1;              // amount to increment each try
-//    ulong offsetFullJpg = 0;
-//    QFileInfo fileInfo(fPath);
-//    QString ext = fileInfo.completeSuffix().toLower();
-//    if (metadata->rawFormats.contains(ext)) {
-//        // raw files not handled by Qt
-//        QFile imFile(fPath);
-//        do {
-//            if (!metadata->isLoaded(fPath)) {
-//                metadata->loadImageMetadata(fPath);
-//                qDebug() << "No metadata.  Loaded" << fPath;
-//            }
-//            offsetFullJpg = metadata->getOffsetFullJPG(fPath);
-//            // Check if metadata has been cached for this image
-//            if (offsetFullJpg > 0) {
-//                if (imFile.open(QIODevice::ReadOnly)) {
-//                    bool seekSuccess = imFile.seek(offsetFullJpg);
-//                    if (seekSuccess) {
-//                        QByteArray buf = imFile.read(metadata->getLengthFullJPG(fPath));
-//                        success = image.loadFromData(buf, "JPEG");
-//                    }
-//                }
-//            }
-///*            qDebug() << "ImageCache::loadPixmap Success =" << success
-//                     << "msDelay =" << msDelay
-//                     << "offsetFullJpg =" << offsetFullJpg
-//                     << "Attempting to load " << imageFullPath;*/
-//            if (!success) QThread::msleep(msInc);
-//            msDelay += msInc;
-//        }
-//        while (msDelay < totDelay && offsetFullJpg == 0);
-//    }
-//    else {
-//        // cooked files that Qt can load
-//        do {
-//            success = image.load(fPath);
-///*            qDebug() << "ImageCache::loadPixmap Success =" << success
-//                     << "msDelay =" << msDelay
-//                     << "offsetFullJpg =" << offsetFullJpg
-//                     << "Attempting to load " << imageFullPath;*/
-//            if (!success) QThread::msleep(msInc);
-//            msDelay += msInc;
-//        }
-//        while (msDelay < totDelay && !success);
-//    }
-//    QTransform trans;
-//    int orientation = metadata->getImageOrientation(fPath);
-//    if (orientation) {
-//        switch(orientation) {
-//            case 6:
-//                trans.rotate(90);
-//                image = image.transformed(trans, Qt::SmoothTransformation) ;
-//                break;
-//            case 8:
-//                trans.rotate(270);
-//                image = image.transformed(trans, Qt::SmoothTransformation);
-//                break;
-//        }
-//    }
-//    return success;
-//    // must adjust pixmap dpi in case retinal display macs
-////    pm.setDevicePixelRatio(GData::devicePixelRatio);
-//}

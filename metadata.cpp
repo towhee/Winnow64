@@ -31,7 +31,7 @@ void Metadata::initSupportedFiles()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::initExifHash";
+    qDebug() << "Metadata::initSupportedFiles";
     #endif
     }
     // add raw file types here as they are supported
@@ -569,21 +569,6 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
     return(nextIFDOffset);
 }
 
-//QList<ulong> Metadata::getSubIfdOffsets(ulong subIFDaddr)
-//{
-//    {
-////    #ifdef ISDEBUG
-////    qDebug() << "Metadata::getSubIfdOffsets";
-////    #endif
-//    }
-//    QList<ulong> offsets;
-//    file.seek(subIFDaddr);
-//    for (int i=0; i<3; i++) {
-//        offsets.append(get4(file.read(4)));
-//    }
-//    return offsets;
-//}
-
 QList<ulong> Metadata::getSubIfdOffsets(ulong subIFDaddr, int count)
 {
     {
@@ -601,6 +586,11 @@ QList<ulong> Metadata::getSubIfdOffsets(ulong subIFDaddr, int count)
 
 bool Metadata::getDimensions(ulong jpgOffset)
 {
+    {
+//    #ifdef ISDEBUG
+//    qDebug() << "Metadata::getDimensions";
+//    #endif
+    }
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
     ulong marker = 0;
     ulong offset = jpgOffset + 2;
@@ -1025,7 +1015,12 @@ void Metadata::formatOlympus()
 
 void Metadata::formatSony()
 {
-    file.open(QIODevice::ReadOnly);
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::formatSony";
+    #endif
+    }
+//    file.open(QIODevice::ReadOnly);
     // get endian
     order = get2(file.read(4));
     // get offset to first IFD and read it
@@ -1157,6 +1152,11 @@ void Metadata::fuji()
 
 bool Metadata::formatJPG()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::formatJPG";
+    #endif
+    }
     //file.open in readMetadata
 
 //    if (!file.open(QIODevice::ReadOnly)) {
@@ -1353,29 +1353,6 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
     return success;
 }
 
-// Following code moved here from old mdcache metadata
-// *******************************************************************************
-
-//void Metadata::updateImageTags(QString &imageFileName, QSet<QString> tags)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "Metadata::updateImageTags";
-//    #endif
-//    }
-//    metaCache[imageFileName].tags = tags;
-//}
-
-//bool Metadata::removeTagFromImage(QString &imageFileName, const QString &tagName)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "Metadata::removeTagFromImage";
-//    #endif
-//    }
-//    return metaCache[imageFileName].tags.remove(tagName);
-//}
-
 void Metadata::removeImage(QString &imageFileName)
 {
     {
@@ -1390,7 +1367,7 @@ bool Metadata::isLoaded(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::isMetadata";
+    qDebug() << "Metadata::isLoaded";
     #endif
     }
     return metaCache[imageFileName].isLoaded;
@@ -1606,16 +1583,6 @@ void Metadata::setErr(const QString &imageFileName, const QString &err)
     metaCache[imageFileName].err = err;
 }
 
-//QSet<QString>& Metadata::getImageTags(QString &imageFileName)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "Metadata::getImageTags";
-//    #endif
-//    }
-//    return metaCache[imageFileName].tags ;
-//}
-
 int Metadata::getImageOrientation(QString &imageFileName)
 {
     {
@@ -1642,19 +1609,6 @@ bool Metadata::getPick(const QString &imageFileName)
     return metaCache[imageFileName].isPicked;
 }
 
-//void Metadata::setImageTags(const QString &imageFileName, QSet<QString> tags)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "Metadata::setImageTags";
-//    #endif
-//    }
-//    ImageMetadata imageMetadata;
-
-//    imageMetadata.tags = tags;
-//    metaCache.insert(imageFileName, imageMetadata);
-//}
-
 void Metadata::setPick(const QString &imageFileName, bool choice)
 {
     {
@@ -1664,20 +1618,6 @@ void Metadata::setPick(const QString &imageFileName, bool choice)
     }
     metaCache[imageFileName].isPicked = choice;
 }
-
-//void Metadata::addTagToImage(QString &imageFileName, QString &tagName)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "Metadata::addTagToImage";
-//    #endif
-//    }
-//    if (metaCache[imageFileName].tags.contains(tagName)) {
-//        return;
-//    }
-
-//    metaCache[imageFileName].tags.insert(tagName);
-//}
 
 void Metadata::clear()
 {

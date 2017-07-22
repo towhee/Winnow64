@@ -46,7 +46,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->cacheSizeSpinbox->setValue(mw->cacheSizeMB);
     ui->showCacheStatusChk->setChecked(mw->isShowCacheStatus);
     ui->cacheStatusWidthSpin->setValue(mw->cacheStatusWidth);
-    switch (mw->cacheWtAhead) {
+    cacheWtAhead = mw->cacheWtAhead;
+    switch (cacheWtAhead) {
     case 5: ui->cache50AheadRadio->setChecked(true); break;
     case 6: ui->cache60AheadRadio->setChecked(true); break;
     case 7: ui->cache70AheadRadio->setChecked(true); break;

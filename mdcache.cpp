@@ -4,6 +4,11 @@
 MetadataCache::MetadataCache(QObject *parent, ThumbView *thumbView,
                   Metadata *metadata) : QThread(parent)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MetadataCache::MetadataCache";
+    #endif
+    }
     this->thumbView = thumbView;
     this->metadata = metadata;
     restart = false;

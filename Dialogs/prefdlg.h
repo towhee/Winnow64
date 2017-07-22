@@ -28,7 +28,7 @@ signals:
     void updateThumbDockParameters(bool isThumbWrap, bool isAutoFit, bool isVerticalTitle);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
-            int cacheStatusWidth, int cacheWtAhead, bool isPreview,
+            int cacheStatusWidth, int cacheWtAhead, bool usePreview,
                                int previewWidth, int previewHeight);
     void updateFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata,
                                bool isThumbs, bool isStatusBar);
