@@ -1,8 +1,8 @@
 To do:
-- Convert imageView to use QGraphicsView
-    - Prevent scrolling outside scene boundaries
-    - Why not automatically resizing
+- Zoom rect in thumbnail to show zoom and pan in imageView
 - Get title, comment and copywrite metadata
+- Show how many images in each folder in treeView
+- Show how much mem req'd for selected images
 - Sort thumbs and add to workspaces
 - Add more raw file formats
 - Compare 2-9 images
@@ -24,6 +24,7 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Convert imageView to use QGraphicsView
 - Done: Set bookmark not working
 - Done: Thumbs fit
 - Done: Fix thumbSize in thumbView (maybe change to thumbWidth??
@@ -239,80 +240,13 @@ if hide/show ui element
 
 
 
+QGraphicsItem::itemChange()
 
-@Canvas::Canvas(): QGraphicsScene(0,0,100,100)
-{
-}
-@
+That is quite simple, just connect each view's scroll bar's valueChanged(int) signal (or sliderMoved(int)) signal to the other view's scroll bar's setValue(int) slot, like so:
 
-QPixmap tmpmap (fileName, 0, Qt::AutoColor);
-if (!pixmapItem) {
-pixmapItem = scene->addPixmap (tmpmap);
-ui->graphicsView_inputImage->setScene(scene);
-ui->graphicsView_inputImage->scale(ui->graphicsView_inputImage->width()/scene->width(),
-ui->graphicsView_inputImage ->height()/scene->height());
-} else {
-pixmapItem->setPixmap(tmpmap);
-}@
+connect(view1->horizontalScrollBar(), SIGNAL(valueChanged(int)), view2->horizontalScrollBar(), SLOT(setValue(int)));
+connect(view2->horizontalScrollBar(), SIGNAL(valueChanged(int)), view1->horizontalScrollBar(), SLOT(setValue(int)));
 
-void MainWindow::mousejustpressed(int x,int y)
-{
 
- unsigned char value;
 
-    QImage image(scene->sceneRect().size().toSize(),
-    QImage::Format_RGB32);
-
-    QPainter painter(&image);
-    scene->render(&painter);
-
-    value=image.pixel(ui->graphicsView_inputImage->mapToScene(x,y).toPoint());
-}
-
-QGraphicsScene* scene = new QGraphicsScene();
-QGraphicsView* view = new QGraphicsView(scene);
-QGraphicsPixmapItem* item = new QGraphicsPixmapItem(QPixmap::fromImage(image));
-scene->addItem(item);
-view->show();
-
-MW::folderSelectionChange
-MetadataCache::stopMetadateCache
-ThumbCache::stopThumbCache
-ImageCache::stopImageCache
-MW::getSelectedPath
-MW::addRecentFolder
-MW::syncRecentFoldersMenu
-ThumbView::load
-ThumbView::loadPrepare
-ThumbView::initThumbs
-ThumbView::selectThumb(row) 0
-ThumbViewDelegate::sizeHint
-ThumbViewDelegate::sizeHint
-MW::fileSelectionChange
-ImageView::loadImage
-ImageView::loadPixmap
-Metadata::getImageOrientation
-ImageView::resizeImage
-
- "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
-pmItem->pixmap().rect() QRect(0,0 3840x2160)
-centralWidget->rect() QRect(0,0 794x706)
-pmItem->boundingRect()) QRectF(0,0 3840x2160)
-zoom 0.20625
-mouseZoomFit true
-
----------------------------------------------------
-
-ThumbView::isSelectedItem
-ThumbView::getNextRow
-ThumbView::selectThumb(row) 1
-MW::fileSelectionChange
-ImageView::loadImage
-ImageView::resizeImage
-
- "/Users/roryhill/Pictures/2048JPG/2017-01-28_0029.jpg"
-pmItem->pixmap().rect() QRect(0,0 2048x1365)
-centralWidget->rect() QRect(0,0 794x706)
-pmItem->boundingRect()) QRectF(0,0 1024x683)
-zoom 0.386719
-mouseZoomFit true
+http://tpgit.github.io/MDIImageViewer/_modules/imageviewer.html

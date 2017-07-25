@@ -4,6 +4,10 @@ QWidget {
     border-width: 0px;
 }
 
+QGraphicsView {
+    border: none;
+}
+
 StatusBar::QLabel {
     color: rgb(190,190,190);
     background-color:red;

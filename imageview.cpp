@@ -35,7 +35,6 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     this->thumbView = thumbView;
     this->isCompareMode = isCompareMode;
 
-    loadTimeParentRect = mainWindow->rect();
     scene = new QGraphicsScene();
     pmItem = new QGraphicsPixmapItem;
 //    pmItem->setFlag(QGraphicsItem::ItemIsMovable, true);
@@ -44,7 +43,7 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
 //    infoItem->setHtml("Shooting Info");
     scene->addItem(pmItem);
 
-    setDragMode(QGraphicsView::ScrollHandDrag);
+//    setDragMode(QGraphicsView::ScrollHandDrag);
 //    setOptimizationFlags(QGraphicsView::DontSavePainterState);
 //    setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);
 //    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
@@ -91,7 +90,6 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
 //    mouseZoomFit = true;
     isMouseDrag = false;
     isMouseDoubleClick = false;
-    isResizeSourceMouseClick = false;
 }
 
 bool ImageView::loadImage(QModelIndex idx, QString fPath)
@@ -124,7 +122,6 @@ bool ImageView::loadImage(QModelIndex idx, QString fPath)
             pmItem->setPixmap(imageCacheThread->imCache.value(fPath + "_Preview"));
             isPreview = true;
             isLoaded = true;
-            qDebug() << "Set pixmap for preview" << fPath + "_Preview";
         }
         // load full size image
         else {
@@ -152,7 +149,7 @@ bool ImageView::loadImage(QModelIndex idx, QString fPath)
     setSceneRect(scene->itemsBoundingRect());
     zoom = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
     scale();
-    isZoom = false;
+//    isZoom = false;
 
     return isLoaded;
 }
@@ -312,6 +309,10 @@ void ImageView::scale()
     matrix.reset();
     matrix.scale(zoom, zoom);
     setMatrix(matrix);
+    isZoom = (zoom > zoomFit);
+    if (isZoom) setCursor(Qt::OpenHandCursor);
+    else setCursor(Qt::ArrowCursor);
+
     movePickIcon();
     setInfo(metadata->getShootingInfo(currentImagePath));
 //    QString msg = QString::number(v.w) + ", " + QString::number(v.h);
@@ -528,10 +529,10 @@ void ImageView::resizeEvent(QResizeEvent *event)
     if (getZoom() <= zoomFit) {
         zoom = zoomFit;
         scale();
-        isZoom = false;
+//        isZoom = false;
     }
     else {
-        isZoom = true;
+//        isZoom = true;
     }
 }
 
@@ -756,8 +757,6 @@ to help make it visible against different coloured backgrounds. */
 
     sceneOrigin = mapFromScene(0.0, 0.0);
 
-    qDebug() << "sceneOrigin" << sceneOrigin;
-
     // if the scene is not as wide as the view
     if (sceneOrigin.x() > 0)
         x = sceneOrigin.x() + offset;
@@ -785,21 +784,18 @@ void ImageView::monitorCursorState()
     qDebug() << "ImageView::monitorCursorState";
     #endif
     }
+//    qDebug() << "ImageView::monitorCursorState";
     static QPoint lastPos;
 
-    if (QCursor::pos() != lastPos)
-    {
+    if (QCursor::pos() != lastPos) {
         lastPos = QCursor::pos();
-        if (cursorIsHidden)
-        {
+        if (cursorIsHidden) {
             QApplication::restoreOverrideCursor();
             cursorIsHidden = false;
         }
     }
-    else
-    {
-        if (!cursorIsHidden)
-        {
+    else {
+        if (!cursorIsHidden) {
             QApplication::setOverrideCursor(Qt::BlankCursor);
             cursorIsHidden = true;
         }
@@ -846,7 +842,6 @@ replicate zoom in all compare images.
 //             << "imageLabel->geometry().topLeft().y()" << imageLabel->geometry().topLeft().y()
 //             << "w, h, mouse.x, mouse.y" << f.w << f.h
 //             << mouse.x << mouse.y << "\n";
-    isResizeSourceMouseClick = false;
 //    resizeImage();
 }
 
@@ -895,13 +890,10 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     if (currentImagePath.isEmpty()) return;
     isMouseDoubleClick = false;
     if (event->button() == Qt::LeftButton) {
-        setMouseMoveData(true, event->x(), event->y());
-        int x = event->localPos().x();
-        int y = event->localPos().y();
-//        isMouseClickInLabel = inImageView(QPoint(x,y));
-//        isMouseClickInLabel = true;
-        if (isZoom) setCursor(Qt::ClosedHandCursor);
-        event->accept();
+//        setMouseMoveData(true, event->x(), event->y());
+//        int x = event->localPos().x();
+//        int y = event->localPos().y();
+//        event->accept();
     }
     QGraphicsView::mousePressEvent(event);
 }
@@ -913,44 +905,12 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     qDebug() << "ImageView::mouseReleaseEvent";
     #endif
     }
-    // bad things happen if no image when click
-    if (currentImagePath.isEmpty()) return;
-
     if (isMouseDrag || isMouseDoubleClick) {
         isMouseDrag = false;
         return;
     }
-
-    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
-    (isZoom) ? zoom = zoomFit : zoom = clickZoom;
+    isZoom ? zoom = zoomFit : zoom = clickZoom;
     scale();
-    isZoom = !isZoom;
-
-//    if (event->button() == Qt::LeftButton) {
-////        while (QApplication::overrideCursor()) {
-////            QApplication::restoreOverrideCursor();
-////        }
-
-//        bool okToZoom = (!isMouseDoubleClick
-//                         && !isMouseDrag
-//                         && isMouseClickInLabel);
-///*        qDebug() << "okToZoom =" << okToZoom
-//                 << "isMouseDrag =" << isMouseDrag
-//                 << "isMouseDoubleClick =" << isMouseDoubleClick
-//                 << "isMouseClickInLabel =" << isMouseClickInLabel
-//                 << "mouseZoom100Pct =" << mouseZoom100Pct;
-//                 */
-//        if (okToZoom) {
-//            zoom = clickZoom;     // if zoomToFit then zoom reset in resize
-//            mouseZoomFit = !mouseZoomFit;
-//            isResizeSourceMouseClick = true;
-//            setMouseMoveData(false, event->x(), event->y());
-//            resizeImage();
-//        }
-//        isMouseDrag = false;
-//    }
-//    if (event->button() == Qt::BackButton) emit togglePick();
-//    if (isZoom) setCursor(Qt::OpenHandCursor);
     QGraphicsView::mouseReleaseEvent(event);
 }
 
@@ -995,17 +955,19 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     qDebug() << "ImageView::mouseMoveEvent";
     #endif
     }
-    isMouseDrag = true;
+// seems to force two mouse clicks after mouse movement to zoiom
 
-    if (moveImageLocked) {
-        QPoint delta;
-        delta.setX(event->pos().x() - mouse.x);
-        delta.setY(event->pos().y() - mouse.y);
-//        deltaMoveImage(delta);
-        if (isCompareMode && event->modifiers() != Qt::ShiftModifier) {
-            emit comparePan(delta, imageIndex);
-        }
-    }
+//    isMouseDrag = true;
+
+//    if (moveImageLocked) {
+//        QPoint delta;
+//        delta.setX(event->pos().x() - mouse.x);
+//        delta.setY(event->pos().y() - mouse.y);
+////        deltaMoveImage(delta);
+//        if (isCompareMode && event->modifiers() != Qt::ShiftModifier) {
+//            emit comparePan(delta, imageIndex);
+//        }
+//    }
     QGraphicsView::mouseMoveEvent(event);
 }
 

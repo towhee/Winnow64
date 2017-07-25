@@ -15,7 +15,7 @@
 #include "popup.h"
 #include "bookmarks.h"
 #include "infoview.h"
-#include "compareview.h"
+#include "compareImages.h"
 #include "ui_helpform.h"
 #include "sstream"
 #include <iostream>
@@ -394,7 +394,7 @@ private:
     Metadata *metadata;
     ThumbView *thumbView;
     ImageView *imageView;
-    CompareView *compareView;
+    CompareImages *compareImages;
 //    ImageView *im1;
 //    ImageView *im2;
     MetadataCache *metadataCacheThread;

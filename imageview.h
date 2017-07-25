@@ -84,7 +84,7 @@ private:
     QGraphicsPixmapItem *pmItem;
     QGraphicsTextItem *infoItem;
     QMatrix matrix;
-    QRect loadTimeParentRect;
+//    QRect loadTimeParentRect;
 //    qreal scaleFactor;
 //    qreal fitScaleFactor;
 //    QPointF viewCenter, sceneCtr, pmItemCenter;
@@ -129,12 +129,9 @@ private:
 
     bool cursorIsHidden;                // use for slideshow and full screen - review rgh
     bool moveImageLocked;               // control when con drag image around
-//    bool mouseZoomFit;                  // flag in resize to scale to fit window
     bool isZoom;
     bool isMouseDrag;
     bool isMouseDoubleClick;
-//    bool isMouseClickInLabel;
-    bool isResizeSourceMouseClick;      // prevent recursive infinite loop
     bool isPreview;
 
     qreal zoomFit;
@@ -143,23 +140,14 @@ private:
     qreal zoomMax = 8.0;    // 800% of original
     qreal clickZoom = 1.0;
 
-//    QPointF fitItemAnchor;
-//    QRectF fitSceneAnchor;
-
-
     qreal getFitScaleFactor(QRectF container, QRectF content);
     void scale();
     qreal getZoom();
 
-//    void resizeImage();
     void movePickIcon();
     void setMouseMoveData(bool lockMove, int lMouseX, int lMouseY);
-//    void centerImage(QSize &imgSize);
-//    void moveImage(QSize &imgSize);
     bool previewFitsZoom();
 
-//    QRect windowRect();
-//    bool inImageView(QPoint canvasPt);
     void transform();
 };
 

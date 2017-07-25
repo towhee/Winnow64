@@ -1,7 +1,7 @@
-#include "compareview.h"
+#include "compareImages.h"
 #include "global.h"
 
-CompareView::CompareView(QWidget *parent,
+CompareImages::CompareImages(QWidget *parent,
                          QWidget *centralWidget,
                          Metadata *metadata,
                          ThumbView *thumbView,
@@ -9,7 +9,7 @@ CompareView::CompareView(QWidget *parent,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::CompareView";
+    qDebug() << "CompareImages::CompareImages";
     #endif
     }
     this->metadata = metadata;
@@ -22,67 +22,80 @@ CompareView::CompareView(QWidget *parent,
     gridLayout->setMargin(0);
     gridLayout->setSpacing(0);
 
-    scrlArea = new QScrollArea;
-    scrlArea->setContentsMargins(0, 0, 0, 0);
-    scrlArea->setFrameStyle(0);
-    scrlArea->setLayout(gridLayout);
+    setLayout(gridLayout);
+    setContentsMargins(0, 0, 0, 0);
 
-    mainLayout = new QHBoxLayout();
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-//    mainLayout->setSpacing(1);
-    mainLayout->addWidget(scrlArea);
-    this->setLayout(mainLayout);
-
-    ivList = new QList<ImageView*>;
-
+    imList = new QList<CompareView*>;
+    sizeList = new QList<QSize>;
 }
 
-bool CompareView::load(const QSize &centralWidgetSize)
+bool CompareImages::load(const QSize &centralWidgetSize)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::load";
+    qDebug() << "CompareImages::load";
     #endif
     }
     cw = centralWidgetSize;
-    ivList->clear();
+
+    // clear old stuff
+    imList->clear();
+    sizeList->clear();
     while (gridLayout->count() > 0) {
         QWidget *w = gridLayout->itemAt(0)->widget();
         gridLayout->removeWidget(w);
     }
+
     selection = this->thumbView->selectionModel()->selectedIndexes();
     count = selection.count();
     if (count > 9) count = 9;
+
+    // iterate selected thumbs to get image dimensions and configure grid.  Req'd before
+    // load images as they need to know grid size to be able to scale to fit.
     for (int i = 0; i < count; ++i) {
-        ivList->append(new ImageView(this, centralWidget, metadata, imageCacheThread, thumbView, false, true));
         QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
-        bool isPick = qvariant_cast<bool>(selection.at(i).data(thumbView->PickedRole));
-        ivList->at(i)->pickLabel->setVisible(isPick);
-        ivList->at(i)->loadImage(selection.at(i), fPath);
-        connect(ivList->at(i), SIGNAL(compareZoom(QPointF, QModelIndex, bool)),
-                this, SLOT(zoom(QPointF, QModelIndex, bool)));
-        connect(ivList->at(i), SIGNAL(comparePan(QPoint, QModelIndex)),
-                this, SLOT(pan(QPoint, QModelIndex)));
+        QSize imSize(metadata->getWidth(fPath), metadata->getHeight(fPath));
+        sizeList->append(imSize);
+        qDebug() << "compareImages loading" << i << fPath;
     }
+
     configureGrid();
+    QSize gridCell(cw.width() / cols, cw.height() / rows);
+
+    // iterate selected thumbs - load images, append and connect
+    for (int i = 0; i < count; ++i) {
+        QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
+        imList->append(new CompareView(this, gridCell, metadata, imageCacheThread, thumbView));
+        bool isPick = qvariant_cast<bool>(selection.at(i).data(thumbView->PickedRole));
+        imList->at(i)->pickLabel->setVisible(isPick);
+        imList->at(i)->loadImage(selection.at(i), fPath);
+
+        // pass mouse click zoom to other images as a pct of width and height
+        connect(imList->at(i), SIGNAL(zoomFromPct(QPointF, QModelIndex, bool)),
+                this, SLOT(zoom(QPointF, QModelIndex, bool)));
+        // sync panning
+        connect(imList->at(i), SIGNAL(panFromPct(QPointF, QModelIndex)),
+                this, SLOT(pan(QPointF, QModelIndex)));
+    }
+
     loadGrid();
 //    ivList->at(0)->setFocus();
 //    ivList->at(0)->setStyleSheet("QLabel {border: white;}");
     return true;
 }
 
-void CompareView::loadGrid()
+void CompareImages::loadGrid()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::loadGrid";
+    qDebug() << "CompareImages::loadGrid";
     #endif
     }
     int i = 0;
     int row, col;
     for (row = 0; row < rows; ++row) {
         for (col = 0; col < cols; ++col) {
-            gridLayout->addWidget(ivList->at(i), row, col);
+            gridLayout->addWidget(imList->at(i), row, col);
             i++;
             if (i == count) break;
         }
@@ -90,11 +103,14 @@ void CompareView::loadGrid()
     }
 }
 
-void CompareView::configureGrid()
+void CompareImages::configureGrid()
 {
+/*  Returns the most efficient number of rows and columns to fit n images (between 2 - 9)
+    in a grid, based on the aspect ratios of each image.  The algoritm minimizes the total area.
+*/
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::configureGrid";
+    qDebug() << "CompareImages::configureGrid";
     #endif
     }
     long area1, area2, area3;
@@ -123,6 +139,7 @@ void CompareView::configureGrid()
         area1 = area(2, 2);
         area2 = area(1, 4);
         area3 = area(4, 1);
+        qDebug() << "case 4: area1, area2, area3" << area1 << area2 << area3;
         if (area1 >= area2 && area1 >= area3) {
             rows = 2;
             cols = 2;
@@ -184,77 +201,69 @@ void CompareView::configureGrid()
     }
 }
 
-long CompareView::area(int rows, int cols)
+long CompareImages::area(int rows, int cols)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::area";
+    qDebug() << "CompareImages::area";
     #endif
     }
     QSize cell(cw.width() / cols, cw.height() / rows);
     long area = 0;
 
     for (int i = 0; i < count; ++i) {
-        QSize imSize = ivList->at(i)->imageSize();
+        QSize imSize = sizeList->at(i);
         imSize.scale(cell, Qt::KeepAspectRatio);
         area += imSize.width() * imSize.height();
+        qDebug() << "area imSize" << "rows, cols" << rows << cols
+                 << "item" << i << "imSize" << imSize << "cell size" << cell
+                 << "cw" << cw << "item area" << imSize.width() * imSize.height()
+                 << "sum area" << area;
     }
     return area;
 }
 
-void CompareView::pick(bool isPick, QModelIndex idx)
+void CompareImages::pick(bool isPick, QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::pick";
+    qDebug() << "CompareImages::pick";
     #endif
     }
-//    qDebug() << "CompareView::pick" << isPick << idx;
-    for (int i = 0; i < ivList->count(); ++i) {
-        if (ivList->at(i)->imageIndex == idx) {
-            ivList->at(i)->pickLabel->setVisible(isPick);
+//    qDebug() << "CompareImages::pick" << isPick << idx;
+    for (int i = 0; i < imList->count(); ++i) {
+        if (imList->at(i)->imageIndex == idx) {
+            imList->at(i)->pickLabel->setVisible(isPick);
         }
     }
 }
 
-void CompareView::showShootingInfo(bool isVisible)
+void CompareImages::zoom(QPointF scrollPct, QModelIndex idx, bool isZoom)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::showShootingInfo";
+    qDebug() << "CompareImages::zoom";
     #endif
     }
-    for (int i = 0; i < ivList->count(); ++i) {
-            ivList->at(i)->infoDropShadow->setVisible(isVisible);
-    }
-}
-
-void CompareView::zoom(QPointF coord, QModelIndex idx, bool isZoom)
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "CompareView::zoom";
-    #endif
-    }
-    qDebug() << "CompareView::zoom";
-    for (int i = 0; i < ivList->count(); ++i) {
-        if (ivList->at(i)->imageIndex != idx) {
-            ivList->at(i)->compareZoomAtCoord(coord, isZoom);
+    qDebug() << "CompareImages::zoom  scrollPct" << scrollPct << "isZoom" << isZoom;
+    for (int i = 0; i < imList->count(); ++i) {
+        if (imList->at(i)->imageIndex != idx) {
+            imList->at(i)->zoomToPct(scrollPct, isZoom);
         }
     }
 }
 
-void CompareView::pan(QPoint delta, QModelIndex idx)
+void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::pan";
+    qDebug() << "CompareImages::pan";
     #endif
     }
-    qDebug() << "CompareView::pan";
-    for (int i = 0; i < ivList->count(); ++i) {
-        if (ivList->at(i)->imageIndex != idx) {
-//            ivList->at(i)->deltaMoveImage(delta);
+    qDebug() << "CompareImages::pan";
+    for (int i = 0; i < imList->count(); ++i) {
+        if (imList->at(i)->imageIndex != idx) {
+            imList->at(i)->panToPct(scrollPct);
         }
     }
 }

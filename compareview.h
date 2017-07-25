@@ -1,54 +1,97 @@
-#ifndef COMPARE_H
-#define COMPARE_H
+#ifndef COMPAREVIEW_H
+#define COMPAREVIEW_H
 
 #include <QtWidgets>
 #include "metadata.h"
-#include "thumbview.h"
-#include "imageview.h"
+#include "imagecache.h"
+#include "thumbcache.h"
 
-class CompareView : public QWidget
+class CompareView : public QGraphicsView
 {
     Q_OBJECT
 
 public:
-    CompareView(QWidget *parent, QWidget *centralWidget, Metadata *metadata, ThumbView *thumbView,
-                ImageCache *imageCacheThread);
-    bool load(const QSize &centralWidgetSize);
-    void pick(bool isPick, QModelIndex idx);
-    void showShootingInfo(bool isVisible);
+    CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
+              ImageCache *imageCacheThread, ThumbView *thumbView);
+
+    qreal zoom;
+    QModelIndex imageIndex;
+
+    bool loadPixmap(QString &imageFullPath, QPixmap &pm);
+    bool loadImage(QModelIndex idx, QString imageFileName);
+    void panToPct(QPointF scrollPct);
+
+    QLabel *pickLabel;      // visibility controlled in MW
+
+public slots:
+    void zoomToPct(QPointF coord, bool isZoom);
+
+    void setClickZoom(float clickZoom);
+    void zoomIn();
+    void zoomOut();
+    void zoomToFit();
+    void zoom50();
+    void zoom100();
+    void zoom200();
+    void zoomTo(float zoomTo);
+    void zoomToggle();
+
+signals:
+    void togglePick();
+    void zoomFromPct(QPointF scrollPct, QModelIndex idx, bool isZoom);
+    void panFromPct(QPointF scrollPct, QModelIndex idx);
 
 private slots:
-    void zoom(QPointF coord, QModelIndex idx, bool isZoom);
-    void pan(QPoint delta, QModelIndex idx);
+    void scrollEvent();
+
+protected:
+    void resizeEvent(QResizeEvent *event);
+    void mousePressEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
+    void enterEvent(QEvent *event);
 
 private:
+    QWidget *mainWindow;
+    QSize gridCell;
     Metadata *metadata;
-    ThumbView *thumbView;
     ImageCache *imageCacheThread;
-    QWidget *centralWidget;
+    ThumbView *thumbView;
+    QImageReader imageReader;
 
-    QHBoxLayout *mainLayout;
-    QScrollArea *scrlArea;
-    QGridLayout *gridLayout;
+    QGraphicsScene *scene;
+    QGraphicsPixmapItem *pmItem;
+    QMatrix matrix;
 
-    QList<ImageView*> *ivList;
-    QModelIndexList selection;
+    QPixmap displayPixmap;
+    QImage thumbsUp;
 
-    // req'd to receive pt from imageView
-    struct pt
-    {
-        int x;
-        int y;
-    };
+    QString currentImagePath;
 
-    QSize cw;       // central widget in parent
-    int count;      // number of images to compare
-    int rows;
-    int cols;
+    bool moveImageLocked;               // control when con drag image around
+    bool isZoom;
+    QPoint mousePt;
+    bool isMouseDrag;
+    bool isMouseDoubleClick;
+    bool isPreview;
 
-    void configureGrid();
-    void loadGrid();
-    long area(int rows, int cols);
+    qreal zoomFit;
+    qreal zoomInc = 0.1;    // 10% delta
+    qreal zoomMin = 0.05;   // 5% of original  rgh add to pref
+    qreal zoomMax = 8.0;    // 800% of original
+    qreal clickZoom = 1.0;
+
+    qreal getFitScaleFactor(QSize container, QRectF content);
+    void scale(bool propagate);
+    qreal getZoom();
+    QPointF getScrollPct();
+    QPointF getMousePct();
+//    QPointF getScrollPctFromCenter();
+    QPointF getSceneCoordFromPct(QPointF scrollPct);
+
+    void movePickIcon();
+    bool previewFitsZoom();
+
+    void rotateByExifRotation(QImage &image, QString &imageFullPath);
 };
 
-#endif // COMPARE_H
+#endif // COMPAREVIEW_H

@@ -91,7 +91,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     this->setObjectName("WinnowMW");
 
     centralLayout->addWidget(imageView);
-    centralLayout->addWidget(compareView);
+    centralLayout->addWidget(compareImages);
     centralLayout->addWidget(thumbView);
     centralLayout->setCurrentIndex(0);
 //    compareView->setVisible(false);
@@ -143,7 +143,7 @@ void MW::setupMainWindow(bool resetSettings)
 //    centralLayout->setContentsMargins(0, 0, 0, 0);
 //    centralLayout->addWidget(imageView);
 //    centralLayout->addWidget(compareView);
-    compareView->setVisible(false);
+//    compareImages->setVisible(false);
 //    centralWidget = new QWidget;
     centralWidget->setLayout(centralLayout);
 //    centralWidget->setMouseTracking(true);
@@ -1337,7 +1337,7 @@ void MW::createCompareView()
     qDebug() << "MW::createCompareView";
     #endif
     }
-    compareView = new CompareView(this, centralWidget, metadata, thumbView, imageCacheThread);
+    compareImages = new CompareImages(this, centralWidget, metadata, thumbView, imageCacheThread);
 }
 
 void MW::createStatusBar()
@@ -3290,7 +3290,7 @@ void MW::compareDisplay()
     qDebug() << "MW::compareDisplay";
     #endif
     }
-    centralLayout->setCurrentIndex(2);
+    centralLayout->setCurrentIndex(1);
 
     int n = thumbView->selectionModel()->selectedIndexes().count();
     if (n < 2) {
@@ -3305,7 +3305,7 @@ void MW::compareDisplay()
 //    imageView->setVisible(false);
 //    compareView->setVisible(true);
 
-//    thumbDock->setWidget(thumbView);
+    thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(true);
     thumbView->isGrid = false;
@@ -3313,7 +3313,7 @@ void MW::compareDisplay()
     setThumbDockVisibity();
 
     thumbView->thumbViewDelegate->isCompare = true;
-    compareView->load(centralWidget->size());
+    compareImages->load(centralWidget->size());
 //    centralLayout->addWidget(compareView);
 }
 
@@ -3347,8 +3347,8 @@ void MW::setShootingInfo() {
     #endif
     }
     imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
-    if (asCompareAction->isChecked())
-        compareView->showShootingInfo(infoVisibleAction->isChecked());
+//    if (asCompareAction->isChecked())
+//        compareView->showShootingInfo(infoVisibleAction->isChecked());
 }
 
 void MW::setThumbDockVisibity()
@@ -3597,7 +3597,7 @@ void MW::togglePick()
     bool isPick = (pickStatus == "true");
 
     imageView->pickLabel->setVisible(isPick);
-    if (asCompareAction->isChecked()) compareView->pick(isPick, index);
+    if (asCompareAction->isChecked()) compareImages->pick(isPick, index);
 }
 
 // When a new image is selected and shown in imageView update the visibility
@@ -3614,7 +3614,7 @@ void MW::updatePick()
     if (asLoupeAction->isChecked())
         (isPick) ? imageView->pickLabel->setVisible(true)
                  : imageView->pickLabel->setVisible(false);
-    if (asCompareAction->isChecked()) compareView->pick(isPick, idx);
+    if (asCompareAction->isChecked()) compareImages->pick(isPick, idx);
 }
 
 void MW::copyPicks()
