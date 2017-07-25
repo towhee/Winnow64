@@ -1,4 +1,5 @@
 #include "compareview.h"
+#include "global.h"
 
 CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
                      ImageCache *imageCacheThread, ThumbView *thumbView)
@@ -36,16 +37,17 @@ CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
 
     isMouseDrag = false;
     isMouseDoubleClick = false;
+    isMouseClickZoom = false;
 
-    connect(horizontalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(scrollEvent()));
-    connect(verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(scrollEvent()));
+//    connect(horizontalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(scrollEvent()));
+//    connect(verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(scrollEvent()));
 }
 
 bool CompareView::loadImage(QModelIndex idx, QString fPath)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::loadImage";
+    qDebug() << "CompareView::loadImage"  << currentImagePath;
     #endif
     }
 
@@ -79,7 +81,8 @@ bool CompareView::loadImage(QModelIndex idx, QString fPath)
     }
 
     setSceneRect(scene->itemsBoundingRect());
-    zoom = getFitScaleFactor(gridCell, pmItem->boundingRect());
+    zoomFit = getFitScaleFactor(gridCell, pmItem->boundingRect());
+    zoom = zoomFit;
     scale(false);
 
     return isLoaded;
@@ -239,7 +242,7 @@ void CompareView::zoomToPct(QPointF scrollPct, bool isZoom)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomToPct";
+    qDebug() << "CompareView::zoomToPct" << currentImagePath;
     #endif
     }
 /* Called from compareImages after signal zoomFromPct has been emitted
@@ -254,14 +257,44 @@ void CompareView::zoomToPct(QPointF scrollPct, bool isZoom)
     this->isZoom = isZoom;
     isZoom ? zoom = zoomFit : zoom = clickZoom;
     scale(false);
-    /*if (isZoom)*/ panToPct(scrollPct);
+    panToPct(scrollPct);
+}
+
+void CompareView::scrollEvent()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::scrollEvent " << currentImagePath;
+    #endif
+    }
+    if (imageIndex == thumbView->currentIndex() && propagate) {
+        qDebug() << "CompareView::scrollEvent has Focus = true" << currentImagePath;
+        emit panFromPct(getScrollPct(), imageIndex);
+    }
+
+}
+
+QPointF CompareView::getOffset(QPointF scrollPct)
+{
+    return scrollPct;
+}
+
+QPointF CompareView::getSceneCoordFromPct(QPointF scrollPct)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::getSceneCoordFromPct" << currentImagePath;
+    #endif
+    }
+    return QPointF(scrollPct.x() * scene->width(),
+                   scrollPct.y() * scene->height());
 }
 
 void CompareView::panToPct(QPointF scrollPct)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::panToPct";
+    qDebug() << "CompareView::panToPct" << currentImagePath;
     #endif
     }
     qreal xPct = scrollPct.x();
@@ -272,92 +305,93 @@ void CompareView::panToPct(QPointF scrollPct)
     qreal y = yPct * h;
     qDebug() << "CompareView::panToPct  xPct, yPct" << xPct << yPct
              << "w" << w << "h" << h << "x" << x << "y" << y
-             << "zoom" << zoom << "zoomFit" << zoomFit;
+             << "zoom" << zoom << "zoomFit" << zoomFit
+             << currentImagePath;
 //    centerOn(xPct * scene->width(), yPct * scene->height());
-    centerOn(x, y);
+//    centerOn(x, y);
+
+    setScrollBars(scrollPct);
+    reportScrollBarStatus();
     return;
 }
 
-void CompareView::scrollEvent()
+void CompareView::setScrollBars(QPointF scrollPct)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::scrollEvent";
+    qDebug() << "CompareView::setScrollBars" << currentImagePath;
     #endif
     }
-    if (hasFocus()) emit panFromPct(getScrollPct(), imageIndex);
+    getScrollBarStatus();
+    scrl.hVal = scrl.hMin + scrollPct.x() * (scrl.hMax - scrl.hMin);
+    scrl.vVal = scrl.vMin + scrollPct.y() * (scrl.vMax - scrl.vMin);
+    horizontalScrollBar()->setValue(scrl.hVal);
+    verticalScrollBar()->setValue(scrl.vVal);
 }
 
-QPointF CompareView::getSceneCoordFromPct(QPointF scrollPct)
+void CompareView::getScrollBarStatus()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getSceneCoordFromPct";
+    qDebug() << "CompareView::getScrolBarStatus" << currentImagePath;
     #endif
     }
-    return QPointF(scrollPct.x() * scene->width(),
-                   scrollPct.y() * scene->height());
+    scrl.hMin = horizontalScrollBar()->minimum();
+    scrl.hMax = horizontalScrollBar()->maximum();
+    scrl.hVal = horizontalScrollBar()->value();
+    scrl.hPct = qreal(scrl.hVal - scrl.hMin) / (scrl.hMax - scrl.hMin);
+    scrl.vMin = verticalScrollBar()->minimum();
+    scrl.vMax = verticalScrollBar()->maximum();
+    scrl.vVal = verticalScrollBar()->value();
+    scrl.vPct = qreal(scrl.vVal - scrl.vMin) / (scrl.vMax - scrl.vMin);
+}
+
+void CompareView::reportScrollBarStatus()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::reportScrollBarStatus" << currentImagePath;
+    #endif
+    }
+    qDebug() << "\n"
+             << "hMin" << scrl.hMin << "hMax" << scrl.hMax << "hPct" << scrl.hPct << "hVal" << scrl.hVal
+             << "vMin" << scrl.vMin << "vMax" << scrl.vMax << "vPct" << scrl.vPct << "vVal" << scrl.vVal
+             << "\n";
 }
 
 QPointF CompareView::getScrollPct()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getScrollPct";
+    qDebug() << "CompareView::getScrollPct" << currentImagePath;
     #endif
     }
-    int h1 = horizontalScrollBar()->minimum();
-    int h2 = horizontalScrollBar()->maximum();
-    int h = horizontalScrollBar()->value();
-    qreal xPct = qreal(h - h1) / (h2 - h1);
-    int v1 = verticalScrollBar()->minimum();
-    int v2 = verticalScrollBar()->maximum();
-    int v = verticalScrollBar()->value();
-    qreal yPct = qreal(v - v1) / (v2 - v1);
-    QPointF scrollPct(xPct, yPct);
-    qDebug() << "CompareView::getScrollPct()  xPct, yPct" << xPct << yPct
-             << "horizontal scroll value" << horizontalScrollBar()->value();
-    panToPct(scrollPct);
-    return QPointF(scrollPct);
+    getScrollBarStatus();
+    reportScrollBarStatus();
+    return QPointF(scrl.hPct, scrl.vPct);
 }
 
 QPointF CompareView::getMousePct()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getScrollPct";
+    qDebug() << "CompareView::getScrollPct" << currentImagePath;
     #endif
     }
     QPointF p(mapToScene(mousePt));
-    qDebug() << "CompareView::getMousePct  Mouse" << mousePt
-             << "p(mapToScene(mousePt))" << p << mapToScene(mousePt);
     QPointF scrollPct(p.x() / scene->width(), p.y() / scene->height());
+    qDebug() << "\nCompareView::getMousePct  Mouse" << mousePt
+             << "p(mapToScene(mousePt))" << p << "scrollPct" << scrollPct;
     panToPct(scrollPct);
-    return QPointF(scrollPct);
+    return getScrollPct();
+//    return QPointF(scrollPct);
 }
-
-
-
-//QPointF CompareView::getScrollPct()
-//{
-//    int h1 = horizontalScrollBar()->minimum();
-//    int h2 = horizontalScrollBar()->maximum();
-//    int h = horizontalScrollBar()->value();
-//    qreal xPct = qreal(h - h1) / (h2 - h1);
-//    int v1 = verticalScrollBar()->minimum();
-//    int v2 = verticalScrollBar()->maximum();
-//    int v = verticalScrollBar()->value();
-//    qreal yPct = qreal(v - v1) / (v2 - v1);
-//    qDebug() << "CompareView::getScrollPct()  xPct, yPct" << xPct << yPct
-//             << "horizontal scroll value" << horizontalScrollBar()->value();
-//    return QPointF(xPct, yPct);
-//}
 
 qreal CompareView::getZoom()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getZoom";
+    qDebug() << "CompareView::getZoom" << currentImagePath;
     #endif
     }
     // use view center to make sure inside scene item
@@ -371,7 +405,7 @@ qreal CompareView::getFitScaleFactor(QSize container, QRectF content)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getFitScaleFactor";
+    qDebug() << "CompareView::getFitScaleFactor" << currentImagePath;
     #endif
     }
     qreal hScale = ((qreal)container.width() - 2) / content.width();
@@ -379,17 +413,17 @@ qreal CompareView::getFitScaleFactor(QSize container, QRectF content)
     return (hScale < vScale) ? hScale : vScale;
 }
 
-void CompareView::scale(bool propagate)
+void CompareView::scale(bool okayToPropagate)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::scale";
+    qDebug() << "CompareView::scale" << currentImagePath;
     #endif
     }
     matrix.reset();
     matrix.scale(zoom, zoom);
     setMatrix(matrix);
-    if (propagate) {
+    if (okayToPropagate) {
         qDebug() << "Propagating from" << currentImagePath;
         emit zoomFromPct(getMousePct(), imageIndex, isZoom);
     }
@@ -407,7 +441,7 @@ as the image is resized and zoomed, adjusting for the aspect ratio of the
 image.*/
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::movePickIcon";
+    qDebug() << "CompareView::movePickIcon" << currentImagePath;
     #endif
     }
     QPoint sceneBottomRight;            // bottom right corner of scene in view coord
@@ -436,7 +470,7 @@ void CompareView::resizeEvent(QResizeEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::resizeEvent";
+    qDebug() << "CompareView::resizeEvent" << currentImagePath;
     #endif
     }
     QGraphicsView::resizeEvent(event);
@@ -451,7 +485,7 @@ void CompareView::zoomIn()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomIn";
+    qDebug() << "CompareView::zoomIn" << currentImagePath;
     #endif
     }
     zoom *= (1.0 + zoomInc);
@@ -464,7 +498,7 @@ void CompareView::zoomOut()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomOut";
+    qDebug() << "CompareView::zoomOut" << currentImagePath;
     #endif
     }
     zoom *= (1.0 - zoomInc);
@@ -476,7 +510,7 @@ void CompareView::zoom100()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoom100";
+    qDebug() << "CompareView::zoom100" << currentImagePath;
     #endif
     }
     clickZoom = 1;
@@ -488,7 +522,7 @@ void CompareView::zoomToFit()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomToFit";
+    qDebug() << "CompareView::zoomToFit" << currentImagePath;
     #endif
     }
 //    mouseZoomFit = true;
@@ -499,7 +533,7 @@ void CompareView::zoomTo(float zoomTo)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomTo";
+    qDebug() << "CompareView::zoomTo" << currentImagePath;
     #endif
     }
     zoom = zoomTo;
@@ -513,7 +547,7 @@ void CompareView::zoomToggle()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomToggle";
+    qDebug() << "CompareView::zoomToggle" << currentImagePath;
     #endif
     }
 //    qDebug() << "zoomToggle  isZoom =" << isZoom;
@@ -526,7 +560,7 @@ void CompareView::zoom50()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoom50";
+    qDebug() << "CompareView::zoom50" << currentImagePath;
     #endif
     }
     zoomTo(0.5);
@@ -537,7 +571,7 @@ void CompareView::zoom200()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoom200";
+    qDebug() << "CompareView::zoom200" << currentImagePath;
     #endif
     }
     zoomTo(2.0);
@@ -548,19 +582,49 @@ void CompareView::setClickZoom(float clickZoom)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::setClickZoom";
+    qDebug() << "CompareView::setClickZoom" << currentImagePath;
     #endif
     }
     this->clickZoom = clickZoom;
 }
 
-// MOUSE EVENTS
+void CompareView::resetMouseClickZoom()
+{
+    isMouseClickZoom = false;
+}
+
+// EVENTS
+
+void CompareView::wheelEvent(QWheelEvent *wheelEvent)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::wheelEvent" << currentImagePath;
+    #endif
+    }
+    propagate = true;
+    qDebug() << wheelEvent->pos() << "propagate" << propagate;
+
+//    if (imageIndex == thumbView->currentIndex() && propagate) {
+    if (imageIndex == thumbView->currentIndex()) {
+        if(wheelEvent->modifiers() & Qt::ShiftModifier) {
+            qDebug() << "wheelEvent shiftModifier";
+            propagate = false;
+        }
+//        if((wheelEvent->modifiers() & Qt::NoModifier)) {
+        else {
+            qDebug() << "CompareView::wheelEvent emiting" << currentImagePath;
+            emit panFromPct(getScrollPct(), imageIndex);
+        }
+    }
+    QGraphicsView::wheelEvent(wheelEvent);
+}
 
 void CompareView::mousePressEvent(QMouseEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::mousePressEvent";
+    qDebug() << "CompareView::mousePressEvent" << currentImagePath;
     #endif
     }
     // bad things happen if no image when click
@@ -573,15 +637,21 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::mouseReleaseEvent";
+    qDebug() << "CompareView::mouseReleaseEvent" << currentImagePath;
     #endif
     }
 //    clickZoom = 0.5;
     qDebug() << "CompareView::mouseReleaseEvent  mouse x, y"
              << event->localPos();
+
+    qDebug() << "\n00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n";
+
     mousePt = event->localPos().toPoint();
     isZoom ? zoom = zoomFit : zoom = clickZoom;
+    isMouseClickZoom = true;
+    propagate = false;
     scale(true);
+    propagate = true;
     QGraphicsView::mouseReleaseEvent(event);
 }
 
@@ -589,7 +659,7 @@ void CompareView::enterEvent(QEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::enterEvent";
+    qDebug() << "CompareView::enterEvent" << currentImagePath;
     #endif
     }
     this->setFocus();

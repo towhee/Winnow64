@@ -2694,6 +2694,7 @@ void MW::writeSettings()
 
     // not req'd
     setting->setValue("thumbsSortFlags", (int)thumbView->thumbsSortFlags);
+
 //    setting->setValue("thumbsZoomVal", (int)thumbView->thumbSize);
 
     /* Action shortcuts */

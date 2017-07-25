@@ -250,3 +250,32 @@ connect(view2->horizontalScrollBar(), SIGNAL(valueChanged(int)), view1->horizont
 
 
 http://tpgit.github.io/MDIImageViewer/_modules/imageviewer.html
+
+CompareView::scrollEvent
+CompareView::scrollEvent has Focus = true "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0001.NEF"
+CompareView::getScrollPct
+getScrollPct()  xPct 0.265908 yPct 0.36687 horizontal scroll value 1705 vertical scroll value 1681
+CompareImages::pan
+CompareImages::pan
+CompareView::panToPct
+CompareView::panToPct  xPct, yPct 0.265908 0.36687 w 7360 h 4912 x 1957.08 y 1802.07 zoom 1 zoomFit 0.0665717 "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0002.NEF"
+CompareView::scrollEvent
+CompareView::scrollEvent
+CompareView::scrollEvent
+CompareView::scrollEvent has Focus = true "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0001.NEF"
+CompareView::getScrollPct
+getScrollPct()  xPct 0.266999 yPct 0.36687 horizontal scroll value 1712 vertical scroll value 1681
+CompareImages::pan
+CompareImages::pan
+CompareView::panToPct
+CompareView::panToPct  xPct, yPct 0.266999 0.36687 w 7360 h 4912 x 1965.12 y 1802.07 zoom 1 zoomFit 0.0665717 "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0002.NEF"
+CompareView::scrollEvent
+CompareView::scrollEvent
+CompareView::scrollEvent has Focus = true "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0001.NEF"
+CompareView::getScrollPct
+getScrollPct()  xPct 0.266999 yPct 0.367525 horizontal scroll value 1712 vertical scroll value 1684
+CompareImages::pan
+CompareImages::pan
+CompareView::panToPct
+CompareView::panToPct  xPct, yPct 0.266999 0.367525 w 7360 h 4912 x 1965.12 y 1805.28 zoom 1 zoomFit 0.0665717 "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0002.NEF"
+

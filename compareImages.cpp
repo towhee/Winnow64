@@ -251,6 +251,12 @@ void CompareImages::zoom(QPointF scrollPct, QModelIndex idx, bool isZoom)
             imList->at(i)->zoomToPct(scrollPct, isZoom);
         }
     }
+//    for (int i = 0; i < imList->count(); ++i) {
+//        if (imList->at(i)->imageIndex == idx) {
+//            imList->at(i)->resetMouseClickZoom();
+//            break;
+//        }
+//    }
 }
 
 void CompareImages::pan(QPointF scrollPct, QModelIndex idx)

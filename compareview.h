@@ -20,7 +20,8 @@ public:
     bool loadPixmap(QString &imageFullPath, QPixmap &pm);
     bool loadImage(QModelIndex idx, QString imageFileName);
     void panToPct(QPointF scrollPct);
-
+    void resetMouseClickZoom();
+    bool propagate = true;
     QLabel *pickLabel;      // visibility controlled in MW
 
 public slots:
@@ -48,6 +49,7 @@ protected:
     void resizeEvent(QResizeEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
+    void wheelEvent(QWheelEvent *wheelEvent);
     void enterEvent(QEvent *event);
 
 private:
@@ -65,14 +67,26 @@ private:
     QPixmap displayPixmap;
     QImage thumbsUp;
 
-    QString currentImagePath;
+    struct scrollStatus {
+        int hVal;
+        int hMax;
+        int hMin;
+        qreal hPct;
+        int vVal;
+        int vMax;
+        int vMin;
+        qreal vPct;
+    } scrl;
 
-    bool moveImageLocked;               // control when con drag image around
-    bool isZoom;
+    QString currentImagePath;
     QPoint mousePt;
+    QPointF offset;
+
+    bool isZoom;
     bool isMouseDrag;
     bool isMouseDoubleClick;
-    bool isPreview;
+//    bool isPreview;
+    bool isMouseClickZoom;
 
     qreal zoomFit;
     qreal zoomInc = 0.1;    // 10% delta
@@ -81,8 +95,12 @@ private:
     qreal clickZoom = 1.0;
 
     qreal getFitScaleFactor(QSize container, QRectF content);
-    void scale(bool propagate);
+    void scale(bool okayToPropagate);
     qreal getZoom();
+    QPointF getOffset(QPointF scrollPct);
+    void getScrollBarStatus();
+    void setScrollBars(QPointF scrollPct);
+    void reportScrollBarStatus();
     QPointF getScrollPct();
     QPointF getMousePct();
 //    QPointF getScrollPctFromCenter();
