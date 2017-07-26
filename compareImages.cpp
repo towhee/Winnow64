@@ -16,11 +16,14 @@ CompareImages::CompareImages(QWidget *parent,
     this->thumbView = thumbView;
     this->imageCacheThread = imageCacheThread;
     this->centralWidget = centralWidget;
+//    centralWidget->setBackgroundRole(backgroundRole());       // not helping
+//    this->setBackgroundRole(backgroundRole());
+//    setStyleSheet("QWidget {background-color: yellow}");  // works, but not in spacing area
 
     gridLayout = new QGridLayout;
     gridLayout->setContentsMargins(0, 0, 0, 0);
     gridLayout->setMargin(0);
-    gridLayout->setSpacing(0);
+    gridLayout->setSpacing(3);
 
     setLayout(gridLayout);
     setContentsMargins(0, 0, 0, 0);
@@ -56,7 +59,7 @@ bool CompareImages::load(const QSize &centralWidgetSize)
         QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
         QSize imSize(metadata->getWidth(fPath), metadata->getHeight(fPath));
         sizeList->append(imSize);
-        qDebug() << "compareImages loading" << i << fPath;
+//        qDebug() << "compareImages loading" << i << fPath;
     }
 
     configureGrid();
@@ -215,10 +218,10 @@ long CompareImages::area(int rows, int cols)
         QSize imSize = sizeList->at(i);
         imSize.scale(cell, Qt::KeepAspectRatio);
         area += imSize.width() * imSize.height();
-        qDebug() << "area imSize" << "rows, cols" << rows << cols
-                 << "item" << i << "imSize" << imSize << "cell size" << cell
-                 << "cw" << cw << "item area" << imSize.width() * imSize.height()
-                 << "sum area" << area;
+//        qDebug() << "area imSize" << "rows, cols" << rows << cols
+//                 << "item" << i << "imSize" << imSize << "cell size" << cell
+//                 << "cw" << cw << "item area" << imSize.width() * imSize.height()
+//                 << "sum area" << area;
     }
     return area;
 }
@@ -245,18 +248,12 @@ void CompareImages::zoom(QPointF scrollPct, QModelIndex idx, bool isZoom)
     qDebug() << "CompareImages::zoom";
     #endif
     }
-    qDebug() << "CompareImages::zoom  scrollPct" << scrollPct << "isZoom" << isZoom;
+//    qDebug() << "CompareImages::zoom  scrollPct" << scrollPct << "isZoom" << isZoom;
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->zoomToPct(scrollPct, isZoom);
         }
     }
-//    for (int i = 0; i < imList->count(); ++i) {
-//        if (imList->at(i)->imageIndex == idx) {
-//            imList->at(i)->resetMouseClickZoom();
-//            break;
-//        }
-//    }
 }
 
 void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
@@ -266,7 +263,7 @@ void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
     qDebug() << "CompareImages::pan";
     #endif
     }
-    qDebug() << "CompareImages::pan";
+//    qDebug() << "CompareImages::pan";
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->panToPct(scrollPct);

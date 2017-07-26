@@ -652,15 +652,12 @@ void CompareView::wheelEvent(QWheelEvent *wheelEvent)
     #endif
     }
     propagate = true;
-    qDebug() << wheelEvent->pos() << "propagate" << propagate;
-
-//    if (imageIndex == thumbView->currentIndex() && propagate) {
+    
     if (imageIndex == thumbView->currentIndex()) {
         if(wheelEvent->modifiers() & Qt::ShiftModifier) {
             qDebug() << "wheelEvent shiftModifier";
             propagate = false;
         }
-//        if((wheelEvent->modifiers() & Qt::NoModifier)) {
         else {
             qDebug() << "CompareView::wheelEvent emiting" << currentImagePath;
             emit panFromPct(getScrollPct(), imageIndex);

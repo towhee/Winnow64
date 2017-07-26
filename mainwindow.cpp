@@ -3292,6 +3292,7 @@ void MW::compareDisplay()
     #endif
     }
     centralLayout->setCurrentIndex(1);
+    centralWidget->setStyleSheet("QWidget {background-color: rgb(85,85,85);}");
 
     int n = thumbView->selectionModel()->selectedIndexes().count();
     if (n < 2) {
