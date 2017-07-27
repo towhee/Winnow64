@@ -20,8 +20,8 @@ public:
     bool loadPixmap(QString &imageFullPath, QPixmap &pm);
     bool loadImage(QModelIndex idx, QString imageFileName);
     void panToPct(QPointF scrollPct);
+    void panToDeltaPct(QPointF delta);
     void resetMouseClickZoom();
-    bool propagate = true;
     QLabel *pickLabel;      // visibility controlled in MW
 
 public slots:
@@ -81,12 +81,15 @@ private:
     QString currentImagePath;
     QPoint mousePt;
     QPointF offset;
+    QPointF scrollPosPct;       // current position
+//    QPointF getOffset(QPointF scrollPct);
 
-    bool isZoom;
+    // Status
+    bool isZoom;                // zoom is greater than req'd to fit image
     bool isMouseDrag;
     bool isMouseDoubleClick;
-//    bool isPreview;
-    bool isMouseClickZoom;
+    bool isMouseClickZoom;      // zoom initiated by mouse click
+    bool propagate = true;      // sync pan (scrollEvent)
 
     qreal zoomFit;
     qreal zoomInc = 0.1;    // 10% delta
@@ -97,12 +100,12 @@ private:
     qreal getFitScaleFactor(QSize container, QRectF content);
     void scale(bool okayToPropagate);
     qreal getZoom();
-    QPointF getOffset(QPointF scrollPct);
     void getScrollBarStatus();
     void setScrollBars(QPointF scrollPct);
     void reportScrollBarStatus();
     QPointF getScrollPct();
-    QPointF getMousePct();
+    QPointF getScrollDeltaPct();
+//    QPointF getMousePct();
 //    QPointF getScrollPctFromCenter();
     QPointF getSceneCoordFromPct(QPointF scrollPct);
 

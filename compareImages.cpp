@@ -20,6 +20,7 @@ CompareImages::CompareImages(QWidget *parent,
 //    this->setBackgroundRole(backgroundRole());
 //    setStyleSheet("QWidget {background-color: yellow}");  // works, but not in spacing area
 
+//    gridLayout = new QGraphicsGridLayout;
     gridLayout = new QGridLayout;
     gridLayout->setContentsMargins(0, 0, 0, 0);
     gridLayout->setMargin(0);
@@ -266,7 +267,8 @@ void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
 //    qDebug() << "CompareImages::pan";
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
-            imList->at(i)->panToPct(scrollPct);
+            imList->at(i)->panToDeltaPct(scrollPct);
+//            imList->at(i)->panToPct(scrollPct);
         }
     }
 }

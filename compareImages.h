@@ -26,6 +26,7 @@ private:
     ImageCache *imageCacheThread;
     QWidget *centralWidget;
 
+//    QGraphicsGridLayout *gridLayout;
     QGridLayout *gridLayout;
 
     QList<CompareView*> *imList;
