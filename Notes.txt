@@ -5,7 +5,6 @@ To do:
 - Show how much mem req'd for selected images
 - Sort thumbs and add to workspaces
 - Add more raw file formats
-- Compare 2-9 images
 - Add zoom increment to preferences
 - UI for changing compare click zoom amount
 - Eject card
@@ -24,6 +23,7 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Compare 2-9 images
 - Done: Convert imageView to use QGraphicsView
 - Done: Set bookmark not working
 - Done: Thumbs fit

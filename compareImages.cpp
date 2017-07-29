@@ -16,21 +16,18 @@ CompareImages::CompareImages(QWidget *parent,
     this->thumbView = thumbView;
     this->imageCacheThread = imageCacheThread;
     this->centralWidget = centralWidget;
-//    centralWidget->setBackgroundRole(backgroundRole());       // not helping
-//    this->setBackgroundRole(backgroundRole());
-//    setStyleSheet("QWidget {background-color: yellow}");  // works, but not in spacing area
 
-//    gridLayout = new QGraphicsGridLayout;
     gridLayout = new QGridLayout;
     gridLayout->setContentsMargins(0, 0, 0, 0);
     gridLayout->setMargin(0);
-    gridLayout->setSpacing(3);
+    gridLayout->setSpacing(0);
 
     setLayout(gridLayout);
     setContentsMargins(0, 0, 0, 0);
 
     imList = new QList<CompareView*>;
     sizeList = new QList<QSize>;
+    imageAlign = new ImageAlign(120, 0.2);
 }
 
 bool CompareImages::load(const QSize &centralWidgetSize)
@@ -65,6 +62,10 @@ bool CompareImages::load(const QSize &centralWidgetSize)
 
     configureGrid();
     QSize gridCell(cw.width() / cols, cw.height() / rows);
+    for (int col = 0; col < cols; ++col)
+        gridLayout->setColumnMinimumWidth(col, cw.width() / cols - 1);
+    for (int row = 0; row < rows; ++row)
+        gridLayout->setRowMinimumHeight(row, cw.height() / rows - 1);
 
     // iterate selected thumbs - load images, append and connect
     for (int i = 0; i < count; ++i) {
@@ -80,6 +81,9 @@ bool CompareImages::load(const QSize &centralWidgetSize)
         // sync panning
         connect(imList->at(i), SIGNAL(panFromPct(QPointF, QModelIndex)),
                 this, SLOT(pan(QPointF, QModelIndex)));
+        // align
+        connect(imList->at(i), SIGNAL(align(QPointF, QModelIndex)),
+                this, SLOT(align(QPointF, QModelIndex)));
     }
 
     loadGrid();
@@ -268,7 +272,92 @@ void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->panToDeltaPct(scrollPct);
-//            imList->at(i)->panToPct(scrollPct);
         }
     }
 }
+
+void CompareImages::align(QPointF basePos, QModelIndex idx)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareImages::align";
+    #endif
+    }
+    qDebug() << "CompareImages::align";
+    int idxRow = 0;
+    for (int i = 0; i < imList->count(); ++i) {
+        if (imList->at(i)->imageIndex == idx) {
+            idxRow = i;
+            break;
+        }
+    }
+    QImage *baseImage = new QImage;
+    *baseImage = imList->at(idxRow)->pmItem->pixmap().toImage();
+    QPointF basePosPct = imList->at(idxRow)->getScrollPct();
+    for (int i = 0; i < imList->count(); ++i) {
+        if (imList->at(i)->imageIndex != idx) {
+            QImage *image = new QImage;
+            *image = imList->at(i)->pmItem->pixmap().toImage();
+            QPointF scrollPct(imageAlign->alignImage(baseImage, image, basePosPct));
+            qDebug() << "basePos" << basePos << "scrollPct" << scrollPct;
+            imList->at(i)->panToPct(scrollPct);
+        }
+    }
+}
+
+void CompareImages::zoomIn()
+{
+    for (int i = 0; i < imList->count(); ++i) {
+        imList->at(i)->zoomIn();
+    }
+}
+
+void CompareImages::zoomOut()
+{
+    for (int i = 0; i < imList->count(); ++i) {
+        imList->at(i)->zoomOut();
+    }
+}
+
+void CompareImages::zoomToFit()
+{
+    for (int i = 0; i < imList->count(); ++i) {
+        imList->at(i)->zoomToFit();
+    }
+}
+
+void CompareImages::zoom50()
+{
+    for (int i = 0; i < imList->count(); ++i) {
+        imList->at(i)->zoomToFit();
+    }
+}
+
+void CompareImages::zoom100()
+{
+    for (int i = 0; i < imList->count(); ++i) {
+        imList->at(i)->zoomToFit();
+    }
+}
+
+void CompareImages::zoom200()
+{
+    for (int i = 0; i < imList->count(); ++i) {
+        imList->at(i)->zoomToFit();
+    }
+}
+
+//void CompareImages::zoomTo()
+//{
+//    for (int i = 0; i < imList->count(); ++i) {
+//        imList->at(i)->zoomTo();
+//    }
+//}
+
+void CompareImages::zoomToggle()
+{
+    for (int i = 0; i < imList->count(); ++i) {
+        imList->at(i)->zoomToggle();
+    }
+}
+

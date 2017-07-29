@@ -16,9 +16,11 @@ public:
 
     qreal zoom;
     QModelIndex imageIndex;
+    QGraphicsPixmapItem *pmItem;        // req'd by imageAlign
 
     bool loadPixmap(QString &imageFullPath, QPixmap &pm);
     bool loadImage(QModelIndex idx, QString imageFileName);
+    QPointF getScrollPct();
     void panToPct(QPointF scrollPct);
     void panToDeltaPct(QPointF delta);
     void resetMouseClickZoom();
@@ -41,6 +43,7 @@ signals:
     void togglePick();
     void zoomFromPct(QPointF scrollPct, QModelIndex idx, bool isZoom);
     void panFromPct(QPointF scrollPct, QModelIndex idx);
+    void align(QPointF scrollPct, QModelIndex idx);
 
 private slots:
     void scrollEvent();
@@ -51,6 +54,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event);
     void wheelEvent(QWheelEvent *wheelEvent);
     void enterEvent(QEvent *event);
+    void leaveEvent(QEvent *event);
 
 private:
     QWidget *mainWindow;
@@ -60,11 +64,13 @@ private:
     ThumbView *thumbView;
     QImageReader imageReader;
 
+    QFrame *frame;
+
     QGraphicsScene *scene;
-    QGraphicsPixmapItem *pmItem;
     QMatrix matrix;
 
     QPixmap displayPixmap;
+    QPixmap *pickPixmap;
     QImage thumbsUp;
 
     struct scrollStatus {
@@ -103,7 +109,6 @@ private:
     void getScrollBarStatus();
     void setScrollBars(QPointF scrollPct);
     void reportScrollBarStatus();
-    QPointF getScrollPct();
     QPointF getScrollDeltaPct();
 //    QPointF getMousePct();
 //    QPointF getScrollPctFromCenter();

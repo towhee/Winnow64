@@ -163,7 +163,14 @@ private slots:
     void loupeDisplay();
     void gridDisplay();
     void compareDisplay();
-//    void updateActions();
+    void zoomOut();
+    void zoomIn();
+    void zoomToFit();
+    void zoom50();
+    void zoom100();
+    void zoom200();
+//    void zoomTo(float zoomTo);
+    void zoomToggle();
     void updateStatus(bool showFileCount, QString s);
     void updateMetadataThreadRunStatus(bool isRun);
     void updateThumbThreadRunStatus(bool isRun);

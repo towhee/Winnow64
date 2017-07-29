@@ -720,27 +720,27 @@ void MW::createActions()
 
     zoomOutAction = new QAction(tr("Zoom Out"), this);
     zoomOutAction->setObjectName("zoomOut");
-    connect(zoomOutAction, SIGNAL(triggered()), imageView, SLOT(zoomOut()));
+    connect(zoomOutAction, SIGNAL(triggered()), this, SLOT(zoomOut()));
 
     zoomInAction = new QAction(tr("Zoom In"), this);
     zoomInAction->setObjectName("zoomIn");
-    connect(zoomInAction, SIGNAL(triggered()), imageView, SLOT(zoomIn()));
+    connect(zoomInAction, SIGNAL(triggered()), this, SLOT(zoomIn()));
 
     zoomToggleAction = new QAction(tr("Zoom fit <-> 100%"), this);
     zoomToggleAction->setObjectName("resetZoom");
-    connect(zoomToggleAction, SIGNAL(triggered()), imageView, SLOT(zoomToggle()));
+    connect(zoomToggleAction, SIGNAL(triggered()), this, SLOT(zoomToggle()));
 
     zoom50PctAction = new QAction(tr("Click zoom 50%"), this);
     zoom50PctAction->setObjectName("50PctZoom");
-    connect(zoom50PctAction, SIGNAL(triggered()), imageView, SLOT(zoom50()));
+    connect(zoom50PctAction, SIGNAL(triggered()), this, SLOT(zoom50()));
 
     zoom100PctAction = new QAction(tr("Click zoom 100%"), this);
     zoom100PctAction->setObjectName("100PctZoom");
-    connect(zoom100PctAction, SIGNAL(triggered()), imageView, SLOT(zoom100()));
+    connect(zoom100PctAction, SIGNAL(triggered()), this, SLOT(zoom100()));
 
     zoom200PctAction = new QAction(tr("Click zoom 200%"), this);
     zoom200PctAction->setObjectName("200PctZoom");
-    connect(zoom200PctAction, SIGNAL(triggered()), imageView, SLOT(zoom200()));
+    connect(zoom200PctAction, SIGNAL(triggered()), this, SLOT(zoom200()));
 
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
@@ -2530,6 +2530,54 @@ void MW::selectAllThumbs()
     thumbView->selectAll();
 }
 
+void MW::zoomIn()
+{
+    if (asLoupeAction) imageView->zoomIn();
+    if (asCompareAction) compareImages->zoomIn();
+}
+
+void MW::zoomOut()
+{
+    if (asLoupeAction) imageView->zoomOut();
+    if (asCompareAction) compareImages->zoomOut();
+}
+
+void MW::zoomToFit()
+{
+    if (asLoupeAction) imageView->zoomToFit();
+    if (asCompareAction) compareImages->zoomToFit();
+}
+
+void MW::zoom50()
+{
+    if (asLoupeAction) imageView->zoom50();
+    if (asCompareAction) compareImages->zoom50();
+}
+
+void MW::zoom100()
+{
+    if (asLoupeAction) imageView->zoom100();
+    if (asCompareAction) compareImages->zoomToFit();
+}
+
+void MW::zoom200()
+{
+    if (asLoupeAction) imageView->zoomToFit();
+    if (asCompareAction) compareImages->zoomToFit();
+}
+
+//void MW::zoomTo()
+//{
+//    if (asLoupeAction) imageView->zoomToFit();
+//    if (asCompareAction) compareImages->zoomToFit();
+//}
+
+void MW::zoomToggle()
+{
+    if (asLoupeAction) imageView->zoomToFit();
+    if (asCompareAction) compareImages->zoomToFit();
+}
+
 void MW::rotateLeft()
 {
     {
@@ -3291,9 +3339,6 @@ void MW::compareDisplay()
     qDebug() << "MW::compareDisplay";
     #endif
     }
-    centralLayout->setCurrentIndex(1);
-//    centralWidget->setStyleSheet("QWidget {background-color: rgb(85,85,85);}");
-
     int n = thumbView->selectionModel()->selectedIndexes().count();
     if (n < 2) {
         popUp->showPopup(this, "Select more than one image to compare.", 1000, 0.75);
@@ -3304,8 +3349,6 @@ void MW::compareDisplay()
         msg += " images have been selected.  Only the first 9 will be compared.";
         popUp->showPopup(this, msg, 2000, 0.75);
     }
-//    imageView->setVisible(false);
-//    compareView->setVisible(true);
 
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
@@ -3315,6 +3358,7 @@ void MW::compareDisplay()
     setThumbDockVisibity();
 
     thumbView->thumbViewDelegate->isCompare = true;
+    centralLayout->setCurrentIndex(1);
     compareImages->load(centralWidget->size());
 //    centralLayout->addWidget(compareView);
 }

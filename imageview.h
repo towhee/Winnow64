@@ -38,6 +38,7 @@ public:
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void setInfo(QString infoString);
     QLabel *pickLabel;      // visibility controlled in MW
+    QPixmap *pickPixmap;
 
 public slots:
     void monitorCursorState();
@@ -91,7 +92,7 @@ private:
 
     QPixmap displayPixmap;
 //    QImage origImage;
-    QImage thumbsUp;
+//    QImage thumbsUp;
     QImage displayImage;
     QTimer *mouseMovementTimer;
 

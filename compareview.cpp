@@ -62,8 +62,15 @@ CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
     this->metadata = metadata;
     this->imageCacheThread = imageCacheThread;
     this->thumbView = thumbView;
-    this->setStyleSheet("QAbstractScrollArea  {margin:2; border-width: 2; color: yellow;}");     // not working
+    this->setStyleSheet("QGraphicsView  {"
+                        "margin:1; "
+                        "border-style: solid; "
+                        "border-width: 1; "
+                        "border-color: rgb(111,111,111);}");
 
+//    frame = new QFrame;
+//    QLabel *g = new QLabel;
+//    this->setFrame
 
     scene = new QGraphicsScene();
     pmItem = new QGraphicsPixmapItem;
@@ -79,14 +86,16 @@ CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
     pickLabel = new QLabel(this);
     pickLabel->setFixedSize(40,48);
     pickLabel->setAttribute(Qt::WA_TranslucentBackground);
-    thumbsUp.load(":/images/ThumbsUp48.png");
-    pickLabel->setPixmap(QPixmap::fromImage(thumbsUp));
+    pickPixmap = new QPixmap(":/images/ThumbsUp48.png");
+    // setPixmap during resize event
+    pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
     pickLabel->setVisible(false);
 
     isMouseDrag = false;
     isMouseDoubleClick = false;
     isMouseClickZoom = false;
-    clickZoom = 0.5;
+    clickZoom = 1.0;
+    zoomInc = 0.1;
 
     connect(horizontalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(scrollEvent()));
     connect(verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(scrollEvent()));
@@ -301,8 +310,8 @@ void CompareView::zoomToPct(QPointF scrollPct, bool isZoom)
    slider range, because each image in the compare group might have different
    size or aspect ratios.
 */
-    qDebug() << "CompareView::zoomToPct  scrollPct" << scrollPct
-             << "isZoom" << isZoom << currentImagePath;
+//    qDebug() << "CompareView::zoomToPct  scrollPct" << scrollPct
+//             << "isZoom" << isZoom << currentImagePath;
     this->isZoom = isZoom;
     isZoom ? zoom = zoomFit : zoom = clickZoom;
     scale(false);
@@ -319,16 +328,13 @@ void CompareView::scrollEvent()
     qDebug() << "CompareView::scrollEvent " << currentImagePath;
     #endif
     }
-    if (imageIndex == thumbView->currentIndex() && propagate) {
-        qDebug() << "CompareView::scrollEvent" << currentImagePath;
-//        emit panFromPct(getScrollPct(), imageIndex);
-        emit panFromPct(getScrollDeltaPct(), imageIndex);
+    if (imageIndex == thumbView->currentIndex()) {
+        if (propagate) emit panFromPct(getScrollDeltaPct(), imageIndex);
+        else {
+            getScrollBarStatus();
+            scrollPosPct = QPointF(scrl.hPct, scrl.vPct);
+        }
     }
-    else if(imageIndex == thumbView->currentIndex()) {
-        getScrollBarStatus();
-        scrollPosPct = QPointF(scrl.hPct, scrl.vPct);
-    }
-
 }
 
 //QPointF CompareView::getOffset(QPointF scrollPct)
@@ -354,7 +360,7 @@ void CompareView::panToDeltaPct(QPointF delta)
     qDebug() << "CompareView::panToDeltaPct" << currentImagePath;
     #endif
     }
-    qDebug() << "Delta pan" << delta << currentImagePath;
+//    qDebug() << "Delta pan" << delta << currentImagePath;
     getScrollBarStatus();
     setScrollBars(QPointF(scrl.hPct + delta.x(), scrl.vPct + delta.y()));
 //    reportScrollBarStatus();
@@ -383,7 +389,7 @@ void CompareView::panToPct(QPointF scrollPct)
 
     setScrollBars(scrollPct);
     qDebug() << "panToPct:  scrollPct" << scrollPct;
-    reportScrollBarStatus();
+//    reportScrollBarStatus();
     return;
 }
 
@@ -394,7 +400,7 @@ void CompareView::setScrollBars(QPointF scrollPct)
     qDebug() << "CompareView::setScrollBars" << currentImagePath;
     #endif
     }
-    qDebug() << "setScrollBars: scrollPct" << scrollPct << currentImagePath;
+//    qDebug() << "setScrollBars: scrollPct" << scrollPct << currentImagePath;
     getScrollBarStatus();
     scrl.hVal = scrl.hMin + scrollPct.x() * (scrl.hMax - scrl.hMin);
     scrl.vVal = scrl.vMin + scrollPct.y() * (scrl.vMax - scrl.vMin);
@@ -443,8 +449,8 @@ QPointF CompareView::getScrollDeltaPct()
     getScrollBarStatus();
     // difference between new and previous scroll position
     QPointF delta(scrl.hPct - scrollPosPct.x(), scrl.vPct - scrollPosPct.y());
-    qDebug() << "getScrollDeltaPct:  delta" << delta << "scrollPosPct" << scrollPosPct;
-    reportScrollBarStatus();
+//    qDebug() << "getScrollDeltaPct:  delta" << delta << "scrollPosPct" << scrollPosPct;
+//    reportScrollBarStatus();
     // update current scroll position
     scrollPosPct = QPointF(scrl.hPct, scrl.vPct);
 //    reportScrollBarStatus();
@@ -459,9 +465,9 @@ QPointF CompareView::getScrollPct()
     qDebug() << "CompareView::getScrollPct" << currentImagePath;
     #endif
     }
-    qDebug() << "CompareView::getScrollPct" << currentImagePath;
+//    qDebug() << "CompareView::getScrollPct" << currentImagePath;
     getScrollBarStatus();
-    reportScrollBarStatus();
+//    reportScrollBarStatus();
     return QPointF(scrl.hPct, scrl.vPct);
 }
 
@@ -521,13 +527,13 @@ setTransformationAnchor(QGraphicsView::AnchorUnderMouse).
     matrix.scale(zoom, zoom);
     setMatrix(matrix);
     if (okayToPropagate) {
-        qDebug() << "Propagating from" << currentImagePath;
+//        qDebug() << "Propagating from" << currentImagePath;
         getScrollBarStatus();
-        reportScrollBarStatus();
+//        reportScrollBarStatus();
         scrollPosPct = QPointF(scrl.hPct, scrl.vPct);      // new position base for delta scrolls
-        qDebug() << "scrollPosPct" << scrollPosPct;
+//        qDebug() << "scrollPosPct" << scrollPosPct;
         emit zoomFromPct(scrollPosPct, imageIndex, isZoom);
-//        emit zoomFromPct(getMousePct(), imageIndex, isZoom);
+//        emit align(scrollPosPct, imageIndex);
     }
     isZoom = (zoom > zoomFit);
     if (isZoom) setCursor(Qt::OpenHandCursor);
@@ -561,11 +567,15 @@ image.*/
     else x = rect().width() - pw - offset;
 
     // if the image view is not as high as the window
-    if (sceneBottomRight.y() < rect().width())
+    if (sceneBottomRight.y() < rect().height())
         y = sceneBottomRight.y() - ph - offset;
-    else y = rect().width() - ph - offset;
+    else y = rect().height() - ph - offset;
 
     pickLabel->move(x, y);
+
+    qDebug() << "sceneBottomRight" << sceneBottomRight << "rect()" << rect()
+             << "x" << x << "y" << y;
+
 }
 
 void CompareView::resizeEvent(QResizeEvent *event)
@@ -581,6 +591,15 @@ void CompareView::resizeEvent(QResizeEvent *event)
         zoom = zoomFit;
         scale(false);
     }
+    qreal f = 0.03;
+    int w = width() * f;
+    int h = height() * f;
+    int d;
+    w > h ? d = w : d = h;
+    if (d < 20) d = 20;
+    if (d > 40) d = 40;
+    pickLabel->setPixmap(pickPixmap->scaled(d, d, Qt::KeepAspectRatio));
+    movePickIcon();
 }
 
 void CompareView::zoomIn()
@@ -590,10 +609,10 @@ void CompareView::zoomIn()
     qDebug() << "CompareView::zoomIn" << currentImagePath;
     #endif
     }
+    qDebug() << "CompareView::zoomIn" << currentImagePath;
     zoom *= (1.0 + zoomInc);
-//    qDebug() << "zoomInc" << zoomInc;
     zoom = zoom > zoomMax ? zoomMax: zoom;
-    scale(true);
+    scale(false);
 }
 
 void CompareView::zoomOut()
@@ -603,9 +622,10 @@ void CompareView::zoomOut()
     qDebug() << "CompareView::zoomOut" << currentImagePath;
     #endif
     }
+    qDebug() << "CompareView::zoomOut" << currentImagePath;
     zoom *= (1.0 - zoomInc);
     zoom = zoom < zoomMin ? zoomMin : zoom;
-    scale(true);
+    scale(false);
 }
 
 void CompareView::zoom100()
@@ -616,8 +636,9 @@ void CompareView::zoom100()
     #endif
     }
     clickZoom = 1;
-//    mouseZoomFit = false;
-//    resizeImage();
+    zoom = clickZoom;
+    zoom = zoom < zoomMin ? zoomMin : zoom;
+    scale(false);
 }
 
 void CompareView::zoomToFit()
@@ -665,8 +686,10 @@ void CompareView::zoom50()
     qDebug() << "CompareView::zoom50" << currentImagePath;
     #endif
     }
-    zoomTo(0.5);
     clickZoom = 0.5;
+    zoom = clickZoom;
+    zoom = zoom < zoomMin ? zoomMin : zoom;
+    scale(false);
 }
 
 void CompareView::zoom200()
@@ -676,8 +699,10 @@ void CompareView::zoom200()
     qDebug() << "CompareView::zoom200" << currentImagePath;
     #endif
     }
-    zoomTo(2.0);
-    clickZoom = 2.0;
+    clickZoom = 2;
+    zoom = clickZoom;
+    zoom = zoom < zoomMin ? zoomMin : zoom;
+    scale(false);
 }
 
 void CompareView::setClickZoom(float clickZoom)
@@ -708,7 +733,7 @@ void CompareView::wheelEvent(QWheelEvent *wheelEvent)
 
     if (imageIndex == thumbView->currentIndex()) {
         if(wheelEvent->modifiers() & Qt::ShiftModifier) {
-            qDebug() << "wheelEvent shiftModifier";
+//            qDebug() << "wheelEvent shiftModifier";
             propagate = false;
         }
         else {
@@ -739,10 +764,10 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     qDebug() << "CompareView::mouseReleaseEvent" << currentImagePath;
     #endif
     }
-    qDebug() << "CompareView::mouseReleaseEvent  mouse x, y"
-             << event->localPos();
+//    qDebug() << "CompareView::mouseReleaseEvent  mouse x, y"
+//             << event->localPos();
 
-    qDebug() << "\n00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n";
+//    qDebug() << "\n00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n";
 
     mousePt = event->localPos().toPoint();
     isZoom ? zoom = zoomFit : zoom = clickZoom;
@@ -763,6 +788,24 @@ void CompareView::enterEvent(QEvent *event)
     this->setFocus();
     if (imageIndex != thumbView->currentIndex()) {
         thumbView->setCurrentIndex(imageIndex);
+        this->setStyleSheet("QGraphicsView  {"
+                            "margin:1; "
+                            "border-style: solid; "
+                            "border-width: 1; "
+                            "border-color: rgb(225,225,225);}");
     }
 }
 
+void CompareView::leaveEvent(QEvent *event)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::enterEvent" << currentImagePath;
+    #endif
+    }
+    this->setStyleSheet("QGraphicsView  {"
+                        "margin:1; "
+                        "border-style: solid; "
+                        "border-width: 1; "
+                        "border-color: rgb(111,111,111);}");
+}

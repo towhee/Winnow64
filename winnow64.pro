@@ -26,7 +26,9 @@ HEADERS += \
     Dialogs/copypickdlg.h \
     Dialogs/popup.h \
     compareImages.h \
-    compareview.h
+    compareview.h \
+    imagealign.h \
+    testaligndlg.h
 SOURCES += \
     bookmarks.cpp \
     dircompleter.cpp \
@@ -49,12 +51,16 @@ SOURCES += \
     Dialogs/copypickdlg.cpp \
     Dialogs/popup.cpp \
     compareImages.cpp \
-    compareview.cpp
+    compareview.cpp \
+    imagealign.cpp \
+    testaligndlg.cpp
 FORMS += \
     copypickdlg.ui \
     prefdlg.ui \
     workspacedlg.ui \
-    helpform.ui
+    helpform.ui \
+    aligndlg.ui \
+    testaligndlg.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns
