@@ -1314,7 +1314,7 @@ void MW:: createImageView()
     }
     imageCacheThread = new ImageCache(this, metadata);
     imageView = new ImageView(this, centralWidget, metadata, imageCacheThread, thumbView,
-                              setting->value("isImageInfoVisible").toBool(), false);
+                              setting->value("isImageInfoVisible").toBool());
 //    connect(copyImageAction, SIGNAL(triggered()), imageView, SLOT(copyImage()));
 //    connect(pasteImageAction, SIGNAL(triggered()), imageView, SLOT(pasteImage()));
     connect(metadataCacheThread, SIGNAL(updateIsRunning(bool)),

@@ -15,9 +15,9 @@ class ImageView : public QGraphicsView
 public:
     ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata,
               ImageCache *imageCacheThread, ThumbView *thumbView,
-              bool isShootingInfoVisible, bool isCompareMode);
+              bool isShootingInfoVisible);
 
-    QScrollArea *scrlArea;
+//    QScrollArea *scrlArea;
     QLabel *infoLabel;
     QLabel *infoLabelShadow;
     DropShadowLabel *infoDropShadow;
@@ -27,16 +27,16 @@ public:
     bool loadPixmap(QString &imageFullPath, QPixmap &pm);
     bool loadImage(QModelIndex idx, QString imageFileName);
     void setCursorHiding(bool hide);
-    void setClickZoom(float clickZoom);
+//    void setClickZoom(float clickZoom);
 
-    void compareZoomAtCoord(QPointF coord, bool isZoom);
+//    void compareZoomAtCoord(QPointF coord, bool isZoom);
 //    void deltaMoveImage(QPoint &delta);                   // used by compare
 
 //    void setImageLabelSize(QSize newSize);                  // req'd by compare?
-    QSize imageSize();                                      // compare?
+//    QSize imageSize();                                      // compare?
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
-    void setInfo(QString infoString);
+    void moveShootingInfo(QString infoString);
     QLabel *pickLabel;      // visibility controlled in MW
     QPixmap *pickPixmap;
 
@@ -56,10 +56,11 @@ public slots:
 signals:
     void togglePick();
     void updateStatus(bool, QString);
-    void compareZoom(QPointF coord, QModelIndex imageIndex, bool isZoom);
-    void comparePan(QPoint delta, QModelIndex imageIndex);
+//    void compareZoom(QPointF coord, QModelIndex imageIndex, bool isZoom);
+//    void comparePan(QPoint delta, QModelIndex imageIndex);
 
 private slots:
+    void loadFullSize();
 
 protected:
     void resizeEvent(QResizeEvent *event);
@@ -77,7 +78,7 @@ private:
     Metadata *metadata;
     ImageCache *imageCacheThread;
     ThumbView *thumbView;
-    bool isCompareMode;
+//    bool isCompareMode;
     QImageReader imageReader;
     QLabel *imageLabel;
 
@@ -94,7 +95,11 @@ private:
 //    QImage origImage;
 //    QImage thumbsUp;
     QImage displayImage;
+
     QTimer *mouseMovementTimer;
+    QTimer *loadFullSizeTimer;
+    QElapsedTimer t;
+    QElapsedTimer t1;
 
     struct intSize
     {
@@ -104,10 +109,7 @@ private:
         int y;
     };
 
-    intSize i;     // image
-    intSize v;     // view
-    intSize w;     // canvas or label
-    intSize f;     // label in fit view
+//    intSize f;     // label in fit view
 
     struct floatSize
     {
@@ -124,30 +126,44 @@ private:
     typedef pt pt;
     pt mouse;
 
-    QPointF compareMouseRelLoc;
+//    QPointF compareMouseRelLoc;
+    QSize preview;
+    QSize full;
 
     QString currentImagePath;
+    QString shootingInfo;
+    bool firstImageLoaded;
 
     bool cursorIsHidden;                // use for slideshow and full screen - review rgh
     bool moveImageLocked;               // control when con drag image around
     bool isZoom;
+    bool wasZoomFit;
     bool isMouseDrag;
     bool isMouseDoubleClick;
     bool isPreview;
 
     qreal zoomFit;
+//    qreal previewScaleMax;
     qreal zoomInc = 0.1;    // 10% delta
     qreal zoomMin = 0.05;   // 5% of original  rgh add to pref
     qreal zoomMax = 8.0;    // 800% of original
     qreal clickZoom = 1.0;
 
     qreal getFitScaleFactor(QRectF container, QRectF content);
+//    qreal getPreviewScaleMax();
+    qreal getPreviewToFull();
     void scale();
     qreal getZoom();
 
+    void setPreviewDim();
+    void setFullDim();
+
+    bool sceneBiggerThanView();
+    bool resizeIsSmaller();
+
     void movePickIcon();
     void setMouseMoveData(bool lockMove, int lMouseX, int lMouseY);
-    bool previewFitsZoom();
+//    bool previewFitsZoom();
 
     void transform();
 };

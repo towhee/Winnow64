@@ -19,8 +19,7 @@ the view is as 100%, the same as the original image.
 
 ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata,
                      ImageCache *imageCacheThread, ThumbView *thumbView,
-                     bool isShootingInfoVisible,
-                     bool isCompareMode): QGraphicsView(centralWidget)
+                     bool isShootingInfoVisible): QGraphicsView(centralWidget)
 {
     {
     #ifdef ISDEBUG
@@ -33,7 +32,7 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     this->metadata = metadata;
     this->imageCacheThread = imageCacheThread;
     this->thumbView = thumbView;
-    this->isCompareMode = isCompareMode;
+//    this->isCompareMode = isCompareMode;
 
     scene = new QGraphicsScene();
     pmItem = new QGraphicsPixmapItem;
@@ -88,9 +87,14 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     mouseMovementTimer = new QTimer(this);
     connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
 
+    loadFullSizeTimer = new QTimer(this);
+    loadFullSizeTimer->setInterval(500);
+    connect(loadFullSizeTimer, SIGNAL(timeout()), this, SLOT(loadFullSize()));
+
 //    mouseZoomFit = true;
     isMouseDrag = false;
     isMouseDoubleClick = false;
+    firstImageLoaded = true;
 }
 
 bool ImageView::loadImage(QModelIndex idx, QString fPath)
@@ -100,32 +104,43 @@ bool ImageView::loadImage(QModelIndex idx, QString fPath)
     qDebug() << "ImageView::loadImage";
     #endif
     }
+    // No folder selected yet
+    if (fPath == "") return false;
 
      /* important to keep currentImagePath.  It is used to check if there isn't
      an image (when currentImagePath.isEmpty() == true) - for example when
      no folder has been chosen. */
     currentImagePath = fPath;
     imageIndex = idx;
-
-    // No folder selected yet
-    if (fPath == "") return false;
-
     bool isLoaded = false;
+//    qDebug() << "\n";
 
     // load the image from the image cache if available
     if (imageCacheThread->imCache.contains(fPath)) {
-        if (isCompareMode) {
-            int stopHere;
-        }
-        // load preview
-        if (!isCompareMode && imageCacheThread->imCache.contains(fPath + "_Preview") &&
-        previewFitsZoom()) {
+        // load preview from cache
+//        t.restart();
+//        qDebug() << "Elapsed between images" << t1.nsecsElapsed();
+//        t1.restart();
+
+        bool tryPreview = true;     // for testing
+        loadFullSizeTimer->stop();
+
+        // get preview size from stored metadata to decide if load preview or full
+        setFullDim();               // req'd by setPreviewDim()
+        setPreviewDim();            // defines QSize preview
+        bool previewBigEnough = getFitScaleFactor(rect(), QRect(QPoint(0,0), preview)) > zoom;
+
+        if (tryPreview && imageCacheThread->imCache.contains(fPath + "_Preview") &&
+                previewBigEnough) {
+//            qDebug() << "Load preview" << currentImagePath;
             pmItem->setPixmap(imageCacheThread->imCache.value(fPath + "_Preview"));
             isPreview = true;
             isLoaded = true;
+            loadFullSizeTimer->start();
         }
-        // load full size image
+        // load full size image from cache
         else {
+//            qDebug() << "Load full size" << currentImagePath;
             pmItem->setPixmap(imageCacheThread->imCache.value(fPath));
             isPreview = false;
             isLoaded = true;
@@ -139,7 +154,7 @@ bool ImageView::loadImage(QModelIndex idx, QString fPath)
             if (isLoaded) break;
         }
         if (isLoaded) {
-            qDebug() << "Loaded from file.   displayPixmap.size()" << displayPixmap.size();
+//            qDebug() << "Loaded from file.   displayPixmap.size()" << displayPixmap.size();
     //        displayPixmap.setDevicePixelRatio(G::devicePixelRatio);
             pmItem->setPixmap(displayPixmap);
             isPreview = false;
@@ -148,11 +163,28 @@ bool ImageView::loadImage(QModelIndex idx, QString fPath)
     }
 
     setSceneRect(scene->itemsBoundingRect());
-    zoom = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
-    scale();
-//    isZoom = false;
+    shootingInfo = metadata->getShootingInfo(currentImagePath);
+
+    if (!firstImageLoaded) {
+        zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
+        zoom = zoomFit;
+        scale();
+    }
+//    qDebug() << "elapsed:" << t.nsecsElapsed();
 
     return isLoaded;
+}
+
+void ImageView::loadFullSize()
+{
+//    qDebug() << "Loading full size after timer";
+    loadFullSizeTimer->stop();
+    pmItem->setPixmap(imageCacheThread->imCache.value(currentImagePath));
+    setSceneRect(scene->itemsBoundingRect());
+    isPreview = false;
+    zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
+    zoom = zoomFit;
+    scale();
 }
 
 bool ImageView::loadPixmap(QString &fPath, QPixmap &pm)
@@ -307,171 +339,119 @@ bool ImageView::loadPixmap(QString &fPath, QPixmap &pm)
 
 void ImageView::scale()
 {
+//    qDebug() << "isPreview =" << isPreview
+//             << "zoom =" << zoom
+//             << "zoomFit =" << zoomFit
+//             << "previewScaleMax = " << previewScaleMax
+//             << "rect().width() =" << rect().width()
+//             << "sceneRect().width() =" << sceneRect().width();
     matrix.reset();
     matrix.scale(zoom, zoom);
     setMatrix(matrix);
     isZoom = (zoom > zoomFit);
+    wasZoomFit = zoom == zoomFit;
     if (isZoom) setCursor(Qt::OpenHandCursor);
     else setCursor(Qt::ArrowCursor);
 
     movePickIcon();
-    setInfo(metadata->getShootingInfo(currentImagePath));
+    moveShootingInfo(shootingInfo);
 //    QString msg = QString::number(v.w) + ", " + QString::number(v.h);
     emit updateStatus(true, "");
 }
 
-bool ImageView::previewFitsZoom()
+qreal ImageView::getPreviewToFull()
 {
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ImageView::previewFitsZoom";
-    #endif
-    }
-    QSize previewSize = imageCacheThread->getPreviewSize();
-//    int w = imageLabel->pixmap()->width() * zoom;
-//    int h = imageLabel->pixmap()->height() * zoom;
-    if (previewSize.width() > pmItem->pixmap().width() * zoom &&
-        previewSize.height() > pmItem->pixmap().height() * zoom)
-        return true;
-    else return false;
+    return metadata->getWidth(currentImagePath) /
+              imageCacheThread->getPreviewSize().width();
 }
 
-QSize ImageView::imageSize()
+void ImageView::setFullDim()
 {
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ImageView::imageSize";
-    #endif
-    }
-    return QSize(pmItem->pixmap().size());
+    full.setWidth(metadata->getWidth(currentImagePath));
+    full.setHeight(metadata->getHeight(currentImagePath));
 }
 
-//void ImageView::resizeImage()
+void ImageView::setPreviewDim()
+{
+    preview = imageCacheThread->getPreviewSize();
+    qreal fullAspectRatio = (qreal)(full.height()) / full.width();
+    if (full.width() > full.height()) {
+        preview.setHeight(preview.width() * fullAspectRatio);
+    }
+    else {
+        preview.setWidth(preview.height() / fullAspectRatio);
+    }
+}
+
+//qreal ImageView::getPreviewScaleMax()
 //{
 //    {
 //    #ifdef ISDEBUG
-//    qDebug() << "ImageView::resizeImage";
+//    qDebug() << "ImageView::getPreviewScaleMax";
 //    #endif
 //    }
-//    // Program opening - no folder selected yet
-//    if (currentImagePath == "") return;
+//    return zoomFit;
 
-//    if (mouseZoomFit) {
-//        zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->pixmap().rect());
-//        zoom = zoomFit;
-//        scene->setSceneRect(fitSceneAnchor);
-//        pmItem->setPos(fitItemAnchor);
-//        setTransformationAnchor(QGraphicsView::AnchorViewCenter);
+//    // use metadata to determine before loading preview
 
 
-//    }
-//    else zoom = 1.0;
+//    QRect a = rect();
+//    QSize b = imageCacheThread->getPreviewSize();
+//    QRect previewRect(QPoint(0,0), imageCacheThread->getPreviewSize());
+//    qreal previewFit = getFitScaleFactor(rect(), previewRect);
+//    qreal c = getPreviewToFull();
+//    return previewFit * getPreviewToFull();
 
-//    (zoom > zoomFit) ? isZoom = true : isZoom = false;
-
-//    if (isZoom) {
-//        setCursor(Qt::OpenHandCursor);
-////        setTransformationAnchor(QGraphicsView::AnchorViewCenter);
-//    }
-//    else {
-//        setCursor(Qt::ArrowCursor);
-//        setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
-//        centerView();
-//    }
-
-//    matrix.reset();
-//    matrix.scale(zoom, zoom);
-//    setMatrix(matrix);
-
-//    if (!isZoom) {
-//        centerOn(pmItem);
-//        scene->setSceneRect(sceneRect());
-//    }
-//    scene->setSceneRect(pmItem->boundingRect());
-
-//    qDebug() << "\n" << currentImagePath
-//             << "\npmItem->pos()" << pmItem->pos()
-//             << "\ncentralWidget->rect()" << centralWidget->rect()
-//             << "\npmItem->boundingRect())" << pmItem->boundingRect()
-//             << "\nscene->sceneRect()" << scene->sceneRect()
-//             << "\nview sceneRect" << sceneRect()
-//             << "\nrect()" << this->rect()
-//             << "\nzoom" << zoom
-//             << "\nmouseZoomFit" << mouseZoomFit
-//             << "\nhor/ver scrollbars" << horizontalScrollBar()->value() << verticalScrollBar()->value()
-//             << "\n";
-
-//    return;
-
-//    if (!previewFitsZoom() && isPreview) {
-//        pmItem->setPixmap(imageCacheThread->imCache.value(currentImagePath));
-//        isPreview = false;
-//    }
-
-//    // get the size of the scaled image
-//    QSize imgSize = pmItem->pixmap().size();
-
-//    if (isResizeSourceMouseClick && isCompareMode) {
-///*        qDebug() << currentImagePath
-//                 << "\nStart image resize"
-//                 << "isZoom" << isZoom
-//                 << "mouse" << mouse.x << mouse.y
-//                 << "geometry" << imageLabel->geometry();
-//*/
-//        if (!isZoom) {
-//            f.w = imageLabel->geometry().width();
-//            f.h = imageLabel->geometry().height();
-//            f.x = mouse.x - imageLabel->geometry().topLeft().x();
-//            f.y = mouse.y - imageLabel->geometry().topLeft().y();
-//            compareMouseRelLoc.setX((float)f.x / f.w);
-//            compareMouseRelLoc.setY((float)f.y / f.h);
-////            qDebug() << "compareMouseRelLoc" << compareMouseRelLoc;
-//        }
-//    }
-
-//    zoomFit = getFitScaleFactor(loadTimeParentRect, pmItem->pixmap().rect());
-
-//    matrix.reset();
-//    matrix.scale(zoomFit, zoomFit);
-//    (zoom > zoomFit) ? isZoom = true : isZoom = false;
-
-//    if (isZoom) setCursor(Qt::OpenHandCursor);
-//    else setCursor(Qt::ArrowCursor);
-
-////    qDebug() << "After zoom calc" << timer.nsecsElapsed(); timer.restart();
-
-///*    qDebug() << "\nResize" << currentImagePath
-//             << "\nMetadata width" << metadata->getWidth(currentImagePath)
-//             << "height" << metadata->getHeight(currentImagePath)
-//             << "\nmouse.x =" << mouse.x << "\tmouse.y =" << mouse.y
-//             << "\nzoom =" << zoom << "\tzoomFit =" << zoomFit
-//             << "\nisZoom" << isZoom;
-//*/
-
-//    /* realign image based on mouse click position or to center
-//    - if fit or smaller than window container or coord outside image
-//    - if zoom using keyboard "Z" then no mouse coord so zoom to center
-//    */
-////    if (zoom > zoomFit && (mouse.x > 0 || mouse.y > 0)) moveImage(imgSize);
-////    else centerImage(imgSize);
-//    movePickIcon();
-//    setInfo(metadata->getShootingInfo(currentImagePath));
-
-//    // update status with current zoom magnification (call back from status)
-//    QString msg = QString::number(v.w) + ", " + QString::number(v.h);
-//    if (isPreview) msg += " preview = true";
-//    else msg += " preview = false";
-//    emit updateStatus(true, msg);
-
-//    if (isCompareMode & isResizeSourceMouseClick) {
-//    /* mouse click position as a percentage of the label width and height,
-//    used in compareView to simulate zoom in other images that may not be
-//    the same image dimensions.  */
-//        qDebug() << "emit compareZoom";
-//        emit compareZoom(compareMouseRelLoc, imageIndex, isZoom);
-//        isResizeSourceMouseClick = false;
-//    }
+////    QSize previewSize = imageCacheThread->getPreviewSize();
+////    int pWidth = previewSize.width();
+////    int pHeight = previewSize.height();
+////    int fWidth = metadata->getWidth(currentImagePath);
+////    int fHeight = metadata->getHeight(currentImagePath);
+////    qreal xScale = (qreal)pWidth / fWidth;
+////    qreal yScale = (qreal)pHeight / fHeight;
+////    return xScale < yScale ? xScale : yScale;
 //}
+
+//bool ImageView::previewFitsZoom()
+//{
+//    {
+//    #ifdef ISDEBUG
+//    qDebug() << "ImageView::previewFitsZoom";
+//    #endif
+//    }
+//    return zoom < previewScaleMax;
+
+////    QSize previewSize = imageCacheThread->getPreviewSize();
+////    if (previewSize.width() > pmItem->pixmap().width() * zoom &&
+////        previewSize.height() > pmItem->pixmap().height() * zoom)
+////        return true;
+////    else return false;
+//}
+
+//QSize ImageView::imageSize()
+//{
+//    {
+//    #ifdef ISDEBUG
+//    qDebug() << "ImageView::imageSize";
+//    #endif
+//    }
+//    return QSize(pmItem->pixmap().size());
+//}
+
+bool ImageView::sceneBiggerThanView()
+{
+//    if(rect().contains(sceneRect().toRect())) return false;
+//    else return true;
+
+    QPoint pTL = mapFromScene(0, 0);
+    QPoint pBR = mapFromScene(scene->width(), scene->height());
+    int sceneViewWidth = pBR.x() - pTL.x();
+    int sceneViewHeight = pBR.y() - pTL.y();
+    if (sceneViewWidth > rect().width() && sceneViewHeight > rect().height())
+        return true;
+    else
+        return false;
+}
 
 qreal ImageView::getFitScaleFactor(QRectF container, QRectF content)
 {
@@ -495,7 +475,7 @@ image.*/
 
     sceneBottomRight = mapFromScene(sceneRect().bottomRight());
 
-    qDebug() << "sceneBottomRight" << sceneBottomRight << "rect()" << rect();
+//    qDebug() << "sceneBottomRight" << sceneBottomRight << "rect()" << rect();
 
     intSize p;
     p.w = pickLabel->width();           // width of the pick symbol
@@ -510,7 +490,6 @@ image.*/
     if (sceneBottomRight.x() < rect().width()) {
         x = sceneBottomRight.x() - p.w - offset;
         w = mapFromScene(sceneRect().bottomRight()).x() - mapFromScene(sceneRect().bottomLeft()).x();
-        qDebug() << "w" << w;
     }
     else {
         x = rect().width() - p.w - offset;
@@ -547,14 +526,52 @@ void ImageView::resizeEvent(QResizeEvent *event)
     qDebug() << "ImageView::resizeEvent";
     #endif
     }
-    qDebug() << "*************************************************************************************";
     QGraphicsView::resizeEvent(event);
+    /* Resize scenarios
+
+     If the view is zoomFit then keep zoomFit after resize
+
+     If the view zoom is less than zoomFit no scaling unless resize to
+     smaller than zoom amount - then zoomFit further resizing.
+
+     If the view zoom is greater than zoomFit then no change
+
+
+    qDebug() << "*************************************** RESIZE EVENT **********************************************";
+    qDebug() << "centralWidget->rect()" << centralWidget->rect()
+             << "pmItem->boundingRect()" << pmItem->boundingRect();
+
+             */
+
     zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
-    if (getZoom() <= zoomFit) {
+    static QRect prevRect;
+    static bool wasSceneClipped;
+
+    if (firstImageLoaded) {
         zoom = zoomFit;
         scale();
+        firstImageLoaded = false;
+        wasZoomFit = true;
+        wasSceneClipped = false;
+    }
+    else {
+        bool viewPortIsExpanding = false;
+        if (prevRect.width() < rect().width() || prevRect.height() < rect().height())
+            viewPortIsExpanding = true;
+        bool sceneClipped = sceneBiggerThanView();
+        if ((sceneClipped && !isZoom) ||
+        (zoom == zoomFit) ||
+        ((viewPortIsExpanding && !sceneClipped) && wasZoomFit) ||
+        (wasSceneClipped && !sceneClipped)) {
+            zoom = zoomFit;
+            wasZoomFit = true;
+            scale();
+        }
+        wasSceneClipped = sceneClipped;
+        prevRect = rect();
     }
     movePickIcon();
+    moveShootingInfo(shootingInfo);
 }
 
 void ImageView::thumbClick(float xPct, float yPct)
@@ -587,9 +604,9 @@ qreal ImageView::getZoom()
     qreal x1 = mapToScene(rect().center()).x();
     qreal x2 = mapToScene(rect().center() + QPoint(1, 0)).x();
     qreal calcZoom = 1.0 / (x2 - x1);
-    qDebug() << "zoom" << zoom
-             << "x1" << x1 << "x2" << x2
-             << "calc zoom" << calcZoom;
+//    qDebug() << "getZoom():   zoom =" << zoom
+//             << "x1 =" << x1 << "x2 =" << x2
+//             << "calc zoom =" << calcZoom;
     return calcZoom;
 }
 
@@ -603,9 +620,7 @@ void ImageView::zoomIn()
     zoom *= (1.0 + zoomInc);
     qDebug() << "zoomInc" << zoomInc;
     zoom = zoom > zoomMax ? zoomMax: zoom;
-//    mouseZoomFit = false;
     scale();
-//    resizeImage();
 }
 
 void ImageView::zoomOut()
@@ -617,7 +632,6 @@ void ImageView::zoomOut()
     }
     zoom *= (1.0 - zoomInc);
     zoom = zoom < zoomMin ? zoomMin : zoom;
-//    mouseZoomFit = false;
     scale();
 }
 
@@ -693,15 +707,15 @@ void ImageView::zoom200()
     clickZoom = 2.0;
 }
 
-void ImageView::setClickZoom(float clickZoom)
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ImageView::setClickZoom";
-    #endif
-    }
-    this->clickZoom = clickZoom;
-}
+//void ImageView::setClickZoom(float clickZoom)
+//{
+//    {
+//    #ifdef ISDEBUG
+//    qDebug() << "ImageView::setClickZoom";
+//    #endif
+//    }
+//    this->clickZoom = clickZoom;
+//}
 
 void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 {
@@ -755,7 +769,7 @@ void ImageView::transform()
     rotateByExifRotation(displayImage, currentImagePath);
 }
 
-void ImageView::setInfo(QString infoString)
+void ImageView::moveShootingInfo(QString infoString)
 {
 /* Locate and format the info label, which currently displays the shooting
 information in the top left corner of the image.  The text has a drop shadow
@@ -841,30 +855,30 @@ void ImageView::setCursorHiding(bool hide)
     }
 }
 
-void ImageView::compareZoomAtCoord(QPointF coord, bool isZoom)
-{
-/* Same as when user mouse clicks on the image.  Called from compareView to
-replicate zoom in all compare images.
-*/
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ImageView::compareZoomAtCoord";
-    #endif
-    }
-//    qDebug() << "\n" << currentImagePath;
-//    qDebug() << "ImageView::compareZoomAtCoord" << coord;
-    zoom = clickZoom;     // if zoomToFit then zoom reset in resize
-//    mouseZoomFit = !mouseZoomFit;
-    f.w = imageLabel->geometry().width();
-    f.h = imageLabel->geometry().height();
-    mouse.x = imageLabel->geometry().topLeft().x() + coord.x() * f.w;
-    mouse.y = imageLabel->geometry().topLeft().y() + coord.y() * f.h;
-//    qDebug() << "imageLabel->geometry().topLeft().x()" << imageLabel->geometry().topLeft().x()
-//             << "imageLabel->geometry().topLeft().y()" << imageLabel->geometry().topLeft().y()
-//             << "w, h, mouse.x, mouse.y" << f.w << f.h
-//             << mouse.x << mouse.y << "\n";
-//    resizeImage();
-}
+//void ImageView::compareZoomAtCoord(QPointF coord, bool isZoom)
+//{
+///* Same as when user mouse clicks on the image.  Called from compareView to
+//replicate zoom in all compare images.
+//*/
+//    {
+//    #ifdef ISDEBUG
+//    qDebug() << "ImageView::compareZoomAtCoord";
+//    #endif
+//    }
+////    qDebug() << "\n" << currentImagePath;
+////    qDebug() << "ImageView::compareZoomAtCoord" << coord;
+//    zoom = clickZoom;     // if zoomToFit then zoom reset in resize
+////    mouseZoomFit = !mouseZoomFit;
+//    f.w = imageLabel->geometry().width();
+//    f.h = imageLabel->geometry().height();
+//    mouse.x = imageLabel->geometry().topLeft().x() + coord.x() * f.w;
+//    mouse.y = imageLabel->geometry().topLeft().y() + coord.y() * f.h;
+////    qDebug() << "imageLabel->geometry().topLeft().x()" << imageLabel->geometry().topLeft().x()
+////             << "imageLabel->geometry().topLeft().y()" << imageLabel->geometry().topLeft().y()
+////             << "w, h, mouse.x, mouse.y" << f.w << f.h
+////             << mouse.x << mouse.y << "\n";
+////    resizeImage();
+//}
 
 // EVENTS
 
@@ -930,7 +944,10 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         isMouseDrag = false;
         return;
     }
-    isZoom ? zoom = zoomFit : zoom = clickZoom;
+    if (!isZoom && zoom < zoomFit * 0.99)
+        zoom = zoomFit;
+    else
+        isZoom ? zoom = zoomFit : zoom = clickZoom;
     scale();
     QGraphicsView::mouseReleaseEvent(event);
 }

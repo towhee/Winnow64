@@ -1,4 +1,5 @@
 To do:
+- ImageView thumbclick broken
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Get title, comment and copywrite metadata
 - Show how many images in each folder in treeView
