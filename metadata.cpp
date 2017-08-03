@@ -10,6 +10,7 @@ Metadata::Metadata()
     #endif
     }
     // some initialization
+    initSegCodeHash();
     initExifHash();
     initIfdHash();
     initSupportedFiles();
@@ -47,6 +48,73 @@ void Metadata::initSupportedFiles()
     "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
     "orf" << "pbm" << "pgm" << "png" << "ppm" << "svg" << "svgz" << "tga" <<
     "wbmp" << "webp" << "xbm" << "xpm";
+}
+
+void Metadata::initSegCodeHash()
+{
+    segCodeHash[0xFFC0] = "SOF0";    //Start of Frame 0
+    segCodeHash[0xFFC1] = "SOF1";
+    segCodeHash[0xFFC2] = "SOF2";
+    segCodeHash[0xFFC3] = "SOF3";
+    segCodeHash[0xFFC4] = "SOF4";
+    segCodeHash[0xFFC5] = "SOF5";
+    segCodeHash[0xFFC6] = "SOF6";
+    segCodeHash[0xFFC7] = "SOF7";
+    segCodeHash[0xFFC8] = "JPG";     //JPEG extensions
+    segCodeHash[0xFFC9] = "SOF9";
+    segCodeHash[0xFFCA] = "SOF10";
+    segCodeHash[0xFFCB] = "SOF11";
+    segCodeHash[0xFFCC] = "DAC";     // Define arithmetic coding
+    segCodeHash[0xFFCD] = "SOF13";
+    segCodeHash[0xFFCE] = "SOF14";
+    segCodeHash[0xFFCF] = "SOF15";
+    segCodeHash[0xFFD0] = "RST0";    // Restart Marker 0
+    segCodeHash[0xFFD1] = "RST1";
+    segCodeHash[0xFFD2] = "RST2";
+    segCodeHash[0xFFD3] = "RST3";
+    segCodeHash[0xFFD4] = "RST4";
+    segCodeHash[0xFFD5] = "RST5";
+    segCodeHash[0xFFD6] = "RST6";
+    segCodeHash[0xFFD7] = "RST7";
+    segCodeHash[0xFFD8] = "SOI";     // Start of Image
+    segCodeHash[0xFFD9] = "EOI";     // End of Image
+    segCodeHash[0xFFDA] = "SOS";     // Start of Scan
+    segCodeHash[0xFFDB] = "DQT";     // Define Quantization Table
+    segCodeHash[0xFFDC] = "DNL";     // Define Number of Lines
+    segCodeHash[0xFFDD] = "DRI";     // Define Restart Interval
+    segCodeHash[0xFFDE] = "DHP";     // Define Hierarchical Progression
+    segCodeHash[0xFFDF] = "EXP";     // Expand Reference Component
+    segCodeHash[0xFFE0] = "JFIF";
+    // FFE1 can be EXIF or XMP.  Defined in getSegments()
+    segCodeHash[0xFFE2] = "ICC";
+    segCodeHash[0xFFE3] = "APP3";
+    segCodeHash[0xFFE4] = "APP4";
+    segCodeHash[0xFFE5] = "APP5";
+    segCodeHash[0xFFE6] = "APP6";
+    segCodeHash[0xFFE7] = "APP7";
+    segCodeHash[0xFFE8] = "APP8";
+    segCodeHash[0xFFE9] = "APP9";
+    segCodeHash[0xFFEA] = "APP10";
+    segCodeHash[0xFFEB] = "APP11";
+    segCodeHash[0xFFEC] = "APP12";
+    segCodeHash[0xFFED] = "IPTC";
+    segCodeHash[0xFFEE] = "APP14";
+    segCodeHash[0xFFEF] = "APP15";
+    segCodeHash[0xFFF0] = "JPG0";    // JPEG Extension 0
+    segCodeHash[0xFFF1] = "JPG2";
+    segCodeHash[0xFFF2] = "JPG3";
+    segCodeHash[0xFFF3] = "JPG4";
+    segCodeHash[0xFFF4] = "JPG5";
+    segCodeHash[0xFFF5] = "JPG6";
+    segCodeHash[0xFFF6] = "JPG7";
+    segCodeHash[0xFFF7] = "JPG8";
+    segCodeHash[0xFFF8] = "JPG9";
+    segCodeHash[0xFFF9] = "JPG10";
+    segCodeHash[0xFFFA] = "JPG11";
+    segCodeHash[0xFFFB] = "JPG12";
+    segCodeHash[0xFFFC] = "JPG13";
+    segCodeHash[0xFFFD] = "JPG14";
+    segCodeHash[0xFFFE] = "JPG15";
 }
 
 void Metadata::initExifHash()
@@ -432,6 +500,9 @@ void Metadata::reportMetadata()
     std::cout << std::setw(16) << std::setfill(' ') << std::left << "focalLength"
               << std::setw(16) << std::setfill(' ') << std::left << focalLength.toStdString()
               << "\n";
+    std::cout << std::setw(16) << std::setfill(' ') << std::left << "title"
+              << std::setw(16) << std::setfill(' ') << std::left << title.toStdString()
+              << "\n";
     std::cout << std::flush;
 
 //    qDebug() << "focalLength35mm" << focalLength35mm;
@@ -458,6 +529,11 @@ void Metadata::reportIfdDataHash()
                    << std::setw(10) << std::setfill(' ') << std::right << tagValue
                    << "\n";
     }
+}
+
+uint Metadata::get1(QByteArray c)
+{
+    return static_cast<unsigned int>(c[0]&0xFF);
 }
 
 ulong Metadata::get2(QByteArray c)
@@ -499,6 +575,54 @@ float Metadata::getReal(long offset)
     if (b==0) return 0;
     float x = (float)a/b;
     return x;
+}
+
+ulong Metadata::readIPTC(ulong offset)
+{
+    order = 0x4D4D;                  // only IFD/EXIF can be little endian
+
+    // skip the APP FFED and length bytes
+    file.seek(offset + 2);
+//    ulong appLength = get2(file.read(2));
+    ulong segmentLength = get2(file.read(2));
+    bool foundIPTC = false;
+    int count = 0;
+    while (!foundIPTC && count < segmentLength) {
+        count +=2;
+        // find "8BIM" = 0x3842 0x494D
+        if (get2(file.read(2)) == 0x3842) {
+            if (get2(file.read(2)) == 0x494D) {
+                // is it IPTC data?
+                if (get2(file.read(2)) == 0x0404) foundIPTC = true;
+            }
+        }
+    }
+    if (foundIPTC) {
+        // calc pascal-style string length
+        int pasStrLen = file.read(1).toInt() + 1;
+        pasStrLen = (pasStrLen % 2) ? pasStrLen + 1: pasStrLen;
+        file.seek(file.pos() + pasStrLen - 1);
+        // read size of resource data
+        ulong resourceDataSize = get4(file.read(4));
+
+        // read data blocks searching for title (0x05)
+        bool foundTitle = false;
+        while (!foundTitle) {
+            // every block starts with tag marker 0x1C
+            ulong p = file.pos();
+            uint tagMarker = get1(file.read(1));
+            if (tagMarker != 0x1C) break;
+            uint recordNumber = get1(file.read(1));
+            uint tag = get1(file.read(1));
+            uint dataLength = get2(file.read(2));
+            if (recordNumber == 2 && tag == 5) {
+                title = file.read(dataLength);
+                foundTitle = true;
+//                qDebug() << "Title =" << title;
+            }
+            else file.seek(file.pos() + dataLength);
+        }
+    }
 }
 
 ulong Metadata::readIFD(QString hdr, ulong offset)
@@ -582,6 +706,28 @@ QList<ulong> Metadata::getSubIfdOffsets(ulong subIFDaddr, int count)
         offsets.append(get4(file.read(4)));
     }
     return offsets;
+}
+
+bool Metadata::getSegments(ulong offset)
+{
+    order = 0x4D4D;                  // only IFD/EXIF can be little endian
+    uint marker = 0xFFFF;
+    while (marker > 0xFFBF) {
+        file.seek(offset);           // APP1 FFE*
+        marker = get2(file.read(2));
+        if (marker < 0xFFC0) break;
+        ulong nextOffset = file.pos() + get2(file.read(2));
+        if (marker == 0xFFE1) {
+            QString segName = file.read(4);
+            if (segName == "Exif") segmentHash["EXIF"] = offset;
+            if (segName == "http") segName += file.read(15);
+            if (segName == "http://ns.adobe.com") segmentHash["XMP"] = offset;
+        }
+        else if (segCodeHash.contains(marker)) {
+            segmentHash[segCodeHash[marker]] = offset;
+        }
+        offset = nextOffset;
+    }
 }
 
 bool Metadata::getDimensions(ulong jpgOffset)
@@ -1117,7 +1263,7 @@ void Metadata::formatSony()
 
 }
 
-void Metadata::fuji()
+void Metadata::formatFuji()
 {
     {
     #ifdef ISDEBUG
@@ -1158,14 +1304,23 @@ bool Metadata::formatJPG()
     #endif
     }
     //file.open in readMetadata
-
-//    if (!file.open(QIODevice::ReadOnly)) {
-//        qDebug() << "Failed to open " << file.fileName();
-//        return false;
-//    };
     order = 0x4D4D;
     ulong startOffset = 0;
     if (get2(file.read(2)) != 0xFFD8) return 0;
+
+    // build a hash of jpg segment offsets
+    getSegments(file.pos());
+
+//    // get the APP segment - should be FFE1
+//    ulong appSegment = get2(file.read(2));
+//    // get length of first APP segment
+//    ulong appLength = get2(file.read(2));
+//    // get offset to next APP segment
+//    ulong nextAppOffset = appLength + file.pos() - 2;
+
+    // read the EXIF data
+    if (segmentHash.contains("EXIF")) file.seek(segmentHash["EXIF"]);
+    else return false;
 
     bool foundEndian = false;
     while (!foundEndian) {
@@ -1262,6 +1417,16 @@ bool Metadata::formatJPG()
 
     if (!width || !height) getDimensions(0);
 
+    // read next app segment
+    if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
+
+    //    order = 0x4D4D;
+//    file.seek(nextAppOffset);
+//    appSegment = get2(file.read(2));
+//    qDebug() << "nextAppOffset" << QString::number(nextAppOffset, 16).toUpper();
+
+//    if (appSegment == 0xFFED) nextAppOffset = readIPTC(file.pos());
+
     if (report) reportMetadata();
     return true;
 }
@@ -1288,6 +1453,7 @@ void Metadata::clearMetadata()
     aperture = "";
     ISO = "";
     focalLength = "";
+    title = "";
     err = "";
 
     ifdDataHash.clear();
@@ -1553,6 +1719,16 @@ QString Metadata::getFocalLength(const QString &imageFileName)
     return metaCache[imageFileName].focalLength;
 }
 
+QString Metadata::getTitle(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::getFocalLength";
+    #endif
+    }
+    return metaCache[imageFileName].title;
+}
+
 QString Metadata::getShootingInfo(const QString &imageFileName)
 {
     {
@@ -1660,6 +1836,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo)
     imageMetadata.aperture = aperture;
     imageMetadata.ISO = ISO;
     imageMetadata.focalLength = focalLength;
+    imageMetadata.title = title;
     imageMetadata.year = dateTime.left(4).toInt();
     imageMetadata.month = dateTime.mid(5,2).toInt();
     imageMetadata.day = dateTime.mid(8,2).toInt();

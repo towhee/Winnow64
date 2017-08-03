@@ -189,6 +189,10 @@ void InfoView::updateInfo(const QString &fPath)
     val = metadata->getFocalLength(fPath);
     addEntry(key, val);
 
+    key = tr("Title");
+    val = metadata->getTitle(fPath);
+    addEntry(key, val);
+
     if (G::isThreadTrackingOn) qDebug()
         << "ThumbView::updateExifInfo - loaded metadata display info for"
         << fPath;

@@ -648,8 +648,8 @@ void CompareView::zoomToFit()
     qDebug() << "CompareView::zoomToFit" << currentImagePath;
     #endif
     }
-//    mouseZoomFit = true;
-//    resizeImage();
+    zoom = zoomFit;
+    scale(true);
 }
 
 void CompareView::zoomTo(float zoomTo)

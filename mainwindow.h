@@ -328,6 +328,7 @@ private:
     QAction *zoomInAction;
     QAction *zoomOutAction;
     QAction *zoomToggleAction;
+    QActionGroup *zoomGroupAction;
     QAction *zoom50PctAction;
     QAction *zoom100PctAction;
     QAction *zoom200PctAction;

@@ -44,6 +44,7 @@ public:
     QString ISO;
     QString focalLength;
     QString shootingInfo;
+    QString title;
     int year;
     int month;
     int day;
@@ -74,6 +75,7 @@ public:
     QString aperture;
     QString ISO;
     QString focalLength;
+    QString title;
     QString err;
 
     QStringList rawFormats;
@@ -118,6 +120,7 @@ public:
     QString getISO(const QString &imageFileName);
     QString getFocalLength(const QString &imageFileName);
     QString getShootingInfo(const QString &imageFileName);
+    QString getTitle(const QString &imageFileName);
     int getYear(const QString &imageFileName);
     int getMonth(const QString &imageFileName);
     int getDay(const QString &imageFileName);
@@ -130,7 +133,8 @@ private:
     QFile file;
     QHash<uint, IFDData> ifdDataHash;
     QHash<uint, IFDData>::iterator ifdIter;
-    QHash<ulong, QString> exifHash, ifdHash, gpsHash;
+    QHash<ulong, QString> exifHash, ifdHash, gpsHash, segCodeHash;
+    QHash<QString, ulong> segmentHash;
 
     // was metadata
     QMap<QString, ImageMetadata> metaCache;
@@ -139,17 +143,21 @@ private:
     bool report;
     long order;
 
+    void initSupportedFiles();
+    void initSegCodeHash();
     void initExifHash();
     void initIfdHash();
-    void initSupportedFiles();
 
+    uint get1(QByteArray c);
     ulong get2(QByteArray c);
     ulong get4(QByteArray c);
     float getReal(long offset);
+    ulong readIPTC(ulong offset);
     ulong readIFD(QString hdr, ulong offset);
     QList<ulong> getSubIfdOffsets(ulong subIFDaddr, int count);
 //    ulong getExifOffset(ulong offsetIfd0);      //update to use ifdDataHash
     QString getString(ulong offset, ulong length);
+    bool getSegments(ulong offset);
     bool getDimensions(ulong jpgOffset);
 
     void reportMetadata();
@@ -160,7 +168,7 @@ private:
     void formatCanon();
     void formatOlympus();
     void formatSony();
-    void fuji();
+    void formatFuji();
     bool formatJPG();
 
 signals:

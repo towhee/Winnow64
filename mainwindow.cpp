@@ -732,15 +732,25 @@ void MW::createActions()
 
     zoom50PctAction = new QAction(tr("Click zoom 50%"), this);
     zoom50PctAction->setObjectName("50PctZoom");
+    zoom50PctAction->setCheckable(true);
     connect(zoom50PctAction, SIGNAL(triggered()), this, SLOT(zoom50()));
 
     zoom100PctAction = new QAction(tr("Click zoom 100%"), this);
     zoom100PctAction->setObjectName("100PctZoom");
+    zoom100PctAction->setCheckable(true);
+    zoom100PctAction->setChecked(true);     // temp until add to QSettings
     connect(zoom100PctAction, SIGNAL(triggered()), this, SLOT(zoom100()));
 
     zoom200PctAction = new QAction(tr("Click zoom 200%"), this);
     zoom200PctAction->setObjectName("200PctZoom");
+    zoom200PctAction->setCheckable(true);
     connect(zoom200PctAction, SIGNAL(triggered()), this, SLOT(zoom200()));
+
+    zoomGroupAction = new QActionGroup(this);
+    zoomGroupAction->setExclusive(true);
+    zoomGroupAction->addAction(zoom50PctAction);
+    zoomGroupAction->addAction(zoom100PctAction);
+    zoomGroupAction->addAction(zoom200PctAction);
 
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
@@ -1031,6 +1041,7 @@ void MW::createMenus()
     viewMenu->addAction(zoomInAction);
     viewMenu->addAction(zoomOutAction);
     viewMenu->addAction(zoomToggleAction);
+    viewMenu->addSeparator();
     viewMenu->addAction(zoom50PctAction);
     viewMenu->addAction(zoom100PctAction);
     viewMenu->addAction(zoom200PctAction);
@@ -2187,25 +2198,7 @@ void MW::reportMetadata()
     #endif
     }
 
-//    QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
-//    const QString imagePath = indexesList.first().data(thumbView->FileNameRole).toString();
-
-//    QString imagePath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
     metadata->readMetadata(true, thumbView->getCurrentFilename());
-
-//    QString hdr = "Test header";
-//    std::stringstream os;
-//    os << "test" << endl;
-//    os << "\n*******************************\n"
-//              << hdr.toStdString() << "\n"
-//              << "*******************************\n";
-//    os << "\n  Offset  tagId  tagType  tagCount  tagValue   tagDescription\n";
-//    QString txt = QString::fromStdString(os.str());
-
-//    QMessageBox msg;
-//    msg.setText(txt);
-//   msg.exec();
-
 }
 
 void MW::about()
@@ -2552,18 +2545,21 @@ void MW::zoom50()
 {
     if (asLoupeAction) imageView->zoom50();
     if (asCompareAction) compareImages->zoom50();
+    popUp->showPopup(this, "Click zoom set to 50%", 1000, 0.5);
 }
 
 void MW::zoom100()
 {
     if (asLoupeAction) imageView->zoom100();
     if (asCompareAction) compareImages->zoomToFit();
+    popUp->showPopup(this, "Click zoom set to 100%", 1000, 0.5);
 }
 
 void MW::zoom200()
 {
-    if (asLoupeAction) imageView->zoomToFit();
+    if (asLoupeAction) imageView->zoom200();
     if (asCompareAction) compareImages->zoomToFit();
+    popUp->showPopup(this, "Click zoom set to 200%", 1000, 0.5);
 }
 
 //void MW::zoomTo()
@@ -2574,8 +2570,8 @@ void MW::zoom200()
 
 void MW::zoomToggle()
 {
-    if (asLoupeAction) imageView->zoomToFit();
-    if (asCompareAction) compareImages->zoomToFit();
+    if (asLoupeAction) imageView->zoomToggle();
+    if (asCompareAction) compareImages->zoomToggle();
 }
 
 void MW::rotateLeft()

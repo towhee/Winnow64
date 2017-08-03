@@ -60,7 +60,7 @@ signals:
 //    void comparePan(QPoint delta, QModelIndex imageIndex);
 
 private slots:
-    void loadFullSize();
+    void upgradeToFullSize();
 
 protected:
     void resizeEvent(QResizeEvent *event);
@@ -126,6 +126,19 @@ private:
     typedef pt pt;
     pt mouse;
 
+    struct scrollStatus {
+        int hVal;
+        int hMax;
+        int hMin;
+        qreal hPct;
+        int vVal;
+        int vMax;
+        int vMin;
+        qreal vPct;
+    } scrl;
+
+    QPointF scrollPct;       // current position
+
 //    QPointF compareMouseRelLoc;
     QSize preview;
     QSize full;
@@ -137,6 +150,7 @@ private:
     bool cursorIsHidden;                // use for slideshow and full screen - review rgh
     bool moveImageLocked;               // control when con drag image around
     bool isZoom;
+    bool isFit;
     bool wasZoomFit;
     bool isMouseDrag;
     bool isMouseDoubleClick;
@@ -147,13 +161,17 @@ private:
     qreal zoomInc = 0.1;    // 10% delta
     qreal zoomMin = 0.05;   // 5% of original  rgh add to pref
     qreal zoomMax = 8.0;    // 800% of original
-    qreal clickZoom = 1.0;
+    qreal clickZoom = 1.0;  // for now, put in QSetting
 
     qreal getFitScaleFactor(QRectF container, QRectF content);
 //    qreal getPreviewScaleMax();
-    qreal getPreviewToFull();
+//    qreal getPreviewToFull();
     void scale();
     qreal getZoom();
+
+    QPointF getScrollPct();
+    void getScrollBarStatus();
+    void setScrollBars(QPointF scrollPct);
 
     void setPreviewDim();
     void setFullDim();

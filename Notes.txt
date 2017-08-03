@@ -1,5 +1,5 @@
 To do:
-- ImageView thumbclick broken
+- Reimplement mouse drag scrolling in ImageView and CompareView
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Get title, comment and copywrite metadata
 - Show how many images in each folder in treeView
@@ -24,6 +24,7 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: ImageView thumbclick broken
 - Done: Compare 2-9 images
 - Done: Convert imageView to use QGraphicsView
 - Done: Set bookmark not working
