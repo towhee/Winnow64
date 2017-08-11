@@ -45,6 +45,7 @@ bool CompareImages::load(const QSize &centralWidgetSize)
     while (gridLayout->count() > 0) {
         QWidget *w = gridLayout->itemAt(0)->widget();
         gridLayout->removeWidget(w);
+        delete w;
     }
 
     selection = this->thumbView->selectionModel()->selectedIndexes();

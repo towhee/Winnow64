@@ -181,7 +181,7 @@ void ImageCache::cacheStatus()
 //    qDebug() << "cache size " + mbCacheSize;
 
     // ping mainwindow to show cache update in the status bar
-    emit showCacheStatus(pmCacheStatus, mbCacheSize);
+    emit showCacheStatus(pmCacheStatus);
 }
 
 QSize ImageCache::scalePreview(ulong w, ulong h)
@@ -545,11 +545,9 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     // the total memory size of all the images in the folder currently selected
     float folderMB = 0;
     // get some intel on the new folder image list
-//    qDebug() << "Index       Path";
     for (int i=0; i < imageList.size(); ++i) {
         QFileInfo fileInfo = imageList.at(i);
         QString fPath = fileInfo.absoluteFilePath();
-//        qDebug() << i << "\t" << fPath;
         /* cacheManager is a list of cacheItem used to track the current
            cache status and make future caching decisions for each image  */
         cacheItem.key = i;              // need to be able to sync with imageList
@@ -577,6 +575,18 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
 //    reportCacheManager("Initialize test");
 }
 
+void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
+         int &cacheStatusWidth, int &cacheWtAhead, bool &usePreview,
+         int &previewWidth, int &previewHeight)
+{
+    cache.maxMB = cacheSizeMB;
+    cache.isShowCacheStatus = isShowCacheStatus;
+    cache.pxTotWidth = cacheStatusWidth;
+    cache.wtAhead = cacheWtAhead;
+    cache.usePreview = usePreview;
+    cache.previewSize = QSize(previewWidth, previewHeight);
+}
+
 void ImageCache::updateImageCache(QFileInfoList &imageList, QString &currentImageFullPath)
 {
     {
@@ -590,7 +600,7 @@ void ImageCache::updateImageCache(QFileInfoList &imageList, QString &currentImag
 
 //    cache.key = imageList.indexOf(currentImageFullPath);
 
-    for (int i=0; i<cacheMgr.count(); i++) {
+    for (int i = 0; i < cacheMgr.count(); i++) {
         if (cacheMgr.at(i).fName == currentImageFullPath) {
             cache.key = i;
             continue;
@@ -598,8 +608,8 @@ void ImageCache::updateImageCache(QFileInfoList &imageList, QString &currentImag
     }
 //    qDebug() << "updateImageCache" << currentImageFullPath;
     cacheStatus();
-    if (cache.key == cache.prevKey &&
-            imageList.at(0).absolutePath() == cache.dir) return;
+//    if (cache.key == cache.prevKey &&
+//            imageList.at(0).absolutePath() == cache.dir) return;
     cache.isForward = (cache.key >= cache.prevKey);
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();
@@ -607,7 +617,7 @@ void ImageCache::updateImageCache(QFileInfoList &imageList, QString &currentImag
 //    reportCacheManager("Debugging index out of range");
     setPriorities(cache.key);
     setTargetRange();
-    start(LowestPriority);
+    start(IdlePriority);
 }
 
 void ImageCache::run()
@@ -661,14 +671,13 @@ void ImageCache::run()
             }
 //            pm.setDevicePixelRatio(G::devicePixelRatio);
 //            pm->setDevicePixelRatio(G::devicePixelRatio);
+
             mutex.lock();
             imCache.insert(fPath, pm);
 //            imCache.insert(fPath, *pm);
             if (cache.usePreview) {
                 imCache.insert(fPath + "_Preview", pm.scaled(cache.previewSize,
                    Qt::KeepAspectRatio, Qt::FastTransformation));
-//                imCache.insert(fPath + "_Preview", pm->scaled(cache.previewSize,
-//                  Qt::KeepAspectRatio, Qt::FastTransformation));
             }
             cacheMgr[cache.toCacheKey].isCached = true;
             mutex.unlock();
@@ -828,7 +837,6 @@ bool ImageCache::loadPixmap(QString &fPath, QPixmap &pm)
                     break;
             }
         }
-
 
         pm = QPixmap::fromImage(image);
 

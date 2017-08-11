@@ -70,7 +70,7 @@ private slots:
     void on_previewWidthSB_valueChanged(int value);
     void on_previewHeightSB_valueChanged(int value);
     void on_maxRecentSB_valueChanged(int value);
-    void on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
+    void on_listWidget_currentItemChanged(QListWidgetItem *current);
     void on_foldersChk_clicked();
     void on_favsChk_clicked();
     void on_metadataChk_clicked();

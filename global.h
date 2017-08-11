@@ -4,7 +4,7 @@
 
 #include <QModelIndexList>
 #include <QStringList>
-#include <QtGlobal>
+//#include <QtGlobal>
 #include <QElapsedTimer>
 
 namespace G

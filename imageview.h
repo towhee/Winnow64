@@ -21,12 +21,16 @@ public:
     QLabel *infoLabel;
     QLabel *infoLabelShadow;
     DropShadowLabel *infoDropShadow;
+    QLabel *titleLabel;
+    QLabel *titleLabelShadow;
+    DropShadowLabel *titleDropShadow;
     qreal zoom;
     QModelIndex imageIndex;
 
     bool loadPixmap(QString &imageFullPath, QPixmap &pm);
     bool loadImage(QModelIndex idx, QString imageFileName);
     void setCursorHiding(bool hide);
+    bool isBusy;
 //    void setClickZoom(float clickZoom);
 
 //    void compareZoomAtCoord(QPointF coord, bool isZoom);
@@ -56,8 +60,6 @@ public slots:
 signals:
     void togglePick();
     void updateStatus(bool, QString);
-//    void compareZoom(QPointF coord, QModelIndex imageIndex, bool isZoom);
-//    void comparePan(QPoint delta, QModelIndex imageIndex);
 
 private slots:
     void upgradeToFullSize();
@@ -78,7 +80,6 @@ private:
     Metadata *metadata;
     ImageCache *imageCacheThread;
     ThumbView *thumbView;
-//    bool isCompareMode;
     QImageReader imageReader;
     QLabel *imageLabel;
 
@@ -86,14 +87,8 @@ private:
     QGraphicsPixmapItem *pmItem;
     QGraphicsTextItem *infoItem;
     QMatrix matrix;
-//    QRect loadTimeParentRect;
-//    qreal scaleFactor;
-//    qreal fitScaleFactor;
-//    QPointF viewCenter, sceneCtr, pmItemCenter;
 
     QPixmap displayPixmap;
-//    QImage origImage;
-//    QImage thumbsUp;
     QImage displayImage;
 
     QTimer *mouseMovementTimer;

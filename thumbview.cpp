@@ -108,7 +108,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
 
     if (isIconDisplay) emptyImg.load(":/images/no_image.png");
 
-    QTime time = QTime::currentTime();
+//    QTime time = QTime::currentTime();
 }
 
 //bool ThumbView::event(QEvent *event)
@@ -221,8 +221,8 @@ void ThumbView::setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid
     labelFontSizeGrid = _labelFontSizeGrid;
     showThumbLabelsGrid = _showThumbLabelsGrid;
 
-    qDebug() << "thumbWidthGrid" << thumbWidthGrid
-             << "thumbHeightGrid" << thumbHeightGrid;
+//    qDebug() << "thumbWidthGrid" << thumbWidthGrid
+//             << "thumbHeightGrid" << thumbHeightGrid;
 
     setThumbParameters();
 }
@@ -394,7 +394,7 @@ int ThumbView::getPrevPick()
     #endif
     }
     int back = currentIndex().row() - 1;
-    int rowCount = thumbViewFilter->rowCount();
+//    int rowCount = thumbViewFilter->rowCount();
     QModelIndex idx;
     while (back >= 0) {
         idx = thumbViewFilter->index(back, 0, QModelIndex());
@@ -593,7 +593,6 @@ void ThumbView::selectThumb(QModelIndex idx)
     qDebug() << "ThumbView::selectThumb(index)" << idx;
     #endif
     }
-    qDebug() << "ThumbView::selectThumb(index)" << idx;
     if (idx.isValid()) {
         setCurrentIndex(idx);
         thumbViewDelegate->currentIndex = idx;
@@ -787,6 +786,24 @@ void ThumbView::thumbsShrink()
     if (isAutoFit) thumbsFit();
 }
 
+void ThumbView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
+{
+/* thumbViewDelegate triggers this to provide rect data to calc thumb mouse
+click position that is then sent to imageView to zoom to the same spot
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::updateThumbRectRole";
+    #endif
+    }
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::updateThumbRectRole";
+    #endif
+    }
+    thumbViewFilter->setData(index, iconRect, ThumbRectRole);
+}
+
 void ThumbView::resizeEvent(QResizeEvent *event)
 {
     {
@@ -885,12 +902,12 @@ void ThumbView::forceScroll(int row)
     QScrollBar *sb;
     sb = verticalScrollBar();
     int tot = thumbViewFilter->rowCount();
-    int sbVal = ((float)row / tot) * sb->maximum();
+//    int sbVal = ((float)row / tot) * sb->maximum();
     QSize tSize = thumbViewDelegate->getThumbCell();
     QSize wSize = this->size();
     int perRow = wSize.width() / tSize.width();
     int rowsReqd = ((float)tot / perRow) + 1;
-    int sbMaxCalc = rowsReqd * tSize.height();
+//    int sbMaxCalc = rowsReqd * tSize.height();
 //    qDebug() << "sb->minimum" << sb->minimum()
 //             << "sb->maximum" << sb->maximum()
 //             << "sb->singleStep" << sb->singleStep()
@@ -959,6 +976,7 @@ void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
     qDebug() << "ThumbView::mouseDoubleClickEvent";
     #endif
     }
+    QListView::mouseDoubleClickEvent(event);
     emit displayLoupe();
     // delay reqd
     QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
@@ -974,24 +992,6 @@ void ThumbView::delaySelectCurrentThumb()
 //    QKeyEvent *key = new QKeyEvent (QEvent::KeyRelease, Qt::Key_E, Qt::NoModifier, "E");
 //    qApp->postEvent(mw, (QEvent *)key);
     selectThumb(currentIndex());
-}
-
-void ThumbView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
-{
-/* thumbViewDelegate triggers this to provide rect data to calc thumb mouse
-click position that is then sent to imageView to zoom to the same spot
-*/
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::updateThumbRectRole";
-    #endif
-    }
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::updateThumbRectRole";
-    #endif
-    }
-    thumbViewFilter->setData(index, iconRect, ThumbRectRole);
 }
 
 // called from MW invertSelectionAct

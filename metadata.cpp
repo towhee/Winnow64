@@ -577,7 +577,7 @@ float Metadata::getReal(long offset)
     return x;
 }
 
-ulong Metadata::readIPTC(ulong offset)
+void Metadata::readIPTC(ulong offset)
 {
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
 
@@ -586,7 +586,7 @@ ulong Metadata::readIPTC(ulong offset)
 //    ulong appLength = get2(file.read(2));
     ulong segmentLength = get2(file.read(2));
     bool foundIPTC = false;
-    int count = 0;
+    ulong count = 0;
     while (!foundIPTC && count < segmentLength) {
         count +=2;
         // find "8BIM" = 0x3842 0x494D
@@ -604,12 +604,12 @@ ulong Metadata::readIPTC(ulong offset)
         file.seek(file.pos() + pasStrLen - 1);
         // read size of resource data
         ulong resourceDataSize = get4(file.read(4));
+        ulong endResourceData = file.pos() + resourceDataSize - 4;
 
         // read data blocks searching for title (0x05)
         bool foundTitle = false;
         while (!foundTitle) {
             // every block starts with tag marker 0x1C
-            ulong p = file.pos();
             uint tagMarker = get1(file.read(1));
             if (tagMarker != 0x1C) break;
             uint recordNumber = get1(file.read(1));
@@ -618,9 +618,9 @@ ulong Metadata::readIPTC(ulong offset)
             if (recordNumber == 2 && tag == 5) {
                 title = file.read(dataLength);
                 foundTitle = true;
-//                qDebug() << "Title =" << title;
             }
             else file.seek(file.pos() + dataLength);
+            if (file.pos() > endResourceData) break;
         }
     }
 }
@@ -708,7 +708,7 @@ QList<ulong> Metadata::getSubIfdOffsets(ulong subIFDaddr, int count)
     return offsets;
 }
 
-bool Metadata::getSegments(ulong offset)
+void Metadata::getSegments(ulong offset)
 {
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
     uint marker = 0xFFFF;
@@ -1276,7 +1276,7 @@ void Metadata::formatFuji()
     // get offset to first IFD and read it
     ulong offsetIfd0 = get4(file.read(4));
 
-    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
+//    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
 
     // pull data reqd from IFD0
     (ifdDataHash.contains(272))
@@ -1511,6 +1511,8 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
 
     if (offsetSmallJPG == 0) offsetSmallJPG = offsetFullJPG;
     if (offsetThumbJPG == 0) offsetThumbJPG = offsetSmallJPG;
+
+//    qDebug() << fPath << offsetThumbJPG << offsetSmallJPG << offsetFullJPG;
 
     if (!success) track(fPath, "FAILED TO LOAD METADATA");
     else track(fPath, "Success");
@@ -1771,7 +1773,9 @@ int Metadata::getImageOrientation(QString &imageFileName)
 //    }
 //    return 0;
 
-    if (metaCache.contains(imageFileName)) return metaCache[imageFileName].orientation;
+    if (metaCache.contains(imageFileName)) {
+        return metaCache[imageFileName].orientation;
+    }
     else return 0;
 }
 

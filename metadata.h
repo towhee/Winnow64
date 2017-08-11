@@ -152,12 +152,12 @@ private:
     ulong get2(QByteArray c);
     ulong get4(QByteArray c);
     float getReal(long offset);
-    ulong readIPTC(ulong offset);
+    void readIPTC(ulong offset);
     ulong readIFD(QString hdr, ulong offset);
     QList<ulong> getSubIfdOffsets(ulong subIFDaddr, int count);
 //    ulong getExifOffset(ulong offsetIfd0);      //update to use ifdDataHash
     QString getString(ulong offset, ulong length);
-    bool getSegments(ulong offset);
+    void getSegments(ulong offset);
     bool getDimensions(ulong jpgOffset);
 
     void reportMetadata();

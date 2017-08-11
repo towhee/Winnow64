@@ -318,7 +318,7 @@ void CompareView::zoomToPct(QPointF scrollPct, bool isZoom)
 //    scrollPosPct = scrollPct;      // new position base for delta scrolls
     panToPct(scrollPct);
     getScrollBarStatus();
-    reportScrollBarStatus();
+//    reportScrollBarStatus();
 }
 
 void CompareView::scrollEvent()
@@ -374,23 +374,7 @@ void CompareView::panToPct(QPointF scrollPct)
     qDebug() << "CompareView::panToPct" << currentImagePath;
     #endif
     }
-    qreal xPct = scrollPct.x();
-    qreal yPct = scrollPct.y();
-    qreal w = scene->width();
-    qreal h = scene->height();
-    qreal x = xPct * w;
-    qreal y = yPct * h;
-//    qDebug() << "CompareView::panToPct  xPct, yPct" << xPct << yPct
-//             << "w" << w << "h" << h << "x" << x << "y" << y
-//             << "zoom" << zoom << "zoomFit" << zoomFit
-//             << currentImagePath;
-//    centerOn(xPct * scene->width(), yPct * scene->height());
-//    centerOn(x, y);
-
     setScrollBars(scrollPct);
-    qDebug() << "panToPct:  scrollPct" << scrollPct;
-//    reportScrollBarStatus();
-    return;
 }
 
 void CompareView::setScrollBars(QPointF scrollPct)
@@ -573,8 +557,8 @@ image.*/
 
     pickLabel->move(x, y);
 
-    qDebug() << "sceneBottomRight" << sceneBottomRight << "rect()" << rect()
-             << "x" << x << "y" << y;
+//    qDebug() << "sceneBottomRight" << sceneBottomRight << "rect()" << rect()
+//             << "x" << x << "y" << y;
 
 }
 
@@ -660,10 +644,7 @@ void CompareView::zoomTo(float zoomTo)
     #endif
     }
     zoom = zoomTo;
-    zoom < 0.05 ? 0.05 : zoom;
-    zoom > 8 ? 8: zoom;
-//    mouseZoomFit = false;
-//    resizeImage();
+    scale(true);
 }
 
 void CompareView::zoomToggle()
@@ -794,6 +775,7 @@ void CompareView::enterEvent(QEvent *event)
                             "border-width: 1; "
                             "border-color: rgb(225,225,225);}");
     }
+    QGraphicsView::enterEvent(event);
 }
 
 void CompareView::leaveEvent(QEvent *event)
@@ -808,4 +790,5 @@ void CompareView::leaveEvent(QEvent *event)
                         "border-style: solid; "
                         "border-width: 1; "
                         "border-color: rgb(111,111,111);}");
+    QGraphicsView::leaveEvent(event);
 }

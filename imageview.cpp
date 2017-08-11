@@ -68,6 +68,18 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     infoLabel->setAttribute(Qt::WA_TranslucentBackground);
     infoLabelShadow->setAttribute(Qt::WA_TranslucentBackground);
 
+    // title included in infoLabel, but might want to separate
+    titleDropShadow = new DropShadowLabel(this);
+    titleDropShadow->setVisible(isShootingInfoVisible);
+    titleDropShadow->setAttribute(Qt::WA_TranslucentBackground);
+
+    titleLabel = new QLabel(this);
+    titleLabel->setVisible(isShootingInfoVisible);
+    titleLabelShadow = new QLabel(this);
+    titleLabelShadow->setVisible(isShootingInfoVisible);
+    titleLabel->setAttribute(Qt::WA_TranslucentBackground);
+    titleLabelShadow->setAttribute(Qt::WA_TranslucentBackground);
+
     pickLabel = new QLabel(this);
     pickLabel->setFixedSize(40,48);
     pickLabel->setAttribute(Qt::WA_TranslucentBackground);
@@ -179,23 +191,30 @@ to prevent jarring changes in perceived scale by the user.
             pmItem->setPixmap(displayPixmap);
             isPreview = false;
         }
-        else return false;
     }
 
-    // prevent the viewport scrolling outside the image
-    setSceneRect(scene->itemsBoundingRect());
-    shootingInfo = metadata->getShootingInfo(currentImagePath);
+    if (isLoaded) {
+        // prevent the viewport scrolling outside the image
+        setSceneRect(scene->itemsBoundingRect());
+        shootingInfo = metadata->getShootingInfo(currentImagePath) + "\n" +
+                metadata->getTitle(currentImagePath);
 
-    zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
-    if (!firstImageLoaded) {
-        // check if last image was a zoomFit - if so zoomFit this one too
-        // otherwise keep zoom same as previous
-        if (isFit) {
-            zoom = zoomFit;
+        zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
+        if (!firstImageLoaded) {
+            // check if last image was a zoomFit - if so zoomFit this one too
+            // otherwise keep zoom same as previous
+            if (isFit) {
+                zoom = zoomFit;
+            }
+            scale();
         }
-        scale();
     }
 //    qDebug() << "elapsed:" << t.nsecsElapsed();
+
+    // ignore any arrow key events that occurred while loading
+//    isBusy = true;
+//    qApp->processEvents();  // events trapped in MW::event, ignored when isBusy
+//    isBusy = false;
 
     return isLoaded;
 }
@@ -732,10 +751,7 @@ void ImageView::zoomTo(float zoomTo)
     #endif
     }
     zoom = zoomTo;
-    zoom < 0.05 ? 0.05 : zoom;
-    zoom > 8 ? 8: zoom;
-//    mouseZoomFit = false;
-//    resizeImage();
+    scale();
 }
 
 void ImageView::zoomToggle()
@@ -1056,7 +1072,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageView::mouseMoveEvent";
+//    qDebug() << "ImageView::mouseMoveEvent";
     #endif
     }
 // seems to force two mouse clicks after mouse movement to zoiom

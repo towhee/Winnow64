@@ -135,7 +135,8 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event);
-
+    void keyPressEvent(QKeyEvent *event);
+    void keyReleaseEvent(QKeyEvent *event);
     //    void mouseDoubleClickEvent(QMouseEvent *event);
     //    void mousePressEvent(QMouseEvent *event);
 
@@ -145,7 +146,7 @@ public slots:
 
     void setStatus(QString state);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
-    void showCacheStatus(const QImage &imCacheStatus, QString mb);
+    void showCacheStatus(const QImage &imCacheStatus);
     void setThumbDockFeatures(Qt::DockWidgetArea area);
     void setThumbDockFloatFeatures(bool isFloat);
 

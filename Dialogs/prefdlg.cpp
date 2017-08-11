@@ -78,7 +78,7 @@ void Prefdlg::accept()
     QDialog::accept();
 }
 
-void Prefdlg::on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
+void Prefdlg::on_listWidget_currentItemChanged(QListWidgetItem *current)
 // sync preference category list and preference items in stacked form
 {
     ui->stackedWidget->setCurrentIndex(ui->listWidget->row(current));

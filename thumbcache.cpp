@@ -1,6 +1,11 @@
 #include "thumbcache.h"
 #include <QDebug>
 
+/* ThumbCache populates the thumbView icons (thumbs) in a separate thread.
+
+
+*/
+
 ThumbCache::ThumbCache(QObject *parent, ThumbView *thumbView,
                        Metadata *metadata) : QThread(parent)
 {
@@ -83,16 +88,19 @@ void ThumbCache::run()
 
     int totDelay = 500;     // milliseconds
     int msDelay = 0;        // total incremented delay
-    int msInc = 50;         // amount to increment each try
+    int msInc = 1;          // amount to increment each try
     QString err;            // type of error
 
-    for (int row=0; row < thumbView->thumbViewModel->rowCount(); ++row) {
+    // req'd to prevent warning when using item->setData - don't know why
+    qRegisterMetaType<QVector<int> >("QVector");
+    QStandardItem *item = new QStandardItem;
+
+    for (int row = 0; row < thumbView->thumbViewModel->rowCount(); ++row) {
         if (abort) {
             emit updateIsRunning(false);
             return;
         }
         QModelIndex idx = thumbView->thumbViewModel->index(row, 0, QModelIndex());
-        QStandardItem *item = new QStandardItem;
         item = thumbView->thumbViewModel->itemFromIndex(idx);
         fPath = item->data(Qt::ToolTipRole).toString();
         if (G::isThreadTrackingOn) track(fPath, "Reading");
@@ -113,13 +121,13 @@ void ThumbCache::run()
             // embedded JPG
             // Check if metadata has been cached for this image
             int msDelay = 0;
-            int msInc = 1;
             do {
                 if (abort) {
                     emit updateIsRunning(false);
                     return;
                 }
                 // confirm metadata has been read already
+//                qDebug() << "ThumbCache::run - check isLoaded" << msDelay << fPath;
                 if (metadata->isLoaded(fPath)) {
                     if (offsetThumb) {
                         if (imFile.open(QIODevice::ReadOnly)) {
@@ -130,7 +138,7 @@ void ThumbCache::run()
                                     imFile.close();
                                     if (thumb.isNull() && G::isThreadTrackingOn )
                                         track(fPath, "Empty thumb");
-//                                    if (G::isThreadTrackingOn) qDebug() << fPath << "Scaling:" << thumb.size();
+//                                      if (G::isThreadTrackingOn) qDebug() << fPath << "Scaling:" << thumb.size();
 
                                     thumb.scaled(thumbMax, Qt::KeepAspectRatio);
                                     success = true;
@@ -147,9 +155,11 @@ void ThumbCache::run()
                                 break;
                             }
                         }
-                        // file busy, wait a bit and try again
-                        err = "Could not open file for thumb - try again";
-                        if (G::isThreadTrackingOn) track(fPath, err);
+                        else {
+                            // file busy, wait a bit and try again
+                            err = "Could not open file for thumb - try again";
+                            if (G::isThreadTrackingOn) track(fPath, err);
+                        }
                     }
                     else {
                         err = "No offset for thumb";
@@ -216,18 +226,7 @@ void ThumbCache::run()
         }
         // record any errors
         mutex.lock();
-
-        /*following line generates comment in app output only first time in loop
-        QObject::connect: Cannot queue arguments of type 'QVector<int>'
-        (Make sure 'QVector<int>' is registered using qRegisterMetaType().)*/
         item->setIcon(QPixmap::fromImage(thumb));
-        /*this doesn't work either
-        QPixmap pm;
-        typedef QVector<QVector<int> > pm;
-        qRegisterMetaType<MyArray>("pm");
-        pm.fromImage(thumb);
-        item->setIcon(pm);*/
-
         item->setData(true, thumbView->LoadedRole);
         if (!success) {
             metadata->setErr(fPath, err);

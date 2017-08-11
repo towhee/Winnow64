@@ -77,7 +77,6 @@ public slots:
              int _thumbPadding, int _labelFontSize, bool _showThumbLabels);
     void setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid, int _thumbSpacingGrid,
              int _thumbPaddingGrid, int _labelFontSizeGrid, bool _showThumbLabelsGrid);
-
     void reportThumbs();
     void selectNext();
     void selectPrev();

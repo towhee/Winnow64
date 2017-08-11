@@ -136,6 +136,7 @@ void InfoView::updateInfo(const QString &fPath)
     QFileInfo imageInfo = QFileInfo(fPath);
 //    infoView->addTitleEntry(tr("General             "));
 
+//    qDebug() << "InfoView::updateInfo - check isLoaded" << fPath;
     if (!metadata->isLoaded(fPath)) {
         metadata->loadImageMetadata(fPath);
     }

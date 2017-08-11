@@ -11,9 +11,7 @@ class ThumbViewFilter : public QSortFilterProxyModel
 public:
     explicit ThumbViewFilter(QObject * parent = 0);
 protected:
-    bool filterAcceptRows(int row, const QModelIndex &index) const;
-//    bool filterAcceptRows(int row, const QModelIndex &index,
-//                          bool filterOnPicks) const;
+    bool filterAcceptRows(const QModelIndex &index) const;
 };
 
 #endif // THUMBVIEWFILTER_H

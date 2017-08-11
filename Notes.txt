@@ -1,4 +1,6 @@
 To do:
+- /Users/roryhill/Qt/5.9/Src/qtimageformats/src/3rdparty/jasper/src/libjasper/jpg_dec.c
+- /Users/roryhill/Projects/jpeg-9b/example.c
 - Reimplement mouse drag scrolling in ImageView and CompareView
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Get title, comment and copywrite metadata
@@ -24,6 +26,8 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Fixed warning QObject::connect: Cannot queue arguments of type 'QVector<int>'
+- Done: Fix compare clear before next compare
 - Done: ImageView thumbclick broken
 - Done: Compare 2-9 images
 - Done: Convert imageView to use QGraphicsView
@@ -281,3 +285,6 @@ CompareImages::pan
 CompareView::panToPct
 CompareView::panToPct  xPct, yPct 0.266999 0.367525 w 7360 h 4912 x 1965.12 y 1805.28 zoom 1 zoomFit 0.0665717 "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0002.NEF"
 
+GUI vs Caching performance optimization suggestions
+
+I've built an image viewer in Qt that extracts embedded jpg from camera raw files

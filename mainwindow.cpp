@@ -38,6 +38,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     G::devicePixelRatio = 2;
     #endif
 
+    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+
     isInitializing = true;
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
@@ -50,12 +52,11 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     // must come first so persistant action settings can be updated
     if (!resetSettings) loadSettings();
 
-    // centralWidget required by ImageView constructor
+    // centralWidget required by ImageView/CompareView constructors
     centralWidget = new QWidget(this);
     centralWidget->setObjectName("centralWidget");
-//    centralWidget->setObjectName("loupeLayout");
+    // stack layout for loupe, compare and grid displays
     centralLayout = new QStackedLayout;
-//    QHBoxLayout *centralLayout = new QHBoxLayout;
     centralLayout->setContentsMargins(0, 0, 0, 0);
 
     createThumbView();
@@ -160,35 +161,70 @@ void MW::setupMainWindow(bool resetSettings)
     }
 }
 
+void MW::keyPressEvent(QKeyEvent *event)
+{
+//    qDebug() << "MW::keyPressEvent" << event;
+//    QMainWindow::keyPressEvent(event);
+}
+
+void MW::keyReleaseEvent(QKeyEvent *event)
+{
+//    qDebug() << "MW::keyReleaseEvent" << event;
+//    QMainWindow::keyReleaseEvent(event);
+}
+
 bool MW::event(QEvent *event)
 {
-/* Patch for bug in Qt where scrollTo not working when switch
+/* Intercept arrow keys to prevent runon when holding key down to auto-repeat
+and continue to show next image after arrow key released.  Have to intercept
+QEvent::ShortcutOverride becasue it is fired before keyRelease event.
+
+Patch for bug in Qt where scrollTo not working when switch
 ownershop of thumbView from dock to central widget and back.  scrollTo
 tries to scroll before all the treeView events have executed.  The last
 event is the key release and it works after that.  The shortcuts are
 E (loupe) and G (grid).
 */
+//    qDebug() << "MW::event" << event;
+
+    // Consume arrow key events when updating imageView to prevent runon
+//    if (event->type() == QEvent::ShortcutOverride && imageView->isBusy) {
+//        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+//        if (keyEvent->key() == Qt::Key_Right ||
+//            keyEvent->key() == Qt::Key_Left ||
+//            keyEvent->key() == Qt::Key_Down ||
+//            keyEvent->key() == Qt::Key_Up)
+//        {
+//            keyEvent->accept();     // consume keystroke without doing anything
+//            return true;
+//        }
+
+//    }
+
     if (event->type() == QEvent::KeyRelease) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+
+        // Grid or Loupe views
         if (keyEvent->key() == Qt::Key_G ||
             keyEvent->key() == Qt::Key_E ||
             keyEvent->key() == Qt::Key_Return)
         {
-            qDebug() << "\n" << event << "\n";
+//            qDebug() << "\n" << event << "\n";
             thumbView->selectThumb(thumbView->currentIndex());
         }
+
+        // slideshow
         if (keyEvent->key() == Qt::Key_Escape) {
             if (isSlideShowActive) slideShow();
         }
         if (isSlideShowActive) {
             int n = keyEvent->key() - 48;
-            if (n >= 0 && n <=9) {
+            if (n > 0 && n <=9) {
                 slideShowDelay = n;
                 slideShowTimer->setInterval(n * 1000);
                 QString msg = "Reset slideshow interval to ";
                 msg += QString::number(n) + " seconds";
                 popUp->showPopup(this, msg, 1000, 0.5);
-//                popUp->show();
             }
         }
     }
@@ -362,8 +398,7 @@ void MW::fileSelectionChange()
     // recalculating the target images to cache, decaching and caching to keep
     // the cache up-to-date with the current image selection.
     if (metadataLoaded) {
-        imageCacheThread->updateImageCache(thumbView->
-        thumbFileInfoList, fPath);
+        imageCacheThread->updateImageCache(thumbView->thumbFileInfoList, fPath);
     }
 
 //    thumbView->setWrapping(true);
@@ -1334,8 +1369,8 @@ void MW:: createImageView()
             this, SLOT(updateThumbThreadRunStatus(bool)));
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool)),
             this, SLOT(updateImageThreadRunStatus(bool)));
-    connect(imageCacheThread, SIGNAL(showCacheStatus(const QImage, QString)),
-            this, SLOT(showCacheStatus(const QImage, QString)));
+    connect(imageCacheThread, SIGNAL(showCacheStatus(const QImage)),
+            this, SLOT(showCacheStatus(const QImage)));
     connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
     connect(imageView, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
@@ -1435,6 +1470,10 @@ void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
     isCachePreview = usePreview;
     cachePreviewWidth = previewWidth;
     cachePreviewHeight = previewHeight;
+    imageCacheThread->updateImageCacheParam(size, show, width, wtAhead,
+             usePreview, previewWidth, previewHeight);
+    QString fPath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
+    imageCacheThread->updateImageCache(thumbView->thumbFileInfoList, fPath);
 }
 
 void MW::updateStatus(bool keepBase, QString s)
@@ -1486,10 +1525,12 @@ void MW::updateMetadataThreadRunStatus(bool isRunning)
     qDebug() << "MW::updataMetadataThreadRunStatus";
     #endif
     }
+    qDebug() << "MW::updataMetadataThreadRunStatus" << isRunning;
     if (isRunning)
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
     else
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:Gray;}");
+
     metadataThreadRunningLabel->setText("◉");
 }
 
@@ -1522,7 +1563,7 @@ void MW::updateImageThreadRunStatus(bool isRunning)
 }
 
 // used by ImageCache thread to show image cache building progress
-void MW::showCacheStatus(const QImage &imCacheStatus, QString mbCacheSize)
+void MW::showCacheStatus(const QImage &imCacheStatus)
 {
     {
     #ifdef ISDEBUG
@@ -3352,11 +3393,10 @@ void MW::compareDisplay()
     thumbView->isGrid = false;
     thumbView->setThumbParameters();
     setThumbDockVisibity();
-
     thumbView->thumbViewDelegate->isCompare = true;
+
     centralLayout->setCurrentIndex(1);
     compareImages->load(centralWidget->size());
-//    centralLayout->addWidget(compareView);
 }
 
 void MW::setFullNormal()
@@ -3901,6 +3941,7 @@ void MW::wheelEvent(QWheelEvent *event)
 //            else
 //                thumbView->selectPrev();
 //        }
+    QMainWindow::wheelEvent(event);
 }
 
 // not req'd

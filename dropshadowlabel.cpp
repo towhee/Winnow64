@@ -25,5 +25,7 @@ void DropShadowLabel::paintEvent(QPaintEvent *event)
     painter.drawText(rect2, text());
     painter.setPen(Qt::white);
     painter.drawText(rect1, text());
+
+    QLabel::paintEvent(event);
 }
 
