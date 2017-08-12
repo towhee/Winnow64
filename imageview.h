@@ -7,6 +7,7 @@
 #include "imagecache.h"
 #include "thumbcache.h"
 #include "dropshadowlabel.h"
+#include "pixmap.h"
 
 class ImageView : public QGraphicsView
 {

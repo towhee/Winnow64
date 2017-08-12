@@ -28,7 +28,8 @@ HEADERS += \
     compareImages.h \
     compareview.h \
     imagealign.h \
-    testaligndlg.h
+    testaligndlg.h \
+    pixmap.h
 SOURCES += \
     bookmarks.cpp \
     dircompleter.cpp \
@@ -53,7 +54,8 @@ SOURCES += \
     compareImages.cpp \
     compareview.cpp \
     imagealign.cpp \
-    testaligndlg.cpp
+    testaligndlg.cpp \
+    pixmap.cpp
 FORMS += \
     copypickdlg.ui \
     prefdlg.ui \

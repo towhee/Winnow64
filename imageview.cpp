@@ -184,7 +184,9 @@ to prevent jarring changes in perceived scale by the user.
         // load the image from the image file, may need to wait a bit if another thread
         // reading file
         for (int i=0; i<100000; i++) {
-            isLoaded = loadPixmap(fPath, displayPixmap);
+            Pixmap *pixmap = new Pixmap(this);
+            isLoaded = pixmap->load(fPath, displayPixmap, metadata);
+//            isLoaded = loadPixmap(fPath, displayPixmap);
             if (isLoaded) break;
         }
         if (isLoaded) {
@@ -224,8 +226,8 @@ void ImageView::upgradeToFullSize()
 /* Called after a delay by timer initiated in loadImage. Two prior conditions
 are matched:
 
-● If zoomed then the relative scroll position is set.
-● If zoomFit then zoomFit is recalculated.
+    ● If zoomed then the relative scroll position is set.
+    ● If zoomFit then zoomFit is recalculated.
 
 */
     {
