@@ -5,6 +5,7 @@
 #include "metadata.h"
 #include "imagecache.h"
 #include "thumbcache.h"
+#include "pixmap.h"
 
 class CompareView : public QGraphicsView
 {
@@ -18,7 +19,6 @@ public:
     QModelIndex imageIndex;
     QGraphicsPixmapItem *pmItem;        // req'd by imageAlign
 
-    bool loadPixmap(QString &imageFullPath, QPixmap &pm);
     bool loadImage(QModelIndex idx, QString imageFileName);
     QPointF getScrollPct();
     void panToPct(QPointF scrollPct);
@@ -62,6 +62,7 @@ private:
     Metadata *metadata;
     ImageCache *imageCacheThread;
     ThumbView *thumbView;
+    Pixmap *pixmap;
     QImageReader imageReader;
 
     QFrame *frame;

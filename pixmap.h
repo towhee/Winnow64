@@ -10,12 +10,12 @@ class Pixmap : public QObject
 {
     Q_OBJECT
 public:
-    explicit Pixmap(QObject *parent);
+    explicit Pixmap(QObject *parent, Metadata *metadata);
 //    explicit Pixmap(QObject *parent = nullptr);
-    bool load(QString &fPath, QPixmap &pm, Metadata *metadata);
+    bool load(QString &fPath, QPixmap &pm);
 
 private:
-//    Metadata *metadata;
+    Metadata *metadata;
 };
 
 #endif // PIXMAP_H

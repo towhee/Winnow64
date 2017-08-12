@@ -28,7 +28,6 @@ public:
     qreal zoom;
     QModelIndex imageIndex;
 
-    bool loadPixmap(QString &imageFullPath, QPixmap &pm);
     bool loadImage(QModelIndex idx, QString imageFileName);
     void setCursorHiding(bool hide);
     bool isBusy;
@@ -81,6 +80,7 @@ private:
     Metadata *metadata;
     ImageCache *imageCacheThread;
     ThumbView *thumbView;
+    Pixmap *pixmap;
     QImageReader imageReader;
     QLabel *imageLabel;
 

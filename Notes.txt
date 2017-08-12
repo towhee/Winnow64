@@ -1,4 +1,6 @@
 To do:
+- Get rid of white border around docks
+- Right click should not zoom in imageView or compareView
 - /Users/roryhill/Qt/5.9/Src/qtimageformats/src/3rdparty/jasper/src/libjasper/jpg_dec.c
 - /Users/roryhill/Projects/jpeg-9b/example.c
 - Reimplement mouse drag scrolling in ImageView and CompareView

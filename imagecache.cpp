@@ -8,6 +8,7 @@ ImageCache::ImageCache(QObject *parent, Metadata *metadata) : QThread(parent)
     #endif
     }
     this->metadata = metadata;
+    pixmap = new Pixmap(this, metadata);
 
     restart = false;
     abort = false;
@@ -650,8 +651,8 @@ void ImageCache::run()
         if (G::isThreadTrackingOn) track(fPath, "Reading");
         QPixmap pm;
 //        QPixmap *pm = new QPixmap;
-        if (loadPixmap(fPath, pm)) {
-//            if (loadPixmap(fPath, *pm)) {
+        if (pixmap->load(fPath, pm)) {
+//            if (loadPixmap(fPath, pm)) {
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
             uint roomRqd = cacheMgr.at(cache.toCacheKey).sizeMB;
@@ -694,159 +695,4 @@ void ImageCache::run()
 //    qDebug() << "ImageCache completed";
     emit updateIsRunning(false);
 //    reportCacheManager("Image cache updated for " + cache.dir);
-}
-
-bool ImageCache::loadPixmap(QString &fPath, QPixmap &pm)
-{
-    /*  Reads the embedded jpg (known offset and length) and converts it into a
-        pixmap.
-
-        This function is dependent on metadata being updated first.  Metadata is
-        updated by the mdCache thread that runs every time a new folder is
-        selected. It has a sister function in the imageCache thread that stores
-        pixmaps in the heap.
-
-        Most of the time the pixmap will be obtained from the imageCache, but
-        when the image has yet to be cached this function is called.  This often
-        happens when a new folder is selected and the program is trying to load
-        the metadata, thumbnail and image caches plus show the first image in the
-        folder.
-
-        Since this function, in the main program thread, may be competing with the
-        cache building it will retry attempting to load for a given period of time
-        as the image file may be locked by one of the cache builders.
-
-        If it succeeds in opening the file it still has to read the embedded jpg and
-        convert it to a pixmap.  If this fails then either the file format is not
-        being properly read or the file is corrupted.  In this case the metadata
-        will be updated to show file not readable.
-    */
-        {
-        #ifdef ISDEBUG
-        qDebug() << "ImageCache::loadPixmap" << fPath;
-        #endif
-        }
-
-        // !!!!!!!!!!!!!!!!
-        // ImageView::loadPixmap and ImageCache::loadPixmap should be the same
-
-        bool success = false;
-        int totDelay = 500;     // milliseconds
-        int msDelay = 0;        // total incremented delay
-        int msInc = 10;         // amount to increment each try
-
-        QString err;            // type of error
-
-        ulong offsetFullJpg = 0;
-        QImage image;
-        QFileInfo fileInfo(fPath);
-        QString ext = fileInfo.completeSuffix().toLower();
-        QFile imFile(fPath);
-
-        if (metadata->rawFormats.contains(ext)) {
-            // raw files not handled by Qt
-            do {
-                // Check if metadata has been cached for this image
-                offsetFullJpg = metadata->getOffsetFullJPG(fPath);
-                if (offsetFullJpg == 0) {
-                    metadata->loadImageMetadata(fPath);
-                    //try again
-                    offsetFullJpg = metadata->getOffsetFullJPG(fPath);
-                }
-                // try to read the file
-                if (offsetFullJpg > 0) {
-                    if (imFile.open(QIODevice::ReadOnly)) {
-                        bool seekSuccess = imFile.seek(offsetFullJpg);
-                        if (seekSuccess) {
-                            QByteArray buf = imFile.read(metadata->getLengthFullJPG(fPath));
-                            if (image.loadFromData(buf, "JPEG")) {
-                                imFile.close();
-                                success = true;
-                            }
-                            else {
-                                err = "Could not read image from buffer";
-                                if (G::isThreadTrackingOn) track(fPath, err);
-                                break;
-                            }
-                        }
-                        else {
-                            err = "Illegal offset to image";
-                            if (G::isThreadTrackingOn) track(fPath, err);
-                            break;
-                        }
-                    }
-                    else {
-                        err = "Could not open file for image";    // try again
-                        if (G::isThreadTrackingOn) track(fPath, err);
-                        QThread::msleep(msInc);
-                        msDelay += msInc;
-                    }
-                }
-                /*
-                qDebug() << "ImageView::loadPixmap Success =" << success
-                         << "msDelay =" << msDelay
-                         << "offsetFullJpg =" << offsetFullJpg
-                         << "Attempting to load " << imageFullPath;
-                         */
-            }
-            while (msDelay < totDelay && !success);
-        }
-        else {
-            // cooked files like jpg, png etc
-            do {
-                // check if file is locked by another process
-                if (imFile.open(QIODevice::ReadOnly)) {
-                    // close it to allow qt load to work
-                    imFile.close();
-                    // directly load the image using qt library
-                    success = image.load(fPath);
-                    if (!success) {
-                        err = "Could not read image";
-                        if (G::isThreadTrackingOn) track(fPath, err);
-                        break;
-                    }
-                }
-                else {
-                    err = "Could not open file for image";    // try again
-                    if (G::isThreadTrackingOn) track(fPath, err);
-                    QThread::msleep(msInc);
-                    msDelay += msInc;
-                }
-                  /*
-                  qDebug() << "ImageView::loadPixmap Success =" << success
-                           << "msDelay =" << msDelay
-                           << "offsetFullJpg =" << offsetFullJpg
-                           << "Attempting to load " << imageFullPath;
-                           */
-            }
-            while (msDelay < totDelay && !success);
-        }
-
-        // rotate if portrait image
-        QTransform trans;
-        int orientation = metadata->getImageOrientation(fPath);
-        if (orientation) {
-            switch(orientation) {
-                case 6:
-                    trans.rotate(90);
-                    image = image.transformed(trans, Qt::SmoothTransformation) ;
-                    break;
-                case 8:
-                    trans.rotate(270);
-                    image = image.transformed(trans, Qt::SmoothTransformation);
-                    break;
-            }
-        }
-
-        pm = QPixmap::fromImage(image);
-
-        // record any errors
-        if (!success) {
-            metadata->setErr(fPath, err);
-            if (G::isThreadTrackingOn) track(fPath, err);
-            if (G::isThreadTrackingOn) track(fPath, "FAILED TO LOAD IMAGE");
-        }
-        else if (G::isThreadTrackingOn) track(fPath, "Success");
-
-        return success;
 }

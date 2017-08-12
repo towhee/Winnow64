@@ -11,6 +11,7 @@
 #include <QThread>
 #include <QWaitCondition>
 #include <QGradient>
+#include "pixmap.h"
 
 class ImageCache : public QThread
 {
@@ -47,6 +48,7 @@ private:
     bool abort;
 
     Metadata *metadata;
+    Pixmap *pixmap;
 
     // image cache
     struct CacheItem {
@@ -85,7 +87,6 @@ private:
     QList<uint>toCache;
     QList<uint>toDecache;
 
-    bool loadPixmap(QString &imageFullPath, QPixmap &pm);
     ulong getImCacheSize();         // add up total MB cached
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
