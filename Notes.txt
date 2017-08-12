@@ -1,11 +1,12 @@
 To do:
+- Not remembering to show menu
 - Get rid of white border around docks
 - Right click should not zoom in imageView or compareView
 - /Users/roryhill/Qt/5.9/Src/qtimageformats/src/3rdparty/jasper/src/libjasper/jpg_dec.c
 - /Users/roryhill/Projects/jpeg-9b/example.c
 - Reimplement mouse drag scrolling in ImageView and CompareView
 - Zoom rect in thumbnail to show zoom and pan in imageView
-- Get title, comment and copywrite metadata
+- Get comment and copywrite metadata
 - Show how many images in each folder in treeView
 - Show how much mem req'd for selected images
 - Sort thumbs and add to workspaces
@@ -14,7 +15,6 @@ To do:
 - UI for changing compare click zoom amount
 - Eject card
 - Open with another app
-- Rename selected images
 - Tweak context menus
 - Run droplet
 - Rotate selected images
@@ -28,6 +28,8 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Separate class to load pixmap from image file
+- Done: Get title from meatdata
 - Done: Fixed warning QObject::connect: Cannot queue arguments of type 'QVector<int>'
 - Done: Fix compare clear before next compare
 - Done: ImageView thumbclick broken

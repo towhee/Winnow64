@@ -41,6 +41,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
     isInitializing = true;
+    isSlideShowActive = false;
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
     popUp = new PopUp;

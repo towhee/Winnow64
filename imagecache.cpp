@@ -534,6 +534,8 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     cache.pxTotWidth = cacheStatusWidth;
     // the status bar width of a single image
     cache.pxUnitWidth = (float)cache.pxTotWidth/(imageList.size());
+    cache.targetFirst = 0;
+    cache.targetLast = 0;
     cache.totFiles = imageList.size();
     cache.dir = imageList.at(0).absolutePath();
     cache.previewSize = QSize(previewWidth, previewHeight);
@@ -639,7 +641,6 @@ void ImageCache::run()
     emit updateIsRunning(true);
     static QString prevFileName ="";
     while (nextToCache()) {
-//        qDebug() << "ImageCache::run top of nextToCache while loop.  abort =" << abort;
         if (abort) {
             emit updateIsRunning(false);
             return;
@@ -652,7 +653,6 @@ void ImageCache::run()
         QPixmap pm;
 //        QPixmap *pm = new QPixmap;
         if (pixmap->load(fPath, pm)) {
-//            if (loadPixmap(fPath, pm)) {
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
             uint roomRqd = cacheMgr.at(cache.toCacheKey).sizeMB;
@@ -692,7 +692,6 @@ void ImageCache::run()
     }
     checkForOrphans();
     cacheStatus();
-//    qDebug() << "ImageCache completed";
     emit updateIsRunning(false);
 //    reportCacheManager("Image cache updated for " + cache.dir);
 }
