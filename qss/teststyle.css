@@ -76,6 +76,14 @@ QGroupBox {
     margin-top: 6px; /* leave space at the top for the title */
 }
 
+QLabel {
+    border: none;
+}
+
+QStatusbar::item {
+    border: none;
+}
+
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top center; /* position at the top center */

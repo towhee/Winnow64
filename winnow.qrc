@@ -59,36 +59,6 @@
         <file>images/Winnow coordinate spaces.png</file>
         <file>qss/teststyle.css</file>
         <file>images/combobox-updown-arrow</file>
-        <file>../stylesheet/images/checkbox_checked_hover.png</file>
-        <file>../stylesheet/images/checkbox_checked_pressed.png</file>
-        <file>../stylesheet/images/checkbox_checked.png</file>
-        <file>../stylesheet/images/checkbox_unchecked_hover.png</file>
-        <file>../stylesheet/images/checkbox_unchecked_pressed.png</file>
-        <file>../stylesheet/images/checkbox_unchecked.png</file>
-        <file>../stylesheet/images/down_arrow_disabled.png</file>
-        <file>../stylesheet/images/down_arrow.png</file>
-        <file>../stylesheet/images/frame.png</file>
-        <file>../stylesheet/images/pagefold.png</file>
-        <file>../stylesheet/images/pushbutton_hover.png</file>
-        <file>../stylesheet/images/pushbutton_pressed.png</file>
-        <file>../stylesheet/images/pushbutton.png</file>
-        <file>../stylesheet/images/radiobutton_checked_hover.png</file>
-        <file>../stylesheet/images/radiobutton_checked_pressed.png</file>
-        <file>../stylesheet/images/radiobutton_checked.png</file>
-        <file>../stylesheet/images/radiobutton_unchecked_hover.png</file>
-        <file>../stylesheet/images/radiobutton_unchecked_pressed.png</file>
-        <file>../stylesheet/images/radiobutton_unchecked.png</file>
-        <file>../stylesheet/images/sizegrip.png</file>
-        <file>../stylesheet/images/spindown_hover.png</file>
-        <file>../stylesheet/images/spindown_off.png</file>
-        <file>../stylesheet/images/spindown_pressed.png</file>
-        <file>../stylesheet/images/spindown.png</file>
-        <file>../stylesheet/images/spinup_hover.png</file>
-        <file>../stylesheet/images/spinup_off.png</file>
-        <file>../stylesheet/images/spinup_pressed.png</file>
-        <file>../stylesheet/images/spinup.png</file>
-        <file>../stylesheet/images/up_arrow_disabled.png</file>
-        <file>../stylesheet/images/up_arrow.png</file>
         <file>images/spindown_hover.png</file>
         <file>images/spindown_off.png</file>
         <file>images/spindown_pressed.png</file>

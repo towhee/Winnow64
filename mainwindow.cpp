@@ -1393,6 +1393,8 @@ void MW::createStatusBar()
     qDebug() << "MW::createStatusBar";
     #endif
     }
+    statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
+
     cacheLabel = new QLabel();
     QString cacheStatus = "Image cache status for current folder:\n";
     cacheStatus += "  • LightGray:\tbackground for all images in folder\n";
@@ -4007,20 +4009,20 @@ void MW::revealFile()
 
     // Mac, Windows support folder or file.
 #if defined(Q_OS_WIN)
-    const QString explorer = Environment::systemEnvironment().searchInPath(QLatin1String("explorer.exe"));
-    if (explorer.isEmpty()) {
-        QMessageBox::warning(this,
-                             tr("Launching Windows Explorer failed"),
-                             tr("Could not find explorer.exe in path to launch Windows Explorer."));
-        return;
-    }
-    QString param;
-    if (!QFileInfo(pathIn).isDir())
-        param = QLatin1String("/select,");
-    param += QDir::toNativeSeparators(pathIn);
-    QString command = explorer + " " + param;
-    QString command = explorer + " " + param;
-    QProcess::startDetached(command);
+//    const QString explorer = Environment::systemEnvironment().searchInPath(QLatin1String("explorer.exe"));
+//    if (explorer.isEmpty()) {
+//        QMessageBox::warning(this,
+//                             tr("Launching Windows Explorer failed"),
+//                             tr("Could not find explorer.exe in path to launch Windows Explorer."));
+//        return;
+//    }
+//    QString param;
+//    if (!QFileInfo(pathIn).isDir())
+//        param = QLatin1String("/select,");
+//    param += QDir::toNativeSeparators(pathIn);
+//    QString command = explorer + " " + param;
+//    QString command = explorer + " " + param;
+//    QProcess::startDetached(command);
 
 #elif defined(Q_OS_MAC)
     Q_UNUSED(this)

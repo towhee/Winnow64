@@ -66,11 +66,11 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-icon.files = images/winnow.png
-icon16.files = images/icon16/winnow.png
-iconPixmaps.files = images/icon16/winnow.png
+#icon.files = images/winnow.png
+#icon16.files = images/icon16/winnow.png
+#iconPixmaps.files = images/icon16/winnow.png
 
-INSTALLS += target icon icon16 iconPixmaps desktop
+#INSTALLS += target icon icon16 iconPixmaps desktop
 
 DISTFILES += Notes.txt Errors \
     Menu.txt \
