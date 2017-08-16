@@ -68,7 +68,7 @@ public:
         int thumbHeightGrid;
         int labelFontSizeGrid;
         bool showThumbLabelsGrid;
-        bool isThumbWrap;
+        bool isThumbWrapWhenTopOrBottomDock;
         bool isAutoFit;
         bool isVerticalTitle;
         bool isImageInfoVisible;
@@ -198,7 +198,7 @@ private slots:
     void nextSlide();
     void setCacheParameters(int size, bool show, int width, int wtAhead,
                             bool isCachePreview, int cachePreviewWidth, int cachePreviewHeight);
-    void setThumbDockParameters(bool isThumbWrap, bool isAutoFit, bool isVerticalTitle);
+    void setThumbDockParameters(bool isThumbWrapWhenTopOrBottomDock, bool isAutoFit, bool isVerticalTitle);
     void selectAllThumbs();
     void removeBookmark();
     void rotateLeft();
@@ -443,7 +443,6 @@ private:
     QMovie *busyMovie;              // req'd?
     QLabel *busyLabel;              // req'd?
 
-    void setupMainWindow(bool resetSettings);
     void loadShortcuts(bool defaultShortcuts);
     void setupDocks();
     void updateState();
@@ -461,7 +460,7 @@ private:
     void createFSTree();
     void createBookmarks();
     void writeSettings();
-    void loadSettings();
+    bool loadSettings();
 
     bool isValidPath(QString &path);
     QString getSelectedPath();

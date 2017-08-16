@@ -25,7 +25,7 @@ signals:
             int thumbPadding, int labelFontSize, bool showThumbLabels);
     void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
                                int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid);
-    void updateThumbDockParameters(bool isThumbWrap, bool isAutoFit, bool isVerticalTitle);
+    void updateThumbDockParameters(bool isThumbWrapWhenTopOrBottomDock, bool isAutoFit, bool isVerticalTitle);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
             int cacheStatusWidth, int cacheWtAhead, bool usePreview,

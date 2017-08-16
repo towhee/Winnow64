@@ -175,7 +175,8 @@ void ThumbView::setThumbParameters()
         thumbViewDelegate->setThumbDimensions(thumbWidthGrid, thumbHeightGrid,
             thumbPaddingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     } else {
-        setWrapping(isThumbWrap);
+        setWrapping(isThumbWrapWhenTopOrBottomDock && isTopOrBottomDock);
+        if (!isTopOrBottomDock) setWrapping(true);
         setSpacing(thumbSpacing);
         thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
             thumbPadding, labelFontSize, showThumbLabels);
@@ -757,7 +758,7 @@ void ThumbView::thumbsEnlarge()
         }
     }
     setThumbParameters();
-    if (isAutoFit) thumbsFit();
+//    if (isAutoFit) thumbsFit();
 }
 
 void ThumbView::thumbsShrink()
@@ -767,6 +768,7 @@ void ThumbView::thumbsShrink()
     qDebug() << "ThumbView::thumbsShrink";
     #endif
     }
+    qDebug() << "ThumbView::thumbsShrink";
     if (isGrid) {
         if (thumbWidthGrid > 40  && thumbHeightGrid > 40) {
             thumbWidthGrid *= 0.9;
@@ -783,7 +785,7 @@ void ThumbView::thumbsShrink()
         }
     }
     setThumbParameters();
-    if (isAutoFit) thumbsFit();
+//    if (isAutoFit) thumbsFit();
 }
 
 void ThumbView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
@@ -791,11 +793,6 @@ void ThumbView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
 /* thumbViewDelegate triggers this to provide rect data to calc thumb mouse
 click position that is then sent to imageView to zoom to the same spot
 */
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::updateThumbRectRole";
-    #endif
-    }
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::updateThumbRectRole";
@@ -811,11 +808,12 @@ void ThumbView::resizeEvent(QResizeEvent *event)
     qDebug() << "ThumbView::resizeEvent";
     #endif
     }
+//    qDebug() << "ThumbView::resizeEvent";
     QListView::resizeEvent(event);
-    if (isAutoFit) thumbsFit();
+    if (isAutoFit) thumbsFit(Qt::NoDockWidgetArea);
 }
 
-void ThumbView::thumbsFit()
+void ThumbView::thumbsFit(Qt::DockWidgetArea area)
 {
     {
     #ifdef ISDEBUG
@@ -823,6 +821,7 @@ void ThumbView::thumbsFit()
     #endif
     }
     if (isGrid) {
+        qDebug() << "ThumbView::thumbsFit isGrid";
         // adjust thumb width
         if (thumbWidthGrid < 40 || thumbHeightGrid < 0) {
             thumbWidthGrid = 100;
@@ -854,7 +853,9 @@ void ThumbView::thumbsFit()
                                thumbPaddingGrid, labelFontSizeGrid, showThumbLabelsGrid);
         return;
     }
-    if (isThumbWrap) {
+    // all wrapping is row wrapping
+    if (isWrapping()) {
+        qDebug() << "ThumbView::thumbsFit isWrapping = true";
         // adjust thumb width
         int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
         int width = viewport()->width() - scrollWidth - 2;
@@ -877,14 +878,17 @@ void ThumbView::thumbsFit()
         } while (improving);
         setThumbParameters();
     }
-    else {
+    // no wrapping - must be bottom or top dock area
+    else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea){
+        qDebug() << "ThumbView::thumbsFit else";
+//        int thumbArea = dockWidgetArea(thumbDock);
         // adjust thumb height
         float aspect = thumbWidth / thumbHeight;
         int scrollHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
-        int viewportHeight = viewport()->height() - scrollHeight;
+        int viewportHeight = viewport()->height(); // - scrollHeight;
         int thumbSpaceHeight = thumbViewDelegate->getThumbCell().height();
         int margin = thumbSpaceHeight - thumbHeight;
-        thumbSpaceHeight = viewportHeight;
+        thumbSpaceHeight = viewportHeight < 160 ? viewportHeight : 160;
         thumbHeight = thumbSpaceHeight - margin;
         thumbWidth = thumbHeight * aspect;
         setThumbParameters();

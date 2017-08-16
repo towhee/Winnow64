@@ -23,6 +23,7 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     fontHt = fm.height();
     if (thumbWidth < 40) thumbWidth = 100;
     if (thumbHeight < 40) thumbHeight = 100;
+
     thumbSize.setWidth(thumbWidth);
     thumbSize.setHeight(thumbHeight);
     thumbSpace.setWidth(thumbWidth + thumbBorderThickness*2 + iconPadding*2 + thumbBorderGap*2 + itemBorderThickness*2);
@@ -30,6 +31,7 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     if (showThumbLabels)
         thumbSpace.setHeight(thumbSize.height() + iconPadding*2
             + itemBorderThickness*2 + thumbBorderGap*2 + thumbBorderThickness*2 + fontHt + iconPadding);
+    reportThumbAttributes();
 }
 
 void ThumbViewDelegate::reportThumbAttributes()

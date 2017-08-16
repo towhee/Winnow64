@@ -37,11 +37,6 @@ bool Pixmap::load(QString &fPath, QPixmap &pm)
     #endif
     }
 
-    // IMPORTANT: this function also exists in the imageCache class and is
-    // used there to cache images.
-
-    // ImageView::loadPixmap and ImageCache::loadPixmap should be the same
-
     bool success = false;
     int totDelay = 500;     // milliseconds
     int msDelay = 0;        // total incremented delay

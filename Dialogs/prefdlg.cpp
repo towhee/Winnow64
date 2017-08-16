@@ -35,7 +35,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->showThumbLabelChk_2->setChecked(mw->thumbView->showThumbLabelsGrid);
     ui->lockDimChk_2->setChecked(true);
     // thumb dock
-    ui->wrapThumbsChk->setChecked(mw->thumbView->isThumbWrap);
+    ui->wrapThumbsChk->setChecked(mw->thumbView->isThumbWrapWhenTopOrBottomDock);
     ui->autoFitChk->setChecked(mw->thumbView->isAutoFit);
     ui->autoFit2Chk->setChecked(mw->thumbView->isAutoFit);
     ui->vertTitleChk->setChecked(mw->isThumbDockVerticalTitle);

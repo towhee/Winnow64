@@ -47,11 +47,16 @@
      <height>361</height>
     </rect>
    </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+    </font>
+   </property>
    <property name="frameShape">
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>4</number>
+    <number>3</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QSpinBox" name="maxRecentSB">
@@ -126,7 +131,7 @@
        <x>220</x>
        <y>70</y>
        <width>131</width>
-       <height>151</height>
+       <height>141</height>
       </rect>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
@@ -134,7 +139,7 @@
        <widget class="QRadioButton" name="cache50AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="text">
@@ -146,7 +151,7 @@
        <widget class="QRadioButton" name="cache60AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="text">
@@ -158,7 +163,7 @@
        <widget class="QRadioButton" name="cache70AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="text">
@@ -170,7 +175,7 @@
        <widget class="QRadioButton" name="cache80AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="text">
@@ -182,7 +187,7 @@
        <widget class="QRadioButton" name="cache90AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="text">
@@ -194,7 +199,7 @@
        <widget class="QRadioButton" name="cache100AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="text">
@@ -215,7 +220,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -230,6 +235,11 @@
        <width>71</width>
        <height>24</height>
       </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
      </property>
      <property name="minimum">
       <number>100</number>
@@ -255,7 +265,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -273,7 +283,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -289,6 +299,11 @@
        <height>17</height>
       </rect>
      </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
      <property name="text">
       <string>Show cache status</string>
      </property>
@@ -302,6 +317,11 @@
        <height>20</height>
       </rect>
      </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
      <property name="text">
       <string>Cache previews scaled to monitor resolution</string>
      </property>
@@ -314,6 +334,11 @@
        <width>60</width>
        <height>24</height>
       </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
      </property>
      <property name="minimum">
       <number>1000</number>
@@ -337,6 +362,11 @@
        <height>24</height>
       </rect>
      </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
      <property name="minimum">
       <number>1000</number>
      </property>
@@ -359,6 +389,11 @@
        <height>16</height>
       </rect>
      </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
      <property name="text">
       <string>Width</string>
      </property>
@@ -371,6 +406,11 @@
        <width>41</width>
        <height>16</height>
       </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
      </property>
      <property name="text">
       <string>Height</string>
@@ -402,7 +442,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -430,7 +470,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -466,7 +506,7 @@
     <widget class="QCheckBox" name="wrapThumbsChk">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>280</x>
        <y>250</y>
        <width>101</width>
        <height>20</height>
@@ -474,7 +514,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -524,19 +564,19 @@
     <widget class="QCheckBox" name="vertTitleChk">
      <property name="geometry">
       <rect>
-       <x>40</x>
-       <y>280</y>
-       <width>291</width>
+       <x>280</x>
+       <y>270</y>
+       <width>121</width>
        <height>20</height>
       </rect>
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
-      <string>Vertical titlebar when docked on top or bottom</string>
+      <string>Vertical titlebar</string>
      </property>
     </widget>
     <widget class="QLabel" name="iconPaddingLbl">
@@ -598,7 +638,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -616,7 +656,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -674,7 +714,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -809,7 +849,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -867,7 +907,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -898,7 +938,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -940,7 +980,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -956,8 +996,29 @@
        <height>20</height>
       </rect>
      </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
      <property name="text">
       <string>Auto fit thumbs</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_21">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>250</y>
+       <width>221</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>When thumb dock is at top or bottom:</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
      </property>
     </widget>
    </widget>
@@ -1085,7 +1146,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1103,7 +1164,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1161,7 +1222,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1296,7 +1357,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1354,7 +1415,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1385,7 +1446,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1427,7 +1488,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1443,6 +1504,11 @@
        <height>20</height>
       </rect>
      </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
      <property name="text">
       <string>Auto fit thumbs</string>
      </property>
@@ -1457,6 +1523,11 @@
        <width>341</width>
        <height>61</height>
       </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
      </property>
      <property name="text">
       <string>When full screen is chosen, select which docks should be also visible.  Hiding all the docks will result in only the loupe view or grid of all the thumbnails being visible.</string>
@@ -1480,6 +1551,11 @@
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <widget class="QCheckBox" name="foldersChk">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
         <property name="text">
          <string>Folders</string>
         </property>
@@ -1487,6 +1563,11 @@
       </item>
       <item>
        <widget class="QCheckBox" name="favsChk">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
         <property name="text">
          <string>Favourites</string>
         </property>
@@ -1494,6 +1575,11 @@
       </item>
       <item>
        <widget class="QCheckBox" name="metadataChk">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
         <property name="text">
          <string>Metadata</string>
         </property>
@@ -1501,6 +1587,11 @@
       </item>
       <item>
        <widget class="QCheckBox" name="thumbsChk">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
         <property name="text">
          <string>Thumbnails</string>
         </property>
@@ -1508,6 +1599,11 @@
       </item>
       <item>
        <widget class="QCheckBox" name="statusBarChk">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
         <property name="text">
          <string>Status Bar</string>
         </property>

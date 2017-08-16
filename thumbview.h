@@ -36,7 +36,8 @@ public:
     int labelFontSizeGrid;
     bool showThumbLabelsGrid;
 
-    bool isThumbWrap;
+    bool isThumbWrapWhenTopOrBottomDock;
+    bool isTopOrBottomDock;
     bool isGrid;        // set by MW so know which thumb parameters to use
     bool isAutoFit;
 
@@ -68,7 +69,7 @@ public:
 public slots:
     void thumbsEnlarge();
     void thumbsShrink();
-    void thumbsFit();
+    void thumbsFit(Qt::DockWidgetArea area);
     void toggleFilterPick(bool isFilter);
     void invertSelection();                         //in use
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);

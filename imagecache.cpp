@@ -684,7 +684,6 @@ void ImageCache::run()
             mutex.unlock();
             if (!toCache.isEmpty()) toCache.removeFirst();
             cache.currMB = getImCacheSize();
-//            qDebug() << "ImageCache::run" << fPath;
             cacheStatus();
 //            delete pm;
         }

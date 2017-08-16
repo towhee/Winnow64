@@ -96,6 +96,7 @@ QDockWidget > QWidget {
     margin: 0px;
     padding: 0px;
     spacing: 0px;
+    border: none;
 }
 
 QDockWidget::title {
@@ -104,6 +105,7 @@ QDockWidget::title {
                     stop: 0 rgb(88,88,88), stop: 1 rgb(66,66,66));
     padding-left: 2px;
     padding-top: 2px;
+/*    border: 1px solid rgb(99,99,99);    nada */
 }
 
 QTabWidget::pane { /* The tab widget frame */
@@ -114,8 +116,13 @@ QTabWidget::pane { /* The tab widget frame */
     border-radius: 5px;
 }
 
+/*QTabWidget::pane:selected {           nada
+    border: red;
+}*/
+
 QTabWidget::tab-bar {
     alignment: left;
+    border: 1px solid red;                        /* nada */
 }
 
 QTabBar::tab {
@@ -125,9 +132,15 @@ QTabBar::tab {
     padding: 4px 4px;
 }
 
+/*QTabBar:selected {                    nada
+    border: red;
+}*/
+
 QTabBar::tab:selected {
     color:white;
-    /*background-color: rgb(111,111,111);*/
+    /* border: 1px solid red;   this woks for tabl only as expected */
+    background-color: rgb(111,111,111);
+    background-color: rgb(80,80,80);
 }
 
 QListView {
