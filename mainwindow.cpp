@@ -57,7 +57,7 @@ variables in MW (this class) and managed in the prefDlg class.
 • Load QSettings
 • Set default values if no settings available (first time run)
 • Set preference settings including
-    • General (previus folder etc)
+    • General (previous folder etc)
     • Slideshow
     • Cache
     • Full screen docks visible
@@ -75,7 +75,7 @@ variables in MW (this class) and managed in the prefDlg class.
 //    this->setMouseTracking(true);
 
     // structure to hold persistant settings between sessions
-    setting = new QSettings("Winnow", "winnow_101");
+    setting = new QSettings("Winnow", "winnow_100");
 
     // centralWidget required by ImageView/CompareView constructors
     centralWidget = new QWidget(this);

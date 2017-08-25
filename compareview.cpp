@@ -586,8 +586,36 @@ void CompareView::mousePressEvent(QMouseEvent *event)
     }
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
-
+    if (event->button() == Qt::LeftButton) {
+        isLeftMouseBtnPressed = true;
+        mousePressPt.setX(event->x());
+        mousePressPt.setY(event->y());
+    }
     QGraphicsView::mousePressEvent(event);
+}
+
+void CompareView::mouseMoveEvent(QMouseEvent *event)
+{
+/* Pan the image during a mouse drag operation
+*/
+    {
+    #ifdef ISDEBUG
+//    qDebug() << "ImageView::mouseMoveEvent";
+    #endif
+    }
+    if (isLeftMouseBtnPressed) {
+        isMouseDrag = true;
+        setCursor(Qt::ClosedHandCursor);
+        horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
+                                       (event->x() - mousePressPt.x()));
+        verticalScrollBar()->setValue(verticalScrollBar()->value() -
+                                      (event->y() - mousePressPt.y()));
+        mousePressPt.setX(event->x());
+        mousePressPt.setY(event->y());
+    }
+    event->ignore();
+
+//    QGraphicsView::mouseMoveEvent(event);
 }
 
 void CompareView::mouseReleaseEvent(QMouseEvent *event)
@@ -601,6 +629,13 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
 //             << event->localPos();
 
 //    qDebug() << "\n00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n";
+    isLeftMouseBtnPressed = false;
+    if (isMouseDrag) {
+        isMouseDrag = false;
+        if (isZoom) setCursor((Qt::OpenHandCursor));
+        else setCursor(Qt::ArrowCursor);
+        return;
+    }
 
     mousePt = event->localPos().toPoint();
     isZoom ? zoom = zoomFit : zoom = clickZoom;

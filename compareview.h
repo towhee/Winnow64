@@ -52,6 +52,7 @@ protected:
     void resizeEvent(QResizeEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
     void wheelEvent(QWheelEvent *wheelEvent);
     void enterEvent(QEvent *event);
     void leaveEvent(QEvent *event);
@@ -89,12 +90,14 @@ private:
     QPoint mousePt;
     QPointF offset;
     QPointF scrollPosPct;       // current position
+    QPoint mousePressPt;        // for mouse scrolling
 //    QPointF getOffset(QPointF scrollPct);
 
     // Status
     bool isZoom;                // zoom is greater than req'd to fit image
     bool isMouseDrag;
     bool isMouseDoubleClick;
+    bool isLeftMouseBtnPressed;
     bool isMouseClickZoom;      // zoom initiated by mouse click
     bool propagate = true;      // sync pan (scrollEvent)
 

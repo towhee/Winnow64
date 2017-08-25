@@ -66,6 +66,8 @@ private slots:
 
 protected:
     void resizeEvent(QResizeEvent *event);
+    void scrollContentsBy(int dx, int dy);
+    void dragMoveEvent(QDragMoveEvent *event);
 //    void showEvent(QShowEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
@@ -133,7 +135,8 @@ private:
         qreal vPct;
     } scrl;
 
-    QPointF scrollPct;       // current position
+    QPointF scrollPct;          // current position
+    QPoint mousePressPt;        // for mouse scrolling
 
 //    QPointF compareMouseRelLoc;
     QSize preview;
@@ -143,14 +146,17 @@ private:
     QString shootingInfo;
     bool firstImageLoaded;
 
-    bool cursorIsHidden;                // use for slideshow and full screen - review rgh
-    bool moveImageLocked;               // control when con drag image around
+    bool cursorIsHidden;        // use for slideshow and full screen - review rgh
+    bool moveImageLocked;       // control when con drag image around
     bool isZoom;
     bool isFit;
     bool wasZoomFit;
     bool isMouseDrag;
+    bool isLeftMouseBtnPressed;
     bool isMouseDoubleClick;
     bool isPreview;
+
+    int scrollCount;
 
     qreal zoomFit;
 //    qreal previewScaleMax;
@@ -176,8 +182,6 @@ private:
     bool resizeIsSmaller();
 
     void movePickIcon();
-    void setMouseMoveData(bool lockMove, int lMouseX, int lMouseY);
-//    bool previewFitsZoom();
 
     void transform();
 };
