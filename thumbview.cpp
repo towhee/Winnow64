@@ -758,7 +758,7 @@ void ThumbView::thumbsEnlarge()
         }
     }
     setThumbParameters();
-//    if (isAutoFit) thumbsFit();
+//    if (isAutoFit) thumbsFit(0);
 }
 
 void ThumbView::thumbsShrink()

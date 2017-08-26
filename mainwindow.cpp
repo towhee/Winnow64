@@ -3194,7 +3194,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         ingestAction->setShortcut(QKeySequence("Q"));
         reportMetadataAction->setShortcut(QKeySequence("Ctrl+R"));
         slideShowAction->setShortcut(QKeySequence("S"));
-        thumbsFitAction->setShortcut(QKeySequence("Ctrl+}"));
+        thumbsFitAction->setShortcut(QKeySequence("Alt+}"));
         thumbsEnlargeAction->setShortcut(QKeySequence("}"));
         thumbsShrinkAction->setShortcut(QKeySequence("{"));
         nextThumbAction->setShortcut(QKeySequence("Right"));
@@ -3381,7 +3381,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 //        thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
     if (asGridAction->isChecked()) thumbView->setWrapping(true);
-//    if (thumbView->isAutoFit) thumbView->thumbsFit(area);
+    if (thumbView->isAutoFit) thumbView->thumbsFit(area);
 }
 
 void MW::loupeDisplay()

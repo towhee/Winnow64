@@ -21,8 +21,8 @@ CopyPickDlg::CopyPickDlg(QWidget *parent, QFileInfoList &imageList,
     QString dateTime = metadata->getDateTime(pickList.at(0).absoluteFilePath());
     QString year = dateTime.left(4);
     QString month = dateTime.mid(5,2);
-//    folderPath = "E:/" + year + "/" + year + month + "/" + fileNameDatePrefix;
-    folderPath = "/users/roryhill/pictures/" + fileNameDatePrefix;
+    folderPath = "E:/" + year + "/" + year + month + "/" + fileNameDatePrefix;
+//    folderPath = "/users/roryhill/pictures/" + fileNameDatePrefix;
     updateFolderPath();
     ui->descriptionLineEdit->setFocus();
     getSequenceStart("");

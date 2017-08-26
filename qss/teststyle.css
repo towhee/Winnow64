@@ -139,7 +139,6 @@ QTabBar::tab {
 QTabBar::tab:selected {
     color:white;
     /* border: 1px solid red;   this woks for tabl only as expected */
-    background-color: rgb(111,111,111);
     background-color: rgb(80,80,80);
 }
 
