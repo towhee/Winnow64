@@ -56,7 +56,6 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
 
     cursorIsHidden = false;
     moveImageLocked = false;
-//    setMouseTracking(true);
 
     infoDropShadow = new DropShadowLabel(this);
     infoDropShadow->setVisible(isShootingInfoVisible);

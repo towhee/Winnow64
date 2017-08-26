@@ -72,7 +72,6 @@ variables in MW (this class) and managed in the prefDlg class.
 • Execute updateState function to implement all persistant state settings
 
 */
-//    this->setMouseTracking(true);
 
     // structure to hold persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
@@ -124,19 +123,12 @@ variables in MW (this class) and managed in the prefDlg class.
     centralLayout->addWidget(thumbView);
     centralLayout->setCurrentIndex(0);
     centralWidget->setLayout(centralLayout);
-//    centralWidget->setMouseTracking(true);
     setCentralWidget(centralWidget);
 
     // add error trapping for file io  rgh todo
     QFile fStyle(":/qss/teststyle.css");
     fStyle.open(QIODevice::ReadOnly);
     this->setStyleSheet(fStyle.readAll());
-
-//    // do not open in compare view
-//    if (asCompareAction->isChecked()) {
-//        asCompareAction->setChecked(false);
-//        asLoupeAction->setChecked(true);
-//    }
 
     if (isSettings) updateState();
     else defaultWorkspace();
@@ -288,11 +280,14 @@ void MW::folderSelectionChange()
     QDir testDir;
     if (isInitializing) {
         isInitializing = false;
-        //        if (!rememberLastDir) return;
         if (rememberLastDir) {
             dirPath = lastDir;
+            // is drive still available and valid?
+            QStorageInfo testStorage;
+            testStorage.setPath(dirPath);
+            if (!testStorage.isValid()) return;
             testDir.setPath(dirPath);
-            // unmounted drive or renamed folder
+            // deleted or renamed or corrupted folder
             if (!testDir.exists() || !testDir.isReadable()) return;
             fsTree->setCurrentIndex(fsTree->fsModel->index(dirPath));
         }
@@ -344,15 +339,13 @@ void MW::folderSelectionChange()
         return;
     }
 
-    // Must load metadata first, as it contains the file offsets and lengths
-    // for the thumbnail and full size embedded jpgs and the image width
-    // and height, req'd in imageCache to manage cache max size.  Triggers
-    // loadThumbCache and loadImageCache when finished metadata cache.
-    // The thumb cache includes icons (thumbnails) for all the images in
-    // the folder.
-    // The image cache holds as many full size images in memory as possible.
-    loadMetadataCache();
-    thumbView->selectFirst();
+     /* Must load metadata first, as it contains the file offsets and lengths
+     for the thumbnail and full size embedded jpgs and the image width and
+     height, req'd in imageCache to manage cache max size. Triggers
+     loadThumbCache and loadImageCache when finished metadata cache. The thumb
+     cache includes icons (thumbnails) for all the images in the folder. The
+     image cache holds as many full size images in memory as possible. */
+     loadMetadataCache(); thumbView->selectFirst();
 }
 
 // triggered when file selection changes (folder change selects new image)
