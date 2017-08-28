@@ -35,8 +35,6 @@ public:
     QSettings *setting;
     QMap<QString, QAction *> actionKeys;
     QMap<QString, QString> externalApps;
-    QSet<QString> bookmarkPaths;            // temp holder on opening for settings until passed
-                                            // to bookmarks class when instantiated
 
     struct workspaceData {
         QString accelNum;       // for accelerator

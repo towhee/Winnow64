@@ -2,14 +2,13 @@
 
 #include "bookmarks.h"
 
-BookMarks::BookMarks(QWidget *parent, QSet<QString> bmPaths) : QTreeWidget(parent)
+BookMarks::BookMarks(QWidget *parent) : QTreeWidget(parent)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "BookMarks::BookMarks";
     #endif
     }
-    bookmarkPaths = bmPaths;
 	setAcceptDrops(true);
 	setDragEnabled(false);
 	setDragDropMode(QAbstractItemView::DropOnly);
@@ -19,11 +18,11 @@ BookMarks::BookMarks(QWidget *parent, QSet<QString> bmPaths) : QTreeWidget(paren
     connect(this, SIGNAL(collapsed(const QModelIndex &)), this,
             SLOT(resizeTreeColumn(const QModelIndex &)));
 
+    setRootIsDecorated(false);
 	setColumnCount(1);
 	setHeaderHidden(true);
     setSortingEnabled(true);
     sortByColumn(0, Qt::AscendingOrder);
-	reloadBookmarks();
 }
 
 void BookMarks::reloadBookmarks()

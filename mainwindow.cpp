@@ -88,7 +88,7 @@ variables in MW (this class) and managed in the prefDlg class.
     createCompareView();            // Req centralWidget
     createStatusBar();
     createFSTree();
-    createBookmarks();
+    createBookmarks();              // dependent on loadSettings
 
     createActions();                // dependent on above
     createMenus();                  // dependent on creatActions
@@ -1598,7 +1598,7 @@ void MW::createBookmarks()
     }
     favDock = new QDockWidget(tr("  Fav  "), this);
     favDock->setObjectName("Bookmarks");
-    bookmarks = new BookMarks(favDock, bookmarkPaths);
+    bookmarks = new BookMarks(favDock);
     favDock->setWidget(bookmarks);
 
     bookmarks->setMaximumWidth(folderMaxWidth);
@@ -2790,7 +2790,7 @@ void MW::writeSettings()
 
     /* save bookmarks */
     int idx = 0;
-    setting->beginGroup("CopyMoveToPaths");
+    setting->beginGroup("Bookmarks");
     setting->remove("");
     QSetIterator<QString> pathsIter(bookmarks->bookmarkPaths);
     while (pathsIter.hasNext()) {
@@ -3021,11 +3021,12 @@ zoomOutFlags
     setting->endGroup();
 
     /* read bookmarks */
-    setting->beginGroup("CopyMoveToPaths");
+    setting->beginGroup("Bookmarks");
     QStringList paths = setting->childKeys();
     for (int i = 0; i < paths.size(); ++i) {
-        bookmarkPaths.insert(setting->value(paths.at(i)).toString());
+        bookmarks->bookmarkPaths.insert(setting->value(paths.at(i)).toString());
     }
+    bookmarks->reloadBookmarks();
     setting->endGroup();
 
     /* read recent folders */

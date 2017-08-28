@@ -563,16 +563,8 @@ void CompareView::wheelEvent(QWheelEvent *wheelEvent)
     #endif
     }
     propagate = true;
-
     if (imageIndex == thumbView->currentIndex()) {
-        if(wheelEvent->modifiers() & Qt::ShiftModifier) {
-//            qDebug() << "wheelEvent shiftModifier";
-            propagate = false;
-        }
-        else {
-//            qDebug() << "CompareView::wheelEvent emitting" << currentImagePath;
-//            emit panFromPct(getScrollPct(), imageIndex);
-        }
+        if(wheelEvent->modifiers() & Qt::ShiftModifier) propagate = false;
     }
     QGraphicsView::wheelEvent(wheelEvent);
 }
@@ -586,7 +578,9 @@ void CompareView::mousePressEvent(QMouseEvent *event)
     }
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
+    propagate = true;
     if (event->button() == Qt::LeftButton) {
+        if (event->modifiers() & Qt::ShiftModifier) propagate = false;
         isLeftMouseBtnPressed = true;
         mousePressPt.setX(event->x());
         mousePressPt.setY(event->y());
@@ -614,8 +608,6 @@ void CompareView::mouseMoveEvent(QMouseEvent *event)
         mousePressPt.setY(event->y());
     }
     event->ignore();
-
-//    QGraphicsView::mouseMoveEvent(event);
 }
 
 void CompareView::mouseReleaseEvent(QMouseEvent *event)
@@ -625,10 +617,6 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     qDebug() << "CompareView::mouseReleaseEvent" << currentImagePath;
     #endif
     }
-//    qDebug() << "CompareView::mouseReleaseEvent  mouse x, y"
-//             << event->localPos();
-
-//    qDebug() << "\n00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n";
     isLeftMouseBtnPressed = false;
     if (isMouseDrag) {
         isMouseDrag = false;

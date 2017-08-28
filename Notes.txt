@@ -1,11 +1,9 @@
 To do:
 - ShootingInfo not showing for first image
 - Add preferences for info label
-- Get rid of white border around docks
 - Right click should not zoom in imageView or compareView
 - /Users/roryhill/Qt/5.9/Src/qtimageformats/src/3rdparty/jasper/src/libjasper/jpg_dec.c
 - /Users/roryhill/Projects/jpeg-9b/example.c
-- Reimplement mouse drag scrolling in ImageView and CompareView
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Get comment and copywrite metadata
 - Show how many images in each folder in treeView
@@ -29,6 +27,9 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Bookmarks not saved between sessions anymore
+- Done: Reimplement mouse drag scrolling in ImageView and CompareView
+- Done: Get rid of white border around docks
 - Done: Tracked down bug not showing thumbs when open with no QSettings
 - Done: Not remembering to show menu
 - Done: Separate class to load pixmap from image file
