@@ -1,7 +1,8 @@
 To do:
-- ShootingInfo not showing for first image
+- Initial setup (other than workspace)
+- Hand/Arrow tweaking for zoom / drag in loupe view
+- Thumb wrapping gets turned on when thumbDocked on bottom
 - Add preferences for info label
-- Right click should not zoom in imageView or compareView
 - /Users/roryhill/Qt/5.9/Src/qtimageformats/src/3rdparty/jasper/src/libjasper/jpg_dec.c
 - /Users/roryhill/Projects/jpeg-9b/example.c
 - Zoom rect in thumbnail to show zoom and pan in imageView
@@ -27,6 +28,10 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: ShootingInfo not showing for first image
+- Done: Fix Grid to Compare mode ui glitch
+- Done: Right click should not zoom in imageView or compareView
+- Done: In compare mode shift drag one image with mouse (touch scroll already works)
 - Done: Bookmarks not saved between sessions anymore
 - Done: Reimplement mouse drag scrolling in ImageView and CompareView
 - Done: Get rid of white border around docks
@@ -125,174 +130,140 @@ To do:
 - DONE: Change default docking locations including tabify
 - DONE: Move styles.css to resources
 
-Preferences
-*********************************************************
+MW::folderSelectionChange
+*************************************************************************
+MetadataCache::stopMetadateCache
+ThumbCache::stopThumbCache
+ImageCache::stopImageCache
+STOPPED THREADS
+MW::getSelectedPath
+MW::addRecentFolder
+MW::syncRecentFoldersMenu
+ThumbView::load
+ThumbView::loadPrepare
+ThumbView::initThumbs
+ThumbView::selectThumb(row) 0
+ThumbViewDelegate::sizeHint
+ThumbViewDelegate::sizeHint
+MW::fileSelectionChange
+ImageView::loadImage
+Pixmap::load
+Metadata::getImageOrientation
+Metadata::isLoaded
+metaCache.contains(imageFileName) "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg" true metaCache[imageFileName].isLoaded true
+Metadata::getShootingInfo
+Metadata::getFocalLength
+ImageView::getFitScaleFactor "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+ImageView::scale
+ImageView::movePickIcon
+ImageView::setInfo
+MW::updateStatus
+MW::fileSelectionChange - loaded image file  "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+MW::updatepick
+InfoView::updateInfo
+Metadata::isLoaded
+metaCache.contains(imageFileName) "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg" true metaCache[imageFileName].isLoaded true
+InfoView::addEntry
+InfoView::addEntry
+InfoView::addEntry
+Metadata::getDateTime
+InfoView::addEntry
+InfoView::addEntry
+Metadata::getWidth
+Metadata::getHeight
+InfoView::addEntry
+InfoView::addEntry
+Metadata::getModel
+InfoView::addEntry
+Metadata::getExposureTime
+InfoView::addEntry
+Metadata::getAperture
+InfoView::addEntry
+Metadata::getISO
+InfoView::addEntry
+Metadata::getFocalLength
+InfoView::addEntry
+Metadata::getFocalLength
+InfoView::addEntry
+ThumbView::updateExifInfo - loaded metadata display info for "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+InfoView::tweakHeaders
+metadataCacheThread->isRunning() false thumbCacheThread->isRunning() false imageCacheThread->isRunning() false
+MW::loadMetadataCache
+MetadataCache::stopMetadateCache
+MetadataCache::loadMetadataCache
+MetadataCache::run
+Metadata::isLoaded
+metaCache.contains(imageFileName) "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg" true metaCache[imageFileName].isLoaded true
+0   // errors out after this (end of MetadataCache::run)
+    // emit loadThumbCache() // not firing.  Why?
 
-thumb width
-thumb height
-thumb spacing
-icon padding
-show thumb label
-thumb label text size
-slideshow delay
-random images
-Cache: amount, strategy, show status
-
-
-
-{
-#ifdef ISDEBUG
-qDebug() << "ProgressDialog::";
-#endif
-}
-
-Make QLabel background transparent
-    QWidget::setAttribute(Qt::WA_TranslucentBackground);
-
-Data structures:
-*********************************************************
-ThumbFileInfoList = list of thumb path names
-fileFilters = list of legal file types
-
-mdCache = list of metadata for each image
-    - tags (keywords)
-    - orientation
-    - add camera shooting info???
-    - add preview pixmap???
-
-    fields: file path -> imageMetadata
-
-    ImageMetadata is class defined in mdcache.h
-
-In initThumbs and addThumb
-    thumbViewModel appears to be a list of thumbItem
-
-    thumbItem QStandardItem:
-        - Loaded Role (true/false)
-        - SortRole (file index - path?)
-        - FilePath
-        - FileName
-        - pixmap (Icon)
-
-Key variables
-    - displayPixmap QPixmap (see ImageView::refresh)
-    - origImage QImage (see ImageView::reload)
-
-Window structure:
-*********************************************************
-MainWindow
-- menubar
-- editToolBar
-- goToolBar
-- viewToolBar
-- imageToolBar
-
-- mainLayout QVBoxLayout
-
-- imageView (Widget) - an instance of ImageView Class?
-- fsDock (FileSystem)
-- iiDock (ImageInfo)
-- bmDock (Bookmark)
-- pvDock (Viewer)
-    - imageViewContainer QVBoxLayout (see MW::setupDocks)
-- tagsDock (Tags/Keywords)
-
-In Imageview::ImageView
-    - sets MainWindow as parent
-    - imageLabel
-    - scrollLayout QVBoxLayout
-    - scrlArea QScrollArea
-    - infoLabel
-    - feedbackLabel
-
-brew installer use: brew xyz on mac
-
-*************************************************************
-Show or hide:
-- all docks         F3      toggleDockAct
-- file dock         F4      toggleFilesAct
-- fav dock          F5      toggleFavsAct
-- metadata dock     F6      toggleMetadataAct
-- thumbs dock       F7      toggleThumbsAct
-- title bar         F8      toggleWindowsTitleBarAct
-- menu bar          F9      toggleMenuBarAct
-- status bar        F10     toggleStatusBarAct (create)
-
-- full screen       F       fullScreenAct
-- show file list
-  or thumbnails     T       toggleIconsListAct
-
-
-******************************************************************************
-thumbViewModel
---------------------------------------------------------------------------
-Role 0: DisplayRole     QString, "20041205_0065.jpg"
-     1: DecorationRole  QIcon, QIcon(availableSizes[normal,Off]=(QSize(129, 100)),cacheKey=0x8100000000)
-     2: EditRole        QString, "20041205_0065.jpg"
-     6: FontRole        QFont, QFont("Segoe UI,8,-1,5,25,0,0,0,0,0")
-     7: TextAlignment   int, 132
-     8: BackgroundRole  QBrush, QBrush(QColor(ARGB 1, 1, 0, 0),SolidPattern)
-    13: SizeHintRole    QSize, QSize(133, 125)
-
-QStyledItemDelegate::initStyleOption  this is where icon mode is set to disabled, selected or normal
-
-"20041205_0065.jpg" (State) QFlags<QStyle::StateFlag>(State_Enabled|State_Selected)
-
-******************************************************************************
-Menu Process:
-- QAction item in mainwindow.h
-- addmenu in MW::createMenus
-- QAction in MW::createActions
-- function to execute action
-
-if hide/show ui element
-- create global parameter (
-- create toggle/set function
-- create read/write for parameter
-- update global parameter
-- update QAction
-
-
-
-QGraphicsItem::itemChange()
-
-That is quite simple, just connect each view's scroll bar's valueChanged(int) signal (or sliderMoved(int)) signal to the other view's scroll bar's setValue(int) slot, like so:
-
-connect(view1->horizontalScrollBar(), SIGNAL(valueChanged(int)), view2->horizontalScrollBar(), SLOT(setValue(int)));
-connect(view2->horizontalScrollBar(), SIGNAL(valueChanged(int)), view1->horizontalScrollBar(), SLOT(setValue(int)));
-
-
-
-http://tpgit.github.io/MDIImageViewer/_modules/imageviewer.html
-
-CompareView::scrollEvent
-CompareView::scrollEvent has Focus = true "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0001.NEF"
-CompareView::getScrollPct
-getScrollPct()  xPct 0.265908 yPct 0.36687 horizontal scroll value 1705 vertical scroll value 1681
-CompareImages::pan
-CompareImages::pan
-CompareView::panToPct
-CompareView::panToPct  xPct, yPct 0.265908 0.36687 w 7360 h 4912 x 1957.08 y 1802.07 zoom 1 zoomFit 0.0665717 "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0002.NEF"
-CompareView::scrollEvent
-CompareView::scrollEvent
-CompareView::scrollEvent
-CompareView::scrollEvent has Focus = true "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0001.NEF"
-CompareView::getScrollPct
-getScrollPct()  xPct 0.266999 yPct 0.36687 horizontal scroll value 1712 vertical scroll value 1681
-CompareImages::pan
-CompareImages::pan
-CompareView::panToPct
-CompareView::panToPct  xPct, yPct 0.266999 0.36687 w 7360 h 4912 x 1965.12 y 1802.07 zoom 1 zoomFit 0.0665717 "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0002.NEF"
-CompareView::scrollEvent
-CompareView::scrollEvent
-CompareView::scrollEvent has Focus = true "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0001.NEF"
-CompareView::getScrollPct
-getScrollPct()  xPct 0.266999 yPct 0.367525 horizontal scroll value 1712 vertical scroll value 1684
-CompareImages::pan
-CompareImages::pan
-CompareView::panToPct
-CompareView::panToPct  xPct, yPct 0.266999 0.367525 w 7360 h 4912 x 1965.12 y 1805.28 zoom 1 zoomFit 0.0665717 "/Users/roryhill/Pictures/2017-07-24_D810 test chart/2017-07-24_0002.NEF"
-
-GUI vs Caching performance optimization suggestions
-
-I've built an image viewer in Qt that extracts embedded jpg from camera raw files
+ThumbViewDelegate::paint QModelIndex(0,0,0x7fa9c8bd36d0,QSortFilterProxyModel(0x7fa9c4669620))
+ThumbView::updateThumbRectRole
+ThumbViewDelegate::sizeHint
+MW::updataMetadataThreadRunStatus
+MW::loadThumbCache
+ThumbCache::stopThumbCache
+ThumbCache::loadThumbCache
+MW::loadImageCache
+ImageCache::initImageCache
+ThumbCache::run
+•• Thumb Caching   "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg" "Reading"
+Metadata::getOffsetThumbJPG "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+Metadata::isLoaded
+metaCache.contains(imageFileName) "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg" true metaCache[imageFileName].isLoaded true
+Metadata::getLengthThumbJPG
+Metadata::getImageOrientation
+•• Thumb Caching   "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg" "Success:"
+ThumbView::refreshThumbs
+ThumbView::getLastRow
+ThumbViewDelegate::sizeHint
+Metadata::getWidth
+Metadata::getHeight
+ImageCache::scalePreview
+ImageView::updateImageCache
+ImageCache::cacheStatus
+ImageCache::pxStart "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+ImageCache::pxEnd
+ImageCache::pxStart "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+MW::showCacheStatus
+ImageCache::getImCacheSize
+ImageCache::setPriorities
+ImageCache::setTargetRange
+MW::updataMetadataThreadRunStatus
+ImageCache::run
+ImageCache::nextToCache
+••• Image Caching   "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg" "Reading"
+Pixmap::load
+MW::updateThumbThreadRunningStatus
+ThumbViewDelegate::sizeHint
+ThumbViewDelegate::sizeHint
+ThumbView::refreshThumbs
+ThumbView::getLastRow
+ThumbViewDelegate::sizeHint
+MW::updateStatus
+MW::updateThumbThreadRunningStatus
+MW::updateStatus
+MW::updateImageThreadRunStatus
+ThumbViewDelegate::paint QModelIndex(0,0,0x7fa9c8bd36d0,QSortFilterProxyModel(0x7fa9c4669620))
+ThumbView::updateThumbRectRole
+ThumbViewDelegate::sizeHint
+ThumbViewDelegate::paint QModelIndex(0,0,0x7fa9c8bd36d0,QSortFilterProxyModel(0x7fa9c4669620))
+ThumbView::updateThumbRectRole
+Metadata::getImageOrientation
+ImageCache::getImCacheSize
+ImageCache::cacheStatus
+ImageCache::pxStart "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+ImageCache::pxEnd
+ImageCache::pxStart "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+ImageCache::pxStart "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+ImageCache::nextToCache
+ImageCache::checkForOrphans
+ImageCache::removeOrphans
+ImageCache::cacheStatus
+ImageCache::pxStart "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+MW::showCacheStatus
+ImageCache::pxEnd
+ImageCache::pxStart "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+ImageCache::pxStart "/Users/roryhill/Pictures/2014-09-21/2014-09-21_0001.jpg"
+MW::showCacheStatus
+MW::updateImageThreadRunStatus

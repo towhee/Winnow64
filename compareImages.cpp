@@ -148,7 +148,7 @@ void CompareImages::configureGrid()
         area1 = area(2, 2);
         area2 = area(1, 4);
         area3 = area(4, 1);
-        qDebug() << "case 4: area1, area2, area3" << area1 << area2 << area3;
+//        qDebug() << "case 4: area1, area2, area3" << area1 << area2 << area3;
         if (area1 >= area2 && area1 >= area3) {
             rows = 2;
             cols = 2;
@@ -217,16 +217,19 @@ long CompareImages::area(int rows, int cols)
     qDebug() << "CompareImages::area";
     #endif
     }
-    QSize cell(cw.width() / cols, cw.height() / rows);
+    // cw = central widget
+    QSize cell(cw.height() / rows, cw.width() / cols);
     long area = 0;
 
     for (int i = 0; i < count; ++i) {
         QSize imSize = sizeList->at(i);
         imSize.scale(cell, Qt::KeepAspectRatio);
         area += imSize.width() * imSize.height();
-//        qDebug() << "area imSize" << "rows, cols" << rows << cols
-//                 << "item" << i << "imSize" << imSize << "cell size" << cell
-//                 << "cw" << cw << "item area" << imSize.width() * imSize.height()
+//        qDebug() << "rows, cols" << rows << cols
+//                 << "central widget" << cw
+//                 << "cell size" << cell << "item"
+//                 << i << "imSize" << imSize
+//                 << "item area" << imSize.width() * imSize.height()
 //                 << "sum area" << area;
     }
     return area;

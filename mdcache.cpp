@@ -86,18 +86,20 @@ void MetadataCache::run()
         fPath = idx.data(Qt::ToolTipRole).toString();
         // InfoView::updateInfo might have already loaded by getting here first
         // it is executed when the first image is loaded
-        if (metadata->isLoaded(fPath)) continue;
-        QFileInfo fileInfo(fPath);
-        mutex.lock();
-        metadata->loadImageMetadata(fileInfo);
-        mutex.unlock();
+        if (!metadata->isLoaded(fPath)) {
+            QFileInfo fileInfo(fPath);
+            mutex.lock();
+            metadata->loadImageMetadata(fileInfo);
+            mutex.unlock();
+        }
     }
-    // after read metadata okay to cache thumbs and images, where the target
-    // cache needs to know how big each image is (width, height)
+    /* after read metadata okay to cache thumbs and images, where the target
+    cache needs to know how big each image is (width, height) and the offset
+    to embedded jpgs */
     emit loadThumbCache();
     emit loadImageCache();
 
-    // used to show status in statusbar
+    // update status in statusbar
     emit updateIsRunning(false);
 }
 

@@ -197,10 +197,15 @@ to prevent jarring changes in perceived scale by the user.
     if (isLoaded) {
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
-        if (!metadata->isLoaded(currentImagePath))
-            metadata->readMetadata(false, currentImagePath);
+        if (!metadata->isLoaded(currentImagePath)) {
+//            qDebug() << "metadata not loaded for" << currentImagePath;
+            QFileInfo fileInfo(currentImagePath);
+            bool loadMeta = metadata->loadImageMetadata(fileInfo);
+//            qDebug() << "LoadMetadata =" << loadMeta;
+        }
         shootingInfo = metadata->getShootingInfo(currentImagePath) + "\n" +
                 metadata->getTitle(currentImagePath);
+//        qDebug() << "shootingInfo" << shootingInfo;
 
         zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
         if (!firstImageLoaded) {
@@ -832,7 +837,7 @@ void ImageView::scrollContentsBy(int dx, int dy)
 {
     scrollCount++;
     isMouseDrag = (scrollCount > 2);
-    qDebug() << "scrolling dx =" << dx << "dy =" << dy << scrollCount;
+//    qDebug() << "scrolling dx =" << dx << "dy =" << dy << scrollCount;
     QGraphicsView::scrollContentsBy(dx, dy);
 }
 

@@ -25,7 +25,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     isStressTest = false;
 
     G::appName = "Winnow";
-    //    GData::isDebug = true;        // is this used or just #ifdef ISDEBUG in global.h
     G::isTimer = false;
 
     // Global timer for testing
@@ -118,9 +117,11 @@ variables in MW (this class) and managed in the prefDlg class.
     this->setWindowTitle("Winnow");
     this->setObjectName("WinnowMW");
 
+    centralLabel = new QLabel;
+    centralLayout->addWidget(centralLabel);
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
-    centralLayout->addWidget(thumbView);
+//    centralLayout->addWidget(thumbView);
     centralLayout->setCurrentIndex(0);
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
@@ -130,8 +131,15 @@ variables in MW (this class) and managed in the prefDlg class.
     fStyle.open(QIODevice::ReadOnly);
     this->setStyleSheet(fStyle.readAll());
 
-    if (isSettings) updateState();
-    else defaultWorkspace();
+    if (isSettings && !resetSettings) updateState();
+    else {
+        defaultWorkspace();
+        QString welcomeText = "<h3>Welcome to Winnow</h3>"
+            + tr("<p>To view images select a folder from the Folders dock or from the menu File > Open Folder</p>");
+        centralLabel->setAlignment(Qt::AlignCenter);
+        centralLabel->setText(welcomeText);
+        centralLayout->setCurrentIndex(0);
+    }
 
     // process the persistant folder if available
     folderSelectionChange();
@@ -258,13 +266,16 @@ void MW::folderSelectionChange()
 {
     {
     #ifdef ISDEBUG
-        qDebug() << "\nMW::folderSelectionChange";
+        qDebug() << "\n\nMW::folderSelectionChange"
+                    "\n*************************************************************************";
     #endif
     }
     // Stop any threads that might be running.
     metadataCacheThread->stopMetadateCache();
     thumbCacheThread->stopThumbCache();
     imageCacheThread->stopImageCache();
+
+    qDebug() << "STOPPED THREADS";
 
     // stop slideshow if a new folder is selected
     if (isSlideShowActive && !isStressTest) slideShow();
@@ -328,13 +339,13 @@ void MW::folderSelectionChange()
     // which is also executed when the change file event is fired.
     metadataLoaded = false;
 
-    // need to gather directory file info first (except icon/thumb) which is
-    // loaded by loadThumbCache.  If no images in new folder then cleanup and
-    // exit.
+    /* Need to gather directory file info first (except icon/thumb) which is
+    loaded by loadThumbCache.  If no images in new folder then cleanup and exit.
+    MW::fileSelectionChange triggered by thumbView->load         */
     if (!thumbView->load(currentViewDir, subFoldersAction->isChecked())) {
+        // MW::fileSelectionChange triggered by thumbView->load
         updateStatus(false, "No images in this folder");
         infoView->clearInfo();
-//        imageView->clear();
         cacheLabel->setVisible(false);
         return;
     }
@@ -345,12 +356,21 @@ void MW::folderSelectionChange()
      loadThumbCache and loadImageCache when finished metadata cache. The thumb
      cache includes icons (thumbnails) for all the images in the folder. The
      image cache holds as many full size images in memory as possible. */
-     loadMetadataCache(); thumbView->selectFirst();
+    qDebug() << "metadataCacheThread->isRunning()" << metadataCacheThread->isRunning()
+        << "thumbCacheThread->isRunning()" << thumbCacheThread->isRunning()
+        << "imageCacheThread->isRunning()" << imageCacheThread->isRunning();
+
+     loadMetadataCache();
+//     thumbView->selectFirst();  // file selection triggers MW::fileSelectionChange
 }
 
-// triggered when file selection changes (folder change selects new image)
 void MW::fileSelectionChange()
 {
+/* Triggered when file selection changes (folder change selects new image, so
+it also triggers this function). The new image is loaded, the pick status is
+updated and the infoView metadata is updated. Update the imageCache if
+necessary. The imageCache will not be updated if triggered by folderSelectionChange.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::fileSelectionChange";
@@ -377,10 +397,6 @@ void MW::fileSelectionChange()
     if (metadataLoaded) {
         imageCacheThread->updateImageCache(thumbView->thumbFileInfoList, fPath);
     }
-
-//    thumbView->setWrapping(true);
-//    setThumbDockVisibity();    qDebug() << "centralWidget->width()" << centralWidget->width();
-
 }
 
 void MW::loadMetadataCache()
@@ -566,7 +582,8 @@ void MW::createActions()
     runDropletAction = new QAction(tr("Run Droplet"), this);
     runDropletAction->setObjectName("runDroplet");
     runDropletAction->setShortcut(QKeySequence("A"));
-    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(reportState()));
+    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(test()));
+//    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(reportState()));
 //    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(runDroplet()));
 
     reportMetadataAction = new QAction(tr("Report Metadata"), this);
@@ -1343,7 +1360,7 @@ void MW::addMenuSeparator(QWidget *widget)
     widget->addAction(separator);
 }
 
-void MW:: createImageView()
+void MW::createImageView()
 {
     {
     #ifdef ISDEBUG
@@ -2050,9 +2067,6 @@ app is "stranded" on secondary monitors that are not attached.
     metadataDockLockAction->setChecked(false);
     thumbDockLockAction->setChecked(false);
 
-    // sync app state with menu checked status
-//    updateState();
-
     thumbView->thumbSpacing = 0;
     thumbView->thumbPadding = 0;
     thumbView->thumbWidth = 120;
@@ -2068,28 +2082,27 @@ app is "stranded" on secondary monitors that are not attached.
     thumbView->showThumbLabelsGrid = true;
 
     thumbView->setWrapping(false);
-    thumbView->isAutoFit = true;
+    thumbView->isAutoFit = false;
 
     thumbView->setThumbParameters();
 
-    //    thumbDock->setFeatures(QDockWidget::DockWidgetVerticalTitleBar |
-//                           QDockWidget::DockWidgetMovable);
     folderDock->setFloating(false);
     favDock->setFloating(false);
     metadataDock->setFloating(false);
     thumbDock->setFloating(false);
 
-//    addDockWidget(Qt::LeftDockWidgetArea, folderDock, Qt::Vertical);
-//    addDockWidget(Qt::LeftDockWidgetArea, favDock, Qt::Vertical);
-//    addDockWidget(Qt::LeftDockWidgetArea, metadataDock, Qt::Vertical);
-//    addDockWidget(Qt::BottomDockWidgetArea, thumbDock, Qt::Horizontal);
-
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
     addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::BottomDockWidgetArea, thumbDock);
-    MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
-    MW::tabifyDockWidget(folderDock, favDock);
+
+//    MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
+//    MW::tabifyDockWidget(folderDock, favDock);
+
+//    // enable the folder dock (first one in tab)
+//    QList<QTabBar *> tabList = findChildren<QTabBar *>();
+//    QTabBar* widgetTabBar = tabList.at(0);
+//    widgetTabBar->setCurrentIndex(0);
 
     resizeDocks({thumbDock}, {160}, Qt::Vertical);
     setThumbsFit();
@@ -2239,7 +2252,6 @@ void MW::about()
         + "Qt v" + QT_VERSION_STR
         + "<p></p>"
         + "<p>Author: Rory Hill."
-        + "<p>Some code is based on Phototonic by Ofer Kashayov."
         + "<p>Winnow is licensed under the GNU General Public License version 3</p>";
 
     QMessageBox::about(this, tr("About") + " Winnow", aboutString);
@@ -2862,38 +2874,6 @@ Action settings are maintained by the actions ie action->isChecked();
 They are updated on creation.
 
 Preferences are located in the prefdlg class and updated here.
-
-Legacy settings (not currently saved)
-
-backgroundColor
-backgroundThumbColor
-defaultSaveQuality
-enableAnimations
-enableImageInfoFS
-exifRotationEnabled
-exifThumbRotationEnabled
-exitInsteadOfClose
-fsDockVisible
-iiDockVisible
-imageZoomFactor
-LockDocks
-noEnlargeSmallThumb
-pvDockVisible
-reverseMouseBehavior
-shouldMaximise
-showHiddenFiles
-smallIcons
-specifiedStartDir
-startupDir
-textThumbColor
-thumbLayout
-thumbPagesReadahead
-thumbsBackImage
-thumbsZoomVal
-wrapImageList
-zoomInFlags
-zoomOutFlags
-
 */
     {
     #ifdef ISDEBUG
@@ -2904,45 +2884,27 @@ zoomOutFlags
 
     // default values for first time use
     if (!setting->contains("cacheSizeMB")) {
-//        defaultWorkspace();
-        setting->setValue("lastPrefPage", (int)0);
-        setting->setValue("thumbsSortFlags", (int)0);
-
-      // slideshow
-        setting->setValue("slideShowDelay", (int)5);
-        setting->setValue("slideShowRandom", (bool)false);
-        setting->setValue("slideShowWrap", (bool)true);
-
-        // cache
-        setting->setValue("cacheSizeMB", (int)1000);
-        setting->setValue("isShowCacheStatus", (bool)true);
-        setting->setValue("cacheStatusWidth", (int)200);
-        setting->setValue("cacheWtAhead", (int)5);
-        setting->setValue("isCachePreview", (bool)false);
-
-        setting->setValue("maxRecentFolders", (int)10);
+        // general
+        lastPrefPage = 0;
+        rememberLastDir = true;
+        maxRecentFolders = 10;
         bookmarks->bookmarkPaths.insert(QDir::homePath());
 
-        return false;
+      // slideshow
+        slideShowDelay = 5;
+        slideShowRandom = false;
+        slideShowWrap = true;
 
-        // state established in defaultWorkspace
-//        setting->setValue("isFullScreen", false);
-//        setting->setValue("isImageInfoVisible", true);
-//        setting->setValue("isIconDisplay", true);
-//        setting->setValue("isLoupeDisplay", true);
-//        setting->setValue("isGridDisplay", false);
-//        setting->setValue("isCompareDisplay", false);
-//        setting->setValue("isWindowTitleBarVisible", true);
-//        setting->setValue("isMenuBarVisible", true);
-//        setting->setValue("isStatusBarVisible", true);
-//        setting->setValue("isFolderDockVisible", true);
-//        setting->setValue("isFavDockVisible", true);
-//        setting->setValue("isMetadataDockVisible", true);
-//        setting->setValue("isThumbDockVisible", true);
-//        setting->setValue("isFolderDockLocked", false);
-//        setting->setValue("isFavDockLocked", false);
-//        setting->setValue("isMetadaDockLocked", false);
-//        setting->setValue("isThumbDockLocked", false);
+        // cache
+        cacheSizeMB = 2000;
+        isShowCacheStatus = true;
+        cacheStatusWidth = 200;
+        cacheWtAhead = 5;
+        isCachePreview = true;
+        cachePreviewWidth = 2000;
+        cachePreviewHeight = 1600;
+
+        return false;
     }
 
     // general
@@ -2955,13 +2917,6 @@ zoomOutFlags
     maxRecentFolders = setting->value("maxRecentFolders").toInt();
 
     // thumbs (set in thumbView creation)
-//    mwd.thumbSpacing = setting->value("thumbSpacing").toInt();
-//    mwd.thumbPadding = setting->value("thumbPadding").toInt();
-//    mwd.thumbWidth = setting->value("thumbWidth").toInt();
-//    mwd.thumbHeight = setting->value("thumbHeight").toInt();
-//    mwd.labelFontSize = setting->value("labelFontSize").toInt();
-//    mwd.showThumbLabels = setting->value("showThumbLabels").toBool();
-//    mwd.isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
     isThumbDockVerticalTitle = setting->value("isVerticalTitle").toBool();
 
 // rgh make sure to add thumb sort to workspaces when implemented
@@ -3351,7 +3306,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     qDebug() << "MW::setThumbDockFeatures";
     #endif
     }
-    qDebug() << "MW::setThumbDockFeatures";
+//    qDebug() << "MW::setThumbDockFeatures";
 
     if ((area == Qt::BottomDockWidgetArea ||
         area == Qt::TopDockWidgetArea) && isThumbDockVerticalTitle)
@@ -3373,7 +3328,8 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea) {
         thumbView->setWrapping(thumbView->isThumbWrapWhenTopOrBottomDock);
         thumbView->isTopOrBottomDock = true;
-    } else thumbView->isTopOrBottomDock = false;
+    }
+    else thumbView->isTopOrBottomDock = false;
 
 //        thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 //        thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -3394,15 +3350,21 @@ void MW::loupeDisplay()
     }
 //    imageView->setVisible(true);
 //    compareView->setVisible(false);
-    centralLayout->setCurrentIndex(0);
+    centralLayout->setCurrentIndex(1);
     thumbView->thumbViewDelegate->isCompare = false;
+    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
+    qDebug() << "centralLayout->count()" << centralLayout->count();
+
+    // in case was grid display move thumbView back to dock from central widget
+    saveSelection();
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(true);
     thumbView->isGrid = false;
     thumbView->setThumbParameters();
     setThumbDockVisibity();
+    recoverSelection();
 }
 
 void MW::gridDisplay()
@@ -3412,13 +3374,14 @@ void MW::gridDisplay()
     qDebug() << "MW::gridDisplay";
     #endif
     }
+    // move thumbView from thumbDeck to central widget
     centralLayout->addWidget(thumbView);
-    qDebug() << "centralLayout->count()" << centralLayout->count();
-    centralLayout->setCurrentIndex(2);
+    centralLayout->setCurrentIndex(3);
     imageView->setVisible(false);
-//    compareView->setVisible(false);
     thumbView->thumbViewDelegate->isCompare = false;
+    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
+    saveSelection();
     thumbDockVisibleAction->setChecked(false);
     thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                            QDockWidget::DockWidgetMovable  |
@@ -3427,6 +3390,7 @@ void MW::gridDisplay()
     thumbView->isGrid = true;
     thumbView->setThumbParameters();
     setThumbDockVisibity();
+    recoverSelection();
 }
 
 void MW::compareDisplay()
@@ -3447,16 +3411,37 @@ void MW::compareDisplay()
         popUp->showPopup(this, msg, 2000, 0.75);
     }
 
-    thumbDock->setWidget(thumbView);
-    setThumbDockFeatures(dockWidgetArea(thumbDock));
-    thumbDockVisibleAction->setChecked(true);
-    thumbView->isGrid = false;
-    thumbView->setThumbParameters();
-    setThumbDockVisibity();
+    if (thumbView->isGrid) {
+        saveSelection();
+        thumbDock->setWidget(thumbView);
+        setThumbDockFeatures(dockWidgetArea(thumbDock));
+        thumbDockVisibleAction->setChecked(true);
+        thumbView->isGrid = false;
+        thumbView->setThumbParameters();
+        setThumbDockVisibity();
+        recoverSelection();
+    }
     thumbView->thumbViewDelegate->isCompare = true;
+    thumbView->setSelectionMode(QAbstractItemView::NoSelection);
 
-    centralLayout->setCurrentIndex(1);
+    centralLayout->setCurrentIndex(2);
     compareImages->load(centralWidget->size());
+}
+
+void MW::saveSelection()
+{
+    selectedImages = thumbView->selectionModel()->selectedIndexes();
+}
+
+void MW::recoverSelection()
+{
+    QItemSelection *selection = new QItemSelection();
+    QModelIndex idx;
+    foreach (idx, selectedImages)
+      selection->select(idx, idx);
+    thumbView->selectionModel()->clear();
+    thumbView->selectionModel()->select(*selection, QItemSelectionModel::Select);
+//    qDebug() << thumbView->selectionModel()->selectedIndexes();
 }
 
 void MW::setFullNormal()
@@ -4135,6 +4120,11 @@ void MW::help()
     Ui::helpForm ui;
     ui.setupUi(helpDoc);
     helpDoc->show();
+}
+
+void MW::test()
+{
+    recoverSelection();
 }
 
 // End MW

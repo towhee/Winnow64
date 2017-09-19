@@ -31,7 +31,7 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     if (showThumbLabels)
         thumbSpace.setHeight(thumbSize.height() + iconPadding*2
             + itemBorderThickness*2 + thumbBorderGap*2 + thumbBorderThickness*2 + fontHt + iconPadding);
-    reportThumbAttributes();
+//    reportThumbAttributes();
 }
 
 void ThumbViewDelegate::reportThumbAttributes()

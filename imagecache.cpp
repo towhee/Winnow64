@@ -412,11 +412,11 @@ void ImageCache::checkForOrphans()
     #endif
     }
 /* If the user jumps around rapidly in a large folder, where the target cache
- * is smaller than the entire folder, it is possible for the nextToCache and
- * nextToDecache collections to get out of sync and leave orphans in the image
- * cache buffer.  This function iterates through the image cache, checking that
- * all cached images are in the target.  If not, they are removed from the
- * cache buffer.
+ is smaller than the entire folder, it is possible for the nextToCache and
+ nextToDecache collections to get out of sync and leave orphans in the image
+ cache buffer.  This function iterates through the image cache, checking that
+ all cached images are in the target.  If not, they are removed from the
+ cache buffer.
 */
     {
     #ifdef ISDEBUG
@@ -428,7 +428,7 @@ void ImageCache::checkForOrphans()
             if (!cacheMgr.at(i).isTarget) {
                 imCache.remove(cacheMgr.at(i).fName);
                 cacheMgr[i].isCached = false;
-/*                qDebug() << "\n***********************************************************************"
+/*              qDebug() << "\n***********************************************************************"
                          << "\nREMOVED FROM IMAGE BUFFER:"
                          << cacheMgr.at(i).fName
                          << "\n***********************************************************************";
@@ -466,7 +466,7 @@ void ImageCache::reportCacheManager(QString title)
 
 int ImageCache::pxMid(int key)
 {
-// returns the cache status bar x coordinate for the midpoint of the item key
+/* returns the cache status bar x coordinate for the midpoint of the item key */
     {
     #ifdef ISDEBUG
     qDebug() << "ImageCache::pxMid";
@@ -477,8 +477,8 @@ int ImageCache::pxMid(int key)
 }
 
 int ImageCache::pxStart(int key)
-// returns the cache status bar x coordinate for the start of the item key
 {
+// returns the cache status bar x coordinate for the start of the item key
     {
     #ifdef ISDEBUG
     qDebug() << "ImageCache::pxStart" << cacheMgr.at(key).fName;
@@ -488,8 +488,8 @@ int ImageCache::pxStart(int key)
 }
 
 int ImageCache::pxEnd(int key)
-// returns the cache status bar x coordinate for the end of the item key
 {
+// returns the cache status bar x coordinate for the end of the item key
     {
     #ifdef ISDEBUG
     qDebug() << "ImageCache::pxEnd";
@@ -499,7 +499,8 @@ int ImageCache::pxEnd(int key)
 }
 
 void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
-     bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight)
+     bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead,
+     bool &usePreview, int &previewWidth, int &previewHeight)
 {
     {
     #ifdef ISDEBUG
@@ -510,8 +511,10 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
 
-    // check if still in same folder with the same number of files.  This could change if
-    // inclSubFolders is changed or images have been added or removed from the folder(s)
+    /* check if still in same folder with the same number of files. This could
+    change if inclSubFolders is changed or images have been added or removed
+    from the folder(s) */
+
     if (imageList.at(0).absolutePath() == cache.dir) {
 //        qDebug() << "cacheMgr.size" << cacheMgr.size() << "folder now size" << imageList.size();
         if (cacheMgr.size() == imageList.size()) return;

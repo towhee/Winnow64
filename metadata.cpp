@@ -1538,6 +1538,11 @@ bool Metadata::isLoaded(const QString &imageFileName)
     qDebug() << "Metadata::isLoaded";
     #endif
     }
+//    qDebug() << "metaCache.contains(imageFileName)"
+//             << imageFileName
+//             << metaCache.contains(imageFileName)
+//             << "metaCache[imageFileName].isLoaded"
+//             << metaCache[imageFileName].isLoaded;
     return metaCache[imageFileName].isLoaded;
 }
 
@@ -1817,7 +1822,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo)
     #endif
     }
     // check if already loaded
-//    if (metaCache.contains(fileInfo.filePath())) return true;
+    if (metaCache[fileInfo.filePath()].isLoaded) return true;
 
     bool result;
     QString shootingInfo;

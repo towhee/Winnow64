@@ -246,6 +246,8 @@ private slots:
 
     void help();
 
+    void test();    // for debugging
+
     //    void cutThumbs();
 //    void copyThumbs();
     //    void pasteThumbs();
@@ -384,6 +386,7 @@ private:
     QLineEdit *filterBar;
     QLabel *stateLabel;
     QLabel *cacheLabel;
+    QLabel *centralLabel;
     QLabel *metadataThreadRunningLabel;
     QLabel *thumbThreadRunningLabel;
     QLabel *imageThreadRunningLabel;
@@ -425,6 +428,8 @@ private:
     QStringList *subfolders;
     QStringList *recentFolders;
 
+    QModelIndexList selectedImages;
+
     bool metadataLoaded;
 
     enum CentralWidgets	{           // req'd?
@@ -459,6 +464,8 @@ private:
     void createBookmarks();
     void writeSettings();
     bool loadSettings();
+    void saveSelection();
+    void recoverSelection();
 
     bool isValidPath(QString &path);
     QString getSelectedPath();

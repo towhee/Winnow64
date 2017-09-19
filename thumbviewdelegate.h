@@ -28,7 +28,7 @@ public:
     void reportThumbAttributes();
 
     QModelIndex currentIndex;
-    bool isCompare;
+    bool isCompare;             // not being used?
 
 
 signals:

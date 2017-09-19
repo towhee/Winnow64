@@ -59,7 +59,7 @@ void ThumbCache::loadThumbCache()
     }
     if (!isRunning()) {
         abort = false;
-        start(LowPriority);
+        start(HighestPriority);
     } else {
         mutex.lock();
         abort = true;
@@ -83,7 +83,6 @@ void ThumbCache::run()
     QImageReader thumbReader;
     // rgh review hard coding thumb size
     QSize thumbMax(160, 160);
-//    QSize thumbSpace(GData::thumbWidth, GData::thumbHeight);
     QString fPath;
 
     int totDelay = 500;     // milliseconds
@@ -98,6 +97,7 @@ void ThumbCache::run()
     for (int row = 0; row < thumbView->thumbViewModel->rowCount(); ++row) {
         if (abort) {
             emit updateIsRunning(false);
+            thumbView->refreshThumbs();
             return;
         }
         QModelIndex idx = thumbView->thumbViewModel->index(row, 0, QModelIndex());
@@ -109,11 +109,12 @@ void ThumbCache::run()
         QString ext = fileInfo.completeSuffix().toLower();
         QFile imFile(fPath);
 
-        // Reading the thumb directly from the image file is faster than
-        // using thumbReader to read the entire jpg and then scaling it down.
-        // However, not all jpgs have embedded thumbs so make a quick check
-        ulong offsetThumb = metadata->getOffsetThumbJPG(fPath);
-        bool readThumbFromJPG = (offsetThumb > 0 && ext == "jpg");
+        /* Reading the thumb directly from the image file is faster than using
+        QImageReader (thumbReader) to read the entire jpg and then scaling it
+        down. However, not all jpgs have embedded thumbs so make a quick check.
+        */
+        ulong offsetThumb = metadata->getOffsetThumbJPG(fPath); bool
+        readThumbFromJPG = (offsetThumb > 0 && ext == "jpg");
 
         bool success = false;
         if (metadata->rawFormats.contains(ext) || readThumbFromJPG) {
@@ -240,10 +241,6 @@ void ThumbCache::run()
         // sometimes QListView does not refresh icons...
         if (row % 20 == 0) {
             refreshThumbs();
-//            thumbView->hide();
-//            thumbView->show();
-//            thumbView->refreshThumbs();
-//            qApp->processEvents();
         }
 
         mutex.unlock();

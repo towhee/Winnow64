@@ -578,8 +578,8 @@ void CompareView::mousePressEvent(QMouseEvent *event)
     }
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
-    propagate = true;
     if (event->button() == Qt::LeftButton) {
+        propagate = true;
         if (event->modifiers() & Qt::ShiftModifier) propagate = false;
         isLeftMouseBtnPressed = true;
         mousePressPt.setX(event->x());
@@ -617,20 +617,22 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     qDebug() << "CompareView::mouseReleaseEvent" << currentImagePath;
     #endif
     }
-    isLeftMouseBtnPressed = false;
     if (isMouseDrag) {
         isMouseDrag = false;
         if (isZoom) setCursor((Qt::OpenHandCursor));
         else setCursor(Qt::ArrowCursor);
+        isLeftMouseBtnPressed = false;
         return;
     }
-
-    mousePt = event->localPos().toPoint();
-    isZoom ? zoom = zoomFit : zoom = clickZoom;
-    isMouseClickZoom = true;
-    propagate = false;
-    scale(true);
-    propagate = true;
+    if (isLeftMouseBtnPressed) {
+        isLeftMouseBtnPressed = false;
+        mousePt = event->localPos().toPoint();
+        isZoom ? zoom = zoomFit : zoom = clickZoom;
+        isMouseClickZoom = true;
+        propagate = false;
+        scale(true);
+        propagate = true;
+    }
     QGraphicsView::mouseReleaseEvent(event);
 }
 
@@ -642,14 +644,16 @@ void CompareView::enterEvent(QEvent *event)
     #endif
     }
     this->setFocus();
-    if (imageIndex != thumbView->currentIndex()) {
+//    if (imageIndex != thumbView->currentIndex()) {
+        thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
         thumbView->setCurrentIndex(imageIndex);
+        thumbView->setSelectionMode(QAbstractItemView::NoSelection);
         this->setStyleSheet("QGraphicsView  {"
                             "margin:1; "
                             "border-style: solid; "
-                            "border-width: 1; "
+                            "border-width: 2; "
                             "border-color: rgb(225,225,225);}");
-    }
+//    }
     QGraphicsView::enterEvent(event);
 }
 
@@ -663,7 +667,7 @@ void CompareView::leaveEvent(QEvent *event)
     this->setStyleSheet("QGraphicsView  {"
                         "margin:1; "
                         "border-style: solid; "
-                        "border-width: 1; "
+                        "border-width: 2; "
                         "border-color: rgb(111,111,111);}");
     QGraphicsView::leaveEvent(event);
 }
