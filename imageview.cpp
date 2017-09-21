@@ -287,10 +287,8 @@ is zoomed.
     isFit = (zoom == zoomFit);
     if (isZoom) scrollPct = getScrollPct();
     wasZoomFit = zoom == zoomFit;
-//    if (isZoom) setDragMode(QGraphicsView::ScrollHandDrag);
-//        setCursor(Qt::OpenHandCursor);
-//    else setDragMode(QGraphicsView::NoDrag);
-//        setCursor(Qt::ArrowCursor);
+    if (isZoom) setCursor(Qt::OpenHandCursor);
+    else setCursor(Qt::ArrowCursor);
 
     movePickIcon();
     moveShootingInfo(shootingInfo);

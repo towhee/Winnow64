@@ -936,9 +936,9 @@ void ThumbView::wheelEvent(QWheelEvent *event)
     #endif
     }
     if (event->delta() < 0)
-        verticalScrollBar()->setValue(verticalScrollBar()->value() + thumbHeight);
+        verticalScrollBar()->setValue(verticalScrollBar()->value() + thumbHeight/4);
     else
-        verticalScrollBar()->setValue(verticalScrollBar()->value() - thumbHeight);
+        verticalScrollBar()->setValue(verticalScrollBar()->value() - thumbHeight/4);
 }
 
 void ThumbView::mousePressEvent(QMouseEvent *event)

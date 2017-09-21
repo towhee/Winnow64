@@ -1014,6 +1014,11 @@
        <height>16</height>
       </rect>
      </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
      <property name="text">
       <string>When thumb dock is at top or bottom:</string>
      </property>

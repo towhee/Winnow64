@@ -1622,8 +1622,8 @@ void MW::createBookmarks()
 
     connect(bookmarks, SIGNAL(itemClicked(QTreeWidgetItem *, int)),
             this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
-    connect(removeBookmarkAction, SIGNAL(triggered()),
-            bookmarks, SLOT(removeBookmark()));
+//    connect(removeBookmarkAction, SIGNAL(triggered()),
+//            bookmarks, SLOT(removeBookmark()));
     connect(bookmarks, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
             this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
     addDockWidget(Qt::LeftDockWidgetArea, favDock);

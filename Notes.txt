@@ -1,6 +1,5 @@
 To do:
 - Initial setup (other than workspace)
-- Hand/Arrow tweaking for zoom / drag in loupe view
 - Thumb wrapping gets turned on when thumbDocked on bottom
 - Add preferences for info label
 - /Users/roryhill/Qt/5.9/Src/qtimageformats/src/3rdparty/jasper/src/libjasper/jpg_dec.c
@@ -9,7 +8,8 @@ To do:
 - Get comment and copywrite metadata
 - Show how many images in each folder in treeView
 - Show how much mem req'd for selected images
-- Sort thumbs and add to workspaces
+- Combine raw+jpg option
+- Sort/filter thumbs and add to workspaces
 - Add more raw file formats
 - Add zoom increment to preferences
 - UI for changing compare click zoom amount
@@ -28,6 +28,8 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Smooth grid view scrolling
+- Done: Fix hand cursor when loupe view not zoomed
 - Done: ShootingInfo not showing for first image
 - Done: Fix Grid to Compare mode ui glitch
 - Done: Right click should not zoom in imageView or compareView
