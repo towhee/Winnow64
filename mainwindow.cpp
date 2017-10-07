@@ -271,11 +271,15 @@ void MW::folderSelectionChange()
     #endif
     }
     // Stop any threads that might be running.
-    metadataCacheThread->stopMetadateCache();
     thumbCacheThread->stopThumbCache();
+//    QThread::msleep(2000);        // no effect on crash
+    qDebug() << "thumbCacheThread->isRunning" << thumbCacheThread->isRunning();
     imageCacheThread->stopImageCache();
+    metadataCacheThread->stopMetadateCache();
 
-    qDebug() << "STOPPED THREADS";
+//    qDebug() << "STOPPED THREADS";
+
+//    thumbView->thumbViewModel->clear();
 
     // stop slideshow if a new folder is selected
     if (isSlideShowActive && !isStressTest) slideShow();
@@ -306,6 +310,7 @@ void MW::folderSelectionChange()
     else {
         dirPath = getSelectedPath();
         testDir.setPath(dirPath);
+        qDebug() << "MW::folderSelectionChange ^^^^^^^^^^^ " << dirPath;
     }
 
     if (!testDir.exists()) {
@@ -356,12 +361,13 @@ void MW::folderSelectionChange()
      loadThumbCache and loadImageCache when finished metadata cache. The thumb
      cache includes icons (thumbnails) for all the images in the folder. The
      image cache holds as many full size images in memory as possible. */
-    qDebug() << "metadataCacheThread->isRunning()" << metadataCacheThread->isRunning()
-        << "thumbCacheThread->isRunning()" << thumbCacheThread->isRunning()
-        << "imageCacheThread->isRunning()" << imageCacheThread->isRunning();
+//    qDebug() << "metadataCacheThread->isRunning()" << metadataCacheThread->isRunning()
+//        << "thumbCacheThread->isRunning()" << thumbCacheThread->isRunning()
+//        << "imageCacheThread->isRunning()" << imageCacheThread->isRunning();
 
      loadMetadataCache();
-//     thumbView->selectFirst();  // file selection triggers MW::fileSelectionChange
+//     QThread::msleep(2000);       // no effect on crash
+//     thumbView->selectFirst();    // file selection triggers MW::fileSelectionChange
 }
 
 void MW::fileSelectionChange()
@@ -380,6 +386,8 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // user clicks outside thumb but inside treeView dock
     if (thumbView->selectionModel()->selectedIndexes().isEmpty()) return;
 
+//    QThread::msleep(2000);  // no effect on crash
+
     QString fPath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
 
     // use cache if image loaded, else read it from file
@@ -397,6 +405,9 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     if (metadataLoaded) {
         imageCacheThread->updateImageCache(thumbView->thumbFileInfoList, fPath);
     }
+
+    // debugging
+//    thumbView->reportThumb();
 }
 
 void MW::loadMetadataCache()
@@ -591,7 +602,7 @@ void MW::createActions()
 //    connect(reportMetadataAction, SIGNAL(triggered()),
 //            thumbView, SLOT(reportThumbs()));
     connect(reportMetadataAction, SIGNAL(triggered()),
-            this, SLOT(reportMetadata()));
+            this, SLOT(thumbTable()));
 
     // Appears in Winnow menu in OSX
     exitAction = new QAction(tr("Exit"), this);
@@ -809,11 +820,6 @@ void MW::createActions()
     connect(showThumbLabelsAction, SIGNAL(triggered()), this, SLOT(setThumbLabels()));
     showThumbLabelsAction->setEnabled(true);
 
-    reverseSortAction = new QAction(tr("Reverse order"), this);
-    reverseSortAction->setObjectName("reverse");
-    reverseSortAction->setCheckable(true);
-    connect(reverseSortAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
-
     // Window menu
 
     windowTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
@@ -962,33 +968,51 @@ void MW::createActions()
 
 
     // Sort actions
-    actName = new QAction(tr("Name"), this);
-    actName->setObjectName("name");
-    actTime = new QAction(tr("Time"), this);
-    actTime->setObjectName("time");
-    actSize = new QAction(tr("Size"), this);
-    actSize->setObjectName("size");
-    actType = new QAction(tr("Type"), this);
-    actType->setObjectName("type");
-    actName->setCheckable(true);
-    actTime->setCheckable(true);
-    actSize->setCheckable(true);
-    actType->setCheckable(true);
-    connect(actName, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
-    connect(actTime, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
-    connect(actSize, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
-    connect(actType, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+    sortFileNameAction = new QAction(tr("Sort by file name"), this);
+    sortFileNameAction->setObjectName("Filename");
+    sortFileNameAction->setCheckable(true);
+    connect(sortFileNameAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortFileTypeAction = new QAction(tr("Sort by file type"), this);
+    sortFileTypeAction->setObjectName("FileType");
+    sortFileTypeAction->setCheckable(true);
+    connect(sortFileTypeAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortCreateAction = new QAction(tr("Sort by created time"), this);
+    sortCreateAction->setObjectName("CreateTime");
+    sortCreateAction->setCheckable(true);
+    connect(sortCreateAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortModifyAction = new QAction(tr("Sort by last modified time"), this);
+    sortModifyAction->setObjectName("ModifyTime");
+    sortModifyAction->setCheckable(true);
+    connect(sortModifyAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortLabelAction = new QAction(tr("Sort by label"), this);
+    sortLabelAction->setObjectName("ModifyTime");
+    sortLabelAction->setCheckable(true);
+    connect(sortLabelAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortRatingAction = new QAction(tr("Sort by rating"), this);
+    sortRatingAction->setObjectName("ModifyTime");
+    sortRatingAction->setCheckable(true);
+    connect(sortRatingAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortReverseAction = new QAction(tr("Reverse sort order"), this);
+    sortReverseAction->setObjectName("reverse");
+    sortReverseAction->setCheckable(true);
+    connect(sortReverseAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     // rgh figure out what this does
     if (thumbView->thumbsSortFlags & QDir::Time)
-            actTime->setChecked(true);
+            sortCreateAction->setChecked(true);
     else if (thumbView->thumbsSortFlags & QDir::Size)
-            actSize->setChecked(true);
+            sortModifyAction->setChecked(true);
     else if (thumbView->thumbsSortFlags & QDir::Type)
-            actType->setChecked(true);
+            sortFileTypeAction->setChecked(true);
     else
-            actName->setChecked(true);
-    reverseSortAction->setChecked(thumbView->thumbsSortFlags & QDir::Reversed);
+            sortFileNameAction->setChecked(true);
+    sortReverseAction->setChecked(thumbView->thumbsSortFlags & QDir::Reversed);
 
 
 }
@@ -1054,6 +1078,18 @@ void MW::createMenus()
     goMenu->addAction(nextPickAction);
     goMenu->addAction(prevPickAction);
 
+    sortMenu = menuBar()->addMenu(tr("Sort"));
+    sortTypesGroup = new QActionGroup(this);
+    sortTypesGroup->addAction(sortFileNameAction);
+    sortTypesGroup->addAction(sortFileTypeAction);
+    sortTypesGroup->addAction(sortCreateAction);
+    sortTypesGroup->addAction(sortModifyAction);
+    sortTypesGroup->addAction(sortLabelAction);
+    sortTypesGroup->addAction(sortRatingAction);
+    sortMenu->addActions(sortTypesGroup->actions());
+    sortMenu->addSeparator();
+    sortMenu->addAction(sortReverseAction);
+
     viewMenu = menuBar()->addMenu(tr("&View"));
     viewMenu->addAction(slideShowAction);
     viewMenu->addAction(fullScreenAction);
@@ -1080,19 +1116,8 @@ void MW::createMenus()
     viewMenu->addAction(thumbsShrinkAction);
     viewMenu->addAction(thumbsFitAction);
     viewMenu->addAction(showThumbLabelsAction);
-    viewMenu->addAction(reverseSortAction);
+    viewMenu->addAction(sortReverseAction);
     viewMenu->addSeparator();
-
-/*    sortMenu = viewMenu->addMenu(tr("Sort By"));
-    sortTypesGroup = new QActionGroup(this);
-    sortTypesGroup->addAction(actName);
-    sortTypesGroup->addAction(actTime);
-    sortTypesGroup->addAction(actSize);
-    sortTypesGroup->addAction(actType);
-    sortMenu->addActions(sortTypesGroup->actions());
-    sortMenu->addSeparator();
-    sortMenu->addAction(actReverse);
-    */
 
     windowMenu = menuBar()->addMenu(tr("&Window"));
     workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
@@ -1196,13 +1221,13 @@ void MW::createMenus()
     thumbNailSubMenu->addAction(showThumbLabelsAction);
     sortMenu = thumbNailSubMenu->addMenu(tr("Sort By"));
     sortTypesGroup = new QActionGroup(this);
-    sortTypesGroup->addAction(actName);
-    sortTypesGroup->addAction(actTime);
-    sortTypesGroup->addAction(actSize);
-    sortTypesGroup->addAction(actType);
+    sortTypesGroup->addAction(sortFileNameAction);
+    sortTypesGroup->addAction(sortCreateAction);
+    sortTypesGroup->addAction(sortModifyAction);
+    sortTypesGroup->addAction(sortFileTypeAction);
     sortMenu->addActions(sortTypesGroup->actions());
     sortMenu->addSeparator();
-    sortMenu->addAction(reverseSortAction);
+    sortMenu->addAction(sortReverseAction);
 
     addMenuSeparator(imageView);
 
@@ -1263,7 +1288,7 @@ void MW::createMenus()
     viewSubMenu->addAction(asListAction);
     viewSubMenu->addAction(asIconsAction);
     viewSubMenu->addSeparator();
-    viewSubMenu->addAction(reverseSortAction);
+    viewSubMenu->addAction(sortReverseAction);
 
     QMenu *fileSubMenu = new QMenu(imageView);
     QAction *fileGroupAct = new QAction("File", this);
@@ -1331,6 +1356,9 @@ void MW::createThumbView()
 
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
+//    connect(metadataCacheThread, SIGNAL(loadImageMetadata(QFileInfo)),
+//            metadata, SLOT(loadFromThread(QFileInfo)));
+
     connect(metadataCacheThread, SIGNAL(loadThumbCache()),
             this, SLOT(loadThumbCache()));
 
@@ -1339,6 +1367,9 @@ void MW::createThumbView()
 
     connect(thumbView, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
+
+    connect(thumbCacheThread, SIGNAL(setIcon(QStandardItem*, QImage, QString)),
+            thumbView, SLOT(setIcon(QStandardItem*, QImage, QString)));
 
     connect(thumbCacheThread, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
@@ -1638,19 +1669,20 @@ void MW::sortThumbnails()
     }
     thumbView->thumbsSortFlags = QDir::IgnoreCase;
 
-    if (actName->isChecked())
+    if (sortFileNameAction->isChecked())
         thumbView->thumbsSortFlags |= QDir::Name;
-    else if (actTime->isChecked())
+    else if (sortCreateAction->isChecked())
         thumbView->thumbsSortFlags |= QDir::Time;
-    else if (actSize->isChecked())
+    else if (sortModifyAction->isChecked())
         thumbView->thumbsSortFlags |= QDir::Size;
-    else if (actType->isChecked())
+    else if (sortFileTypeAction->isChecked())
         thumbView->thumbsSortFlags |= QDir::Type;
 
-    if (reverseSortAction->isChecked())
+    if (sortReverseAction->isChecked())
         thumbView->thumbsSortFlags |= QDir::Reversed;
 
-//    refreshThumbs(false);
+    thumbView->sortThumbs(sortReverseAction->isChecked());
+//    refreshThumbs();
 }
 
 void MW::showHiddenFiles()
@@ -2421,6 +2453,12 @@ void MW::preferences()
     connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool)),
             this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool)));
     prefdlg->exec();
+}
+
+void MW::thumbTable()
+{
+    TableView *tableForm = new TableView(thumbView, this);
+    tableForm->exec();
 }
 
 void MW::setIncludeSubFolders()

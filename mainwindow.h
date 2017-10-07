@@ -11,6 +11,7 @@
 #include "mdcache.h"
 #include "copypickdlg.h"
 #include "prefdlg.h"
+#include "tableview.h"
 #include "workspacedlg.h"
 #include "popup.h"
 #include "bookmarks.h"
@@ -157,6 +158,7 @@ private slots:
 //    void reload();
     void preferences();
     void oldPreferences();
+    void thumbTable();
     void toggleFullScreen();
     void escapeFullScreen();
     void loupeDisplay();
@@ -337,7 +339,7 @@ private:
     QAction *thumbsShrinkAction;
     QAction *thumbsFitAction;   // used?? rgh
     QAction *showThumbLabelsAction;
-    QAction *reverseSortAction;
+    QAction *sortReverseAction;
 
     // Window Menu
     QAction *defaultWorkspaceAction;
@@ -371,10 +373,12 @@ private:
     QAction *pasteAction;
     QAction *pasteImageAction;
     QActionGroup *sortTypesGroup;
-    QAction *actName;
-    QAction *actTime;
-    QAction *actSize;
-    QAction *actType;
+    QAction *sortFileNameAction;
+    QAction *sortCreateAction;
+    QAction *sortModifyAction;
+    QAction *sortFileTypeAction;
+    QAction *sortLabelAction;
+    QAction *sortRatingAction;
 
     // Not needed
     //    QAction *cutAction;

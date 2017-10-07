@@ -24,6 +24,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
+    void setIcon(QStandardItem*, QImage, QString);
     void updateIsRunning(bool);
     void updateStatus(bool, QString);
     void refreshThumbs();

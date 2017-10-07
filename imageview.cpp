@@ -626,7 +626,7 @@ void ImageView::zoom50()
     qDebug() << "ImageView::zoom50";
     #endif
     }
-    zoomTo(0.5);
+//    zoomTo(0.5);
     clickZoom = 0.5;
 }
 

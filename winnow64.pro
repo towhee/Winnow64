@@ -29,7 +29,8 @@ HEADERS += \
     compareview.h \
     imagealign.h \
     testaligndlg.h \
-    pixmap.h
+    pixmap.h \
+    tableview.h
 SOURCES += \
     bookmarks.cpp \
     dircompleter.cpp \
@@ -55,14 +56,16 @@ SOURCES += \
     compareview.cpp \
     imagealign.cpp \
     testaligndlg.cpp \
-    pixmap.cpp
+    pixmap.cpp \
+    tableview.cpp
 FORMS += \
     copypickdlg.ui \
     prefdlg.ui \
     workspacedlg.ui \
     helpform.ui \
     aligndlg.ui \
-    testaligndlg.ui
+    testaligndlg.ui \
+    tableview.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns
@@ -79,7 +82,8 @@ DISTFILES += Notes.txt Errors \
     teststyle.css \
     qss/WinnowStyle.css \
     qss/WinnowStyle.css \
-    Shortcuts.txt
+    Shortcuts.txt \
+    Scratch.txt
 
 macx {
     QMAKE_MAC_SDK = macosx10.12

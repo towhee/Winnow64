@@ -17,7 +17,26 @@ public:
         SortRole,
         LoadedRole,
         PickedRole,
-        ThumbRectRole   // is this needed anymore ??
+        ThumbRectRole,
+        PathRole,
+        FileTypeRole,
+        FileSizeRole,
+        CreatedRole,
+        ModifiedRole,
+        LabelRole,
+        RatingRole
+    };
+
+    enum modelColumns {
+        NameColumn,
+        TypeColumn,
+        SizeColumn,
+        CreatedColumn,
+        ModifiedColumn,
+        PickedColumn,
+        LabelColumn,
+        RatingColumn,
+        TotalColumns    // insert additional columns before this
     };
 
     ThumbView(QWidget *parent, Metadata *metadata, bool iconView);
@@ -47,6 +66,8 @@ public:
     void selectThumb(QModelIndex idx);
     void selectThumb(int row);
     void selectThumb(QString &filePath);
+    void reportThumb();                             //debugging thumb roles
+
 
     QFileInfoList getPicks();
     bool isPick();
@@ -74,6 +95,7 @@ public slots:
     void invertSelection();                         //in use
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
     void refreshThumbs();
+    void setIcon(QStandardItem *item, QImage thumb, QString folderPath);
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
              int _thumbPadding, int _labelFontSize, bool _showThumbLabels);
     void setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid, int _thumbSpacingGrid,
@@ -89,6 +111,7 @@ public slots:
     void selectNextPick();
     void selectPrevPick();
     void copyThumbs();
+    void sortThumbs(bool isReverse);
 
 private slots:
     void delaySelectCurrentThumb();
@@ -105,7 +128,6 @@ private:
     void loadPrepare();
     bool initThumbs();
     bool isSelectedItem();          // call before getting row or index
-    void reportThumb();                             //debugging thumb roles
 
     int getNextRow();
     int getPrevRow();

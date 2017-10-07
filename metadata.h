@@ -174,6 +174,7 @@ private:
 signals:
 
 public slots:
+    void loadFromThread(QFileInfo fileInfo);
 
 private:
     void track(QString fPath, QString msg);

@@ -42,6 +42,8 @@ void ThumbCache::stopThumbCache()
         condition.wakeOne();
         mutex.unlock();
         wait();
+        qDebug() << "ThumbCache::stopThumbCache  isRunning:" << isRunning();
+        emit updateIsRunning(false);
     }
 }
 
@@ -84,6 +86,7 @@ void ThumbCache::run()
     // rgh review hard coding thumb size
     QSize thumbMax(160, 160);
     QString fPath;
+    QString folderPath;
 
     int totDelay = 500;     // milliseconds
     int msDelay = 0;        // total incremented delay
@@ -97,15 +100,16 @@ void ThumbCache::run()
     for (int row = 0; row < thumbView->thumbViewModel->rowCount(); ++row) {
         if (abort) {
             emit updateIsRunning(false);
-            thumbView->refreshThumbs();
             return;
         }
         QModelIndex idx = thumbView->thumbViewModel->index(row, 0, QModelIndex());
+        if (!idx.isValid()) return;
         item = thumbView->thumbViewModel->itemFromIndex(idx);
         fPath = item->data(Qt::ToolTipRole).toString();
         if (G::isThreadTrackingOn) track(fPath, "Reading");
         QImage thumb;
         QFileInfo fileInfo(fPath);
+        folderPath = fileInfo.path();
         QString ext = fileInfo.completeSuffix().toLower();
         QFile imFile(fPath);
 
@@ -118,9 +122,9 @@ void ThumbCache::run()
 
         bool success = false;
         if (metadata->rawFormats.contains(ext) || readThumbFromJPG) {
-            // read the raw file thumb using metadata for offset and length of
-            // embedded JPG
-            // Check if metadata has been cached for this image
+            /* read the raw file thumb using metadata for offset and length of
+            embedded JPG.  Check if metadata has been cached for this image.
+            */
             int msDelay = 0;
             do {
                 if (abort) {
@@ -226,9 +230,14 @@ void ThumbCache::run()
                 break;
         }
         // record any errors
+//        qDebug() << "thumbcache::run  abort" << abort << " emit setIcon(item, thumb)" << folderPath;
         mutex.lock();
-        item->setIcon(QPixmap::fromImage(thumb));
-        item->setData(true, thumbView->LoadedRole);
+        if (!abort) emit setIcon(item, thumb, folderPath);
+
+        // causes crash when change folders and thumbcache was interrupted
+//        if (!abort && item->index().isValid()) item->setIcon(QPixmap::fromImage(thumb));
+
+//        item->setData(true, thumbView->LoadedRole);
         if (!success) {
             metadata->setErr(fPath, err);
             if (G::isThreadTrackingOn) track(fPath, err);
@@ -248,6 +257,11 @@ void ThumbCache::run()
              " of " + QString::number(thumbView->thumbViewModel->rowCount()));
         restart = false;
 //        qDebug() << "Thumbnail cached " << fName;
+
+//        if (abort) {
+//            emit updateIsRunning(false);
+//            return;
+//        }
     }
     emit updateIsRunning(false);
     emit updateStatus(true, "All thumbs cached");

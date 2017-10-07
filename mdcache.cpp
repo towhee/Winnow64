@@ -87,7 +87,8 @@ void MetadataCache::run()
         // InfoView::updateInfo might have already loaded by getting here first
         // it is executed when the first image is loaded
         if (!metadata->isLoaded(fPath)) {
-            QFileInfo fileInfo(fPath);
+            QFileInfo fileInfo(fPath);            
+//            emit loadImageMetadata(fileInfo);
             mutex.lock();
             metadata->loadImageMetadata(fileInfo);
             mutex.unlock();

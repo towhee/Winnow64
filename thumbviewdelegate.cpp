@@ -52,7 +52,7 @@ QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbViewDelegate::sizeHint";
+    qDebug() << "ThumbViewDelegate::sizeHint" << index.data(Qt::DisplayRole);
     #endif
     }
     QFont font = QApplication::font();
@@ -77,7 +77,7 @@ textRect         = a rectangle below itemRect
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbViewDelegate::paint" << index;
+    qDebug() << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
     #endif
     }
     painter->save();

@@ -3,7 +3,7 @@
 /*  ThumbView Overview
 
 ThumbView manages the list of images within a folder and it's children
-(optional). The thumbView and either be a list of file names or thumbnails.
+(optional). The thumbView can either be a QListView of file names or thumbnails.
 When a list item is selected the image is shown in imageView.
 
 The thumbView is inside a QDockWidget which allows it to dock and be moved and
@@ -73,12 +73,21 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     setUniformItemSizes(false);
     this->setContentsMargins(0,0,0,0);
 
-    thumbViewModel = new QStandardItemModel(this);
-    thumbViewModel->setSortRole(SortRole);
+    thumbViewModel = new QStandardItemModel();
+
+    // try headers to get to work with multiple columns in a table
+    /*
+    thumbViewModel = new QStandardItemModel(0, TotalColumns);
+    thumbViewModel->setHeaderData(0, Qt::Horizontal, QObject::tr("FileName"));
+    thumbViewModel->setHeaderData(1, Qt::Horizontal, QObject::tr("Type"));
+    */
+
+//    thumbViewModel->setSortRole(ModifiedRole);    // not working
+
     thumbViewFilter = new QSortFilterProxyModel;
     thumbViewFilter->setSourceModel(thumbViewModel);
     thumbViewFilter->setFilterRole(PickedRole);
-//    thumbViewFilter->setSortRole(SortRole);     // rgh 2017-05-31
+//    thumbViewFilter->setSortRole(ModifiedColumn);     // rgh 2017-05-31
     setModel(thumbViewFilter);
 
     thumbViewSelection = selectionModel();
@@ -238,14 +247,27 @@ void ThumbView::reportThumb()
     }
     int currThumb = currentIndex().row();
     qDebug() << "\n ***** THUMB INFO *****";
+    qDebug() << "Row =" << currThumb;
     qDebug() << "LoadedRole " << LoadedRole << thumbViewModel->item(currThumb)->data(LoadedRole).toBool();
     qDebug() << "FileNameRole " << FileNameRole << thumbViewModel->item(currThumb)->data(FileNameRole).toString();
     qDebug() << "SortRole " << SortRole << thumbViewModel->item(currThumb)->data(SortRole).toInt();
+    qDebug() << "PickedRole " << PickedRole << thumbViewModel->item(currThumb)->data(PickedRole).toString();
+    qDebug() << "FileTypeRole " << FileTypeRole << thumbViewModel->item(currThumb)->data(FileTypeRole).toString();
+    qDebug() << "FileSizeRole " << FileSizeRole << thumbViewModel->item(currThumb)->data(FileSizeRole).toInt();
+    qDebug() << "CreatedRole " << CreatedRole << thumbViewModel->item(currThumb)->data(CreatedRole).toDateTime();
+    qDebug() << "ModifiedRole " << ModifiedRole << thumbViewModel->item(currThumb)->data(ModifiedRole).toDateTime();
+    qDebug() << "LabelRole " << ModifiedRole << thumbViewModel->item(currThumb)->data(LabelRole).toInt();
+    qDebug() << "ModifiedRole " << ModifiedRole << thumbViewModel->item(currThumb)->data(RatingRole).toInt();
+
+    // following crashes when columns not added
+//    QModelIndex idx1 = thumbViewFilter->index(currThumb, 1, QModelIndex());
+//    qDebug() << "Column 1 Type:" << idx1.data(Qt::DisplayRole);
+
 //    qDebug() << thumbViewModel->item(currThumb)->data(DisplayRole).toString();
-    qDebug() << "\nAll roles:";
-    for (int i=0; i<15; ++i) {
-        qDebug() << i << ":  " << thumbViewModel->item(currThumb)->data(i);
-    }
+//    qDebug() << "\nAll roles:";
+//    for (int i=0; i<15; ++i) {
+//        qDebug() << i << ":  " << thumbViewModel->item(currThumb)->data(i);
+//    }
 }
 
 int ThumbView::getCurrentRow()
@@ -445,6 +467,24 @@ void ThumbView::toggleFilterPick(bool isFilter)
         thumbViewFilter->setFilterRegExp("");       // no filter - show all
 }
 
+void ThumbView::sortThumbs(bool isReverse)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::sortThumbs";
+    #endif
+    }
+    int sortColumn = NameColumn;
+    qDebug() << "sortIem" << sortColumn;
+    // rgh change to use thumbViewFilter
+    //    if (isReverse) thumbViewFilter->sort(0, Qt::DescendingOrder);
+    //    else thumbViewFilter->sort(0, Qt::AscendingOrder);
+    if (isReverse) thumbViewModel->sort(sortColumn, Qt::DescendingOrder);
+    else thumbViewModel->sort(sortColumn, Qt::AscendingOrder);
+    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+//    refreshThumbs();
+}
+
 QStringList ThumbView::getSelectedThumbsList()
 {
 /* This was used by the eliminated tags class and is not used but looks
@@ -573,7 +613,7 @@ bool ThumbView::initThumbs()
         thumbFileInfo = dirFileInfoList.at(fileIndex);
         thumbFileInfoList.append(thumbFileInfo);
         item = new QStandardItem();
-        item->setData(false, LoadedRole);
+//        item->setData(false, LoadedRole);
         item->setData(fileIndex, SortRole);
 //        item->setData(thumbFileInfo.created(), SortRole);
         item->setData(thumbFileInfo.filePath(), FileNameRole);
@@ -581,9 +621,41 @@ bool ThumbView::initThumbs()
         item->setData("False", PickedRole);
         item->setData(QRect(), ThumbRectRole);     // define later when read
         item->setData(thumbFileInfo.fileName(), Qt::DisplayRole);
+        item->setData(thumbFileInfo.path(), PathRole);
+        item->setData(thumbFileInfo.suffix(), FileTypeRole);
+        item->setData(thumbFileInfo.size(), FileSizeRole);
+        item->setData(thumbFileInfo.created(), CreatedRole);
+        item->setData(thumbFileInfo.lastModified(), ModifiedRole);
+        item->setData(0, LabelRole);
+        item->setData(0, RatingRole);
         thumbViewModel->appendRow(item);
+        // try add columns to model - not working so far
+//        int row = item->index().row();
+//        QModelIndex idx1 = thumbViewFilter->index(row, TypeColumn, QModelIndex());
+//        thumbViewModel->setData(idx1, thumbFileInfo.suffix(), Qt::DisplayRole);
+//        thumbViewModel->setData(thumbViewModel->index(fileIndex, SizeColumn), thumbFileInfo.size());
+//        thumbViewModel->setData(thumbViewModel->index(fileIndex, CreatedColumn), thumbFileInfo.created());
+//        thumbViewModel->setData(thumbViewModel->index(fileIndex, ModifiedColumn), thumbFileInfo.lastModified());
+//        thumbViewModel->setData(thumbViewModel->index(fileIndex, PickedColumn), false);
+//        thumbViewModel->setData(thumbViewModel->index(fileIndex, LabelColumn), 0);
+//        thumbViewModel->setData(thumbViewModel->index(fileIndex, RatingColumn), 0);
     }
     return true;
+}
+
+void ThumbView::setIcon(QStandardItem *item, QImage thumb, QString folderPath)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::setIcon" << folderPath;
+    #endif
+    }
+    /* If a new folder is selected while the previous folder is being cached
+     * a race condition can arise.  Make sure the item is referring to the
+     * current directory.  If not, item will be a dereferenced pointer and
+     * cause a segmentation fault crash */
+    if (folderPath != currentViewDir) return;
+    item->setIcon(QPixmap::fromImage(thumb));
 }
 
 // Used by thumbnail navigation (left, right, up, down etc)
@@ -618,6 +690,8 @@ void ThumbView::selectThumb(int row)
 //    forceScroll(10);
     scrollTo(idx, ScrollHint::PositionAtCenter);
 //    if (idx.isValid()) scrollTo(idx, ScrollHint::PositionAtCenter);
+
+//    reportThumb();
 }
 
 void ThumbView::selectThumb(QString &fName)
