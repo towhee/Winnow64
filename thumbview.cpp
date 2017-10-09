@@ -76,11 +76,12 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     thumbViewModel = new QStandardItemModel();
 
     // try headers to get to work with multiple columns in a table
-    /*
+
     thumbViewModel = new QStandardItemModel(0, TotalColumns);
+//    thumbViewModel = new QStandardItemModel(0, 2);
     thumbViewModel->setHeaderData(0, Qt::Horizontal, QObject::tr("FileName"));
     thumbViewModel->setHeaderData(1, Qt::Horizontal, QObject::tr("Type"));
-    */
+
 
 //    thumbViewModel->setSortRole(ModifiedRole);    // not working
 
@@ -603,6 +604,7 @@ bool ThumbView::initThumbs()
     dirFileInfoList = thumbsDir->entryInfoList();
     if (dirFileInfoList.size() == 0) return false;
     static QStandardItem *item;
+    static QStandardItem *typeItem;
     static int fileIndex;
     static QPixmap emptyPixMap;
 
@@ -630,7 +632,11 @@ bool ThumbView::initThumbs()
         item->setData(0, RatingRole);
         thumbViewModel->appendRow(item);
         // try add columns to model - not working so far
-//        int row = item->index().row();
+        int row = item->index().row();
+
+        typeItem = new QStandardItem(thumbFileInfo.suffix());
+        thumbViewModel->setItem(row, TypeColumn, typeItem);
+
 //        QModelIndex idx1 = thumbViewFilter->index(row, TypeColumn, QModelIndex());
 //        thumbViewModel->setData(idx1, thumbFileInfo.suffix(), Qt::DisplayRole);
 //        thumbViewModel->setData(thumbViewModel->index(fileIndex, SizeColumn), thumbFileInfo.size());

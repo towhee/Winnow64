@@ -2769,7 +2769,7 @@ void MW::writeSettings()
     setting->setValue("thumbHeightGrid", thumbView->thumbHeightGrid);
     setting->setValue("labelFontSizeGrid", thumbView->labelFontSizeGrid);
     setting->setValue("showLabelsGrid", (bool)thumbView->showThumbLabelsGrid);
-    setting->setValue("isThumbWrapWhenTopOrBottomDock", (bool)thumbView->isWrapping());
+    setting->setValue("isThumbWrapWhenTopOrBottomDock", (bool)thumbView->isThumbWrapWhenTopOrBottomDock);
     setting->setValue("isAutoFit", (bool)thumbView->isAutoFit);
     setting->setValue("isVerticalTitle", (bool)isThumbDockVerticalTitle);
     // slideshow
