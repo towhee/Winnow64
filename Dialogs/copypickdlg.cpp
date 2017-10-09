@@ -14,8 +14,8 @@ CopyPickDlg::CopyPickDlg(QWidget *parent, QFileInfoList &imageList,
     this->metadata = metadata;
 //    ui->progressBar->setVisible(false);
 
-    ui->comboBox->addItem("Test 1");
-    ui->comboBox->addItem("Test 2");
+//    ui->comboBox->addItem("Test 1");
+//    ui->comboBox->addItem("Test 2");
 
     fileNameDatePrefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
     QString dateTime = metadata->getDateTime(pickList.at(0).absoluteFilePath());

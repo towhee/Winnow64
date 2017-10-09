@@ -673,7 +673,7 @@ void ImageCache::run()
                 }
                 else break;
             }
-//            pm.setDevicePixelRatio(G::devicePixelRatio);
+            pm.setDevicePixelRatio(G::devicePixelRatio);
 //            pm->setDevicePixelRatio(G::devicePixelRatio);
 
             mutex.lock();

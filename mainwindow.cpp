@@ -34,10 +34,10 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     G::devicePixelRatio = 1;
     #ifdef Q_OS_MAC
-    G::devicePixelRatio = 2;
+    G::devicePixelRatio = 1;
     #endif
 
-    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+//    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
     isInitializing = true;
     isSlideShowActive = false;
@@ -273,7 +273,7 @@ void MW::folderSelectionChange()
     // Stop any threads that might be running.
     thumbCacheThread->stopThumbCache();
 //    QThread::msleep(2000);        // no effect on crash
-    qDebug() << "thumbCacheThread->isRunning" << thumbCacheThread->isRunning();
+//    qDebug() << "thumbCacheThread->isRunning" << thumbCacheThread->isRunning();
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
 
@@ -310,7 +310,7 @@ void MW::folderSelectionChange()
     else {
         dirPath = getSelectedPath();
         testDir.setPath(dirPath);
-        qDebug() << "MW::folderSelectionChange ^^^^^^^^^^^ " << dirPath;
+//        qDebug() << "MW::folderSelectionChange ^^^^^^^^^^^ " << dirPath;
     }
 
     if (!testDir.exists()) {
@@ -1484,7 +1484,6 @@ void MW::setThumbDockParameters(bool isThumbWrapWhenTopOrBottomDock, bool isAuto
     thumbView->isThumbWrapWhenTopOrBottomDock = isThumbWrapWhenTopOrBottomDock;       // is this needed?
     thumbView->isAutoFit = isAutoFit;
     isThumbDockVerticalTitle = isVerticalTitle;
-//    thumbView->setWrapping(isThumbWrapWhenTopOrBottomDock);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
 }
 
@@ -1968,6 +1967,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.showThumbLabels = thumbView->showThumbLabels;
     wsd.isThumbWrapWhenTopOrBottomDock = thumbView->isThumbWrapWhenTopOrBottomDock;
     wsd.isAutoFit = thumbView->isAutoFit;
+    wsd.isVerticalTitle = isThumbDockVerticalTitle; // rgh thumbDock->titleBarWidget()->is;
 
     wsd.thumbSpacingGrid = thumbView->thumbSpacingGrid;
     wsd.thumbPaddingGrid = thumbView->thumbPaddingGrid;
@@ -1976,10 +1976,6 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.labelFontSizeGrid = thumbView->labelFontSizeGrid;
     wsd.showThumbLabelsGrid = thumbView->showThumbLabelsGrid;
 
-    wsd.isThumbWrapWhenTopOrBottomDock = thumbView->isThumbWrapWhenTopOrBottomDock;
-    wsd.isAutoFit = thumbView->isAutoFit;
-
-    wsd.isVerticalTitle = isThumbDockVerticalTitle; // rgh thumbDock->titleBarWidget()->is;
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
 }
 
@@ -3796,7 +3792,7 @@ void MW::copyPicks()
         delete copyPickDlg;
     }
     else QMessageBox::information(this,
-         "Oops", "There are no picks to copy.    ", QMessageBox::Ok);
+         "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
 }
 
 void MW::getSubfolders(QString fPath)

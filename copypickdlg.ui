@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>634</width>
-    <height>478</height>
+    <width>674</width>
+    <height>470</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -22,29 +22,13 @@
   <property name="modal">
    <bool>false</bool>
   </property>
-  <widget class="QProgressBar" name="progressBar">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>367</y>
-     <width>591</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="value">
-    <number>0</number>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
   <widget class="QGroupBox" name="groupBox">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>10</y>
-     <width>591</width>
-     <height>121</height>
+     <y>232</y>
+     <width>631</width>
+     <height>81</height>
     </rect>
    </property>
    <property name="minimumSize">
@@ -54,142 +38,14 @@
     </size>
    </property>
    <property name="title">
-    <string>File Naming</string>
+    <string>Images will be copied and renamed to</string>
    </property>
-   <widget class="QComboBox" name="comboBox">
-    <property name="geometry">
-     <rect>
-      <x>149</x>
-      <y>38</y>
-      <width>261</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="autoFillBackground">
-     <bool>false</bool>
-    </property>
-    <property name="frame">
-     <bool>true</bool>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label">
+   <widget class="QLabel" name="folderPathLabel">
     <property name="geometry">
      <rect>
       <x>20</x>
       <y>40</y>
-      <width>121</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>File naming preset:</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_3">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>80</y>
-      <width>171</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Start file numbering from:</string>
-    </property>
-   </widget>
-   <widget class="QSpinBox" name="spinBoxStartNumber">
-    <property name="geometry">
-     <rect>
-      <x>190</x>
-      <y>77</y>
-      <width>71</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="minimum">
-     <number>1</number>
-    </property>
-    <property name="maximum">
-     <number>9999</number>
-    </property>
-   </widget>
-  </widget>
-  <widget class="QGroupBox" name="groupBox_2">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>147</y>
-     <width>591</width>
-     <height>191</height>
-    </rect>
-   </property>
-   <property name="minimumSize">
-    <size>
-     <width>381</width>
-     <height>0</height>
-    </size>
-   </property>
-   <property name="title">
-    <string>Folder Creation</string>
-   </property>
-   <widget class="QPushButton" name="selectFolderBtn">
-    <property name="geometry">
-     <rect>
-      <x>40</x>
-      <y>143</y>
-      <width>101</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <weight>50</weight>
-      <bold>false</bold>
-     </font>
-    </property>
-    <property name="text">
-     <string>Select folder</string>
-    </property>
-    <property name="autoDefault">
-     <bool>false</bool>
-    </property>
-    <property name="default">
-     <bool>false</bool>
-    </property>
-    <property name="flat">
-     <bool>false</bool>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="descriptionLineEdit">
-    <property name="geometry">
-     <rect>
-      <x>110</x>
-      <y>87</y>
-      <width>361</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QLabel" name="folderDescription">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>88</y>
-      <width>81</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Description:</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="folderPathLabel">
-    <property name="geometry">
-     <rect>
-      <x>80</x>
-      <y>57</y>
-      <width>490</width>
+      <width>591</width>
       <height>20</height>
      </rect>
     </property>
@@ -239,66 +95,113 @@
      <string/>
     </property>
    </widget>
-   <widget class="QLabel" name="label_2">
+  </widget>
+  <widget class="QGroupBox" name="groupBox_2">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>22</y>
+     <width>631</width>
+     <height>191</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>381</width>
+     <height>0</height>
+    </size>
+   </property>
+   <property name="title">
+    <string>Ingest to location parameters</string>
+   </property>
+   <widget class="QPushButton" name="selectFolderBtn">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>30</y>
+      <width>121</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>50</weight>
+      <bold>false</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Select Folder</string>
+    </property>
+    <property name="autoDefault">
+     <bool>false</bool>
+    </property>
+    <property name="default">
+     <bool>false</bool>
+    </property>
+    <property name="flat">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="descriptionLineEdit">
+    <property name="geometry">
+     <rect>
+      <x>160</x>
+      <y>87</y>
+      <width>361</width>
+      <height>20</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="folderDescription">
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>57</y>
-      <width>51</width>
+      <y>88</y>
+      <width>131</width>
       <height>20</height>
      </rect>
     </property>
     <property name="text">
-     <string>Folder:</string>
+     <string>Append Description:</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_4">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>30</y>
-      <width>161</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Create a default folder:</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_5">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>148</y>
-      <width>21</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>or </string>
-    </property>
-   </widget>
-   <widget class="Line" name="line">
+   <widget class="QLabel" name="label_3">
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>126</y>
-      <width>540</width>
-      <height>1</height>
+      <y>140</y>
+      <width>171</width>
+      <height>16</height>
      </rect>
     </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
+    <property name="text">
+     <string>Start file numbering from:</string>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spinBoxStartNumber">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>137</y>
+      <width>71</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="minimum">
+     <number>1</number>
+    </property>
+    <property name="maximum">
+     <number>9999</number>
     </property>
    </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_3">
    <property name="geometry">
     <rect>
-     <x>-20</x>
-     <y>407</y>
-     <width>671</width>
-     <height>101</height>
+     <x>20</x>
+     <y>390</y>
+     <width>631</width>
+     <height>61</height>
     </rect>
    </property>
    <property name="title">
@@ -308,7 +211,7 @@
     <property name="geometry">
      <rect>
       <x>450</x>
-      <y>23</y>
+      <y>20</y>
       <width>156</width>
       <height>25</height>
      </rect>
@@ -327,6 +230,22 @@
      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
     </property>
    </widget>
+  </widget>
+  <widget class="QProgressBar" name="progressBar">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>340</y>
+     <width>631</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="value">
+    <number>0</number>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
   </widget>
  </widget>
  <resources/>
