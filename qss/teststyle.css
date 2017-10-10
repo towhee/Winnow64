@@ -160,20 +160,25 @@ QListWidget {
 
 QTableView
 {
-    alternate-background-color: rgb(87,87,87);
-    gridline-color: rgb(85,85,85);
+    alternate-background-color: rgb(90,90,90);
+    gridline-color: rgb(75,75,75);
+    color: rgb(190,190,190);
 }
 
 QHeaderView
 {
     background-color: rgb(95,95,95);
-    color: rgb(85,85,85);
+    color: rgb(190,190,190);
+/*    color: rgb(85,85,85);  */
+    font-size: 12px;
 }
 
 QHeaderView::section{
     background-color: rgb(95,95,95);
     border-style: solid;
+    border: 1px solid rgb(85,85,85);
     border-bottom: 1px solid rgb(85,85,85);
+    font: bold 13px;
 }
 
 QAbstractScrollArea {

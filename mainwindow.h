@@ -75,6 +75,7 @@ public:
         bool isIconDisplay;            // list vs icon in thumbView
         bool isLoupeDisplay;
         bool isGridDisplay;
+        bool isTableDisplay;
         bool isCompareDisplay;
     };
     workspaceData ws;   // hold values for workspace n
@@ -127,7 +128,49 @@ public:
         bool isStatusBar;
     } fullScreenDocks;
 
+//    enum UserRoles {
+//        FileNameRole = Qt::UserRole + 1,
+//        SortRole,
+//        LoadedRole,
+//        PickedRole,
+//        ThumbRectRole,
+//        PathRole,
+//        FileTypeRole,
+//        FileSizeRole,
+//        CreatedRole,
+//        ModifiedRole,
+//        LabelRole,
+//        RatingRole
+//    };
+
+
+    enum modelColumns {     // modelColumns is also in thumbView.h
+        NameColumn,
+        TypeColumn,
+        SizeColumn,
+        CreatedColumn,
+        ModifiedColumn,
+        PickedColumn,
+        LabelColumn,
+        RatingColumn,
+        MegaPixelsColumn,
+        DimensionsColumn,
+        ApertureColumn,
+        ShutterspeedColumn,
+        ISOColumn,
+        CameraColumn,
+        FocalLengthColumn,
+        TitleColumn,
+        TotalColumns        // insert additional columns before this
+    };
+
     QString currentViewDir;
+//    QDir *imageDir;
+//    QStringList *imageFilters;
+//    QList<QStandardItem*> *imageList;
+//    QItemSelectionModel *imageSelection;
+//    QFileInfo fileInfo;
+//    QFileInfoList fileInfoList;
 
     bool isSlideShowActive;
     bool copyOp;
@@ -163,6 +206,7 @@ private slots:
     void escapeFullScreen();
     void loupeDisplay();
     void gridDisplay();
+    void tableDisplay();
     void compareDisplay();
     void zoomOut();
     void zoomIn();
@@ -323,6 +367,7 @@ private:
     QAction *infoVisibleAction;
     QActionGroup *centralGroupAction;
     QAction *asGridAction;
+    QAction *asTableAction;
     QAction *asLoupeAction;
     QAction *asCompareAction;
     QActionGroup *iconGroupAction;
@@ -408,6 +453,7 @@ private:
     Metadata *metadata;
     ThumbView *thumbView;
     ImageView *imageView;
+    QTableView *tableView;
     CompareImages *compareImages;
 //    ImageView *im1;
 //    ImageView *im2;
@@ -433,6 +479,7 @@ private:
     QStringList *recentFolders;
 
     QModelIndexList selectedImages;
+    QStandardItemModel *imageModel;
 
     bool metadataLoaded;
 
@@ -457,9 +504,12 @@ private:
     void selectCurrentViewDir();
     void handleStartupArgs();
     void addMenuSeparator(QWidget *widget);
+//    void createImageModel();
+//    bool populateImageModel(bool includeSubfolders);
     void createImageView();
     void createCompareView();
     void createThumbView();
+    void createTableView();
     void createActions();
     void createMenus();
     void createStatusBar();

@@ -58,8 +58,6 @@ void InfoView::tweakHeaders()
     qDebug() << "InfoView::tweakHeaders";
     #endif
     }
-//    resizeColumnsToContents();
-//    infoModel->setHorizontalHeaderLabels({"", ""});   // rgh2017-04-30
     horizontalHeader()->setFixedHeight(1);
 }
 
@@ -129,7 +127,7 @@ void InfoView::updateInfo(const QString &fPath)
 
     infoModel->clear();
 
-
+    qDebug() << "InfoView::updateInfo" << fPath;
     QString key;
     QString val;
 

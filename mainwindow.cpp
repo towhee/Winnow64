@@ -43,6 +43,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     isSlideShowActive = false;
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
+//    imageFilters = new QStringList;
+//    imageDir = new QDir();
     popUp = new PopUp;
 
 /* Initialization process
@@ -82,8 +84,10 @@ variables in MW (this class) and managed in the prefDlg class.
     centralLayout = new QStackedLayout;
     centralLayout->setContentsMargins(0, 0, 0, 0);
 
+//    createImageModel();
     createThumbView();              // dependent on QSetting
     createImageView();              // Req centralWidget
+    createTableView();              // Req centralWidget
     createCompareView();            // Req centralWidget
     createStatusBar();
     createFSTree();
@@ -121,7 +125,7 @@ variables in MW (this class) and managed in the prefDlg class.
     centralLayout->addWidget(centralLabel);
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
-//    centralLayout->addWidget(thumbView);
+    centralLayout->addWidget(tableView);
     centralLayout->setCurrentIndex(0);
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
@@ -354,6 +358,7 @@ void MW::folderSelectionChange()
         cacheLabel->setVisible(false);
         return;
     }
+//    populateImageModel(subFoldersAction->isChecked());
 
      /* Must load metadata first, as it contains the file offsets and lengths
      for the thumbnail and full size embedded jpgs and the image width and
@@ -440,6 +445,8 @@ void MW::loadImageCache()
     #endif
     }
 //    qDebug() << "MW::loadImageCache";
+    thumbView->addMetadataToModel();
+    tableView->resizeColumnsToContents();
     metadataLoaded = true;
     QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 
@@ -732,6 +739,10 @@ void MW::createActions()
 //    asGridAction->setChecked(setting->value("isGridDisplay").toBool());
     connect(asGridAction, SIGNAL(triggered()), this, SLOT(gridDisplay()));
 
+    asTableAction = new QAction(tr("Table"), this);
+    asTableAction->setCheckable(true);
+    connect(asTableAction, SIGNAL(triggered()), this, SLOT(tableDisplay()));
+
     asCompareAction = new QAction(tr("Compare"), this);
     asCompareAction->setCheckable(true);
 //    asCompareAction->setChecked(false); // never start with compare set true
@@ -741,6 +752,7 @@ void MW::createActions()
     centralGroupAction->setExclusive(true);
     centralGroupAction->addAction(asLoupeAction);
     centralGroupAction->addAction(asGridAction);
+    centralGroupAction->addAction(asTableAction);
     centralGroupAction->addAction(asCompareAction);
 
     asListAction = new QAction(tr("As list"), this);
@@ -1099,6 +1111,7 @@ void MW::createMenus()
     viewMenu->addSeparator();
     viewMenu->addAction(asLoupeAction);
     viewMenu->addAction(asGridAction);
+    viewMenu->addAction(asTableAction);
     viewMenu->addAction(asCompareAction);
     viewMenu->addSeparator();
     viewMenu->addAction(asListAction);
@@ -1318,6 +1331,119 @@ void MW::createMenus()
     imageView->setContextMenuPolicy(Qt::ActionsContextMenu);
 }
 
+void MW::addMenuSeparator(QWidget *widget)
+{
+    QAction *separator = new QAction(this);
+    separator->setSeparator(true);
+    widget->addAction(separator);
+}
+
+/**************** Data Model *************************/
+
+//void MW::createImageModel()
+//{
+//    imageModel = new QStandardItemModel;
+//    imageModel->setHorizontalHeaderItem(0, new QStandardItem(QString("FileName")));
+//    imageModel->setHorizontalHeaderItem(1, new QStandardItem("Type"));
+//    imageModel->setHorizontalHeaderItem(2, new QStandardItem("Size"));
+//    imageModel->setHorizontalHeaderItem(3, new QStandardItem("Created"));
+//    imageModel->setHorizontalHeaderItem(4, new QStandardItem("Last Modified"));
+//    imageModel->setHorizontalHeaderItem(5, new QStandardItem("Pick"));
+//    imageModel->setHorizontalHeaderItem(6, new QStandardItem("Label"));
+//    imageModel->setHorizontalHeaderItem(7, new QStandardItem("Rating"));
+////    imageModel->insertRow(0);
+////    imageModel->setData(imageModel->index(0, 0), "test");
+////    imageModel->setData(imageModel->index(0, 1), "jpg");
+////    imageModel->setData(imageModel->index(0, 2), 123456);
+////    QStandardItem *item = new QStandardItem("TestItem");
+////    imageModel->setItem(0, 3, item);
+//}
+
+//bool MW::populateImageModel(bool includeSubfolders)
+//{
+//    qDebug() << "MW::populateImageModel";
+//    imageFilters->clear();
+//    foreach (const QString &str, metadata->supportedFormats)
+//            imageFilters->append("*." + str);
+//    imageDir->setNameFilters(*imageFilters);
+//    imageDir->setFilter(QDir::Files);
+//    imageDir->setPath(currentViewDir);
+
+////    imageModel->clear();
+//    QFileInfoList dirFileInfoList;      // info for this folder
+//    dirFileInfoList.clear();
+//    dirFileInfoList = imageDir->entryInfoList();
+//    if (dirFileInfoList.size() == 0) return false;
+
+//    static QStandardItem *item;
+//    static int fileIndex;
+//    static QPixmap emptyPixMap;
+
+//    // rgh not working
+////    emptyPixMap = QPixmap::fromImage(emptyImg).scaled(160, 160);
+
+//    for (fileIndex = 0; fileIndex < dirFileInfoList.size(); ++fileIndex) {
+//        fileInfo = dirFileInfoList.at(fileIndex);
+//        fileInfoList.append(fileInfo);      // file info for all folders
+
+//        imageModel->insertRow(0);
+////            imageModel->setData(imageModel->index(0, 0), "test");
+////            imageModel->setData(imageModel->index(0, 1), "jpg");
+////            imageModel->setData(imageModel->index(0, 2), 123456);
+//        imageModel->setData(imageModel->index(0, 0), "fileInfo.fileName()");
+//        imageModel->setData(imageModel->index(0, 1), fileInfo.suffix());
+//        imageModel->setData(imageModel->index(0, 2), fileInfo.size());
+
+//        qDebug() << fileInfo.fileName()
+//                 << fileInfo.suffix()
+//                 << fileInfo.size();
+
+////        item = new QStandardItem();
+////        item->setData(fileInfo.fileName(), Qt::DisplayRole);
+////        item->setData(fileIndex, SortRole);
+////        item->setData(fileInfo.filePath(), FileNameRole);
+////        item->setData(fileInfo.absoluteFilePath(), Qt::ToolTipRole);
+////        item->setData("False", PickedRole);
+////        item->setData(QRect(), ThumbRectRole);     // define later when read
+////        imageModel->insertRow(0, item);
+//////        imageModel->appendRow(item);
+////        // try add columns to model - not working so far
+////        int row = item->index().row();
+
+////        item = new QStandardItem();
+////        item->setData(fileInfo.suffix(), Qt::DisplayRole);
+////        imageModel->setItem(row, TypeColumn, item);
+
+////        item = new QStandardItem();
+////        item->setData(fileInfo.size(), Qt::DisplayRole);
+////        imageModel->setItem(row, SizeColumn, item);
+
+////        item = new QStandardItem();
+////        item->setData(fileInfo.created(), Qt::DisplayRole);
+////        imageModel->setItem(row, CreatedColumn, item);
+
+////        item = new QStandardItem();
+////        item->setData(fileInfo.lastModified(), Qt::DisplayRole);
+////        imageModel->setItem(row, ModifiedColumn, item);
+
+////        item = new QStandardItem();
+////        item->setData(false, Qt::DisplayRole);
+////        imageModel->setItem(row, PickedColumn, item);
+
+////        item = new QStandardItem();
+////        item->setData(0, Qt::DisplayRole);
+////        imageModel->setItem(row, LabelColumn, item);
+
+////        item = new QStandardItem();
+////        item->setData(0, Qt::DisplayRole);
+////        imageModel->setItem(row, RatingColumn, item);
+
+////        qDebug() << "Row =" << row
+////                 << "FileName =" << imageModel->index(row, NameColumn).data(Qt::DisplayRole);
+//    }
+//    return true;
+//}
+
 void MW::createThumbView()
 {
     {
@@ -1384,11 +1510,19 @@ void MW::createThumbView()
     infoView->setMaximumWidth(folderMaxWidth);
 }
 
-void MW::addMenuSeparator(QWidget *widget)
+void MW::createTableView()
 {
-    QAction *separator = new QAction(this);
-    separator->setSeparator(true);
-    widget->addAction(separator);
+    tableView = new QTableView;
+    tableView->setModel(thumbView->thumbViewFilter);
+    tableView->setSortingEnabled(true);
+    tableView->setAlternatingRowColors(true);
+    tableView->horizontalHeader()->setStretchLastSection(true);
+    tableView->horizontalHeader()->setFixedHeight(25);
+    tableView->verticalHeader()->setVisible(false);
+    tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    tableView->setTabKeyNavigation(false);
+    tableView->setColumnWidth(NameColumn, 250);
 }
 
 void MW::createImageView()
@@ -1910,6 +2044,7 @@ workspace with a matching name to the action is used.
     asIconsAction->setChecked(w.isIconDisplay);
     asLoupeAction->setChecked(w.isLoupeDisplay);
     asGridAction->setChecked(w.isGridDisplay);
+    asTableAction->setChecked(w.isTableDisplay);
     asCompareAction->setChecked(w.isCompareDisplay);
     thumbView->thumbWidth = w.thumbWidth,
     thumbView->thumbHeight = w.thumbHeight,
@@ -1957,6 +2092,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
 
     wsd.isLoupeDisplay = asLoupeAction->isChecked();
     wsd.isGridDisplay = asGridAction->isChecked();
+    wsd.isTableDisplay = asTableAction->isChecked();
     wsd.isCompareDisplay = asCompareAction->isChecked();
 
     wsd.thumbSpacing = thumbView->thumbSpacing;
@@ -2211,6 +2347,7 @@ void MW::reportWorkspace(int n)
              << "\nisIconDisplay" << ws.isIconDisplay
              << "\nisLoupeDisplay" << ws.isLoupeDisplay
              << "\nisGridDisplay" << ws.isGridDisplay
+             << "\nisTableDisplay" << ws.isTableDisplay
              << "\nisCompareDisplay" << ws.isCompareDisplay;
 }
 
@@ -2254,6 +2391,7 @@ void MW::reportState()
              << "\nisIconDisplay" << w.isIconDisplay
              << "\nisLoupeDisplay" << w.isLoupeDisplay
              << "\nisGridDisplay" << w.isGridDisplay
+             << "\nisTableDisplay" << w.isTableDisplay
              << "\nisCompareDisplay" << w.isCompareDisplay;
 }
 
@@ -2796,6 +2934,7 @@ void MW::writeSettings()
     setting->setValue("isIconDisplay", (bool)asIconsAction->isChecked());
     setting->setValue("isLoupeDisplay", (bool)asLoupeAction->isChecked());
     setting->setValue("isGridDisplay", (bool)asGridAction->isChecked());
+    setting->setValue("isTableDisplay", (bool)asTableAction->isChecked());
     setting->setValue("isCompareDisplay", (bool)asCompareAction->isChecked());
 
     setting->setValue("isWindowTitleBarVisible", (bool)windowTitleBarVisibleAction->isChecked());
@@ -2893,6 +3032,7 @@ void MW::writeSettings()
         setting->setValue("isIconDisplay", ws.isIconDisplay);
         setting->setValue("isLoupeDisplay", ws.isLoupeDisplay);
         setting->setValue("isGridDisplay", ws.isGridDisplay);
+        setting->setValue("isTableDisplay", ws.isTableDisplay);
         setting->setValue("isCompareDisplay", ws.isCompareDisplay);
     }
     setting->endArray();
@@ -2981,6 +3121,7 @@ Preferences are located in the prefdlg class and updated here.
     asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool() ||
                               setting->value("isCompareDisplay").toBool());
     asGridAction->setChecked(setting->value("isGridDisplay").toBool());
+    asTableAction->setChecked(setting->value("isTableDisplay").toBool());
     asCompareAction->setChecked(false); // never start with compare set true
     showThumbLabelsAction->setChecked(thumbView->showThumbLabels);
 
@@ -3065,6 +3206,7 @@ Preferences are located in the prefdlg class and updated here.
         ws.isIconDisplay = setting->value("isIconDisplay").toBool();
         ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
         ws.isGridDisplay = setting->value("isGridDisplay").toBool();
+        ws.isTableDisplay = setting->value("isTableDisplay").toBool();
         ws.isCompareDisplay = setting->value("isCompareDisplay").toBool();
         workspaces->append(ws);
     }
@@ -3199,6 +3341,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         openAction->setShortcut(QKeySequence("O"));
         asLoupeAction->setShortcut(QKeySequence("E"));
         asGridAction->setShortcut(QKeySequence("G"));
+        asTableAction->setShortcut(QKeySequence("T"));
         asCompareAction->setShortcut(QKeySequence("C"));
         revealFileAction->setShortcut(QKeySequence("Ctrl+F"));
         zoomOutAction->setShortcut(QKeySequence("-"));
@@ -3410,7 +3553,7 @@ void MW::gridDisplay()
     }
     // move thumbView from thumbDeck to central widget
     centralLayout->addWidget(thumbView);
-    centralLayout->setCurrentIndex(3);
+    centralLayout->setCurrentIndex(4);
     imageView->setVisible(false);
     thumbView->thumbViewDelegate->isCompare = false;
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -3425,6 +3568,19 @@ void MW::gridDisplay()
     thumbView->setThumbParameters();
     setThumbDockVisibity();
     recoverSelection();
+}
+
+void MW::tableDisplay()
+{
+    {
+#ifdef ISDEBUG
+        qDebug() << "MW::tableDisplay";
+#endif
+    }
+    // make table of thumbView in central widget
+    tableView->resizeColumnsToContents();
+    centralLayout->setCurrentIndex(3);
+    thumbView->thumbViewDelegate->isCompare = false;
 }
 
 void MW::compareDisplay()
@@ -3498,6 +3654,7 @@ void MW::setCentralView()
     }
     if (asLoupeAction->isChecked()) loupeDisplay();
     if (asGridAction->isChecked()) gridDisplay();
+    if (asTableAction->isChecked()) tableDisplay();
     if (asCompareAction->isChecked()) compareDisplay();
 }
 

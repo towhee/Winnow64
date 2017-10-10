@@ -19,6 +19,7 @@ Ingest / Copy to folder      Q
 Quit program                 Q    ⌘
 Report metadata              R    ⌘
 Slideshow                    S
+Table view                   T
 New workspace                W
 Manage workspace             W    ⌘
 Default workspace            W               ⇧⌘

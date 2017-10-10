@@ -36,6 +36,14 @@ public:
         PickedColumn,
         LabelColumn,
         RatingColumn,
+        MegaPixelsColumn,
+        DimensionsColumn,
+        ApertureColumn,
+        ShutterspeedColumn,
+        ISOColumn,
+        CameraColumn,
+        FocalLengthColumn,
+        TitleColumn,
         TotalColumns    // insert additional columns before this
     };
 
@@ -61,6 +69,7 @@ public:
     bool isAutoFit;
 
     bool load(QString &dir, bool inclSubfolders);
+    void addMetadataToModel();
 
     ThumbViewDelegate *thumbViewDelegate;
     void selectThumb(QModelIndex idx);
