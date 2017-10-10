@@ -1,6 +1,9 @@
 To do:
+- Reset image cache order and display status when change sort
+- Add ratings and labels
+- Cleaner font for info on screen
+- Resize thumb dock on bottom and top to fit thumbs if no wrap
 - Initial setup (other than workspace)
-- Thumb wrapping gets turned on when thumbDocked on bottom
 - Add preferences for info label
 - /Users/roryhill/Qt/5.9/Src/qtimageformats/src/3rdparty/jasper/src/libjasper/jpg_dec.c
 - /Users/roryhill/Projects/jpeg-9b/example.c
@@ -28,6 +31,8 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Table view
+- Done: Thumb wrapping gets turned on when thumbDocked on bottom
 - Done: Smooth grid view scrolling
 - Done: Fix hand cursor when loupe view not zoomed
 - Done: ShootingInfo not showing for first image

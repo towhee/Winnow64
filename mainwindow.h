@@ -158,7 +158,7 @@ public:
         ApertureColumn,
         ShutterspeedColumn,
         ISOColumn,
-        CameraColumn,
+        ModelColumn,
         FocalLengthColumn,
         TitleColumn,
         TotalColumns        // insert additional columns before this
@@ -171,6 +171,13 @@ public:
 //    QItemSelectionModel *imageSelection;
 //    QFileInfo fileInfo;
 //    QFileInfoList fileInfoList;
+
+    enum centralWidgetTabs {
+        StartTab,
+        LoupeTab,
+        CompareTab,
+        TableTab
+    };
 
     bool isSlideShowActive;
     bool copyOp;
@@ -247,7 +254,7 @@ private slots:
     void removeBookmark();
     void rotateLeft();
     void rotateRight();
-    void showHiddenFiles();
+    void showHiddenFiles();    
     void setThumbLabels();
     void setThumbsFit();
     void chooseExternalApp();
@@ -359,6 +366,25 @@ private:
     QAction *nextPickAction;
     QAction *prevPickAction;
 
+    // Sort Menu
+    QActionGroup *sortGroupAction;
+    QAction *sortFileNameAction;
+    QAction *sortFileTypeAction;
+    QAction *sortFileSizeAction;
+    QAction *sortCreateAction;
+    QAction *sortModifyAction;
+    QAction *sortPickAction;
+    QAction *sortLabelAction;
+    QAction *sortRatingAction;
+    QAction *sortMegaPixelsAction;
+    QAction *sortDimensionsAction;
+    QAction *sortApertureAction;
+    QAction *sortShutterSpeedAction;
+    QAction *sortISOAction;
+    QAction *sortModelAction;
+    QAction *sortFocalLengthAction;
+    QAction *sortTitleAction;
+
     // View Menu
     QAction *slideShowAction;
     QAction *randomImageAction; // req'd by slideshow
@@ -371,8 +397,8 @@ private:
     QAction *asLoupeAction;
     QAction *asCompareAction;
     QActionGroup *iconGroupAction;
-    QAction *asListAction;
-    QAction *asIconsAction;
+//    QAction *asListAction;
+//    QAction *asIconsAction;
     QAction *zoomInAction;
     QAction *zoomOutAction;
     QAction *zoomToggleAction;
@@ -417,13 +443,6 @@ private:
     // Might need
     QAction *pasteAction;
     QAction *pasteImageAction;
-    QActionGroup *sortTypesGroup;
-    QAction *sortFileNameAction;
-    QAction *sortCreateAction;
-    QAction *sortModifyAction;
-    QAction *sortFileTypeAction;
-    QAction *sortLabelAction;
-    QAction *sortRatingAction;
 
     // Not needed
     //    QAction *cutAction;

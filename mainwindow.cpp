@@ -703,6 +703,118 @@ void MW::createActions()
     prevPickAction->setObjectName("prevPick");
     connect(prevPickAction, SIGNAL(triggered()), thumbView, SLOT(selectPrevPick()));
 
+    // Sort Menu
+    sortGroupAction = new QActionGroup(this);
+    sortGroupAction->setExclusive(true);
+
+    sortFileNameAction = new QAction(tr("Sort by file name"), this);
+    sortFileNameAction->setObjectName("SortFilename");
+    sortFileNameAction->setCheckable(true);
+    sortFileNameAction->setActionGroup(sortGroupAction);
+    connect(sortFileNameAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortFileTypeAction = new QAction(tr("Sort by file type"), this);
+    sortFileTypeAction->setObjectName("SortFileType");
+    sortFileTypeAction->setCheckable(true);
+    sortFileTypeAction->setActionGroup(sortGroupAction);
+    connect(sortFileTypeAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortFileSizeAction = new QAction(tr("Sort by file size"), this);
+    sortFileSizeAction->setObjectName("SortFileSize");
+    sortFileSizeAction->setCheckable(true);
+    sortFileSizeAction->setActionGroup(sortGroupAction);
+    connect(sortFileSizeAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortCreateAction = new QAction(tr("Sort by created time"), this);
+    sortCreateAction->setObjectName("SortCreateTime");
+    sortCreateAction->setCheckable(true);
+    sortCreateAction->setActionGroup(sortGroupAction);
+    connect(sortCreateAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortModifyAction = new QAction(tr("Sort by last modified time"), this);
+    sortModifyAction->setObjectName("SortModifyTime");
+    sortModifyAction->setCheckable(true);
+    connect(sortModifyAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortPickAction = new QAction(tr("Sort by picked status"), this);
+    sortPickAction->setObjectName("SortPick");
+    sortPickAction->setCheckable(true);
+    connect(sortPickAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortLabelAction = new QAction(tr("Sort by label"), this);
+    sortLabelAction->setObjectName("SortLabel");
+    sortLabelAction->setCheckable(true);
+    connect(sortLabelAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortRatingAction = new QAction(tr("Sort by rating"), this);
+    sortRatingAction->setObjectName("SortRating");
+    sortRatingAction->setCheckable(true);
+    connect(sortRatingAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortMegaPixelsAction = new QAction(tr("Sort by megapixels"), this);
+    sortMegaPixelsAction->setObjectName("SortMegaPixels");
+    sortMegaPixelsAction->setCheckable(true);
+    connect(sortMegaPixelsAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortDimensionsAction = new QAction(tr("Sort by dimensions"), this);
+    sortDimensionsAction->setObjectName("SortDimensions");
+    sortDimensionsAction->setCheckable(true);
+    connect(sortDimensionsAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortApertureAction = new QAction(tr("Sort by aperture"), this);
+    sortApertureAction->setObjectName("SortAperture");
+    sortApertureAction->setCheckable(true);
+    connect(sortApertureAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortShutterSpeedAction = new QAction(tr("Sort by shutter speed"), this);
+    sortShutterSpeedAction->setObjectName("SortShutterSpeed");
+    sortShutterSpeedAction->setCheckable(true);
+    connect(sortShutterSpeedAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortISOAction = new QAction(tr("Sort by ISO"), this);
+    sortISOAction->setObjectName("SortISO");
+    sortISOAction->setCheckable(true);
+    connect(sortISOAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortModelAction = new QAction(tr("Sort by camera model"), this);
+    sortModelAction->setObjectName("SortModel");
+    sortModelAction->setCheckable(true);
+    connect(sortModelAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortFocalLengthAction = new QAction(tr("Sort by focal length"), this);
+    sortFocalLengthAction->setObjectName("SortFocalLength");
+    sortFocalLengthAction->setCheckable(true);
+    connect(sortFocalLengthAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortTitleAction = new QAction(tr("Sort by title"), this);
+    sortTitleAction->setObjectName("SortTitle");
+    sortTitleAction->setCheckable(true);
+    connect(sortTitleAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+//    sortTypesGroup->addAction(sortFileNameAction);
+//    sortTypesGroup->addAction(sortFileTypeAction);
+//    sortTypesGroup->addAction(sortFileSizeAction);
+//    sortTypesGroup->addAction(sortCreateAction);
+//    sortTypesGroup->addAction(sortModifyAction);
+//    sortTypesGroup->addAction(sortPickAction);
+//    sortTypesGroup->addAction(sortLabelAction);
+//    sortTypesGroup->addAction(sortRatingAction);
+//    sortTypesGroup->addAction(sortMegaPixelsAction);
+//    sortTypesGroup->addAction(sortDimensionsAction);
+//    sortTypesGroup->addAction(sortApertureAction);
+//    sortTypesGroup->addAction(sortShutterSpeedAction);
+//    sortTypesGroup->addAction(sortISOAction);
+//    sortTypesGroup->addAction(sortModelAction);
+//    sortTypesGroup->addAction(sortFocalLengthAction);
+//    sortTypesGroup->addAction(sortTitleAction);
+
+    sortFileNameAction->setChecked(true);
+
+    sortReverseAction = new QAction(tr("Reverse sort order"), this);
+    sortReverseAction->setObjectName("reverse");
+    sortReverseAction->setCheckable(true);
+    connect(sortReverseAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
     // View menu
     slideShowAction = new QAction(tr("Slide Show"), this);
     slideShowAction->setObjectName("slideShow");
@@ -755,20 +867,20 @@ void MW::createActions()
     centralGroupAction->addAction(asTableAction);
     centralGroupAction->addAction(asCompareAction);
 
-    asListAction = new QAction(tr("As list"), this);
-    asListAction->setCheckable(false);
-    asListAction->setChecked(!setting->value("isIconDisplay").toBool());
+//    asListAction = new QAction(tr("As list"), this);
+//    asListAction->setCheckable(false);
+//    asListAction->setChecked(!setting->value("isIconDisplay").toBool());
 //    connect(asListAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
 
-    asIconsAction = new QAction(tr("As thumbs"), this);
-    asIconsAction->setCheckable(true);
-    asIconsAction->setChecked(setting->value("isIconDisplay").toBool());
+//    asIconsAction = new QAction(tr("As thumbs"), this);
+//    asIconsAction->setCheckable(true);
+//    asIconsAction->setChecked(setting->value("isIconDisplay").toBool());
 //    connect(thumbsEnlargeAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
 
-    iconGroupAction = new QActionGroup(this);
-    iconGroupAction->setExclusive(true);
-    iconGroupAction->addAction(asListAction);
-    iconGroupAction->addAction(asIconsAction);
+//    iconGroupAction = new QActionGroup(this);
+//    iconGroupAction->setExclusive(true);
+//    iconGroupAction->addAction(asListAction);
+//    iconGroupAction->addAction(asIconsAction);
 
     zoomOutAction = new QAction(tr("Zoom Out"), this);
     zoomOutAction->setObjectName("zoomOut");
@@ -975,58 +1087,6 @@ void MW::createActions()
     pasteAction = new QAction(tr("Paste files"), this);
     pasteAction->setObjectName("paste");
 //        connect(pasteAction, SIGNAL(triggered()), this, SLOT(about()));
-
-
-
-
-    // Sort actions
-    sortFileNameAction = new QAction(tr("Sort by file name"), this);
-    sortFileNameAction->setObjectName("Filename");
-    sortFileNameAction->setCheckable(true);
-    connect(sortFileNameAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
-
-    sortFileTypeAction = new QAction(tr("Sort by file type"), this);
-    sortFileTypeAction->setObjectName("FileType");
-    sortFileTypeAction->setCheckable(true);
-    connect(sortFileTypeAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
-
-    sortCreateAction = new QAction(tr("Sort by created time"), this);
-    sortCreateAction->setObjectName("CreateTime");
-    sortCreateAction->setCheckable(true);
-    connect(sortCreateAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
-
-    sortModifyAction = new QAction(tr("Sort by last modified time"), this);
-    sortModifyAction->setObjectName("ModifyTime");
-    sortModifyAction->setCheckable(true);
-    connect(sortModifyAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
-
-    sortLabelAction = new QAction(tr("Sort by label"), this);
-    sortLabelAction->setObjectName("ModifyTime");
-    sortLabelAction->setCheckable(true);
-    connect(sortLabelAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
-
-    sortRatingAction = new QAction(tr("Sort by rating"), this);
-    sortRatingAction->setObjectName("ModifyTime");
-    sortRatingAction->setCheckable(true);
-    connect(sortRatingAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
-
-    sortReverseAction = new QAction(tr("Reverse sort order"), this);
-    sortReverseAction->setObjectName("reverse");
-    sortReverseAction->setCheckable(true);
-    connect(sortReverseAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
-
-    // rgh figure out what this does
-    if (thumbView->thumbsSortFlags & QDir::Time)
-            sortCreateAction->setChecked(true);
-    else if (thumbView->thumbsSortFlags & QDir::Size)
-            sortModifyAction->setChecked(true);
-    else if (thumbView->thumbsSortFlags & QDir::Type)
-            sortFileTypeAction->setChecked(true);
-    else
-            sortFileNameAction->setChecked(true);
-    sortReverseAction->setChecked(thumbView->thumbsSortFlags & QDir::Reversed);
-
-
 }
 
 void MW::createMenus()
@@ -1091,14 +1151,23 @@ void MW::createMenus()
     goMenu->addAction(prevPickAction);
 
     sortMenu = menuBar()->addMenu(tr("Sort"));
-    sortTypesGroup = new QActionGroup(this);
-    sortTypesGroup->addAction(sortFileNameAction);
-    sortTypesGroup->addAction(sortFileTypeAction);
-    sortTypesGroup->addAction(sortCreateAction);
-    sortTypesGroup->addAction(sortModifyAction);
-    sortTypesGroup->addAction(sortLabelAction);
-    sortTypesGroup->addAction(sortRatingAction);
-    sortMenu->addActions(sortTypesGroup->actions());
+    sortMenu->addActions(sortGroupAction->actions());
+//    sortMenu->addAction(sortFileNameAction);
+//    sortMenu->addAction(sortFileTypeAction);
+//    sortMenu->addAction(sortFileSizeAction);
+//    sortMenu->addAction(sortCreateAction);
+//    sortMenu->addAction(sortModifyAction);
+//    sortMenu->addAction(sortPickAction);
+//    sortMenu->addAction(sortLabelAction);
+//    sortMenu->addAction(sortRatingAction);
+//    sortMenu->addAction(sortMegaPixelsAction);
+//    sortMenu->addAction(sortDimensionsAction);
+//    sortMenu->addAction(sortApertureAction);
+//    sortMenu->addAction(sortShutterSpeedAction);
+//    sortMenu->addAction(sortISOAction);
+//    sortMenu->addAction(sortModelAction);
+//    sortMenu->addAction(sortFocalLengthAction);
+//    sortMenu->addAction(sortTitleAction);
     sortMenu->addSeparator();
     sortMenu->addAction(sortReverseAction);
 
@@ -1109,14 +1178,15 @@ void MW::createMenus()
     viewMenu->addSeparator();
     viewMenu->addAction(infoVisibleAction);
     viewMenu->addSeparator();
-    viewMenu->addAction(asLoupeAction);
-    viewMenu->addAction(asGridAction);
-    viewMenu->addAction(asTableAction);
-    viewMenu->addAction(asCompareAction);
+    viewMenu->addActions(centralGroupAction->actions());
+//    viewMenu->addAction(asLoupeAction);
+//    viewMenu->addAction(asGridAction);
+//    viewMenu->addAction(asTableAction);
+//    viewMenu->addAction(asCompareAction);
     viewMenu->addSeparator();
-    viewMenu->addAction(asListAction);
-    viewMenu->addAction(asIconsAction);
-    viewMenu->addSeparator();
+//    viewMenu->addAction(asListAction);
+//    viewMenu->addAction(asIconsAction);
+//    viewMenu->addSeparator();
     viewMenu->addAction(zoomInAction);
     viewMenu->addAction(zoomOutAction);
     viewMenu->addAction(zoomToggleAction);
@@ -1129,7 +1199,7 @@ void MW::createMenus()
     viewMenu->addAction(thumbsShrinkAction);
     viewMenu->addAction(thumbsFitAction);
     viewMenu->addAction(showThumbLabelsAction);
-    viewMenu->addAction(sortReverseAction);
+//    viewMenu->addAction(sortReverseAction);
     viewMenu->addSeparator();
 
     windowMenu = menuBar()->addMenu(tr("&Window"));
@@ -1233,12 +1303,12 @@ void MW::createMenus()
     thumbNailSubMenu->addAction(thumbsShrinkAction);
     thumbNailSubMenu->addAction(showThumbLabelsAction);
     sortMenu = thumbNailSubMenu->addMenu(tr("Sort By"));
-    sortTypesGroup = new QActionGroup(this);
-    sortTypesGroup->addAction(sortFileNameAction);
-    sortTypesGroup->addAction(sortCreateAction);
-    sortTypesGroup->addAction(sortModifyAction);
-    sortTypesGroup->addAction(sortFileTypeAction);
-    sortMenu->addActions(sortTypesGroup->actions());
+    sortGroupAction = new QActionGroup(this);
+    sortGroupAction->addAction(sortFileNameAction);
+    sortGroupAction->addAction(sortCreateAction);
+    sortGroupAction->addAction(sortModifyAction);
+    sortGroupAction->addAction(sortFileTypeAction);
+    sortMenu->addActions(sortGroupAction->actions());
     sortMenu->addSeparator();
     sortMenu->addAction(sortReverseAction);
 
@@ -1298,9 +1368,9 @@ void MW::createMenus()
     viewSubMenu->addSeparator();
     viewSubMenu->addAction(infoVisibleAction);
     viewSubMenu->addSeparator();
-    viewSubMenu->addAction(asListAction);
-    viewSubMenu->addAction(asIconsAction);
-    viewSubMenu->addSeparator();
+//    viewSubMenu->addAction(asListAction);
+//    viewSubMenu->addAction(asIconsAction);
+//    viewSubMenu->addSeparator();
     viewSubMenu->addAction(sortReverseAction);
 
     QMenu *fileSubMenu = new QMenu(imageView);
@@ -1517,12 +1587,15 @@ void MW::createTableView()
     tableView->setSortingEnabled(true);
     tableView->setAlternatingRowColors(true);
     tableView->horizontalHeader()->setStretchLastSection(true);
-    tableView->horizontalHeader()->setFixedHeight(25);
+    tableView->horizontalHeader()->setFixedHeight(22);
     tableView->verticalHeader()->setVisible(false);
     tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     tableView->setTabKeyNavigation(false);
-    tableView->setColumnWidth(NameColumn, 250);
+//    tableView->setColumnWidth(NameColumn, 250);
+    tableView->setIconSize(QSize(20,20));
+    tableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    tableView->verticalHeader()->setDefaultSectionSize(24);
 }
 
 void MW::createImageView()
@@ -1800,21 +1873,27 @@ void MW::sortThumbnails()
     qDebug() << "MW::sortThumbnails";
     #endif
     }
-    thumbView->thumbsSortFlags = QDir::IgnoreCase;
+    qDebug() << "Currently checked sort" << sortGroupAction->checkedAction();
+    int sortColumn;
 
-    if (sortFileNameAction->isChecked())
-        thumbView->thumbsSortFlags |= QDir::Name;
-    else if (sortCreateAction->isChecked())
-        thumbView->thumbsSortFlags |= QDir::Time;
-    else if (sortModifyAction->isChecked())
-        thumbView->thumbsSortFlags |= QDir::Size;
-    else if (sortFileTypeAction->isChecked())
-        thumbView->thumbsSortFlags |= QDir::Type;
+    if (sortFileNameAction->isChecked()) sortColumn = NameColumn;
+    if (sortFileTypeAction->isChecked()) sortColumn = TypeColumn;
+    if (sortFileSizeAction->isChecked()) sortColumn = SizeColumn;
+    if (sortCreateAction->isChecked()) sortColumn = CreatedColumn;
+    if (sortModifyAction->isChecked()) sortColumn = ModifiedColumn;
+    if (sortPickAction->isChecked()) sortColumn = PickedColumn;
+    if (sortLabelAction->isChecked()) sortColumn = LabelColumn;
+    if (sortRatingAction->isChecked()) sortColumn = RatingColumn;
+    if (sortMegaPixelsAction->isChecked()) sortColumn = MegaPixelsColumn;
+    if (sortDimensionsAction->isChecked()) sortColumn = DimensionsColumn;
+    if (sortApertureAction->isChecked()) sortColumn = ApertureColumn;
+    if (sortShutterSpeedAction->isChecked()) sortColumn = ShutterspeedColumn;
+    if (sortISOAction->isChecked()) sortColumn = ISOColumn;
+    if (sortModelAction->isChecked()) sortColumn = ModelColumn;
+    if (sortFocalLengthAction->isChecked()) sortColumn = FocalLengthColumn;
+    if (sortTitleAction->isChecked()) sortColumn = TitleColumn;
 
-    if (sortReverseAction->isChecked())
-        thumbView->thumbsSortFlags |= QDir::Reversed;
-
-    thumbView->sortThumbs(sortReverseAction->isChecked());
+    thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
 //    refreshThumbs();
 }
 
@@ -2040,8 +2119,8 @@ workspace with a matching name to the action is used.
     metadataDockLockAction->setChecked(w.isMetadataDockLocked);
     thumbDockLockAction->setChecked( w.isThumbDockLocked);
     infoVisibleAction->setChecked(w.isImageInfoVisible);
-    asListAction->setChecked(!w.isIconDisplay);
-    asIconsAction->setChecked(w.isIconDisplay);
+//    asListAction->setChecked(!w.isIconDisplay);
+//    asIconsAction->setChecked(w.isIconDisplay);
     asLoupeAction->setChecked(w.isLoupeDisplay);
     asGridAction->setChecked(w.isGridDisplay);
     asTableAction->setChecked(w.isTableDisplay);
@@ -2088,7 +2167,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.isMetadataDockLocked = metadataDockLockAction->isChecked();
     wsd.isThumbDockLocked = thumbDockLockAction->isChecked();
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
-    wsd.isIconDisplay = asIconsAction->isChecked();
+//    wsd.isIconDisplay = asIconsAction->isChecked();
 
     wsd.isLoupeDisplay = asLoupeAction->isChecked();
     wsd.isGridDisplay = asGridAction->isChecked();
@@ -2931,7 +3010,7 @@ void MW::writeSettings()
 //    setting->setValue("isFullScreen", (bool)fullScreenAction->isChecked());
 
     setting->setValue("isImageInfoVisible", (bool)infoVisibleAction->isChecked());
-    setting->setValue("isIconDisplay", (bool)asIconsAction->isChecked());
+//    setting->setValue("isIconDisplay", (bool)asIconsAction->isChecked());
     setting->setValue("isLoupeDisplay", (bool)asLoupeAction->isChecked());
     setting->setValue("isGridDisplay", (bool)asGridAction->isChecked());
     setting->setValue("isTableDisplay", (bool)asTableAction->isChecked());

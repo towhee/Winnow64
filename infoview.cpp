@@ -127,7 +127,6 @@ void InfoView::updateInfo(const QString &fPath)
 
     infoModel->clear();
 
-    qDebug() << "InfoView::updateInfo" << fPath;
     QString key;
     QString val;
 

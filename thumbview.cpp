@@ -482,20 +482,18 @@ void ThumbView::toggleFilterPick(bool isFilter)
         thumbViewFilter->setFilterRegExp("");       // no filter - show all
 }
 
-void ThumbView::sortThumbs(bool isReverse)
+void ThumbView::sortThumbs(int sortColumn, bool isReverse)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::sortThumbs";
     #endif
     }
-    int sortColumn = NameColumn;
-    qDebug() << "sortIem" << sortColumn;
     // rgh change to use thumbViewFilter
-    //    if (isReverse) thumbViewFilter->sort(0, Qt::DescendingOrder);
-    //    else thumbViewFilter->sort(0, Qt::AscendingOrder);
-    if (isReverse) thumbViewModel->sort(sortColumn, Qt::DescendingOrder);
-    else thumbViewModel->sort(sortColumn, Qt::AscendingOrder);
+    if (isReverse) thumbViewFilter->sort(sortColumn, Qt::DescendingOrder);
+    else thumbViewFilter->sort(sortColumn, Qt::AscendingOrder);
+//    if (isReverse) thumbViewModel->sort(sortColumn, Qt::DescendingOrder);
+//    else thumbViewModel->sort(sortColumn, Qt::AscendingOrder);
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 //    refreshThumbs();
 }
@@ -602,7 +600,9 @@ void ThumbView::loadPrepare()
 //        tempThumbsSortFlags ^= QDir::Reversed;
 //    }
 //    thumbsDir->setSorting(tempThumbsSortFlags);
-    thumbsDir->setSorting(QDir::Name);
+
+    // reverse sort because push into treeViewModel so first becomes last
+    thumbsDir->setSorting(QDir::Name | QDir::Reversed);
 
     thumbViewModel->removeRows(0, thumbViewModel->rowCount());
     thumbFileInfoList.clear();
@@ -639,12 +639,12 @@ bool ThumbView::initThumbs()
         item->setData(QRect(), ThumbRectRole);     // define later when read
         item->setData(thumbFileInfo.fileName(), Qt::DisplayRole);
         item->setData(thumbFileInfo.path(), PathRole);
-        item->setData(thumbFileInfo.suffix(), FileTypeRole);
-        item->setData(thumbFileInfo.size(), FileSizeRole);
-        item->setData(thumbFileInfo.created(), CreatedRole);
-        item->setData(thumbFileInfo.lastModified(), ModifiedRole);
-        item->setData(0, LabelRole);
-        item->setData(0, RatingRole);
+//        item->setData(thumbFileInfo.suffix(), FileTypeRole);
+//        item->setData(thumbFileInfo.size(), FileSizeRole);
+//        item->setData(thumbFileInfo.created(), CreatedRole);
+//        item->setData(thumbFileInfo.lastModified(), ModifiedRole);
+//        item->setData(0, LabelRole);
+//        item->setData(0, RatingRole);
         thumbViewModel->appendRow(item);
         // try add columns to model - not working so far
         int row = item->index().row();
@@ -682,8 +682,6 @@ bool ThumbView::initThumbs()
         QString mp = QString::number((width * height) / 1000000.0, 'f', 2);
         QString dim = QString::number(width) + "x" + QString::number(height);
 
-        qDebug() << fPath << width;
-
         item = new QStandardItem();
         item->setData(mp, Qt::DisplayRole);
         thumbViewModel->setItem(row, MegaPixelsColumn, item);
@@ -694,12 +692,20 @@ bool ThumbView::initThumbs()
 
 void ThumbView::addMetadataToModel()
 {
+/* This function is called after the metadata for all the eligible images in
+the selected folder have been cached.  The metadata is displayed in tableView,
+which is created in MW.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::addMetadataToModel" << folderPath;
+    #endif
+    }
     static QStandardItem *item;
 
     for(int row = 0; row < thumbViewModel->rowCount(); row++) {
         QModelIndex idx = thumbViewModel->index(row, NameColumn);
         QString fPath = idx.data(FileNameRole).toString();
-        qDebug() << "ThumbView::addMetadataToModel()" << fPath;
 
         uint width = metadata->getWidth(fPath);
         uint height = metadata->getHeight(fPath);

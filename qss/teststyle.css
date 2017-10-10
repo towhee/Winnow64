@@ -2,6 +2,7 @@ QWidget {
     background-color: rgb(85,85,85);
     color: rgb(229,229,229);
     border-width: 0px;
+    font-size: 10px;
 }
 
 QGraphicsView {
@@ -167,18 +168,21 @@ QTableView
 
 QHeaderView
 {
-    background-color: rgb(95,95,95);
+/*    background-color: rgb(95,95,95);
     color: rgb(190,190,190);
 /*    color: rgb(85,85,85);  */
-    font-size: 12px;
+/*    font-size: 10px;      */
 }
 
-QHeaderView::section{
-    background-color: rgb(95,95,95);
+QHeaderView::section {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                stop: 0 rgb(88,88,88), stop: 1 rgb(66,66,66));
+/*    background-color: rgb(95,95,95);  */
     border-style: solid;
     border: 1px solid rgb(85,85,85);
     border-bottom: 1px solid rgb(85,85,85);
-    font: bold 13px;
+    color: rgb(225,225,225);
+/*    font: 13px;       */
 }
 
 QAbstractScrollArea {

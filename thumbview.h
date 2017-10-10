@@ -120,7 +120,7 @@ public slots:
     void selectNextPick();
     void selectPrevPick();
     void copyThumbs();
-    void sortThumbs(bool isReverse);
+    void sortThumbs(int sortColumn, bool isReverse);
 
 private slots:
     void delaySelectCurrentThumb();
