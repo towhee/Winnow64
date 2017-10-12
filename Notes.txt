@@ -1,5 +1,6 @@
 To do:
 - Reset image cache order and display status when change sort
+- Compare images not working after images sorted othr then filename
 - Add ratings and labels
 - Cleaner font for info on screen
 - Resize thumb dock on bottom and top to fit thumbs if no wrap

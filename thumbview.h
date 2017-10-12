@@ -69,6 +69,7 @@ public:
     bool isAutoFit;
 
     bool load(QString &dir, bool inclSubfolders);
+    void updateImageList();
     void addMetadataToModel();
 
     ThumbViewDelegate *thumbViewDelegate;
@@ -88,7 +89,9 @@ public:
 
     QStandardItemModel *thumbViewModel;
     QSortFilterProxyModel *thumbViewFilter;
+    QItemSelectionModel *thumbViewSelection;
     QFileInfoList thumbFileInfoList;
+    QStringList imageFilePathList;
     QFileInfoList dirFileInfoList;
     QDir::SortFlags thumbsSortFlags;
 
@@ -103,6 +106,7 @@ public slots:
     void toggleFilterPick(bool isFilter);
     void invertSelection();                         //in use
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
+
     void refreshThumbs();
     void setIcon(QStandardItem *item, QImage thumb, QString folderPath);
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
@@ -151,7 +155,6 @@ private:
     QDir *thumbsDir;
     QStringList *fileFilters;
     QList<QStandardItem*> *thumbList;
-    QItemSelectionModel *thumbViewSelection;
     QFileInfo thumbFileInfo;
     QImage emptyImg;
     QWidget *mw;

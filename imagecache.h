@@ -28,6 +28,8 @@ public:
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
              int &cacheStatusWidth, int &cacheWtAhead, bool &usePreview,
              int &previewWidth, int &previewHeight);
+    void reindexImageCache(QStringList filterFilePathList,
+             QString &currentImageFullPath);
     void stopImageCache();
     QSize getPreviewSize();
     QHash<QString, QPixmap> imCache;
@@ -59,16 +61,16 @@ private:
         bool isTarget;
         int priority;
         float sizeMB;
-    } cacheItem ;
+    } cacheItem;
 
-    QList<CacheItem> cacheMgr;
+    QList<CacheItem> cacheMgr, cacheMgrCopy;
 
     struct Cache {
         uint key;                   // current image
         uint prevKey;               // used to establish directionof travel
         QString dir;                // compare to input to see if different
         uint toCacheKey;            // next file to cache
-        uint toDecacheKey;          // next file to remove fromc ache
+        uint toDecacheKey;          // next file to remove from cache
         bool isForward;             // direction of travel in folder
         float wtAhead;              // ratio cache ahead vs behind
         int totFiles;               // number of images available

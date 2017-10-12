@@ -192,7 +192,7 @@ protected:
 public slots:
     void folderSelectionChange();
     void fileSelectionChange();
-
+    void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setStatus(QString state);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void showCacheStatus(const QImage &imCacheStatus);
@@ -473,6 +473,7 @@ private:
     ThumbView *thumbView;
     ImageView *imageView;
     QTableView *tableView;
+    QHeaderView *headerView;
     CompareImages *compareImages;
 //    ImageView *im1;
 //    ImageView *im2;
@@ -509,6 +510,8 @@ private:
 
     bool isInitializing;
     bool isStressTest;
+
+    bool sortMenuUpdateToMatchTable = false;
 
     bool needThumbsRefresh;         // req'd?
     bool thumbViewBusy;             // req'd?

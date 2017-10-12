@@ -73,10 +73,6 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     setUniformItemSizes(false);
     this->setContentsMargins(0,0,0,0);
 
-    thumbViewModel = new QStandardItemModel(1, 8);
-
-    // try headers to get to work with multiple columns in a table
-
     thumbViewModel = new QStandardItemModel();
     thumbViewModel->setHorizontalHeaderItem(NameColumn, new QStandardItem(QString("FileName")));
     thumbViewModel->setHorizontalHeaderItem(TypeColumn, new QStandardItem("Type"));
@@ -96,13 +92,9 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     thumbViewModel->setHorizontalHeaderItem(TitleColumn, new QStandardItem("Title"));
 
 //    thumbViewModel->setSortRole(ModifiedRole);    // not working
-
     thumbViewFilter = new QSortFilterProxyModel;
     thumbViewFilter->setSourceModel(thumbViewModel);
     thumbViewFilter->setFilterRole(PickedRole);
-//    thumbViewFilter->setHeaderData(0, Qt::Horizontal, QObject::tr("FileName"));
-//    thumbViewFilter->setHeaderData(1, Qt::Horizontal, QObject::tr("Type"));
-//    thumbViewFilter->setSortRole(ModifiedColumn);     // rgh 2017-05-31
     setModel(thumbViewFilter);
 
     thumbViewSelection = selectionModel();
@@ -489,12 +481,11 @@ void ThumbView::sortThumbs(int sortColumn, bool isReverse)
     qDebug() << "ThumbView::sortThumbs";
     #endif
     }
-    // rgh change to use thumbViewFilter
     if (isReverse) thumbViewFilter->sort(sortColumn, Qt::DescendingOrder);
     else thumbViewFilter->sort(sortColumn, Qt::AscendingOrder);
-//    if (isReverse) thumbViewModel->sort(sortColumn, Qt::DescendingOrder);
-//    else thumbViewModel->sort(sortColumn, Qt::AscendingOrder);
+
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+    updateImageList();      // req'd to reindex image cache after re-sort
 //    refreshThumbs();
 }
 
@@ -595,14 +586,7 @@ void ThumbView::loadPrepare()
 
     thumbsDir->setPath(currentViewDir);
 
-//    QDir::SortFlags tempThumbsSortFlags = thumbsSortFlags;
-//    if (tempThumbsSortFlags & QDir::Size || tempThumbsSortFlags & QDir::Time) {
-//        tempThumbsSortFlags ^= QDir::Reversed;
-//    }
-//    thumbsDir->setSorting(tempThumbsSortFlags);
-
-    // reverse sort because push into treeViewModel so first becomes last
-    thumbsDir->setSorting(QDir::Name | QDir::Reversed);
+    thumbsDir->setSorting(QDir::Name);
 
     thumbViewModel->removeRows(0, thumbViewModel->rowCount());
     thumbFileInfoList.clear();
@@ -630,23 +614,16 @@ bool ThumbView::initThumbs()
         thumbFileInfoList.append(thumbFileInfo);
         QString fPath = thumbFileInfo.filePath();
         item = new QStandardItem();
-//        item->setData(false, LoadedRole);
         item->setData(fileIndex, SortRole);
-//        item->setData(thumbFileInfo.created(), SortRole);
         item->setData(thumbFileInfo.filePath(), FileNameRole);
         item->setData(thumbFileInfo.absoluteFilePath(), Qt::ToolTipRole);
         item->setData("False", PickedRole);
         item->setData(QRect(), ThumbRectRole);     // define later when read
         item->setData(thumbFileInfo.fileName(), Qt::DisplayRole);
         item->setData(thumbFileInfo.path(), PathRole);
-//        item->setData(thumbFileInfo.suffix(), FileTypeRole);
-//        item->setData(thumbFileInfo.size(), FileSizeRole);
-//        item->setData(thumbFileInfo.created(), CreatedRole);
-//        item->setData(thumbFileInfo.lastModified(), ModifiedRole);
-//        item->setData(0, LabelRole);
-//        item->setData(0, RatingRole);
         thumbViewModel->appendRow(item);
-        // try add columns to model - not working so far
+
+        // add columns to model
         int row = item->index().row();
 
         item = new QStandardItem();
@@ -677,17 +654,32 @@ bool ThumbView::initThumbs()
         item->setData(0, Qt::DisplayRole);
         thumbViewModel->setItem(row, RatingColumn, item);
 
-        uint width = metadata->getWidth(fPath);
-        uint height = metadata->getHeight(fPath);
-        QString mp = QString::number((width * height) / 1000000.0, 'f', 2);
-        QString dim = QString::number(width) + "x" + QString::number(height);
-
-        item = new QStandardItem();
-        item->setData(mp, Qt::DisplayRole);
-        thumbViewModel->setItem(row, MegaPixelsColumn, item);
-
+//        qDebug() << "Row =" << row << fPath;
     }
+//    sortThumbs(NameColumn, false);
+//    updateImageList();
     return true;
+}
+
+void ThumbView::updateImageList()
+{
+/* The image list of file paths replicates the current sort order and filtration
+of thumbViewFilter.  It is used to keep the image cache in synch with the
+current state of thumbViewFilter.  This function is called when the user
+changes the sort or filter.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::updateImageList";
+    #endif
+    }
+//    qDebug() << "ThumbView::updateImageList";
+    imageFilePathList.clear();
+    for(int row = 0; row < thumbViewFilter->rowCount(); row++) {
+        QString fPath = thumbViewFilter->index(row, 0).data(FileNameRole).toString();
+        imageFilePathList.append(fPath);
+//        qDebug() << "&&&&&&&&&&&&&&&&&& updateImageList:" << fPath;
+    }
 }
 
 void ThumbView::addMetadataToModel()
@@ -754,6 +746,7 @@ void ThumbView::selectThumb(QModelIndex idx)
     }
     if (idx.isValid()) {
         setCurrentIndex(idx);
+        qDebug() << "Row =" << idx.row();
         thumbViewDelegate->currentIndex = idx;
         scrollTo(idx, ScrollHint::PositionAtCenter);
     }
@@ -1116,6 +1109,7 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     }
     QListView::mousePressEvent(event);
     QModelIndex idx = currentIndex();
+    qDebug() << "Row =" << idx.row();
     QRect iconRect = idx.data(ThumbRectRole).toRect();
     QPoint mousePt = event->pos();
     QPoint iconPt = mousePt - iconRect.topLeft();
