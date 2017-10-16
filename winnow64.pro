@@ -7,36 +7,38 @@ QT += widgets
 
 HEADERS += \
     bookmarks.h \
+    compareImages.h \
+    compareview.h \
     dircompleter.h \
     dropshadowlabel.h \
     fstree.h \
     global.h \
+    imagealign.h \
     imagecache.h \
     imageview.h \
     infoview.h \
     mainwindow.h \
     mdcache.h \
     metadata.h \
+    pixmap.h \
     thumbcache.h \
     thumbview.h \
     thumbviewdelegate.h \
     thumbviewfilter.h \
+    testaligndlg.h \
     Dialogs/prefdlg.h \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
-    Dialogs/popup.h \
-    compareImages.h \
-    compareview.h \
-    imagealign.h \
-    testaligndlg.h \
-    pixmap.h \
-    tableview.h
+    Dialogs/popup.h
 SOURCES += \
     bookmarks.cpp \
+    compareImages.cpp \
+    compareview.cpp \
     dircompleter.cpp \
     dropshadowlabel.cpp \
     fstree.cpp \
     global.cpp \
+    imagealign.cpp \
     imagecache.cpp \
     imageview.cpp \
     infoview.cpp \
@@ -44,28 +46,23 @@ SOURCES += \
     mainwindow.cpp \
     mdcache.cpp \
     metadata.cpp \
+    pixmap.cpp \
     thumbcache.cpp \
     thumbview.cpp \
     thumbviewdelegate.cpp \
     thumbviewfilter.cpp \
+    testaligndlg.cpp \
     Dialogs/prefdlg.cpp \
     Dialogs/workspacedlg.cpp \
     Dialogs/copypickdlg.cpp \
-    Dialogs/popup.cpp \
-    compareImages.cpp \
-    compareview.cpp \
-    imagealign.cpp \
-    testaligndlg.cpp \
-    pixmap.cpp \
-    tableview.cpp
+    Dialogs/popup.cpp
 FORMS += \
     copypickdlg.ui \
     prefdlg.ui \
     workspacedlg.ui \
     helpform.ui \
     aligndlg.ui \
-    testaligndlg.ui \
-    tableview.ui
+    testaligndlg.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns

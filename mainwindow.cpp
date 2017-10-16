@@ -34,7 +34,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     G::devicePixelRatio = 1;
     #ifdef Q_OS_MAC
-    G::devicePixelRatio = 1;
+    G::devicePixelRatio = 2;
     #endif
 
 //    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -1537,7 +1537,6 @@ void MW::createThumbView()
 void MW::createTableView()
 {
     tableView = new QTableView;
-//    headerView = new QHeaderView(Qt::Horizontal);
     tableView->setModel(thumbView->thumbViewFilter);
     tableView->setSortingEnabled(true);
     tableView->setAlternatingRowColors(true);
@@ -1548,11 +1547,10 @@ void MW::createTableView()
     tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     tableView->setTabKeyNavigation(false);
 //    tableView->setColumnWidth(NameColumn, 250);
-    tableView->setIconSize(QSize(20,20));
+    tableView->setIconSize(QSize(24,24));   // no effect on thumbView scroll issue
     tableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     tableView->verticalHeader()->setDefaultSectionSize(24);
     tableView->setSelectionModel(thumbView->thumbViewSelection);
-//    tableView->setHorizontalHeader(headerView);
 
     connect(tableView->horizontalHeader(),
             SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
@@ -1880,25 +1878,24 @@ void MW::sortThumbnails()
 
     int sortColumn;
 
-    if (sortFileNameAction->isChecked()) sortColumn = NameColumn;
-    if (sortFileTypeAction->isChecked()) sortColumn = TypeColumn;
-    if (sortFileSizeAction->isChecked()) sortColumn = SizeColumn;
-    if (sortCreateAction->isChecked()) sortColumn = CreatedColumn;
-    if (sortModifyAction->isChecked()) sortColumn = ModifiedColumn;
-    if (sortPickAction->isChecked()) sortColumn = PickedColumn;
-    if (sortLabelAction->isChecked()) sortColumn = LabelColumn;
-    if (sortRatingAction->isChecked()) sortColumn = RatingColumn;
-    if (sortMegaPixelsAction->isChecked()) sortColumn = MegaPixelsColumn;
-    if (sortDimensionsAction->isChecked()) sortColumn = DimensionsColumn;
-    if (sortApertureAction->isChecked()) sortColumn = ApertureColumn;
-    if (sortShutterSpeedAction->isChecked()) sortColumn = ShutterspeedColumn;
-    if (sortISOAction->isChecked()) sortColumn = ISOColumn;
-    if (sortModelAction->isChecked()) sortColumn = ModelColumn;
-    if (sortFocalLengthAction->isChecked()) sortColumn = FocalLengthColumn;
-    if (sortTitleAction->isChecked()) sortColumn = TitleColumn;
+    if (sortFileNameAction->isChecked()) sortColumn = thumbView->NameColumn;
+    if (sortFileTypeAction->isChecked()) sortColumn = thumbView->TypeColumn;
+    if (sortFileSizeAction->isChecked()) sortColumn = thumbView->SizeColumn;
+    if (sortCreateAction->isChecked()) sortColumn = thumbView->CreatedColumn;
+    if (sortModifyAction->isChecked()) sortColumn = thumbView->ModifiedColumn;
+    if (sortPickAction->isChecked()) sortColumn = thumbView->PickedColumn;
+    if (sortLabelAction->isChecked()) sortColumn = thumbView->LabelColumn;
+    if (sortRatingAction->isChecked()) sortColumn = thumbView->RatingColumn;
+    if (sortMegaPixelsAction->isChecked()) sortColumn = thumbView->MegaPixelsColumn;
+    if (sortDimensionsAction->isChecked()) sortColumn = thumbView->DimensionsColumn;
+    if (sortApertureAction->isChecked()) sortColumn = thumbView->ApertureColumn;
+    if (sortShutterSpeedAction->isChecked()) sortColumn = thumbView->ShutterspeedColumn;
+    if (sortISOAction->isChecked()) sortColumn = thumbView->ISOColumn;
+    if (sortModelAction->isChecked()) sortColumn = thumbView->CameraModelColumn;
+    if (sortFocalLengthAction->isChecked()) sortColumn = thumbView->FocalLengthColumn;
+    if (sortTitleAction->isChecked()) sortColumn = thumbView->TitleColumn;
 
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
-//    refreshThumbs();
 }
 
 void MW::showHiddenFiles()
@@ -2674,8 +2671,8 @@ void MW::preferences()
 
 void MW::thumbTable()
 {
-    TableView *tableForm = new TableView(thumbView, this);
-    tableForm->exec();
+//    TableView *tableForm = new TableView(thumbView, this);
+//    tableForm->exec();
 }
 
 void MW::setIncludeSubFolders()

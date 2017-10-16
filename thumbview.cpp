@@ -74,7 +74,8 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     this->setContentsMargins(0,0,0,0);
 
     thumbViewModel = new QStandardItemModel();
-    thumbViewModel->setHorizontalHeaderItem(NameColumn, new QStandardItem(QString("FileName")));
+    thumbViewModel->setHorizontalHeaderItem(PathColumn, new QStandardItem(QString("Icon")));
+    thumbViewModel->setHorizontalHeaderItem(NameColumn, new QStandardItem(QString("File Name")));
     thumbViewModel->setHorizontalHeaderItem(TypeColumn, new QStandardItem("Type"));
     thumbViewModel->setHorizontalHeaderItem(SizeColumn, new QStandardItem("Size"));
     thumbViewModel->setHorizontalHeaderItem(CreatedColumn, new QStandardItem("Created"));
@@ -87,7 +88,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     thumbViewModel->setHorizontalHeaderItem(ApertureColumn, new QStandardItem("Aperture"));
     thumbViewModel->setHorizontalHeaderItem(ShutterspeedColumn, new QStandardItem("Shutter"));
     thumbViewModel->setHorizontalHeaderItem(ISOColumn, new QStandardItem("ISO"));
-    thumbViewModel->setHorizontalHeaderItem(CameraColumn, new QStandardItem("Model"));
+    thumbViewModel->setHorizontalHeaderItem(CameraModelColumn, new QStandardItem("Model"));
     thumbViewModel->setHorizontalHeaderItem(FocalLengthColumn, new QStandardItem("Focal length"));
     thumbViewModel->setHorizontalHeaderItem(TitleColumn, new QStandardItem("Title"));
 
@@ -526,9 +527,9 @@ thumbCache.
     }
     currentViewDir = dir;
     if (!pickFilter) {
-        loadPrepare();
+        initLoad();
         // exit if no images, otherwise get thumb info
-        if (!initThumbs() && !includeSubfolders) return false;
+        if (!addFolderImageDataToModel() && !includeSubfolders) return false;
     }
 
     // exit here if just display file list instead of icons
@@ -546,7 +547,7 @@ thumbCache.
             if (iterator.fileInfo().isDir() && iterator.fileName() != "." && iterator.fileName() != "..") {
                 thumbsDir->setPath(iterator.filePath());
                 qDebug() << "ITERATING FOLDER" << iterator.filePath();
-                initThumbs();
+                addFolderImageDataToModel();
             }
         }
     }
@@ -558,7 +559,7 @@ thumbCache.
     return false;   // no images found in any folder
 }
 
-void ThumbView::loadPrepare()
+void ThumbView::initLoad()
 {
 
 /*  Prepares the thumbview for new data
@@ -588,11 +589,13 @@ void ThumbView::loadPrepare()
 
     thumbsDir->setSorting(QDir::Name);
 
+    // if use thumbViewModel->clear() headers are deleted
     thumbViewModel->removeRows(0, thumbViewModel->rowCount());
+    thumbViewModel->setSortRole(Qt::DisplayRole);
     thumbFileInfoList.clear();
 }
 
-bool ThumbView::initThumbs()
+bool ThumbView::addFolderImageDataToModel()
 {
     {
     #ifdef ISDEBUG
@@ -610,21 +613,30 @@ bool ThumbView::initThumbs()
     emptyPixMap = QPixmap::fromImage(emptyImg).scaled(thumbWidth, thumbHeight);
 
     for (fileIndex = 0; fileIndex < dirFileInfoList.size(); ++fileIndex) {
+
+        // get file info
         thumbFileInfo = dirFileInfoList.at(fileIndex);
         thumbFileInfoList.append(thumbFileInfo);
         QString fPath = thumbFileInfo.filePath();
+
+        // add filename as first column in new row
         item = new QStandardItem();
-        item->setData(fileIndex, SortRole);
+//        item->setData(fileIndex, SortRole);
+        item->setData("", Qt::DisplayRole);
+//        item->setData(thumbFileInfo.fileName(), Qt::DisplayRole);
         item->setData(thumbFileInfo.filePath(), FileNameRole);
         item->setData(thumbFileInfo.absoluteFilePath(), Qt::ToolTipRole);
         item->setData("False", PickedRole);
         item->setData(QRect(), ThumbRectRole);     // define later when read
-        item->setData(thumbFileInfo.fileName(), Qt::DisplayRole);
         item->setData(thumbFileInfo.path(), PathRole);
         thumbViewModel->appendRow(item);
 
         // add columns to model
         int row = item->index().row();
+
+        item = new QStandardItem();
+        item->setData(thumbFileInfo.fileName(), Qt::DisplayRole);
+        thumbViewModel->setItem(row, NameColumn, item);
 
         item = new QStandardItem();
         item->setData(thumbFileInfo.suffix(), Qt::DisplayRole);
@@ -657,7 +669,7 @@ bool ThumbView::initThumbs()
 //        qDebug() << "Row =" << row << fPath;
     }
 //    sortThumbs(NameColumn, false);
-//    updateImageList();
+    updateImageList();
     return true;
 }
 
@@ -690,13 +702,14 @@ which is created in MW.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::addMetadataToModel" << folderPath;
+    qDebug() << "ThumbView::addMetadataToModel";
     #endif
     }
     static QStandardItem *item;
+    qDebug() << "ThumbView::addMetadataToModel";
 
     for(int row = 0; row < thumbViewModel->rowCount(); row++) {
-        QModelIndex idx = thumbViewModel->index(row, NameColumn);
+        QModelIndex idx = thumbViewModel->index(row, PathColumn);
         QString fPath = idx.data(FileNameRole).toString();
 
         uint width = metadata->getWidth(fPath);
@@ -715,7 +728,7 @@ which is created in MW.
         thumbViewModel->setData(thumbViewModel->index(row, ApertureColumn), aperture);
         thumbViewModel->setData(thumbViewModel->index(row, ShutterspeedColumn), ss);
         thumbViewModel->setData(thumbViewModel->index(row, ISOColumn), iso);
-        thumbViewModel->setData(thumbViewModel->index(row, CameraColumn), model);
+        thumbViewModel->setData(thumbViewModel->index(row, CameraModelColumn), model);
         thumbViewModel->setData(thumbViewModel->index(row, FocalLengthColumn), fl);
         thumbViewModel->setData(thumbViewModel->index(row, TitleColumn), title);
     }

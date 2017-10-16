@@ -11,7 +11,6 @@
 #include "mdcache.h"
 #include "copypickdlg.h"
 #include "prefdlg.h"
-#include "tableview.h"
 #include "workspacedlg.h"
 #include "popup.h"
 #include "bookmarks.h"
@@ -128,49 +127,7 @@ public:
         bool isStatusBar;
     } fullScreenDocks;
 
-//    enum UserRoles {
-//        FileNameRole = Qt::UserRole + 1,
-//        SortRole,
-//        LoadedRole,
-//        PickedRole,
-//        ThumbRectRole,
-//        PathRole,
-//        FileTypeRole,
-//        FileSizeRole,
-//        CreatedRole,
-//        ModifiedRole,
-//        LabelRole,
-//        RatingRole
-//    };
-
-
-    enum modelColumns {     // modelColumns is also in thumbView.h
-        NameColumn,
-        TypeColumn,
-        SizeColumn,
-        CreatedColumn,
-        ModifiedColumn,
-        PickedColumn,
-        LabelColumn,
-        RatingColumn,
-        MegaPixelsColumn,
-        DimensionsColumn,
-        ApertureColumn,
-        ShutterspeedColumn,
-        ISOColumn,
-        ModelColumn,
-        FocalLengthColumn,
-        TitleColumn,
-        TotalColumns        // insert additional columns before this
-    };
-
     QString currentViewDir;
-//    QDir *imageDir;
-//    QStringList *imageFilters;
-//    QList<QStandardItem*> *imageList;
-//    QItemSelectionModel *imageSelection;
-//    QFileInfo fileInfo;
-//    QFileInfoList fileInfoList;
 
     enum centralWidgetTabs {
         StartTab,

@@ -106,6 +106,7 @@ void ThumbCache::run()
         if (!idx.isValid()) return;
         item = thumbView->thumbViewModel->itemFromIndex(idx);
         fPath = item->data(Qt::ToolTipRole).toString();
+//        qDebug() << fPath;
         if (G::isThreadTrackingOn) track(fPath, "Reading");
         QImage thumb;
         QFileInfo fileInfo(fPath);
@@ -140,6 +141,7 @@ void ThumbCache::run()
                                 QByteArray buf =
                                     imFile.read(metadata->getLengthThumbJPG(fPath));
                                 if (thumb.loadFromData(buf, "JPEG")) {
+//                                    qDebug() << fPath;
                                     imFile.close();
                                     if (thumb.isNull() && G::isThreadTrackingOn )
                                         track(fPath, "Empty thumb");

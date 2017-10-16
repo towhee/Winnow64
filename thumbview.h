@@ -27,7 +27,8 @@ public:
         RatingRole
     };
 
-    enum modelColumns {
+    enum dataModelColumns {
+        PathColumn,
         NameColumn,
         TypeColumn,
         SizeColumn,
@@ -41,7 +42,7 @@ public:
         ApertureColumn,
         ShutterspeedColumn,
         ISOColumn,
-        CameraColumn,
+        CameraModelColumn,
         FocalLengthColumn,
         TitleColumn,
         TotalColumns    // insert additional columns before this
@@ -138,8 +139,8 @@ protected:
 //    bool event(QEvent* event);      // key capture
 
 private:
-    void loadPrepare();
-    bool initThumbs();
+    void initLoad();
+    bool addFolderImageDataToModel();
     bool isSelectedItem();          // call before getting row or index
 
     int getNextRow();
