@@ -48,7 +48,12 @@ bool CompareImages::load(const QSize &centralWidgetSize)
         delete w;
     }
 
-    selection = thumbView->selectionModel()->selectedIndexes();
+    /* iterate selected thumbs to get image dimensions and configure grid.
+    Req'd before load images as they need to know grid size to be able to scale
+    to fit.
+    */
+    count = 0;
+    selection = thumbView->selectionModel()->selectedRows();
     count = selection.count();
     if (count > 9) count = 9;
 

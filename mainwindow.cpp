@@ -394,7 +394,14 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // user clicks outside thumb but inside treeView dock
     if (thumbView->selectionModel()->selectedIndexes().isEmpty()) return;
 
-//    QThread::msleep(2000);  // no effect on crash
+    // test selection
+    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    int count = selection.count();
+    qDebug() << "Images selected:" << count;
+    for (int i = 0; i < count; ++i) {
+        QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
+        qDebug() << "Selection" << i << fPath;
+    }
 
     QString fPath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
 
@@ -3683,7 +3690,7 @@ void MW::compareDisplay()
     qDebug() << "MW::compareDisplay";
     #endif
     }
-    int n = thumbView->selectionModel()->selectedIndexes().count();
+    int n = thumbView->selectionModel()->selectedRows().count();
     if (n < 2) {
         popUp->showPopup(this, "Select more than one image to compare.", 1000, 0.75);
         return;

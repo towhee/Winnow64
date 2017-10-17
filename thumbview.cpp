@@ -105,6 +105,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
         thumbPadding, labelFontSize, showThumbLabels);
     setItemDelegate(thumbViewDelegate);
 
+    // triggers MW::fileSectionChange
     connect(this->selectionModel(),
             SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
             parent, SLOT(fileSelectionChange()));
