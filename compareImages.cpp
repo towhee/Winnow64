@@ -48,12 +48,14 @@ bool CompareImages::load(const QSize &centralWidgetSize)
         delete w;
     }
 
-    selection = this->thumbView->selectionModel()->selectedIndexes();
+    selection = thumbView->selectionModel()->selectedIndexes();
     count = selection.count();
     if (count > 9) count = 9;
 
-    // iterate selected thumbs to get image dimensions and configure grid.  Req'd before
-    // load images as they need to know grid size to be able to scale to fit.
+    /* iterate selected thumbs to get image dimensions and configure grid.
+    Req'd before load images as they need to know grid size to be able to scale
+    to fit.
+    */
     for (int i = 0; i < count; ++i) {
         QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
         QSize imSize(metadata->getWidth(fPath), metadata->getHeight(fPath));

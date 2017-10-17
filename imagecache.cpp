@@ -687,6 +687,7 @@ updated. Image caching is reactivated.
     #endif
     }
 
+    return;
     if (isRunning()) stopImageCache();
 
     cacheMgrCopy = cacheMgr;

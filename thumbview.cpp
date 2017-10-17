@@ -629,6 +629,7 @@ bool ThumbView::addFolderImageDataToModel()
         item->setData("False", PickedRole);
         item->setData(QRect(), ThumbRectRole);     // define later when read
         item->setData(thumbFileInfo.path(), PathRole);
+        item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         thumbViewModel->appendRow(item);
 
         // add columns to model
@@ -660,11 +661,17 @@ bool ThumbView::addFolderImageDataToModel()
 
         item = new QStandardItem();
         item->setData(0, Qt::DisplayRole);
+        item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         thumbViewModel->setItem(row, LabelColumn, item);
 
         item = new QStandardItem();
         item->setData(0, Qt::DisplayRole);
+        item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         thumbViewModel->setItem(row, RatingColumn, item);
+
+        /* the rest of the data model columns are added after the metadata
+        has been loaded, when the image caching is called.  See
+        MW::loadImageCache and thumbView::addMetadataToModel    */
 
 //        qDebug() << "Row =" << row << fPath;
     }
@@ -676,7 +683,7 @@ bool ThumbView::addFolderImageDataToModel()
 void ThumbView::updateImageList()
 {
 /* The image list of file paths replicates the current sort order and filtration
-of thumbViewFilter.  It is used to keep the image cache in synch with the
+of thumbViewFilter.  It is used to keep the image cache in sync with the
 current state of thumbViewFilter.  This function is called when the user
 changes the sort or filter.
 */

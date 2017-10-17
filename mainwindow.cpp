@@ -420,6 +420,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
 //    qDebug() << "thumbViewFilter row = 0"
 //             << thumbView->thumbViewFilter->index(0,0).data(Qt::DisplayRole);
 
+    tableView->selectRow(thumbView->currentIndex().row());
     // debugging
 //    thumbView->reportThumb();
 }
@@ -467,6 +468,7 @@ cached.
     thumbView->addMetadataToModel();
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
+    tableView->setColumnWidth(thumbView->PathColumn, 24+12);
     QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 
     QString fPath = indexesList.first().data(thumbView->FileNameRole).toString();
@@ -1536,22 +1538,22 @@ void MW::createThumbView()
 
 void MW::createTableView()
 {
-    tableView = new QTableView;
-    tableView->setModel(thumbView->thumbViewFilter);
-    tableView->setSortingEnabled(true);
-    tableView->setAlternatingRowColors(true);
-    tableView->horizontalHeader()->setStretchLastSection(true);
-    tableView->horizontalHeader()->setFixedHeight(22);
-    tableView->verticalHeader()->setVisible(false);
-    tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
-    tableView->setTabKeyNavigation(false);
-//    tableView->setColumnWidth(NameColumn, 250);
-    tableView->setIconSize(QSize(24,24));   // no effect on thumbView scroll issue
-    tableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
-    tableView->verticalHeader()->setDefaultSectionSize(24);
-    tableView->setSelectionModel(thumbView->thumbViewSelection);
+    /* TableView includes all the metadata used for each image.  It is useful
+       for sorting on any column and to check for information to filter.
+    */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::createTableView";
+    #endif
+    }
+    tableView = new TableView(thumbView);
 
+    // update thumbView index when tableView clicked.  This also updates
+    // the imageView and metadata infoView.
+    connect(tableView, SIGNAL(clicked(QModelIndex)),
+            thumbView, SLOT(selectThumb(QModelIndex)));
+
+    // update menu sort by to match tableView sort change
     connect(tableView->horizontalHeader(),
             SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
             this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
@@ -1829,7 +1831,7 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 {
 /* This slot function is triggered by the tableView->horizontalHeader
 sortIndicatorChanged signal being emitted, which tells us that thumbViewFilter
-has been resorted. As a consequence we need to update the menu checked status
+has been re-sorted. As a consequence we need to update the menu checked status
 for the correct column and also resync the image cache. However, changing the
 menu checked state for any of the menu sort actions triggers a sort, which needs
 to be suppressed while syncing the menu actions with tableView.
@@ -1841,30 +1843,29 @@ to be suppressed while syncing the menu actions with tableView.
     }
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
     switch (column) {
-    case 0: sortFileNameAction->setChecked(true); break;
-    case 1: sortFileTypeAction->setChecked(true); break;
-    case 2: sortFileSizeAction->setChecked(true); break;
-    case 3: sortCreateAction->setChecked(true); break;
-    case 4: sortModifyAction->setChecked(true); break;
-    case 5: sortPickAction->setChecked(true); break;
-    case 6: sortLabelAction->setChecked(true); break;
-    case 7: sortRatingAction->setChecked(true); break;
-    case 8: sortMegaPixelsAction->setChecked(true); break;
-    case 9: sortDimensionsAction->setChecked(true); break;
-    case 10: sortApertureAction->setChecked(true); break;
-    case 11: sortShutterSpeedAction->setChecked(true); break;
-    case 12: sortISOAction->setChecked(true); break;
-    case 13: sortModelAction->setChecked(true); break;
-    case 14: sortFocalLengthAction->setChecked(true); break;
-    case 15: sortTitleAction->setChecked(true); break;
+    case 1: sortFileNameAction->setChecked(true); break;
+    case 2: sortFileTypeAction->setChecked(true); break;
+    case 3: sortFileSizeAction->setChecked(true); break;
+    case 4: sortCreateAction->setChecked(true); break;
+    case 5: sortModifyAction->setChecked(true); break;
+    case 6: sortPickAction->setChecked(true); break;
+    case 7: sortLabelAction->setChecked(true); break;
+    case 8: sortRatingAction->setChecked(true); break;
+    case 9: sortMegaPixelsAction->setChecked(true); break;
+    case 10: sortDimensionsAction->setChecked(true); break;
+    case 11: sortApertureAction->setChecked(true); break;
+    case 12: sortShutterSpeedAction->setChecked(true); break;
+    case 13: sortISOAction->setChecked(true); break;
+    case 14: sortModelAction->setChecked(true); break;
+    case 15: sortFocalLengthAction->setChecked(true); break;
+    case 16: sortTitleAction->setChecked(true); break;
     }
     if(sortOrder == Qt::DescendingOrder) sortReverseAction->setChecked(true);
     else sortReverseAction->setChecked(false);
     sortMenuUpdateToMatchTable = false;
     thumbView->updateImageList();
     QString currentFilePath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
-    imageCacheThread->reindexImageCache(thumbView->imageFilePathList,
-              currentFilePath);
+    imageCacheThread->reindexImageCache(thumbView->imageFilePathList, currentFilePath);
 }
 
 void MW::sortThumbnails()
@@ -1896,6 +1897,8 @@ void MW::sortThumbnails()
     if (sortTitleAction->isChecked()) sortColumn = thumbView->TitleColumn;
 
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
+//    tableView->horizontalHeader()->setSortIndicator(sortColumn, Qt::AscendingOrder);
+
 }
 
 void MW::showHiddenFiles()
@@ -3653,14 +3656,24 @@ void MW::gridDisplay()
 void MW::tableDisplay()
 {
     {
-#ifdef ISDEBUG
-        qDebug() << "MW::tableDisplay";
-#endif
+    #ifdef ISDEBUG
+    qDebug() << "MW::tableDisplay";
+    #endif
     }
     // make table of thumbView in central widget
     tableView->resizeColumnsToContents();
     centralLayout->setCurrentIndex(3);
     thumbView->thumbViewDelegate->isCompare = false;
+
+    // in case was grid display move thumbView back to dock from central widget
+    saveSelection();
+    thumbDock->setWidget(thumbView);
+    setThumbDockFeatures(dockWidgetArea(thumbDock));
+    thumbDockVisibleAction->setChecked(true);
+    thumbView->isGrid = false;
+    thumbView->setThumbParameters();
+    setThumbDockVisibity();
+    recoverSelection();
 }
 
 void MW::compareDisplay()

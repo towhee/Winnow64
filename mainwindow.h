@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QDesktopWidget>
 #include "thumbview.h"
+#include "tableview.h"
 #include "imageview.h"
 #include "imagecache.h"
 #include "thumbcache.h"
@@ -428,8 +429,9 @@ private:
     QDockWidget *metadataDock;
     Metadata *metadata;
     ThumbView *thumbView;
+    TableView *tableView;
     ImageView *imageView;
-    QTableView *tableView;
+//    QTableView *tableView;
     QHeaderView *headerView;
     CompareImages *compareImages;
 //    ImageView *im1;

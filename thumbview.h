@@ -12,6 +12,9 @@ class ThumbView : public QListView
     Q_OBJECT
 
 public:
+
+    ThumbView(QWidget *parent, Metadata *metadata, bool iconView);
+
     enum UserRoles {
         FileNameRole = Qt::UserRole + 1,
         SortRole,
@@ -48,8 +51,6 @@ public:
         TotalColumns    // insert additional columns before this
     };
 
-    ThumbView(QWidget *parent, Metadata *metadata, bool iconView);
-
     int thumbWidth;
     int thumbHeight;
     int thumbSpacing;
@@ -74,7 +75,6 @@ public:
     void addMetadataToModel();
 
     ThumbViewDelegate *thumbViewDelegate;
-    void selectThumb(QModelIndex idx);
     void selectThumb(int row);
     void selectThumb(QString &filePath);
     void reportThumb();                             //debugging thumb roles
@@ -115,6 +115,7 @@ public slots:
     void setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid, int _thumbSpacingGrid,
              int _thumbPaddingGrid, int _labelFontSizeGrid, bool _showThumbLabelsGrid);
     void reportThumbs();
+    void selectThumb(QModelIndex idx);
     void selectNext();
     void selectPrev();
     void selectUp();
