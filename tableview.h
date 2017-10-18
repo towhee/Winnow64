@@ -12,9 +12,17 @@ class TableView : public QTableView
 public:
     TableView(ThumbView *thumbView);
 
+protected:
+    void mouseDoubleClickEvent(QMouseEvent *event);
+
 private:
     ThumbView *thumbView;
-    void pressed(const QModelIndex &index);
+
+private slots:
+    void delaySelectCurrentThumb();
+
+signals:
+    void displayLoupe();
 };
 
 #endif // TABLEVIEW_H

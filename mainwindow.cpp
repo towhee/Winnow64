@@ -395,13 +395,13 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     if (thumbView->selectionModel()->selectedIndexes().isEmpty()) return;
 
     // test selection
-    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
-    int count = selection.count();
-    qDebug() << "Images selected:" << count;
-    for (int i = 0; i < count; ++i) {
-        QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
-        qDebug() << "Selection" << i << fPath;
-    }
+//    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+//    int count = selection.count();
+//    qDebug() << "Images selected:" << count;
+//    for (int i = 0; i < count; ++i) {
+//        QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
+//        qDebug() << "Selection" << i << fPath;
+//    }
 
     QString fPath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
 
@@ -1497,6 +1497,7 @@ void MW::createThumbView()
     thumbView->thumbPadding = setting->value("thumbPadding").toInt();
     thumbView->thumbWidth = setting->value("thumbWidth").toInt();
     thumbView->thumbHeight = setting->value("thumbHeight").toInt();
+    qDebug() << "thumbView->thumbHeight = setting->value(thumbHeight).toInt()" << thumbView->thumbHeight;
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
 
@@ -1564,6 +1565,8 @@ void MW::createTableView()
     connect(tableView->horizontalHeader(),
             SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
             this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
+
+    connect(tableView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 }
 
 void MW::createImageView()
@@ -3583,6 +3586,9 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
+        int height = thumbView->getThumbDockGridSize().height();
+        int scrollBarHeight = 16;
+        resizeDocks({thumbDock}, {height + scrollBarHeight}, Qt::Vertical);
     }
     else {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |

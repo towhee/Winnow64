@@ -82,6 +82,7 @@ public:
 
     QFileInfoList getPicks();
     bool isPick();
+    QSize getThumbDockGridSize();
     QStringList getSelectedThumbsList();        //used by tags, might be useful
     int getCurrentRow();
     QString getCurrentFilename();       //not used, but might be handy

@@ -19,8 +19,25 @@ TableView::TableView(ThumbView *thumbView)
     setSelectionModel(thumbView->thumbViewSelection);
 }
 
-void TableView::pressed(const QModelIndex &index)
+void TableView::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    QTableView::pressed(index);
-    qDebug() << "Table pressed at index" << index;
+    {
+    #ifdef ISDEBUG
+    qDebug() << "TableView::mouseDoubleClickEvent";
+    #endif
+    }
+    QTableView::mouseDoubleClickEvent(event);
+    emit displayLoupe();
+    // delay reqd
+    QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
+}
+
+void TableView::delaySelectCurrentThumb()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "TableView::delaySelectCurrentThumb";
+    #endif
+    }
+    thumbView->selectThumb(thumbView->currentIndex());
 }

@@ -101,6 +101,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     thumbViewSelection = selectionModel();
 
     thumbViewDelegate = new ThumbViewDelegate(this);
+    qDebug() << "THUMBHEIGHT" << thumbHeight;
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels);
     setItemDelegate(thumbViewDelegate);
@@ -240,10 +241,15 @@ void ThumbView::setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid
     labelFontSizeGrid = _labelFontSizeGrid;
     showThumbLabelsGrid = _showThumbLabelsGrid;
 
-//    qDebug() << "thumbWidthGrid" << thumbWidthGrid
-//             << "thumbHeightGrid" << thumbHeightGrid;
-
     setThumbParameters();
+}
+
+QSize ThumbView::getThumbDockGridSize()
+{
+//    int w = thumbWidth + thumbSpacing * 2 + thumbPadding *2 + 8;
+//    int h = thumbHeight + thumbSpacing * 2 + thumbPadding *2 + 8;
+//    return QSize(w, h);
+    return thumbViewDelegate->getThumbCell();
 }
 
 // debugging
@@ -343,7 +349,7 @@ bool ThumbView::isSelectedItem()
     qDebug() << "ThumbView::isSelectedItem";
     #endif
     }
-    if (selectionModel()->selectedIndexes().size() == 1)
+    if (selectionModel()->selectedRows().size() == 1)
         return true;
     else
         return false;
@@ -783,15 +789,11 @@ void ThumbView::selectThumb(int row)
     // some operations assign row = -1 if not found
     if (row < 0) return;
     setFocus();
-//    qDebug() << "ThumbView::selectThumb(row)" << row;
     QModelIndex idx = thumbViewFilter->index(row, 0, QModelIndex());
+    qDebug() << idx;
     setCurrentIndex(idx);
     thumbViewDelegate->currentIndex = idx;
-//    forceScroll(10);
     scrollTo(idx, ScrollHint::PositionAtCenter);
-//    if (idx.isValid()) scrollTo(idx, ScrollHint::PositionAtCenter);
-
-//    reportThumb();
 }
 
 void ThumbView::selectThumb(QString &fName)
