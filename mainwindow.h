@@ -72,7 +72,6 @@ public:
         bool isVerticalTitle;
         bool isImageInfoVisible;
         bool includeSubfolders;
-        bool isIconDisplay;            // list vs icon in thumbView
         bool isLoupeDisplay;
         bool isGridDisplay;
         bool isTableDisplay;

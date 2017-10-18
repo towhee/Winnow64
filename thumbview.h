@@ -13,7 +13,7 @@ class ThumbView : public QListView
 
 public:
 
-    ThumbView(QWidget *parent, Metadata *metadata, bool iconView);
+    ThumbView(QWidget *parent, Metadata *metadata);
 
     enum UserRoles {
         FileNameRole = Qt::UserRole + 1,
@@ -162,7 +162,6 @@ private:
     QImage emptyImg;
     QWidget *mw;
     Metadata *metadata;
-    bool isIconDisplay;
     QSize treeViewSize;
 
 signals:

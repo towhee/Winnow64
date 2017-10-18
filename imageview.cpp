@@ -61,24 +61,10 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     infoDropShadow->setVisible(isShootingInfoVisible);
     infoDropShadow->setAttribute(Qt::WA_TranslucentBackground);
 
-    infoLabel = new QLabel(this);
-    infoLabel->setVisible(isShootingInfoVisible);
-    infoLabelShadow = new QLabel(this);
-    infoLabelShadow->setVisible(isShootingInfoVisible);
-    infoLabel->setAttribute(Qt::WA_TranslucentBackground);
-    infoLabelShadow->setAttribute(Qt::WA_TranslucentBackground);
-
     // title included in infoLabel, but might want to separate
     titleDropShadow = new DropShadowLabel(this);
     titleDropShadow->setVisible(isShootingInfoVisible);
     titleDropShadow->setAttribute(Qt::WA_TranslucentBackground);
-
-    titleLabel = new QLabel(this);
-    titleLabel->setVisible(isShootingInfoVisible);
-    titleLabelShadow = new QLabel(this);
-    titleLabelShadow->setVisible(isShootingInfoVisible);
-    titleLabel->setAttribute(Qt::WA_TranslucentBackground);
-    titleLabelShadow->setAttribute(Qt::WA_TranslucentBackground);
 
     pickLabel = new QLabel(this);
     pickLabel->setFixedSize(40,48);
@@ -90,8 +76,8 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
 
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
     infoEffect->setOpacity(0.8);
-    infoLabel->setGraphicsEffect(infoEffect);
-    infoLabelShadow->setGraphicsEffect(infoEffect);
+//    infoLabel->setGraphicsEffect(infoEffect);
+//    infoLabelShadow->setGraphicsEffect(infoEffect);
     infoDropShadow->setGraphicsEffect(infoEffect);
 
     mouseMovementTimer = new QTimer(this);
@@ -714,9 +700,9 @@ to help make it visible against different coloured backgrounds. */
     #endif
     }
 
-    QPalette palette1 = infoLabelShadow->palette();
-    palette1.setColor(QPalette::WindowText, Qt::black);
-    infoLabelShadow->setPalette(palette1);
+//    QPalette palette1 = infoLabelShadow->palette();
+//    palette1.setColor(QPalette::WindowText, Qt::black);
+//    infoLabelShadow->setPalette(palette1);
 
     // window (w) and view (v) sizes are updated during resize
 
@@ -736,13 +722,34 @@ to help make it visible against different coloured backgrounds. */
         y = sceneOrigin.y() + offset;
     else y = offset;
 
-    QFont font( "Tahoma", 16);
+    QFont font( "Tahoma", 20);
+//    QFont font( "Arial", 48);
+//    font.setPointSize(100);
     font.setKerning(true);
-    infoDropShadow->setFont(font);
+
+//    QLabel *info = new QLabel;
+//    info->setFont(font);
+////    info->setText("TEST");
+//    info->setAttribute(Qt::WA_TranslucentBackground);
+////    info->setGraphicsEffect(infoEffect);
+//    info->setText(infoString);
+////    qDebug() << "info =" << info->text();
+//    info->adjustSize();
+////    // make a little wider to account for the drop shadow
+//    info->resize(info->width()+10, info->height());
+//    scene->addWidget(info);
+//    info->move(x, y);
+//    info->setVisible(true);
+
+
+    infoDropShadow->setFont(font);      // not working
+    int fontSize = 14;
+
+    infoDropShadow->setStyleSheet("font: " + QString::number(fontSize) + "pt;");
     infoDropShadow->setText(infoString);
     infoDropShadow->adjustSize();
     // make a little wider to account for the drop shadow
-    infoDropShadow->resize(infoDropShadow->width()+10, infoDropShadow->height());
+    infoDropShadow->resize(infoDropShadow->width()+10, infoDropShadow->height()+10);
     infoDropShadow->move(x, y);
 }
 

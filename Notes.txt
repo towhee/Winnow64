@@ -2,7 +2,6 @@ To do:
 - Reset image cache order and display status when change sort
 - Compare images not working after images sorted othr then filename
 - Add ratings and labels
-- Cleaner font for info on screen
 - Resize thumb dock on bottom and top to fit thumbs if no wrap
 - Initial setup (other than workspace)
 - Add preferences for info label
@@ -32,6 +31,10 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Cleaner font for info on screen
+- Done: Pick label not toggling
+- Done: tweak infoLabel / titleLabel font and size
+- Done: remove iconDisplay from thumbView since added tableView
 - Done: Table view
 - Done: Thumb wrapping gets turned on when thumbDocked on bottom
 - Done: Smooth grid view scrolling

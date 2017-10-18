@@ -42,7 +42,7 @@ void ThumbCache::stopThumbCache()
         condition.wakeOne();
         mutex.unlock();
         wait();
-        qDebug() << "ThumbCache::stopThumbCache  isRunning:" << isRunning();
+//        qDebug() << "ThumbCache::stopThumbCache  isRunning:" << isRunning();
         emit updateIsRunning(false);
     }
 }

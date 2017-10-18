@@ -4,7 +4,7 @@
 
 DropShadowLabel::DropShadowLabel(QWidget *parent) : QLabel(parent)
 {
-
+    setFont(QFont("Tahoma", 50));
 }
 
 void DropShadowLabel::paintEvent(QPaintEvent *event)
@@ -19,13 +19,12 @@ void DropShadowLabel::paintEvent(QPaintEvent *event)
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setRenderHint(QPainter::TextAntialiasing, true);
 
-    QRect rect1(1,1,this->width()+100,this->height()-2);
-    QRect rect2(3,3,this->width()+100,this->height()-2);
+    QRect rect1(0, 0, this->width() + 100, this->height() + 20);
+    QRect rect2(2, 2, this->width() + 100, this->height() + 20);
+
     painter.setPen(Qt::black);
     painter.drawText(rect2, text());
     painter.setPen(Qt::white);
     painter.drawText(rect1, text());
-
-    QLabel::paintEvent(event);
 }
 

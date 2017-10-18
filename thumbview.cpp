@@ -45,9 +45,9 @@ QStandardItemModel roles used:
 Note that a "row" in this class refers to the row in the model, which has one
 thumb per row, not the view in the dock, where there can be many thumbs per row
 
-  */
+*/
 
-ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QListView(parent)
+ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
 {
     {
     #ifdef ISDEBUG
@@ -57,15 +57,13 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     mw = parent;
     this->metadata = metadata;
 
-    isIconDisplay = iconDisplay;
 //    thumbHeight = G::thumbHeight;
     pickFilter = false;
-    if (isIconDisplay) setViewMode(QListView::IconMode);
-    else setViewMode(QListView::ListMode);
+    setViewMode(QListView::IconMode);
 
     setSelectionMode(QAbstractItemView::ExtendedSelection);
-    if (isIconDisplay) setResizeMode(QListView::Adjust);
-    this->setLayoutMode(QListView::Batched);
+    setResizeMode(QListView::Adjust);
+    setLayoutMode(QListView::Batched);
 //    setBatchSize(2);
     setWordWrap(true);
     setDragEnabled(true);
@@ -101,7 +99,6 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     thumbViewSelection = selectionModel();
 
     thumbViewDelegate = new ThumbViewDelegate(this);
-    qDebug() << "THUMBHEIGHT" << thumbHeight;
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels);
     setItemDelegate(thumbViewDelegate);
@@ -125,7 +122,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, bool iconDisplay) : QL
     thumbsDir = new QDir();
     fileFilters = new QStringList;
 
-    if (isIconDisplay) emptyImg.load(":/images/no_image.png");
+    emptyImg.load(":/images/no_image.png");
 
 //    QTime time = QTime::currentTime();
 }
@@ -539,12 +536,6 @@ thumbCache.
         if (!addFolderImageDataToModel() && !includeSubfolders) return false;
     }
 
-    // exit here if just display file list instead of icons
-    if (!isIconDisplay) {
-        qDebug() << "isIconDisplay =" << isIconDisplay << "Cancel load thumbView";
-        return true;
-    }
-
 //    setWrapping(true);
     if (includeSubfolders) {
         qDebug() << "ThumbView::load including subfolders";
@@ -581,8 +572,6 @@ void ThumbView::initLoad()
     qDebug() << "ThumbView::loadPrepare";
     #endif
     }
-    if (!isIconDisplay) thumbHeight = 0;
-
     fileFilters->clear();
     foreach (const QString &str, metadata->supportedFormats)
             fileFilters->append("*." + str);
@@ -720,7 +709,6 @@ which is created in MW.
     #endif
     }
     static QStandardItem *item;
-    qDebug() << "ThumbView::addMetadataToModel";
 
     for(int row = 0; row < thumbViewModel->rowCount(); row++) {
         QModelIndex idx = thumbViewModel->index(row, PathColumn);
@@ -773,7 +761,7 @@ void ThumbView::selectThumb(QModelIndex idx)
     }
     if (idx.isValid()) {
         setCurrentIndex(idx);
-        qDebug() << "Row =" << idx.row();
+//        qDebug() << "Row =" << idx.row();
         thumbViewDelegate->currentIndex = idx;
         scrollTo(idx, ScrollHint::PositionAtCenter);
     }
@@ -790,7 +778,7 @@ void ThumbView::selectThumb(int row)
     if (row < 0) return;
     setFocus();
     QModelIndex idx = thumbViewFilter->index(row, 0, QModelIndex());
-    qDebug() << idx;
+//    qDebug() << idx;
     setCurrentIndex(idx);
     thumbViewDelegate->currentIndex = idx;
     scrollTo(idx, ScrollHint::PositionAtCenter);

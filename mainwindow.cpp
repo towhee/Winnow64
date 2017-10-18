@@ -1490,14 +1490,13 @@ void MW::createThumbView()
     #endif
     }
     metadata = new Metadata;
-    thumbView = new ThumbView(this, metadata, true);
+    thumbView = new ThumbView(this, metadata);
     thumbView->setObjectName("ImageView");  //rgh need to fix??
 
     thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
     thumbView->thumbPadding = setting->value("thumbPadding").toInt();
     thumbView->thumbWidth = setting->value("thumbWidth").toInt();
     thumbView->thumbHeight = setting->value("thumbHeight").toInt();
-    qDebug() << "thumbView->thumbHeight = setting->value(thumbHeight).toInt()" << thumbView->thumbHeight;
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
 
@@ -2437,7 +2436,6 @@ void MW::reportWorkspace(int n)
              << "\nisAutoFit" << ws.isAutoFit
              << "\nisVerticalTitle" << ws.isVerticalTitle
              << "\nshowShootingInfo" << ws.isImageInfoVisible
-             << "\nisIconDisplay" << ws.isIconDisplay
              << "\nisLoupeDisplay" << ws.isLoupeDisplay
              << "\nisGridDisplay" << ws.isGridDisplay
              << "\nisTableDisplay" << ws.isTableDisplay
@@ -2481,7 +2479,6 @@ void MW::reportState()
              << "\nisAutoFit" << w.isAutoFit
              << "\nisVerticalTitle" << isThumbDockVerticalTitle
              << "\nshowShootingInfo" << w.isImageInfoVisible
-             << "\nisIconDisplay" << w.isIconDisplay
              << "\nisLoupeDisplay" << w.isLoupeDisplay
              << "\nisGridDisplay" << w.isGridDisplay
              << "\nisTableDisplay" << w.isTableDisplay
@@ -3024,7 +3021,6 @@ void MW::writeSettings()
 //    setting->setValue("isFullScreen", (bool)fullScreenAction->isChecked());
 
     setting->setValue("isImageInfoVisible", (bool)infoVisibleAction->isChecked());
-//    setting->setValue("isIconDisplay", (bool)asIconsAction->isChecked());
     setting->setValue("isLoupeDisplay", (bool)asLoupeAction->isChecked());
     setting->setValue("isGridDisplay", (bool)asGridAction->isChecked());
     setting->setValue("isTableDisplay", (bool)asTableAction->isChecked());
@@ -3122,7 +3118,6 @@ void MW::writeSettings()
         setting->setValue("isAutoFit", ws.isAutoFit);
         setting->setValue("isVerticalTitle", ws.isVerticalTitle);
         setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
-        setting->setValue("isIconDisplay", ws.isIconDisplay);
         setting->setValue("isLoupeDisplay", ws.isLoupeDisplay);
         setting->setValue("isGridDisplay", ws.isGridDisplay);
         setting->setValue("isTableDisplay", ws.isTableDisplay);
@@ -3296,7 +3291,6 @@ Preferences are located in the prefdlg class and updated here.
         ws.isAutoFit = setting->value("isAutoFit").toBool();
         ws.isVerticalTitle = setting->value("isVerticalTitle").toBool();
         ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-        ws.isIconDisplay = setting->value("isIconDisplay").toBool();
         ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
         ws.isGridDisplay = setting->value("isGridDisplay").toBool();
         ws.isTableDisplay = setting->value("isTableDisplay").toBool();
@@ -3586,7 +3580,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
-        int height = thumbView->getThumbDockGridSize().height();
+        int height = thumbView->getThumbDockGridSize().height() - 1;
         int scrollBarHeight = 16;
         resizeDocks({thumbDock}, {height + scrollBarHeight}, Qt::Vertical);
     }
@@ -3621,13 +3615,9 @@ void MW::loupeDisplay()
     qDebug() << "MW::loupeDisplay";
     #endif
     }
-//    imageView->setVisible(true);
-//    compareView->setVisible(false);
     centralLayout->setCurrentIndex(1);
     thumbView->thumbViewDelegate->isCompare = false;
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-
-    qDebug() << "centralLayout->count()" << centralLayout->count();
 
     // in case was grid display move thumbView back to dock from central widget
     saveSelection();
@@ -3771,8 +3761,6 @@ void MW::setShootingInfo() {
     #endif
     }
     imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
-//    if (asCompareAction->isChecked())
-//        compareView->showShootingInfo(infoVisibleAction->isChecked());
 }
 
 void MW::setThumbDockVisibity()
@@ -4006,7 +3994,7 @@ void MW::togglePick()
     }
 
     QModelIndex index;
-    QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
+    QModelIndexList indexesList = thumbView->selectionModel()->selectedRows();
     QString pickStatus;
 
     foreach (index, indexesList) {

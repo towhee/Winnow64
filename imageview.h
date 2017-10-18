@@ -19,11 +19,7 @@ public:
               bool isShootingInfoVisible);
 
 //    QScrollArea *scrlArea;
-    QLabel *infoLabel;
-    QLabel *infoLabelShadow;
     DropShadowLabel *infoDropShadow;
-    QLabel *titleLabel;
-    QLabel *titleLabelShadow;
     DropShadowLabel *titleDropShadow;
     qreal zoom;
     QModelIndex imageIndex;
@@ -31,13 +27,6 @@ public:
     bool loadImage(QModelIndex idx, QString imageFileName);
     void setCursorHiding(bool hide);
     bool isBusy;
-//    void setClickZoom(float clickZoom);
-
-//    void compareZoomAtCoord(QPointF coord, bool isZoom);
-//    void deltaMoveImage(QPoint &delta);                   // used by compare
-
-//    void setImageLabelSize(QSize newSize);                  // req'd by compare?
-//    QSize imageSize();                                      // compare?
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void moveShootingInfo(QString infoString);
@@ -166,8 +155,6 @@ private:
     qreal clickZoom = 1.0;  // for now, put in QSetting
 
     qreal getFitScaleFactor(QRectF container, QRectF content);
-//    qreal getPreviewScaleMax();
-//    qreal getPreviewToFull();
     void scale();
     qreal getZoom();
 
