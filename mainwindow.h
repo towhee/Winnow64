@@ -138,13 +138,15 @@ public:
 
     bool isSlideShowActive;
     bool copyOp;
+    int maxThumbSpaceHeight;
 
 protected:
     void closeEvent(QCloseEvent *event);
     void keyPressEvent(QKeyEvent *event);
     void keyReleaseEvent(QKeyEvent *event);
-    //    void mouseDoubleClickEvent(QMouseEvent *event);
-    //    void mousePressEvent(QMouseEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
+//    void mouseDoubleClickEvent(QMouseEvent *event);
+//    void mousePressEvent(QMouseEvent *event);
 
 public slots:
     void folderSelectionChange();
@@ -213,7 +215,7 @@ private slots:
     void rotateRight();
     void showHiddenFiles();    
     void setThumbLabels();
-    void setThumbsFit();
+    void setDockFitThumbs();
     void chooseExternalApp();
     void updateExternalApps();
     void runExternalApp();
@@ -253,6 +255,7 @@ private slots:
     void reassignWorkspace(int n);
     void defaultWorkspace();
     void reportWorkspace(int n);
+    void loadWorkspaces();
 
     void help();
 
@@ -460,6 +463,7 @@ private:
     QStandardItemModel *imageModel;
 
     bool metadataLoaded;
+    bool ignoreDockResize;
 
     enum CentralWidgets	{           // req'd?
         thumbViewIdx = 0,

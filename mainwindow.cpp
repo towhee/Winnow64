@@ -41,6 +41,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     isInitializing = true;
     isSlideShowActive = false;
+    maxThumbSpaceHeight = 160 + qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
 //    imageFilters = new QStringList;
@@ -93,14 +94,16 @@ variables in MW (this class) and managed in the prefDlg class.
     createFSTree();
     createBookmarks();              // dependent on loadSettings
 
+    loadWorkspaces();               // req'd by actions and menu
     createActions();                // dependent on above
-    createMenus();                  // dependent on creatActions
+    createMenus();                  // dependent on creatActions and loadSettings
 
     updateExternalApps();           // dependent on createActions
     setupDocks();
+    thumbDock->installEventFilter(this);
     handleStartupArgs();
 
-    bool isSettings = loadSettings();
+    bool isSettings = loadSettings();//dependent on bookmarks and actions
     loadShortcuts(true);            // dependent on createActions
 
     if (!resetSettings) {
@@ -159,6 +162,37 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
 //    qDebug() << "MW::keyReleaseEvent" << event;
 //    QMainWindow::keyReleaseEvent(event);
+}
+
+bool MW::eventFilter(QObject *obj, QEvent *event) {
+  bool okayToResize = true;
+  if (event->type() == QEvent::Resize && obj == thumbDock
+  && !ignoreDockResize) {
+      static int height = 0;
+      QResizeEvent *resizeEvent = static_cast<QResizeEvent*>(event);
+      if (resizeEvent->size().height() != height) {
+          if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
+          dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea) {
+              height = resizeEvent->size().height();
+              int width = resizeEvent->size().width();
+              if (width > 160) okayToResize = false;
+              thumbView->thumbsFit(dockWidgetArea(thumbDock));
+              qDebug("Dock Resized (New Size) - Width: %d Height: %d",
+                     resizeEvent->size().width(),
+                     resizeEvent->size().height());
+              qDebug() << "maxThumbSpaceHeight" << maxThumbSpaceHeight;
+          }
+          if (resizeEvent->size().height() > 160) {
+//              resizeDocks({thumbDock}, {maxThumbSpaceHeight}, Qt::Vertical);
+          }
+      }
+//      setDockFitThumbs();
+  }
+
+//  if (!okayToResize) resizeDocks({thumbDock}, {maxThumbSpaceHeight}, Qt::Vertical);
+  if (okayToResize) {
+  }
+  return QWidget::eventFilter(obj, event);
 }
 
 bool MW::event(QEvent *event)
@@ -475,7 +509,7 @@ cached.
     thumbView->addMetadataToModel();
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
-    tableView->setColumnWidth(thumbView->PathColumn, 24+12);
+    tableView->setColumnWidth(thumbView->PathColumn, 24+8);
     QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 
     QString fPath = indexesList.first().data(thumbView->FileNameRole).toString();
@@ -929,7 +963,7 @@ void MW::createActions()
     // is this used - not in menu
     thumbsFitAction = new QAction(tr("Fit thumbs"), this);
     thumbsFitAction->setObjectName("thumbsZoomOut");
-    connect(thumbsFitAction, SIGNAL(triggered()), this, SLOT(setThumbsFit()));
+    connect(thumbsFitAction, SIGNAL(triggered()), this, SLOT(setDockFitThumbs()));
 //    if (thumbView->thumbSize == THUMB_SIZE_MIN)
 //            thumbsFitAction->setEnabled(false);
 
@@ -945,76 +979,61 @@ void MW::createActions()
     windowTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
     windowTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
     windowTitleBarVisibleAction->setCheckable(true);
-//    windowTitleBarVisibleAction->setChecked(setting->value("isWindowTitleBarVisible").toBool());
     connect(windowTitleBarVisibleAction, SIGNAL(triggered()), this, SLOT(setWindowsTitleBarVisibility()));
 
     menuBarVisibleAction = new QAction(tr("Menubar"), this);
     menuBarVisibleAction->setObjectName("toggleMenuBar");
     menuBarVisibleAction->setCheckable(true);
-//    menuBarVisibleAction->setChecked(setting->value("isMenuBarVisible").toBool());
     connect(menuBarVisibleAction, SIGNAL(triggered()), this, SLOT(setMenuBarVisibility()));
 
     statusBarVisibleAction = new QAction(tr("Statusbar"), this);
     statusBarVisibleAction->setObjectName("toggleStatusBar");
     statusBarVisibleAction->setCheckable(true);
-//    statusBarVisibleAction->setChecked(setting->value("isStatusBarVisible").toBool());
     connect(statusBarVisibleAction, SIGNAL(triggered()), this, SLOT(setStatusBarVisibility()));
 
     folderDockVisibleAction = new QAction(tr("Folder"), this);
     folderDockVisibleAction->setObjectName("toggleFiless");
     folderDockVisibleAction->setCheckable(true);
-//    folderDockVisibleAction->setChecked(setting->value("isFolderDockVisible").toBool());
     connect(folderDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFolderDockVisibility()));
 
     favDockVisibleAction = new QAction(tr("Favourites"), this);
     favDockVisibleAction->setObjectName("toggleFavs");
     favDockVisibleAction->setCheckable(true);
-//    favDockVisibleAction->setChecked(setting->value("isFavDockVisible").toBool());
     connect(favDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFavDockVisibility()));
 
     metadataDockVisibleAction = new QAction(tr("Metadata"), this);
     metadataDockVisibleAction->setObjectName("toggleMetadata");
     metadataDockVisibleAction->setCheckable(true);
-//    metadataDockVisibleAction->setChecked(setting->value("isMetadataDockVisible").toBool());
     connect(metadataDockVisibleAction, SIGNAL(triggered()), this, SLOT(setMetadataDockVisibility()));
 
     thumbDockVisibleAction = new QAction(tr("Thumbnails"), this);
+    thumbDockVisibleAction->setObjectName("toggleThumbs");
     thumbDockVisibleAction->setCheckable(true);
-//    thumbDockVisibleAction->setChecked(setting->value("isThumbDockVisible").toBool());
     connect(thumbDockVisibleAction, SIGNAL(triggered()), this, SLOT(setThumbDockVisibity()));
 
-    folderDockLockAction = new QAction(tr("Lock Files"), this);
+    folderDockLockAction = new QAction(tr("Hide Files Titlebar"), this);
     folderDockLockAction->setObjectName("lockDockFiles");
     folderDockLockAction->setCheckable(true);
-//    folderDockLockAction->setChecked(setting->value("isFolderDockLocked").toBool());
     connect(folderDockLockAction, SIGNAL(triggered()), this, SLOT(setFolderDockLockMode()));
 
-    favDockLockAction = new QAction(tr("Lock Favourites"), this);
+    favDockLockAction = new QAction(tr("Hide Favourite titlebars"), this);
     favDockLockAction->setObjectName("lockDockFavs");
     favDockLockAction->setCheckable(true);
-//    favDockLockAction->setChecked(setting->value("isFavDockLocked").toBool());
     connect(favDockLockAction, SIGNAL(triggered()), this, SLOT(setFavDockLockMode()));
 
-    metadataDockLockAction = new QAction(tr("Lock Metadata"), this);
+    metadataDockLockAction = new QAction(tr("Hide Metadata Titlebar"), this);
     metadataDockLockAction->setObjectName("lockDockMetadata");
     metadataDockLockAction->setCheckable(true);
-//    metadataDockLockAction->setChecked(setting->value("isMetadataDockLocked").toBool());
     connect(metadataDockLockAction, SIGNAL(triggered()), this, SLOT(setMetadataDockLockMode()));
 
-    thumbDockLockAction = new QAction(tr("Lock Thumbs"), this);
+    thumbDockLockAction = new QAction(tr("Hide Thumbs Titlebar"), this);
     thumbDockLockAction->setObjectName("lockDockThumbs");
     thumbDockLockAction->setCheckable(true);
-//    thumbDockLockAction->setChecked(setting->value("isThumbDockLocked").toBool());
     connect(thumbDockLockAction, SIGNAL(triggered()), this, SLOT(setThumbDockLockMode()));
 
-    allDocksLockAction = new QAction(tr("Lock all docks"), this);
+    allDocksLockAction = new QAction(tr("Hide All Titlebars"), this);
     allDocksLockAction->setObjectName("lockDocks");
     allDocksLockAction->setCheckable(true);
-//    if (folderDockLockAction->isChecked() &&
-//        favDockLockAction->isChecked() &&
-//        metadataDockLockAction->isChecked() &&
-//        thumbDockLockAction->isChecked())
-//        allDocksLockAction->setChecked(true);
     connect(allDocksLockAction, SIGNAL(triggered()), this, SLOT(setAllDocksLockMode()));
 
     // Workspace submenu of Window menu
@@ -1920,20 +1939,14 @@ void MW::showHiddenFiles()
     fsTree->setModelFlags();
 }
 
-void MW::setThumbsFit()
+void MW::setDockFitThumbs()
 {
     {
     #ifdef ISDEBUG
     qDebug() << "MW::setThuumbsFit";
     #endif
     }
-    qDebug() << "MW::setThuumbsFit";
     setThumbDockFeatures(dockWidgetArea(thumbDock));
-//    thumbView->thumbsFit(dockWidgetArea(thumbDock));
-//    if (asLoupeAction->isChecked() || asCompareAction->isChecked()) {
-//        if (!thumbDock->isVisible()) return;
-//        thumbView->thumbsFit(thumbDock);
-//    }
 }
 
 void MW::setThumbLabels()   // move to thumbView
@@ -2094,6 +2107,7 @@ void MW::invokeWorkspaceFromAction(QAction *workAction)
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == workAction->text()) {
             invokeWorkspace(workspaces->at(i));
+            reportWorkspace(i);         // rgh remove after debugging
             return;
         }
     }
@@ -2111,11 +2125,6 @@ workspace with a matching name to the action is used.
     qDebug() << "MW::invokeWorkspace";
     #endif
     }
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::invokeWorkspace";
-    #endif
-    }
     fullScreenAction->setChecked(w.isFullScreen);
     setFullNormal();
     restoreGeometry(w.geometry);
@@ -2126,6 +2135,7 @@ workspace with a matching name to the action is used.
     folderDockVisibleAction->setChecked(w.isFolderDockVisible);
     favDockVisibleAction->setChecked(w.isFavDockVisible);
     metadataDockVisibleAction->setChecked(w.isMetadataDockVisible);
+    qDebug() << "*********** w.isThumbDockVisible" << w.isThumbDockVisible;
     thumbDockVisibleAction->setChecked(w.isThumbDockVisible);
     folderDockLockAction->setChecked(w.isFolderDockLocked);
     favDockLockAction->setChecked(w.isFavDockLocked);
@@ -2154,7 +2164,6 @@ workspace with a matching name to the action is used.
     thumbView->isAutoFit = w.isAutoFit;
     thumbView->setThumbParameters();
     updateState();
-//            reportWorkspace(i);         // rgh remove after debugging
 }
 
 void MW::snapshotWorkspace(workspaceData &wsd)
@@ -2291,6 +2300,7 @@ void MW::reassignWorkspace(int n)
     }
     QString name = workspaces->at(n).name;
     populateWorkspace(n, name);
+    reportWorkspace(n);
 }
 
 void MW::defaultWorkspace()
@@ -2361,7 +2371,7 @@ app is "stranded" on secondary monitors that are not attached.
 //    widgetTabBar->setCurrentIndex(0);
 
     resizeDocks({thumbDock}, {160}, Qt::Vertical);
-    setThumbsFit();
+    setDockFitThumbs();
     asLoupeAction->setChecked(true);
     updateState();
 }
@@ -2408,7 +2418,7 @@ void MW::reportWorkspace(int n)
              << "\nAccel#" << ws.accelNum
              << "\nGeometry" << ws.geometry
              << "\nState" << ws.state
-             << "\niisFullScreen" << ws.isFullScreen
+             << "\nisFullScreen" << ws.isFullScreen
              << "\nisWindowTitleBarVisible" << ws.isWindowTitleBarVisible
              << "\nisMenuBarVisible" << ws.isMenuBarVisible
              << "\nisStatusBarVisible" << ws.isStatusBarVisible
@@ -2440,6 +2450,52 @@ void MW::reportWorkspace(int n)
              << "\nisGridDisplay" << ws.isGridDisplay
              << "\nisTableDisplay" << ws.isTableDisplay
              << "\nisCompareDisplay" << ws.isCompareDisplay;
+}
+
+void MW::loadWorkspaces()
+{
+    int size = setting->beginReadArray("workspaces");
+    for (int i = 0; i < size; ++i) {
+        setting->setArrayIndex(i);
+        ws.accelNum = setting->value("accelNum").toString();
+        ws.name = setting->value("name").toString();
+        ws.geometry = setting->value("geometry").toByteArray();
+        ws.state = setting->value("state").toByteArray();
+        ws.isFullScreen = setting->value("isFullScreen").toBool();
+        ws.isWindowTitleBarVisible = setting->value("isWindowTitleBarVisible").toBool();
+        ws.isMenuBarVisible = setting->value("isMenuBarVisible").toBool();
+        ws.isStatusBarVisible = setting->value("isStatusBarVisible").toBool();
+        ws.isFolderDockVisible = setting->value("isFolderDockVisible").toBool();
+        ws.isFavDockVisible = setting->value("isFavDockVisible").toBool();
+        ws.isMetadataDockVisible = setting->value("isMetadataDockVisible").toBool();
+        ws.isThumbDockVisible = setting->value("isThumbDockVisible").toBool();
+        ws.isFolderDockLocked = setting->value("isFolderDockLocked").toBool();
+        ws.isFavDockLocked = setting->value("isFavDockLocked").toBool();
+        ws.isMetadataDockLocked = setting->value("isMetadataDockLocked").toBool();
+        ws.isThumbDockLocked = setting->value("isThumbDockLocked").toBool();
+        ws.thumbSpacing = setting->value("thumbSpacing").toInt();
+        ws.thumbPadding = setting->value("thumbPadding").toInt();
+        ws.thumbWidth = setting->value("thumbWidth").toInt();
+        ws.thumbHeight = setting->value("thumbHeight").toInt();
+        ws.labelFontSize = setting->value("labelFontSize").toInt();
+        ws.showThumbLabels = setting->value("showThumbLabels").toBool();
+        ws.thumbSpacingGrid = setting->value("thumbSpacingGrid").toInt();
+        ws.thumbPaddingGrid = setting->value("thumbPaddingGrid").toInt();
+        ws.thumbWidthGrid = setting->value("thumbWidthGrid").toInt();
+        ws.thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
+        ws.labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
+        ws.showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
+        ws.isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
+        ws.isAutoFit = setting->value("isAutoFit").toBool();
+        ws.isVerticalTitle = setting->value("isVerticalTitle").toBool();
+        ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
+        ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
+        ws.isGridDisplay = setting->value("isGridDisplay").toBool();
+        ws.isTableDisplay = setting->value("isTableDisplay").toBool();
+        ws.isCompareDisplay = setting->value("isCompareDisplay").toBool();
+        workspaces->append(ws);
+    }
+    setting->endArray();
 }
 
 void MW::reportState()
@@ -3255,49 +3311,52 @@ Preferences are located in the prefdlg class and updated here.
     }
     setting->endGroup();
 
+    // moved read workspaces to separate function as req'd by actions while the
+    // rest of QSettings are dependent on actions being defined first.
+
     /* read workspaces */
-    int size = setting->beginReadArray("workspaces");
-    for (int i = 0; i < size; ++i) {
-        setting->setArrayIndex(i);
-        ws.accelNum = setting->value("accelNum").toString();
-        ws.name = setting->value("name").toString();
-        ws.geometry = setting->value("geometry").toByteArray();
-        ws.state = setting->value("state").toByteArray();
-        ws.isFullScreen = setting->value("isFullScreen").toBool();
-        ws.isWindowTitleBarVisible = setting->value("isWindowTitleBarVisible").toBool();
-        ws.isMenuBarVisible = setting->value("isMenuBarVisible").toBool();
-        ws.isStatusBarVisible = setting->value("isStatusBarVisible").toBool();
-        ws.isFolderDockVisible = setting->value("isFolderDockVisible").toBool();
-        ws.isFavDockVisible = setting->value("isFavDockVisible").toBool();
-        ws.isMetadataDockVisible = setting->value("isMetadataDockVisible").toBool();
-        ws.isThumbDockVisible = setting->value("isThumbDockVisible").toBool();
-        ws.isFolderDockLocked = setting->value("isFolderDockLocked").toBool();
-        ws.isFavDockLocked = setting->value("isFavDockLocked").toBool();
-        ws.isMetadataDockLocked = setting->value("isMetadataDockLocked").toBool();
-        ws.isThumbDockLocked = setting->value("isThumbDockLocked").toBool();
-        ws.thumbSpacing = setting->value("thumbSpacing").toInt();
-        ws.thumbPadding = setting->value("thumbPadding").toInt();
-        ws.thumbWidth = setting->value("thumbWidth").toInt();
-        ws.thumbHeight = setting->value("thumbHeight").toInt();
-        ws.labelFontSize = setting->value("labelFontSize").toInt();
-        ws.showThumbLabels = setting->value("showThumbLabels").toBool();
-        ws.thumbSpacingGrid = setting->value("thumbSpacingGrid").toInt();
-        ws.thumbPaddingGrid = setting->value("thumbPaddingGrid").toInt();
-        ws.thumbWidthGrid = setting->value("thumbWidthGrid").toInt();
-        ws.thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
-        ws.labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
-        ws.showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
-        ws.isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
-        ws.isAutoFit = setting->value("isAutoFit").toBool();
-        ws.isVerticalTitle = setting->value("isVerticalTitle").toBool();
-        ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-        ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
-        ws.isGridDisplay = setting->value("isGridDisplay").toBool();
-        ws.isTableDisplay = setting->value("isTableDisplay").toBool();
-        ws.isCompareDisplay = setting->value("isCompareDisplay").toBool();
-        workspaces->append(ws);
-    }
-    setting->endArray();
+//    int size = setting->beginReadArray("workspaces");
+//    for (int i = 0; i < size; ++i) {
+//        setting->setArrayIndex(i);
+//        ws.accelNum = setting->value("accelNum").toString();
+//        ws.name = setting->value("name").toString();
+//        ws.geometry = setting->value("geometry").toByteArray();
+//        ws.state = setting->value("state").toByteArray();
+//        ws.isFullScreen = setting->value("isFullScreen").toBool();
+//        ws.isWindowTitleBarVisible = setting->value("isWindowTitleBarVisible").toBool();
+//        ws.isMenuBarVisible = setting->value("isMenuBarVisible").toBool();
+//        ws.isStatusBarVisible = setting->value("isStatusBarVisible").toBool();
+//        ws.isFolderDockVisible = setting->value("isFolderDockVisible").toBool();
+//        ws.isFavDockVisible = setting->value("isFavDockVisible").toBool();
+//        ws.isMetadataDockVisible = setting->value("isMetadataDockVisible").toBool();
+//        ws.isThumbDockVisible = setting->value("isThumbDockVisible").toBool();
+//        ws.isFolderDockLocked = setting->value("isFolderDockLocked").toBool();
+//        ws.isFavDockLocked = setting->value("isFavDockLocked").toBool();
+//        ws.isMetadataDockLocked = setting->value("isMetadataDockLocked").toBool();
+//        ws.isThumbDockLocked = setting->value("isThumbDockLocked").toBool();
+//        ws.thumbSpacing = setting->value("thumbSpacing").toInt();
+//        ws.thumbPadding = setting->value("thumbPadding").toInt();
+//        ws.thumbWidth = setting->value("thumbWidth").toInt();
+//        ws.thumbHeight = setting->value("thumbHeight").toInt();
+//        ws.labelFontSize = setting->value("labelFontSize").toInt();
+//        ws.showThumbLabels = setting->value("showThumbLabels").toBool();
+//        ws.thumbSpacingGrid = setting->value("thumbSpacingGrid").toInt();
+//        ws.thumbPaddingGrid = setting->value("thumbPaddingGrid").toInt();
+//        ws.thumbWidthGrid = setting->value("thumbWidthGrid").toInt();
+//        ws.thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
+//        ws.labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
+//        ws.showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
+//        ws.isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
+//        ws.isAutoFit = setting->value("isAutoFit").toBool();
+//        ws.isVerticalTitle = setting->value("isVerticalTitle").toBool();
+//        ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
+//        ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
+//        ws.isGridDisplay = setting->value("isGridDisplay").toBool();
+//        ws.isTableDisplay = setting->value("isTableDisplay").toBool();
+//        ws.isCompareDisplay = setting->value("isCompareDisplay").toBool();
+//        workspaces->append(ws);
+//    }
+//    setting->endArray();
 
     return true;
 }
@@ -3575,14 +3634,18 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     if ((area == Qt::BottomDockWidgetArea ||
         area == Qt::TopDockWidgetArea) && isThumbDockVerticalTitle)
     {
-
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
-        int height = thumbView->getThumbDockGridSize().height() - 1;
-        int scrollBarHeight = 16;
-        resizeDocks({thumbDock}, {height + scrollBarHeight}, Qt::Vertical);
+        if (!thumbView->isThumbWrapWhenTopOrBottomDock) {
+            // prevent thumbDock resize event resize thumbs
+            ignoreDockResize = true;
+            int height = thumbView->getThumbDockGridSize().height();
+            int scrollBarHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);;
+            resizeDocks({thumbDock}, {height + scrollBarHeight}, Qt::Vertical);
+            ignoreDockResize = false;
+        }
     }
     else {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -3623,7 +3686,7 @@ void MW::loupeDisplay()
     saveSelection();
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
-    thumbDockVisibleAction->setChecked(true);
+//    thumbDockVisibleAction->setChecked(true);
     thumbView->isGrid = false;
     thumbView->setThumbParameters();
     setThumbDockVisibity();
@@ -3672,7 +3735,7 @@ void MW::tableDisplay()
     saveSelection();
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
-    thumbDockVisibleAction->setChecked(true);
+//    thumbDockVisibleAction->setChecked(true);
     thumbView->isGrid = false;
     thumbView->setThumbParameters();
     setThumbDockVisibity();
@@ -3763,17 +3826,6 @@ void MW::setShootingInfo() {
     imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
 }
 
-void MW::setThumbDockVisibity()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::setThumbDockVisibity";
-    #endif
-    }
-    thumbDock->setVisible(thumbDockVisibleAction->isChecked());
-    setThumbDockLockMode();
-}
-
 void MW::setFolderDockVisibility() {
     {
     #ifdef ISDEBUG
@@ -3799,6 +3851,17 @@ void MW::setMetadataDockVisibility() {
     #endif
     }
     metadataDock->setVisible(metadataDockVisibleAction->isChecked());
+}
+
+void MW::setThumbDockVisibity()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setThumbDockVisibity";
+    #endif
+    }
+    thumbDock->setVisible(thumbDockVisibleAction->isChecked());
+//    setThumbDockLockMode();
 }
 
 void MW::setMenuBarVisibility() {
@@ -3840,21 +3903,6 @@ void MW::setWindowsTitleBarVisibility() {
     }
 }
 
-// replace this with isList and isThumbs
-
-//void MW::toggleIconsList() {
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "MW::toggleIconsList";
-//    #endif
-//    }
-//    if(toggleIconsListAction->isChecked()) {
-//        isIconDisplay = false;    }
-//    else {
-//        isIconDisplay = true;
-//    }
-//}
-
 void MW::setFolderDockLockMode()
 {
     {
@@ -3864,11 +3912,9 @@ void MW::setFolderDockLockMode()
     }
     if (folderDockLockAction->isChecked()) {
         folderDock->setTitleBarWidget(folderDockEmptyWidget);
-//        G::isFolderDockLocked = true;
     }
     else {
         folderDock->setTitleBarWidget(folderDockOrigWidget);
-//        G::isFolderDockLocked = false;
     }
 }
 
@@ -3881,11 +3927,9 @@ void MW::setFavDockLockMode()
     }
     if (favDockLockAction->isChecked()) {
         favDock->setTitleBarWidget(favDockEmptyWidget);
-//        G::isFavsDockLocked = true;
     }
     else {
         favDock->setTitleBarWidget(favDockOrigWidget);
-//        G::isFavsDockLocked = false;
     }
 }
 
@@ -3898,11 +3942,9 @@ void MW::setMetadataDockLockMode()
     }
     if (metadataDockLockAction->isChecked()) {
         metadataDock->setTitleBarWidget(metadataDockEmptyWidget);
-//        G::isMetadataDockLocked = true;
     }
     else {
         metadataDock->setTitleBarWidget(metadataDockOrigWidget);
-//        G::isMetadataDockLocked = false;
     }
 }
 
@@ -3915,11 +3957,9 @@ void MW::setThumbDockLockMode()
     }
     if (thumbDockLockAction->isChecked()) {
         thumbDock->setTitleBarWidget(thumbDockEmptyWidget);
-//        G::isThumbDockLocked = true;
     }
     else {
         thumbDock->setTitleBarWidget(thumbDockOrigWidget);
-//        G::isThumbDockLocked = false;
     }
 }
 
