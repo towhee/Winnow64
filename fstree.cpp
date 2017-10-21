@@ -35,8 +35,16 @@ FSTree::FSTree(QWidget *parent) : QTreeView(parent)
 	setDragDropMode(QAbstractItemView::InternalMove);
 
 	fsModel = new FSModel();
-//    fsModel->setRootPath(fileSystemModel.myComputer().toString());
+
+#ifdef Q_OS_LINIX
     fsModel->setRootPath("/Volumes");
+#endif
+#ifdef Q_OS_WIN
+    fsModel->setRootPath(fileSystemModel.myComputer().toString());
+#endif
+#ifdef Q_OS_MAC
+    fsModel->setRootPath("/Volumes");
+#endif
 
 	setModelFlags();
 	setModel(fsModel);
