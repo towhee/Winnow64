@@ -69,6 +69,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
     setDragEnabled(true);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setUniformItemSizes(false);
+    setMaximumHeight(100000);
     this->setContentsMargins(0,0,0,0);
 
     thumbViewModel = new QStandardItemModel();
@@ -177,9 +178,9 @@ void ThumbView::refreshThumbs() {
 
 void ThumbView::setThumbParameters()
 {
-    /*
-    Helper function for in class calls where thumb parameters already defined
-    */
+/*
+Helper function for in class calls where thumb parameters already defined
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::setThumbParameters";
@@ -239,6 +240,11 @@ void ThumbView::setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid
     showThumbLabelsGrid = _showThumbLabelsGrid;
 
     setThumbParameters();
+}
+
+int ThumbView::getThumbSpaceMax()
+{
+    return 160 + thumbSpacing * 2 + thumbPadding *2 + 8;
 }
 
 QSize ThumbView::getThumbDockGridSize()
@@ -1052,7 +1058,8 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         int viewportHeight = viewport()->height(); // - scrollHeight;
         int thumbSpaceHeight = thumbViewDelegate->getThumbCell().height();
         int margin = thumbSpaceHeight - thumbHeight;
-        thumbSpaceHeight = viewportHeight < 160 ? viewportHeight : 160;
+        int thumbMax = getThumbSpaceMax();
+        thumbSpaceHeight = viewportHeight < thumbMax ? viewportHeight : thumbMax;
         thumbHeight = thumbSpaceHeight - margin;
         thumbWidth = thumbHeight * aspect;
         setThumbParameters();

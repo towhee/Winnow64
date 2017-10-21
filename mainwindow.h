@@ -464,11 +464,8 @@ private:
 
     bool metadataLoaded;
     bool ignoreDockResize;
-
-    enum CentralWidgets	{           // req'd?
-        thumbViewIdx = 0,
-        imageViewIdx
-    };
+    bool isThumbDockVisibleBeforeGridViewInvoked;
+    bool isUpdatingState;
 
     bool isInitializing;
     bool isStressTest;

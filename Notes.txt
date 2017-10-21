@@ -1,4 +1,5 @@
 To do:
+- Check full screen logic
 - Drives not showing in Files in Windows
 - Workspace not remembering thumbs hidden
 - Reset image cache order and display status when change sort

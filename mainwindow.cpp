@@ -164,40 +164,35 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 //    QMainWindow::keyReleaseEvent(event);
 }
 
-bool MW::eventFilter(QObject *obj, QEvent *event) {
-  bool okayToResize = true;
-  if (event->type() == QEvent::Resize && obj == thumbDock
-  && !ignoreDockResize) {
+bool MW::eventFilter(QObject *obj, QEvent *event)
+{
+/*
+Trap the thumbDock resize event and dynamically resize thumbnails as the
+thumbdock is resized by the user when:
+   - dock area is top or bottom
+   - height change of dock changes
+*/
+    if (event->type() == QEvent::Resize && obj == thumbDock &&
+      !thumbDock->isFloating())
+    {
       static int height = 0;
       QResizeEvent *resizeEvent = static_cast<QResizeEvent*>(event);
       if (resizeEvent->size().height() != height) {
           if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
-          dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea) {
+              dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
+          {
               height = resizeEvent->size().height();
-              int width = resizeEvent->size().width();
-              if (width > 160) okayToResize = false;
               thumbView->thumbsFit(dockWidgetArea(thumbDock));
-              qDebug("Dock Resized (New Size) - Width: %d Height: %d",
-                     resizeEvent->size().width(),
-                     resizeEvent->size().height());
-              qDebug() << "maxThumbSpaceHeight" << maxThumbSpaceHeight;
-          }
-          if (resizeEvent->size().height() > 160) {
-//              resizeDocks({thumbDock}, {maxThumbSpaceHeight}, Qt::Vertical);
           }
       }
-//      setDockFitThumbs();
-  }
-
-//  if (!okayToResize) resizeDocks({thumbDock}, {maxThumbSpaceHeight}, Qt::Vertical);
-  if (okayToResize) {
-  }
-  return QWidget::eventFilter(obj, event);
+    }
+    return QWidget::eventFilter(obj, event);
 }
 
 bool MW::event(QEvent *event)
 {
-/* Intercept arrow keys to prevent runon when holding key down to auto-repeat
+/*
+Intercept arrow keys to prevent runon when holding key down to auto-repeat
 and continue to show next image after arrow key released.  Have to intercept
 QEvent::ShortcutOverride because it is fired before keyRelease event.
 
@@ -1322,8 +1317,8 @@ void MW::createMenus()
     for (int i=0; i<10; i++) {
         workspaceSubMenu->addAction(workspaceActions.at(i));
     }
-    connect(workspaceSubMenu, SIGNAL(triggered(QAction*)),
-            SLOT(invokeWorkspaceFromAction(QAction*)));
+//    connect(workspaceSubMenu, SIGNAL(triggered(QAction*)),
+//            SLOT(invokeWorkspaceFromAction(QAction*)));
 
     QMenu *windowSubMenu = new QMenu(imageView);
     QAction *windowGroupAct = new QAction("Window", this);
@@ -1516,6 +1511,7 @@ void MW::createThumbView()
     thumbView->thumbPadding = setting->value("thumbPadding").toInt();
     thumbView->thumbWidth = setting->value("thumbWidth").toInt();
     thumbView->thumbHeight = setting->value("thumbHeight").toInt();
+    qDebug() << "thumbView->thumbHeight" << thumbView->thumbHeight;
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
 
@@ -2107,7 +2103,7 @@ void MW::invokeWorkspaceFromAction(QAction *workAction)
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == workAction->text()) {
             invokeWorkspace(workspaces->at(i));
-            reportWorkspace(i);         // rgh remove after debugging
+//            reportWorkspace(i);         // rgh remove after debugging
             return;
         }
     }
@@ -2125,7 +2121,8 @@ workspace with a matching name to the action is used.
     qDebug() << "MW::invokeWorkspace";
     #endif
     }
-    fullScreenAction->setChecked(w.isFullScreen);
+    if (fullScreenAction->isChecked() != w.isFullScreen)
+        fullScreenAction->setChecked(w.isFullScreen);
     setFullNormal();
     restoreGeometry(w.geometry);
     restoreState(w.state);
@@ -2135,15 +2132,12 @@ workspace with a matching name to the action is used.
     folderDockVisibleAction->setChecked(w.isFolderDockVisible);
     favDockVisibleAction->setChecked(w.isFavDockVisible);
     metadataDockVisibleAction->setChecked(w.isMetadataDockVisible);
-    qDebug() << "*********** w.isThumbDockVisible" << w.isThumbDockVisible;
     thumbDockVisibleAction->setChecked(w.isThumbDockVisible);
     folderDockLockAction->setChecked(w.isFolderDockLocked);
     favDockLockAction->setChecked(w.isFavDockLocked);
     metadataDockLockAction->setChecked(w.isMetadataDockLocked);
     thumbDockLockAction->setChecked( w.isThumbDockLocked);
     infoVisibleAction->setChecked(w.isImageInfoVisible);
-//    asListAction->setChecked(!w.isIconDisplay);
-//    asIconsAction->setChecked(w.isIconDisplay);
     asLoupeAction->setChecked(w.isLoupeDisplay);
     asGridAction->setChecked(w.isGridDisplay);
     asTableAction->setChecked(w.isTableDisplay);
@@ -2163,6 +2157,8 @@ workspace with a matching name to the action is used.
     thumbView->isThumbWrapWhenTopOrBottomDock = w.isThumbWrapWhenTopOrBottomDock;
     thumbView->isAutoFit = w.isAutoFit;
     thumbView->setThumbParameters();
+    // if in grid view override normal behavior if workspace invoked
+    isThumbDockVisibleBeforeGridViewInvoked = w.isThumbDockVisible;
     updateState();
 }
 
@@ -2860,12 +2856,6 @@ void MW::toggleFullScreen()
         showNormal();
         invokeWorkspace(ws);
 //        imageView->setCursorHiding(false);
-//        folderDockVisibleAction->setChecked(true);       setFolderDockVisibility();
-//        favDockVisibleAction->setChecked(true);        setFavDockVisibility();
-//        metadataDockVisibleAction->setChecked(true);    setMetadataDockVisibility();
-//        menuBarVisibleAction->setChecked(true);     setMenuBarVisibility();
-//        statusBarVisibleAction->setChecked(true);   setStatusBarVisibility();
-//        allDocksLockAction->setChecked(false);  setAllDocksLockMode();
     }
 }
 
@@ -3285,6 +3275,7 @@ Preferences are located in the prefdlg class and updated here.
         metadataDockLockAction->isChecked() &&
         thumbDockLockAction->isChecked())
         allDocksLockAction->setChecked(true);
+    isThumbDockVisibleBeforeGridViewInvoked = thumbDockVisibleAction->isChecked();
 
     /* read external apps */
     setting->beginGroup("ExternalApps");
@@ -3574,12 +3565,16 @@ void MW::setupDocks()
 
 void MW::updateState()
 {
+/*
+Called when program starting and when a workspace is invoked.  Based on the
+condition of actions sets the visibility of all window components. */
     {
     #ifdef ISDEBUG
     qDebug() << "MW::updateState";
     #endif
     }
-//    setMaxNormal();
+    // set flag so
+    isUpdatingState = true;
     setMenuBarVisibility();
     setStatusBarVisibility();
     setFolderDockVisibility();
@@ -3593,6 +3588,7 @@ void MW::updateState()
     setShootingInfo();
     setCentralView();
     setThumbDockFeatures(dockWidgetArea(thumbDock));
+    isUpdatingState = false;
 //    reportState();
 }
 
@@ -3615,6 +3611,7 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
     #endif
     }
     if (isFloat) {
+        thumbView->setMaximumHeight(100000);
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
@@ -3629,22 +3626,25 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     qDebug() << "MW::setThumbDockFeatures";
     #endif
     }
-//    qDebug() << "MW::setThumbDockFeatures";
+    thumbView->setMaximumHeight(100000);
 
-    if ((area == Qt::BottomDockWidgetArea ||
-        area == Qt::TopDockWidgetArea) && isThumbDockVerticalTitle)
+    if ((area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea)
+         && isThumbDockVerticalTitle)
     {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
-        if (!thumbView->isThumbWrapWhenTopOrBottomDock) {
-            // prevent thumbDock resize event resize thumbs
-            ignoreDockResize = true;
-            int height = thumbView->getThumbDockGridSize().height();
+        // if thumbDock area changed then set dock height to thumb sizw
+        if (!thumbView->isThumbWrapWhenTopOrBottomDock &&
+            !thumbDock->isFloating())
+        {
+            int ht = thumbView->getThumbDockGridSize().height();
+            int maxHt = thumbView->getThumbSpaceMax();
+            qDebug() << "ht" << ht << "thumbView->thumbHeight" << thumbView->thumbHeight;
             int scrollBarHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);;
-            resizeDocks({thumbDock}, {height + scrollBarHeight}, Qt::Vertical);
-            ignoreDockResize = false;
+            resizeDocks({thumbDock}, {ht + scrollBarHeight}, Qt::Vertical);
+            thumbView->setMaximumHeight(maxHt + scrollBarHeight + 1);
         }
     }
     else {
@@ -3678,6 +3678,7 @@ void MW::loupeDisplay()
     qDebug() << "MW::loupeDisplay";
     #endif
     }
+    qDebug() << "MW::loupeDisplay";
     centralLayout->setCurrentIndex(1);
     thumbView->thumbViewDelegate->isCompare = false;
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -3686,9 +3687,10 @@ void MW::loupeDisplay()
     saveSelection();
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
-//    thumbDockVisibleAction->setChecked(true);
+    thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
     thumbView->isGrid = false;
     thumbView->setThumbParameters();
+//    if (!isUpdatingState) thumbView->thumbsFit(dockWidgetArea(thumbDock));
     setThumbDockVisibity();
     recoverSelection();
 }
@@ -3700,7 +3702,9 @@ void MW::gridDisplay()
     qDebug() << "MW::gridDisplay";
     #endif
     }
+    qDebug() << "MW::gridDisplay";
     // move thumbView from thumbDeck to central widget
+    isThumbDockVisibleBeforeGridViewInvoked = thumbDockVisibleAction->isChecked();
     centralLayout->addWidget(thumbView);
     centralLayout->setCurrentIndex(4);
     imageView->setVisible(false);
@@ -3726,6 +3730,7 @@ void MW::tableDisplay()
     qDebug() << "MW::tableDisplay";
     #endif
     }
+    qDebug() << "MW::tableDisplay";
     // make table of thumbView in central widget
     tableView->resizeColumnsToContents();
     centralLayout->setCurrentIndex(3);
@@ -3735,7 +3740,7 @@ void MW::tableDisplay()
     saveSelection();
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
-//    thumbDockVisibleAction->setChecked(true);
+    thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
     thumbView->isGrid = false;
     thumbView->setThumbParameters();
     setThumbDockVisibity();
