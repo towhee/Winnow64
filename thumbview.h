@@ -73,6 +73,7 @@ public:
     bool load(QString &dir, bool inclSubfolders);
     void updateImageList();
     void addMetadataToModel();
+    void updateLayout();
 
     ThumbViewDelegate *thumbViewDelegate;
     void selectThumb(int row);
@@ -82,8 +83,9 @@ public:
 
     QFileInfoList getPicks();
     bool isPick();
+    int getThumbSpaceMin();
     int getThumbSpaceMax();
-    QSize getThumbDockGridSize();
+    QSize getThumbCellSize();
     QStringList getSelectedThumbsList();        //used by tags, might be useful
     int getCurrentRow();
     QString getCurrentFilename();       //not used, but might be handy

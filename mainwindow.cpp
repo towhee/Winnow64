@@ -173,18 +173,24 @@ thumbdock is resized by the user when:
    - height change of dock changes
 */
     if (event->type() == QEvent::Resize && obj == thumbDock &&
-      !thumbDock->isFloating())
+      !thumbDock->isFloating() && !isInitializing)
     {
-      static int height = 0;
-      QResizeEvent *resizeEvent = static_cast<QResizeEvent*>(event);
-      if (resizeEvent->size().height() != height) {
-          if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
-              dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
-          {
-              height = resizeEvent->size().height();
-              thumbView->thumbsFit(dockWidgetArea(thumbDock));
-          }
-      }
+        if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
+            dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
+        {
+            static int oldHt = 0;
+            QResizeEvent *resizeEvent = static_cast<QResizeEvent*>(event);
+            int newHt = resizeEvent->size().height();
+            if (newHt != oldHt) {
+                qDebug() << "\nMW::eventFilter dock area\n"
+                         << "***  thumbView Ht =" << thumbView->height()
+                         << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+                         << "thumbHeight =" << thumbView->thumbHeight << "\n"
+                         << "thumbDock Ht =" << thumbDock->height();
+                 thumbView->thumbsFit(dockWidgetArea(thumbDock));
+                 oldHt = newHt;
+             }
+        }
     }
     return QWidget::eventFilter(obj, event);
 }
@@ -449,6 +455,14 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     if (metadataLoaded) {
         imageCacheThread->updateImageCache(thumbView->thumbFileInfoList, fPath);
     }
+
+    // if top/bottom dock resize dock height if scrollbar is/not visible
+    qDebug() << "\nMW::fileSelectionChange\n"
+             << "***  thumbView Ht =" << thumbView->height()
+             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+    setThumbDockFeatures(dockWidgetArea(thumbDock));
+
 //    qDebug() << "thumbView->thumbFileInfoList:";
 //    foreach (QFileInfo f, thumbView->thumbFileInfoList) {
 //        qDebug() << f.filePath();
@@ -1511,7 +1525,6 @@ void MW::createThumbView()
     thumbView->thumbPadding = setting->value("thumbPadding").toInt();
     thumbView->thumbWidth = setting->value("thumbWidth").toInt();
     thumbView->thumbHeight = setting->value("thumbHeight").toInt();
-    qDebug() << "thumbView->thumbHeight" << thumbView->thumbHeight;
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
 
@@ -1525,6 +1538,10 @@ void MW::createThumbView()
     thumbView->isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
     thumbView->isAutoFit = setting->value("isAutoFit").toBool();
 
+    qDebug() << "\nMW::createThumbView before calling setThumbParameters" << "\n"
+             << "***  thumbView Ht =" << thumbView->height()
+             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setThumbParameters();
 
     metadataCacheThread = new MetadataCache(this, thumbView, metadata);
@@ -2156,6 +2173,10 @@ workspace with a matching name to the action is used.
     thumbView->showThumbLabelsGrid = w.showThumbLabelsGrid;
     thumbView->isThumbWrapWhenTopOrBottomDock = w.isThumbWrapWhenTopOrBottomDock;
     thumbView->isAutoFit = w.isAutoFit;
+    qDebug() << "\nMW::invokeWorkspace before calling setThumbParameters" << "\n"
+             << "***  thumbView Ht =" << thumbView->height()
+             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setThumbParameters();
     // if in grid view override normal behavior if workspace invoked
     isThumbDockVisibleBeforeGridViewInvoked = w.isThumbDockVisible;
@@ -2346,6 +2367,10 @@ app is "stranded" on secondary monitors that are not attached.
     thumbView->setWrapping(false);
     thumbView->isAutoFit = false;
 
+    qDebug() << "\nMW::defaultWorkspace before calling setThumbParameters" << "\n"
+             << "***  thumbView Ht =" << thumbView->height()
+             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setThumbParameters();
 
     folderDock->setFloating(false);
@@ -3030,6 +3055,7 @@ void MW::writeSettings()
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
     setting->setValue("thumbPadding", thumbView->thumbPadding);
     setting->setValue("thumbWidth", thumbView->thumbWidth);
+    qDebug() << "MW::writeSettings thumbView->thumbHeight" << thumbView->thumbHeight;
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showLabels", (bool)showThumbLabelsAction->isChecked());
@@ -3522,9 +3548,10 @@ void MW::setupDocks()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::setupDocks";
+        qDebug() << "MW::setupDocks";
     #endif
     }
+    qDebug() << "MW::setupDocks - isInitializing =" << isInitializing;
     thumbDock = new QDockWidget(tr("Thumbnails"), this);
     thumbDock->setObjectName("thumbDock");
 
@@ -3557,6 +3584,8 @@ void MW::setupDocks()
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, metadataDock);
+
+    qDebug() << "MW::setupDocks initial height =" << thumbDock->height();
 
     // match opening state from loadSettings
 //    updateState();
@@ -3626,6 +3655,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     qDebug() << "MW::setThumbDockFeatures";
     #endif
     }
+
     thumbView->setMaximumHeight(100000);
 
     if ((area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea)
@@ -3637,14 +3667,43 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetVerticalTitleBar);
         // if thumbDock area changed then set dock height to thumb sizw
         if (!thumbView->isThumbWrapWhenTopOrBottomDock &&
-            !thumbDock->isFloating())
+            !thumbDock->isFloating()) // && thumbView->thumbViewFilter->rowCount() > 0)
         {
-            int ht = thumbView->getThumbDockGridSize().height();
+            // make thumbDock height fit thumbs
             int maxHt = thumbView->getThumbSpaceMax();
-            qDebug() << "ht" << ht << "thumbView->thumbHeight" << thumbView->thumbHeight;
+            int minHt = thumbView->getThumbSpaceMin();
             int scrollBarHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);;
-            resizeDocks({thumbDock}, {ht + scrollBarHeight}, Qt::Vertical);
-            thumbView->setMaximumHeight(maxHt + scrollBarHeight + 1);
+
+            int newThumbDockHeight = thumbView->getThumbCellSize().height();
+
+            // horizontal scrollBar?
+            int thumbCellWidth = thumbView->getThumbCellSize().width();
+            int maxThumbsBeforeScrollReqd = thumbView->viewport()->width() / thumbCellWidth;
+            int thumbsCount = thumbView->thumbViewFilter->rowCount();
+            int thumbDockWidth = thumbView->viewport()->width();
+            bool isScrollBar = thumbsCount > maxThumbsBeforeScrollReqd;
+
+            if (isScrollBar) {
+                maxHt += scrollBarHeight;// + 1;
+                minHt += scrollBarHeight;// + 1;
+                newThumbDockHeight += scrollBarHeight;// + 1;
+            }
+//            qDebug() << "Min:" << minHt << "Max:" << maxHt;
+            thumbView->setMaximumHeight(maxHt);
+            thumbView->setMinimumHeight(minHt);
+
+//            thumbView->updateLayout();
+
+//            qDebug() << "scrollbar visible =" << thumbView->horizontalScrollBar()->isVisible()
+//                     << "viewpost width =" << thumbView->viewport()->width();
+            resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
+            qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
+                     << "***  thumbView Ht =" << thumbView->height()
+                     << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+                     << "thumbHeight =" << thumbView->thumbHeight << "\n";
+//                     << "scrollBarHeight =" << scrollBarHeight
+//                     << "Set dock ht to" << ht + scrollBarHeight;
+
         }
     }
     else {
@@ -3689,6 +3748,11 @@ void MW::loupeDisplay()
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
     thumbView->isGrid = false;
+    qDebug() << "\nMW::loupeDisplay before calling setThumbParameters" << "\n"
+             << "***  thumbView Ht =" << thumbView->height()
+             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+
     thumbView->setThumbParameters();
 //    if (!isUpdatingState) thumbView->thumbsFit(dockWidgetArea(thumbDock));
     setThumbDockVisibity();
@@ -3705,6 +3769,7 @@ void MW::gridDisplay()
     qDebug() << "MW::gridDisplay";
     // move thumbView from thumbDeck to central widget
     isThumbDockVisibleBeforeGridViewInvoked = thumbDockVisibleAction->isChecked();
+    thumbView->setMaximumHeight(100000);
     centralLayout->addWidget(thumbView);
     centralLayout->setCurrentIndex(4);
     imageView->setVisible(false);
@@ -3713,6 +3778,10 @@ void MW::gridDisplay()
 
     saveSelection();
     thumbDockVisibleAction->setChecked(false);
+    qDebug() << "\nMW::gridDisplay before calling setThumbParameters" << "\n"
+             << "***  thumbView Ht =" << thumbView->height()
+             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                            QDockWidget::DockWidgetMovable  |
                            QDockWidget::DockWidgetFloatable);
@@ -3742,6 +3811,10 @@ void MW::tableDisplay()
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
     thumbView->isGrid = false;
+    qDebug() << "\nMW::tableDisplay before calling setThumbParameters" << "\n"
+             << "***  thumbView Ht =" << thumbView->height()
+             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setThumbParameters();
     setThumbDockVisibity();
     recoverSelection();
@@ -3771,6 +3844,10 @@ void MW::compareDisplay()
         setThumbDockFeatures(dockWidgetArea(thumbDock));
         thumbDockVisibleAction->setChecked(true);
         thumbView->isGrid = false;
+        qDebug() << "\nMW::compareDisplay before calling setThumbParameters" << "\n"
+                 << "***  thumbView Ht =" << thumbView->height()
+                 << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+                 << "thumbHeight =" << thumbView->thumbHeight << "\n";
         thumbView->setThumbParameters();
         setThumbDockVisibity();
         recoverSelection();

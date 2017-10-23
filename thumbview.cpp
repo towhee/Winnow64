@@ -186,6 +186,10 @@ Helper function for in class calls where thumb parameters already defined
     qDebug() << "ThumbView::setThumbParameters";
     #endif
     }
+    qDebug() << "ThumbView::setThumbParameters "
+             << " isGrid =" << isGrid
+             << "thumbHeight = " << thumbHeight;
+
     if (isGrid) {
         setWrapping(true);
         setSpacing(thumbSpacingGrid);
@@ -242,12 +246,17 @@ void ThumbView::setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid
     setThumbParameters();
 }
 
+int ThumbView::getThumbSpaceMin()
+{
+    return 40 + thumbSpacing * 2 + thumbPadding *2 + 8;
+}
+
 int ThumbView::getThumbSpaceMax()
 {
     return 160 + thumbSpacing * 2 + thumbPadding *2 + 8;
 }
 
-QSize ThumbView::getThumbDockGridSize()
+QSize ThumbView::getThumbCellSize()
 {
 //    int w = thumbWidth + thumbSpacing * 2 + thumbPadding *2 + 8;
 //    int h = thumbHeight + thumbSpacing * 2 + thumbPadding *2 + 8;
@@ -1050,18 +1059,36 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     }
     // no wrapping - must be bottom or top dock area
     else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea){
-        qDebug() << "ThumbView::thumbsFit else";
-//        int thumbArea = dockWidgetArea(thumbDock);
+        // horizontal scrollBar?
+        int thumbCellWidth = getThumbCellSize().width();
+        int maxThumbsBeforeScrollReqd = viewport()->width() / thumbCellWidth;
+        int thumbsCount = thumbViewFilter->rowCount();
+        int thumbDockWidth = viewport()->width();
+        bool isScrollBar = thumbsCount > maxThumbsBeforeScrollReqd;
+
+        // set target ht based on space with/without scrollbar
+        int ht = height();
+        int scrollHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+        if (isScrollBar) ht -= scrollHeight;
+
         // adjust thumb height
         float aspect = thumbWidth / thumbHeight;
-        int scrollHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
-        int viewportHeight = viewport()->height(); // - scrollHeight;
         int thumbSpaceHeight = thumbViewDelegate->getThumbCell().height();
         int margin = thumbSpaceHeight - thumbHeight;
         int thumbMax = getThumbSpaceMax();
-        thumbSpaceHeight = viewportHeight < thumbMax ? viewportHeight : thumbMax;
+        thumbSpaceHeight = ht < thumbMax ? ht : thumbMax;
         thumbHeight = thumbSpaceHeight - margin;
         thumbWidth = thumbHeight * aspect;
+//        int thumbSpaceWidth = thumbWidth  + thumbSpacing * 2 + thumbPadding *2 + 8;
+//        int maxThumbsBeforeScrollReqd = viewportWidth / thumbSpaceWidth;
+
+
+        qDebug() << "\nThumbView::thumbsFit else\n"
+                 << "***  thumbView Ht =" << ht
+                 << "thumbSpace Ht =" << thumbSpaceHeight
+                 << "thumbHeight =" << thumbHeight;
+
+        // change the thumbnail size in thumbViewDelegate
         setThumbParameters();
     }
 }
@@ -1098,6 +1125,12 @@ void ThumbView::forceScroll(int row)
 //    selectThumb(row);
 }
 
+void ThumbView::updateLayout()
+{
+    QEvent event{QEvent::LayoutRequest};
+    QListView::updateGeometries();
+    QListView::event(&event);
+}
 
 void ThumbView::wheelEvent(QWheelEvent *event)
 {
