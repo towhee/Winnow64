@@ -736,6 +736,7 @@ which is created in MW.
         QString aperture = metadata->getAperture(fPath);
         QString ss = metadata->getExposureTime(fPath);
         QString iso = metadata->getISO(fPath);
+        int isoInt = iso.toInt();
         QString model = metadata->getModel(fPath);
         QString fl = metadata->getFocalLength(fPath);
         QString title = metadata->getTitle(fPath);
@@ -744,7 +745,9 @@ which is created in MW.
         thumbViewModel->setData(thumbViewModel->index(row, DimensionsColumn), dim);
         thumbViewModel->setData(thumbViewModel->index(row, ApertureColumn), aperture);
         thumbViewModel->setData(thumbViewModel->index(row, ShutterspeedColumn), ss);
-        thumbViewModel->setData(thumbViewModel->index(row, ISOColumn), iso);
+        thumbViewModel->setData(thumbViewModel->index(row, ISOColumn), iso, Qt::DisplayRole);
+        thumbViewModel->setData(thumbViewModel->index(row, ISOColumn), isoInt, Qt::EditRole);
+        thumbViewModel->setSortRole(Qt::EditRole);
         thumbViewModel->setData(thumbViewModel->index(row, CameraModelColumn), model);
         thumbViewModel->setData(thumbViewModel->index(row, FocalLengthColumn), fl);
         thumbViewModel->setData(thumbViewModel->index(row, TitleColumn), title);
@@ -1060,11 +1063,11 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     // no wrapping - must be bottom or top dock area
     else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea){
         // horizontal scrollBar?
-        int thumbCellWidth = getThumbCellSize().width();
+        int thumbCellWidth = getThumbCellSize().width() - 1;
         int maxThumbsBeforeScrollReqd = viewport()->width() / thumbCellWidth;
         int thumbsCount = thumbViewFilter->rowCount();
         int thumbDockWidth = viewport()->width();
-        bool isScrollBar = thumbsCount > maxThumbsBeforeScrollReqd;
+        bool isScrollBar = thumbsCount >= maxThumbsBeforeScrollReqd;
 
         // set target ht based on space with/without scrollbar
         int ht = height();
@@ -1086,7 +1089,10 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         qDebug() << "\nThumbView::thumbsFit else\n"
                  << "***  thumbView Ht =" << ht
                  << "thumbSpace Ht =" << thumbSpaceHeight
-                 << "thumbHeight =" << thumbHeight;
+                 << "thumbHeight =" << thumbHeight
+                 << "viewport Wd =" << thumbDockWidth
+                 << "thumbSpace Wd =" << thumbCellWidth
+                 << "Max thumbs before scroll =" << maxThumbsBeforeScrollReqd;
 
         // change the thumbnail size in thumbViewDelegate
         setThumbParameters();

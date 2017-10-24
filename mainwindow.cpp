@@ -3667,7 +3667,8 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetVerticalTitleBar);
         // if thumbDock area changed then set dock height to thumb sizw
         if (!thumbView->isThumbWrapWhenTopOrBottomDock &&
-            !thumbDock->isFloating()) // && thumbView->thumbViewFilter->rowCount() > 0)
+            !thumbDock->isFloating() &&
+            !asGridAction->isChecked()) // && thumbView->thumbViewFilter->rowCount() > 0)
         {
             // make thumbDock height fit thumbs
             int maxHt = thumbView->getThumbSpaceMax();
@@ -3769,7 +3770,6 @@ void MW::gridDisplay()
     qDebug() << "MW::gridDisplay";
     // move thumbView from thumbDeck to central widget
     isThumbDockVisibleBeforeGridViewInvoked = thumbDockVisibleAction->isChecked();
-    thumbView->setMaximumHeight(100000);
     centralLayout->addWidget(thumbView);
     centralLayout->setCurrentIndex(4);
     imageView->setVisible(false);
@@ -3788,6 +3788,7 @@ void MW::gridDisplay()
     thumbView->setWrapping(true);
     thumbView->isGrid = true;
     thumbView->setThumbParameters();
+//    thumbView->setMaximumHeight(100000);
     setThumbDockVisibity();
     recoverSelection();
 }
