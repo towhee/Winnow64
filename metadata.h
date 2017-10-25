@@ -40,9 +40,13 @@ public:
     QString dateTime;
     QString model;
     QString exposureTime;
+    float exposureTimeNum;
     QString aperture;
+    float apertureNum;
     QString ISO;
+    int ISONum;
     QString focalLength;
+    int focalLengthNum;
     QString shootingInfo;
     QString title;
     int year;
@@ -72,9 +76,13 @@ public:
     QString dateTime;
     QString model;
     QString exposureTime;
+    float exposureTimeNum;
     QString aperture;
+    float apertureNum;
     QString ISO;
+    int ISONum;
     QString focalLength;
+    int focalLengthNum;
     QString title;
     QString err;
 
@@ -116,9 +124,13 @@ public:
     QString getDateTime(const QString &imageFileName);
     QString getModel(const QString &imageFileName);
     QString getExposureTime( const QString &imageFileName);
+    float getExposureTimeNum( const QString &imageFileName);
     QString getAperture(const QString &imageFileName);
+    qreal getApertureNum(const QString &imageFileName);
     QString getISO(const QString &imageFileName);
+    int getISONum(const QString &imageFileName);
     QString getFocalLength(const QString &imageFileName);
+    int getFocalLengthNum(const QString &imageFileName);
     QString getShootingInfo(const QString &imageFileName);
     QString getTitle(const QString &imageFileName);
     int getYear(const QString &imageFileName);

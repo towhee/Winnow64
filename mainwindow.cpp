@@ -3645,6 +3645,7 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
         thumbView->setWrapping(true);
+        thumbView->isFloat = isFloat;
     }
 }
 
@@ -3689,22 +3690,20 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                 minHt += scrollBarHeight;// + 1;
                 newThumbDockHeight += scrollBarHeight;// + 1;
             }
-//            qDebug() << "Min:" << minHt << "Max:" << maxHt;
+
             thumbView->setMaximumHeight(maxHt);
             thumbView->setMinimumHeight(minHt);
 
-//            thumbView->updateLayout();
+            qDebug() << "maxHt, minHt, newThumbDockHeight" << maxHt << minHt << newThumbDockHeight;
 
-//            qDebug() << "scrollbar visible =" << thumbView->horizontalScrollBar()->isVisible()
-//                     << "viewpost width =" << thumbView->viewport()->width();
             resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
+
             qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
                      << "***  thumbView Ht =" << thumbView->height()
                      << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-                     << "thumbHeight =" << thumbView->thumbHeight << "\n";
-//                     << "scrollBarHeight =" << scrollBarHeight
-//                     << "Set dock ht to" << ht + scrollBarHeight;
-
+                     << "thumbHeight =" << thumbView->thumbHeight
+                     << "newThumbDockHeight" << newThumbDockHeight
+                     << "scrollBarHeight =" << scrollBarHeight << isScrollBar;
         }
     }
     else {

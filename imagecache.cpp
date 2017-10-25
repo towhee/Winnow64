@@ -522,7 +522,7 @@ int ImageCache::pxStart(int key)
 // returns the cache status bar x coordinate for the start of the item key
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::pxStart" << cacheMgr.at(key).fName;
+//    qDebug() << "ImageCache::pxStart" << cacheMgr.at(key).fName;
     #endif
     }
     return qRound((float)cache.pxUnitWidth * key);

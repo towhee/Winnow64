@@ -25,4 +25,34 @@ signals:
     void displayLoupe();
 };
 
+#include <QStyledItemDelegate>
+
+class ApertureItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit ApertureItemDelegate(QObject* parent = 0);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+};
+
+class ExposureTimeItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit ExposureTimeItemDelegate(QObject* parent = 0);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+};
+
+class FocalLengthItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit FocalLengthItemDelegate(QObject* parent = 0);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+};
+
+class FileSizeItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit FileSizeItemDelegate(QObject* parent = 0);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+};
+
 #endif // TABLEVIEW_H

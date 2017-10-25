@@ -1,4 +1,5 @@
 To do:
+- Set each column for sorting on editrole
 - Check full screen logic
 - Drives not showing in Files in Windows
 - Workspace not remembering thumbs hidden

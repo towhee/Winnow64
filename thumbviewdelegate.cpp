@@ -12,7 +12,7 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbViewDelegate::setThumbDimensions";
+//    qDebug() << "ThumbViewDelegate::setThumbDimensions";
     #endif
     }
     delegateShowThumbLabels = showThumbLabels;
@@ -52,7 +52,7 @@ QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbViewDelegate::sizeHint" << index.data(Qt::DisplayRole);
+//    qDebug() << "ThumbViewDelegate::sizeHint" << index.data(Qt::DisplayRole);
     #endif
     }
     QFont font = QApplication::font();
@@ -77,7 +77,7 @@ textRect         = a rectangle below itemRect
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
+//    qDebug() << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
     #endif
     }
     painter->save();

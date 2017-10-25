@@ -45,6 +45,54 @@ QStandardItemModel roles used:
 Note that a "row" in this class refers to the row in the model, which has one
 thumb per row, not the view in the dock, where there can be many thumbs per row
 
+ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
+
+    Behavior is controlled in prefDlg
+
+        ● thumb/icon size
+        ● thumb padding
+        ● thumb spacing
+        ● thumb label
+        ● if dock is top or bottom
+            ● thumb wrapping
+            ● vertical title bar visible
+
+    Triggers:
+
+        ● MW thumbDock Signal dockLocationChanged
+        ● MW thumbDock Signal topLevelChanged
+        ● MW::eventFilter() resize event
+
+    The thumbDock dimensions are controlled by the size of its contents - the
+    thumbView. When docked in bottom or top and thumb wrapping is false the
+    maximum height is defined by thumbView->setMaximumHeight().
+
+    ThumbDock resize to fit thumbs:
+
+        This only occurs when the thumbDock is located in the top or bottom
+        dock locations and wrap thumbs is not checked in prefDlg.
+
+        When a relocation to the top or bottom occurs the height of the
+        thumbDock is adjusted to fit the current size of the thumbs, depending
+        on whether a scrollbar is required. It can also occur when a new folder
+        is selected and the scrollbar requirement changes, depending on the
+        number of images in the folder. This behavior is managed in
+        MW::setThumbDockFeatures.
+
+        Also, when thumbs are resized the height of the thumbDock is adjusted
+        to accomodate the new thumb height, factoring in whether a scrollbar is
+        required.
+
+    Thumb resize to fit in dock:
+
+        This also only occurs when the thumbDock is located in the top or bottom
+        dock locations and wrap thumbs is not checked in prefDlg.  If the
+        thumbDock horizontal splitter is dragged to make the thumbDock taller
+        or shorter, within the minimum and maximum thumbView heights, the thumb
+        sizes are adjusted to fit, factoring in the need for a scrollbar.
+
+        This is triggered by MW::eventFilter() and effectuated in thumbsFit().
+
 */
 
 ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
@@ -69,10 +117,12 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
     setDragEnabled(true);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setUniformItemSizes(false);
+//    setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
     setMaximumHeight(100000);
     this->setContentsMargins(0,0,0,0);
 
     thumbViewModel = new QStandardItemModel();
+    thumbViewModel->setSortRole(Qt::EditRole);
     thumbViewModel->setHorizontalHeaderItem(PathColumn, new QStandardItem(QString("Icon")));
     thumbViewModel->setHorizontalHeaderItem(NameColumn, new QStandardItem(QString("File Name")));
     thumbViewModel->setHorizontalHeaderItem(TypeColumn, new QStandardItem("Type"));
@@ -91,10 +141,10 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
     thumbViewModel->setHorizontalHeaderItem(FocalLengthColumn, new QStandardItem("Focal length"));
     thumbViewModel->setHorizontalHeaderItem(TitleColumn, new QStandardItem("Title"));
 
-//    thumbViewModel->setSortRole(ModifiedRole);    // not working
     thumbViewFilter = new QSortFilterProxyModel;
     thumbViewFilter->setSourceModel(thumbViewModel);
     thumbViewFilter->setFilterRole(PickedRole);
+    thumbViewFilter->setSortRole(Qt::EditRole);
     setModel(thumbViewFilter);
 
     thumbViewSelection = selectionModel();
@@ -188,16 +238,17 @@ Helper function for in class calls where thumb parameters already defined
     }
     qDebug() << "ThumbView::setThumbParameters "
              << " isGrid =" << isGrid
+             << " isFloat =" << isFloat
              << "thumbHeight = " << thumbHeight;
 
     if (isGrid) {
-        setWrapping(true);
-        setSpacing(thumbSpacingGrid);
+//        setWrapping(true);
+//        setSpacing(thumbSpacingGrid);
         thumbViewDelegate->setThumbDimensions(thumbWidthGrid, thumbHeightGrid,
             thumbPaddingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     } else {
-        setWrapping(isThumbWrapWhenTopOrBottomDock && isTopOrBottomDock);
-        if (!isTopOrBottomDock) setWrapping(true);
+//        setWrapping(isThumbWrapWhenTopOrBottomDock && isTopOrBottomDock);
+//        if (!isTopOrBottomDock) setWrapping(true);
         setSpacing(thumbSpacing);
         thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
             thumbPadding, labelFontSize, showThumbLabels);
@@ -602,7 +653,7 @@ void ThumbView::initLoad()
 
     // if use thumbViewModel->clear() headers are deleted
     thumbViewModel->removeRows(0, thumbViewModel->rowCount());
-    thumbViewModel->setSortRole(Qt::DisplayRole);
+//    thumbViewModel->setSortRole(Qt::EditRole);
     thumbFileInfoList.clear();
 }
 
@@ -630,7 +681,7 @@ bool ThumbView::addFolderImageDataToModel()
         thumbFileInfoList.append(thumbFileInfo);
         QString fPath = thumbFileInfo.filePath();
 
-        // add filename as first column in new row
+        // add icon as first column in new row
         item = new QStandardItem();
 //        item->setData(fileIndex, SortRole);
         item->setData("", Qt::DisplayRole);
@@ -651,11 +702,12 @@ bool ThumbView::addFolderImageDataToModel()
         thumbViewModel->setItem(row, NameColumn, item);
 
         item = new QStandardItem();
-        item->setData(thumbFileInfo.suffix(), Qt::DisplayRole);
+        item->setData(thumbFileInfo.suffix().toUpper(), Qt::DisplayRole);
         thumbViewModel->setItem(row, TypeColumn, item);
 
         item = new QStandardItem();
         item->setData(thumbFileInfo.size(), Qt::DisplayRole);
+        item->setData(int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
         thumbViewModel->setItem(row, SizeColumn, item);
 
         item = new QStandardItem();
@@ -734,22 +786,27 @@ which is created in MW.
         QString mp = QString::number((width * height) / 1000000.0, 'f', 2);
         QString dim = QString::number(width) + "x" + QString::number(height);
         QString aperture = metadata->getAperture(fPath);
+        float apertureNum = metadata->getApertureNum(fPath);
         QString ss = metadata->getExposureTime(fPath);
+        float ssNum = metadata->getExposureTimeNum(fPath);
         QString iso = metadata->getISO(fPath);
-        int isoInt = iso.toInt();
+        int isoNum = metadata->getISONum(fPath);
         QString model = metadata->getModel(fPath);
         QString fl = metadata->getFocalLength(fPath);
+        int flNum = metadata->getFocalLengthNum(fPath);
         QString title = metadata->getTitle(fPath);
 
         thumbViewModel->setData(thumbViewModel->index(row, MegaPixelsColumn), mp);
         thumbViewModel->setData(thumbViewModel->index(row, DimensionsColumn), dim);
-        thumbViewModel->setData(thumbViewModel->index(row, ApertureColumn), aperture);
-        thumbViewModel->setData(thumbViewModel->index(row, ShutterspeedColumn), ss);
-        thumbViewModel->setData(thumbViewModel->index(row, ISOColumn), iso, Qt::DisplayRole);
-        thumbViewModel->setData(thumbViewModel->index(row, ISOColumn), isoInt, Qt::EditRole);
-        thumbViewModel->setSortRole(Qt::EditRole);
+        thumbViewModel->setData(thumbViewModel->index(row, ApertureColumn), apertureNum);
+        thumbViewModel->setData(thumbViewModel->index(row, ApertureColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        thumbViewModel->setData(thumbViewModel->index(row, ShutterspeedColumn), ssNum);
+        thumbViewModel->setData(thumbViewModel->index(row, ShutterspeedColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        thumbViewModel->setData(thumbViewModel->index(row, ISOColumn), isoNum);
+        thumbViewModel->setData(thumbViewModel->index(row, ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
         thumbViewModel->setData(thumbViewModel->index(row, CameraModelColumn), model);
-        thumbViewModel->setData(thumbViewModel->index(row, FocalLengthColumn), fl);
+        thumbViewModel->setData(thumbViewModel->index(row, FocalLengthColumn), flNum);
+        thumbViewModel->setData(thumbViewModel->index(row, FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
         thumbViewModel->setData(thumbViewModel->index(row, TitleColumn), title);
     }
 }
@@ -919,8 +976,8 @@ void ThumbView::thumbsEnlarge()
     qDebug() << "thumbsEnlarge: isGrid/thumbWidthGrid"
              << isGrid << thumbWidthGrid << thumbHeightGrid;
     if (isGrid) {
-        if (thumbWidthGrid == 0) thumbWidthGrid = 40;
-        if (thumbHeightGrid == 0) thumbHeightGrid = 40;
+        if (thumbWidthGrid < 40) thumbWidthGrid = 40;
+        if (thumbHeightGrid < 40) thumbHeightGrid = 40;
         if (thumbWidthGrid < 160 && thumbHeightGrid < 160)
         {
             thumbWidthGrid *= 1.1;
@@ -929,8 +986,8 @@ void ThumbView::thumbsEnlarge()
             if (thumbHeightGrid > 160) thumbHeightGrid = 160;
         }
     } else {
-        if (thumbWidth == 0) thumbWidth = 40;
-        if (thumbHeight ==0) thumbHeight = 40;
+        if (thumbWidth < 40) thumbWidth = 40;
+        if (thumbHeight < 40) thumbHeight = 40;
         if (thumbWidth < 160 && thumbHeight < 160)
         {
             thumbWidth *= 1.1;
@@ -977,7 +1034,7 @@ click position that is then sent to imageView to zoom to the same spot
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::updateThumbRectRole";
+//    qDebug() << "ThumbView::updateThumbRectRole";
     #endif
     }
     thumbViewFilter->setData(index, iconRect, ThumbRectRole);

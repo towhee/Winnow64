@@ -68,6 +68,7 @@ public:
     bool isThumbWrapWhenTopOrBottomDock;
     bool isTopOrBottomDock;
     bool isGrid;        // set by MW so know which thumb parameters to use
+    bool isFloat;       // set by MW ...
     bool isAutoFit;
 
     bool load(QString &dir, bool inclSubfolders);

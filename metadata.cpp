@@ -1374,12 +1374,14 @@ bool Metadata::formatJPG()
     // get shutter speed
     if (ifdDataHash.contains(33434)) {
         float x = getReal(ifdDataHash.value(33434).tagValue + startOffset);
-        if (x<1) {
+        if (x <1 ) {
             uint t = qRound(1/x);
             exposureTime = "1/" + QString::number(t);
+            exposureTimeNum = x;
         } else {
             uint t = (uint)x;
             exposureTime = QString::number(t);
+            exposureTimeNum = t;
         }
         exposureTime += " sec";
     } else {
@@ -1389,22 +1391,29 @@ bool Metadata::formatJPG()
     if (ifdDataHash.contains(33437)) {
         float x = getReal(ifdDataHash.value(33437).tagValue + startOffset);
         aperture = "f/" + QString::number(x, 'f', 1);
+        apertureNum = qRound(x * 10) / 10.0;
     } else {
         aperture = "";
+        apertureNum = 0;
     }
     //ISO
     if (ifdDataHash.contains(34855)) {
-        ISO = QString::number(ifdDataHash.value(34855).tagValue);
-//        ISO = "ISO " + QString::number(ifdDataHash.value(34855).tagValue);
+        ulong x = ifdDataHash.value(34855).tagValue;
+        ISONum = static_cast<int>(x);
+        ISO = QString::number(ISONum);
+//        ISO = "ISO " + QString::number(x);
     } else {
         ISO = "";
+        ISONum = 0;
     }
     // focal length
     if (ifdDataHash.contains(37386)) {
         float x = getReal(ifdDataHash.value(37386).tagValue + startOffset);
+        focalLengthNum = static_cast<int>(x);
         focalLength = QString::number(x, 'f', 0) + "mm";
     } else {
         focalLength = "";
+        focalLengthNum = 0;
     }
     // width
     (ifdDataHash.contains(40962))
@@ -1696,6 +1705,16 @@ QString Metadata::getExposureTime(const QString &imageFileName)
     return metaCache[imageFileName].exposureTime;
 }
 
+float Metadata::getExposureTimeNum(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::getExposureTime" << imageFileName;
+    #endif
+    }
+    return metaCache[imageFileName].exposureTimeNum;
+}
+
 QString Metadata::getAperture(const QString &imageFileName)
 {
     {
@@ -1704,6 +1723,16 @@ QString Metadata::getAperture(const QString &imageFileName)
     #endif
     }
     return metaCache[imageFileName].aperture;
+}
+
+qreal Metadata::getApertureNum(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::getApertureNum" << imageFileName;
+    #endif
+    }
+    return metaCache[imageFileName].apertureNum;
 }
 
 QString Metadata::getISO(const QString &imageFileName)
@@ -1716,6 +1745,16 @@ QString Metadata::getISO(const QString &imageFileName)
     return metaCache[imageFileName].ISO;
 }
 
+int Metadata::getISONum(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::getISO" << imageFileName;
+    #endif
+    }
+    return metaCache[imageFileName].ISONum;
+}
+
 QString Metadata::getFocalLength(const QString &imageFileName)
 {
     {
@@ -1724,6 +1763,16 @@ QString Metadata::getFocalLength(const QString &imageFileName)
     #endif
     }
     return metaCache[imageFileName].focalLength;
+}
+
+int Metadata::getFocalLengthNum(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::getFocalLength" << imageFileName;
+    #endif
+    }
+    return metaCache[imageFileName].focalLengthNum;
 }
 
 QString Metadata::getTitle(const QString &imageFileName)
@@ -1847,9 +1896,13 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo)
     imageMetadata.dateTime = dateTime;
     imageMetadata.model = model;
     imageMetadata.exposureTime = exposureTime;
+    imageMetadata.exposureTimeNum = exposureTimeNum;
     imageMetadata.aperture = aperture;
+    imageMetadata.apertureNum = apertureNum;
     imageMetadata.ISO = ISO;
+    imageMetadata.ISONum = ISONum;
     imageMetadata.focalLength = focalLength;
+    imageMetadata.focalLengthNum = focalLengthNum;
     imageMetadata.title = title;
     imageMetadata.year = dateTime.left(4).toInt();
     imageMetadata.month = dateTime.mid(5,2).toInt();
