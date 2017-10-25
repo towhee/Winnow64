@@ -1,5 +1,3 @@
-
-
 #include "bookmarks.h"
 
 BookMarks::BookMarks(QWidget *parent) : QTreeWidget(parent)

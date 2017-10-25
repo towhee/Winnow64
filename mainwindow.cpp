@@ -93,6 +93,7 @@ variables in MW (this class) and managed in the prefDlg class.
     createStatusBar();
     createFSTree();
     createBookmarks();              // dependent on loadSettings
+    createFilterView();             // dependent on thumbView
 
     loadWorkspaces();               // req'd by actions and menu
     createActions();                // dependent on above
@@ -1010,6 +1011,11 @@ void MW::createActions()
     favDockVisibleAction->setCheckable(true);
     connect(favDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFavDockVisibility()));
 
+    filterDockVisibleAction = new QAction(tr("Filters"), this);
+    filterDockVisibleAction->setObjectName("toggleFilters");
+    filterDockVisibleAction->setCheckable(true);
+    connect(filterDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFilterDockVisibility()));
+
     metadataDockVisibleAction = new QAction(tr("Metadata"), this);
     metadataDockVisibleAction->setObjectName("toggleMetadata");
     metadataDockVisibleAction->setCheckable(true);
@@ -1029,6 +1035,11 @@ void MW::createActions()
     favDockLockAction->setObjectName("lockDockFavs");
     favDockLockAction->setCheckable(true);
     connect(favDockLockAction, SIGNAL(triggered()), this, SLOT(setFavDockLockMode()));
+
+    filterDockLockAction = new QAction(tr("Hide Filter titlebars"), this);
+    filterDockLockAction->setObjectName("lockDockFilters");
+    filterDockLockAction->setCheckable(true);
+    connect(filterDockLockAction, SIGNAL(triggered()), this, SLOT(setfilterDockLockMode()));
 
     metadataDockLockAction = new QAction(tr("Hide Metadata Titlebar"), this);
     metadataDockLockAction->setObjectName("lockDockMetadata");
@@ -1218,6 +1229,7 @@ void MW::createMenus()
             SLOT(invokeWorkspaceFromAction(QAction*)));
     windowMenu->addAction(folderDockVisibleAction);
     windowMenu->addAction(favDockVisibleAction);
+    windowMenu->addAction(filterDockVisibleAction);
     windowMenu->addAction(metadataDockVisibleAction);
     windowMenu->addAction(thumbDockVisibleAction);
     windowMenu->addSeparator();
@@ -1227,6 +1239,7 @@ void MW::createMenus()
     windowMenu->addSeparator();
     windowMenu->addAction(folderDockLockAction);
     windowMenu->addAction(favDockLockAction);
+    windowMenu->addAction(filterDockLockAction);
     windowMenu->addAction(metadataDockLockAction);
     windowMenu->addAction(thumbDockLockAction);
     windowMenu->addSeparator();
@@ -1340,6 +1353,7 @@ void MW::createMenus()
     windowGroupAct->setMenu(windowSubMenu);
     windowSubMenu->addAction(folderDockVisibleAction);
     windowSubMenu->addAction(favDockVisibleAction);
+    windowSubMenu->addAction(filterDockVisibleAction);
     windowSubMenu->addAction(metadataDockVisibleAction);
     windowSubMenu->addAction(thumbDockVisibleAction);
     addMenuSeparator(windowSubMenu);
@@ -1349,6 +1363,7 @@ void MW::createMenus()
     addMenuSeparator(windowSubMenu);
     windowSubMenu->addAction(folderDockLockAction);
     windowSubMenu->addAction(favDockLockAction);
+    windowSubMenu->addAction(filterDockLockAction);
     windowSubMenu->addAction(metadataDockLockAction);
     windowSubMenu->addAction(thumbDockLockAction);
     addMenuSeparator(windowSubMenu);
@@ -1845,6 +1860,14 @@ void MW::createFSTree()
 //            this, SLOT(updateActions()));
 }
 
+void MW::createFilterView()
+{
+    filterDock = new QDockWidget(tr("  Filters  "), this);
+    filterDock->setObjectName("Filters");
+    filterView = new FilterView(filterDock, thumbView);
+    addDockWidget(Qt::LeftDockWidgetArea, filterDock);
+}
+
 void MW::createBookmarks()
 {
     {
@@ -2148,10 +2171,12 @@ workspace with a matching name to the action is used.
     statusBarVisibleAction->setChecked(w.isStatusBarVisible);
     folderDockVisibleAction->setChecked(w.isFolderDockVisible);
     favDockVisibleAction->setChecked(w.isFavDockVisible);
+    filterDockVisibleAction->setChecked(w.isFilterDockVisible);
     metadataDockVisibleAction->setChecked(w.isMetadataDockVisible);
     thumbDockVisibleAction->setChecked(w.isThumbDockVisible);
     folderDockLockAction->setChecked(w.isFolderDockLocked);
     favDockLockAction->setChecked(w.isFavDockLocked);
+    filterDockLockAction->setChecked(w.isFilterDockLocked);
     metadataDockLockAction->setChecked(w.isMetadataDockLocked);
     thumbDockLockAction->setChecked( w.isThumbDockLocked);
     infoVisibleAction->setChecked(w.isImageInfoVisible);
@@ -2199,10 +2224,12 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.isStatusBarVisible = statusBarVisibleAction->isChecked();
     wsd.isFolderDockVisible = folderDockVisibleAction->isChecked();
     wsd.isFavDockVisible = favDockVisibleAction->isChecked();
+    wsd.isFilterDockVisible = filterDockVisibleAction->isChecked();
     wsd.isMetadataDockVisible = metadataDockVisibleAction->isChecked();
     wsd.isThumbDockVisible = thumbDockVisibleAction->isChecked();
     wsd.isFolderDockLocked = folderDockLockAction->isChecked();
     wsd.isFavDockLocked = favDockLockAction->isChecked();
+    wsd.isFilterDockLocked = filterDockLockAction->isChecked();
     wsd.isMetadataDockLocked = metadataDockLockAction->isChecked();
     wsd.isThumbDockLocked = thumbDockLockAction->isChecked();
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
@@ -2342,11 +2369,13 @@ app is "stranded" on secondary monitors that are not attached.
 
     folderDockVisibleAction->setChecked(true);
     favDockVisibleAction->setChecked(true);
+    filterDockVisibleAction->setChecked(true);
     metadataDockVisibleAction->setChecked(true);
     thumbDockVisibleAction->setChecked(true);
 
     folderDockLockAction->setChecked(false);
     favDockLockAction->setChecked(false);
+    filterDockLockAction->setChecked(false);
     metadataDockLockAction->setChecked(false);
     thumbDockLockAction->setChecked(false);
 
@@ -2375,11 +2404,13 @@ app is "stranded" on secondary monitors that are not attached.
 
     folderDock->setFloating(false);
     favDock->setFloating(false);
+    filterDock->setFloating(false);
     metadataDock->setFloating(false);
     thumbDock->setFloating(false);
 
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
+    addDockWidget(Qt::LeftDockWidgetArea, filterDock);
     addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::BottomDockWidgetArea, thumbDock);
 
@@ -2445,10 +2476,12 @@ void MW::reportWorkspace(int n)
              << "\nisStatusBarVisible" << ws.isStatusBarVisible
              << "\nisFolderDockVisible" << ws.isFolderDockVisible
              << "\nisFavDockVisible" << ws.isFavDockVisible
+             << "\nisFilterDockVisible" << ws.isFilterDockVisible
              << "\nisMetadataDockVisible" << ws.isMetadataDockVisible
              << "\nisThumbDockVisible" << ws.isThumbDockVisible
              << "\nisFolderLocked" << ws.isFolderDockLocked
              << "\nisFavLocked" << ws.isFavDockLocked
+             << "\nisFilterLocked" << ws.isFilterDockLocked
              << "\nisMetadataLocked" << ws.isMetadataDockLocked
              << "\nisThumbsLocked" << ws.isThumbDockLocked
              << "\nthumbSpacing" << ws.thumbSpacing
@@ -2488,10 +2521,12 @@ void MW::loadWorkspaces()
         ws.isStatusBarVisible = setting->value("isStatusBarVisible").toBool();
         ws.isFolderDockVisible = setting->value("isFolderDockVisible").toBool();
         ws.isFavDockVisible = setting->value("isFavDockVisible").toBool();
+        ws.isFilterDockVisible = setting->value("isFilterDockVisible").toBool();
         ws.isMetadataDockVisible = setting->value("isMetadataDockVisible").toBool();
         ws.isThumbDockVisible = setting->value("isThumbDockVisible").toBool();
         ws.isFolderDockLocked = setting->value("isFolderDockLocked").toBool();
         ws.isFavDockLocked = setting->value("isFavDockLocked").toBool();
+        ws.isFilterDockLocked = setting->value("isFilterDockLocked").toBool();
         ws.isMetadataDockLocked = setting->value("isMetadataDockLocked").toBool();
         ws.isThumbDockLocked = setting->value("isThumbDockLocked").toBool();
         ws.thumbSpacing = setting->value("thumbSpacing").toInt();
@@ -2534,10 +2569,12 @@ void MW::reportState()
              << "\nisStatusBarVisible" << w.isStatusBarVisible
              << "\nisFolderDockVisible" << w.isFolderDockVisible
              << "\nisFavDockVisible" << w.isFavDockVisible
+             << "\nisFilterDockVisible" << w.isFilterDockVisible
              << "\nisMetadataDockVisible" << w.isMetadataDockVisible
              << "\nisThumbDockVisible" << w.isThumbDockVisible
              << "\nisFolderLocked" << w.isFolderDockLocked
              << "\nisFavLocked" << w.isFavDockLocked
+             << "\nisFilterLocked" << w.isFilterDockLocked
              << "\nisMetadataLocked" << w.isMetadataDockLocked
              << "\nisThumbsLocked" << w.isThumbDockLocked
              << "\nthumbSpacing" << w.thumbSpacing
@@ -2867,6 +2904,8 @@ void MW::toggleFullScreen()
         setFolderDockVisibility();
         favDockVisibleAction->setChecked(fullScreenDocks.isFavs);
         setFavDockVisibility();
+        filterDockVisibleAction->setChecked(fullScreenDocks.isFavs);
+        setFilterDockVisibility();
         metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
         setMetadataDockVisibility();
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
@@ -3103,10 +3142,12 @@ void MW::writeSettings()
     setting->setValue("isStatusBarVisible", (bool)statusBarVisibleAction->isChecked());
     setting->setValue("isFolderDockVisible", (bool)folderDockVisibleAction->isChecked());
     setting->setValue("isFavDockVisible", (bool)favDockVisibleAction->isChecked());
+    setting->setValue("isFilterDockVisible", (bool)filterDockVisibleAction->isChecked());
     setting->setValue("isMetadataDockVisible", (bool)metadataDockVisibleAction->isChecked());
     setting->setValue("isThumbDockVisible", (bool)thumbDockVisibleAction->isChecked());
     setting->setValue("isFolderDockLocked", (bool)folderDockLockAction->isChecked());
     setting->setValue("isFavDockLocked", (bool)favDockLockAction->isChecked());
+    setting->setValue("isFilterDockLocked", (bool)filterDockLockAction->isChecked());
     setting->setValue("isMetadataDockLocked", (bool)metadataDockLockAction->isChecked());
     setting->setValue("isThumbDockLocked", (bool)thumbDockLockAction->isChecked());
 
@@ -3168,10 +3209,12 @@ void MW::writeSettings()
         setting->setValue("isStatusBarVisible", ws.isStatusBarVisible);
         setting->setValue("isFolderDockVisible", ws.isFolderDockVisible);
         setting->setValue("isFavDockVisible", ws.isFavDockVisible);
+        setting->setValue("isFilterDockVisible", ws.isFilterDockVisible);
         setting->setValue("isMetadataDockVisible", ws.isMetadataDockVisible);
         setting->setValue("isThumbDockVisible", ws.isThumbDockVisible);
         setting->setValue("isFolderDockLocked", ws.isFolderDockLocked);
         setting->setValue("isFavDockLocked", ws.isFavDockLocked);
+        setting->setValue("isFilterDockLocked", ws.isFilterDockLocked);
         setting->setValue("isMetadataDockLocked", ws.isMetadataDockLocked);
         setting->setValue("isThumbDockLocked", ws.isThumbDockLocked);
         setting->setValue("thumbSpacing", ws.thumbSpacing);
@@ -3290,14 +3333,17 @@ Preferences are located in the prefdlg class and updated here.
     statusBarVisibleAction->setChecked(setting->value("isStatusBarVisible").toBool());
     folderDockVisibleAction->setChecked(setting->value("isFolderDockVisible").toBool());
     favDockVisibleAction->setChecked(setting->value("isFavDockVisible").toBool());
+    filterDockVisibleAction->setChecked(setting->value("isFilterDockVisible").toBool());
     metadataDockVisibleAction->setChecked(setting->value("isMetadataDockVisible").toBool());
     thumbDockVisibleAction->setChecked(setting->value("isThumbDockVisible").toBool());
     folderDockLockAction->setChecked(setting->value("isFolderDockLocked").toBool());
     favDockLockAction->setChecked(setting->value("isFavDockLocked").toBool());
+    filterDockLockAction->setChecked(setting->value("isFilterDockLocked").toBool());
     metadataDockLockAction->setChecked(setting->value("isMetadataDockLocked").toBool());
     thumbDockLockAction->setChecked(setting->value("isThumbDockLocked").toBool());
     if (folderDockLockAction->isChecked() &&
         favDockLockAction->isChecked() &&
+        filterDockLockAction->isChecked() &&
         metadataDockLockAction->isChecked() &&
         thumbDockLockAction->isChecked())
         allDocksLockAction->setChecked(true);
@@ -3427,6 +3473,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
 //    actionKeys[toggleAllDocksAct->objectName()] = toggleAllDocksAct;
     actionKeys[folderDockVisibleAction->objectName()] = folderDockVisibleAction;
     actionKeys[favDockVisibleAction->objectName()] = favDockVisibleAction;
+    actionKeys[filterDockVisibleAction->objectName()] = filterDockVisibleAction;
     actionKeys[metadataDockVisibleAction->objectName()] = metadataDockVisibleAction;
     actionKeys[thumbDockVisibleAction->objectName()] = thumbDockVisibleAction;
     actionKeys[windowTitleBarVisibleAction->objectName()] = windowTitleBarVisibleAction;
@@ -3525,15 +3572,17 @@ void MW::loadShortcuts(bool defaultShortcuts)
         newWorkspaceAction->setShortcut(QKeySequence("W"));
         manageWorkspaceAction->setShortcut(QKeySequence("Ctrl+W"));
         defaultWorkspaceAction->setShortcut(QKeySequence("Ctrl+Shift+W"));
-        folderDockVisibleAction->setShortcut(QKeySequence("F4"));
-        favDockVisibleAction->setShortcut(QKeySequence("F5"));
+        folderDockVisibleAction->setShortcut(QKeySequence("F3"));
+        favDockVisibleAction->setShortcut(QKeySequence("F4"));
+        filterDockVisibleAction->setShortcut(QKeySequence("F5"));
         metadataDockVisibleAction->setShortcut(QKeySequence("F6"));
         thumbDockVisibleAction->setShortcut(QKeySequence("F7"));
         windowTitleBarVisibleAction->setShortcut(QKeySequence("F8"));
         menuBarVisibleAction->setShortcut(QKeySequence("F9"));
         statusBarVisibleAction->setShortcut(QKeySequence("F10"));
-        folderDockLockAction->setShortcut(QKeySequence("Shift+F4"));
-        favDockLockAction->setShortcut(QKeySequence("Shift+F5"));
+        folderDockLockAction->setShortcut(QKeySequence("Shift+F3"));
+        favDockLockAction->setShortcut(QKeySequence("Shift+F4"));
+        filterDockLockAction->setShortcut(QKeySequence("Shift+F5"));
         metadataDockLockAction->setShortcut(QKeySequence("Shift+F6"));
         thumbDockLockAction->setShortcut(QKeySequence("Shift+F7"));
         allDocksLockAction->setShortcut(QKeySequence("Ctrl+L"));
@@ -3574,16 +3623,19 @@ void MW::setupDocks()
 
     folderDockOrigWidget = folderDock->titleBarWidget();
     favDockOrigWidget = favDock->titleBarWidget();
+    filterDockOrigWidget = filterDock->titleBarWidget();
     metadataDockOrigWidget = metadataDock->titleBarWidget();
     thumbDockOrigWidget = thumbDock->titleBarWidget();
     folderDockEmptyWidget = new QWidget;
     favDockEmptyWidget = new QWidget;
+    filterDockEmptyWidget = new QWidget;
     metadataDockEmptyWidget = new QWidget;
     thumbDockEmptyWidget = new QWidget;
 
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, metadataDock);
+    MW::tabifyDockWidget(metadataDock, filterDock);
 
     qDebug() << "MW::setupDocks initial height =" << thumbDock->height();
 
@@ -3608,10 +3660,12 @@ condition of actions sets the visibility of all window components. */
     setStatusBarVisibility();
     setFolderDockVisibility();
     setFavDockVisibility();
+    setFilterDockVisibility();
     setMetadataDockVisibility();
     setThumbDockVisibity();
     setFolderDockLockMode();
     setFavDockLockMode();
+    setFilterDockLockMode();
     setMetadataDockLockMode();
     setThumbDockLockMode();
     setShootingInfo();
@@ -3926,6 +3980,15 @@ void MW::setFavDockVisibility() {
     favDock->setVisible(favDockVisibleAction->isChecked());
 }
 
+void MW::setFilterDockVisibility() {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setFilterDockVisibility";
+    #endif
+    }
+    filterDock->setVisible(filterDockVisibleAction->isChecked());
+}
+
 void MW::setMetadataDockVisibility() {
     {
     #ifdef ISDEBUG
@@ -4015,6 +4078,21 @@ void MW::setFavDockLockMode()
     }
 }
 
+void MW::setFilterDockLockMode()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setfilterDockLockMode";
+    #endif
+    }
+    if (filterDockLockAction->isChecked()) {
+        filterDock->setTitleBarWidget(filterDockEmptyWidget);
+    }
+    else {
+        filterDock->setTitleBarWidget(filterDockOrigWidget);
+    }
+}
+
 void MW::setMetadataDockLockMode()
 {
     {
@@ -4058,20 +4136,24 @@ void MW::setAllDocksLockMode()
     if (allDocksLockAction->isChecked()) {
         folderDock->setTitleBarWidget(folderDockEmptyWidget);
         favDock->setTitleBarWidget(favDockEmptyWidget);
+        filterDock->setTitleBarWidget(filterDockEmptyWidget);
         metadataDock->setTitleBarWidget(metadataDockEmptyWidget);
         thumbDock->setTitleBarWidget(thumbDockEmptyWidget);
         folderDockLockAction->setChecked(true);
         favDockLockAction->setChecked(true);
+        filterDockLockAction->setChecked(true);
         metadataDockLockAction->setChecked(true);
         thumbDockLockAction->setChecked(true);
 //        G::isLockAllDocks = true;
     } else {
         folderDock->setTitleBarWidget(folderDockOrigWidget);
         favDock->setTitleBarWidget(favDockOrigWidget);
+        filterDock->setTitleBarWidget(filterDockOrigWidget);
         metadataDock->setTitleBarWidget(metadataDockOrigWidget);
         thumbDock->setTitleBarWidget(thumbDockOrigWidget);
         folderDockLockAction->setChecked(false);
         favDockLockAction->setChecked(false);
+        filterDockLockAction->setChecked(false);
         metadataDockLockAction->setChecked(false);
         thumbDockLockAction->setChecked(false);
 //        G::isLockAllDocks = false;

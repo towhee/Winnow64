@@ -15,6 +15,7 @@
 #include "workspacedlg.h"
 #include "popup.h"
 #include "bookmarks.h"
+#include "filterview.h"
 #include "infoview.h"
 #include "compareImages.h"
 #include "ui_helpform.h"
@@ -48,11 +49,13 @@ public:
         bool isStatusBarVisible;
         bool isFolderDockVisible;
         bool isFavDockVisible;
+        bool isFilterDockVisible;
         bool isMetadataDockVisible;
         bool isThumbDockVisible;
         bool isImageDockVisible;
         bool isFolderDockLocked;
         bool isFavDockLocked;
+        bool isFilterDockLocked;
         bool isMetadataDockLocked;
         bool isThumbDockLocked;
         int thumbSpacing;
@@ -227,12 +230,14 @@ private slots:
     void setThumbDockVisibity();
     void setFolderDockVisibility();
     void setFavDockVisibility();
+    void setFilterDockVisibility();
     void setMetadataDockVisibility();
     void setMenuBarVisibility();
     void setStatusBarVisibility();
     void setWindowsTitleBarVisibility();
     void setFolderDockLockMode();
     void setFavDockLockMode();
+    void setFilterDockLockMode();
     void setMetadataDockLockMode();
     void setThumbDockLockMode();
     void setAllDocksLockMode();
@@ -380,6 +385,7 @@ private:
 
     QAction *folderDockVisibleAction;
     QAction *favDockVisibleAction;
+    QAction *filterDockVisibleAction;
     QAction *metadataDockVisibleAction;
     QAction *thumbDockVisibleAction;
     QAction *windowTitleBarVisibleAction;
@@ -388,6 +394,7 @@ private:
 
     QAction *folderDockLockAction;
     QAction *favDockLockAction;
+    QAction *filterDockLockAction;
     QAction *metadataDockLockAction;
     QAction *thumbDockLockAction;
     QAction *allDocksLockAction;
@@ -420,9 +427,11 @@ private:
     QLabel *imageThreadRunningLabel;
     QDockWidget *folderDock;
     QDockWidget *favDock;
+    QDockWidget *filterDock;
     QDockWidget *thumbDock;
     FSTree *fsTree;
     BookMarks *bookmarks;
+    FilterView *filterView;
     QWidget *centralWidget;
 //    QStackedLayout *mainLayout;
     QGridLayout *compareLayout;
@@ -448,10 +457,12 @@ private:
     QTimer *slideShowTimer;
     QWidget *folderDockOrigWidget;
     QWidget *favDockOrigWidget;
+    QWidget *filterDockOrigWidget;
     QWidget *metadataDockOrigWidget;
     QWidget *thumbDockOrigWidget;
     QWidget *folderDockEmptyWidget;
     QWidget *favDockEmptyWidget;
+    QWidget *filterDockEmptyWidget;
     QWidget *metadataDockEmptyWidget;
     QWidget *thumbDockEmptyWidget;
     QVBoxLayout *imageViewContainer;
@@ -497,6 +508,7 @@ private:
     void setfsModelFlags();
     void createFSTree();
     void createBookmarks();
+    void createFilterView();
     void writeSettings();
     bool loadSettings();
     void saveSelection();
