@@ -661,7 +661,7 @@ bool ThumbView::addFolderImageDataToModel()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::initThumbs";
+    qDebug() << "ThumbView::addFolderImageDataToModel";
     #endif
     }
     dirFileInfoList = thumbsDir->entryInfoList();
@@ -680,6 +680,10 @@ bool ThumbView::addFolderImageDataToModel()
         thumbFileInfo = dirFileInfoList.at(fileIndex);
         thumbFileInfoList.append(thumbFileInfo);
         QString fPath = thumbFileInfo.filePath();
+
+        qDebug() << "building data model"
+                 << fileIndex << "of" << dirFileInfoList.size()
+                 << fPath;
 
         // add icon as first column in new row
         item = new QStandardItem();
