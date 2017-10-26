@@ -693,6 +693,8 @@ bool ThumbView::addFolderImageDataToModel()
         item->setData(thumbFileInfo.filePath(), FileNameRole);
         item->setData(thumbFileInfo.absoluteFilePath(), Qt::ToolTipRole);
         item->setData("False", PickedRole);
+        item->setData("", RatingRole);
+        item->setData("", LabelRole);
         item->setData(QRect(), ThumbRectRole);     // define later when read
         item->setData(thumbFileInfo.path(), PathRole);
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -727,12 +729,12 @@ bool ThumbView::addFolderImageDataToModel()
         thumbViewModel->setItem(row, PickedColumn, item);
 
         item = new QStandardItem();
-        item->setData(0, Qt::DisplayRole);
+        item->setData("", Qt::DisplayRole);
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         thumbViewModel->setItem(row, LabelColumn, item);
 
         item = new QStandardItem();
-        item->setData(0, Qt::DisplayRole);
+        item->setData("", Qt::DisplayRole);
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         thumbViewModel->setItem(row, RatingColumn, item);
 

@@ -717,7 +717,55 @@ void MW::createActions()
     copyImagesAction = new QAction(tr("Copy to clipboard"), this);
     copyImagesAction->setObjectName("copyImages");
     copyImagesAction->setShortcut(QKeySequence("Ctrl+C"));
-        connect(copyImagesAction, SIGNAL(triggered()), thumbView, SLOT(copyThumbs()));
+    connect(copyImagesAction, SIGNAL(triggered()), thumbView, SLOT(copyThumbs()));
+
+    rate0Action = new QAction(tr("Clear rating"), this);
+    rate0Action->setObjectName("Rate0");
+    connect(rate0Action, SIGNAL(triggered()), this, SLOT(setRating()));
+
+    rate1Action = new QAction(tr("Set rating to 1"), this);
+    rate1Action->setObjectName("Rate1");
+    connect(rate1Action, SIGNAL(triggered()), this, SLOT(setRating()));
+
+    rate2Action = new QAction(tr("Set rating to 2"), this);
+    rate2Action->setObjectName("Rate2");
+    connect(rate2Action, SIGNAL(triggered()), this, SLOT(setRating()));
+
+    rate3Action = new QAction(tr("Set rating to 3"), this);
+    rate3Action->setObjectName("Rate3");
+    connect(rate3Action, SIGNAL(triggered()), this, SLOT(setRating()));
+
+    rate4Action = new QAction(tr("Set rating to 4"), this);
+    rate4Action->setObjectName("Rate4");
+    connect(rate4Action, SIGNAL(triggered()), this, SLOT(setRating()));
+
+    rate5Action = new QAction(tr("Set rating to 5"), this);
+    rate5Action->setObjectName("Rate5");
+    connect(rate5Action, SIGNAL(triggered()), this, SLOT(setRating()));
+
+    label0Action = new QAction(tr("Clear label colour"), this);
+    label0Action->setObjectName("Label0");
+    connect(label0Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
+
+    label1Action = new QAction(tr("Set label to Red"), this);
+    label1Action->setObjectName("Label1");
+    connect(label1Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
+
+    label2Action = new QAction(tr("Set label to Yellow"), this);
+    label2Action->setObjectName("Label2");
+    connect(label2Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
+
+    label3Action = new QAction(tr("Set label to Green"), this);
+    label3Action->setObjectName("Label3");
+    connect(label3Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
+
+    label4Action = new QAction(tr("Set label to Blue"), this);
+    label4Action->setObjectName("Label4");
+    connect(label4Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
+
+    label5Action = new QAction(tr("Set label to Purple"), this);
+    label5Action->setObjectName("Label5");
+    connect(label5Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
 
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
@@ -1168,6 +1216,19 @@ void MW::createMenus()
     editMenu->addSeparator();
     editMenu->addAction(copyImagesAction);
     editMenu->addSeparator();
+    editMenu->addAction(rate0Action);
+    editMenu->addAction(rate1Action);
+    editMenu->addAction(rate2Action);
+    editMenu->addAction(rate3Action);
+    editMenu->addAction(rate4Action);
+    editMenu->addAction(rate5Action);
+    editMenu->addSeparator();
+    editMenu->addAction(label0Action);
+    editMenu->addAction(label1Action);
+    editMenu->addAction(label2Action);
+    editMenu->addAction(label3Action);
+    editMenu->addAction(label4Action);
+    editMenu->addAction(label5Action);
     editMenu->addAction(rotateRightAction);
     editMenu->addAction(rotateLeftAction);
     editMenu->addSeparator();
@@ -1961,8 +2022,6 @@ void MW::sortThumbnails()
     if (sortTitleAction->isChecked()) sortColumn = thumbView->TitleColumn;
 
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
-//    tableView->horizontalHeader()->setSortIndicator(sortColumn, Qt::AscendingOrder);
-
 }
 
 void MW::showHiddenFiles()
@@ -3534,6 +3593,18 @@ void MW::loadShortcuts(bool defaultShortcuts)
         togglePickAction->setShortcut(QKeySequence("`"));
         toggleFilterPickAction->setShortcut(QKeySequence("Ctrl+`"));
         ingestAction->setShortcut(QKeySequence("Q"));
+        rate0Action->setShortcut(QKeySequence("!"));
+        rate1Action->setShortcut(QKeySequence("1"));
+        rate2Action->setShortcut(QKeySequence("2"));
+        rate3Action->setShortcut(QKeySequence("3"));
+        rate4Action->setShortcut(QKeySequence("4"));
+        rate5Action->setShortcut(QKeySequence("5"));
+        label0Action->setShortcut(QKeySequence("^"));
+        label1Action->setShortcut(QKeySequence("6"));
+        label2Action->setShortcut(QKeySequence("7"));
+        label3Action->setShortcut(QKeySequence("8"));
+        label4Action->setShortcut(QKeySequence("9"));
+        label5Action->setShortcut(QKeySequence("0"));
         reportMetadataAction->setShortcut(QKeySequence("Ctrl+R"));
         slideShowAction->setShortcut(QKeySequence("S"));
         thumbsFitAction->setShortcut(QKeySequence("Alt+}"));
@@ -3557,9 +3628,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
         zoomOutAction->setShortcut(QKeySequence("-"));
         zoomInAction->setShortcut(QKeySequence("+"));
         zoomToggleAction->setShortcut(QKeySequence("Z"));
-        zoom50PctAction->setShortcut(QKeySequence("5"));
-        zoom100PctAction->setShortcut(QKeySequence("0"));
-        zoom200PctAction->setShortcut(QKeySequence("2"));
+        zoom50PctAction->setShortcut(QKeySequence("Ctrl+5"));
+        zoom100PctAction->setShortcut(QKeySequence("Ctrl+0"));
+        zoom200PctAction->setShortcut(QKeySequence("Ctrl+2"));
         rotateLeftAction->setShortcut(QKeySequence("["));
         rotateRightAction->setShortcut(QKeySequence("]"));
 //        moveLeftAct->setShortcut(QKeySequence("Left"));
@@ -4248,6 +4319,63 @@ void MW::copyPicks()
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
+}
+
+void MW::setRating()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setRating";
+    #endif
+    }
+    QObject* obj = sender();
+    QString s = obj->objectName();
+    QString rating;
+    qDebug() << obj << obj->objectName();
+    if (s == "Rate0") rating = "";
+    if (s == "Rate1") rating = "1";
+    if (s == "Rate2") rating = "2";
+    if (s == "Rate3") rating = "3";
+    if (s == "Rate4") rating = "4";
+    if (s == "Rate5") rating = "5";
+
+    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    for (int i = 0; i < selection.count(); ++i) {
+        QModelIndex idx = selection.at(i);
+        thumbView->thumbViewModel->setData(idx, rating, thumbView->RatingRole);
+        idx = thumbView->thumbViewModel->index(idx.row(), thumbView->RatingColumn);
+        thumbView->thumbViewModel->setData(idx, rating, Qt::EditRole);
+    }
+    thumbView->refreshThumbs();
+}
+
+void MW::setLabelColor()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setLabelColor";
+    #endif
+    }
+    QObject* obj = sender();
+    QString s = obj->objectName();
+    QString labelColor;
+    qDebug() << obj << obj->objectName();
+    if (s == "Label0") labelColor = "";
+    if (s == "Label1") labelColor = "Red";
+    if (s == "Label2") labelColor = "Yellow";
+    if (s == "Label3") labelColor = "Green";
+    if (s == "Label4") labelColor = "Blue";
+    if (s == "Label5") labelColor = "Purple";
+//    QModelIndex idx = thumbView->currentIndex();
+
+    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    for (int i = 0; i < selection.count(); ++i) {
+        QModelIndex idx = selection.at(i);
+        thumbView->thumbViewModel->setData(idx, labelColor, thumbView->LabelRole);
+        idx = thumbView->thumbViewModel->index(idx.row(), thumbView->LabelColumn);
+        thumbView->thumbViewModel->setData(idx, labelColor, Qt::EditRole);
+    }
+    thumbView->refreshThumbs();
 }
 
 void MW::getSubfolders(QString fPath)

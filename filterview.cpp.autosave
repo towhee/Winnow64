@@ -6,6 +6,8 @@ FilterView::FilterView(QWidget *parent, ThumbView *thumbView) : QTreeWidget(pare
     setRootIsDecorated(false);
     setColumnCount(1);
     setHeaderHidden(true);
+    
+    // Picks, Ratings, Labels, Dimensions, Aperture, Shutter, ISO, Model, Focal Length, Title
 
     static QTreeWidgetItem *item;
     item = new QTreeWidgetItem(this);

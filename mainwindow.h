@@ -166,6 +166,8 @@ signals:
 private slots:
     void about();
     void copyPicks();
+    void setRating();
+    void setLabelColor();
     void sortThumbnails();
 //    void reload();
     void preferences();
@@ -330,6 +332,18 @@ private:
     QAction *lastThumbAction;
     QAction *nextPickAction;
     QAction *prevPickAction;
+    QAction *rate0Action;
+    QAction *rate1Action;
+    QAction *rate2Action;
+    QAction *rate3Action;
+    QAction *rate4Action;
+    QAction *rate5Action;
+    QAction *label0Action;
+    QAction *label1Action;
+    QAction *label2Action;
+    QAction *label3Action;
+    QAction *label4Action;
+    QAction *label5Action;
 
     // Sort Menu
     QActionGroup *sortGroupAction;

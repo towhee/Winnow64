@@ -35,11 +35,11 @@ void BookMarks::reloadBookmarks()
 	while (it.hasNext()) {
 		QString itemPath = it.next();
 	    QTreeWidgetItem *item = new QTreeWidgetItem(this);
-	    item->setText(0, QFileInfo(itemPath).fileName());
-	   	item->setIcon(0, QIcon(":/images/bookmarks.png"));
-	   	item->setToolTip(0, itemPath);
-	    insertTopLevelItem(0, item);
-	}
+        item->setText(0, QFileInfo(itemPath).fileName());
+        item->setIcon(0, QIcon(":/images/bookmarks.png"));
+        item->setToolTip(0, itemPath);
+        insertTopLevelItem(0, item);
+    }
 }
 
 void BookMarks::resizeTreeColumn(const QModelIndex &)

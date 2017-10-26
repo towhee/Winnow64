@@ -15,6 +15,8 @@ public:
 
     ThumbView(QWidget *parent, Metadata *metadata);
 
+    // note if change then fix offset in thumbViewDelegate::paint for
+    // LabelRole and RattingRole
     enum UserRoles {
         FileNameRole = Qt::UserRole + 1,
         SortRole,

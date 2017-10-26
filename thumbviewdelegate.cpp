@@ -85,10 +85,22 @@ textRect         = a rectangle below itemRect
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     QSize iconsize = icon.actualSize(thumbSize);
 
-    QString fName = qvariant_cast<QString>(index.data(Qt::EditRole));
+//    QString fName = qvariant_cast<QString>(index.data(Qt::EditRole));
+    QStandardItemModel *model = new QStandardItemModel;
+//    model = index.model();
+    int row = index.row();
+    QString fName = index.model()->index(row, 1).data(Qt::EditRole).toString();
+    QString labelColor = index.model()->index(row, 7).data(Qt::EditRole).toString();
+    QString rating = index.model()->index(row, 8).data(Qt::EditRole).toString();
+
 
     // UserRoles defined in ThumbView header
     bool isPicked = qvariant_cast<bool>(index.data(Qt::UserRole + 4));
+//    QString rating = qvariant_cast<QString>(index.data(Qt::UserRole + 12));
+    qDebug() << "Rating =" << rating << "LabelColor =" << labelColor << "for" << fName;
+
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    painter->setRenderHint(QPainter::TextAntialiasing, true);
 
     // define some offsets
     QPoint itemBorderOffset(itemBorderThickness, itemBorderThickness);
@@ -110,6 +122,12 @@ textRect         = a rectangle below itemRect
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
                    iconsize.width(), iconsize.height());
 
+    // label/rating rect
+    int ratingDiam = 14;
+    QPoint ratingTopLeft(option.rect.right() - ratingDiam, option.rect.top());
+    QPoint ratingBottomRight(option.rect.right(), option.rect.top() + ratingDiam);
+    QRect ratingRect(ratingTopLeft, ratingBottomRight);
+
     QPainterPath iconPath;
     iconPath.addRoundRect(iconRect, 12, 12);
 
@@ -117,9 +135,6 @@ textRect         = a rectangle below itemRect
     textRect.setTop(itemRect.bottom()-fontHt-iconPadding);
     QPainterPath textPath;
     textPath.addRoundedRect(textRect, 8, 8);
-
-    painter->setRenderHint(QPainter::Antialiasing, true);
-    painter->setRenderHint(QPainter::TextAntialiasing, true);
 
     if (delegateShowThumbLabels) {
         painter->setFont(font);
@@ -133,6 +148,7 @@ textRect         = a rectangle below itemRect
     painter->drawPixmap(iconRect, icon.pixmap(iconsize.width(),iconsize.height()));
     painter->setClipping(false);
 
+    // draw rect around icon (thumb) and make it green if picked
     if (isPicked) {
         QPen pick(Qt::green);
         pick.setWidth(thumbBorderThickness);
@@ -146,25 +162,43 @@ textRect         = a rectangle below itemRect
     painter->setPen(backPen);
     painter->drawRoundedRect(itemRect, 8, 8);
 
+    // draw the item rect around the icon and label (if shown)
+    // and make it white if selected or gray if not selected
     if (option.state.testFlag(QStyle::State_Selected)) {
         QPen selectedPen(Qt::white);
         selectedPen.setWidth(itemBorderThickness);
         painter->setPen(selectedPen);
-//        if (index == currentIndex) {
-//            QPen selectedPen(Qt::white);
-//            selectedPen.setWidth(2);
-//            painter->setPen(selectedPen);
-//        } else {
-//            QPen selectedPen(Qt::darkGray);
-//            selectedPen.setWidth(2);
-//            painter->setPen(selectedPen);
-//        }
     } else {
         QPen activePen(borderGray);
         activePen.setWidth(itemBorderThickness / 2);
         painter->setPen(activePen);
     }
     painter->drawRoundedRect(itemRect, 8, 8);
+
+    QColor labelColorToUse;
+    if(rating != "" || labelColor != "") {
+        // ratings/label color
+
+        if (labelColor == "") labelColorToUse = QColor(65,65,65,255);
+        if (labelColor == "Red") labelColorToUse = QColor(Qt::red);
+        if (labelColor == "Yellow") labelColorToUse = QColor(Qt::darkYellow);
+        if (labelColor == "Green") labelColorToUse = QColor(Qt::darkGreen);
+        if (labelColor == "Blue") labelColorToUse = QColor(Qt::blue);
+        if (labelColor == "Purple") labelColorToUse = QColor(Qt::darkMagenta);
+        painter->setBrush(labelColorToUse);
+        QPen ratingPen(labelColorToUse);
+        ratingPen.setWidth(0);
+        painter->setPen(ratingPen);
+        painter->drawEllipse(ratingRect);
+        QPen ratingTextPen(Qt::white);
+        ratingTextPen.setWidth(2);
+        painter->setPen(ratingTextPen);
+        QFont font = painter->font();
+        font.setPixelSize(12);
+        font.setBold(true);
+        painter->setFont(font);
+        painter->drawText(ratingRect, Qt::AlignHCenter, rating);
+    }
 
     emit update(index, iconRect);
 
