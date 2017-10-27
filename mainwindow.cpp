@@ -1087,7 +1087,7 @@ void MW::createActions()
     filterDockLockAction = new QAction(tr("Hide Filter titlebars"), this);
     filterDockLockAction->setObjectName("lockDockFilters");
     filterDockLockAction->setCheckable(true);
-    connect(filterDockLockAction, SIGNAL(triggered()), this, SLOT(setfilterDockLockMode()));
+    connect(filterDockLockAction, SIGNAL(triggered()), this, SLOT(setFilterDockLockMode()));
 
     metadataDockLockAction = new QAction(tr("Hide Metadata Titlebar"), this);
     metadataDockLockAction->setObjectName("lockDockMetadata");
@@ -1926,6 +1926,8 @@ void MW::createFilterView()
     filterDock = new QDockWidget(tr("  Filters  "), this);
     filterDock->setObjectName("Filters");
     filterView = new FilterView(filterDock, thumbView);
+    filterDock->setWidget(filterView);
+    filterView->setMaximumWidth(folderMaxWidth);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
 }
 
@@ -4156,6 +4158,7 @@ void MW::setFilterDockLockMode()
     qDebug() << "MW::setfilterDockLockMode";
     #endif
     }
+    qDebug() << "MW::setfilterDockLockMode";
     if (filterDockLockAction->isChecked()) {
         filterDock->setTitleBarWidget(filterDockEmptyWidget);
     }

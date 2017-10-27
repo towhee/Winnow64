@@ -681,9 +681,9 @@ bool ThumbView::addFolderImageDataToModel()
         thumbFileInfoList.append(thumbFileInfo);
         QString fPath = thumbFileInfo.filePath();
 
-        qDebug() << "building data model"
-                 << fileIndex << "of" << dirFileInfoList.size()
-                 << fPath;
+//        qDebug() << "building data model"
+//                 << fileIndex << "of" << dirFileInfoList.size()
+//                 << fPath;
 
         // add icon as first column in new row
         item = new QStandardItem();

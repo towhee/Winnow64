@@ -97,7 +97,7 @@ textRect         = a rectangle below itemRect
     // UserRoles defined in ThumbView header
     bool isPicked = qvariant_cast<bool>(index.data(Qt::UserRole + 4));
 //    QString rating = qvariant_cast<QString>(index.data(Qt::UserRole + 12));
-    qDebug() << "Rating =" << rating << "LabelColor =" << labelColor << "for" << fName;
+//    qDebug() << "Rating =" << rating << "LabelColor =" << labelColor << "for" << fName;
 
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->setRenderHint(QPainter::TextAntialiasing, true);
@@ -123,7 +123,7 @@ textRect         = a rectangle below itemRect
                    iconsize.width(), iconsize.height());
 
     // label/rating rect
-    int ratingDiam = 14;
+    int ratingDiam = 18;
     QPoint ratingTopLeft(option.rect.right() - ratingDiam, option.rect.top());
     QPoint ratingBottomRight(option.rect.right(), option.rect.top() + ratingDiam);
     QRect ratingRect(ratingTopLeft, ratingBottomRight);
@@ -197,7 +197,7 @@ textRect         = a rectangle below itemRect
         font.setPixelSize(12);
         font.setBold(true);
         painter->setFont(font);
-        painter->drawText(ratingRect, Qt::AlignHCenter, rating);
+        painter->drawText(ratingRect, Qt::AlignCenter, rating);
     }
 
     emit update(index, iconRect);
