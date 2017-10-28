@@ -12,12 +12,13 @@ class ThumbViewFilter : public QSortFilterProxyModel
     Q_OBJECT
 
 public:
-    ThumbViewFilter(FilterView *filterView);
+    ThumbViewFilter();
+//    ThumbViewFilter(FilterView *filterView);
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
 private:
-    FilterView *filterView;
+//    FilterView *filterView;
 };
 
 #endif // THUMBVIEWFILTER_H

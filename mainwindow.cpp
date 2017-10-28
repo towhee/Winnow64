@@ -1594,7 +1594,8 @@ void MW::createThumbView()
     #endif
     }
     metadata = new Metadata;
-    thumbView = new ThumbView(this, metadata, filterView);
+    thumbView = new ThumbView(this, metadata);
+//    thumbView = new ThumbView(this, metadata, filterView);
     thumbView->setObjectName("ImageView");  //rgh need to fix??
 
     thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();

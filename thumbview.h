@@ -7,7 +7,7 @@
 #include "metadata.h"
 #include "thumbviewdelegate.h"
 #include "thumbviewfilter.h"
-#include "filterview.h"
+//#include "filterview.h"
 
 class ThumbView : public QListView
 {
@@ -15,7 +15,8 @@ class ThumbView : public QListView
 
 public:
 
-    ThumbView(QWidget *parent, Metadata *metadata, FilterView *filterView);
+    ThumbView(QWidget *parent, Metadata *metadata);
+//    ThumbView(QWidget *parent, Metadata *metadata, FilterView *filterView);
 
     // note if change then fix offset in thumbViewDelegate::paint for
     // LabelRole and RattingRole
@@ -98,8 +99,8 @@ public:
     void forceScroll(int row);
 
     QStandardItemModel *thumbViewModel;
-//    QSortFilterProxyModel *thumbViewFilter;
-    ThumbViewFilter *thumbViewFilter;
+    QSortFilterProxyModel *thumbViewFilter;
+//    ThumbViewFilter *thumbViewFilter;
     QItemSelectionModel *thumbViewSelection;
     QFileInfoList thumbFileInfoList;
     QStringList imageFilePathList;
@@ -171,7 +172,7 @@ private:
     QImage emptyImg;
     QWidget *mw;
     Metadata *metadata;
-    FilterView *filterView;
+//    FilterView *filterView;
     QSize treeViewSize;
 
 signals:
