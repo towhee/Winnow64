@@ -239,7 +239,7 @@ void ThumbCache::run()
         // causes crash when change folders and thumbcache was interrupted
 //        if (!abort && item->index().isValid()) item->setIcon(QPixmap::fromImage(thumb));
 
-//        item->setData(true, thumbView->LoadedRole);
+//        item->setData(true, G::LoadedRole);
         if (!success) {
             metadata->setErr(fPath, err);
             if (G::isThreadTrackingOn) track(fPath, err);

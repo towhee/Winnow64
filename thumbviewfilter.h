@@ -1,11 +1,11 @@
 #ifndef THUMBVIEWFILTER_H
 #define THUMBVIEWFILTER_H
 
-//#include <QObject>
-//#include <QSortFilterProxyModel>
-#include <QtWidgets>
+#include <QSortFilterProxyModel>
+//#include <QtWidgets>
+#include <QDebug>
 #include "global.h"
-#include "filters.h"
+//#include "filters.h"
 
 class ThumbViewFilter : public QSortFilterProxyModel
 {

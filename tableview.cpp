@@ -20,16 +20,16 @@ TableView::TableView(ThumbView *thumbView)
     setSelectionModel(thumbView->thumbViewSelection);
 
     ApertureItemDelegate *apertureItemDelegate = new ApertureItemDelegate;
-    setItemDelegateForColumn(thumbView->ApertureColumn, apertureItemDelegate);
+    setItemDelegateForColumn(G::ApertureColumn, apertureItemDelegate);
 
     ExposureTimeItemDelegate *exposureTimeItemDelegate = new ExposureTimeItemDelegate;
-    setItemDelegateForColumn(thumbView->ShutterspeedColumn, exposureTimeItemDelegate);
+    setItemDelegateForColumn(G::ShutterspeedColumn, exposureTimeItemDelegate);
 
     FocalLengthItemDelegate *focalLengthItemDelegate = new FocalLengthItemDelegate;
-    setItemDelegateForColumn(thumbView->FocalLengthColumn, focalLengthItemDelegate);
+    setItemDelegateForColumn(G::FocalLengthColumn, focalLengthItemDelegate);
 
     FileSizeItemDelegate *fileSizeItemDelegate = new FileSizeItemDelegate;
-    setItemDelegateForColumn(thumbView->SizeColumn, fileSizeItemDelegate);
+    setItemDelegateForColumn(G::SizeColumn, fileSizeItemDelegate);
 }
 
 void TableView::mouseDoubleClickEvent(QMouseEvent *event)

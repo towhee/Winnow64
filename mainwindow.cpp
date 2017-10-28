@@ -439,7 +439,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
 //        qDebug() << "Selection" << i << fPath;
 //    }
 
-    QString fPath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
+    QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
 
     // use cache if image loaded, else read it from file
     if (imageView->loadImage(thumbView->currentIndex(), fPath)) {
@@ -519,10 +519,10 @@ cached.
     thumbView->addMetadataToModel();
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
-    tableView->setColumnWidth(thumbView->PathColumn, 24+8);
+    tableView->setColumnWidth(G::PathColumn, 24+8);
     QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 
-    QString fPath = indexesList.first().data(thumbView->FileNameRole).toString();
+    QString fPath = indexesList.first().data(G::FileNameRole).toString();
     // imageChacheThread checks if already running and restarts
     imageCacheThread->initImageCache(thumbView->thumbFileInfoList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
@@ -1594,8 +1594,8 @@ void MW::createThumbView()
     #endif
     }
     metadata = new Metadata;
-    thumbView = new ThumbView(this, metadata);
-//    thumbView = new ThumbView(this, metadata, filterView);
+//    thumbView = new ThumbView(this, metadata);
+    thumbView = new ThumbView(this, metadata, filterView);
     thumbView->setObjectName("ImageView");  //rgh need to fix??
 
     thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
@@ -1790,7 +1790,7 @@ void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
     cachePreviewHeight = previewHeight;
     imageCacheThread->updateImageCacheParam(size, show, width, wtAhead,
              usePreview, previewWidth, previewHeight);
-    QString fPath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
+    QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
     imageCacheThread->updateImageCache(thumbView->thumbFileInfoList, fPath);
 }
 
@@ -1810,7 +1810,7 @@ void MW::updateStatus(bool keepBase, QString s)
 /* Possible status info
 
 QString fName = idx.data(Qt::EditRole).toString();
-QString fPath = idx.data(thumbView->FileNameRole).toString();
+QString fPath = idx.data(G::FileNameRole).toString();
 QString shootingInfo = metadata->getShootingInfo(fPath);
 QString err = metadata->getErr(fPath);
 QString magnify = "🔎";
@@ -1992,7 +1992,7 @@ to be suppressed while syncing the menu actions with tableView.
     else sortReverseAction->setChecked(false);
     sortMenuUpdateToMatchTable = false;
     thumbView->updateImageList();
-    QString currentFilePath = thumbView->currentIndex().data(thumbView->FileNameRole).toString();
+    QString currentFilePath = thumbView->currentIndex().data(G::FileNameRole).toString();
     imageCacheThread->reindexImageCache(thumbView->imageFilePathList, currentFilePath);
 }
 
@@ -2007,22 +2007,22 @@ void MW::sortThumbnails()
 
     int sortColumn;
 
-    if (sortFileNameAction->isChecked()) sortColumn = thumbView->NameColumn;
-    if (sortFileTypeAction->isChecked()) sortColumn = thumbView->TypeColumn;
-    if (sortFileSizeAction->isChecked()) sortColumn = thumbView->SizeColumn;
-    if (sortCreateAction->isChecked()) sortColumn = thumbView->CreatedColumn;
-    if (sortModifyAction->isChecked()) sortColumn = thumbView->ModifiedColumn;
-    if (sortPickAction->isChecked()) sortColumn = thumbView->PickedColumn;
-    if (sortLabelAction->isChecked()) sortColumn = thumbView->LabelColumn;
-    if (sortRatingAction->isChecked()) sortColumn = thumbView->RatingColumn;
-    if (sortMegaPixelsAction->isChecked()) sortColumn = thumbView->MegaPixelsColumn;
-    if (sortDimensionsAction->isChecked()) sortColumn = thumbView->DimensionsColumn;
-    if (sortApertureAction->isChecked()) sortColumn = thumbView->ApertureColumn;
-    if (sortShutterSpeedAction->isChecked()) sortColumn = thumbView->ShutterspeedColumn;
-    if (sortISOAction->isChecked()) sortColumn = thumbView->ISOColumn;
-    if (sortModelAction->isChecked()) sortColumn = thumbView->CameraModelColumn;
-    if (sortFocalLengthAction->isChecked()) sortColumn = thumbView->FocalLengthColumn;
-    if (sortTitleAction->isChecked()) sortColumn = thumbView->TitleColumn;
+    if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;
+    if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;
+    if (sortFileSizeAction->isChecked()) sortColumn = G::SizeColumn;
+    if (sortCreateAction->isChecked()) sortColumn = G::CreatedColumn;
+    if (sortModifyAction->isChecked()) sortColumn = G::ModifiedColumn;
+    if (sortPickAction->isChecked()) sortColumn = G::PickedColumn;
+    if (sortLabelAction->isChecked()) sortColumn = G::LabelColumn;
+    if (sortRatingAction->isChecked()) sortColumn = G::RatingColumn;
+    if (sortMegaPixelsAction->isChecked()) sortColumn = G::MegaPixelsColumn;
+    if (sortDimensionsAction->isChecked()) sortColumn = G::DimensionsColumn;
+    if (sortApertureAction->isChecked()) sortColumn = G::ApertureColumn;
+    if (sortShutterSpeedAction->isChecked()) sortColumn = G::ShutterspeedColumn;
+    if (sortISOAction->isChecked()) sortColumn = G::ISOColumn;
+    if (sortModelAction->isChecked()) sortColumn = G::CameraModelColumn;
+    if (sortFocalLengthAction->isChecked()) sortColumn = G::FocalLengthColumn;
+    if (sortTitleAction->isChecked()) sortColumn = G::TitleColumn;
 
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
 }
@@ -2741,7 +2741,7 @@ void MW::runExternalApp()
             for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn)
             {
                 selectedFileNames += "\"" +
-                    thumbView->thumbViewModel->item(selectedIdxList[tn].row())->data(thumbView->FileNameRole).toString();
+                    thumbView->thumbViewModel->item(selectedIdxList[tn].row())->data(G::FileNameRole).toString();
                 if (tn)
                     selectedFileNames += "\" ";
             }
@@ -4278,12 +4278,11 @@ void MW::togglePick()
 
     foreach (index, indexesList) {
         QModelIndex srcIdx = thumbView->thumbViewFilter->mapToSource(index);
-        pickStatus = (qvariant_cast<QString>(srcIdx.data(thumbView->PickedRole))
+        pickStatus = (qvariant_cast<QString>(srcIdx.data(G::PickedRole))
                       == "true") ? "false" : "true";
         thumbView->thumbViewModel->item(srcIdx.row())
-                 ->setData(pickStatus, thumbView->UserRoles::PickedRole);
+                 ->setData(pickStatus, G::PickedRole);
     }
-
     index = thumbView->currentIndex();
     bool isPick = (pickStatus == "true");
 
@@ -4301,7 +4300,7 @@ void MW::updatePick()
     #endif
     }
     QModelIndex idx = thumbView->currentIndex();
-    bool isPick = qvariant_cast<bool>(idx.data(thumbView->PickedRole));
+    bool isPick = qvariant_cast<bool>(idx.data(G::PickedRole));
     if (asLoupeAction->isChecked())
         (isPick) ? imageView->pickLabel->setVisible(true)
                  : imageView->pickLabel->setVisible(false);
@@ -4346,8 +4345,8 @@ void MW::setRating()
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex idx = selection.at(i);
-        thumbView->thumbViewModel->setData(idx, rating, thumbView->RatingRole);
-        idx = thumbView->thumbViewModel->index(idx.row(), thumbView->RatingColumn);
+        thumbView->thumbViewModel->setData(idx, rating, G::RatingRole);
+        idx = thumbView->thumbViewModel->index(idx.row(), G::RatingColumn);
         thumbView->thumbViewModel->setData(idx, rating, Qt::EditRole);
     }
     thumbView->refreshThumbs();
@@ -4375,8 +4374,8 @@ void MW::setLabelColor()
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex idx = selection.at(i);
-        thumbView->thumbViewModel->setData(idx, labelColor, thumbView->LabelRole);
-        idx = thumbView->thumbViewModel->index(idx.row(), thumbView->LabelColumn);
+        thumbView->thumbViewModel->setData(idx, labelColor, G::LabelRole);
+        idx = thumbView->thumbViewModel->index(idx.row(), G::LabelColumn);
         thumbView->thumbViewModel->setData(idx, labelColor, Qt::EditRole);
     }
     thumbView->refreshThumbs();

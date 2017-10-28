@@ -62,7 +62,7 @@ bool CompareImages::load(const QSize &centralWidgetSize)
     to fit.
     */
     for (int i = 0; i < count; ++i) {
-        QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
+        QString fPath = selection.at(i).data(G::FileNameRole).toString();
         QSize imSize(metadata->getWidth(fPath), metadata->getHeight(fPath));
         sizeList->append(imSize);
 //        qDebug() << "compareImages loading" << i << fPath;
@@ -77,9 +77,9 @@ bool CompareImages::load(const QSize &centralWidgetSize)
 
     // iterate selected thumbs - load images, append and connect
     for (int i = 0; i < count; ++i) {
-        QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
+        QString fPath = selection.at(i).data(G::FileNameRole).toString();
         imList->append(new CompareView(this, gridCell, metadata, imageCacheThread, thumbView));
-        bool isPick = qvariant_cast<bool>(selection.at(i).data(thumbView->PickedRole));
+        bool isPick = qvariant_cast<bool>(selection.at(i).data(G::PickedRole));
         imList->at(i)->pickLabel->setVisible(isPick);
         imList->at(i)->loadImage(selection.at(i), fPath);
 

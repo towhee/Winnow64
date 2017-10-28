@@ -9,6 +9,42 @@
 
 namespace G
 {
+enum UserRoles {
+    FileNameRole = Qt::UserRole + 1,
+    SortRole,
+    LoadedRole,
+    PickedRole,
+    ThumbRectRole,
+    PathRole,
+    FileTypeRole,
+    FileSizeRole,
+    CreatedRole,
+    ModifiedRole,
+    LabelRole,
+    RatingRole
+};
+
+enum dataModelColumns {
+    PathColumn,
+    NameColumn,
+    TypeColumn,
+    SizeColumn,
+    CreatedColumn,
+    ModifiedColumn,
+    PickedColumn,
+    LabelColumn,
+    RatingColumn,
+    MegaPixelsColumn,
+    DimensionsColumn,
+    ApertureColumn,
+    ShutterspeedColumn,
+    ISOColumn,
+    CameraModelColumn,
+    FocalLengthColumn,
+    TitleColumn,
+    TotalColumns    // insert additional columns before this
+};
+
     extern bool isThreadTrackingOn;
     extern qreal devicePixelRatio;
     extern QModelIndexList copyCutIdxList;  // req'd?

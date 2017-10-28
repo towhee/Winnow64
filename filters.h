@@ -1,9 +1,8 @@
-#ifndef FILTERVIEW_H
-#define FILTERVIEW_H
+#ifndef FILTERS_H
+#define FILTERS_H
 
 #include <QtWidgets>
 #include "global.h"
-#include "thumbview.h"
 
 class Filters : public QTreeWidget
 {
@@ -19,4 +18,4 @@ public slots:
 private:
 };
 
-#endif // FILTERVIEW_H
+#endif // FILTERS_H

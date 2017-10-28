@@ -7,7 +7,7 @@
 #include "metadata.h"
 #include "thumbviewdelegate.h"
 #include "thumbviewfilter.h"
-//#include "filters.h"
+#include "filters.h"
 
 class ThumbView : public QListView
 {
@@ -15,46 +15,46 @@ class ThumbView : public QListView
 
 public:
 
-    ThumbView(QWidget *parent, Metadata *metadata);
-//    ThumbView(QWidget *parent, Metadata *metadata, Filters *filterView);
+//    ThumbView(QWidget *parent, Metadata *metadata);
+    ThumbView(QWidget *parent, Metadata *metadata, Filters *filters);
 
     // note if change then fix offset in thumbViewDelegate::paint for
     // LabelRole and RattingRole
-    enum UserRoles {
-        FileNameRole = Qt::UserRole + 1,
-        SortRole,
-        LoadedRole,
-        PickedRole,
-        ThumbRectRole,
-        PathRole,
-        FileTypeRole,
-        FileSizeRole,
-        CreatedRole,
-        ModifiedRole,
-        LabelRole,
-        RatingRole
-    };
+//    enum UserRoles {
+//        FileNameRole = Qt::UserRole + 1,
+//        SortRole,
+//        LoadedRole,
+//        PickedRole,
+//        ThumbRectRole,
+//        PathRole,
+//        FileTypeRole,
+//        FileSizeRole,
+//        CreatedRole,
+//        ModifiedRole,
+//        LabelRole,
+//        RatingRole
+//    };
 
-    enum dataModelColumns {
-        PathColumn,
-        NameColumn,
-        TypeColumn,
-        SizeColumn,
-        CreatedColumn,
-        ModifiedColumn,
-        PickedColumn,
-        LabelColumn,
-        RatingColumn,
-        MegaPixelsColumn,
-        DimensionsColumn,
-        ApertureColumn,
-        ShutterspeedColumn,
-        ISOColumn,
-        CameraModelColumn,
-        FocalLengthColumn,
-        TitleColumn,
-        TotalColumns    // insert additional columns before this
-    };
+//    enum dataModelColumns {
+//        PathColumn,
+//        NameColumn,
+//        TypeColumn,
+//        SizeColumn,
+//        CreatedColumn,
+//        ModifiedColumn,
+//        PickedColumn,
+//        LabelColumn,
+//        RatingColumn,
+//        MegaPixelsColumn,
+//        DimensionsColumn,
+//        ApertureColumn,
+//        ShutterspeedColumn,
+//        ISOColumn,
+//        CameraModelColumn,
+//        FocalLengthColumn,
+//        TitleColumn,
+//        TotalColumns    // insert additional columns before this
+//    };
 
     int thumbWidth;
     int thumbHeight;
@@ -101,6 +101,7 @@ public:
     QStandardItemModel *thumbViewModel;
     QSortFilterProxyModel *thumbViewFilter;
 //    ThumbViewFilter *thumbViewFilter;
+//    ThumbViewFilter *thumbViewFilterTest;
     QItemSelectionModel *thumbViewSelection;
     QFileInfoList thumbFileInfoList;
     QStringList imageFilePathList;
@@ -172,7 +173,7 @@ private:
     QImage emptyImg;
     QWidget *mw;
     Metadata *metadata;
-//    Filters *filterView;
+    Filters *filters;
     QSize treeViewSize;
 
 signals:
