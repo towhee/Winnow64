@@ -3,15 +3,19 @@
 
 #include <QObject>
 #include <QSortFilterProxyModel>
+#include "filterview.h"
 
 class ThumbViewFilter : public QSortFilterProxyModel
 {
     Q_OBJECT
 
 public:
-    explicit ThumbViewFilter(QObject * parent = 0);
+    ThumbViewFilter(FilterView *filterView, QObject *parent = 0);
+
 protected:
-    bool filterAcceptRows(const QModelIndex &index) const;
+    bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
+private:
+    FilterView *filterView;
 };
 
 #endif // THUMBVIEWFILTER_H

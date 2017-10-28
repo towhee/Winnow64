@@ -9,14 +9,14 @@ class FilterView : public QTreeWidget
 {
     Q_OBJECT
 public:
-    explicit FilterView(QWidget *parent, ThumbView *thumbView);
-
+    FilterView(QWidget *parent);
+    QTreeWidgetItem *picksFalse;
+    QTreeWidgetItem *picksTrue;
 signals:
 
 public slots:
 
 private:
-    ThumbView *thumbView;
 };
 
 #endif // FILTERVIEW_H

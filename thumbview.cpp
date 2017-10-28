@@ -95,7 +95,8 @@ ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
 
 */
 
-ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
+ThumbView::ThumbView(QWidget *parent, Metadata *metadata, FilterView *filterView)
+    : QListView(parent)
 {
     {
     #ifdef ISDEBUG
@@ -104,6 +105,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
     }
     mw = parent;
     this->metadata = metadata;
+    this->filterView = filterView;
 
 //    thumbHeight = G::thumbHeight;
     pickFilter = false;
@@ -141,7 +143,8 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata) : QListView(parent)
     thumbViewModel->setHorizontalHeaderItem(FocalLengthColumn, new QStandardItem("Focal length"));
     thumbViewModel->setHorizontalHeaderItem(TitleColumn, new QStandardItem("Title"));
 
-    thumbViewFilter = new QSortFilterProxyModel;
+    thumbViewFilter = new ThumbViewFilter(filterView);
+//    thumbViewFilter = new QSortFilterProxyModel;
     thumbViewFilter->setSourceModel(thumbViewModel);
     thumbViewFilter->setFilterRole(PickedRole);
     thumbViewFilter->setSortRole(Qt::EditRole);

@@ -31,7 +31,8 @@ HEADERS += \
     Dialogs/copypickdlg.h \
     Dialogs/popup.h \
     tableview.h \
-    filterview.h
+    filterview.h \
+    datamodel.h
 SOURCES += \
     bookmarks.cpp \
     compareImages.cpp \
@@ -59,7 +60,8 @@ SOURCES += \
     Dialogs/copypickdlg.cpp \
     Dialogs/popup.cpp \
     tableview.cpp \
-    filterview.cpp
+    filterview.cpp \
+    datamodel.cpp
 FORMS += \
     copypickdlg.ui \
     prefdlg.ui \

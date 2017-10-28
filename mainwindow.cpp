@@ -86,14 +86,14 @@ variables in MW (this class) and managed in the prefDlg class.
     centralLayout->setContentsMargins(0, 0, 0, 0);
 
 //    createImageModel();
-    createThumbView();              // dependent on QSetting
+    createFilterView();             // dependent on thumbView
+    createThumbView();              // dependent on QSetting, filterView
     createImageView();              // Req centralWidget
     createTableView();              // Req centralWidget
     createCompareView();            // Req centralWidget
     createStatusBar();
     createFSTree();
     createBookmarks();              // dependent on loadSettings
-    createFilterView();             // dependent on thumbView
 
     loadWorkspaces();               // req'd by actions and menu
     createActions();                // dependent on above
@@ -1594,7 +1594,7 @@ void MW::createThumbView()
     #endif
     }
     metadata = new Metadata;
-    thumbView = new ThumbView(this, metadata);
+    thumbView = new ThumbView(this, metadata, filterView);
     thumbView->setObjectName("ImageView");  //rgh need to fix??
 
     thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
@@ -1925,7 +1925,7 @@ void MW::createFilterView()
 {
     filterDock = new QDockWidget(tr("  Filters  "), this);
     filterDock->setObjectName("Filters");
-    filterView = new FilterView(filterDock, thumbView);
+    filterView = new FilterView(filterDock);
     filterDock->setWidget(filterView);
     filterView->setMaximumWidth(folderMaxWidth);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);

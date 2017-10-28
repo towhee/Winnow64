@@ -1,9 +1,7 @@
 #include "filterview.h"
 
-FilterView::FilterView(QWidget *parent, ThumbView *thumbView) : QTreeWidget(parent)
+FilterView::FilterView(QWidget *parent) : QTreeWidget(parent)
 {
-    this->thumbView = thumbView;
-
     setRootIsDecorated(false);
     setColumnCount(2);
     setHeaderHidden(true);
@@ -28,13 +26,15 @@ FilterView::FilterView(QWidget *parent, ThumbView *thumbView) : QTreeWidget(pare
     picks->setFont(0, categoryFont);
     picks->setBackground(0, categoryBackground);
     picks->setBackground(1, categoryBackground);
-    QTreeWidgetItem *picksFalse = new QTreeWidgetItem(picks);
+    picksFalse = new QTreeWidgetItem(picks);
     picksFalse->setText(0, "False");
     picksFalse->setCheckState(0, Qt::Unchecked);
+    picksFalse->setData(0, Qt::EditRole, "False");
     picksFalse->setData(1, Qt::EditRole, 0);
-    QTreeWidgetItem *picksTrue = new QTreeWidgetItem(picks);
+    picksTrue = new QTreeWidgetItem(picks);
     picksTrue->setText(0, "True");
     picksTrue->setCheckState(0, Qt::Unchecked);
+    picksTrue->setData(0, Qt::EditRole, "True");
     picksTrue->setData(1, Qt::EditRole, 0);
 
     QTreeWidgetItem *ratings = new QTreeWidgetItem(this);
@@ -49,6 +49,7 @@ FilterView::FilterView(QWidget *parent, ThumbView *thumbView) : QTreeWidget(pare
     QTreeWidgetItem *ratings1 = new QTreeWidgetItem(ratings);
     ratings1->setText(0, "One");
     ratings1->setCheckState(0, Qt::Unchecked);
+    ratings1->setData(1, Qt::EditRole, "1");
     ratings1->setData(1, Qt::EditRole, 0);
     QTreeWidgetItem *ratings2 = new QTreeWidgetItem(ratings);
     ratings2->setText(0, "Two");

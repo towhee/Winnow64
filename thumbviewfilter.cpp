@@ -1,13 +1,19 @@
 #include "thumbviewfilter.h"
 #include <QDebug>
 
-ThumbViewFilter::ThumbViewFilter(QObject * parent)
+ThumbViewFilter::ThumbViewFilter(FilterView *filterView, QObject *parent)
 {
-
+    this->filterView = filterView;
 }
 
-bool ThumbViewFilter::filterAcceptRows(const QModelIndex &index) const
+bool ThumbViewFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
-    qDebug() << "ThumbViewFilter::filterAcceptRows";
-    return qvariant_cast<bool>(index.data(Qt::UserRole+4));
+    QModelIndex idxRating = sourceModel()->index(sourceRow, 8, sourceParent);
+    qDebug() << "ThumbViewFilter::filterAcceptRows  Rating =" << idxRating.data(Qt::EditRole);
+
+    return filterView->picksTrue->checkState(0) == Qt::Checked;
+
+//    return true;  //idxRating.data(Qt::EditRole) != 2;
+
+//    return qvariant_cast<bool>(sourceParent.data(Qt::UserRole + 4));
 }
