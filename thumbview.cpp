@@ -143,9 +143,9 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, Filters *filters)
     thumbViewModel->setHorizontalHeaderItem(G::FocalLengthColumn, new QStandardItem("Focal length"));
     thumbViewModel->setHorizontalHeaderItem(G::TitleColumn, new QStandardItem("Title"));
 
-//    thumbViewFilter = new ThumbViewFilter();
+    thumbViewFilter = new ThumbViewFilter(this, filters);
 //    thumbViewFilter = new ThumbViewFilter(filters);
-    thumbViewFilter = new QSortFilterProxyModel;
+//    thumbViewFilter = new QSortFilterProxyModel;
     thumbViewFilter->setSourceModel(thumbViewModel);
     thumbViewFilter->setFilterRole(G::PickedRole);      // ditch when thumbviewfilter comes online
     thumbViewFilter->setSortRole(Qt::EditRole);

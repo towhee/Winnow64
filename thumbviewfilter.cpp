@@ -1,8 +1,8 @@
 #include "thumbviewfilter.h"
 
-ThumbViewFilter::ThumbViewFilter()
+ThumbViewFilter::ThumbViewFilter(QObject *parent, Filters *filters) : QSortFilterProxyModel(parent)
 {
-//    this->filterView = filterView;
+    this->filters = filters;
 }
 
 bool ThumbViewFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
@@ -12,11 +12,13 @@ bool ThumbViewFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
     QModelIndex idxPick = sourceModel()->index(sourceRow, G::PickedColumn, sourceParent);
     QModelIndex idxType = sourceModel()->index(sourceRow, G::TypeColumn, sourceParent);
     QModelIndex idxModel = sourceModel()->index(sourceRow, G::CameraModelColumn, sourceParent);
-    qDebug() << "ThumbViewFilter::filterAcceptRows  Rating =" << idxRating.data(Qt::EditRole);
+//    qDebug() << "ThumbViewFilter::filterAcceptRows  Rating =" << idxModel.data(Qt::EditRole);
 
-//    return filterView->picksTrue->checkState(0) == Qt::Checked;
+//    return filters->picksFalse->checkState(0) == Qt::Checked && idxLabel.data(Qt::EditRole) == "False";
 
-//    return true;  //idxRating.data(Qt::EditRole) != 2;
+    return idxRating.data(Qt::EditRole) != 2;
 
 //    return qvariant_cast<bool>(sourceParent.data(G::PickedRole));
+
+//    return true;
 }

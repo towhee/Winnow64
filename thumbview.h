@@ -18,44 +18,6 @@ public:
 //    ThumbView(QWidget *parent, Metadata *metadata);
     ThumbView(QWidget *parent, Metadata *metadata, Filters *filters);
 
-    // note if change then fix offset in thumbViewDelegate::paint for
-    // LabelRole and RattingRole
-//    enum UserRoles {
-//        FileNameRole = Qt::UserRole + 1,
-//        SortRole,
-//        LoadedRole,
-//        PickedRole,
-//        ThumbRectRole,
-//        PathRole,
-//        FileTypeRole,
-//        FileSizeRole,
-//        CreatedRole,
-//        ModifiedRole,
-//        LabelRole,
-//        RatingRole
-//    };
-
-//    enum dataModelColumns {
-//        PathColumn,
-//        NameColumn,
-//        TypeColumn,
-//        SizeColumn,
-//        CreatedColumn,
-//        ModifiedColumn,
-//        PickedColumn,
-//        LabelColumn,
-//        RatingColumn,
-//        MegaPixelsColumn,
-//        DimensionsColumn,
-//        ApertureColumn,
-//        ShutterspeedColumn,
-//        ISOColumn,
-//        CameraModelColumn,
-//        FocalLengthColumn,
-//        TitleColumn,
-//        TotalColumns    // insert additional columns before this
-//    };
-
     int thumbWidth;
     int thumbHeight;
     int thumbSpacing;
@@ -99,8 +61,8 @@ public:
     void forceScroll(int row);
 
     QStandardItemModel *thumbViewModel;
-    QSortFilterProxyModel *thumbViewFilter;
-//    ThumbViewFilter *thumbViewFilter;
+//    QSortFilterProxyModel *thumbViewFilter;
+    ThumbViewFilter *thumbViewFilter;
 //    ThumbViewFilter *thumbViewFilterTest;
     QItemSelectionModel *thumbViewSelection;
     QFileInfoList thumbFileInfoList;
