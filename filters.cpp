@@ -1,10 +1,10 @@
-#include "filterview.h"
+#include "filters.h"
 
-FilterView::FilterView(QWidget *parent) : QTreeWidget(parent)
+Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "FilterView::FilterView";
+    qDebug() << "Filters::Filters";
     #endif
     }
     setRootIsDecorated(false);

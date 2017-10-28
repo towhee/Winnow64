@@ -1926,7 +1926,7 @@ void MW::createFilterView()
 {
     filterDock = new QDockWidget(tr("  Filters  "), this);
     filterDock->setObjectName("Filters");
-    filterView = new FilterView(filterDock);
+    filterView = new Filters(filterDock);
     filterDock->setWidget(filterView);
     filterView->setMaximumWidth(folderMaxWidth);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);

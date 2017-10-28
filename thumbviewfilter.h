@@ -5,7 +5,7 @@
 //#include <QSortFilterProxyModel>
 #include <QtWidgets>
 #include "global.h"
-#include "filterview.h"
+#include "filters.h"
 
 class ThumbViewFilter : public QSortFilterProxyModel
 {
@@ -13,12 +13,12 @@ class ThumbViewFilter : public QSortFilterProxyModel
 
 public:
     ThumbViewFilter();
-//    ThumbViewFilter(FilterView *filterView);
+//    ThumbViewFilter(Filters *filterView);
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
 private:
-//    FilterView *filterView;
+//    Filters *filterView;
 };
 
 #endif // THUMBVIEWFILTER_H

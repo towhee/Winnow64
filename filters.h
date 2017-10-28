@@ -5,11 +5,11 @@
 #include "global.h"
 #include "thumbview.h"
 
-class FilterView : public QTreeWidget
+class Filters : public QTreeWidget
 {
     Q_OBJECT
 public:
-    FilterView(QWidget *parent);
+    Filters(QWidget *parent);
     QTreeWidgetItem *picksFalse;
     QTreeWidgetItem *picksTrue;
 signals:

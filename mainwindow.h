@@ -15,7 +15,7 @@
 #include "workspacedlg.h"
 #include "popup.h"
 #include "bookmarks.h"
-#include "filterview.h"
+#include "filters.h"
 #include "infoview.h"
 #include "compareImages.h"
 #include "ui_helpform.h"
@@ -445,7 +445,7 @@ private:
     QDockWidget *thumbDock;
     FSTree *fsTree;
     BookMarks *bookmarks;
-    FilterView *filterView;
+    Filters *filterView;
     QWidget *centralWidget;
 //    QStackedLayout *mainLayout;
     QGridLayout *compareLayout;
