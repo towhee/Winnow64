@@ -2,6 +2,11 @@
 
 FilterView::FilterView(QWidget *parent) : QTreeWidget(parent)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "FilterView::FilterView";
+    #endif
+    }
     setRootIsDecorated(false);
     setColumnCount(2);
     setHeaderHidden(true);

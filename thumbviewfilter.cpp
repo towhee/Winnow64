@@ -1,7 +1,7 @@
 #include "thumbviewfilter.h"
 #include <QDebug>
 
-ThumbViewFilter::ThumbViewFilter(FilterView *filterView, QObject *parent)
+ThumbViewFilter::ThumbViewFilter(FilterView *filterView)
 {
     this->filterView = filterView;
 }
