@@ -4299,17 +4299,18 @@ void MW::togglePick()
     QString pickStatus;
 
     foreach (index, indexesList) {
-        QModelIndex srcIdx = thumbView->thumbViewFilter->mapToSource(index);
-        pickStatus = (qvariant_cast<QString>(srcIdx.data(G::PickedRole))
+        int srcRow = thumbView->thumbViewFilter->mapToSource(index).row();
+        QModelIndex srcIdx = thumbView->thumbViewModel->index(srcRow, G::PickedColumn);
+        pickStatus = (qvariant_cast<QString>(srcIdx.data(Qt::EditRole))
                       == "true") ? "false" : "true";
-        thumbView->thumbViewModel->item(srcIdx.row())
-                 ->setData(pickStatus, G::PickedRole);
+        thumbView->thumbViewModel->setData(srcIdx, pickStatus, Qt::EditRole);
     }
     index = thumbView->currentIndex();
     bool isPick = (pickStatus == "true");
 
     imageView->pickLabel->setVisible(isPick);
     if (asCompareAction->isChecked()) compareImages->pick(isPick, index);
+    thumbView->refreshThumbs();
 }
 
 // When a new image is selected and shown in imageView update the visibility
@@ -4321,8 +4322,9 @@ void MW::updatePick()
     qDebug() << "MW::updatepick";
     #endif
     }
-    QModelIndex idx = thumbView->currentIndex();
-    bool isPick = qvariant_cast<bool>(idx.data(G::PickedRole));
+    int row = thumbView->currentIndex().row();
+    QModelIndex idx = thumbView->thumbViewModel->index(row, G::PickedColumn);
+    bool isPick = qvariant_cast<bool>(idx.data(Qt::EditRole));
     if (asLoupeAction->isChecked())
         (isPick) ? imageView->pickLabel->setVisible(true)
                  : imageView->pickLabel->setVisible(false);

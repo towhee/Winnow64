@@ -38,11 +38,11 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     picksFalse = new QTreeWidgetItem(picks);
     picksFalse->setText(0, "False");
     picksFalse->setCheckState(0, Qt::Unchecked);
-    picksFalse->setData(1, Qt::EditRole, "False");
+    picksFalse->setData(1, Qt::EditRole, "false");
     picksTrue = new QTreeWidgetItem(picks);
     picksTrue->setText(0, "True");
     picksTrue->setCheckState(0, Qt::Unchecked);
-    picksTrue->setData(1, Qt::EditRole, "True");
+    picksTrue->setData(1, Qt::EditRole, "true");
 
     ratings = new QTreeWidgetItem(this);
     ratings->setText(0, "Ratings");

@@ -32,7 +32,7 @@ bool ThumbViewFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
                 qDebug() << itemCategory << itemName
                          << "Comparing" << dataValue << filterValue << (dataValue == filterValue);
 
-                if (dataValue == filterValue) isMatch == true;
+                if (dataValue == filterValue) isMatch = true;
             }
         }
         else {
