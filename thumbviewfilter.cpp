@@ -14,14 +14,19 @@ bool ThumbViewFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
     QString itemCategory = "Just starting";
 
     int dataModelColumn;
-    bool isMatch;                   // overall match
+    bool isMatch = true;                   // overall match
     bool isCategoryUnchecked = true;
     QTreeWidgetItemIterator it(filters);
     while (*it) {
         if ((*it)->parent()) {
-            // item to compare
-            // debug info
-            QString itemName = (*it)->text(0);
+            /* There is a parent therefore not a top level item so this is one
+            of the items to match ie rating = one. If the item has been checked
+            then compare the checked filter item to the data in the
+            dataModelColumn for the row. If it matches then set isMatch = true.
+            If it does not match them isMatch is still false but the row could
+            still be accepted if another item in the same category does match.
+            */
+//            QString itemName = (*it)->text(0);      // for debugging
 
             if ((*it)->checkState(0) != Qt::Unchecked) {
                 isCategoryUnchecked = false;
@@ -29,8 +34,8 @@ bool ThumbViewFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
                 QVariant dataValue = idx.data(Qt::EditRole);
                 QVariant filterValue = (*it)->data(1, Qt::EditRole);
 
-                qDebug() << itemCategory << itemName
-                         << "Comparing" << dataValue << filterValue << (dataValue == filterValue);
+//                qDebug() << itemCategory << itemName
+//                         << "Comparing" << dataValue << filterValue << (dataValue == filterValue);
 
                 if (dataValue == filterValue) isMatch = true;
             }
@@ -39,48 +44,25 @@ bool ThumbViewFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
             // top level item = category
             // check results of category items filter match
             if (isCategoryUnchecked) isMatch = true;
-            if (!isMatch) return isMatch;   // no match in category
+            qDebug() << "Category" << itemCategory << isMatch;
+            if (!isMatch) return false;   // no match in category
 
-            // prepare for category items filter match
+            /* prepare for category items filter match.  If no item is checked
+            or one checked item matches the data then the row is okay to show
+            */
+            // the top level items contain reference to the data model column
             dataModelColumn = (*it)->data(0, G::ColumnRole).toInt();
             isCategoryUnchecked = true;
             isMatch = false;
-            itemCategory = (*it)->text(0);
+//            itemCategory = (*it)->text(0);      // for debugging
         }
         ++it;
     }
+    // check results of category items filter match for the last group
+    if (isCategoryUnchecked) isMatch = true;
+    qDebug() << "After iteration  isMatch =" << isMatch;
 
-    return true;
-
-//    QModelIndex idxRating = sourceModel()->index(sourceRow, G::RatingColumn, sourceParent);
-//    QModelIndex idxLabel = sourceModel()->index(sourceRow, G::LabelColumn, sourceParent);
-//    QModelIndex idxPick = sourceModel()->index(sourceRow, G::PickedColumn, sourceParent);
-//    QModelIndex idxType = sourceModel()->index(sourceRow, G::TypeColumn, sourceParent);
-//    QModelIndex idxModel = sourceModel()->index(sourceRow, G::CameraModelColumn, sourceParent);
-
-//    int rating = idxRating.data(Qt::EditRole).toInt();
-//    bool isRating = false;
-
-//    foreach (QStandardItem item, filters->ratings) {
-//        qDebug() << "filter item  ischecked" << item.checkState() << "Value" << item.data(Qt::EditRole);
-//        if (item.checkState()) {
-//            if(item.data(Qt::EditRole) == rating) isRating = true;
-//            if (isRating) break;
-//        }
-//    }
-//    isMatch = isRating;
-
-//    return isMatch;
-
-//    qDebug() << "ThumbViewFilter::filterAcceptRows  Rating =" << idxModel.data(Qt::EditRole);
-
-//    return filters->picksFalse->checkState(0) == Qt::Checked && idxLabel.data(Qt::EditRole) == "False";
-
-//    return idxRating.data(Qt::EditRole) != 2;
-
-//    return qvariant_cast<bool>(sourceParent.data(G::PickedRole));
-
-    return true;
+    return isMatch;
 }
 
 void ThumbViewFilter::filterChanged(QTreeWidgetItem* x, int col)
