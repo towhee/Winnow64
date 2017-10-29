@@ -445,7 +445,7 @@ private:
     QDockWidget *thumbDock;
     FSTree *fsTree;
     BookMarks *bookmarks;
-    Filters *filterView;
+    Filters *filters;
     QWidget *centralWidget;
 //    QStackedLayout *mainLayout;
     QGridLayout *compareLayout;

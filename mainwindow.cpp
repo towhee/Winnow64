@@ -678,10 +678,10 @@ void MW::createActions()
 
     reportMetadataAction = new QAction(tr("Report Metadata"), this);
     reportMetadataAction->setObjectName("reportMetadata");
-//    connect(reportMetadataAction, SIGNAL(triggered()),
-//            thumbView, SLOT(reportThumbs()));
     connect(reportMetadataAction, SIGNAL(triggered()),
-            this, SLOT(thumbTable()));
+            this, SLOT(reportMetadata()));
+//    connect(reportMetadataAction, SIGNAL(triggered()),
+//            this, SLOT(thumbTable()));
 
     // Appears in Winnow menu in OSX
     exitAction = new QAction(tr("Exit"), this);
@@ -1595,7 +1595,7 @@ void MW::createThumbView()
     }
     metadata = new Metadata;
 //    thumbView = new ThumbView(this, metadata);
-    thumbView = new ThumbView(this, metadata, filterView);
+    thumbView = new ThumbView(this, metadata, filters);
     thumbView->setObjectName("ImageView");  //rgh need to fix??
 
     thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
@@ -1926,9 +1926,9 @@ void MW::createFilterView()
 {
     filterDock = new QDockWidget(tr("  Filters  "), this);
     filterDock->setObjectName("Filters");
-    filterView = new Filters(filterDock);
-    filterDock->setWidget(filterView);
-    filterView->setMaximumWidth(folderMaxWidth);
+    filters = new Filters(filterDock);
+    filterDock->setWidget(filters);
+    filters->setMaximumWidth(folderMaxWidth);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
 }
 
@@ -2668,8 +2668,30 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
+//    thumbView->thumbViewFilter->invalidateFilter();
+    return;
 
-    metadata->readMetadata(true, thumbView->getCurrentFilename());
+    QTreeWidgetItemIterator it(filters);
+    while (*it) {
+        QString parentName;
+        int dataModelColumn;
+        bool isMatch = false;
+        if ((*it)->parent()) {
+            parentName = (*it)->parent()->text(0);
+            qDebug() << "item text" << (*it)->text(0)
+                     << "item value" << (*it)->data(1, Qt::EditRole)
+                     << "parent" << parentName
+                     << "data column" << dataModelColumn
+                     << "check state" << (*it)->checkState(0);
+        }
+        else {
+            dataModelColumn = (*it)->data(0, G::ColumnRole).toInt();
+        }
+        ++it;
+    }
+
+//    filters->iterateFilters();
+//    metadata->readMetadata(true, thumbView->getCurrentFilename());
 }
 
 void MW::about()

@@ -21,7 +21,8 @@ enum UserRoles {
     CreatedRole,
     ModifiedRole,
     LabelRole,
-    RatingRole
+    RatingRole,
+    ColumnRole
 };
 
 enum dataModelColumns {

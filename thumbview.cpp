@@ -163,6 +163,10 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, Filters *filters)
             SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
             parent, SLOT(fileSelectionChange()));
 
+    // changeing filters triggers a refiltering
+    connect(filters, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
+            thumbViewFilter, SLOT(filterChanged(QTreeWidgetItem*,int)));
+
 //    connect(this, SIGNAL(activated(QModelIndex)),
 //            this, SLOT(activate(QModelIndex)));
 

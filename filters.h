@@ -9,8 +9,26 @@ class Filters : public QTreeWidget
     Q_OBJECT
 public:
     Filters(QWidget *parent);
+    QTreeWidgetItem *picks;
     QTreeWidgetItem *picksFalse;
     QTreeWidgetItem *picksTrue;
+    QTreeWidgetItem *ratings;
+    QTreeWidgetItem *ratingsNone;
+    QTreeWidgetItem *ratings1;
+    QTreeWidgetItem *ratings2;
+    QTreeWidgetItem *ratings3;
+    QTreeWidgetItem *ratings4;
+    QTreeWidgetItem *ratings5;
+    QTreeWidgetItem *labels;
+    QTreeWidgetItem *labelsNone;
+    QTreeWidgetItem *labelsRed;
+    QTreeWidgetItem *labelsYellow;
+    QTreeWidgetItem *labelsGreen;
+    QTreeWidgetItem *labelsBlue;
+    QTreeWidgetItem *labelsPurple;
+    QTreeWidgetItem *types;
+    QTreeWidgetItem *models;
+
 signals:
 
 public slots:

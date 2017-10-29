@@ -89,15 +89,15 @@ textRect         = a rectangle below itemRect
     QStandardItemModel *model = new QStandardItemModel;
 //    model = index.model();
     int row = index.row();
-    QString fName = index.model()->index(row, 1).data(Qt::EditRole).toString();
-    QString labelColor = index.model()->index(row, G::LabelRole).data(Qt::EditRole).toString();
-    QString rating = index.model()->index(row, G::RatingRole).data(Qt::EditRole).toString();
+    QString fName = index.model()->index(row, G::PathColumn).data(G::FileNameRole).toString();
+    QString labelColor = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
+    QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
 
 
     // UserRoles defined in ThumbView header
     bool isPicked = qvariant_cast<bool>(index.data(G::PickedRole));
 //    QString rating = qvariant_cast<QString>(index.data(Qt::UserRole + 12));
-//    qDebug() << "Rating =" << rating << "LabelColor =" << labelColor << "for" << fName;
+    qDebug() << "Rating =" << rating << "LabelColor =" << labelColor << "for" << fName;
 
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->setRenderHint(QPainter::TextAntialiasing, true);

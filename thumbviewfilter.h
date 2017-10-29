@@ -15,6 +15,9 @@ public:
     ThumbViewFilter(QObject *parent, Filters *filters);
 //    ThumbViewFilter(Filters *filterView);
 
+public slots:
+    void filterChanged(QTreeWidgetItem* x, int col);
+
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
 private:
