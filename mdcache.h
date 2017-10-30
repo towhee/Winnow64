@@ -32,6 +32,7 @@ signals:
     void loadThumbCache();
     void loadImageCache();
     void updateIsRunning(bool);
+    void updateStatus(bool, QString);
 
 private:
     QMutex mutex;

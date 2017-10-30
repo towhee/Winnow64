@@ -84,6 +84,8 @@ void MetadataCache::run()
         }
         QModelIndex idx = thumbView->thumbViewModel->index(row, 0, QModelIndex());
         fPath = idx.data(Qt::ToolTipRole).toString();
+        QString s = "Loading metadata " + QString::number(row + 1) + " of " + QString::number(totRows);
+        emit updateStatus(false, s);
         // InfoView::updateInfo might have already loaded by getting here first
         // it is executed when the first image is loaded
         if (!metadata->isLoaded(fPath)) {

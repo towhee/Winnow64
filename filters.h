@@ -28,12 +28,22 @@ public:
     QTreeWidgetItem *labelsPurple;
     QTreeWidgetItem *types;
     QTreeWidgetItem *models;
+    QTreeWidgetItem *titles;
+    QTreeWidgetItem *focalLengths;
+
+    void createPredefinedFilters();
+    void createDynamicFilters();
+    void removeChildrenDynamicFilters();
+    void uncheckFilters();
+    void addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category);
 
 signals:
 
 public slots:
 
 private:
+    QLinearGradient categoryBackground;
+    QFont categoryFont;
 };
 
 #endif // FILTERS_H

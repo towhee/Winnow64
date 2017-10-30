@@ -44,7 +44,7 @@ bool ThumbViewFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
             // top level item = category
             // check results of category items filter match
             if (isCategoryUnchecked) isMatch = true;
-            qDebug() << "Category" << itemCategory << isMatch;
+//            qDebug() << "Category" << itemCategory << isMatch;
             if (!isMatch) return false;   // no match in category
 
             /* prepare for category items filter match.  If no item is checked
@@ -60,7 +60,7 @@ bool ThumbViewFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
     }
     // check results of category items filter match for the last group
     if (isCategoryUnchecked) isMatch = true;
-    qDebug() << "After iteration  isMatch =" << isMatch;
+//    qDebug() << "After iteration  isMatch =" << isMatch;
 
     return isMatch;
 }

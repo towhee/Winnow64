@@ -664,6 +664,9 @@ void ThumbView::initLoad()
     thumbViewModel->removeRows(0, thumbViewModel->rowCount());
 //    thumbViewModel->setSortRole(Qt::EditRole);
     thumbFileInfoList.clear();
+
+    // clear all items for filters based on data content ie file types, camera model
+    filters->removeChildrenDynamicFilters();
 }
 
 bool ThumbView::addFolderImageDataToModel()
@@ -679,6 +682,7 @@ bool ThumbView::addFolderImageDataToModel()
     static QStandardItem *item;
     static int fileIndex;
     static QPixmap emptyPixMap;
+    QMap<QVariant, QString> typesMap;
 
     // rgh not working
     emptyPixMap = QPixmap::fromImage(emptyImg).scaled(thumbWidth, thumbHeight);
@@ -717,7 +721,10 @@ bool ThumbView::addFolderImageDataToModel()
         thumbViewModel->setItem(row, G::NameColumn, item);
 
         item = new QStandardItem();
-        item->setData(thumbFileInfo.suffix().toUpper(), Qt::DisplayRole);
+        QString s = thumbFileInfo.suffix().toUpper();
+        // build list for filters->addCategoryFromData
+        typesMap[s] = s;
+        item->setData(s, Qt::DisplayRole);
         thumbViewModel->setItem(row, G::TypeColumn, item);
 
         item = new QStandardItem();
@@ -754,8 +761,66 @@ bool ThumbView::addFolderImageDataToModel()
 //        qDebug() << "Row =" << row << fPath;
     }
 //    sortThumbs(NameColumn, false);
+    filters->addCategoryFromData(typesMap, filters->types);
+
     updateImageList();
     return true;
+}
+
+void ThumbView::addMetadataToModel()
+{
+/* This function is called after the metadata for all the eligible images in
+the selected folder have been cached.  The metadata is displayed in tableView,
+which is created in MW.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::addMetadataToModel";
+    #endif
+    }
+    static QStandardItem *item;
+    QMap<QVariant, QString> modelMap;
+    QMap<QVariant, QString> titleMap;
+    QMap<QVariant, QString> flMap;
+
+    for(int row = 0; row < thumbViewModel->rowCount(); row++) {
+        QModelIndex idx = thumbViewModel->index(row, G::PathColumn);
+        QString fPath = idx.data(G::FileNameRole).toString();
+
+        uint width = metadata->getWidth(fPath);
+        uint height = metadata->getHeight(fPath);
+        QString mp = QString::number((width * height) / 1000000.0, 'f', 2);
+        QString dim = QString::number(width) + "x" + QString::number(height);
+        QString aperture = metadata->getAperture(fPath);
+        float apertureNum = metadata->getApertureNum(fPath);
+        QString ss = metadata->getExposureTime(fPath);
+        float ssNum = metadata->getExposureTimeNum(fPath);
+        QString iso = metadata->getISO(fPath);
+        int isoNum = metadata->getISONum(fPath);
+        QString model = metadata->getModel(fPath);
+        modelMap[model] = model;
+        QString fl = metadata->getFocalLength(fPath);
+        int flNum = metadata->getFocalLengthNum(fPath);
+        flMap[flNum] = fl;
+        QString title = metadata->getTitle(fPath);
+        titleMap[title] = title;
+
+        thumbViewModel->setData(thumbViewModel->index(row, G::MegaPixelsColumn), mp);
+        thumbViewModel->setData(thumbViewModel->index(row, G::DimensionsColumn), dim);
+        thumbViewModel->setData(thumbViewModel->index(row, G::ApertureColumn), apertureNum);
+        thumbViewModel->setData(thumbViewModel->index(row, G::ApertureColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        thumbViewModel->setData(thumbViewModel->index(row, G::ShutterspeedColumn), ssNum);
+        thumbViewModel->setData(thumbViewModel->index(row, G::ShutterspeedColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        thumbViewModel->setData(thumbViewModel->index(row, G::ISOColumn), isoNum);
+        thumbViewModel->setData(thumbViewModel->index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        thumbViewModel->setData(thumbViewModel->index(row, G::CameraModelColumn), model);
+        thumbViewModel->setData(thumbViewModel->index(row, G::FocalLengthColumn), flNum);
+        thumbViewModel->setData(thumbViewModel->index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        thumbViewModel->setData(thumbViewModel->index(row, G::TitleColumn), title);
+    }
+    filters->addCategoryFromData(modelMap, filters->models);
+    filters->addCategoryFromData(titleMap, filters->titles);
+    filters->addCategoryFromData(flMap, filters->focalLengths);
 }
 
 void ThumbView::updateImageList()
@@ -776,53 +841,6 @@ changes the sort or filter.
         QString fPath = thumbViewFilter->index(row, 0).data(G::FileNameRole).toString();
         imageFilePathList.append(fPath);
 //        qDebug() << "&&&&&&&&&&&&&&&&&& updateImageList:" << fPath;
-    }
-}
-
-void ThumbView::addMetadataToModel()
-{
-/* This function is called after the metadata for all the eligible images in
-the selected folder have been cached.  The metadata is displayed in tableView,
-which is created in MW.
-*/
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::addMetadataToModel";
-    #endif
-    }
-    static QStandardItem *item;
-
-    for(int row = 0; row < thumbViewModel->rowCount(); row++) {
-        QModelIndex idx = thumbViewModel->index(row, G::PathColumn);
-        QString fPath = idx.data(G::FileNameRole).toString();
-
-        uint width = metadata->getWidth(fPath);
-        uint height = metadata->getHeight(fPath);
-        QString mp = QString::number((width * height) / 1000000.0, 'f', 2);
-        QString dim = QString::number(width) + "x" + QString::number(height);
-        QString aperture = metadata->getAperture(fPath);
-        float apertureNum = metadata->getApertureNum(fPath);
-        QString ss = metadata->getExposureTime(fPath);
-        float ssNum = metadata->getExposureTimeNum(fPath);
-        QString iso = metadata->getISO(fPath);
-        int isoNum = metadata->getISONum(fPath);
-        QString model = metadata->getModel(fPath);
-        QString fl = metadata->getFocalLength(fPath);
-        int flNum = metadata->getFocalLengthNum(fPath);
-        QString title = metadata->getTitle(fPath);
-
-        thumbViewModel->setData(thumbViewModel->index(row, G::MegaPixelsColumn), mp);
-        thumbViewModel->setData(thumbViewModel->index(row, G::DimensionsColumn), dim);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ApertureColumn), apertureNum);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ApertureColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ShutterspeedColumn), ssNum);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ShutterspeedColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ISOColumn), isoNum);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-        thumbViewModel->setData(thumbViewModel->index(row, G::CameraModelColumn), model);
-        thumbViewModel->setData(thumbViewModel->index(row, G::FocalLengthColumn), flNum);
-        thumbViewModel->setData(thumbViewModel->index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        thumbViewModel->setData(thumbViewModel->index(row, G::TitleColumn), title);
     }
 }
 

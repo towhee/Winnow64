@@ -1731,6 +1731,10 @@ void MW::createStatusBar()
     cacheLabel->setToolTipDuration(100000);
     statusBar()->addPermanentWidget(cacheLabel);
 
+    QLabel *spacer = new QLabel;
+    spacer->setText(" ");
+    statusBar()->addPermanentWidget(spacer);
+
     int runLabelWidth = 13;
     metadataThreadRunningLabel = new QLabel;
     QString mtrl = "Metadata cache thread running status";
@@ -2669,6 +2673,7 @@ void MW::reportMetadata()
     #endif
     }
 //    thumbView->thumbViewFilter->invalidateFilter();
+    filters->uncheckFilters();
     return;
 
     QTreeWidgetItemIterator it(filters);

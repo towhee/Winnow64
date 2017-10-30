@@ -98,10 +98,10 @@ textRect         = a rectangle below itemRect
 
     // UserRoles defined in ThumbView header
 //    QString rating = qvariant_cast<QString>(index.data(Qt::UserRole + 12));
-    qDebug() << "Rating =" << rating
-             << "LabelColor =" << labelColor
-             << "isPicked =" << isPicked
-             << "for" << fName;
+//    qDebug() << "Rating =" << rating
+//             << "LabelColor =" << labelColor
+//             << "isPicked =" << isPicked
+//             << "for" << fName;
 
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->setRenderHint(QPainter::TextAntialiasing, true);
