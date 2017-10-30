@@ -34,12 +34,15 @@ public:
     void createPredefinedFilters();
     void createDynamicFilters();
     void removeChildrenDynamicFilters();
-    void uncheckFilters();
     void addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category);
 
 signals:
 
 public slots:
+
+    void uncheckAllFilters();
+    void expandAllFilters();
+    void collapseAllFilters();
 
 private:
     QLinearGradient categoryBackground;

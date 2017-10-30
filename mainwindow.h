@@ -345,6 +345,12 @@ private:
     QAction *label4Action;
     QAction *label5Action;
 
+    // Filters
+
+    QAction *uncheckAllAction;
+    QAction *expandAllAction;
+    QAction *collapseAllAction;
+
     // Sort Menu
     QActionGroup *sortGroupAction;
     QAction *sortFileNameAction;

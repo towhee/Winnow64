@@ -229,7 +229,7 @@ void ThumbView::refreshThumbs() {
     #endif
     }
     // if workspace invoked with diff thumb parameters
-//    setThumbParameters();
+    setThumbParameters();
     this->dataChanged(thumbViewFilter->index(0, 0, QModelIndex()),
       thumbViewFilter->index(getLastRow(), 0, QModelIndex()));
 }
@@ -251,7 +251,7 @@ Helper function for in class calls where thumb parameters already defined
 
     if (isGrid) {
 //        setWrapping(true);
-//        setSpacing(thumbSpacingGrid);
+        setSpacing(thumbSpacingGrid);
         thumbViewDelegate->setThumbDimensions(thumbWidthGrid, thumbHeightGrid,
             thumbPaddingGrid, labelFontSizeGrid, showThumbLabelsGrid);
     } else {
@@ -295,6 +295,7 @@ void ThumbView::setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid
     qDebug() << "ThumbView::setThumbGridParameters";
     #endif
     }
+    qDebug() << "ThumbView::setThumbGridParameters";
     thumbWidthGrid = _thumbWidthGrid;
     thumbHeightGrid = _thumbHeightGrid;
     thumbSpacingGrid = _thumbSpacingGrid;

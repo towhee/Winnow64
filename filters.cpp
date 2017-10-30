@@ -2,17 +2,28 @@
 
 Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 {
+/*  This tree widget is loaded in a QDockWidget.  It contains top level items
+(Categories ie Ratings, Color Classes, File types ...).  For each top level item
+the children are the filter choices to filter treeview->treeViewFilter.  The
+categories are divided into predefined (Picks, Ratings and Color Classes) and
+dynamic categories based on existing metadata (File types, Camera Models,
+Focal Lengths and Titles).  The dynamic filter options are populated by
+thumbView when folder data is loaded by addFolderImageDataToModel and
+addMetadataToModel.  The actual filtering is executed in ThumbViewFilter.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "Filters::Filters";
     #endif
     }
     setRootIsDecorated(true);
+    setSelectionMode(QAbstractItemView::NoSelection);
     setColumnCount(2);
     setHeaderHidden(true);
     setColumnWidth(0, 200);
     setColumnWidth(1, 50);
     hideColumn(1);
+//    setIndentation(10);
 
     categoryBackground.setStart(0, 0);
     categoryBackground.setFinalStop(0, 18);
@@ -172,10 +183,11 @@ prevent duplication and orphans.
     }
     types->takeChildren();
     models->takeChildren();
+    titles->takeChildren();
     focalLengths->takeChildren();
 }
 
-void Filters::uncheckFilters()
+void Filters::uncheckAllFilters()
 {
 /* Uncheck all the filter items
 */
@@ -192,6 +204,17 @@ void Filters::uncheckFilters()
         ++it;
     }
 }
+
+void Filters::expandAllFilters()
+{
+    expandAll();
+}
+
+void Filters::collapseAllFilters()
+{
+    collapseAll();
+}
+
 
 void Filters::addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category)
 {

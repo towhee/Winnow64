@@ -823,6 +823,20 @@ void MW::createActions()
     prevPickAction->setObjectName("prevPick");
     connect(prevPickAction, SIGNAL(triggered()), thumbView, SLOT(selectPrevPick()));
 
+    // Filters
+
+    uncheckAllAction = new QAction(tr("Uncheck all filters"), this);
+    uncheckAllAction->setObjectName("uncheckAll");
+    connect(uncheckAllAction, SIGNAL(triggered()), filters, SLOT(uncheckAllFilters()));
+
+    expandAllAction = new QAction(tr("Expand all filters"), this);
+    expandAllAction->setObjectName("expandAll");
+    connect(expandAllAction, SIGNAL(triggered()), filters, SLOT(expandAllFilters()));
+
+    collapseAllAction = new QAction(tr("Collapse all filters"), this);
+    collapseAllAction->setObjectName("collapseAll");
+    connect(collapseAllAction, SIGNAL(triggered()), filters, SLOT(collapseAllFilters()));
+
     // Sort Menu
 
     sortFileNameAction = new QAction(tr("Sort by file name"), this);
@@ -1320,6 +1334,13 @@ void MW::createMenus()
     fsTree->addAction(openWithMenuAction);
     fsTree->addAction(addBookmarkAction);
     fsTree->setContextMenuPolicy(Qt::ActionsContextMenu);
+
+    // filters context menu
+    filters->addAction(uncheckAllAction);
+    addMenuSeparator(filters);
+    filters->addAction(expandAllAction);
+    filters->addAction(collapseAllAction);
+    filters->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     // bookmarks context menu
     bookmarks->addAction(pasteAction);
@@ -2673,7 +2694,7 @@ void MW::reportMetadata()
     #endif
     }
 //    thumbView->thumbViewFilter->invalidateFilter();
-    filters->uncheckFilters();
+    filters->uncheckAllFilters();
     return;
 
     QTreeWidgetItemIterator it(filters);

@@ -1,11 +1,9 @@
 To do:
-- Set each column for sorting on editrole
+- Reset image cache order and display status when change sort
 - Check full screen logic
 - Drives not showing in Files in Windows
 - Workspace not remembering thumbs hidden
-- Reset image cache order and display status when change sort
-- Compare images not working after images sorted othr then filename
-- Add ratings and labels
+- Compare images not working after images sorted other then filename
 - Initial setup (other than workspace)
 - Add preferences for info label
 - /Users/roryhill/Qt/5.9/Src/qtimageformats/src/3rdparty/jasper/src/libjasper/jpg_dec.c
@@ -15,7 +13,6 @@ To do:
 - Show how many images in each folder in treeView
 - Show how much mem req'd for selected images
 - Combine raw+jpg option
-- Sort/filter thumbs and add to workspaces
 - Add more raw file formats
 - Add zoom increment to preferences
 - UI for changing compare click zoom amount
@@ -34,6 +31,9 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done:Sort/filter thumbs
+- Done: Add ratings and labels
+- Done: Set each column for sorting on editrole
 - Done: Resize thumb dock on bottom and top to fit thumbs if no wrap
 - Done: Cleaner font for info on screen
 - Done: Pick label not toggling
