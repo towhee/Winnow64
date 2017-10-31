@@ -405,6 +405,7 @@ void MW::folderSelectionChange()
      loadThumbCache and loadImageCache when finished metadata cache. The thumb
      cache includes icons (thumbnails) for all the images in the folder. The
      image cache holds as many full size images in memory as possible. */
+
 //    qDebug() << "metadataCacheThread->isRunning()" << metadataCacheThread->isRunning()
 //        << "thumbCacheThread->isRunning()" << thumbCacheThread->isRunning()
 //        << "imageCacheThread->isRunning()" << imageCacheThread->isRunning();
