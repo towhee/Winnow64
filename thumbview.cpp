@@ -819,6 +819,7 @@ which is created in MW.
         thumbViewModel->setData(thumbViewModel->index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
         thumbViewModel->setData(thumbViewModel->index(row, G::TitleColumn), title);
     }
+    // build filter items
     filters->addCategoryFromData(modelMap, filters->models);
     filters->addCategoryFromData(titleMap, filters->titles);
     filters->addCategoryFromData(flMap, filters->focalLengths);

@@ -2,13 +2,15 @@
 #define DATAMODEL_H
 
 #include <QtWidgets>
+#include "metadata.h"
+#include "filters.h"
 #include "global.h"
 
-class DataModel : public QWidget
+class DataModel : public QStandardItemModel
 {
     Q_OBJECT
 public:
-    explicit DataModel(QWidget *parent);
+    explicit DataModel(QWidget *parent, Metadata *metadata, Filters *filters);
 
     enum UserRoles {
         FileNameRole = Qt::UserRole + 1,

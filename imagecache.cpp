@@ -677,17 +677,15 @@ updated.  Image caching is reactivated.
 void ImageCache::reindexImageCache(QStringList filterFilePathList,
                                    QString &currentImageFullPath)
 {
-/* Updates the cache for the current image in the data model. The cache key is
-set, forward or backward progress is determined and the target range is
-updated. Image caching is reactivated.
+/* The cacheMgr is rebuilt to mirror the current sorting and filtering in
+thumbViewFilter.
 */
     {
     #ifdef ISDEBUG
     qDebug() << "ImageView::reindexImageCache";
     #endif
     }
-
-    return;
+//    return;
     if (isRunning()) stopImageCache();
 
     cacheMgrCopy = cacheMgr;

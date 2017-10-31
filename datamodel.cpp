@@ -1,6 +1,6 @@
 #include "datamodel.h"
 
-DataModel::DataModel(QWidget *parent) : QWidget(parent)
+DataModel::DataModel(QWidget *parent, Metadata *metadata, Filters *filters) : QStandardItemModel(parent)
 {
 
 }

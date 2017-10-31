@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <QDesktopWidget>
+#include "datamodel.h"
 #include "thumbview.h"
 #include "tableview.h"
 #include "imageview.h"
@@ -458,6 +459,7 @@ private:
     QStackedLayout *centralLayout;
 //    QHBoxLayout *centralLayout;
     QDockWidget *metadataDock;
+    DataModel *dm;
     Metadata *metadata;
     ThumbView *thumbView;
     TableView *tableView;
@@ -518,6 +520,7 @@ private:
     void addMenuSeparator(QWidget *widget);
 //    void createImageModel();
 //    bool populateImageModel(bool includeSubfolders);
+    void createDataModel();
     void createImageView();
     void createCompareView();
     void createThumbView();

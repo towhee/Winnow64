@@ -87,6 +87,7 @@ variables in MW (this class) and managed in the prefDlg class.
 
 //    createImageModel();
     createFilterView();             // dependent on thumbView
+    createDataModel();
     createThumbView();              // dependent on QSetting, filterView
     createImageView();              // Req centralWidget
     createTableView();              // Req centralWidget
@@ -1608,6 +1609,12 @@ void MW::addMenuSeparator(QWidget *widget)
 //    return true;
 //}
 
+void MW::createDataModel()
+{
+    metadata = new Metadata;
+    dm = new DataModel(this, metadata, filters);
+}
+
 void MW::createThumbView()
 {
     {
@@ -1615,7 +1622,7 @@ void MW::createThumbView()
     qDebug() << "MW::createThumbView";
     #endif
     }
-    metadata = new Metadata;
+//    metadata = new Metadata;
 //    thumbView = new ThumbView(this, metadata);
     thumbView = new ThumbView(this, metadata, filters);
     thumbView->setObjectName("ImageView");  //rgh need to fix??
