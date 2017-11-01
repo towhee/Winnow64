@@ -9,8 +9,10 @@ HEADERS += \
     bookmarks.h \
     compareImages.h \
     compareview.h \
+    datamodel.h \
     dircompleter.h \
     dropshadowlabel.h \
+    filters.h \
     fstree.h \
     global.h \
     imagealign.h \
@@ -21,24 +23,23 @@ HEADERS += \
     mdcache.h \
     metadata.h \
     pixmap.h \
+    tableview.h \
     thumbcache.h \
     thumbview.h \
     thumbviewdelegate.h \
-    thumbviewfilter.h \
     testaligndlg.h \
     Dialogs/prefdlg.h \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
-    Dialogs/popup.h \
-    tableview.h \
-    datamodel.h \
-    filters.h
+    Dialogs/popup.h
 SOURCES += \
     bookmarks.cpp \
     compareImages.cpp \
     compareview.cpp \
+    datamodel.cpp \
     dircompleter.cpp \
     dropshadowlabel.cpp \
+    filters.cpp \
     fstree.cpp \
     global.cpp \
     imagealign.cpp \
@@ -50,18 +51,15 @@ SOURCES += \
     mdcache.cpp \
     metadata.cpp \
     pixmap.cpp \
+    tableview.cpp \
     thumbcache.cpp \
     thumbview.cpp \
     thumbviewdelegate.cpp \
-    thumbviewfilter.cpp \
     testaligndlg.cpp \
     Dialogs/prefdlg.cpp \
     Dialogs/workspacedlg.cpp \
     Dialogs/copypickdlg.cpp \
-    Dialogs/popup.cpp \
-    tableview.cpp \
-    datamodel.cpp \
-    filters.cpp
+    Dialogs/popup.cpp
 FORMS += \
     copypickdlg.ui \
     prefdlg.ui \

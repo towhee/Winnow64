@@ -213,10 +213,10 @@ Helper function for in class calls where thumb parameters already defined
     qDebug() << "ThumbView::setThumbParameters";
     #endif
     }
-    qDebug() << "ThumbView::setThumbParameters "
-             << " isGrid =" << isGrid
-             << " isFloat =" << isFloat
-             << "thumbHeight = " << thumbHeight;
+//    qDebug() << "ThumbView::setThumbParameters "
+//             << " isGrid =" << isGrid
+//             << " isFloat =" << isFloat
+//             << "thumbHeight = " << thumbHeight;
 
     if (isGrid) {
 //        setWrapping(true);
@@ -305,14 +305,14 @@ void ThumbView::reportThumb()
     int currThumb = currentIndex().row();
     qDebug() << "\n ***** THUMB INFO *****";
     qDebug() << "Row =" << currThumb;
-    qDebug() << "LoadedRole " << dm->LoadedRole << dm->item(currThumb)->data(dm->LoadedRole).toBool();
-    qDebug() << "FileNameRole " << dm->FileNameRole << dm->item(currThumb)->data(dm->FileNameRole).toString();
-    qDebug() << "SortRole " << dm->SortRole << dm->item(currThumb)->data(dm->SortRole).toInt();
-    qDebug() << "PickedRole " << dm->PickedRole << dm->item(currThumb)->data(dm->PickedRole).toString();
-    qDebug() << "FileTypeRole " << dm->FileTypeRole << dm->item(currThumb)->data(dm->FileTypeRole).toString();
-    qDebug() << "FileSizeRole " << dm->FileSizeRole << dm->item(currThumb)->data(dm->FileSizeRole).toInt();
-    qDebug() << "CreatedRole " << dm->CreatedRole << dm->item(currThumb)->data(dm->CreatedRole).toDateTime();
-    qDebug() << "ModifiedRole " << dm->ModifiedRole << dm->item(currThumb)->data(dm->ModifiedRole).toDateTime();
+    qDebug() << "LoadedRole " << G::LoadedRole << dm->item(currThumb)->data(G::LoadedRole).toBool();
+    qDebug() << "FileNameRole " << G::FileNameRole << dm->item(currThumb)->data(G::FileNameRole).toString();
+    qDebug() << "SortRole " << G::SortRole << dm->item(currThumb)->data(G::SortRole).toInt();
+    qDebug() << "PickedRole " << G::PickedRole << dm->item(currThumb)->data(G::PickedRole).toString();
+    qDebug() << "FileTypeRole " << G::FileTypeRole << dm->item(currThumb)->data(G::FileTypeRole).toString();
+    qDebug() << "FileSizeRole " << G::FileSizeRole << dm->item(currThumb)->data(G::FileSizeRole).toInt();
+    qDebug() << "CreatedRole " << G::CreatedRole << dm->item(currThumb)->data(G::CreatedRole).toDateTime();
+    qDebug() << "ModifiedRole " << G::ModifiedRole << dm->item(currThumb)->data(G::ModifiedRole).toDateTime();
 
     // following crashes when columns not added
 //    QModelIndex idx1 = dm->sf->index(currThumb, 1, QModelIndex());
@@ -617,7 +617,7 @@ void ThumbView::selectThumb(QString &fName)
     #endif
     }
     QModelIndexList idxList =
-        dm->match(dm->index(0, 0), dm->FileNameRole, fName);
+    dm->match(dm->index(0, 0), G::FileNameRole, fName);
     QModelIndex idx = idxList[0];
     thumbViewDelegate->currentIndex = idx;
     QItemSelection selection(idx, idx);

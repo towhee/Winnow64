@@ -7,7 +7,7 @@
 #include "metadata.h"
 #include "datamodel.h"
 #include "thumbviewdelegate.h"
-#include "thumbviewfilter.h"
+//#include "thumbviewfilter.h"
 #include "filters.h"
 
 class ThumbView : public QListView

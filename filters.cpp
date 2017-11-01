@@ -9,7 +9,8 @@ categories are divided into predefined (Picks, Ratings and Color Classes) and
 dynamic categories based on existing metadata (File types, Camera Models,
 Focal Lengths and Titles).  The dynamic filter options are populated by
 thumbView when folder data is loaded by addFolderImageDataToModel and
-addMetadataToModel.  The actual filtering is executed in ThumbViewFilter.
+addMetadataToModel.  The actual filtering is executed in SortFilter subclass of
+QSortFilterProxy (sf) in datamodel.
 */
     {
     #ifdef ISDEBUG
@@ -235,7 +236,7 @@ createDynamicFilters;
     QMap<QVariant, QString> uniqueItems;
     for (auto key : itemMap.keys())
     {
-      qDebug() << "itemMap" << key << "," << itemMap.value(key);
+//      qDebug() << "itemMap" << key << "," << itemMap.value(key);
       if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
     }
     for (auto key : uniqueItems.keys()) {

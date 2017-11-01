@@ -1,15 +1,17 @@
 To do:
 - Reset image cache order and display status when change sort
-- Check full screen logic
-- Drives not showing in Files in Windows
-- Workspace not remembering thumbs hidden
 - Compare images not working after images sorted other then filename
+- Try producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
+- Check full screen logic
+- Workspace not remembering thumbs hidden
+- Rotate selected images
 - Initial setup (other than workspace)
 - Add preferences for info label
 - /Users/roryhill/Qt/5.9/Src/qtimageformats/src/3rdparty/jasper/src/libjasper/jpg_dec.c
 - /Users/roryhill/Projects/jpeg-9b/example.c
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Get comment and copywrite metadata
+- Get lens metadata
 - Show how many images in each folder in treeView
 - Show how much mem req'd for selected images
 - Combine raw+jpg option
@@ -20,17 +22,16 @@ To do:
 - Open with another app
 - Tweak context menus
 - Run droplet
-- Rotate selected images
 - Recent copy to folders in copy dialog
 - Check for Tif support in Qt
 - Disable menu "add bookmark" when folders not selected??
 - Redirect report metadata to a text window so Qt Creator not req'd
 - Not reading metadata from iphone jpgs
 - Ingest including token builder
-- Add QCompleter for direct navigation to a folder
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Drives not showing in Files in Windows
 - Done:Sort/filter thumbs
 - Done: Add ratings and labels
 - Done: Set each column for sorting on editrole

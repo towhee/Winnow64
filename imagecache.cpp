@@ -678,7 +678,7 @@ void ImageCache::reindexImageCache(QStringList filterFilePathList,
                                    QString &currentImageFullPath)
 {
 /* The cacheMgr is rebuilt to mirror the current sorting and filtering in
-thumbViewFilter.
+SortFilter (dm->sf).
 */
     {
     #ifdef ISDEBUG

@@ -399,14 +399,13 @@ void MW::folderSelectionChange()
     sortThumbnails();
     dm->updateImageList();
 
-//    populateImageModel(subFoldersAction->isChecked());
-
      /* Must load metadata first, as it contains the file offsets and lengths
      for the thumbnail and full size embedded jpgs and the image width and
      height, req'd in imageCache to manage cache max size. Triggers
      loadThumbCache and loadImageCache when finished metadata cache. The thumb
      cache includes icons (thumbnails) for all the images in the folder. The
      image cache holds as many full size images in memory as possible. */
+
 //    qDebug() << "metadataCacheThread->isRunning()" << metadataCacheThread->isRunning()
 //        << "thumbCacheThread->isRunning()" << thumbCacheThread->isRunning()
 //        << "imageCacheThread->isRunning()" << imageCacheThread->isRunning();
@@ -456,7 +455,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // recalculating the target images to cache, decaching and caching to keep
     // the cache up-to-date with the current image selection.
     if (metadataLoaded) {
-        imageCacheThread->updateImageCache(dm->thumbFileInfoList, fPath);
+        imageCacheThread->updateImageCache(dm->fileInfoList, fPath);
     }
 
     // if top/bottom dock resize dock height if scrollbar is/not visible
@@ -518,7 +517,7 @@ cached.
     }
     metadataLoaded = true;
     // now that metadata is loaded populate the data model
-    dm->addMetadataToModel();
+    dm->addMetadata();
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
@@ -526,10 +525,10 @@ cached.
 
     QString fPath = indexesList.first().data(G::FileNameRole).toString();
     // imageChacheThread checks if already running and restarts
-    imageCacheThread->initImageCache(dm->thumbFileInfoList, cacheSizeMB,
+    imageCacheThread->initImageCache(dm->fileInfoList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
-    imageCacheThread->updateImageCache(dm->thumbFileInfoList, fPath);
+    imageCacheThread->updateImageCache(dm->fileInfoList, fPath);
 }
 
 // called by signal itemClicked in bookmark
@@ -1825,7 +1824,7 @@ void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
     imageCacheThread->updateImageCacheParam(size, show, width, wtAhead,
              usePreview, previewWidth, previewHeight);
     QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
-    imageCacheThread->updateImageCache(dm->thumbFileInfoList, fPath);
+    imageCacheThread->updateImageCache(dm->fileInfoList, fPath);
 }
 
 void MW::updateStatus(bool keepBase, QString s)
@@ -4338,7 +4337,7 @@ void MW::togglePick()
 
     foreach (index, indexesList) {
         int srcRow = dm->sf->mapToSource(index).row();
-        QModelIndex srcIdx = dm->index(srcRow, dm->PickedColumn);
+        QModelIndex srcIdx = dm->index(srcRow, G::PickedColumn);
         pickStatus = (qvariant_cast<QString>(srcIdx.data(Qt::EditRole))
                       == "true") ? "false" : "true";
         dm->setData(srcIdx, pickStatus, Qt::EditRole);

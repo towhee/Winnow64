@@ -6,45 +6,6 @@
 #include "filters.h"
 #include "global.h"
 
-//namespace DM
-//{
-//    enum UserRoles {
-//        FileNameRole = Qt::UserRole + 1,
-//        SortRole,
-//        LoadedRole,
-//        PickedRole,
-//        ThumbRectRole,
-//        PathRole,
-//        FileTypeRole,
-//        FileSizeRole,
-//        CreatedRole,
-//        ModifiedRole,
-//        LabelRole,
-//        RatingRole,
-//        ColumnRole
-//    };
-
-//    enum dataModelColumns {
-//        PathColumn,
-//        NameColumn,
-//        TypeColumn,
-//        SizeColumn,
-//        CreatedColumn,
-//        ModifiedColumn,
-//        PickedColumn,
-//        LabelColumn,
-//        RatingColumn,
-//        MegaPixelsColumn,
-//        DimensionsColumn,
-//        ApertureColumn,
-//        ShutterspeedColumn,
-//        ISOColumn,
-//        CameraModelColumn,
-//        FocalLengthColumn,
-//        TitleColumn,
-//        TotalColumns    // insert additional columns before this
-//    };
-//}   // end namespace
 
 class SortFilter : public QSortFilterProxyModel
 {
@@ -70,55 +31,16 @@ public:
     DataModel(QWidget *parent, Metadata *metadata, Filters *filters);
 
     bool load(QString &dir, bool includeSubfolders);
-    void addMetadataToModel();
+    void addMetadata();
     void updateImageList();
     void sortThumbs(int sortColumn, bool isReverse);
 
-    SortFilter *sf; //ThumbViewFilter *thumbViewFilter;
-//    ThumbViewFilter *thumbViewFilterTest;
-    QItemSelectionModel *thumbViewSelection;
-    QFileInfoList thumbFileInfoList;
+    SortFilter *sf;
+    QFileInfoList fileInfoList;
     QStringList imageFilePathList;
-    QFileInfoList dirFileInfoList;
+//    QFileInfoList dirFileInfoList;
     QDir::SortFlags thumbsSortFlags;
     QString currentFolderPath;
-
-    enum UserRoles {
-        FileNameRole = Qt::UserRole + 1,
-        SortRole,
-        LoadedRole,
-        PickedRole,
-        ThumbRectRole,
-        PathRole,
-        FileTypeRole,
-        FileSizeRole,
-        CreatedRole,
-        ModifiedRole,
-        LabelRole,
-        RatingRole,
-        ColumnRole
-    };
-
-    enum dataModelColumns {
-        PathColumn,
-        NameColumn,
-        TypeColumn,
-        SizeColumn,
-        CreatedColumn,
-        ModifiedColumn,
-        PickedColumn,
-        LabelColumn,
-        RatingColumn,
-        MegaPixelsColumn,
-        DimensionsColumn,
-        ApertureColumn,
-        ShutterspeedColumn,
-        ISOColumn,
-        CameraModelColumn,
-        FocalLengthColumn,
-        TitleColumn,
-        TotalColumns    // insert additional columns before this
-    };
 
 signals:
 
@@ -132,7 +54,7 @@ private:
     QDir *dir;
     QStringList *fileFilters;
     QList<QStandardItem*> *thumbList;
-    QFileInfo thumbFileInfo;
+    QFileInfo fileInfo;
     QImage emptyImg;
 
     bool addFiles();
