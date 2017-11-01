@@ -1,9 +1,10 @@
 #include "tableview.h"
 
-TableView::TableView(ThumbView *thumbView)
+TableView::TableView(DataModel *dm, ThumbView *thumbView)
 {
     this->thumbView = thumbView;
-    setModel(thumbView->thumbViewFilter);
+
+    setModel(dm->sf);
     setSortingEnabled(true);
     setAlternatingRowColors(true);
     horizontalHeader()->setStretchLastSection(true);

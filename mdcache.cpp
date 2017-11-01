@@ -1,7 +1,7 @@
 #include "global.h"
 #include "mdcache.h"
 
-MetadataCache::MetadataCache(QObject *parent, ThumbView *thumbView,
+MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
                   Metadata *metadata) : QThread(parent)
 {
     {
@@ -9,7 +9,7 @@ MetadataCache::MetadataCache(QObject *parent, ThumbView *thumbView,
     qDebug() << "MetadataCache::MetadataCache";
     #endif
     }
-    this->thumbView = thumbView;
+    this->dm = dm;
     this->metadata = metadata;
     restart = false;
     abort = false;
@@ -76,13 +76,13 @@ void MetadataCache::run()
     }
     emit updateIsRunning(true);
     QString fPath;
-    int totRows = thumbView->thumbViewModel->rowCount();
+    int totRows = dm->rowCount();
     for (int row=0; row < totRows; ++row) {
         if (abort) {
             emit updateIsRunning(false);
             return;
         }
-        QModelIndex idx = thumbView->thumbViewModel->index(row, 0, QModelIndex());
+        QModelIndex idx = dm->index(row, 0, QModelIndex());
         fPath = idx.data(Qt::ToolTipRole).toString();
         QString s = "Loading metadata " + QString::number(row + 1) + " of " + QString::number(totRows);
         emit updateStatus(false, s);

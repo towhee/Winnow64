@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include "global.h"
+#include "datamodel.h"
 #include "thumbview.h"
 
 class TableView : public QTableView
@@ -10,7 +11,7 @@ class TableView : public QTableView
     Q_OBJECT
 
 public:
-    TableView(ThumbView *thumbView);
+    TableView(DataModel *dm, ThumbView *thumbView);
 
 protected:
     void mouseDoubleClickEvent(QMouseEvent *event);

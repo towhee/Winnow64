@@ -5,6 +5,7 @@
 #include "global.h"
 #include "fstree.h"
 #include "metadata.h"
+#include "datamodel.h"
 #include "thumbviewdelegate.h"
 #include "thumbviewfilter.h"
 #include "filters.h"
@@ -14,9 +15,7 @@ class ThumbView : public QListView
     Q_OBJECT
 
 public:
-
-//    ThumbView(QWidget *parent, Metadata *metadata);
-    ThumbView(QWidget *parent, Metadata *metadata, Filters *filters);
+    ThumbView(QWidget *parent, DataModel *dm);
 
     int thumbWidth;
     int thumbHeight;
@@ -38,9 +37,6 @@ public:
     bool isFloat;       // set by MW ...
     bool isAutoFit;
 
-    bool load(QString &dir, bool inclSubfolders);
-    void updateImageList();
-    void addMetadataToModel();
     void updateLayout();
 
     ThumbViewDelegate *thumbViewDelegate;
@@ -60,15 +56,15 @@ public:
     void setThumbParameters();
     void forceScroll(int row);
 
-    QStandardItemModel *thumbViewModel;
+    QStandardItemModel *thumbViewModel;     //dm
 //    QSortFilterProxyModel *thumbViewFilter;
-    ThumbViewFilter *thumbViewFilter;
+//     ThumbViewFilter *thumbViewFilter;     //dm
 //    ThumbViewFilter *thumbViewFilterTest;
     QItemSelectionModel *thumbViewSelection;
-    QFileInfoList thumbFileInfoList;
-    QStringList imageFilePathList;
-    QFileInfoList dirFileInfoList;
-    QDir::SortFlags thumbsSortFlags;
+//    QFileInfoList thumbFileInfoList;     //dm
+//    QStringList imageFilePathList;     //dm
+//    QFileInfoList dirFileInfoList;     //dm
+//    QDir::SortFlags thumbsSortFlags;     //dm
 
     int thumbSize;
     QString filterStr;
@@ -127,15 +123,14 @@ private:
     int getNextPick();
     int getPrevPick();
 
-    QString currentViewDir;
-    QDir *thumbsDir;
-    QStringList *fileFilters;
-    QList<QStandardItem*> *thumbList;
-    QFileInfo thumbFileInfo;
-    QImage emptyImg;
+//    QString currentViewDir;     //dm
+//    QDir *thumbsDir;     //dm
+//    QStringList *fileFilters;     //dm
+//    QList<QStandardItem*> *thumbList;     //dm
+//    QFileInfo thumbFileInfo;     //dm
+//    QImage emptyImg;     //dm
     QWidget *mw;
-    Metadata *metadata;
-    Filters *filters;
+    DataModel *dm;
     QSize treeViewSize;
 
 signals:

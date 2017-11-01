@@ -14,7 +14,7 @@ class ThumbCache : public QThread
     Q_OBJECT
 
 public:
-    ThumbCache(QObject *parent, ThumbView *thumbView, Metadata *metadata);
+    ThumbCache(QObject *parent, DataModel *dm, Metadata *metadata);
     ~ThumbCache();
     void loadThumbCache();
     void stopThumbCache();
@@ -36,7 +36,7 @@ private:
 
 
     void track(QString fPath, QString msg);
-    ThumbView *thumbView;
+    DataModel *dm;
     Metadata *metadata;
 };
 

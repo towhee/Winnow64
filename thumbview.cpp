@@ -95,7 +95,7 @@ ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
 
 */
 
-ThumbView::ThumbView(QWidget *parent, Metadata *metadata, Filters *filters)
+ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     : QListView(parent)
 {
     {
@@ -104,8 +104,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, Filters *filters)
     #endif
     }
     mw = parent;
-    this->metadata = metadata;
-    this->filters = filters;
+    this->dm = dm;
 
 //    thumbHeight = G::thumbHeight;
     pickFilter = false;
@@ -123,33 +122,7 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, Filters *filters)
     setMaximumHeight(100000);
     this->setContentsMargins(0,0,0,0);
 
-    thumbViewModel = new QStandardItemModel();
-    thumbViewModel->setSortRole(Qt::EditRole);
-    thumbViewModel->setHorizontalHeaderItem(G::PathColumn, new QStandardItem(QString("Icon")));
-    thumbViewModel->setHorizontalHeaderItem(G::NameColumn, new QStandardItem(QString("File Name")));
-    thumbViewModel->setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type"));
-    thumbViewModel->setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size"));
-    thumbViewModel->setHorizontalHeaderItem(G::CreatedColumn, new QStandardItem("Created"));
-    thumbViewModel->setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified"));
-    thumbViewModel->setHorizontalHeaderItem(G::PickedColumn, new QStandardItem("Pick"));
-    thumbViewModel->setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Label"));
-    thumbViewModel->setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating"));
-    thumbViewModel->setHorizontalHeaderItem(G::MegaPixelsColumn, new QStandardItem("MPix"));
-    thumbViewModel->setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions"));
-    thumbViewModel->setHorizontalHeaderItem(G::ApertureColumn, new QStandardItem("Aperture"));
-    thumbViewModel->setHorizontalHeaderItem(G::ShutterspeedColumn, new QStandardItem("Shutter"));
-    thumbViewModel->setHorizontalHeaderItem(G::ISOColumn, new QStandardItem("ISO"));
-    thumbViewModel->setHorizontalHeaderItem(G::CameraModelColumn, new QStandardItem("Model"));
-    thumbViewModel->setHorizontalHeaderItem(G::FocalLengthColumn, new QStandardItem("Focal length"));
-    thumbViewModel->setHorizontalHeaderItem(G::TitleColumn, new QStandardItem("Title"));
-
-    thumbViewFilter = new ThumbViewFilter(this, filters);
-//    thumbViewFilter = new ThumbViewFilter(filters);
-//    thumbViewFilter = new QSortFilterProxyModel;
-    thumbViewFilter->setSourceModel(thumbViewModel);
-    thumbViewFilter->setFilterRole(G::PickedRole);      // ditch when thumbviewfilter comes online
-    thumbViewFilter->setSortRole(Qt::EditRole);
-    setModel(thumbViewFilter);
+    setModel(this->dm->sf);
 
     thumbViewSelection = selectionModel();
 
@@ -158,14 +131,10 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, Filters *filters)
         thumbPadding, labelFontSize, showThumbLabels);
     setItemDelegate(thumbViewDelegate);
 
-    // triggers MW::fileSectionChange
+    // triggers MW::fileSelectionChange
     connect(this->selectionModel(),
             SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
             parent, SLOT(fileSelectionChange()));
-
-    // changeing filters triggers a refiltering
-    connect(filters, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
-            thumbViewFilter, SLOT(filterChanged(QTreeWidgetItem*,int)));
 
 //    connect(this, SIGNAL(activated(QModelIndex)),
 //            this, SLOT(activate(QModelIndex)));
@@ -178,10 +147,10 @@ ThumbView::ThumbView(QWidget *parent, Metadata *metadata, Filters *filters)
     connect(thumbViewDelegate, SIGNAL(update(QModelIndex, QRect)),
             this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
 
-    thumbsDir = new QDir();
-    fileFilters = new QStringList;
+//    thumbsDir = new QDir();
+//    fileFilters = new QStringList;
 
-    emptyImg.load(":/images/no_image.png");
+//    emptyImg.load(":/images/no_image.png");
 
 //    QTime time = QTime::currentTime();
 }
@@ -216,8 +185,8 @@ void ThumbView::reportThumbs()
 {
 //    QModelIndex idx;
 //    qDebug() << "List all thumbs";
-//    for (int i=0; i<thumbViewFilter->rowCount(); i++) {
-//        idx = thumbViewFilter->index(i, 0, QModelIndex());
+//    for (int i=0; i<dm->sf->rowCount(); i++) {
+//        idx = dm->sf->index(i, 0, QModelIndex());
 //        qDebug() << i << idx.data(FileNameRole).toString();
 //    }
 }
@@ -230,8 +199,8 @@ void ThumbView::refreshThumbs() {
     }
     // if workspace invoked with diff thumb parameters
     setThumbParameters();
-    this->dataChanged(thumbViewFilter->index(0, 0, QModelIndex()),
-      thumbViewFilter->index(getLastRow(), 0, QModelIndex()));
+    this->dataChanged(dm->sf->index(0, 0, QModelIndex()),
+      dm->sf->index(getLastRow(), 0, QModelIndex()));
 }
 
 void ThumbView::setThumbParameters()
@@ -336,19 +305,17 @@ void ThumbView::reportThumb()
     int currThumb = currentIndex().row();
     qDebug() << "\n ***** THUMB INFO *****";
     qDebug() << "Row =" << currThumb;
-    qDebug() << "LoadedRole " << G::LoadedRole << thumbViewModel->item(currThumb)->data(G::LoadedRole).toBool();
-    qDebug() << "FileNameRole " << G::FileNameRole << thumbViewModel->item(currThumb)->data(G::FileNameRole).toString();
-    qDebug() << "SortRole " << G::SortRole << thumbViewModel->item(currThumb)->data(G::SortRole).toInt();
-    qDebug() << "PickedRole " << G::PickedRole << thumbViewModel->item(currThumb)->data(G::PickedRole).toString();
-    qDebug() << "FileTypeRole " << G::FileTypeRole << thumbViewModel->item(currThumb)->data(G::FileTypeRole).toString();
-    qDebug() << "FileSizeRole " << G::FileSizeRole << thumbViewModel->item(currThumb)->data(G::FileSizeRole).toInt();
-    qDebug() << "CreatedRole " << G::CreatedRole << thumbViewModel->item(currThumb)->data(G::CreatedRole).toDateTime();
-    qDebug() << "ModifiedRole " << G::ModifiedRole << thumbViewModel->item(currThumb)->data(G::ModifiedRole).toDateTime();
-    qDebug() << "LabelRole " << G::ModifiedRole << thumbViewModel->item(currThumb)->data(G::LabelRole).toInt();
-    qDebug() << "ModifiedRole " << G::ModifiedRole << thumbViewModel->item(currThumb)->data(G::RatingRole).toInt();
+    qDebug() << "LoadedRole " << dm->LoadedRole << dm->item(currThumb)->data(dm->LoadedRole).toBool();
+    qDebug() << "FileNameRole " << dm->FileNameRole << dm->item(currThumb)->data(dm->FileNameRole).toString();
+    qDebug() << "SortRole " << dm->SortRole << dm->item(currThumb)->data(dm->SortRole).toInt();
+    qDebug() << "PickedRole " << dm->PickedRole << dm->item(currThumb)->data(dm->PickedRole).toString();
+    qDebug() << "FileTypeRole " << dm->FileTypeRole << dm->item(currThumb)->data(dm->FileTypeRole).toString();
+    qDebug() << "FileSizeRole " << dm->FileSizeRole << dm->item(currThumb)->data(dm->FileSizeRole).toInt();
+    qDebug() << "CreatedRole " << dm->CreatedRole << dm->item(currThumb)->data(dm->CreatedRole).toDateTime();
+    qDebug() << "ModifiedRole " << dm->ModifiedRole << dm->item(currThumb)->data(dm->ModifiedRole).toDateTime();
 
     // following crashes when columns not added
-//    QModelIndex idx1 = thumbViewFilter->index(currThumb, 1, QModelIndex());
+//    QModelIndex idx1 = dm->sf->index(currThumb, 1, QModelIndex());
 //    qDebug() << "Column 1 Type:" << idx1.data(Qt::DisplayRole);
 
 //    qDebug() << thumbViewModel->item(currThumb)->data(DisplayRole).toString();
@@ -376,7 +343,7 @@ int ThumbView::getNextRow()
     #endif
     }
     int row = currentIndex().row();
-    if (row == thumbViewFilter->rowCount() - 1)
+    if (row == dm->sf->rowCount() - 1)
         return row;
     return row + 1;
 }
@@ -401,7 +368,7 @@ int ThumbView::getLastRow()
     qDebug() << "ThumbView::getLastRow";
     #endif
     }
-    return thumbViewFilter->rowCount() - 1;
+    return dm->sf->rowCount() - 1;
 }
 
 int ThumbView::getRandomRow()
@@ -411,7 +378,7 @@ int ThumbView::getRandomRow()
     qDebug() << "ThumbView::getRandomRow";
     #endif
     }
-    return qrand() % (thumbViewFilter->rowCount());
+    return qrand() % (dm->sf->rowCount());
 }
 
 bool ThumbView::isSelectedItem()
@@ -450,8 +417,8 @@ bool ThumbView::isPick()
     #endif
     }
     int pickCount = 0;
-    for (int row = 0; row < thumbViewFilter->rowCount(); ++row) {
-        QModelIndex idx = thumbViewFilter->index(row, 0, QModelIndex());
+    for (int row = 0; row < dm->sf->rowCount(); ++row) {
+        QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
         if (idx.data(G::PickedRole).toString() == "true") ++pickCount;
     }
     return (pickCount > 0);
@@ -469,8 +436,8 @@ folder.
     #endif
     }
     QFileInfoList fileInfoList;
-    for (int row = 0; row < thumbViewFilter->rowCount(); ++row) {
-        QModelIndex idx = thumbViewFilter->index(row, 0, QModelIndex());
+    for (int row = 0; row < dm->sf->rowCount(); ++row) {
+        QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
         if (idx.data(G::PickedRole).toString() == "true") {
             QFileInfo fileInfo(idx.data(G::FileNameRole).toString());
             fileInfoList.append(fileInfo);
@@ -487,10 +454,10 @@ int ThumbView::getNextPick()
     #endif
     }
     int frwd = currentIndex().row() + 1;
-    int rowCount = thumbViewFilter->rowCount();
+    int rowCount = dm->sf->rowCount();
     QModelIndex idx;
     while (frwd < rowCount) {
-        idx = thumbViewFilter->index(frwd, 0, QModelIndex());
+        idx = dm->sf->index(frwd, 0, QModelIndex());
         if (idx.data(G::PickedRole).toString() == "true") return frwd;
         ++frwd;
     }
@@ -505,10 +472,10 @@ int ThumbView::getPrevPick()
     #endif
     }
     int back = currentIndex().row() - 1;
-//    int rowCount = thumbViewFilter->rowCount();
+//    int rowCount = dm->sf->rowCount();
     QModelIndex idx;
     while (back >= 0) {
-        idx = thumbViewFilter->index(back, 0, QModelIndex());
+        idx = dm->sf->index(back, 0, QModelIndex());
         if (idx.data(G::PickedRole).toString() == "true") return back;
         --back;
     }
@@ -525,12 +492,12 @@ int ThumbView::getNearestPick()
     }
     int frwd = currentIndex().row();
     int back = frwd;
-    int rowCount = thumbViewFilter->rowCount();
+    int rowCount = dm->sf->rowCount();
     QModelIndex idx;
     while (back >=0 || frwd < rowCount) {
-        if (back >=0) idx = thumbViewFilter->index(back, 0, QModelIndex());
+        if (back >=0) idx = dm->sf->index(back, 0, QModelIndex());
         if (idx.data(G::PickedRole).toString() == "true") return back;
-        if (frwd < rowCount) idx = thumbViewFilter->index(frwd, 0, QModelIndex());
+        if (frwd < rowCount) idx = dm->sf->index(frwd, 0, QModelIndex());
         if (idx.data(G::PickedRole).toString() == "true") return frwd;
         --back;
         ++frwd;
@@ -549,10 +516,10 @@ void ThumbView::toggleFilterPick(bool isFilter)
     if (pickFilter) {
         int row = getNearestPick();
         selectThumb(row);
-        thumbViewFilter->setFilterRegExp("true");   // show only picked items
+        dm->sf->setFilterRegExp("true");   // show only picked items
     }
     else
-        thumbViewFilter->setFilterRegExp("");       // no filter - show all
+        dm->sf->setFilterRegExp("");       // no filter - show all
 }
 
 void ThumbView::sortThumbs(int sortColumn, bool isReverse)
@@ -562,11 +529,11 @@ void ThumbView::sortThumbs(int sortColumn, bool isReverse)
     qDebug() << "ThumbView::sortThumbs";
     #endif
     }
-    if (isReverse) thumbViewFilter->sort(sortColumn, Qt::DescendingOrder);
-    else thumbViewFilter->sort(sortColumn, Qt::AscendingOrder);
+    if (isReverse) dm->sf->sort(sortColumn, Qt::DescendingOrder);
+    else dm->sf->sort(sortColumn, Qt::AscendingOrder);
 
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
-    updateImageList();      // req'd to reindex image cache after re-sort
+    dm->updateImageList();      // req'd to reindex image cache after re-sort
 //    refreshThumbs();
 }
 
@@ -594,258 +561,6 @@ useful.
     return SelectedThumbsPaths;
 }
 
-bool ThumbView::load(QString &dir, bool includeSubfolders)
-{
-/* When a new folder is selected load it into the thumbView.  This clears the
-model and populates the QListView with all the cached thumbnail pixmaps from
-thumbCache.
-*/
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::load";
-    #endif
-    }
-    currentViewDir = dir;
-    if (!pickFilter) {
-        initLoad();
-        // exit if no images, otherwise get thumb info
-        if (!addFolderImageDataToModel() && !includeSubfolders) return false;
-    }
-
-//    setWrapping(true);
-    if (includeSubfolders) {
-        qDebug() << "ThumbView::load including subfolders";
-        QDirIterator iterator(currentViewDir, QDirIterator::Subdirectories);
-        while (iterator.hasNext()) {
-            iterator.next();
-            if (iterator.fileInfo().isDir() && iterator.fileName() != "." && iterator.fileName() != "..") {
-                thumbsDir->setPath(iterator.filePath());
-                qDebug() << "ITERATING FOLDER" << iterator.filePath();
-                addFolderImageDataToModel();
-            }
-        }
-    }
-
-    if (thumbFileInfoList.size() && selectionModel()->selectedIndexes().size() == 0) {
-        selectThumb(0);
-        return true;
-    }
-    return false;   // no images found in any folder
-}
-
-void ThumbView::initLoad()
-{
-
-/*  Prepares the thumbview for new data
-      * thumb layout
-      * thumb size
-      * file filter
-      * sorting
-      * clear model and run parameters      */
-
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::loadPrepare";
-    #endif
-    }
-    fileFilters->clear();
-    foreach (const QString &str, metadata->supportedFormats)
-            fileFilters->append("*." + str);
-    thumbsDir->setNameFilters(*fileFilters);
-    thumbsDir->setFilter(QDir::Files);
-//	if (GData::showHiddenFiles) {
-//		thumbsDir->setFilter(thumbsDir->filter() | QDir::Hidden);
-//	}
-
-    thumbsDir->setPath(currentViewDir);
-
-    thumbsDir->setSorting(QDir::Name);
-
-    // if use thumbViewModel->clear() headers are deleted
-    thumbViewModel->removeRows(0, thumbViewModel->rowCount());
-//    thumbViewModel->setSortRole(Qt::EditRole);
-    thumbFileInfoList.clear();
-
-    // clear all items for filters based on data content ie file types, camera model
-    filters->removeChildrenDynamicFilters();
-}
-
-bool ThumbView::addFolderImageDataToModel()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::addFolderImageDataToModel";
-    #endif
-    }
-    dirFileInfoList = thumbsDir->entryInfoList();
-    if (dirFileInfoList.size() == 0) return false;
-
-    static QStandardItem *item;
-    static int fileIndex;
-    static QPixmap emptyPixMap;
-    QMap<QVariant, QString> typesMap;
-
-    // rgh not working
-    emptyPixMap = QPixmap::fromImage(emptyImg).scaled(thumbWidth, thumbHeight);
-
-    for (fileIndex = 0; fileIndex < dirFileInfoList.size(); ++fileIndex) {
-
-        // get file info
-        thumbFileInfo = dirFileInfoList.at(fileIndex);
-        thumbFileInfoList.append(thumbFileInfo);
-        QString fPath = thumbFileInfo.filePath();
-
-        qDebug() << "building data model"
-                 << fileIndex << "of" << dirFileInfoList.size()
-                 << fPath;
-
-        // add icon as first column in new row
-        item = new QStandardItem();
-//        item->setData(fileIndex, G::SortRole);
-        item->setData("", Qt::DisplayRole);
-//        item->setData(thumbFileInfo.fileName(), Qt::DisplayRole);
-        item->setData(thumbFileInfo.filePath(), G::FileNameRole);
-        item->setData(thumbFileInfo.absoluteFilePath(), Qt::ToolTipRole);
-        item->setData("False", G::PickedRole);
-        item->setData("", G::RatingRole);
-        item->setData("", G::LabelRole);
-        item->setData(QRect(), G::ThumbRectRole);     // define later when read
-        item->setData(thumbFileInfo.path(), G::PathRole);
-        item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
-        thumbViewModel->appendRow(item);
-
-        // add columns to model
-        int row = item->index().row();
-
-        item = new QStandardItem();
-        item->setData(thumbFileInfo.fileName(), Qt::DisplayRole);
-        thumbViewModel->setItem(row, G::NameColumn, item);
-
-        item = new QStandardItem();
-        QString s = thumbFileInfo.suffix().toUpper();
-        // build list for filters->addCategoryFromData
-        typesMap[s] = s;
-        item->setData(s, Qt::DisplayRole);
-        thumbViewModel->setItem(row, G::TypeColumn, item);
-
-        item = new QStandardItem();
-        item->setData(thumbFileInfo.size(), Qt::DisplayRole);
-        item->setData(int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        thumbViewModel->setItem(row, G::SizeColumn, item);
-
-        item = new QStandardItem();
-        item->setData(thumbFileInfo.created(), Qt::DisplayRole);
-        thumbViewModel->setItem(row, G::CreatedColumn, item);
-
-        item = new QStandardItem();
-        item->setData(thumbFileInfo.lastModified(), Qt::DisplayRole);
-        thumbViewModel->setItem(row, G::ModifiedColumn, item);
-
-        item = new QStandardItem();
-        item->setData(false, Qt::DisplayRole);
-        thumbViewModel->setItem(row, G::PickedColumn, item);
-
-        item = new QStandardItem();
-        item->setData("", Qt::DisplayRole);
-        item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
-        thumbViewModel->setItem(row, G::LabelColumn, item);
-
-        item = new QStandardItem();
-        item->setData("", Qt::DisplayRole);
-        item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
-        thumbViewModel->setItem(row, G::RatingColumn, item);
-
-        /* the rest of the data model columns are added after the metadata
-        has been loaded, when the image caching is called.  See
-        MW::loadImageCache and thumbView::addMetadataToModel    */
-
-//        qDebug() << "Row =" << row << fPath;
-    }
-//    sortThumbs(NameColumn, false);
-    filters->addCategoryFromData(typesMap, filters->types);
-
-    updateImageList();
-    return true;
-}
-
-void ThumbView::addMetadataToModel()
-{
-/* This function is called after the metadata for all the eligible images in
-the selected folder have been cached.  The metadata is displayed in tableView,
-which is created in MW.
-*/
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::addMetadataToModel";
-    #endif
-    }
-    static QStandardItem *item;
-    QMap<QVariant, QString> modelMap;
-    QMap<QVariant, QString> titleMap;
-    QMap<QVariant, QString> flMap;
-
-    for(int row = 0; row < thumbViewModel->rowCount(); row++) {
-        QModelIndex idx = thumbViewModel->index(row, G::PathColumn);
-        QString fPath = idx.data(G::FileNameRole).toString();
-
-        uint width = metadata->getWidth(fPath);
-        uint height = metadata->getHeight(fPath);
-        QString mp = QString::number((width * height) / 1000000.0, 'f', 2);
-        QString dim = QString::number(width) + "x" + QString::number(height);
-        QString aperture = metadata->getAperture(fPath);
-        float apertureNum = metadata->getApertureNum(fPath);
-        QString ss = metadata->getExposureTime(fPath);
-        float ssNum = metadata->getExposureTimeNum(fPath);
-        QString iso = metadata->getISO(fPath);
-        int isoNum = metadata->getISONum(fPath);
-        QString model = metadata->getModel(fPath);
-        modelMap[model] = model;
-        QString fl = metadata->getFocalLength(fPath);
-        int flNum = metadata->getFocalLengthNum(fPath);
-        flMap[flNum] = fl;
-        QString title = metadata->getTitle(fPath);
-        titleMap[title] = title;
-
-        thumbViewModel->setData(thumbViewModel->index(row, G::MegaPixelsColumn), mp);
-        thumbViewModel->setData(thumbViewModel->index(row, G::DimensionsColumn), dim);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ApertureColumn), apertureNum);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ApertureColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ShutterspeedColumn), ssNum);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ShutterspeedColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ISOColumn), isoNum);
-        thumbViewModel->setData(thumbViewModel->index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-        thumbViewModel->setData(thumbViewModel->index(row, G::CameraModelColumn), model);
-        thumbViewModel->setData(thumbViewModel->index(row, G::FocalLengthColumn), flNum);
-        thumbViewModel->setData(thumbViewModel->index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        thumbViewModel->setData(thumbViewModel->index(row, G::TitleColumn), title);
-    }
-    // build filter items
-    filters->addCategoryFromData(modelMap, filters->models);
-    filters->addCategoryFromData(titleMap, filters->titles);
-    filters->addCategoryFromData(flMap, filters->focalLengths);
-}
-
-void ThumbView::updateImageList()
-{
-/* The image list of file paths replicates the current sort order and filtration
-of thumbViewFilter.  It is used to keep the image cache in sync with the
-current state of thumbViewFilter.  This function is called when the user
-changes the sort or filter.
-*/
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::updateImageList";
-    #endif
-    }
-//    qDebug() << "ThumbView::updateImageList";
-    imageFilePathList.clear();
-    for(int row = 0; row < thumbViewFilter->rowCount(); row++) {
-        QString fPath = thumbViewFilter->index(row, 0).data(G::FileNameRole).toString();
-        imageFilePathList.append(fPath);
-//        qDebug() << "&&&&&&&&&&&&&&&&&& updateImageList:" << fPath;
-    }
-}
-
 void ThumbView::setIcon(QStandardItem *item, QImage thumb, QString folderPath)
 {
     {
@@ -857,7 +572,7 @@ void ThumbView::setIcon(QStandardItem *item, QImage thumb, QString folderPath)
      * a race condition can arise.  Make sure the item is referring to the
      * current directory.  If not, item will be a dereferenced pointer and
      * cause a segmentation fault crash */
-    if (folderPath != currentViewDir) return;
+    if (folderPath != dm->currentFolderPath) return;
     item->setIcon(QPixmap::fromImage(thumb));
 }
 
@@ -887,7 +602,7 @@ void ThumbView::selectThumb(int row)
     // some operations assign row = -1 if not found
     if (row < 0) return;
     setFocus();
-    QModelIndex idx = thumbViewFilter->index(row, 0, QModelIndex());
+    QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
 //    qDebug() << idx;
     setCurrentIndex(idx);
     thumbViewDelegate->currentIndex = idx;
@@ -902,7 +617,7 @@ void ThumbView::selectThumb(QString &fName)
     #endif
     }
     QModelIndexList idxList =
-        thumbViewModel->match(thumbViewModel->index(0, 0), G::FileNameRole, fName);
+        dm->match(dm->index(0, 0), dm->FileNameRole, fName);
     QModelIndex idx = idxList[0];
     thumbViewDelegate->currentIndex = idx;
     QItemSelection selection(idx, idx);
@@ -1072,7 +787,7 @@ click position that is then sent to imageView to zoom to the same spot
 //    qDebug() << "ThumbView::updateThumbRectRole";
     #endif
     }
-    thumbViewFilter->setData(index, iconRect, G::ThumbRectRole);
+    dm->sf->setData(index, iconRect, G::ThumbRectRole);
 }
 
 void ThumbView::resizeEvent(QResizeEvent *event)
@@ -1157,7 +872,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         // horizontal scrollBar?
         int thumbCellWidth = getThumbCellSize().width() - 1;
         int maxThumbsBeforeScrollReqd = viewport()->width() / thumbCellWidth;
-        int thumbsCount = thumbViewFilter->rowCount();
+        int thumbsCount = dm->sf->rowCount();
         int thumbDockWidth = viewport()->width();
         bool isScrollBar = thumbsCount >= maxThumbsBeforeScrollReqd;
 
@@ -1201,7 +916,7 @@ void ThumbView::forceScroll(int row)
 
     QScrollBar *sb;
     sb = verticalScrollBar();
-    int tot = thumbViewFilter->rowCount();
+    int tot = dm->sf->rowCount();
 //    int sbVal = ((float)row / tot) * sb->maximum();
     QSize tSize = thumbViewDelegate->getThumbCell();
     QSize wSize = this->size();
@@ -1323,8 +1038,8 @@ void ThumbView::invertSelection()
     #endif
     }
     QItemSelection toggleSelection;
-    QModelIndex firstIndex = thumbViewFilter->index(0, 0);
-    QModelIndex lastIndex = thumbViewFilter->index(thumbViewFilter->rowCount() - 1, 0);
+    QModelIndex firstIndex = dm->sf->index(0, 0);
+    QModelIndex lastIndex = dm->sf->index(dm->sf->rowCount() - 1, 0);
     toggleSelection.select(firstIndex, lastIndex);
     selectionModel()->select(toggleSelection, QItemSelectionModel::Toggle);
 }
@@ -1393,7 +1108,7 @@ void ThumbView::startDrag(Qt::DropActions)
         painter.setPen(QPen(Qt::white, 2));
         int x = 0, y = 0, xMax = 0, yMax = 0;
         for (int i = 0; i < qMin(5, indexesList.count()); ++i) {
-            QPixmap pix = thumbViewModel->item(indexesList.at(i).row())->icon().pixmap(72);
+            QPixmap pix = dm->item(indexesList.at(i).row())->icon().pixmap(72);
             if (i == 4) {
                 x = (xMax - pix.width()) / 2;
                 y = (yMax - pix.height()) / 2;
@@ -1409,7 +1124,7 @@ void ThumbView::startDrag(Qt::DropActions)
         pix = pix.copy(0, 0, xMax, yMax);
         drag->setPixmap(pix);
     } else {
-        pix = thumbViewModel->item(indexesList.at(0).row())->icon().pixmap(128);
+        pix = dm->item(indexesList.at(0).row())->icon().pixmap(128);
         drag->setPixmap(pix);
     }
     drag->setHotSpot(QPoint(pix.width() / 2, pix.height() / 2));

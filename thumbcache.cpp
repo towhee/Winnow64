@@ -6,7 +6,7 @@
 
 */
 
-ThumbCache::ThumbCache(QObject *parent, ThumbView *thumbView,
+ThumbCache::ThumbCache(QObject *parent, DataModel *dm,
                        Metadata *metadata) : QThread(parent)
 {
     {
@@ -14,7 +14,7 @@ ThumbCache::ThumbCache(QObject *parent, ThumbView *thumbView,
     qDebug() << "ThumbCache::ThumbCache";
     #endif
     }
-    this->thumbView = thumbView;
+    this->dm = dm;
     this->metadata = metadata;
     restart = false;
     abort = false;
@@ -97,14 +97,14 @@ void ThumbCache::run()
     qRegisterMetaType<QVector<int> >("QVector");
     QStandardItem *item = new QStandardItem;
 
-    for (int row = 0; row < thumbView->thumbViewModel->rowCount(); ++row) {
+    for (int row = 0; row < dm->rowCount(); ++row) {
         if (abort) {
             emit updateIsRunning(false);
             return;
         }
-        QModelIndex idx = thumbView->thumbViewModel->index(row, 0, QModelIndex());
+        QModelIndex idx = dm->index(row, 0, QModelIndex());
         if (!idx.isValid()) return;
-        item = thumbView->thumbViewModel->itemFromIndex(idx);
+        item = dm->itemFromIndex(idx);
         fPath = item->data(Qt::ToolTipRole).toString();
 //        qDebug() << fPath;
         if (G::isThreadTrackingOn) track(fPath, "Reading");
@@ -256,7 +256,7 @@ void ThumbCache::run()
 
         mutex.unlock();
         emit updateStatus(false, "Caching thumb " + QString::number(row + 1) +
-             " of " + QString::number(thumbView->thumbViewModel->rowCount()));
+             " of " + QString::number(dm->rowCount()));
         restart = false;
 //        qDebug() << "Thumbnail cached " << fName;
 
@@ -267,5 +267,5 @@ void ThumbCache::run()
     }
     emit updateIsRunning(false);
     emit updateStatus(true, "All thumbs cached");
-    thumbView->refreshThumbs();
+    refreshThumbs();
 }

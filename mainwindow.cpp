@@ -387,16 +387,17 @@ void MW::folderSelectionChange()
 
     /* Need to gather directory file info first (except icon/thumb) which is
     loaded by loadThumbCache.  If no images in new folder then cleanup and exit.
-    MW::fileSelectionChange triggered by thumbView->load         */
-    if (!thumbView->load(currentViewDir, subFoldersAction->isChecked())) {
-        // MW::fileSelectionChange triggered by thumbView->load
+    MW::fileSelectionChange triggered by DataModel->load         */
+    if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
+        // MW::fileSelectionChange triggered by dm->load
         updateStatus(false, "No images in this folder");
         infoView->clearInfo();
         cacheLabel->setVisible(false);
         return;
     }
+    thumbView->selectThumb(0);
     sortThumbnails();
-    thumbView->updateImageList();
+    dm->updateImageList();
 
 //    populateImageModel(subFoldersAction->isChecked());
 
@@ -406,7 +407,6 @@ void MW::folderSelectionChange()
      loadThumbCache and loadImageCache when finished metadata cache. The thumb
      cache includes icons (thumbnails) for all the images in the folder. The
      image cache holds as many full size images in memory as possible. */
-
 //    qDebug() << "metadataCacheThread->isRunning()" << metadataCacheThread->isRunning()
 //        << "thumbCacheThread->isRunning()" << thumbCacheThread->isRunning()
 //        << "imageCacheThread->isRunning()" << imageCacheThread->isRunning();
@@ -456,7 +456,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // recalculating the target images to cache, decaching and caching to keep
     // the cache up-to-date with the current image selection.
     if (metadataLoaded) {
-        imageCacheThread->updateImageCache(thumbView->thumbFileInfoList, fPath);
+        imageCacheThread->updateImageCache(dm->thumbFileInfoList, fPath);
     }
 
     // if top/bottom dock resize dock height if scrollbar is/not visible
@@ -518,7 +518,7 @@ cached.
     }
     metadataLoaded = true;
     // now that metadata is loaded populate the data model
-    thumbView->addMetadataToModel();
+    dm->addMetadataToModel();
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
@@ -526,10 +526,10 @@ cached.
 
     QString fPath = indexesList.first().data(G::FileNameRole).toString();
     // imageChacheThread checks if already running and restarts
-    imageCacheThread->initImageCache(thumbView->thumbFileInfoList, cacheSizeMB,
+    imageCacheThread->initImageCache(dm->thumbFileInfoList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
-    imageCacheThread->updateImageCache(thumbView->thumbFileInfoList, fPath);
+    imageCacheThread->updateImageCache(dm->thumbFileInfoList, fPath);
 }
 
 // called by signal itemClicked in bookmark
@@ -1612,6 +1612,7 @@ void MW::addMenuSeparator(QWidget *widget)
 void MW::createDataModel()
 {
     metadata = new Metadata;
+
     dm = new DataModel(this, metadata, filters);
 }
 
@@ -1624,7 +1625,7 @@ void MW::createThumbView()
     }
 //    metadata = new Metadata;
 //    thumbView = new ThumbView(this, metadata);
-    thumbView = new ThumbView(this, metadata, filters);
+    thumbView = new ThumbView(this, dm);
     thumbView->setObjectName("ImageView");  //rgh need to fix??
 
     thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
@@ -1650,8 +1651,8 @@ void MW::createThumbView()
              << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setThumbParameters();
 
-    metadataCacheThread = new MetadataCache(this, thumbView, metadata);
-    thumbCacheThread = new ThumbCache(this, thumbView, metadata);
+    metadataCacheThread = new MetadataCache(this, dm, metadata);
+    thumbCacheThread = new ThumbCache(this, dm, metadata);
     infoView = new InfoView(this, metadata);
 
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -1691,7 +1692,7 @@ void MW::createTableView()
     qDebug() << "MW::createTableView";
     #endif
     }
-    tableView = new TableView(thumbView);
+    tableView = new TableView(dm, thumbView);
 
     // update thumbView index when tableView clicked.  This also updates
     // the imageView and metadata infoView.
@@ -1824,7 +1825,7 @@ void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
     imageCacheThread->updateImageCacheParam(size, show, width, wtAhead,
              usePreview, previewWidth, previewHeight);
     QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
-    imageCacheThread->updateImageCache(thumbView->thumbFileInfoList, fPath);
+    imageCacheThread->updateImageCache(dm->thumbFileInfoList, fPath);
 }
 
 void MW::updateStatus(bool keepBase, QString s)
@@ -1854,7 +1855,7 @@ QString fileSym = "📷";
     // image of total: fileCount
     if (keepBase) {
         QModelIndex idx = thumbView->currentIndex();
-        long rowCount = thumbView->thumbViewFilter->rowCount();
+        long rowCount = dm->sf->rowCount();
         if (rowCount > 0) {
             int row = idx.row() + 1;
             fileCount = QString::number(row) + " of "
@@ -1991,11 +1992,12 @@ void MW::createBookmarks()
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 {
 /* This slot function is triggered by the tableView->horizontalHeader
-sortIndicatorChanged signal being emitted, which tells us that thumbViewFilter
-has been re-sorted. As a consequence we need to update the menu checked status
-for the correct column and also resync the image cache. However, changing the
-menu checked state for any of the menu sort actions triggers a sort, which needs
-to be suppressed while syncing the menu actions with tableView.
+sortIndicatorChanged signal being emitted, which tells us that the data model
+sort/filter has been re-sorted. As a consequence we need to update the menu
+checked status for the correct column and also resync the image cache. However,
+changing the menu checked state for any of the menu sort actions triggers a
+sort, which needs to be suppressed while syncing the menu actions with
+tableView.
 */
     {
     #ifdef ISDEBUG
@@ -2024,9 +2026,9 @@ to be suppressed while syncing the menu actions with tableView.
     if(sortOrder == Qt::DescendingOrder) sortReverseAction->setChecked(true);
     else sortReverseAction->setChecked(false);
     sortMenuUpdateToMatchTable = false;
-    thumbView->updateImageList();
+    dm->updateImageList();
     QString currentFilePath = thumbView->currentIndex().data(G::FileNameRole).toString();
-    imageCacheThread->reindexImageCache(thumbView->imageFilePathList, currentFilePath);
+    imageCacheThread->reindexImageCache(dm->imageFilePathList, currentFilePath);
 }
 
 void MW::sortThumbnails()
@@ -3163,6 +3165,7 @@ void MW::removeBookmark()
     }
 }
 
+// rgh used?
 void MW::setThumbsFilter()
 {
     {
@@ -3174,6 +3177,7 @@ void MW::setThumbsFilter()
 //    refreshThumbs(true);
 }
 
+// rgh used?
 void MW::clearThumbsFilter()
 {
     {
@@ -3270,7 +3274,7 @@ void MW::writeSettings()
     setting->setValue("isThumbDockLocked", (bool)thumbDockLockAction->isChecked());
 
     // not req'd
-    setting->setValue("thumbsSortFlags", (int)thumbView->thumbsSortFlags);
+//    setting->setValue("thumbsSortFlags", (int)thumbView->thumbsSortFlags);
 
 //    setting->setValue("thumbsZoomVal", (int)thumbView->thumbSize);
 
@@ -3853,7 +3857,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         // if thumbDock area changed then set dock height to thumb sizw
         if (!thumbView->isThumbWrapWhenTopOrBottomDock &&
             !thumbDock->isFloating() &&
-            !asGridAction->isChecked()) // && thumbView->thumbViewFilter->rowCount() > 0)
+            !asGridAction->isChecked()) // && dm->sf->rowCount() > 0)
         {
             // make thumbDock height fit thumbs
             int maxHt = thumbView->getThumbSpaceMax();
@@ -3865,7 +3869,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
             // horizontal scrollBar?
             int thumbCellWidth = thumbView->getThumbCellSize().width();
             int maxThumbsBeforeScrollReqd = thumbView->viewport()->width() / thumbCellWidth;
-            int thumbsCount = thumbView->thumbViewFilter->rowCount();
+            int thumbsCount = dm->sf->rowCount();
             int thumbDockWidth = thumbView->viewport()->width();
             bool isScrollBar = thumbsCount > maxThumbsBeforeScrollReqd;
 
@@ -4333,11 +4337,11 @@ void MW::togglePick()
     QString pickStatus;
 
     foreach (index, indexesList) {
-        int srcRow = thumbView->thumbViewFilter->mapToSource(index).row();
-        QModelIndex srcIdx = thumbView->thumbViewModel->index(srcRow, G::PickedColumn);
+        int srcRow = dm->sf->mapToSource(index).row();
+        QModelIndex srcIdx = dm->index(srcRow, dm->PickedColumn);
         pickStatus = (qvariant_cast<QString>(srcIdx.data(Qt::EditRole))
                       == "true") ? "false" : "true";
-        thumbView->thumbViewModel->setData(srcIdx, pickStatus, Qt::EditRole);
+        dm->setData(srcIdx, pickStatus, Qt::EditRole);
     }
     index = thumbView->currentIndex();
     bool isPick = (pickStatus == "true");
@@ -4357,7 +4361,7 @@ void MW::updatePick()
     #endif
     }
     int row = thumbView->currentIndex().row();
-    QModelIndex idx = thumbView->thumbViewModel->index(row, G::PickedColumn);
+    QModelIndex idx = dm->index(row, G::PickedColumn);
     bool isPick = qvariant_cast<bool>(idx.data(Qt::EditRole));
     if (asLoupeAction->isChecked())
         (isPick) ? imageView->pickLabel->setVisible(true)
@@ -4403,9 +4407,9 @@ void MW::setRating()
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex idx = selection.at(i);
-        thumbView->thumbViewModel->setData(idx, rating, G::RatingRole);
-        idx = thumbView->thumbViewModel->index(idx.row(), G::RatingColumn);
-        thumbView->thumbViewModel->setData(idx, rating, Qt::EditRole);
+        dm->setData(idx, rating, G::RatingRole);
+        idx = dm->index(idx.row(), G::RatingColumn);
+        dm->setData(idx, rating, Qt::EditRole);
     }
     thumbView->refreshThumbs();
 }
@@ -4432,9 +4436,9 @@ void MW::setLabelColor()
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex idx = selection.at(i);
-        thumbView->thumbViewModel->setData(idx, labelColor, G::LabelRole);
-        idx = thumbView->thumbViewModel->index(idx.row(), G::LabelColumn);
-        thumbView->thumbViewModel->setData(idx, labelColor, Qt::EditRole);
+        dm->setData(idx, labelColor, G::LabelRole);
+        idx = dm->index(idx.row(), G::LabelColumn);
+        dm->setData(idx, labelColor, Qt::EditRole);
     }
     thumbView->refreshThumbs();
 }
@@ -4526,7 +4530,7 @@ void MW::nextSlide()
     #endif
     }
     static int counter = 0;
-    int totSlides = thumbView->thumbViewFilter->rowCount();
+    int totSlides = dm->sf->rowCount();
     if (slideShowRandom) thumbView->selectRandom();
     else {
         if (thumbView->getCurrentRow() == totSlides - 1)

@@ -15,9 +15,11 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
 
     // this works because friend class of MW
     MW *mw = qobject_cast<MW*>(parent);
+
     // general
     ui->rememberFolderChk->setChecked(mw->rememberLastDir);
     ui->maxRecentSB->setValue(mw->maxRecentFolders);
+
     // thumbs
     ui->iconWidthSlider->setValue(mw->thumbView->thumbWidth);
     ui->iconHeightSlider->setValue(mw->thumbView->thumbHeight);
@@ -26,6 +28,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->fontSizeSlider->setValue(mw->thumbView->labelFontSize);
     ui->showThumbLabelChk->setChecked(mw->thumbView->showThumbLabels);
     ui->lockDimChk->setChecked(true);
+
     // thumbsGrid
     ui->iconWidthSlider_2->setValue(mw->thumbView->thumbWidthGrid);
     ui->iconHeightSlider_2->setValue(mw->thumbView->thumbHeightGrid);
@@ -34,14 +37,17 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->fontSizeSlider_2->setValue(mw->thumbView->labelFontSizeGrid);
     ui->showThumbLabelChk_2->setChecked(mw->thumbView->showThumbLabelsGrid);
     ui->lockDimChk_2->setChecked(true);
+
     // thumb dock
     ui->wrapThumbsChk->setChecked(mw->thumbView->isThumbWrapWhenTopOrBottomDock);
     ui->autoFitChk->setChecked(mw->thumbView->isAutoFit);
     ui->autoFit2Chk->setChecked(mw->thumbView->isAutoFit);
     ui->vertTitleChk->setChecked(mw->isThumbDockVerticalTitle);
+
     // slideshow
     ui->slideshowDelaySpinbox->setValue(mw->slideShowDelay);
     ui->slideshowRandomChk->setChecked(mw->slideShowRandom);
+
     // cache
     ui->cacheSizeSpinbox->setValue(mw->cacheSizeMB);
     ui->showCacheStatusChk->setChecked(mw->isShowCacheStatus);
@@ -58,6 +64,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->cachePreviewsChk->setChecked(mw->isCachePreview);
     ui->previewWidthSB->setValue(mw->cachePreviewWidth);
     ui->previewHeightSB->setValue(mw->cachePreviewHeight);
+
     // full screen
     ui->foldersChk->setChecked(mw->fullScreenDocks.isFolders);
     ui->favsChk->setChecked(mw->fullScreenDocks.isFavs);

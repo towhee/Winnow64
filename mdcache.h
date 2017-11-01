@@ -8,7 +8,7 @@
 #include <QSize>
 #include <QThread>
 #include <QWaitCondition>
-#include "thumbview.h"
+#include "datamodel.h"
 #include "metadata.h"
 
 
@@ -17,7 +17,7 @@ class MetadataCache : public QThread
     Q_OBJECT
 
 public:
-    MetadataCache(QObject *parent, ThumbView *thumbView,
+    MetadataCache(QObject *parent, DataModel *dm,
                   Metadata *metadata);
     ~MetadataCache();
     void loadMetadataCache();
@@ -38,7 +38,7 @@ private:
     QMutex mutex;
     QWaitCondition condition;
     bool abort;
-    ThumbView *thumbView;
+    DataModel *dm;
     Metadata *metadata;
 
     void track(QString fPath, QString msg);
