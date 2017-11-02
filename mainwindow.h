@@ -161,6 +161,7 @@ public slots:
     void showCacheStatus(const QImage &imCacheStatus);
     void setThumbDockFeatures(Qt::DockWidgetArea area);
     void setThumbDockFloatFeatures(bool isFloat);
+    void reindexImageCache();
 
 signals:
 
@@ -195,6 +196,7 @@ private slots:
     void loadMetadataCache();
     void loadThumbCache();
     void loadImageCache();
+    void loadFilteredImageCache();
     void addNewBookmark();
     void reportMetadata();
     void checkDirState(const QModelIndex &, int, int);

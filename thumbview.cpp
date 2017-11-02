@@ -533,8 +533,6 @@ void ThumbView::sortThumbs(int sortColumn, bool isReverse)
     else dm->sf->sort(sortColumn, Qt::AscendingOrder);
 
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
-    dm->updateImageList();      // req'd to reindex image cache after re-sort
-//    refreshThumbs();
 }
 
 QStringList ThumbView::getSelectedThumbsList()
@@ -616,8 +614,7 @@ void ThumbView::selectThumb(QString &fName)
     qDebug() << "ThumbView::selectThumb(filename)";
     #endif
     }
-    QModelIndexList idxList =
-    dm->match(dm->index(0, 0), G::FileNameRole, fName);
+    QModelIndexList idxList = dm->match(dm->index(0, 0), G::FileNameRole, fName);
     QModelIndex idx = idxList[0];
     thumbViewDelegate->currentIndex = idx;
     QItemSelection selection(idx, idx);
@@ -893,13 +890,13 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
 //        int maxThumbsBeforeScrollReqd = viewportWidth / thumbSpaceWidth;
 
 
-        qDebug() << "\nThumbView::thumbsFit else\n"
-                 << "***  thumbView Ht =" << ht
-                 << "thumbSpace Ht =" << thumbSpaceHeight
-                 << "thumbHeight =" << thumbHeight
-                 << "viewport Wd =" << thumbDockWidth
-                 << "thumbSpace Wd =" << thumbCellWidth
-                 << "Max thumbs before scroll =" << maxThumbsBeforeScrollReqd;
+//        qDebug() << "\nThumbView::thumbsFit else\n"
+//                 << "***  thumbView Ht =" << ht
+//                 << "thumbSpace Ht =" << thumbSpaceHeight
+//                 << "thumbHeight =" << thumbHeight
+//                 << "viewport Wd =" << thumbDockWidth
+//                 << "thumbSpace Wd =" << thumbCellWidth
+//                 << "Max thumbs before scroll =" << maxThumbsBeforeScrollReqd;
 
         // change the thumbnail size in thumbViewDelegate
         setThumbParameters();

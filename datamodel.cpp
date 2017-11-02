@@ -3,6 +3,40 @@
 DataModel::DataModel(QWidget *parent, Metadata *metadata, Filters *filters) : QStandardItemModel(parent)
 {
 /*
+The datamodel (dm thoughout app) contains information about each eligible image
+file in the selected folder (and optionally the subfolder heirarchy).  Eligible
+image files, defined in the metadata class, are files Winnow knows how to decode.
+
+The data is structured in columns:
+
+● Path:             from QFileInfoList  ToolTipRole + G::ThumbRectRole (icon)
+● File name:        from QFileInfoList
+● File type:        from QFileInfoList  EditRole
+● File size:        from QFileInfoList  EditRole
+● File created:     from QFileInfoList  EditRole
+● File modified:    from QFileInfoList  EditRole
+● Picked:           user edited         EditRole
+● Rating:           user edited         EditRole
+● Label:            user edited         EditRole
+● MegaPixels:       from metadata       EditRole
+● Dimensions:       from metadata       EditRole
+● Aperture:         from metadata       EditRole
+● ShutterSpeed:     from metadata       EditRole
+● ISO:              from metadata       EditRole
+● CameraModel:      from metadata       EditRole
+● FocalLength:      from metadata       EditRole
+● Title:            from metadata       EditRole
+
+A QSortFilterProxyModel (SortFilter) is used by ThumbView, TableView,
+CompareView and ImageView (sf thoughout the app).
+
+Sorting is applied both from the menu and by clicking TableView headers.  When
+sorting occurs all views are updated and the image cache is reindexed.
+
+Filtering is applied from Filters, a QTreeWidget with checkable items for a
+number of datamodel columns.  Filtering also updates all views and the image
+cache is reloaded.
+
 */
     {
     #ifdef ISDEBUG
@@ -35,8 +69,9 @@ DataModel::DataModel(QWidget *parent, Metadata *metadata, Filters *filters) : QS
     sf = new SortFilter(this, filters);
     sf->setSourceModel(this);
 
+    // root folder containing images to be added to the data model
     dir = new QDir();
-    fileFilters = new QStringList;
+    fileFilters = new QStringList;          // eligible image file types
     emptyImg.load(":/images/no_image.png");
 
     // changing filters triggers a refiltering
@@ -48,7 +83,8 @@ bool DataModel::load(QString &folderPath, bool includeSubfolders)
 {
 /* When a new folder is selected load it into the data model.  This clears the
 model and populates the data model with all the cached thumbnail pixmaps from
-thumbCache.
+thumbCache.  If load subfolders has been chosen then the entire subfolder
+heirarchy is loaded.
 */
     {
     #ifdef ISDEBUG
@@ -72,10 +108,10 @@ thumbCache.
     // clear all items for filters based on data content ie file types, camera model
     filters->removeChildrenDynamicFilters();
 
-    // exit if no images, otherwise get file info
+    // exit if no images, otherwise get file info and add to model
     if (!addFiles() && !includeSubfolders) return false;
 
-        if (includeSubfolders) {
+    if (includeSubfolders) {
         qDebug() << "DataModel::load including subfolders";
         QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
         while (it.hasNext()) {
@@ -89,12 +125,8 @@ thumbCache.
     }
 
     // if images were found and added to data model
-    if (rowCount()) {
-//        selectThumb(0);
-        return true;
-    }
-    // else
-    return false;   // no images found in any folder
+    if (rowCount()) return true;
+    else return false;
 }
 
 bool DataModel::addFiles()
@@ -111,6 +143,8 @@ bool DataModel::addFiles()
     static QPixmap emptyPixMap;
     QMap<QVariant, QString> typesMap;
 
+    imageFilePathList.clear();
+
     // rgh not working
     emptyPixMap = QPixmap::fromImage(emptyImg).scaled(160, 160);
 
@@ -119,6 +153,7 @@ bool DataModel::addFiles()
         // get file info
         fileInfo = dir->entryInfoList().at(fileIndex);
         fileInfoList.append(fileInfo);
+        imageFilePathList.append(fileInfo.absoluteFilePath());
 //        QString fPath = fileInfo.filePath();
 
 //        qDebug() << "building data model"
@@ -185,10 +220,7 @@ bool DataModel::addFiles()
 
 //        qDebug() << "Row =" << row << fPath;
     }
-//    sortThumbs(NameColumn, false);
     filters->addCategoryFromData(typesMap, filters->types);
-
-    updateImageList();
     return true;
 }
 
@@ -282,7 +314,14 @@ SortFilter::SortFilter(QObject *parent, Filters *filters) : QSortFilterProxyMode
 
 bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
-//    return true;
+/*
+The QTreeWidget filters is used to match checked filter items with the proper
+column in data model.  The top level items in the QTreeWidget are referred to
+as categories, and each category has one or more filter items.  Categories
+map to columns in the data model ie Picked, Rating, Label ...
+*/
+    if (!G::isNewFolderLoaded) return true;
+
     static int counter = 0;
     counter++;
 //    qDebug() << "Filtering" << counter;
@@ -291,9 +330,11 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     int dataModelColumn;
     bool isMatch = true;                   // overall match
     bool isCategoryUnchecked = true;
-    QTreeWidgetItemIterator it(filters);
-    while (*it) {
-        if ((*it)->parent()) {
+
+    // cycle through the filters and identify matches
+    QTreeWidgetItemIterator filter(filters);
+    while (*filter) {
+        if ((*filter)->parent()) {
             /* There is a parent therefore not a top level item so this is one
             of the items to match ie rating = one. If the item has been checked
             then compare the checked filter item to the data in the
@@ -301,13 +342,13 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
             If it does not match them isMatch is still false but the row could
             still be accepted if another item in the same category does match.
             */
-//            QString itemName = (*it)->text(0);      // for debugging
+//            QString itemName = (*filter)->text(0);      // for debugging
 
-            if ((*it)->checkState(0) != Qt::Unchecked) {
+            if ((*filter)->checkState(0) != Qt::Unchecked) {
                 isCategoryUnchecked = false;
                 QModelIndex idx = sourceModel()->index(sourceRow, dataModelColumn, sourceParent);
                 QVariant dataValue = idx.data(Qt::EditRole);
-                QVariant filterValue = (*it)->data(1, Qt::EditRole);
+                QVariant filterValue = (*filter)->data(1, Qt::EditRole);
 
 //                qDebug() << itemCategory << itemName
 //                         << "Comparing" << dataValue << filterValue << (dataValue == filterValue);
@@ -326,22 +367,34 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
             or one checked item matches the data then the row is okay to show
             */
             // the top level items contain reference to the data model column
-            dataModelColumn = (*it)->data(0, G::ColumnRole).toInt();
+            dataModelColumn = (*filter)->data(0, G::ColumnRole).toInt();
             isCategoryUnchecked = true;
             isMatch = false;
-//            itemCategory = (*it)->text(0);      // for debugging
+//            itemCategory = (*filter)->text(0);      // for debugging
         }
-        ++it;
+        ++filter;
     }
     // check results of category items filter match for the last group
     if (isCategoryUnchecked) isMatch = true;
-//    qDebug() << "After iteration  isMatch =" << isMatch;
+
+    qDebug() << "SortFilter::filterAcceptsRow After iteration  isMatch =" << isMatch;
 
     return isMatch;
 }
 
 void SortFilter::filterChanged(QTreeWidgetItem* x, int col)
 {
+/*
+This slot is called when data changes in the filters widget.  The proxy (this)
+is invalidated, which forces an update.  This happens with every change in the
+filters widget including when the filters are being created in the filter
+widget.
+
+If the new folder has been loaded and there are user driven changes to the
+filtration then the image cache needs to be reloaded to match the new proxy (sf)
+*/
     this->invalidateFilter();
+//    qDebug() << "filterChanged" << x << "column" << col << "isFinished" << G::isNewFolderLoaded;
+    if (G::isNewFolderLoaded) emit reloadImageCache();
 }
 

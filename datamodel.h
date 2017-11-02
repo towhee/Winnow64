@@ -17,11 +17,17 @@ public:
 public slots:
     void filterChanged(QTreeWidgetItem* x, int col);
 
+private slots:
+
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
 
+signals:
+    void reloadImageCache();
+
 private:
     Filters *filters;
+    bool isFinished;
 };
 
 class DataModel : public QStandardItemModel

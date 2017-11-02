@@ -21,10 +21,10 @@ public:
     ImageCache(QObject *parent, Metadata *metadata);
     ~ImageCache();
 
-    void initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
+    void initImageCache(QStringList &imageList, int &cacheSizeMB,
              bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead,
              bool &usePreview, int &previewWidth, int &previewHeight);
-    void updateImageCache(QFileInfoList &imageList, QString  &currentImageFullPath);
+    void updateImageCache(QString  &currentImageFullPath);
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
              int &cacheStatusWidth, int &cacheWtAhead, bool &usePreview,
              int &previewWidth, int &previewHeight);

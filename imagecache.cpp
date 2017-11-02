@@ -490,7 +490,7 @@ void ImageCache::reportCacheManager(QString title)
              <<  "cacheMB:" << cache.currMB
              << "Wt:" << cache.wtAhead
              << "Total files:" << cache.totFiles;
-    qDebug() << "\nIndex      Key     OrigKey     Priority     Target     Cached       SizeMB    Width      Height      FName";
+    qDebug() << "\nIndex      Key      OrigKey    Priority         Target      Cached         SizeMB    Width      Height         FName";
     for (int i=0; i<cache.totFiles; ++i) {
         qDebug() << i << "\t"
                  << cacheMgr.at(i).key << "\t"
@@ -539,7 +539,7 @@ int ImageCache::pxEnd(int key)
     return qRound((float)cache.pxUnitWidth * (key+1));
 }
 
-void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
+void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
      bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead,
      bool &usePreview, int &previewWidth, int &previewHeight)
 {
@@ -549,6 +549,8 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     #endif
     }
 
+    G::isNewFolderLoaded = true;
+
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
 
@@ -556,10 +558,10 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     change if inclSubFolders is changed or images have been added or removed
     from the folder(s) */
 
-    if (imageList.at(0).absolutePath() == cache.dir) {
-//        qDebug() << "cacheMgr.size" << cacheMgr.size() << "folder now size" << imageList.size();
-        if (cacheMgr.size() == imageList.size()) return;
-    }
+//    if (imageList.at(0) == cache.dir) {
+////        qDebug() << "cacheMgr.size" << cacheMgr.size() << "folder now size" << imageList.size();
+//        if (cacheMgr.size() == imageList.size()) return;
+//    }
 
     imCache.clear();
     cacheMgr.clear();
@@ -581,26 +583,21 @@ void ImageCache::initImageCache(QFileInfoList &imageList, int &cacheSizeMB,
     cache.targetFirst = 0;
     cache.targetLast = 0;
     cache.totFiles = imageList.size();
-    cache.dir = imageList.at(0).absolutePath();
+    cache.dir = imageList.at(0);
     cache.previewSize = QSize(previewWidth, previewHeight);
     cache.usePreview = usePreview;
-
-//    qDebug() << "usePreview, preview width, height" << cache.usePreview << cache.monitorPreview;
-
-//    qDebug() << "\n###### Initializing image cache for " << cache.dir << "######";
-
     // the total memory size of all the images in the folder currently selected
     float folderMB = 0;
     // get some intel on the new folder image list
     for (int i=0; i < imageList.size(); ++i) {
-        QFileInfo fileInfo = imageList.at(i);
-        QString fPath = fileInfo.absoluteFilePath();
+        QString fPath = imageList.at(i);
 //        qDebug() << "Image Cache row =" << i << fPath;
         /* cacheManager is a list of cacheItem used to track the current
            cache status and make future caching decisions for each image  */
         cacheItem.key = i;              // need to be able to sync with imageList
         cacheItem.origKey = i;          // req'd while setting target range
-        cacheItem.fName = fileInfo.absoluteFilePath();
+        cacheItem.fName = fPath;
+//        cacheItem.fName = fileInfo.absoluteFilePath();
         cacheItem.isCached = false;
         cacheItem.isTarget = false;
         cacheItem.priority = i;
@@ -637,9 +634,10 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus
 
 
 
-void ImageCache::updateImageCache(QFileInfoList &imageList, QString &currentImageFullPath)
+void ImageCache::updateImageCache(QString &currentImageFullPath)
 {
-/* Updates the cache for the current image in the data model.  The cache key is
+/*
+Updates the cache for the current image in the data model.  The cache key is
 set, forward or backward progress is determined and the target range is
 updated.  Image caching is reactivated.
 */
@@ -677,8 +675,9 @@ updated.  Image caching is reactivated.
 void ImageCache::reindexImageCache(QStringList filterFilePathList,
                                    QString &currentImageFullPath)
 {
-/* The cacheMgr is rebuilt to mirror the current sorting and filtering in
-SortFilter (dm->sf).
+/*
+The cacheMgr is rebuilt to mirror the current sorting in SortFilter (dm->sf).
+If there is filtering then the entire cache is reloaded.
 */
     {
     #ifdef ISDEBUG
@@ -692,21 +691,20 @@ SortFilter (dm->sf).
     cacheMgr.clear();
 
     int filterRowCount = filterFilePathList.count();
-//    qDebug() << "filterRowCount" << filterRowCount;
+
+//    qDebug() << "reindexImageCache - filterFilePathList" << filterFilePathList;
 //    qDebug() << "cache.totFiles" << cache.totFiles;
     int i;
     for(int row = 0; row < filterRowCount; ++row) {
-//        qDebug() << "row" << row;
+        qDebug() << "row" << row;
         if(filterFilePathList[row] == currentImageFullPath) cache.key = row;
-        for (i = 0; i<cache.totFiles; ++i) {
-//            qDebug() << "i" << i
-//                     << cacheMgrCopy.at(i).fName
-//                     << filterFilePathList[row]
-//                     << currentImageFullPath;
-            if(i > filterRowCount) break;
-            if(cacheMgrCopy.at(i).fName == filterFilePathList[row]) {
-                break;
-            }
+        for (i = 0; i < cache.totFiles; ++i) {
+            qDebug() << "i" << i
+                     << cacheMgrCopy.at(i).fName
+                     << filterFilePathList[row]
+                     << currentImageFullPath;
+//            if(i >= filterRowCount) break;
+            if(cacheMgrCopy.at(i).fName == filterFilePathList[row]) break;
         }
         cacheItem.fName = filterFilePathList[row];
         cacheItem.isCached = cacheMgrCopy.at(i).isCached;
@@ -715,8 +713,8 @@ SortFilter (dm->sf).
         cacheItem.origKey = cacheMgrCopy.at(i).origKey;
         cacheItem.priority = cacheMgrCopy.at(i).priority;
         cacheItem.sizeMB = cacheMgrCopy.at(i).sizeMB;
+
         cacheMgr.append(cacheItem);
-//        qDebug() << "End loop for row" << row;
     }
 
 //    qDebug() << "\nIndex      Key     OrigKey     Priority         Target     Cached          SizeMB    Width      Height        FName";
@@ -735,7 +733,12 @@ SortFilter (dm->sf).
 
     cacheMgrCopy.clear();
 
+    cache.totFiles = filterRowCount;
+    cache.pxUnitWidth = (float)cache.pxTotWidth/filterRowCount;
+
     cacheStatus();
+
+    reportCacheManager("Test");
 //    qDebug() << "cache.key" << cache.key;
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();

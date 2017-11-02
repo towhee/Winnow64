@@ -2,15 +2,14 @@
 
 Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 {
-/*  This tree widget is loaded in a QDockWidget.  It contains top level items
-(Categories ie Ratings, Color Classes, File types ...).  For each top level item
-the children are the filter choices to filter treeview->treeViewFilter.  The
+/* This tree widget is loaded in a QDockWidget. It contains top level items
+(Categories ie Ratings, Color Classes, File types ...). For each top level item
+the children are the filter choices to filter DataModel->Proxy (dm->sf). The
 categories are divided into predefined (Picks, Ratings and Color Classes) and
-dynamic categories based on existing metadata (File types, Camera Models,
-Focal Lengths and Titles).  The dynamic filter options are populated by
-thumbView when folder data is loaded by addFolderImageDataToModel and
-addMetadataToModel.  The actual filtering is executed in SortFilter subclass of
-QSortFilterProxy (sf) in datamodel.
+dynamic categories based on existing metadata (File types, Camera Models, Focal
+Lengths and Titles). The dynamic filter options are populated by DataModel when
+folder data is loaded by addFiles and addMetadata. The actual filtering is
+executed in SortFilter subclass of QSortFilterProxy (sf) in datamodel.
 */
     {
     #ifdef ISDEBUG
@@ -37,8 +36,6 @@ QSortFilterProxy (sf) in datamodel.
     createDynamicFilters();
 
     setStyleSheet("QTreeView::item { height: 18px;}");
-
-//    this->expandAll();
 }
 
 void Filters::createPredefinedFilters()

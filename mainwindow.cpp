@@ -184,11 +184,11 @@ thumbdock is resized by the user when:
             QResizeEvent *resizeEvent = static_cast<QResizeEvent*>(event);
             int newHt = resizeEvent->size().height();
             if (newHt != oldHt) {
-                qDebug() << "\nMW::eventFilter dock area\n"
-                         << "***  thumbView Ht =" << thumbView->height()
-                         << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-                         << "thumbHeight =" << thumbView->thumbHeight << "\n"
-                         << "thumbDock Ht =" << thumbDock->height();
+//                qDebug() << "\nMW::eventFilter dock area\n"
+//                         << "***  thumbView Ht =" << thumbView->height()
+//                         << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+//                         << "thumbHeight =" << thumbView->thumbHeight << "\n"
+//                         << "thumbDock Ht =" << thumbDock->height();
                  thumbView->thumbsFit(dockWidgetArea(thumbDock));
                  oldHt = newHt;
              }
@@ -318,6 +318,8 @@ void MW::folderSelectionChange()
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
 
+    G::isNewFolderLoaded = false;
+
 //    qDebug() << "STOPPED THREADS";
 
 //    thumbView->thumbViewModel->clear();
@@ -396,8 +398,7 @@ void MW::folderSelectionChange()
         return;
     }
     thumbView->selectThumb(0);
-    sortThumbnails();
-    dm->updateImageList();
+    thumbView->sortThumbs(1, false);
 
      /* Must load metadata first, as it contains the file offsets and lengths
      for the thumbnail and full size embedded jpgs and the image width and
@@ -455,14 +456,14 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // recalculating the target images to cache, decaching and caching to keep
     // the cache up-to-date with the current image selection.
     if (metadataLoaded) {
-        imageCacheThread->updateImageCache(dm->fileInfoList, fPath);
+        imageCacheThread->updateImageCache(fPath);
     }
 
     // if top/bottom dock resize dock height if scrollbar is/not visible
-    qDebug() << "\nMW::fileSelectionChange\n"
-             << "***  thumbView Ht =" << thumbView->height()
-             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+//    qDebug() << "\nMW::fileSelectionChange\n"
+//             << "***  thumbView Ht =" << thumbView->height()
+//             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+//             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     setThumbDockFeatures(dockWidgetArea(thumbDock));
 
 //    qDebug() << "thumbView->thumbFileInfoList:";
@@ -525,10 +526,31 @@ cached.
 
     QString fPath = indexesList.first().data(G::FileNameRole).toString();
     // imageChacheThread checks if already running and restarts
-    imageCacheThread->initImageCache(dm->fileInfoList, cacheSizeMB,
+    imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
-    imageCacheThread->updateImageCache(dm->fileInfoList, fPath);
+    imageCacheThread->updateImageCache(fPath);
+}
+
+void MW::loadFilteredImageCache()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::loadFilteredImageCache";
+    #endif
+    }
+    qDebug() << "MW::loadFilteredImageCache";
+    QModelIndex idx = thumbView->currentIndex();
+    QString fPath = idx.data(G::FileNameRole).toString();
+    thumbView->selectThumb(idx);
+
+    dm->updateImageList();
+
+    // imageChacheThread checks if already running and restarts
+    imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
+        isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
+        cachePreviewWidth, cachePreviewHeight);
+    imageCacheThread->updateImageCache(fPath);
 }
 
 // called by signal itemClicked in bookmark
@@ -1613,6 +1635,8 @@ void MW::createDataModel()
     metadata = new Metadata;
 
     dm = new DataModel(this, metadata, filters);
+
+    connect(dm->sf, SIGNAL(reloadImageCache()), this, SLOT(loadFilteredImageCache()));
 }
 
 void MW::createThumbView()
@@ -1824,7 +1848,7 @@ void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
     imageCacheThread->updateImageCacheParam(size, show, width, wtAhead,
              usePreview, previewWidth, previewHeight);
     QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
-    imageCacheThread->updateImageCache(dm->fileInfoList, fPath);
+    imageCacheThread->updateImageCache(fPath);
 }
 
 void MW::updateStatus(bool keepBase, QString s)
@@ -1988,6 +2012,30 @@ void MW::createBookmarks()
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
 }
 
+void MW::reindexImageCache()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::reindexImageCache";
+    #endif
+    }
+    qDebug() << "ThumbView::reindexImageCache";
+    int sfRowCount = dm->sf->rowCount();
+    if (!sfRowCount) return;
+    dm->updateImageList();
+    QModelIndex idx = thumbView->currentIndex();
+    QString currentFilePath = idx.data(G::FileNameRole).toString();
+    qDebug() << "reindexImageCache current" << currentFilePath;
+    if(!dm->imageFilePathList.contains(currentFilePath)) {
+        idx = dm->sf->index(0, 0);
+        currentFilePath = idx.data(G::FileNameRole).toString();
+        qDebug() << "reindexImageCache updated" << currentFilePath;
+    }
+//    QString currentFileName = dm->sf->index(0, 1).data(Qt::EditRole).toString();
+    thumbView->selectThumb(idx);
+    imageCacheThread->reindexImageCache(dm->imageFilePathList, currentFilePath);
+}
+
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 {
 /* This slot function is triggered by the tableView->horizontalHeader
@@ -2025,9 +2073,7 @@ tableView.
     if(sortOrder == Qt::DescendingOrder) sortReverseAction->setChecked(true);
     else sortReverseAction->setChecked(false);
     sortMenuUpdateToMatchTable = false;
-    dm->updateImageList();
-    QString currentFilePath = thumbView->currentIndex().data(G::FileNameRole).toString();
-    imageCacheThread->reindexImageCache(dm->imageFilePathList, currentFilePath);
+    reindexImageCache();
 }
 
 void MW::sortThumbnails()
@@ -2059,6 +2105,7 @@ void MW::sortThumbnails()
     if (sortTitleAction->isChecked()) sortColumn = G::TitleColumn;
 
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
+    reindexImageCache();
 }
 
 void MW::showHiddenFiles()
@@ -3881,16 +3928,16 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
             thumbView->setMaximumHeight(maxHt);
             thumbView->setMinimumHeight(minHt);
 
-            qDebug() << "maxHt, minHt, newThumbDockHeight" << maxHt << minHt << newThumbDockHeight;
+//            qDebug() << "maxHt, minHt, newThumbDockHeight" << maxHt << minHt << newThumbDockHeight;
 
             resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
 
-            qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
-                     << "***  thumbView Ht =" << thumbView->height()
-                     << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-                     << "thumbHeight =" << thumbView->thumbHeight
-                     << "newThumbDockHeight" << newThumbDockHeight
-                     << "scrollBarHeight =" << scrollBarHeight << isScrollBar;
+//            qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
+//                     << "***  thumbView Ht =" << thumbView->height()
+//                     << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+//                     << "thumbHeight =" << thumbView->thumbHeight
+//                     << "newThumbDockHeight" << newThumbDockHeight
+//                     << "scrollBarHeight =" << scrollBarHeight << isScrollBar;
         }
     }
     else {
