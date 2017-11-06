@@ -111,8 +111,10 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     setViewMode(QListView::IconMode);
 
     setSelectionMode(QAbstractItemView::ExtendedSelection);
+    setTabKeyNavigation(true);  // not working
     setResizeMode(QListView::Adjust);
     setLayoutMode(QListView::Batched);
+    setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
 //    setBatchSize(2);
     setWordWrap(true);
     setDragEnabled(true);
@@ -135,6 +137,17 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     connect(this->selectionModel(),
             SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
             parent, SLOT(fileSelectionChange()));
+
+    // triggers MW::fileSelectionChange
+//    connect(this->selectionModel(),
+//            SIGNAL(currentChanged(QModelIndex,QModelIndex)),
+//            thumbViewDelegate, SLOT(onCurrentChanged(QModelIndex,QModelIndex)));
+
+//    connect(this->selectionModel(),
+//            SIGNAL(currentChanged(QModelIndex,QModelIndex)),
+//            parent, SLOT(fileSelectionChange(QModelIndex,QModelIndex)));
+
+    //    [signal] void QItemSelectionModel::currentChanged(const QModelIndex &current, const QModelIndex &previous)
 
 //    connect(this, SIGNAL(activated(QModelIndex)),
 //            this, SLOT(activate(QModelIndex)));
@@ -231,6 +244,10 @@ Helper function for in class calls where thumb parameters already defined
             thumbPadding, labelFontSize, showThumbLabels);
     }
 //    qDebug() << "ThumbView::setThumbParameters isGrid:" << isGrid;
+    // if top/bottom dock resize dock height if scrollbar is/not visible
+
+    qDebug() << "emitting updateThumbDock";
+    emit updateThumbDock();
 }
 
 void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
@@ -585,7 +602,7 @@ void ThumbView::selectThumb(QModelIndex idx)
     if (idx.isValid()) {
         setCurrentIndex(idx);
 //        qDebug() << "Row =" << idx.row();
-        thumbViewDelegate->currentIndex = idx;
+//        thumbViewDelegate->currentIndex = idx;
         scrollTo(idx, ScrollHint::PositionAtCenter);
     }
 }
@@ -603,7 +620,7 @@ void ThumbView::selectThumb(int row)
     QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
 //    qDebug() << idx;
     setCurrentIndex(idx);
-    thumbViewDelegate->currentIndex = idx;
+//    thumbViewDelegate->currentIndex = idx;
     scrollTo(idx, ScrollHint::PositionAtCenter);
 }
 
@@ -616,7 +633,7 @@ void ThumbView::selectThumb(QString &fName)
     }
     QModelIndexList idxList = dm->match(dm->index(0, 0), G::FileNameRole, fName);
     QModelIndex idx = idxList[0];
-    thumbViewDelegate->currentIndex = idx;
+//    thumbViewDelegate->currentIndex = idx;
     QItemSelection selection(idx, idx);
     thumbViewSelection->select(selection, QItemSelectionModel::Select);
     if (idx.isValid()) scrollTo(idx, ScrollHint::PositionAtCenter);
@@ -968,24 +985,26 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     qDebug() << "ThumbView::mousePressEvent";
     #endif
     }
+    beforeSelectionExtensionIndex = currentIndex();
     QListView::mousePressEvent(event);
-    QModelIndex idx = currentIndex();
-    qDebug() << "Row =" << idx.row();
-    QRect iconRect = idx.data(G::ThumbRectRole).toRect();
-    QPoint mousePt = event->pos();
-    QPoint iconPt = mousePt - iconRect.topLeft();
-    float xPct = (float)iconPt.x() / iconRect.width();
-    float yPct = (float)iconPt.y() / iconRect.height();
-/*    qDebug() << "ThumbView::mousePressEvent"
-             << "xPct =" << xPct
-             << "yPct =" << yPct
-             << "iconRect =" << iconRect
-             << "idx =" << idx;
-             */
-    if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
-        thumbClick(xPct, yPct);    //signal used in ThumbView::mousePressEvent
+    if (event->modifiers() == Qt::NoModifier) {
+        QModelIndex idx = currentIndex();
+        qDebug() << "Row =" << idx.row();
+        QRect iconRect = idx.data(G::ThumbRectRole).toRect();
+        QPoint mousePt = event->pos();
+        QPoint iconPt = mousePt - iconRect.topLeft();
+        float xPct = (float)iconPt.x() / iconRect.width();
+        float yPct = (float)iconPt.y() / iconRect.height();
+        /*qDebug() << "ThumbView::mousePressEvent"
+                 << "xPct =" << xPct
+                 << "yPct =" << yPct
+                 << "iconRect =" << iconRect
+                 << "idx =" << idx;
+                 */
+        if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
+            thumbClick(xPct, yPct);    //signal used in ThumbView::mousePressEvent
+        }
     }
-//    reportThumb();
 }
 
 void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)

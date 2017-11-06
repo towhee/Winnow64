@@ -37,6 +37,8 @@ public:
     bool isFloat;       // set by MW ...
     bool isAutoFit;
 
+    QModelIndex beforeSelectionExtensionIndex;
+
     void updateLayout();
 
     ThumbViewDelegate *thumbViewDelegate;
@@ -137,6 +139,7 @@ signals:
     void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent
     void displayLoupe();
     void updateStatus(bool, QString);
+    void updateThumbDock();
 };
 
 #endif // THUMBVIEW_H

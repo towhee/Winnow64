@@ -74,6 +74,9 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
     pickLabel->setVisible(false);
 
+    editsLabel = new CircleLabel(this);
+    editsLabel->setVisible(false);
+
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
     infoEffect->setOpacity(0.8);
 //    infoLabel->setGraphicsEffect(infoEffect);
@@ -390,10 +393,12 @@ to a percentage to be used to match position in the next image if zoomed.
 
 void ImageView::movePickIcon()
 {
-/* The bright green thumbsUp pixmap shows the pick status for the current
-image. This function locates the pixmap in the bottom corner of the image label
-as the image is resized and zoomed, adjusting for the aspect ratio of the
-image and size.*/
+/*
+The bright green thumbsUp pixmap shows the pick status for the current image.
+This function locates the pixmap in the bottom corner of the image label as the
+image is resized and zoomed, adjusting for the aspect ratio of the image and
+size.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ImageView::movePickIcon";
@@ -442,6 +447,7 @@ image and size.*/
     pickLabel->setPixmap(pickPixmap->scaled(d, d, Qt::KeepAspectRatio));
 
     pickLabel->move(x, y);
+    editsLabel->move(x + p.w - offset - d, y + p.h - offset - 0.20 * d);
 }
 
 void ImageView::resizeEvent(QResizeEvent *event)

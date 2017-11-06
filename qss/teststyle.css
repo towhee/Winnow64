@@ -165,7 +165,8 @@ QTableView
     gridline-color: rgb(75,75,75);
     color: rgb(190,190,190);
     selection-color: rgb(190,190,190);
-    selection-background-color: rgb(45,45,45);;
+    selection-background-color: rgb(45,45,45);
+    border: none;
 }
 
 QHeaderView

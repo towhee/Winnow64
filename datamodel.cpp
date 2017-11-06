@@ -9,23 +9,26 @@ image files, defined in the metadata class, are files Winnow knows how to decode
 
 The data is structured in columns:
 
-● Path:             from QFileInfoList  ToolTipRole + G::ThumbRectRole (icon)
-● File name:        from QFileInfoList
-● File type:        from QFileInfoList  EditRole
-● File size:        from QFileInfoList  EditRole
-● File created:     from QFileInfoList  EditRole
-● File modified:    from QFileInfoList  EditRole
-● Picked:           user edited         EditRole
-● Rating:           user edited         EditRole
-● Label:            user edited         EditRole
-● MegaPixels:       from metadata       EditRole
-● Dimensions:       from metadata       EditRole
-● Aperture:         from metadata       EditRole
-● ShutterSpeed:     from metadata       EditRole
-● ISO:              from metadata       EditRole
-● CameraModel:      from metadata       EditRole
-● FocalLength:      from metadata       EditRole
-● Title:            from metadata       EditRole
+    ● Path:             from QFileInfoList  ToolTipRole + G::ThumbRectRole (icon)
+    ● File name:        from QFileInfoList
+    ● File type:        from QFileInfoList  EditRole
+    ● File size:        from QFileInfoList  EditRole
+    ● File created:     from QFileInfoList  EditRole
+    ● File modified:    from QFileInfoList  EditRole
+    ● Picked:           user edited         EditRole
+    ● Rating:           user edited         EditRole
+    ● Label:            user edited         EditRole
+    ● MegaPixels:       from metadata       EditRole
+    ● Dimensions:       from metadata       EditRole
+    ● Aperture:         from metadata       EditRole
+    ● ShutterSpeed:     from metadata       EditRole
+    ● ISO:              from metadata       EditRole
+    ● CameraModel:      from metadata       EditRole
+    ● FocalLength:      from metadata       EditRole
+    ● Title:            from metadata       EditRole
+
+Note that more items such as the file offsets to embedded JPG are stored in
+the metadata structure which is indexed by the file path.
 
 A QSortFilterProxyModel (SortFilter) is used by ThumbView, TableView,
 CompareView and ImageView (sf thoughout the app).
@@ -36,6 +39,8 @@ sorting occurs all views are updated and the image cache is reindexed.
 Filtering is applied from Filters, a QTreeWidget with checkable items for a
 number of datamodel columns.  Filtering also updates all views and the image
 cache is reloaded.
+
+enum for roles and columns are in global.cpp
 
 */
     {
@@ -55,7 +60,7 @@ cache is reloaded.
     setHorizontalHeaderItem(G::CreatedColumn, new QStandardItem("Created"));
     setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified"));
     setHorizontalHeaderItem(G::PickedColumn, new QStandardItem("Pick"));
-    setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Label"));
+    setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("   Label   "));
     setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating"));
     setHorizontalHeaderItem(G::MegaPixelsColumn, new QStandardItem("MPix"));
     setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions"));
@@ -81,7 +86,8 @@ cache is reloaded.
 
 bool DataModel::load(QString &folderPath, bool includeSubfolders)
 {
-/* When a new folder is selected load it into the data model.  This clears the
+/*
+When a new folder is selected load it into the data model.  This clears the
 model and populates the data model with all the cached thumbnail pixmaps from
 thumbCache.  If load subfolders has been chosen then the entire subfolder
 heirarchy is loaded.
@@ -136,6 +142,9 @@ bool DataModel::addFiles()
     qDebug() << "ThumbView::addFiles";
     #endif
     }
+    QElapsedTimer t;
+    t.start();
+
     if (dir->entryInfoList().size() == 0) return false;
 
     static QStandardItem *item;
@@ -201,7 +210,7 @@ bool DataModel::addFiles()
         setItem(row, G::ModifiedColumn, item);
 
         item = new QStandardItem();
-        item->setData(false, Qt::DisplayRole);
+        item->setData("false", Qt::EditRole);
         setItem(row, G::PickedColumn, item);
 
         item = new QStandardItem();
@@ -220,13 +229,18 @@ bool DataModel::addFiles()
 
 //        qDebug() << "Row =" << row << fPath;
     }
+
+    qDebug() << "Add files elapsed time =" << t.restart() << "ms for "
+             << dir->entryInfoList().size() << "files";
     filters->addCategoryFromData(typesMap, filters->types);
+    qDebug() << "Add filters elapsed time =" << t.restart();
     return true;
 }
 
 void DataModel::addMetadata()
 {
-/* This function is called after the metadata for all the eligible images in
+/*
+This function is called after the metadata for all the eligible images in
 the selected folder have been cached.  The metadata is displayed in tableView,
 which is created in MW.
 */
@@ -320,6 +334,11 @@ column in data model.  The top level items in the QTreeWidget are referred to
 as categories, and each category has one or more filter items.  Categories
 map to columns in the data model ie Picked, Rating, Label ...
 */
+    {
+//    #ifdef ISDEBUG
+//    qDebug() << "SortFilter::filterAcceptsRow";
+//    #endif
+    }
     if (!G::isNewFolderLoaded) return true;
 
     static int counter = 0;
@@ -342,7 +361,6 @@ map to columns in the data model ie Picked, Rating, Label ...
             If it does not match them isMatch is still false but the row could
             still be accepted if another item in the same category does match.
             */
-//            QString itemName = (*filter)->text(0);      // for debugging
 
             if ((*filter)->checkState(0) != Qt::Unchecked) {
                 isCategoryUnchecked = false;
@@ -350,6 +368,7 @@ map to columns in the data model ie Picked, Rating, Label ...
                 QVariant dataValue = idx.data(Qt::EditRole);
                 QVariant filterValue = (*filter)->data(1, Qt::EditRole);
 
+//                QString itemName = (*filter)->text(0);      // for debugging
 //                qDebug() << itemCategory << itemName
 //                         << "Comparing" << dataValue << filterValue << (dataValue == filterValue);
 
@@ -377,7 +396,7 @@ map to columns in the data model ie Picked, Rating, Label ...
     // check results of category items filter match for the last group
     if (isCategoryUnchecked) isMatch = true;
 
-    qDebug() << "SortFilter::filterAcceptsRow After iteration  isMatch =" << isMatch;
+//    qDebug() << "SortFilter::filterAcceptsRow After iteration  isMatch =" << isMatch;
 
     return isMatch;
 }
@@ -393,6 +412,11 @@ widget.
 If the new folder has been loaded and there are user driven changes to the
 filtration then the image cache needs to be reloaded to match the new proxy (sf)
 */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "SortFilter::filterChanged";
+    #endif
+    }
     this->invalidateFilter();
 //    qDebug() << "filterChanged" << x << "column" << col << "isFinished" << G::isNewFolderLoaded;
     if (G::isNewFolderLoaded) emit reloadImageCache();

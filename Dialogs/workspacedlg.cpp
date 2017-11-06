@@ -11,12 +11,18 @@ WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList, QWidget *parent) :
     ui->setupUi(this);
     this->mainWindow = parent;
 
+    int h = ui->workspaceCB->height() - 8;
     for (int i=0; i < wsList->count(); i++) {
         ui->workspaceCB->addItem(wsList->at(i));
+        ui->workspaceCB->model()->setData( ui->workspaceCB->model()->index(i, 0), QSize(h, h), Qt::SizeHintRole);
 //        qDebug() << "ui->workspaceCB i" << i
 //                 << ui->workspaceCB->currentIndex();
     }
     editMode = true;
+
+    //  this is not working
+//    ui->workspaceCB->setStyleSheet("QComboBox QAbstractItemView::item {border-width: 5px;border-color: white}");
+//    ui->workspaceCB->setStyleSheet("QComboBox QAbstractItemView::item {margin-top: 2px;}");
 }
 
 WorkspaceDlg::~WorkspaceDlg()
@@ -108,11 +114,11 @@ void WorkspaceDlg::report(QString signalName)
 
 void WorkspaceDlg::on_reportLinkButton_clicked()
 {
-    int n = ui->workspaceCB->currentIndex();
-    emit reportWorkspace(n);
+//    int n = ui->workspaceCB->currentIndex();
+//    emit reportWorkspace(n);
 }
 
 void WorkspaceDlg::on_workspaceCB_currentIndexChanged(int index)
 {
-    ui->workspaceIndexLbl->setText(QString::number(index));
+//    ui->workspaceIndexLbl->setText(QString::number(index));
 }

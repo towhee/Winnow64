@@ -54,11 +54,11 @@ void Filters::createPredefinedFilters()
     picks->setBackground(1, categoryBackground);
     picks->setData(0, G::ColumnRole, G::PickedColumn);
     picksFalse = new QTreeWidgetItem(picks);
-    picksFalse->setText(0, "False");
+    picksFalse->setText(0, "");
     picksFalse->setCheckState(0, Qt::Unchecked);
     picksFalse->setData(1, Qt::EditRole, "false");
     picksTrue = new QTreeWidgetItem(picks);
-    picksTrue->setText(0, "True");
+    picksTrue->setText(0, "✓");
     picksTrue->setCheckState(0, Qt::Unchecked);
     picksTrue->setData(1, Qt::EditRole, "true");
 

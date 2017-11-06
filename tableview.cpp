@@ -2,6 +2,15 @@
 
 TableView::TableView(DataModel *dm, ThumbView *thumbView)
 {
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "TableView::TableView";
+    #endif
+    }
+
     this->thumbView = thumbView;
 
     setModel(dm->sf);
@@ -19,6 +28,9 @@ TableView::TableView(DataModel *dm, ThumbView *thumbView)
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setDefaultSectionSize(24);
     setSelectionModel(thumbView->thumbViewSelection);
+
+    PickItemDelegate *pickItemDelegate = new PickItemDelegate;
+    setItemDelegateForColumn(G::PickedColumn, pickItemDelegate);
 
     ApertureItemDelegate *apertureItemDelegate = new ApertureItemDelegate;
     setItemDelegateForColumn(G::ApertureColumn, apertureItemDelegate);
@@ -56,10 +68,18 @@ void TableView::delaySelectCurrentThumb()
     thumbView->selectThumb(thumbView->currentIndex());
 }
 
+//------------------------------------------------------------------------------
+//   DELEGATES
+//------------------------------------------------------------------------------
 
-#include <QPainter>
-#include <QStyleOptionViewItem>
-#include <QModelIndex>
+PickItemDelegate::PickItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString PickItemDelegate::displayText(const QVariant& value, const QLocale& locale) const
+{
+    return (value == "true") ? "✓" : "";
+}
 
 ApertureItemDelegate::ApertureItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 {
@@ -67,8 +87,7 @@ ApertureItemDelegate::ApertureItemDelegate(QObject* parent): QStyledItemDelegate
 
 QString ApertureItemDelegate::displayText(const QVariant& value, const QLocale& locale) const
 {
-    if (value == 0)
-    return QString();
+    if (value == 0) return QString();
 
     return "f/" + QString::number(value.toDouble(), 'f', 1);
 }

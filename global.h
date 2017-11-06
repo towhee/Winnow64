@@ -2,6 +2,8 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
+#include <QtWidgets>
+#include <QColor>
 #include <QModelIndexList>
 #include <QStringList>
 //#include <QtGlobal>
@@ -45,6 +47,13 @@ enum dataModelColumns {
     TitleColumn,
     TotalColumns    // insert additional columns before this
 };
+
+    extern QColor labelNoneColor;
+    extern QColor labelRedColor;
+    extern QColor labelYellowColor;
+    extern QColor labelGreenColor;
+    extern QColor labelBlueColor;
+    extern QColor labelPurpleColor;
 
     extern bool isThreadTrackingOn;
     extern bool isNewFolderLoaded;

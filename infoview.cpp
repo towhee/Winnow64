@@ -15,8 +15,6 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTableView(parent)
     infoModel = new QStandardItemModel(this);
     setModel(infoModel);
 
-//  setSelectionBehavior(QAbstractItemView::SelectItems);
-//	setSelectionMode(QAbstractItemView::ExtendedSelection);
     setSelectionMode(QAbstractItemView::NoSelection);
 	verticalHeader()->setVisible(false);
 	verticalHeader()->setDefaultSectionSize(verticalHeader()->minimumSectionSize());
@@ -65,7 +63,7 @@ void InfoView::addEntry(QString &key, QString &value)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "InfoView::addEntry";
+    qDebug() << "InfoView::addEntry" << key << value;
     #endif
     }
 	int atRow = infoModel->rowCount();
@@ -82,7 +80,7 @@ void InfoView::addTitleEntry(QString title)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "InfoView::addTitleEntry";
+    qDebug() << "InfoView::addTitleEntry" << title;
     #endif
     }
 

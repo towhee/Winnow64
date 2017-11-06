@@ -2,6 +2,7 @@
 
 ThumbViewDelegate::ThumbViewDelegate(QObject *parent)
 {
+//    this->parent = parent;
     itemBorderThickness = 2;
     thumbBorderThickness = 2;
     thumbBorderGap = 1;         // allow small gap between thumb and outer border
@@ -47,6 +48,12 @@ QSize ThumbViewDelegate::getThumbCell()
     return thumbSpace;
 }
 
+//void ThumbViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex previous)
+//{
+//    currentIndex = current;
+//    qDebug() << "ThumbViewDelegate::onCurrentChanged" << current;
+//}
+
 QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
                               const QModelIndex &index) const
 {
@@ -85,26 +92,12 @@ textRect         = a rectangle below itemRect
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     QSize iconsize = icon.actualSize(thumbSize);
 
-//    QString fName = qvariant_cast<QString>(index.data(Qt::EditRole));
-    QStandardItemModel *model = new QStandardItemModel;
-//    model = index.model();
+    // get data from model
     int row = index.row();
     QString fName = index.model()->index(row, G::PathColumn).data(G::FileNameRole).toString();
     QString labelColor = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     bool isPicked = index.model()->index(row, G::PickedColumn).data(Qt::EditRole).toBool();
-//    bool isPicked = qvariant_cast<bool>(index.data(G::PickedRole));
-
-
-    // UserRoles defined in ThumbView header
-//    QString rating = qvariant_cast<QString>(index.data(Qt::UserRole + 12));
-//    qDebug() << "Rating =" << rating
-//             << "LabelColor =" << labelColor
-//             << "isPicked =" << isPicked
-//             << "for" << fName;
-
-    painter->setRenderHint(QPainter::Antialiasing, true);
-    painter->setRenderHint(QPainter::TextAntialiasing, true);
 
     // define some offsets
     QPoint itemBorderOffset(itemBorderThickness, itemBorderThickness);
@@ -126,7 +119,7 @@ textRect         = a rectangle below itemRect
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
                    iconsize.width(), iconsize.height());
 
-    // label/rating rect
+    // label/rating rect located top-right as containment for circle
     int ratingDiam = 18;
     QPoint ratingTopLeft(option.rect.right() - ratingDiam, option.rect.top());
     QPoint ratingBottomRight(option.rect.right(), option.rect.top() + ratingDiam);
@@ -140,40 +133,54 @@ textRect         = a rectangle below itemRect
     QPainterPath textPath;
     textPath.addRoundedRect(textRect, 8, 8);
 
+    // start painting
+
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    painter->setRenderHint(QPainter::TextAntialiasing, true);
+
     if (delegateShowThumbLabels) {
         painter->setFont(font);
         painter->drawText(textRect, Qt::AlignHCenter, fName);
     }
 
-    QColor borderGray(95, 95, 95, 255);
-    QPen notPick(borderGray);
     painter->setClipping(true);
     painter->setClipPath(iconPath);
     painter->drawPixmap(iconRect, icon.pixmap(iconsize.width(),iconsize.height()));
     painter->setClipping(false);
 
+    // define colors
+    QColor defaultBorderColor(95, 95, 95, 255);
+    QColor currentItemColor(Qt::white);
+    QColor selectedNotCurrentItemColor(Qt::lightGray);
+    QColor pickColor(Qt::green);
+    QPen notPick(defaultBorderColor);
+
     // draw rect around icon (thumb) and make it green if picked
     if (isPicked) {
-        QPen pick(Qt::green);
+        QPen pick(pickColor);
         pick.setWidth(thumbBorderThickness);
         painter->setPen(pick);
     }
     else painter->setPen(notPick);
     painter->drawPath(iconPath);
 
-    QPen backPen(borderGray);
+    QPen backPen(defaultBorderColor);
     backPen.setWidth(3);
     painter->setPen(backPen);
     painter->drawRoundedRect(itemRect, 8, 8);
 
-    // draw the item rect around the icon and label (if shown)
-    // and make it white if selected or gray if not selected
+    /* draw the item rect around the icon and label (if shown) and make it
+    white if current item, light gray if selected but not the current item, or
+    gray if not selected
+    */
+    QColor selectedColor  = selectedNotCurrentItemColor;
+    if (currentIndex == index) selectedColor = currentItemColor;
     if (option.state.testFlag(QStyle::State_Selected)) {
-        QPen selectedPen(Qt::white);
+        QPen selectedPen(selectedColor);
         selectedPen.setWidth(itemBorderThickness);
         painter->setPen(selectedPen);
     } else {
-        QPen activePen(borderGray);
+        QPen activePen(defaultBorderColor);
         activePen.setWidth(itemBorderThickness / 2);
         painter->setPen(activePen);
     }
@@ -183,12 +190,12 @@ textRect         = a rectangle below itemRect
     if(rating != "" || labelColor != "") {
         // ratings/label color
 
-        if (labelColor == "") labelColorToUse = QColor(65,65,65,255);
-        if (labelColor == "Red") labelColorToUse = QColor(Qt::red);
-        if (labelColor == "Yellow") labelColorToUse = QColor(Qt::darkYellow);
-        if (labelColor == "Green") labelColorToUse = QColor(Qt::darkGreen);
-        if (labelColor == "Blue") labelColorToUse = QColor(Qt::blue);
-        if (labelColor == "Purple") labelColorToUse = QColor(Qt::darkMagenta);
+        if (labelColor == "") labelColorToUse = G::labelNoneColor;
+        if (labelColor == "Red") labelColorToUse = G::labelRedColor;
+        if (labelColor == "Yellow") labelColorToUse = G::labelYellowColor;
+        if (labelColor == "Green") labelColorToUse = G::labelGreenColor;
+        if (labelColor == "Blue") labelColorToUse = G::labelBlueColor;
+        if (labelColor == "Purple") labelColorToUse = G::labelPurpleColor;
         painter->setBrush(labelColorToUse);
         QPen ratingPen(labelColorToUse);
         ratingPen.setWidth(0);

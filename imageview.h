@@ -7,6 +7,7 @@
 #include "imagecache.h"
 #include "thumbcache.h"
 #include "dropshadowlabel.h"
+#include "circlelabel.h"
 #include "pixmap.h"
 
 class ImageView : public QGraphicsView
@@ -31,6 +32,7 @@ public:
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void moveShootingInfo(QString infoString);
     QLabel *pickLabel;      // visibility controlled in MW
+    CircleLabel *editsLabel;
     QPixmap *pickPixmap;
 
 public slots:

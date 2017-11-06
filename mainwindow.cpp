@@ -320,10 +320,6 @@ void MW::folderSelectionChange()
 
     G::isNewFolderLoaded = false;
 
-//    qDebug() << "STOPPED THREADS";
-
-//    thumbView->thumbViewModel->clear();
-
     // stop slideshow if a new folder is selected
     if (isSlideShowActive && !isStressTest) slideShow();
 
@@ -382,9 +378,9 @@ void MW::folderSelectionChange()
     // add to recent folders
     addRecentFolder(currentViewDir);
 
-    // We do not want to update the imageCache while metadata is still being
-    // loaded.  The imageCache update is triggered in fileSelectionChange,
-    // which is also executed when the change file event is fired.
+    /* We do not want to update the imageCache while metadata is still being
+    loaded.  The imageCache update is triggered in fileSelectionChange,
+    which is also executed when the change file event is fired. */
     metadataLoaded = false;
 
     /* Need to gather directory file info first (except icon/thumb) which is
@@ -400,22 +396,19 @@ void MW::folderSelectionChange()
     thumbView->selectThumb(0);
     thumbView->sortThumbs(1, false);
 
+    // no ratings or label color classes set yet so hide editsLabel
+    imageView->editsLabel->setVisible(false);
+
      /* Must load metadata first, as it contains the file offsets and lengths
      for the thumbnail and full size embedded jpgs and the image width and
      height, req'd in imageCache to manage cache max size. Triggers
      loadThumbCache and loadImageCache when finished metadata cache. The thumb
      cache includes icons (thumbnails) for all the images in the folder. The
      image cache holds as many full size images in memory as possible. */
-
-//    qDebug() << "metadataCacheThread->isRunning()" << metadataCacheThread->isRunning()
-//        << "thumbCacheThread->isRunning()" << thumbCacheThread->isRunning()
-//        << "imageCacheThread->isRunning()" << imageCacheThread->isRunning();
-
      loadMetadataCache();
-//     QThread::msleep(2000);       // no effect on crash
-//     thumbView->selectFirst();    // file selection triggers MW::fileSelectionChange
 }
 
+//void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
 void MW::fileSelectionChange()
 {
 /* Triggered when file selection changes (folder change selects new image, so
@@ -428,54 +421,73 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     qDebug() << "MW::fileSelectionChange";
     #endif
     }
+    QModelIndexList selected = thumbView->selectionModel()->selectedIndexes();
 
     // user clicks outside thumb but inside treeView dock
-    if (thumbView->selectionModel()->selectedIndexes().isEmpty()) return;
+    if (selected.isEmpty()) return;
 
-    // test selection
-//    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
-//    int count = selection.count();
-//    qDebug() << "Images selected:" << count;
-//    for (int i = 0; i < count; ++i) {
-//        QString fPath = selection.at(i).data(thumbView->FileNameRole).toString();
-//        qDebug() << "Selection" << i << fPath;
-//    }
-
-    QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
+    // sync thumbView delegate current item
+    thumbView->thumbViewDelegate->currentIndex = thumbView->currentIndex();
 
     // use cache if image loaded, else read it from file
+    QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
     if (imageView->loadImage(thumbView->currentIndex(), fPath)) {
         if (G::isThreadTrackingOn) qDebug()
             << "MW::fileSelectionChange - loaded image file " << fPath;
         updatePick();
+        updateRating();
+        updateColorClass();
         infoView->updateInfo(fPath);
     }
-    else updateStatus(false, "Could not read " + fPath);
 
-    // If the metadataCache is finished then update the imageCache,
-    // recalculating the target images to cache, decaching and caching to keep
-    // the cache up-to-date with the current image selection.
+    tableView->selectRow(thumbView->currentIndex().row());
+
+    /* If the metadataCache is finished then update the imageCache,
+     recalculating the target images to cache, decaching and caching to keep
+     the cache up-to-date with the current image selection. */
     if (metadataLoaded) {
         imageCacheThread->updateImageCache(fPath);
     }
 
     // if top/bottom dock resize dock height if scrollbar is/not visible
-//    qDebug() << "\nMW::fileSelectionChange\n"
-//             << "***  thumbView Ht =" << thumbView->height()
-//             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-//             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     setThumbDockFeatures(dockWidgetArea(thumbDock));
 
-//    qDebug() << "thumbView->thumbFileInfoList:";
-//    foreach (QFileInfo f, thumbView->thumbFileInfoList) {
-//        qDebug() << f.filePath();
-//    }
-//    qDebug() << "thumbViewFilter row = 0"
-//             << thumbView->thumbViewFilter->index(0,0).data(Qt::DisplayRole);
+/*   Other stuff tried and reported ...
+ *
+    qDebug() << "\n\nisNewFolderLoaded" << G::isNewFolderLoaded
+             << "\nSelected.count:" << selected.count()
+             << "\nSelected List: " << selected
+             << "\nCurrent:     " << current
+             << "\nPrevious:    " << previous
+             << "\nSelection contains previous:"
+             << selected.contains(previous) << "\n";
 
-    tableView->selectRow(thumbView->currentIndex().row());
-    // debugging
-//    thumbView->reportThumb();
+     selection is extended - do not change current index
+        if(selected.count() > 1 && G::isNewFolderLoaded) {
+    if(selected.count() > 1) {
+        if(selected.contains(previous)) {
+            thumbView->setCurrentIndex(previous);
+            return;
+        }
+    }
+
+
+     if top/bottom dock resize dock height if scrollbar is/not visible
+    qDebug() << "\nMW::fileSelectionChange\n"
+             << "***  thumbView Ht =" << thumbView->height()
+             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+
+    qDebug() << "thumbView->thumbFileInfoList:";
+    foreach (QFileInfo f, thumbView->thumbFileInfoList) {
+        qDebug() << f.filePath();
+    }
+    qDebug() << "thumbViewFilter row = 0"
+             << thumbView->thumbViewFilter->index(0,0).data(Qt::DisplayRole);
+
+     debugging
+    thumbView->reportThumb();
+    */
 }
 
 void MW::loadMetadataCache()
@@ -768,27 +780,27 @@ void MW::createActions()
 
     label0Action = new QAction(tr("Clear label colour"), this);
     label0Action->setObjectName("Label0");
-    connect(label0Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
+    connect(label0Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     label1Action = new QAction(tr("Set label to Red"), this);
     label1Action->setObjectName("Label1");
-    connect(label1Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
+    connect(label1Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     label2Action = new QAction(tr("Set label to Yellow"), this);
     label2Action->setObjectName("Label2");
-    connect(label2Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
+    connect(label2Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     label3Action = new QAction(tr("Set label to Green"), this);
     label3Action->setObjectName("Label3");
-    connect(label3Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
+    connect(label3Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     label4Action = new QAction(tr("Set label to Blue"), this);
     label4Action->setObjectName("Label4");
-    connect(label4Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
+    connect(label4Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     label5Action = new QAction(tr("Set label to Purple"), this);
     label5Action->setObjectName("Label5");
-    connect(label5Action, SIGNAL(triggered()), this, SLOT(setLabelColor()));
+    connect(label5Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
@@ -1668,17 +1680,20 @@ void MW::createThumbView()
     thumbView->isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
     thumbView->isAutoFit = setting->value("isAutoFit").toBool();
 
-    qDebug() << "\nMW::createThumbView before calling setThumbParameters" << "\n"
-             << "***  thumbView Ht =" << thumbView->height()
-             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-             << "thumbHeight =" << thumbView->thumbHeight << "\n";
-    thumbView->setThumbParameters();
+//    qDebug() << "\nMW::createThumbView before calling setThumbParameters" << "\n"
+//             << "***  thumbView Ht =" << thumbView->height()
+//             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+//             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+//    thumbView->setThumbParameters();
 
     metadataCacheThread = new MetadataCache(this, dm, metadata);
     thumbCacheThread = new ThumbCache(this, dm, metadata);
     infoView = new InfoView(this, metadata);
 
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
+
+    connect(thumbView, SIGNAL(updateThumbDock()),
+            this, SLOT(setThumbDockHeight()));
 
     connect(metadataCacheThread, SIGNAL(loadThumbCache()),
             this, SLOT(loadThumbCache()));
@@ -2341,10 +2356,10 @@ workspace with a matching name to the action is used.
     thumbView->showThumbLabelsGrid = w.showThumbLabelsGrid;
     thumbView->isThumbWrapWhenTopOrBottomDock = w.isThumbWrapWhenTopOrBottomDock;
     thumbView->isAutoFit = w.isAutoFit;
-    qDebug() << "\nMW::invokeWorkspace before calling setThumbParameters" << "\n"
-             << "***  thumbView Ht =" << thumbView->height()
-             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+//    qDebug() << "\nMW::invokeWorkspace before calling setThumbParameters" << "\n"
+//             << "***  thumbView Ht =" << thumbView->height()
+//             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+//             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setThumbParameters();
     // if in grid view override normal behavior if workspace invoked
     isThumbDockVisibleBeforeGridViewInvoked = w.isThumbDockVisible;
@@ -2539,10 +2554,10 @@ app is "stranded" on secondary monitors that are not attached.
     thumbView->setWrapping(false);
     thumbView->isAutoFit = false;
 
-    qDebug() << "\nMW::defaultWorkspace before calling setThumbParameters" << "\n"
-             << "***  thumbView Ht =" << thumbView->height()
-             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+//    qDebug() << "\nMW::defaultWorkspace before calling setThumbParameters" << "\n"
+//             << "***  thumbView Ht =" << thumbView->height()
+//             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+//             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setThumbParameters();
 
     folderDock->setFloating(false);
@@ -2749,8 +2764,7 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-//    thumbView->thumbViewFilter->invalidateFilter();
-    filters->uncheckAllFilters();
+    thumbView->setCurrentIndex(dm->sf->index(0, 0));
     return;
 
     QTreeWidgetItemIterator it(filters);
@@ -3737,9 +3751,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
         zoomOutAction->setShortcut(QKeySequence("-"));
         zoomInAction->setShortcut(QKeySequence("+"));
         zoomToggleAction->setShortcut(QKeySequence("Z"));
-        zoom50PctAction->setShortcut(QKeySequence("Ctrl+5"));
-        zoom100PctAction->setShortcut(QKeySequence("Ctrl+0"));
-        zoom200PctAction->setShortcut(QKeySequence("Ctrl+2"));
+//        zoom50PctAction->setShortcut(QKeySequence("Ctrl+5"));
+//        zoom100PctAction->setShortcut(QKeySequence("Ctrl+0"));
+//        zoom200PctAction->setShortcut(QKeySequence("Ctrl+2"));
         rotateLeftAction->setShortcut(QKeySequence("["));
         rotateRightAction->setShortcut(QKeySequence("]"));
 //        moveLeftAct->setShortcut(QKeySequence("Left"));
@@ -3785,7 +3799,7 @@ void MW::setupDocks()
     thumbDock->setObjectName("thumbDock");
 
     connect(thumbDock, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
-            this, SLOT(setThumbDockFeatures(Qt::DockWidgetArea)));
+            this, SLOT(setThumbDockFeatures()));
 
     connect(thumbDock, SIGNAL(topLevelChanged(bool)),
             this, SLOT(setThumbDockFloatFeatures(bool)));
@@ -3796,7 +3810,7 @@ void MW::setupDocks()
     QWidget *imageViewContainerWidget = new QWidget;
     imageViewContainerWidget->setLayout(imageViewContainer);
     thumbDock->setWidget(thumbView);
-    thumbDock->setWindowTitle(" ");
+    thumbDock->setWindowTitle("Thumbs");
 
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
@@ -3883,13 +3897,34 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
     }
 }
 
+void MW::setThumbDockHeight()
+{
+/*
+Helper slot to call setThumbDockFeatures when the dockWidgetArea is not known,
+which is the case when calling from another class like thumbView after thumbnails
+have been resized.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setThumbDockHeight";
+    #endif
+    }
+    setThumbDockFeatures(dockWidgetArea(thumbDock));
+}
+
 void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 {
+/*
+When the thumbDock is moved or when the thumbnails have been resized set the
+thumbDock features accordingly, based on settings in preferences for wrapping
+and titlebar visibility.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::setThumbDockFeatures";
     #endif
     }
+    qDebug() << "DockWidgetArea =" << area;
 
     thumbView->setMaximumHeight(100000);
 
@@ -3928,7 +3963,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
             thumbView->setMaximumHeight(maxHt);
             thumbView->setMinimumHeight(minHt);
 
-//            qDebug() << "maxHt, minHt, newThumbDockHeight" << maxHt << minHt << newThumbDockHeight;
+            qDebug() << "maxHt, minHt, newThumbDockHeight" << maxHt << minHt << newThumbDockHeight;
 
             resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
 
@@ -3954,11 +3989,13 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     }
     else thumbView->isTopOrBottomDock = false;
 
-//        thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-//        thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    /*
+    thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-//        thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-//        thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    */
 
     if (asGridAction->isChecked()) thumbView->setWrapping(true);
     if (thumbView->isAutoFit) thumbView->thumbsFit(area);
@@ -3972,7 +4009,7 @@ void MW::loupeDisplay()
     #endif
     }
     qDebug() << "MW::loupeDisplay";
-    centralLayout->setCurrentIndex(1);
+    centralLayout->setCurrentIndex(LoupeTab);
     thumbView->thumbViewDelegate->isCompare = false;
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
@@ -3982,15 +4019,17 @@ void MW::loupeDisplay()
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
     thumbView->isGrid = false;
-    qDebug() << "\nMW::loupeDisplay before calling setThumbParameters" << "\n"
-             << "***  thumbView Ht =" << thumbView->height()
-             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+//    qDebug() << "\nMW::loupeDisplay before calling setThumbParameters" << "\n"
+//             << "***  thumbView Ht =" << thumbView->height()
+//             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+//             << "thumbHeight =" << thumbView->thumbHeight << "\n";
 
     thumbView->setThumbParameters();
 //    if (!isUpdatingState) thumbView->thumbsFit(dockWidgetArea(thumbDock));
     setThumbDockVisibity();
     recoverSelection();
+    if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
+        thumbView->setFocus();
 }
 
 void MW::gridDisplay()
@@ -4004,17 +4043,17 @@ void MW::gridDisplay()
     // move thumbView from thumbDeck to central widget
     isThumbDockVisibleBeforeGridViewInvoked = thumbDockVisibleAction->isChecked();
     centralLayout->addWidget(thumbView);
-    centralLayout->setCurrentIndex(4);
+    centralLayout->setCurrentIndex(GridTab);
     imageView->setVisible(false);
     thumbView->thumbViewDelegate->isCompare = false;
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     saveSelection();
     thumbDockVisibleAction->setChecked(false);
-    qDebug() << "\nMW::gridDisplay before calling setThumbParameters" << "\n"
-             << "***  thumbView Ht =" << thumbView->height()
-             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+//    qDebug() << "\nMW::gridDisplay before calling setThumbParameters" << "\n"
+//             << "***  thumbView Ht =" << thumbView->height()
+//             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+//             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                            QDockWidget::DockWidgetMovable  |
                            QDockWidget::DockWidgetFloatable);
@@ -4024,6 +4063,8 @@ void MW::gridDisplay()
 //    thumbView->setMaximumHeight(100000);
     setThumbDockVisibity();
     recoverSelection();
+    if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
+        thumbView->setFocus();
 }
 
 void MW::tableDisplay()
@@ -4033,10 +4074,10 @@ void MW::tableDisplay()
     qDebug() << "MW::tableDisplay";
     #endif
     }
-    qDebug() << "MW::tableDisplay";
+//    qDebug() << "MW::tableDisplay";
     // make table of thumbView in central widget
-    tableView->resizeColumnsToContents();
-    centralLayout->setCurrentIndex(3);
+//    tableView->resizeColumnsToContents();
+    centralLayout->setCurrentIndex(TableTab);
     thumbView->thumbViewDelegate->isCompare = false;
 
     // in case was grid display move thumbView back to dock from central widget
@@ -4045,13 +4086,15 @@ void MW::tableDisplay()
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
     thumbView->isGrid = false;
-    qDebug() << "\nMW::tableDisplay before calling setThumbParameters" << "\n"
-             << "***  thumbView Ht =" << thumbView->height()
-             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+//    qDebug() << "\nMW::tableDisplay before calling setThumbParameters" << "\n"
+//             << "***  thumbView Ht =" << thumbView->height()
+//             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+//             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setThumbParameters();
     setThumbDockVisibity();
     recoverSelection();
+    if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
+        thumbView->setFocus();
 }
 
 void MW::compareDisplay()
@@ -4078,10 +4121,10 @@ void MW::compareDisplay()
         setThumbDockFeatures(dockWidgetArea(thumbDock));
         thumbDockVisibleAction->setChecked(true);
         thumbView->isGrid = false;
-        qDebug() << "\nMW::compareDisplay before calling setThumbParameters" << "\n"
-                 << "***  thumbView Ht =" << thumbView->height()
-                 << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-                 << "thumbHeight =" << thumbView->thumbHeight << "\n";
+//        qDebug() << "\nMW::compareDisplay before calling setThumbParameters" << "\n"
+//                 << "***  thumbView Ht =" << thumbView->height()
+//                 << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+//                 << "thumbHeight =" << thumbView->thumbHeight << "\n";
         thumbView->setThumbParameters();
         setThumbDockVisibity();
         recoverSelection();
@@ -4089,22 +4132,31 @@ void MW::compareDisplay()
     thumbView->thumbViewDelegate->isCompare = true;
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
 
-    centralLayout->setCurrentIndex(2);
+    centralLayout->setCurrentIndex(CompareTab);
     compareImages->load(centralWidget->size());
+
+    if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
+        thumbView->setFocus();
 }
 
 void MW::saveSelection()
 {
     selectedImages = thumbView->selectionModel()->selectedIndexes();
+    currentIdx = thumbView->selectionModel()->currentIndex();
 }
 
 void MW::recoverSelection()
 {
     QItemSelection *selection = new QItemSelection();
     QModelIndex idx;
+//    thumbView->setCurrentIndex(currentIdx);
+    // sync thumbView delegate current item
+    thumbView->thumbViewDelegate->currentIndex = currentIdx;
+
     foreach (idx, selectedImages)
-      selection->select(idx, idx);
+      if (idx != currentIdx) selection->select(idx, idx);
     thumbView->selectionModel()->clear();
+    thumbView->selectionModel()->setCurrentIndex(currentIdx, QItemSelectionModel::Select);
     thumbView->selectionModel()->select(*selection, QItemSelectionModel::Select);
 //    qDebug() << thumbView->selectionModel()->selectedIndexes();
 }
@@ -4378,29 +4430,31 @@ void MW::togglePick()
     #endif
     }
 
-    QModelIndex index;
-    QModelIndexList indexesList = thumbView->selectionModel()->selectedRows();
+    QModelIndex idx;
+    QModelIndexList idxList = thumbView->selectionModel()->selectedRows();
     QString pickStatus;
 
-    foreach (index, indexesList) {
-        int srcRow = dm->sf->mapToSource(index).row();
+    foreach (idx, idxList) {
+        int srcRow = dm->sf->mapToSource(idx).row();
         QModelIndex srcIdx = dm->index(srcRow, G::PickedColumn);
         pickStatus = (qvariant_cast<QString>(srcIdx.data(Qt::EditRole))
                       == "true") ? "false" : "true";
         dm->setData(srcIdx, pickStatus, Qt::EditRole);
     }
-    index = thumbView->currentIndex();
+    idx = thumbView->currentIndex();
     bool isPick = (pickStatus == "true");
 
     imageView->pickLabel->setVisible(isPick);
-    if (asCompareAction->isChecked()) compareImages->pick(isPick, index);
+    if (asCompareAction->isChecked()) compareImages->pick(isPick, idx);
     thumbView->refreshThumbs();
 }
 
-// When a new image is selected and shown in imageView update the visibility
-// of the thumbs up icon that highlights if the image has been picked.
 void MW::updatePick()
 {
+/*
+When a new image is selected and shown in imageView update the visibility
+of the thumbs up icon that highlights if the image has been picked.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::updatepick";
@@ -4434,6 +4488,10 @@ void MW::copyPicks()
 
 void MW::setRating()
 {
+/*
+Resolve the source menu action that called (could be any rating) and then set
+the rating for all the selected thumbs.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::setRating";
@@ -4441,8 +4499,6 @@ void MW::setRating()
     }
     QObject* obj = sender();
     QString s = obj->objectName();
-    QString rating;
-    qDebug() << obj << obj->objectName();
     if (s == "Rate0") rating = "";
     if (s == "Rate1") rating = "1";
     if (s == "Rate2") rating = "2";
@@ -4451,17 +4507,54 @@ void MW::setRating()
     if (s == "Rate5") rating = "5";
 
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    // check if selection is entirely rating already - if so set to no rating
+    bool isAlreadyRating = true;
     for (int i = 0; i < selection.count(); ++i) {
-        QModelIndex idx = selection.at(i);
-        dm->setData(idx, rating, G::RatingRole);
-        idx = dm->index(idx.row(), G::RatingColumn);
+        QModelIndex idx = dm->index(selection.at(i).row(), G::RatingColumn);
+        if(idx.data(Qt::EditRole) != rating) {
+            isAlreadyRating = false;
+        }
+    }
+    if(isAlreadyRating) rating = "";     // invert the label
+
+    // set the image edits label
+    imageView->editsLabel->setText(rating);
+    if (labelColor == "" && rating == "") imageView->editsLabel->setVisible(false);
+    else imageView->editsLabel->setVisible(true);
+
+    // set the rating
+    for (int i = 0; i < selection.count(); ++i) {
+        QModelIndex idx = dm->index(selection.at(i).row(), G::RatingColumn);
         dm->setData(idx, rating, Qt::EditRole);
     }
     thumbView->refreshThumbs();
 }
 
-void MW::setLabelColor()
+void MW::updateRating()
 {
+/*
+When a new image is selected and shown in imageView update the rating on
+imageView and visibility (true if either rating or color class set).
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::updatepick";
+    #endif
+    }
+    int row = thumbView->currentIndex().row();
+    QModelIndex idx = dm->index(row, G::RatingColumn);
+    rating = idx.data(Qt::EditRole).toString();
+    imageView->editsLabel->setText(rating);
+    if (labelColor == "" && rating == "") imageView->editsLabel->setVisible(false);
+    else imageView->editsLabel->setVisible(true);
+}
+
+void MW::setColorClass()
+{
+/*
+Resolve the source menu action that called (could be any color class) and then
+set the color class for all the selected thumbs.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::setLabelColor";
@@ -4469,24 +4562,64 @@ void MW::setLabelColor()
     }
     QObject* obj = sender();
     QString s = obj->objectName();
-    QString labelColor;
-    qDebug() << obj << obj->objectName();
     if (s == "Label0") labelColor = "";
     if (s == "Label1") labelColor = "Red";
     if (s == "Label2") labelColor = "Yellow";
     if (s == "Label3") labelColor = "Green";
     if (s == "Label4") labelColor = "Blue";
     if (s == "Label5") labelColor = "Purple";
-//    QModelIndex idx = thumbView->currentIndex();
 
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    // check if selection is entirely label color already - if so set no label
+    bool isAlreadyLabel = true;
     for (int i = 0; i < selection.count(); ++i) {
-        QModelIndex idx = selection.at(i);
-        dm->setData(idx, labelColor, G::LabelRole);
-        idx = dm->index(idx.row(), G::LabelColumn);
+        QModelIndex idx = dm->index(selection.at(i).row(), G::LabelColumn);
+        if(idx.data(Qt::EditRole) != labelColor) {
+            isAlreadyLabel = false;
+        }
+    }
+    if(isAlreadyLabel) labelColor = "";     // invert the label
+
+    // set the image edits label
+    if (labelColor == "") imageView->editsLabel->setBackgroundColor(G::labelNoneColor);
+    if (labelColor == "Red") imageView->editsLabel->setBackgroundColor(G::labelRedColor);
+    if (labelColor == "Yellow") imageView->editsLabel->setBackgroundColor(G::labelYellowColor);
+    if (labelColor == "Green") imageView->editsLabel->setBackgroundColor(G::labelGreenColor);
+    if (labelColor == "Blue") imageView->editsLabel->setBackgroundColor(G::labelBlueColor);
+    if (labelColor == "Purple") imageView->editsLabel->setBackgroundColor(G::labelPurpleColor);
+
+    if (labelColor == "" && rating == "") imageView->editsLabel->setVisible(false);
+    else imageView->editsLabel->setVisible(true);
+
+    // update the data model
+    for (int i = 0; i < selection.count(); ++i) {
+        QModelIndex idx = dm->index(selection.at(i).row(), G::LabelColumn);
         dm->setData(idx, labelColor, Qt::EditRole);
     }
     thumbView->refreshThumbs();
+    tableView->resizeColumnToContents(G::LabelColumn);
+}
+
+void MW::updateColorClass()
+{
+/*
+When a new image is selected and shown in imageView update the color class on
+imageView and visibility (true if either rating or color class set). Note that
+label and color class are the same thing in this program. In lightroom the
+color class is called label.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::updatepick";
+    #endif
+    }
+    int row = thumbView->currentIndex().row();
+    QModelIndex idx = dm->index(row, G::LabelColumn);
+    labelColor = idx.data(Qt::EditRole).toString();
+    imageView->editsLabel->setBackgroundColor(labelColor);
+    if (labelColor == "" && rating == "") imageView->editsLabel->setVisible(false);
+    else imageView->editsLabel->setVisible(true);
+
 }
 
 void MW::getSubfolders(QString fPath)

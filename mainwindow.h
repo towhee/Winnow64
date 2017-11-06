@@ -39,6 +39,8 @@ public:
     QMap<QString, QAction *> actionKeys;
     QMap<QString, QString> externalApps;
 
+    QDockWidget *thumbDock;
+
     struct workspaceData {
         QString accelNum;       // for accelerator
         QString name;           // used for menu
@@ -137,7 +139,8 @@ public:
         StartTab,
         LoupeTab,
         CompareTab,
-        TableTab
+        TableTab,
+        GridTab
     };
 
     bool isSlideShowActive;
@@ -154,11 +157,13 @@ protected:
 
 public slots:
     void folderSelectionChange();
+//    void fileSelectionChange(QModelIndex current, QModelIndex previous);
     void fileSelectionChange();
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setStatus(QString state);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void showCacheStatus(const QImage &imCacheStatus);
+    void setThumbDockHeight();  // signal from thumbView
     void setThumbDockFeatures(Qt::DockWidgetArea area);
     void setThumbDockFloatFeatures(bool isFloat);
     void reindexImageCache();
@@ -169,7 +174,7 @@ private slots:
     void about();
     void copyPicks();
     void setRating();
-    void setLabelColor();
+    void setColorClass();
     void sortThumbnails();
 //    void reload();
     void preferences();
@@ -206,6 +211,8 @@ private slots:
     void setShootingInfo();
     void togglePick();
     void updatePick();
+    void updateRating();
+    void updateColorClass();
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
     void setIncludeSubFolders();
@@ -451,7 +458,7 @@ private:
     QDockWidget *folderDock;
     QDockWidget *favDock;
     QDockWidget *filterDock;
-    QDockWidget *thumbDock;
+//    QDockWidget *thumbDock;
     FSTree *fsTree;
     BookMarks *bookmarks;
     Filters *filters;
@@ -495,6 +502,7 @@ private:
     QStringList *recentFolders;
 
     QModelIndexList selectedImages;
+    QModelIndex currentIdx;
     QStandardItemModel *imageModel;
 
     bool metadataLoaded;
@@ -512,6 +520,9 @@ private:
 
     QMovie *busyMovie;              // req'd?
     QLabel *busyLabel;              // req'd?
+
+    QString rating = "";
+    QString labelColor = "";
 
     void loadShortcuts(bool defaultShortcuts);
     void setupDocks();

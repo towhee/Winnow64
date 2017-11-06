@@ -548,6 +548,8 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
     qDebug() << "ImageCache::initImageCache";
     #endif
     }
+    // cancel if no images to cache
+    if (!imageList.size()) return;
 
     G::isNewFolderLoaded = true;
 
@@ -684,6 +686,7 @@ If there is filtering then the entire cache is reloaded.
     qDebug() << "ImageView::reindexImageCache";
     #endif
     }
+    qDebug() << "ImageView::reindexImageCache" << currentImageFullPath;
 //    return;
     if (isRunning()) stopImageCache();
 
@@ -696,13 +699,13 @@ If there is filtering then the entire cache is reloaded.
 //    qDebug() << "cache.totFiles" << cache.totFiles;
     int i;
     for(int row = 0; row < filterRowCount; ++row) {
-        qDebug() << "row" << row;
+//        qDebug() << "row" << row;
         if(filterFilePathList[row] == currentImageFullPath) cache.key = row;
         for (i = 0; i < cache.totFiles; ++i) {
-            qDebug() << "i" << i
-                     << cacheMgrCopy.at(i).fName
-                     << filterFilePathList[row]
-                     << currentImageFullPath;
+//            qDebug() << "i" << i
+//                     << cacheMgrCopy.at(i).fName
+//                     << filterFilePathList[row]
+//                     << currentImageFullPath;
 //            if(i >= filterRowCount) break;
             if(cacheMgrCopy.at(i).fName == filterFilePathList[row]) break;
         }
@@ -738,7 +741,7 @@ If there is filtering then the entire cache is reloaded.
 
     cacheStatus();
 
-    reportCacheManager("Test");
+//    reportCacheManager("Test");
 //    qDebug() << "cache.key" << cache.key;
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();

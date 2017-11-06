@@ -92,6 +92,8 @@ CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
     pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
     pickLabel->setVisible(false);
 
+//    colorLabel = new QLabel(this);
+
     isMouseDrag = false;
     isMouseDoubleClick = false;
     isMouseClickZoom = false;

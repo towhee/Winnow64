@@ -34,7 +34,11 @@ public:
 signals:
     void update(const QModelIndex index, QRect iconRect) const;
 
+public slots:
+//    void onCurrentChanged(QModelIndex current, QModelIndex previous);
+
 private:
+    QObject parent;
     bool delegateShowThumbLabels;
     QFont font;
     QSize thumbSize;

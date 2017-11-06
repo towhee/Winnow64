@@ -1,5 +1,6 @@
 To do:
-- Reset image cache order and display status when change sort
+- selection when filtered not correct indexes when apply ratings, labels or picks
+- cmd click to select multiple items crashing
 - Compare images not working after images sorted other then filename
 - Try producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
 - Check full screen logic
@@ -31,8 +32,13 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: thumbDock height adjusts to thumb size chenges in prefDlg
+- Done: increased height of combo dropdown items in workspaceDlg
+- Done: invert ratings and labels by re-entering same value
+- Done: Show check mark in Picked in tableview
+- Done: Reset image cache order and display status when change sort
 - Done: Drives not showing in Files in Windows
-- Done:Sort/filter thumbs
+- Done: Sort/filter thumbs
 - Done: Add ratings and labels
 - Done: Set each column for sorting on editrole
 - Done: Resize thumb dock on bottom and top to fit thumbs if no wrap
