@@ -11,18 +11,17 @@ WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList, QWidget *parent) :
     ui->setupUi(this);
     this->mainWindow = parent;
 
+    // get height for dropdown items from combobox height
     int h = ui->workspaceCB->height() - 8;
+    // populate the dropdown list
     for (int i=0; i < wsList->count(); i++) {
         ui->workspaceCB->addItem(wsList->at(i));
+        // set height for each row (setStylesheet approach did not work)
         ui->workspaceCB->model()->setData( ui->workspaceCB->model()->index(i, 0), QSize(h, h), Qt::SizeHintRole);
 //        qDebug() << "ui->workspaceCB i" << i
 //                 << ui->workspaceCB->currentIndex();
     }
     editMode = true;
-
-    //  this is not working
-//    ui->workspaceCB->setStyleSheet("QComboBox QAbstractItemView::item {border-width: 5px;border-color: white}");
-//    ui->workspaceCB->setStyleSheet("QComboBox QAbstractItemView::item {margin-top: 2px;}");
 }
 
 WorkspaceDlg::~WorkspaceDlg()

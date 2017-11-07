@@ -32,6 +32,7 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: added circleLabel showing rating / color class in imageView
 - Done: thumbDock height adjusts to thumb size chenges in prefDlg
 - Done: increased height of combo dropdown items in workspaceDlg
 - Done: invert ratings and labels by re-entering same value

@@ -131,6 +131,7 @@ variables in MW (this class) and managed in the prefDlg class.
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
     centralLayout->addWidget(tableView);
+//    centralLayout->addWidget(gridView); // rghx
     centralLayout->setCurrentIndex(0);
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
@@ -1661,7 +1662,7 @@ void MW::createThumbView()
 //    metadata = new Metadata;
 //    thumbView = new ThumbView(this, metadata);
     thumbView = new ThumbView(this, dm);
-    thumbView->setObjectName("ImageView");  //rgh need to fix??
+    thumbView->setObjectName("ThumbView");  //rgh need to fix??
 
     thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
     thumbView->thumbPadding = setting->value("thumbPadding").toInt();
@@ -1679,6 +1680,8 @@ void MW::createThumbView()
 
     thumbView->isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
     thumbView->isAutoFit = setting->value("isAutoFit").toBool();
+
+//    gridView = new ThumbView(this, dm);
 
 //    qDebug() << "\nMW::createThumbView before calling setThumbParameters" << "\n"
 //             << "***  thumbView Ht =" << thumbView->height()
@@ -4042,14 +4045,14 @@ void MW::gridDisplay()
     qDebug() << "MW::gridDisplay";
     // move thumbView from thumbDeck to central widget
     isThumbDockVisibleBeforeGridViewInvoked = thumbDockVisibleAction->isChecked();
-    centralLayout->addWidget(thumbView);
+    centralLayout->addWidget(thumbView); // rghx
     centralLayout->setCurrentIndex(GridTab);
     imageView->setVisible(false);
     thumbView->thumbViewDelegate->isCompare = false;
-    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+//    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     saveSelection();
-    thumbDockVisibleAction->setChecked(false);
+    thumbDockVisibleAction->setChecked(false); // rghx
 //    qDebug() << "\nMW::gridDisplay before calling setThumbParameters" << "\n"
 //             << "***  thumbView Ht =" << thumbView->height()
 //             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
@@ -4148,17 +4151,21 @@ void MW::saveSelection()
 void MW::recoverSelection()
 {
     QItemSelection *selection = new QItemSelection();
+    thumbView->selectionModel()->clear();
+
     QModelIndex idx;
 //    thumbView->setCurrentIndex(currentIdx);
     // sync thumbView delegate current item
     thumbView->thumbViewDelegate->currentIndex = currentIdx;
 
+    thumbView->selectionModel()->setCurrentIndex(currentIdx, QItemSelectionModel::Select);
     foreach (idx, selectedImages)
       if (idx != currentIdx) selection->select(idx, idx);
-    thumbView->selectionModel()->clear();
-    thumbView->selectionModel()->setCurrentIndex(currentIdx, QItemSelectionModel::Select);
+
     thumbView->selectionModel()->select(*selection, QItemSelectionModel::Select);
-//    qDebug() << thumbView->selectionModel()->selectedIndexes();
+    qDebug() << "thumbView->selectionModel()->currentIndex()" << thumbView->selectionModel()->currentIndex();
+    qDebug() << "thumbView->selectionModel()->selectedIndexes()" << thumbView->selectionModel()->selectedIndexes();
+
 }
 
 void MW::setFullNormal()

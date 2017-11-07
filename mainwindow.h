@@ -471,6 +471,7 @@ private:
     DataModel *dm;
     Metadata *metadata;
     ThumbView *thumbView;
+    ThumbView *gridView;
     TableView *tableView;
     ImageView *imageView;
 //    QTableView *tableView;
