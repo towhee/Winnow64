@@ -231,13 +231,13 @@ E (loupe) and G (grid).
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
 
         // Grid or Loupe views
-        if (keyEvent->key() == Qt::Key_G ||
-            keyEvent->key() == Qt::Key_E ||
-            keyEvent->key() == Qt::Key_Return)
-        {
-//            qDebug() << "\n" << event << "\n";
-            thumbView->selectThumb(thumbView->currentIndex());
-        }
+//        if (keyEvent->key() == Qt::Key_G ||
+//            keyEvent->key() == Qt::Key_E ||
+//            keyEvent->key() == Qt::Key_Return)
+//        {
+////            qDebug() << "\n" << event << "\n";
+//            thumbView->selectThumb(thumbView->currentIndex());
+//        }
 
         // slideshow
         if (keyEvent->key() == Qt::Key_Escape) {
@@ -429,7 +429,6 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
 
     // sync thumbView delegate current item
     thumbView->thumbViewDelegate->currentIndex = thumbView->currentIndex();
-
     // use cache if image loaded, else read it from file
     QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
     if (imageView->loadImage(thumbView->currentIndex(), fPath)) {
@@ -451,7 +450,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     }
 
     // if top/bottom dock resize dock height if scrollbar is/not visible
-    setThumbDockFeatures(dockWidgetArea(thumbDock));
+//    setThumbDockFeatures(dockWidgetArea(thumbDock));
 
 /*   Other stuff tried and reported ...
  *
@@ -4014,10 +4013,10 @@ void MW::loupeDisplay()
     qDebug() << "MW::loupeDisplay";
     centralLayout->setCurrentIndex(LoupeTab);
     thumbView->thumbViewDelegate->isCompare = false;
-    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+//    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // in case was grid display move thumbView back to dock from central widget
-    saveSelection();
+//    saveSelection();
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
@@ -4030,7 +4029,7 @@ void MW::loupeDisplay()
     thumbView->setThumbParameters();
 //    if (!isUpdatingState) thumbView->thumbsFit(dockWidgetArea(thumbDock));
     setThumbDockVisibity();
-    recoverSelection();
+//    recoverSelection();
     if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
         thumbView->setFocus();
 }
@@ -4051,7 +4050,7 @@ void MW::gridDisplay()
     thumbView->thumbViewDelegate->isCompare = false;
 //    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
-    saveSelection();
+//    saveSelection();
     thumbDockVisibleAction->setChecked(false); // rghx
 //    qDebug() << "\nMW::gridDisplay before calling setThumbParameters" << "\n"
 //             << "***  thumbView Ht =" << thumbView->height()
@@ -4065,7 +4064,7 @@ void MW::gridDisplay()
     thumbView->setThumbParameters();
 //    thumbView->setMaximumHeight(100000);
     setThumbDockVisibity();
-    recoverSelection();
+//    recoverSelection();
     if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
         thumbView->setFocus();
 }
@@ -4077,14 +4076,12 @@ void MW::tableDisplay()
     qDebug() << "MW::tableDisplay";
     #endif
     }
-//    qDebug() << "MW::tableDisplay";
     // make table of thumbView in central widget
-//    tableView->resizeColumnsToContents();
     centralLayout->setCurrentIndex(TableTab);
     thumbView->thumbViewDelegate->isCompare = false;
 
     // in case was grid display move thumbView back to dock from central widget
-    saveSelection();
+//    saveSelection();
     thumbDock->setWidget(thumbView);
     setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
@@ -4095,7 +4092,7 @@ void MW::tableDisplay()
 //             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setThumbParameters();
     setThumbDockVisibity();
-    recoverSelection();
+//    recoverSelection();
     if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
         thumbView->setFocus();
 }
@@ -4464,7 +4461,7 @@ of the thumbs up icon that highlights if the image has been picked.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::updatepick";
+    qDebug() << "MW::updatePick";
     #endif
     }
     int row = thumbView->currentIndex().row();
@@ -4545,7 +4542,7 @@ imageView and visibility (true if either rating or color class set).
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::updatepick";
+    qDebug() << "MW::updateRating";
     #endif
     }
     int row = thumbView->currentIndex().row();
@@ -4617,13 +4614,18 @@ color class is called label.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::updatepick";
+    qDebug() << "MW::updateColorClass";
     #endif
     }
     int row = thumbView->currentIndex().row();
     QModelIndex idx = dm->index(row, G::LabelColumn);
     labelColor = idx.data(Qt::EditRole).toString();
-    imageView->editsLabel->setBackgroundColor(labelColor);
+    if (labelColor == "") imageView->editsLabel->setBackgroundColor(G::labelNoneColor);
+    if (labelColor == "Red") imageView->editsLabel->setBackgroundColor(G::labelRedColor);
+    if (labelColor == "Yellow") imageView->editsLabel->setBackgroundColor(G::labelYellowColor);
+    if (labelColor == "Green") imageView->editsLabel->setBackgroundColor(G::labelGreenColor);
+    if (labelColor == "Blue") imageView->editsLabel->setBackgroundColor(G::labelBlueColor);
+    if (labelColor == "Purple") imageView->editsLabel->setBackgroundColor(G::labelPurpleColor);
     if (labelColor == "" && rating == "") imageView->editsLabel->setVisible(false);
     else imageView->editsLabel->setVisible(true);
 

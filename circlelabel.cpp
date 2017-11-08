@@ -8,8 +8,9 @@ CircleLabel::CircleLabel(QWidget *parent)
     setFixedSize(18, 18);
     setScaledContents(true);
     setAttribute(Qt::WA_TranslucentBackground);
-//    setAlignment(Qt::AlignRight | Qt::AlignBottom);
-    setAlignment(Qt::AlignCenter | Qt::AlignHCenter);
+//    setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    setAlignment(Qt::AlignRight | Qt::AlignBottom);
+//    setAlignment(Qt::AlignCenter | Qt::AlignHCenter);
 
     textColor = QColor(Qt::white);
 }
@@ -47,6 +48,8 @@ void CircleLabel::paintEvent(QPaintEvent *event)
     QRect rect(0, 0, 18, 18);
 //    QRect rect((width() - diameter) / 2, (height() - diameter) / 2, diameter, diameter);
     painter.setBrush(backgroundColor);
+//    painter.setBrush(QColor(255,0,0,128));
+
     painter.setPen(backgroundColor);
     painter.drawEllipse(rect);
     QPen ratingTextPen(textColor);

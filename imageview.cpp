@@ -69,6 +69,7 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     pickLabel = new QLabel(this);
     pickLabel->setFixedSize(40,48);
     pickLabel->setAttribute(Qt::WA_TranslucentBackground);
+//    pickPixmap = new QPixmap(":/images/Check_mark.png");
     pickPixmap = new QPixmap(":/images/ThumbsUp48.png");
     // setPixmap during resize event
     pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
@@ -447,7 +448,8 @@ size.
     pickLabel->setPixmap(pickPixmap->scaled(d, d, Qt::KeepAspectRatio));
 
     pickLabel->move(x, y);
-    editsLabel->move(x + p.w - offset - d, y + p.h - offset - 0.20 * d);
+    editsLabel->move(x + p.w - offset, y + p.h - offset);
+//    editsLabel->move(x + p.w - offset - d, y + p.h - offset - 0.20 * d);
 }
 
 void ImageView::resizeEvent(QResizeEvent *event)
