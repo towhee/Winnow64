@@ -118,6 +118,7 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     setWordWrap(true);
     setDragEnabled(true);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
+    setSelectionBehavior(QAbstractItemView::SelectRows);
     setUniformItemSizes(false);
 //    setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
     setMaximumHeight(100000);
@@ -125,17 +126,12 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
 
     setModel(this->dm->sf);
 
-    thumbViewSelection = selectionModel();
+//    thumbViewSelection = selectionModel();
 
     thumbViewDelegate = new ThumbViewDelegate(this);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels);
     setItemDelegate(thumbViewDelegate);
-
-    // triggers MW::fileSelectionChange
-    connect(this->selectionModel(),
-            SIGNAL(currentChanged(QModelIndex,QModelIndex)),
-            parent, SLOT(fileSelectionChange()));
 
     // used to provide iconRect info to zoom to point clicked on thumb
     // in imageView
@@ -143,6 +139,15 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
             this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
 
 /* Misc connections, emptyImg and timer
+    // triggers MW::fileSelectionChange
+//    connect(this->selectionModel(),
+//            SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+//            parent, SLOT(fileSelectionChange(QModelIndex, QModelIndex)));
+
+//    connect(this->selectionModel(),
+//            SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
+//            parent, SLOT(fileSelectionChange()));
+
      triggers MW::fileSelectionChange
      seems to be firing twice
     connect(this->selectionModel(),
@@ -636,8 +641,8 @@ void ThumbView::selectThumb(QString &fName)
     QModelIndexList idxList = dm->match(dm->index(0, 0), G::FileNameRole, fName);
     QModelIndex idx = idxList[0];
 //    thumbViewDelegate->currentIndex = idx;
-    QItemSelection selection(idx, idx);
-    thumbViewSelection->select(selection, QItemSelectionModel::Select);
+//    QItemSelection selection(idx, idx);
+//    thumbViewSelection->select(selection, QItemSelectionModel::Select);
     qDebug() << "scrollto: ThumbView::selectThumb(filename)" << fName;
     if (idx.isValid()) scrollTo(idx, ScrollHint::PositionAtCenter);
 }
@@ -996,8 +1001,9 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     #endif
     }
     QListView::mousePressEvent(event);
+
+    // capture mouse click position for imageView zoom/pan
     if (event->modifiers() == Qt::NoModifier) {
-        // capture position for imageView zoom/pan
         QModelIndex idx = currentIndex();
         qDebug() << "Row =" << idx.row();
         QRect iconRect = idx.data(G::ThumbRectRole).toRect();
@@ -1016,6 +1022,15 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
         }
     }
 }
+
+//QModelIndex ThumbView::moveCursor(QAbstractItemView::CursorAction cursorAction,
+//                                Qt::KeyboardModifiers modifiers)
+//{
+//    QModelIndex idx = QAbstractItemView::moveCursor(cursorAction, modifiers);
+//    setCurrentIndex(idx);
+
+//}
+
 
 void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
 {

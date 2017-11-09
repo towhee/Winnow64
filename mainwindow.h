@@ -157,8 +157,8 @@ protected:
 
 public slots:
     void folderSelectionChange();
-//    void fileSelectionChange(QModelIndex current, QModelIndex previous);
-    void fileSelectionChange();
+    void fileSelectionChange(QModelIndex current, QModelIndex previous);
+//    void fileSelectionChange();
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setStatus(QString state);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);

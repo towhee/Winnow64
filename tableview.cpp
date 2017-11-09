@@ -27,7 +27,6 @@ TableView::TableView(DataModel *dm, ThumbView *thumbView)
     setIconSize(QSize(24,24+12));   // no effect on thumbView scroll issue
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setDefaultSectionSize(24);
-//    setSelectionModel(thumbView->thumbViewSelection);
 
     PickItemDelegate *pickItemDelegate = new PickItemDelegate;
     setItemDelegateForColumn(G::PickedColumn, pickItemDelegate);

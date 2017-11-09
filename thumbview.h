@@ -107,6 +107,8 @@ protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
     void resizeEvent(QResizeEvent* event);
+//    QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction,
+//                           Qt::KeyboardModifiers modifiers);
 //    bool event(QEvent* event);      // key capture
 
 private:

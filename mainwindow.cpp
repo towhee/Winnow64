@@ -126,12 +126,16 @@ variables in MW (this class) and managed in the prefDlg class.
     this->setWindowTitle("Winnow");
     this->setObjectName("WinnowMW");
 
-    selectionModel = new QItemSelectionModel(dm);
+    // set a common selection model for all views
+    selectionModel = new QItemSelectionModel(dm->sf);
     thumbView->setSelectionModel(selectionModel);
     tableView->setSelectionModel(selectionModel);
+    connect(selectionModel,
+            SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+            this, SLOT(fileSelectionChange(QModelIndex, QModelIndex)));
 
     centralLabel = new QLabel;
-    centralLayout->addWidget(centralLabel);
+    centralLayout->addWidget(centralLabel);     // first time open program
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
     centralLayout->addWidget(tableView);
@@ -413,8 +417,8 @@ void MW::folderSelectionChange()
      loadMetadataCache();
 }
 
-//void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
-void MW::fileSelectionChange()
+void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
+//void MW::fileSelectionChange()
 {
 /* Triggered when file selection changes (folder change selects new image, so
 it also triggers this function). The new image is loaded, the pick status is
@@ -428,12 +432,15 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     }
     QModelIndexList selected = thumbView->selectionModel()->selectedIndexes();
 
+    qDebug() << "MW::fileSelectionChange";
+
     // user clicks outside thumb but inside treeView dock
     if (selected.isEmpty()) return;
 
     // sync thumbView delegate current item
     thumbView->thumbViewDelegate->currentIndex = thumbView->currentIndex();
-    // use cache if image loaded, else read it from file
+
+    // update imageView, use cache if image loaded, else read it from file
     QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
     if (imageView->loadImage(thumbView->currentIndex(), fPath)) {
         if (G::isThreadTrackingOn) qDebug()
@@ -4030,7 +4037,7 @@ void MW::loupeDisplay()
 //             << "thumbHeight =" << thumbView->thumbHeight << "\n";
 
     thumbView->setThumbParameters();
-//    if (!isUpdatingState) thumbView->thumbsFit(dockWidgetArea(thumbDock));
+    if (!isUpdatingState) thumbView->thumbsFit(dockWidgetArea(thumbDock));
     setThumbDockVisibity();
 //    recoverSelection();
     if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
@@ -4085,16 +4092,16 @@ void MW::tableDisplay()
 
     // in case was grid display move thumbView back to dock from central widget
 //    saveSelection();
-    thumbDock->setWidget(thumbView);
-    setThumbDockFeatures(dockWidgetArea(thumbDock));
-    thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
-    thumbView->isGrid = false;
-//    qDebug() << "\nMW::tableDisplay before calling setThumbParameters" << "\n"
-//             << "***  thumbView Ht =" << thumbView->height()
-//             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-//             << "thumbHeight =" << thumbView->thumbHeight << "\n";
-    thumbView->setThumbParameters();
-    setThumbDockVisibity();
+//    thumbDock->setWidget(thumbView);
+//    setThumbDockFeatures(dockWidgetArea(thumbDock));
+//    thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
+//    thumbView->isGrid = false;
+////    qDebug() << "\nMW::tableDisplay before calling setThumbParameters" << "\n"
+////             << "***  thumbView Ht =" << thumbView->height()
+////             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+////             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+//    thumbView->setThumbParameters();
+//    setThumbDockVisibity();
 //    recoverSelection();
     if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
         thumbView->setFocus();
