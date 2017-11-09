@@ -37,8 +37,6 @@ public:
     bool isFloat;       // set by MW ...
     bool isAutoFit;
 
-    QModelIndex beforeSelectionExtensionIndex;
-
     void updateLayout();
 
     ThumbViewDelegate *thumbViewDelegate;

@@ -106,7 +106,6 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     mw = parent;
     this->dm = dm;
 
-//    thumbHeight = G::thumbHeight;
     pickFilter = false;
     setViewMode(QListView::IconMode);
 
@@ -135,35 +134,41 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
 
     // triggers MW::fileSelectionChange
     connect(this->selectionModel(),
+            SIGNAL(currentChanged(QModelIndex,QModelIndex)),
             parent, SLOT(fileSelectionChange()));
-
-    // triggers MW::fileSelectionChange
-//    connect(this->selectionModel(),
-//            SIGNAL(currentChanged(QModelIndex,QModelIndex)),
-//            thumbViewDelegate, SLOT(onCurrentChanged(QModelIndex,QModelIndex)));
-
-//    connect(this->selectionModel(),
-//            SIGNAL(currentChanged(QModelIndex,QModelIndex)),
-
-    //    [signal] void QItemSelectionModel::currentChanged(const QModelIndex &current, const QModelIndex &previous)
-
-//    connect(this, SIGNAL(activated(QModelIndex)),
-//            this, SLOT(activate(QModelIndex)));
-
-//    connect(this, SIGNAL(doubleClicked(const QModelIndex &)), parent,
-//            SLOT(loadImagefromThumb(const QModelIndex &)));
 
     // used to provide iconRect info to zoom to point clicked on thumb
     // in imageView
     connect(thumbViewDelegate, SIGNAL(update(QModelIndex, QRect)),
             this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
 
-//    thumbsDir = new QDir();
-//    fileFilters = new QStringList;
+/* Misc connections, emptyImg and timer
+     triggers MW::fileSelectionChange
+     seems to be firing twice
+    connect(this->selectionModel(),
+            SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
+            parent, SLOT(fileSelectionChange()));
 
-//    emptyImg.load(":/images/no_image.png");
+     triggers MW::fileSelectionChange
+    connect(this->selectionModel(),
+            SIGNAL(currentChanged(QModelIndex,QModelIndex)),
+            thumbViewDelegate, SLOT(onCurrentChanged(QModelIndex,QModelIndex)));
 
-//    QTime time = QTime::currentTime();
+        [signal] void QItemSelectionModel::currentChanged(const QModelIndex &current, const QModelIndex &previous)
+
+    connect(this, SIGNAL(activated(QModelIndex)),
+            this, SLOT(activate(QModelIndex)));
+
+    connect(this, SIGNAL(doubleClicked(const QModelIndex &)), parent,
+            SLOT(loadImagefromThumb(const QModelIndex &)));
+
+    thumbsDir = new QDir();
+    fileFilters = new QStringList;
+
+    emptyImg.load(":/images/no_image.png");
+
+    QTime time = QTime::currentTime();
+    */
 }
 
 //bool ThumbView::event(QEvent *event)
@@ -404,6 +409,9 @@ bool ThumbView::isSelectedItem()
     qDebug() << "ThumbView::isSelectedItem";
     #endif
     }
+    return true;
+    qDebug() << "selectionModel()->selectedRows().size()" << selectionModel()->selectedRows().size();
+    if (selectionModel()->selectedRows().size() > 0)
         return true;
     else
         return false;
@@ -599,6 +607,8 @@ void ThumbView::selectThumb(QModelIndex idx)
     if (idx.isValid()) {
         setCurrentIndex(idx);
 //        qDebug() << "Row =" << idx.row();
+        thumbViewDelegate->currentIndex = idx;
+//        scrollTo(idx, ScrollHint::PositionAtCenter);
     }
 }
 
@@ -613,6 +623,7 @@ void ThumbView::selectThumb(int row)
     if (row < 0) return;
     setFocus();
     QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
+    selectThumb(idx);
 }
 
 void ThumbView::selectThumb(QString &fName)
@@ -627,6 +638,7 @@ void ThumbView::selectThumb(QString &fName)
 //    thumbViewDelegate->currentIndex = idx;
     QItemSelection selection(idx, idx);
     thumbViewSelection->select(selection, QItemSelectionModel::Select);
+    qDebug() << "scrollto: ThumbView::selectThumb(filename)" << fName;
     if (idx.isValid()) scrollTo(idx, ScrollHint::PositionAtCenter);
 }
 
@@ -637,7 +649,8 @@ void ThumbView::selectNext()
     qDebug() << "ThumbView::selectNext";
     #endif
     }
-    if (isSelectedItem()) selectThumb(getNextRow());
+    selectThumb(getNextRow());
+//    if (isSelectedItem()) selectThumb(getNextRow());
 }
 
 void ThumbView::selectPrev()
@@ -647,7 +660,8 @@ void ThumbView::selectPrev()
     qDebug() << "ThumbView::selectPrev";
     #endif
     }
-    if (isSelectedItem()) selectThumb(getPrevRow());
+    selectThumb(getPrevRow());
+//    if (isSelectedItem()) selectThumb(getPrevRow());
 //    setCurrentIndex(moveCursor(MovePrevious, Qt::NoModifier));
 }
 
@@ -678,7 +692,8 @@ void ThumbView::selectFirst()
     qDebug() << "ThumbView::selectFirst";
     #endif
     }
-    if (isSelectedItem()) selectThumb(0);
+    selectThumb(0);
+//    if (isSelectedItem()) selectThumb(0);
 }
 
 void ThumbView::selectLast()
@@ -688,7 +703,8 @@ void ThumbView::selectLast()
     qDebug() << "ThumbView::selectLast";
     #endif
     }
-    if (isSelectedItem()) selectThumb(getLastRow());
+    selectThumb(getLastRow());
+//    if (isSelectedItem()) selectThumb(getLastRow());
 }
 
 void ThumbView::selectRandom()
@@ -698,7 +714,8 @@ void ThumbView::selectRandom()
     qDebug() << "ThumbView::selectRandom";
     #endif
     }
-    if (isSelectedItem()) selectThumb(getRandomRow());
+    selectThumb(getRandomRow());
+//    if (isSelectedItem()) selectThumb(getRandomRow());
 }
 
 void ThumbView::selectNextPick()
@@ -708,7 +725,8 @@ void ThumbView::selectNextPick()
     qDebug() << "ThumbView::selectNextPick";
     #endif
     }
-    if (isSelectedItem()) selectThumb(getNextPick());
+    selectThumb(getNextPick());
+//    if (isSelectedItem()) selectThumb(getNextPick());
 }
 
 void ThumbView::selectPrevPick()
@@ -718,7 +736,8 @@ void ThumbView::selectPrevPick()
     qDebug() << "ThumbView::selectPrevPick";
     #endif
     }
-    if (isSelectedItem()) selectThumb(getPrevPick());
+    selectThumb(getPrevPick());
+//    if (isSelectedItem()) selectThumb(getPrevPick());
 }
 
 void ThumbView::thumbsEnlarge()
@@ -976,9 +995,9 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     qDebug() << "ThumbView::mousePressEvent";
     #endif
     }
-    beforeSelectionExtensionIndex = currentIndex();
     QListView::mousePressEvent(event);
     if (event->modifiers() == Qt::NoModifier) {
+        // capture position for imageView zoom/pan
         QModelIndex idx = currentIndex();
         qDebug() << "Row =" << idx.row();
         QRect iconRect = idx.data(G::ThumbRectRole).toRect();

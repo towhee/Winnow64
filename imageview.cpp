@@ -84,8 +84,9 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
 //    infoLabelShadow->setGraphicsEffect(infoEffect);
     infoDropShadow->setGraphicsEffect(infoEffect);
 
+    // rgh is this needed or holdover from prev program
     mouseMovementTimer = new QTimer(this);
-    connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
+//    connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
 
     loadFullSizeTimer = new QTimer(this);
     loadFullSizeTimer->setInterval(500);
@@ -100,7 +101,8 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
 
 bool ImageView::loadImage(QModelIndex idx, QString fPath)
 {
-/* There are two sources for the image (pixmap): a file or the cache.
+/*
+There are two sources for the image (pixmap): a file or the cache.
 
 The first choice is the cache.  In the cache two versions of the image are
 stored: the full scale and a preview scaled to dimensions defined in
@@ -123,7 +125,6 @@ scene.
 Moving from one image to the next, the scenario where the currrent image is
 full scale and the next is a preview, requires the zoom factor to be normalized
 to prevent jarring changes in perceived scale by the user.
-
 */
     {
     #ifdef ISDEBUG

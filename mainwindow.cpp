@@ -126,6 +126,10 @@ variables in MW (this class) and managed in the prefDlg class.
     this->setWindowTitle("Winnow");
     this->setObjectName("WinnowMW");
 
+    selectionModel = new QItemSelectionModel(dm);
+    thumbView->setSelectionModel(selectionModel);
+    tableView->setSelectionModel(selectionModel);
+
     centralLabel = new QLabel;
     centralLayout->addWidget(centralLabel);
     centralLayout->addWidget(imageView);
@@ -440,10 +444,9 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
         infoView->updateInfo(fPath);
     }
 
-    tableView->selectRow(thumbView->currentIndex().row());
+//    tableView->selectRow(thumbView->currentIndex().row());
 
     /* If the metadataCache is finished then update the imageCache,
-     recalculating the target images to cache, decaching and caching to keep
      the cache up-to-date with the current image selection. */
     if (metadataLoaded) {
         imageCacheThread->updateImageCache(fPath);
