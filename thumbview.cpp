@@ -302,11 +302,21 @@ void ThumbView::setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid
 
 int ThumbView::getThumbSpaceMin()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getThumbSpaceMin";
+    #endif
+    }
     return 40 + thumbSpacing * 2 + thumbPadding *2 + 8;
 }
 
 int ThumbView::getThumbSpaceMax()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getThumbSpaceMax";
+    #endif
+    }
     return 160 + thumbSpacing * 2 + thumbPadding *2 + 8;
 }
 
@@ -315,6 +325,11 @@ QSize ThumbView::getThumbCellSize()
 //    int w = thumbWidth + thumbSpacing * 2 + thumbPadding *2 + 8;
 //    int h = thumbHeight + thumbSpacing * 2 + thumbPadding *2 + 8;
 //    return QSize(w, h);
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getThumbCellSize";
+    #endif
+    }
     return thumbViewDelegate->getThumbCell();
 }
 
@@ -1063,16 +1078,6 @@ void ThumbView::invertSelection()
 /* inverts/toggles which thumbs are selected.  Called from
  * MW::invertSelectionAct
 */
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::invertSelection";
-    #endif
-    }
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::invertSelection";
-    #endif
-    }
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::invertSelection";

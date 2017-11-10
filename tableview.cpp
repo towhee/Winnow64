@@ -22,9 +22,10 @@ TableView::TableView(DataModel *dm, ThumbView *thumbView)
     verticalHeader()->setVisible(false);
 
     setEditTriggers(QAbstractItemView::NoEditTriggers);
+    setSelectionMode(QAbstractItemView::ExtendedSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setTabKeyNavigation(false);
-    setIconSize(QSize(24,24+12));   // no effect on thumbView scroll issue
+    setIconSize(QSize(24, 24 + 12));
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setDefaultSectionSize(24);
 
@@ -51,10 +52,11 @@ void TableView::mouseDoubleClickEvent(QMouseEvent *event)
     qDebug() << "TableView::mouseDoubleClickEvent";
     #endif
     }
-    QTableView::mouseDoubleClickEvent(event);
+//    QTableView::mouseDoubleClickEvent(event);
+//    thumbView->selectThumb(thumbView->currentIndex());
     emit displayLoupe();
     // delay reqd
-    QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
+//    QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
 }
 
 void TableView::delaySelectCurrentThumb()

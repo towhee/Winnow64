@@ -1,6 +1,8 @@
 To do:
-- selection when filtered not correct indexes when apply ratings, labels or picks
+- multi-select not working in tableView
 - cmd click to select multiple items crashing
+- check all mouse behavior including wheel event and scrolling on track pad
+- selection when filtered not correct indexes when apply ratings, labels or picks
 - Compare images not working after images sorted other then filename
 - Try producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
 - Check full screen logic
@@ -32,6 +34,7 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: sync selection in thumbView and table
 - Done: fixed thumbView horizontal scrollbar ghosting issue
 - Done: added circleLabel showing rating / color class in imageView
 - Done: thumbDock height adjusts to thumb size chenges in prefDlg

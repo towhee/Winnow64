@@ -179,13 +179,14 @@ private slots:
 //    void reload();
     void preferences();
     void oldPreferences();
-    void thumbTable();
     void toggleFullScreen();
     void escapeFullScreen();
     void loupeDisplay();
     void gridDisplay();
     void tableDisplay();
     void compareDisplay();
+    void testDoubleClick(QModelIndex idx);
+    void testSingleClick(QModelIndex idx);
     void zoomOut();
     void zoomIn();
     void zoomToFit();

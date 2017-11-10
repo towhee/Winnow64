@@ -67,9 +67,10 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     titleDropShadow->setAttribute(Qt::WA_TranslucentBackground);
 
     pickLabel = new QLabel(this);
+//    pickLabel->setFixedSize(64,51);
     pickLabel->setFixedSize(40,48);
     pickLabel->setAttribute(Qt::WA_TranslucentBackground);
-//    pickPixmap = new QPixmap(":/images/Check_mark.png");
+//    pickPixmap = new QPixmap(":/images/checkmark64.png");
     pickPixmap = new QPixmap(":/images/ThumbsUp48.png");
     // setPixmap during resize event
     pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);

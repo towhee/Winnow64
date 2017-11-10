@@ -105,5 +105,8 @@
         <file>qss/winnow.css</file>
         <file>images/winnow.ico</file>
         <file>Docs/Winnow help.html</file>
+        <file>images/checkmark64.png</file>
+        <file>images/checkmark128.png</file>
+        <file>images/checkmark256.png</file>
     </qresource>
 </RCC>

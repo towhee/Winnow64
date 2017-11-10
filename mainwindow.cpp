@@ -208,49 +208,44 @@ thumbdock is resized by the user when:
 
 bool MW::event(QEvent *event)
 {
-/*
-Intercept arrow keys to prevent runon when holding key down to auto-repeat
-and continue to show next image after arrow key released.  Have to intercept
-QEvent::ShortcutOverride because it is fired before keyRelease event.
+    /* Previous stuff no longer req'd
+    qDebug() << "MW::event" << event;
 
-Patch for bug in Qt where scrollTo not working when switch
-ownershop of thumbView from dock to central widget and back.  scrollTo
-tries to scroll before all the treeView events have executed.  The last
-event is the key release and it works after that.  The shortcuts are
-E (loupe) and G (grid).
-*/
-//    qDebug() << "MW::event" << event;
+     Consume arrow key events when updating imageView to prevent runon
+    if (event->type() == QEvent::ShortcutOverride && imageView->isBusy) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Right ||
+            keyEvent->key() == Qt::Key_Left ||
+            keyEvent->key() == Qt::Key_Down ||
+            keyEvent->key() == Qt::Key_Up)
+        {
+            keyEvent->accept();     // consume keystroke without doing anything
+            return true;
+        }
 
-    // Consume arrow key events when updating imageView to prevent runon
-//    if (event->type() == QEvent::ShortcutOverride && imageView->isBusy) {
-//        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-//        if (keyEvent->key() == Qt::Key_Right ||
-//            keyEvent->key() == Qt::Key_Left ||
-//            keyEvent->key() == Qt::Key_Down ||
-//            keyEvent->key() == Qt::Key_Up)
-//        {
-//            keyEvent->accept();     // consume keystroke without doing anything
-//            return true;
-//        }
-
-//    }
+    }
 
     if (event->type() == QEvent::KeyRelease) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
 
-        // Grid or Loupe views
-//        if (keyEvent->key() == Qt::Key_G ||
-//            keyEvent->key() == Qt::Key_E ||
-//            keyEvent->key() == Qt::Key_Return)
-//        {
-////            qDebug() << "\n" << event << "\n";
-//            thumbView->selectThumb(thumbView->currentIndex());
-//        }
+         Grid or Loupe views
+        if (keyEvent->key() == Qt::Key_G ||
+            keyEvent->key() == Qt::Key_E ||
+            keyEvent->key() == Qt::Key_Return)
+        {
+//            qDebug() << "\n" << event << "\n";
+            thumbView->selectThumb(thumbView->currentIndex());
+        }
+         */
 
         // slideshow
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+
         if (keyEvent->key() == Qt::Key_Escape) {
-            if (isSlideShowActive) slideShow();
+            if (isSlideShowActive) slideShow();     // toggles slideshow off
         }
+        // change delay 1 - 9 seconds
         if (isSlideShowActive) {
             int n = keyEvent->key() - 48;
             if (n > 0 && n <=9) {
@@ -430,19 +425,22 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     qDebug() << "MW::fileSelectionChange";
     #endif
     }
-    QModelIndexList selected = thumbView->selectionModel()->selectedIndexes();
-
-    qDebug() << "MW::fileSelectionChange";
+//    QModelIndexList selected = thumbView->selectionModel()->selectedIndexes();
+    QModelIndexList selected = selectionModel->selectedIndexes();
 
     // user clicks outside thumb but inside treeView dock
     if (selected.isEmpty()) return;
 
+    // currentIndex must be column 0
+    QModelIndex currentIndex = dm->sf->index(current.row(), 0);
+    thumbView->setCurrentIndex(currentIndex);
+
     // sync thumbView delegate current item
-    thumbView->thumbViewDelegate->currentIndex = thumbView->currentIndex();
+    thumbView->thumbViewDelegate->currentIndex = currentIndex;
 
     // update imageView, use cache if image loaded, else read it from file
-    QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
-    if (imageView->loadImage(thumbView->currentIndex(), fPath)) {
+    QString fPath = currentIndex.data(G::FileNameRole).toString();
+    if (imageView->loadImage(currentIndex, fPath)) {
         if (G::isThreadTrackingOn) qDebug()
             << "MW::fileSelectionChange - loaded image file " << fPath;
         updatePick();
@@ -1548,112 +1546,13 @@ void MW::addMenuSeparator(QWidget *widget)
 
 /**************** Data Model *************************/
 
-//void MW::createImageModel()
-//{
-//    imageModel = new QStandardItemModel;
-//    imageModel->setHorizontalHeaderItem(0, new QStandardItem(QString("FileName")));
-//    imageModel->setHorizontalHeaderItem(1, new QStandardItem("Type"));
-//    imageModel->setHorizontalHeaderItem(2, new QStandardItem("Size"));
-//    imageModel->setHorizontalHeaderItem(3, new QStandardItem("Created"));
-//    imageModel->setHorizontalHeaderItem(4, new QStandardItem("Last Modified"));
-//    imageModel->setHorizontalHeaderItem(5, new QStandardItem("Pick"));
-//    imageModel->setHorizontalHeaderItem(6, new QStandardItem("Label"));
-//    imageModel->setHorizontalHeaderItem(7, new QStandardItem("Rating"));
-////    imageModel->insertRow(0);
-////    imageModel->setData(imageModel->index(0, 0), "test");
-////    imageModel->setData(imageModel->index(0, 1), "jpg");
-////    imageModel->setData(imageModel->index(0, 2), 123456);
-////    QStandardItem *item = new QStandardItem("TestItem");
-////    imageModel->setItem(0, 3, item);
-//}
-
-//bool MW::populateImageModel(bool includeSubfolders)
-//{
-//    qDebug() << "MW::populateImageModel";
-//    imageFilters->clear();
-//    foreach (const QString &str, metadata->supportedFormats)
-//            imageFilters->append("*." + str);
-//    imageDir->setNameFilters(*imageFilters);
-//    imageDir->setFilter(QDir::Files);
-//    imageDir->setPath(currentViewDir);
-
-////    imageModel->clear();
-//    QFileInfoList dirFileInfoList;      // info for this folder
-//    dirFileInfoList.clear();
-//    dirFileInfoList = imageDir->entryInfoList();
-//    if (dirFileInfoList.size() == 0) return false;
-
-//    static QStandardItem *item;
-//    static int fileIndex;
-//    static QPixmap emptyPixMap;
-
-//    // rgh not working
-////    emptyPixMap = QPixmap::fromImage(emptyImg).scaled(160, 160);
-
-//    for (fileIndex = 0; fileIndex < dirFileInfoList.size(); ++fileIndex) {
-//        fileInfo = dirFileInfoList.at(fileIndex);
-//        fileInfoList.append(fileInfo);      // file info for all folders
-
-//        imageModel->insertRow(0);
-////            imageModel->setData(imageModel->index(0, 0), "test");
-////            imageModel->setData(imageModel->index(0, 1), "jpg");
-////            imageModel->setData(imageModel->index(0, 2), 123456);
-//        imageModel->setData(imageModel->index(0, 0), "fileInfo.fileName()");
-//        imageModel->setData(imageModel->index(0, 1), fileInfo.suffix());
-//        imageModel->setData(imageModel->index(0, 2), fileInfo.size());
-
-//        qDebug() << fileInfo.fileName()
-//                 << fileInfo.suffix()
-//                 << fileInfo.size();
-
-////        item = new QStandardItem();
-////        item->setData(fileInfo.fileName(), Qt::DisplayRole);
-////        item->setData(fileIndex, SortRole);
-////        item->setData(fileInfo.filePath(), FileNameRole);
-////        item->setData(fileInfo.absoluteFilePath(), Qt::ToolTipRole);
-////        item->setData("False", PickedRole);
-////        item->setData(QRect(), ThumbRectRole);     // define later when read
-////        imageModel->insertRow(0, item);
-//////        imageModel->appendRow(item);
-////        // try add columns to model - not working so far
-////        int row = item->index().row();
-
-////        item = new QStandardItem();
-////        item->setData(fileInfo.suffix(), Qt::DisplayRole);
-////        imageModel->setItem(row, TypeColumn, item);
-
-////        item = new QStandardItem();
-////        item->setData(fileInfo.size(), Qt::DisplayRole);
-////        imageModel->setItem(row, SizeColumn, item);
-
-////        item = new QStandardItem();
-////        item->setData(fileInfo.created(), Qt::DisplayRole);
-////        imageModel->setItem(row, CreatedColumn, item);
-
-////        item = new QStandardItem();
-////        item->setData(fileInfo.lastModified(), Qt::DisplayRole);
-////        imageModel->setItem(row, ModifiedColumn, item);
-
-////        item = new QStandardItem();
-////        item->setData(false, Qt::DisplayRole);
-////        imageModel->setItem(row, PickedColumn, item);
-
-////        item = new QStandardItem();
-////        item->setData(0, Qt::DisplayRole);
-////        imageModel->setItem(row, LabelColumn, item);
-
-////        item = new QStandardItem();
-////        item->setData(0, Qt::DisplayRole);
-////        imageModel->setItem(row, RatingColumn, item);
-
-////        qDebug() << "Row =" << row
-////                 << "FileName =" << imageModel->index(row, NameColumn).data(Qt::DisplayRole);
-//    }
-//    return true;
-//}
-
 void MW::createDataModel()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::createDataModel";
+    #endif
+    }
     metadata = new Metadata;
 
     dm = new DataModel(this, metadata, filters);
@@ -1744,10 +1643,10 @@ void MW::createTableView()
     }
     tableView = new TableView(dm, thumbView);
 
-    // update thumbView index when tableView clicked.  This also updates
-    // the imageView and metadata infoView.
-    connect(tableView, SIGNAL(clicked(QModelIndex)),
-            thumbView, SLOT(selectThumb(QModelIndex)));
+//    connect(tableView, SIGNAL(doubleClicked(QModelIndex)),
+//            this, SLOT(testDoubleClick(QModelIndex)));
+//    connect(tableView, SIGNAL(clicked(QModelIndex)),
+//            this, SLOT(testSingleClick(QModelIndex)));
 
     // update menu sort by to match tableView sort change
     connect(tableView->horizontalHeader(),
@@ -1755,6 +1654,20 @@ void MW::createTableView()
             this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
 
     connect(tableView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
+}
+
+void MW::testDoubleClick(QModelIndex idx)
+{
+    qDebug() << "\nDoubleClick  currentIndex" << tableView->currentIndex()
+             << "Signal index" << idx;
+//    thumbView->selectThumb(idx);
+    loupeDisplay();
+}
+
+void MW::testSingleClick(QModelIndex idx)
+{
+    qDebug() << "\nSingleClick  currentIndex" << tableView->currentIndex()
+             << "Signal index" << idx;
 }
 
 void MW::createImageView()
@@ -1843,7 +1756,8 @@ void MW::createStatusBar()
 
 void MW::setThumbDockParameters(bool isThumbWrapWhenTopOrBottomDock, bool isAutoFit, bool isVerticalTitle)
 {
-/* Signal from prefDlg when thumbWrap or verticalTitle changed
+/*
+Signal from prefDlg when thumbWrap or verticalTitle changed
 */
     {
     #ifdef ISDEBUG
@@ -2065,7 +1979,8 @@ void MW::reindexImageCache()
 
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 {
-/* This slot function is triggered by the tableView->horizontalHeader
+/*
+This slot function is triggered by the tableView->horizontalHeader
 sortIndicatorChanged signal being emitted, which tells us that the data model
 sort/filter has been re-sorted. As a consequence we need to update the menu
 checked status for the correct column and also resync the image cache. However,
@@ -2434,7 +2349,7 @@ void MW::manageWorkspaces()
 {
 /*
 Delete, rename and reassign workspaces.
- */
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::manageWorkspaces";
@@ -2523,7 +2438,7 @@ void MW::defaultWorkspace()
 The defaultWorkspace is used the first time the app is run on a new machine and
 there are not any QSettings to read.  It is also useful if part or all of the
 app is "stranded" on secondary monitors that are not attached.
- */
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::defaultWorkspace";
@@ -2985,12 +2900,6 @@ void MW::preferences()
     prefdlg->exec();
 }
 
-void MW::thumbTable()
-{
-//    TableView *tableForm = new TableView(thumbView, this);
-//    tableForm->exec();
-}
-
 void MW::setIncludeSubFolders()
 {
     {
@@ -3085,7 +2994,6 @@ void MW::toggleFullScreen()
     qDebug() << "MW::toggleFullScreen";
     #endif
     }
-    qDebug() << "test";
     if (fullScreenAction->isChecked())
     {
         qDebug() << "fullScreenDocks.isThumbs" << fullScreenDocks.isThumbs;
@@ -3127,24 +3035,44 @@ void MW::selectAllThumbs()
 
 void MW::zoomIn()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::zoomIn";
+    #endif
+    }
     if (asLoupeAction) imageView->zoomIn();
     if (asCompareAction) compareImages->zoomIn();
 }
 
 void MW::zoomOut()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::zoomOut";
+    #endif
+    }
     if (asLoupeAction) imageView->zoomOut();
     if (asCompareAction) compareImages->zoomOut();
 }
 
 void MW::zoomToFit()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::zoomToFit";
+    #endif
+    }
     if (asLoupeAction) imageView->zoomToFit();
     if (asCompareAction) compareImages->zoomToFit();
 }
 
 void MW::zoom50()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::zoom50";
+    #endif
+    }
     if (asLoupeAction) imageView->zoom50();
     if (asCompareAction) compareImages->zoom50();
     popUp->showPopup(this, "Click zoom set to 50%", 1000, 0.5);
@@ -3152,6 +3080,11 @@ void MW::zoom50()
 
 void MW::zoom100()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::zoom100";
+    #endif
+    }
     if (asLoupeAction) imageView->zoom100();
     if (asCompareAction) compareImages->zoomToFit();
     popUp->showPopup(this, "Click zoom set to 100%", 1000, 0.5);
@@ -3159,19 +3092,23 @@ void MW::zoom100()
 
 void MW::zoom200()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::zoom200";
+    #endif
+    }
     if (asLoupeAction) imageView->zoom200();
     if (asCompareAction) compareImages->zoomToFit();
     popUp->showPopup(this, "Click zoom set to 200%", 1000, 0.5);
 }
 
-//void MW::zoomTo()
-//{
-//    if (asLoupeAction) imageView->zoomToFit();
-//    if (asCompareAction) compareImages->zoomToFit();
-//}
-
 void MW::zoomToggle()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::zoomToggle";
+    #endif
+    }
     if (asLoupeAction) imageView->zoomToggle();
     if (asCompareAction) compareImages->zoomToggle();
 }
@@ -3885,13 +3822,6 @@ condition of actions sets the visibility of all window components. */
  * HIDE/SHOW UI ELEMENTS
  * **************************************************************************************/
 
-//void MW::enter()
-//{
-//    QWidget * fw = qApp->focusWidget();
-//    if (fw->objectName() == "ThumbView") loupeDisplay();
-//    qDebug() << "Focus Widget =" << fw->objectName();
-//}
-
 void MW::setThumbDockFloatFeatures(bool isFloat)
 {
     {
@@ -4027,17 +3957,17 @@ void MW::loupeDisplay()
 
     // in case was grid display move thumbView back to dock from central widget
 //    saveSelection();
-    thumbDock->setWidget(thumbView);
-    setThumbDockFeatures(dockWidgetArea(thumbDock));
     thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
     thumbView->isGrid = false;
+    thumbDock->setWidget(thumbView);
+    thumbView->setThumbParameters();
+//    setThumbDockFeatures(dockWidgetArea(thumbDock));
 //    qDebug() << "\nMW::loupeDisplay before calling setThumbParameters" << "\n"
 //             << "***  thumbView Ht =" << thumbView->height()
 //             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
 //             << "thumbHeight =" << thumbView->thumbHeight << "\n";
 
-    thumbView->setThumbParameters();
-    if (!isUpdatingState) thumbView->thumbsFit(dockWidgetArea(thumbDock));
+//    if (!isUpdatingState) thumbView->thumbsFit(dockWidgetArea(thumbDock));
     setThumbDockVisibity();
 //    recoverSelection();
     if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
@@ -4066,12 +3996,12 @@ void MW::gridDisplay()
 //             << "***  thumbView Ht =" << thumbView->height()
 //             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
 //             << "thumbHeight =" << thumbView->thumbHeight << "\n";
-    thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
-                           QDockWidget::DockWidgetMovable  |
-                           QDockWidget::DockWidgetFloatable);
     thumbView->setWrapping(true);
     thumbView->isGrid = true;
     thumbView->setThumbParameters();
+//    thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
+//                           QDockWidget::DockWidgetMovable  |
+//                           QDockWidget::DockWidgetFloatable);
 //    thumbView->setMaximumHeight(100000);
     setThumbDockVisibity();
 //    recoverSelection();
@@ -4086,23 +4016,26 @@ void MW::tableDisplay()
     qDebug() << "MW::tableDisplay";
     #endif
     }
-    // make table of thumbView in central widget
+    // show tableView in central widget
     centralLayout->setCurrentIndex(TableTab);
     thumbView->thumbViewDelegate->isCompare = false;
 
-    // in case was grid display move thumbView back to dock from central widget
-//    saveSelection();
-//    thumbDock->setWidget(thumbView);
-//    setThumbDockFeatures(dockWidgetArea(thumbDock));
-//    thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
-//    thumbView->isGrid = false;
-////    qDebug() << "\nMW::tableDisplay before calling setThumbParameters" << "\n"
-////             << "***  thumbView Ht =" << thumbView->height()
-////             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-////             << "thumbHeight =" << thumbView->thumbHeight << "\n";
-//    thumbView->setThumbParameters();
-//    setThumbDockVisibity();
-//    recoverSelection();
+    /* in case was grid display move thumbView back to dock from central widget.
+    Moving the widget clears its settings, so must call setThumbParameters.
+    After the thumb parameters are reset setThumbParameters emits a signal to
+    execute MW::setThumbDockFeatures, where the thumbDock, if top or bottom, is
+    resized to fit the thumbs.
+    */
+    thumbDock->setWidget(thumbView);
+    thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
+    thumbView->isGrid = false;
+/*    qDebug() << "\nMW::tableDisplay before calling setThumbParameters" << "\n"
+             << "***  thumbView Ht =" << thumbView->height()
+             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+             */
+    thumbView->setThumbParameters();
+    setThumbDockVisibity();
     if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
         thumbView->setFocus();
 }
@@ -4151,12 +4084,22 @@ void MW::compareDisplay()
 
 void MW::saveSelection()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::saveSelection";
+    #endif
+    }
     selectedImages = thumbView->selectionModel()->selectedIndexes();
     currentIdx = thumbView->selectionModel()->currentIndex();
 }
 
 void MW::recoverSelection()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::recoverSelection";
+    #endif
+    }
     QItemSelection *selection = new QItemSelection();
     thumbView->selectionModel()->clear();
 
