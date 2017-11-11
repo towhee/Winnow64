@@ -107,8 +107,8 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     this->dm = dm;
 
     pickFilter = false;
-    setViewMode(QListView::IconMode);
 
+    setViewMode(QListView::IconMode);
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setTabKeyNavigation(true);  // not working
     setResizeMode(QListView::Adjust);
@@ -125,8 +125,6 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     this->setContentsMargins(0,0,0,0);
 
     setModel(this->dm->sf);
-
-//    thumbViewSelection = selectionModel();
 
     thumbViewDelegate = new ThumbViewDelegate(this);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
@@ -675,10 +673,10 @@ void ThumbView::selectThumb(QModelIndex idx)
     #endif
     }
     if (idx.isValid()) {
+        thumbViewDelegate->currentIndex = idx;
         setCurrentIndex(idx);
 //        qDebug() << "Row =" << idx.row();
-        thumbViewDelegate->currentIndex = idx;
-//        scrollTo(idx, ScrollHint::PositionAtCenter);
+        scrollTo(idx, ScrollHint::PositionAtCenter);
     }
 }
 

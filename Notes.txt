@@ -1,10 +1,7 @@
 CLOC = Count Lines Of Code
-
 In terminal: cloc /Users/roryhill/Projects/Winnow64
 
 To do:
-- multi-select not working in tableView
-- cmd click to select multiple items crashing
 - check all mouse behavior including wheel event and scrolling on track pad
 - selection when filtered not correct indexes when apply ratings, labels or picks
 - Compare images not working after images sorted other then filename
@@ -38,6 +35,9 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: improve performance when opening large folders
+- Done: cmd click to select multiple items crashing
+- Done: multi-select not working in tableView
 - Done: sync selection in thumbView and table
 - Done: fixed thumbView horizontal scrollbar ghosting issue
 - Done: added circleLabel showing rating / color class in imageView
