@@ -1833,7 +1833,7 @@ void MW::createBookmarks()
     qDebug() << "MW::createBookmarks";
     #endif
     }
-    bookmarks = new BookMarks(favDock);
+    bookmarks = new BookMarks(this);
 
     bookmarks->setMaximumWidth(folderMaxWidth);
 
