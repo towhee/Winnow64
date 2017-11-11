@@ -1802,7 +1802,8 @@ void MW::createFSTree()
     qDebug() << "MW::createFSTree";
     #endif
     }
-    fsTree = new FSTree(folderDock);
+    fsTree = new FSTree(this);
+//    fsTree = new FSTree(folderDock);
     fsTree->setMaximumWidth(folderMaxWidth);
 
     connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
