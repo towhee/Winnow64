@@ -185,6 +185,18 @@ prevent duplication and orphans.
     focalLengths->takeChildren();
 }
 
+void Filters::checkPicks(bool check)
+{
+    if (check) {
+        picksFalse->setCheckState(0, Qt::Unchecked);
+        picksTrue->setCheckState(0, Qt::Checked);
+    }
+    else {
+        picksFalse->setCheckState(0, Qt::Unchecked);
+        picksTrue->setCheckState(0, Qt::Unchecked);
+    }
+}
+
 void Filters::uncheckAllFilters()
 {
 /* Uncheck all the filter items

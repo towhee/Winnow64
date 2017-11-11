@@ -43,6 +43,7 @@ public slots:
     void uncheckAllFilters();
     void expandAllFilters();
     void collapseAllFilters();
+    void checkPicks(bool check);
 
 private:
     QLinearGradient categoryBackground;

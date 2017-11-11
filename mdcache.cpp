@@ -95,11 +95,12 @@ void MetadataCache::run()
             metadata->loadImageMetadata(fileInfo);
             mutex.unlock();
         }
+        if (totRows > 20 && row == 20) emit loadThumbCache();
     }
     /* after read metadata okay to cache thumbs and images, where the target
     cache needs to know how big each image is (width, height) and the offset
     to embedded jpgs */
-    emit loadThumbCache();
+//    emit loadThumbCache();
     emit loadImageCache();
 
     // update status in statusbar

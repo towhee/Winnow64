@@ -437,6 +437,53 @@ bool ThumbView::isSelectedItem()
         return false;
 }
 
+int ThumbView::getFirstVisible()
+{
+/*
+Return the datamodel row for the first thumb visible in the thumbView. This is
+used to prioritize thumbnail loading when a new folder is selected to show the
+user thumbnails as quickly as possible, instead of waiting for all the
+thumbnails to be generated. This can take a few seconds if there are thousands
+of images in the selected folder.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getFirstVisible";
+    #endif
+    }
+    QRect thumbViewRect = viewport()->rect();
+    for (int row = 0; row < dm->sf->rowCount(); ++row) {
+        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
+            qDebug() << "1st row" << row;
+            return row;
+        }
+    }
+    return -1;
+}
+
+int ThumbView::getLastVisible()
+{
+/*
+Return the datamodel row for the last thumb visible in the thumbView. This is
+used to prioritize thumbnail loading when a new folder is selected to show the
+user thumbnails as quickly as possible, instead of waiting for all the
+thumbnails to be generated. This can take a few seconds if there are thousands
+of images in the selected folder.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getLastVisible";
+    #endif
+    }
+    QRect thumbViewRect = viewport()->rect();
+    for (int row = dm->sf->rowCount() - 1; row >= 0; --row) {
+        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
+            return row;
+        }
+    }
+    return -1;
+}
+
 // not used but might be useful
 QString ThumbView::getCurrentFilename()
 {
@@ -458,12 +505,11 @@ bool ThumbView::isPick()
     qDebug() << "ThumbView::isPick";
     #endif
     }
-    int pickCount = 0;
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
-        QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
-        if (idx.data(G::PickedRole).toString() == "true") ++pickCount;
+        QModelIndex idx = dm->sf->index(row, G::PickedColumn);
+        if (idx.data(Qt::EditRole).toString() == "true") return true;
     }
-    return (pickCount > 0);
+    return false;
 }
 
 QFileInfoList ThumbView::getPicks()
@@ -479,9 +525,12 @@ folder.
     }
     QFileInfoList fileInfoList;
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
-        QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
-        if (idx.data(G::PickedRole).toString() == "true") {
-            QFileInfo fileInfo(idx.data(G::FileNameRole).toString());
+        QModelIndex idx = dm->sf->index(row, G::PickedColumn);
+        if (idx.data(Qt::EditRole).toString() == "true") {
+            QModelIndex pathIdx = dm->sf->index(row, 0);
+            QString fPath = pathIdx.data(G::FileNameRole).toString();
+            QFileInfo fileInfo(fPath);
+            qDebug() << fPath;
             fileInfoList.append(fileInfo);
         }
     }
@@ -499,8 +548,8 @@ int ThumbView::getNextPick()
     int rowCount = dm->sf->rowCount();
     QModelIndex idx;
     while (frwd < rowCount) {
-        idx = dm->sf->index(frwd, 0, QModelIndex());
-        if (idx.data(G::PickedRole).toString() == "true") return frwd;
+        idx = dm->sf->index(frwd, G::PickedColumn);
+        if (idx.data(Qt::EditRole).toString() == "true") return frwd;
         ++frwd;
     }
     return -1;
@@ -517,8 +566,8 @@ int ThumbView::getPrevPick()
 //    int rowCount = dm->sf->rowCount();
     QModelIndex idx;
     while (back >= 0) {
-        idx = dm->sf->index(back, 0, QModelIndex());
-        if (idx.data(G::PickedRole).toString() == "true") return back;
+        idx = dm->sf->index(back, G::PickedColumn);
+        if (idx.data(Qt::EditRole).toString() == "true") return back;
         --back;
     }
     return -1;
@@ -537,10 +586,10 @@ int ThumbView::getNearestPick()
     int rowCount = dm->sf->rowCount();
     QModelIndex idx;
     while (back >=0 || frwd < rowCount) {
-        if (back >=0) idx = dm->sf->index(back, 0, QModelIndex());
-        if (idx.data(G::PickedRole).toString() == "true") return back;
-        if (frwd < rowCount) idx = dm->sf->index(frwd, 0, QModelIndex());
-        if (idx.data(G::PickedRole).toString() == "true") return frwd;
+        if (back >=0) idx = dm->sf->index(back, G::PickedColumn);
+        if (idx.data(Qt::EditRole).toString() == "true") return back;
+        if (frwd < rowCount) idx = dm->sf->index(frwd, G::PickedColumn);
+        if (idx.data(Qt::EditRole).toString() == "true") return frwd;
         --back;
         ++frwd;
     }
@@ -556,9 +605,10 @@ void ThumbView::toggleFilterPick(bool isFilter)
     }
     pickFilter = isFilter;
     if (pickFilter) {
-        int row = getNearestPick();
-        selectThumb(row);
-        dm->sf->setFilterRegExp("true");   // show only picked items
+
+//        int row = getNearestPick();
+//        selectThumb(row);
+//        dm->sf->setFilterRegExp("true");   // show only picked items
     }
     else
         dm->sf->setFilterRegExp("");       // no filter - show all

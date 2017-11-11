@@ -305,6 +305,7 @@ void MW::folderSelectionChange()
     metadataCacheThread->stopMetadateCache();
 
     G::isNewFolderLoaded = false;
+    updateStatus(false, "");
 
     // stop slideshow if a new folder is selected
     if (isSlideShowActive && !isStressTest) slideShow();
@@ -391,6 +392,7 @@ void MW::folderSelectionChange()
      loadThumbCache and loadImageCache when finished metadata cache. The thumb
      cache includes icons (thumbnails) for all the images in the folder. The
      image cache holds as many full size images in memory as possible. */
+     updateStatus(false, "Collecting metadata for all images in folder(s)");
      loadMetadataCache();
 }
 
@@ -733,7 +735,7 @@ void MW::createActions()
     toggleFilterPickAction->setCheckable(true);
     toggleFilterPickAction->setChecked(false);
     connect(toggleFilterPickAction, SIGNAL(triggered(bool)),
-            thumbView, SLOT(toggleFilterPick(bool)));
+            filters, SLOT(checkPicks(bool)));
 //    connect(toggleFilterPickAction, SIGNAL(triggered()), this, SLOT(toggleFilterPick()));
 
     // Place keeper for now
@@ -3315,7 +3317,6 @@ void MW::writeSettings()
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
     setting->setValue("thumbPadding", thumbView->thumbPadding);
     setting->setValue("thumbWidth", thumbView->thumbWidth);
-//    qDebug() << "MW::writeSettings thumbView->thumbHeight" << thumbView->thumbHeight;
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showLabels", (bool)showThumbLabelsAction->isChecked());

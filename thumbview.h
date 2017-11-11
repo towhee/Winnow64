@@ -44,6 +44,8 @@ public:
     void selectThumb(QString &filePath);
     void reportThumb();                             //debugging thumb roles
 
+    int getFirstVisible();
+    int getLastVisible();
 
     QFileInfoList getPicks();
     bool isPick();

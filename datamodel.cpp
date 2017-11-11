@@ -97,6 +97,10 @@ heirarchy is loaded.
     qDebug() << "ThumbView::load";
     #endif
     }
+
+    QElapsedTimer t;
+    t.start();
+
     currentFolderPath = folderPath;
 
     // do some initializing
@@ -107,6 +111,9 @@ heirarchy is loaded.
     dir->setFilter(QDir::Files);
     dir->setPath(currentFolderPath);
     dir->setSorting(QDir::Name);
+
+    qDebug() << "Get eligible dir files  elapsed time =" << t.restart() << "ms for "
+             << dir->entryInfoList().size() << "files";
 
     removeRows(0, rowCount());
     fileInfoList.clear();
@@ -161,67 +168,48 @@ bool DataModel::addFiles()
 
         // get file info
         fileInfo = dir->entryInfoList().at(fileIndex);
-        fileInfoList.append(fileInfo);
         imageFilePathList.append(fileInfo.absoluteFilePath());
-//        QString fPath = fileInfo.filePath();
 
-//        qDebug() << "building data model"
-//                 << fileIndex << "of" << dirFileInfoList.size()
-//                 << fPath;
+        /* add icon as first column in new row
 
-        // add icon as first column in new row
+        // this approach is slower than adding setData(index(row, column), x)
+        // for the first item that is req'd to append a new item to the datamodel
+        item = new QStandardItem();
+        appendRow(item);
+        int row = item->index().row();
+        setData(index(row, G::PathColumn), fileInfo.fileName(), Qt::DisplayRole);
+        setData(index(row, G::PathColumn), fileInfo.filePath(), G::FileNameRole);
+        setData(index(row, G::PathColumn), fileInfo.absoluteFilePath(), Qt::ToolTipRole);
+        setData(index(row, G::PathColumn), fileInfo.path(), G::PathRole);   // can we combine and eliminate
+        setData(index(row, G::PathColumn), QRect(), G::ThumbRectRole);
+        setData(index(row, G::PathColumn), Qt::AlignCenter, Qt::TextAlignmentRole);  */
+
         item = new QStandardItem();
         item->setData("", Qt::DisplayRole);     // column 0 just displays icon
         item->setData(fileInfo.filePath(), G::FileNameRole);
         item->setData(fileInfo.absoluteFilePath(), Qt::ToolTipRole);
-        item->setData("False", G::PickedRole);
-        item->setData("", G::RatingRole);
-        item->setData("", G::LabelRole);
         item->setData(QRect(), G::ThumbRectRole);     // define later when read
         item->setData(fileInfo.path(), G::PathRole);
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         appendRow(item);
 
-        // add columns to model
+        // add columns that do not require metadata read form files
         int row = item->index().row();
 
-        item = new QStandardItem();
-        item->setData(fileInfo.fileName(), Qt::DisplayRole);
-        setItem(row, G::NameColumn, item);
-
-        item = new QStandardItem();
+        setData(index(row, G::NameColumn), fileInfo.fileName());
+        setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
         QString s = fileInfo.suffix().toUpper();
         // build list for filters->addCategoryFromData
         typesMap[s] = s;
-        item->setData(s, Qt::DisplayRole);
-        setItem(row, G::TypeColumn, item);
-
-        item = new QStandardItem();
-        item->setData(fileInfo.size(), Qt::DisplayRole);
-        item->setData(int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        setItem(row, G::SizeColumn, item);
-
-        item = new QStandardItem();
-        item->setData(fileInfo.created(), Qt::DisplayRole);
-        setItem(row, G::CreatedColumn, item);
-
-        item = new QStandardItem();
-        item->setData(fileInfo.lastModified(), Qt::DisplayRole);
-        setItem(row, G::ModifiedColumn, item);
-
-        item = new QStandardItem();
-        item->setData("false", Qt::EditRole);
-        setItem(row, G::PickedColumn, item);
-
-        item = new QStandardItem();
-        item->setData("", Qt::DisplayRole);
-        item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
-        setItem(row, G::LabelColumn, item);
-
-        item = new QStandardItem();
-        item->setData("", Qt::DisplayRole);
-        item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
-        setItem(row, G::RatingColumn, item);
+        setData(index(row, G::TypeColumn), s);
+        setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        setData(index(row, G::CreatedColumn), fileInfo.created());
+        setData(index(row, G::ModifiedColumn), fileInfo.lastModified());
+        setData(index(row, G::PickedColumn), "false");
+        setData(index(row, G::LabelColumn), "");
+        setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        setData(index(row, G::RatingColumn), "");
+        setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
 
         /* the rest of the data model columns are added after the metadata
         has been loaded, when the image caching is called.  See
@@ -233,7 +221,6 @@ bool DataModel::addFiles()
     qDebug() << "Add files elapsed time =" << t.restart() << "ms for "
              << dir->entryInfoList().size() << "files";
     filters->addCategoryFromData(typesMap, filters->types);
-    qDebug() << "Add filters elapsed time =" << t.restart();
     return true;
 }
 
@@ -249,6 +236,9 @@ which is created in MW.
     qDebug() << "DataModel::addMetadataToModel";
     #endif
     }
+    QElapsedTimer t;
+    t.start();
+
     static QStandardItem *item;
     QMap<QVariant, QString> modelMap;
     QMap<QVariant, QString> titleMap;
@@ -293,6 +283,9 @@ which is created in MW.
     filters->addCategoryFromData(modelMap, filters->models);
     filters->addCategoryFromData(titleMap, filters->titles);
     filters->addCategoryFromData(flMap, filters->focalLengths);
+
+    qDebug() << "add metadata elapsed time =" << t.restart();
+
 }
 
 void DataModel::updateImageList()

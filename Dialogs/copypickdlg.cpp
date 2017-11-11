@@ -25,6 +25,8 @@ CopyPickDlg::CopyPickDlg(QWidget *parent, QFileInfoList &imageList,
 //    folderPath = "/users/roryhill/pictures/" + fileNameDatePrefix;
     updateFolderPath();
     ui->descriptionLineEdit->setFocus();
+
+    qDebug() << "\ngetSequenceStart()";
     getSequenceStart("");
 }
 
