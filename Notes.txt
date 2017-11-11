@@ -1,3 +1,7 @@
+CLOC = Count Lines Of Code
+
+In terminal: cloc /Users/roryhill/Projects/Winnow64
+
 To do:
 - multi-select not working in tableView
 - cmd click to select multiple items crashing

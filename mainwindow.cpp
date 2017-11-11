@@ -32,21 +32,19 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     //    GData::t.start();
     #endif
 
-    G::devicePixelRatio = 1;
-    #ifdef Q_OS_MAC
-    G::devicePixelRatio = 2;
-    #endif
+    this->setWindowTitle("Winnow");
+    this->setObjectName("WinnowMW");
 
 //    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-
     isInitializing = true;
     isSlideShowActive = false;
     maxThumbSpaceHeight = 160 + qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
-//    imageFilters = new QStringList;
-//    imageDir = new QDir();
     popUp = new PopUp;
+
+    // platform specific settings
+    setupPlatform();
 
 /* Initialization process
 *******************************************************************************
@@ -78,31 +76,26 @@ variables in MW (this class) and managed in the prefDlg class.
     // structure to hold persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
 
-    // centralWidget required by ImageView/CompareView constructors
-    centralWidget = new QWidget(this);
-    centralWidget->setObjectName("centralWidget");
-    // stack layout for loupe, compare and grid displays
-    centralLayout = new QStackedLayout;
-    centralLayout->setContentsMargins(0, 0, 0, 0);
-
-//    createImageModel();
-    createFilterView();             // dependent on thumbView
-    createDataModel();
-    createThumbView();              // dependent on QSetting, filterView
-    createImageView();              // Req centralWidget
-    createTableView();              // Req centralWidget
-    createCompareView();            // Req centralWidget
-    createStatusBar();
+    createCentralWidget();      // req'd by ImageView, CompareView
+    createFilterView();         // req'd by DataModel
+    createDataModel();          // dependent on FilterView, creates Metadata
+    createThumbView();          // dependent on QSetting, filterView
+    createTableView();          // dependent on centralWidget
+    createSelectionModel();     // dependent on ThumbView, ImageView
+    createInfoView();           // dependent on metadata
+    createCaching();            // dependent on dm, metadata, thumbView
+    createImageView();          // dependent on centralWidget
+    createCompareView();        // dependent on centralWidget
     createFSTree();
-    createBookmarks();              // dependent on loadSettings
+    createBookmarks();          // dependent on loadSettings
+    createDocks();              // dependent on FSTree, Bookmarks, ThumbView, Metadata, InfoView
+    createStatusBar();
 
-    loadWorkspaces();               // req'd by actions and menu
-    createActions();                // dependent on above
-    createMenus();                  // dependent on creatActions and loadSettings
+    loadWorkspaces();           // req'd by actions and menu
+    createActions();            // dependent on above
+    createMenus();              // dependent on creatActions and loadSettings
 
-    updateExternalApps();           // dependent on createActions
-    setupDocks();
-    thumbDock->installEventFilter(this);
+    updateExternalApps();       // dependent on createActions
     handleStartupArgs();
 
     bool isSettings = loadSettings();//dependent on bookmarks and actions
@@ -113,41 +106,8 @@ variables in MW (this class) and managed in the prefDlg class.
         restoreState(setting->value("WindowState").toByteArray());
     }
 
-    #ifdef Q_OS_LINIX
-
-    #endif
-    #ifdef Q_OS_WIN
-        setWindowIcon(QIcon(":/images/winnow.png"));
-    #endif
-    #ifdef Q_OS_MAC
-        setWindowIcon(QIcon(":/images/winnow.icns"));
-    #endif
-
-    this->setWindowTitle("Winnow");
-    this->setObjectName("WinnowMW");
-
-    // set a common selection model for all views
-    selectionModel = new QItemSelectionModel(dm->sf);
-    thumbView->setSelectionModel(selectionModel);
-    tableView->setSelectionModel(selectionModel);
-    connect(selectionModel,
-            SIGNAL(currentChanged(QModelIndex, QModelIndex)),
-            this, SLOT(fileSelectionChange(QModelIndex, QModelIndex)));
-
-    centralLabel = new QLabel;
-    centralLayout->addWidget(centralLabel);     // first time open program
-    centralLayout->addWidget(imageView);
-    centralLayout->addWidget(compareImages);
-    centralLayout->addWidget(tableView);
-//    centralLayout->addWidget(gridView); // rghx
-    centralLayout->setCurrentIndex(0);
-    centralWidget->setLayout(centralLayout);
-    setCentralWidget(centralWidget);
-
-    // add error trapping for file io  rgh todo
-    QFile fStyle(":/qss/teststyle.css");
-    fStyle.open(QIODevice::ReadOnly);
-    this->setStyleSheet(fStyle.readAll());
+    setupCentralWidget();
+    createAppStyle();
 
     if (isSettings && !resetSettings) updateState();
     else {
@@ -162,6 +122,28 @@ variables in MW (this class) and managed in the prefDlg class.
     // process the persistant folder if available
     folderSelectionChange();
 }
+
+void MW::setupPlatform()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setupPlatform";
+    #endif
+    }
+    #ifdef Q_OS_LINIX
+        G::devicePixelRatio = 1;
+    #endif
+    #ifdef Q_OS_WIN
+        G::devicePixelRatio = 1;
+        setWindowIcon(QIcon(":/images/winnow.png"));
+    #endif
+    #ifdef Q_OS_MAC
+        G::devicePixelRatio = 2;
+        setWindowIcon(QIcon(":/images/winnow.icns"));
+    #endif
+}
+
+//   EVENT HANDLERS
 
 void MW::keyPressEvent(QKeyEvent *event)
 {
@@ -276,7 +258,7 @@ void MW::handleStartupArgs()
  A new folder is selected which triggers folderSelectionChange:
 
  1.  A list of all eligible image files in the folder is generated in
-     thumbView.
+     DataModel (dm).
 
  2.  A thread is spawned to cache metadata for all the images.
 
@@ -425,6 +407,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     qDebug() << "MW::fileSelectionChange";
     #endif
     }
+    // rgh check if selection is working properly
 //    QModelIndexList selected = thumbView->selectionModel()->selectedIndexes();
     QModelIndexList selected = selectionModel->selectedIndexes();
 
@@ -449,16 +432,11 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
         infoView->updateInfo(fPath);
     }
 
-//    tableView->selectRow(thumbView->currentIndex().row());
-
     /* If the metadataCache is finished then update the imageCache,
      the cache up-to-date with the current image selection. */
     if (metadataLoaded) {
         imageCacheThread->updateImageCache(fPath);
     }
-
-    // if top/bottom dock resize dock height if scrollbar is/not visible
-//    setThumbDockFeatures(dockWidgetArea(thumbDock));
 
 /*   Other stuff tried and reported ...
  *
@@ -511,7 +489,8 @@ void MW::loadMetadataCache()
 
 void MW::loadThumbCache()
 {
-/* The thumbnail cache is loaded after the metadata for all the images in the
+/*
+The thumbnail cache is loaded after the metadata for all the images in the
 folder(s) has been loaded.  This function is called from the metadataCacheThread.
 */
     {
@@ -525,7 +504,8 @@ folder(s) has been loaded.  This function is called from the metadataCacheThread
 
 void MW::loadImageCache()
 {
-/*  This is called from the metadataCacheThread after all the metadata has been
+/*
+This is called from the metadataCacheThread after all the metadata has been
 loaded.  It is called immediately after loadThumbCache so both the thumbCache and
 full size imageCache are running simultaneously.  The imageCache loads images
 until the assigned amount of memory has been consumed or all the images are
@@ -1544,7 +1524,37 @@ void MW::addMenuSeparator(QWidget *widget)
     widget->addAction(separator);
 }
 
-/**************** Data Model *************************/
+void MW::createCentralWidget()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::createCentralWidget";
+    #endif
+    }
+    // centralWidget required by ImageView/CompareView constructors
+    centralWidget = new QWidget(this);
+    centralWidget->setObjectName("centralWidget");
+    // stack layout for loupe, table, compare and grid displays
+    centralLayout = new QStackedLayout;
+    centralLayout->setContentsMargins(0, 0, 0, 0);
+}
+
+void MW::setupCentralWidget()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setupCentralWidget";
+    #endif
+    }
+    centralLabel = new QLabel;
+    centralLayout->addWidget(centralLabel);     // first time open program
+    centralLayout->addWidget(imageView);
+    centralLayout->addWidget(compareImages);
+    centralLayout->addWidget(tableView);
+    centralLayout->setCurrentIndex(0);
+    centralWidget->setLayout(centralLayout);
+    setCentralWidget(centralWidget);
+}
 
 void MW::createDataModel()
 {
@@ -1554,10 +1564,69 @@ void MW::createDataModel()
     #endif
     }
     metadata = new Metadata;
-
     dm = new DataModel(this, metadata, filters);
 
-    connect(dm->sf, SIGNAL(reloadImageCache()), this, SLOT(loadFilteredImageCache()));
+    connect(dm->sf, SIGNAL(reloadImageCache()),
+            this, SLOT(loadFilteredImageCache()));
+}
+
+void MW::createSelectionModel()
+{
+/*
+The application only has one selection model which is shared by ThumbView and
+TableView, insuring that each view is in sync.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::createSelectionModel";
+    #endif
+    }
+    // set a common selection model for all views
+    selectionModel = new QItemSelectionModel(dm->sf);
+    thumbView->setSelectionModel(selectionModel);
+    tableView->setSelectionModel(selectionModel);
+
+    connect(selectionModel, SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+            this, SLOT(fileSelectionChange(QModelIndex, QModelIndex)));
+}
+
+void MW::createCaching()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::createDataModel";
+    #endif
+    }
+    metadataCacheThread = new MetadataCache(this, dm, metadata);
+    thumbCacheThread = new ThumbCache(this, dm, metadata);
+    imageCacheThread = new ImageCache(this, metadata);
+
+    connect(metadataCacheThread, SIGNAL(loadThumbCache()),
+            this, SLOT(loadThumbCache()));
+
+    connect(metadataCacheThread, SIGNAL(loadImageCache()),
+            this, SLOT(loadImageCache()));
+
+    connect(metadataCacheThread, SIGNAL(updateIsRunning(bool)),
+            this, SLOT(updateMetadataThreadRunStatus(bool)));
+
+    connect(thumbCacheThread, SIGNAL(setIcon(QStandardItem*, QImage, QString)),
+            thumbView, SLOT(setIcon(QStandardItem*, QImage, QString)));
+
+    connect(thumbCacheThread, SIGNAL(updateStatus(bool, QString)),
+            this, SLOT(updateStatus(bool, QString)));
+
+    connect(thumbCacheThread, SIGNAL(refreshThumbs()),
+            thumbView, SLOT(refreshThumbs()));
+
+    connect(thumbCacheThread, SIGNAL(updateIsRunning(bool)),
+            this, SLOT(updateThumbThreadRunStatus(bool)));
+
+    connect(imageCacheThread, SIGNAL(updateIsRunning(bool)),
+            this, SLOT(updateImageThreadRunStatus(bool)));
+
+    connect(imageCacheThread, SIGNAL(showCacheStatus(const QImage)),
+            this, SLOT(showCacheStatus(const QImage)));
 }
 
 void MW::createThumbView()
@@ -1567,8 +1636,6 @@ void MW::createThumbView()
     qDebug() << "MW::createThumbView";
     #endif
     }
-//    metadata = new Metadata;
-//    thumbView = new ThumbView(this, metadata);
     thumbView = new ThumbView(this, dm);
     thumbView->setObjectName("ThumbView");  //rgh need to fix??
 
@@ -1589,53 +1656,22 @@ void MW::createThumbView()
     thumbView->isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
     thumbView->isAutoFit = setting->value("isAutoFit").toBool();
 
-//    gridView = new ThumbView(this, dm);
-
-//    qDebug() << "\nMW::createThumbView before calling setThumbParameters" << "\n"
-//             << "***  thumbView Ht =" << thumbView->height()
-//             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-//             << "thumbHeight =" << thumbView->thumbHeight << "\n";
-//    thumbView->setThumbParameters();
-
-    metadataCacheThread = new MetadataCache(this, dm, metadata);
-    thumbCacheThread = new ThumbCache(this, dm, metadata);
-    infoView = new InfoView(this, metadata);
-
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
     connect(thumbView, SIGNAL(updateThumbDock()),
             this, SLOT(setThumbDockHeight()));
 
-    connect(metadataCacheThread, SIGNAL(loadThumbCache()),
-            this, SLOT(loadThumbCache()));
-
-    connect(metadataCacheThread, SIGNAL(loadImageCache()),
-            this, SLOT(loadImageCache()));
-
     connect(thumbView, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
-
-    connect(thumbCacheThread, SIGNAL(setIcon(QStandardItem*, QImage, QString)),
-            thumbView, SLOT(setIcon(QStandardItem*, QImage, QString)));
-
-    connect(thumbCacheThread, SIGNAL(updateStatus(bool, QString)),
-            this, SLOT(updateStatus(bool, QString)));
-
-    connect(thumbCacheThread, SIGNAL(refreshThumbs()),
-            thumbView, SLOT(refreshThumbs()));
-
-    metadataDock = new QDockWidget(tr("  Metadata  "), this);
-    metadataDock->setObjectName("Image Info");
-    metadataDock->setWidget(infoView);
-
-    infoView->setMaximumWidth(folderMaxWidth);
 }
 
 void MW::createTableView()
 {
-    /* TableView includes all the metadata used for each image.  It is useful
-       for sorting on any column and to check for information to filter.
-    */
+/*
+TableView includes all the metadata used for each image. It is useful for
+sorting on any column and to check for information to filter.  Creation is
+dependent on datamodel and thumbView.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::createTableView";
@@ -1643,12 +1679,7 @@ void MW::createTableView()
     }
     tableView = new TableView(dm, thumbView);
 
-//    connect(tableView, SIGNAL(doubleClicked(QModelIndex)),
-//            this, SLOT(testDoubleClick(QModelIndex)));
-//    connect(tableView, SIGNAL(clicked(QModelIndex)),
-//            this, SLOT(testSingleClick(QModelIndex)));
-
-    // update menu sort by to match tableView sort change
+    // update menu "sort by" to match tableView sort change
     connect(tableView->horizontalHeader(),
             SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
             this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
@@ -1656,45 +1687,30 @@ void MW::createTableView()
     connect(tableView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 }
 
-void MW::testDoubleClick(QModelIndex idx)
-{
-    qDebug() << "\nDoubleClick  currentIndex" << tableView->currentIndex()
-             << "Signal index" << idx;
-//    thumbView->selectThumb(idx);
-    loupeDisplay();
-}
-
-void MW::testSingleClick(QModelIndex idx)
-{
-    qDebug() << "\nSingleClick  currentIndex" << tableView->currentIndex()
-             << "Signal index" << idx;
-}
-
 void MW::createImageView()
 {
+/*
+ImageView displays the image in the central widget.  The image is either from
+the image cache or read from the file if the cache is unavailable.  Creation is
+dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::createImageView";
     #endif
     }
-    imageCacheThread = new ImageCache(this, metadata);
     imageView = new ImageView(this, centralWidget, metadata, imageCacheThread, thumbView,
                               setting->value("isImageInfoVisible").toBool());
-//    connect(copyImageAction, SIGNAL(triggered()), imageView, SLOT(copyImage()));
-//    connect(pasteImageAction, SIGNAL(triggered()), imageView, SLOT(pasteImage()));
-    connect(metadataCacheThread, SIGNAL(updateIsRunning(bool)),
-            this, SLOT(updateMetadataThreadRunStatus(bool)));
-    connect(thumbCacheThread, SIGNAL(updateIsRunning(bool)),
-            this, SLOT(updateThumbThreadRunStatus(bool)));
-    connect(imageCacheThread, SIGNAL(updateIsRunning(bool)),
-            this, SLOT(updateImageThreadRunStatus(bool)));
-    connect(imageCacheThread, SIGNAL(showCacheStatus(const QImage)),
-            this, SLOT(showCacheStatus(const QImage)));
+
     connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
+
     connect(imageView, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
-    connect(thumbView, SIGNAL(thumbClick(float,float)), imageView, SLOT(thumbClick(float,float)));
+
+    connect(thumbView, SIGNAL(thumbClick(float,float)),
+            imageView, SLOT(thumbClick(float,float)));
 }
+
 void MW::createCompareView()
 {
     {
@@ -1703,6 +1719,142 @@ void MW::createCompareView()
     #endif
     }
     compareImages = new CompareImages(this, centralWidget, metadata, thumbView, imageCacheThread);
+}
+
+void MW::createInfoView()
+{
+/*
+InfoView shows basic metadata in a dock widget.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::createInfoView";
+    #endif
+    }
+    infoView = new InfoView(this, metadata);
+    infoView->setMaximumWidth(folderMaxWidth);
+}
+
+void MW::createDocks()
+{
+    {
+    #ifdef ISDEBUG
+        qDebug() << "MW::setupDocks";
+    #endif
+    }
+    folderDock = new QDockWidget(tr("  Folders  "), this);
+    folderDock->setObjectName("File System");
+    folderDock->setWidget(fsTree);
+
+    favDock = new QDockWidget(tr("  Fav  "), this);
+    favDock->setObjectName("Bookmarks");
+    favDock->setWidget(bookmarks);
+
+    metadataDock = new QDockWidget(tr("  Metadata  "), this);
+    metadataDock->setObjectName("Image Info");
+    metadataDock->setWidget(infoView);
+
+    filterDock = new QDockWidget(tr("  Filters  "), this);
+    filterDock->setObjectName("Filters");
+    filterDock->setWidget(filters);
+
+    thumbDock = new QDockWidget(tr("Thumbnails"), this);
+    thumbDock->setObjectName("thumbDock");
+    thumbDock->setWidget(thumbView);
+    thumbDock->setWindowTitle("Thumbs");
+    thumbDock->installEventFilter(this);
+
+    addDockWidget(Qt::LeftDockWidgetArea, folderDock);
+    addDockWidget(Qt::LeftDockWidgetArea, favDock);
+    addDockWidget(Qt::LeftDockWidgetArea, filterDock);
+    addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
+    addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
+
+    connect(thumbDock, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
+            this, SLOT(setThumbDockFeatures(Qt::DockWidgetArea)));
+
+    connect(thumbDock, SIGNAL(topLevelChanged(bool)),
+            this, SLOT(setThumbDockFloatFeatures(bool)));
+
+    folderDockOrigWidget = folderDock->titleBarWidget();
+    favDockOrigWidget = favDock->titleBarWidget();
+    filterDockOrigWidget = filterDock->titleBarWidget();
+    metadataDockOrigWidget = metadataDock->titleBarWidget();
+    thumbDockOrigWidget = thumbDock->titleBarWidget();
+    folderDockEmptyWidget = new QWidget;
+    favDockEmptyWidget = new QWidget;
+    filterDockEmptyWidget = new QWidget;
+    metadataDockEmptyWidget = new QWidget;
+    thumbDockEmptyWidget = new QWidget;
+
+    MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
+    MW::tabifyDockWidget(folderDock, favDock);
+    MW::tabifyDockWidget(favDock, metadataDock);
+    MW::tabifyDockWidget(metadataDock, filterDock);
+}
+
+void MW::createFSTree()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::createFSTree";
+    #endif
+    }
+    fsTree = new FSTree(folderDock);
+    fsTree->setMaximumWidth(folderMaxWidth);
+
+    connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
+
+    connect(fsTree->fsModel, SIGNAL(rowsRemoved(const QModelIndex &, int, int)),
+            this, SLOT(checkDirState(const QModelIndex &, int, int)));
+
+    connect(fsTree, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
+            this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
+}
+
+void MW::createFilterView()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::createFilterView";
+    #endif
+    }
+    filters = new Filters(filterDock);
+    filters->setMaximumWidth(folderMaxWidth);
+}
+
+void MW::createBookmarks()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::createBookmarks";
+    #endif
+    }
+    bookmarks = new BookMarks(favDock);
+
+    bookmarks->setMaximumWidth(folderMaxWidth);
+
+    connect(bookmarks, SIGNAL(itemClicked(QTreeWidgetItem *, int)),
+            this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
+
+//    connect(removeBookmarkAction, SIGNAL(triggered()),
+//            bookmarks, SLOT(removeBookmark()));
+
+    connect(bookmarks, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
+            this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
+}
+
+void MW::createAppStyle()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::createAppStyle";
+    #endif
+    }
+    // add error trapping for file io  rgh todo
+    QFile fStyle(":/qss/teststyle.css");
+    fStyle.open(QIODevice::ReadOnly);
+    this->setStyleSheet(fStyle.readAll());
 }
 
 void MW::createStatusBar()
@@ -1754,7 +1906,8 @@ void MW::createStatusBar()
     statusBar()->addWidget(stateLabel);
 }
 
-void MW::setThumbDockParameters(bool isThumbWrapWhenTopOrBottomDock, bool isAutoFit, bool isVerticalTitle)
+void MW::setThumbDockParameters(bool isThumbWrapWhenTopOrBottomDock,
+                                bool isAutoFit, bool isVerticalTitle)
 {
 /*
 Signal from prefDlg when thumbWrap or verticalTitle changed
@@ -1888,69 +2041,6 @@ void MW::showCacheStatus(const QImage &imCacheStatus)
     cacheLabel->setVisible(true);
     cacheLabel->setPixmap(QPixmap::fromImage(imCacheStatus));
 //    updateStatus(mbCacheSize);
-}
-
-void MW::createFSTree()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::createFSTree";
-    #endif
-    }
-    folderDock = new QDockWidget(tr("  Folders  "), this);
-    folderDock->setObjectName("File System");
-
-    fsTree = new FSTree(folderDock);
-    folderDock->setWidget(fsTree);
-    addDockWidget(Qt::LeftDockWidgetArea, folderDock);
-
-    fsTree->setMaximumWidth(folderMaxWidth);
-
-    connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
-
-    connect(fsTree->fsModel, SIGNAL(rowsRemoved(const QModelIndex &, int, int)),
-            this, SLOT(checkDirState(const QModelIndex &, int, int)));
-
-    connect(fsTree, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
-            this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
-
-//    fsTree->setCurrentIndex(fsTree->fsModel->index(QDir::currentPath())); // rgh 2017-04-04
-
-//    connect(fsTree->selectionModel(), SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
-//            this, SLOT(updateActions()));
-}
-
-void MW::createFilterView()
-{
-    filterDock = new QDockWidget(tr("  Filters  "), this);
-    filterDock->setObjectName("Filters");
-    filters = new Filters(filterDock);
-    filterDock->setWidget(filters);
-    filters->setMaximumWidth(folderMaxWidth);
-    addDockWidget(Qt::LeftDockWidgetArea, filterDock);
-}
-
-void MW::createBookmarks()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::createBookmarks";
-    #endif
-    }
-    favDock = new QDockWidget(tr("  Fav  "), this);
-    favDock->setObjectName("Bookmarks");
-    bookmarks = new BookMarks(favDock);
-    favDock->setWidget(bookmarks);
-
-    bookmarks->setMaximumWidth(folderMaxWidth);
-
-    connect(bookmarks, SIGNAL(itemClicked(QTreeWidgetItem *, int)),
-            this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
-//    connect(removeBookmarkAction, SIGNAL(triggered()),
-//            bookmarks, SLOT(removeBookmark()));
-    connect(bookmarks, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
-            this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
-    addDockWidget(Qt::LeftDockWidgetArea, favDock);
 }
 
 void MW::reindexImageCache()
@@ -3225,7 +3315,7 @@ void MW::writeSettings()
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
     setting->setValue("thumbPadding", thumbView->thumbPadding);
     setting->setValue("thumbWidth", thumbView->thumbWidth);
-    qDebug() << "MW::writeSettings thumbView->thumbHeight" << thumbView->thumbHeight;
+//    qDebug() << "MW::writeSettings thumbView->thumbHeight" << thumbView->thumbHeight;
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showLabels", (bool)showThumbLabelsAction->isChecked());
@@ -3736,57 +3826,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
     setting->endGroup();
 }
 
-void MW::setupDocks()
-{
-    {
-    #ifdef ISDEBUG
-        qDebug() << "MW::setupDocks";
-    #endif
-    }
-    qDebug() << "MW::setupDocks - isInitializing =" << isInitializing;
-    thumbDock = new QDockWidget(tr("Thumbnails"), this);
-    thumbDock->setObjectName("thumbDock");
-
-    connect(thumbDock, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
-            this, SLOT(setThumbDockFeatures()));
-
-    connect(thumbDock, SIGNAL(topLevelChanged(bool)),
-            this, SLOT(setThumbDockFloatFeatures(bool)));
-
-    imageViewContainer = new QVBoxLayout;
-    imageViewContainer->setContentsMargins(0, 0, 0, 0);
-//    imageViewContainer->addWidget(imageView);
-    QWidget *imageViewContainerWidget = new QWidget;
-    imageViewContainerWidget->setLayout(imageViewContainer);
-    thumbDock->setWidget(thumbView);
-    thumbDock->setWindowTitle("Thumbs");
-
-    addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
-    addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
-
-    folderDockOrigWidget = folderDock->titleBarWidget();
-    favDockOrigWidget = favDock->titleBarWidget();
-    filterDockOrigWidget = filterDock->titleBarWidget();
-    metadataDockOrigWidget = metadataDock->titleBarWidget();
-    thumbDockOrigWidget = thumbDock->titleBarWidget();
-    folderDockEmptyWidget = new QWidget;
-    favDockEmptyWidget = new QWidget;
-    filterDockEmptyWidget = new QWidget;
-    metadataDockEmptyWidget = new QWidget;
-    thumbDockEmptyWidget = new QWidget;
-
-    MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
-    MW::tabifyDockWidget(folderDock, favDock);
-    MW::tabifyDockWidget(favDock, metadataDock);
-    MW::tabifyDockWidget(metadataDock, filterDock);
-
-    qDebug() << "MW::setupDocks initial height =" << thumbDock->height();
-
-    // match opening state from loadSettings
-//    updateState();
-//    setWindowsTitleBarVisibility();  // image area shrinks
-}
-
 void MW::updateState()
 {
 /*
@@ -3866,7 +3905,7 @@ and titlebar visibility.
     qDebug() << "MW::setThumbDockFeatures";
     #endif
     }
-    qDebug() << "DockWidgetArea =" << area;
+//    qDebug() << "DockWidgetArea =" << area;
 
     thumbView->setMaximumHeight(100000);
 
@@ -3905,7 +3944,7 @@ and titlebar visibility.
             thumbView->setMaximumHeight(maxHt);
             thumbView->setMinimumHeight(minHt);
 
-            qDebug() << "maxHt, minHt, newThumbDockHeight" << maxHt << minHt << newThumbDockHeight;
+//            qDebug() << "maxHt, minHt, newThumbDockHeight" << maxHt << minHt << newThumbDockHeight;
 
             resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
 
@@ -3950,7 +3989,6 @@ void MW::loupeDisplay()
     qDebug() << "MW::loupeDisplay";
     #endif
     }
-    qDebug() << "MW::loupeDisplay";
     centralLayout->setCurrentIndex(LoupeTab);
     thumbView->thumbViewDelegate->isCompare = false;
 //    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -4274,7 +4312,6 @@ void MW::setFilterDockLockMode()
     qDebug() << "MW::setfilterDockLockMode";
     #endif
     }
-    qDebug() << "MW::setfilterDockLockMode";
     if (filterDockLockAction->isChecked()) {
         filterDock->setTitleBarWidget(filterDockEmptyWidget);
     }

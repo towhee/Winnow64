@@ -20,7 +20,6 @@ private:
     ThumbView *thumbView;
 
 private slots:
-    void delaySelectCurrentThumb();
 
 signals:
     void displayLoupe();

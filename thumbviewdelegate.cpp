@@ -99,9 +99,9 @@ textRect         = a rectangle below itemRect
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     bool isPicked = index.model()->index(row, G::PickedColumn).data(Qt::EditRole).toBool();
 
-    qDebug() << "ThumbViewDelegate::paint" << fName
-             << "current index" << currentIndex
-             << "index" << index;
+//    qDebug() << "ThumbViewDelegate::paint" << fName
+//             << "current index" << currentIndex
+//             << "index" << index;
 
     // define some offsets
     QPoint itemBorderOffset(itemBorderThickness, itemBorderThickness);

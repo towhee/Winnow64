@@ -52,21 +52,7 @@ void TableView::mouseDoubleClickEvent(QMouseEvent *event)
     qDebug() << "TableView::mouseDoubleClickEvent";
     #endif
     }
-//    QTableView::mouseDoubleClickEvent(event);
-//    thumbView->selectThumb(thumbView->currentIndex());
     emit displayLoupe();
-    // delay reqd
-//    QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
-}
-
-void TableView::delaySelectCurrentThumb()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "TableView::delaySelectCurrentThumb";
-    #endif
-    }
-    thumbView->selectThumb(thumbView->currentIndex());
 }
 
 //------------------------------------------------------------------------------

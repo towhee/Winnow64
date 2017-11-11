@@ -254,7 +254,7 @@ Helper function for in class calls where thumb parameters already defined
 //    qDebug() << "ThumbView::setThumbParameters isGrid:" << isGrid;
     // if top/bottom dock resize dock height if scrollbar is/not visible
 
-    qDebug() << "emitting updateThumbDock";
+//    qDebug() << "emitting updateThumbDock";
     emit updateThumbDock();
 }
 
