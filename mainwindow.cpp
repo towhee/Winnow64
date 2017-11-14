@@ -3039,6 +3039,16 @@ void MW::setMaxRecentFolders(int prefMaxRecentFolders)
     syncRecentFoldersMenu();
 }
 
+void MW::setIngestRootFolder(QString rootFolder)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setMaxRecentFolders";
+    #endif
+    }
+    ingestRootFolder = rootFolder;
+}
+
 void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs, bool isStatusBar)
 {
     {
@@ -3318,6 +3328,7 @@ void MW::writeSettings()
     setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("maxRecentFolders", maxRecentFolders);
+    setting->setValue("ingestRootFolder", ingestRootFolder);
     // thumbs
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
     setting->setValue("thumbPadding", thumbView->thumbPadding);
@@ -3519,6 +3530,7 @@ Preferences are located in the prefdlg class and updated here.
     rememberLastDir = setting->value("rememberLastDir").toBool();
     lastDir = setting->value("lastDir").toString();
     maxRecentFolders = setting->value("maxRecentFolders").toInt();
+    ingestRootFolder = setting->value("ingestRootFolder").toString();
 
     // thumbs (set in thumbView creation)
     isThumbDockVerticalTitle = setting->value("isVerticalTitle").toBool();
@@ -4480,7 +4492,9 @@ void MW::copyPicks()
     }
     if (thumbView->isPick()) {
         QFileInfoList imageList = thumbView->getPicks();
-        copyPickDlg = new CopyPickDlg(this, imageList, metadata);
+        copyPickDlg = new CopyPickDlg(this, imageList, metadata, ingestRootFolder);
+        connect(copyPickDlg, SIGNAL(updateIngestRootFolder(QString)),
+                this, SLOT(setIngestRootFolder(QString)));
         copyPickDlg->exec();
         delete copyPickDlg;
     }

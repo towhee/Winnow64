@@ -15,25 +15,38 @@ class CopyPickDlg : public QDialog
 public:
     explicit CopyPickDlg(QWidget *parent,
                          QFileInfoList &imageList,
-                         Metadata *metadata);
+                         Metadata *metadata,
+                         QString ingestRootFolder);
     ~CopyPickDlg();
 
 private slots:
     void on_selectFolderBtn_clicked();
+    void on_selectParentFolderBtn_clicked();
     void on_spinBoxStartNumber_valueChanged(const QString &arg1);
     void updateFolderPath();
     void on_descriptionLineEdit_textChanged(const QString &arg1);
 
+signals:
+    void updateIngestRootFolder(QString rootFolderPath);
+
 private:
     Ui::CopyPickDlg *ui;
     void accept();
+    void updateExistingSequence();
     int getSequenceStart(const QString &path);
     QStringList *existFiles;
     QFileInfoList pickList;
     Metadata *metadata;
-    QString folderPath;
+    QString folderPath; // rootFolderPath + folderBase + folderDescription
+    QString defaultRootFolderPath;
+
+    QString rootFolderPath;
+    QString folderBase;
     QString folderDescription;
     QString fileNameDatePrefix;
+    QString fileNameSequence;
+    QString fileSuffix;
+
     int fileCount;
     float fileMB;
 };

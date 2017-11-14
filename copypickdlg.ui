@@ -301,12 +301,12 @@
    <property name="title">
     <string>Ingest to location parameters</string>
    </property>
-   <widget class="QPushButton" name="selectFolderBtn">
+   <widget class="QPushButton" name="selectParentFolderBtn">
     <property name="geometry">
      <rect>
       <x>20</x>
       <y>30</y>
-      <width>121</width>
+      <width>101</width>
       <height>25</height>
      </rect>
     </property>
@@ -316,6 +316,9 @@
       <weight>50</weight>
       <bold>false</bold>
      </font>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the &lt;span style=&quot; font-weight:600;&quot;&gt;root folder&lt;/span&gt; where your images reside. A new folder will be created in this root folder. The new folder will have the format YYYY-MM-DD_Description.&lt;/p&gt;&lt;p&gt;NOTE: If the image folder has been selected (Folder Button) then that will override the root folder selection.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Root Folder&lt;/span&gt; + &lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base &lt;/span&gt;+ &lt;span style=&quot; color:#fd8008;&quot;&gt;Folder Description&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base&lt;/span&gt; and &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;//user/username/pictures/2017-10/&lt;/span&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;/&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
      <string>Parent Folder</string>
@@ -333,7 +336,7 @@
    <widget class="QLineEdit" name="descriptionLineEdit">
     <property name="geometry">
      <rect>
-      <x>160</x>
+      <x>135</x>
       <y>99</y>
       <width>361</width>
       <height>20</height>
@@ -344,13 +347,16 @@
       <pointsize>10</pointsize>
      </font>
     </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style=&quot; font-weight:600; color:#fd8008;&quot;&gt;description&lt;/span&gt; is appended to the Folder Base to make the folder name that will contain the images. The folder will be formated YYYY-MM-DD_Description. For example &lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Root Folder&lt;/span&gt; + &lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base &lt;/span&gt;+ &lt;span style=&quot; color:#fd8008;&quot;&gt;Folder Description&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base&lt;/span&gt; and &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;//user/username/pictures/2017-10/&lt;/span&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;/&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
    </widget>
    <widget class="QLabel" name="folderDescription">
     <property name="geometry">
      <rect>
       <x>20</x>
       <y>100</y>
-      <width>131</width>
+      <width>101</width>
       <height>20</height>
      </rect>
     </property>
@@ -358,6 +364,9 @@
      <font>
       <pointsize>10</pointsize>
      </font>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style=&quot; font-weight:600; color:#fd8008;&quot;&gt;description&lt;/span&gt; is appended to the Folder Base to make the folder name that will contain the images. The folder will be formated YYYY-MM-DD_Description. For example &lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Root Folder&lt;/span&gt; + &lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base &lt;/span&gt;+ &lt;span style=&quot; color:#fd8008;&quot;&gt;Folder Description&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base&lt;/span&gt; and &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;//user/username/pictures/2017-10/&lt;/span&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;/&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
      <string>Append Description:</string>
@@ -368,7 +377,7 @@
      <rect>
       <x>20</x>
       <y>140</y>
-      <width>161</width>
+      <width>111</width>
       <height>16</height>
      </rect>
     </property>
@@ -378,15 +387,15 @@
      </font>
     </property>
     <property name="text">
-     <string>Start file numbering from:</string>
+     <string>Start sequence from:</string>
     </property>
    </widget>
    <widget class="QSpinBox" name="spinBoxStartNumber">
     <property name="geometry">
      <rect>
-      <x>165</x>
+      <x>140</x>
       <y>137</y>
-      <width>71</width>
+      <width>61</width>
       <height>22</height>
      </rect>
     </property>
@@ -394,6 +403,9 @@
      <font>
       <pointsize>10</pointsize>
      </font>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style=&quot; font-weight:600;&quot;&gt;sequence&lt;/span&gt; is appended to the File Base to make the file name that will contain the images. The file name will be formated YYYY-MM-DD_Sequence. For example &lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0089&lt;/span&gt;&lt;span style=&quot; color:#0000ff;&quot;&gt;.&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;cr2&lt;/span&gt;.&lt;/p&gt;&lt;p&gt;If the folder already exists the sequence start number will default to one greater than the highest sequence found in the folder.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Root Folder&lt;/span&gt; + &lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base &lt;/span&gt;+ &lt;span style=&quot; color:#fd8008;&quot;&gt;Folder Description&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base&lt;/span&gt; and &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;//user/username/pictures/2017-10/&lt;/span&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;/&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="minimum">
      <number>1</number>
@@ -405,9 +417,9 @@
    <widget class="QLabel" name="parentFolderLabel">
     <property name="geometry">
      <rect>
-      <x>170</x>
+      <x>145</x>
       <y>34</y>
-      <width>431</width>
+      <width>471</width>
       <height>20</height>
      </rect>
     </property>
@@ -416,16 +428,22 @@
       <pointsize>10</pointsize>
      </font>
     </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the &lt;span style=&quot; font-weight:600;&quot;&gt;root folder&lt;/span&gt; where your images reside. A new folder will be created in this root folder. The new folder will have the format YYYY-MM-DD_Description.&lt;/p&gt;&lt;p&gt;NOTE: If the image folder has been selected (Folder Button) then that will override the root folder selection.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Root Folder&lt;/span&gt; + &lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base &lt;/span&gt;+ &lt;span style=&quot; color:#fd8008;&quot;&gt;Folder Description&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base&lt;/span&gt; and &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;//user/username/pictures/2017-10/&lt;/span&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;/&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Box</enum>
+    </property>
     <property name="text">
-     <string>TextLabel</string>
+     <string/>
     </property>
    </widget>
-   <widget class="QPushButton" name="selectFolderBtn_2">
+   <widget class="QPushButton" name="selectFolderBtn">
     <property name="geometry">
      <rect>
       <x>20</x>
       <y>60</y>
-      <width>121</width>
+      <width>101</width>
       <height>25</height>
      </rect>
     </property>
@@ -435,6 +453,9 @@
       <weight>50</weight>
       <bold>false</bold>
      </font>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the folder where you wish to copy the picks. This will override the root folder selection.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Folder&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:  &lt;span style=&quot; color:#fc0107;&quot;&gt;//users/username/Pictures/Harry Birthday/&lt;/span&gt;&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
      <string>Folder</string>
@@ -452,9 +473,9 @@
    <widget class="QLabel" name="folderLabel">
     <property name="geometry">
      <rect>
-      <x>170</x>
+      <x>145</x>
       <y>64</y>
-      <width>431</width>
+      <width>471</width>
       <height>20</height>
      </rect>
     </property>
@@ -463,8 +484,27 @@
       <pointsize>10</pointsize>
      </font>
     </property>
+    <property name="frameShape">
+     <enum>QFrame::Box</enum>
+    </property>
     <property name="text">
-     <string>TextLabel</string>
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="existingSequenceLabel">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>140</y>
+      <width>351</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Box</enum>
+    </property>
+    <property name="text">
+     <string/>
     </property>
    </widget>
   </widget>

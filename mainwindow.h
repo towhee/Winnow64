@@ -106,6 +106,7 @@ public:
     QString lastDir;
     bool inclSubfolders;
     int maxRecentFolders = 10;
+    QString ingestRootFolder;
 
     // preferences: docks
     bool isThumbDockVerticalTitle;
@@ -216,6 +217,7 @@ private slots:
     void setRememberLastDir(bool prefRememberFolder);
     void setIncludeSubFolders();
     void setMaxRecentFolders(int prefMaxRecentFolders);
+    void setIngestRootFolder(QString rootFolder);
     void setSlideShowParameters(int delay, bool isRandom);
     void setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs, bool isStatusBar);
     void slideShow();
