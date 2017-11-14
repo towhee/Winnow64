@@ -98,9 +98,6 @@ heirarchy is loaded.
     #endif
     }
 
-    QElapsedTimer t;
-    t.start();
-
     currentFolderPath = folderPath;
 
     // do some initializing
@@ -111,9 +108,6 @@ heirarchy is loaded.
     dir->setFilter(QDir::Files);
     dir->setPath(currentFolderPath);
     dir->setSorting(QDir::Name);
-
-    qDebug() << "Get eligible dir files  elapsed time =" << t.restart() << "ms for "
-             << dir->entryInfoList().size() << "files";
 
     removeRows(0, rowCount());
     fileInfoList.clear();
@@ -157,6 +151,8 @@ bool DataModel::addFiles()
     static QStandardItem *item;
     static int fileIndex;
     static QPixmap emptyPixMap;
+
+    // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> typesMap;
 
     imageFilePathList.clear();
@@ -229,7 +225,7 @@ void DataModel::addMetadata()
 /*
 This function is called after the metadata for all the eligible images in
 the selected folder have been cached.  The metadata is displayed in tableView,
-which is created in MW.
+which is created in MW, and in InfoView.
 */
     {
     #ifdef ISDEBUG
@@ -240,6 +236,8 @@ which is created in MW.
     t.start();
 
     static QStandardItem *item;
+
+    // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
     QMap<QVariant, QString> titleMap;
     QMap<QVariant, QString> flMap;
@@ -284,7 +282,7 @@ which is created in MW.
     filters->addCategoryFromData(titleMap, filters->titles);
     filters->addCategoryFromData(flMap, filters->focalLengths);
 
-    qDebug() << "add metadata elapsed time =" << t.restart();
+//    qDebug() << "add metadata elapsed time =" << t.restart();
 
 }
 

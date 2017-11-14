@@ -52,6 +52,8 @@ public:
     int getThumbSpaceMin();
     int getThumbSpaceMax();
     QSize getThumbCellSize();
+    int getThumbSpaceWidth(int thumbSpaceHeight);
+    int getScrollThreshold(int thumbSpaceHeight);
     QStringList getSelectedThumbsList();        //used by tags, might be useful
     int getCurrentRow();
     QString getCurrentFilename();       //not used, but might be handy

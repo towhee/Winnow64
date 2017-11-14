@@ -48,11 +48,11 @@ QSize ThumbViewDelegate::getThumbCell()
     return thumbSpace;
 }
 
-//void ThumbViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex previous)
-//{
-//    currentIndex = current;
+void ThumbViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex previous)
+{
+    currentIndex = current;
 //    qDebug() << "ThumbViewDelegate::onCurrentChanged" << current;
-//}
+}
 
 QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
                               const QModelIndex &index) const

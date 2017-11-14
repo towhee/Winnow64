@@ -114,15 +114,16 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     setResizeMode(QListView::Adjust);
     setLayoutMode(QListView::Batched);
     setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
-//    setBatchSize(2);
     setWordWrap(true);
     setDragEnabled(true);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setUniformItemSizes(false);
-//    setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
     setMaximumHeight(100000);
-    this->setContentsMargins(0,0,0,0);
+    setContentsMargins(0,0,0,0);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+//    setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+//    setBatchSize(2);
 
     setModel(this->dm->sf);
 
@@ -320,15 +321,46 @@ int ThumbView::getThumbSpaceMax()
 
 QSize ThumbView::getThumbCellSize()
 {
-//    int w = thumbWidth + thumbSpacing * 2 + thumbPadding *2 + 8;
-//    int h = thumbHeight + thumbSpacing * 2 + thumbPadding *2 + 8;
-//    return QSize(w, h);
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::getThumbCellSize";
     #endif
     }
     return thumbViewDelegate->getThumbCell();
+}
+
+int ThumbView::getThumbSpaceWidth(int thumbSpaceHeight)
+{
+/*
+The thumbSpace is the total cell occupied be the thumbnail, including the outer
+margin, like the box model.  The width is calculated by taking the thumbSpace
+height, determining the thumbnail height, calculating the thumbnail width from
+the aspact ratio and adding the margin back to get the space width.
+
+This function is used when the thumbView wrapping = false and the thumbDock
+changes height to determine whether a scrollbar is required.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::getThumbSpaceWidth";
+    #endif
+    }
+    float aspect = thumbWidth / thumbHeight;
+    qDebug() << "aspect =" << aspect;
+    // Difference between thumbSpace and thumbHeight
+    int margin = thumbViewDelegate->getThumbCell().height() - thumbHeight;
+    int newThumbHeight = thumbSpaceHeight - margin;
+    int newThumbWidth = newThumbHeight * aspect;
+    return newThumbWidth + margin - 1;
+}
+
+int ThumbView::getScrollThreshold(int thumbSpaceHeight)
+{
+    qDebug() << "getScrollThreshold  viewport()->width()"
+             << viewport()->width()
+             << "getThumbSpaceWidth"
+             << getThumbSpaceWidth(thumbSpaceHeight);
+    return viewport()->width() / getThumbSpaceWidth(thumbSpaceHeight);
 }
 
 // debugging
@@ -673,7 +705,7 @@ void ThumbView::selectThumb(QModelIndex idx)
     #endif
     }
     if (idx.isValid()) {
-        thumbViewDelegate->currentIndex = idx;
+//        thumbViewDelegate->currentIndex = idx;
         setCurrentIndex(idx);
 //        qDebug() << "Row =" << idx.row();
         scrollTo(idx, ScrollHint::PositionAtCenter);
@@ -908,7 +940,8 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
             thumbWidthGrid = 100;
             thumbHeightGrid = 100;
         }
-        int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+        int scrollWidth = 12;
+//        int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
         int width = viewport()->width() - scrollWidth - 2;
         // get the thumb cell width with no padding
         int thumbCellWidth = thumbViewDelegate->getThumbCell().width() - thumbPaddingGrid * 2;
@@ -938,7 +971,8 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     if (isWrapping()) {
         qDebug() << "ThumbView::thumbsFit isWrapping = true";
         // adjust thumb width
-        int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+        int scrollWidth = 12;
+//        int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
         int width = viewport()->width() - scrollWidth - 2;
         int thumbCellWidth = thumbViewDelegate->getThumbCell().width() - thumbPadding * 2;
         int rightSideGap = 99999;
@@ -961,17 +995,11 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     }
     // no wrapping - must be bottom or top dock area
     else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea){
-        // horizontal scrollBar?
-        int thumbCellWidth = getThumbCellSize().width() - 1;
-        int maxThumbsBeforeScrollReqd = viewport()->width() / thumbCellWidth;
-        int thumbsCount = dm->sf->rowCount();
-        int thumbDockWidth = viewport()->width();
-        bool isScrollBar = thumbsCount >= maxThumbsBeforeScrollReqd;
-
-        // set target ht based on space with/without scrollbar
+        // set target ht based on space with scrollbar (always on)
         int ht = height();
-        int scrollHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
-        if (isScrollBar) ht -= scrollHeight;
+        int scrollHeight = 12;
+//        int scrollHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+        ht -= scrollHeight;
 
         // adjust thumb height
         float aspect = thumbWidth / thumbHeight;
@@ -985,13 +1013,12 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
 //        int maxThumbsBeforeScrollReqd = viewportWidth / thumbSpaceWidth;
 
 
-//        qDebug() << "\nThumbView::thumbsFit else\n"
-//                 << "***  thumbView Ht =" << ht
-//                 << "thumbSpace Ht =" << thumbSpaceHeight
-//                 << "thumbHeight =" << thumbHeight
-//                 << "viewport Wd =" << thumbDockWidth
-//                 << "thumbSpace Wd =" << thumbCellWidth
-//                 << "Max thumbs before scroll =" << maxThumbsBeforeScrollReqd;
+        qDebug() << "\nThumbView::thumbsFit else\n"
+                 << "***  thumbView Ht =" << ht
+                 << "thumbSpace Ht =" << thumbSpaceHeight
+                 << "thumbHeight =" << thumbHeight
+                 << "scrollbar Ht =" << scrollHeight
+                 << "viewport Ht =" << viewport()->height();
 
         // change the thumbnail size in thumbViewDelegate
         setThumbParameters();

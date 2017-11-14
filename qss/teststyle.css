@@ -238,7 +238,7 @@ QScrollBar:horizontal {
     background-color: rgb(77,77,77);
     margin-left: 0px;
     margin-right: 0px;
-    height: 14px;
+    height: 12px;
 }
 
 QScrollBar::handle:horizontal {

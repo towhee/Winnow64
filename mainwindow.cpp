@@ -38,7 +38,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 //    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     isInitializing = true;
     isSlideShowActive = false;
-    maxThumbSpaceHeight = 160 + qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+    maxThumbSpaceHeight = 160 + 12 + 1;
+//    maxThumbSpaceHeight = 160 + qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
     popUp = new PopUp;
@@ -175,11 +176,8 @@ thumbdock is resized by the user when:
             QResizeEvent *resizeEvent = static_cast<QResizeEvent*>(event);
             int newHt = resizeEvent->size().height();
             if (newHt != oldHt) {
-//                qDebug() << "\nMW::eventFilter dock area\n"
-//                         << "***  thumbView Ht =" << thumbView->height()
-//                         << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-//                         << "thumbHeight =" << thumbView->thumbHeight << "\n"
-//                         << "thumbDock Ht =" << thumbDock->height();
+//                qDebug() << "\nMW::eventFilter dock area"
+//                         << "thumbHeight =" << thumbView->thumbHeight;
                  thumbView->thumbsFit(dockWidgetArea(thumbDock));
                  oldHt = newHt;
              }
@@ -421,7 +419,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     thumbView->setCurrentIndex(currentIndex);
 
     // sync thumbView delegate current item
-    thumbView->thumbViewDelegate->currentIndex = currentIndex;
+//    thumbView->thumbViewDelegate->currentIndex = currentIndex;
 
     // update imageView, use cache if image loaded, else read it from file
     QString fPath = currentIndex.data(G::FileNameRole).toString();
@@ -1588,8 +1586,14 @@ TableView, insuring that each view is in sync.
     thumbView->setSelectionModel(selectionModel);
     tableView->setSelectionModel(selectionModel);
 
+    // whenever currentIndex changes do a file selection change
     connect(selectionModel, SIGNAL(currentChanged(QModelIndex, QModelIndex)),
             this, SLOT(fileSelectionChange(QModelIndex, QModelIndex)));
+
+    // and update the current index in the ThumbView delegate so can highlight
+    connect(selectionModel, SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+            thumbView->thumbViewDelegate,
+            SLOT(onCurrentChanged(QModelIndex, QModelIndex)));
 }
 
 void MW::createCaching()
@@ -3926,7 +3930,8 @@ and titlebar visibility.
             // make thumbDock height fit thumbs
             int maxHt = thumbView->getThumbSpaceMax();
             int minHt = thumbView->getThumbSpaceMin();
-            int scrollBarHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);;
+            int scrollBarHeight = 12;
+//            int scrollBarHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
 
             int newThumbDockHeight = thumbView->getThumbCellSize().height();
 
@@ -3935,7 +3940,8 @@ and titlebar visibility.
             int maxThumbsBeforeScrollReqd = thumbView->viewport()->width() / thumbCellWidth;
             int thumbsCount = dm->sf->rowCount();
             int thumbDockWidth = thumbView->viewport()->width();
-            bool isScrollBar = thumbsCount > maxThumbsBeforeScrollReqd;
+            bool isScrollBar = true;
+//            bool isScrollBar = thumbsCount > maxThumbsBeforeScrollReqd;
 
             if (isScrollBar) {
                 maxHt += scrollBarHeight;// + 1;
@@ -4146,7 +4152,7 @@ void MW::recoverSelection()
     QModelIndex idx;
 //    thumbView->setCurrentIndex(currentIdx);
     // sync thumbView delegate current item
-    thumbView->thumbViewDelegate->currentIndex = currentIdx;
+//    thumbView->thumbViewDelegate->currentIndex = currentIdx;
 
     thumbView->selectionModel()->setCurrentIndex(currentIdx, QItemSelectionModel::Select);
     foreach (idx, selectedImages)
@@ -4506,7 +4512,7 @@ the rating for all the selected thumbs.
     // check if selection is entirely rating already - if so set to no rating
     bool isAlreadyRating = true;
     for (int i = 0; i < selection.count(); ++i) {
-        QModelIndex idx = dm->index(selection.at(i).row(), G::RatingColumn);
+        QModelIndex idx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
         if(idx.data(Qt::EditRole) != rating) {
             isAlreadyRating = false;
         }
@@ -4519,9 +4525,9 @@ the rating for all the selected thumbs.
     else imageView->editsLabel->setVisible(true);
 
     // set the rating
-    for (int i = 0; i < selection.count(); ++i) {
-        QModelIndex idx = dm->index(selection.at(i).row(), G::RatingColumn);
-        dm->setData(idx, rating, Qt::EditRole);
+    for (int i = 0; i < selection.count(); ++i) {        
+        QModelIndex idx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
+        dm->sf->setData(idx, rating, Qt::EditRole);
     }
     thumbView->refreshThumbs();
 }
@@ -4538,7 +4544,7 @@ imageView and visibility (true if either rating or color class set).
     #endif
     }
     int row = thumbView->currentIndex().row();
-    QModelIndex idx = dm->index(row, G::RatingColumn);
+    QModelIndex idx = dm->sf->index(row, G::RatingColumn);
     rating = idx.data(Qt::EditRole).toString();
     imageView->editsLabel->setText(rating);
     if (labelColor == "" && rating == "") imageView->editsLabel->setVisible(false);
@@ -4569,7 +4575,7 @@ set the color class for all the selected thumbs.
     // check if selection is entirely label color already - if so set no label
     bool isAlreadyLabel = true;
     for (int i = 0; i < selection.count(); ++i) {
-        QModelIndex idx = dm->index(selection.at(i).row(), G::LabelColumn);
+        QModelIndex idx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
         if(idx.data(Qt::EditRole) != labelColor) {
             isAlreadyLabel = false;
         }
@@ -4589,8 +4595,8 @@ set the color class for all the selected thumbs.
 
     // update the data model
     for (int i = 0; i < selection.count(); ++i) {
-        QModelIndex idx = dm->index(selection.at(i).row(), G::LabelColumn);
-        dm->setData(idx, labelColor, Qt::EditRole);
+        QModelIndex idx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
+        dm->sf->setData(idx, labelColor, Qt::EditRole);
     }
     thumbView->refreshThumbs();
     tableView->resizeColumnToContents(G::LabelColumn);
@@ -4610,7 +4616,7 @@ color class is called label.
     #endif
     }
     int row = thumbView->currentIndex().row();
-    QModelIndex idx = dm->index(row, G::LabelColumn);
+    QModelIndex idx = dm->sf->index(row, G::LabelColumn);
     labelColor = idx.data(Qt::EditRole).toString();
     if (labelColor == "") imageView->editsLabel->setBackgroundColor(G::labelNoneColor);
     if (labelColor == "Red") imageView->editsLabel->setBackgroundColor(G::labelRedColor);

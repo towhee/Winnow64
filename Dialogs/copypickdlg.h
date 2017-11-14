@@ -20,6 +20,7 @@ public:
 
 private slots:
     void on_selectFolderBtn_clicked();
+    void on_spinBoxStartNumber_valueChanged(const QString &arg1);
     void updateFolderPath();
     void on_descriptionLineEdit_textChanged(const QString &arg1);
 
@@ -33,6 +34,8 @@ private:
     QString folderPath;
     QString folderDescription;
     QString fileNameDatePrefix;
+    int fileCount;
+    float fileMB;
 };
 
 #endif // COPYPICKDLG_H

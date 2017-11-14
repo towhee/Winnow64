@@ -176,7 +176,8 @@ to prevent jarring changes in perceived scale by the user.
     else {
         // load the image from the image file, may need to wait a bit if another thread
         // reading file
-        for (int i=0; i<100000; i++) {
+        int attempts;
+        for (attempts = 0; attempts < 100000; attempts++) {
             isLoaded = pixmap->load(fPath, displayPixmap);
             if (isLoaded) break;
         }

@@ -800,7 +800,7 @@ void ImageCache::run()
             pm.setDevicePixelRatio(G::devicePixelRatio);
 //            pm->setDevicePixelRatio(G::devicePixelRatio);
 
-            mutex.lock();
+//            mutex.lock();
             imCache.insert(fPath, pm);
 //            imCache.insert(fPath, *pm);
             if (cache.usePreview) {
@@ -808,7 +808,7 @@ void ImageCache::run()
                    Qt::KeepAspectRatio, Qt::FastTransformation));
             }
             cacheMgr[cache.toCacheKey].isCached = true;
-            mutex.unlock();
+//            mutex.unlock();
             if (!toCache.isEmpty()) toCache.removeFirst();
             cache.currMB = getImCacheSize();
             cacheStatus();

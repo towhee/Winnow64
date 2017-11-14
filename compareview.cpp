@@ -594,7 +594,8 @@ void CompareView::mousePressEvent(QMouseEvent *event)
 
 void CompareView::mouseMoveEvent(QMouseEvent *event)
 {
-/* Pan the image during a mouse drag operation
+/*
+Pan the image during a mouse drag operation
 */
     {
     #ifdef ISDEBUG
