@@ -1826,7 +1826,7 @@ void MW::createFilterView()
     qDebug() << "MW::createFilterView";
     #endif
     }
-    filters = new Filters(filterDock);
+    filters = new Filters(this);
     filters->setMaximumWidth(folderMaxWidth);
 }
 

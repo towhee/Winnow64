@@ -2,6 +2,7 @@
 #define COPYPICKDLG_H
 
 #include <QDialog>
+#include <QtWidgets>
 #include "thumbview.h"
 
 namespace Ui {
@@ -36,6 +37,7 @@ private:
     int getSequenceStart(const QString &path);
     QStringList *existFiles;
     QFileInfoList pickList;
+    QFileSystemModel fileSystemModel;
     Metadata *metadata;
     QString folderPath; // rootFolderPath + folderBase + folderDescription
     QString defaultRootFolderPath;
@@ -46,6 +48,10 @@ private:
     QString fileNameDatePrefix;
     QString fileNameSequence;
     QString fileSuffix;
+
+    QString dateTime;
+    QString year;
+    QString month;
 
     int fileCount;
     float fileMB;

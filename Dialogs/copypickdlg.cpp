@@ -33,9 +33,10 @@ CopyPickDlg::CopyPickDlg(QWidget *parent, QFileInfoList &imageList,
     ui->statsLabel->setText(s1 + s2 + s3 + "MB");
 
     fileNameDatePrefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
-    QString dateTime = metadata->getDateTime(pickList.at(0).absoluteFilePath());
-    QString year = dateTime.left(4);
-    QString month = dateTime.mid(5,2);
+    dateTime = metadata->getDateTime(pickList.at(0).absoluteFilePath());
+//    year = metadata->getYear(pickList.at(0).absoluteFilePath());
+    year = dateTime.left(4);
+    month = dateTime.mid(5,2);
 
     QString rootFolder = ingestRootFolder;
 //    QString rootFolder = "E:/" + year + "/" + year + month + "/";
@@ -57,9 +58,8 @@ CopyPickDlg::~CopyPickDlg()
 
 void CopyPickDlg::accept()
 {
-    QString destPath = ui->folderPathLabel->text();
     QDir dir;
-    dir.mkdir(destPath);
+    dir.mkdir(folderPath);
     ui->progressBar->setVisible(true);
     QString prefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
     for (int i=0; i < pickList.size(); ++i) {
@@ -71,7 +71,7 @@ void CopyPickDlg::accept()
         QString sequence = "_" + QString("%1").arg(i + 1, 4 , 10, QChar('0'));
         QString suffix = "." + fileInfo.completeSuffix();
         QString source = fileInfo.absoluteFilePath();
-        QString destination = destPath + "/" + prefix + sequence + suffix;
+        QString destination = folderPath + "/" + prefix + sequence + suffix;
         QFile::copy(source, destination);
     }
     QDialog::accept();
@@ -89,7 +89,21 @@ void CopyPickDlg::updateExistingSequence()
 
 void CopyPickDlg::on_selectFolderBtn_clicked()
 {
-    QString root = "/users/roryhill/pictures";
+//    QString root;
+//#ifdef Q_OS_LINIX
+//    root = "/users/roryhill/pictures";
+//#endif
+//#ifdef Q_OS_WIN
+////    root = fileSystemModel.myComputer().toString();
+//#endif
+//#ifdef Q_OS_MAC
+//    root = "/users/roryhill/pictures";
+//#endif
+
+    QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
+//    QString root = "D:/";
+    qDebug() << fileSystemModel.myComputer().toString();
+//    qDebug() << root;
     QString s;
     s = QFileDialog::getExistingDirectory
         (this, tr("Choose Ingest Folder"), root,
@@ -112,7 +126,7 @@ void CopyPickDlg::on_selectParentFolderBtn_clicked()
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 //    qDebug() << "Folderpath: " << s;
     if (s.length() > 0) {
-        rootFolderPath = s + "/";
+        rootFolderPath = s + "/" + year + month + "/";
         ui->parentFolderLabel->setText(rootFolderPath);
 //        folderPath = s + "/" + metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
         updateFolderPath();
