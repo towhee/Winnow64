@@ -407,6 +407,8 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     qDebug() << "MW::fileSelectionChange";
     #endif
     }
+    qDebug() << "CurrentIndex vs PreviousIndex" << current << previous;
+    if(current.row() == previous.row()) return;
     // rgh check if selection is working properly
 //    QModelIndexList selected = thumbView->selectionModel()->selectedIndexes();
     QModelIndexList selected = selectionModel->selectedIndexes();
@@ -414,9 +416,12 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // user clicks outside thumb but inside treeView dock
     if (selected.isEmpty()) return;
 
-    // currentIndex must be column 0
+    // currentIndex must be column 0 - this might cause another call to
+    // fileSelectionChange, hence check initially if same datamodel row
     QModelIndex currentIndex = dm->sf->index(current.row(), 0);
+    qDebug() << "thumbView->setCurrentIndex(currentIndex)";
     thumbView->setCurrentIndex(currentIndex);
+    thumbView->thumbViewDelegate->currentIndex = currentIndex;
 
     // sync thumbView delegate current item
 //    thumbView->thumbViewDelegate->currentIndex = currentIndex;
@@ -1591,9 +1596,9 @@ TableView, insuring that each view is in sync.
             this, SLOT(fileSelectionChange(QModelIndex, QModelIndex)));
 
     // and update the current index in the ThumbView delegate so can highlight
-    connect(selectionModel, SIGNAL(currentChanged(QModelIndex, QModelIndex)),
-            thumbView->thumbViewDelegate,
-            SLOT(onCurrentChanged(QModelIndex, QModelIndex)));
+//    connect(selectionModel, SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+//            thumbView->thumbViewDelegate,
+//            SLOT(onCurrentChanged(QModelIndex, QModelIndex)));
 }
 
 void MW::createCaching()

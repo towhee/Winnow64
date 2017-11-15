@@ -136,79 +136,18 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     // in imageView
     connect(thumbViewDelegate, SIGNAL(update(QModelIndex, QRect)),
             this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
-
-/* Misc connections, emptyImg and timer
-    // triggers MW::fileSelectionChange
-//    connect(this->selectionModel(),
-//            SIGNAL(currentChanged(QModelIndex, QModelIndex)),
-//            parent, SLOT(fileSelectionChange(QModelIndex, QModelIndex)));
-
-//    connect(this->selectionModel(),
-//            SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
-//            parent, SLOT(fileSelectionChange()));
-
-     triggers MW::fileSelectionChange
-     seems to be firing twice
-    connect(this->selectionModel(),
-            SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
-            parent, SLOT(fileSelectionChange()));
-
-     triggers MW::fileSelectionChange
-    connect(this->selectionModel(),
-            SIGNAL(currentChanged(QModelIndex,QModelIndex)),
-            thumbViewDelegate, SLOT(onCurrentChanged(QModelIndex,QModelIndex)));
-
-        [signal] void QItemSelectionModel::currentChanged(const QModelIndex &current, const QModelIndex &previous)
-
-    connect(this, SIGNAL(activated(QModelIndex)),
-            this, SLOT(activate(QModelIndex)));
-
-    connect(this, SIGNAL(doubleClicked(const QModelIndex &)), parent,
-            SLOT(loadImagefromThumb(const QModelIndex &)));
-
-    thumbsDir = new QDir();
-    fileFilters = new QStringList;
-
-    emptyImg.load(":/images/no_image.png");
-
-    QTime time = QTime::currentTime();
-    */
 }
-
-//bool ThumbView::event(QEvent *event)
-//{
-///* Just in case we need to override a keystroke in the thumbview */
-//    bool override = false;
-////    qDebug() << "thumbView events:" << event;
-//    if (event->type() == QEvent::UpdateLater ||
-//        event->type() == QEvent::Paint) {
-////        forceScroll(0);
-//    }
-//    if (event->type() == QEvent::Resize) {
-////        forceScroll(40);
-//    }
-//    if (event->type() == QEvent::KeyPress) {
-//        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-////        if (keyEvent->key() == Qt::Key_Right) {
-////            override = true;
-////            selectNext();
-////        }
-////        if (keyEvent->key() == Qt::Key_Left) {
-////            override = true;
-////            selectPrev();
-////        }
-//    }
-//    if (!override) return QListView::event(event);
-//}
 
 void ThumbView::reportThumbs()
 {
-//    QModelIndex idx;
-//    qDebug() << "List all thumbs";
-//    for (int i=0; i<dm->sf->rowCount(); i++) {
-//        idx = dm->sf->index(i, 0, QModelIndex());
-//        qDebug() << i << idx.data(FileNameRole).toString();
-//    }
+    /*
+    QModelIndex idx;
+    qDebug() << "List all thumbs";
+    for (int i=0; i<dm->sf->rowCount(); i++) {
+        idx = dm->sf->index(i, 0, QModelIndex());
+        qDebug() << i << idx.data(FileNameRole).toString();
+    }
+    */
 }
 
 void ThumbView::refreshThumbs() {
@@ -775,6 +714,7 @@ void ThumbView::selectUp()
     #endif
     }
     if(isCompareView) return;
+    selectPrev();
     setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
 }
 
@@ -786,7 +726,8 @@ void ThumbView::selectDown()
     #endif
     }
     if(isCompareView) return;
-    setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
+    selectNext();
+//    setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
 }
 
 void ThumbView::selectFirst()
@@ -1079,10 +1020,7 @@ void ThumbView::wheelEvent(QWheelEvent *event)
     qDebug() << "ThumbView::wheelEvent";
     #endif
     }
-    if (event->delta() < 0)
-        verticalScrollBar()->setValue(verticalScrollBar()->value() + thumbHeight/4);
-    else
-        verticalScrollBar()->setValue(verticalScrollBar()->value() - thumbHeight/4);
+    QListView::wheelEvent(event);
 }
 
 void ThumbView::mousePressEvent(QMouseEvent *event)

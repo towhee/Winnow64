@@ -864,6 +864,30 @@ void ImageView::dragMoveEvent(QDragMoveEvent *event)
     qDebug() << "drag";
 }
 
+void ImageView::wheelEvent(QWheelEvent *event)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ImageView::wheelEvent";
+    #endif
+    }
+    static int delta;
+    delta += event->delta();
+//    qDebug() << "ImageView::wheelEvent   delta =" << delta
+//             << "angleDelta =" << event->angleDelta()
+//             << "phase =" << event->phase();
+    int deltaThreshold = 40;
+
+    if(delta > deltaThreshold) {
+        thumbView->selectPrev();
+        delta = 0;
+    }
+    if(delta < (-deltaThreshold)) {
+        thumbView->selectNext();
+        delta = 0;
+    }
+}
+
 // not used
 void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 {

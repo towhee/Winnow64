@@ -60,6 +60,7 @@ protected:
     void scrollContentsBy(int dx, int dy);
     void dragMoveEvent(QDragMoveEvent *event);
 //    void showEvent(QShowEvent *event);
+    void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);

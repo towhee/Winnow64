@@ -33,6 +33,7 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Aperture, ss, iso and focal length numbers for raw formats for tableView
 - Done: Compare images not working after images sorted other then filename
 - Done: currentIndex not updating properly after compareView.
 - Done: resize thumbs in top/bottpm thumbDock with scrollbar always on
