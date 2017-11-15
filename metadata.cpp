@@ -880,30 +880,40 @@ void Metadata::formatNikon()
 
     // read ExifIFD
     readIFD("IFD Exif", offsetEXIF);
+    // get shutter speed
     if (ifdDataHash.contains(33434)) {
         float x = getReal(ifdDataHash.value(33434).tagValue);
-        if (x<1) {
+        if (x <1 ) {
             uint t = qRound(1/x);
             exposureTime = "1/" + QString::number(t);
+            exposureTimeNum = x;
         } else {
             uint t = (uint)x;
             exposureTime = QString::number(t);
+            exposureTimeNum = t;
         }
         exposureTime += " sec";
     } else {
         exposureTime = "";
     }
+    // aperture
     if (ifdDataHash.contains(33437)) {
         float x = getReal(ifdDataHash.value(33437).tagValue);
         aperture = "f/" + QString::number(x, 'f', 1);
+        apertureNum = qRound(x * 10) / 10.0;
     } else {
         aperture = "";
+        apertureNum = 0;
     }
+    //ISO
     if (ifdDataHash.contains(34855)) {
-//        ISO = "ISO " + QString::number(ifdDataHash.value(34855).tagValue);
-        ISO = QString::number(ifdDataHash.value(34855).tagValue);
+        ulong x = ifdDataHash.value(34855).tagValue;
+        ISONum = static_cast<int>(x);
+        ISO = QString::number(ISONum);
+//        ISO = "ISO " + QString::number(x);
     } else {
         ISO = "";
+        ISONum = 0;
     }
 /*
 //    if (ifdDataHash.contains(41989)) {
@@ -912,11 +922,14 @@ void Metadata::formatNikon()
 //        focalLength35mm = "Unknown";
 //    }
 */
+    // focal length
     if (ifdDataHash.contains(37386)) {
         float x = getReal(ifdDataHash.value(37386).tagValue);
+        focalLengthNum = static_cast<int>(x);
         focalLength = QString::number(x, 'f', 0) + "mm";
     } else {
         focalLength = "";
+        focalLengthNum = 0;
     }
 
     // read makernoteIFD
@@ -1011,12 +1024,14 @@ void Metadata::formatCanon()
     // shutter speed
     if (ifdDataHash.contains(33434)) {
         float x = getReal(ifdDataHash.value(33434).tagValue);
-        if (x<1) {
+        if (x <1 ) {
             uint t = qRound(1/x);
             exposureTime = "1/" + QString::number(t);
+            exposureTimeNum = x;
         } else {
             uint t = (uint)x;
             exposureTime = QString::number(t);
+            exposureTimeNum = t;
         }
         exposureTime += " sec";
     } else {
@@ -1037,22 +1052,29 @@ void Metadata::formatCanon()
     if (ifdDataHash.contains(33437)) {
         float x = getReal(ifdDataHash.value(33437).tagValue);
         aperture = "f/" + QString::number(x, 'f', 1);
+        apertureNum = qRound(x * 10) / 10.0;
     } else {
         aperture = "";
+        apertureNum = 0;
     }
     //ISO
     if (ifdDataHash.contains(34855)) {
-        ISO = QString::number(ifdDataHash.value(34855).tagValue);
-//        ISO = "ISO " + QString::number(ifdDataHash.value(34855).tagValue);
+        ulong x = ifdDataHash.value(34855).tagValue;
+        ISONum = static_cast<int>(x);
+        ISO = QString::number(ISONum);
+//        ISO = "ISO " + QString::number(x);
     } else {
         ISO = "";
+        ISONum = 0;
     }
     // focal length
     if (ifdDataHash.contains(37386)) {
         float x = getReal(ifdDataHash.value(37386).tagValue);
+        focalLengthNum = static_cast<int>(x);
         focalLength = QString::number(x, 'f', 0) + "mm";
     } else {
         focalLength = "";
+        focalLengthNum = 0;
     }
 
     if (report) reportMetadata();
@@ -1093,37 +1115,49 @@ void Metadata::formatOlympus()
         : offsetEXIF = 0;
     readIFD("IFD Exif", offsetEXIF);
 
+    // get shutter speed
     if (ifdDataHash.contains(33434)) {
         float x = getReal(ifdDataHash.value(33434).tagValue);
-        if (x<1) {
+        if (x <1 ) {
             uint t = qRound(1/x);
             exposureTime = "1/" + QString::number(t);
+            exposureTimeNum = x;
         } else {
             uint t = (uint)x;
             exposureTime = QString::number(t);
+            exposureTimeNum = t;
         }
         exposureTime += " sec";
     } else {
         exposureTime = "";
     }
+    // aperture
     if (ifdDataHash.contains(33437)) {
         float x = getReal(ifdDataHash.value(33437).tagValue);
         aperture = "f/" + QString::number(x, 'f', 1);
+        apertureNum = qRound(x * 10) / 10.0;
     } else {
         aperture = "";
+        apertureNum = 0;
     }
+    //ISO
     if (ifdDataHash.contains(34855)) {
-        ISO = QString::number(ifdDataHash.value(34855).tagValue);
-//        ISO = "ISO " + QString::number(ifdDataHash.value(34855).tagValue);
+        ulong x = ifdDataHash.value(34855).tagValue;
+        ISONum = static_cast<int>(x);
+        ISO = QString::number(ISONum);
+//        ISO = "ISO " + QString::number(x);
     } else {
         ISO = "";
+        ISONum = 0;
     }
-
+    // focal length
     if (ifdDataHash.contains(37386)) {
         float x = getReal(ifdDataHash.value(37386).tagValue);
+        focalLengthNum = static_cast<int>(x);
         focalLength = QString::number(x, 'f', 0) + "mm";
     } else {
         focalLength = "";
+        focalLengthNum = 0;
     }
 
     // read makernoteIFD
@@ -1220,43 +1254,49 @@ void Metadata::formatSony()
 
     // get the offset for ExifIFD and read it
     readIFD("IFD Exif", offsetEXIF);
+    // get shutter speed
     if (ifdDataHash.contains(33434)) {
         float x = getReal(ifdDataHash.value(33434).tagValue);
-        if (x<1) {
+        if (x <1 ) {
             uint t = qRound(1/x);
             exposureTime = "1/" + QString::number(t);
+            exposureTimeNum = x;
         } else {
             uint t = (uint)x;
             exposureTime = QString::number(t);
+            exposureTimeNum = t;
         }
         exposureTime += " sec";
     } else {
         exposureTime = "";
     }
+    // aperture
     if (ifdDataHash.contains(33437)) {
         float x = getReal(ifdDataHash.value(33437).tagValue);
         aperture = "f/" + QString::number(x, 'f', 1);
+        apertureNum = qRound(x * 10) / 10.0;
     } else {
         aperture = "";
+        apertureNum = 0;
     }
+    //ISO
     if (ifdDataHash.contains(34855)) {
-        ISO = QString::number(ifdDataHash.value(34855).tagValue);
-        ISO = "ISO " + QString::number(ifdDataHash.value(34855).tagValue);
+        ulong x = ifdDataHash.value(34855).tagValue;
+        ISONum = static_cast<int>(x);
+        ISO = QString::number(ISONum);
+//        ISO = "ISO " + QString::number(x);
     } else {
         ISO = "";
+        ISONum = 0;
     }
-/*
-//    if (ifdDataHash.contains(41989)) {
-//        focalLength35mm = QString::number(ifdDataHash.value(41989).tagValue) + "mm";
-//    } else {
-//        focalLength35mm = "Unknown";
-//    }
-*/
+    // focal length
     if (ifdDataHash.contains(37386)) {
         float x = getReal(ifdDataHash.value(37386).tagValue);
+        focalLengthNum = static_cast<int>(x);
         focalLength = QString::number(x, 'f', 0) + "mm";
     } else {
         focalLength = "";
+        focalLengthNum = 0;
     }
 
     if (report) reportMetadata();

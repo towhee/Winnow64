@@ -749,6 +749,7 @@ void ThumbView::selectNext()
     qDebug() << "ThumbView::selectNext";
     #endif
     }
+    if(isCompareView) return;
     selectThumb(getNextRow());
 //    if (isSelectedItem()) selectThumb(getNextRow());
 }
@@ -760,6 +761,7 @@ void ThumbView::selectPrev()
     qDebug() << "ThumbView::selectPrev";
     #endif
     }
+    if(isCompareView) return;
     selectThumb(getPrevRow());
 //    if (isSelectedItem()) selectThumb(getPrevRow());
 //    setCurrentIndex(moveCursor(MovePrevious, Qt::NoModifier));
@@ -772,6 +774,7 @@ void ThumbView::selectUp()
     qDebug() << "ThumbView::selectUp";
     #endif
     }
+    if(isCompareView) return;
     setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
 }
 
@@ -782,6 +785,7 @@ void ThumbView::selectDown()
     qDebug() << "ThumbView::selectDown";
     #endif
     }
+    if(isCompareView) return;
     setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
 }
 
@@ -792,6 +796,7 @@ void ThumbView::selectFirst()
     qDebug() << "ThumbView::selectFirst";
     #endif
     }
+    if(isCompareView) return;
     selectThumb(0);
 //    if (isSelectedItem()) selectThumb(0);
 }
@@ -803,6 +808,7 @@ void ThumbView::selectLast()
     qDebug() << "ThumbView::selectLast";
     #endif
     }
+    if(isCompareView) return;
     selectThumb(getLastRow());
 //    if (isSelectedItem()) selectThumb(getLastRow());
 }
@@ -871,6 +877,7 @@ void ThumbView::thumbsEnlarge()
         }
     }
     setThumbParameters();
+    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 //    if (isAutoFit) thumbsFit(0);
 }
 
@@ -898,6 +905,7 @@ void ThumbView::thumbsShrink()
         }
     }
     setThumbParameters();
+    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 //    if (isAutoFit) thumbsFit();
 }
 
@@ -1013,12 +1021,12 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
 //        int maxThumbsBeforeScrollReqd = viewportWidth / thumbSpaceWidth;
 
 
-        qDebug() << "\nThumbView::thumbsFit else\n"
-                 << "***  thumbView Ht =" << ht
-                 << "thumbSpace Ht =" << thumbSpaceHeight
-                 << "thumbHeight =" << thumbHeight
-                 << "scrollbar Ht =" << scrollHeight
-                 << "viewport Ht =" << viewport()->height();
+//        qDebug() << "\nThumbView::thumbsFit else\n"
+//                 << "***  thumbView Ht =" << ht
+//                 << "thumbSpace Ht =" << thumbSpaceHeight
+//                 << "thumbHeight =" << thumbHeight
+//                 << "scrollbar Ht =" << scrollHeight
+//                 << "viewport Ht =" << viewport()->height();
 
         // change the thumbnail size in thumbViewDelegate
         setThumbParameters();

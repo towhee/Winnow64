@@ -3,7 +3,6 @@ In terminal: cloc /Users/roryhill/Projects/Winnow64
 
 To do:
 - check all mouse behavior including wheel event and scrolling on track pad
-- Compare images not working after images sorted other then filename
 - Try producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
 - Check full screen logic
 - Workspace not remembering thumbs hidden
@@ -34,6 +33,8 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Compare images not working after images sorted other then filename
+- Done: currentIndex not updating properly after compareView.
 - Done: resize thumbs in top/bottpm thumbDock with scrollbar always on
 - Done: selection when filtered not correct indexes when apply ratings, labels or picks
 - Done: improve performance when opening large folders

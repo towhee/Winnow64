@@ -37,6 +37,8 @@ public:
     bool isFloat;       // set by MW ...
     bool isAutoFit;
 
+    bool isCompareView; // do not allow thumb selection changes while in compareView
+
     void updateLayout();
 
     ThumbViewDelegate *thumbViewDelegate;

@@ -3886,6 +3886,7 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
     qDebug() << "MW::setThumbDockFloatFeatures";
     #endif
     }
+//    qDebug() << "Floating";
     if (isFloat) {
         thumbView->setMaximumHeight(100000);
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -3923,7 +3924,7 @@ and titlebar visibility.
     qDebug() << "MW::setThumbDockFeatures";
     #endif
     }
-//    qDebug() << "DockWidgetArea =" << area;
+//    qDebug() << "MW::setThumbDockFeatures   DockWidgetArea =" << area;
 
     thumbView->setMaximumHeight(100000);
 
@@ -4017,7 +4018,9 @@ void MW::loupeDisplay()
 //    saveSelection();
     thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
     thumbView->isGrid = false;
+    thumbView->isCompareView = false;
     thumbDock->setWidget(thumbView);
+    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     thumbView->setThumbParameters();
 //    setThumbDockFeatures(dockWidgetArea(thumbDock));
 //    qDebug() << "\nMW::loupeDisplay before calling setThumbParameters" << "\n"
@@ -4045,6 +4048,7 @@ void MW::gridDisplay()
     centralLayout->addWidget(thumbView); // rghx
     centralLayout->setCurrentIndex(GridTab);
     imageView->setVisible(false);
+    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     thumbView->thumbViewDelegate->isCompare = false;
 //    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
@@ -4056,6 +4060,7 @@ void MW::gridDisplay()
 //             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setWrapping(true);
     thumbView->isGrid = true;
+    thumbView->isCompareView = false;
     thumbView->setThumbParameters();
 //    thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
 //                           QDockWidget::DockWidgetMovable  |
@@ -4085,8 +4090,10 @@ void MW::tableDisplay()
     resized to fit the thumbs.
     */
     thumbDock->setWidget(thumbView);
+    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
     thumbView->isGrid = false;
+    thumbView->isCompareView = false;
 /*    qDebug() << "\nMW::tableDisplay before calling setThumbParameters" << "\n"
              << "***  thumbView Ht =" << thumbView->height()
              << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
@@ -4132,6 +4139,7 @@ void MW::compareDisplay()
     }
     thumbView->thumbViewDelegate->isCompare = true;
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
+    thumbView->isCompareView = true;
 
     centralLayout->setCurrentIndex(CompareTab);
     compareImages->load(centralWidget->size());
