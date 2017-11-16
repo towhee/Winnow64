@@ -419,8 +419,9 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // currentIndex must be column 0 - this might cause another call to
     // fileSelectionChange, hence check initially if same datamodel row
     QModelIndex currentIndex = dm->sf->index(current.row(), 0);
-    qDebug() << "thumbView->setCurrentIndex(currentIndex)";
+    qDebug() << "thumbView->setCurrentIndex(currentIndex)" << currentIndex;
     thumbView->setCurrentIndex(currentIndex);
+    qDebug() << "thumbView->selectionMode()" << thumbView->selectionMode();
     thumbView->thumbViewDelegate->currentIndex = currentIndex;
 
     // sync thumbView delegate current item
@@ -3091,8 +3092,10 @@ void MW::escapeFullScreen()
     #endif
     }
     qDebug() << "MW::escapeFullScreen";
-    fullScreenAction->setChecked(false);
-    toggleFullScreen();
+    if(fullScreenAction->isChecked()) {
+        fullScreenAction->setChecked(false);
+        toggleFullScreen();
+    }
 }
 
 // rgh maybe separate this into two functions:
@@ -3124,7 +3127,7 @@ void MW::toggleFullScreen()
         setThumbDockVisibity();
         menuBarVisibleAction->setChecked(false);
         setMenuBarVisibility();
-        statusBarVisibleAction->setChecked(fullScreenDocks.isThumbs);
+        statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
         setStatusBarVisibility();
     }
     else
@@ -4017,13 +4020,13 @@ void MW::loupeDisplay()
     }
     centralLayout->setCurrentIndex(LoupeTab);
     thumbView->thumbViewDelegate->isCompare = false;
+    thumbView->mwMode = "Loupe";
 //    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // in case was grid display move thumbView back to dock from central widget
 //    saveSelection();
     thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
     thumbView->isGrid = false;
-    thumbView->isCompareView = false;
     thumbDock->setWidget(thumbView);
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     thumbView->setThumbParameters();
@@ -4053,6 +4056,7 @@ void MW::gridDisplay()
     centralLayout->addWidget(thumbView); // rghx
     centralLayout->setCurrentIndex(GridTab);
     imageView->setVisible(false);
+    thumbView->mwMode = "Grid";
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     thumbView->thumbViewDelegate->isCompare = false;
 //    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -4065,7 +4069,6 @@ void MW::gridDisplay()
 //             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setWrapping(true);
     thumbView->isGrid = true;
-    thumbView->isCompareView = false;
     thumbView->setThumbParameters();
 //    thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
 //                           QDockWidget::DockWidgetMovable  |
@@ -4095,10 +4098,10 @@ void MW::tableDisplay()
     resized to fit the thumbs.
     */
     thumbDock->setWidget(thumbView);
+    thumbView->mwMode = "Table";
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     thumbDockVisibleAction->setChecked(isThumbDockVisibleBeforeGridViewInvoked);
     thumbView->isGrid = false;
-    thumbView->isCompareView = false;
 /*    qDebug() << "\nMW::tableDisplay before calling setThumbParameters" << "\n"
              << "***  thumbView Ht =" << thumbView->height()
              << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
@@ -4142,9 +4145,9 @@ void MW::compareDisplay()
         setThumbDockVisibity();
         recoverSelection();
     }
+    thumbView->mwMode = "Compare";
     thumbView->thumbViewDelegate->isCompare = true;
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
-    thumbView->isCompareView = true;
 
     centralLayout->setCurrentIndex(CompareTab);
     compareImages->load(centralWidget->size());

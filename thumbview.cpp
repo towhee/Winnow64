@@ -688,7 +688,7 @@ void ThumbView::selectNext()
     qDebug() << "ThumbView::selectNext";
     #endif
     }
-    if(isCompareView) return;
+    if(mwMode == "Compare") return;
     selectThumb(getNextRow());
 //    if (isSelectedItem()) selectThumb(getNextRow());
 }
@@ -700,7 +700,7 @@ void ThumbView::selectPrev()
     qDebug() << "ThumbView::selectPrev";
     #endif
     }
-    if(isCompareView) return;
+    if(mwMode == "Compare") return;
     selectThumb(getPrevRow());
 //    if (isSelectedItem()) selectThumb(getPrevRow());
 //    setCurrentIndex(moveCursor(MovePrevious, Qt::NoModifier));
@@ -713,7 +713,7 @@ void ThumbView::selectUp()
     qDebug() << "ThumbView::selectUp";
     #endif
     }
-    if(isCompareView) return;
+    if(mwMode == "Compare") return;
     selectPrev();
     setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
 }
@@ -725,7 +725,7 @@ void ThumbView::selectDown()
     qDebug() << "ThumbView::selectDown";
     #endif
     }
-    if(isCompareView) return;
+    if(mwMode == "Compare") return;
     selectNext();
 //    setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
 }
@@ -737,7 +737,7 @@ void ThumbView::selectFirst()
     qDebug() << "ThumbView::selectFirst";
     #endif
     }
-    if(isCompareView) return;
+    if(mwMode == "Compare") return;
     selectThumb(0);
 //    if (isSelectedItem()) selectThumb(0);
 }
@@ -749,7 +749,7 @@ void ThumbView::selectLast()
     qDebug() << "ThumbView::selectLast";
     #endif
     }
-    if(isCompareView) return;
+    if(mwMode == "Compare") return;
     selectThumb(getLastRow());
 //    if (isSelectedItem()) selectThumb(getLastRow());
 }
@@ -1076,7 +1076,9 @@ void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
     #endif
     }
     QListView::mouseDoubleClickEvent(event);
-    emit displayLoupe();
+
+    // do not displayLoupe if already displayed
+    if (mwMode != "Loupe") emit displayLoupe();
     // delay reqd
     QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
 }

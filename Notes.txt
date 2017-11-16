@@ -2,9 +2,7 @@ CLOC = Count Lines Of Code
 In terminal: cloc /Users/roryhill/Projects/Winnow64
 
 To do:
-- check all mouse behavior including wheel event and scrolling on track pad
 - Try producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
-- Check full screen logic
 - Workspace not remembering thumbs hidden
 - Rotate selected images
 - Initial setup (other than workspace)
@@ -33,6 +31,8 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Check full screen logic
+- Done: check all mouse behavior including wheel event and scrolling on track pad
 - Done: Aperture, ss, iso and focal length numbers for raw formats for tableView
 - Done: Compare images not working after images sorted other then filename
 - Done: currentIndex not updating properly after compareView.

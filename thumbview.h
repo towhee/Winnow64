@@ -37,7 +37,7 @@ public:
     bool isFloat;       // set by MW ...
     bool isAutoFit;
 
-    bool isCompareView; // do not allow thumb selection changes while in compareView
+    QString mwMode;     // loupe, grid, compare or table
 
     void updateLayout();
 

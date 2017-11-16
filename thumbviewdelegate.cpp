@@ -87,6 +87,7 @@ textRect         = a rectangle below itemRect
 //    qDebug() << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
     #endif
     }
+    qDebug() << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
     painter->save();
 
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
@@ -178,6 +179,9 @@ textRect         = a rectangle below itemRect
     gray if not selected
     */
     QColor selectedColor  = selectedNotCurrentItemColor;
+    qDebug() << "index vs currentIndex" << index << currentIndex
+             << "option.state.testFlag(QStyle::State_Selected)"
+             << option.state.testFlag(QStyle::State_Selected);
     if (currentIndex == index) selectedColor = currentItemColor;
     if (option.state.testFlag(QStyle::State_Selected)) {
         QPen selectedPen(selectedColor);
