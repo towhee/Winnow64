@@ -1061,19 +1061,18 @@ void MW::createActions()
 //            thumbsShrinkAction->setEnabled(false);
 //    addAction(thumbsShrinkAction);
 
-    // is this used - not in menu
     thumbsFitAction = new QAction(tr("Fit thumbs"), this);
     thumbsFitAction->setObjectName("thumbsZoomOut");
     connect(thumbsFitAction, SIGNAL(triggered()), this, SLOT(setDockFitThumbs()));
 //    if (thumbView->thumbSize == THUMB_SIZE_MIN)
 //            thumbsFitAction->setEnabled(false);
 
-    showThumbLabelsAction = new QAction(tr("Thumb labels"), this);
-    showThumbLabelsAction->setObjectName("showLabels");
-    showThumbLabelsAction->setCheckable(true);
-//    showThumbLabelsAction->setChecked(thumbView->showThumbLabels);
-    connect(showThumbLabelsAction, SIGNAL(triggered()), this, SLOT(setThumbLabels()));
-    showThumbLabelsAction->setEnabled(true);
+//    showThumbLabelsAction = new QAction(tr("Thumb labels"), this);
+//    showThumbLabelsAction->setObjectName("showLabels");
+//    showThumbLabelsAction->setCheckable(true);
+////    showThumbLabelsAction->setChecked(thumbView->showThumbLabels);
+//    connect(showThumbLabelsAction, SIGNAL(triggered()), this, SLOT(setThumbLabels()));
+//    showThumbLabelsAction->setEnabled(true);
 
     // Window menu
 
@@ -1314,7 +1313,7 @@ void MW::createMenus()
     viewMenu->addAction(thumbsEnlargeAction);
     viewMenu->addAction(thumbsShrinkAction);
     viewMenu->addAction(thumbsFitAction);
-    viewMenu->addAction(showThumbLabelsAction);
+//    viewMenu->addAction(showThumbLabelsAction);
 //    viewMenu->addAction(sortReverseAction);
     viewMenu->addSeparator();
 
@@ -1426,7 +1425,7 @@ void MW::createMenus()
     thumbnailGroupAct->setMenu(thumbNailSubMenu);
     thumbNailSubMenu->addAction(thumbsEnlargeAction);
     thumbNailSubMenu->addAction(thumbsShrinkAction);
-    thumbNailSubMenu->addAction(showThumbLabelsAction);
+//    thumbNailSubMenu->addAction(showThumbLabelsAction);
     sortMenu = thumbNailSubMenu->addMenu(tr("Sort By"));
     sortMenu->addActions(sortGroupAction->actions());
     sortMenu->addSeparator();
@@ -3343,13 +3342,13 @@ void MW::writeSettings()
     setting->setValue("thumbWidth", thumbView->thumbWidth);
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
-    setting->setValue("showLabels", (bool)showThumbLabelsAction->isChecked());
+    setting->setValue("showThumbLabels", (bool)thumbView->showThumbLabels);
     setting->setValue("thumbSpacingGrid", thumbView->thumbSpacingGrid);
     setting->setValue("thumbPaddingGrid", thumbView->thumbPaddingGrid);
     setting->setValue("thumbWidthGrid", thumbView->thumbWidthGrid);
     setting->setValue("thumbHeightGrid", thumbView->thumbHeightGrid);
     setting->setValue("labelFontSizeGrid", thumbView->labelFontSizeGrid);
-    setting->setValue("showLabelsGrid", (bool)thumbView->showThumbLabelsGrid);
+    setting->setValue("showThumbLabelsGrid", (bool)thumbView->showThumbLabelsGrid);
     setting->setValue("isThumbWrapWhenTopOrBottomDock", (bool)thumbView->isThumbWrapWhenTopOrBottomDock);
     setting->setValue("isAutoFit", (bool)thumbView->isAutoFit);
     setting->setValue("isVerticalTitle", (bool)isThumbDockVerticalTitle);
@@ -3573,7 +3572,7 @@ Preferences are located in the prefdlg class and updated here.
     asGridAction->setChecked(setting->value("isGridDisplay").toBool());
     asTableAction->setChecked(setting->value("isTableDisplay").toBool());
     asCompareAction->setChecked(false); // never start with compare set true
-    showThumbLabelsAction->setChecked(thumbView->showThumbLabels);
+//    showThumbLabelsAction->setChecked(thumbView->showThumbLabels);
 
     windowTitleBarVisibleAction->setChecked(setting->value("isWindowTitleBarVisible").toBool());
     menuBarVisibleAction->setChecked(setting->value("isMenuBarVisible").toBool());

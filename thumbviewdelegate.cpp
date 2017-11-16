@@ -27,11 +27,24 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
 
     thumbSize.setWidth(thumbWidth);
     thumbSize.setHeight(thumbHeight);
-    thumbSpace.setWidth(thumbWidth + thumbBorderThickness*2 + iconPadding*2 + thumbBorderGap*2 + itemBorderThickness*2);
-    thumbSpace.setHeight(thumbHeight + thumbBorderThickness*2 + iconPadding*2 + thumbBorderGap*2 + itemBorderThickness*2);
+    thumbSpace.setWidth(thumbWidth
+                        + thumbBorderThickness*2
+                        + iconPadding*2
+                        + thumbBorderGap*2
+                        + itemBorderThickness*2);
+    thumbSpace.setHeight(thumbHeight
+                         + thumbBorderThickness*2
+                         + iconPadding*2
+                         + thumbBorderGap*2
+                         + itemBorderThickness*2);
     if (showThumbLabels)
-        thumbSpace.setHeight(thumbSize.height() + iconPadding*2
-            + itemBorderThickness*2 + thumbBorderGap*2 + thumbBorderThickness*2 + fontHt + iconPadding);
+        thumbSpace.setHeight(thumbSize.height()
+                             + thumbBorderThickness*2
+                             + iconPadding*2
+                             + thumbBorderGap*2
+                             + itemBorderThickness*2
+                             + fontHt
+                             + iconPadding);
 //    reportThumbAttributes();
 }
 
@@ -51,7 +64,6 @@ QSize ThumbViewDelegate::getThumbCell()
 void ThumbViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex previous)
 {
     currentIndex = current;
-//    qDebug() << "ThumbViewDelegate::onCurrentChanged" << current;
 }
 
 QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
@@ -63,6 +75,7 @@ QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
     #endif
     }
     QFont font = QApplication::font();
+//    font.setPixelSize(9);
     QFontMetrics fm(font);
     return thumbSpace;
 }
@@ -95,8 +108,9 @@ textRect         = a rectangle below itemRect
 
     // get data from model
     int row = index.row();
-    QString fName = index.model()->index(row, G::PathColumn).data(G::FileNameRole).toString();
-    QString labelColor = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
+    QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
+//    QString fName = index.model()->index(row, G::PathColumn).data(G::FileNameRole).toString();
+    QString labelColor = index.model()->index(row, G::LabelColumn).data(QAbstractItemView::ExtendedSelection).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     bool isPicked = index.model()->index(row, G::PickedColumn).data(Qt::EditRole).toBool();
 
@@ -144,6 +158,8 @@ textRect         = a rectangle below itemRect
     painter->setRenderHint(QPainter::TextAntialiasing, true);
 
     if (delegateShowThumbLabels) {
+//        QFont thumbFont = font;
+//        thumbFont.setPixelSize(9);
         painter->setFont(font);
         painter->drawText(textRect, Qt::AlignHCenter, fName);
     }

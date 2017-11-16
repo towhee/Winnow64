@@ -2,9 +2,9 @@ CLOC = Count Lines Of Code
 In terminal: cloc /Users/roryhill/Projects/Winnow64
 
 To do:
-- Cmd click on item requires two clicks to select
+- Settings not remembering to show thumb labels
+- Thumb label not positioning properly
 - Try producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
-- Workspace not remembering thumbs hidden
 - Rotate selected images
 - Initial setup (other than workspace)
 - Add preferences for info label
@@ -32,6 +32,9 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Thumb label is showing entire file path instead of just the filename
+- Done: Workspace not remembering thumbs hidden
+- Done: Cmd click on item requires two clicks to select
 - Done: Double click on thumb in Loupe view should be ignored
 - Done: Check full screen logic
 - Done: check all mouse behavior including wheel event and scrolling on track pad

@@ -405,7 +405,7 @@ private:
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
     QAction *thumbsFitAction;   // used?? rgh
-    QAction *showThumbLabelsAction;
+//    QAction *showThumbLabelsAction;
     QAction *sortReverseAction;
 
     // Window Menu
