@@ -2,7 +2,7 @@ CLOC = Count Lines Of Code
 In terminal: cloc /Users/roryhill/Projects/Winnow64
 
 To do:
--
+- Cmd click on item requires two clicks to select
 - Try producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
 - Workspace not remembering thumbs hidden
 - Rotate selected images
@@ -32,6 +32,7 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Double click on thumb in Loupe view should be ignored
 - Done: Check full screen logic
 - Done: check all mouse behavior including wheel event and scrolling on track pad
 - Done: Aperture, ss, iso and focal length numbers for raw formats for tableView

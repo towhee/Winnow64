@@ -420,7 +420,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // fileSelectionChange, hence check initially if same datamodel row
     QModelIndex currentIndex = dm->sf->index(current.row(), 0);
     qDebug() << "thumbView->setCurrentIndex(currentIndex)" << currentIndex;
-    thumbView->setCurrentIndex(currentIndex);
+//    thumbView->setCurrentIndex(currentIndex);
     qDebug() << "thumbView->selectionMode()" << thumbView->selectionMode();
     thumbView->thumbViewDelegate->currentIndex = currentIndex;
 
