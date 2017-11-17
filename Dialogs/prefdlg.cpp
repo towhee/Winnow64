@@ -30,12 +30,12 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->lockDimChk->setChecked(true);
 
     // thumbsGrid
-    ui->iconWidthSlider_2->setValue(mw->thumbView->thumbWidthGrid);
-    ui->iconHeightSlider_2->setValue(mw->thumbView->thumbHeightGrid);
-    ui->iconPaddingSlider_2->setValue(mw->thumbView->thumbPaddingGrid);
-    ui->thumbSpacingSlider_2->setValue(mw->thumbView->thumbSpacingGrid);
-    ui->fontSizeSlider_2->setValue(mw->thumbView->labelFontSizeGrid);
-    ui->showThumbLabelChk_2->setChecked(mw->thumbView->showThumbLabelsGrid);
+    ui->iconWidthSlider_2->setValue(mw->gridView->thumbWidth);
+    ui->iconHeightSlider_2->setValue(mw->gridView->thumbHeight);
+    ui->iconPaddingSlider_2->setValue(mw->gridView->thumbPadding);
+    ui->thumbSpacingSlider_2->setValue(mw->gridView->thumbSpacing);
+    ui->fontSizeSlider_2->setValue(mw->gridView->labelFontSize);
+    ui->showThumbLabelChk_2->setChecked(mw->gridView->showThumbLabels);
     ui->lockDimChk_2->setChecked(true);
 
     // thumb dock

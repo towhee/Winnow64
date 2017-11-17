@@ -504,7 +504,7 @@ private:
 
     bool metadataLoaded;
     bool ignoreDockResize;
-    bool isThumbDockVisibleBeforeGridViewInvoked;
+    bool wasThumbDockVisibleBeforeGridInvoked;
     bool isUpdatingState;
 
     bool isInitializing;
@@ -540,6 +540,7 @@ private:
     void createMenus();
     void createTableView();
     void createThumbView();
+    void createGridView();
     void createSelectionModel();
     void createStatusBar();
     void createAppStyle();

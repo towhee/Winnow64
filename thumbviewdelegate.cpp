@@ -100,7 +100,7 @@ textRect         = a rectangle below itemRect
 //    qDebug() << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
     #endif
     }
-    qDebug() << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
+//    qDebug() << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
     painter->save();
 
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
@@ -110,7 +110,7 @@ textRect         = a rectangle below itemRect
     int row = index.row();
     QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
 //    QString fName = index.model()->index(row, G::PathColumn).data(G::FileNameRole).toString();
-    QString labelColor = index.model()->index(row, G::LabelColumn).data(QAbstractItemView::ExtendedSelection).toString();
+    QString labelColor = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     bool isPicked = index.model()->index(row, G::PickedColumn).data(Qt::EditRole).toBool();
 
@@ -195,9 +195,9 @@ textRect         = a rectangle below itemRect
     gray if not selected
     */
     QColor selectedColor  = selectedNotCurrentItemColor;
-    qDebug() << "index vs currentIndex" << index << currentIndex
-             << "option.state.testFlag(QStyle::State_Selected)"
-             << option.state.testFlag(QStyle::State_Selected);
+//    qDebug() << "index vs currentIndex" << index << currentIndex
+//             << "option.state.testFlag(QStyle::State_Selected)"
+//             << option.state.testFlag(QStyle::State_Selected);
     if (currentIndex == index) selectedColor = currentItemColor;
     if (option.state.testFlag(QStyle::State_Selected)) {
         QPen selectedPen(selectedColor);
@@ -213,7 +213,6 @@ textRect         = a rectangle below itemRect
     QColor labelColorToUse;
     if(rating != "" || labelColor != "") {
         // ratings/label color
-
         if (labelColor == "") labelColorToUse = G::labelNoneColor;
         if (labelColor == "Red") labelColorToUse = G::labelRedColor;
         if (labelColor == "Yellow") labelColorToUse = G::labelYellowColor;

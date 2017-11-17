@@ -2,8 +2,8 @@ CLOC = Count Lines Of Code
 In terminal: cloc /Users/roryhill/Projects/Winnow64
 
 To do:
-- Settings not remembering to show thumb labels
-- Thumb label not positioning properly
+- ThumbView does not scroll to current after pagedown in Grid > switch to Loupe
+- Add preference for trackpad pan/advance
 - Try producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
 - Rotate selected images
 - Initial setup (other than workspace)
@@ -32,6 +32,9 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Color class not showing on thumbs
+- Done: Settings not remembering to show thumb labels
+- Done: Thumb label not positioning properly
 - Done: Thumb label is showing entire file path instead of just the filename
 - Done: Workspace not remembering thumbs hidden
 - Done: Cmd click on item requires two clicks to select
@@ -162,9 +165,9 @@ To do:
 - Done: Remove extraneous menus and functions
 - Done: Add thumbview and image cache status to status bar
 - Done: move image caching to a separate thread
-- DONE: Update menu enabled status when close dock
-- DONE: Full size previews for raw files
-- DONE: zoom to mouse click
-- DONE: Thumbs to dock
-- DONE: Change default docking locations including tabify
-- DONE: Move styles.css to resources
+- Done: Update menu enabled status when close dock
+- Done: Full size previews for raw files
+- Done: zoom to mouse click
+- Done: Thumbs to dock
+- Done: Change default docking locations including tabify
+- Done: Move styles.css to resources

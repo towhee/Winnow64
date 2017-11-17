@@ -24,12 +24,12 @@ public:
     int labelFontSize;
     bool showThumbLabels;
 
-    int thumbWidthGrid;
-    int thumbHeightGrid;
-    int thumbSpacingGrid;
-    int thumbPaddingGrid;
-    int labelFontSizeGrid;
-    bool showThumbLabelsGrid;
+//    int thumbWidthGrid;
+//    int thumbHeightGrid;
+//    int thumbSpacingGrid;
+//    int thumbPaddingGrid;
+//    int labelFontSizeGrid;
+//    bool showThumbLabelsGrid;
 
     bool isThumbWrapWhenTopOrBottomDock;
     bool isTopOrBottomDock;
@@ -60,7 +60,7 @@ public:
     int getCurrentRow();
     QString getCurrentFilename();       //not used, but might be handy
     void setThumbParameters();
-    void forceScroll(int row);
+    void scrollToCurrent();
 
     QStandardItemModel *thumbViewModel;     //dm
 //    QSortFilterProxyModel *thumbViewFilter;
@@ -88,8 +88,8 @@ public slots:
     void setIcon(QStandardItem *item, QImage thumb, QString folderPath);
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
              int _thumbPadding, int _labelFontSize, bool _showThumbLabels);
-    void setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid, int _thumbSpacingGrid,
-             int _thumbPaddingGrid, int _labelFontSizeGrid, bool _showThumbLabelsGrid);
+//    void setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid, int _thumbSpacingGrid,
+//             int _thumbPaddingGrid, int _labelFontSizeGrid, bool _showThumbLabelsGrid);
     void reportThumbs();
     void selectThumb(QModelIndex idx);
     void selectNext();
