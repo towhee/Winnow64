@@ -147,6 +147,7 @@ public:
     bool isSlideShowActive;
     bool copyOp;
     int maxThumbSpaceHeight;
+    bool isGrid;
 
 protected:
     void closeEvent(QCloseEvent *event);
@@ -229,7 +230,9 @@ private slots:
     void removeBookmark();
     void rotateLeft();
     void rotateRight();
-    void showHiddenFiles();    
+    void showHiddenFiles();
+    void thumbsEnlarge();
+    void thumbsShrink();
     void setThumbLabels();
     void setDockFitThumbs();
     void chooseExternalApp();

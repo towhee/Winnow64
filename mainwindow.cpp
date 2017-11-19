@@ -379,7 +379,11 @@ void MW::folderSelectionChange()
         cacheLabel->setVisible(false);
         return;
     }
+//    qDebug() << "???? thumbView->selectThumb(0)";
     thumbView->selectThumb(0);
+//    selectionModel->select(thumbView->currentIndex(), QItemSelectionModel::Select);
+//    QModelIndexList selected = selectionModel->selectedIndexes();
+//    qDebug() << "Selected =" << selected;
     thumbView->sortThumbs(1, false);
 
     // no ratings or label color classes set yet so hide editsLabel
@@ -405,31 +409,29 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::fileSelectionChange";
+    qDebug() << "\n**********************************MW::fileSelectionChange";
     #endif
     }
-//    qDebug() << "CurrentIndex vs PreviousIndex" << current << previous;
     if(current.row() == previous.row()) return;
-    // rgh check if selection is working properly
-//    QModelIndexList selected = thumbView->selectionModel()->selectedIndexes();
-    QModelIndexList selected = selectionModel->selectedIndexes();
 
+    // starting program, set first image to displa
+    if(previous.row() == -1) thumbView->selectThumb(0);
+
+    QModelIndexList selected = selectionModel->selectedIndexes();
     // user clicks outside thumb but inside treeView dock
     if (selected.isEmpty()) return;
 
     // currentIndex must be column 0 - this might cause another call to
-    // fileSelectionChange, hence check initially if same datamodel row
+    // fileSelectionChange, hence check above if same datamodel row
     QModelIndex currentIndex = dm->sf->index(current.row(), 0);
-//    qDebug() << "thumbView->setCurrentIndex(currentIndex)" << currentIndex;
-//    thumbView->setCurrentIndex(currentIndex);
-//    qDebug() << "thumbView->selectionMode()" << thumbView->selectionMode();
+    // update delegates so they can highlight the current item
     thumbView->thumbViewDelegate->currentIndex = currentIndex;
     gridView->thumbViewDelegate->currentIndex = currentIndex;
-
-    // sync thumbView delegate current item
-//    thumbView->thumbViewDelegate->currentIndex = currentIndex;
+    thumbView->scrollToCurrent(0);
+    gridView->scrollToCurrent(0);
 
     // update imageView, use cache if image loaded, else read it from file
+    qDebug() << "\n>>>Try to load image";
     QString fPath = currentIndex.data(G::FileNameRole).toString();
     if (imageView->loadImage(currentIndex, fPath)) {
         if (G::isThreadTrackingOn) qDebug()
@@ -1051,23 +1053,15 @@ void MW::createActions()
 
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
-    connect(thumbsEnlargeAction, SIGNAL(triggered()), thumbView, SLOT(thumbsEnlarge()));
-//    if (thumbView->thumbSize == THUMB_SIZE_MAX)
-//        thumbsEnlargeAction->setEnabled(false);
-//    addAction(thumbsEnlargeAction);
+    connect(thumbsEnlargeAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
 
     thumbsShrinkAction = new QAction(tr("Shrink thumbs"), this);
     thumbsShrinkAction->setObjectName("shrinkThumbs");
-    connect(thumbsShrinkAction, SIGNAL(triggered()), thumbView, SLOT(thumbsShrink()));
-//    if (thumbView->thumbSize == THUMB_SIZE_MIN)
-//            thumbsShrinkAction->setEnabled(false);
-//    addAction(thumbsShrinkAction);
+    connect(thumbsShrinkAction, SIGNAL(triggered()), this, SLOT(thumbsShrink()));
 
     thumbsFitAction = new QAction(tr("Fit thumbs"), this);
     thumbsFitAction->setObjectName("thumbsZoomOut");
     connect(thumbsFitAction, SIGNAL(triggered()), this, SLOT(setDockFitThumbs()));
-//    if (thumbView->thumbSize == THUMB_SIZE_MIN)
-//            thumbsFitAction->setEnabled(false);
 
 //    showThumbLabelsAction = new QAction(tr("Thumb labels"), this);
 //    showThumbLabelsAction->setObjectName("showLabels");
@@ -1663,16 +1657,10 @@ void MW::createThumbView()
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
 
-//    thumbView->thumbSpacingGrid = setting->value("thumbSpacingGrid").toInt();
-//    thumbView->thumbPaddingGrid = setting->value("thumbPaddingGrid").toInt();
-//    thumbView->thumbWidthGrid = setting->value("thumbWidthGrid").toInt();
-//    thumbView->thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
-//    thumbView->labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
-//    thumbView->showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
-
     thumbView->isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
     thumbView->isAutoFit = setting->value("isAutoFit").toBool();
 
+    // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
     connect(thumbView, SIGNAL(updateThumbDock()),
@@ -1700,6 +1688,9 @@ void MW::createGridView()
     gridView->thumbHeight = setting->value("thumbHeightGrid").toInt();
     gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
     gridView->showThumbLabels = setting->value("showThumbLabelsGrid").toBool();
+
+    // double mouse click fires displayLoupe
+    connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 }
 
 void MW::createTableView()
@@ -2192,10 +2183,32 @@ void MW::setDockFitThumbs()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::setThuumbsFit";
+    qDebug() << "MW::setThumbsFit";
     #endif
     }
     setThumbDockFeatures(dockWidgetArea(thumbDock));
+}
+
+void MW::thumbsEnlarge()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::thumbsEnlarge";
+    #endif
+    }
+    if (isGrid) gridView->thumbsEnlarge();
+    else thumbView->thumbsEnlarge();
+}
+
+void MW::thumbsShrink()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::thumbsShrink";
+    #endif
+    }
+    if (isGrid) gridView->thumbsShrink();
+    else thumbView->thumbsShrink();
 }
 
 void MW::setThumbLabels()   // move to thumbView
@@ -4046,6 +4059,9 @@ void MW::loupeDisplay()
     }
     centralLayout->setCurrentIndex(LoupeTab);
     // if was in grid mode then restore thumbdock to previous state
+    thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
+    setThumbDockVisibity();
+    isGrid = false;
 //    thumbView->isGrid = false;
     thumbView->thumbViewDelegate->isCompare = false;
 
@@ -4062,14 +4078,7 @@ void MW::loupeDisplay()
 //    thumbView->isGrid = false;
     thumbView->setThumbParameters();
     setThumbDockVisibity();
-//    if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
-//        thumbView->setFocus();
-//    thumbView->selectThumb(thumbView->currentIndex());
-
-//    QModelIndex idx = thumbView->currentIndex();
-//    qDebug() << "Loupe" << idx;
-//    thumbView->scrollTo(idx);
-    thumbView->scrollToCurrent();
+    thumbView->scrollToCurrent(0);
 }
 
 void MW::gridDisplay()
@@ -4081,27 +4090,17 @@ void MW::gridDisplay()
     }
     // show tableView in central widget
     centralLayout->setCurrentIndex(GridTab);
+    isGrid = true;
+    wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
+    thumbDockVisibleAction->setChecked(false);
+    setThumbDockVisibity();
 //    thumbView->thumbViewDelegate->isCompare = false;
 
     gridView->setThumbParameters();
-
-
-//    // move thumbView from thumbDeck to central widget
-//    wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
-//    centralLayout->addWidget(thumbView); // rghx
-//    centralLayout->setCurrentIndex(GridTab);
-//    imageView->setVisible(false);
 //    thumbView->mwMode = "Grid";
-//    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-//    thumbView->thumbViewDelegate->isCompare = false;
-//    thumbDockVisibleAction->setChecked(false);
-//    thumbView->setWrapping(true);
-//    thumbView->isGrid = true;
-//    thumbView->setThumbParameters();
-//    setThumbDockVisibity();
 //    if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
 //        thumbView->setFocus();
-    gridView->scrollToCurrent();
+    gridView->scrollToCurrent(0);
 }
 
 void MW::tableDisplay()
@@ -4113,7 +4112,10 @@ void MW::tableDisplay()
     }
     // show tableView in central widget
     centralLayout->setCurrentIndex(TableTab);
-    thumbView->thumbViewDelegate->isCompare = false;
+//    thumbView->thumbViewDelegate->isCompare = false;
+    thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
+    setThumbDockVisibity();
+    isGrid = false;
 
     /* in case was grid display move thumbView back to dock from central widget.
     Moving the widget clears its settings, so must call setThumbParameters.
@@ -4123,15 +4125,8 @@ void MW::tableDisplay()
     */
 //    thumbDock->setWidget(thumbView);
     thumbView->mwMode = "Table";
-//    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-//    thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
-//    thumbView->isGrid = false;
-//    thumbView->setThumbParameters();
-//    setThumbDockVisibity();
 //    if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
 //        thumbView->setFocus();
-    thumbView->scrollToCurrent();
-    gridView->scrollToCurrent();
 }
 
 void MW::compareDisplay()
@@ -4290,8 +4285,11 @@ void MW::setThumbDockVisibity()
     qDebug() << "MW::setThumbDockVisibity";
     #endif
     }
-//    bool test = thumbDockVisibleAction->isChecked();
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
+
+    /* thumbDock hidden in gridView, but if user makes visible, then keep
+       thumdock visible when change to another mode (loupe, table, compare) */
+    if(isGrid) wasThumbDockVisibleBeforeGridInvoked = true;
 //    thumbView->scrollToCurrent();
 //    setThumbDockLockMode();
 }

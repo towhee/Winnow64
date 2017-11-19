@@ -60,7 +60,7 @@ public:
     int getCurrentRow();
     QString getCurrentFilename();       //not used, but might be handy
     void setThumbParameters();
-    void scrollToCurrent();
+    void scrollToCurrent(int column);
 
     QStandardItemModel *thumbViewModel;     //dm
 //    QSortFilterProxyModel *thumbViewFilter;

@@ -145,6 +145,7 @@ to prevent jarring changes in perceived scale by the user.
     // load the image from the image cache if available
     if (imageCacheThread->imCache.contains(fPath)) {
         // load preview from cache
+        qDebug() << ">>>Load image from cache";
         bool tryPreview = true;     // for testing
         loadFullSizeTimer->stop();
 
@@ -176,11 +177,13 @@ to prevent jarring changes in perceived scale by the user.
     else {
         // load the image from the image file, may need to wait a bit if another thread
         // reading file
+        qDebug() << ">>>Load image from file";
         int attempts;
         for (attempts = 0; attempts < 100000; attempts++) {
             isLoaded = pixmap->load(fPath, displayPixmap);
             if (isLoaded) break;
         }
+        qDebug() << ">>>Attempts to load:" << attempts << "isLoaded:" << isLoaded;
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
             isPreview = false;

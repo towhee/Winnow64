@@ -173,27 +173,9 @@ Helper function for in class calls where thumb parameters already defined
     qDebug() << "ThumbView::setThumbParameters";
     #endif
     }
-//    qDebug() << "ThumbView::setThumbParameters "
-//             << " isGrid =" << isGrid
-//             << " isFloat =" << isFloat
-//             << "thumbHeight = " << thumbHeight;
-
-//    if (isGrid) {
-////        setWrapping(true);
-//        setSpacing(thumbSpacingGrid);
-//        thumbViewDelegate->setThumbDimensions(thumbWidthGrid, thumbHeightGrid,
-//            thumbPaddingGrid, labelFontSizeGrid, showThumbLabelsGrid);
-//    } else {
-//        setWrapping(isThumbWrapWhenTopOrBottomDock && isTopOrBottomDock);
-//        if (!isTopOrBottomDock) setWrapping(true);
-        setSpacing(thumbSpacing);
-        thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-            thumbPadding, labelFontSize, showThumbLabels);
-//    }
-//    qDebug() << "ThumbView::setThumbParameters isGrid:" << isGrid;
-    // if top/bottom dock resize dock height if scrollbar is/not visible
-
-//    qDebug() << "emitting updateThumbDock";
+    setSpacing(thumbSpacing);
+    thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+        thumbPadding, labelFontSize, showThumbLabels);
     if (!isGrid) emit updateThumbDock();
 }
 
@@ -796,29 +778,15 @@ void ThumbView::thumbsEnlarge()
     qDebug() << "ThumbView::thumbsEnlarge";
     #endif
     }
-    qDebug() << "thumbsEnlarge: isGrid/thumbWidthGrid"
-             << isGrid << thumbWidth << thumbHeight;
-//    if (isGrid) {
-//        if (thumbWidthGrid < 40) thumbWidthGrid = 40;
-//        if (thumbHeightGrid < 40) thumbHeightGrid = 40;
-//        if (thumbWidthGrid < 160 && thumbHeightGrid < 160)
-//        {
-//            thumbWidthGrid *= 1.1;
-//            thumbHeightGrid *= 1.1;
-//            if (thumbWidthGrid > 160) thumbWidthGrid = 160;
-//            if (thumbHeightGrid > 160) thumbHeightGrid = 160;
-//        }
-//    } else {
-        if (thumbWidth < 40) thumbWidth = 40;
-        if (thumbHeight < 40) thumbHeight = 40;
-        if (thumbWidth < 160 && thumbHeight < 160)
-        {
-            thumbWidth *= 1.1;
-            thumbHeight *= 1.1;
-            if (thumbWidth > 160) thumbWidth = 160;
-            if (thumbHeight > 160) thumbHeight = 160;
-        }
-//    }
+    if (thumbWidth < 40) thumbWidth = 40;
+    if (thumbHeight < 40) thumbHeight = 40;
+    if (thumbWidth < 160 && thumbHeight < 160)
+    {
+        thumbWidth *= 1.1;
+        thumbHeight *= 1.1;
+        if (thumbWidth > 160) thumbWidth = 160;
+        if (thumbHeight > 160) thumbHeight = 160;
+    }
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 //    if (isAutoFit) thumbsFit(0);
@@ -831,22 +799,12 @@ void ThumbView::thumbsShrink()
     qDebug() << "ThumbView::thumbsShrink";
     #endif
     }
-    qDebug() << "ThumbView::thumbsShrink";
-//    if (isGrid) {
-//        if (thumbWidthGrid > 40  && thumbHeightGrid > 40) {
-//            thumbWidthGrid *= 0.9;
-//            thumbHeightGrid *= 0.9;
-//            if (thumbWidthGrid < 40) thumbWidthGrid = 40;
-//            if (thumbHeightGrid < 40) thumbHeightGrid = 40;
-//        }
-//    } else {
-        if (thumbWidth > 40  && thumbHeight > 40) {
-            thumbWidth *= 0.9;
-            thumbHeight *= 0.9;
-            if (thumbWidth < 40) thumbWidth = 40;
-            if (thumbHeight < 40) thumbHeight = 40;
-        }
-//    }
+    if (thumbWidth > 40  && thumbHeight > 40) {
+        thumbWidth *= 0.9;
+        thumbHeight *= 0.9;
+        if (thumbWidth < 40) thumbWidth = 40;
+        if (thumbHeight < 40) thumbHeight = 40;
+    }
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 //    if (isAutoFit) thumbsFit();
@@ -966,13 +924,14 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     }
 }
 
-void ThumbView::scrollToCurrent()
+void ThumbView::scrollToCurrent(int column)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::scrollToCurrent";
     #endif
     }
+    /*
     int row = currentIndex().row();
     int tRows = dm->sf->rowCount();
     float location = (float)row / tRows;
@@ -999,14 +958,22 @@ void ThumbView::scrollToCurrent()
              << min << max << range << scrollLocation;
 
     return;
+    */
 
     QModelIndex idx = dm->sf->index(currentIndex().row(), 0);
-
-    qDebug() << "ThumbView::scrollToCurrent()" << idx << "row =" << row
-             << "isValid" << idx.isValid()
-             << "isVisible" << isVisible();
-
+    scrollTo(idx, ScrollHint::PositionAtCenter);
+//    QMessageBox msgBox;
+//    msgBox.setText("Trying column 0");
+//    msgBox.exec();
+//    idx = dm->sf->index(currentIndex().row(), 1);
 //    scrollTo(idx, ScrollHint::PositionAtCenter);
+//    msgBox.setText("Trying column 1");
+//    msgBox.exec();
+//    idx = dm->sf->index(currentIndex().row(), 2);
+//    scrollTo(idx, ScrollHint::PositionAtCenter);
+//    msgBox.setText("Trying column 2");
+//    msgBox.exec();
+//    qDebug() << idx.parent() << rootIndex();
 }
 
 void ThumbView::updateLayout()
