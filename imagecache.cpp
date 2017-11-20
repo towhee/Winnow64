@@ -207,7 +207,7 @@ void ImageCache::cacheStatus()
 
     // show the rectangle for the current cache by painting each item that has been cached
     for (int i=0; i<cache.totFiles; ++i) {
-        if (cacheMgr.at(i).isCached) {  // crash with i out of limits
+        if (cacheMgr.at(i).isCached) {
             pnt.fillRect(QRect(pxStart(i), htOffset, cache.pxUnitWidth+1, ht), cacheCurrentColor);
         }
     }
@@ -660,15 +660,18 @@ updated.  Image caching is reactivated.
             continue;
         }
     }
-//    qDebug() << "updateImageCache" << currentImageFullPath;
+
     cacheStatus();
-//    if (cache.key == cache.prevKey &&
-//            imageList.at(0).absolutePath() == cache.dir) return;
     cache.isForward = (cache.key >= cache.prevKey);
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();
-//    qDebug() << "currentImageFullPath" << currentImageFullPath;
-//    reportCacheManager("Debugging index out of range");
+
+    // if all images are cached then we're all done
+    bool allImagesCached = true;
+    for (int i = 0; i < cache.totFiles; ++i)
+        allImagesCached = cacheMgr.at(i).isCached;
+    if(allImagesCached) return;
+
     setPriorities(cache.key);
     setTargetRange();
     start(IdlePriority);

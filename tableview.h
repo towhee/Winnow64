@@ -12,12 +12,14 @@ class TableView : public QTableView
 
 public:
     TableView(DataModel *dm, ThumbView *thumbView);
+    void scrollToCurrent();
 
 protected:
     void mouseDoubleClickEvent(QMouseEvent *event);
 
 private:
     ThumbView *thumbView;
+    DataModel *dm;
 
 private slots:
 

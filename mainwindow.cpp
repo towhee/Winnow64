@@ -167,6 +167,9 @@ thumbdock is resized by the user when:
    - dock area is top or bottom
    - height change of dock changes
 */
+//    if (gridView->isGridTest) {
+//        qDebug() << "MW events" << event << obj << "mwMode" << thumbView->mwMode;
+//    }
     if (event->type() == QEvent::Resize && obj == thumbDock &&
       !thumbDock->isFloating() && !isInitializing)
     {
@@ -427,11 +430,13 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // update delegates so they can highlight the current item
     thumbView->thumbViewDelegate->currentIndex = currentIndex;
     gridView->thumbViewDelegate->currentIndex = currentIndex;
-    thumbView->scrollToCurrent(0);
-    gridView->scrollToCurrent(0);
+//    thumbView->scrollToCurrent();
+//    gridView->scrollToCurrent();
+//    tableView->scrollToCurrent();
+//    thumbView->selectThumb(currentIndex.row());
+//    gridView->selectThumb(currentIndex.row());
 
     // update imageView, use cache if image loaded, else read it from file
-    qDebug() << "\n>>>Try to load image";
     QString fPath = currentIndex.data(G::FileNameRole).toString();
     if (imageView->loadImage(currentIndex, fPath)) {
         if (G::isThreadTrackingOn) qDebug()
@@ -1548,7 +1553,7 @@ void MW::setupCentralWidget()
     #endif
     }
     centralLabel = new QLabel;
-    centralLayout->addWidget(centralLabel);     // first time open program
+    centralLayout->addWidget(centralLabel);     // first time open program tips
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
     centralLayout->addWidget(tableView);
@@ -1636,7 +1641,7 @@ void MW::createCaching()
 
     connect(imageCacheThread, SIGNAL(showCacheStatus(const QImage)),
             this, SLOT(showCacheStatus(const QImage)));
-}
+    }
 
 void MW::createThumbView()
 {
@@ -2177,6 +2182,12 @@ void MW::showHiddenFiles()
     #endif
     }
     fsTree->setModelFlags();
+}
+
+void MW::cancelNeedToScroll()
+{
+    thumbView->readyToScroll = false;
+    gridView->readyToScroll = false;
 }
 
 void MW::setDockFitThumbs()
@@ -2925,13 +2936,13 @@ void MW::runExternalApp()
             }
 
             selectedFileNames += " ";
-            for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn)
-            {
-                selectedFileNames += "\"" +
-                    thumbView->thumbViewModel->item(selectedIdxList[tn].row())->data(G::FileNameRole).toString();
-                if (tn)
-                    selectedFileNames += "\" ";
-            }
+//            for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn)
+//            {
+//                selectedFileNames += "\"" +
+////                    thumbView->thumbViewModel->item(selectedIdxList[tn].row())->data(G::FileNameRole).toString();
+//                if (tn)
+//                    selectedFileNames += "\" ";
+//            }
         }
 
         execCommand += selectedFileNames;
@@ -3130,7 +3141,7 @@ void MW::escapeFullScreen()
     qDebug() << "MW::escapeFullScreen";
     #endif
     }
-    qDebug() << "MW::escapeFullScreen";
+//    qDebug() << "MW::escapeFullScreen";
     if(fullScreenAction->isChecked()) {
         fullScreenAction->setChecked(false);
         toggleFullScreen();
@@ -3150,7 +3161,7 @@ void MW::toggleFullScreen()
     }
     if (fullScreenAction->isChecked())
     {
-        qDebug() << "fullScreenDocks.isThumbs" << fullScreenDocks.isThumbs;
+//        qDebug() << "fullScreenDocks.isThumbs" << fullScreenDocks.isThumbs;
         snapshotWorkspace(ws);
         showFullScreen();
         imageView->setCursorHiding(true);
@@ -3971,7 +3982,7 @@ and titlebar visibility.
     qDebug() << "MW::setThumbDockFeatures";
     #endif
     }
-    qDebug() << "MW::setThumbDockFeatures   DockWidgetArea =" << area;
+//    qDebug() << "MW::setThumbDockFeatures   DockWidgetArea =" << area;
 
     thumbView->setMaximumHeight(100000);
 
@@ -4052,17 +4063,25 @@ and titlebar visibility.
 
 void MW::loupeDisplay()
 {
+/*
+When the thumbDock thumbView is displayed it needs to be scrolled to the
+currentIndex since it has been "hidden". However, the scrollbars take a long
+time to paint after the view show event, so the ThumbView::scrollToCurrent must
+be delayed. This is done by the eventFilter in ThumbView, intercepted the
+scrollbar paint events.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::loupeDisplay";
     #endif
     }
+    thumbView->mwMode = "Loupe";
     centralLayout->setCurrentIndex(LoupeTab);
     // if was in grid mode then restore thumbdock to previous state
     thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
+    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     setThumbDockVisibity();
     isGrid = false;
-//    thumbView->isGrid = false;
     thumbView->thumbViewDelegate->isCompare = false;
 
     /* in case was grid display move thumbView back to dock from central widget.
@@ -4071,36 +4090,37 @@ void MW::loupeDisplay()
     execute MW::setThumbDockFeatures, where the thumbDock, if top or bottom, is
     resized to fit the thumbs.
     */
-//    thumbDock->setWidget(thumbView);
-    thumbView->mwMode = "Loupe";
-//    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-//    thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
-//    thumbView->isGrid = false;
     thumbView->setThumbParameters();
     setThumbDockVisibity();
-    thumbView->scrollToCurrent(0);
+    thumbView->readyToScroll = true;
+    QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
 }
 
 void MW::gridDisplay()
 {
+/*
+When the gridView is displayed it needs to be scrolled to the currentIndex
+since it has been "hidden". However, the scrollbars take a long time to paint
+after the view show event, so the ThumbView::scrollToCurrent must be delayed.
+This is done by the eventFilter in ThumbView, intercepted the scrollbar paint
+events.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::gridDisplay";
     #endif
     }
+    thumbView->mwMode = "Grid";
     // show tableView in central widget
     centralLayout->setCurrentIndex(GridTab);
     isGrid = true;
     wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
+    gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     thumbDockVisibleAction->setChecked(false);
     setThumbDockVisibity();
-//    thumbView->thumbViewDelegate->isCompare = false;
-
     gridView->setThumbParameters();
-//    thumbView->mwMode = "Grid";
-//    if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
-//        thumbView->setFocus();
-    gridView->scrollToCurrent(0);
+    gridView->readyToScroll = true;
+    QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
 }
 
 void MW::tableDisplay()
@@ -4110,10 +4130,13 @@ void MW::tableDisplay()
     qDebug() << "MW::tableDisplay";
     #endif
     }
+    thumbView->mwMode = "Table";
     // show tableView in central widget
     centralLayout->setCurrentIndex(TableTab);
 //    thumbView->thumbViewDelegate->isCompare = false;
     thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
+    wasThumbDockVisibleBeforeGridInvoked = false;
+    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     setThumbDockVisibity();
     isGrid = false;
 
@@ -4124,7 +4147,7 @@ void MW::tableDisplay()
     resized to fit the thumbs.
     */
 //    thumbDock->setWidget(thumbView);
-    thumbView->mwMode = "Table";
+    tableView->scrollToCurrent();
 //    if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
 //        thumbView->setFocus();
 }
@@ -4147,8 +4170,9 @@ void MW::compareDisplay()
         popUp->showPopup(this, msg, 2000, 0.75);
     }
 
+    thumbView->mwMode = "Compare";
     if (thumbView->isGrid) {
-        saveSelection();
+//        saveSelection();
         thumbDock->setWidget(thumbView);
         setThumbDockFeatures(dockWidgetArea(thumbDock));
         thumbDockVisibleAction->setChecked(true);
@@ -4159,9 +4183,8 @@ void MW::compareDisplay()
 //                 << "thumbHeight =" << thumbView->thumbHeight << "\n";
         thumbView->setThumbParameters();
         setThumbDockVisibity();
-        recoverSelection();
+//        recoverSelection();
     }
-    thumbView->mwMode = "Compare";
     thumbView->thumbViewDelegate->isCompare = true;
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
 
@@ -4247,7 +4270,7 @@ void MW::setFolderDockVisibility() {
     qDebug() << "MW::setFolderDockVisibility";
     #endif
     }
-    qDebug() << "folderDockVisibleAction->isChecked()" << folderDockVisibleAction->isChecked();
+//    qDebug() << "folderDockVisibleAction->isChecked()" << folderDockVisibleAction->isChecked();
     folderDock->setVisible(folderDockVisibleAction->isChecked());
 }
 

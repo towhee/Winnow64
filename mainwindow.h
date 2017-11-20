@@ -280,6 +280,7 @@ private slots:
 
     void help();
 
+    void cancelNeedToScroll();
     void test();    // for debugging
 
     //    void cutThumbs();

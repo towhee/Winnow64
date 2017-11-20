@@ -12,6 +12,7 @@ TableView::TableView(DataModel *dm, ThumbView *thumbView)
     }
 
     this->thumbView = thumbView;
+    this->dm = dm;
 
     setModel(dm->sf);
     setSortingEnabled(true);
@@ -43,6 +44,17 @@ TableView::TableView(DataModel *dm, ThumbView *thumbView)
 
     FileSizeItemDelegate *fileSizeItemDelegate = new FileSizeItemDelegate;
     setItemDelegateForColumn(G::SizeColumn, fileSizeItemDelegate);
+}
+
+void TableView::scrollToCurrent()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "TableView::scrollToCurrent";
+    #endif
+    }
+    QModelIndex idx = dm->sf->index(currentIndex().row(), 0);
+    scrollTo(idx, ScrollHint::PositionAtCenter);
 }
 
 void TableView::mouseDoubleClickEvent(QMouseEvent *event)

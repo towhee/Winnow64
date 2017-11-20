@@ -10,6 +10,21 @@
 //#include "thumbviewfilter.h"
 #include "filters.h"
 
+class Scrollbar : public QScrollBar
+{
+    Q_OBJECT
+
+public:
+    Scrollbar(QWidget *parent);
+    void test();
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event);
+
+signals:
+    void updateScrollTo();
+};
+
 class ThumbView : public QListView
 {
     Q_OBJECT
@@ -60,23 +75,17 @@ public:
     int getCurrentRow();
     QString getCurrentFilename();       //not used, but might be handy
     void setThumbParameters();
-    void scrollToCurrent(int column);
 
-    QStandardItemModel *thumbViewModel;     //dm
-//    QSortFilterProxyModel *thumbViewFilter;
-//     ThumbViewFilter *thumbViewFilter;     //dm
-//    ThumbViewFilter *thumbViewFilterTest;
     QItemSelectionModel *thumbViewSelection;
-//    QFileInfoList thumbFileInfoList;     //dm
-//    QStringList imageFilePathList;     //dm
-//    QFileInfoList dirFileInfoList;     //dm
-//    QDir::SortFlags thumbsSortFlags;     //dm
 
     int thumbSize;
     QString filterStr;
     bool pickFilter;
+    bool readyToScroll;
 
 public slots:
+    void horizontalScrollBarRangeChanged();
+    void scrollToCurrent();
     void thumbsEnlarge();
     void thumbsShrink();
     void thumbsFit(Qt::DockWidgetArea area);
@@ -108,6 +117,7 @@ private slots:
     void delaySelectCurrentThumb();
 
 protected:
+    bool eventFilter(QObject *obj, QEvent *event);
     void startDrag(Qt::DropActions);
     void wheelEvent(QWheelEvent *event);
     void mousePressEvent(QMouseEvent *event);
@@ -131,14 +141,9 @@ private:
     int getNextPick();
     int getPrevPick();
 
-//    QString currentViewDir;     //dm
-//    QDir *thumbsDir;     //dm
-//    QStringList *fileFilters;     //dm
-//    QList<QStandardItem*> *thumbList;     //dm
-//    QFileInfo thumbFileInfo;     //dm
-//    QImage emptyImg;     //dm
     QWidget *mw;
     DataModel *dm;
+    Scrollbar *scrollbar;
     QSize treeViewSize;
 
 signals:
@@ -147,5 +152,6 @@ signals:
     void updateStatus(bool, QString);
     void updateThumbDock();
 };
+
 
 #endif // THUMBVIEW_H

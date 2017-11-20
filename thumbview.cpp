@@ -106,6 +106,11 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     mw = parent;
     this->dm = dm;
 
+//    // capture scrollbar show event
+//    scrollbar = new Scrollbar(this);
+//    setVerticalScrollBar(scrollbar);
+//    connect(scrollbar, SIGNAL(updateScrollTo()), this, SLOT(scrollToCurrent()));
+
     pickFilter = false;
 
     setViewMode(QListView::IconMode);
@@ -115,6 +120,8 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     setLayoutMode(QListView::Batched);
 //    setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
     setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    verticalScrollBar()->setObjectName("VerticalScrollBar");
+    horizontalScrollBar()->setObjectName("HorizontalScrollBar");
     setWordWrap(true);
     setDragEnabled(true);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -843,6 +850,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     #endif
     }
     if (isGrid) {
+        return;
         qDebug() << "ThumbView::thumbsFit isGrid";
         // adjust thumb width
         if (thumbWidth < 40 || thumbHeight < 0) {
@@ -924,7 +932,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     }
 }
 
-void ThumbView::scrollToCurrent(int column)
+void ThumbView::scrollToCurrent()
 {
     {
     #ifdef ISDEBUG
@@ -960,20 +968,8 @@ void ThumbView::scrollToCurrent(int column)
     return;
     */
 
-    QModelIndex idx = dm->sf->index(currentIndex().row(), 0);
-    scrollTo(idx, ScrollHint::PositionAtCenter);
-//    QMessageBox msgBox;
-//    msgBox.setText("Trying column 0");
-//    msgBox.exec();
-//    idx = dm->sf->index(currentIndex().row(), 1);
-//    scrollTo(idx, ScrollHint::PositionAtCenter);
-//    msgBox.setText("Trying column 1");
-//    msgBox.exec();
-//    idx = dm->sf->index(currentIndex().row(), 2);
-//    scrollTo(idx, ScrollHint::PositionAtCenter);
-//    msgBox.setText("Trying column 2");
-//    msgBox.exec();
-//    qDebug() << idx.parent() << rootIndex();
+//    qDebug() << "ThumbView::scrollToCurrent";
+    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
 void ThumbView::updateLayout()
@@ -981,6 +977,25 @@ void ThumbView::updateLayout()
     QEvent event{QEvent::LayoutRequest};
     QListView::updateGeometries();
     QListView::event(&event);
+}
+
+void ThumbView::horizontalScrollBarRangeChanged()
+{
+    qDebug() << "ThumbView::horizontalScrollBarRangeChanged";
+}
+
+bool ThumbView::eventFilter(QObject *obj, QEvent *event)
+{
+/*
+
+*/
+//    qDebug() << "ThumbView events" << obj << event << "mwMode" << mwMode;
+    if(event->type() == QEvent::Paint
+            && readyToScroll
+            && (obj->objectName() == "VerticalScrollBar"
+            || obj->objectName() == "HorizontalScrollBar"))
+        scrollToCurrent();
+    return QWidget::eventFilter(obj, event);
 }
 
 void ThumbView::wheelEvent(QWheelEvent *event)
@@ -1169,3 +1184,31 @@ void ThumbView::startDrag(Qt::DropActions)
     drag->setHotSpot(QPoint(pix.width() / 2, pix.height() / 2));
     drag->exec(Qt::CopyAction | Qt::MoveAction | Qt::LinkAction, Qt::IgnoreAction);
 }
+
+// -----------------------------------------------------------------------------
+// Scrollbar Class used to capture scrollbar show event
+// -----------------------------------------------------------------------------
+
+Scrollbar::Scrollbar(QWidget *parent)
+{
+}
+
+bool Scrollbar::eventFilter(QObject *obj, QEvent *event)
+{
+/*
+
+*/
+    qDebug() << event;
+    if (event->type() == QEvent::Show) {
+        if (!event->spontaneous()) {
+            qDebug() << "Scrollbar::eventFilter  event->type() == QEvent::Show";
+            emit updateScrollTo();
+        }
+    }
+}
+
+void Scrollbar::test()
+{
+    qDebug() << "Scrollbar::setFont";
+}
+

@@ -51,7 +51,6 @@
         <file>images/winnow.png</file>
         <file>images/sizegrip.png</file>
         <file>images/ThumbsUp16.png</file>
-        <file>images/ThumbsUp48.png</file>
         <file>images/ThumbsUp96.png</file>
         <file>images/down-arrow.png</file>
         <file>console.txt</file>
@@ -108,5 +107,6 @@
         <file>images/checkmark64.png</file>
         <file>images/checkmark128.png</file>
         <file>images/checkmark256.png</file>
+        <file>images/ThumbsUp48.png</file>
     </qresource>
 </RCC>

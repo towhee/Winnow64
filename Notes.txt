@@ -2,7 +2,8 @@ CLOC = Count Lines Of Code
 In terminal: cloc /Users/roryhill/Projects/Winnow64
 
 To do:
-- ThumbView does not scroll to current after pagedown in Grid > switch to Loupe
+- Edit title in metadata?
+- ThumbView does not scroll to current if was hidden
 - Add preference for trackpad pan/advance
 - Try producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
 - Rotate selected images
