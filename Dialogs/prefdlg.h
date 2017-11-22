@@ -21,6 +21,7 @@ signals:
     void updateRememberFolder(bool rememberFolder);
     void updateInclSubfolders(bool inclSubfolders);
     void updateMaxRecentFolders(int maxRecentFolders);
+    void updateTrackpadScroll(bool trackpadScroll);
     void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
             int thumbPadding, int labelFontSize, bool showThumbLabels);
     void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
@@ -37,6 +38,8 @@ private slots:
     // general
     void on_rememberFolderChk_clicked();
     void on_maxRecentSB_destroyed();
+    void on_trackpadIterateRadio_clicked();
+    void on_trackpadScrollRadio_clicked();
     // thumbs
     void on_iconWidthSlider_valueChanged(int value);
     void on_iconHeightSlider_valueChanged(int value);

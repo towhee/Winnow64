@@ -94,7 +94,8 @@ CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
     pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
     pickLabel->setVisible(false);
 
-//    colorLabel = new QLabel(this);
+    editsLabel = new CircleLabel(this);
+    editsLabel->setVisible(false);
 
     isMouseDrag = false;
     isMouseDoubleClick = false;
@@ -393,27 +394,69 @@ image.*/
     #endif
     }
     QPoint sceneBottomRight;            // bottom right corner of scene in view coord
-
     sceneBottomRight = mapFromScene(sceneRect().bottomRight());
 
-    int pw = pickLabel->width();        // width of the pick symbol
-    int ph = pickLabel->height();       // height of the pick symbol
+//    int pw = pickLabel->width();        // width of the pick symbol
+//    int ph = pickLabel->height();       // height of the pick symbol
+//    int offset = 10;                    // offset pixels from the edge of image
+//    int x, y = 0;                       // top left coordinates of pick symbol
+
+//    // if the image view is not as wide as the window
+//    if (sceneBottomRight.x() < rect().width())
+//        x = sceneBottomRight.x() - pw - offset;
+//    else x = rect().width() - pw - offset;
+
+//    // if the image view is not as high as the window
+//    if (sceneBottomRight.y() < rect().height())
+//        y = sceneBottomRight.y() - ph - offset;
+//    else y = rect().height() - ph - offset;
+
+//    pickLabel->move(x, y);
+//    editsLabel->move(x + pw - offset, y + ph - offset);
+
+    intSize p;
+    p.w = pickLabel->width();           // width of the pick symbol
+    p.h = pickLabel->height();          // height of the pick symbol
     int offset = 10;                    // offset pixels from the edge of image
     int x, y = 0;                       // top left coordinates of pick symbol
 
-    // if the image view is not as wide as the window
-    if (sceneBottomRight.x() < rect().width())
-        x = sceneBottomRight.x() - pw - offset;
-    else x = rect().width() - pw - offset;
+    int w;                              // width of window or image, whichever is smaller in view coord
+    int h;                              // height of window or image, whichever is smaller in view coord
 
+    // if the image view is not as wide as the window
+    if (sceneBottomRight.x() < rect().width()) {
+        x = sceneBottomRight.x() - p.w - offset;
+        w = mapFromScene(sceneRect().bottomRight()).x() - mapFromScene(sceneRect().bottomLeft()).x();
+    }
+    else {
+        x = rect().width() - p.w - offset;
+        w = rect().width();
+    }
+\
     // if the image view is not as high as the window
-    if (sceneBottomRight.y() < rect().height())
-        y = sceneBottomRight.y() - ph - offset;
-    else y = rect().height() - ph - offset;
+    if (sceneBottomRight.y() < rect().height()) {
+        y = sceneBottomRight.y() - p.h - offset;
+        h = mapFromScene(sceneRect().bottomRight()).y() - mapFromScene(sceneRect().topRight()).y();
+    }
+    else {
+        y = rect().height() - p.h - offset;
+        h = rect().height();
+    }
+
+    // resize if necessary
+    qreal f = 0.03;
+    w *= f;
+    h *= f;
+    int d;                          // dimension of pick image
+    w > h ? d = w : d = h;
+    if (d < 20) d = 20;
+    if (d > 40) d = 40;
+    pickLabel->setPixmap(pickPixmap->scaled(d, d, Qt::KeepAspectRatio));
 
     pickLabel->move(x, y);
+    editsLabel->move(x + p.w - offset, y + p.h - offset);
 
-//    qDebug() << "sceneBottomRight" << sceneBottomRight << "rect()" << rect()
+    //    qDebug() << "sceneBottomRight" << sceneBottomRight << "rect()" << rect()
 //             << "x" << x << "y" << y;
 
 }

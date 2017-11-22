@@ -48,11 +48,8 @@ public:
 
     bool isThumbWrapWhenTopOrBottomDock;
     bool isTopOrBottomDock;
-    bool isGrid;        // set by MW so know which thumb parameters to use
     bool isFloat;       // set by MW ...
     bool isAutoFit;
-
-    QString mwMode;     // loupe, grid, compare or table
 
     void updateLayout();
 
@@ -150,7 +147,7 @@ signals:
     void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent
     void displayLoupe();
     void updateStatus(bool, QString);
-    void updateThumbDock();
+    void updateThumbDockHeight();
 };
 
 

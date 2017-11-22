@@ -28,6 +28,7 @@ public:
     bool loadImage(QModelIndex idx, QString imageFileName);
     void setCursorHiding(bool hide);
     bool isBusy;
+    bool isTrackpadScroll;
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void moveShootingInfo(QString infoString);

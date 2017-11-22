@@ -249,10 +249,32 @@ void CompareImages::pick(bool isPick, QModelIndex idx)
     qDebug() << "CompareImages::pick";
     #endif
     }
-//    qDebug() << "CompareImages::pick" << isPick << idx;
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex == idx) {
             imList->at(i)->pickLabel->setVisible(isPick);
+        }
+    }
+}
+
+void CompareImages::ratingColorClass(QString rating, QString colorClass, QModelIndex idx)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareImages::pick";
+    #endif
+    }
+    for (int i = 0; i < imList->count(); ++i) {
+        if (imList->at(i)->imageIndex.row() == idx.row()) {
+            imList->at(i)->editsLabel->setText(rating);
+            if (colorClass == "") imList->at(i)->editsLabel->setBackgroundColor(G::labelNoneColor);
+            if (colorClass == "Red") imList->at(i)->editsLabel->setBackgroundColor(G::labelRedColor);
+            if (colorClass == "Yellow") imList->at(i)->editsLabel->setBackgroundColor(G::labelYellowColor);
+            if (colorClass == "Green") imList->at(i)->editsLabel->setBackgroundColor(G::labelGreenColor);
+            if (colorClass == "Blue") imList->at(i)->editsLabel->setBackgroundColor(G::labelBlueColor);
+            if (colorClass == "Purple") imList->at(i)->editsLabel->setBackgroundColor(G::labelPurpleColor);
+
+            if (colorClass == "" && rating == "") imList->at(i)->editsLabel->setVisible(false);
+            else imList->at(i)->editsLabel->setVisible(true);
         }
     }
 }

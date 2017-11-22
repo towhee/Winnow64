@@ -20,29 +20,28 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     // use this to show thread activity
     G::isThreadTrackingOn = false;
 
-    // used here for testing/debugging
+    // testing/debugging
     bool resetSettings = false;
     isStressTest = false;
-
-    G::appName = "Winnow";
+    // Global timer
     G::isTimer = false;
-
-    // Global timer for testing
     #ifdef ISDEBUG
-    //    GData::t.start();
+//        G::t.start();
     #endif
 
+    G::appName = "Winnow";
     this->setWindowTitle("Winnow");
     this->setObjectName("WinnowMW");
 
 //    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     isInitializing = true;
     isSlideShowActive = false;
-    maxThumbSpaceHeight = 160 + 12 + 1;
+    maxThumbSpaceHeight = 160 + 12 + 1;     // rgh not being used
 //    maxThumbSpaceHeight = 160 + qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
     popUp = new PopUp;
+    hasGridBeenActivated = false;
 
     // platform specific settings
     setupPlatform();
@@ -168,7 +167,7 @@ thumbdock is resized by the user when:
    - height change of dock changes
 */
 //    if (gridView->isGridTest) {
-//        qDebug() << "MW events" << event << obj << "mwMode" << thumbView->mwMode;
+//        qDebug() << "MW events" << event << obj << "G::mode" << G::mode;
 //    }
     if (event->type() == QEvent::Resize && obj == thumbDock &&
       !thumbDock->isFloating() && !isInitializing)
@@ -430,9 +429,10 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // update delegates so they can highlight the current item
     thumbView->thumbViewDelegate->currentIndex = currentIndex;
     gridView->thumbViewDelegate->currentIndex = currentIndex;
-//    thumbView->scrollToCurrent();
-//    gridView->scrollToCurrent();
-//    tableView->scrollToCurrent();
+    thumbView->scrollToCurrent();
+    gridView->scrollToCurrent();
+    // keep tableView scrollTo position hint = center
+    tableView->scrollToCurrent();
 //    thumbView->selectThumb(currentIndex.row());
 //    gridView->selectThumb(currentIndex.row());
 
@@ -1075,7 +1075,7 @@ void MW::createActions()
 //    connect(showThumbLabelsAction, SIGNAL(triggered()), this, SLOT(setThumbLabels()));
 //    showThumbLabelsAction->setEnabled(true);
 
-    // Window menu
+    // Window menu Visibility actions
 
     windowTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
     windowTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
@@ -1117,12 +1117,35 @@ void MW::createActions()
     thumbDockVisibleAction->setCheckable(true);
     connect(thumbDockVisibleAction, SIGNAL(triggered()), this, SLOT(setThumbDockVisibity()));
 
-    folderDockLockAction = new QAction(tr("Hide Files Titlebar"), this);
+    // Window menu focus actions
+
+    folderDockFocusAction = new QAction(tr("Focus on Folders"), this);
+    folderDockFocusAction->setObjectName("FocusFolders");
+    connect(folderDockFocusAction, SIGNAL(triggered()), this, SLOT(setFolderDockFocus()));
+
+    favDockFocusAction = new QAction(tr("Focus on Favourites"), this);
+    favDockFocusAction->setObjectName("FocusFavourites");
+    connect(favDockFocusAction, SIGNAL(triggered()), this, SLOT(setFavDockFocus()));
+
+    filterDockFocusAction = new QAction(tr("Focus on Filters"), this);
+    filterDockFocusAction->setObjectName("FocusFilters");
+    connect(filterDockFocusAction, SIGNAL(triggered()), this, SLOT(setFilterDockFocus()));
+
+    metadataDockFocusAction = new QAction(tr("Focus on Metadata"), this);
+    metadataDockFocusAction->setObjectName("FocusMetadata");
+    connect(metadataDockFocusAction, SIGNAL(triggered()), this, SLOT(setMetadataDockFocus()));
+
+    thumbDockFocusAction = new QAction(tr("Focus on Thumbs"), this);
+    thumbDockFocusAction->setObjectName("FocusThumbs");
+    connect(thumbDockFocusAction, SIGNAL(triggered()), this, SLOT(setThumbDockFocus()));
+
+    // Lock docks (hide titlebar) actions
+    folderDockLockAction = new QAction(tr("Hide Folder Titlebar"), this);
     folderDockLockAction->setObjectName("lockDockFiles");
     folderDockLockAction->setCheckable(true);
     connect(folderDockLockAction, SIGNAL(triggered()), this, SLOT(setFolderDockLockMode()));
 
-    favDockLockAction = new QAction(tr("Hide Favourite titlebars"), this);
+    favDockLockAction = new QAction(tr("Hide Favourite titlebar"), this);
     favDockLockAction->setObjectName("lockDockFavs");
     favDockLockAction->setCheckable(true);
     connect(favDockLockAction, SIGNAL(triggered()), this, SLOT(setFavDockLockMode()));
@@ -1340,6 +1363,12 @@ void MW::createMenus()
     windowMenu->addAction(windowTitleBarVisibleAction);
     windowMenu->addAction(menuBarVisibleAction);
     windowMenu->addAction(statusBarVisibleAction);
+    windowMenu->addSeparator();
+    windowMenu->addAction(folderDockFocusAction);
+    windowMenu->addAction(favDockFocusAction);
+    windowMenu->addAction(filterDockFocusAction);
+    windowMenu->addAction(metadataDockFocusAction);
+    windowMenu->addAction(thumbDockFocusAction);
     windowMenu->addSeparator();
     windowMenu->addAction(folderDockLockAction);
     windowMenu->addAction(favDockLockAction);
@@ -1668,7 +1697,7 @@ void MW::createThumbView()
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
-    connect(thumbView, SIGNAL(updateThumbDock()),
+    connect(thumbView, SIGNAL(updateThumbDockHeight()),
             this, SLOT(setThumbDockHeight()));
 
     connect(thumbView, SIGNAL(updateStatus(bool, QString)),
@@ -1684,7 +1713,6 @@ void MW::createGridView()
     }
     gridView = new ThumbView(this, dm);
     gridView->setObjectName("GridView");
-    gridView->isGrid = true;
     gridView->setWrapping(true);
 
     gridView->thumbSpacing = setting->value("thumbSpacingGrid").toInt();
@@ -1693,6 +1721,11 @@ void MW::createGridView()
     gridView->thumbHeight = setting->value("thumbHeightGrid").toInt();
     gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
     gridView->showThumbLabels = setting->value("showThumbLabelsGrid").toBool();
+
+    // only applies to thumbView, set true for set thumbdock logic in setThumbParameters
+    gridView->isThumbWrapWhenTopOrBottomDock = true;
+    // how does this apply to gridView?  //rgh
+    gridView->isAutoFit = setting->value("isAutoFit").toBool();
 
     // double mouse click fires displayLoupe
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -2188,6 +2221,7 @@ void MW::cancelNeedToScroll()
 {
     thumbView->readyToScroll = false;
     gridView->readyToScroll = false;
+    tableView->readyToScroll = false;
 }
 
 void MW::setDockFitThumbs()
@@ -2207,7 +2241,7 @@ void MW::thumbsEnlarge()
     qDebug() << "MW::thumbsEnlarge";
     #endif
     }
-    if (isGrid) gridView->thumbsEnlarge();
+    if (G::mode == "Grid") gridView->thumbsEnlarge();
     else thumbView->thumbsEnlarge();
 }
 
@@ -2218,7 +2252,7 @@ void MW::thumbsShrink()
     qDebug() << "MW::thumbsShrink";
     #endif
     }
-    if (isGrid) gridView->thumbsShrink();
+    if (G::mode == "Grid") gridView->thumbsShrink();
     else thumbView->thumbsShrink();
 }
 
@@ -2639,6 +2673,7 @@ app is "stranded" on secondary monitors that are not attached.
 //             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
 //             << "thumbHeight =" << thumbView->thumbHeight << "\n";
     thumbView->setThumbParameters();
+    gridView->setThumbParameters();
 
     folderDock->setFloating(false);
     favDock->setFloating(false);
@@ -3038,6 +3073,8 @@ void MW::preferences()
             this, SLOT(setRememberLastDir(bool)));
     connect(prefdlg, SIGNAL(updateMaxRecentFolders(int)),
             this, SLOT(setMaxRecentFolders(int)));
+    connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
+            this, SLOT(setTrackpadScroll(bool)));
     connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool)),
             thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
     connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool)),
@@ -3093,6 +3130,16 @@ void MW::setMaxRecentFolders(int prefMaxRecentFolders)
     }
     maxRecentFolders = prefMaxRecentFolders;
     syncRecentFoldersMenu();
+}
+
+void MW::setTrackpadScroll(bool trackpadScroll)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setTrackpadScroll";
+    #endif
+    }
+    imageView->isTrackpadScroll = trackpadScroll;
 }
 
 void MW::setIngestRootFolder(QString rootFolder)
@@ -3386,6 +3433,7 @@ void MW::writeSettings()
     setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("maxRecentFolders", maxRecentFolders);
+    setting->setValue("isTrackpadScroll", imageView->isTrackpadScroll);
     setting->setValue("ingestRootFolder", ingestRootFolder);
     // thumbs
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
@@ -3446,6 +3494,7 @@ void MW::writeSettings()
     setting->setValue("isFilterDockLocked", (bool)filterDockLockAction->isChecked());
     setting->setValue("isMetadataDockLocked", (bool)metadataDockLockAction->isChecked());
     setting->setValue("isThumbDockLocked", (bool)thumbDockLockAction->isChecked());
+//    setting->setValue("wasThumbDockVisibleBeforeGridInvoked", wasThumbDockVisibleBeforeGridInvoked);
 
     // not req'd
 //    setting->setValue("thumbsSortFlags", (int)thumbView->thumbsSortFlags);
@@ -3562,6 +3611,7 @@ Preferences are located in the prefdlg class and updated here.
         rememberLastDir = true;
         maxRecentFolders = 10;
         bookmarks->bookmarkPaths.insert(QDir::homePath());
+        imageView->isTrackpadScroll = true;
 
       // slideshow
         slideShowDelay = 5;
@@ -3589,6 +3639,9 @@ Preferences are located in the prefdlg class and updated here.
     lastDir = setting->value("lastDir").toString();
     maxRecentFolders = setting->value("maxRecentFolders").toInt();
     ingestRootFolder = setting->value("ingestRootFolder").toString();
+
+    // trackpad
+    imageView->isTrackpadScroll = setting->value("isTrackpadScroll").toBool();
 
     // thumbs (set in thumbView creation)
     isThumbDockVerticalTitle = setting->value("isVerticalTitle").toBool();
@@ -3644,7 +3697,7 @@ Preferences are located in the prefdlg class and updated here.
         metadataDockLockAction->isChecked() &&
         thumbDockLockAction->isChecked())
         allDocksLockAction->setChecked(true);
-    wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
+//    wasThumbDockVisibleBeforeGridInvoked = setting->value("wasThumbDockVisibleBeforeGridInvoked").toBool();
 
     /* read external apps */
     setting->beginGroup("ExternalApps");
@@ -3889,6 +3942,11 @@ void MW::loadShortcuts(bool defaultShortcuts)
         windowTitleBarVisibleAction->setShortcut(QKeySequence("F8"));
         menuBarVisibleAction->setShortcut(QKeySequence("F9"));
         statusBarVisibleAction->setShortcut(QKeySequence("F10"));
+        folderDockFocusAction->setShortcut(QKeySequence("Ctrl+F3"));
+        favDockFocusAction->setShortcut(QKeySequence("Ctrl+F4"));
+        filterDockFocusAction->setShortcut(QKeySequence("Ctrl+F5"));
+        metadataDockFocusAction->setShortcut(QKeySequence("Ctrl+F6"));
+        thumbDockFocusAction->setShortcut(QKeySequence("Ctrl+F7"));
         folderDockLockAction->setShortcut(QKeySequence("Shift+F3"));
         favDockLockAction->setShortcut(QKeySequence("Shift+F4"));
         filterDockLockAction->setShortcut(QKeySequence("Shift+F5"));
@@ -3967,6 +4025,7 @@ have been resized.
     qDebug() << "MW::setThumbDockHeight";
     #endif
     }
+//    if(thumbDock->isVisible())
     setThumbDockFeatures(dockWidgetArea(thumbDock));
 }
 
@@ -4064,34 +4123,31 @@ and titlebar visibility.
 void MW::loupeDisplay()
 {
 /*
-When the thumbDock thumbView is displayed it needs to be scrolled to the
+In the central widget show a loupe view of the image pointed to by the thumbView
+currentindex.
+
+Note: When the thumbDock thumbView is displayed it needs to be scrolled to the
 currentIndex since it has been "hidden". However, the scrollbars take a long
-time to paint after the view show event, so the ThumbView::scrollToCurrent must
-be delayed. This is done by the eventFilter in ThumbView, intercepted the
-scrollbar paint events.
+time to paint after the view show event, so the ThumbView::scrollToCurrent
+function must be delayed. This is done by the eventFilter in ThumbView,
+intercepted the scrollbar paint events. This is a bit of a cludge to get around
+lack of notification when the QListView has finished painting itself.
 */
     {
     #ifdef ISDEBUG
     qDebug() << "MW::loupeDisplay";
     #endif
     }
-    thumbView->mwMode = "Loupe";
+    G::mode = "Loupe";
+    // show imageView in the central widget
     centralLayout->setCurrentIndex(LoupeTab);
     // if was in grid mode then restore thumbdock to previous state
-    thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
+    if (hasGridBeenActivated)
+        thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
+    setThumbDockVisibity();
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    setThumbDockVisibity();
-    isGrid = false;
-    thumbView->thumbViewDelegate->isCompare = false;
-
-    /* in case was grid display move thumbView back to dock from central widget.
-    Moving the widget clears its settings, so must call setThumbParameters.
-    After the thumb parameters are reset setThumbParameters emits a signal to
-    execute MW::setThumbDockFeatures, where the thumbDock, if top or bottom, is
-    resized to fit the thumbs.
-    */
     thumbView->setThumbParameters();
-    setThumbDockVisibity();
+    // limit time spent intercepting paint events to call scrollToCurrent
     thumbView->readyToScroll = true;
     QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
 }
@@ -4099,26 +4155,30 @@ scrollbar paint events.
 void MW::gridDisplay()
 {
 /*
-When the gridView is displayed it needs to be scrolled to the currentIndex
-since it has been "hidden". However, the scrollbars take a long time to paint
-after the view show event, so the ThumbView::scrollToCurrent must be delayed.
-This is done by the eventFilter in ThumbView, intercepted the scrollbar paint
-events.
+Note: When the gridView is displayed it needs to be scrolled to the
+currentIndex since it has been "hidden". However, the scrollbars take a long
+time to paint after the view show event, so the ThumbView::scrollToCurrent
+function must be delayed. This is done by the eventFilter in ThumbView,
+intercepted the scrollbar paint events. This is a bit of a cludge to get around
+lack of notification when the QListView has finished painting itself.
 */
     {
     #ifdef ISDEBUG
     qDebug() << "MW::gridDisplay";
     #endif
     }
-    thumbView->mwMode = "Grid";
+    G::mode = "Grid";
+    hasGridBeenActivated = true;
     // show tableView in central widget
     centralLayout->setCurrentIndex(GridTab);
-    isGrid = true;
+    // remember previous state of thumbDock so can recover if change mode
     wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
-    gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    // hide the thumbDock in grid mode as we don't need to see thumbs twice
     thumbDockVisibleAction->setChecked(false);
     setThumbDockVisibity();
     gridView->setThumbParameters();
+    gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    // limit time spent intercepting paint events to call scrollToCurrent
     gridView->readyToScroll = true;
     QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
 }
@@ -4130,26 +4190,19 @@ void MW::tableDisplay()
     qDebug() << "MW::tableDisplay";
     #endif
     }
-    thumbView->mwMode = "Table";
+    G::mode = "Table";
     // show tableView in central widget
     centralLayout->setCurrentIndex(TableTab);
-//    thumbView->thumbViewDelegate->isCompare = false;
+    // if was in grid mode then restore thumbdock to previous state
     thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
-    wasThumbDockVisibleBeforeGridInvoked = false;
-    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+//    wasThumbDockVisibleBeforeGridInvoked = false;
+    thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
     setThumbDockVisibity();
-    isGrid = false;
-
-    /* in case was grid display move thumbView back to dock from central widget.
-    Moving the widget clears its settings, so must call setThumbParameters.
-    After the thumb parameters are reset setThumbParameters emits a signal to
-    execute MW::setThumbDockFeatures, where the thumbDock, if top or bottom, is
-    resized to fit the thumbs.
-    */
-//    thumbDock->setWidget(thumbView);
+    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     tableView->scrollToCurrent();
-//    if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
-//        thumbView->setFocus();
+    // limit time spent intercepting paint events to call scrollToCurrent
+//    thumbView->readyToScroll = true;
+//    QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
 }
 
 void MW::compareDisplay()
@@ -4170,29 +4223,20 @@ void MW::compareDisplay()
         popUp->showPopup(this, msg, 2000, 0.75);
     }
 
-    thumbView->mwMode = "Compare";
-    if (thumbView->isGrid) {
-//        saveSelection();
-        thumbDock->setWidget(thumbView);
+    // if was in grid mode make sure thumbDock is visible in compare mode
+    if (G::mode == "Grid") {
         setThumbDockFeatures(dockWidgetArea(thumbDock));
         thumbDockVisibleAction->setChecked(true);
-        thumbView->isGrid = false;
-//        qDebug() << "\nMW::compareDisplay before calling setThumbParameters" << "\n"
-//                 << "***  thumbView Ht =" << thumbView->height()
-//                 << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-//                 << "thumbHeight =" << thumbView->thumbHeight << "\n";
-        thumbView->setThumbParameters();
         setThumbDockVisibity();
-//        recoverSelection();
+        thumbView->setThumbParameters();
     }
-    thumbView->thumbViewDelegate->isCompare = true;
-    thumbView->setSelectionMode(QAbstractItemView::NoSelection);
 
+    G::mode = "Compare";
     centralLayout->setCurrentIndex(CompareTab);
     compareImages->load(centralWidget->size());
 
-    if (thumbDockVisibleAction->isChecked() || thumbView->isGrid)
-        thumbView->setFocus();
+    thumbView->setSelectionMode(QAbstractItemView::NoSelection);
+    thumbView->selectionModel()->clear();
 }
 
 void MW::saveSelection()
@@ -4309,12 +4353,6 @@ void MW::setThumbDockVisibity()
     #endif
     }
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
-
-    /* thumbDock hidden in gridView, but if user makes visible, then keep
-       thumdock visible when change to another mode (loupe, table, compare) */
-    if(isGrid) wasThumbDockVisibleBeforeGridInvoked = true;
-//    thumbView->scrollToCurrent();
-//    setThumbDockLockMode();
 }
 
 void MW::setMenuBarVisibility() {
@@ -4354,6 +4392,31 @@ void MW::setWindowsTitleBarVisibility() {
         setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
         show();
     }
+}
+
+void MW::setFolderDockFocus()
+{
+    folderDock->raise();
+}
+
+void MW::setFavDockFocus()
+{
+    favDock->raise();
+}
+
+void MW::setFilterDockFocus()
+{
+    filterDock->raise();
+}
+
+void MW::setMetadataDockFocus()
+{
+    metadataDock->raise();
+}
+
+void MW::setThumbDockFocus()
+{
+    thumbDock->raise();
 }
 
 void MW::setFolderDockLockMode()
@@ -4520,7 +4583,10 @@ void MW::togglePick()
     bool isPick = (pickStatus == "true");
 
     imageView->pickLabel->setVisible(isPick);
-    if (asCompareAction->isChecked()) compareImages->pick(isPick, idx);
+    if (asCompareAction->isChecked()) {
+        compareImages->pick(isPick, idx);
+
+    }
     thumbView->refreshThumbs();
 }
 
@@ -4592,7 +4658,7 @@ the rating for all the selected thumbs.
             isAlreadyRating = false;
         }
     }
-    if(isAlreadyRating) rating = "";     // invert the label
+    if(isAlreadyRating) rating = "";     // invert the label(s)
 
     // set the image edits label
     imageView->editsLabel->setText(rating);
@@ -4605,6 +4671,8 @@ the rating for all the selected thumbs.
         dm->sf->setData(idx, rating, Qt::EditRole);
     }
     thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+    updateRating();
 }
 
 void MW::updateRating()
@@ -4622,8 +4690,14 @@ imageView and visibility (true if either rating or color class set).
     QModelIndex idx = dm->sf->index(row, G::RatingColumn);
     rating = idx.data(Qt::EditRole).toString();
     imageView->editsLabel->setText(rating);
-    if (labelColor == "" && rating == "") imageView->editsLabel->setVisible(false);
-    else imageView->editsLabel->setVisible(true);
+    if (labelColor == "" && rating == "") {
+        imageView->editsLabel->setVisible(false);
+    }
+    else {
+        imageView->editsLabel->setVisible(true);
+    }
+    if (G::mode == "Compare")
+        compareImages->ratingColorClass(rating, labelColor, idx);
 }
 
 void MW::setColorClass()
@@ -4657,7 +4731,7 @@ set the color class for all the selected thumbs.
     }
     if(isAlreadyLabel) labelColor = "";     // invert the label
 
-    // set the image edits label
+    // set the image editsLabel
     if (labelColor == "") imageView->editsLabel->setBackgroundColor(G::labelNoneColor);
     if (labelColor == "Red") imageView->editsLabel->setBackgroundColor(G::labelRedColor);
     if (labelColor == "Yellow") imageView->editsLabel->setBackgroundColor(G::labelYellowColor);
@@ -4674,7 +4748,9 @@ set the color class for all the selected thumbs.
         dm->sf->setData(idx, labelColor, Qt::EditRole);
     }
     thumbView->refreshThumbs();
+    gridView->refreshThumbs();
     tableView->resizeColumnToContents(G::LabelColumn);
+    updateColorClass();
 }
 
 void MW::updateColorClass()
@@ -4701,6 +4777,9 @@ color class is called label.
     if (labelColor == "Purple") imageView->editsLabel->setBackgroundColor(G::labelPurpleColor);
     if (labelColor == "" && rating == "") imageView->editsLabel->setVisible(false);
     else imageView->editsLabel->setVisible(true);
+
+    if (G::mode == "Compare")
+        compareImages->ratingColorClass(rating, labelColor, idx);
 }
 
 void MW::getSubfolders(QString fPath)

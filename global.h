@@ -55,6 +55,8 @@ enum dataModelColumns {
     extern QColor labelBlueColor;
     extern QColor labelPurpleColor;
 
+    extern QString mode;
+
     extern bool isThreadTrackingOn;
     extern bool isNewFolderLoaded;
     extern qreal devicePixelRatio;

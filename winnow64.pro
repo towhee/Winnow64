@@ -80,13 +80,15 @@ RC_ICONS = images/winnow.ico
 
 #INSTALLS += target icon icon16 iconPixmaps desktop
 
-DISTFILES += Notes.txt Errors \
+DISTFILES += \
     Menu.txt \
     teststyle.css \
     qss/WinnowStyle.css \
     qss/WinnowStyle.css \
     Shortcuts.txt \
-    Scratch.txt
+    Scratch.txt \
+    ToDo.txt \
+    Notes
 
 macx {
     QMAKE_MAC_SDK = macosx10.12

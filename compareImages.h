@@ -16,6 +16,7 @@ public:
                   ThumbView *thumbView, ImageCache *imageCacheThread);
     bool load(const QSize &central);
     void pick(bool isPick, QModelIndex idx);
+    void ratingColorClass(QString rating, QString colorClass, QModelIndex idx);
     void zoomOut();
     void zoomIn();
     void zoomToFit();

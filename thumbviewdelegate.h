@@ -28,8 +28,6 @@ public:
     void reportThumbAttributes();
 
     QModelIndex currentIndex;
-    bool isCompare;             // not being used?
-
 
 signals:
     void update(const QModelIndex index, QRect iconRect) const;

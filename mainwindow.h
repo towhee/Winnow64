@@ -147,7 +147,6 @@ public:
     bool isSlideShowActive;
     bool copyOp;
     int maxThumbSpaceHeight;
-    bool isGrid;
 
 protected:
     void closeEvent(QCloseEvent *event);
@@ -218,6 +217,7 @@ private slots:
     void setRememberLastDir(bool prefRememberFolder);
     void setIncludeSubFolders();
     void setMaxRecentFolders(int prefMaxRecentFolders);
+    void setTrackpadScroll(bool trackpadScroll);
     void setIngestRootFolder(QString rootFolder);
     void setSlideShowParameters(int delay, bool isRandom);
     void setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs, bool isStatusBar);
@@ -251,6 +251,13 @@ private slots:
     void setMenuBarVisibility();
     void setStatusBarVisibility();
     void setWindowsTitleBarVisibility();
+
+    void setFolderDockFocus();
+    void setFavDockFocus();
+    void setFilterDockFocus();
+    void setMetadataDockFocus();
+    void setThumbDockFocus();
+
     void setFolderDockLockMode();
     void setFavDockLockMode();
     void setFilterDockLockMode();
@@ -427,6 +434,12 @@ private:
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
 
+    QAction *folderDockFocusAction;
+    QAction *favDockFocusAction;
+    QAction *filterDockFocusAction;
+    QAction *metadataDockFocusAction;
+    QAction *thumbDockFocusAction;
+
     QAction *folderDockLockAction;
     QAction *favDockLockAction;
     QAction *filterDockLockAction;
@@ -513,6 +526,7 @@ private:
 
     bool isInitializing;
     bool isStressTest;
+    bool hasGridBeenActivated;
 
     bool sortMenuUpdateToMatchTable = false;
 

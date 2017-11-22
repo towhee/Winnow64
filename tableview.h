@@ -13,8 +13,10 @@ class TableView : public QTableView
 public:
     TableView(DataModel *dm, ThumbView *thumbView);
     void scrollToCurrent();
+    bool readyToScroll;
 
 protected:
+    bool eventFilter(QObject *obj, QEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
 
 private:

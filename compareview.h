@@ -5,6 +5,7 @@
 #include "metadata.h"
 #include "imagecache.h"
 #include "thumbcache.h"
+#include "circlelabel.h"
 #include "pixmap.h"
 
 class CompareView : public QGraphicsView
@@ -24,7 +25,8 @@ public:
     void panToPct(QPointF scrollPct);
     void panToDeltaPct(QPointF delta);
     void resetMouseClickZoom();
-    QLabel *pickLabel;      // visibility controlled in MW
+    QLabel *pickLabel;          // visibility controlled in MW
+    CircleLabel *editsLabel;
 
 public slots:
     void zoomToPct(QPointF coord, bool isZoom);
@@ -74,6 +76,14 @@ private:
     QPixmap displayPixmap;
     QPixmap *pickPixmap;
     QImage thumbsUp;
+
+    struct intSize
+    {
+        int w;
+        int h;
+        int x;
+        int y;
+    };
 
     struct scrollStatus {
         int hVal;

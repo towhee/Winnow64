@@ -56,60 +56,122 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>3</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
-    <widget class="QSpinBox" name="maxRecentSB">
+    <widget class="QGroupBox" name="groupBoxTrackpadAction">
      <property name="geometry">
       <rect>
-       <x>260</x>
-       <y>70</y>
-       <width>48</width>
-       <height>24</height>
+       <x>20</x>
+       <y>150</y>
+       <width>431</width>
+       <height>91</height>
       </rect>
      </property>
-     <property name="minimum">
-      <number>5</number>
+     <property name="title">
+      <string>Trackpad Swipe Action</string>
      </property>
-     <property name="maximum">
-      <number>50</number>
-     </property>
+     <widget class="QWidget" name="">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>30</y>
+        <width>311</width>
+        <height>51</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QRadioButton" name="trackpadIterateRadio">
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Next / previous image</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="trackpadScrollRadio">
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Scroll current image when zoomed</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
-    <widget class="QLabel" name="label_13">
+    <widget class="QGroupBox" name="groupBoxFolders">
      <property name="geometry">
       <rect>
-       <x>42</x>
-       <y>74</y>
-       <width>147</width>
-       <height>16</height>
+       <x>20</x>
+       <y>30</y>
+       <width>431</width>
+       <height>101</height>
       </rect>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
+     <property name="title">
+      <string>Folders preferences</string>
      </property>
-     <property name="text">
-      <string>Maximum recent folders</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="rememberFolderChk">
-     <property name="geometry">
-      <rect>
-       <x>40</x>
-       <y>35</y>
-       <width>186</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Remember previous folder</string>
-     </property>
+     <widget class="QCheckBox" name="rememberFolderChk">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>30</y>
+        <width>186</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Remember previous folder</string>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="maxRecentSB">
+      <property name="geometry">
+       <rect>
+        <x>230</x>
+        <y>60</y>
+        <width>48</width>
+        <height>24</height>
+       </rect>
+      </property>
+      <property name="minimum">
+       <number>5</number>
+      </property>
+      <property name="maximum">
+       <number>50</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_13">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>64</y>
+        <width>147</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Maximum recent folders</string>
+      </property>
+     </widget>
     </widget>
    </widget>
    <widget class="QWidget" name="pageCache">

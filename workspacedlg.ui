@@ -80,7 +80,7 @@
     <item>
      <widget class="QPushButton" name="reassignBtn">
       <property name="text">
-       <string>Update to current setup</string>
+       <string>Update to current layout</string>
       </property>
      </widget>
     </item>

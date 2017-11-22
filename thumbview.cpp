@@ -183,7 +183,7 @@ Helper function for in class calls where thumb parameters already defined
     setSpacing(thumbSpacing);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels);
-    if (!isGrid) emit updateThumbDock();
+    if (!isThumbWrapWhenTopOrBottomDock) emit updateThumbDockHeight();
 }
 
 void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
@@ -635,9 +635,7 @@ void ThumbView::selectThumb(QModelIndex idx)
     #endif
     }
     if (idx.isValid()) {
-//        thumbViewDelegate->currentIndex = idx;
         setCurrentIndex(idx);
-//        qDebug() << "Row =" << idx.row();
         scrollTo(idx, ScrollHint::PositionAtCenter);
     }
 }
@@ -679,9 +677,8 @@ void ThumbView::selectNext()
     qDebug() << "ThumbView::selectNext";
     #endif
     }
-    if(mwMode == "Compare") return;
+    if(G::mode == "Compare") return;
     selectThumb(getNextRow());
-//    if (isSelectedItem()) selectThumb(getNextRow());
 }
 
 void ThumbView::selectPrev()
@@ -691,7 +688,7 @@ void ThumbView::selectPrev()
     qDebug() << "ThumbView::selectPrev";
     #endif
     }
-    if(mwMode == "Compare") return;
+    if(G::mode == "Compare") return;
     selectThumb(getPrevRow());
 //    if (isSelectedItem()) selectThumb(getPrevRow());
 //    setCurrentIndex(moveCursor(MovePrevious, Qt::NoModifier));
@@ -704,7 +701,7 @@ void ThumbView::selectUp()
     qDebug() << "ThumbView::selectUp";
     #endif
     }
-    if(mwMode == "Compare") return;
+    if(G::mode == "Compare") return;
     selectPrev();
     setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
 }
@@ -716,7 +713,7 @@ void ThumbView::selectDown()
     qDebug() << "ThumbView::selectDown";
     #endif
     }
-    if(mwMode == "Compare") return;
+    if(G::mode == "Compare") return;
     selectNext();
 //    setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
 }
@@ -728,7 +725,7 @@ void ThumbView::selectFirst()
     qDebug() << "ThumbView::selectFirst";
     #endif
     }
-    if(mwMode == "Compare") return;
+    if(G::mode == "Compare") return;
     selectThumb(0);
 //    if (isSelectedItem()) selectThumb(0);
 }
@@ -740,7 +737,7 @@ void ThumbView::selectLast()
     qDebug() << "ThumbView::selectLast";
     #endif
     }
-    if(mwMode == "Compare") return;
+    if(G::mode == "Compare") return;
     selectThumb(getLastRow());
 //    if (isSelectedItem()) selectThumb(getLastRow());
 }
@@ -849,9 +846,9 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     qDebug() << "ThumbView::thumbsFit";
     #endif
     }
-    if (isGrid) {
+    if (G::mode == "Grid") {
         return;
-        qDebug() << "ThumbView::thumbsFit isGrid";
+
         // adjust thumb width
         if (thumbWidth < 40 || thumbHeight < 0) {
             thumbWidth = 100;
@@ -881,7 +878,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
             padding++;
         } while (improving);
         setThumbParameters(thumbWidth, thumbHeight, thumbSpacing,
-                               thumbPadding, labelFontSize, showThumbLabels);
+                           thumbPadding, labelFontSize, showThumbLabels);
         return;
     }
     // all wrapping is row wrapping
@@ -968,7 +965,7 @@ void ThumbView::scrollToCurrent()
     return;
     */
 
-//    qDebug() << "ThumbView::scrollToCurrent";
+//    qDebug() << "ThumbView::scrollToCurrent  Elapsed time:" << G::t.elapsed();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
@@ -989,7 +986,7 @@ bool ThumbView::eventFilter(QObject *obj, QEvent *event)
 /*
 
 */
-//    qDebug() << "ThumbView events" << obj << event << "mwMode" << mwMode;
+//    qDebug() << "ThumbView events" << obj << event << "G::mode" << G::mode;
     if(event->type() == QEvent::Paint
             && readyToScroll
             && (obj->objectName() == "VerticalScrollBar"
@@ -1063,7 +1060,7 @@ void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
     QListView::mouseDoubleClickEvent(event);
 
     // do not displayLoupe if already displayed
-    if (mwMode != "Loupe") emit displayLoupe();
+    if (G::mode != "Loupe") emit displayLoupe();
     // delay reqd
     QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
 }

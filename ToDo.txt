@@ -1,11 +1,15 @@
 CLOC = Count Lines Of Code
 In terminal: cloc /Users/roryhill/Projects/Winnow64
+producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
 
 To do:
+- Up arrow doing weird stuff when thumbDock wrapping = true
+- Arrow keys in compare mode
+- Full screen mode needs some love
+- Sometimes two mouse clicks reqd in loupe view to toggle zoom
 - Edit title in metadata?
-- ThumbView does not scroll to current if was hidden
 - Add preference for trackpad pan/advance
-- Try producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
+- Improve producer/consumer image cache performance
 - Rotate selected images
 - Initial setup (other than workspace)
 - Add preferences for info label
@@ -33,6 +37,10 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: ThumbView does not scroll to current if was hidden
+- Done: Shortcut to focus on a dock
+- Done: Edit labels not showing in compare view
+- Done: make wasThumbDockVisibleBeforeGridInvoked persistent between sessions
 - Done: Color class not showing on thumbs
 - Done: Settings not remembering to show thumb labels
 - Done: Thumb label not positioning properly

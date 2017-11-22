@@ -873,6 +873,14 @@ void ImageView::wheelEvent(QWheelEvent *event)
     qDebug() << "ImageView::wheelEvent";
     #endif
     }
+    // if trackpad scrolling set in preferences then default behavior
+    qDebug() << "isTrackpadScroll =" << isTrackpadScroll;
+    if(isTrackpadScroll) {
+        QGraphicsView::wheelEvent(event);
+        return;
+    }
+
+    // otherwise trapckpad swiping = next/previous image
     static int delta;
     delta += event->delta();
 //    qDebug() << "ImageView::wheelEvent   delta =" << delta
