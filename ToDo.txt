@@ -1,20 +1,10 @@
-CLOC = Count Lines Of Code
-In terminal: cloc /Users/roryhill/Projects/Winnow64
-producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
-
 To do:
-- Up arrow doing weird stuff when thumbDock wrapping = true
-- Arrow keys in compare mode
-- Full screen mode needs some love
 - Sometimes two mouse clicks reqd in loupe view to toggle zoom
 - Edit title in metadata?
-- Add preference for trackpad pan/advance
 - Improve producer/consumer image cache performance
 - Rotate selected images
 - Initial setup (other than workspace)
 - Add preferences for info label
-- /Users/roryhill/Qt/5.9/Src/qtimageformats/src/3rdparty/jasper/src/libjasper/jpg_dec.c
-- /Users/roryhill/Projects/jpeg-9b/example.c
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Get comment and copywrite metadata
 - Get lens metadata
@@ -37,6 +27,13 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done:Full screen mode needs some love
+- Done: Up arrow doing weird stuff when thumbDock wrapping = true
+- Done: thumbDock visibility not remembered between sessions if close from Grid mode
+- Done: Arrow keys in compare mode
+- Done: Add preferences to show/hide cache status and thread activity
+- Done: ThumbDock horizontal scrollbar when wrapping is on - should only be vertical scrollbar
+- Done: Add preference for trackpad pan/advance
 - Done: ThumbView does not scroll to current if was hidden
 - Done: Shortcut to focus on a dock
 - Done: Edit labels not showing in compare view

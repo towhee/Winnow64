@@ -68,7 +68,8 @@ FORMS += \
     workspacedlg.ui \
     helpform.ui \
     aligndlg.ui \
-    testaligndlg.ui
+    testaligndlg.ui \
+    introduction.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns

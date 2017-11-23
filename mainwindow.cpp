@@ -41,7 +41,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
     popUp = new PopUp;
-    hasGridBeenActivated = false;
+    hasGridBeenActivated = true;
 
     // platform specific settings
     setupPlatform();
@@ -74,7 +74,7 @@ variables in MW (this class) and managed in the prefDlg class.
 */
 
     // structure to hold persistant settings between sessions
-    setting = new QSettings("Winnow", "winnow_100");
+    setting = new QSettings("Winnow", "winnow_101");
 
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel
@@ -110,14 +110,18 @@ variables in MW (this class) and managed in the prefDlg class.
     setupCentralWidget();
     createAppStyle();
 
+    // recall previous state in case last closed in Grid mode
+    thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
+
     if (isSettings && !resetSettings) updateState();
     else {
         defaultWorkspace();
-        QString welcomeText = "<h3>Welcome to Winnow</h3>"
-            + tr("<p>To view images select a folder from the Folders dock or from the menu File > Open Folder</p>");
-        centralLabel->setAlignment(Qt::AlignCenter);
-        centralLabel->setText(welcomeText);
-        centralLayout->setCurrentIndex(0);
+        isFirstTimeNoSettings = true;
+//        QString welcomeText = "<h3>Welcome to Winnow</h3>"
+//            + tr("<p>To view images select a folder from the Folders dock or from the menu File > Open Folder</p>");
+//        centralLabel->setAlignment(Qt::AlignCenter);
+//        centralLabel->setText(welcomeText);
+//        centralLayout->setCurrentIndex(0);
     }
 
     // process the persistant folder if available
@@ -823,30 +827,35 @@ void MW::createActions()
 
     // Go menu
 
-    nextThumbAction = new QAction(tr("Next Image"), this);
-    nextThumbAction->setObjectName("nextImage");
-    nextThumbAction->setEnabled(true);
-    connect(nextThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectNext()));
+//    keyRightAction = new QAction(tr("Next Image"), this);
+//    keyRightAction->setObjectName("nextImage");
+//    keyRightAction->setEnabled(true);
+//    connect(keyRightAction, SIGNAL(triggered()), thumbView, SLOT(selectNext()));
 
-    prevThumbAction = new QAction(tr("Previous"), this);
-    prevThumbAction->setObjectName("prevImage");
-    connect(prevThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectPrev()));
+    keyRightAction = new QAction(tr("Next Image"), this);
+    keyRightAction->setObjectName("nextImage");
+    keyRightAction->setEnabled(true);
+    connect(keyRightAction, SIGNAL(triggered()), this, SLOT(keyRight()));
 
-    upThumbAction = new QAction(tr("Move Up"), this);
-    upThumbAction->setObjectName("moveUp");
-    connect(upThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectUp()));
+    keyLeftAction = new QAction(tr("Previous"), this);
+    keyLeftAction->setObjectName("prevImage");
+    connect(keyLeftAction, SIGNAL(triggered()), this, SLOT(keyLeft()));
 
-    downThumbAction = new QAction(tr("Move Down"), this);
-    downThumbAction->setObjectName("moveDown");
-    connect(downThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectDown()));
+    keyUpAction = new QAction(tr("Move Up"), this);
+    keyUpAction->setObjectName("moveUp");
+    connect(keyUpAction, SIGNAL(triggered()), this, SLOT(keyUp()));
 
-    firstThumbAction = new QAction(tr("First"), this);
-    firstThumbAction->setObjectName("firstImage");
-    connect(firstThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectFirst()));
+    keyDownAction = new QAction(tr("Move Down"), this);
+    keyDownAction->setObjectName("moveDown");
+    connect(keyDownAction, SIGNAL(triggered()), this, SLOT(keyDown()));
 
-    lastThumbAction = new QAction(tr("Last"), this);
-    lastThumbAction->setObjectName("lastImage");
-    connect(lastThumbAction, SIGNAL(triggered()), thumbView, SLOT(selectLast()));
+    keyHomeAction = new QAction(tr("First"), this);
+    keyHomeAction->setObjectName("firstImage");
+    connect(keyHomeAction, SIGNAL(triggered()), this, SLOT(keyHome()));
+
+    keyEndAction = new QAction(tr("Last"), this);
+    keyEndAction->setObjectName("lastImage");
+    connect(keyEndAction, SIGNAL(triggered()), this, SLOT(keyEnd()));
 
     // Not a menu item - used by slide show
     randomImageAction = new QAction(tr("Random"), this);
@@ -1302,12 +1311,12 @@ void MW::createMenus()
     editMenu->addAction(oldPrefAction);
 
     goMenu = menuBar()->addMenu(tr("&Go"));
-    goMenu->addAction(nextThumbAction);
-    goMenu->addAction(prevThumbAction);
-    goMenu->addAction(upThumbAction);
-    goMenu->addAction(downThumbAction);
-    goMenu->addAction(firstThumbAction);
-    goMenu->addAction(lastThumbAction);
+    goMenu->addAction(keyRightAction);
+    goMenu->addAction(keyLeftAction);
+    goMenu->addAction(keyUpAction);
+    goMenu->addAction(keyDownAction);
+    goMenu->addAction(keyHomeAction);
+    goMenu->addAction(keyEndAction);
     goMenu->addSeparator();
     goMenu->addAction(nextPickAction);
     goMenu->addAction(prevPickAction);
@@ -1424,12 +1433,12 @@ void MW::createMenus()
     QAction *goGroupAct = new QAction("Go", this);
     imageView->addAction(goGroupAct);
     goGroupAct->setMenu(goSubMenu);
-    goSubMenu->addAction(nextThumbAction);
-    goSubMenu->addAction(prevThumbAction);
-    goSubMenu->addAction(firstThumbAction);
-    goSubMenu->addAction(lastThumbAction);
-    goSubMenu->addAction(upThumbAction);
-    goSubMenu->addAction(downThumbAction);
+    goSubMenu->addAction(keyRightAction);
+    goSubMenu->addAction(keyLeftAction);
+    goSubMenu->addAction(keyHomeAction);
+    goSubMenu->addAction(keyEndAction);
+    goSubMenu->addAction(keyUpAction);
+    goSubMenu->addAction(keyDownAction);
     goSubMenu->addAction(randomImageAction);
     goSubMenu->addAction(slideShowAction);
 
@@ -1581,8 +1590,26 @@ void MW::setupCentralWidget()
     qDebug() << "MW::setupCentralWidget";
     #endif
     }
-    centralLabel = new QLabel;
-    centralLayout->addWidget(centralLabel);     // first time open program tips
+
+//    // Current working version
+//    centralLabel = new QLabel;
+//    QString welcomeText = "<h3>Welcome to Winnow</h3>"
+//        + tr("<p>To view images select a folder from the Folders dock or from the menu File > Open Folder</p>");
+//    centralLabel->setAlignment(Qt::AlignCenter);
+//    centralLabel->setText(welcomeText);
+
+//    QScrollArea area;
+//    QLabel("TEST");
+//    area.
+//    centralLayout->addWidget(ui.label);     // first time open program welcome screen
+
+    QWidget *welcome = new QWidget;
+    Ui::introWidget ui;
+    ui.setupUi(welcome);
+    qDebug() << "ui.label->text()" << ui.label->text();
+
+    centralLayout->addWidget(welcome);     // first time open program tips
+//    centralLayout->addWidget(centralLabel);     // first time open program tips
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
     centralLayout->addWidget(tableView);
@@ -1682,7 +1709,7 @@ void MW::createThumbView()
     thumbView = new ThumbView(this, dm);
     thumbView->setObjectName("ThumbView");
     // set here, as gridView, which is another ThumbView object, is different
-    thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+//    thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
     thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
     thumbView->thumbPadding = setting->value("thumbPadding").toInt();
@@ -1992,24 +2019,35 @@ Signal from prefDlg when thumbWrap or verticalTitle changed
 }
 
 void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
-                            bool usePreview, int previewWidth, int previewHeight)
+           bool usePreview, int previewWidth, int previewHeight, bool activity)
 {
+/*
+This slot signalled from the preferences dialog with changes to the cache
+parameters.  Any visibility changes are executed.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::setCacheParameters";
     #endif
     }
-    cacheSizeMB = size;
+    cacheSizeMB = size * 1000;      // Entered as GB in pref dlg
     isShowCacheStatus = show;
     cacheStatusWidth = width;
     cacheWtAhead = wtAhead;
     isCachePreview = usePreview;
     cachePreviewWidth = previewWidth;
     cachePreviewHeight = previewHeight;
+    isShowCacheThreadActivity = activity;
     imageCacheThread->updateImageCacheParam(size, show, width, wtAhead,
              usePreview, previewWidth, previewHeight);
     QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
     imageCacheThread->updateImageCache(fPath);
+
+    // update visibility if preferences have been changed
+    cacheLabel->setVisible(isShowCacheStatus);
+    metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+    thumbThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+    imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
 }
 
 void MW::updateStatus(bool keepBase, QString s)
@@ -2107,7 +2145,6 @@ void MW::showCacheStatus(const QImage &imCacheStatus)
     }
     cacheLabel->setVisible(true);
     cacheLabel->setPixmap(QPixmap::fromImage(imCacheStatus));
-//    updateStatus(mbCacheSize);
 }
 
 void MW::reindexImageCache()
@@ -2879,6 +2916,9 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
+    gridView->setVisible(!gridView->isVisible());
+    return;
+
     thumbView->setCurrentIndex(dm->sf->index(0, 0));
     return;
 
@@ -3083,8 +3123,8 @@ void MW::preferences()
             this, SLOT(setThumbDockParameters(bool, bool, bool)));
     connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
             this, SLOT(setSlideShowParameters(int, bool)));
-    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, bool, int, int)),
-            this, SLOT(setCacheParameters(int, bool, int, int, bool, int, int)));
+    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, bool, int, int, bool)),
+            this, SLOT(setCacheParameters(int, bool, int, int, bool, int, int, bool)));
     connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool)),
             this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool)));
     prefdlg->exec();
@@ -3458,6 +3498,7 @@ void MW::writeSettings()
     // cache
     setting->setValue("cacheSizeMB", (int)cacheSizeMB);
     setting->setValue("isShowCacheStatus", (bool)isShowCacheStatus);
+    setting->setValue("isShowCacheThreadActivity", (bool)isShowCacheThreadActivity);
     setting->setValue("cacheStatusWidth", (int)cacheStatusWidth);
     setting->setValue("cacheWtAhead", (int)cacheWtAhead);
     setting->setValue("isCachePreview", (int)isCachePreview);
@@ -3494,7 +3535,7 @@ void MW::writeSettings()
     setting->setValue("isFilterDockLocked", (bool)filterDockLockAction->isChecked());
     setting->setValue("isMetadataDockLocked", (bool)metadataDockLockAction->isChecked());
     setting->setValue("isThumbDockLocked", (bool)thumbDockLockAction->isChecked());
-//    setting->setValue("wasThumbDockVisibleBeforeGridInvoked", wasThumbDockVisibleBeforeGridInvoked);
+    setting->setValue("wasThumbDockVisibleBeforeGridInvoked", wasThumbDockVisibleBeforeGridInvoked);
 
     // not req'd
 //    setting->setValue("thumbsSortFlags", (int)thumbView->thumbsSortFlags);
@@ -3620,7 +3661,8 @@ Preferences are located in the prefdlg class and updated here.
 
         // cache
         cacheSizeMB = 2000;
-        isShowCacheStatus = true;
+        isShowCacheStatus = false;
+        isShowCacheThreadActivity = false;
         cacheStatusWidth = 200;
         cacheWtAhead = 5;
         isCachePreview = true;
@@ -3656,6 +3698,7 @@ Preferences are located in the prefdlg class and updated here.
     // cache
     cacheSizeMB = setting->value("cacheSizeMB").toInt();
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
+    isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
     cacheStatusWidth = setting->value("cacheStatusWidth").toInt();
     cacheWtAhead = setting->value("cacheWtAhead").toInt();
     isCachePreview = setting->value("isCachePreview").toBool();
@@ -3697,7 +3740,7 @@ Preferences are located in the prefdlg class and updated here.
         metadataDockLockAction->isChecked() &&
         thumbDockLockAction->isChecked())
         allDocksLockAction->setChecked(true);
-//    wasThumbDockVisibleBeforeGridInvoked = setting->value("wasThumbDockVisibleBeforeGridInvoked").toBool();
+    wasThumbDockVisibleBeforeGridInvoked = setting->value("wasThumbDockVisibleBeforeGridInvoked").toBool();
 
     /* read external apps */
     setting->beginGroup("ExternalApps");
@@ -3790,10 +3833,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[thumbsShrinkAction->objectName()] = thumbsShrinkAction;
 //    actionKeys[cutAction->objectName()] = cutAction;
 //    actionKeys[copyAction->objectName()] = copyAction;
-    actionKeys[nextThumbAction->objectName()] = nextThumbAction;
-    actionKeys[prevThumbAction->objectName()] = prevThumbAction;
-    actionKeys[downThumbAction->objectName()] = downThumbAction;
-    actionKeys[upThumbAction->objectName()] = upThumbAction;
+    actionKeys[keyRightAction->objectName()] = keyRightAction;
+    actionKeys[keyLeftAction->objectName()] = keyLeftAction;
+    actionKeys[keyDownAction->objectName()] = keyDownAction;
+    actionKeys[keyUpAction->objectName()] = keyUpAction;
 //    actionKeys[keepTransformAct->objectName()] = keepTransformAct;
 //    actionKeys[keepZoomAct->objectName()] = keepZoomAct;
 //    actionKeys[copyImageAction->objectName()] = copyImageAction;
@@ -3805,8 +3848,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[ingestAction->objectName()] = ingestAction;
     actionKeys[reportMetadataAction->objectName()] = reportMetadataAction;
     actionKeys[slideShowAction->objectName()] = slideShowAction;
-    actionKeys[firstThumbAction->objectName()] = firstThumbAction;
-    actionKeys[lastThumbAction->objectName()] = lastThumbAction;
+    actionKeys[keyHomeAction->objectName()] = keyHomeAction;
+    actionKeys[keyEndAction->objectName()] = keyEndAction;
     actionKeys[randomImageAction->objectName()] = randomImageAction;
     actionKeys[openAction->objectName()] = openAction;
     actionKeys[zoomOutAction->objectName()] = zoomOutAction;
@@ -3864,8 +3907,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
     {
 //        qDebug() << "Default shortcuts";
         //    formats to set shortcut
-        //    nextThumbAction->setShortcut(QKeySequence("Right"));
-        //    nextThumbAction->setShortcut((Qt::Key_Right);
+        //    keyRightAction->setShortcut(QKeySequence("Right"));
+        //    keyRightAction->setShortcut((Qt::Key_Right);
 
 //        thumbsGoTopAct->setShortcut(QKeySequence("Ctrl+Home"));
 //        thumbsGoBottomAct->setShortcut(QKeySequence("Ctrl+End"));
@@ -3879,7 +3922,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         subFoldersAction->setShortcut(QKeySequence("B"));
         fullScreenAction->setShortcut(QKeySequence("F"));
         escapeFullScreenAction->setShortcut(QKeySequence("Esc"));
-        prefAction->setShortcut(QKeySequence("Ctrl+P"));
+        prefAction->setShortcut(QKeySequence("Ctrl+,"));
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
         togglePickAction->setShortcut(QKeySequence("`"));
         toggleFilterPickAction->setShortcut(QKeySequence("Ctrl+`"));
@@ -3901,12 +3944,12 @@ void MW::loadShortcuts(bool defaultShortcuts)
         thumbsFitAction->setShortcut(QKeySequence("Alt+}"));
         thumbsEnlargeAction->setShortcut(QKeySequence("}"));
         thumbsShrinkAction->setShortcut(QKeySequence("{"));
-        nextThumbAction->setShortcut(QKeySequence("Right"));
-        prevThumbAction->setShortcut(QKeySequence("Left"));
-        firstThumbAction->setShortcut(QKeySequence("Home"));
-        lastThumbAction->setShortcut(QKeySequence("End"));
-        downThumbAction->setShortcut(QKeySequence("Down"));
-        upThumbAction->setShortcut(QKeySequence("Up"));
+        keyRightAction->setShortcut(QKeySequence("Right"));
+        keyLeftAction->setShortcut(QKeySequence("Left"));
+        keyHomeAction->setShortcut(QKeySequence("Home"));
+        keyEndAction->setShortcut(QKeySequence("End"));
+        keyDownAction->setShortcut(QKeySequence("Down"));
+        keyUpAction->setShortcut(QKeySequence("Up"));
         randomImageAction->setShortcut(QKeySequence("Ctrl+Alt+Right"));
         nextPickAction->setShortcut(QKeySequence("Alt+Right"));
         prevPickAction->setShortcut(QKeySequence("Alt+Left"));
@@ -4010,6 +4053,7 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
                                QDockWidget::DockWidgetFloatable);
         thumbView->setWrapping(true);
         thumbView->isFloat = isFloat;
+        thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     }
 }
 
@@ -4041,8 +4085,6 @@ and titlebar visibility.
     qDebug() << "MW::setThumbDockFeatures";
     #endif
     }
-//    qDebug() << "MW::setThumbDockFeatures   DockWidgetArea =" << area;
-
     thumbView->setMaximumHeight(100000);
 
     if ((area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea)
@@ -4067,37 +4109,38 @@ and titlebar visibility.
 
             // horizontal scrollBar?
             int thumbCellWidth = thumbView->getThumbCellSize().width();
-            int maxThumbsBeforeScrollReqd = thumbView->viewport()->width() / thumbCellWidth;
-            int thumbsCount = dm->sf->rowCount();
-            int thumbDockWidth = thumbView->viewport()->width();
-            bool isScrollBar = true;
-//            bool isScrollBar = thumbsCount > maxThumbsBeforeScrollReqd;
+//            int maxThumbsBeforeScrollReqd = thumbView->viewport()->width() / thumbCellWidth;
+//            int thumbsCount = dm->sf->rowCount();
+//            int thumbDockWidth = thumbView->viewport()->width();
+//            bool isScrollBar = true;
 
-            if (isScrollBar) {
+//            if (isScrollBar) {
                 maxHt += scrollBarHeight;// + 1;
                 minHt += scrollBarHeight;// + 1;
                 newThumbDockHeight += scrollBarHeight;// + 1;
-            }
+//            }
 
             thumbView->setMaximumHeight(maxHt);
             thumbView->setMinimumHeight(minHt);
 
-//            qDebug() << "maxHt, minHt, newThumbDockHeight" << maxHt << minHt << newThumbDockHeight;
+            thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
             resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
 
-//            qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
-//                     << "***  thumbView Ht =" << thumbView->height()
-//                     << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-//                     << "thumbHeight =" << thumbView->thumbHeight
-//                     << "newThumbDockHeight" << newThumbDockHeight
-//                     << "scrollBarHeight =" << scrollBarHeight << isScrollBar;
+/*            qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
+                     << "***  thumbView Ht =" << thumbView->height()
+                     << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
+                     << "thumbHeight =" << thumbView->thumbHeight
+                     << "newThumbDockHeight" << newThumbDockHeight
+                     << "scrollBarHeight =" << scrollBarHeight << isScrollBar;
+                     */
         }
     }
     else {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
+        thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     }
 
     if (area == Qt::LeftDockWidgetArea || area == Qt::RightDockWidgetArea)
@@ -4169,13 +4212,14 @@ lack of notification when the QListView has finished painting itself.
     }
     G::mode = "Grid";
     hasGridBeenActivated = true;
-    // show tableView in central widget
-    centralLayout->setCurrentIndex(GridTab);
     // remember previous state of thumbDock so can recover if change mode
+    qDebug() << "thumbDockVisibleAction->isChecked()" << thumbDockVisibleAction->isChecked();
     wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
     thumbDockVisibleAction->setChecked(false);
     setThumbDockVisibity();
+    // show tableView in central widget
+    centralLayout->setCurrentIndex(GridTab);
     gridView->setThumbParameters();
     gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     // limit time spent intercepting paint events to call scrollToCurrent
@@ -4236,7 +4280,7 @@ void MW::compareDisplay()
     compareImages->load(centralWidget->size());
 
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
-    thumbView->selectionModel()->clear();
+//    thumbView->selectionModel()->clear();
 }
 
 void MW::saveSelection()
@@ -4292,6 +4336,11 @@ void MW::setCentralView()
     #ifdef ISDEBUG
     qDebug() << "MW::setCentralView";
     #endif
+    }
+    if(isFirstTimeNoSettings) {
+        centralLayout->setCurrentIndex(StartTab);
+        isFirstTimeNoSettings = false;
+        return;
     }
     if (asLoupeAction->isChecked()) loupeDisplay();
     if (asGridAction->isChecked()) gridDisplay();
@@ -4353,6 +4402,8 @@ void MW::setThumbDockVisibity()
     #endif
     }
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
+    if (G::mode != "Grid")
+        wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
 }
 
 void MW::setMenuBarVisibility() {
@@ -4803,6 +4854,96 @@ void MW::getSubfolders(QString fPath)
     }
 }
 
+void MW::keyRight()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::keyRight";
+    #endif
+    }
+    if (G::mode == "Compare") compareImages->go("Right");
+    else thumbView->selectNext();
+}
+
+void MW::keyLeft()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::keyLeft";
+    #endif
+    }
+    if (G::mode == "Compare") compareImages->go("Left");
+    else thumbView->selectNext();
+}
+
+void MW::keyUp()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::keyUp";
+    #endif
+    }
+    if (G::mode == "Loupe") thumbView->selectUp();
+    if (G::mode == "Table") thumbView->selectUp();
+    if (G::mode == "Grid") gridView->selectUp();
+}
+
+void MW::keyDown()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::keyDown";
+    #endif
+    }
+    if (G::mode == "Loupe") thumbView->selectDown();
+    if (G::mode == "Table") thumbView->selectDown();
+    if (G::mode == "Grid") gridView->selectDown();
+}
+
+void MW::keyHome()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::keyHome";
+    #endif
+    }
+    if (G::mode == "Compare") compareImages->go("Home");
+    else thumbView->selectFirst();
+}
+
+void MW::keyEnd()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::keyEnd";
+    #endif
+    }
+    if (G::mode == "Compare") compareImages->go("End");
+    else {
+        thumbView->selectLast();
+        gridView->setVisible(true);
+        gridView->selectLast();
+    }
+}
+
 void MW::stressTest()
 {
     {
@@ -5000,7 +5141,7 @@ void MW::wheelEvent(QWheelEvent *event)
 //            else
 //                imageView->zoomIn();
 //        }
-//        else if (nextThumbAction->isEnabled())
+//        else if (keyRightAction->isEnabled())
 //        {
 //            if (event->delta() < 0)
 //                thumbView->selectNext();
@@ -5979,7 +6120,7 @@ void MW::test()
 //    qDebug() << "MW::setViewerKeyEventsEnabled";
 //    #endif
 //    }
-//    nextThumbAction->setEnabled(enabled);
+//    keyRightAction->setEnabled(enabled);
 //    prevThumbAction->setEnabled(enabled);
 //    upThumbAction->setEnabled(enabled);
 //    downThumbAction->setEnabled(enabled);
@@ -6159,7 +6300,7 @@ void MW::test()
 //    }
 //    // actions
 ////    closeImageAct->setEnabled(enable);
-//    nextThumbAction->setEnabled(enable);
+//    keyRightAction->setEnabled(enable);
 //    prevThumbAction->setEnabled(enable);
 //    firstThumbAction->setEnabled(enable);
 //    lastThumbAction->setEnabled(enable);

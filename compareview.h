@@ -25,6 +25,10 @@ public:
     void panToPct(QPointF scrollPct);
     void panToDeltaPct(QPointF delta);
     void resetMouseClickZoom();
+
+    void select();
+    void deselect();
+
     QLabel *pickLabel;          // visibility controlled in MW
     CircleLabel *editsLabel;
 

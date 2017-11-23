@@ -223,7 +223,7 @@ void ImageCache::cacheStatus()
 //    qDebug() << "cache size " + mbCacheSize;
 
     // ping mainwindow to show cache update in the status bar
-    emit showCacheStatus(pmCacheStatus);
+    if (cache.isShowCacheStatus) emit showCacheStatus(pmCacheStatus);
 }
 
 QSize ImageCache::scalePreview(ulong w, ulong h)
@@ -661,7 +661,7 @@ updated.  Image caching is reactivated.
         }
     }
 
-    cacheStatus();
+    if (cache.isShowCacheStatus) cacheStatus();
     cache.isForward = (cache.key >= cache.prevKey);
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();
@@ -723,29 +723,28 @@ If there is filtering then the entire cache is reloaded.
         cacheMgr.append(cacheItem);
     }
 
-//    qDebug() << "\nIndex      Key     OrigKey     Priority         Target     Cached          SizeMB    Width      Height        FName";
-//    for (int i=0; i<cache.totFiles; ++i) {
-//        qDebug() << i << "\t"
-//                 << cacheMgrCopy.at(i).key << "\t"
-//                 << cacheMgrCopy.at(i).origKey << "\t"
-//                 << cacheMgrCopy.at(i).priority << "\t"
-//                 << cacheMgrCopy.at(i).isTarget << "\t"
-//                 << cacheMgrCopy.at(i).isCached << "\t"
-//                 << cacheMgrCopy.at(i).sizeMB << "\t"
-//                 << metadata->getWidth(cacheMgrCopy.at(i).fName) << "\t"
-//                 << metadata->getHeight(cacheMgrCopy.at(i).fName) << "\t"
-//                 << cacheMgrCopy.at(i).fName;
-//    }
+/*    qDebug() << "\nIndex      Key     OrigKey     Priority         Target     Cached          SizeMB    Width      Height        FName";
+    for (int i=0; i<cache.totFiles; ++i) {
+        qDebug() << i << "\t"
+                 << cacheMgrCopy.at(i).key << "\t"
+                 << cacheMgrCopy.at(i).origKey << "\t"
+                 << cacheMgrCopy.at(i).priority << "\t"
+                 << cacheMgrCopy.at(i).isTarget << "\t"
+                 << cacheMgrCopy.at(i).isCached << "\t"
+                 << cacheMgrCopy.at(i).sizeMB << "\t"
+                 << metadata->getWidth(cacheMgrCopy.at(i).fName) << "\t"
+                 << metadata->getHeight(cacheMgrCopy.at(i).fName) << "\t"
+                 << cacheMgrCopy.at(i).fName;
+    }
+    */
 
     cacheMgrCopy.clear();
 
     cache.totFiles = filterRowCount;
     cache.pxUnitWidth = (float)cache.pxTotWidth/filterRowCount;
 
-    cacheStatus();
+    if (cache.isShowCacheStatus) cacheStatus();
 
-//    reportCacheManager("Test");
-//    qDebug() << "cache.key" << cache.key;
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();
     setPriorities(cache.key);

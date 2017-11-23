@@ -56,7 +56,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>1</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -141,7 +141,7 @@
      <widget class="QSpinBox" name="maxRecentSB">
       <property name="geometry">
        <rect>
-        <x>230</x>
+        <x>170</x>
         <y>60</y>
         <width>48</width>
         <height>24</height>
@@ -178,31 +178,34 @@
     <widget class="QSpinBox" name="cacheSizeSpinbox">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>140</x>
        <y>30</y>
-       <width>71</width>
+       <width>51</width>
        <height>24</height>
       </rect>
      </property>
      <property name="minimum">
-      <number>500</number>
+      <number>1</number>
      </property>
      <property name="maximum">
-      <number>32000</number>
+      <number>64</number>
      </property>
      <property name="singleStep">
-      <number>500</number>
+      <number>1</number>
      </property>
      <property name="value">
-      <number>4999</number>
+      <number>4</number>
+     </property>
+     <property name="displayIntegerBase">
+      <number>10</number>
      </property>
     </widget>
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>140</x>
        <y>70</y>
-       <width>131</width>
+       <width>95</width>
        <height>141</height>
       </rect>
      </property>
@@ -290,7 +293,7 @@
      <property name="geometry">
       <rect>
        <x>220</x>
-       <y>307</y>
+       <y>294</y>
        <width>141</width>
        <height>16</height>
       </rect>
@@ -308,7 +311,7 @@
      <property name="geometry">
       <rect>
        <x>370</x>
-       <y>303</y>
+       <y>290</y>
        <width>71</width>
        <height>24</height>
       </rect>
@@ -336,7 +339,7 @@
       <rect>
        <x>40</x>
        <y>34</y>
-       <width>151</width>
+       <width>91</width>
        <height>16</height>
       </rect>
      </property>
@@ -346,15 +349,15 @@
       </font>
      </property>
      <property name="text">
-      <string>Cache size (MB)</string>
+      <string>Cache size (GB)</string>
      </property>
     </widget>
     <widget class="QLabel" name="label">
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>74</y>
-       <width>111</width>
+       <y>70</y>
+       <width>91</width>
        <height>16</height>
       </rect>
      </property>
@@ -371,7 +374,7 @@
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>306</y>
+       <y>293</y>
        <width>151</width>
        <height>17</height>
       </rect>
@@ -407,7 +410,7 @@
      <property name="geometry">
       <rect>
        <x>150</x>
-       <y>260</y>
+       <y>250</y>
        <width>60</width>
        <height>24</height>
       </rect>
@@ -434,7 +437,7 @@
      <property name="geometry">
       <rect>
        <x>280</x>
-       <y>260</y>
+       <y>250</y>
        <width>60</width>
        <height>24</height>
       </rect>
@@ -461,7 +464,7 @@
      <property name="geometry">
       <rect>
        <x>100</x>
-       <y>263</y>
+       <y>253</y>
        <width>41</width>
        <height>16</height>
       </rect>
@@ -479,7 +482,7 @@
      <property name="geometry">
       <rect>
        <x>230</x>
-       <y>263</y>
+       <y>253</y>
        <width>41</width>
        <height>16</height>
       </rect>
@@ -491,6 +494,54 @@
      </property>
      <property name="text">
       <string>Height</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="showCacheThreadActivityChk">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>320</y>
+       <width>151</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Show cache thread activity</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_6">
+     <property name="geometry">
+      <rect>
+       <x>270</x>
+       <y>30</y>
+       <width>191</width>
+       <height>181</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;Experiment with different cache sizes. 2-8 GB appear to work best. Cache performance does not always improve with size.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;If you tend to move back and forth between files then a 50% cache ahead strategy is best. If you generally just move ahead through the images in the folder then weighting a higher % ahead makes sense.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::AutoText</enum>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
      </property>
     </widget>
    </widget>

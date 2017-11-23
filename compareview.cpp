@@ -691,17 +691,16 @@ void CompareView::enterEvent(QEvent *event)
     qDebug() << "CompareView::enterEvent" << currentImagePath;
     #endif
     }
-    this->setFocus();
-//    if (imageIndex != thumbView->currentIndex()) {
-        thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
-        thumbView->setCurrentIndex(imageIndex);
-        thumbView->setSelectionMode(QAbstractItemView::NoSelection);
-        this->setStyleSheet("QGraphicsView  {"
-                            "margin:1; "
-                            "border-style: solid; "
-                            "border-width: 2; "
-                            "border-color: rgb(225,225,225);}");
-//    }
+    select();
+//    this->setFocus();
+//    thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
+//    thumbView->setCurrentIndex(imageIndex);
+//    thumbView->setSelectionMode(QAbstractItemView::NoSelection);
+//    this->setStyleSheet("QGraphicsView  {"
+//                        "margin:1; "
+//                        "border-style: solid; "
+//                        "border-width: 2; "
+//                        "border-color: rgb(225,225,225);}");
     QGraphicsView::enterEvent(event);
 }
 
@@ -712,10 +711,43 @@ void CompareView::leaveEvent(QEvent *event)
     qDebug() << "CompareView::enterEvent" << currentImagePath;
     #endif
     }
+    deselect();
+//    this->setStyleSheet("QGraphicsView  {"
+//                        "margin:1; "
+//                        "border-style: solid; "
+//                        "border-width: 2; "
+//                        "border-color: rgb(111,111,111);}");
+    QGraphicsView::leaveEvent(event);
+}
+
+void CompareView::select()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::select" << currentImagePath;
+    #endif
+    }
+    this->setFocus();
+    thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
+    thumbView->setCurrentIndex(imageIndex);
+    thumbView->setSelectionMode(QAbstractItemView::NoSelection);
+    this->setStyleSheet("QGraphicsView  {"
+                        "margin:1; "
+                        "border-style: solid; "
+                        "border-width: 2; "
+                        "border-color: rgb(225,225,225);}");
+}
+
+void CompareView::deselect()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::deselect" << currentImagePath;
+    #endif
+    }
     this->setStyleSheet("QGraphicsView  {"
                         "margin:1; "
                         "border-style: solid; "
                         "border-width: 2; "
                         "border-color: rgb(111,111,111);}");
-    QGraphicsView::leaveEvent(event);
 }

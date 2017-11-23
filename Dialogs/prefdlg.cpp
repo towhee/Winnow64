@@ -51,7 +51,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->slideshowRandomChk->setChecked(mw->slideShowRandom);
 
     // cache
-    ui->cacheSizeSpinbox->setValue(mw->cacheSizeMB);
+    ui->cacheSizeSpinbox->setValue(mw->cacheSizeMB / 1000);
     ui->showCacheStatusChk->setChecked(mw->isShowCacheStatus);
     ui->cacheStatusWidthSpin->setValue(mw->cacheStatusWidth);
     cacheWtAhead = mw->cacheWtAhead;
@@ -201,7 +201,8 @@ void Prefdlg::on_cacheSizeSpinbox_valueChanged(int value)
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
                                    ui->previewWidthSB->value(),
-                                   ui->previewHeightSB->value());
+                                   ui->previewHeightSB->value(),
+                                   ui->showCacheThreadActivityChk->isChecked());
     }
 }
 
@@ -214,7 +215,22 @@ void Prefdlg::on_showCacheStatusChk_clicked()
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
                                    ui->previewWidthSB->value(),
-                                   ui->previewHeightSB->value());
+                                   ui->previewHeightSB->value(),
+                                   ui->showCacheThreadActivityChk->isChecked());
+    }
+}
+
+void Prefdlg::on_showCacheThreadActivityChk_clicked()
+{
+    if (okToUpdate) {
+        emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                                   ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheStatusWidthSpin->value(),
+                                   cacheWtAhead,
+                                   ui->cachePreviewsChk->isChecked(),
+                                   ui->previewWidthSB->value(),
+                                   ui->previewHeightSB->value(),
+                                   ui->showCacheThreadActivityChk->isChecked());
     }
 }
 
@@ -227,7 +243,8 @@ void Prefdlg::on_cacheStatusWidthSpin_valueChanged(int value)
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
                                    ui->previewWidthSB->value(),
-                                   ui->previewHeightSB->value());
+                                   ui->previewHeightSB->value(),
+                                   ui->showCacheThreadActivityChk->isChecked());
     }
 }
 
@@ -241,7 +258,8 @@ void Prefdlg::on_cache50AheadRadio_clicked()
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
                                    ui->previewWidthSB->value(),
-                                   ui->previewHeightSB->value());
+                                   ui->previewHeightSB->value(),
+                                   ui->showCacheThreadActivityChk->isChecked());
    }
 }
 
@@ -255,7 +273,8 @@ void Prefdlg::on_cache60AheadRadio_clicked()
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
                                    ui->previewWidthSB->value(),
-                                   ui->previewHeightSB->value());
+                                   ui->previewHeightSB->value(),
+                                   ui->showCacheThreadActivityChk->isChecked());
     }
 }
 
@@ -269,7 +288,8 @@ void Prefdlg::on_cache70AheadRadio_clicked()
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
                                    ui->previewWidthSB->value(),
-                                   ui->previewHeightSB->value());
+                                   ui->previewHeightSB->value(),
+                                   ui->showCacheThreadActivityChk->isChecked());
     }
 }
 
@@ -283,7 +303,8 @@ void Prefdlg::on_cache80AheadRadio_clicked()
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
                                    ui->previewWidthSB->value(),
-                                   ui->previewHeightSB->value());
+                                   ui->previewHeightSB->value(),
+                                   ui->showCacheThreadActivityChk->isChecked());
     }
 }
 
@@ -297,7 +318,8 @@ void Prefdlg::on_cache90AheadRadio_clicked()
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
                                    ui->previewWidthSB->value(),
-                                   ui->previewHeightSB->value());
+                                   ui->previewHeightSB->value(),
+                                   ui->showCacheThreadActivityChk->isChecked());
     }
 }
 
@@ -311,7 +333,8 @@ void Prefdlg::on_cache100AheadRadio_clicked()
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
                                    ui->previewWidthSB->value(),
-                                   ui->previewHeightSB->value());
+                                   ui->previewHeightSB->value(),
+                                   ui->showCacheThreadActivityChk->isChecked());
     }
 }
 
@@ -330,7 +353,8 @@ void Prefdlg::on_cachePreviewsChk_clicked()
                                cacheWtAhead,
                                ui->cachePreviewsChk->isChecked(),
                                ui->previewWidthSB->value(),
-                               ui->previewHeightSB->value());
+                               ui->previewHeightSB->value(),
+                               ui->showCacheThreadActivityChk->isChecked());
 }
 
 void Prefdlg::on_previewWidthSB_valueChanged(int value)
@@ -341,7 +365,8 @@ void Prefdlg::on_previewWidthSB_valueChanged(int value)
                                cacheWtAhead,
                                ui->cachePreviewsChk->isChecked(),
                                ui->previewWidthSB->value(),
-                               ui->previewHeightSB->value());
+                               ui->previewHeightSB->value(),
+                               ui->showCacheThreadActivityChk->isChecked());
 }
 
 void Prefdlg::on_previewHeightSB_valueChanged(int value)
@@ -352,7 +377,8 @@ void Prefdlg::on_previewHeightSB_valueChanged(int value)
                                cacheWtAhead,
                                ui->cachePreviewsChk->isChecked(),
                                ui->previewWidthSB->value(),
-                               ui->previewHeightSB->value());
+                               ui->previewHeightSB->value(),
+                               ui->showCacheThreadActivityChk->isChecked());
 }
 
 void Prefdlg::on_rememberFolderChk_clicked()

@@ -30,7 +30,7 @@ signals:
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
             int cacheStatusWidth, int cacheWtAhead, bool usePreview,
-                               int previewWidth, int previewHeight);
+                               int previewWidth, int previewHeight, bool activity);
     void updateFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata,
                                bool isThumbs, bool isStatusBar);
 
@@ -62,6 +62,7 @@ private slots:
     // cache
     void on_cacheSizeSpinbox_valueChanged(int value);
     void on_showCacheStatusChk_clicked();
+    void on_showCacheThreadActivityChk_clicked();
     void on_cacheStatusWidthSpin_valueChanged(int value);
     void on_cache50AheadRadio_clicked();
     void on_cache60AheadRadio_clicked();

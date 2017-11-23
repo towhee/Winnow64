@@ -17,6 +17,7 @@ public:
     bool load(const QSize &central);
     void pick(bool isPick, QModelIndex idx);
     void ratingColorClass(QString rating, QString colorClass, QModelIndex idx);
+    void go(QString key);
     void zoomOut();
     void zoomIn();
     void zoomToFit();
@@ -61,6 +62,7 @@ private:
     void configureGrid();
     void loadGrid();
     long area(int rows, int cols);
+    int current();    // compare index row for currentIndex
 };
 
 #endif // COMPARE_H

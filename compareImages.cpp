@@ -95,8 +95,9 @@ bool CompareImages::load(const QSize &centralWidgetSize)
     }
 
     loadGrid();
-//    ivList->at(0)->setFocus();
-//    ivList->at(0)->setStyleSheet("QLabel {border: white;}");
+
+    thumbView->setCurrentIndex(imList->at(0)->imageIndex);
+    go("Home");
     return true;
 }
 
@@ -240,6 +241,53 @@ long CompareImages::area(int rows, int cols)
 //                 << "sum area" << area;
     }
     return area;
+}
+
+int CompareImages::current()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareImages::current";
+    #endif
+    }
+    QModelIndex idx = thumbView->currentIndex();
+    for (int i = 0; i < imList->count(); ++i) {
+        QModelIndex idxItem = imList->at(i)->imageIndex;
+        if (imList->at(i)->imageIndex == idx) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void CompareImages::go(QString key)
+{
+    if (key == "Right") {
+        int i = current();
+        imList->at(i)->deselect();
+        if (i == imList->count() - 1) i = 0;
+        else i++;
+        imList->at(i)->select();
+    }
+    if (key == "Left") {
+        int i = current();
+        imList->at(i)->deselect();
+        if (i == 0) i = imList->count() - 1;
+        else i--;
+        imList->at(i)->select();
+    }
+    if (key == "End") {
+        int i = current();
+        imList->at(i)->deselect();
+        i = imList->count() - 1;
+        imList->at(i)->select();
+    }
+    if (key == "Home") {
+        int i = current();
+        imList->at(i)->deselect();
+        i = 0;
+        imList->at(i)->select();
+    }
 }
 
 void CompareImages::pick(bool isPick, QModelIndex idx)

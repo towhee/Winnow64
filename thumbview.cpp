@@ -106,11 +106,6 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     mw = parent;
     this->dm = dm;
 
-//    // capture scrollbar show event
-//    scrollbar = new Scrollbar(this);
-//    setVerticalScrollBar(scrollbar);
-//    connect(scrollbar, SIGNAL(updateScrollTo()), this, SLOT(scrollToCurrent()));
-
     pickFilter = false;
 
     setViewMode(QListView::IconMode);
@@ -701,9 +696,8 @@ void ThumbView::selectUp()
     qDebug() << "ThumbView::selectUp";
     #endif
     }
-    if(G::mode == "Compare") return;
-    selectPrev();
-    setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
+    if (G::mode == "Table" || !isWrapping()) selectPrev();
+    else setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
 }
 
 void ThumbView::selectDown()
@@ -713,9 +707,8 @@ void ThumbView::selectDown()
     qDebug() << "ThumbView::selectDown";
     #endif
     }
-    if(G::mode == "Compare") return;
-    selectNext();
-//    setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
+    if (G::mode == "Table" || !isWrapping()) selectNext();
+    else setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
 }
 
 void ThumbView::selectFirst()
@@ -725,9 +718,7 @@ void ThumbView::selectFirst()
     qDebug() << "ThumbView::selectFirst";
     #endif
     }
-    if(G::mode == "Compare") return;
     selectThumb(0);
-//    if (isSelectedItem()) selectThumb(0);
 }
 
 void ThumbView::selectLast()
@@ -737,9 +728,7 @@ void ThumbView::selectLast()
     qDebug() << "ThumbView::selectLast";
     #endif
     }
-    if(G::mode == "Compare") return;
     selectThumb(getLastRow());
-//    if (isSelectedItem()) selectThumb(getLastRow());
 }
 
 void ThumbView::selectRandom()
@@ -750,7 +739,6 @@ void ThumbView::selectRandom()
     #endif
     }
     selectThumb(getRandomRow());
-//    if (isSelectedItem()) selectThumb(getRandomRow());
 }
 
 void ThumbView::selectNextPick()
@@ -991,7 +979,17 @@ bool ThumbView::eventFilter(QObject *obj, QEvent *event)
             && readyToScroll
             && (obj->objectName() == "VerticalScrollBar"
             || obj->objectName() == "HorizontalScrollBar"))
+    {
+        static int count = 0;
+        count++;
+        qDebug() << "ThumbView events" << obj << event << "G::mode" << G::mode << "Count =" << count;
         scrollToCurrent();
+
+//        if(count > 1) {
+//            scrollToCurrent();
+//            count = 0;
+//        }
+    }
     return QWidget::eventFilter(obj, event);
 }
 

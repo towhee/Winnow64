@@ -20,6 +20,7 @@
 #include "infoview.h"
 #include "compareImages.h"
 #include "ui_helpform.h"
+#include "ui_introduction.h"
 #include "sstream"
 #include <iostream>
 #include <iomanip>
@@ -119,6 +120,7 @@ public:
     // preferences: cache
     int cacheSizeMB;
     bool isShowCacheStatus;
+    bool isShowCacheThreadActivity;
     int cacheStatusWidth;
     int cacheWtAhead;
     bool isCachePreview;
@@ -192,6 +194,12 @@ private slots:
     void zoom50();
     void zoom100();
     void zoom200();
+    void keyRight();
+    void keyLeft();
+    void keyUp();
+    void keyDown();
+    void keyHome();
+    void keyEnd();
 //    void zoomTo(float zoomTo);
     void zoomToggle();
     void updateStatus(bool showFileCount, QString s);
@@ -224,7 +232,8 @@ private slots:
     void slideShow();
     void nextSlide();
     void setCacheParameters(int size, bool show, int width, int wtAhead,
-                            bool isCachePreview, int cachePreviewWidth, int cachePreviewHeight);
+                            bool isCachePreview, int cachePreviewWidth,
+                            int cachePreviewHeight, bool activity);
     void setThumbDockParameters(bool isThumbWrapWhenTopOrBottomDock, bool isAutoFit, bool isVerticalTitle);
     void selectAllThumbs();
     void removeBookmark();
@@ -346,12 +355,12 @@ private:
     QAction *oldPrefAction;
 
     // Go Menu
-    QAction *nextThumbAction;
-    QAction *prevThumbAction;
-    QAction *upThumbAction;
-    QAction *downThumbAction;
-    QAction *firstThumbAction;
-    QAction *lastThumbAction;
+    QAction *keyRightAction;
+    QAction *keyLeftAction;
+    QAction *keyUpAction;
+    QAction *keyDownAction;
+    QAction *keyHomeAction;
+    QAction *keyEndAction;
     QAction *nextPickAction;
     QAction *prevPickAction;
     QAction *rate0Action;
@@ -524,6 +533,7 @@ private:
     bool wasThumbDockVisibleBeforeGridInvoked;
     bool isUpdatingState;
 
+    bool isFirstTimeNoSettings;
     bool isInitializing;
     bool isStressTest;
     bool hasGridBeenActivated;
