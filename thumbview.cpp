@@ -160,7 +160,7 @@ void ThumbView::refreshThumbs() {
     #endif
     }
     // if workspace invoked with diff thumb parameters
-    setThumbParameters();
+//    setThumbParameters();
     this->dataChanged(dm->sf->index(0, 0, QModelIndex()),
       dm->sf->index(getLastRow(), 0, QModelIndex()));
 }
@@ -871,6 +871,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     }
     // all wrapping is row wrapping
     if (isWrapping()) {
+        return;
         qDebug() << "ThumbView::thumbsFit isWrapping = true";
         // adjust thumb width
         int scrollWidth = 12;
@@ -982,7 +983,7 @@ bool ThumbView::eventFilter(QObject *obj, QEvent *event)
     {
         static int count = 0;
         count++;
-        qDebug() << "ThumbView events" << obj << event << "G::mode" << G::mode << "Count =" << count;
+//        qDebug() << "ThumbView events" << obj << event << "G::mode" << G::mode << "Count =" << count;
         scrollToCurrent();
 
 //        if(count > 1) {

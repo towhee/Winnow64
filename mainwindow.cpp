@@ -74,7 +74,7 @@ variables in MW (this class) and managed in the prefDlg class.
 */
 
     // structure to hold persistant settings between sessions
-    setting = new QSettings("Winnow", "winnow_101");
+    setting = new QSettings("Winnow", "winnow_100");
 
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel
@@ -102,26 +102,27 @@ variables in MW (this class) and managed in the prefDlg class.
     bool isSettings = loadSettings();//dependent on bookmarks and actions
     loadShortcuts(true);            // dependent on createActions
 
-    if (!resetSettings) {
+    if (!resetSettings && isSettings) {
+        qDebug() << "Restoring geometry";
         restoreGeometry(setting->value("Geometry").toByteArray());
+        qDebug() << "Restoring state";
+        // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
+        isFirstTimeNoSettings = false;
+    }
+    else {
+        isFirstTimeNoSettings = true;
     }
 
     setupCentralWidget();
     createAppStyle();
 
-    // recall previous state in case last closed in Grid mode
+    // recall previous thumbDock state in case last closed in Grid mode
     thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
 
     if (isSettings && !resetSettings) updateState();
     else {
         defaultWorkspace();
-        isFirstTimeNoSettings = true;
-//        QString welcomeText = "<h3>Welcome to Winnow</h3>"
-//            + tr("<p>To view images select a folder from the Folders dock or from the menu File > Open Folder</p>");
-//        centralLabel->setAlignment(Qt::AlignCenter);
-//        centralLabel->setText(welcomeText);
-//        centralLayout->setCurrentIndex(0);
     }
 
     // process the persistant folder if available
@@ -183,8 +184,10 @@ thumbdock is resized by the user when:
             QResizeEvent *resizeEvent = static_cast<QResizeEvent*>(event);
             int newHt = resizeEvent->size().height();
             if (newHt != oldHt) {
-//                qDebug() << "\nMW::eventFilter dock area"
-//                         << "thumbHeight =" << thumbView->thumbHeight;
+                qDebug() << "\nMW::eventFilter dock area"
+                         << "thumbView->thumbHeight =" << thumbView->thumbHeight
+                         << "oldHt =" << oldHt
+                         << "newHt =" << newHt;
                  thumbView->thumbsFit(dockWidgetArea(thumbDock));
                  oldHt = newHt;
              }
@@ -456,6 +459,8 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     if (metadataLoaded) {
         imageCacheThread->updateImageCache(fPath);
     }
+
+    isInitializing = false;
 
 /*   Other stuff tried and reported ...
  *
@@ -1590,31 +1595,16 @@ void MW::setupCentralWidget()
     qDebug() << "MW::setupCentralWidget";
     #endif
     }
-
-//    // Current working version
-//    centralLabel = new QLabel;
-//    QString welcomeText = "<h3>Welcome to Winnow</h3>"
-//        + tr("<p>To view images select a folder from the Folders dock or from the menu File > Open Folder</p>");
-//    centralLabel->setAlignment(Qt::AlignCenter);
-//    centralLabel->setText(welcomeText);
-
-//    QScrollArea area;
-//    QLabel("TEST");
-//    area.
-//    centralLayout->addWidget(ui.label);     // first time open program welcome screen
-
-    QWidget *welcome = new QWidget;
-    Ui::introWidget ui;
+    QScrollArea *welcome = new QScrollArea;
+    Ui::welcomeScrollArea ui;
     ui.setupUi(welcome);
-    qDebug() << "ui.label->text()" << ui.label->text();
 
     centralLayout->addWidget(welcome);     // first time open program tips
-//    centralLayout->addWidget(centralLabel);     // first time open program tips
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
     centralLayout->addWidget(tableView);
     centralLayout->addWidget(gridView);
-    centralLayout->setCurrentIndex(0);
+//    centralLayout->setCurrentIndex(0);
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
 }
@@ -4006,7 +3996,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
 void MW::updateState()
 {
 /*
-Called when program starting and when a workspace is invoked.  Based on the
+Called when program starting or when a workspace is invoked.  Based on the
 condition of actions sets the visibility of all window components. */
     {
     #ifdef ISDEBUG
@@ -4079,21 +4069,38 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 When the thumbDock is moved or when the thumbnails have been resized set the
 thumbDock features accordingly, based on settings in preferences for wrapping
 and titlebar visibility.
+
+Note that a floating thumbDock does not trigger this slot.  The float
+condition is handled by setThumbDockFloatFeatures.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::setThumbDockFeatures";
+    qDebug() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________";
     #endif
     }
+    if(isInitializing) {
+        qDebug() << "Still initializing - cancel setThumbDockFeatures";
+        return;
+    }
+
+    int h = thumbView->height();
     thumbView->setMaximumHeight(100000);
 
-    if ((area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea)
-         && isThumbDockVerticalTitle)
+    /* Check if the thumbDock is docked top or bottom.  If so, set the titlebar
+       to vertical and the thumbDock to accomodate the height of the thumbs. Set
+       horizontal scrollbar on all the time (to simplify resizing dock and
+       thumbs).  The vertical scrollbar depends on whether wrapping is checked
+       in preferences.
+    */
+    if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea)
     {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
+        thumbView->setWrapping(false);
+//        thumbView->setWrapping(thumbView->isThumbWrapWhenTopOrBottomDock);
+        thumbView->isTopOrBottomDock = true;
         // if thumbDock area changed then set dock height to thumb sizw
         if (!thumbView->isThumbWrapWhenTopOrBottomDock &&
             !thumbDock->isFloating() &&
@@ -4107,27 +4114,18 @@ and titlebar visibility.
 
             int newThumbDockHeight = thumbView->getThumbCellSize().height();
 
-            // horizontal scrollBar?
-            int thumbCellWidth = thumbView->getThumbCellSize().width();
-//            int maxThumbsBeforeScrollReqd = thumbView->viewport()->width() / thumbCellWidth;
-//            int thumbsCount = dm->sf->rowCount();
-//            int thumbDockWidth = thumbView->viewport()->width();
-//            bool isScrollBar = true;
-
-//            if (isScrollBar) {
-                maxHt += scrollBarHeight;// + 1;
-                minHt += scrollBarHeight;// + 1;
-                newThumbDockHeight += scrollBarHeight;// + 1;
-//            }
+            maxHt += scrollBarHeight;// + 1;
+            minHt += scrollBarHeight;// + 1;
+            newThumbDockHeight += scrollBarHeight;// + 1;
 
             thumbView->setMaximumHeight(maxHt);
-            thumbView->setMinimumHeight(minHt);
+            thumbView->setMinimumHeight(62);
+//            thumbView->setMinimumHeight(minHt);
 
             thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-
             resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
-
-/*            qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
+/*
+               qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
                      << "***  thumbView Ht =" << thumbView->height()
                      << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
                      << "thumbHeight =" << thumbView->thumbHeight
@@ -4136,20 +4134,25 @@ and titlebar visibility.
                      */
         }
     }
+    /* must be docked left or right.  Turn horizontal scrollbars off.  Turn
+       wrapping on
+    */
     else {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        thumbView->setWrapping(true);
+        thumbView->isTopOrBottomDock = false;
     }
 
-    if (area == Qt::LeftDockWidgetArea || area == Qt::RightDockWidgetArea)
-        thumbView->setWrapping(true);
-    if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea) {
-        thumbView->setWrapping(thumbView->isThumbWrapWhenTopOrBottomDock);
-        thumbView->isTopOrBottomDock = true;
-    }
-    else thumbView->isTopOrBottomDock = false;
+//    if (area == Qt::LeftDockWidgetArea || area == Qt::RightDockWidgetArea)
+//        thumbView->setWrapping(true);
+//    if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea) {
+//        thumbView->setWrapping(thumbView->isThumbWrapWhenTopOrBottomDock);
+//        thumbView->isTopOrBottomDock = true;
+//    }
+//    else thumbView->isTopOrBottomDock = false;
 
     /*
     thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);

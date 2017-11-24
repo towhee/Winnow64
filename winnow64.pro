@@ -69,7 +69,8 @@ FORMS += \
     helpform.ui \
     aligndlg.ui \
     testaligndlg.ui \
-    introduction.ui
+    introduction.ui \
+    welcome.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns

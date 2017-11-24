@@ -709,7 +709,7 @@ information in the top left corner of the image.  The text has a drop shadow
 to help make it visible against different coloured backgrounds. */
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageView::setInfo";
+    qDebug() << "ImageView::moveShootingInfo";
     #endif
     }
 

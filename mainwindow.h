@@ -20,7 +20,8 @@
 #include "infoview.h"
 #include "compareImages.h"
 #include "ui_helpform.h"
-#include "ui_introduction.h"
+//#include "ui_introduction.h"
+#include "ui_welcome.h"
 #include "sstream"
 #include <iostream>
 #include <iomanip>
@@ -475,6 +476,7 @@ private:
     //    QAction *moveToAction;
     //    QAction *deleteAction;
 
+    QScrollArea *welcome;       // welcome screen for first time use
     QLineEdit *filterBar;
     QLabel *stateLabel;
     QLabel *cacheLabel;

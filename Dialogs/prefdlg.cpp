@@ -13,7 +13,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->setupUi(this);
     ui->listWidget->setCurrentRow(lastPrefPage);
 
-    // this works because friend class of MW
+    // this works because prefdlg is a friend class of MW
     MW *mw = qobject_cast<MW*>(parent);
 
     // general
