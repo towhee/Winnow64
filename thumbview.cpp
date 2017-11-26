@@ -163,9 +163,10 @@ void ThumbView::refreshThumbs() {
 //    setThumbParameters();
     this->dataChanged(dm->sf->index(0, 0, QModelIndex()),
       dm->sf->index(getLastRow(), 0, QModelIndex()));
+    emit updateThumbDockHeight();
 }
 
-void ThumbView::setThumbParameters()
+void ThumbView::setThumbParameters(bool okayToUpdateThumbDockHeight)
 {
 /*
 Helper function for in class calls where thumb parameters already defined
@@ -178,7 +179,7 @@ Helper function for in class calls where thumb parameters already defined
     setSpacing(thumbSpacing);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels);
-    if (!isThumbWrapWhenTopOrBottomDock) emit updateThumbDockHeight();
+    if(okayToUpdateThumbDockHeight) emit updateThumbDockHeight();
 }
 
 void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
@@ -197,32 +198,8 @@ void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
     labelFontSize = _labelFontSize;
     showThumbLabels = _showThumbLabels;
 
-    setThumbParameters();
+    setThumbParameters(true);
 }
-
-//rgh this prob not reqd now
-//void ThumbView::setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid,
-//                int _thumbSpacingGrid,int _thumbPaddingGrid, int _labelFontSizeGrid,
-//                bool _showThumbLabelsGrid)
-//{
-//    /*
-
-//    */
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "ThumbView::setThumbGridParameters";
-//    #endif
-//    }
-//    qDebug() << "ThumbView::setThumbGridParameters";
-////    thumbWidthGrid = _thumbWidthGrid;
-////    thumbHeightGrid = _thumbHeightGrid;
-////    thumbSpacingGrid = _thumbSpacingGrid;
-////    thumbPaddingGrid = _thumbPaddingGrid;
-////    labelFontSizeGrid = _labelFontSizeGrid;
-////    showThumbLabelsGrid = _showThumbLabelsGrid;
-
-//    setThumbParameters();
-//}
 
 int ThumbView::getThumbSpaceMin()
 {
@@ -779,9 +756,8 @@ void ThumbView::thumbsEnlarge()
         if (thumbWidth > 160) thumbWidth = 160;
         if (thumbHeight > 160) thumbHeight = 160;
     }
-    setThumbParameters();
+    setThumbParameters(true);
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
-//    if (isAutoFit) thumbsFit(0);
 }
 
 void ThumbView::thumbsShrink()
@@ -797,9 +773,8 @@ void ThumbView::thumbsShrink()
         if (thumbWidth < 40) thumbWidth = 40;
         if (thumbHeight < 40) thumbHeight = 40;
     }
-    setThumbParameters();
+    setThumbParameters(true);
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
-//    if (isAutoFit) thumbsFit();
 }
 
 void ThumbView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
@@ -824,7 +799,6 @@ void ThumbView::resizeEvent(QResizeEvent *event)
     }
 //    qDebug() << "ThumbView::resizeEvent";
     QListView::resizeEvent(event);
-    if (isAutoFit) thumbsFit(Qt::NoDockWidgetArea);
 }
 
 void ThumbView::thumbsFit(Qt::DockWidgetArea area)
@@ -894,7 +868,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
             }
             padding++;
         } while (improving);
-        setThumbParameters();
+        setThumbParameters(false);
     }
     // no wrapping - must be bottom or top dock area
     else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea){
@@ -906,16 +880,68 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
 
         // adjust thumb height
         float aspect = thumbWidth / thumbHeight;
+        // get the current thumb cell
         int thumbSpaceHeight = thumbViewDelegate->getThumbCell().height();
+        // margin = nonthumb space is used to rebuild cell after thumb resize to fit
         int margin = thumbSpaceHeight - thumbHeight;
         int thumbMax = getThumbSpaceMax();
         thumbSpaceHeight = ht < thumbMax ? ht : thumbMax;
         thumbHeight = thumbSpaceHeight - margin;
         thumbWidth = thumbHeight * aspect;
 
+        qDebug() << "ht" << ht
+                 << "thumbHeight" << thumbHeight;
+
         // change the thumbnail size in thumbViewDelegate
-        setThumbParameters();
+        setThumbParameters(false);
     }
+}
+
+void ThumbView::thumbsFitTopOrBottom()
+{
+    /*
+    Called by MW::eventFilter when a thumbDock resize event occurs, griggered by
+    the user resizing the thumbDock. Adjust the size of the thumbs to fit the new
+    thumbDock height.
+    */
+        {
+        #ifdef ISDEBUG
+        qDebug() << "MW::thumbsFitTopOrBottom";
+        #endif
+        }
+        /*
+        thumbSpace anatomy (see ThumbViewDelegate)
+         */
+        int scrollHeight = 12;
+//        int thumbHeight = thumbView->thumbHeight;
+//        int thumbWidth = thumbView->thumbWidth;
+        float aspect = (float)thumbWidth / thumbHeight;
+        // viewport available height
+        int netViewportHt = height() - scrollHeight;
+        int hMax = getThumbSpaceMax();
+        int hMin = getThumbSpaceMin();
+        // restrict thumbSpace within limits
+        int newThumbSpaceHt = netViewportHt > hMax ? hMax : netViewportHt;
+        newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
+        // derive new thumbsize from new thumbSpace
+        thumbHeight = thumbViewDelegate->getThumbHeightFromAvailHeight(newThumbSpaceHt);
+        // make sure within range (should be from thumbSpace check but just to be sure)
+        thumbHeight = thumbHeight > 160 ? 160 : thumbHeight;
+        thumbHeight = thumbHeight < 40 ? 40 : thumbHeight;
+        thumbWidth = thumbHeight * aspect;
+        // check thumbWidth within range
+        if(thumbWidth > 160) {
+            thumbWidth = 160;
+            thumbHeight = 160 / aspect;
+        }
+/*        qDebug() << "netViewportHt" << netViewportHt
+                 << "hMin / hMax" << hMin << hMax
+                 << "newThumbSpaceHt" << newThumbSpaceHt
+                 << "thumbHeight" << thumbView->thumbHeight
+                 << "thumbWidth" << thumbView->thumbWidth;
+                 */
+
+        setThumbParameters(false);
 }
 
 void ThumbView::scrollToCurrent()

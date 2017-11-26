@@ -1,13 +1,9 @@
+
+
 Height of thumbDock (ht) changes
-    If thumbDock top or bottom
-        Calc new thumbSpace to fit
-        Calc maxThumbs fit without scrollBar
-        If scrollBar req'd and no scrollBar
-            newHt = ht + scrollBarHt
-            Resize thumbDock to newHt - causes recurse to #1
-        If scrollBar not req'd and is scrollBar
-            newHt = ht - scrollBarHt
-            Resize thumbDock to newHt - causes recurse to #1
-        Resize thumbs to fit
+    MW::eventFilter - Resize event trapped
+        thumbFitTopOrBottom resizes thumbs to fit
+            ThumbView::setThumbParameters
 
-
+PrefDlg resize thumbs
+    ThumbView::setThumbParameters

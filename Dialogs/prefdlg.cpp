@@ -40,12 +40,6 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->showThumbLabelChk_2->setChecked(mw->gridView->showThumbLabels);
     ui->lockDimChk_2->setChecked(true);
 
-    // thumb dock
-    ui->wrapThumbsChk->setChecked(mw->thumbView->isThumbWrapWhenTopOrBottomDock);
-    ui->autoFitChk->setChecked(mw->thumbView->isAutoFit);
-    ui->autoFit2Chk->setChecked(mw->thumbView->isAutoFit);
-    ui->vertTitleChk->setChecked(mw->isThumbDockVerticalTitle);
-
     // slideshow
     ui->slideshowDelaySpinbox->setValue(mw->slideShowDelay);
     ui->slideshowRandomChk->setChecked(mw->slideShowRandom);
@@ -53,6 +47,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     // cache
     ui->cacheSizeSpinbox->setValue(mw->cacheSizeMB / 1000);
     ui->showCacheStatusChk->setChecked(mw->isShowCacheStatus);
+    ui->showCacheThreadActivityChk->setChecked(mw->isShowCacheThreadActivity);
     ui->cacheStatusWidthSpin->setValue(mw->cacheStatusWidth);
     cacheWtAhead = mw->cacheWtAhead;
     switch (cacheWtAhead) {
@@ -385,46 +380,6 @@ void Prefdlg::on_rememberFolderChk_clicked()
 {
     if (okToUpdate) {
         emit updateRememberFolder(ui->rememberFolderChk->isChecked());
-    }
-}
-
-// thumb dock
-
-void Prefdlg::on_wrapThumbsChk_clicked()
-{
-    if (okToUpdate) {
-        emit updateThumbDockParameters(ui->wrapThumbsChk->isChecked(),
-                                       ui->autoFitChk->isChecked(),
-                                       ui->vertTitleChk->isChecked());
-    }
-}
-
-void Prefdlg::on_autoFitChk_clicked()
-{
-    if (okToUpdate) {
-        ui->autoFit2Chk->setChecked(ui->autoFitChk->isChecked());
-        emit updateThumbDockParameters(ui->wrapThumbsChk->isChecked(),
-                                       ui->autoFitChk->isChecked(),
-                                       ui->vertTitleChk->isChecked());
-    }
-}
-
-void Prefdlg::on_autoFit2Chk_clicked()
-{
-    if (okToUpdate) {
-        ui->autoFitChk->setChecked(ui->autoFit2Chk->isChecked());
-        emit updateThumbDockParameters(ui->wrapThumbsChk->isChecked(),
-                                       ui->autoFitChk->isChecked(),
-                                       ui->vertTitleChk->isChecked());
-    }
-}
-
-void Prefdlg::on_vertTitleChk_clicked()
-{
-    if (okToUpdate) {
-        emit updateThumbDockParameters(ui->wrapThumbsChk->isChecked(),
-                                       ui->autoFitChk->isChecked(),
-                                       ui->vertTitleChk->isChecked());
     }
 }
 

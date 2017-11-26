@@ -71,7 +71,7 @@
      <property name="title">
       <string>Trackpad Swipe Action</string>
      </property>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <property name="geometry">
        <rect>
         <x>20</x>
@@ -501,7 +501,7 @@
       <rect>
        <x>40</x>
        <y>320</y>
-       <width>151</width>
+       <width>191</width>
        <height>17</height>
       </rect>
      </property>
@@ -641,24 +641,6 @@
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
     </widget>
-    <widget class="QCheckBox" name="wrapThumbsChk">
-     <property name="geometry">
-      <rect>
-       <x>280</x>
-       <y>250</y>
-       <width>101</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Wrap thumbs</string>
-     </property>
-    </widget>
     <widget class="QSlider" name="fontSizeSlider">
      <property name="geometry">
       <rect>
@@ -702,24 +684,6 @@
      </property>
      <property name="tickInterval">
       <number>5</number>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="vertTitleChk">
-     <property name="geometry">
-      <rect>
-       <x>280</x>
-       <y>270</y>
-       <width>121</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Vertical titlebar</string>
      </property>
     </widget>
     <widget class="QLabel" name="iconPaddingLbl">
@@ -1122,45 +1086,6 @@
      </property>
      <property name="text">
       <string>Font size</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="autoFitChk">
-     <property name="geometry">
-      <rect>
-       <x>40</x>
-       <y>310</y>
-       <width>131</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Auto fit thumbs</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_21">
-     <property name="geometry">
-      <rect>
-       <x>40</x>
-       <y>250</y>
-       <width>221</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>When thumb dock is at top or bottom:</string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
      </property>
     </widget>
    </widget>
@@ -1634,24 +1559,6 @@
      </property>
      <property name="text">
       <string>Font size</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="autoFit2Chk">
-     <property name="geometry">
-      <rect>
-       <x>40</x>
-       <y>310</y>
-       <width>131</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Auto fit thumbs</string>
      </property>
     </widget>
    </widget>

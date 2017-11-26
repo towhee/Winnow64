@@ -27,6 +27,8 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Left key not always moving back
+- Done: Thread activity lights not hiding
 - Done:Full screen mode needs some love
 - Done: Up arrow doing weird stuff when thumbDock wrapping = true
 - Done: thumbDock visibility not remembered between sessions if close from Grid mode

@@ -35,6 +35,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
+    int debugThumbHt;
+
     int copyCutCount;   // req'd?
 
     QSettings *setting;
@@ -75,9 +77,6 @@ public:
         int thumbHeightGrid;
         int labelFontSizeGrid;
         bool showThumbLabelsGrid;
-        bool isThumbWrapWhenTopOrBottomDock;
-        bool isAutoFit;
-        bool isVerticalTitle;
         bool isImageInfoVisible;
         bool includeSubfolders;
         bool isLoupeDisplay;
@@ -109,9 +108,6 @@ public:
     bool inclSubfolders;
     int maxRecentFolders = 10;
     QString ingestRootFolder;
-
-    // preferences: docks
-    bool isThumbDockVerticalTitle;
 
     // preferences: slideshow
     int slideShowDelay;
@@ -218,6 +214,7 @@ private slots:
     void setThumbsFilter();
     void clearThumbsFilter();
     void setShootingInfo();
+    void setCacheStatusVisibility();
     void togglePick();
     void updatePick();
     void updateRating();
@@ -235,7 +232,6 @@ private slots:
     void setCacheParameters(int size, bool show, int width, int wtAhead,
                             bool isCachePreview, int cachePreviewWidth,
                             int cachePreviewHeight, bool activity);
-    void setThumbDockParameters(bool isThumbWrapWhenTopOrBottomDock, bool isAutoFit, bool isVerticalTitle);
     void selectAllThumbs();
     void removeBookmark();
     void rotateLeft();

@@ -188,7 +188,8 @@ thumbdock is resized by the user when:
                          << "thumbView->thumbHeight =" << thumbView->thumbHeight
                          << "oldHt =" << oldHt
                          << "newHt =" << newHt;
-                 thumbView->thumbsFit(dockWidgetArea(thumbDock));
+                 thumbView->thumbsFitTopOrBottom();
+//                makeThumbsFitDockAfterResize();
                  oldHt = newHt;
              }
         }
@@ -328,7 +329,7 @@ void MW::folderSelectionChange()
     QString dirPath;
     QDir testDir;
     if (isInitializing) {
-        isInitializing = false;
+//        isInitializing = false;
         if (rememberLastDir) {
             dirPath = lastDir;
             // is drive still available and valid?
@@ -460,7 +461,17 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
         imageCacheThread->updateImageCache(fPath);
     }
 
-    isInitializing = false;
+    qDebug() << "MW::fileSelectionChange  isInitializing =" << isInitializing;
+
+    if (isInitializing) {
+        isInitializing = false;
+        if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
+            dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
+        {
+            thumbView->setWrapping(false);
+        }
+//        setThumbDockFeatures(dockWidgetArea(thumbDock));
+    }
 
 /*   Other stuff tried and reported ...
  *
@@ -1708,9 +1719,6 @@ void MW::createThumbView()
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
 
-    thumbView->isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
-    thumbView->isAutoFit = setting->value("isAutoFit").toBool();
-
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
@@ -1719,7 +1727,8 @@ void MW::createThumbView()
 
     connect(thumbView, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
-}
+
+    }
 
 void MW::createGridView()
 {
@@ -1738,11 +1747,6 @@ void MW::createGridView()
     gridView->thumbHeight = setting->value("thumbHeightGrid").toInt();
     gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
     gridView->showThumbLabels = setting->value("showThumbLabelsGrid").toBool();
-
-    // only applies to thumbView, set true for set thumbdock logic in setThumbParameters
-    gridView->isThumbWrapWhenTopOrBottomDock = true;
-    // how does this apply to gridView?  //rgh
-    gridView->isAutoFit = setting->value("isAutoFit").toBool();
 
     // double mouse click fires displayLoupe
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -1988,24 +1992,6 @@ void MW::createStatusBar()
 
     stateLabel = new QLabel;
     statusBar()->addWidget(stateLabel);
-}
-
-void MW::setThumbDockParameters(bool isThumbWrapWhenTopOrBottomDock,
-                                bool isAutoFit, bool isVerticalTitle)
-{
-/*
-Signal from prefDlg when thumbWrap or verticalTitle changed
-*/
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::setThumbDockParameters";
-    #endif
-    }
-    qDebug() << "MW::setThumbDockParameters";
-    thumbView->isThumbWrapWhenTopOrBottomDock = isThumbWrapWhenTopOrBottomDock;       // is this needed?
-    thumbView->isAutoFit = isAutoFit;
-    isThumbDockVerticalTitle = isVerticalTitle;
-    setThumbDockFeatures(dockWidgetArea(thumbDock));
 }
 
 void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
@@ -2494,14 +2480,8 @@ workspace with a matching name to the action is used.
     gridView->thumbPadding = w.thumbPaddingGrid,
     gridView->labelFontSize = w.labelFontSizeGrid,
     gridView->showThumbLabels = w.showThumbLabelsGrid;
-    thumbView->isThumbWrapWhenTopOrBottomDock = w.isThumbWrapWhenTopOrBottomDock;
-    thumbView->isAutoFit = w.isAutoFit;
-//    qDebug() << "\nMW::invokeWorkspace before calling setThumbParameters" << "\n"
-//             << "***  thumbView Ht =" << thumbView->height()
-//             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-//             << "thumbHeight =" << thumbView->thumbHeight << "\n";
-    thumbView->setThumbParameters();
-    gridView->setThumbParameters();
+    thumbView->setThumbParameters(true);
+    gridView->setThumbParameters(false);
     // if in grid view override normal behavior if workspace invoked
     wasThumbDockVisibleBeforeGridInvoked = w.isThumbDockVisible;
     updateState();
@@ -2545,9 +2525,6 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.thumbHeight = thumbView->thumbHeight;
     wsd.labelFontSize = thumbView->labelFontSize;
     wsd.showThumbLabels = thumbView->showThumbLabels;
-    wsd.isThumbWrapWhenTopOrBottomDock = thumbView->isThumbWrapWhenTopOrBottomDock;
-    wsd.isAutoFit = thumbView->isAutoFit;
-    wsd.isVerticalTitle = isThumbDockVerticalTitle; // rgh thumbDock->titleBarWidget()->is;
 
     wsd.thumbSpacingGrid = gridView->thumbSpacing;
     wsd.thumbPaddingGrid = gridView->thumbPadding;
@@ -2693,14 +2670,13 @@ app is "stranded" on secondary monitors that are not attached.
     gridView->showThumbLabels = true;
 
     thumbView->setWrapping(false);
-    thumbView->isAutoFit = false;
 
 //    qDebug() << "\nMW::defaultWorkspace before calling setThumbParameters" << "\n"
 //             << "***  thumbView Ht =" << thumbView->height()
 //             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
 //             << "thumbHeight =" << thumbView->thumbHeight << "\n";
-    thumbView->setThumbParameters();
-    gridView->setThumbParameters();
+    thumbView->setThumbParameters(true);
+    gridView->setThumbParameters(false);
 
     folderDock->setFloating(false);
     favDock->setFloating(false);
@@ -2796,9 +2772,6 @@ void MW::reportWorkspace(int n)
              << "\nthumbHeightGrid" << ws.thumbHeightGrid
              << "\nlabelFontSizeGrid" << ws.labelFontSizeGrid
              << "\nshowThumbLabelsGrid" << ws.showThumbLabelsGrid
-             << "\nisThumbWrap" << ws.isThumbWrapWhenTopOrBottomDock
-             << "\nisAutoFit" << ws.isAutoFit
-             << "\nisVerticalTitle" << ws.isVerticalTitle
              << "\nshowShootingInfo" << ws.isImageInfoVisible
              << "\nisLoupeDisplay" << ws.isLoupeDisplay
              << "\nisGridDisplay" << ws.isGridDisplay
@@ -2841,9 +2814,6 @@ void MW::loadWorkspaces()
         ws.thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
         ws.labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
         ws.showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
-        ws.isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
-        ws.isAutoFit = setting->value("isAutoFit").toBool();
-        ws.isVerticalTitle = setting->value("isVerticalTitle").toBool();
         ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
         ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
         ws.isGridDisplay = setting->value("isGridDisplay").toBool();
@@ -2889,9 +2859,6 @@ void MW::reportState()
              << "\nthumbHeightGrid" << w.thumbHeightGrid
              << "\nlabelFontSizeGrid" << w.labelFontSizeGrid
              << "\nshowThumbLabelsGrid" << w.showThumbLabelsGrid
-             << "\nisThumbWrap" << w.isThumbWrapWhenTopOrBottomDock
-             << "\nisAutoFit" << w.isAutoFit
-             << "\nisVerticalTitle" << isThumbDockVerticalTitle
              << "\nshowShootingInfo" << w.isImageInfoVisible
              << "\nisLoupeDisplay" << w.isLoupeDisplay
              << "\nisGridDisplay" << w.isGridDisplay
@@ -3109,8 +3076,8 @@ void MW::preferences()
             thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
     connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool)),
             gridView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
-    connect(prefdlg, SIGNAL(updateThumbDockParameters(bool, bool, bool)),
-            this, SLOT(setThumbDockParameters(bool, bool, bool)));
+//    connect(prefdlg, SIGNAL(updateThumbDockParameters(bool, bool, bool)),
+//            this, SLOT(setThumbDockParameters(bool, bool, bool)));
     connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
             this, SLOT(setSlideShowParameters(int, bool)));
     connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, bool, int, int, bool)),
@@ -3478,9 +3445,6 @@ void MW::writeSettings()
     setting->setValue("thumbHeightGrid", gridView->thumbHeight);
     setting->setValue("labelFontSizeGrid", gridView->labelFontSize);
     setting->setValue("showThumbLabelsGrid", (bool)gridView->showThumbLabels);
-    setting->setValue("isThumbWrapWhenTopOrBottomDock", (bool)thumbView->isThumbWrapWhenTopOrBottomDock);
-    setting->setValue("isAutoFit", (bool)thumbView->isAutoFit);
-    setting->setValue("isVerticalTitle", (bool)isThumbDockVerticalTitle);
     // slideshow
     setting->setValue("slideShowDelay", (int)slideShowDelay);
     setting->setValue("slideShowRandom", (bool)slideShowRandom);
@@ -3605,9 +3569,6 @@ void MW::writeSettings()
         setting->setValue("thumbHeightGrid", ws.thumbHeightGrid);
         setting->setValue("labelFontSizeGrid", ws.labelFontSizeGrid);
         setting->setValue("showThumbLabelsGrid", ws.showThumbLabelsGrid);
-        setting->setValue("isThumbWrapWhenTopOrBottomDock", ws.isThumbWrapWhenTopOrBottomDock);
-        setting->setValue("isAutoFit", ws.isAutoFit);
-        setting->setValue("isVerticalTitle", ws.isVerticalTitle);
         setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
         setting->setValue("isLoupeDisplay", ws.isLoupeDisplay);
         setting->setValue("isGridDisplay", ws.isGridDisplay);
@@ -3671,16 +3632,8 @@ Preferences are located in the prefdlg class and updated here.
     lastDir = setting->value("lastDir").toString();
     maxRecentFolders = setting->value("maxRecentFolders").toInt();
     ingestRootFolder = setting->value("ingestRootFolder").toString();
-
     // trackpad
     imageView->isTrackpadScroll = setting->value("isTrackpadScroll").toBool();
-
-    // thumbs (set in thumbView creation)
-    isThumbDockVerticalTitle = setting->value("isVerticalTitle").toBool();
-
-// rgh make sure to add thumb sort to workspaces when implemented
-//    setting->setValue("thumbsSortFlags", (int)0);
-
     // slideshow
     slideShowDelay = setting->value("slideShowDelay").toInt();
     slideShowRandom = setting->value("slideShowRandom").toBool();
@@ -3792,9 +3745,6 @@ Preferences are located in the prefdlg class and updated here.
 //        ws.thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
 //        ws.labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
 //        ws.showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
-//        ws.isThumbWrapWhenTopOrBottomDock = setting->value("isThumbWrapWhenTopOrBottomDock").toBool();
-//        ws.isAutoFit = setting->value("isAutoFit").toBool();
-//        ws.isVerticalTitle = setting->value("isVerticalTitle").toBool();
 //        ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
 //        ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
 //        ws.isGridDisplay = setting->value("isGridDisplay").toBool();
@@ -4007,6 +3957,7 @@ condition of actions sets the visibility of all window components. */
     isUpdatingState = true;
     setMenuBarVisibility();
     setStatusBarVisibility();
+    setCacheStatusVisibility();
     setFolderDockVisibility();
     setFavDockVisibility();
     setFilterDockVisibility();
@@ -4019,7 +3970,7 @@ condition of actions sets the visibility of all window components. */
     setThumbDockLockMode();
     setShootingInfo();
     setCentralView();
-    setThumbDockFeatures(dockWidgetArea(thumbDock));
+//    setThumbDockFeatures(dockWidgetArea(thumbDock));
     isUpdatingState = false;
 //    reportState();
 }
@@ -4065,14 +4016,14 @@ have been resized.
 
 void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 {
-/*
-When the thumbDock is moved or when the thumbnails have been resized set the
-thumbDock features accordingly, based on settings in preferences for wrapping
-and titlebar visibility.
+    /*
+    When the thumbDock is moved or when the thumbnails have been resized set the
+    thumbDock features accordingly, based on settings in preferences for wrapping
+    and titlebar visibility.
 
-Note that a floating thumbDock does not trigger this slot.  The float
-condition is handled by setThumbDockFloatFeatures.
-*/
+    Note that a floating thumbDock does not trigger this slot. The float
+    condition is handled by setThumbDockFloatFeatures.
+    */
     {
     #ifdef ISDEBUG
     qDebug() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________";
@@ -4080,10 +4031,9 @@ condition is handled by setThumbDockFloatFeatures.
     }
     if(isInitializing) {
         qDebug() << "Still initializing - cancel setThumbDockFeatures";
-        return;
+//        return;
     }
 
-    int h = thumbView->height();
     thumbView->setMaximumHeight(100000);
 
     /* Check if the thumbDock is docked top or bottom.  If so, set the titlebar
@@ -4099,28 +4049,23 @@ condition is handled by setThumbDockFloatFeatures.
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
         thumbView->setWrapping(false);
-//        thumbView->setWrapping(thumbView->isThumbWrapWhenTopOrBottomDock);
         thumbView->isTopOrBottomDock = true;
         // if thumbDock area changed then set dock height to thumb sizw
-        if (!thumbView->isThumbWrapWhenTopOrBottomDock &&
-            !thumbDock->isFloating() &&
-            !asGridAction->isChecked()) // && dm->sf->rowCount() > 0)
-        {
+        if (!thumbDock->isFloating() && !asGridAction->isChecked()) {
             // make thumbDock height fit thumbs
             int maxHt = thumbView->getThumbSpaceMax();
             int minHt = thumbView->getThumbSpaceMin();
             int scrollBarHeight = 12;
 //            int scrollBarHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
 
-            int newThumbDockHeight = thumbView->getThumbCellSize().height();
+            int thumbCellHt = thumbView->getThumbCellSize().height();
 
             maxHt += scrollBarHeight;// + 1;
             minHt += scrollBarHeight;// + 1;
-            newThumbDockHeight += scrollBarHeight;// + 1;
+            int newThumbDockHeight = thumbCellHt + scrollBarHeight;
 
-            thumbView->setMaximumHeight(maxHt);
-            thumbView->setMinimumHeight(62);
-//            thumbView->setMinimumHeight(minHt);
+            thumbView->setMaximumHeight(maxHt + 2);
+            thumbView->setMinimumHeight(minHt);
 
             thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
             resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
@@ -4145,25 +4090,6 @@ condition is handled by setThumbDockFloatFeatures.
         thumbView->setWrapping(true);
         thumbView->isTopOrBottomDock = false;
     }
-
-//    if (area == Qt::LeftDockWidgetArea || area == Qt::RightDockWidgetArea)
-//        thumbView->setWrapping(true);
-//    if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea) {
-//        thumbView->setWrapping(thumbView->isThumbWrapWhenTopOrBottomDock);
-//        thumbView->isTopOrBottomDock = true;
-//    }
-//    else thumbView->isTopOrBottomDock = false;
-
-    /*
-    thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-
-    thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    */
-
-    if (asGridAction->isChecked()) thumbView->setWrapping(true);
-    if (thumbView->isAutoFit) thumbView->thumbsFit(area);
 }
 
 void MW::loupeDisplay()
@@ -4192,7 +4118,7 @@ lack of notification when the QListView has finished painting itself.
         thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
     setThumbDockVisibity();
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    thumbView->setThumbParameters();
+    thumbView->setThumbParameters(true);
     // limit time spent intercepting paint events to call scrollToCurrent
     thumbView->readyToScroll = true;
     QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
@@ -4223,7 +4149,7 @@ lack of notification when the QListView has finished painting itself.
     setThumbDockVisibity();
     // show tableView in central widget
     centralLayout->setCurrentIndex(GridTab);
-    gridView->setThumbParameters();
+    gridView->setThumbParameters(false);
     gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     // limit time spent intercepting paint events to call scrollToCurrent
     gridView->readyToScroll = true;
@@ -4275,7 +4201,7 @@ void MW::compareDisplay()
         setThumbDockFeatures(dockWidgetArea(thumbDock));
         thumbDockVisibleAction->setChecked(true);
         setThumbDockVisibity();
-        thumbView->setThumbParameters();
+        thumbView->setThumbParameters(false);
     }
 
     G::mode = "Compare";
@@ -4585,6 +4511,19 @@ void MW::setAllDocksLockMode()
     }
 }
 
+void MW::setCacheStatusVisibility()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setCacheStatusVisibility";
+    #endif
+    }
+    cacheLabel->setVisible(isShowCacheStatus);
+    metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+    thumbThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+    imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+}
+
 void MW::closeEvent(QCloseEvent *event)
 {
     {
@@ -4882,7 +4821,7 @@ void MW::keyLeft()
     #endif
     }
     if (G::mode == "Compare") compareImages->go("Left");
-    else thumbView->selectNext();
+    else thumbView->selectPrev();
 }
 
 void MW::keyUp()

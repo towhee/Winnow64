@@ -26,7 +26,6 @@ signals:
             int thumbPadding, int labelFontSize, bool showThumbLabels);
     void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
                                int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid);
-    void updateThumbDockParameters(bool isThumbWrapWhenTopOrBottomDock, bool isAutoFit, bool isVerticalTitle);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
             int cacheStatusWidth, int cacheWtAhead, bool usePreview,
@@ -47,8 +46,8 @@ private slots:
     void on_iconPaddingSlider_valueChanged(int value);
     void on_showThumbLabelChk_clicked();
     void on_fontSizeSlider_valueChanged(int value);
-    void on_wrapThumbsChk_clicked();
-    void on_vertTitleChk_clicked();
+//    void on_wrapThumbsChk_clicked();
+//    void on_vertTitleChk_clicked();
     // thumbsGrid
     void on_iconWidthSlider_2_valueChanged(int value);
     void on_iconHeightSlider_2_valueChanged(int value);
@@ -80,10 +79,6 @@ private slots:
     void on_metadataChk_clicked();
     void on_thumbsChk_clicked();
     void on_statusBarChk_clicked();
-
-    void on_autoFitChk_clicked();
-
-    void on_autoFit2Chk_clicked();
 
 private:
 

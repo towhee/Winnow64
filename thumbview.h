@@ -39,19 +39,11 @@ public:
     int labelFontSize;
     bool showThumbLabels;
 
-//    int thumbWidthGrid;
-//    int thumbHeightGrid;
-//    int thumbSpacingGrid;
-//    int thumbPaddingGrid;
-//    int labelFontSizeGrid;
-//    bool showThumbLabelsGrid;
-
-    bool isThumbWrapWhenTopOrBottomDock;
     bool isTopOrBottomDock;
     bool isFloat;       // set by MW ...
-    bool isAutoFit;
 
     void updateLayout();
+
 
     ThumbViewDelegate *thumbViewDelegate;
     void selectThumb(int row);
@@ -71,7 +63,7 @@ public:
     QStringList getSelectedThumbsList();        //used by tags, might be useful
     int getCurrentRow();
     QString getCurrentFilename();       //not used, but might be handy
-    void setThumbParameters();
+    void setThumbParameters(bool okayToUpdateThumbDockHeight);
 
     QItemSelectionModel *thumbViewSelection;
 
@@ -86,6 +78,7 @@ public slots:
     void thumbsEnlarge();
     void thumbsShrink();
     void thumbsFit(Qt::DockWidgetArea area);
+    void thumbsFitTopOrBottom();
     void toggleFilterPick(bool isFilter);
     void invertSelection();                         //in use
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
