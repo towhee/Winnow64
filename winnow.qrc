@@ -56,7 +56,6 @@
         <file>console.txt</file>
         <file>images/winnow.icns</file>
         <file>images/Winnow coordinate spaces.png</file>
-        <file>qss/teststyle.css</file>
         <file>images/combobox-updown-arrow</file>
         <file>images/spindown_hover.png</file>
         <file>images/spindown_off.png</file>
@@ -101,12 +100,13 @@
         <file>images/winnow288.ico</file>
         <file>images/winnow288.png</file>
         <file>images/down-arrow3.png</file>
-        <file>qss/winnow.css</file>
         <file>images/winnow.ico</file>
         <file>Docs/Winnow help.html</file>
         <file>images/checkmark64.png</file>
         <file>images/checkmark128.png</file>
         <file>images/checkmark256.png</file>
         <file>images/ThumbsUp48.png</file>
+        <file>images/NoImagesInFolder.png</file>
+        <file>qss/winnow.css</file>
     </qresource>
 </RCC>

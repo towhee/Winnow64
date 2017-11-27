@@ -59,6 +59,7 @@ enum dataModelColumns {
 
     extern bool isThreadTrackingOn;
     extern bool isNewFolderLoaded;
+    extern int scrollBarThickness;
     extern qreal devicePixelRatio;
     extern QModelIndexList copyCutIdxList;  // req'd?
     extern QStringList copyCutFileList;     // req'd?

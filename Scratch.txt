@@ -1,9 +1,460 @@
+MW::MW
+MW::setupPlatform
+MW::createCentralWidget
+MW::createFilterView
+Filters::Filters
+Filters::createPredefinedFilters
+Filters::createDynamicFilters
+MW::createDataModel
+Metadata::Metadata
+Metadata::initExifHash
+Metadata::initIfdHash
+Metadata::initSupportedFiles
+DataModel::DataModel
+MW::createThumbView
+ThumbView::ThumbView
+QFont::setPixelSize: Pixel size <= 0 (0)
+MW::createGridView
+ThumbView::ThumbView
+QFont::setPixelSize: Pixel size <= 0 (0)
+MW::createTableView
+TableView::TableView
+MW::createSelectionModel
+MW::createInfoView
+InfoView::InfoView
+MW::createDataModel
+MetadataCache::MetadataCache
+ThumbCache::ThumbCache
+ImageCache::ImageCache
+MW::createImageView
+ImageView::ImageView
+MW::createCompareView
+CompareImages::CompareImages
+MW::createFSTree
+FSTree::FSTree
+FSTree::setModelFlags
+MW::createBookmarks
+BookMarks::BookMarks
+MW::setupDocks
+MW::createStatusBar
+MW::updataMetadataThreadRunStatus
+MW::updateThumbThreadRunningStatus
+MW::updateImageThreadRunStatus
+MW::createActions
+MW::createMenus
+MW::updateExternalApps
+MW::handleStartupArgs
+MW::loadSettings
+BookMarks::reloadBookmarks
+MW::loadShortcuts
+Restoring geometry
+Restoring state
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________
+Still initializing - cancel setThumbDockFeatures
+ThumbView::getThumbSpaceMax
+ThumbView::getThumbSpaceMin
+ThumbView::getThumbCellSize
+MW::setupCentralWidget
+MW::createAppStyle
+MW::updateState
+MW::setMenuBarVisibility
+MW::setStatusBarVisibility
+MW::setCacheStatusVisibility
+MW::setFolderDockVisibility
+MW::setFavDockVisibility
+MW::setFilterDockVisibility
+MW::setMetadataDockVisibility
+MW::setThumbDockVisibity
+MW::setFolderDockLockMode
+MW::setFavDockLockMode
+MW::setfilterDockLockMode
+MW::setMetadataDockLockMode
+MW::setThumbDockLockMode
+MW::setShootingInfo
+MW::setCentralView
+MW::loupeDisplay
+MW::setThumbDockVisibity
+ThumbView::setThumbParameters
+MW::setThumbDockHeight
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________
+Still initializing - cancel setThumbDockFeatures
+ThumbView::getThumbSpaceMax
+ThumbView::getThumbSpaceMin
+ThumbView::getThumbCellSize
 
 
-Height of thumbDock (ht) changes
-    MW::eventFilter - Resize event trapped
-        thumbFitTopOrBottom resizes thumbs to fit
-            ThumbView::setThumbParameters
+MW::folderSelectionChange
+*************************************************************************
+ThumbCache::stopThumbCache
+ImageCache::stopImageCache
+MetadataCache::stopMetadateCache
+MW::updateStatus
+MW::addRecentFolder
+MW::syncRecentFoldersMenu
+ThumbView::load
+Filters::removeChildrenDynamicFilters
+ThumbView::addFiles
+Add files elapsed time = 2 ms for  1 files
+Filters::addCategoryFromData
+SortFilter::filterChanged
+SortFilter::filterChanged
+SortFilter::filterChanged
+ThumbView::selectThumb(row) 0
 
-PrefDlg resize thumbs
-    ThumbView::setThumbParameters
+**********************************MW::fileSelectionChange
+ThumbView::selectThumb(row) 0
+ThumbView::selectThumb(index) QModelIndex(0,0,0x7fc0cc52f2b0,SortFilter(0x7fc0cc52b6f0))
+ThumbView::scrollToCurrent
+ThumbView::scrollToCurrent
+TableView::scrollToCurrent
+ImageView::loadImage
+>>>Load image from file
+Pixmap::load
+Metadata::getImageOrientation "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::isLoaded "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::loadImageMetadata
+Metadata::readMetadata
+Metadata::clearMetadata
+Metadata::formatJPG
+Metadata::getShootingInfo "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageView::getFitScaleFactor "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+MW::updatePick
+MW::updateRating
+MW::updateColorClass
+InfoView::updateInfo
+Metadata::isLoaded "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "File name" "2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Location" "/Users/roryhill/Pictures/4K"
+InfoView::addEntry "Size" "2.03 MB"
+Metadata::getDateTime "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Date" "2017:02:24 10:02:25"
+InfoView::addEntry "Modified" "2017-02-24 10:02 AM"
+Metadata::getWidth "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getHeight "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Dimensions" "2160x3840"
+InfoView::addEntry "Megapixel" "8.29"
+Metadata::getModel "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Model" "Canon EOS 7D Mark II"
+Metadata::getExposureTime "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Shutter speed" "1/1000 sec"
+Metadata::getAperture "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Aperture" "f/5.6"
+Metadata::getISO "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "ISO" "1000"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Focal length" "840mm"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Title" "Bald Eagle, Brunswick Point"
+InfoView::tweakHeaders
+MW::fileSelectionChange  isInitializing = true
+ThumbView::selectThumb(index) QModelIndex(0,0,0x7fc0cc52f2b0,SortFilter(0x7fc0cc52b6f0))
+ThumbView::sortThumbs
+MW::updateStatus
+MW::loadMetadataCache
+MetadataCache::stopMetadateCache
+MetadataCache::loadMetadataCache
+MetadataCache::run
+Metadata::isLoaded "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageView::resizeEvent
+ImageView::getFitScaleFactor "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageView::scale
+ImageView::movePickIcon
+ImageView::moveShootingInfo
+MW::updateStatus
+ImageView::movePickIcon
+ImageView::moveShootingInfo
+FSTree::resizeTreeColumn
+FSTree::resizeTreeColumn
+FSTree::resizeTreeColumn
+
+MW::eventFilter dock area thumbView->thumbHeight = 90 oldHt = 0 newHt = 116
+MW::thumbsFitTopOrBottom
+ThumbView::getThumbSpaceMax
+ThumbView::getThumbSpaceMin
+ThumbView::setThumbParameters
+ThumbView::resizeEvent
+ThumbView::resizeEvent
+ThumbView::scrollToCurrent
+ThumbView::scrollToCurrent
+ThumbView::resizeEvent
+MW::updataMetadataThreadRunStatus
+MW::loadThumbCache
+ThumbCache::stopThumbCache
+ThumbCache::loadThumbCache
+MW::loadImageCache
+DataModel::addMetadataToModel
+Metadata::getWidth "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ThumbCache::run
+Metadata::getHeight "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getAperture "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getApertureNum "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getExposureTime "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getExposureTime "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getISO "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getISO "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getModel "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getOffsetThumbJPG "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::isLoaded "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getLengthThumbJPG "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Filters::addCategoryFromData
+SortFilter::filterChanged
+SortFilter::filterChanged
+SortFilter::filterChanged
+Filters::addCategoryFromData
+SortFilter::filterChanged
+SortFilter::filterChanged
+SortFilter::filterChanged
+Filters::addCategoryFromData
+SortFilter::filterChanged
+SortFilter::filterChanged
+SortFilter::filterChanged
+Metadata::getImageOrientation "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageCache::initImageCache
+Metadata::getWidth "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getHeight "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageCache::scalePreview
+ImageView::updateImageCache
+ImageCache::getImCacheSize
+ImageCache::setPriorities
+ImageCache::setTargetRange
+MW::updataMetadataThreadRunStatus
+ImageCache::run
+ImageCache::nextToCache
+Pixmap::load
+ThumbView::resizeEvent
+ThumbView::scrollToCurrent
+ImageView::resizeEvent
+ImageView::getFitScaleFactor "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageView::sceneBiggerThanView "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageView::scale
+ImageView::movePickIcon
+ImageView::moveShootingInfo
+MW::updateStatus
+ImageView::movePickIcon
+ImageView::moveShootingInfo
+MW::updateThumbThreadRunningStatus
+ThumbView::setIcon "/Users/roryhill/Pictures/4K"
+ThumbView::refreshThumbs
+ThumbView::getLastRow
+MW::setThumbDockHeight
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________
+ThumbView::getThumbSpaceMax
+ThumbView::getThumbSpaceMin
+ThumbView::getThumbCellSize
+MW::updateStatus
+MW::updateThumbThreadRunningStatus
+MW::updateStatus
+ThumbView::refreshThumbs
+ThumbView::getLastRow
+MW::setThumbDockHeight
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________
+ThumbView::getThumbSpaceMax
+ThumbView::getThumbSpaceMin
+ThumbView::getThumbCellSize
+MW::updateImageThreadRunStatus
+ThumbView::scrollToCurrent
+Metadata::getImageOrientation "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageCache::getImCacheSize
+ImageCache::cacheStatus
+ImageCache::pxEnd
+ImageCache::nextToCache
+ImageCache::checkForOrphans
+ImageCache::removeOrphans
+ImageCache::cacheStatus
+ImageCache::pxEnd
+MW::updateImageThreadRunStatus
+
+PICK EMPTY FOLDER
+
+
+MW::bookmarkClicked
+
+
+MW::folderSelectionChange
+*************************************************************************
+ThumbCache::stopThumbCache
+ImageCache::stopImageCache
+MetadataCache::stopMetadateCache
+MW::updateStatus
+MW::getSelectedPath
+MW::addRecentFolder
+MW::syncRecentFoldersMenu
+ThumbView::load
+
+**********************************MW::fileSelectionChange
+ThumbView::scrollToCurrent
+ThumbView::scrollToCurrent
+TableView::scrollToCurrent
+ImageView::loadImage
+MW::fileSelectionChange  isInitializing = false
+Filters::removeChildrenDynamicFilters
+ThumbView::addFiles
+MW::updateStatus
+InfoView::clearInfo
+Metadata::clearMetadata
+ImageView::loadBlankImage
+
+PICK 4K FOLDER
+
+
+ImageView::enterEvent
+MW::bookmarkClicked
+
+
+MW::folderSelectionChange
+*************************************************************************
+ThumbCache::stopThumbCache
+ImageCache::stopImageCache
+MetadataCache::stopMetadateCache
+MW::updateStatus
+MW::getSelectedPath
+MW::addRecentFolder
+MW::syncRecentFoldersMenu
+ThumbView::load
+Filters::removeChildrenDynamicFilters
+ThumbView::addFiles
+Add files elapsed time = 2 ms for  1 files
+Filters::addCategoryFromData
+SortFilter::filterChanged
+SortFilter::filterChanged
+SortFilter::filterChanged
+ThumbView::selectThumb(row) 0
+ThumbView::selectThumb(index) QModelIndex(0,0,0x7fc0cc52f2b0,SortFilter(0x7fc0cc52b6f0))
+
+**********************************MW::fileSelectionChange
+ThumbView::selectThumb(row) 0
+ThumbView::selectThumb(index) QModelIndex(0,0,0x7fc0cc52f2b0,SortFilter(0x7fc0cc52b6f0))
+ThumbView::scrollToCurrent
+ThumbView::scrollToCurrent
+TableView::scrollToCurrent
+ImageView::loadImage
+ImageView::setFullDim
+Metadata::getWidth "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getHeight "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageView::setPreviewDim
+ImageCache::getPreviewSize
+ImageView::getFitScaleFactor "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::isLoaded "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getShootingInfo "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageView::getFitScaleFactor "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageView::scale
+ImageView::movePickIcon
+ImageView::moveShootingInfo
+MW::updateStatus
+MW::updatePick
+MW::updateRating
+MW::updateColorClass
+InfoView::updateInfo
+Metadata::isLoaded "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "File name" "2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Location" "/Users/roryhill/Pictures/4K"
+InfoView::addEntry "Size" "2.03 MB"
+Metadata::getDateTime "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Date" "2017:02:24 10:02:25"
+InfoView::addEntry "Modified" "2017-02-24 10:02 AM"
+Metadata::getWidth "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getHeight "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Dimensions" "2160x3840"
+InfoView::addEntry "Megapixel" "8.29"
+Metadata::getModel "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Model" "Canon EOS 7D Mark II"
+Metadata::getExposureTime "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Shutter speed" "1/1000 sec"
+Metadata::getAperture "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Aperture" "f/5.6"
+Metadata::getISO "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "ISO" "1000"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Focal length" "840mm"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+InfoView::addEntry "Title" "Bald Eagle, Brunswick Point"
+InfoView::tweakHeaders
+MW::fileSelectionChange  isInitializing = false
+ThumbView::sortThumbs
+MW::updateStatus
+MW::loadMetadataCache
+MetadataCache::stopMetadateCache
+MetadataCache::loadMetadataCache
+MetadataCache::run
+Metadata::isLoaded "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ThumbView::resizeEvent
+MW::updataMetadataThreadRunStatus
+MW::loadThumbCache
+ThumbCache::stopThumbCache
+ThumbCache::loadThumbCache
+MW::loadImageCache
+DataModel::addMetadataToModel
+ThumbCache::run
+Metadata::getWidth "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getHeight "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getAperture "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getOffsetThumbJPG "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getApertureNum "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::isLoaded "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getExposureTime "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getExposureTime "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getISO "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getISO "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getModel "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getFocalLength "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getLengthThumbJPG "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Filters::addCategoryFromData
+SortFilter::filterChanged
+SortFilter::filterChanged
+SortFilter::filterChanged
+Filters::addCategoryFromData
+SortFilter::filterChanged
+SortFilter::filterChanged
+SortFilter::filterChanged
+Filters::addCategoryFromData
+SortFilter::filterChanged
+SortFilter::filterChanged
+SortFilter::filterChanged
+Metadata::getImageOrientation "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageCache::initImageCache
+Metadata::getWidth "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+Metadata::getHeight "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageCache::scalePreview
+ImageView::updateImageCache
+ImageCache::getImCacheSize
+ImageCache::setPriorities
+ImageCache::setTargetRange
+MW::updataMetadataThreadRunStatus
+ImageCache::run
+ImageCache::nextToCache
+MW::updateThumbThreadRunningStatus
+ThumbView::setIcon "/Users/roryhill/Pictures/4K"
+ThumbView::refreshThumbs
+ThumbView::getLastRow
+MW::setThumbDockHeight
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________
+ThumbView::getThumbSpaceMax
+ThumbView::getThumbSpaceMin
+ThumbView::getThumbCellSize
+MW::updateStatus
+MW::updateThumbThreadRunningStatus
+MW::updateStatus
+ThumbView::refreshThumbs
+ThumbView::getLastRow
+MW::setThumbDockHeight
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________
+ThumbView::getThumbSpaceMax
+ThumbView::getThumbSpaceMin
+ThumbView::getThumbCellSize
+MW::updateImageThreadRunStatus
+ImageView::upgradeToFullSize
+ImageView::getFitScaleFactor "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"
+ImageView::scale
+ImageView::movePickIcon
+ImageView::moveShootingInfo
+MW::updateStatus
+MW::closeEvent
+MW::writeSettings
+/Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_9_2_clang_64bit-Release/Winnow.app/Contents/MacOS/Winnow exited with code 0

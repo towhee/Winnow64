@@ -899,49 +899,47 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
 
 void ThumbView::thumbsFitTopOrBottom()
 {
+/*
+Called by MW::eventFilter when a thumbDock resize event occurs, triggered by
+the user resizing the thumbDock. Adjust the size of the thumbs to fit the new
+thumbDock height.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::thumbsFitTopOrBottom";
+    #endif
+    }
     /*
-    Called by MW::eventFilter when a thumbDock resize event occurs, griggered by
-    the user resizing the thumbDock. Adjust the size of the thumbs to fit the new
-    thumbDock height.
-    */
-        {
-        #ifdef ISDEBUG
-        qDebug() << "MW::thumbsFitTopOrBottom";
-        #endif
-        }
-        /*
-        thumbSpace anatomy (see ThumbViewDelegate)
-         */
-        int scrollHeight = 12;
-//        int thumbHeight = thumbView->thumbHeight;
-//        int thumbWidth = thumbView->thumbWidth;
-        float aspect = (float)thumbWidth / thumbHeight;
-        // viewport available height
-        int netViewportHt = height() - scrollHeight;
-        int hMax = getThumbSpaceMax();
-        int hMin = getThumbSpaceMin();
-        // restrict thumbSpace within limits
-        int newThumbSpaceHt = netViewportHt > hMax ? hMax : netViewportHt;
-        newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
-        // derive new thumbsize from new thumbSpace
-        thumbHeight = thumbViewDelegate->getThumbHeightFromAvailHeight(newThumbSpaceHt);
-        // make sure within range (should be from thumbSpace check but just to be sure)
-        thumbHeight = thumbHeight > 160 ? 160 : thumbHeight;
-        thumbHeight = thumbHeight < 40 ? 40 : thumbHeight;
-        thumbWidth = thumbHeight * aspect;
-        // check thumbWidth within range
-        if(thumbWidth > 160) {
-            thumbWidth = 160;
-            thumbHeight = 160 / aspect;
-        }
+    thumbSpace anatomy (see ThumbViewDelegate)
+     */
+//    int scrollHeight = 12;
+    float aspect = (float)thumbWidth / thumbHeight;
+    // viewport available height
+    int netViewportHt = height() - G::scrollBarThickness;
+    int hMax = getThumbSpaceMax();
+    int hMin = getThumbSpaceMin();
+    // restrict thumbSpace within limits
+    int newThumbSpaceHt = netViewportHt > hMax ? hMax : netViewportHt;
+    newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
+    // derive new thumbsize from new thumbSpace
+    thumbHeight = thumbViewDelegate->getThumbHeightFromAvailHeight(newThumbSpaceHt);
+    // make sure within range (should be from thumbSpace check but just to be sure)
+    thumbHeight = thumbHeight > 160 ? 160 : thumbHeight;
+    thumbHeight = thumbHeight < 40 ? 40 : thumbHeight;
+    thumbWidth = thumbHeight * aspect;
+    // check thumbWidth within range
+    if(thumbWidth > 160) {
+        thumbWidth = 160;
+        thumbHeight = 160 / aspect;
+    }
 /*        qDebug() << "netViewportHt" << netViewportHt
-                 << "hMin / hMax" << hMin << hMax
-                 << "newThumbSpaceHt" << newThumbSpaceHt
-                 << "thumbHeight" << thumbView->thumbHeight
-                 << "thumbWidth" << thumbView->thumbWidth;
-                 */
+             << "hMin / hMax" << hMin << hMax
+             << "newThumbSpaceHt" << newThumbSpaceHt
+             << "thumbHeight" << thumbView->thumbHeight
+             << "thumbWidth" << thumbView->thumbWidth;
+             */
 
-        setThumbParameters(false);
+    setThumbParameters(false);
 }
 
 void ThumbView::scrollToCurrent()
@@ -980,7 +978,7 @@ void ThumbView::scrollToCurrent()
     return;
     */
 
-//    qDebug() << "ThumbView::scrollToCurrent  Elapsed time:" << G::t.elapsed();
+    qDebug() << "ThumbView::scrollToCurrent" << currentIndex();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 

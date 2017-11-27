@@ -159,7 +159,7 @@ to prevent jarring changes in perceived scale by the user.
                 previewBigEnough) {
             pmItem->setPixmap(imageCacheThread->imCache.value(fPath + "_Preview"));
             isPreview = true;
-            // if prev smaller than view than next image should also be smaller
+            // if prev smaller than view then next image should also be smaller
             // since each image may be different sizes have to equalize scale
             // zoomFit is still for prev image and previewFit is for current preview
             if (!isFit) zoom *= previewFit / zoomFit;
@@ -190,17 +190,15 @@ to prevent jarring changes in perceived scale by the user.
     }
 
     if (isLoaded) {
+        pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
         if (!metadata->isLoaded(currentImagePath)) {
-//            qDebug() << "metadata not loaded for" << currentImagePath;
             QFileInfo fileInfo(currentImagePath);
             bool loadMeta = metadata->loadImageMetadata(fileInfo);
-//            qDebug() << "LoadMetadata =" << loadMeta;
         }
         shootingInfo = metadata->getShootingInfo(currentImagePath) + "\n" +
                 metadata->getTitle(currentImagePath);
-//        qDebug() << "shootingInfo" << shootingInfo;
 
         zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
         if (!firstImageLoaded) {
@@ -213,12 +211,6 @@ to prevent jarring changes in perceived scale by the user.
         }
     }
 //    qDebug() << "elapsed:" << t.nsecsElapsed();
-
-    // ignore any arrow key events that occurred while loading
-//    isBusy = true;
-//    qApp->processEvents();  // events trapped in MW::event, ignored when isBusy
-//    isBusy = false;
-
     return isLoaded;
 }
 
@@ -237,15 +229,32 @@ are matched:
     #endif
     }
     loadFullSizeTimer->stop();
-    pmItem->setPixmap(imageCacheThread->imCache.value(currentImagePath));
-    setSceneRect(scene->itemsBoundingRect());
-    isPreview = false;
-    qreal prevZoomFit = zoomFit;
-    zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
-    zoom *= (zoomFit / prevZoomFit);
-    if (isFit) zoom = zoomFit;
-    scale();
-    if (isZoom) setScrollBars(scrollPct);
+    if(imageCacheThread->imCache.contains(currentImagePath)) {
+        pmItem->setPixmap(imageCacheThread->imCache.value(currentImagePath));
+        setSceneRect(scene->itemsBoundingRect());
+        isPreview = false;
+        qreal prevZoomFit = zoomFit;
+        zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
+        zoom *= (zoomFit / prevZoomFit);
+        if (isFit) zoom = zoomFit;
+        scale();
+        if (isZoom) setScrollBars(scrollPct);
+    }
+}
+
+void ImageView::emptyFolder()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ImageView::emptyFolder";
+    #endif
+    }
+//    QString noImages = ":/images/NoImagesInFolder.png";
+//    QString blankImage = ":/images/no_image.png";
+//    pixmap->load(blankImage, displayPixmap);
+//    pmItem->setPixmap(displayPixmap);
+    pmItem->setVisible(false);
+    infoDropShadow->setText("");
 }
 
 void ImageView::scale()
@@ -712,11 +721,6 @@ to help make it visible against different coloured backgrounds. */
     qDebug() << "ImageView::moveShootingInfo";
     #endif
     }
-
-//    QPalette palette1 = infoLabelShadow->palette();
-//    palette1.setColor(QPalette::WindowText, Qt::black);
-//    infoLabelShadow->setPalette(palette1);
-
     // window (w) and view (v) sizes are updated during resize
 
     int offset = 10;                        // offset pixels from the edge of image
@@ -736,24 +740,7 @@ to help make it visible against different coloured backgrounds. */
     else y = offset;
 
     QFont font( "Tahoma", 20);
-//    QFont font( "Arial", 48);
-//    font.setPointSize(100);
     font.setKerning(true);
-
-//    QLabel *info = new QLabel;
-//    info->setFont(font);
-////    info->setText("TEST");
-//    info->setAttribute(Qt::WA_TranslucentBackground);
-////    info->setGraphicsEffect(infoEffect);
-//    info->setText(infoString);
-////    qDebug() << "info =" << info->text();
-//    info->adjustSize();
-////    // make a little wider to account for the drop shadow
-//    info->resize(info->width()+10, info->height());
-//    scene->addWidget(info);
-//    info->move(x, y);
-//    info->setVisible(true);
-
 
     infoDropShadow->setFont(font);      // not working
     int fontSize = 14;

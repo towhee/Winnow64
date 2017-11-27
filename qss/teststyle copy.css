@@ -197,7 +197,7 @@ QScrollBar:vertical {
     background-color: rgb(77,77,77);
     margin-top: 0px;
     margin-bottom: 0px;
-    width: 12px;
+    width: 10px;       /* also set for QScrollBar:horizontal and global.cpp */
 }
 
 QScrollBar::handle:vertical {
@@ -238,7 +238,7 @@ QScrollBar:horizontal {
     background-color: rgb(77,77,77);
     margin-left: 0px;
     margin-right: 0px;
-    height: 12px;
+    height: 10px;       /* also set for QScrollBar:vertical and global.cpp */
 }
 
 QScrollBar::handle:horizontal {

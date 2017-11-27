@@ -2,11 +2,6 @@ QWidget {
     background-color: rgb(85,85,85);
     color: rgb(229,229,229);
     border-width: 0px;
-    font-size: 10px;
-}
-
-QGraphicsView {
-    border: none;
 }
 
 StatusBar::QLabel {
@@ -49,13 +44,13 @@ QMenuBar::item:pressed {
 }
 
 QFrame {
-    /* must keep blank */
+ /*   border: 2px solid green; */
 }
 
 QMainWindow::separator {
     background: rgb(90,90,90);
-    width: 3px;
-    height: 3px;
+    width: 2px;
+    height: 2px;
 }
 
 QMainWindow::separator:hover {
@@ -77,14 +72,6 @@ QGroupBox {
     margin-top: 6px; /* leave space at the top for the title */
 }
 
-QLabel {
-    border: none;
-}
-
-QStatusbar::item {
-    border: none;
-}
-
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top center; /* position at the top center */
@@ -94,10 +81,6 @@ QGroupBox::title {
 
 QDockWidget > QWidget {
     color: rgb(190,190,190);
-    margin: 0px;
-    padding: 0px;
-    spacing: 0px;
-    border: none;
 }
 
 QDockWidget::title {
@@ -106,7 +89,6 @@ QDockWidget::title {
                     stop: 0 rgb(88,88,88), stop: 1 rgb(66,66,66));
     padding-left: 2px;
     padding-top: 2px;
-/*    border: 1px solid rgb(99,99,99);    nada */
 }
 
 QTabWidget::pane { /* The tab widget frame */
@@ -117,13 +99,8 @@ QTabWidget::pane { /* The tab widget frame */
     border-radius: 5px;
 }
 
-/*QTabWidget::pane:selected {           nada
-    border: red;
-}*/
-
 QTabWidget::tab-bar {
     alignment: left;
-    border: 1px solid red;                        /* nada */
 }
 
 QTabBar::tab {
@@ -133,59 +110,31 @@ QTabBar::tab {
     padding: 4px 4px;
 }
 
-/*QTabBar:selected {                    nada
-    border: red;
-}*/
-
 QTabBar::tab:selected {
     color:white;
-    /* border: 1px solid red;   this woks for tabl only as expected */
-    background-color: rgb(80,80,80);
+    /*background-color: rgb(111,111,111);*/
 }
 
 QListView {
-    border: 1px solid rgb(85,85,85);
-}
-
-QStackedWidget {
-    border: 1px solid rgb(95,95,95);
-    border-radius: 5px;
-}
-
-QListWidget {
-    selection-color: rgb(225,225,0);
-    selection-background-color: rgb(85,85,85);
-
-    /*selection-background-color: rgb(95,95,95);*/
+/*    border: 1px solid green; */
 }
 
 QTableView
 {
-    alternate-background-color: rgb(90,90,90);
-    gridline-color: rgb(75,75,75);
-    color: rgb(190,190,190);
-    selection-color: rgb(190,190,190);
-    selection-background-color: rgb(45,45,45);
-    border: none;
+    alternate-background-color: rgb(87,87,87);
+    gridline-color: rgb(85,85,85);
 }
 
 QHeaderView
 {
-/*    background-color: rgb(95,95,95);
-    color: rgb(190,190,190);
-/*    color: rgb(85,85,85);  */
-/*    font-size: 10px;      */
+    background-color: rgb(95,95,95);
+    color: rgb(85,85,85);
 }
 
-QHeaderView::section {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                stop: 0 rgb(88,88,88), stop: 1 rgb(66,66,66));
-/*    background-color: rgb(95,95,95);  */
+QHeaderView::section{
+    background-color: rgb(95,95,95);
     border-style: solid;
-    border: 1px solid rgb(85,85,85);
     border-bottom: 1px solid rgb(85,85,85);
-    color: rgb(225,225,225);
-/*    font: 13px;       */
 }
 
 QAbstractScrollArea {
@@ -197,7 +146,7 @@ QScrollBar:vertical {
     background-color: rgb(77,77,77);
     margin-top: 0px;
     margin-bottom: 0px;
-    width: 10px;       /* also set for QScrollBar:horizontal and global.cpp */
+    width: 12px;
 }
 
 QScrollBar::handle:vertical {
@@ -237,8 +186,8 @@ QScrollBar:horizontal {
     border: 1px solid gray;
     background-color: rgb(77,77,77);
     margin-left: 0px;
-    margin-right: 0px;
-    height: 10px;       /* also set for QScrollBar:vertical and global.cpp */
+    margin-right: 0px;c
+    height: 14px;
 }
 
 QScrollBar::handle:horizontal {
@@ -402,16 +351,10 @@ QSpinBox:hover, QSpinBox:focus {
     border-color: silver;
 }
 
-QSpinBox:disabled {
-    color: rgb(77,77,77);
-    background-color: rgb(88,88,88);
-}
-
 QSpinBox::up-button, QSpinBox::down-button  {
     width: 0px;
     border-width: 0px;
 }
-
 
 QLineEdit {
     background-color: rgb(111,111,111);

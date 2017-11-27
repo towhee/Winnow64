@@ -386,7 +386,11 @@ void MW::folderSelectionChange()
         // MW::fileSelectionChange triggered by dm->load
         updateStatus(false, "No images in this folder");
         infoView->clearInfo();
+        metadata->clearMetadata();
+//        imageView->infoDropShadow->setVisible(false);
+        imageView->emptyFolder();
         cacheLabel->setVisible(false);
+        isInitializing = false;
         return;
     }
 //    qDebug() << "???? thumbView->selectThumb(0)";
@@ -424,7 +428,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     }
     if(current.row() == previous.row()) return;
 
-    // starting program, set first image to displa
+    // starting program, set first image to display
     if(previous.row() == -1) thumbView->selectThumb(0);
 
     QModelIndexList selected = selectionModel->selectedIndexes();
@@ -434,6 +438,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // currentIndex must be column 0 - this might cause another call to
     // fileSelectionChange, hence check above if same datamodel row
     QModelIndex currentIndex = dm->sf->index(current.row(), 0);
+    thumbView->setCurrentIndex(currentIndex);
     // update delegates so they can highlight the current item
     thumbView->thumbViewDelegate->currentIndex = currentIndex;
     gridView->thumbViewDelegate->currentIndex = currentIndex;
@@ -441,8 +446,6 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     gridView->scrollToCurrent();
     // keep tableView scrollTo position hint = center
     tableView->scrollToCurrent();
-//    thumbView->selectThumb(currentIndex.row());
-//    gridView->selectThumb(currentIndex.row());
 
     // update imageView, use cache if image loaded, else read it from file
     QString fPath = currentIndex.data(G::FileNameRole).toString();
@@ -461,8 +464,6 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
         imageCacheThread->updateImageCache(fPath);
     }
 
-    qDebug() << "MW::fileSelectionChange  isInitializing =" << isInitializing;
-
     if (isInitializing) {
         isInitializing = false;
         if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
@@ -470,7 +471,6 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
         {
             thumbView->setWrapping(false);
         }
-//        setThumbDockFeatures(dockWidgetArea(thumbDock));
     }
 
 /*   Other stuff tried and reported ...
@@ -1940,7 +1940,8 @@ void MW::createAppStyle()
     #endif
     }
     // add error trapping for file io  rgh todo
-    QFile fStyle(":/qss/teststyle.css");
+    QFile fStyle(":/qss/winnow.css");
+//    QFile fStyle(":/qss/teststyle.css");
     fStyle.open(QIODevice::ReadOnly);
     this->setStyleSheet(fStyle.readAll());
 }
@@ -4055,19 +4056,21 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
             // make thumbDock height fit thumbs
             int maxHt = thumbView->getThumbSpaceMax();
             int minHt = thumbView->getThumbSpaceMin();
-            int scrollBarHeight = 12;
+//            int scrollBarHeight = 12;
 //            int scrollBarHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+            int test = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+            qDebug() << "qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent)" << test;
 
             int thumbCellHt = thumbView->getThumbCellSize().height();
 
-            maxHt += scrollBarHeight;// + 1;
-            minHt += scrollBarHeight;// + 1;
-            int newThumbDockHeight = thumbCellHt + scrollBarHeight;
+            maxHt += G::scrollBarThickness;
+            minHt += G::scrollBarThickness;
+            int newThumbDockHeight = thumbCellHt + G::scrollBarThickness;
 
             thumbView->setMaximumHeight(maxHt + 2);
             thumbView->setMinimumHeight(minHt);
 
-            thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+            thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
             resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
 /*
                qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
@@ -4075,7 +4078,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                      << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
                      << "thumbHeight =" << thumbView->thumbHeight
                      << "newThumbDockHeight" << newThumbDockHeight
-                     << "scrollBarHeight =" << scrollBarHeight << isScrollBar;
+                     << "scrollBarHeight =" << G::scrollBarThickness << isScrollBar;
                      */
         }
     }

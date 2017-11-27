@@ -107,6 +107,7 @@ public:
     void removeImage(QString &imageFileName);
     void setPick(const QString &imageFileName, bool choice);
     void clear();
+    void clearMetadata();
     bool loadImageMetadata(const QFileInfo &fileInfo);
     bool isLoaded(const QString &imageFullPath);
     ulong getOffsetFullJPG(const QString &imageFullPath);
@@ -174,7 +175,6 @@ private:
 
     void reportMetadata();
     void reportIfdDataHash();
-    void clearMetadata();
 
     void formatNikon();
     void formatCanon();

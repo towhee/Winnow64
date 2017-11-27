@@ -26,6 +26,7 @@ public:
     QModelIndex imageIndex;
 
     bool loadImage(QModelIndex idx, QString imageFileName);
+    void emptyFolder();
     void setCursorHiding(bool hide);
     bool isBusy;
     bool isTrackpadScroll;

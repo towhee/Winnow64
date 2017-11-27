@@ -1,6 +1,12 @@
 To do:
+
+- Reset currentIndex when invert selection
+- Mouse click row in tableView does not scrollTo in thumbView
 - Sometimes two mouse clicks reqd in loupe view to toggle zoom
+- Show file size in KB/MB/GB
+- Show available memory in pref cache
 - Edit title in metadata?
+- Improve performance for large files (D850)
 - Improve producer/consumer image cache performance
 - Rotate selected images
 - Initial setup (other than workspace)
@@ -27,6 +33,8 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Rename testStyle.css to winnow.css
+- Done: If empty folder then loupe view should be blank
 - Done: Left key not always moving back
 - Done: Thread activity lights not hiding
 - Done:Full screen mode needs some love

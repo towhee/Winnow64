@@ -7,6 +7,7 @@ QT += widgets
 
 HEADERS += \
     bookmarks.h \
+    circlelabel.h \
     compareImages.h \
     compareview.h \
     datamodel.h \
@@ -31,10 +32,11 @@ HEADERS += \
     Dialogs/prefdlg.h \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
-    Dialogs/popup.h \
-    circlelabel.h
+    Dialogs/popup.h
+
 SOURCES += \
     bookmarks.cpp \
+    circlelabel.cpp \
     compareImages.cpp \
     compareview.cpp \
     datamodel.cpp \
@@ -60,8 +62,8 @@ SOURCES += \
     Dialogs/prefdlg.cpp \
     Dialogs/workspacedlg.cpp \
     Dialogs/copypickdlg.cpp \
-    Dialogs/popup.cpp \
-    circlelabel.cpp
+    Dialogs/popup.cpp
+
 FORMS += \
     copypickdlg.ui \
     prefdlg.ui \
@@ -76,17 +78,8 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-#icon.files = images/winnow.png
-#icon16.files = images/icon16/winnow.png
-#iconPixmaps.files = images/icon16/winnow.png
-
-#INSTALLS += target icon icon16 iconPixmaps desktop
-
 DISTFILES += \
     Menu.txt \
-    teststyle.css \
-    qss/WinnowStyle.css \
-    qss/WinnowStyle.css \
     Shortcuts.txt \
     Scratch.txt \
     ToDo.txt \
