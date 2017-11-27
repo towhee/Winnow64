@@ -1209,26 +1209,26 @@ void ThumbView::startDrag(Qt::DropActions)
 // Scrollbar Class used to capture scrollbar show event
 // -----------------------------------------------------------------------------
 
-Scrollbar::Scrollbar(QWidget *parent)
-{
-}
+//Scrollbar::Scrollbar(QWidget *parent)
+//{
+//}
 
-bool Scrollbar::eventFilter(QObject *obj, QEvent *event)
-{
-/*
+//bool Scrollbar::eventFilter(QObject *obj, QEvent *event)
+//{
+///*
 
-*/
-    qDebug() << event;
-    if (event->type() == QEvent::Show) {
-        if (!event->spontaneous()) {
-            qDebug() << "Scrollbar::eventFilter  event->type() == QEvent::Show";
-            emit updateScrollTo();
-        }
-    }
-}
+//*/
+//    qDebug() << event;
+//    if (event->type() == QEvent::Show) {
+//        if (!event->spontaneous()) {
+//            qDebug() << "Scrollbar::eventFilter  event->type() == QEvent::Show";
+//            emit updateScrollTo();
+//        }
+//    }
+//}
 
-void Scrollbar::test()
-{
-    qDebug() << "Scrollbar::setFont";
-}
+//void Scrollbar::test()
+//{
+//    qDebug() << "Scrollbar::setFont";
+//}
 

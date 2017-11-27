@@ -10,20 +10,20 @@
 //#include "thumbviewfilter.h"
 #include "filters.h"
 
-class Scrollbar : public QScrollBar
-{
-    Q_OBJECT
+//class Scrollbar : public QScrollBar
+//{
+//    Q_OBJECT
 
-public:
-    Scrollbar(QWidget *parent);
-    void test();
+//public:
+//    Scrollbar(QWidget *parent);
+//    void test();
 
-protected:
-    bool eventFilter(QObject *obj, QEvent *event);
+//protected:
+//    bool eventFilter(QObject *obj, QEvent *event);
 
-signals:
-    void updateScrollTo();
-};
+//signals:
+//    void updateScrollTo();
+//};
 
 class ThumbView : public QListView
 {
@@ -133,7 +133,7 @@ private:
 
     QWidget *mw;
     DataModel *dm;
-    Scrollbar *scrollbar;
+//    Scrollbar *scrollbar;
     QSize treeViewSize;
 
 signals:
