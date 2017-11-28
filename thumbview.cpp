@@ -1082,21 +1082,21 @@ void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
 
 void ThumbView::delaySelectCurrentThumb()
 {
+/*
+Called by mouseDoubleClickEvent.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::delaySelectCurrentThumb";
     #endif
     }
-//    QKeyEvent *key = new QKeyEvent (QEvent::KeyRelease, Qt::Key_E, Qt::NoModifier, "E");
-//    qApp->postEvent(mw, (QEvent *)key);
     selectThumb(currentIndex());
 }
 
-// called from MW invertSelectionAct
 void ThumbView::invertSelection()
 {
-/* inverts/toggles which thumbs are selected.  Called from
- * MW::invertSelectionAct
+/*
+Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct
 */
     {
     #ifdef ISDEBUG
@@ -1108,6 +1108,10 @@ void ThumbView::invertSelection()
     QModelIndex lastIndex = dm->sf->index(dm->sf->rowCount() - 1, 0);
     toggleSelection.select(firstIndex, lastIndex);
     selectionModel()->select(toggleSelection, QItemSelectionModel::Toggle);
+    if(selectedIndexes().count() > 0) {
+        QModelIndex idx = selectedIndexes().at(0);
+        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::Select);
+    }
 }
 
 void ThumbView::copyThumbs()

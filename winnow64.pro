@@ -72,7 +72,8 @@ FORMS += \
     aligndlg.ui \
     testaligndlg.ui \
     introduction.ui \
-    welcome.ui
+    welcome.ui \
+    shortcutsform.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns

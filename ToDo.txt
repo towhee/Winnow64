@@ -1,9 +1,6 @@
-To do:
-- When thumbDock is floating always wrap thumbs
-- Not zoom when right click imageView
-- Reset currentIndex when invert selection
-- Mouse click row in tableView does not scrollTo in thumbView
+- Add font size to preferences
 - Sometimes two mouse clicks reqd in loupe view to toggle zoom
+- Set mouse click zoom amount (default = 100%)
 - Show file size in KB/MB/GB
 - Show available memory in pref cache
 - Edit title in metadata?
@@ -34,8 +31,14 @@ To do:
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Help > Shortcuts
+- Done: Reset currentIndex when invert selection
+- Done: Should not zoom when right click imageView
+- Done: Weird scrolling when pick
+- Done: When thumbDock is floating always wrap thumbs
 - Done: Rename testStyle.css to winnow.css
 - Done: If empty folder then loupe view should be blank
+- Done: Mouse click row in tableView does not scrollTo in thumbView
 - Done: Left key not always moving back
 - Done: Thread activity lights not hiding
 - Done:Full screen mode needs some love

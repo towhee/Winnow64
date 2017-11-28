@@ -1260,6 +1260,10 @@ void MW::createActions()
     helpAction->setObjectName("help");
     connect(helpAction, SIGNAL(triggered()), this, SLOT(help()));
 
+    helpShortcutsAction = new QAction(tr("Winnow Shortcuts"), this);
+    helpShortcutsAction->setObjectName("helpShortcuts");
+    connect(helpShortcutsAction, SIGNAL(triggered()), this, SLOT(helpShortcuts()));
+
     // Possibly needed actions
 
 //    enterAction = new QAction(tr("Enter"), this);
@@ -1416,6 +1420,7 @@ void MW::createMenus()
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAction);
     helpMenu->addAction(helpAction);
+    helpMenu->addAction(helpShortcutsAction);
 
     menuBar()->setVisible(true);
 
@@ -3875,6 +3880,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         escapeFullScreenAction->setShortcut(QKeySequence("Esc"));
         prefAction->setShortcut(QKeySequence("Ctrl+,"));
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
+        selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
+        invertSelectionAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
         togglePickAction->setShortcut(QKeySequence("`"));
         toggleFilterPickAction->setShortcut(QKeySequence("Ctrl+`"));
         ingestAction->setShortcut(QKeySequence("Q"));
@@ -3901,7 +3908,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         keyEndAction->setShortcut(QKeySequence("End"));
         keyDownAction->setShortcut(QKeySequence("Down"));
         keyUpAction->setShortcut(QKeySequence("Up"));
-        randomImageAction->setShortcut(QKeySequence("Ctrl+Alt+Right"));
+        randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+Right"));
         nextPickAction->setShortcut(QKeySequence("Alt+Right"));
         prevPickAction->setShortcut(QKeySequence("Alt+Left"));
         openAction->setShortcut(QKeySequence("O"));
@@ -3918,13 +3925,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
 //        zoom200PctAction->setShortcut(QKeySequence("Ctrl+2"));
         rotateLeftAction->setShortcut(QKeySequence("["));
         rotateRightAction->setShortcut(QKeySequence("]"));
-//        moveLeftAct->setShortcut(QKeySequence("Left"));
-//        moveRightAct->setShortcut(QKeySequence("Right"));
-//        copyToAction->setShortcut(QKeySequence("Ctrl+Y"));
-//        moveToAction->setShortcut(QKeySequence("Ctrl+M"));
-//        keepTransformAct->setShortcut(QKeySequence("Ctrl+K"));
         infoVisibleAction->setShortcut(QKeySequence("I"));
-//        toggleAllDocksAct->setShortcut(QKeySequence("F3"));
         newWorkspaceAction->setShortcut(QKeySequence("W"));
         manageWorkspaceAction->setShortcut(QKeySequence("Ctrl+W"));
         defaultWorkspaceAction->setShortcut(QKeySequence("Ctrl+Shift+W"));
@@ -4594,13 +4595,14 @@ void MW::togglePick()
 
     }
     thumbView->refreshThumbs();
+    gridView->refreshThumbs();
 }
 
 void MW::updatePick()
 {
 /*
 When a new image is selected and shown in imageView update the visibility
-of the thumbs up icon that highlights if the image has been picked.
+of the "thumbs up" icon that highlights if the image has been picked.
 */
     {
     #ifdef ISDEBUG
@@ -5237,6 +5239,32 @@ void MW::help()
     Ui::helpForm ui;
     ui.setupUi(helpDoc);
     helpDoc->show();
+}
+
+void MW::helpShortcuts()
+{
+    QScrollArea *helpShortcuts = new QScrollArea;
+    Ui::shortcutsForm ui;
+    ui.setupUi(helpShortcuts);
+
+    // set row heights in tree widget
+//    QTreeWidgetItemIterator it(ui.treeWidget);
+//    while (*it) {
+//        (*it)->setSizeHint(0, QSize(20, 20));
+//        ++it;
+//    }
+
+    ui.treeWidget->setColumnWidth(0, 250);
+    ui.treeWidget->setColumnWidth(1, 100);
+    ui.treeWidget->setColumnWidth(2, 250);
+    ui.treeWidget->header()->setMinimumHeight(20);
+    ui.treeWidget->expandAll();
+    QFile fStyle(":/qss/winnow.css");
+    fStyle.open(QIODevice::ReadOnly);
+    ui.scrollAreaWidgetContents->setStyleSheet(fStyle.readAll());
+//    ui.scrollAreaWidgetContents->setStyleSheet("QTreeView::item { height: 20px;}");
+
+    helpShortcuts->show();
 }
 
 void MW::test()

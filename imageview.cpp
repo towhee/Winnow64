@@ -908,6 +908,8 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     }
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
+    // prevent zooming when right click for context menu
+    if (event->button() == Qt::RightButton) return;
     isMouseDoubleClick = false;
     if (event->button() == Qt::LeftButton) {
         isLeftMouseBtnPressed = true;

@@ -30,12 +30,12 @@ executed in SortFilter subclass of QSortFilterProxy (sf) in datamodel.
     categoryBackground.setColorAt(0, QColor(88,88,88));
     categoryBackground.setColorAt(1, QColor(66,66,66));
     categoryFont = this->font();
-    categoryFont.setBold(true);
+//    categoryFont.setBold(true);
 
     createPredefinedFilters();
     createDynamicFilters();
 
-    setStyleSheet("QTreeView::item { height: 18px;}");
+    setStyleSheet("QTreeView::item { height: 20px;}");
 }
 
 void Filters::createPredefinedFilters()

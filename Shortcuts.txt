@@ -1,10 +1,13 @@
-Function                     Key  ⌘  ⇧  ⌥  ⇧⌘  ⇧⌥  ⌥⌘  ⇧⌥⌘
+Function                     Key  ⌘  ⇧  ⌥
 Escape full screen           ⎋
 Mouse click zoom 50%         5
 Mouse click zoom 100%        0
 Mouse click zoom 200%        2
 During slideshow interval    0-9
 Invoke workspace             0-9  ⌘
+Select all                   A    ⌘
+Invert Select all            A    ⌘  ⇧
+Enable subfolders            B
 Compare view                 C
 Loupe view                   E
 Full screen                  F
@@ -22,7 +25,7 @@ Slideshow                    S
 Table view                   T
 New workspace                W
 Manage workspace             W    ⌘
-Default workspace            W               ⇧⌘
+Default workspace            W    ⌘  ⇧
 Zoom fit <-> 100%            Z
 Folder dock                  F4
 Folder dock lock             F4      ⇧
@@ -45,10 +48,10 @@ Shrink thumb                 {
 Zoom out                     -
 Zoom in                      +
 Next thumb                   →
-Next pick                    →          ⌥
-Random thumb                 →               ⇧⌘
+Next pick                    →           ⌥
+Random thumb                 →    ⌘  ⇧
 Previous thumb               ←
-Previous pick                ←          ⌥
+Previous pick                ←           ⌥
 Above thumb                  ↑
 Below thumb                  ↓
 First thumb                  ↖︎

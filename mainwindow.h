@@ -20,7 +20,7 @@
 #include "infoview.h"
 #include "compareImages.h"
 #include "ui_helpform.h"
-//#include "ui_introduction.h"
+#include "ui_shortcutsform.h"
 #include "ui_welcome.h"
 #include "sstream"
 #include <iostream>
@@ -292,6 +292,7 @@ private slots:
     void loadWorkspaces();
 
     void help();
+    void helpShortcuts();
 
     void cancelNeedToScroll();
     void test();    // for debugging
@@ -458,6 +459,7 @@ private:
     // Help Menu
     QAction *aboutAction;
     QAction *helpAction;
+    QAction *helpShortcutsAction;
 
     // General
 

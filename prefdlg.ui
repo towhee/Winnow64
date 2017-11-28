@@ -178,11 +178,14 @@
     <widget class="QSpinBox" name="cacheSizeSpinbox">
      <property name="geometry">
       <rect>
-       <x>140</x>
+       <x>120</x>
        <y>30</y>
        <width>51</width>
        <height>24</height>
       </rect>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then wieghting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="minimum">
       <number>1</number>
@@ -203,7 +206,7 @@
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>140</x>
+       <x>120</x>
        <y>70</y>
        <width>95</width>
        <height>141</height>
@@ -292,7 +295,7 @@
     <widget class="QLabel" name="label_10">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>294</y>
        <width>141</width>
        <height>16</height>
@@ -310,7 +313,7 @@
     <widget class="QSpinBox" name="cacheStatusWidthSpin">
      <property name="geometry">
       <rect>
-       <x>370</x>
+       <x>350</x>
        <y>290</y>
        <width>71</width>
        <height>24</height>
@@ -337,7 +340,7 @@
     <widget class="QLabel" name="label_8">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>34</y>
        <width>91</width>
        <height>16</height>
@@ -348,6 +351,9 @@
        <pointsize>12</pointsize>
       </font>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then wieghting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
       <string>Cache size (GB)</string>
      </property>
@@ -355,7 +361,7 @@
     <widget class="QLabel" name="label">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>70</y>
        <width>91</width>
        <height>16</height>
@@ -366,6 +372,9 @@
        <pointsize>12</pointsize>
       </font>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then wieghting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
       <string>Cache strategy</string>
      </property>
@@ -373,7 +382,7 @@
     <widget class="QCheckBox" name="showCacheStatusChk">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>293</y>
        <width>151</width>
        <height>17</height>
@@ -391,7 +400,7 @@
     <widget class="QCheckBox" name="cachePreviewsChk">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>230</y>
        <width>301</width>
        <height>20</height>
@@ -409,7 +418,7 @@
     <widget class="QSpinBox" name="previewWidthSB">
      <property name="geometry">
       <rect>
-       <x>150</x>
+       <x>130</x>
        <y>250</y>
        <width>60</width>
        <height>24</height>
@@ -436,7 +445,7 @@
     <widget class="QSpinBox" name="previewHeightSB">
      <property name="geometry">
       <rect>
-       <x>280</x>
+       <x>260</x>
        <y>250</y>
        <width>60</width>
        <height>24</height>
@@ -463,7 +472,7 @@
     <widget class="QLabel" name="label_9">
      <property name="geometry">
       <rect>
-       <x>100</x>
+       <x>80</x>
        <y>253</y>
        <width>41</width>
        <height>16</height>
@@ -481,7 +490,7 @@
     <widget class="QLabel" name="label_20">
      <property name="geometry">
       <rect>
-       <x>230</x>
+       <x>210</x>
        <y>253</y>
        <width>41</width>
        <height>16</height>
@@ -499,7 +508,7 @@
     <widget class="QCheckBox" name="showCacheThreadActivityChk">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>320</y>
        <width>191</width>
        <height>17</height>
@@ -514,42 +523,12 @@
       <string>Show cache thread activity</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_6">
-     <property name="geometry">
-      <rect>
-       <x>270</x>
-       <y>30</y>
-       <width>191</width>
-       <height>181</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::Box</enum>
-     </property>
-     <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;Experiment with different cache sizes. 2-8 GB appear to work best. Cache performance does not always improve with size.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;If you tend to move back and forth between files then a 50% cache ahead strategy is best. If you generally just move ahead through the images in the folder then weighting a higher % ahead makes sense.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="textFormat">
-      <enum>Qt::AutoText</enum>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-    </widget>
    </widget>
    <widget class="QWidget" name="pageSlideshow">
     <widget class="QCheckBox" name="slideshowRandomChk">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>80</y>
        <width>19</width>
        <height>18</height>
@@ -567,7 +546,7 @@
     <widget class="QLabel" name="label_12">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>80</y>
        <width>112</width>
        <height>16</height>
@@ -585,7 +564,7 @@
     <widget class="QSpinBox" name="slideshowDelaySpinbox">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>41</y>
        <width>48</width>
        <height>24</height>
@@ -600,7 +579,7 @@
     <widget class="QLabel" name="label_11">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>45</y>
        <width>64</width>
        <height>15</height>
@@ -620,7 +599,7 @@
     <widget class="QLabel" name="iconWidthLbl">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>380</x>
        <y>30</y>
        <width>30</width>
        <height>16</height>
@@ -644,7 +623,7 @@
     <widget class="QSlider" name="fontSizeSlider">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>200</y>
        <width>160</width>
        <height>22</height>
@@ -689,7 +668,7 @@
     <widget class="QLabel" name="iconPaddingLbl">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>380</x>
        <y>135</y>
        <width>30</width>
        <height>16</height>
@@ -713,7 +692,7 @@
     <widget class="QLabel" name="thumbSpacingLbl">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>380</x>
        <y>115</y>
        <width>30</width>
        <height>16</height>
@@ -737,7 +716,7 @@
     <widget class="QLabel" name="label_4">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>115</y>
        <width>121</width>
        <height>16</height>
@@ -755,7 +734,7 @@
     <widget class="QLabel" name="label_5">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>135</y>
        <width>121</width>
        <height>16</height>
@@ -773,7 +752,7 @@
     <widget class="QSlider" name="iconWidthSlider">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>30</y>
        <width>160</width>
        <height>22</height>
@@ -818,7 +797,7 @@
     <widget class="QCheckBox" name="showThumbLabelChk">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>180</y>
        <width>221</width>
        <height>17</height>
@@ -836,7 +815,7 @@
     <widget class="QLabel" name="fontSizeLbl">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>380</x>
        <y>196</y>
        <width>30</width>
        <height>16</height>
@@ -860,7 +839,7 @@
     <widget class="QSlider" name="iconPaddingSlider">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>135</y>
        <width>160</width>
        <height>22</height>
@@ -905,7 +884,7 @@
     <widget class="QSlider" name="thumbSpacingSlider">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>115</y>
        <width>160</width>
        <height>22</height>
@@ -950,7 +929,7 @@
     <widget class="QLabel" name="label_2">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>30</y>
        <width>91</width>
        <height>16</height>
@@ -968,7 +947,7 @@
     <widget class="QSlider" name="iconHeightSlider">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>50</y>
        <width>160</width>
        <height>22</height>
@@ -1013,7 +992,7 @@
     <widget class="QCheckBox" name="lockDimChk">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>70</y>
        <width>151</width>
        <height>20</height>
@@ -1031,7 +1010,7 @@
     <widget class="QLabel" name="label_3">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>50</y>
        <width>91</width>
        <height>16</height>
@@ -1049,7 +1028,7 @@
     <widget class="QLabel" name="iconHeightLbl">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>380</x>
        <y>50</y>
        <width>30</width>
        <height>16</height>
@@ -1073,7 +1052,7 @@
     <widget class="QLabel" name="label_7">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>200</y>
        <width>121</width>
        <height>16</height>
@@ -1093,7 +1072,7 @@
     <widget class="QLabel" name="iconWidthLbl_2">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>380</x>
        <y>30</y>
        <width>30</width>
        <height>16</height>
@@ -1117,7 +1096,7 @@
     <widget class="QSlider" name="fontSizeSlider_2">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>200</y>
        <width>160</width>
        <height>22</height>
@@ -1162,7 +1141,7 @@
     <widget class="QLabel" name="iconPaddingLbl_2">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>380</x>
        <y>135</y>
        <width>30</width>
        <height>16</height>
@@ -1186,7 +1165,7 @@
     <widget class="QLabel" name="thumbSpacingLbl_2">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>380</x>
        <y>115</y>
        <width>30</width>
        <height>16</height>
@@ -1210,7 +1189,7 @@
     <widget class="QLabel" name="label_14">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>115</y>
        <width>121</width>
        <height>16</height>
@@ -1228,7 +1207,7 @@
     <widget class="QLabel" name="label_15">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>135</y>
        <width>121</width>
        <height>16</height>
@@ -1246,7 +1225,7 @@
     <widget class="QSlider" name="iconWidthSlider_2">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>30</y>
        <width>160</width>
        <height>22</height>
@@ -1291,7 +1270,7 @@
     <widget class="QCheckBox" name="showThumbLabelChk_2">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>180</y>
        <width>201</width>
        <height>17</height>
@@ -1309,7 +1288,7 @@
     <widget class="QLabel" name="fontSizeLbl_2">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>380</x>
        <y>196</y>
        <width>30</width>
        <height>16</height>
@@ -1333,7 +1312,7 @@
     <widget class="QSlider" name="iconPaddingSlider_2">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>135</y>
        <width>160</width>
        <height>22</height>
@@ -1378,7 +1357,7 @@
     <widget class="QSlider" name="thumbSpacingSlider_2">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>115</y>
        <width>160</width>
        <height>22</height>
@@ -1423,7 +1402,7 @@
     <widget class="QLabel" name="label_17">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>30</y>
        <width>91</width>
        <height>16</height>
@@ -1441,7 +1420,7 @@
     <widget class="QSlider" name="iconHeightSlider_2">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>200</x>
        <y>50</y>
        <width>160</width>
        <height>22</height>
@@ -1486,7 +1465,7 @@
     <widget class="QCheckBox" name="lockDimChk_2">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>70</y>
        <width>181</width>
        <height>20</height>
@@ -1504,7 +1483,7 @@
     <widget class="QLabel" name="label_18">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>50</y>
        <width>91</width>
        <height>16</height>
@@ -1522,7 +1501,7 @@
     <widget class="QLabel" name="iconHeightLbl_2">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>380</x>
        <y>50</y>
        <width>30</width>
        <height>16</height>
@@ -1546,7 +1525,7 @@
     <widget class="QLabel" name="label_19">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>200</y>
        <width>121</width>
        <height>16</height>
@@ -1566,9 +1545,9 @@
     <widget class="QLabel" name="fullScreenExplanationLbl">
      <property name="geometry">
       <rect>
-       <x>30</x>
+       <x>20</x>
        <y>30</y>
-       <width>341</width>
+       <width>421</width>
        <height>61</height>
       </rect>
      </property>
@@ -1590,7 +1569,7 @@
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>30</x>
+       <x>20</x>
        <y>90</y>
        <width>221</width>
        <height>131</height>
@@ -1686,9 +1665,9 @@
      <property name="geometry">
       <rect>
        <x>0</x>
-       <y>20</y>
+       <y>10</y>
        <width>191</width>
-       <height>341</height>
+       <height>351</height>
       </rect>
      </property>
      <property name="frameShadow">

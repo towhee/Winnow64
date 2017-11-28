@@ -2,7 +2,7 @@ QWidget {
     background-color: rgb(85,85,85);
     color: rgb(229,229,229);
     border-width: 0px;
-    font-size: 10px;
+    font-size: 12px;
 }
 
 QGraphicsView {
@@ -157,6 +157,16 @@ QListWidget {
     selection-background-color: rgb(85,85,85);
 
     /*selection-background-color: rgb(95,95,95);*/
+}
+
+QTreeWidget {
+    alternate-background-color: rgb(90,90,90);
+    border: 2px solid rgb(95,95,95);
+    color: rgb(229,229,229);
+}
+
+QTreeWidget::item {
+    height: 24px;
 }
 
 QTableView
