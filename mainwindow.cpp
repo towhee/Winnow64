@@ -171,9 +171,8 @@ thumbdock is resized by the user when:
    - dock area is top or bottom
    - height change of dock changes
 */
-//    if (gridView->isGridTest) {
-//        qDebug() << "MW events" << event << obj << "G::mode" << G::mode;
-//    }
+//    qDebug() << "MW events" << obj << event;
+
     if (event->type() == QEvent::Resize && obj == thumbDock &&
       !thumbDock->isFloating() && !isInitializing)
     {
@@ -184,10 +183,10 @@ thumbdock is resized by the user when:
             QResizeEvent *resizeEvent = static_cast<QResizeEvent*>(event);
             int newHt = resizeEvent->size().height();
             if (newHt != oldHt) {
-                qDebug() << "\nMW::eventFilter dock area"
-                         << "thumbView->thumbHeight =" << thumbView->thumbHeight
-                         << "oldHt =" << oldHt
-                         << "newHt =" << newHt;
+//                qDebug() << "\nMW::eventFilter dock area"
+//                         << "thumbView->thumbHeight =" << thumbView->thumbHeight
+//                         << "oldHt =" << oldHt
+//                         << "newHt =" << newHt;
                  thumbView->thumbsFitTopOrBottom();
 //                makeThumbsFitDockAfterResize();
                  oldHt = newHt;
@@ -426,7 +425,14 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     qDebug() << "\n**********************************MW::fileSelectionChange";
     #endif
     }
-    if(current.row() == previous.row()) return;
+//    if(current.row() == previous.row()) return;
+    if(current.column() != 0) {
+        QModelIndex currentIndex = dm->sf->index(current.row(), 0);
+//        thumbView->setCurrentIndex(currentIndex);
+//        thumbView->thumbViewDelegate->currentIndex = currentIndex;
+//        gridView->thumbViewDelegate->currentIndex = currentIndex;
+        thumbView->selectThumb(current.row());
+    }
 
     // starting program, set first image to display
     if(previous.row() == -1) thumbView->selectThumb(0);
@@ -437,19 +443,32 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
 
     // currentIndex must be column 0 - this might cause another call to
     // fileSelectionChange, hence check above if same datamodel row
-    QModelIndex currentIndex = dm->sf->index(current.row(), 0);
-    thumbView->setCurrentIndex(currentIndex);
+//    QModelIndex currentIndex = dm->sf->index(current.row(), 0);
+
+    qDebug() << "current" << current
+             << "thumbView->currentIndex" << thumbView->currentIndex();
+
     // update delegates so they can highlight the current item
-    thumbView->thumbViewDelegate->currentIndex = currentIndex;
-    gridView->thumbViewDelegate->currentIndex = currentIndex;
-    thumbView->scrollToCurrent();
+    thumbView->thumbViewDelegate->currentIndex = current;
+    gridView->thumbViewDelegate->currentIndex = current;
+//    thumbView->thumbViewDelegate->currentIndex = currentIndex;
+    gridView->thumbViewDelegate->currentIndex = current;
+
+    thumbView->readyToScroll = true;
+//    tableView->readyToScroll = true;
+    QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
+
+//    thumbView->scrollToCurrent();
+//    thumbView->refreshThumbs();
     gridView->scrollToCurrent();
-    // keep tableView scrollTo position hint = center
+//    // keep tableView scrollTo position hint = center
     tableView->scrollToCurrent();
 
     // update imageView, use cache if image loaded, else read it from file
-    QString fPath = currentIndex.data(G::FileNameRole).toString();
-    if (imageView->loadImage(currentIndex, fPath)) {
+    QString fPath = current.data(G::FileNameRole).toString();
+//    QString fPath = currentIndex.data(G::FileNameRole).toString();
+    if (imageView->loadImage(current, fPath)) {
+//        if (imageView->loadImage(currentIndex, fPath)) {
         if (G::isThreadTrackingOn) qDebug()
             << "MW::fileSelectionChange - loaded image file " << fPath;
         updatePick();
@@ -4059,7 +4078,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 //            int scrollBarHeight = 12;
 //            int scrollBarHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
             int test = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
-            qDebug() << "qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent)" << test;
+//            qDebug() << "qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent)" << test;
 
             int thumbCellHt = thumbView->getThumbCellSize().height();
 

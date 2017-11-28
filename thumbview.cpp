@@ -999,21 +999,13 @@ bool ThumbView::eventFilter(QObject *obj, QEvent *event)
 /*
 
 */
-//    qDebug() << "ThumbView events" << obj << event << "G::mode" << G::mode;
+//    qDebug() << "ThumbView events" << obj << event;
     if(event->type() == QEvent::Paint
             && readyToScroll
             && (obj->objectName() == "VerticalScrollBar"
             || obj->objectName() == "HorizontalScrollBar"))
     {
-        static int count = 0;
-        count++;
-//        qDebug() << "ThumbView events" << obj << event << "G::mode" << G::mode << "Count =" << count;
         scrollToCurrent();
-
-//        if(count > 1) {
-//            scrollToCurrent();
-//            count = 0;
-//        }
     }
     return QWidget::eventFilter(obj, event);
 }

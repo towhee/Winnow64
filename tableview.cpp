@@ -55,7 +55,7 @@ void TableView::scrollToCurrent()
     }
     QModelIndex idx = dm->sf->index(currentIndex().row(), 1);
     scrollTo(idx, ScrollHint::PositionAtCenter);
-//    qDebug() << "TableView::scrollToCurrent" << idx;
+    qDebug() << "TableView::scrollToCurrent" << idx;
 }
 
 bool TableView::eventFilter(QObject *obj, QEvent *event)
@@ -63,9 +63,13 @@ bool TableView::eventFilter(QObject *obj, QEvent *event)
 /*
 
 */
-//    qDebug() << "TableView events" << obj << event << "G::mode" << G::mode;
-//    if(event->type() == QEvent::Paint && readyToScroll)
-//        scrollToCurrent();
+    qDebug() << "TableView events" << obj << event;
+    if((event->type() == QEvent::Paint || event->type() == QEvent::Timer)
+            && readyToScroll
+            && obj->objectName() == "QScrollBar")
+    {
+        scrollToCurrent();
+    }
     return QWidget::eventFilter(obj, event);
 }
 void TableView::mouseDoubleClickEvent(QMouseEvent *event)

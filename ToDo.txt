@@ -1,5 +1,6 @@
 To do:
-
+- When thumbDock is floating always wrap thumbs
+- Not zoom when right click imageView
 - Reset currentIndex when invert selection
 - Mouse click row in tableView does not scrollTo in thumbView
 - Sometimes two mouse clicks reqd in loupe view to toggle zoom
