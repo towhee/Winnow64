@@ -114,7 +114,8 @@ int ThumbViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
 
 void ThumbViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex previous)
 {
-    currentIndex = current;
+    currentRow = current.row();     // this slot not being used
+//    currentIndex = current;
 }
 
 QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
@@ -157,7 +158,7 @@ textRect         = a rectangle below itemRect
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     QSize iconsize = icon.actualSize(thumbSize);
 
-    int currentRow = currentIndex.row();
+//    int currentRow = currentIndex.row();
 
     // get data from model
     int row = index.row();
@@ -252,6 +253,8 @@ textRect         = a rectangle below itemRect
 //             << "currentRow =" <<  currentRow
 //             << "option.state.testFlag(QStyle::State_Selected)"
 //             << option.state.testFlag(QStyle::State_Selected);
+
+    // currentRow is set in MW::fileSelectionChange
     if (row == currentRow) selectedColor = currentItemColor;
     if (option.state.testFlag(QStyle::State_Selected)) {
         QPen selectedPen(selectedColor);

@@ -103,9 +103,7 @@ variables in MW (this class) and managed in the prefDlg class.
     loadShortcuts(true);            // dependent on createActions
 
     if (!resetSettings && isSettings) {
-        qDebug() << "Restoring geometry";
         restoreGeometry(setting->value("Geometry").toByteArray());
-        qDebug() << "Restoring state";
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
         isFirstTimeNoSettings = false;
@@ -419,21 +417,24 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
 it also triggers this function). The new image is loaded, the pick status is
 updated and the infoView metadata is updated. Update the imageCache if
 necessary. The imageCache will not be updated if triggered by folderSelectionChange.
+
+It has proven quite difficult to sync the thumbView, tableView and gridView,
+keeping the currentIndex in the center position (scrolling).  The issue is timing
+as it can take the scrollbars a while to finish painting.  Several scrollbar
+paint events are fired, so the solution implemented is to set a readyToScroll
+flag when a new image is selected and set a timer to turn the flag off after
+1000ms.  During that time any scrollbar paint events trigger the scrollToCurrent
+function, which in turn tries to scrollTo with a center position scroll hint.
+
+Note that the datamodel includes multiple columns for each row and the index
+sent to fileSelectionChange could be for a column other than 0 (from tableView)
+so scrollTo and delegate use of the current index must check the row.
 */
     {
     #ifdef ISDEBUG
     qDebug() << "\n**********************************MW::fileSelectionChange";
     #endif
     }
-//    if(current.row() == previous.row()) return;
-    if(current.column() != 0) {
-        QModelIndex currentIndex = dm->sf->index(current.row(), 0);
-//        thumbView->setCurrentIndex(currentIndex);
-//        thumbView->thumbViewDelegate->currentIndex = currentIndex;
-//        gridView->thumbViewDelegate->currentIndex = currentIndex;
-        thumbView->selectThumb(current.row());
-    }
-
     // starting program, set first image to display
     if(previous.row() == -1) thumbView->selectThumb(0);
 
@@ -441,34 +442,22 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
     // user clicks outside thumb but inside treeView dock
     if (selected.isEmpty()) return;
 
-    // currentIndex must be column 0 - this might cause another call to
-    // fileSelectionChange, hence check above if same datamodel row
-//    QModelIndex currentIndex = dm->sf->index(current.row(), 0);
-
-    qDebug() << "current" << current
-             << "thumbView->currentIndex" << thumbView->currentIndex();
-
     // update delegates so they can highlight the current item
-    thumbView->thumbViewDelegate->currentIndex = current;
-    gridView->thumbViewDelegate->currentIndex = current;
-//    thumbView->thumbViewDelegate->currentIndex = currentIndex;
-    gridView->thumbViewDelegate->currentIndex = current;
+    int currentRow = current.row();
+    thumbView->thumbViewDelegate->currentRow = currentRow;
+    gridView->thumbViewDelegate->currentRow = currentRow;
 
     thumbView->readyToScroll = true;
-//    tableView->readyToScroll = true;
     QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
 
-//    thumbView->scrollToCurrent();
-//    thumbView->refreshThumbs();
+    // keep gridView scrollTo position hint = center
     gridView->scrollToCurrent();
-//    // keep tableView scrollTo position hint = center
+    // keep tableView scrollTo position hint = center
     tableView->scrollToCurrent();
 
     // update imageView, use cache if image loaded, else read it from file
     QString fPath = current.data(G::FileNameRole).toString();
-//    QString fPath = currentIndex.data(G::FileNameRole).toString();
     if (imageView->loadImage(current, fPath)) {
-//        if (imageView->loadImage(currentIndex, fPath)) {
         if (G::isThreadTrackingOn) qDebug()
             << "MW::fileSelectionChange - loaded image file " << fPath;
         updatePick();
@@ -483,6 +472,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
         imageCacheThread->updateImageCache(fPath);
     }
 
+    // terminate initializing flag set when new folder selected
     if (isInitializing) {
         isInitializing = false;
         if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
@@ -490,6 +480,7 @@ necessary. The imageCache will not be updated if triggered by folderSelectionCha
         {
             thumbView->setWrapping(false);
         }
+        if(thumbDock->isFloating()) thumbView->setWrapping(true);
     }
 
 /*   Other stuff tried and reported ...

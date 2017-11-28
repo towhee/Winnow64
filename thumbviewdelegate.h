@@ -29,6 +29,7 @@ public:
     void reportThumbAttributes();
 
     QModelIndex currentIndex;
+    int currentRow;
 
 signals:
     void update(const QModelIndex index, QRect iconRect) const;

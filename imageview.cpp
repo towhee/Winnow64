@@ -176,7 +176,7 @@ to prevent jarring changes in perceived scale by the user.
     else {
         // load the image from the image file, may need to wait a bit if another thread
         // reading file
-        qDebug() << ">>>Load image from file";
+//        qDebug() << ">>>Load image from file";
         int attempts;
         for (attempts = 0; attempts < 100000; attempts++) {
             isLoaded = pixmap->load(fPath, displayPixmap);

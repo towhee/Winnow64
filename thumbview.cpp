@@ -978,7 +978,7 @@ void ThumbView::scrollToCurrent()
     return;
     */
 
-    qDebug() << "ThumbView::scrollToCurrent" << currentIndex();
+//    qDebug() << "ThumbView::scrollToCurrent" << currentIndex();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
