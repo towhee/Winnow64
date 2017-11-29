@@ -68,6 +68,7 @@ public:
     QItemSelectionModel *thumbViewSelection;
 
     int thumbSize;
+    QString pickMemorySize;
     QString filterStr;
     bool pickFilter;
     bool readyToScroll;

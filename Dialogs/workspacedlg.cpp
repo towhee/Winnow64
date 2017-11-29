@@ -56,7 +56,7 @@ void WorkspaceDlg::on_reassignBtn_clicked()
     int n = ui->workspaceCB->currentIndex();
     emit reassignWorkspace(n);
     ui->status->setText(ui->workspaceCB->itemText(n) + " has been reassigned");
-    QTimer::singleShot(1500, this, SLOT(clearStatus()));
+    QTimer::singleShot(2000, this, SLOT(clearStatus()));
 }
 
 void WorkspaceDlg::clearStatus()

@@ -159,11 +159,8 @@ void ThumbView::refreshThumbs() {
     qDebug() << "ThumbView::refreshThumbs";
     #endif
     }
-    // if workspace invoked with diff thumb parameters
-//    setThumbParameters();
-    this->dataChanged(dm->sf->index(0, 0, QModelIndex()),
-      dm->sf->index(getLastRow(), 0, QModelIndex()));
-    emit updateThumbDockHeight();
+    dataChanged(dm->sf->index(0, 0), dm->sf->index(getLastRow(), 0));
+//    emit updateThumbDockHeight();
 }
 
 void ThumbView::setThumbParameters(bool okayToUpdateThumbDockHeight)

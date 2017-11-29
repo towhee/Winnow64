@@ -312,6 +312,7 @@ void MW::folderSelectionChange()
 
     G::isNewFolderLoaded = false;
     updateStatus(false, "");
+    pickMemSize = "";
 
     // stop slideshow if a new folder is selected
     if (isSlideShowActive && !isStressTest) slideShow();
@@ -448,7 +449,7 @@ so scrollTo and delegate use of the current index must check the row.
     gridView->thumbViewDelegate->currentRow = currentRow;
 
     thumbView->readyToScroll = true;
-    QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
+    QTimer::singleShot(2000, this, SLOT(cancelNeedToScroll()));
 
     // keep gridView scrollTo position hint = center
     gridView->scrollToCurrent();
@@ -767,17 +768,17 @@ void MW::createActions()
     connect(invertSelectionAction, SIGNAL(triggered()), thumbView,
             SLOT(invertSelection()));
 
-    togglePickAction = new QAction(tr("Pick"), this);
-    togglePickAction->setObjectName("togglePick");
-    togglePickAction->setCheckable(true);
-    togglePickAction->setChecked(false);
-    connect(togglePickAction, SIGNAL(triggered()), this, SLOT(togglePick()));
+    pickAction = new QAction(tr("Pick"), this);
+    pickAction->setObjectName("togglePick");
+    pickAction->setCheckable(true);
+    pickAction->setChecked(false);
+    connect(pickAction, SIGNAL(triggered()), this, SLOT(togglePick()));
 
-    toggleFilterPickAction = new QAction(tr("Filter picks only"), this);
-    toggleFilterPickAction->setObjectName("toggleFilterPick");
-    toggleFilterPickAction->setCheckable(true);
-    toggleFilterPickAction->setChecked(false);
-    connect(toggleFilterPickAction, SIGNAL(triggered(bool)),
+    filterPickAction = new QAction(tr("Filter picks only"), this);
+    filterPickAction->setObjectName("toggleFilterPick");
+    filterPickAction->setCheckable(true);
+    filterPickAction->setChecked(false);
+    connect(filterPickAction, SIGNAL(triggered(bool)),
             filters, SLOT(checkPicks(bool)));
 //    connect(toggleFilterPickAction, SIGNAL(triggered()), this, SLOT(toggleFilterPick()));
 
@@ -898,9 +899,9 @@ void MW::createActions()
 
     // Filters
 
-    uncheckAllAction = new QAction(tr("Uncheck all filters"), this);
-    uncheckAllAction->setObjectName("uncheckAll");
-    connect(uncheckAllAction, SIGNAL(triggered()), filters, SLOT(uncheckAllFilters()));
+    uncheckAllFiltersAction = new QAction(tr("Uncheck all filters"), this);
+    uncheckAllFiltersAction->setObjectName("uncheckAllFilters");
+    connect(uncheckAllFiltersAction, SIGNAL(triggered()), filters, SLOT(uncheckAllFilters()));
 
     expandAllAction = new QAction(tr("Expand all filters"), this);
     expandAllAction->setObjectName("expandAll");
@@ -909,6 +910,46 @@ void MW::createActions()
     collapseAllAction = new QAction(tr("Collapse all filters"), this);
     collapseAllAction->setObjectName("collapseAll");
     connect(collapseAllAction, SIGNAL(triggered()), filters, SLOT(collapseAllFilters()));
+
+    filterRating1Action = new QAction(tr("Filter by rating 1"), this);
+    filterRating1Action->setCheckable(true);
+    connect(filterRating1Action,  SIGNAL(triggered()), this, SLOT(quickFilter()));
+
+    filterRating2Action = new QAction(tr("Filter by rating 2"), this);
+    filterRating2Action->setCheckable(true);
+    connect(filterRating2Action,  SIGNAL(triggered()), this, SLOT(quickFilter()));
+
+    filterRating3Action = new QAction(tr("Filter by rating 3"), this);
+    filterRating3Action->setCheckable(true);
+    connect(filterRating3Action,  SIGNAL(triggered()), this, SLOT(quickFilter()));
+
+    filterRating4Action = new QAction(tr("Filter by rating 4"), this);
+    filterRating4Action->setCheckable(true);
+    connect(filterRating4Action,  SIGNAL(triggered()), this, SLOT(quickFilter()));
+
+    filterRating5Action = new QAction(tr("Filter by rating 5"), this);
+    filterRating5Action->setCheckable(true);
+    connect(filterRating5Action,  SIGNAL(triggered()), this, SLOT(quickFilter()));
+
+    filterRedAction = new QAction(tr("Filter by Red"), this);
+    filterRedAction->setCheckable(true);
+    connect(filterRedAction,  SIGNAL(triggered()), this, SLOT(quickFilter()));
+
+    filterYellowAction = new QAction(tr("Filter by Yellow"), this);
+    filterYellowAction->setCheckable(true);
+    connect(filterYellowAction,  SIGNAL(triggered()), this, SLOT(quickFilter()));
+
+    filterGreenAction = new QAction(tr("Filter by Green"), this);
+    filterGreenAction->setCheckable(true);
+    connect(filterGreenAction,  SIGNAL(triggered()), this, SLOT(quickFilter()));
+
+    filterBlueAction = new QAction(tr("Filter by Blue"), this);
+    filterBlueAction->setCheckable(true);
+    connect(filterBlueAction,  SIGNAL(triggered()), this, SLOT(quickFilter()));
+
+    filterPurpleAction = new QAction(tr("Filter by Purple"), this);
+    filterPurpleAction->setCheckable(true);
+    connect(filterPurpleAction,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
     // Sort Menu
 
@@ -1316,8 +1357,8 @@ void MW::createMenus()
     editMenu->addAction(selectAllAction);
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
-    editMenu->addAction(togglePickAction);
-    editMenu->addAction(toggleFilterPickAction);
+    editMenu->addAction(pickAction);
+    editMenu->addAction(filterPickAction);
     editMenu->addSeparator();
     editMenu->addAction(copyImagesAction);
     editMenu->addSeparator();
@@ -1350,6 +1391,23 @@ void MW::createMenus()
     goMenu->addSeparator();
     goMenu->addAction(nextPickAction);
     goMenu->addAction(prevPickAction);
+
+    filterMenu = menuBar()->addMenu(tr("Filter"));
+    filterMenu->addAction(uncheckAllFiltersAction);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterPickAction);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterRating1Action);
+    filterMenu->addAction(filterRating2Action);
+    filterMenu->addAction(filterRating3Action);
+    filterMenu->addAction(filterRating4Action);
+    filterMenu->addAction(filterRating5Action);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterRedAction);
+    filterMenu->addAction(filterYellowAction);
+    filterMenu->addAction(filterGreenAction);
+    filterMenu->addAction(filterBlueAction);
+    filterMenu->addAction(filterPurpleAction);
 
     sortMenu = menuBar()->addMenu(tr("Sort"));
     sortMenu->addActions(sortGroupAction->actions());
@@ -1434,7 +1492,7 @@ void MW::createMenus()
     fsTree->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     // filters context menu
-    filters->addAction(uncheckAllAction);
+    filters->addAction(uncheckAllFiltersAction);
     addMenuSeparator(filters);
     filters->addAction(expandAllAction);
     filters->addAction(collapseAllAction);
@@ -1455,8 +1513,8 @@ void MW::createMenus()
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     // imageview context menu
-    imageView->addAction(togglePickAction);
-    imageView->addAction(toggleFilterPickAction);
+    imageView->addAction(pickAction);
+    imageView->addAction(filterPickAction);
     imageView->addAction(ingestAction);
     addMenuSeparator(imageView);
 
@@ -2077,7 +2135,9 @@ QString fileSym = "📷";
         }
         if (subFoldersAction->isChecked()) fileCount += " including subfolders";
         zoomPct = QString::number(imageView->zoom*100, 'f', 0) + "% zoom";
+        QString pickedSoFar = pickMemSize + " picked";
         base = fileCount + spacer + zoomPct + spacer;
+        if(pickMemSize.length() > 0) base += pickedSoFar + spacer;
     }
 
     status = " " + base + s;
@@ -2202,6 +2262,25 @@ tableView.
     else sortReverseAction->setChecked(false);
     sortMenuUpdateToMatchTable = false;
     reindexImageCache();
+}
+
+void MW::quickFilter()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::quickFilter";
+    #endif
+    }
+    if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Checked);
+    if (filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Checked);
+    if (filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Checked);
+    if (filterRating4Action->isChecked()) filters->ratings4->setCheckState(0, Qt::Checked);
+    if (filterRating5Action->isChecked()) filters->ratings5->setCheckState(0, Qt::Checked);
+    if (filterRedAction->isChecked()) filters->labelsRed->setCheckState(0, Qt::Checked);
+    if (filterYellowAction->isChecked()) filters->labelsYellow->setCheckState(0, Qt::Checked);
+    if (filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Checked);
+    if (filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Checked);
+    if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Checked);
 }
 
 void MW::sortThumbnails()
@@ -3799,8 +3878,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
 //    actionKeys[pasteImageAction->objectName()] = pasteImageAction;
 //    actionKeys[refreshAction->objectName()] = refreshAction;
 //    actionKeys[pasteAction->objectName()] = pasteAction;
-    actionKeys[togglePickAction->objectName()] = togglePickAction;
-    actionKeys[toggleFilterPickAction->objectName()] = toggleFilterPickAction;
+    actionKeys[pickAction->objectName()] = pickAction;
+    actionKeys[filterPickAction->objectName()] = filterPickAction;
     actionKeys[ingestAction->objectName()] = ingestAction;
     actionKeys[reportMetadataAction->objectName()] = reportMetadataAction;
     actionKeys[slideShowAction->objectName()] = slideShowAction;
@@ -3882,26 +3961,37 @@ void MW::loadShortcuts(bool defaultShortcuts)
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
         selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
         invertSelectionAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
-        togglePickAction->setShortcut(QKeySequence("`"));
-        toggleFilterPickAction->setShortcut(QKeySequence("Ctrl+`"));
+        pickAction->setShortcut(QKeySequence("`"));
+        filterPickAction->setShortcut(QKeySequence("Shift+`"));
         ingestAction->setShortcut(QKeySequence("Q"));
-        rate0Action->setShortcut(QKeySequence("!"));
+//        rate0Action->setShortcut(QKeySequence("!"));
+        uncheckAllFiltersAction->setShortcut(QKeySequence("Shift+Ctrl+0"));
         rate1Action->setShortcut(QKeySequence("1"));
         rate2Action->setShortcut(QKeySequence("2"));
         rate3Action->setShortcut(QKeySequence("3"));
         rate4Action->setShortcut(QKeySequence("4"));
         rate5Action->setShortcut(QKeySequence("5"));
-        label0Action->setShortcut(QKeySequence("^"));
+        filterRating1Action->setShortcut(QKeySequence("Shift+1"));
+        filterRating2Action->setShortcut(QKeySequence("Shift+2"));
+        filterRating3Action->setShortcut(QKeySequence("Shift+3"));
+        filterRating4Action->setShortcut(QKeySequence("Shift+4"));
+        filterRating5Action->setShortcut(QKeySequence("Shift+5"));
+//        label0Action->setShortcut(QKeySequence("^"));
         label1Action->setShortcut(QKeySequence("6"));
         label2Action->setShortcut(QKeySequence("7"));
         label3Action->setShortcut(QKeySequence("8"));
         label4Action->setShortcut(QKeySequence("9"));
         label5Action->setShortcut(QKeySequence("0"));
+        filterRedAction->setShortcut(QKeySequence("Shift+6"));
+        filterYellowAction->setShortcut(QKeySequence("Shift+7"));
+        filterGreenAction->setShortcut(QKeySequence("Shift+8"));
+        filterBlueAction->setShortcut(QKeySequence("Shift+9"));
+        filterPurpleAction->setShortcut(QKeySequence("Shift+0"));
         reportMetadataAction->setShortcut(QKeySequence("Ctrl+R"));
         slideShowAction->setShortcut(QKeySequence("S"));
-        thumbsFitAction->setShortcut(QKeySequence("Alt+}"));
-        thumbsEnlargeAction->setShortcut(QKeySequence("}"));
-        thumbsShrinkAction->setShortcut(QKeySequence("{"));
+        thumbsFitAction->setShortcut(QKeySequence("Alt+]"));
+        thumbsEnlargeAction->setShortcut(QKeySequence("]"));
+        thumbsShrinkAction->setShortcut(QKeySequence("["));
         keyRightAction->setShortcut(QKeySequence("Right"));
         keyLeftAction->setShortcut(QKeySequence("Left"));
         keyHomeAction->setShortcut(QKeySequence("Home"));
@@ -3923,8 +4013,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
 //        zoom50PctAction->setShortcut(QKeySequence("Ctrl+5"));
 //        zoom100PctAction->setShortcut(QKeySequence("Ctrl+0"));
 //        zoom200PctAction->setShortcut(QKeySequence("Ctrl+2"));
-        rotateLeftAction->setShortcut(QKeySequence("["));
-        rotateRightAction->setShortcut(QKeySequence("]"));
+        rotateLeftAction->setShortcut(QKeySequence("Ctrl+["));
+        rotateRightAction->setShortcut(QKeySequence("Ctrl+]"));
         infoVisibleAction->setShortcut(QKeySequence("I"));
         newWorkspaceAction->setShortcut(QKeySequence("W"));
         manageWorkspaceAction->setShortcut(QKeySequence("Ctrl+W"));
@@ -4135,7 +4225,7 @@ lack of notification when the QListView has finished painting itself.
     thumbView->setThumbParameters(true);
     // limit time spent intercepting paint events to call scrollToCurrent
     thumbView->readyToScroll = true;
-    QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
+    QTimer::singleShot(2000, this, SLOT(cancelNeedToScroll()));
 }
 
 void MW::gridDisplay()
@@ -4167,7 +4257,7 @@ lack of notification when the QListView has finished painting itself.
     gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     // limit time spent intercepting paint events to call scrollToCurrent
     gridView->readyToScroll = true;
-    QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
+    QTimer::singleShot(2000, this, SLOT(cancelNeedToScroll()));
 }
 
 void MW::tableDisplay()
@@ -4580,13 +4670,15 @@ void MW::togglePick()
     QString pickStatus;
 
     foreach (idx, idxList) {
-        int srcRow = dm->sf->mapToSource(idx).row();
-        QModelIndex srcIdx = dm->index(srcRow, G::PickedColumn);
-        pickStatus = (qvariant_cast<QString>(srcIdx.data(Qt::EditRole))
-                      == "true") ? "false" : "true";
-        dm->setData(srcIdx, pickStatus, Qt::EditRole);
+        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickedColumn);
+        pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
+        pickStatus = pickStatus == "true" ? "false" : "true";
+        dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
     }
+
     idx = thumbView->currentIndex();
+    QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickedColumn);
+    pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
     bool isPick = (pickStatus == "true");
 
     imageView->pickLabel->setVisible(isPick);
@@ -4596,6 +4688,22 @@ void MW::togglePick()
     }
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
+
+    QModelIndex sizeIdx = dm->sf->index(idx.row(), G::SizeColumn);
+//    QVariant a = sizeIdx.data(Qt::EditRole)
+    qDebug() << "sizeIdx.data(Qt::EditRole)" << sizeIdx.data(Qt::EditRole)
+             << "sizeIdx.data(Qt::DisplayRole)" << sizeIdx.data(Qt::DisplayRole);
+
+    qulonglong memTot = 0;
+    for(int row = 0; row < dm->sf->rowCount(); row++) {
+        QModelIndex idx = dm->sf->index(row, G::PickedColumn);
+        if(qvariant_cast<QString>(idx.data(Qt::EditRole)) == "true") {
+            idx = dm->sf->index(row, G::SizeColumn);
+            memTot += idx.data(Qt::EditRole).toULongLong();
+        }
+    }
+    pickMemSize = memory(memTot);
+    updateStatus(true, "");
 }
 
 void MW::updatePick()
@@ -4616,6 +4724,20 @@ of the "thumbs up" icon that highlights if the image has been picked.
         (isPick) ? imageView->pickLabel->setVisible(true)
                  : imageView->pickLabel->setVisible(false);
     if (asCompareAction->isChecked()) compareImages->pick(isPick, idx);
+}
+
+QString MW::memory(qulonglong bytes)
+{
+    qulonglong x = 1024;
+    if(bytes < x) return QString::number(bytes) + "bytes";
+    if(bytes < x * 1024) return QString::number(bytes / x) + "KB";
+    x *= 1024;
+    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + "MB";
+    x *= 1024;
+    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + "GB";
+    x *= 1024;
+    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + "TB";
+    return "More than TB";
 }
 
 void MW::copyPicks()

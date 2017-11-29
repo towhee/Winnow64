@@ -198,6 +198,7 @@ bool DataModel::addFiles()
         // build list for filters->addCategoryFromData
         typesMap[s] = s;
         setData(index(row, G::TypeColumn), s);
+        setData(index(row, G::SizeColumn), fileInfo.size());
         setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::CreatedColumn), fileInfo.created());
         setData(index(row, G::ModifiedColumn), fileInfo.lastModified());

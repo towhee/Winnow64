@@ -146,6 +146,7 @@ public:
     bool isSlideShowActive;
     bool copyOp;
     int maxThumbSpaceHeight;
+    QString pickMemSize;
 
 protected:
     void closeEvent(QCloseEvent *event);
@@ -175,6 +176,7 @@ private slots:
     void copyPicks();
     void setRating();
     void setColorClass();
+    void quickFilter();
     void sortThumbnails();
 //    void reload();
     void preferences();
@@ -309,6 +311,7 @@ private:
         QMenu *recentFoldersMenu;
     QMenu *editMenu;
     QMenu *goMenu;
+    QMenu *filterMenu;
     QMenu *sortMenu;
     QMenu *viewMenu;
        QMenu *zoomSubMenu;
@@ -345,8 +348,8 @@ private:
     QAction *selectAllAction;
     QAction *invertSelectionAction;
     QAction *copyImagesAction;
-    QAction *togglePickAction;
-    QAction *toggleFilterPickAction;
+    QAction *pickAction;
+    QAction *filterPickAction;
     QAction *rotateLeftAction;
     QAction *rotateRightAction;
     QAction *prefAction;
@@ -376,9 +379,19 @@ private:
 
     // Filters
 
-    QAction *uncheckAllAction;
+    QAction *uncheckAllFiltersAction;
     QAction *expandAllAction;
     QAction *collapseAllAction;
+    QAction *filterRating1Action;
+    QAction *filterRating2Action;
+    QAction *filterRating3Action;
+    QAction *filterRating4Action;
+    QAction *filterRating5Action;
+    QAction *filterRedAction;
+    QAction *filterYellowAction;
+    QAction *filterGreenAction;
+    QAction *filterBlueAction;
+    QAction *filterPurpleAction;
 
     // Sort Menu
     QActionGroup *sortGroupAction;
@@ -411,8 +424,6 @@ private:
     QAction *asLoupeAction;
     QAction *asCompareAction;
     QActionGroup *iconGroupAction;
-//    QAction *asListAction;
-//    QAction *asIconsAction;
     QAction *zoomInAction;
     QAction *zoomOutAction;
     QAction *zoomToggleAction;
@@ -596,6 +607,8 @@ private:
 
     void addRecentFolder(QString fPath);
     void syncRecentFoldersMenu();
+
+    QString memory(qulonglong bytes);
 
     void stressTest();
 

@@ -1,4 +1,4 @@
-- Add font size to preferences
+- Add filter shortcuts and menu
 - Sometimes two mouse clicks reqd in loupe view to toggle zoom
 - Set mouse click zoom amount (default = 100%)
 - Show file size in KB/MB/GB
