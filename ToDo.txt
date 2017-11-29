@@ -1,7 +1,5 @@
-- Add filter shortcuts and menu
-- Sometimes two mouse clicks reqd in loupe view to toggle zoom
 - Set mouse click zoom amount (default = 100%)
-- Show file size in KB/MB/GB
+- Show how many images in each folder in treeView
 - Show available memory in pref cache
 - Edit title in metadata?
 - Improve performance for large files (D850)
@@ -12,7 +10,6 @@
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Get comment and copywrite metadata
 - Get lens metadata
-- Show how many images in each folder in treeView
 - Show how much mem req'd for selected images
 - Combine raw+jpg option
 - Add more raw file formats
@@ -31,6 +28,9 @@
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Show file size in KB/MB/GB
+- Done: Sometimes two mouse clicks reqd in loupe view to toggle zoom
+- Done: Add filter shortcuts and menu
 - Done: Help > Shortcuts
 - Done: Reset currentIndex when invert selection
 - Done: Should not zoom when right click imageView

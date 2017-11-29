@@ -861,7 +861,7 @@ void ImageView::wheelEvent(QWheelEvent *event)
     #endif
     }
     // if trackpad scrolling set in preferences then default behavior
-    qDebug() << "isTrackpadScroll =" << isTrackpadScroll;
+//    qDebug() << "isTrackpadScroll =" << isTrackpadScroll << event;
     if(isTrackpadScroll) {
         QGraphicsView::wheelEvent(event);
         return;
@@ -906,6 +906,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     qDebug() << "ImageView::mousePressEvent";
     #endif
     }
+//    qDebug() << "mousePressEvent" << event;
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
     // prevent zooming when right click for context menu
@@ -922,7 +923,8 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
 void ImageView::mouseMoveEvent(QMouseEvent *event)
 {
-/* Pan the image during a mouse drag operation
+/*
+Pan the image during a mouse drag operation
 */
     {
     #ifdef ISDEBUG
@@ -938,6 +940,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
                                       (event->y() - mousePressPt.y()));
         mousePressPt.setX(event->x());
         mousePressPt.setY(event->y());
+        qDebug() << event;
     }
     event->ignore();
 
@@ -951,12 +954,13 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     qDebug() << "ImageView::mouseReleaseEvent";
     #endif
     }
+//    qDebug() << "mouseReleaseEvent" << event;
     isLeftMouseBtnPressed = false;
     if (isMouseDrag || isMouseDoubleClick) {
         isMouseDrag = false;
         if (isZoom) setCursor((Qt::OpenHandCursor));
         else setCursor(Qt::ArrowCursor);
-        return;
+//        return;
     }
     if (!isZoom && zoom < zoomFit * 0.99)
         zoom = zoomFit;

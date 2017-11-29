@@ -1,0 +1,22 @@
+// Regular expression
+QRegExp rx("^(Border|Text|Shape|Graphic)$");
+
+if (rx.exactMatch(objectName) == true){
+    // do something
+}
+
+
+// QString with arguments
+statusBar()->showMessage(tr("Position: (%1,%2) in top level").arg(row).arg(column));
+QString newTemplate = QString("New Template %1").arg(newTemplateCount);
+
+
+// Algorithm to walk a tree structure
+void DataModel::walkTree(const QModelIndex &row)
+{
+    if (this->hasChildren()) {
+        for (int i = 0; i < rowCount(row); ++i){
+            walkTree(this->index(i,0,row));
+        }
+    }
+}

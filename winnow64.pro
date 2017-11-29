@@ -84,7 +84,8 @@ DISTFILES += \
     Shortcuts.txt \
     Scratch.txt \
     ToDo.txt \
-    Notes
+    Notes \
+    snippets.txt
 
 macx {
     QMAKE_MAC_SDK = macosx10.12

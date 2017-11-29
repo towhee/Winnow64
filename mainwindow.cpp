@@ -87,7 +87,7 @@ variables in MW (this class) and managed in the prefDlg class.
     createCaching();            // dependent on dm, metadata, thumbView
     createImageView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
-    createFSTree();
+    createFSTree();             // dependent on Metadata
     createBookmarks();          // dependent on loadSettings
     createDocks();              // dependent on FSTree, Bookmarks, ThumbView, Metadata, InfoView
     createStatusBar();
@@ -1960,7 +1960,7 @@ void MW::createFSTree()
     qDebug() << "MW::createFSTree";
     #endif
     }
-    fsTree = new FSTree(this);
+    fsTree = new FSTree(this, metadata);
 //    fsTree = new FSTree(folderDock);
     fsTree->setMaximumWidth(folderMaxWidth);
 
