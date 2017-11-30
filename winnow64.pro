@@ -85,7 +85,8 @@ DISTFILES += \
     Scratch.txt \
     ToDo.txt \
     Notes \
-    snippets.txt
+    snippets.txt \
+    Deploy.txt
 
 macx {
     QMAKE_MAC_SDK = macosx10.12

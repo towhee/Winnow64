@@ -4,7 +4,7 @@
 /*------------------------------------------------------------------------------
 CLASS FSModel subclassing QFileSystemModel
 ------------------------------------------------------------------------------*/
-FSModel::FSModel(QWidget *parent, Metadata *metadata) : QFileSystemModel(parent)
+FSModel::FSModel(QWidget *parent, Metadata *metadata, bool showImageCount) : QFileSystemModel(parent)
 {
     QStringList *fileFilters = new QStringList;
     dir = new QDir();
@@ -86,7 +86,7 @@ QVariant FSModel::data(const QModelIndex & index, int role) const
 CLASS FSTree subclassing QTreeView
 ------------------------------------------------------------------------------*/
 
-FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
+FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTreeView(parent)
 {
     {
     #ifdef ISDEBUG
@@ -97,7 +97,7 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 	setDragEnabled(true);
 	setDragDropMode(QAbstractItemView::InternalMove);
 
-    fsModel = new FSModel(this, metadata);
+    fsModel = new FSModel(this, metadata, showImageCount);
     this->metadata = metadata;
 
     fileFilters = new QStringList;
