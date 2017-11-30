@@ -29,7 +29,7 @@ public:
     void emptyFolder();
     void setCursorHiding(bool hide);
     bool isBusy;
-    bool isTrackpadScroll;
+    bool useWheelToScroll;
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void moveShootingInfo(QString infoString);
@@ -146,6 +146,7 @@ private:
     bool isFit;
     bool wasZoomFit;
     bool isMouseDrag;
+    bool isTrackpadScroll;
     bool isLeftMouseBtnPressed;
     bool isMouseDoubleClick;
     bool isPreview;

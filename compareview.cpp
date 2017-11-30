@@ -642,10 +642,11 @@ Pan the image during a mouse drag operation
 */
     {
     #ifdef ISDEBUG
-//    qDebug() << "ImageView::mouseMoveEvent";
+//    qDebug() << "CompareView::mouseMoveEvent";
     #endif
     }
     if (isLeftMouseBtnPressed) {
+        qDebug() << "CompareView::mouseMoveEvent  if (isLeftMouseBtnPressed)";
         isMouseDrag = true;
         setCursor(Qt::ClosedHandCursor);
         horizontalScrollBar()->setValue(horizontalScrollBar()->value() -

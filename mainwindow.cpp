@@ -3210,8 +3210,14 @@ void MW::setShowImageCount()
     qDebug() << "MW::setShowImageCount";
     #endif
     }
-    fsTree->fsModel->showImageCount = showImageCountAction->isChecked();
-    fsTree->fsModel->fetchMore(fsTree->rootIndex());
+    bool isShow = showImageCountAction->isChecked();
+    // req'd to resize columns
+    fsTree->showImageCount = isShow;
+    // req'd to show imageCount in data
+    fsTree->fsModel->showImageCount = isShow;
+    fsTree->resizeColumns();
+    fsTree->repaint();
+    if (isShow) fsTree->fsModel->fetchMore(fsTree->rootIndex());
 }
 
 void MW::setPrefPage(int page)
@@ -3252,7 +3258,7 @@ void MW::setTrackpadScroll(bool trackpadScroll)
     qDebug() << "MW::setTrackpadScroll";
     #endif
     }
-    imageView->isTrackpadScroll = trackpadScroll;
+    imageView->useWheelToScroll = trackpadScroll;
 }
 
 void MW::setIngestRootFolder(QString rootFolder)
@@ -3547,7 +3553,7 @@ void MW::writeSettings()
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("showImageCount", showImageCountAction->isChecked());
     setting->setValue("maxRecentFolders", maxRecentFolders);
-    setting->setValue("isTrackpadScroll", imageView->isTrackpadScroll);
+    setting->setValue("useWheelToScroll", imageView->useWheelToScroll);
     setting->setValue("ingestRootFolder", ingestRootFolder);
     // thumbs
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
@@ -3720,7 +3726,7 @@ Preferences are located in the prefdlg class and updated here.
         rememberLastDir = true;
         maxRecentFolders = 10;
         bookmarks->bookmarkPaths.insert(QDir::homePath());
-        imageView->isTrackpadScroll = true;
+        imageView->useWheelToScroll = true;
 
       // slideshow
         slideShowDelay = 5;
@@ -3751,7 +3757,7 @@ Preferences are located in the prefdlg class and updated here.
     maxRecentFolders = setting->value("maxRecentFolders").toInt();
     ingestRootFolder = setting->value("ingestRootFolder").toString();
     // trackpad
-    imageView->isTrackpadScroll = setting->value("isTrackpadScroll").toBool();
+    imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
     // slideshow
     slideShowDelay = setting->value("slideShowDelay").toInt();
     slideShowRandom = setting->value("slideShowRandom").toBool();
@@ -3978,6 +3984,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         //        refreshAction->setShortcut(QKeySequence("Ctrl+F5"));
         //        pasteAction->setShortcut(QKeySequence("Ctrl+V"));
         subFoldersAction->setShortcut(QKeySequence("B"));
+        showImageCountAction->setShortcut(QKeySequence("\\"));
         fullScreenAction->setShortcut(QKeySequence("F"));
         escapeFullScreenAction->setShortcut(QKeySequence("Esc"));
         prefAction->setShortcut(QKeySequence("Ctrl+,"));

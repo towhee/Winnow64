@@ -15,7 +15,7 @@ public:
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QVariant data(const QModelIndex &index, int role) const;
-    Qt::ItemFlags flags(const QModelIndex &index) const;
+//    Qt::ItemFlags flags(const QModelIndex &index) const;
 
     bool showImageCount;
 
@@ -32,8 +32,12 @@ public:
     FSTree(QWidget *parent, Metadata *metadata, bool showImageCount);
 	FSModel *fsModel;
 	QModelIndex getCurrentIndex();
+    bool showImageCount;
 	void setModelFlags();
-    void showSupportedImageCount();
+//    void showSupportedImageCount();
+
+public slots:
+    void resizeColumns();
 
 protected:
 	void dragEnterEvent(QDragEnterEvent *event);
@@ -44,15 +48,16 @@ signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
 
 private:
-    void walkTree(const QModelIndex &row);
+//    void walkTree(const QModelIndex &row);
 	QModelIndex dndOrigSelection;
     QFileSystemModel fileSystemModel;
     Metadata *metadata;
     QDir *dir;
     QStringList *fileFilters;
+    int imageCountColumnWidth;
 
 private slots:
-	void resizeTreeColumn(const QModelIndex &);
+//	void resizeTreeColumn(const QModelIndex &);
 };
 
 #endif // FSTREE_H

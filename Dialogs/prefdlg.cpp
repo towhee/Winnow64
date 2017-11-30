@@ -19,8 +19,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     // general
     ui->rememberFolderChk->setChecked(mw->rememberLastDir);
     ui->maxRecentSB->setValue(mw->maxRecentFolders);
-    ui->trackpadIterateRadio->setChecked(!mw->imageView->isTrackpadScroll);
-    ui->trackpadScrollRadio->setChecked(mw->imageView->isTrackpadScroll);
+    ui->trackpadIterateRadio->setChecked(!mw->imageView->useWheelToScroll);
+    ui->trackpadScrollRadio->setChecked(mw->imageView->useWheelToScroll);
 
     // thumbs
     ui->iconWidthSlider->setValue(mw->thumbView->thumbWidth);

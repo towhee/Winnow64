@@ -841,7 +841,7 @@ void ImageView::paintEvent(QPaintEvent *event)
 void ImageView::scrollContentsBy(int dx, int dy)
 {
     scrollCount++;
-    isMouseDrag = (scrollCount > 2);
+//    isMouseDrag = (scrollCount > 2);
 //    qDebug() << "scrolling dx =" << dx << "dy =" << dy << scrollCount;
     QGraphicsView::scrollContentsBy(dx, dy);
 }
@@ -861,9 +861,10 @@ void ImageView::wheelEvent(QWheelEvent *event)
     #endif
     }
     // if trackpad scrolling set in preferences then default behavior
-    qDebug() << event << "isTrackpadScroll =" << isTrackpadScroll << "isMouseDrag" << isMouseDrag;
-    if(isTrackpadScroll) {
+//    qDebug() << event << "useWheelToScroll =" << useWheelToScroll << "isMouseDrag" << isMouseDrag;
+    if(useWheelToScroll) {
         QGraphicsView::wheelEvent(event);
+        isTrackpadScroll = true;
         return;
     }
 
@@ -896,7 +897,7 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
     // placeholder function pending use
 
     //    isMouseDoubleClick = true;
-    qDebug() << "ImageView::mouseDoubleClickEvent" << "isMouseDrag" << isMouseDrag;
+//    qDebug() << "ImageView::mouseDoubleClickEvent" << "isMouseDrag" << isMouseDrag;
     QWidget::mouseDoubleClickEvent(event);
 }
 
@@ -907,7 +908,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     qDebug() << "ImageView::mousePressEvent";
     #endif
     }
-    qDebug() << "mousePressEvent" << event << "isMouseDrag" << isMouseDrag;
+//    qDebug() << "mousePressEvent" << event << "isMouseDrag" << isMouseDrag;
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
     // prevent zooming when right click for context menu
@@ -932,10 +933,10 @@ Pan the image during a mouse drag operation
 //    qDebug() << "ImageView::mouseMoveEvent";
     #endif
     }
-    qDebug() << "ImageView::mouseMoveEvent" << isMouseDrag;
+//    qDebug() << "ImageView::mouseMoveEvent" << isMouseDrag;
     if (isLeftMouseBtnPressed) {
         isMouseDrag = true;
-        qDebug() << "ImageView::mouseMoveEvent  isLeftMouseBtnPressed" << isLeftMouseBtnPressed << "isMouseDrag" << isMouseDrag;
+//        qDebug() << "ImageView::mouseMoveEvent  isLeftMouseBtnPressed" << isLeftMouseBtnPressed << "isMouseDrag" << isMouseDrag;
         setCursor(Qt::ClosedHandCursor);
         horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
                                        (event->x() - mousePressPt.x()));
@@ -957,14 +958,14 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     qDebug() << "ImageView::mouseReleaseEvent";
     #endif
     }
-    qDebug() << "mouseReleaseEvent" << event << "isMouseDrag" << isMouseDrag;
+//    qDebug() << "mouseReleaseEvent" << event << "isMouseDrag" << isMouseDrag;
     isLeftMouseBtnPressed = false;
     if (isMouseDrag || isMouseDoubleClick) {
-        qDebug() << "mouseReleaseEvent  if (isMouseDrag || isMouseDoubleClick)" << event << "isMouseDrag" << isMouseDrag;
+//        qDebug() << "mouseReleaseEvent  if (isMouseDrag || isMouseDoubleClick)" << event << "isMouseDrag" << isMouseDrag;
         isMouseDrag = false;
         if (isZoom) setCursor((Qt::OpenHandCursor));
         else setCursor(Qt::ArrowCursor);
-//        return;
+        return;
     }
     if (!isZoom && zoom < zoomFit * 0.99)
         zoom = zoomFit;
