@@ -1,5 +1,5 @@
 
-#include "dircompleter.h"
+//#include "dircompleter.h"
 #include "mainwindow.h"
 #include "global.h"
 
@@ -436,7 +436,8 @@ so scrollTo and delegate use of the current index must check the row.
     qDebug() << "\n**********************************MW::fileSelectionChange";
     #endif
     }
-    fsTree->showSupportedImageCount();
+//    fsTree->showSupportedImageCount();
+//    fsTree->fsModel->showImageCount = true;
 
     // starting program, set first image to display
     if(previous.row() == -1) thumbView->selectThumb(0);
@@ -719,6 +720,11 @@ void MW::createActions()
     subFoldersAction->setCheckable(true);
     subFoldersAction->setChecked(false);
     connect(subFoldersAction, SIGNAL(triggered()), this, SLOT(setIncludeSubFolders()));
+
+    showImageCountAction = new QAction(tr("Show image count"), this);
+    showImageCountAction->setObjectName("showImageCount");
+    showImageCountAction->setCheckable(true);
+    connect(showImageCountAction, SIGNAL(triggered()), this, SLOT(setShowImageCount()));
 
     addBookmarkAction = new QAction(tr("Add Bookmark"), this);
     addBookmarkAction->setObjectName("addBookmark");
@@ -1337,6 +1343,7 @@ void MW::createMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(revealFileAction);
     fileMenu->addAction(subFoldersAction);
+    fileMenu->addAction(showImageCountAction);
     fileMenu->addAction(addBookmarkAction);
     recentFoldersMenu = fileMenu->addMenu(tr("Recent folders"));
     // add 10 dummy menu items for custom workspaces
@@ -1787,6 +1794,7 @@ void MW::createThumbView()
     // set here, as gridView, which is another ThumbView object, is different
 //    thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
+    // loadSettings has not run yet (dependencies, but QSettings has been opened
     thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
     thumbView->thumbPadding = setting->value("thumbPadding").toInt();
     thumbView->thumbWidth = setting->value("thumbWidth").toInt();
@@ -1962,8 +1970,8 @@ void MW::createFSTree()
     qDebug() << "MW::createFSTree";
     #endif
     }
-    fsTree = new FSTree(this, metadata);
-//    fsTree = new FSTree(folderDock);
+    // loadSettings has not run yet (dependencies, but QSettings has been opened
+    fsTree = new FSTree(this, metadata, setting->value("showImageCount").toBool());
     fsTree->setMaximumWidth(folderMaxWidth);
 
     connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
@@ -3195,6 +3203,17 @@ void MW::setIncludeSubFolders()
     folderSelectionChange();
 }
 
+void MW::setShowImageCount()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::setShowImageCount";
+    #endif
+    }
+    fsTree->fsModel->showImageCount = showImageCountAction->isChecked();
+    fsTree->fsModel->fetchMore(fsTree->rootIndex());
+}
+
 void MW::setPrefPage(int page)
 {
     {
@@ -3526,6 +3545,7 @@ void MW::writeSettings()
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
+    setting->setValue("showImageCount", showImageCountAction->isChecked());
     setting->setValue("maxRecentFolders", maxRecentFolders);
     setting->setValue("isTrackpadScroll", imageView->isTrackpadScroll);
     setting->setValue("ingestRootFolder", ingestRootFolder);
@@ -3727,6 +3747,7 @@ Preferences are located in the prefdlg class and updated here.
 //    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();
     rememberLastDir = setting->value("rememberLastDir").toBool();
     lastDir = setting->value("lastDir").toString();
+    showImageCountAction->setChecked(setting->value("showImageCount").toBool());
     maxRecentFolders = setting->value("maxRecentFolders").toInt();
     ingestRootFolder = setting->value("ingestRootFolder").toString();
     // trackpad

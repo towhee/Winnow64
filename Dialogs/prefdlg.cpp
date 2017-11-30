@@ -402,6 +402,8 @@ void Prefdlg::on_maxRecentSB_destroyed()
     }
 }
 
+
+
 void Prefdlg::on_trackpadIterateRadio_clicked()
 {
     if(okToUpdate) {

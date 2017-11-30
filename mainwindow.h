@@ -17,8 +17,12 @@
 #include "popup.h"
 #include "bookmarks.h"
 #include "filters.h"
+#include "fstree.h"
 #include "infoview.h"
 #include "compareImages.h"
+#include "dircompleter.h"
+#include "mainwindow.h"
+#include "global.h"
 #include "ui_helpform.h"
 #include "ui_shortcutsform.h"
 #include "ui_welcome.h"
@@ -172,6 +176,7 @@ public slots:
 signals:
 
 private slots:
+    void setShowImageCount();
     void about();
     void copyPicks();
     void setRating();
@@ -335,6 +340,7 @@ private:
     QAction *removeBookmarkAction;
     QAction *ingestAction;
     QAction *renameAction;
+    QAction *showImageCountAction;
     QAction *runDropletAction;
     QAction *reportMetadataAction;
     QAction *exitAction;
