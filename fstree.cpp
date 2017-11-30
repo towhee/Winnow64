@@ -55,19 +55,25 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
         return QFileSystemModel::headerData(section, orientation, role);
 }
 
+Qt::ItemFlags FSModel::flags(const QModelIndex &index) const
+{
+    return Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled;
+}
+
 QVariant FSModel::data(const QModelIndex & index, int role) const
 {
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole) {
-            QString fPath = qvariant_cast<QString>(QFileSystemModel::data(index, QFileSystemModel::FilePathRole));
-            dir->setPath(fPath);
-            int count = dir->entryInfoList().size();
-            QString imageCount = "";
-            if (count > 0)
-              imageCount = QString::number(count, 'f', 0);
-            return imageCount;
+            return QVariant();
+//            QString fPath = qvariant_cast<QString>(QFileSystemModel::data(index, QFileSystemModel::FilePathRole));
+//            dir->setPath(fPath);
+//            int count = dir->entryInfoList().size();
+//            QString imageCount = "";
+//            if (count > 0)
+//              imageCount = QString::number(count, 'f', 0);
+//            return imageCount;
         }
-        if(role == Qt::TextAlignmentRole)
+        if (role == Qt::TextAlignmentRole)
             return static_cast<QVariant>(Qt::AlignRight | Qt::AlignVCenter);
         else
             return QVariant();
@@ -92,6 +98,10 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 	setDragDropMode(QAbstractItemView::InternalMove);
 
     fsModel = new FSModel(this, metadata);
+    this->metadata = metadata;
+
+    fileFilters = new QStringList;
+    dir = new QDir();
 
 #ifdef Q_OS_LINIX
     fsModel->setRootPath("/Volumes");
@@ -191,27 +201,30 @@ void FSTree::setModelFlags()
 //		fsModel->setFilter(fsModel->filter() | QDir::Hidden);
 }
 
-//void FSTree::showSupportedImageCount()
-//{
-//    // do some initializing
-//    fileFilters->clear();
-//    foreach (const QString &str, metadata->supportedFormats)
-//            fileFilters->append("*." + str);
-//    dir->setNameFilters(*fileFilters);
-//    dir->setFilter(QDir::Files);
+void FSTree::showSupportedImageCount()
+{
+    // do some initializing
+    fileFilters->clear();
+    foreach (const QString &str, metadata->supportedFormats)
+            fileFilters->append("*." + str);
+    dir->setNameFilters(*fileFilters);
+    dir->setFilter(QDir::Files);
 
-//    walkTree(rootIndex());
-//}
+    walkTree(rootIndex());
+}
 
-//void FSTree::walkTree(const QModelIndex &row)
-//{
-//    if (fsModel->hasChildren(row)) {
-//        for (int i = 0; i < fsModel->rowCount(row); ++i){
-//            QModelIndex idx = fsModel->index(i, 0, row);
-//            QString fPath = qvariant_cast<QString>(idx.data(QFileSystemModel::FilePathRole));
-//            dir->setPath(fPath);
-//            qDebug() << fPath << dir->entryInfoList().size();
-//            walkTree(idx);
-//        }
-//    }
-//}
+void FSTree::walkTree(const QModelIndex &row)
+{
+    if (fsModel->hasChildren(row)) {
+        for (int i = 0; i < fsModel->rowCount(row); ++i){
+            QModelIndex idx = fsModel->index(i, 0, row);
+            QString fPath = qvariant_cast<QString>(idx.data(QFileSystemModel::FilePathRole));
+            dir->setPath(fPath);
+            QModelIndex idx2 = fsModel->index(i, 4, row);
+            fsModel->setData(idx2, dir->entryInfoList().size(), Qt::DisplayRole);
+            fsModel->setData(idx2, dir->entryInfoList().size(), Qt::EditRole);
+            qDebug() << fPath << dir->entryInfoList().size();
+            walkTree(idx);
+        }
+    }
+}

@@ -1,5 +1,4 @@
 - Set mouse click zoom amount (default = 100%)
-- Show how many images in each folder in treeView
 - Show available memory in pref cache
 - Edit title in metadata?
 - Improve performance for large files (D850)
@@ -28,6 +27,7 @@
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done:  Poor performance - Show how many images in each folder in treeView
 - Done: Show file size in KB/MB/GB
 - Done: Sometimes two mouse clicks reqd in loupe view to toggle zoom
 - Done: Add filter shortcuts and menu

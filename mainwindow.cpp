@@ -436,6 +436,8 @@ so scrollTo and delegate use of the current index must check the row.
     qDebug() << "\n**********************************MW::fileSelectionChange";
     #endif
     }
+    fsTree->showSupportedImageCount();
+
     // starting program, set first image to display
     if(previous.row() == -1) thumbView->selectThumb(0);
 
