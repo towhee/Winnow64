@@ -156,6 +156,18 @@ void MW::setupPlatform()
 
 //   EVENT HANDLERS
 
+void MW::moveEvent(QMoveEvent *event)
+{
+    QMainWindow::moveEvent(event);
+    emit resizeMW(this->geometry(), centralWidget->geometry());
+}
+
+void MW::resizeEvent(QResizeEvent *event)
+{
+    QMainWindow::resizeEvent(event);
+    emit resizeMW(this->geometry(), centralWidget->geometry());
+}
+
 void MW::keyPressEvent(QKeyEvent *event)
 {
 //    qDebug() << "MW::keyPressEvent" << event;
@@ -3349,11 +3361,28 @@ void MW::updateZoom()
     qDebug() << "MW::preferences";
     #endif
     }
-    ZoomDlg *zoomdlg = new ZoomDlg(this, (int)(imageView->zoom * 100));
+    QRect a = this->geometry();
+    QRect c = centralWidget->geometry();
+    int zoom = (int)(imageView->zoom * 100);
+    ZoomDlg *zoomdlg = new ZoomDlg(this, zoom, a, c);
+
+    // update the imageView and compareView classes if there is a zoom change
     connect(zoomdlg, SIGNAL(zoom(qreal)), imageView, SLOT(zoomTo(qreal)));
+    connect(zoomdlg, SIGNAL(zoom(qreal)), compareImages, SLOT(zoomTo(qreal)));
+
+    // update the imageView and compareView classes if there is a toggleZoomValue change
     connect(zoomdlg, SIGNAL(updateToggleZoom(qreal)),
             imageView, SLOT(updateToggleZoom(qreal)));
-    zoomdlg->exec();
+    connect(zoomdlg, SIGNAL(updateToggleZoom(qreal)),
+            compareImages, SLOT(updateToggleZoom(qreal)));
+
+    // if zoom change in parent send it to the zoom dialog
+    connect(imageView, SIGNAL(zoomChange(int)), zoomdlg, SLOT(zoomChange(int)));
+
+    // if main window resized then re-position zoom dialog
+    connect(this, SIGNAL(resizeMW(QRect,QRect)), zoomdlg, SLOT(positionWindow(QRect,QRect)));
+
+    zoomdlg->show();
 }
 
 void MW::zoomIn()
@@ -3721,7 +3750,7 @@ Preferences are located in the prefdlg class and updated here.
         bookmarks->bookmarkPaths.insert(QDir::homePath());
         imageView->useWheelToScroll = true;
         imageView->toggleZoom = 1.0;
-//        compareView->toggleZoom = 1.0;
+        compareImages->toggleZoom = 1.0;
 
       // slideshow
         slideShowDelay = 5;
@@ -3744,6 +3773,7 @@ Preferences are located in the prefdlg class and updated here.
     // general
     lastPrefPage = setting->value("lastPrefPage").toInt();
     imageView->toggleZoom = setting->value("toggleZoomValue").toReal();
+    compareImages->toggleZoom = setting->value("toggleZoomValue").toReal();
 
     // files
 //    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();

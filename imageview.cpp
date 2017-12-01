@@ -291,6 +291,7 @@ is zoomed.
     matrix.reset();
     matrix.scale(zoom, zoom);
     setMatrix(matrix);
+    emit zoomChange((int)(zoom * 100));
     isZoom = (zoom > zoomFit);
     isFit = (zoom == zoomFit);
     if (isZoom) scrollPct = getScrollPct();

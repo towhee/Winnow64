@@ -78,10 +78,13 @@ bool CompareImages::load(const QSize &centralWidgetSize)
     // iterate selected thumbs - load images, append and connect
     for (int i = 0; i < count; ++i) {
         QString fPath = selection.at(i).data(G::FileNameRole).toString();
+        // creae new compareView and append to list
         imList->append(new CompareView(this, gridCell, metadata, imageCacheThread, thumbView));
         bool isPick = qvariant_cast<bool>(selection.at(i).data(G::PickedRole));
         imList->at(i)->pickLabel->setVisible(isPick);
         imList->at(i)->loadImage(selection.at(i), fPath);
+        // set toggleZoom value (from QSettings)
+        imList->at(i)->toggleZoom = toggleZoom;
 
         // pass mouse click zoom to other images as a pct of width and height
         connect(imList->at(i), SIGNAL(zoomFromPct(QPointF, QModelIndex, bool)),
@@ -386,6 +389,21 @@ void CompareImages::align(QPointF basePos, QModelIndex idx)
     }
 }
 
+void CompareImages::updateToggleZoom(qreal toggleZoomValue)
+{
+/*
+Slot for signal from update zoom dialog to set the amount to zoom when user
+clicks on the unzoomed image.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ImageView::updateToggleZoom";
+    #endif
+    }
+    for (int i = 0; i < imList->count(); ++i)
+        imList->at(i)->toggleZoom == toggleZoomValue;
+}
+
 void CompareImages::zoomIn()
 {
     for (int i = 0; i < imList->count(); ++i) {
@@ -428,12 +446,13 @@ void CompareImages::zoom200()
     }
 }
 
-//void CompareImages::zoomTo()
-//{
-//    for (int i = 0; i < imList->count(); ++i) {
-//        imList->at(i)->zoomTo();
-//    }
-//}
+void CompareImages::zoomTo(qreal zoomValue)
+{
+    for (int i = 0; i < imList->count(); ++i) {
+        imList->at(i)->zoomTo(zoomValue);
+        qDebug() << i << "zoomto" << zoomValue;
+    }
+}
 
 void CompareImages::zoomToggle()
 {

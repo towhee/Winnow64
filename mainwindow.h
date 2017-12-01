@@ -157,6 +157,8 @@ public:
     QString pickMemSize;
 
 protected:
+    void moveEvent(QMoveEvent *event);
+    void resizeEvent(QResizeEvent *event);
     void closeEvent(QCloseEvent *event);
     void keyPressEvent(QKeyEvent *event);
     void keyReleaseEvent(QKeyEvent *event);
@@ -178,6 +180,7 @@ public slots:
     void reindexImageCache();
 
 signals:
+    void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
 
 private slots:
     void setShowImageCount();

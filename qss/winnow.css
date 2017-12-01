@@ -400,6 +400,8 @@ QComboBox::down-arrow:on { /* shift the arrow when popup is open */
     left: 1px;
 }
 
+/* NOTE - the spinbox style is "subclassed" in ZoomDlg, so any changes here
+should also be made there ...  */
 QSpinBox {
     background-color: rgb(111,111,111);
     border: 1px solid gray;

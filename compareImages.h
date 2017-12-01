@@ -14,9 +14,14 @@ class CompareImages : public QWidget
 public:
     CompareImages(QWidget *parent, QWidget *centralWidget, Metadata *metadata,
                   ThumbView *thumbView, ImageCache *imageCacheThread);
+
+    qreal toggleZoom;
     bool load(const QSize &central);
     void pick(bool isPick, QModelIndex idx);
     void ratingColorClass(QString rating, QString colorClass, QModelIndex idx);
+
+public slots:
+    void updateToggleZoom(qreal toggleZoomValue);
     void go(QString key);
     void zoomOut();
     void zoomIn();
@@ -24,7 +29,7 @@ public:
     void zoom50();
     void zoom100();
     void zoom200();
-    void zoomTo(float zoomTo);
+    void zoomTo(qreal zoomValue);
     void zoomToggle();
 
 private slots:
