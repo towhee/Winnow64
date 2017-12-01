@@ -148,6 +148,9 @@ to prevent jarring changes in perceived scale by the user.
         bool tryPreview = true;     // for testing
         loadFullSizeTimer->stop();
 
+//        QElapsedTimer t;
+//        t.start();
+
         // get preview size from stored metadata to decide if load preview or full
         setFullDim();               // req'd by setPreviewDim()
         setPreviewDim();            // defines QSize preview
@@ -172,6 +175,7 @@ to prevent jarring changes in perceived scale by the user.
             isPreview = false;
             isLoaded = true;
         }
+//        qDebug() << "set pixmap elapsed time =" << fPath << t.nsecsElapsed();
     }
     else {
         // load the image from the image file, may need to wait a bit if another thread
@@ -555,6 +559,20 @@ qreal ImageView::getZoom()
     return calcZoom;
 }
 
+void ImageView::updateToggleZoom(qreal toggleZoomValue)
+{
+/*
+Slot for signal from update zoom dialog to set the amount to zoom when user
+clicks on the unzoomed image.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ImageView::updateToggleZoom";
+    #endif
+    }
+    toggleZoom = toggleZoomValue;
+}
+
 void ImageView::zoomIn()
 {
     {
@@ -587,7 +605,7 @@ void ImageView::zoom100()
     qDebug() << "ImageView::zoom100";
     #endif
     }
-    clickZoom = 1;
+    toggleZoom = 1;
 //    mouseZoomFit = false;
 //    resizeImage();
 }
@@ -603,7 +621,7 @@ void ImageView::zoomToFit()
     scale();
 }
 
-void ImageView::zoomTo(float zoomTo)
+void ImageView::zoomTo(qreal zoomTo)
 {
     {
     #ifdef ISDEBUG
@@ -622,7 +640,7 @@ void ImageView::zoomToggle()
     #endif
     }
     if (zoom < zoomFit) zoom = zoomFit;
-    else if (zoom == zoomFit) zoom = clickZoom;
+    else if (zoom == zoomFit) zoom = toggleZoom;
     else if (isZoom) zoom = zoomFit;
     scale();
 }
@@ -635,7 +653,7 @@ void ImageView::zoom50()
     #endif
     }
 //    zoomTo(0.5);
-    clickZoom = 0.5;
+    toggleZoom = 0.5;
 }
 
 void ImageView::zoom200()
@@ -646,17 +664,17 @@ void ImageView::zoom200()
     #endif
     }
     zoomTo(2.0);
-    clickZoom = 2.0;
+    toggleZoom = 2.0;
 }
 
-//void ImageView::setClickZoom(float clickZoom)
+//void ImageView::setClickZoom(float toggleZoom)
 //{
 //    {
 //    #ifdef ISDEBUG
 //    qDebug() << "ImageView::setClickZoom";
 //    #endif
 //    }
-//    this->clickZoom = clickZoom;
+//    this->toggleZoom = toggleZoom;
 //}
 
 void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
@@ -808,7 +826,7 @@ void ImageView::setCursorHiding(bool hide)
 //    }
 ////    qDebug() << "\n" << currentImagePath;
 ////    qDebug() << "ImageView::compareZoomAtCoord" << coord;
-//    zoom = clickZoom;     // if zoomToFit then zoom reset in resize
+//    zoom = toggleZoom;     // if zoomToFit then zoom reset in resize
 ////    mouseZoomFit = !mouseZoomFit;
 //    f.w = imageLabel->geometry().width();
 //    f.h = imageLabel->geometry().height();
@@ -970,7 +988,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     if (!isZoom && zoom < zoomFit * 0.99)
         zoom = zoomFit;
     else
-        isZoom ? zoom = zoomFit : zoom = clickZoom;
+        isZoom ? zoom = zoomFit : zoom = toggleZoom;
     scale();
     QGraphicsView::mouseReleaseEvent(event);
 }

@@ -19,10 +19,11 @@ public:
               ImageCache *imageCacheThread, ThumbView *thumbView,
               bool isShootingInfoVisible);
 
-//    QScrollArea *scrlArea;
+    qreal zoom;
+    qreal toggleZoom;
+
     DropShadowLabel *infoDropShadow;
     DropShadowLabel *titleDropShadow;
-    qreal zoom;
     QModelIndex imageIndex;
 
     bool loadImage(QModelIndex idx, QString imageFileName);
@@ -41,13 +42,14 @@ public slots:
     void monitorCursorState();
     void copyImage();
     void thumbClick(float xPct, float yPct);
+    void updateToggleZoom(qreal toggleZoomValue);
     void zoomIn();
     void zoomOut();
     void zoomToFit();
     void zoom50();
     void zoom100();
     void zoom200();
-    void zoomTo(float zoomTo);
+    void zoomTo(qreal zoomTo);
     void zoomToggle();
 
 signals:
@@ -158,7 +160,6 @@ private:
     qreal zoomInc = 0.1;    // 10% delta
     qreal zoomMin = 0.05;   // 5% of original  rgh add to pref
     qreal zoomMax = 8.0;    // 800% of original
-    qreal clickZoom = 1.0;  // for now, put in QSetting
 
     qreal getFitScaleFactor(QRectF container, QRectF content);
     void scale();

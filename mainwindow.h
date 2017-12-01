@@ -3,38 +3,42 @@
 
 #include <QtWidgets>
 #include <QDesktopWidget>
-#include "datamodel.h"
-#include "thumbview.h"
-#include "tableview.h"
-#include "imageview.h"
-#include "imagecache.h"
-#include "thumbcache.h"
-#include "metadata.h"
-#include "mdcache.h"
-#include "copypickdlg.h"
-#include "prefdlg.h"
-#include "workspacedlg.h"
-#include "popup.h"
-#include "bookmarks.h"
-#include "filters.h"
-#include "fstree.h"
-#include "infoview.h"
-#include "compareImages.h"
-#include "dircompleter.h"
-#include "mainwindow.h"
-#include "global.h"
-#include "ui_helpform.h"
-#include "ui_shortcutsform.h"
-#include "ui_welcome.h"
 #include "sstream"
 #include <iostream>
 #include <iomanip>
+
+#include "bookmarks.h"
+#include "compareImages.h"
+#include "copypickdlg.h"
+#include "datamodel.h"
+#include "dircompleter.h"
+#include "imagecache.h"
+#include "imageview.h"
+#include "filters.h"
+#include "fstree.h"
+#include "infoview.h"
+#include "mainwindow.h"
+#include "mdcache.h"
+#include "metadata.h"
+#include "popup.h"
+#include "prefdlg.h"
+#include "global.h"
+#include "thumbview.h"
+#include "tableview.h"
+#include "thumbcache.h"
+#include "workspacedlg.h"
+#include "zoomdlg.h"
+
+#include "ui_helpform.h"
+#include "ui_shortcutsform.h"
+#include "ui_welcome.h"
 
 class MW : public QMainWindow
 {
     Q_OBJECT
 
     friend class Prefdlg;
+//    friend class ZoomDlg;
 
 public:
     MW(QWidget *parent = 0);
@@ -192,6 +196,7 @@ private slots:
     void gridDisplay();
     void tableDisplay();
     void compareDisplay();
+    void updateZoom();
     void zoomOut();
     void zoomIn();
     void zoomToFit();
@@ -206,7 +211,7 @@ private slots:
     void keyEnd();
 //    void zoomTo(float zoomTo);
     void zoomToggle();
-    void updateStatus(bool showFileCount, QString s);
+    void updateStatus(bool showFileCount, QString s = "");
     void updateMetadataThreadRunStatus(bool isRun);
     void updateThumbThreadRunStatus(bool isRun);
     void updateImageThreadRunStatus(bool isRun);
@@ -430,6 +435,7 @@ private:
     QAction *asLoupeAction;
     QAction *asCompareAction;
     QActionGroup *iconGroupAction;
+    QAction *zoomToAction;
     QAction *zoomInAction;
     QAction *zoomOutAction;
     QAction *zoomToggleAction;
@@ -614,7 +620,8 @@ private:
     void addRecentFolder(QString fPath);
     void syncRecentFoldersMenu();
 
-    QString memory(qulonglong bytes);
+    qulonglong memoryReqdForPicks();
+    QString formatMemoryReqdForPicks(qulonglong bytes);
 
     void stressTest();
 

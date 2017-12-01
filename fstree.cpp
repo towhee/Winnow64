@@ -56,11 +56,6 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
         return QFileSystemModel::headerData(section, orientation, role);
 }
 
-//Qt::ItemFlags FSModel::flags(const QModelIndex &index) const
-//{
-//    return Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled;
-//}
-
 QVariant FSModel::data(const QModelIndex & index, int role) const
 {
     if (index.column() == imageCountColumn) {
@@ -147,17 +142,6 @@ QModelIndex FSTree::getCurrentIndex()
     }
 	return selectedIndexes().first();
 }
-
-//void FSTree::resizeTreeColumn(const QModelIndex &)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "FSTree::resizeTreeColumn";
-//    #endif
-//    }
-//    qDebug() << width();
-//    resizeColumns();
-//}
 
 void FSTree::resizeColumns()
 {

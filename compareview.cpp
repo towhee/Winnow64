@@ -100,7 +100,7 @@ CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
     isMouseDrag = false;
     isMouseDoubleClick = false;
     isMouseClickZoom = false;
-    clickZoom = 1.0;
+//    toggleZoom = 1.0;
     zoomInc = 0.1;
 
     connect(horizontalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(scrollEvent()));
@@ -170,7 +170,7 @@ void CompareView::zoomToPct(QPointF scrollPct, bool isZoom)
 //    qDebug() << "CompareView::zoomToPct  scrollPct" << scrollPct
 //             << "isZoom" << isZoom << currentImagePath;
     this->isZoom = isZoom;
-    isZoom ? zoom = zoomFit : zoom = clickZoom;
+    isZoom ? zoom = zoomFit : zoom = toggleZoom;
     scale(false);
 //    scrollPosPct = scrollPct;      // new position base for delta scrolls
     panToPct(scrollPct);
@@ -518,8 +518,8 @@ void CompareView::zoom100()
     qDebug() << "CompareView::zoom100" << currentImagePath;
     #endif
     }
-    clickZoom = 1;
-    zoom = clickZoom;
+    toggleZoom = 1;
+    zoom = toggleZoom;
     zoom = zoom < zoomMin ? zoomMin : zoom;
     scale(false);
 }
@@ -555,7 +555,7 @@ void CompareView::zoomToggle()
     }
 //    qDebug() << "zoomToggle  isZoom =" << isZoom;
 //    mouseZoomFit = isZoom;
-    if (!isZoom) zoom = clickZoom;
+    if (!isZoom) zoom = toggleZoom;
 //    resizeImage();
 }
 
@@ -566,8 +566,8 @@ void CompareView::zoom50()
     qDebug() << "CompareView::zoom50" << currentImagePath;
     #endif
     }
-    clickZoom = 0.5;
-    zoom = clickZoom;
+    toggleZoom = 0.5;
+    zoom = toggleZoom;
     zoom = zoom < zoomMin ? zoomMin : zoom;
     scale(false);
 }
@@ -579,20 +579,20 @@ void CompareView::zoom200()
     qDebug() << "CompareView::zoom200" << currentImagePath;
     #endif
     }
-    clickZoom = 2;
-    zoom = clickZoom;
+    toggleZoom = 2;
+    zoom = toggleZoom;
     zoom = zoom < zoomMin ? zoomMin : zoom;
     scale(false);
 }
 
-void CompareView::setClickZoom(float clickZoom)
+void CompareView::setClickZoom(float toggleZoom)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "CompareView::setClickZoom" << currentImagePath;
     #endif
     }
-    this->clickZoom = clickZoom;
+    this->toggleZoom = toggleZoom;
 }
 
 void CompareView::resetMouseClickZoom()
@@ -676,7 +676,7 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     if (isLeftMouseBtnPressed) {
         isLeftMouseBtnPressed = false;
         mousePt = event->localPos().toPoint();
-        isZoom ? zoom = zoomFit : zoom = clickZoom;
+        isZoom ? zoom = zoomFit : zoom = toggleZoom;
         isMouseClickZoom = true;
         propagate = false;
         scale(true);

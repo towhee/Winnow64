@@ -1,33 +1,32 @@
-- Set mouse click zoom amount (default = 100%)
-- Show available memory in pref cache
-- Edit title in metadata?
+- Check for Tif support in Qt
+- Zoom rect in thumbnail to show zoom and pan in imageView
+- Combine raw+jpg option
+- Recent copy to folders in copy dialog
+- Not reading metadata from iphone jpgs
+- Tweak context menus
+- Disable menu "add bookmark" when folders not selected??
 - Improve performance for large files (D850)
 - Improve producer/consumer image cache performance
 - Rotate selected images
 - Initial setup (other than workspace)
 - Add preferences for info label
-- Zoom rect in thumbnail to show zoom and pan in imageView
 - Get comment and copywrite metadata
 - Get lens metadata
-- Show how much mem req'd for selected images
-- Combine raw+jpg option
 - Add more raw file formats
 - Add zoom increment to preferences
 - UI for changing compare click zoom amount
 - Eject card
 - Open with another app
-- Tweak context menus
 - Run droplet
-- Recent copy to folders in copy dialog
-- Check for Tif support in Qt
-- Disable menu "add bookmark" when folders not selected??
 - Redirect report metadata to a text window so Qt Creator not req'd
-- Not reading metadata from iphone jpgs
 - Ingest including token builder
 - Deleteop, removeBookmarkAction cleanup
+- Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
-- Done:  Poor performance - Show how many images in each folder in treeView
+- Done: Set mouse click zoom amount (default = 100%)
+- Done: Show how much mem req'd for selected images
+- Done: Poor performance - Show how many images in each folder in treeView
 - Done: Show file size in KB/MB/GB
 - Done: Sometimes two mouse clicks reqd in loupe view to toggle zoom
 - Done: Add filter shortcuts and menu

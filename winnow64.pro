@@ -32,7 +32,8 @@ HEADERS += \
     Dialogs/prefdlg.h \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
-    Dialogs/popup.h
+    Dialogs/popup.h \
+    Dialogs/zoomdlg.h
 
 SOURCES += \
     bookmarks.cpp \
@@ -62,7 +63,8 @@ SOURCES += \
     Dialogs/prefdlg.cpp \
     Dialogs/workspacedlg.cpp \
     Dialogs/copypickdlg.cpp \
-    Dialogs/popup.cpp
+    Dialogs/popup.cpp \
+    Dialogs/zoomdlg.cpp
 
 FORMS += \
     copypickdlg.ui \
@@ -73,7 +75,8 @@ FORMS += \
     testaligndlg.ui \
     introduction.ui \
     welcome.ui \
-    shortcutsform.ui
+    shortcutsform.ui \
+    zoomdlg.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns

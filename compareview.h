@@ -17,6 +17,8 @@ public:
               ImageCache *imageCacheThread, ThumbView *thumbView);
 
     qreal zoom;
+    qreal toggleZoom;
+
     QModelIndex imageIndex;
     QGraphicsPixmapItem *pmItem;        // req'd by imageAlign
 
@@ -35,7 +37,7 @@ public:
 public slots:
     void zoomToPct(QPointF coord, bool isZoom);
 
-    void setClickZoom(float clickZoom);
+    void setClickZoom(float toggleZoom);
     void zoomIn();
     void zoomOut();
     void zoomToFit();
@@ -119,7 +121,6 @@ private:
     qreal zoomInc = 0.1;    // 10% delta
     qreal zoomMin = 0.05;   // 5% of original  rgh add to pref
     qreal zoomMax = 8.0;    // 800% of original
-    qreal clickZoom = 1.0;
 
     qreal getFitScaleFactor(QSize container, QRectF content);
     void scale(bool okayToPropagate);

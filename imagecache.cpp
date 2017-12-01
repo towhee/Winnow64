@@ -507,7 +507,9 @@ void ImageCache::reportCacheManager(QString title)
 
 int ImageCache::pxMid(int key)
 {
-/* returns the cache status bar x coordinate for the midpoint of the item key */
+/*
+returns the cache status bar x coordinate for the midpoint of the item key
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ImageCache::pxMid";
@@ -519,7 +521,9 @@ int ImageCache::pxMid(int key)
 
 int ImageCache::pxStart(int key)
 {
-// returns the cache status bar x coordinate for the start of the item key
+/*
+returns the cache status bar x coordinate for the start of the item key
+*/
     {
     #ifdef ISDEBUG
 //    qDebug() << "ImageCache::pxStart" << cacheMgr.at(key).fName;
@@ -530,7 +534,9 @@ int ImageCache::pxStart(int key)
 
 int ImageCache::pxEnd(int key)
 {
-// returns the cache status bar x coordinate for the end of the item key
+/*
+returns the cache status bar x coordinate for the end of the item key
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ImageCache::pxEnd";
@@ -599,7 +605,6 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
         cacheItem.key = i;              // need to be able to sync with imageList
         cacheItem.origKey = i;          // req'd while setting target range
         cacheItem.fName = fPath;
-//        cacheItem.fName = fileInfo.absoluteFilePath();
         cacheItem.isCached = false;
         cacheItem.isTarget = false;
         cacheItem.priority = i;
@@ -705,11 +710,11 @@ If there is filtering then the entire cache is reloaded.
 //        qDebug() << "row" << row;
         if(filterFilePathList[row] == currentImageFullPath) cache.key = row;
         for (i = 0; i < cache.totFiles; ++i) {
-//            qDebug() << "i" << i
-//                     << cacheMgrCopy.at(i).fName
-//                     << filterFilePathList[row]
-//                     << currentImageFullPath;
-//            if(i >= filterRowCount) break;
+/*            qDebug() << "i" << i
+                     << cacheMgrCopy.at(i).fName
+                     << filterFilePathList[row]
+                     << currentImageFullPath;
+                     */
             if(cacheMgrCopy.at(i).fName == filterFilePathList[row]) break;
         }
         cacheItem.fName = filterFilePathList[row];
@@ -781,7 +786,10 @@ void ImageCache::run()
         if (G::isThreadTrackingOn) track(fPath, "Reading");
         QPixmap pm;
 //        QPixmap *pm = new QPixmap;
+//        QElapsedTimer t;
+//        t.start();
         if (pixmap->load(fPath, pm)) {
+//            qDebug() << "load pixmap elapsed time =" << fPath << t.restart();
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
             uint roomRqd = cacheMgr.at(cache.toCacheKey).sizeMB;

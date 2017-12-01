@@ -2,6 +2,7 @@
 //#include "dircompleter.h"
 #include "mainwindow.h"
 #include "global.h"
+//#include "sys/sysinfo"
 
 #define THUMB_SIZE_MIN	40
 #define THUMB_SIZE_MAX	160
@@ -125,6 +126,12 @@ variables in MW (this class) and managed in the prefDlg class.
 
     // process the persistant folder if available
     folderSelectionChange();
+
+//struct sysinfo sys_info;
+//totalmem=(qint32)(sys_info.totalram/1048576);
+//freemem=(qint32)(sys_info.freeram/1048576); // divide by 1024*1024 = 1048576
+
+//qDebug() << "total mem:" << totalmem << " free mem:" << freemem;
 }
 
 void MW::setupPlatform()
@@ -409,6 +416,8 @@ void MW::folderSelectionChange()
      image cache holds as many full size images in memory as possible. */
      updateStatus(false, "Collecting metadata for all images in folder(s)");
      loadMetadataCache();
+     pickMemSize = formatMemoryReqdForPicks(memoryReqdForPicks());
+     updateStatus(true);
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
@@ -436,14 +445,11 @@ so scrollTo and delegate use of the current index must check the row.
     qDebug() << "\n**********************************MW::fileSelectionChange";
     #endif
     }
-//    fsTree->showSupportedImageCount();
-//    fsTree->fsModel->showImageCount = true;
-
-    // starting program, set first image to display
+    // if starting program, set first image to display
     if(previous.row() == -1) thumbView->selectThumb(0);
 
-    QModelIndexList selected = selectionModel->selectedIndexes();
     // user clicks outside thumb but inside treeView dock
+    QModelIndexList selected = selectionModel->selectedIndexes();
     if (selected.isEmpty()) return;
 
     // update delegates so they can highlight the current item
@@ -451,12 +457,12 @@ so scrollTo and delegate use of the current index must check the row.
     thumbView->thumbViewDelegate->currentRow = currentRow;
     gridView->thumbViewDelegate->currentRow = currentRow;
 
+    // limit time polling scrollbar paint events (MW::eventFilter)
     thumbView->readyToScroll = true;
     QTimer::singleShot(2000, this, SLOT(cancelNeedToScroll()));
 
-    // keep gridView scrollTo position hint = center
+    // scroll views to center on currentIndex
     gridView->scrollToCurrent();
-    // keep tableView scrollTo position hint = center
     tableView->scrollToCurrent();
 
     // update imageView, use cache if image loaded, else read it from file
@@ -471,12 +477,12 @@ so scrollTo and delegate use of the current index must check the row.
     }
 
     /* If the metadataCache is finished then update the imageCache,
-     the cache up-to-date with the current image selection. */
+     and keep it up-to-date with the current image selection. */
     if (metadataLoaded) {
         imageCacheThread->updateImageCache(fPath);
     }
 
-    // terminate initializing flag set when new folder selected
+    // terminate initializing flag (set when new folder selected)
     if (isInitializing) {
         isInitializing = false;
         if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
@@ -486,43 +492,6 @@ so scrollTo and delegate use of the current index must check the row.
         }
         if(thumbDock->isFloating()) thumbView->setWrapping(true);
     }
-
-/*   Other stuff tried and reported ...
- *
-    qDebug() << "\n\nisNewFolderLoaded" << G::isNewFolderLoaded
-             << "\nSelected.count:" << selected.count()
-             << "\nSelected List: " << selected
-             << "\nCurrent:     " << current
-             << "\nPrevious:    " << previous
-             << "\nSelection contains previous:"
-             << selected.contains(previous) << "\n";
-
-     selection is extended - do not change current index
-        if(selected.count() > 1 && G::isNewFolderLoaded) {
-    if(selected.count() > 1) {
-        if(selected.contains(previous)) {
-            thumbView->setCurrentIndex(previous);
-            return;
-        }
-    }
-
-
-     if top/bottom dock resize dock height if scrollbar is/not visible
-    qDebug() << "\nMW::fileSelectionChange\n"
-             << "***  thumbView Ht =" << thumbView->height()
-             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
-             << "thumbHeight =" << thumbView->thumbHeight << "\n";
-
-    qDebug() << "thumbView->thumbFileInfoList:";
-    foreach (QFileInfo f, thumbView->thumbFileInfoList) {
-        qDebug() << f.filePath();
-    }
-    qDebug() << "thumbViewFilter row = 0"
-             << thumbView->thumbViewFilter->index(0,0).data(Qt::DisplayRole);
-
-     debugging
-    thumbView->reportThumb();
-    */
 }
 
 void MW::loadMetadataCache()
@@ -1106,6 +1075,10 @@ void MW::createActions()
     centralGroupAction->addAction(asTableAction);
     centralGroupAction->addAction(asCompareAction);
 
+    zoomToAction = new QAction(tr("Zoom To"), this);
+    zoomToAction->setObjectName("zoomTo");
+    connect(zoomToAction, SIGNAL(triggered()), this, SLOT(updateZoom()));
+
     zoomOutAction = new QAction(tr("Zoom Out"), this);
     zoomOutAction->setObjectName("zoomOut");
     connect(zoomOutAction, SIGNAL(triggered()), this, SLOT(zoomOut()));
@@ -1432,6 +1405,7 @@ void MW::createMenus()
     viewMenu->addSeparator();
     viewMenu->addActions(centralGroupAction->actions());
     viewMenu->addSeparator();
+    viewMenu->addAction(zoomToAction);
     viewMenu->addAction(zoomInAction);
     viewMenu->addAction(zoomOutAction);
     viewMenu->addAction(zoomToggleAction);
@@ -2146,8 +2120,9 @@ QString fileSym = "📷";
         if (subFoldersAction->isChecked()) fileCount += " including subfolders";
         zoomPct = QString::number(imageView->zoom*100, 'f', 0) + "% zoom";
         QString pickedSoFar = pickMemSize + " picked";
-        base = fileCount + spacer + zoomPct + spacer;
-        if(pickMemSize.length() > 0) base += pickedSoFar + spacer;
+        base = fileCount + spacer + zoomPct + spacer + pickedSoFar + spacer;;
+//        base = fileCount + spacer + zoomPct + spacer;
+//        if(pickMemSize.length() > 0) base += pickedSoFar + spacer;
     }
 
     status = " " + base + s;
@@ -3364,6 +3339,23 @@ void MW::selectAllThumbs()
     thumbView->selectAll();
 }
 
+void MW::updateZoom()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::preferences";
+    #endif
+    }
+    ZoomDlg *zoomdlg = new ZoomDlg(this, (int)(imageView->zoom * 100));
+    connect(zoomdlg, SIGNAL(zoom(qreal)), imageView, SLOT(zoomTo(qreal)));
+    connect(zoomdlg, SIGNAL(updateToggleZoom(qreal)),
+            imageView, SLOT(updateToggleZoom(qreal)));
+    zoomdlg->exec();
+}
+
 void MW::zoomIn()
 {
     {
@@ -3546,6 +3538,7 @@ void MW::writeSettings()
     }
     // general
     setting->setValue("lastPrefPage", (int)lastPrefPage);
+    setting->setValue("toggleZoomValue", imageView->toggleZoom);
     // files
 //    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
     setting->setValue("rememberLastDir", rememberLastDir);
@@ -3727,6 +3720,8 @@ Preferences are located in the prefdlg class and updated here.
         maxRecentFolders = 10;
         bookmarks->bookmarkPaths.insert(QDir::homePath());
         imageView->useWheelToScroll = true;
+        imageView->toggleZoom = 1.0;
+//        compareView->toggleZoom = 1.0;
 
       // slideshow
         slideShowDelay = 5;
@@ -3748,6 +3743,7 @@ Preferences are located in the prefdlg class and updated here.
 
     // general
     lastPrefPage = setting->value("lastPrefPage").toInt();
+    imageView->toggleZoom = setting->value("toggleZoomValue").toReal();
 
     // files
 //    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();
@@ -4039,7 +4035,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         revealFileAction->setShortcut(QKeySequence("Ctrl+F"));
         zoomOutAction->setShortcut(QKeySequence("-"));
         zoomInAction->setShortcut(QKeySequence("+"));
-        zoomToggleAction->setShortcut(QKeySequence("Z"));
+        zoomToggleAction->setShortcut(QKeySequence("Space"));
+        zoomToAction->setShortcut(QKeySequence("Z"));
 //        zoom50PctAction->setShortcut(QKeySequence("Ctrl+5"));
 //        zoom100PctAction->setShortcut(QKeySequence("Ctrl+0"));
 //        zoom200PctAction->setShortcut(QKeySequence("Ctrl+2"));
@@ -4719,20 +4716,7 @@ void MW::togglePick()
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
-    QModelIndex sizeIdx = dm->sf->index(idx.row(), G::SizeColumn);
-//    QVariant a = sizeIdx.data(Qt::EditRole)
-    qDebug() << "sizeIdx.data(Qt::EditRole)" << sizeIdx.data(Qt::EditRole)
-             << "sizeIdx.data(Qt::DisplayRole)" << sizeIdx.data(Qt::DisplayRole);
-
-    qulonglong memTot = 0;
-    for(int row = 0; row < dm->sf->rowCount(); row++) {
-        QModelIndex idx = dm->sf->index(row, G::PickedColumn);
-        if(qvariant_cast<QString>(idx.data(Qt::EditRole)) == "true") {
-            idx = dm->sf->index(row, G::SizeColumn);
-            memTot += idx.data(Qt::EditRole).toULongLong();
-        }
-    }
-    pickMemSize = memory(memTot);
+    pickMemSize = formatMemoryReqdForPicks(memoryReqdForPicks());
     updateStatus(true, "");
 }
 
@@ -4756,10 +4740,24 @@ of the "thumbs up" icon that highlights if the image has been picked.
     if (asCompareAction->isChecked()) compareImages->pick(isPick, idx);
 }
 
-QString MW::memory(qulonglong bytes)
+qulonglong MW::memoryReqdForPicks()
+{
+    qulonglong memTot = 0;
+    for(int row = 0; row < dm->sf->rowCount(); row++) {
+        QModelIndex idx = dm->sf->index(row, G::PickedColumn);
+        if(qvariant_cast<QString>(idx.data(Qt::EditRole)) == "true") {
+            idx = dm->sf->index(row, G::SizeColumn);
+            memTot += idx.data(Qt::EditRole).toULongLong();
+        }
+    }
+    return memTot;
+}
+
+QString MW::formatMemoryReqdForPicks(qulonglong bytes)
 {
     qulonglong x = 1024;
-    if(bytes < x) return QString::number(bytes) + "bytes";
+    if(bytes == 0) return "0";
+    if(bytes < x) return QString::number(bytes) + " bytes";
     if(bytes < x * 1024) return QString::number(bytes / x) + "KB";
     x *= 1024;
     if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + "MB";
