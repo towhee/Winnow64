@@ -95,6 +95,10 @@ bool CompareImages::load(const QSize &centralWidgetSize)
         // align
         connect(imList->at(i), SIGNAL(align(QPointF, QModelIndex)),
                 this, SLOT(align(QPointF, QModelIndex)));
+
+        // get zoom factor to report status and send zoomChange to ZoomDlg
+        connect(imList->at(i), SIGNAL(zoomChange(qreal)),
+                this, SLOT(zoomChangeFromView(qreal)));
     }
 
     loadGrid();
@@ -343,6 +347,8 @@ void CompareImages::zoom(QPointF scrollPct, QModelIndex idx, bool isZoom)
             imList->at(i)->zoomToPct(scrollPct, isZoom);
         }
     }
+//    emit zoomChange();
+//    emit updateStatus(true, "");
 }
 
 void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
@@ -397,11 +403,32 @@ clicks on the unzoomed image.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageView::updateToggleZoom";
+    qDebug() << "CompareImages::updateToggleZoom";
     #endif
     }
     for (int i = 0; i < imList->count(); ++i)
         imList->at(i)->toggleZoom == toggleZoomValue;
+}
+
+void CompareImages::zoomChangeFromView(qreal zoomValue)
+{
+/*
+Signal zoom changes from CompareImages to simplify connections as the
+CompareView instances will not have been created when connections are
+assigned im MW.  However, CompareImages does exist and communicates with
+CompareView instances.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareImages::zoomChangeFromView";
+    #endif
+    }
+    this->zoomValue = zoomValue;       // used by MW::updateStatus
+
+    // update ZoomDlg
+    emit zoomChange(zoomValue);
+
+    emit updateStatus(true, "");
 }
 
 void CompareImages::zoomIn()

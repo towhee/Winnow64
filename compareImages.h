@@ -16,11 +16,13 @@ public:
                   ThumbView *thumbView, ImageCache *imageCacheThread);
 
     qreal toggleZoom;
+    qreal zoomValue;
     bool load(const QSize &central);
     void pick(bool isPick, QModelIndex idx);
     void ratingColorClass(QString rating, QString colorClass, QModelIndex idx);
 
 public slots:
+    void zoomChangeFromView(qreal zoomValue);
     void updateToggleZoom(qreal toggleZoomValue);
     void go(QString key);
     void zoomOut();
@@ -31,6 +33,10 @@ public slots:
     void zoom200();
     void zoomTo(qreal zoomValue);
     void zoomToggle();
+
+signals:
+    void updateStatus(bool, QString);
+    void zoomChange(qreal zoomValue);
 
 private slots:
     void zoom(QPointF coord, QModelIndex idx, bool isZoom);
@@ -43,7 +49,6 @@ private:
     ImageCache *imageCacheThread;
     QWidget *centralWidget;
 
-//    QGraphicsGridLayout *gridLayout;
     QGridLayout *gridLayout;
 
     QList<CompareView*> *imList;
@@ -52,7 +57,7 @@ private:
 
     ImageAlign *imageAlign;
 
-    // req'd to receive pt from imageView
+    // req'd to receive pt from compareView
     struct pt
     {
         int x;

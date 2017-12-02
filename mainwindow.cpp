@@ -1875,6 +1875,9 @@ void MW::createCompareView()
     #endif
     }
     compareImages = new CompareImages(this, centralWidget, metadata, thumbView, imageCacheThread);
+
+    connect(compareImages, SIGNAL(updateStatus(bool, QString)),
+            this, SLOT(updateStatus(bool, QString)));
 }
 
 void MW::createInfoView()
@@ -2103,6 +2106,7 @@ void MW::updateStatus(bool keepBase, QString s)
     qDebug() << "MW::updateStatus";
     #endif
     }
+    qDebug() << "MW::updateStatus";
     QString status;
     QString fileCount = "";
     QString zoomPct = "";
@@ -2130,11 +2134,14 @@ QString fileSym = "📷";
                 + QString::number(rowCount);
         }
         if (subFoldersAction->isChecked()) fileCount += " including subfolders";
-        zoomPct = QString::number(imageView->zoom*100, 'f', 0) + "% zoom";
+
+        qreal zoom;
+        if (G::mode == "Compare") zoom = compareImages->zoomValue;
+        else zoom = imageView->zoom;
+        zoomPct = QString::number(zoom*100, 'f', 0) + "% zoom";
+
         QString pickedSoFar = pickMemSize + " picked";
         base = fileCount + spacer + zoomPct + spacer + pickedSoFar + spacer;;
-//        base = fileCount + spacer + zoomPct + spacer;
-//        if(pickMemSize.length() > 0) base += pickedSoFar + spacer;
     }
 
     status = " " + base + s;
@@ -3403,6 +3410,7 @@ are not applicable.
 
     // if zoom change in parent send it to the zoom dialog
     connect(imageView, SIGNAL(zoomChange(qreal)), zoomdlg, SLOT(zoomChange(qreal)));
+    connect(compareImages, SIGNAL(zoomChange(qreal)), zoomdlg, SLOT(zoomChange(qreal)));
 
     // if main window resized then re-position zoom dialog
     connect(this, SIGNAL(resizeMW(QRect,QRect)), zoomdlg, SLOT(positionWindow(QRect,QRect)));

@@ -1,3 +1,6 @@
+- UpdateStatus signal in compareImages not working
+- Zooming is not propagating consistently in compareView
+- Add zoom increment amount to preferences
 - Check for Tif support in Qt
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Combine raw+jpg option

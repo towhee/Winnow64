@@ -3,14 +3,14 @@
 
 /*  OVERVIEW
 
-This class manages a view of a scene containing a pixmap of the comparison
-image in a grid of comparison images housed in compareImages. Each grid item
+This class manages a view of a scene containing a pixmap of a comparison
+image in a grid of comparison images housed in CompareImages. Each grid item
 view is a separate instance of this class.
 
 Terms:
 
     Current instance - has the focus and is thumbView->currentIndex
-    Other instance - the rest if the grid instances
+    Other instance - the rest of the grid instances
     Current location - the scroll percent location of the current instance
     Offset location - the offset from the current location for each instance
 
@@ -85,10 +85,8 @@ CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
     setScene(scene);
 
     pickLabel = new QLabel(this);
-//    pickLabel->setFixedSize(64,51);
     pickLabel->setFixedSize(40,48);
     pickLabel->setAttribute(Qt::WA_TranslucentBackground);
-//    pickPixmap = new QPixmap(":/images/checkmark64.png");
     pickPixmap = new QPixmap(":/images/ThumbsUp48.png");
     // setPixmap during resize event
     pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
@@ -100,7 +98,7 @@ CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
     isMouseDrag = false;
     isMouseDoubleClick = false;
     isMouseClickZoom = false;
-//    toggleZoom = 1.0;
+    isLeftMouseBtnPressed = false;
     zoomInc = 0.1;
 
     connect(horizontalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(scrollEvent()));
@@ -361,7 +359,7 @@ See overview at top of this file explaining multiple instances of compareView.
 
 CompareView::scale is called after a mouse click executes a toggle zoom in one
 of the compareViews. Scales the image to the current zoom factor. The
-okayToPropagate flag prevents additional scaling in the source copareView.
+okayToPropagate flag prevents additional scaling in the source compareView.
 
 If called from mouse release then panning is automatic because
 setTransformationAnchor(QGraphicsView::AnchorUnderMouse).  Signal to ZoomDlg in
@@ -376,10 +374,15 @@ circular, with variance checks to prevent a repeating cycle.
     qDebug() << "CompareView::scale" << currentImagePath;
     #endif
     }
+    // rescale to new zoom factor
     matrix.reset();
     matrix.scale(zoom, zoom);
     setMatrix(matrix);
+
+    // notify ZoomDlg of change in scale
     emit zoomChange(zoom);
+
+    // if not current instance (originator of scale change)
     if (okayToPropagate) {
 //        qDebug() << "Propagating from" << currentImagePath;
         getScrollBarStatus();
@@ -392,7 +395,9 @@ circular, with variance checks to prevent a repeating cycle.
     isZoom = (zoom > zoomFit);
     if (isZoom) setCursor(Qt::OpenHandCursor);
     else setCursor(Qt::ArrowCursor);
+
     movePickIcon();
+//    emit updateStatus(true, "");
 }
 
 void CompareView::movePickIcon()
@@ -649,6 +654,11 @@ void CompareView::mousePressEvent(QMouseEvent *event)
     }
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
+
+    // prevent zooming when right click for context menu
+    if (event->button() == Qt::RightButton) return;//
+
+    isMouseDoubleClick = false;//
     if (event->button() == Qt::LeftButton) {
         propagate = true;
         if (event->modifiers() & Qt::ShiftModifier) propagate = false;
@@ -690,23 +700,39 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     qDebug() << "CompareView::mouseReleaseEvent" << currentImagePath;
     #endif
     }
+    isLeftMouseBtnPressed = false;
     if (isMouseDrag) {
         isMouseDrag = false;
         if (isZoom) setCursor((Qt::OpenHandCursor));
         else setCursor(Qt::ArrowCursor);
-        isLeftMouseBtnPressed = false;
         return;
     }
-    if (isLeftMouseBtnPressed) {
-        isLeftMouseBtnPressed = false;
-        mousePt = event->localPos().toPoint();
+
+    if (!isZoom && zoom < zoomFit * 0.99)
+        zoom = zoomFit;
+    else
         isZoom ? zoom = zoomFit : zoom = toggleZoom;
-        isMouseClickZoom = true;
-        propagate = false;
-        scale(true);
-        propagate = true;
-    }
+    propagate = false;
+    scale(true);
+    propagate = true;
     QGraphicsView::mouseReleaseEvent(event);
+//    if (isMouseDrag) {
+//        isMouseDrag = false;
+//        if (isZoom) setCursor((Qt::OpenHandCursor));
+//        else setCursor(Qt::ArrowCursor);
+//        isLeftMouseBtnPressed = false;
+//        return;
+//    }
+//    if (isLeftMouseBtnPressed) {
+//        isLeftMouseBtnPressed = false;
+//        mousePt = event->localPos().toPoint();
+//        isZoom ? zoom = zoomFit : zoom = toggleZoom;
+//        isMouseClickZoom = true;
+//        propagate = false;
+//        scale(true);
+//        propagate = true;
+//    }
+//    QGraphicsView::mouseReleaseEvent(event);
 }
 
 void CompareView::enterEvent(QEvent *event)
@@ -717,6 +743,7 @@ void CompareView::enterEvent(QEvent *event)
     #endif
     }
     select();
+    emit zoomChange(zoom);
 //    this->setFocus();
 //    thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
 //    thumbView->setCurrentIndex(imageIndex);

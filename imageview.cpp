@@ -940,14 +940,17 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     #endif
     }
 //    qDebug() << "mousePressEvent" << event << "isMouseDrag" << isMouseDrag;
+
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
+
     // prevent zooming when right click for context menu
     if (event->button() == Qt::RightButton) return;
+
     isMouseDoubleClick = false;
     if (event->button() == Qt::LeftButton) {
         isLeftMouseBtnPressed = true;
-        scrollCount = 0;
+        scrollCount = 0;                // still used?
         mousePressPt.setX(event->x());
         mousePressPt.setY(event->y());
     }
@@ -998,6 +1001,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         else setCursor(Qt::ArrowCursor);
         return;
     }
+
     if (!isZoom && zoom < zoomFit * 0.99)
         zoom = zoomFit;
     else
