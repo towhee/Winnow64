@@ -55,7 +55,7 @@ public slots:
 signals:
     void togglePick();
     void updateStatus(bool, QString);
-    void zoomChange(int zoomValue);
+    void zoomChange(qreal zoomValue);
 
 private slots:
     void upgradeToFullSize();

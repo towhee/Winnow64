@@ -257,12 +257,15 @@
       </item>
       <item>
        <widget class="QPushButton" name="toggleZoomAmountBtn">
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
         <property name="text">
          <string>Set as toggle 
 zoom amount</string>
         </property>
         <property name="shortcut">
-         <string>Z</string>
+         <string>Shift+T</string>
         </property>
        </widget>
       </item>

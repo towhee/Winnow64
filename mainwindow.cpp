@@ -3354,17 +3354,42 @@ void MW::selectAllThumbs()
 void MW::updateZoom()
 {
 /*
+This function provides a dialog to change scale and to set the toggleZoom
+value, which is the amount of zoom to toggle with zoomToFit scale. The user can
+zoom to 100% (for example) with a click of the mouse, and with another click,
+return to the zoomToFit scale. Here the user can set the amount of zoom when
+toggled.
 
+The dialog is non-modal and floats at the bottom of the central widget.
+Adjustments are made when the main window resizes or is moved or the mode
+changes or when a different workspace is invoked.
+
+When the zoom is changed this is signalled to ImageView and CompareImages,
+which in turn make the scale changes to the image. Conversely, changes in scale
+originating from toggleZoom mouse clicking in ImageView or CompareView, or
+scale changes originating from the zoomInAction and zoomOutAction are signaled
+and updated here. This can cause a circular message, which is prevented by
+variance checking. If the zoom factor has not changed more than can be
+accounted for in int/qreal conversions then the signal is not propagated.
+
+This only applies when a mode that can be zoomed is visible, so table and grid
+are not applicable.
 */
     {
     #ifdef ISDEBUG
     qDebug() << "MW::preferences";
     #endif
     }
+    // only makes sense to zoom when in loupe or compare view
+    if (G::mode == "Table" || G::mode == "Grid") {
+        popUp->showPopup(this, "The zoom dialog is only available in loupe view", 2000, 0.75);
+        return;
+    }
+
+    // the dialog positions itself relative to the main window and central widget.
     QRect a = this->geometry();
     QRect c = centralWidget->geometry();
-    int zoom = (int)(imageView->zoom * 100);
-    ZoomDlg *zoomdlg = new ZoomDlg(this, zoom, a, c);
+    ZoomDlg *zoomdlg = new ZoomDlg(this, imageView->zoom, a, c);
 
     // update the imageView and compareView classes if there is a zoom change
     connect(zoomdlg, SIGNAL(zoom(qreal)), imageView, SLOT(zoomTo(qreal)));
@@ -3377,11 +3402,15 @@ void MW::updateZoom()
             compareImages, SLOT(updateToggleZoom(qreal)));
 
     // if zoom change in parent send it to the zoom dialog
-    connect(imageView, SIGNAL(zoomChange(int)), zoomdlg, SLOT(zoomChange(int)));
+    connect(imageView, SIGNAL(zoomChange(qreal)), zoomdlg, SLOT(zoomChange(qreal)));
 
     // if main window resized then re-position zoom dialog
     connect(this, SIGNAL(resizeMW(QRect,QRect)), zoomdlg, SLOT(positionWindow(QRect,QRect)));
 
+    // if view change other than loupe then close zoomDlg
+    connect(this, SIGNAL(closeZoomDlg()), zoomdlg, SLOT(close()));
+
+    // use show so dialog will be non-modal
     zoomdlg->show();
 }
 
@@ -4334,6 +4363,7 @@ void MW::tableDisplay()
     setThumbDockVisibity();
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     tableView->scrollToCurrent();
+    emit closeZoomDlg();
     // limit time spent intercepting paint events to call scrollToCurrent
 //    thumbView->readyToScroll = true;
 //    QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));

@@ -291,7 +291,7 @@ is zoomed.
     matrix.reset();
     matrix.scale(zoom, zoom);
     setMatrix(matrix);
-    emit zoomChange((int)(zoom * 100));
+    emit zoomChange(zoom);
     isZoom = (zoom > zoomFit);
     isFit = (zoom == zoomFit);
     if (isZoom) scrollPct = getScrollPct();
@@ -624,11 +624,23 @@ void ImageView::zoomToFit()
 
 void ImageView::zoomTo(qreal zoomTo)
 {
+/*
+Called ZoomDlg when the zoom is changed. From here the message is passed on to
+ImageView::scale(), which in turn makes the proper scale change. When scale()
+is called with the new zoom it will signal back to ZoomDlg (which is reqd when
+scale changes occur locally). This can cause circular messaging, so we check
+whether scale has actually changed. There can be small differences becasue the
+controls in ZoomDlg are using integers so the conversion can be off by up to
+0.005.
+*/
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageView::zoomTo";
+    qDebug() << "ImageView::zoomTo" << zoomTo;
     #endif
     }
+    qreal variance = qFabs(zoom - zoomTo);
+    if (variance < .005) return;
+
     zoom = zoomTo;
     scale();
 }

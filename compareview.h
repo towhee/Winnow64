@@ -44,7 +44,7 @@ public slots:
     void zoom50();
     void zoom100();
     void zoom200();
-    void zoomTo(float zoomTo);
+    void zoomTo(qreal zoomTo);
     void zoomToggle();
 
 signals:
@@ -52,6 +52,7 @@ signals:
     void zoomFromPct(QPointF scrollPct, QModelIndex idx, bool isZoom);
     void panFromPct(QPointF scrollPct, QModelIndex idx);
     void align(QPointF scrollPct, QModelIndex idx);
+    void zoomChange(qreal zoomValue);
 
 private slots:
     void scrollEvent();

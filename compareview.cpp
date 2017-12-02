@@ -356,8 +356,20 @@ qreal CompareView::getFitScaleFactor(QSize container, QRectF content)
 
 void CompareView::scale(bool okayToPropagate)
 {
-/* If called from mouse release then panning is automatic because
-setTransformationAnchor(QGraphicsView::AnchorUnderMouse).
+/*
+See overview at top of this file explaining multiple instances of compareView.
+
+CompareView::scale is called after a mouse click executes a toggle zoom in one
+of the compareViews. Scales the image to the current zoom factor. The
+okayToPropagate flag prevents additional scaling in the source copareView.
+
+If called from mouse release then panning is automatic because
+setTransformationAnchor(QGraphicsView::AnchorUnderMouse).  Signal to ZoomDlg in
+case it is open and can sync with local scale change.
+
+If called from zoomTo, as a result of a signal sent from ZoomDlg to
+CompareImages::zoomTo and then to the local zoomTo, the return signal will be
+circular, with variance checks to prevent a repeating cycle.
 */
     {
     #ifdef ISDEBUG
@@ -367,6 +379,7 @@ setTransformationAnchor(QGraphicsView::AnchorUnderMouse).
     matrix.reset();
     matrix.scale(zoom, zoom);
     setMatrix(matrix);
+    emit zoomChange(zoom);
     if (okayToPropagate) {
 //        qDebug() << "Propagating from" << currentImagePath;
         getScrollBarStatus();
@@ -535,15 +548,26 @@ void CompareView::zoomToFit()
     scale(true);
 }
 
-void CompareView::zoomTo(float zoomTo)
+void CompareView::zoomTo(qreal zoomTo)
 {
+/*
+Called from CompareImages::zoomTo, which in turn receives a signal from ZoomDlg
+when the zoom is changed. When scale(false) is called with the new zoom it will
+signal back to ZoomDlg (which is reqd when scale changes occur locally). This
+can cause circular messaging, so check whether scale has actually changed.
+There can be small differences becasue the controls in ZoomDlg are using
+integers so the conversion can be off by up to 0.005.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "CompareView::zoomTo" << currentImagePath;
     #endif
     }
+    qreal variance = qFabs(zoom - zoomTo);
+    if (variance < .005) return;
+
     zoom = zoomTo;
-    scale(true);
+    scale(false);
 }
 
 void CompareView::zoomToggle()

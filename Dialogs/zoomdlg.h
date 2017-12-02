@@ -1,6 +1,7 @@
 #ifndef ZOOMDLG_H
 #define ZOOMDLG_H
 
+#include <QtWidgets>
 #include <QDialog>
 
 namespace Ui {
@@ -12,12 +13,14 @@ class ZoomDlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit ZoomDlg(QWidget *parent, int zoom, QRect anchor, QRect c);
+    explicit ZoomDlg(QWidget *parent, qreal zoom, QRect anchor, QRect c);
     ~ZoomDlg();
 
 public slots:
-    void zoomChange(int zoom);
+    void zoomChange(qreal zoom);
+//    void zoomChange(int zoom);
     void positionWindow(QRect a, QRect c);
+    void close();
 
 signals:
     void zoom(qreal zoomVal);
@@ -25,6 +28,7 @@ signals:
 
 private:
     Ui::ZoomDlg *ui;
+    qreal oldZoom;
 
 private slots:
     void on_zoomSB_valueChanged(int value);

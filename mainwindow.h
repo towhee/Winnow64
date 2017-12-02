@@ -181,6 +181,7 @@ public slots:
 
 signals:
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
+    void closeZoomDlg();
 
 private slots:
     void setShowImageCount();

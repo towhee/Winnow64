@@ -448,9 +448,17 @@ void CompareImages::zoom200()
 
 void CompareImages::zoomTo(qreal zoomValue)
 {
+/*
+Called ZoomDlg when the zoom is changed. From here the message is passed on to
+each instance of CompareView, which in turn makes the proper scale change.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareView::zoomTo" << zoomValue;
+    #endif
+    }
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomTo(zoomValue);
-        qDebug() << i << "zoomto" << zoomValue;
     }
 }
 
