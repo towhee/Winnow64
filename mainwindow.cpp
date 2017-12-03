@@ -1267,7 +1267,7 @@ void MW::createActions()
 
     favDockVisibleAction = new QAction(tr("Favourites"), this);
     favDockVisibleAction->setObjectName("toggleFavs");
-    favDockVisibleAction->setCheckable(true);
+    favDockVisibleActionit->setCheckable(true);
     addAction(favDockVisibleAction);
     connect(favDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFavDockVisibility()));
 
