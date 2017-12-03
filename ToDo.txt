@@ -1,4 +1,3 @@
-- UpdateStatus signal in compareImages not working
 - Zooming is not propagating consistently in compareView
 - Add zoom increment amount to preferences
 - Check for Tif support in Qt
@@ -27,6 +26,7 @@
 - Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: UpdateStatus signal in compareImages not working
 - Done: Set mouse click zoom amount (default = 100%)
 - Done: Show how much mem req'd for selected images
 - Done: Poor performance - Show how many images in each folder in treeView

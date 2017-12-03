@@ -24,6 +24,7 @@ public:
 public slots:
     void zoomChangeFromView(qreal zoomValue);
     void updateToggleZoom(qreal toggleZoomValue);
+
     void go(QString key);
     void zoomOut();
     void zoomIn();
@@ -41,6 +42,8 @@ signals:
 private slots:
     void zoom(QPointF coord, QModelIndex idx, bool isZoom);
     void pan(QPointF scrollPct, QModelIndex idx);
+    void startPan(QModelIndex idx);
+    void cleanupAfterPan(QPointF deltaPct, QModelIndex idx);
     void align(QPointF basePos, QModelIndex idx);
 
 private:

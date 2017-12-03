@@ -89,16 +89,26 @@ bool CompareImages::load(const QSize &centralWidgetSize)
         // pass mouse click zoom to other images as a pct of width and height
         connect(imList->at(i), SIGNAL(zoomFromPct(QPointF, QModelIndex, bool)),
                 this, SLOT(zoom(QPointF, QModelIndex, bool)));
+
         // sync panning
         connect(imList->at(i), SIGNAL(panFromPct(QPointF, QModelIndex)),
                 this, SLOT(pan(QPointF, QModelIndex)));
-        // align
-        connect(imList->at(i), SIGNAL(align(QPointF, QModelIndex)),
-                this, SLOT(align(QPointF, QModelIndex)));
+
+        // start of pan position
+        connect(imList->at(i), SIGNAL(panStartPct(QModelIndex)),
+                this, SLOT(startPan(QModelIndex)));
+
+        // cleanup at end of pan
+        connect(imList->at(i), SIGNAL(cleanupAfterPan(QPointF,QModelIndex)),
+                this, SLOT(cleanupAfterPan(QPointF,QModelIndex)));
 
         // get zoom factor to report status and send zoomChange to ZoomDlg
         connect(imList->at(i), SIGNAL(zoomChange(qreal)),
                 this, SLOT(zoomChangeFromView(qreal)));
+
+        //        // align
+        //        connect(imList->at(i), SIGNAL(align(QPointF, QModelIndex)),
+        //                this, SLOT(align(QPointF, QModelIndex)));
     }
 
     loadGrid();
@@ -362,6 +372,36 @@ void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->panToDeltaPct(scrollPct);
+        }
+    }
+}
+
+void CompareImages::startPan(QModelIndex idx)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareImages::pan";
+    #endif
+    }
+//    qDebug() << "CompareImages::pan";
+    for (int i = 0; i < imList->count(); ++i) {
+        if (imList->at(i)->imageIndex != idx) {
+            imList->at(i)->npSetPanStartPct();
+        }
+    }
+}
+
+void CompareImages::cleanupAfterPan(QPointF deltaPct, QModelIndex idx)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "CompareImages::pan";
+    #endif
+    }
+//    qDebug() << "CompareImages::pan";
+    for (int i = 0; i < imList->count(); ++i) {
+        if (imList->at(i)->imageIndex != idx) {
+            imList->at(i)->npCleanupAfterPan(deltaPct);
         }
     }
 }

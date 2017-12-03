@@ -2106,7 +2106,6 @@ void MW::updateStatus(bool keepBase, QString s)
     qDebug() << "MW::updateStatus";
     #endif
     }
-    qDebug() << "MW::updateStatus";
     QString status;
     QString fileCount = "";
     QString zoomPct = "";

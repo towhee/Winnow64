@@ -9,15 +9,17 @@ view is a separate instance of this class.
 
 Terms:
 
-    Current instance - has the focus and is thumbView->currentIndex
-    Other instance - the rest of the grid instances
+    Propagator = has the focus and is thumbView->currentIndex
+    NonPropagator =  the rest of the grid instances
     Current location - the scroll percent location of the current instance
     Offset location - the offset from the current location for each instance
+    Propagate - true for the current instance only to prevent the other instances
+                also triggering zoom and pan events.
 
-Each instance becomes the current instance when the mouse enters its grid
-location and the thumbView->currentIndex is set.  Each instance can be panned
-separately or in sync mode, where all instances pan together.  Because each
-instance can be panned independently, the independent panning is recorded
+Each instance becomes the propagator (current instance) when the mouse enters
+its grid location and the thumbView->currentIndex is set. Each instance can be
+panned separately or in sync mode, where all instances pan together. Because
+each instance can be panned independently, the independent panning is recorded
 as the offset to the synced pan location.
 
 Mouse click zoom:
@@ -30,7 +32,7 @@ Mouse click zoom:
 
     ● action starts with mouse release in the current instance.
     ● scale the current instance with propagate = true
-    ● emit signal to CompareImages to scale/pan all instances
+    ● emit signal zoomFromPct to CompareImages to scale/pan all instances
     ● scale each instance with propagate = false (prevent ∞ loop)
     ● pan each instance by scroll percentage and offset correction
 
@@ -41,10 +43,21 @@ Synced panning:
     ● The pan is initiated by a panning action in the current instance, which
       triggers a wheel event.  The current instance is panned by the default
       QGraphicsView behavior.
-    ● A signal is emitted from wheelEvent to CompareImages
-    ● CompareImages passes the scroll percentage to each instance
+    ● The initial position before panning is recorded.  A signal to record the
+      initial position is sent to CompareImages and on to the non-propagators.
+      This will later be used to re-sync to the propagator if lag occurs.
+    ● The signal panFromPct is continuously emitted from wheelEvent to
+      CompareImages.
+    ● CompareImages passes the scroll percentage to each instance.
     ● Each instance calculates the new scroll position based on the scroll
-      percentage of the scene, corrected for any local offset
+      percentage of the scene, corrected for any local offset.  Not all scroll
+      events are signaled so the non-propagating instances can lag and get out
+      of sync with the propagator.
+    ● The mouse release event ends the panning operation.  The delta position
+      from panning the propagator is calculated (final position - start position)
+      and sent to CompareImages and on to the other instances.  They calculate
+      their respective final positions and execute a final scroll to re-sync
+      with the propagator.
 
 */
 
@@ -165,8 +178,9 @@ void CompareView::zoomToPct(QPointF scrollPct, bool isZoom)
    slider range, because each image in the compare group might have different
    size or aspect ratios.
 */
-//    qDebug() << "CompareView::zoomToPct  scrollPct" << scrollPct
-//             << "isZoom" << isZoom << currentImagePath;
+//    qDebug() << "CompareView::zoomToPct" << currentImagePath
+//             << "isZoom =" << isZoom
+//             << "scrollPct =" << scrollPct;
     this->isZoom = isZoom;
     isZoom ? zoom = zoomFit : zoom = toggleZoom;
     scale(false);
@@ -218,7 +232,7 @@ void CompareView::panToDeltaPct(QPointF delta)
 //    qDebug() << "Delta pan" << delta << currentImagePath;
     getScrollBarStatus();
     setScrollBars(QPointF(scrl.hPct + delta.x(), scrl.vPct + delta.y()));
-//    reportScrollBarStatus();
+    reportScrollBarStatus("CV::panToDeltaPct                ");
     return;
 }
 
@@ -230,6 +244,7 @@ void CompareView::panToPct(QPointF scrollPct)
     #endif
     }
     setScrollBars(scrollPct);
+    reportScrollBarStatus("CV::panToPct                     ");
 }
 
 void CompareView::setScrollBars(QPointF scrollPct)
@@ -247,11 +262,43 @@ void CompareView::setScrollBars(QPointF scrollPct)
     verticalScrollBar()->setValue(scrl.vVal);
 }
 
+void CompareView::npSetPanStartPct()
+{
+/*
+When the propagating instance left mouse clicks the scrollPct position is
+signalled (panStartPct) to CompareImages, which in turn calls all non-propagating
+instances to set the possible start pan scroll position in percent.
+*/
+    startOfPanPct = getScrollPct();
+    qDebug() << "\n" << imageIndex.row()
+             << "CompareView::npSetPanStartPct  startOfPanPct = " << startOfPanPct;
+}
+
+void CompareView::npCleanupAfterPan(QPointF deltaPct)
+{
+/*
+When the propagating instance left mouse releases the end scrollPct position is
+signalled (panEndPct) to CompareImages, which in turn calls all non-propagating
+instances to set the possible end pan scroll position in percent.
+
+This is required because the scroll event does not reliably send all scroll
+occurrences which causes the non-propagating instances panning to lag a small
+amount.  By recording the startOfPanPct and the endOfPanPct a final scroll
+correction can be executed to re-sync all the instances.
+*/
+    endOfPanPct = startOfPanPct + deltaPct;
+    panToPct(endOfPanPct);
+    qDebug() << "CompareView::cleanupAfterPan:   propagate =" << propagate;
+    qDebug() << "startOfPanPct" << startOfPanPct
+             << "endOfPanPct" << endOfPanPct
+             << "deltaPanPct" << deltaPct;
+}
+
 void CompareView::getScrollBarStatus()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getScrolBarStatus" << currentImagePath;
+    qDebug() << "CompareView::getScrollBarStatus" << currentImagePath;
     #endif
     }
     scrl.hMin = horizontalScrollBar()->minimum();
@@ -264,17 +311,21 @@ void CompareView::getScrollBarStatus()
     scrl.vPct = qreal(scrl.vVal - scrl.vMin) / (scrl.vMax - scrl.vMin);
 }
 
-void CompareView::reportScrollBarStatus()
+void CompareView::reportScrollBarStatus(QString info)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "CompareView::reportScrollBarStatus" << currentImagePath;
     #endif
     }
-    qDebug() << "ScrollBarStatus:" << currentImagePath << "\n"
-             << "hMin" << scrl.hMin << "hMax" << scrl.hMax << "hVal" << scrl.hVal << "hPct" << scrl.hPct
-             << "vMin" << scrl.vMin << "vMax" << scrl.vMax << "vVal" << scrl.vVal << "vPct" << scrl.vPct
-             << "\n";
+//    qDebug() << "ScrollBarStatus:" << currentImagePath// << "\n"
+//             << "hMin" << scrl.hMin << "hMax" << scrl.hMax << "hVal" << scrl.hVal
+//             << "vMin" << scrl.vMin << "vMax" << scrl.vMax << "vVal" << scrl.vVal
+//             << "hPct" << scrl.hPct << "vPct" << scrl.vPct
+//             << "\n";
+    getScrollBarStatus();
+    int row = imageIndex.row();
+    qDebug() << row << info << "Zoom" << zoom << "hPct" << scrl.hPct << "vPct" << scrl.vPct;
 }
 
 QPointF CompareView::getScrollDeltaPct()
@@ -298,7 +349,10 @@ QPointF CompareView::getScrollDeltaPct()
 
 QPointF CompareView::getScrollPct()
 {
-    /* Only called from current instance of CompareView  */
+/*
+Returns coordinates in percent for the current scroll position.
+Only called from current propagating instance of CompareView
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "CompareView::getScrollPct" << currentImagePath;
@@ -308,6 +362,23 @@ QPointF CompareView::getScrollPct()
     getScrollBarStatus();
 //    reportScrollBarStatus();
     return QPointF(scrl.hPct, scrl.vPct);
+}
+
+QPointF CompareView::getScrollPct(QPoint p)
+{
+/*
+Returns coordinates in percent for point p
+Only called from current instance of CompareView
+*/
+    int hMin = horizontalScrollBar()->minimum();
+    int hMax = horizontalScrollBar()->maximum();
+    int hVal = p.x();
+    qreal hPct = qreal(hVal - hMin) / (hMax - hMin);
+    int vMin = verticalScrollBar()->minimum();
+    int vMax = verticalScrollBar()->maximum();
+    int vVal = p.y();
+    qreal vPct = qreal(vVal - vMin) / (vMax - vMin);
+    return QPointF(hPct, vPct);
 }
 
 //QPointF CompareView::getMousePct()
@@ -385,13 +456,15 @@ circular, with variance checks to prevent a repeating cycle.
     // if not current instance (originator of scale change)
     if (okayToPropagate) {
 //        qDebug() << "Propagating from" << currentImagePath;
-        getScrollBarStatus();
-//        reportScrollBarStatus();
+//        getScrollBarStatus();
+        reportScrollBarStatus("CV::scale okayToPropagate emiting");
         scrollPosPct = QPointF(scrl.hPct, scrl.vPct);      // new position base for delta scrolls
-//        qDebug() << "scrollPosPct" << scrollPosPct;
+//        qDebug() << "CompareView::scale" << currentImagePath
+//                 << "EMITING scrollPosPct " << scrollPosPct;
         emit zoomFromPct(scrollPosPct, imageIndex, isZoom);
 //        emit align(scrollPosPct, imageIndex);
     }
+    reportScrollBarStatus("CV::scale                        ");
     isZoom = (zoom > zoomFit);
     if (isZoom) setCursor(Qt::OpenHandCursor);
     else setCursor(Qt::ArrowCursor);
@@ -665,6 +738,13 @@ void CompareView::mousePressEvent(QMouseEvent *event)
         isLeftMouseBtnPressed = true;
         mousePressPt.setX(event->x());
         mousePressPt.setY(event->y());
+        if (isZoom) {
+            startOfPanPct = getScrollPct();
+            emit panStartPct(imageIndex);
+//        qDebug() << "CompareView::mousePressEvent  mousePressPt =" << currentImagePath
+//                 << "mousePressPt =" << mousePressPt;
+            reportScrollBarStatus("CV::mouse press                  ");
+        }
     }
     QGraphicsView::mousePressEvent(event);
 }
@@ -672,7 +752,9 @@ void CompareView::mousePressEvent(QMouseEvent *event)
 void CompareView::mouseMoveEvent(QMouseEvent *event)
 {
 /*
-Pan the image during a mouse drag operation
+Pan the image during a mouse drag operation.  If the shift key is also pressed
+then the pan will not be signaled to the other instances and only the
+propagator will pan.  The modifier key test is in the scroll event.
 */
     {
     #ifdef ISDEBUG
@@ -680,15 +762,23 @@ Pan the image during a mouse drag operation
     #endif
     }
     if (isLeftMouseBtnPressed) {
-        qDebug() << "CompareView::mouseMoveEvent  if (isLeftMouseBtnPressed)";
         isMouseDrag = true;
         setCursor(Qt::ClosedHandCursor);
+
+        /* scroll to pan with the mouse drag.  All operations are relative so
+           calculate the delta amount between mouse events.  Thehe scroll event
+           is fired by changes to the scrollbars which signals the other
+           instances to mirror the pan  */
         horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
                                        (event->x() - mousePressPt.x()));
         verticalScrollBar()->setValue(verticalScrollBar()->value() -
                                       (event->y() - mousePressPt.y()));
+        // keep point to calc next delta
         mousePressPt.setX(event->x());
         mousePressPt.setY(event->y());
+//        qDebug() << "CompareView::mouseMoveEvent" << currentImagePath
+//                 << "mousePressPt =" << mousePressPt;
+        reportScrollBarStatus("CV::mousemove                    ");
     }
     event->ignore();
 }
@@ -703,6 +793,18 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     isLeftMouseBtnPressed = false;
     if (isMouseDrag) {
         isMouseDrag = false;
+        if (isZoom) {
+            endOfPanPct = getScrollPct();
+            deltaPanPct = endOfPanPct - startOfPanPct;
+
+            // only propagate if shift modifier was not engaged during pan
+            if (propagate) emit cleanupAfterPan(deltaPanPct, imageIndex);
+            qDebug() << "Propagating instance end of pan:   propagate =" << propagate;
+            qDebug() << "startOfPanPct" << startOfPanPct
+                     << "endOfPanPct" << endOfPanPct
+                     << "deltaPanPct" << deltaPanPct;
+        }
+
         if (isZoom) setCursor((Qt::OpenHandCursor));
         else setCursor(Qt::ArrowCursor);
         return;
@@ -715,6 +817,7 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     propagate = false;
     scale(true);
     propagate = true;
+
     QGraphicsView::mouseReleaseEvent(event);
 //    if (isMouseDrag) {
 //        isMouseDrag = false;
@@ -743,16 +846,8 @@ void CompareView::enterEvent(QEvent *event)
     #endif
     }
     select();
+    // zoomToFit zoom factor can be different so do update
     emit zoomChange(zoom);
-//    this->setFocus();
-//    thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
-//    thumbView->setCurrentIndex(imageIndex);
-//    thumbView->setSelectionMode(QAbstractItemView::NoSelection);
-//    this->setStyleSheet("QGraphicsView  {"
-//                        "margin:1; "
-//                        "border-style: solid; "
-//                        "border-width: 2; "
-//                        "border-color: rgb(225,225,225);}");
     QGraphicsView::enterEvent(event);
 }
 
@@ -764,11 +859,6 @@ void CompareView::leaveEvent(QEvent *event)
     #endif
     }
     deselect();
-//    this->setStyleSheet("QGraphicsView  {"
-//                        "margin:1; "
-//                        "border-style: solid; "
-//                        "border-width: 2; "
-//                        "border-color: rgb(111,111,111);}");
     QGraphicsView::leaveEvent(event);
 }
 

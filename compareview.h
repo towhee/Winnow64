@@ -26,6 +26,8 @@ public:
     QPointF getScrollPct();
     void panToPct(QPointF scrollPct);
     void panToDeltaPct(QPointF delta);
+    void npSetPanStartPct();
+    void npCleanupAfterPan(QPointF deltaPct);
     void resetMouseClickZoom();
 
     void select();
@@ -51,7 +53,9 @@ signals:
     void togglePick();
     void zoomFromPct(QPointF scrollPct, QModelIndex idx, bool isZoom);
     void panFromPct(QPointF scrollPct, QModelIndex idx);
-    void align(QPointF scrollPct, QModelIndex idx);
+    void panStartPct(QModelIndex idx);
+    void cleanupAfterPan(QPointF deltaPct, QModelIndex idx);
+    void align(QPointF scrollPct, QModelIndex idx); // not used
     void zoomChange(qreal zoomValue);
 
 private slots:
@@ -104,10 +108,13 @@ private:
     } scrl;
 
     QString currentImagePath;
-    QPoint mousePt;
-    QPointF offset;
+    QPoint mousePt;             // not used
+    QPointF offset;             // offset for "thumb up" and edits Labels
     QPointF scrollPosPct;       // current position
     QPoint mousePressPt;        // for mouse scrolling
+    QPointF startOfPanPct;
+    QPointF endOfPanPct;
+    QPointF deltaPanPct;
 //    QPointF getOffset(QPointF scrollPct);
 
     // Status
@@ -128,8 +135,9 @@ private:
     qreal getZoom();
     void getScrollBarStatus();
     void setScrollBars(QPointF scrollPct);
-    void reportScrollBarStatus();
-    QPointF getScrollDeltaPct();
+    void reportScrollBarStatus(QString info = "");
+    QPointF getScrollDeltaPct();        //
+    QPointF getScrollPct(QPoint p);
 //    QPointF getMousePct();
 //    QPointF getScrollPctFromCenter();
     QPointF getSceneCoordFromPct(QPointF scrollPct);
