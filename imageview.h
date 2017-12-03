@@ -35,7 +35,7 @@ public:
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void moveShootingInfo(QString infoString);
     QLabel *pickLabel;      // visibility controlled in MW
-    CircleLabel *editsLabel;
+    CircleLabel *classificationLabel;
     QPixmap *pickPixmap;
 
 public slots:

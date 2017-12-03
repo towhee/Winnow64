@@ -76,8 +76,8 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
     pickLabel->setVisible(false);
 
-    editsLabel = new CircleLabel(this);
-    editsLabel->setVisible(false);
+    classificationLabel = new CircleLabel(this);
+    classificationLabel->setVisible(false);
 
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
     infoEffect->setOpacity(0.8);
@@ -467,8 +467,8 @@ size.
     pickLabel->setPixmap(pickPixmap->scaled(d, d, Qt::KeepAspectRatio));
 
     pickLabel->move(x, y);
-    editsLabel->move(x + p.w - offset, y + p.h - offset);
-//    editsLabel->move(x + p.w - offset - d, y + p.h - offset - 0.20 * d);
+    classificationLabel->move(x + p.w - offset, y + p.h - offset);
+//    classificationLabel->move(x + p.w - offset - d, y + p.h - offset - 0.20 * d);
 }
 
 void ImageView::resizeEvent(QResizeEvent *event)

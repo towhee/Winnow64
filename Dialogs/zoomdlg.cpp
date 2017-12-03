@@ -8,6 +8,11 @@ ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent
     setWindowFlags(Qt::WindowStaysOnTopHint | Qt::Dialog | Qt::FramelessWindowHint);
     ui->setupUi(this);
 
+    QAction *okayAction = new QAction(tr("Okay"), this);
+    okayAction->setShortcut(QKeySequence("Return"));
+    this->addAction(okayAction);
+    connect(okayAction, SIGNAL(triggered(bool)), this, SLOT(accept()));
+
     // update controls to current zoom factor
     zoomChange(zoom);
 

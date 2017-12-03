@@ -1,4 +1,5 @@
-- Zooming is not propagating consistently in compareView
+- ThumbDock thumb size forgotten after grid view sometimes
+- Tweak panning in compareView
 - Add zoom increment amount to preferences
 - Check for Tif support in Qt
 - Zoom rect in thumbnail to show zoom and pan in imageView
@@ -26,6 +27,7 @@
 - Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done:Zooming is not propagating consistently in compareView
 - Done: UpdateStatus signal in compareImages not working
 - Done: Set mouse click zoom amount (default = 100%)
 - Done: Show how much mem req'd for selected images

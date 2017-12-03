@@ -417,8 +417,8 @@ void MW::folderSelectionChange()
 //    qDebug() << "Selected =" << selected;
     thumbView->sortThumbs(1, false);
 
-    // no ratings or label color classes set yet so hide editsLabel
-    imageView->editsLabel->setVisible(false);
+    // no ratings or label color classes set yet so hide classificationLabel
+    imageView->classificationLabel->setVisible(false);
 
      /* Must load metadata first, as it contains the file offsets and lengths
      for the thumbnail and full size embedded jpgs and the image width and
@@ -1267,7 +1267,7 @@ void MW::createActions()
 
     favDockVisibleAction = new QAction(tr("Favourites"), this);
     favDockVisibleAction->setObjectName("toggleFavs");
-    favDockVisibleActionit->setCheckable(true);
+    favDockVisibleAction->setCheckable(true);
     addAction(favDockVisibleAction);
     connect(favDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFavDockVisibility()));
 
@@ -5008,9 +5008,9 @@ the rating for all the selected thumbs.
     if(isAlreadyRating) rating = "";     // invert the label(s)
 
     // set the image edits label
-    imageView->editsLabel->setText(rating);
-    if (labelColor == "" && rating == "") imageView->editsLabel->setVisible(false);
-    else imageView->editsLabel->setVisible(true);
+    imageView->classificationLabel->setText(rating);
+    if (labelColor == "" && rating == "") imageView->classificationLabel->setVisible(false);
+    else imageView->classificationLabel->setVisible(true);
 
     // set the rating
     for (int i = 0; i < selection.count(); ++i) {        
@@ -5036,12 +5036,12 @@ imageView and visibility (true if either rating or color class set).
     int row = thumbView->currentIndex().row();
     QModelIndex idx = dm->sf->index(row, G::RatingColumn);
     rating = idx.data(Qt::EditRole).toString();
-    imageView->editsLabel->setText(rating);
+    imageView->classificationLabel->setText(rating);
     if (labelColor == "" && rating == "") {
-        imageView->editsLabel->setVisible(false);
+        imageView->classificationLabel->setVisible(false);
     }
     else {
-        imageView->editsLabel->setVisible(true);
+        imageView->classificationLabel->setVisible(true);
     }
     if (G::mode == "Compare")
         compareImages->ratingColorClass(rating, labelColor, idx);
@@ -5078,16 +5078,16 @@ set the color class for all the selected thumbs.
     }
     if(isAlreadyLabel) labelColor = "";     // invert the label
 
-    // set the image editsLabel
-    if (labelColor == "") imageView->editsLabel->setBackgroundColor(G::labelNoneColor);
-    if (labelColor == "Red") imageView->editsLabel->setBackgroundColor(G::labelRedColor);
-    if (labelColor == "Yellow") imageView->editsLabel->setBackgroundColor(G::labelYellowColor);
-    if (labelColor == "Green") imageView->editsLabel->setBackgroundColor(G::labelGreenColor);
-    if (labelColor == "Blue") imageView->editsLabel->setBackgroundColor(G::labelBlueColor);
-    if (labelColor == "Purple") imageView->editsLabel->setBackgroundColor(G::labelPurpleColor);
+    // set the image classificationLabel
+    if (labelColor == "") imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
+    if (labelColor == "Red") imageView->classificationLabel->setBackgroundColor(G::labelRedColor);
+    if (labelColor == "Yellow") imageView->classificationLabel->setBackgroundColor(G::labelYellowColor);
+    if (labelColor == "Green") imageView->classificationLabel->setBackgroundColor(G::labelGreenColor);
+    if (labelColor == "Blue") imageView->classificationLabel->setBackgroundColor(G::labelBlueColor);
+    if (labelColor == "Purple") imageView->classificationLabel->setBackgroundColor(G::labelPurpleColor);
 
-    if (labelColor == "" && rating == "") imageView->editsLabel->setVisible(false);
-    else imageView->editsLabel->setVisible(true);
+    if (labelColor == "" && rating == "") imageView->classificationLabel->setVisible(false);
+    else imageView->classificationLabel->setVisible(true);
 
     // update the data model
     for (int i = 0; i < selection.count(); ++i) {
@@ -5116,14 +5116,14 @@ color class is called label.
     int row = thumbView->currentIndex().row();
     QModelIndex idx = dm->sf->index(row, G::LabelColumn);
     labelColor = idx.data(Qt::EditRole).toString();
-    if (labelColor == "") imageView->editsLabel->setBackgroundColor(G::labelNoneColor);
-    if (labelColor == "Red") imageView->editsLabel->setBackgroundColor(G::labelRedColor);
-    if (labelColor == "Yellow") imageView->editsLabel->setBackgroundColor(G::labelYellowColor);
-    if (labelColor == "Green") imageView->editsLabel->setBackgroundColor(G::labelGreenColor);
-    if (labelColor == "Blue") imageView->editsLabel->setBackgroundColor(G::labelBlueColor);
-    if (labelColor == "Purple") imageView->editsLabel->setBackgroundColor(G::labelPurpleColor);
-    if (labelColor == "" && rating == "") imageView->editsLabel->setVisible(false);
-    else imageView->editsLabel->setVisible(true);
+    if (labelColor == "") imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
+    if (labelColor == "Red") imageView->classificationLabel->setBackgroundColor(G::labelRedColor);
+    if (labelColor == "Yellow") imageView->classificationLabel->setBackgroundColor(G::labelYellowColor);
+    if (labelColor == "Green") imageView->classificationLabel->setBackgroundColor(G::labelGreenColor);
+    if (labelColor == "Blue") imageView->classificationLabel->setBackgroundColor(G::labelBlueColor);
+    if (labelColor == "Purple") imageView->classificationLabel->setBackgroundColor(G::labelPurpleColor);
+    if (labelColor == "" && rating == "") imageView->classificationLabel->setVisible(false);
+    else imageView->classificationLabel->setVisible(true);
 
     if (G::mode == "Compare")
         compareImages->ratingColorClass(rating, labelColor, idx);

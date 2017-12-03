@@ -24,28 +24,23 @@ public:
 
     bool loadImage(QModelIndex idx, QString imageFileName);
     QPointF getScrollPct();
-    void panToPct(QPointF scrollPct);
-    void panToDeltaPct(QPointF delta);
-    void npSetPanStartPct();
-    void npCleanupAfterPan(QPointF deltaPct);
-    void resetMouseClickZoom();
+    void setScrollBars(QPointF scrollPct);
+    void slavePanToDeltaPct(QPointF delta);
+    void slaveSetPanStartPct();
+    void slaveCleanupAfterPan(QPointF deltaPct);
 
     void select();
     void deselect();
 
     QLabel *pickLabel;          // visibility controlled in MW
-    CircleLabel *editsLabel;
+    CircleLabel *classificationLabel;
 
 public slots:
-    void zoomToPct(QPointF coord, bool isZoom);
+    void slaveZoomToPct(QPointF coord, bool isZoom);
 
-    void setClickZoom(float toggleZoom);
     void zoomIn();
     void zoomOut();
     void zoomToFit();
-    void zoom50();
-    void zoom100();
-    void zoom200();
     void zoomTo(qreal zoomTo);
     void zoomToggle();
 
@@ -134,13 +129,10 @@ private:
     void scale(bool okayToPropagate);
     qreal getZoom();
     void getScrollBarStatus();
-    void setScrollBars(QPointF scrollPct);
     void reportScrollBarStatus(QString info = "");
     QPointF getScrollDeltaPct();        //
     QPointF getScrollPct(QPoint p);
-//    QPointF getMousePct();
-//    QPointF getScrollPctFromCenter();
-    QPointF getSceneCoordFromPct(QPointF scrollPct);
+    QPointF getSceneCoordFromPct(QPointF scrollPct);    // not used
 
     void movePickIcon();
     bool previewFitsZoom();

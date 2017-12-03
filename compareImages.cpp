@@ -330,16 +330,16 @@ void CompareImages::ratingColorClass(QString rating, QString colorClass, QModelI
     }
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex.row() == idx.row()) {
-            imList->at(i)->editsLabel->setText(rating);
-            if (colorClass == "") imList->at(i)->editsLabel->setBackgroundColor(G::labelNoneColor);
-            if (colorClass == "Red") imList->at(i)->editsLabel->setBackgroundColor(G::labelRedColor);
-            if (colorClass == "Yellow") imList->at(i)->editsLabel->setBackgroundColor(G::labelYellowColor);
-            if (colorClass == "Green") imList->at(i)->editsLabel->setBackgroundColor(G::labelGreenColor);
-            if (colorClass == "Blue") imList->at(i)->editsLabel->setBackgroundColor(G::labelBlueColor);
-            if (colorClass == "Purple") imList->at(i)->editsLabel->setBackgroundColor(G::labelPurpleColor);
+            imList->at(i)->classificationLabel->setText(rating);
+            if (colorClass == "") imList->at(i)->classificationLabel->setBackgroundColor(G::labelNoneColor);
+            if (colorClass == "Red") imList->at(i)->classificationLabel->setBackgroundColor(G::labelRedColor);
+            if (colorClass == "Yellow") imList->at(i)->classificationLabel->setBackgroundColor(G::labelYellowColor);
+            if (colorClass == "Green") imList->at(i)->classificationLabel->setBackgroundColor(G::labelGreenColor);
+            if (colorClass == "Blue") imList->at(i)->classificationLabel->setBackgroundColor(G::labelBlueColor);
+            if (colorClass == "Purple") imList->at(i)->classificationLabel->setBackgroundColor(G::labelPurpleColor);
 
-            if (colorClass == "" && rating == "") imList->at(i)->editsLabel->setVisible(false);
-            else imList->at(i)->editsLabel->setVisible(true);
+            if (colorClass == "" && rating == "") imList->at(i)->classificationLabel->setVisible(false);
+            else imList->at(i)->classificationLabel->setVisible(true);
         }
     }
 }
@@ -354,7 +354,7 @@ void CompareImages::zoom(QPointF scrollPct, QModelIndex idx, bool isZoom)
 //    qDebug() << "CompareImages::zoom  scrollPct" << scrollPct << "isZoom" << isZoom;
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
-            imList->at(i)->zoomToPct(scrollPct, isZoom);
+            imList->at(i)->slaveZoomToPct(scrollPct, isZoom);
         }
     }
 //    emit zoomChange();
@@ -371,7 +371,7 @@ void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
 //    qDebug() << "CompareImages::pan";
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
-            imList->at(i)->panToDeltaPct(scrollPct);
+            imList->at(i)->slavePanToDeltaPct(scrollPct);
         }
     }
 }
@@ -386,7 +386,7 @@ void CompareImages::startPan(QModelIndex idx)
 //    qDebug() << "CompareImages::pan";
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
-            imList->at(i)->npSetPanStartPct();
+            imList->at(i)->slaveSetPanStartPct();
         }
     }
 }
@@ -401,11 +401,12 @@ void CompareImages::cleanupAfterPan(QPointF deltaPct, QModelIndex idx)
 //    qDebug() << "CompareImages::pan";
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
-            imList->at(i)->npCleanupAfterPan(deltaPct);
+            imList->at(i)->slaveCleanupAfterPan(deltaPct);
         }
     }
 }
 
+// try to find a commmon feature to align all comparison images - not working very well
 void CompareImages::align(QPointF basePos, QModelIndex idx)
 {
     {
@@ -430,7 +431,7 @@ void CompareImages::align(QPointF basePos, QModelIndex idx)
             *image = imList->at(i)->pmItem->pixmap().toImage();
             QPointF scrollPct(imageAlign->alignImage(baseImage, image, basePosPct));
             qDebug() << "basePos" << basePos << "scrollPct" << scrollPct;
-            imList->at(i)->panToPct(scrollPct);
+            imList->at(i)->setScrollBars(scrollPct);
         }
     }
 }
@@ -443,11 +444,12 @@ clicks on the unzoomed image.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareImages::updateToggleZoom";
+    qDebug() << "CompareImages::updateToggleZoom" << toggleZoomValue;
     #endif
     }
+    qDebug() << "CompareImages::updateToggleZoom" << toggleZoomValue;
     for (int i = 0; i < imList->count(); ++i)
-        imList->at(i)->toggleZoom == toggleZoomValue;
+        imList->at(i)->toggleZoom = toggleZoomValue;
 }
 
 void CompareImages::zoomChangeFromView(qreal zoomValue)
