@@ -642,29 +642,35 @@ void MW::createActions()
     //rgh need slot function
     openAction = new QAction(tr("Open Folder"), this);
     openAction->setObjectName("openFolder");
+    addAction(openAction);
     connect(openAction, SIGNAL(triggered()), this, SLOT(openFolder()));
 
     openWithMenu = new QMenu(tr("Open With..."));
     openWithMenuAction = new QAction(tr("Open With..."), this);
     openWithMenuAction->setObjectName("openWithMenu");
+    addAction(openWithMenuAction);
     openWithMenuAction->setMenu(openWithMenu);
 
     chooseAppAction = new QAction(tr("Manage External Applications"), this);
     chooseAppAction->setObjectName("chooseApp");
+    addAction(chooseAppAction);
     connect(chooseAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
 //    chooseAppAction->setMenu(openWithMenu);
 
     newAppAction = new QAction(tr("New app"), this);
     newAppAction->setObjectName("newApp");
+    addAction(newAppAction);
 //    connect(newAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
 
     deleteAppAction = new QAction(tr("Delete app"), this);
     deleteAppAction->setObjectName("deleteApp");
+    addAction(deleteAppAction);
 //    connect(deleteAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
 
     recentFoldersMenu = new QMenu(tr("Recent folders..."));
     recentFoldersAction = new QAction(tr("Recent folders..."), this);
     recentFoldersAction->setObjectName("recentFoldersAction");
+    addAction(recentFoldersAction);
     recentFoldersAction->setMenu(recentFoldersMenu);
 
     // general connection to handle invoking new recent folders
@@ -685,6 +691,7 @@ void MW::createActions()
             recentFolderActions.at(i)->setObjectName(objName);
             recentFolderActions.at(i)->setText(name);
             recentFolderActions.at(i)->setVisible(true);
+            addAction(recentFolderActions.at(i));
         }
         if (i >= n) recentFolderActions.at(i)->setVisible(false);
 //        recentFolderActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
@@ -693,6 +700,7 @@ void MW::createActions()
 
     revealFileAction = new QAction(tr("Reveal in finder/explorer"), this);
     revealFileAction->setObjectName("openInFinder");
+    addAction(revealFileAction);
     connect(revealFileAction, SIGNAL(triggered()),
         this, SLOT(revealFile()));
 
@@ -700,42 +708,50 @@ void MW::createActions()
     subFoldersAction->setObjectName("subFolders");
     subFoldersAction->setCheckable(true);
     subFoldersAction->setChecked(false);
+    addAction(subFoldersAction);
     connect(subFoldersAction, SIGNAL(triggered()), this, SLOT(setIncludeSubFolders()));
 
     showImageCountAction = new QAction(tr("Show image count"), this);
     showImageCountAction->setObjectName("showImageCount");
     showImageCountAction->setCheckable(true);
+    addAction(showImageCountAction);
     connect(showImageCountAction, SIGNAL(triggered()), this, SLOT(setShowImageCount()));
 
     addBookmarkAction = new QAction(tr("Add Bookmark"), this);
     addBookmarkAction->setObjectName("addBookmark");
+    addAction(addBookmarkAction);
     connect(addBookmarkAction, SIGNAL(triggered()), this, SLOT(addNewBookmark()));
 
     removeBookmarkAction = new QAction(tr("Remove Bookmark"), this);
     removeBookmarkAction->setObjectName("removeBookmark");
     // rgh where did removeBookmark slot function go?
+    addAction(removeBookmarkAction);
     connect(removeBookmarkAction, SIGNAL(triggered()), this, SLOT(removeBookmark()));
 
     ingestAction = new QAction(tr("Ingest picks"), this);
     ingestAction->setObjectName("ingest");
+    addAction(ingestAction);
     connect(ingestAction, SIGNAL(triggered()), this, SLOT(copyPicks()));
 
     // Place keeper for now
     renameAction = new QAction(tr("Rename selected images"), this);
     renameAction->setObjectName("renameImages");
     renameAction->setShortcut(Qt::Key_F2);
+    addAction(renameAction);
 //    connect(renameAction, SIGNAL(triggered()), this, SLOT(renameImages()));
 
     // Place keeper for now
     runDropletAction = new QAction(tr("Run Droplet"), this);
     runDropletAction->setObjectName("runDroplet");
     runDropletAction->setShortcut(QKeySequence("A"));
+    addAction(runDropletAction);
     connect(runDropletAction, SIGNAL(triggered()), this, SLOT(test()));
 //    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(reportState()));
 //    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(runDroplet()));
 
     reportMetadataAction = new QAction(tr("Report Metadata"), this);
     reportMetadataAction->setObjectName("reportMetadata");
+    addAction(reportMetadataAction);
     connect(reportMetadataAction, SIGNAL(triggered()),
             this, SLOT(reportMetadata()));
 //    connect(reportMetadataAction, SIGNAL(triggered()),
@@ -744,16 +760,19 @@ void MW::createActions()
     // Appears in Winnow menu in OSX
     exitAction = new QAction(tr("Exit"), this);
     exitAction->setObjectName("exit");
+    addAction(exitAction);
     connect(exitAction, SIGNAL(triggered()), this, SLOT(close()));
 
     // Edit Menu
 
     selectAllAction = new QAction(tr("Select All"), this);
     selectAllAction->setObjectName("selectAll");
+    addAction(selectAllAction);
     connect(selectAllAction, SIGNAL(triggered()), this, SLOT(selectAllThumbs()));
 
     invertSelectionAction = new QAction(tr("Invert Selection"), this);
     invertSelectionAction->setObjectName("invertSelection");
+    addAction(invertSelectionAction);
     connect(invertSelectionAction, SIGNAL(triggered()), thumbView,
             SLOT(invertSelection()));
 
@@ -761,12 +780,14 @@ void MW::createActions()
     pickAction->setObjectName("togglePick");
     pickAction->setCheckable(true);
     pickAction->setChecked(false);
+    addAction(pickAction);
     connect(pickAction, SIGNAL(triggered()), this, SLOT(togglePick()));
 
     filterPickAction = new QAction(tr("Filter picks only"), this);
     filterPickAction->setObjectName("toggleFilterPick");
     filterPickAction->setCheckable(true);
     filterPickAction->setChecked(false);
+    addAction(filterPickAction);
     connect(filterPickAction, SIGNAL(triggered(bool)),
             filters, SLOT(checkPicks(bool)));
 //    connect(toggleFilterPickAction, SIGNAL(triggered()), this, SLOT(toggleFilterPick()));
@@ -775,70 +796,87 @@ void MW::createActions()
     copyImagesAction = new QAction(tr("Copy to clipboard"), this);
     copyImagesAction->setObjectName("copyImages");
     copyImagesAction->setShortcut(QKeySequence("Ctrl+C"));
+    addAction(copyImagesAction);
     connect(copyImagesAction, SIGNAL(triggered()), thumbView, SLOT(copyThumbs()));
 
     rate0Action = new QAction(tr("Clear rating"), this);
     rate0Action->setObjectName("Rate0");
+    addAction(rate0Action);
     connect(rate0Action, SIGNAL(triggered()), this, SLOT(setRating()));
 
     rate1Action = new QAction(tr("Set rating to 1"), this);
     rate1Action->setObjectName("Rate1");
+    addAction(rate1Action);
     connect(rate1Action, SIGNAL(triggered()), this, SLOT(setRating()));
 
     rate2Action = new QAction(tr("Set rating to 2"), this);
     rate2Action->setObjectName("Rate2");
+    addAction(rate2Action);
     connect(rate2Action, SIGNAL(triggered()), this, SLOT(setRating()));
 
     rate3Action = new QAction(tr("Set rating to 3"), this);
     rate3Action->setObjectName("Rate3");
+    addAction(rate3Action);
     connect(rate3Action, SIGNAL(triggered()), this, SLOT(setRating()));
 
     rate4Action = new QAction(tr("Set rating to 4"), this);
     rate4Action->setObjectName("Rate4");
+    addAction(rate4Action);
     connect(rate4Action, SIGNAL(triggered()), this, SLOT(setRating()));
 
     rate5Action = new QAction(tr("Set rating to 5"), this);
     rate5Action->setObjectName("Rate5");
+    addAction(rate5Action);
     connect(rate5Action, SIGNAL(triggered()), this, SLOT(setRating()));
 
     label0Action = new QAction(tr("Clear label colour"), this);
     label0Action->setObjectName("Label0");
+    addAction(label0Action);
     connect(label0Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     label1Action = new QAction(tr("Set label to Red"), this);
     label1Action->setObjectName("Label1");
+    addAction(label1Action);
     connect(label1Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     label2Action = new QAction(tr("Set label to Yellow"), this);
     label2Action->setObjectName("Label2");
+    addAction(label2Action);
     connect(label2Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     label3Action = new QAction(tr("Set label to Green"), this);
     label3Action->setObjectName("Label3");
+    addAction(label3Action);
     connect(label3Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     label4Action = new QAction(tr("Set label to Blue"), this);
     label4Action->setObjectName("Label4");
+    addAction(label4Action);
     connect(label4Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     label5Action = new QAction(tr("Set label to Purple"), this);
     label5Action->setObjectName("Label5");
+    addAction(label5Action);
     connect(label5Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
+    addAction(rotateRightAction);
     connect(rotateRightAction, SIGNAL(triggered()), this, SLOT(rotateRight()));
 
     rotateLeftAction = new QAction(tr("Rotate CCW"), this);
     rotateLeftAction->setObjectName("rotateLeft");
+    addAction(rotateLeftAction);
     connect(rotateLeftAction, SIGNAL(triggered()), this, SLOT(rotateLeft()));
 
     prefAction = new QAction(tr("Preferences"), this);
     prefAction->setObjectName("settings");
+    addAction(prefAction);
     connect(prefAction, SIGNAL(triggered()), this, SLOT(preferences()));
 
     oldPrefAction = new QAction(tr("Old Preferences"), this);
     oldPrefAction->setObjectName("settings");
+    addAction(oldPrefAction);
     connect(oldPrefAction, SIGNAL(triggered()), this, SLOT(oldPreferences()));
 
     // Go menu
@@ -851,160 +889,198 @@ void MW::createActions()
     keyRightAction = new QAction(tr("Next Image"), this);
     keyRightAction->setObjectName("nextImage");
     keyRightAction->setEnabled(true);
+    addAction(keyRightAction);
     connect(keyRightAction, SIGNAL(triggered()), this, SLOT(keyRight()));
 
     keyLeftAction = new QAction(tr("Previous"), this);
     keyLeftAction->setObjectName("prevImage");
+    addAction(keyLeftAction);
     connect(keyLeftAction, SIGNAL(triggered()), this, SLOT(keyLeft()));
 
     keyUpAction = new QAction(tr("Move Up"), this);
     keyUpAction->setObjectName("moveUp");
+    addAction(keyUpAction);
     connect(keyUpAction, SIGNAL(triggered()), this, SLOT(keyUp()));
 
     keyDownAction = new QAction(tr("Move Down"), this);
     keyDownAction->setObjectName("moveDown");
+    addAction(keyDownAction);
     connect(keyDownAction, SIGNAL(triggered()), this, SLOT(keyDown()));
 
     keyHomeAction = new QAction(tr("First"), this);
     keyHomeAction->setObjectName("firstImage");
+    addAction(keyHomeAction);
     connect(keyHomeAction, SIGNAL(triggered()), this, SLOT(keyHome()));
 
     keyEndAction = new QAction(tr("Last"), this);
     keyEndAction->setObjectName("lastImage");
+    addAction(keyEndAction);
     connect(keyEndAction, SIGNAL(triggered()), this, SLOT(keyEnd()));
 
     // Not a menu item - used by slide show
     randomImageAction = new QAction(tr("Random"), this);
     randomImageAction->setObjectName("randomImage");
+    addAction(randomImageAction);
     connect(randomImageAction, SIGNAL(triggered()), thumbView, SLOT(selectRandom()));
 
     nextPickAction = new QAction(tr("Next Pick"), this);
     nextPickAction->setObjectName("nextPick");
+    addAction(nextPickAction);
     connect(nextPickAction, SIGNAL(triggered()), thumbView, SLOT(selectNextPick()));
 
     prevPickAction = new QAction(tr("Previous Pick"), this);
     prevPickAction->setObjectName("prevPick");
+    addAction(prevPickAction);
     connect(prevPickAction, SIGNAL(triggered()), thumbView, SLOT(selectPrevPick()));
 
     // Filters
 
     uncheckAllFiltersAction = new QAction(tr("Uncheck all filters"), this);
     uncheckAllFiltersAction->setObjectName("uncheckAllFilters");
+    addAction(uncheckAllFiltersAction);
     connect(uncheckAllFiltersAction, SIGNAL(triggered()), filters, SLOT(uncheckAllFilters()));
 
     expandAllAction = new QAction(tr("Expand all filters"), this);
     expandAllAction->setObjectName("expandAll");
+    addAction(expandAllAction);
     connect(expandAllAction, SIGNAL(triggered()), filters, SLOT(expandAllFilters()));
 
     collapseAllAction = new QAction(tr("Collapse all filters"), this);
     collapseAllAction->setObjectName("collapseAll");
+    addAction(collapseAllAction);
     connect(collapseAllAction, SIGNAL(triggered()), filters, SLOT(collapseAllFilters()));
 
     filterRating1Action = new QAction(tr("Filter by rating 1"), this);
     filterRating1Action->setCheckable(true);
+    addAction(filterRating1Action);
     connect(filterRating1Action,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
     filterRating2Action = new QAction(tr("Filter by rating 2"), this);
     filterRating2Action->setCheckable(true);
+    addAction(filterRating2Action);
     connect(filterRating2Action,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
     filterRating3Action = new QAction(tr("Filter by rating 3"), this);
     filterRating3Action->setCheckable(true);
+    addAction(filterRating3Action);
     connect(filterRating3Action,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
     filterRating4Action = new QAction(tr("Filter by rating 4"), this);
     filterRating4Action->setCheckable(true);
+    addAction(filterRating4Action);
     connect(filterRating4Action,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
     filterRating5Action = new QAction(tr("Filter by rating 5"), this);
     filterRating5Action->setCheckable(true);
+    addAction(filterRating5Action);
     connect(filterRating5Action,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
     filterRedAction = new QAction(tr("Filter by Red"), this);
     filterRedAction->setCheckable(true);
+    addAction(filterRedAction);
     connect(filterRedAction,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
     filterYellowAction = new QAction(tr("Filter by Yellow"), this);
     filterYellowAction->setCheckable(true);
+    addAction(filterYellowAction);
     connect(filterYellowAction,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
     filterGreenAction = new QAction(tr("Filter by Green"), this);
     filterGreenAction->setCheckable(true);
+    addAction(filterGreenAction);
     connect(filterGreenAction,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
     filterBlueAction = new QAction(tr("Filter by Blue"), this);
     filterBlueAction->setCheckable(true);
+    addAction(filterBlueAction);
     connect(filterBlueAction,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
     filterPurpleAction = new QAction(tr("Filter by Purple"), this);
     filterPurpleAction->setCheckable(true);
+    addAction(filterPurpleAction);
     connect(filterPurpleAction,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
     // Sort Menu
 
     sortFileNameAction = new QAction(tr("Sort by file name"), this);
     sortFileNameAction->setCheckable(true);
+    addAction(sortFileNameAction);
     connect(sortFileNameAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortFileTypeAction = new QAction(tr("Sort by file type"), this);
     sortFileTypeAction->setCheckable(true);
+    addAction(sortFileTypeAction);
     connect(sortFileTypeAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortFileSizeAction = new QAction(tr("Sort by file size"), this);
     sortFileSizeAction->setCheckable(true);
+    addAction(sortFileSizeAction);
     connect(sortFileSizeAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortCreateAction = new QAction(tr("Sort by created time"), this);
     sortCreateAction->setCheckable(true);
+    addAction(sortCreateAction);
     connect(sortCreateAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortModifyAction = new QAction(tr("Sort by last modified time"), this);
     sortModifyAction->setCheckable(true);
+    addAction(sortModifyAction);
     connect(sortModifyAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortPickAction = new QAction(tr("Sort by picked status"), this);
     sortPickAction->setCheckable(true);
+    addAction(sortPickAction);
     connect(sortPickAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortLabelAction = new QAction(tr("Sort by label"), this);
     sortLabelAction->setCheckable(true);
+    addAction(sortLabelAction);
     connect(sortLabelAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortRatingAction = new QAction(tr("Sort by rating"), this);
     sortRatingAction->setCheckable(true);
+    addAction(sortRatingAction);
     connect(sortRatingAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortMegaPixelsAction = new QAction(tr("Sort by megapixels"), this);
     sortMegaPixelsAction->setCheckable(true);
+    addAction(sortMegaPixelsAction);
     connect(sortMegaPixelsAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortDimensionsAction = new QAction(tr("Sort by dimensions"), this);
     sortDimensionsAction->setCheckable(true);
+    addAction(sortDimensionsAction);
     connect(sortDimensionsAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortApertureAction = new QAction(tr("Sort by aperture"), this);
 //    sortApertureAction->setObjectName("SortAperture");
     sortApertureAction->setCheckable(true);
+    addAction(sortApertureAction);
     connect(sortApertureAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortShutterSpeedAction = new QAction(tr("Sort by shutter speed"), this);
     sortShutterSpeedAction->setCheckable(true);
+    addAction(sortShutterSpeedAction);
     connect(sortShutterSpeedAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortISOAction = new QAction(tr("Sort by ISO"), this);
     sortISOAction->setCheckable(true);
+    addAction(sortISOAction);
     connect(sortISOAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortModelAction = new QAction(tr("Sort by camera model"), this);
     sortModelAction->setCheckable(true);
+    addAction(sortModelAction);
     connect(sortModelAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortFocalLengthAction = new QAction(tr("Sort by focal length"), this);
     sortFocalLengthAction->setCheckable(true);
+    addAction(sortFocalLengthAction);
     connect(sortFocalLengthAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortTitleAction = new QAction(tr("Sort by title"), this);
     sortTitleAction->setCheckable(true);
+    addAction(sortTitleAction);
     connect(sortTitleAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     sortGroupAction = new QActionGroup(this);
@@ -1033,27 +1109,32 @@ void MW::createActions()
     sortReverseAction->setObjectName("reverse");
     sortReverseAction->setCheckable(true);
 //    sortReverseAction->setChecked(false);
+    addAction(sortReverseAction);
     connect(sortReverseAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
     // View menu
     slideShowAction = new QAction(tr("Slide Show"), this);
     slideShowAction->setObjectName("slideShow");
+    addAction(slideShowAction);
     connect(slideShowAction, SIGNAL(triggered()), this, SLOT(slideShow()));
 
     fullScreenAction = new QAction(tr("Full Screen"), this);
     fullScreenAction->setObjectName("fullScreenAct");
     fullScreenAction->setCheckable(true);
 //    fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
+    addAction(fullScreenAction);
     connect(fullScreenAction, SIGNAL(triggered()), this, SLOT(toggleFullScreen()));
 
     escapeFullScreenAction = new QAction(tr("Escape Full Screen"), this);
     escapeFullScreenAction->setObjectName("escapeFullScreenAct");
+    addAction(escapeFullScreenAction);
     connect(escapeFullScreenAction, SIGNAL(triggered()), this, SLOT(escapeFullScreen()));
 
     infoVisibleAction = new QAction(tr("Shooting Info"), this);
     infoVisibleAction->setObjectName("toggleInfo");
     infoVisibleAction->setCheckable(true);
 //    infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());  // from QSettings
+    addAction(infoVisibleAction);
     connect(infoVisibleAction, SIGNAL(triggered()), this, SLOT(setShootingInfo()));
 
 
@@ -1063,21 +1144,25 @@ void MW::createActions()
 //                              setting->value("isCompareDisplay").toBool());
     // add secondary shortcut (primary defined in loadShortcuts)
     QShortcut *enter = new QShortcut(QKeySequence("Return"), this);
+    addAction(asLoupeAction);
     connect(enter, SIGNAL(activated()), asLoupeAction, SLOT(trigger()));
     connect(asLoupeAction, SIGNAL(triggered()), this, SLOT(loupeDisplay()));
 
     asGridAction = new QAction(tr("Grid"), this);
     asGridAction->setCheckable(true);
 //    asGridAction->setChecked(setting->value("isGridDisplay").toBool());
+    addAction(asGridAction);
     connect(asGridAction, SIGNAL(triggered()), this, SLOT(gridDisplay()));
 
     asTableAction = new QAction(tr("Table"), this);
     asTableAction->setCheckable(true);
+    addAction(asTableAction);
     connect(asTableAction, SIGNAL(triggered()), this, SLOT(tableDisplay()));
 
     asCompareAction = new QAction(tr("Compare"), this);
     asCompareAction->setCheckable(true);
 //    asCompareAction->setChecked(false); // never start with compare set true
+    addAction(asCompareAction);
     connect(asCompareAction, SIGNAL(triggered()), this, SLOT(compareDisplay()));
 
     centralGroupAction = new QActionGroup(this);
@@ -1089,34 +1174,41 @@ void MW::createActions()
 
     zoomToAction = new QAction(tr("Zoom To"), this);
     zoomToAction->setObjectName("zoomTo");
+    addAction(zoomToAction);
     connect(zoomToAction, SIGNAL(triggered()), this, SLOT(updateZoom()));
 
     zoomOutAction = new QAction(tr("Zoom Out"), this);
     zoomOutAction->setObjectName("zoomOut");
+    addAction(zoomOutAction);
     connect(zoomOutAction, SIGNAL(triggered()), this, SLOT(zoomOut()));
 
     zoomInAction = new QAction(tr("Zoom In"), this);
     zoomInAction->setObjectName("zoomIn");
+    addAction(zoomInAction);
     connect(zoomInAction, SIGNAL(triggered()), this, SLOT(zoomIn()));
 
     zoomToggleAction = new QAction(tr("Zoom fit <-> 100%"), this);
     zoomToggleAction->setObjectName("resetZoom");
+    addAction(zoomToggleAction);
     connect(zoomToggleAction, SIGNAL(triggered()), this, SLOT(zoomToggle()));
 
     zoom50PctAction = new QAction(tr("Click zoom 50%"), this);
     zoom50PctAction->setObjectName("50PctZoom");
     zoom50PctAction->setCheckable(true);
+    addAction(zoom50PctAction);
     connect(zoom50PctAction, SIGNAL(triggered()), this, SLOT(zoom50()));
 
     zoom100PctAction = new QAction(tr("Click zoom 100%"), this);
     zoom100PctAction->setObjectName("100PctZoom");
     zoom100PctAction->setCheckable(true);
     zoom100PctAction->setChecked(true);     // temp until add to QSettings
+    addAction(zoom100PctAction);
     connect(zoom100PctAction, SIGNAL(triggered()), this, SLOT(zoom100()));
 
     zoom200PctAction = new QAction(tr("Click zoom 200%"), this);
     zoom200PctAction->setObjectName("200PctZoom");
     zoom200PctAction->setCheckable(true);
+    addAction(zoom200PctAction);
     connect(zoom200PctAction, SIGNAL(triggered()), this, SLOT(zoom200()));
 
     zoomGroupAction = new QActionGroup(this);
@@ -1127,14 +1219,17 @@ void MW::createActions()
 
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
+    addAction(thumbsEnlargeAction);
     connect(thumbsEnlargeAction, SIGNAL(triggered()), this, SLOT(thumbsEnlarge()));
 
     thumbsShrinkAction = new QAction(tr("Shrink thumbs"), this);
     thumbsShrinkAction->setObjectName("shrinkThumbs");
+    addAction(thumbsShrinkAction);
     connect(thumbsShrinkAction, SIGNAL(triggered()), this, SLOT(thumbsShrink()));
 
     thumbsFitAction = new QAction(tr("Fit thumbs"), this);
     thumbsFitAction->setObjectName("thumbsZoomOut");
+    addAction(thumbsFitAction);
     connect(thumbsFitAction, SIGNAL(triggered()), this, SLOT(setDockFitThumbs()));
 
 //    showThumbLabelsAction = new QAction(tr("Thumb labels"), this);
@@ -1149,108 +1244,130 @@ void MW::createActions()
     windowTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
     windowTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
     windowTitleBarVisibleAction->setCheckable(true);
+    addAction(windowTitleBarVisibleAction);
     connect(windowTitleBarVisibleAction, SIGNAL(triggered()), this, SLOT(setWindowsTitleBarVisibility()));
 
     menuBarVisibleAction = new QAction(tr("Menubar"), this);
     menuBarVisibleAction->setObjectName("toggleMenuBar");
     menuBarVisibleAction->setCheckable(true);
+    addAction(menuBarVisibleAction);
     connect(menuBarVisibleAction, SIGNAL(triggered()), this, SLOT(setMenuBarVisibility()));
 
     statusBarVisibleAction = new QAction(tr("Statusbar"), this);
     statusBarVisibleAction->setObjectName("toggleStatusBar");
     statusBarVisibleAction->setCheckable(true);
+    addAction(statusBarVisibleAction);
     connect(statusBarVisibleAction, SIGNAL(triggered()), this, SLOT(setStatusBarVisibility()));
 
     folderDockVisibleAction = new QAction(tr("Folder"), this);
     folderDockVisibleAction->setObjectName("toggleFiless");
     folderDockVisibleAction->setCheckable(true);
+    addAction(folderDockVisibleAction);
     connect(folderDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFolderDockVisibility()));
 
     favDockVisibleAction = new QAction(tr("Favourites"), this);
     favDockVisibleAction->setObjectName("toggleFavs");
     favDockVisibleAction->setCheckable(true);
+    addAction(favDockVisibleAction);
     connect(favDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFavDockVisibility()));
 
     filterDockVisibleAction = new QAction(tr("Filters"), this);
     filterDockVisibleAction->setObjectName("toggleFilters");
     filterDockVisibleAction->setCheckable(true);
+    addAction(filterDockVisibleAction);
     connect(filterDockVisibleAction, SIGNAL(triggered()), this, SLOT(setFilterDockVisibility()));
 
     metadataDockVisibleAction = new QAction(tr("Metadata"), this);
     metadataDockVisibleAction->setObjectName("toggleMetadata");
     metadataDockVisibleAction->setCheckable(true);
+    addAction(metadataDockVisibleAction);
     connect(metadataDockVisibleAction, SIGNAL(triggered()), this, SLOT(setMetadataDockVisibility()));
 
     thumbDockVisibleAction = new QAction(tr("Thumbnails"), this);
     thumbDockVisibleAction->setObjectName("toggleThumbs");
     thumbDockVisibleAction->setCheckable(true);
+    addAction(thumbDockVisibleAction);
     connect(thumbDockVisibleAction, SIGNAL(triggered()), this, SLOT(setThumbDockVisibity()));
 
     // Window menu focus actions
 
     folderDockFocusAction = new QAction(tr("Focus on Folders"), this);
     folderDockFocusAction->setObjectName("FocusFolders");
+    addAction(folderDockFocusAction);
     connect(folderDockFocusAction, SIGNAL(triggered()), this, SLOT(setFolderDockFocus()));
 
     favDockFocusAction = new QAction(tr("Focus on Favourites"), this);
     favDockFocusAction->setObjectName("FocusFavourites");
+    addAction(favDockFocusAction);
     connect(favDockFocusAction, SIGNAL(triggered()), this, SLOT(setFavDockFocus()));
 
     filterDockFocusAction = new QAction(tr("Focus on Filters"), this);
     filterDockFocusAction->setObjectName("FocusFilters");
+    addAction(filterDockFocusAction);
     connect(filterDockFocusAction, SIGNAL(triggered()), this, SLOT(setFilterDockFocus()));
 
     metadataDockFocusAction = new QAction(tr("Focus on Metadata"), this);
     metadataDockFocusAction->setObjectName("FocusMetadata");
+    addAction(metadataDockFocusAction);
     connect(metadataDockFocusAction, SIGNAL(triggered()), this, SLOT(setMetadataDockFocus()));
 
     thumbDockFocusAction = new QAction(tr("Focus on Thumbs"), this);
     thumbDockFocusAction->setObjectName("FocusThumbs");
+    addAction(thumbDockFocusAction);
     connect(thumbDockFocusAction, SIGNAL(triggered()), this, SLOT(setThumbDockFocus()));
 
     // Lock docks (hide titlebar) actions
     folderDockLockAction = new QAction(tr("Hide Folder Titlebar"), this);
     folderDockLockAction->setObjectName("lockDockFiles");
     folderDockLockAction->setCheckable(true);
+    addAction(folderDockLockAction);
     connect(folderDockLockAction, SIGNAL(triggered()), this, SLOT(setFolderDockLockMode()));
 
     favDockLockAction = new QAction(tr("Hide Favourite titlebar"), this);
     favDockLockAction->setObjectName("lockDockFavs");
     favDockLockAction->setCheckable(true);
+    addAction(favDockLockAction);
     connect(favDockLockAction, SIGNAL(triggered()), this, SLOT(setFavDockLockMode()));
 
     filterDockLockAction = new QAction(tr("Hide Filter titlebars"), this);
     filterDockLockAction->setObjectName("lockDockFilters");
     filterDockLockAction->setCheckable(true);
+    addAction(filterDockLockAction);
     connect(filterDockLockAction, SIGNAL(triggered()), this, SLOT(setFilterDockLockMode()));
 
     metadataDockLockAction = new QAction(tr("Hide Metadata Titlebar"), this);
     metadataDockLockAction->setObjectName("lockDockMetadata");
     metadataDockLockAction->setCheckable(true);
+    addAction(metadataDockLockAction);
     connect(metadataDockLockAction, SIGNAL(triggered()), this, SLOT(setMetadataDockLockMode()));
 
     thumbDockLockAction = new QAction(tr("Hide Thumbs Titlebar"), this);
     thumbDockLockAction->setObjectName("lockDockThumbs");
     thumbDockLockAction->setCheckable(true);
+    addAction(thumbDockLockAction);
     connect(thumbDockLockAction, SIGNAL(triggered()), this, SLOT(setThumbDockLockMode()));
 
     allDocksLockAction = new QAction(tr("Hide All Titlebars"), this);
     allDocksLockAction->setObjectName("lockDocks");
     allDocksLockAction->setCheckable(true);
+    addAction(allDocksLockAction);
     connect(allDocksLockAction, SIGNAL(triggered()), this, SLOT(setAllDocksLockMode()));
 
     // Workspace submenu of Window menu
     defaultWorkspaceAction = new QAction(tr("Default Workspace"), this);
     defaultWorkspaceAction->setObjectName("defaultWorkspace");
+    addAction(defaultWorkspaceAction);
     connect(defaultWorkspaceAction, SIGNAL(triggered()), this, SLOT(defaultWorkspace()));
 
     newWorkspaceAction = new QAction(tr("New Workspace"), this);
     newWorkspaceAction->setObjectName("newWorkspace");
     connect(newWorkspaceAction, SIGNAL(triggered()), this, SLOT(newWorkspace()));
     addAction(newWorkspaceAction);
+    addAction(newWorkspaceAction);
 
     manageWorkspaceAction = new QAction(tr("Manage Workspaces ..."), this);
     manageWorkspaceAction->setObjectName("manageWorkspaces");
+    addAction(manageWorkspaceAction);
     connect(manageWorkspaceAction, SIGNAL(triggered()),
             this, SLOT(manageWorkspaces()));
     addAction(manageWorkspaceAction);
@@ -1274,6 +1391,7 @@ void MW::createActions()
             workspaceActions.at(i)->setObjectName(objName);
             workspaceActions.at(i)->setText(name);
             workspaceActions.at(i)->setVisible(true);
+            addAction(workspaceActions.at(i));
         }
         if (i >= n) workspaceActions.at(i)->setVisible(false);
         workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
@@ -1288,14 +1406,17 @@ void MW::createActions()
 
     aboutAction = new QAction(tr("About"), this);
     aboutAction->setObjectName("about");
+    addAction(aboutAction);
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(about()));
 
     helpAction = new QAction(tr("Winnow Help"), this);
     helpAction->setObjectName("help");
+    addAction(helpAction);
     connect(helpAction, SIGNAL(triggered()), this, SLOT(help()));
 
     helpShortcutsAction = new QAction(tr("Winnow Shortcuts"), this);
     helpShortcutsAction->setObjectName("helpShortcuts");
+    addAction(helpShortcutsAction);
     connect(helpShortcutsAction, SIGNAL(triggered()), this, SLOT(helpShortcuts()));
 
     // Possibly needed actions
@@ -1308,6 +1429,7 @@ void MW::createActions()
     // used in fsTree and bookmarks
     pasteAction = new QAction(tr("Paste files"), this);
     pasteAction->setObjectName("paste");
+    addAction(pasteAction);
 //        connect(pasteAction, SIGNAL(triggered()), this, SLOT(about()));
 }
 
