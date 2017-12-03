@@ -22,6 +22,10 @@ public slots:
     void positionWindow(QRect a, QRect c);
     void close();
 
+protected:
+    void enterEvent(QEvent *event);
+    void changeEvent(QEvent *event);
+
 signals:
     void zoom(qreal zoomVal);
     void updateToggleZoom(qreal toggleZoomVal);

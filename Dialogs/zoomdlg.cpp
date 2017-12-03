@@ -19,6 +19,7 @@ ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent
     // do some formatting (color: yellow; font-size: 18px;) NOTE keep in sync with winnow.css
     QString spinBoxStyle = "QSpinBox {color: yellow; font-size: 18px; background-color: rgb(111,111,111); border: 1px solid gray; selection-background-color: darkgray; border-radius: 5px; padding-left: 4px;}QSpinBox:hover, QSpinBox:focus {border-color: silver;}QSpinBox:disabled {color: rgb(77,77,77);background-color: rgb(88,88,88);}QSpinBox::up-button, QSpinBox::down-button  {width: 0px;border-width: 0px;}";
     ui->zoomSB->setStyleSheet(spinBoxStyle);
+    ui->border->setStyleSheet("QFrame {border: 2px solid rgb(125,125,125); border-radius: 4px;}");
 
     // position in middle of main window and at the bottom of the central widget
     positionWindow(a, c);
@@ -127,4 +128,36 @@ void ZoomDlg::on_radio150Button_clicked()
 void ZoomDlg::on_radio200Button_clicked()
 {
     emit zoom(2.0);
+}
+
+void ZoomDlg::enterEvent(QEvent *event)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ZoomDlg::enterEvent" << currentImagePath;
+    #endif
+    }
+    qDebug() << "ZoomDlg enter event";
+    this->activateWindow();
+    this->setFocus();
+    this->ui->zoomSlider->setFocus();
+}
+
+void ZoomDlg::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::ActivationChange)
+    {
+        if(this->isActiveWindow())
+        {
+            ui->border->setStyleSheet("QFrame {border: 2px solid rgb(125,125,125); border-radius: 4px;}");
+        }
+        else
+        {
+            // widget is now inactive
+            qDebug() << "ZoomDlg lost focus";
+            ui->border->setStyleSheet("QFrame {border: 2px solid rgb(85,85,85); border-radius: 4px;}");
+        }
+    }
+    QDialog::changeEvent(event);
 }

@@ -1,3 +1,5 @@
+- Main context menu only in loupe mode
+- Tweak context menus
 - ThumbDock thumb size forgotten after grid view sometimes
 - Tweak panning in compareView
 - Add zoom increment amount to preferences
@@ -6,7 +8,6 @@
 - Combine raw+jpg option
 - Recent copy to folders in copy dialog
 - Not reading metadata from iphone jpgs
-- Tweak context menus
 - Disable menu "add bookmark" when folders not selected??
 - Improve performance for large files (D850)
 - Improve producer/consumer image cache performance
@@ -16,8 +17,6 @@
 - Get comment and copywrite metadata
 - Get lens metadata
 - Add more raw file formats
-- Add zoom increment to preferences
-- UI for changing compare click zoom amount
 - Eject card
 - Open with another app
 - Run droplet
@@ -27,7 +26,9 @@
 - Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
-- Done:Zooming is not propagating consistently in compareView
+- Done: Highlight and set focus on zoom dialog when mouse over
+- Done: UI for changing compare click zoom amount
+- Done: Zooming is not propagating consistently in compareView
 - Done: UpdateStatus signal in compareImages not working
 - Done: Set mouse click zoom amount (default = 100%)
 - Done: Show how much mem req'd for selected images

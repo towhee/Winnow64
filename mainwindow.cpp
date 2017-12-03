@@ -1629,7 +1629,7 @@ void MW::createMenus()
     thumbView->addAction(reportMetadataAction);
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-    // imageview context menu
+    // imageview/tableview/gridview/compareview context menu
     imageView->addAction(pickAction);
     imageView->addAction(filterPickAction);
     imageView->addAction(ingestAction);
@@ -1734,9 +1734,8 @@ void MW::createMenus()
     viewSubMenu->addSeparator();
     viewSubMenu->addAction(infoVisibleAction);
     viewSubMenu->addSeparator();
-//    viewSubMenu->addAction(asListAction);
-//    viewSubMenu->addAction(asIconsAction);
-//    viewSubMenu->addSeparator();
+    viewMenu->addActions(centralGroupAction->actions());
+    viewMenu->addSeparator();
     viewSubMenu->addAction(sortReverseAction);
 
     QMenu *fileSubMenu = new QMenu(imageView);
