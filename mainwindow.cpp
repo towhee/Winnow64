@@ -1214,31 +1214,6 @@ void MW::createActions()
     addAction(zoomToggleAction);
     connect(zoomToggleAction, SIGNAL(triggered()), this, SLOT(zoomToggle()));
 
-    zoom50PctAction = new QAction(tr("Click zoom 50%"), this);
-    zoom50PctAction->setObjectName("50PctZoom");
-    zoom50PctAction->setCheckable(true);
-    addAction(zoom50PctAction);
-    connect(zoom50PctAction, SIGNAL(triggered()), this, SLOT(zoom50()));
-
-    zoom100PctAction = new QAction(tr("Click zoom 100%"), this);
-    zoom100PctAction->setObjectName("100PctZoom");
-    zoom100PctAction->setCheckable(true);
-    zoom100PctAction->setChecked(true);     // temp until add to QSettings
-    addAction(zoom100PctAction);
-    connect(zoom100PctAction, SIGNAL(triggered()), this, SLOT(zoom100()));
-
-    zoom200PctAction = new QAction(tr("Click zoom 200%"), this);
-    zoom200PctAction->setObjectName("200PctZoom");
-    zoom200PctAction->setCheckable(true);
-    addAction(zoom200PctAction);
-    connect(zoom200PctAction, SIGNAL(triggered()), this, SLOT(zoom200()));
-
-    zoomGroupAction = new QActionGroup(this);
-    zoomGroupAction->setExclusive(true);
-    zoomGroupAction->addAction(zoom50PctAction);
-    zoomGroupAction->addAction(zoom100PctAction);
-    zoomGroupAction->addAction(zoom200PctAction);
-
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
     addAction(thumbsEnlargeAction);
@@ -2256,7 +2231,7 @@ QString fileSym = "📷";
         qreal zoom;
         if (G::mode == "Compare") zoom = compareImages->zoomValue;
         else zoom = imageView->zoom;
-        zoomPct = QString::number(zoom*100, 'f', 0) + "% zoom";
+        zoomPct = QString::number(qRound(zoom*100)) + "% zoom";
 
         QString pickedSoFar = pickMemSize + " picked";
         base = fileCount + spacer + zoomPct + spacer + pickedSoFar + spacer;;
@@ -3092,33 +3067,33 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-    gridView->setVisible(!gridView->isVisible());
-    return;
+//    gridView->setVisible(!gridView->isVisible());
+//    return;
 
-    thumbView->setCurrentIndex(dm->sf->index(0, 0));
-    return;
+//    thumbView->setCurrentIndex(dm->sf->index(0, 0));
+//    return;
 
-    QTreeWidgetItemIterator it(filters);
-    while (*it) {
-        QString parentName;
-        int dataModelColumn;
-        bool isMatch = false;
-        if ((*it)->parent()) {
-            parentName = (*it)->parent()->text(0);
-            qDebug() << "item text" << (*it)->text(0)
-                     << "item value" << (*it)->data(1, Qt::EditRole)
-                     << "parent" << parentName
-                     << "data column" << dataModelColumn
-                     << "check state" << (*it)->checkState(0);
-        }
-        else {
-            dataModelColumn = (*it)->data(0, G::ColumnRole).toInt();
-        }
-        ++it;
-    }
+//    QTreeWidgetItemIterator it(filters);
+//    while (*it) {
+//        QString parentName;
+//        int dataModelColumn;
+//        bool isMatch = false;
+//        if ((*it)->parent()) {
+//            parentName = (*it)->parent()->text(0);
+//            qDebug() << "item text" << (*it)->text(0)
+//                     << "item value" << (*it)->data(1, Qt::EditRole)
+//                     << "parent" << parentName
+//                     << "data column" << dataModelColumn
+//                     << "check state" << (*it)->checkState(0);
+//        }
+//        else {
+//            dataModelColumn = (*it)->data(0, G::ColumnRole).toInt();
+//        }
+//        ++it;
+//    }
 
 //    filters->iterateFilters();
-//    metadata->readMetadata(true, thumbView->getCurrentFilename());
+    metadata->readMetadata(true, thumbView->getCurrentFilename());
 }
 
 void MW::about()
@@ -3573,42 +3548,6 @@ void MW::zoomToFit()
     }
     if (asLoupeAction) imageView->zoomToFit();
     if (asCompareAction) compareImages->zoomToFit();
-}
-
-void MW::zoom50()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::zoom50";
-    #endif
-    }
-    if (asLoupeAction) imageView->zoom50();
-    if (asCompareAction) compareImages->zoom50();
-    popUp->showPopup(this, "Click zoom set to 50%", 1000, 0.5);
-}
-
-void MW::zoom100()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::zoom100";
-    #endif
-    }
-    if (asLoupeAction) imageView->zoom100();
-    if (asCompareAction) compareImages->zoomToFit();
-    popUp->showPopup(this, "Click zoom set to 100%", 1000, 0.5);
-}
-
-void MW::zoom200()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::zoom200";
-    #endif
-    }
-    if (asLoupeAction) imageView->zoom200();
-    if (asCompareAction) compareImages->zoomToFit();
-    popUp->showPopup(this, "Click zoom set to 200%", 1000, 0.5);
 }
 
 void MW::zoomToggle()
@@ -4224,9 +4163,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
         zoomInAction->setShortcut(QKeySequence("+"));
         zoomToggleAction->setShortcut(QKeySequence("Space"));
         zoomToAction->setShortcut(QKeySequence("Z"));
-//        zoom50PctAction->setShortcut(QKeySequence("Ctrl+5"));
-//        zoom100PctAction->setShortcut(QKeySequence("Ctrl+0"));
-//        zoom200PctAction->setShortcut(QKeySequence("Ctrl+2"));
         rotateLeftAction->setShortcut(QKeySequence("Ctrl+["));
         rotateRightAction->setShortcut(QKeySequence("Ctrl+]"));
         infoVisibleAction->setShortcut(QKeySequence("I"));

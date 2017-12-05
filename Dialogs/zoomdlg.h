@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <QDialog>
+#include <popup.h>
 
 namespace Ui {
 class ZoomDlg;
@@ -32,7 +33,7 @@ signals:
 
 private:
     Ui::ZoomDlg *ui;
-    qreal oldZoom;
+    PopUp *popUp;
 
 private slots:
     void on_zoomSB_valueChanged(int value);
@@ -41,7 +42,7 @@ private slots:
     void on_radio50Button_clicked();
     void on_radio66Button_clicked();
     void on_radio100Button_clicked();
-    void on_radio150Button_clicked();
+    void on_radio133Button_clicked();
     void on_radio200Button_clicked();
 };
 

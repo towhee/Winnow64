@@ -440,8 +440,7 @@ setTransformationAnchor(QGraphicsView::AnchorUnderMouse). A signal is sent to
 ZoomDlg in case it is open and can sync with local scale change.
 
 ZoomDlg also signals changes in scale to CompareImages::zoomTo and then to the
-local zoomTo. Since signals are sent from both ZoomDlg and CompareView this could
-loupe repeatedly, so variance checks prevent a repeating cycle.
+local zoomTo.
 */
     {
     #ifdef ISDEBUG
@@ -602,19 +601,13 @@ void CompareView::zoomTo(qreal zoomTo)
 /*
 Called from CompareImages::zoomTo, which in turn receives a signal from ZoomDlg
 when the zoom is changed. When scale(false) is called with the new zoom it will
-signal back to ZoomDlg (which is reqd when scale changes occur locally). This
-can cause circular messaging, so check whether scale has actually changed.
-There can be small differences because the controls in ZoomDlg are using
-integers so the conversion can be off by up to 0.005.
+signal back to ZoomDlg (which is reqd when scale changes occur locally).
 */
     {
     #ifdef ISDEBUG
     qDebug() << "CompareView::zoomTo" << currentImagePath;
     #endif
     }
-    qreal variance = qFabs(zoom - zoomTo);
-    if (variance < .005) return;
-
     zoom = zoomTo;
     scale(false);
 }

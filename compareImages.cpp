@@ -494,27 +494,6 @@ void CompareImages::zoomToFit()
     }
 }
 
-void CompareImages::zoom50()
-{
-    for (int i = 0; i < imList->count(); ++i) {
-        imList->at(i)->zoomToFit();
-    }
-}
-
-void CompareImages::zoom100()
-{
-    for (int i = 0; i < imList->count(); ++i) {
-        imList->at(i)->zoomToFit();
-    }
-}
-
-void CompareImages::zoom200()
-{
-    for (int i = 0; i < imList->count(); ++i) {
-        imList->at(i)->zoomToFit();
-    }
-}
-
 void CompareImages::zoomTo(qreal zoomValue)
 {
 /*

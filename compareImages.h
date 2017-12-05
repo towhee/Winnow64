@@ -29,9 +29,6 @@ public slots:
     void zoomOut();
     void zoomIn();
     void zoomToFit();
-    void zoom50();
-    void zoom100();
-    void zoom200();
     void zoomTo(qreal zoomValue);
     void zoomToggle();
 

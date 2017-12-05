@@ -4,6 +4,7 @@
 - Tweak panning in compareView
 - Add zoom increment amount to preferences
 - Check for Tif support in Qt
+- Add pref for fields to show in infoView and tableView
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Combine raw+jpg option
 - Possibly combine workspaces into an actionGroup so can check active workspace
@@ -15,8 +16,6 @@
 - Rotate selected images
 - Initial setup (other than workspace)
 - Add preferences for info label
-- Get comment and copywrite metadata
-- Get lens metadata
 - Add more raw file formats
 - Eject card
 - Open with another app
@@ -27,6 +26,8 @@
 - Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Get comment and copywrite metadata (for JPG)
+- Done: Get lens metadata (for JPG
 - Done: Main context menu only in loupe mode
 - Done: Highlight and set focus on zoom dialog when mouse over
 - Done: UI for changing compare click zoom amount

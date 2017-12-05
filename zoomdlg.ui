@@ -17,7 +17,7 @@
    <double>0.850000000000000</double>
   </property>
   <property name="toolTip">
-   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:18pt; font-weight:600;&quot;&gt;Zoom tips:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Esc&lt;/span&gt; to quit&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Enter&lt;/span&gt; to change toogle zoom amount and exit&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;1&lt;/span&gt; - &lt;span style=&quot; font-weight:600;&quot;&gt;6&lt;/span&gt; to quick set zoom percentage&lt;/p&gt;&lt;p&gt;This window will stay-on-top so you can scroll the image, click zoom or pan to click point on a thumbnail.&lt;/p&gt;&lt;p&gt;Settings are sticky and will remain when you use Esc to exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:18pt; font-weight:600;&quot;&gt;Zoom tips:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Enter&lt;/span&gt;,&lt;span style=&quot; font-weight:600;&quot;&gt; Z &lt;/span&gt;or &lt;span style=&quot; font-weight:600;&quot;&gt;Esc &lt;/span&gt; to change toogle zoom amount and exit&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;1&lt;/span&gt; - &lt;span style=&quot; font-weight:600;&quot;&gt;6&lt;/span&gt; to quick set zoom percentage&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;T&lt;/span&gt; to change the toggle zoom amount (when clicking on the main image)&lt;/p&gt;&lt;p&gt;This window will stay-on-top so you can scroll the image, click zoom or pan to click point on a thumbnail.&lt;/p&gt;&lt;p&gt;Settings are sticky and will remain when you use Esc to exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
   </property>
   <widget class="QFrame" name="border">
    <property name="geometry">
@@ -127,7 +127,7 @@
            <string>Shortcut = 3</string>
           </property>
           <property name="text">
-           <string>66% (3)</string>
+           <string>67% (3)</string>
           </property>
           <property name="shortcut">
            <string>3</string>
@@ -153,7 +153,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radio150Button">
+         <widget class="QRadioButton" name="radio133Button">
           <property name="font">
            <font>
             <pointsize>11</pointsize>
@@ -163,7 +163,7 @@
            <string>Shortcut = 5</string>
           </property>
           <property name="text">
-           <string>150% (5)</string>
+           <string>133% (5)</string>
           </property>
           <property name="shortcut">
            <string>5</string>
@@ -271,7 +271,7 @@
 zoom amount</string>
         </property>
         <property name="shortcut">
-         <string>Shift+T</string>
+         <string>T</string>
         </property>
        </widget>
       </item>

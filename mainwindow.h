@@ -204,9 +204,6 @@ private slots:
     void zoomOut();
     void zoomIn();
     void zoomToFit();
-    void zoom50();
-    void zoom100();
-    void zoom200();
     void keyRight();
     void keyLeft();
     void keyUp();
@@ -448,9 +445,6 @@ private:
     QAction *zoomOutAction;
     QAction *zoomToggleAction;
     QActionGroup *zoomGroupAction;
-    QAction *zoom50PctAction;
-    QAction *zoom100PctAction;
-    QAction *zoom200PctAction;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
     QAction *thumbsFitAction;   // used?? rgh

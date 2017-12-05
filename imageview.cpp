@@ -272,6 +272,7 @@ is zoomed.
 ● The cursor to set to pointer if not zoomed and hand if zoomed.
 ● The pick icon and shooting info text are relocated as necessary.
 ● The app status is updated.
+● The zoom amount is updated in ZoomDlg if it is open.
 
 */
     {
@@ -599,18 +600,6 @@ void ImageView::zoomOut()
     scale();
 }
 
-void ImageView::zoom100()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ImageView::zoom100";
-    #endif
-    }
-    toggleZoom = 1;
-//    mouseZoomFit = false;
-//    resizeImage();
-}
-
 void ImageView::zoomToFit()
 {
     {
@@ -625,28 +614,25 @@ void ImageView::zoomToFit()
 void ImageView::zoomTo(qreal zoomTo)
 {
 /*
-Called ZoomDlg when the zoom is changed. From here the message is passed on to
-ImageView::scale(), which in turn makes the proper scale change. When scale()
-is called with the new zoom it will signal back to ZoomDlg (which is reqd when
-scale changes occur locally). This can cause circular messaging, so we check
-whether scale has actually changed. There can be small differences becasue the
-controls in ZoomDlg are using integers so the conversion can be off by up to
-0.005.
+Called from ZoomDlg when the zoom is changed. From here the message is passed
+on to ImageView::scale(), which in turn makes the proper scale change.
 */
     {
     #ifdef ISDEBUG
     qDebug() << "ImageView::zoomTo" << zoomTo;
     #endif
     }
-    qreal variance = qFabs(zoom - zoomTo);
-    if (variance < .005) return;
-
     zoom = zoomTo;
     scale();
 }
 
 void ImageView::zoomToggle()
 {
+/*
+Alternate between zoom-to-fit and another zoom value (typically 100% to check
+detail).  The other zoom value (toggleZoom) can be assigned in ZoomDlg and
+defaults to 1.0
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ImageView::zoomToggle";
@@ -657,38 +643,6 @@ void ImageView::zoomToggle()
     else if (isZoom) zoom = zoomFit;
     scale();
 }
-
-void ImageView::zoom50()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ImageView::zoom50";
-    #endif
-    }
-//    zoomTo(0.5);
-    toggleZoom = 0.5;
-}
-
-void ImageView::zoom200()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ImageView::zoom200";
-    #endif
-    }
-    zoomTo(2.0);
-    toggleZoom = 2.0;
-}
-
-//void ImageView::setClickZoom(float toggleZoom)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "ImageView::setClickZoom";
-//    #endif
-//    }
-//    this->toggleZoom = toggleZoom;
-//}
 
 void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 {

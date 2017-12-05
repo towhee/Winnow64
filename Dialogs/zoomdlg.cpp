@@ -8,10 +8,19 @@ ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent
     setWindowFlags(Qt::WindowStaysOnTopHint | Qt::Dialog | Qt::FramelessWindowHint);
     ui->setupUi(this);
 
+    // use to visually confirm changes to toggle zoom amount
+    popUp = new PopUp;
+
+    // shortcuts
     QAction *okayAction = new QAction(tr("Okay"), this);
     okayAction->setShortcut(QKeySequence("Return"));
     this->addAction(okayAction);
     connect(okayAction, SIGNAL(triggered(bool)), this, SLOT(accept()));
+
+    QAction *okay2Action = new QAction(tr("Okay"), this);
+    okay2Action->setShortcut(QKeySequence("Z"));
+    this->addAction(okay2Action);
+    connect(okay2Action, SIGNAL(triggered(bool)), this, SLOT(accept()));
 
     // update controls to current zoom factor
     zoomChange(zoom);
@@ -25,9 +34,6 @@ ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent
 
     // position in middle of main window and at the bottom of the central widget
     positionWindow(a, c);
-
-    // remember previous zoom to do variance checks to prevent circular messaging
-    oldZoom = zoom;
 }
 
 ZoomDlg::~ZoomDlg()
@@ -55,48 +61,48 @@ void ZoomDlg::zoomChange(qreal zoom)
 {
 /*
 This slot receives signals from either imageView or compareView when the scale
-changes.
-
-Check for circular messaging where local change of scale was signalled
-to ImageView and CompareView, where the scale is updated.  The scale change
-triggers a signal back here, hence the variance check with the previous zoom.
+changes and the scale dialog (this) is showing.  The zoom slider and spinbox
+controls are updated to the current scale.
 */
     {
     #ifdef ISDEBUG
     qDebug() << "ZoomDlg::zoomChange" << zoom;
     #endif
     }
+    // convert to percentage for persentation
     zoom *= 100;
-    qreal variance = qFabs(1 - zoom / oldZoom);
-    if (variance < .005) return;
 
-    oldZoom = zoom;
-    ui->zoomSB->setValue((int)zoom);
-    if (zoom >= 1 && zoom <= 200) ui->zoomSlider->setValue(zoom);
+    // update controls
+    ui->zoomSB->setValue(qRound(zoom));
+    if (zoom >= 1 && zoom <= 200) ui->zoomSlider->setValue(qRound(zoom));
 }
 
 void ZoomDlg::on_zoomSB_valueChanged(int value)
 {
 /*
-When the zoom spinbox value changes we emit a signal to the slots in imageView
+When the zoom spinbox value changes a signal is emited to the slots in imageView
 and compareView.
 
-Check for circular messaging where local change of scale was signalled
-to ZoomDlg, which converted to integer and signalled back here
+Check for circular messaging where an external change of scale was signalled
+to ZoomDlg, which updated this control, and then signals back, by limiting signals
+to only changes made lacally via the isActiveWindow flag.
 */
     {
     #ifdef ISDEBUG
     qDebug() << "ZoomDlg::on_zoomSB_valueChanged" << value;
     #endif
     }
-    emit zoom((qreal)value/100);
+    if (isActiveWindow()) emit zoom((qreal)value/100);
 }
 
 void ZoomDlg::on_toggleZoomAmountBtn_clicked()
 {
+    QString msg = "Toggle zoom amount changed to " +
+                  QString::number(ui->zoomSB->value()) + "%";
+    popUp->showPopup(this, msg, 1500, 0.75);
     qreal zoomVal = (qreal)ui->zoomSB->value() / 100;
     emit updateToggleZoom(zoomVal);
-    QDialog::accept();
+//    QDialog::accept();
 }
 
 // radio buttons for quick zoom setting at popular scales
@@ -120,9 +126,9 @@ void ZoomDlg::on_radio100Button_clicked()
     emit zoom(1.0);
 }
 
-void ZoomDlg::on_radio150Button_clicked()
+void ZoomDlg::on_radio133Button_clicked()
 {
-    emit zoom(1.5);
+    emit zoom(1.33333333);
 }
 
 void ZoomDlg::on_radio200Button_clicked()
@@ -132,6 +138,9 @@ void ZoomDlg::on_radio200Button_clicked()
 
 void ZoomDlg::enterEvent(QEvent *event)
 {
+/*
+For convenience, set window focus on mouseover
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ZoomDlg::enterEvent" << currentImagePath;
@@ -145,6 +154,9 @@ void ZoomDlg::enterEvent(QEvent *event)
 
 void ZoomDlg::changeEvent(QEvent *event)
 {
+/*
+Set some formatting to make it clear when the ZoomDlg has focus
+*/
     QWidget::changeEvent(event);
     if (event->type() == QEvent::ActivationChange)
     {
