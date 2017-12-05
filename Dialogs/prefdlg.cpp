@@ -69,6 +69,15 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->thumbsChk->setChecked(mw->fullScreenDocks.isThumbs);
     ui->statusBarChk->setChecked(mw->fullScreenDocks.isStatusBar);
 
+    ui->InfoFieldsTable->setModel(mw->infoView->ok);
+    for(int row = 0; row < mw->infoView->ok->rowCount(); row++)
+        ui->InfoFieldsTable->setIndexWidget(mw->infoView->ok->index(row,1),new QCheckBox());
+    ui->InfoFieldsTable->horizontalHeader()->moveSection(1, 0);
+
+    ui->InfoFieldsTable->horizontalHeader()->setVisible(false);
+    ui->InfoFieldsTable->verticalHeader()->setVisible(false);
+    ui->InfoFieldsTable->resizeColumnsToContents();
+
     okToUpdate = true;
 }
 

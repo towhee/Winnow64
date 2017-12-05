@@ -56,7 +56,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>6</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -1644,6 +1644,18 @@
      </layout>
     </widget>
    </widget>
+   <widget class="QWidget" name="page_3">
+    <widget class="QTableView" name="InfoFieldsTable">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>40</y>
+       <width>211</width>
+       <height>301</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
   </widget>
   <widget class="QStackedWidget" name="listContainer">
    <property name="geometry">
@@ -1704,6 +1716,11 @@
      <item>
       <property name="text">
        <string>Full screen default docks</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Visible fields</string>
       </property>
      </item>
     </widget>

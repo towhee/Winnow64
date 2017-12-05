@@ -33,6 +33,9 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTableView(parent)
 	connect(copyAction, SIGNAL(triggered()), this, SLOT(copyEntry()));
 	infoMenu->addAction(copyAction);
 	setContextMenuPolicy(Qt::CustomContextMenu);
+
+    createOkToShow();
+
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),
             SLOT(showInfoViewMenu(QPoint)));
 }
@@ -57,6 +60,41 @@ void InfoView::tweakHeaders()
     #endif
     }
     horizontalHeader()->setFixedHeight(1);
+}
+
+void InfoView::createOkToShow()
+{
+    ok = new QStandardItemModel;
+
+    ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
+    ok->setHorizontalHeaderItem(1, new QStandardItem(QString("Show")));
+
+    ok->insertRow(0);  ok->setData(ok->index(0, 0), "File Name");
+    ok->insertRow(1);  ok->setData(ok->index(1, 0), "Location");
+
+    for(int row = 0; row < ok->rowCount(); row++)
+        ok->setData(ok->index(row, 1), true);
+
+//    okToShow = new QMap<QString, bool>;
+//    okToShow->insert("File Name", true);
+//    okToShow->insert("Location", true);
+//    okToShow->insert("Size", true);
+//    okToShow->insert("Date/Time", true);
+//    okToShow->insert("Modified", true);
+//    okToShow->insert("Dimensions", true);
+//    okToShow->insert("Megapixels", true);
+//    okToShow->insert("Model", true);
+//    okToShow->insert("Lens", true);
+//    okToShow->insert("Shutter speed", true);
+//    okToShow->insert("Aperture", true);
+//    okToShow->insert("ISO", true);
+//    okToShow->insert("Focal length", true);
+//    okToShow->insert("Title", true);
+//    okToShow->insert("Creator", true);
+//    okToShow->insert("Copyright", true);
+//    okToShow->insert("Email", true);
+//    okToShow->insert("Url", true);
+
 }
 
 void InfoView::addEntry(QString &key, QString &value)
@@ -147,7 +185,7 @@ void InfoView::updateInfo(const QString &fPath)
     val = QString::number(imageInfo.size() / 1024000.0, 'f', 2) + " MB";
     addEntry(key, val);
 
-    key = tr("Date");
+    key = tr("Date/Time");
     val = metadata->getDateTime(fPath);
     addEntry(key, val);
 
@@ -161,7 +199,7 @@ void InfoView::updateInfo(const QString &fPath)
     val = QString::number(width) + "x" + QString::number(height);
     addEntry(key, val);
 
-    key = tr("Megapixel");
+    key = tr("Megapixels");
     val = QString::number((width * height) / 1000000.0, 'f', 2);
     addEntry(key, val);
 

@@ -51,7 +51,7 @@ void ZoomDlg::positionWindow(QRect a, QRect c)
     // a = mainWindow->geometry()
     // c = centralWidget->geometry();
     int w = width();        // width of this dialog
-    int h = height();       // heiht of this dialog
+    int h = height();       // height of this dialog
     // anchor point = center of app and bottom central widget
     QPoint anchor = a.topLeft() + QPoint(0, c.height()) + QPoint(a.width() / 2, 0);
     setGeometry(anchor.x() - w/2, anchor.y() - h, w, h);

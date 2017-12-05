@@ -15,6 +15,9 @@ public:
     void updateInfo(const QString &imageFullPath);
     void clearInfo();
 
+//    QMap<QString, bool> *okToShow;
+    QStandardItemModel *ok;
+
 public slots:
     // rgh context menu req'd??  Need to coppy??
 	void showInfoViewMenu(QPoint pt);
@@ -30,6 +33,7 @@ private:
     Metadata *metadata;
 
 //    void clear();
+    void createOkToShow();
     void addEntry(QString &key, QString &value);
     void addTitleEntry(QString title);
     void tweakHeaders();

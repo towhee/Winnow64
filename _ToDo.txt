@@ -1,11 +1,9 @@
-- Still problem with toggle zoom
-- Tweak context menus
+- Add pref for fields to show in infoView and tableView
 - ThumbDock thumb size forgotten after grid view sometimes
-- Tweak panning in compareView
 - Add zoom increment amount to preferences
 - Check for Tif support in Qt
-- Add pref for fields to show in infoView and tableView
 - Zoom rect in thumbnail to show zoom and pan in imageView
+- Rotate selected images
 - Combine raw+jpg option
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Recent copy to folders in copy dialog
@@ -13,7 +11,8 @@
 - Disable menu "add bookmark" when folders not selected??
 - Improve performance for large files (D850)
 - Improve producer/consumer image cache performance
-- Rotate selected images
+- Tweak panning in compareView (eliminate incremental scrolling)
+- Tweak context menus
 - Initial setup (other than workspace)
 - Add preferences for info label
 - Add more raw file formats
@@ -26,6 +25,7 @@
 - Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Still problem with toggle zoom
 - Done: Get comment and copywrite metadata (for JPG)
 - Done: Get lens metadata (for JPG
 - Done: Main context menu only in loupe mode

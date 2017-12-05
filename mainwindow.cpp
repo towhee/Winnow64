@@ -3746,6 +3746,16 @@ void MW::writeSettings()
 //    }
 //    GData::appSettings->endGroup();
 
+    /* InfoView okToShow fields */
+//    setting->beginGroup("InfoFields");
+//    setting->remove("");
+//    QMapIterator<QString, QString> eaIter(infoView->okToShow);
+//    while (eaIter.hasNext()) {
+//        eaIter.next();
+//        setting->setValue(eaIter.key(), eaIter.value());
+//    }
+//    setting->endGroup();
+
     /* External apps */
     setting->beginGroup("ExternalApps");
     setting->remove("");
@@ -3930,6 +3940,14 @@ Preferences are located in the prefdlg class and updated here.
         thumbDockLockAction->isChecked())
         allDocksLockAction->setChecked(true);
     wasThumbDockVisibleBeforeGridInvoked = setting->value("wasThumbDockVisibleBeforeGridInvoked").toBool();
+
+//    /* read InfoView okToShow fields */
+//    setting->beginGroup("InfoFields");
+//    QStringList ok = setting->childKeys();
+//    for (int i = 0; i < extApps.size(); ++i) {
+//        infoView->okToShow[ok.at(i)] = setting->value(ok.at(i)).toBool();
+//    }
+//    setting->endGroup();
 
     /* read external apps */
     setting->beginGroup("ExternalApps");
