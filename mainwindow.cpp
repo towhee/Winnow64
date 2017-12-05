@@ -97,7 +97,7 @@ variables in MW (this class) and managed in the prefDlg class.
     createActions();            // dependent on above
     createMenus();              // dependent on creatActions and loadSettings
 
-    updateExternalApps();       // dependent on createActions
+//    updateExternalApps();       // dependent on createActions
     handleStartupArgs();
 
     bool isSettings = loadSettings();//dependent on bookmarks and actions
@@ -460,6 +460,7 @@ so scrollTo and delegate use of the current index must check the row.
     // if starting program, set first image to display
     if(previous.row() == -1) thumbView->selectThumb(0);
 
+
     // user clicks outside thumb but inside treeView dock
     QModelIndexList selected = selectionModel->selectedIndexes();
     if (selected.isEmpty()) return;
@@ -479,6 +480,7 @@ so scrollTo and delegate use of the current index must check the row.
 
     // update imageView, use cache if image loaded, else read it from file
     QString fPath = current.data(G::FileNameRole).toString();
+    qDebug() << fPath;
     if (imageView->loadImage(current, fPath)) {
         if (G::isThreadTrackingOn) qDebug()
             << "MW::fileSelectionChange - loaded image file " << fPath;
@@ -698,7 +700,15 @@ void MW::createActions()
     }
     addActions(recentFolderActions);
 
-    revealFileAction = new QAction(tr("Reveal in finder/explorer"), this);
+    QString reveal = "Reveal";
+    #ifdef Q_OS_WIN
+        reveal = "Reveal in Explorer";
+    #endif
+    #ifdef Q_OS_MAC
+        reveal = "Reveal in Finder";
+    #endif
+
+    revealFileAction = new QAction(reveal, this);
     revealFileAction->setObjectName("openInFinder");
     addAction(revealFileAction);
     connect(revealFileAction, SIGNAL(triggered()),
@@ -829,32 +839,32 @@ void MW::createActions()
     addAction(rate5Action);
     connect(rate5Action, SIGNAL(triggered()), this, SLOT(setRating()));
 
-    label0Action = new QAction(tr("Clear label colour"), this);
+    label0Action = new QAction(tr("Clear colour"), this);
     label0Action->setObjectName("Label0");
     addAction(label0Action);
     connect(label0Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
-    label1Action = new QAction(tr("Set label to Red"), this);
+    label1Action = new QAction(tr("Set to Red"), this);
     label1Action->setObjectName("Label1");
     addAction(label1Action);
     connect(label1Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
-    label2Action = new QAction(tr("Set label to Yellow"), this);
+    label2Action = new QAction(tr("Set to Yellow"), this);
     label2Action->setObjectName("Label2");
     addAction(label2Action);
     connect(label2Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
-    label3Action = new QAction(tr("Set label to Green"), this);
+    label3Action = new QAction(tr("Set to Green"), this);
     label3Action->setObjectName("Label3");
     addAction(label3Action);
     connect(label3Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
-    label4Action = new QAction(tr("Set label to Blue"), this);
+    label4Action = new QAction(tr("Set to Blue"), this);
     label4Action->setObjectName("Label4");
     addAction(label4Action);
     connect(label4Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
 
-    label5Action = new QAction(tr("Set label to Purple"), this);
+    label5Action = new QAction(tr("Set to Purple"), this);
     label5Action->setObjectName("Label5");
     addAction(label5Action);
     connect(label5Action, SIGNAL(triggered()), this, SLOT(setColorClass()));
@@ -1083,6 +1093,16 @@ void MW::createActions()
     addAction(sortTitleAction);
     connect(sortTitleAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
 
+    sortLensAction = new QAction(tr("Sort by lens"), this);
+    sortLensAction->setCheckable(true);
+    addAction(sortLensAction);
+    connect(sortLensAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
+    sortCreatorAction = new QAction(tr("Sort by creator"), this);
+    sortCreatorAction->setCheckable(true);
+    addAction(sortCreatorAction);
+    connect(sortCreatorAction, SIGNAL(triggered()), this, SLOT(sortThumbnails()));
+
     sortGroupAction = new QActionGroup(this);
     sortGroupAction->setExclusive(true);
 
@@ -1100,8 +1120,10 @@ void MW::createActions()
     sortGroupAction->addAction(sortShutterSpeedAction);
     sortGroupAction->addAction(sortISOAction);
     sortGroupAction->addAction(sortModelAction);
+    sortGroupAction->addAction(sortLensAction);
     sortGroupAction->addAction(sortFocalLengthAction);
     sortGroupAction->addAction(sortTitleAction);
+    sortGroupAction->addAction(sortCreatorAction);
 
     sortFileNameAction->setChecked(true);
 
@@ -1376,7 +1398,7 @@ void MW::createActions()
     // MacOS will not allow runtime menu insertions.  Cludge workaround
     // add 10 dummy menu items and then hide until use.
     n = workspaces->count();
-    for (int i=0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
         QString name;
         QString objName = "";
         if (i < n) {
@@ -1441,17 +1463,17 @@ void MW::createMenus()
     #endif
     }
     // Main Menu
-    fileMenu = menuBar()->addMenu(tr("&File"));
+
+    // File Menu
+
+    QMenu *fileMenu = new QMenu(this);
+    QAction *fileGroupAct = new QAction("File", this);
+    fileGroupAct->setMenu(fileMenu);
     fileMenu->addAction(openAction);
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
     openWithMenu->addAction(chooseAppAction);
     openWithMenu->addAction(newAppAction);
     openWithMenu->addAction(deleteAppAction);
-    fileMenu->addSeparator();
-    fileMenu->addAction(revealFileAction);
-    fileMenu->addAction(subFoldersAction);
-    fileMenu->addAction(showImageCountAction);
-    fileMenu->addAction(addBookmarkAction);
     recentFoldersMenu = fileMenu->addMenu(tr("Recent folders"));
     // add 10 dummy menu items for custom workspaces
     for (int i = 0; i < maxRecentFolders; i++) {
@@ -1459,17 +1481,26 @@ void MW::createMenus()
     }
     connect(recentFoldersMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeRecentFolder(QAction*)));
-
     fileMenu->addSeparator();
     fileMenu->addAction(ingestAction);
-    fileMenu->addAction(renameAction);
-    fileMenu->addAction(runDropletAction);
     fileMenu->addSeparator();
-    fileMenu->addAction(reportMetadataAction);
+    fileMenu->addAction(revealFileAction);
+    fileMenu->addAction(subFoldersAction);
+    fileMenu->addAction(showImageCountAction);
+    fileMenu->addAction(addBookmarkAction);
+//    fileMenu->addSeparator();
+//    fileMenu->addAction(renameAction);
+//    fileMenu->addAction(runDropletAction);
+//    fileMenu->addSeparator();
+//    fileMenu->addAction(reportMetadataAction);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);    // Appears in Winnow menu in OSX
 
-    editMenu = menuBar()->addMenu(tr("&Edit"));
+    // Edit Menu
+
+    QMenu *editMenu = new QMenu(this);
+    QAction *editGroupAct = new QAction("Edit", this);
+    editGroupAct->setMenu(editMenu);
     editMenu->addAction(selectAllAction);
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
@@ -1491,13 +1522,18 @@ void MW::createMenus()
     editMenu->addAction(label3Action);
     editMenu->addAction(label4Action);
     editMenu->addAction(label5Action);
+    editMenu->addSeparator();
     editMenu->addAction(rotateRightAction);
     editMenu->addAction(rotateLeftAction);
     editMenu->addSeparator();
     editMenu->addAction(prefAction);       // Appears in Winnow menu in OSX
-    editMenu->addAction(oldPrefAction);
+//    editMenu->addAction(oldPrefAction);
 
-    goMenu = menuBar()->addMenu(tr("&Go"));
+    // Go Menu
+
+    QMenu *goMenu = new QMenu(this);
+    QAction *goGroupAct = new QAction("Go", this);
+    goGroupAct->setMenu(goMenu);
     goMenu->addAction(keyRightAction);
     goMenu->addAction(keyLeftAction);
     goMenu->addAction(keyUpAction);
@@ -1508,7 +1544,11 @@ void MW::createMenus()
     goMenu->addAction(nextPickAction);
     goMenu->addAction(prevPickAction);
 
-    filterMenu = menuBar()->addMenu(tr("Filter"));
+    // Filter Menu
+
+    QMenu *filterMenu = new QMenu(this);
+    QAction *filterGroupAct = new QAction("Filter", this);
+    filterGroupAct->setMenu(filterMenu);
     filterMenu->addAction(uncheckAllFiltersAction);
     filterMenu->addSeparator();
     filterMenu->addAction(filterPickAction);
@@ -1525,37 +1565,43 @@ void MW::createMenus()
     filterMenu->addAction(filterBlueAction);
     filterMenu->addAction(filterPurpleAction);
 
-    sortMenu = menuBar()->addMenu(tr("Sort"));
+    // Sort Menu
+
+    QMenu *sortMenu = new QMenu(this);
+    QAction *sortGroupAct = new QAction("Sort", this);
+    sortGroupAct->setMenu(sortMenu);
     sortMenu->addActions(sortGroupAction->actions());
     sortMenu->addSeparator();
     sortMenu->addAction(sortReverseAction);
 
-    viewMenu = menuBar()->addMenu(tr("&View"));
+    // View Menu
+
+    QMenu *viewMenu = new QMenu(this);
+    QAction *viewGroupAct = new QAction("View", this);
+    viewGroupAct->setMenu(viewMenu);
+    viewMenu->addActions(centralGroupAction->actions());
+    viewMenu->addSeparator();
     viewMenu->addAction(slideShowAction);
     viewMenu->addAction(fullScreenAction);
     viewMenu->addAction(escapeFullScreenAction);
     viewMenu->addSeparator();
     viewMenu->addAction(infoVisibleAction);
     viewMenu->addSeparator();
-    viewMenu->addActions(centralGroupAction->actions());
-    viewMenu->addSeparator();
     viewMenu->addAction(zoomToAction);
     viewMenu->addAction(zoomInAction);
     viewMenu->addAction(zoomOutAction);
     viewMenu->addAction(zoomToggleAction);
     viewMenu->addSeparator();
-    viewMenu->addAction(zoom50PctAction);
-    viewMenu->addAction(zoom100PctAction);
-    viewMenu->addAction(zoom200PctAction);
-    viewMenu->addSeparator();
     viewMenu->addAction(thumbsEnlargeAction);
     viewMenu->addAction(thumbsShrinkAction);
-    viewMenu->addAction(thumbsFitAction);
+//    viewMenu->addAction(thumbsFitAction);
 //    viewMenu->addAction(showThumbLabelsAction);
-//    viewMenu->addAction(sortReverseAction);
-    viewMenu->addSeparator();
 
-    windowMenu = menuBar()->addMenu(tr("&Window"));
+    // Window Menu
+
+    QMenu *windowMenu = new QMenu(this);
+    QAction *windowGroupAct = new QAction("Window", this);
+    windowGroupAct->setMenu(windowMenu);
     workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
     windowMenu->addSeparator();
     workspaceMenu->addAction(defaultWorkspaceAction);
@@ -1592,28 +1638,35 @@ void MW::createMenus()
     windowMenu->addSeparator();
     windowMenu->addAction(allDocksLockAction);
 
-    helpMenu = menuBar()->addMenu(tr("&Help"));
+    // Help Menu
+
+    QMenu *helpMenu = new QMenu(this);
+    QAction *helpGroupAct = new QAction("Help", this);
+    helpGroupAct->setMenu(helpMenu);
     helpMenu->addAction(aboutAction);
     helpMenu->addAction(helpAction);
     helpMenu->addAction(helpShortcutsAction);
 
-    menuBar()->setVisible(true);
+    // Separator Action
+    QAction *separatorAction = new QAction(this);
+    separatorAction->setSeparator(true);
 
     // FSTree context menu
-    fsTree->addAction(openAction);
-    addMenuSeparator(fsTree);
-    fsTree->addAction(pasteAction);
-    addMenuSeparator(fsTree);
-    fsTree->addAction(openWithMenuAction);
-    fsTree->addAction(addBookmarkAction);
-    fsTree->setContextMenuPolicy(Qt::ActionsContextMenu);
+    QList<QAction *> *fsTreeActions = new QList<QAction *>;
+    fsTreeActions->append(showImageCountAction);
+    fsTreeActions->append(revealFileAction);
+    fsTreeActions->append(separatorAction);
+    fsTreeActions->append(pasteAction);
+    fsTreeActions->append(separatorAction);
+    fsTreeActions->append(openWithMenuAction);
+    fsTreeActions->append(addBookmarkAction);
 
     // filters context menu
-    filters->addAction(uncheckAllFiltersAction);
-    addMenuSeparator(filters);
-    filters->addAction(expandAllAction);
-    filters->addAction(collapseAllAction);
-    filters->setContextMenuPolicy(Qt::ActionsContextMenu);
+    QList<QAction *> *filterActions = new QList<QAction *>;
+    filterActions->append(uncheckAllFiltersAction);
+    filterActions->append(separatorAction);
+    filterActions->append(expandAllAction);
+    filterActions->append(collapseAllAction);
 
     // bookmarks context menu
     bookmarks->addAction(pasteAction);
@@ -1621,149 +1674,94 @@ void MW::createMenus()
     bookmarks->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     // thumbview context menu
-    thumbView->addAction(openAction);
-    thumbView->addAction(openWithMenuAction);
-    thumbView->addAction(selectAllAction);
-    thumbView->addAction(invertSelectionAction);
-    addMenuSeparator(thumbView);
-    thumbView->addAction(reportMetadataAction);
+    QList<QAction *> *thumbViewActions = new QList<QAction *>;
+    thumbViewActions->append(openAction);
+    thumbViewActions->append(openWithMenuAction);
+    thumbViewActions->append(selectAllAction);
+    thumbViewActions->append(invertSelectionAction);
+    thumbViewActions->append(separatorAction);
+    thumbViewActions->append(reportMetadataAction);
+
+//    // imageview/tableview/gridview/compareview context menu
+//    imageView->addAction(pickAction);
+//    imageView->addAction(filterPickAction);
+//    imageView->addAction(ingestAction);
+//    addMenuSeparator(imageView);
+
+
+//    QMenu *zoomSubMenu = new QMenu(imageView);
+//    QAction *zoomGroupAct = new QAction("Zoom", this);
+//    imageView->addAction(zoomGroupAct);
+//    zoomGroupAct->setMenu(zoomSubMenu);
+//    zoomSubMenu->addAction(zoomInAction);
+//    zoomSubMenu->addAction(zoomOutAction);
+//    zoomSubMenu->addAction(zoomToggleAction);
+
+//    QMenu *transformSubMenu = new QMenu(imageView);
+//    QAction *transformGroupAct = new QAction("Rotate", this);
+//    imageView->addAction(transformGroupAct);
+//    transformGroupAct->setMenu(transformSubMenu);
+//    transformSubMenu->addAction(rotateRightAction);
+//    transformSubMenu->addAction(rotateLeftAction);
+
+//    QMenu *thumbNailSubMenu = new QMenu(imageView);
+//    QAction *thumbnailGroupAct = new QAction("ThumbNails", this);
+//    imageView->addAction(thumbnailGroupAct);
+//    thumbnailGroupAct->setMenu(thumbNailSubMenu);
+//    thumbNailSubMenu->addAction(thumbsEnlargeAction);
+//    thumbNailSubMenu->addAction(thumbsShrinkAction);
+////    thumbNailSubMenu->addAction(showThumbLabelsAction);
+//    sortMenu = thumbNailSubMenu->addMenu(tr("Sort By"));
+//    sortMenu->addActions(sortGroupAction->actions());
+//    sortMenu->addSeparator();
+//    sortMenu->addAction(sortReverseAction);
+
+//    addMenuSeparator(imageView);
+
+    // main menu
+    menuBar()->addAction(fileGroupAct);
+    menuBar()->addAction(editGroupAct);
+    menuBar()->addAction(goGroupAct);
+    menuBar()->addAction(filterGroupAct);
+    menuBar()->addAction(sortGroupAct);
+    menuBar()->addAction(viewGroupAct);
+    menuBar()->addAction(windowGroupAct);
+    menuBar()->addAction(helpGroupAct);
+    menuBar()->setVisible(true);
+
+    // main context menu
+    mainContextActions = new QList<QAction *>;
+    mainContextActions->append(fileGroupAct);
+    mainContextActions->append(editGroupAct);
+    mainContextActions->append(goGroupAct);
+    mainContextActions->append(filterGroupAct);
+    mainContextActions->append(sortGroupAct);
+    mainContextActions->append(viewGroupAct);
+    mainContextActions->append(windowGroupAct);
+    mainContextActions->append(helpGroupAct);
+
+    // Central Widget mode context menu
+    imageView->addActions(*mainContextActions);
+    imageView->setContextMenuPolicy(Qt::ActionsContextMenu);
+
+    tableView->addActions(*mainContextActions);
+    tableView->setContextMenuPolicy(Qt::ActionsContextMenu);
+
+    gridView->addActions(*mainContextActions);
+    gridView->setContextMenuPolicy(Qt::ActionsContextMenu);
+
+    compareImages->addActions(*mainContextActions);
+    compareImages->setContextMenuPolicy(Qt::ActionsContextMenu);
+
+    fsTree->addActions(*fsTreeActions);
+    fsTree->setContextMenuPolicy(Qt::ActionsContextMenu);
+
+    filters->addActions(*filterActions);
+    filters->setContextMenuPolicy(Qt::ActionsContextMenu);
+
+    thumbView->addActions(*thumbViewActions);
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-    // imageview/tableview/gridview/compareview context menu
-    imageView->addAction(pickAction);
-    imageView->addAction(filterPickAction);
-    imageView->addAction(ingestAction);
-    addMenuSeparator(imageView);
-
-    QMenu *goSubMenu = new QMenu(imageView);
-    QAction *goGroupAct = new QAction("Go", this);
-    imageView->addAction(goGroupAct);
-    goGroupAct->setMenu(goSubMenu);
-    goSubMenu->addAction(keyRightAction);
-    goSubMenu->addAction(keyLeftAction);
-    goSubMenu->addAction(keyHomeAction);
-    goSubMenu->addAction(keyEndAction);
-    goSubMenu->addAction(keyUpAction);
-    goSubMenu->addAction(keyDownAction);
-    goSubMenu->addAction(randomImageAction);
-    goSubMenu->addAction(slideShowAction);
-
-
-    QMenu *zoomSubMenu = new QMenu(imageView);
-    QAction *zoomGroupAct = new QAction("Zoom", this);
-    imageView->addAction(zoomGroupAct);
-    zoomGroupAct->setMenu(zoomSubMenu);
-    zoomSubMenu->addAction(zoomInAction);
-    zoomSubMenu->addAction(zoomOutAction);
-    zoomSubMenu->addAction(zoomToggleAction);
-
-    QMenu *transformSubMenu = new QMenu(imageView);
-    QAction *transformGroupAct = new QAction("Rotate", this);
-    imageView->addAction(transformGroupAct);
-    transformGroupAct->setMenu(transformSubMenu);
-    transformSubMenu->addAction(rotateRightAction);
-    transformSubMenu->addAction(rotateLeftAction);
-
-    QMenu *thumbNailSubMenu = new QMenu(imageView);
-    QAction *thumbnailGroupAct = new QAction("ThumbNails", this);
-    imageView->addAction(thumbnailGroupAct);
-    thumbnailGroupAct->setMenu(thumbNailSubMenu);
-    thumbNailSubMenu->addAction(thumbsEnlargeAction);
-    thumbNailSubMenu->addAction(thumbsShrinkAction);
-//    thumbNailSubMenu->addAction(showThumbLabelsAction);
-    sortMenu = thumbNailSubMenu->addMenu(tr("Sort By"));
-    sortMenu->addActions(sortGroupAction->actions());
-    sortMenu->addSeparator();
-    sortMenu->addAction(sortReverseAction);
-
-    addMenuSeparator(imageView);
-
-//    imageView->addAction(copyImageAction);
-//    imageView->addAction(pasteImageAction);
-//    imageView->addAction(closeImageAct);
-//    imageView->addAction(keepTransformAct);
-//    imageView->addAction(keepZoomAct);
-//    imageView->addAction(refreshAction);
-//    imageView->addAction(copyToAction);
-//    imageView->addAction(moveToAction);
-
-    QMenu *workspaceSubMenu = new QMenu(imageView);
-    QAction *workspaceGroupAct = new QAction("Workspace", this);
-    imageView->addAction(workspaceGroupAct);
-    workspaceGroupAct->setMenu(workspaceSubMenu);
-    workspaceSubMenu->addAction(defaultWorkspaceAction);
-    workspaceSubMenu->addAction(newWorkspaceAction);
-    workspaceSubMenu->addAction(manageWorkspaceAction);
-    workspaceSubMenu->addSeparator();
-    // add 10 dummy menu items for custom workspaces
-    for (int i=0; i<10; i++) {
-        workspaceSubMenu->addAction(workspaceActions.at(i));
-    }
-//    connect(workspaceSubMenu, SIGNAL(triggered(QAction*)),
-//            SLOT(invokeWorkspaceFromAction(QAction*)));
-
-    QMenu *windowSubMenu = new QMenu(imageView);
-    QAction *windowGroupAct = new QAction("Window", this);
-    imageView->addAction(windowGroupAct);
-    windowGroupAct->setMenu(windowSubMenu);
-    windowSubMenu->addAction(folderDockVisibleAction);
-    windowSubMenu->addAction(favDockVisibleAction);
-    windowSubMenu->addAction(filterDockVisibleAction);
-    windowSubMenu->addAction(metadataDockVisibleAction);
-    windowSubMenu->addAction(thumbDockVisibleAction);
-    addMenuSeparator(windowSubMenu);
-    windowSubMenu->addAction(windowTitleBarVisibleAction);
-    windowSubMenu->addAction(menuBarVisibleAction);
-    windowSubMenu->addAction(statusBarVisibleAction);
-    addMenuSeparator(windowSubMenu);
-    windowSubMenu->addAction(folderDockLockAction);
-    windowSubMenu->addAction(favDockLockAction);
-    windowSubMenu->addAction(filterDockLockAction);
-    windowSubMenu->addAction(metadataDockLockAction);
-    windowSubMenu->addAction(thumbDockLockAction);
-    addMenuSeparator(windowSubMenu);
-    windowSubMenu->addAction(allDocksLockAction);
-
-    QMenu *viewSubMenu = new QMenu(imageView);
-    QAction *viewGroupAct = new QAction("View", this);
-    imageView->addAction(viewGroupAct);
-    viewGroupAct->setMenu(viewSubMenu);
-    viewSubMenu->addAction(slideShowAction);
-    viewSubMenu->addAction(fullScreenAction);
-    viewSubMenu->addAction(escapeFullScreenAction);
-    viewSubMenu->addSeparator();
-    viewSubMenu->addAction(infoVisibleAction);
-    viewSubMenu->addSeparator();
-    viewMenu->addActions(centralGroupAction->actions());
-    viewMenu->addSeparator();
-    viewSubMenu->addAction(sortReverseAction);
-
-    QMenu *fileSubMenu = new QMenu(imageView);
-    QAction *fileGroupAct = new QAction("File", this);
-    imageView->addAction(fileGroupAct);
-    fileGroupAct->setMenu(fileSubMenu);
-    fileSubMenu->addAction(openAction);
-    recentFoldersMenu = fileSubMenu->addMenu(tr("Recent folders"));
-    openWithMenu = fileSubMenu->addMenu(tr("Open with..."));
-    openWithMenu->addAction(newAppAction);
-    openWithMenu->addAction(deleteAppAction);
-    fileSubMenu->addAction(revealFileAction);
-    fileSubMenu->addAction(subFoldersAction);
-    fileSubMenu->addAction(addBookmarkAction);
-    fileSubMenu->addSeparator();
-    fileSubMenu->addAction(ingestAction);
-    fileSubMenu->addAction(renameAction);
-    fileSubMenu->addAction(runDropletAction);
-    fileSubMenu->addSeparator();
-    fileSubMenu->addAction(reportMetadataAction);
-    addMenuSeparator(imageView);
-
-    imageView->addAction(prefAction);
-    imageView->addAction(oldPrefAction);
-    addMenuSeparator(imageView);
-    imageView->addAction(exitAction);
-
-    imageView->setContextMenuPolicy(Qt::ActionsContextMenu);
 }
 
 void MW::addMenuSeparator(QWidget *widget)
@@ -2366,21 +2364,23 @@ tableView.
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
     switch (column) {
     case 1: sortFileNameAction->setChecked(true); break;
-    case 2: sortFileTypeAction->setChecked(true); break;
-    case 3: sortFileSizeAction->setChecked(true); break;
-    case 4: sortCreateAction->setChecked(true); break;
-    case 5: sortModifyAction->setChecked(true); break;
-    case 6: sortPickAction->setChecked(true); break;
-    case 7: sortLabelAction->setChecked(true); break;
-    case 8: sortRatingAction->setChecked(true); break;
-    case 9: sortMegaPixelsAction->setChecked(true); break;
-    case 10: sortDimensionsAction->setChecked(true); break;
-    case 11: sortApertureAction->setChecked(true); break;
-    case 12: sortShutterSpeedAction->setChecked(true); break;
-    case 13: sortISOAction->setChecked(true); break;
-    case 14: sortModelAction->setChecked(true); break;
-    case 15: sortFocalLengthAction->setChecked(true); break;
-    case 16: sortTitleAction->setChecked(true); break;
+    case 2: sortPickAction->setChecked(true); break;
+    case 3: sortLabelAction->setChecked(true); break;
+    case 4: sortRatingAction->setChecked(true); break;
+    case 5: sortFileTypeAction->setChecked(true); break;
+    case 6: sortFileSizeAction->setChecked(true); break;
+    case 7: sortCreateAction->setChecked(true); break;
+    case 8: sortModifyAction->setChecked(true); break;
+    case 9: sortCreatorAction->setChecked(true); break;
+    case 10: sortMegaPixelsAction->setChecked(true); break;
+    case 11: sortDimensionsAction->setChecked(true); break;
+    case 12: sortApertureAction->setChecked(true); break;
+    case 13: sortShutterSpeedAction->setChecked(true); break;
+    case 14: sortISOAction->setChecked(true); break;
+    case 15: sortModelAction->setChecked(true); break;
+    case 16: sortLensAction->setChecked(true); break;
+    case 17: sortFocalLengthAction->setChecked(true); break;
+    case 18: sortTitleAction->setChecked(true); break;
     }
     if(sortOrder == Qt::DescendingOrder) sortReverseAction->setChecked(true);
     else sortReverseAction->setChecked(false);

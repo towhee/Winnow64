@@ -503,6 +503,21 @@ void Metadata::reportMetadata()
     std::cout << std::setw(16) << std::setfill(' ') << std::left << "title"
               << std::setw(16) << std::setfill(' ') << std::left << title.toStdString()
               << "\n";
+    std::cout << std::setw(16) << std::setfill(' ') << std::left << "lens"
+              << std::setw(16) << std::setfill(' ') << std::left << lens.toStdString()
+              << "\n";
+    std::cout << std::setw(16) << std::setfill(' ') << std::left << "creator"
+              << std::setw(16) << std::setfill(' ') << std::left << creator.toStdString()
+              << "\n";
+    std::cout << std::setw(16) << std::setfill(' ') << std::left << "copyright"
+              << std::setw(16) << std::setfill(' ') << std::left << copyright.toStdString()
+              << "\n";
+    std::cout << std::setw(16) << std::setfill(' ') << std::left << "email"
+              << std::setw(16) << std::setfill(' ') << std::left << email.toStdString()
+              << "\n";
+    std::cout << std::setw(16) << std::setfill(' ') << std::left << "url"
+              << std::setw(16) << std::setfill(' ') << std::left << url.toStdString()
+              << "\n";
     std::cout << std::flush;
 
 //    qDebug() << "focalLength35mm" << focalLength35mm;
@@ -577,11 +592,191 @@ float Metadata::getReal(long offset)
     return x;
 }
 
+ulong Metadata::find(QString s, ulong offset, ulong range)
+{
+    uint firstCharCode = static_cast<unsigned int>(s[0].unicode());
+    for (ulong i = offset; i < offset + range; i++) {
+
+        if (get1(file.read(1)) == firstCharCode) {
+            bool rejected = false;
+            for (int j = 1; j < s.length(); j++) {
+                uint nextCharCode = static_cast<unsigned int>(s[j].unicode());
+                uint byte = get1(file.read(1));
+//                QString byteHex = QString::number(byte, 16).toUpper();
+//                QString byteString = QChar(byte);
+//                qDebug() << file.pos() << x << s[j] << "==>"
+//                         << byte << byteHex << byteString;
+                if (byte != nextCharCode) rejected = true;
+                if (rejected) break;
+//                if (get1(file.read(1)) != x) break;
+            }
+            if (!rejected) return file.pos() - s.length() - 1;
+        }
+    }
+    return -1;
+}
+
+bool Metadata::readXMP(ulong offset)
+{
+    order = 0x4D4D;                  // only IFD/EXIF can be little endian
+
+    // skip over APP FFE1 bytes
+    file.seek(offset);
+    ulong xmpOffsetStart;
+    // find endo of XMP block at next FF
+    bool xmpFound = false;
+    QByteArray xmpByteArray;
+
+    qDebug() << "Starting readXMP";
+    // look for the start of XMP block = "<?xpacket begin" ...
+    for(ulong i = 0; i < 200; i++) {
+        uint byte = get1(file.read(1));
+        // check for "<" = 0x3C = 60
+        if (byte == 0x3C) {
+            xmpOffsetStart = file.pos() - 1;
+            QString s = "<?xpacket end";
+            ulong xmpOffsetEnd = find(s, xmpOffsetStart, 64555);
+            xmpOffsetEnd = find(">", xmpOffsetEnd, 100) + 2;  // 38306
+            ulong xmpLength = xmpOffsetEnd - xmpOffsetStart;
+            file.seek(xmpOffsetStart);
+            xmpByteArray = file.read(xmpLength);
+//            QString x = QString::QString(xmpByteArray);
+//            qDebug() << "xmpByteArray as a sting:\n" << x;
+            xmpFound = true;
+            break;
+        }
+    }
+
+    // report
+//    QXmlStreamReader xmp(xmpByteArray);
+//    while(!xmp.atEnd() && !xmp.hasError()) {
+//        QXmlStreamReader::TokenType token = xmp.readNext();
+////        if (token != QXmlStreamReader::StartElement &&
+////            token != QXmlStreamReader::QXmlStreamReader::Characters) continue;
+////        if (xmp.isWhitespace()) continue;
+////        if (xmp.qualifiedName() == "rdf:li") continue;
+////        if (xmp.qualifiedName() == "rdf:Seq") continue;
+////        if (xmp.qualifiedName() == "rdf:Alt") continue;
+////        if (xmp.text() == "" && xmp.qualifiedName() == "") continue;
+
+//        if (xmp.attributes().count() == 0)
+//            qDebug()  << "qualifiedName:" << xmp.qualifiedName()
+//                      << "isWhitespace" << xmp.isWhitespace()
+//                      << "Text:" << xmp.text();
+//        for(int i = 0; i < xmp.attributes().size(); i++) {
+//            qDebug() << "qualifiedName:" << xmp.qualifiedName()
+//                     << "Text:" << xmp.text()
+//                     << xmp.attributes().at(i).prefix()
+//                     << xmp.attributes().at(i).name()
+//                     << xmp.attributes().at(i).value();
+//        }
+//    }
+
+//    QString lens;
+//    QString creator;
+//    QString copyright;
+//    QString email;
+//    QString url;
+
+    QString xmpTitle;
+    if (!xmpFound) return false;
+
+    QXmlStreamReader xmp(xmpByteArray);
+    bool err = xmp.hasError();
+
+    // search xmp for data
+    while(!xmp.atEnd() && !xmp.hasError()) {
+        QXmlStreamReader::TokenType token = xmp.readNext();
+        // lots of stuff to ignore
+        if (token != QXmlStreamReader::StartElement &&
+            token != QXmlStreamReader::QXmlStreamReader::Characters) continue;
+        if (xmp.isWhitespace()) continue;
+        if (xmp.qualifiedName() == "rdf:li") continue;
+        if (xmp.qualifiedName() == "rdf:Seq") continue;
+        if (xmp.qualifiedName() == "rdf:Alt") continue;
+        if (xmp.text() == "" && xmp.qualifiedName() == "") continue;
+
+        // get lens
+        if (xmp.qualifiedName() == "rdf:Description") {
+            for(int i = 0; i < xmp.attributes().size(); i++) {
+                if (xmp.attributes().at(i).name() == "Lens") {
+                    lens = xmp.attributes().at(i).value().toString();
+                    break;
+                }
+            }
+        }
+
+        // get creator
+        if (xmp.qualifiedName() == "dc:creator") {
+            int count = 0;
+            bool notFound = true;
+            while(notFound || count < 4) {
+                count++;
+                xmp.readNext();
+                if(xmp.qualifiedName() == "" && !xmp.isWhitespace()) {
+                    qDebug() << xmp.qualifiedName() << xmp.text();
+                    creator = xmp.text().toString();
+                    notFound = false;
+                }
+            }
+        }
+
+        // get xmpTitle (already tried in IPTC so this is redundent
+        if (xmp.qualifiedName() == "dc:title") {
+            int count = 0;
+            bool notFound = true;
+            while(notFound || count < 4) {
+                count++;
+                xmp.readNext();
+                if(xmp.qualifiedName() == "" && !xmp.isWhitespace()) {
+                    qDebug() << xmp.qualifiedName() << xmp.text();
+                    xmpTitle = xmp.text().toString();
+                    notFound = false;
+                }
+            }
+        }
+
+        // get copyright
+        if (xmp.qualifiedName() == "dc:rights") {
+            int count = 0;
+            bool notFound = true;
+            while(notFound || count < 4) {
+                count++;
+                xmp.readNext();
+                if(xmp.qualifiedName() == "" && !xmp.isWhitespace()) {
+                    qDebug() << xmp.qualifiedName() << xmp.text();
+                    copyright = xmp.text().toString();
+                    notFound = false;
+                }
+            }
+        }
+
+        // get email and url
+        if (xmp.qualifiedName() == "Iptc4xmpCore:CreatorContactInfo") {
+            for(int i = 0; i < xmp.attributes().size(); i++) {
+                if (xmp.attributes().at(i).name() == "CiEmailWork")
+                    email = xmp.attributes().at(i).value().toString();
+                if (xmp.attributes().at(i).name() == "CiUrlWork")
+                    url = xmp.attributes().at(i).value().toString();
+            }
+        }
+    }
+    qDebug() << "Lens:" << lens;
+    qDebug() << "Creator" << creator;
+    qDebug() << "Copyright" << copyright;
+    qDebug() << "xmpTitle" << xmpTitle;
+    qDebug() << "email" << email;
+    qDebug() << "url" << url;
+
+
+}
+
+
 void Metadata::readIPTC(ulong offset)
 {
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
 
-    // skip the APP FFED and length bytes
+    // skip the APP marker FFED and length bytes
     file.seek(offset + 2);
 //    ulong appLength = get2(file.read(2));
     ulong segmentLength = get2(file.read(2));
@@ -1077,6 +1272,12 @@ void Metadata::formatCanon()
         focalLengthNum = 0;
     }
 
+    // read next app segment
+    if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
+
+    // read XMP
+    if (segmentHash.contains("XMP")) readXMP(segmentHash["XMP"]);
+
     if (report) reportMetadata();
 }
 
@@ -1469,12 +1670,8 @@ bool Metadata::formatJPG()
     // read next app segment
     if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
 
-    //    order = 0x4D4D;
-//    file.seek(nextAppOffset);
-//    appSegment = get2(file.read(2));
-//    qDebug() << "nextAppOffset" << QString::number(nextAppOffset, 16).toUpper();
-
-//    if (appSegment == 0xFFED) nextAppOffset = readIPTC(file.pos());
+    // read XMP
+    if (segmentHash.contains("XMP")) readXMP(segmentHash["XMP"]);
 
     if (report) reportMetadata();
     return true;
@@ -1503,6 +1700,11 @@ void Metadata::clearMetadata()
     ISO = "";
     focalLength = "";
     title = "";
+    lens = "";
+    creator = "";
+    copyright = "";
+    email = "";
+    url = "";
     err = "";
 
     ifdDataHash.clear();
@@ -1789,7 +1991,7 @@ int Metadata::getISONum(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getISO" << imageFileName;
+    qDebug() << "Metadata::getISONum" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].ISONum;
@@ -1819,10 +2021,60 @@ QString Metadata::getTitle(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getFocalLength" << imageFileName;
+    qDebug() << "Metadata::getTitle" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].title;
+}
+
+QString Metadata::getLens(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::getLens" << imageFileName;
+    #endif
+    }
+    return metaCache[imageFileName].lens;
+}
+
+QString Metadata::getCreator(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::getCreator" << imageFileName;
+    #endif
+    }
+    return metaCache[imageFileName].creator;
+}
+
+QString Metadata::getCopyright(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::getCopyright" << imageFileName;
+    #endif
+    }
+    return metaCache[imageFileName].copyright;
+}
+
+QString Metadata::getEmail(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::getEmail" << imageFileName;
+    #endif
+    }
+    return metaCache[imageFileName].email;
+}
+
+QString Metadata::getUrl(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::getUrl" << imageFileName;
+    #endif
+    }
+    return metaCache[imageFileName].url;
 }
 
 QString Metadata::getShootingInfo(const QString &imageFileName)
@@ -1944,6 +2196,11 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo)
     imageMetadata.focalLength = focalLength;
     imageMetadata.focalLengthNum = focalLengthNum;
     imageMetadata.title = title;
+    imageMetadata.lens = lens;
+    imageMetadata.creator = creator;
+    imageMetadata.copyright = copyright;
+    imageMetadata.email = email;
+    imageMetadata.url = url;
     imageMetadata.year = dateTime.left(4).toInt();
     imageMetadata.month = dateTime.mid(5,2).toInt();
     imageMetadata.day = dateTime.mid(8,2).toInt();

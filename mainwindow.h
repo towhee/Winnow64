@@ -338,6 +338,8 @@ private:
     QMenu *MirroringSubMenu;
     QMenu *transformSubMenu;
 
+    QList<QAction *> *mainContextActions;
+
     // File menu
     QAction *openAction;
     QAction *revealFileAction;
@@ -411,19 +413,21 @@ private:
     // Sort Menu
     QActionGroup *sortGroupAction;
     QAction *sortFileNameAction;
+    QAction *sortPickAction;
+    QAction *sortLabelAction;
+    QAction *sortRatingAction;
     QAction *sortFileTypeAction;
     QAction *sortFileSizeAction;
     QAction *sortCreateAction;
     QAction *sortModifyAction;
-    QAction *sortPickAction;
-    QAction *sortLabelAction;
-    QAction *sortRatingAction;
+    QAction *sortCreatorAction;
     QAction *sortMegaPixelsAction;
     QAction *sortDimensionsAction;
     QAction *sortApertureAction;
     QAction *sortShutterSpeedAction;
     QAction *sortISOAction;
     QAction *sortModelAction;
+    QAction *sortLensAction;
     QAction *sortFocalLengthAction;
     QAction *sortTitleAction;
 

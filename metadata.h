@@ -2,6 +2,7 @@
 #define METADATA_H
 
 #include <QCoreApplication>
+#include <QXmlStreamReader>
 #include <QFile>
 #include <QFileInfo>
 #include <QDebug>
@@ -49,6 +50,11 @@ public:
     int focalLengthNum;
     QString shootingInfo;
     QString title;
+    QString lens;
+    QString creator;
+    QString copyright;
+    QString email;
+    QString url;
     int year;
     int month;
     int day;
@@ -84,6 +90,13 @@ public:
     QString focalLength;
     int focalLengthNum;
     QString title;
+    QString lens;
+    QString creator;
+    QString copyright;
+//    QString xmpTitle;
+    QString email;
+    QString url;
+
     QString err;
 
     QStringList rawFormats;
@@ -134,6 +147,11 @@ public:
     int getFocalLengthNum(const QString &imageFileName);
     QString getShootingInfo(const QString &imageFileName);
     QString getTitle(const QString &imageFileName);
+    QString getLens(const QString &imageFileName);
+    QString getCreator(const QString &imageFileName);
+    QString getCopyright(const QString &imageFileName);
+    QString getEmail(const QString &imageFileName);
+    QString getUrl(const QString &imageFileName);
     int getYear(const QString &imageFileName);
     int getMonth(const QString &imageFileName);
     int getDay(const QString &imageFileName);
@@ -165,6 +183,8 @@ private:
     ulong get2(QByteArray c);
     ulong get4(QByteArray c);
     float getReal(long offset);
+    ulong find(QString s, ulong offset, ulong range);
+    bool readXMP(ulong offset);
     void readIPTC(ulong offset);
     ulong readIFD(QString hdr, ulong offset);
     QList<ulong> getSubIfdOffsets(ulong subIFDaddr, int count);

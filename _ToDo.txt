@@ -1,4 +1,4 @@
-- Main context menu only in loupe mode
+- Still problem with toggle zoom
 - Tweak context menus
 - ThumbDock thumb size forgotten after grid view sometimes
 - Tweak panning in compareView
@@ -6,6 +6,7 @@
 - Check for Tif support in Qt
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Combine raw+jpg option
+- Possibly combine workspaces into an actionGroup so can check active workspace
 - Recent copy to folders in copy dialog
 - Not reading metadata from iphone jpgs
 - Disable menu "add bookmark" when folders not selected??
@@ -26,6 +27,7 @@
 - Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Main context menu only in loupe mode
 - Done: Highlight and set focus on zoom dialog when mouse over
 - Done: UI for changing compare click zoom amount
 - Done: Zooming is not propagating consistently in compareView

@@ -86,10 +86,11 @@ DISTFILES += \
     Menu.txt \
     Shortcuts.txt \
     Scratch.txt \
-    ToDo.txt \
     Notes \
     snippets.txt \
-    Deploy.txt
+    Deploy.txt \
+    xmp.txt \
+    _ToDo.txt
 
 macx {
     QMAKE_MAC_SDK = macosx10.12

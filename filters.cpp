@@ -153,12 +153,12 @@ by addCategoryFromData.
     models->setBackground(1, categoryBackground);
     models->setData(0, G::ColumnRole, G::CameraModelColumn);
 
-    titles = new QTreeWidgetItem(this);
-    titles->setText(0, "Title");
-    titles->setFont(0, categoryFont);
-    titles->setBackground(0, categoryBackground);
-    titles->setBackground(1, categoryBackground);
-    titles->setData(0, G::ColumnRole, G::TitleColumn);
+    lenses = new QTreeWidgetItem(this);
+    lenses->setText(0, "Lenses");
+    lenses->setFont(0, categoryFont);
+    lenses->setBackground(0, categoryBackground);
+    lenses->setBackground(1, categoryBackground);
+    lenses->setData(0, G::ColumnRole, G::LensColumn);
 
     focalLengths = new QTreeWidgetItem(this);
     focalLengths->setText(0, "FocalLengths");
@@ -166,6 +166,20 @@ by addCategoryFromData.
     focalLengths->setBackground(0, categoryBackground);
     focalLengths->setBackground(1, categoryBackground);
     focalLengths->setData(0, G::ColumnRole, G::FocalLengthColumn);
+
+    titles = new QTreeWidgetItem(this);
+    titles->setText(0, "Title");
+    titles->setFont(0, categoryFont);
+    titles->setBackground(0, categoryBackground);
+    titles->setBackground(1, categoryBackground);
+    titles->setData(0, G::ColumnRole, G::TitleColumn);
+
+    creators = new QTreeWidgetItem(this);
+    creators->setText(0, "Creators");
+    creators->setFont(0, categoryFont);
+    creators->setBackground(0, categoryBackground);
+    creators->setBackground(1, categoryBackground);
+    creators->setData(0, G::ColumnRole, G::CreatorColumn);
 }
 
 void Filters::removeChildrenDynamicFilters()
@@ -181,8 +195,10 @@ prevent duplication and orphans.
     }
     types->takeChildren();
     models->takeChildren();
-    titles->takeChildren();
+    lenses->takeChildren();
     focalLengths->takeChildren();
+    titles->takeChildren();
+    creators->takeChildren();
 }
 
 void Filters::checkPicks(bool check)
@@ -228,11 +244,11 @@ void Filters::collapseAllFilters()
 
 void Filters::addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category)
 {
-/* All the values for a category are collected into a QMap object in thumbView
+/* All the values for a category are collected into a QMap object in DataModel
 as the model data is added from the images in the folder.  The list is passed
 here, where unique values are extracted and added to the category.  For example,
 there could be multiple file types in the folder like JPG and NEF.  A QMap
-object is used to the items can be sorted by key in the same order as the
+object is used so the items can be sorted by key in the same order as the
 tableView.  This function should only be used for dynamic categories (see
 createDynamicFilters;
 */

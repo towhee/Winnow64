@@ -664,7 +664,7 @@ void CompareView::mousePressEvent(QMouseEvent *event)
     if (currentImagePath.isEmpty()) return;
 
     // prevent zooming when right click for context menu
-    if (event->button() == Qt::RightButton) return;//
+    if (event->button() == Qt::RightButton) return;
 
     isMouseDoubleClick = false;
     if (event->button() == Qt::LeftButton) {
@@ -719,6 +719,9 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     qDebug() << "CompareView::mouseReleaseEvent" << currentImagePath;
     #endif
     }
+    // prevent zooming when right click for context menu
+    if (event->button() == Qt::RightButton) return;
+
     isLeftMouseBtnPressed = false;
     if (isMouseDrag) {
         isMouseDrag = false;

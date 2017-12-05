@@ -19,6 +19,8 @@ ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent
     // do some formatting (color: yellow; font-size: 18px;) NOTE keep in sync with winnow.css
     QString spinBoxStyle = "QSpinBox {color: yellow; font-size: 18px; background-color: rgb(111,111,111); border: 1px solid gray; selection-background-color: darkgray; border-radius: 5px; padding-left: 4px;}QSpinBox:hover, QSpinBox:focus {border-color: silver;}QSpinBox:disabled {color: rgb(77,77,77);background-color: rgb(88,88,88);}QSpinBox::up-button, QSpinBox::down-button  {width: 0px;border-width: 0px;}";
     ui->zoomSB->setStyleSheet(spinBoxStyle);
+    QString labelStyle = "QLabel {color: yellow; font-size: 18px; border:none;}";
+    ui->pctLabel->setStyleSheet(labelStyle);
     ui->border->setStyleSheet("QFrame {border: 2px solid rgb(125,125,125); border-radius: 4px;}");
 
     // position in middle of main window and at the bottom of the central widget
@@ -65,7 +67,6 @@ triggers a signal back here, hence the variance check with the previous zoom.
     #endif
     }
     zoom *= 100;
-    qDebug() << "ImageView::zoomChange" << zoom;
     qreal variance = qFabs(1 - zoom / oldZoom);
     if (variance < .005) return;
 
@@ -88,7 +89,6 @@ to ZoomDlg, which converted to integer and signalled back here
     qDebug() << "ZoomDlg::on_zoomSB_valueChanged" << value;
     #endif
     }
-    qDebug() << "ZoomDlg::on_zoomSB_valueChanged" << value;
     emit zoom((qreal)value/100);
 }
 
@@ -151,12 +151,14 @@ void ZoomDlg::changeEvent(QEvent *event)
         if(this->isActiveWindow())
         {
             ui->border->setStyleSheet("QFrame {border: 2px solid rgb(125,125,125); border-radius: 4px;}");
+            setWindowOpacity(0.85);
         }
         else
         {
             // widget is now inactive
             qDebug() << "ZoomDlg lost focus";
             ui->border->setStyleSheet("QFrame {border: 2px solid rgb(85,85,85); border-radius: 4px;}");
+            setWindowOpacity(0.50);
         }
     }
     QDialog::changeEvent(event);

@@ -29,6 +29,8 @@ public:
     QTreeWidgetItem *types;
     QTreeWidgetItem *models;
     QTreeWidgetItem *titles;
+    QTreeWidgetItem *lenses;
+    QTreeWidgetItem *creators;
     QTreeWidgetItem *focalLengths;
 
     void createPredefinedFilters();

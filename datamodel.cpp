@@ -55,19 +55,21 @@ enum for roles and columns are in global.cpp
     setSortRole(Qt::EditRole);
     setHorizontalHeaderItem(G::PathColumn, new QStandardItem(QString("Icon")));
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem(QString("File Name")));
+    setHorizontalHeaderItem(G::PickedColumn, new QStandardItem("Pick"));
+    setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("   Label   "));
+    setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating"));
     setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type"));
     setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size"));
     setHorizontalHeaderItem(G::CreatedColumn, new QStandardItem("Created"));
     setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified"));
-    setHorizontalHeaderItem(G::PickedColumn, new QStandardItem("Pick"));
-    setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("   Label   "));
-    setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating"));
+    setHorizontalHeaderItem(G::CreatorColumn, new QStandardItem("Creator"));
     setHorizontalHeaderItem(G::MegaPixelsColumn, new QStandardItem("MPix"));
     setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions"));
     setHorizontalHeaderItem(G::ApertureColumn, new QStandardItem("Aperture"));
     setHorizontalHeaderItem(G::ShutterspeedColumn, new QStandardItem("Shutter"));
     setHorizontalHeaderItem(G::ISOColumn, new QStandardItem("ISO"));
     setHorizontalHeaderItem(G::CameraModelColumn, new QStandardItem("Model"));
+    setHorizontalHeaderItem(G::LensColumn, new QStandardItem("Lens"));
     setHorizontalHeaderItem(G::FocalLengthColumn, new QStandardItem("Focal length"));
     setHorizontalHeaderItem(G::TitleColumn, new QStandardItem("Title"));
 
@@ -240,8 +242,10 @@ which is created in MW, and in InfoView.
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
+    QMap<QVariant, QString> lensMap;
     QMap<QVariant, QString> titleMap;
     QMap<QVariant, QString> flMap;
+    QMap<QVariant, QString> creatorMap;
 
     for(int row = 0; row < rowCount(); row++) {
         QModelIndex idx = index(row, G::PathColumn);
@@ -259,11 +263,18 @@ which is created in MW, and in InfoView.
         int isoNum = metadata->getISONum(fPath);
         QString model = metadata->getModel(fPath);
         modelMap[model] = model;
+        QString lens = metadata->getLens(fPath);
+        lensMap[lens] = lens;
         QString fl = metadata->getFocalLength(fPath);
         int flNum = metadata->getFocalLengthNum(fPath);
         flMap[flNum] = fl;
         QString title = metadata->getTitle(fPath);
         titleMap[title] = title;
+        QString creator = metadata->getCreator(fPath);
+        creatorMap[creator] = creator;
+        QString copyright = metadata->getCopyright(fPath);
+        QString email = metadata->getEmail(fPath);
+        QString url = metadata->getUrl(fPath);
 
         setData(index(row, G::MegaPixelsColumn), mp);
         setData(index(row, G::DimensionsColumn), dim);
@@ -274,14 +285,21 @@ which is created in MW, and in InfoView.
         setData(index(row, G::ISOColumn), isoNum);
         setData(index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
         setData(index(row, G::CameraModelColumn), model);
+        setData(index(row, G::LensColumn), lens);
         setData(index(row, G::FocalLengthColumn), flNum);
         setData(index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::TitleColumn), title);
+        setData(index(row, G::CreatorColumn), creator);
+        setData(index(row, G::CopyrightColumn), copyright);
+        setData(index(row, G::EmailColumn), email);
+        setData(index(row, G::UrlColumn), url);
     }
     // build filter items
     filters->addCategoryFromData(modelMap, filters->models);
-    filters->addCategoryFromData(titleMap, filters->titles);
+    filters->addCategoryFromData(lensMap, filters->lenses);
     filters->addCategoryFromData(flMap, filters->focalLengths);
+    filters->addCategoryFromData(titleMap, filters->titles);
+    filters->addCategoryFromData(creatorMap, filters->creators);
 
 //    qDebug() << "add metadata elapsed time =" << t.restart();
 

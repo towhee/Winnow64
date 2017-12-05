@@ -169,6 +169,10 @@ void InfoView::updateInfo(const QString &fPath)
     val = metadata->getModel(fPath);
     addEntry(key, val);
 
+    key = tr("Lens");
+    val = metadata->getLens(fPath);
+    addEntry(key, val);
+
     key = tr("Shutter speed");
     val = metadata->getExposureTime(fPath);
     addEntry(key, val);
@@ -187,6 +191,22 @@ void InfoView::updateInfo(const QString &fPath)
 
     key = tr("Title");
     val = metadata->getTitle(fPath);
+    addEntry(key, val);
+
+    key = tr("Creator");
+    val = metadata->getCreator(fPath);
+    addEntry(key, val);
+
+    key = tr("Copyright");
+    val = metadata->getCopyright(fPath);
+    addEntry(key, val);
+
+    key = tr("Email");
+    val = metadata->getEmail(fPath);
+    addEntry(key, val);
+
+    key = tr("Url");
+    val = metadata->getUrl(fPath);
     addEntry(key, val);
 
     if (G::isThreadTrackingOn) qDebug()
