@@ -79,6 +79,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
         QWidget *wid = ui->infoFieldsTable->indexWidget(idx);
         QCheckBox *box= qobject_cast<QCheckBox*>(wid);
         box->setChecked(idx.data().toBool());
+//        box->resize(box->width(), box->height() - 4);  box height = 18
 //        box->setStyleSheet("QCheckBox::item { height: 10px;}");
         connect(box, SIGNAL(clicked(bool)), this, SLOT(on_infoField_changed()));
     }
@@ -87,7 +88,27 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->infoFieldsTable->horizontalHeader()->setStretchLastSection(true);
     ui->infoFieldsTable->verticalHeader()->setVisible(false);
     ui->infoFieldsTable->resizeColumnsToContents();
-    ui->infoFieldsTable->setStyleSheet("QTableView::item {border: 1px solid rgb(85,85,85);}");
+//    ui->infoFieldsTable->setStyleSheet("QTableView::item {height: 10px;}");  // no work
+    ui->infoFieldsTable->setStyleSheet("QTableView {border: 1px solid rgb(85,85,85);}");  // no work
+
+    // TableView fields to show
+    okTable = mw->tableView->ok;
+    ui->tableFieldsTable->setModel(okTable);
+    for(int row = 0; row < okTable->rowCount(); row++) {
+        QModelIndex idx = okTable->index(row,1);
+        ui->tableFieldsTable->setIndexWidget(idx, new QCheckBox);
+        // set state to match data model value
+        QWidget *wid1 = ui->tableFieldsTable->indexWidget(idx);
+        QCheckBox *box1 = qobject_cast<QCheckBox*>(wid1);
+        box1->setChecked(idx.data().toBool());
+//        box->setStyleSheet("QCheckBox::item { height: 10px;}");
+        connect(box1, SIGNAL(clicked(bool)), this, SLOT(on_tableField_changed()));
+    }
+    ui->tableFieldsTable->horizontalHeader()->moveSection(1, 0);
+    ui->tableFieldsTable->horizontalHeader()->setVisible(false);
+    ui->tableFieldsTable->horizontalHeader()->setStretchLastSection(true);
+    ui->tableFieldsTable->verticalHeader()->setVisible(false);
+    ui->tableFieldsTable->resizeColumnsToContents();
 
     okToUpdate = true;
 }
@@ -102,9 +123,42 @@ void Prefdlg::accept()
     QDialog::accept();
 }
 
-void Prefdlg::on_listWidget_currentItemChanged(QListWidgetItem *current)
-// sync preference category list and preference items in stacked form
+void Prefdlg::on_infoField_changed()
 {
+/*
+Update the datamodel okInfo (infoView->ok) to match ui->infoFieldsTable.  This
+will trigger a datachanged signal which in turn will fire the slot
+infoView->showOrHide(), which will show or hide each metadata item in the
+Metadata panel.
+*/
+    for(int row = 0; row < okInfo->rowCount(); row++) {
+        QModelIndex idx = okInfo->index(row,1);
+        QWidget *wid = ui->infoFieldsTable->indexWidget(idx);
+        QCheckBox *box = qobject_cast<QCheckBox*>(wid);
+        okInfo->setData(idx, box->isChecked());
+    }
+}
+
+void Prefdlg::on_tableField_changed()
+{
+/*
+Update the datamodel okInfo (tableView->ok) to match ui->infoFieldsTable.  This
+will trigger a datachanged signal which in turn will fire the slot
+tableView->showOrHide(), which will show or hide each column in the tableView.
+*/
+    for(int row = 0; row < okTable->rowCount(); row++) {
+        QModelIndex idx = okTable->index(row, 1);
+        QWidget *wid1 = ui->tableFieldsTable->indexWidget(idx);
+        QCheckBox *box1 = qobject_cast<QCheckBox*>(wid1);
+        okTable->setData(idx, box1->isChecked());
+    }
+}
+
+void Prefdlg::on_listWidget_currentItemChanged(QListWidgetItem *current)
+{
+/*
+Sync preference category list and preference items in stacked form
+*/
     ui->stackedWidget->setCurrentIndex(ui->listWidget->row(current));
     emit updatePage(ui->listWidget->currentRow());
 }
@@ -554,12 +608,3 @@ void Prefdlg::on_statusBarChk_clicked()
                                ui->statusBarChk->isChecked());
 }
 
-void Prefdlg::on_infoField_changed()
-{
-    for(int row = 0; row < okInfo->rowCount(); row++) {
-        QModelIndex idx = okInfo->index(row,1);
-        QWidget *wid = ui->infoFieldsTable->indexWidget(idx);
-        QCheckBox *box= qobject_cast<QCheckBox*>(wid);
-        okInfo->setData(idx, box->isChecked());
-    }
-}

@@ -1700,6 +1700,9 @@
             <height>16777215</height>
            </size>
           </property>
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
           <property name="frameShape">
            <enum>QFrame::StyledPanel</enum>
           </property>
@@ -1747,7 +1750,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QTableView" name="tableView">
+         <widget class="QTableView" name="tableFieldsTable">
           <property name="maximumSize">
            <size>
             <width>160</width>
@@ -1825,7 +1828,7 @@
      </item>
      <item>
       <property name="text">
-       <string>Visible fields</string>
+       <string>Show or hide fields</string>
       </property>
      </item>
     </widget>

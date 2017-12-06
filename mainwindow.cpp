@@ -3067,7 +3067,15 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-    metadata->readMetadata(true, thumbView->getCurrentFilename());
+    qDebug() << "tableView->ok";
+    for(int i = 0; i < dm->columnCount(); i++) {
+        QString field = tableView->ok->index(i, 0).data().toString();
+        bool showField = tableView->ok->index(i, 1).data().toBool();
+        qDebug() << field << showField;
+    }
+
+
+//    metadata->readMetadata(true, thumbView->getCurrentFilename());
 }
 
 void MW::about()
@@ -3730,6 +3738,26 @@ void MW::writeSettings()
     }
     setting->endGroup();
 
+    /* InfoView okToShow fields */
+    setting->beginGroup("InfoFields");
+    setting->remove("");
+    for(int row = 0; row < infoView->ok->rowCount(); row++) {
+        QString field = infoView->ok->index(row, 0).data().toString();
+        bool showField = infoView->ok->index(row, 1).data().toBool();
+        setting->setValue(field, showField);
+    }
+    setting->endGroup();
+
+    /* TableView okToShow fields */
+    setting->beginGroup("TableFields");
+    setting->remove("");
+    for(int row = 0; row < tableView->ok->rowCount(); row++) {
+        QString field = tableView->ok->index(row, 0).data().toString();
+        bool showField = tableView->ok->index(row, 1).data().toBool();
+        setting->setValue(field, showField);
+    }
+    setting->endGroup();
+
     /* External apps */
     setting->beginGroup("ExternalApps");
     setting->remove("");
@@ -3923,9 +3951,27 @@ Preferences are located in the prefdlg class and updated here.
         QString okField = okFields.at(i);
         bool okToShow = setting->value(okField).toBool();
         itemList = infoView->ok->findItems(okField);
-        int row = itemList[0]->row();
-        QModelIndex idx = infoView->ok->index(row, 1);
-        infoView->ok->setData(idx, okToShow, Qt::EditRole);
+        if (itemList.length()) {
+            int row = itemList[0]->row();
+            QModelIndex idx = infoView->ok->index(row, 1);
+            infoView->ok->setData(idx, okToShow, Qt::EditRole);
+        }
+    }
+    setting->endGroup();
+
+    /* read TableView okToShow fields */
+    setting->beginGroup("TableFields");
+    okFields = setting->childKeys();
+//    QList<QStandardItem *> itemList;
+    for (int i = 0; i < okFields.size(); ++i) {
+        QString okField = okFields.at(i);
+        bool okToShow = setting->value(okField).toBool();
+        itemList = tableView->ok->findItems(okField);
+        if (itemList.length()) {
+            int row = itemList[0]->row();
+            QModelIndex idx = tableView->ok->index(row, 1);
+            tableView->ok->setData(idx, okToShow, Qt::EditRole);
+        }
     }
     setting->endGroup();
 
@@ -4415,16 +4461,20 @@ void MW::tableDisplay()
     #endif
     }
     G::mode = "Table";
+
     // show tableView in central widget
     centralLayout->setCurrentIndex(TableTab);
+
     // if was in grid mode then restore thumbdock to previous state
     thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
-//    wasThumbDockVisibleBeforeGridInvoked = false;
-    thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
     setThumbDockVisibity();
+
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     tableView->scrollToCurrent();
+
+    // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
+
     // limit time spent intercepting paint events to call scrollToCurrent
 //    thumbView->readyToScroll = true;
 //    QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));

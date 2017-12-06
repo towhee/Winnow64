@@ -56,7 +56,7 @@ enum for roles and columns are in global.cpp
     setHorizontalHeaderItem(G::PathColumn, new QStandardItem(QString("Icon")));
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem(QString("File Name")));
     setHorizontalHeaderItem(G::PickedColumn, new QStandardItem("Pick"));
-    setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("   Label   "));
+    setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour"));
     setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating"));
     setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type"));
     setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size"));

@@ -3,6 +3,13 @@
 #include "infoview.h"
 #include "global.h"
 
+
+/*
+Should change infoModel to create list of metadata items plus show column.  Then
+update the metadata in the value column instead of the current clear and rebuild
+table strategy.
+*/
+
 InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTableView(parent)
 {
     {
@@ -64,21 +71,33 @@ void InfoView::tweakHeaders()
 
 void InfoView::createOkToShow()
 {
+/*
+Create a datamodel called (ok) to hold all metadata items in infoModel and a
+boolean flag indicating whether to show or hide each item. It would make sense
+to consolidate this into the infoModel datamodel, which is currently cleared
+every time a new image is selected.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "InfoView::createOkToShow";
+    #endif
+    }
     ok = new QStandardItemModel;
 
     ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
     ok->setHorizontalHeaderItem(1, new QStandardItem(QString("Show")));
 
-    ok->insertRow(0);  ok->setData(ok->index(0, 0), "File Name");
-    ok->insertRow(1);  ok->setData(ok->index(1, 0), "Location");
-    ok->insertRow(2);  ok->setData(ok->index(2, 0), "Size");
-    ok->insertRow(3);  ok->setData(ok->index(3, 0), "Date/Time");
-    ok->insertRow(4);  ok->setData(ok->index(4, 0), "Modified");
-    ok->insertRow(5);  ok->setData(ok->index(5, 0), "Dimensions");
-    ok->insertRow(6);  ok->setData(ok->index(6, 0), "Megapixels");
-    ok->insertRow(7);  ok->setData(ok->index(7, 0), "Model");
-    ok->insertRow(8);  ok->setData(ok->index(8, 0), "Lens");
-    ok->insertRow(9);  ok->setData(ok->index(9, 0), "Shutter speed");
+    // these fields must exactly match ones in updateInfo() !!
+    ok->insertRow(0);   ok->setData(ok->index(0, 0),  "File name");
+    ok->insertRow(1);   ok->setData(ok->index(1, 0),  "Location");
+    ok->insertRow(2);   ok->setData(ok->index(2, 0),  "Size");
+    ok->insertRow(3);   ok->setData(ok->index(3, 0),  "Date/Time");
+    ok->insertRow(4);   ok->setData(ok->index(4, 0),  "Modified");
+    ok->insertRow(5);   ok->setData(ok->index(5, 0),  "Dimensions");
+    ok->insertRow(6);   ok->setData(ok->index(6, 0),  "Megapixels");
+    ok->insertRow(7);   ok->setData(ok->index(7, 0),  "Model");
+    ok->insertRow(8);   ok->setData(ok->index(8, 0),  "Lens");
+    ok->insertRow(9);   ok->setData(ok->index(9, 0),  "Shutter speed");
     ok->insertRow(10);  ok->setData(ok->index(10, 0), "Aperture");
     ok->insertRow(11);  ok->setData(ok->index(11, 0), "ISO");
     ok->insertRow(12);  ok->setData(ok->index(12, 0), "Focal length");
@@ -97,6 +116,20 @@ void InfoView::createOkToShow()
 
 void InfoView::showOrHide()
 {
+/*
+Shows or hides each metadata item in the metadata panel based on the boolean
+flag in the datamodel ok.  The show/hide is set in the prefdlg, which is in
+sync with ok.
+
+When called, the function iterates through all the metadata items in ok and looks
+for the field in infoModel.  It then shows or hides the table row based on the
+ok show flag.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "InfoView::showOrHide()";
+    #endif
+    }
     for(int row = 0; row < ok->rowCount(); row++) {
         QString field = ok->index(row, 0).data().toString();
         bool showField = ok->index(row, 1).data().toBool();

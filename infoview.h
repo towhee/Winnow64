@@ -15,14 +15,13 @@ public:
     void updateInfo(const QString &imageFullPath);
     void clearInfo();
 
-//    QMap<QString, bool> *okToShow;
+    // datamodel for metadata to show or hide
     QStandardItemModel *ok;
 
 public slots:
-    // rgh context menu req'd??  Need to coppy??
+    void showOrHide();
 	void showInfoViewMenu(QPoint pt);
 	void copyEntry();
-    void showOrHide();
 
 private slots:
 

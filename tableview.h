@@ -14,6 +14,10 @@ public:
     TableView(DataModel *dm, ThumbView *thumbView);
     void scrollToCurrent();
     bool readyToScroll;
+    QStandardItemModel *ok;
+
+public slots:
+    void showOrHide();
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
@@ -22,6 +26,7 @@ protected:
 private:
     ThumbView *thumbView;
     DataModel *dm;
+    void createOkToShow();
 
 private slots:
 

@@ -81,11 +81,13 @@ private slots:
     void on_statusBarChk_clicked();
 
     void on_infoField_changed();
+    void on_tableField_changed();
 
 private:
 
     Ui::Prefdlg *ui;
     QStandardItemModel *okInfo;
+    QStandardItemModel *okTable;
     void accept();
     bool okToUpdate;
 
