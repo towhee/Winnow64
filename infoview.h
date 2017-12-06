@@ -22,6 +22,9 @@ public slots:
     // rgh context menu req'd??  Need to coppy??
 	void showInfoViewMenu(QPoint pt);
 	void copyEntry();
+    void showOrHide();
+
+private slots:
 
 protected:
 

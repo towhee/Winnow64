@@ -3067,32 +3067,6 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-//    gridView->setVisible(!gridView->isVisible());
-//    return;
-
-//    thumbView->setCurrentIndex(dm->sf->index(0, 0));
-//    return;
-
-//    QTreeWidgetItemIterator it(filters);
-//    while (*it) {
-//        QString parentName;
-//        int dataModelColumn;
-//        bool isMatch = false;
-//        if ((*it)->parent()) {
-//            parentName = (*it)->parent()->text(0);
-//            qDebug() << "item text" << (*it)->text(0)
-//                     << "item value" << (*it)->data(1, Qt::EditRole)
-//                     << "parent" << parentName
-//                     << "data column" << dataModelColumn
-//                     << "check state" << (*it)->checkState(0);
-//        }
-//        else {
-//            dataModelColumn = (*it)->data(0, G::ColumnRole).toInt();
-//        }
-//        ++it;
-//    }
-
-//    filters->iterateFilters();
     metadata->readMetadata(true, thumbView->getCurrentFilename());
 }
 
@@ -3747,14 +3721,14 @@ void MW::writeSettings()
 //    GData::appSettings->endGroup();
 
     /* InfoView okToShow fields */
-//    setting->beginGroup("InfoFields");
-//    setting->remove("");
-//    QMapIterator<QString, QString> eaIter(infoView->okToShow);
-//    while (eaIter.hasNext()) {
-//        eaIter.next();
-//        setting->setValue(eaIter.key(), eaIter.value());
-//    }
-//    setting->endGroup();
+    setting->beginGroup("InfoFields");
+    setting->remove("");
+    for(int row = 0; row < infoView->ok->rowCount(); row++) {
+        QString field = infoView->ok->index(row, 0).data().toString();
+        bool showField = infoView->ok->index(row, 1).data().toBool();
+        setting->setValue(field, showField);
+    }
+    setting->endGroup();
 
     /* External apps */
     setting->beginGroup("ExternalApps");
@@ -3941,13 +3915,19 @@ Preferences are located in the prefdlg class and updated here.
         allDocksLockAction->setChecked(true);
     wasThumbDockVisibleBeforeGridInvoked = setting->value("wasThumbDockVisibleBeforeGridInvoked").toBool();
 
-//    /* read InfoView okToShow fields */
-//    setting->beginGroup("InfoFields");
-//    QStringList ok = setting->childKeys();
-//    for (int i = 0; i < extApps.size(); ++i) {
-//        infoView->okToShow[ok.at(i)] = setting->value(ok.at(i)).toBool();
-//    }
-//    setting->endGroup();
+    /* read InfoView okToShow fields */
+    setting->beginGroup("InfoFields");
+    QStringList okFields = setting->childKeys();
+    QList<QStandardItem *> itemList;
+    for (int i = 0; i < okFields.size(); ++i) {
+        QString okField = okFields.at(i);
+        bool okToShow = setting->value(okField).toBool();
+        itemList = infoView->ok->findItems(okField);
+        int row = itemList[0]->row();
+        QModelIndex idx = infoView->ok->index(row, 1);
+        infoView->ok->setData(idx, okToShow, Qt::EditRole);
+    }
+    setting->endGroup();
 
     /* read external apps */
     setting->beginGroup("ExternalApps");
@@ -4240,7 +4220,6 @@ condition of actions sets the visibility of all window components. */
     setThumbDockLockMode();
     setShootingInfo();
     setCentralView();
-//    setThumbDockFeatures(dockWidgetArea(thumbDock));
     isUpdatingState = false;
 //    reportState();
 }

@@ -69,14 +69,25 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->thumbsChk->setChecked(mw->fullScreenDocks.isThumbs);
     ui->statusBarChk->setChecked(mw->fullScreenDocks.isStatusBar);
 
-    ui->InfoFieldsTable->setModel(mw->infoView->ok);
-    for(int row = 0; row < mw->infoView->ok->rowCount(); row++)
-        ui->InfoFieldsTable->setIndexWidget(mw->infoView->ok->index(row,1),new QCheckBox());
-    ui->InfoFieldsTable->horizontalHeader()->moveSection(1, 0);
-
-    ui->InfoFieldsTable->horizontalHeader()->setVisible(false);
-    ui->InfoFieldsTable->verticalHeader()->setVisible(false);
-    ui->InfoFieldsTable->resizeColumnsToContents();
+    // InfoView fields to show
+    okInfo = mw->infoView->ok;
+    ui->infoFieldsTable->setModel(okInfo);
+    for(int row = 0; row < okInfo->rowCount(); row++) {
+        QModelIndex idx = okInfo->index(row,1);
+        ui->infoFieldsTable->setIndexWidget(idx, new QCheckBox);
+        // set state to match data model value
+        QWidget *wid = ui->infoFieldsTable->indexWidget(idx);
+        QCheckBox *box= qobject_cast<QCheckBox*>(wid);
+        box->setChecked(idx.data().toBool());
+//        box->setStyleSheet("QCheckBox::item { height: 10px;}");
+        connect(box, SIGNAL(clicked(bool)), this, SLOT(on_infoField_changed()));
+    }
+    ui->infoFieldsTable->horizontalHeader()->moveSection(1, 0);
+    ui->infoFieldsTable->horizontalHeader()->setVisible(false);
+    ui->infoFieldsTable->horizontalHeader()->setStretchLastSection(true);
+    ui->infoFieldsTable->verticalHeader()->setVisible(false);
+    ui->infoFieldsTable->resizeColumnsToContents();
+    ui->infoFieldsTable->setStyleSheet("QTableView::item {border: 1px solid rgb(85,85,85);}");
 
     okToUpdate = true;
 }
@@ -543,3 +554,12 @@ void Prefdlg::on_statusBarChk_clicked()
                                ui->statusBarChk->isChecked());
 }
 
+void Prefdlg::on_infoField_changed()
+{
+    for(int row = 0; row < okInfo->rowCount(); row++) {
+        QModelIndex idx = okInfo->index(row,1);
+        QWidget *wid = ui->infoFieldsTable->indexWidget(idx);
+        QCheckBox *box= qobject_cast<QCheckBox*>(wid);
+        okInfo->setData(idx, box->isChecked());
+    }
+}

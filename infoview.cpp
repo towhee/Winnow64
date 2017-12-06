@@ -71,30 +71,43 @@ void InfoView::createOkToShow()
 
     ok->insertRow(0);  ok->setData(ok->index(0, 0), "File Name");
     ok->insertRow(1);  ok->setData(ok->index(1, 0), "Location");
+    ok->insertRow(2);  ok->setData(ok->index(2, 0), "Size");
+    ok->insertRow(3);  ok->setData(ok->index(3, 0), "Date/Time");
+    ok->insertRow(4);  ok->setData(ok->index(4, 0), "Modified");
+    ok->insertRow(5);  ok->setData(ok->index(5, 0), "Dimensions");
+    ok->insertRow(6);  ok->setData(ok->index(6, 0), "Megapixels");
+    ok->insertRow(7);  ok->setData(ok->index(7, 0), "Model");
+    ok->insertRow(8);  ok->setData(ok->index(8, 0), "Lens");
+    ok->insertRow(9);  ok->setData(ok->index(9, 0), "Shutter speed");
+    ok->insertRow(10);  ok->setData(ok->index(10, 0), "Aperture");
+    ok->insertRow(11);  ok->setData(ok->index(11, 0), "ISO");
+    ok->insertRow(12);  ok->setData(ok->index(12, 0), "Focal length");
+    ok->insertRow(13);  ok->setData(ok->index(13, 0), "Title");
+    ok->insertRow(14);  ok->setData(ok->index(14, 0), "Creator");
+    ok->insertRow(15);  ok->setData(ok->index(15, 0), "Copyright");
+    ok->insertRow(16);  ok->setData(ok->index(16, 0), "Email");
+    ok->insertRow(17);  ok->setData(ok->index(17, 0), "Url");
 
     for(int row = 0; row < ok->rowCount(); row++)
         ok->setData(ok->index(row, 1), true);
 
-//    okToShow = new QMap<QString, bool>;
-//    okToShow->insert("File Name", true);
-//    okToShow->insert("Location", true);
-//    okToShow->insert("Size", true);
-//    okToShow->insert("Date/Time", true);
-//    okToShow->insert("Modified", true);
-//    okToShow->insert("Dimensions", true);
-//    okToShow->insert("Megapixels", true);
-//    okToShow->insert("Model", true);
-//    okToShow->insert("Lens", true);
-//    okToShow->insert("Shutter speed", true);
-//    okToShow->insert("Aperture", true);
-//    okToShow->insert("ISO", true);
-//    okToShow->insert("Focal length", true);
-//    okToShow->insert("Title", true);
-//    okToShow->insert("Creator", true);
-//    okToShow->insert("Copyright", true);
-//    okToShow->insert("Email", true);
-//    okToShow->insert("Url", true);
+    connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
+            this, SLOT(showOrHide()));
+}
 
+void InfoView::showOrHide()
+{
+    for(int row = 0; row < ok->rowCount(); row++) {
+        QString field = ok->index(row, 0).data().toString();
+        bool showField = ok->index(row, 1).data().toBool();
+        int tRow;
+        for(tRow = 0; tRow < infoModel->rowCount(); tRow++) {
+            QString infoField = infoModel->index(tRow, 0).data().toString();
+            if (infoField == field) break;
+        }
+        if (showField) showRow(tRow);
+        else hideRow(tRow);
+    }
 }
 
 void InfoView::addEntry(QString &key, QString &value)
@@ -256,5 +269,6 @@ void InfoView::updateInfo(const QString &fPath)
 //    addEntry(key, val);
 
     tweakHeaders();
+    showOrHide();
 }
 

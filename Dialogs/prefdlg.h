@@ -80,9 +80,12 @@ private slots:
     void on_thumbsChk_clicked();
     void on_statusBarChk_clicked();
 
+    void on_infoField_changed();
+
 private:
 
     Ui::Prefdlg *ui;
+    QStandardItemModel *okInfo;
     void accept();
     bool okToUpdate;
 
