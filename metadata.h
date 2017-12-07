@@ -121,7 +121,7 @@ public:
     void setPick(const QString &imageFileName, bool choice);
     void clear();
     void clearMetadata();
-    bool loadImageMetadata(const QFileInfo &fileInfo);
+    bool loadImageMetadata(const QFileInfo &fileInfo, bool essential = true, bool nonEssential = true);
     bool isLoaded(const QString &imageFullPath);
     ulong getOffsetFullJPG(const QString &imageFullPath);
     ulong getLengthFullJPG(const QString &imageFullPath);
@@ -158,7 +158,10 @@ public:
     QString getErr(const QString &imageFileName);
     void setErr(const QString &imageFileName, const QString &err);
     QString getCopyFileNamePrefix(const QString &imageFileName);
-//    bool isMetadata(const QString &imageFileName);
+
+    bool okToReadXMP;
+    bool readEssentialMetadata;
+    bool readNonEssentialMetadata;
 
 private:
     QFile file;

@@ -1,7 +1,8 @@
+- Check cache logic - seems broken when get to end of folder and start back
+- Add current folder to bookmarks
+- Add zoom increment amount to preferences
 - Change infoView to combine infoModel and ok
 - Remember column order in tableView and workspace
-- ThumbDock thumb size forgotten after grid view sometimes
-- Add zoom increment amount to preferences
 - Check for Tif support in Qt
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Rotate selected images
@@ -26,6 +27,7 @@
 - Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: ThumbDock thumb size forgotten after grid view sometimes
 - Done: Add pref for fields to show in infoView and tableView
 - Done: Still problem with toggle zoom
 - Done: Get comment and copywrite metadata (for JPG)

@@ -1,4 +1,5 @@
 #include "thumbview.h"
+#include "mainwindow.h"
 
 /*  ThumbView Overview
 
@@ -95,6 +96,9 @@ ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
 
 */
 
+// Declare here as #include "mainwindow" causes errors if put in header
+MW *mw;
+
 ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     : QListView(parent)
 {
@@ -103,8 +107,11 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     qDebug() << "ThumbView::ThumbView";
     #endif
     }
-    mw = parent;
     this->dm = dm;
+
+    // this works because ThumbView is a friend class of MW
+    mw = qobject_cast<MW*>(parent);
+//    qDebug() << "mw->maxRecentFolders" << mw->maxRecentFolders;
 
     pickFilter = false;
 
@@ -124,6 +131,9 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     setUniformItemSizes(false);
     setMaximumHeight(100000);
     setContentsMargins(0,0,0,0);
+
+    horizontalScrollBar()->setObjectName("ThumbViewHorizontalScrollBar");
+    verticalScrollBar()->setObjectName("ThumbViewVerticalScrollBar");
 //    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 //    setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
 //    setBatchSize(2);
@@ -173,6 +183,8 @@ Helper function for in class calls where thumb parameters already defined
     qDebug() << "ThumbView::setThumbParameters";
     #endif
     }
+//    qDebug() << "ThumbView::setThumbParameters  "
+//             << "thumbWidth" << thumbWidth;
     setSpacing(thumbSpacing);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels);
@@ -195,6 +207,7 @@ void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
     labelFontSize = _labelFontSize;
     showThumbLabels = _showThumbLabels;
 
+//    qDebug() << "Calling setThumbParameters from ThumbView::setThumbParameters with args thumbWidth" << thumbWidth ;
     setThumbParameters(true);
 }
 
@@ -753,6 +766,7 @@ void ThumbView::thumbsEnlarge()
         if (thumbWidth > 160) thumbWidth = 160;
         if (thumbHeight > 160) thumbHeight = 160;
     }
+//    qDebug() << "Calling setThumbParameters from ThumbView::thumbsEnlarge thumbWidth" << thumbWidth ;
     setThumbParameters(true);
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -770,6 +784,7 @@ void ThumbView::thumbsShrink()
         if (thumbWidth < 40) thumbWidth = 40;
         if (thumbHeight < 40) thumbHeight = 40;
     }
+//    qDebug() << "Calling setThumbParameters from ThumbView::thumbsShrink thumbWidth" << thumbWidth ;
     setThumbParameters(true);
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -795,6 +810,7 @@ void ThumbView::resizeEvent(QResizeEvent *event)
     #endif
     }
 //    qDebug() << "ThumbView::resizeEvent";
+
     QListView::resizeEvent(event);
 }
 
@@ -836,6 +852,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
             }
             padding++;
         } while (improving);
+//        qDebug() << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
         setThumbParameters(thumbWidth, thumbHeight, thumbSpacing,
                            thumbPadding, labelFontSize, showThumbLabels);
         return;
@@ -865,6 +882,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
             }
             padding++;
         } while (improving);
+//        qDebug() << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
         setThumbParameters(false);
     }
     // no wrapping - must be bottom or top dock area
@@ -890,6 +908,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
                  << "thumbHeight" << thumbHeight;
 
         // change the thumbnail size in thumbViewDelegate
+//        qDebug() << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
         setThumbParameters(false);
     }
 }
@@ -936,6 +955,7 @@ thumbDock height.
              << "thumbWidth" << thumbView->thumbWidth;
              */
 
+//    qDebug() << "Calling setThumbParameters from ThumbView::thumbsFitTopOrBottom thumbWidth" << thumbWidth ;
     setThumbParameters(false);
 }
 
@@ -991,19 +1011,68 @@ void ThumbView::horizontalScrollBarRangeChanged()
     qDebug() << "ThumbView::horizontalScrollBarRangeChanged";
 }
 
+bool ThumbView::event(QEvent *event)
+{
+//    qDebug() << "ThumbView::event" << event;
+    QListView::event(event);
+}
+
 bool ThumbView::eventFilter(QObject *obj, QEvent *event)
 {
 /*
+The thumbView scrollBar paint events are monitored in conjunction with a timer
+to repeatedly attempt to scroll to the currentIndex of ThumbView after it has
+been hidden.  It takes quite a while for the scrollBars to be painted and there
+does not appear to be any signal or event when it is finished hence this cludge.
 
+Events are filtered from qApp here by an installEventFilter in the MW contructor
+to monitor the splitter resize of the thumbdock when it is docked horizontally.
+In this situation, as the vertical height of the thumbDock changes the size of
+the thumbnails is modified to fit the thumbDock by calling thumbsFitTopOrBottom.
+The mouse events determine when a mouseDrag operation is happening in combination
+with thumbDock resizing.  The thumbDock is referenced from the parent because
+thumbView is a friend class to MW.
 */
-//    qDebug() << "ThumbView events" << obj << event;
+
+    // filter to scrollTo after final scrollbar paint
+
     if(event->type() == QEvent::Paint
             && readyToScroll
-            && (obj->objectName() == "VerticalScrollBar"
-            || obj->objectName() == "HorizontalScrollBar"))
-    {
+            && (obj->objectName() == "ThumbViewVerticalScrollBar"
+            || obj->objectName() == "ThumbViewHorizontalScrollBar"))
         scrollToCurrent();
+
+    // events required to filter splitter resize of top/bottom thumbDock
+
+    if (event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *e = (QMouseEvent *)event;
+        if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
     }
+
+    if (event->type() == QEvent::MouseButtonRelease) {
+        QMouseEvent *e = (QMouseEvent *)event;
+        if (e->button() == Qt::LeftButton) {
+            isLeftMouseBtnPressed = false;
+            isMouseDrag = false;
+        }
+    }
+
+    if (event->type() == QEvent::MouseMove) {
+        if (isLeftMouseBtnPressed) isMouseDrag = true;
+    }
+
+    if ((obj == mw->thumbDock) &&
+            (event->type() == QEvent::Resize) &&
+            isMouseDrag)
+        thumbsFitTopOrBottom();
+
+    /* Filter and debug testing
+       if (event->type() == QEvent::Paint &&
+               (obj->objectName() == "ThumbViewHorScrollBar" ||
+                obj->objectName() == "WinnowStatusBar"))
+           qDebug() << "ThumbView event filter" << obj << event;
+   */
+
     return QWidget::eventFilter(obj, event);
 }
 
@@ -1030,10 +1099,15 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     qDebug() << "ThumbView::mousePressEvent";
     #endif
     }
+    bool dock = false;
+    qDebug() << "ThumbView::mousePressEvent   dock at bottom =" << dock;
     QListView::mousePressEvent(event);
 
     // capture mouse click position for imageView zoom/pan
     if (event->modifiers() == Qt::NoModifier) {
+        // reqd for thumb resizing
+        if (event->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
+
         QModelIndex idx = currentIndex();
         qDebug() << "Row =" << idx.row();
         QRect iconRect = idx.data(G::ThumbRectRole).toRect();
@@ -1051,6 +1125,22 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
             thumbClick(xPct, yPct);    //signal used in ThumbView::mousePressEvent
         }
     }
+}
+
+void ThumbView::mouseMoveEvent(QMouseEvent *event)
+{
+    qDebug() << event;
+    if (isLeftMouseBtnPressed) isMouseDrag = true;
+    QListView::mouseMoveEvent(event);
+}
+
+void ThumbView::mouseReleaseEvent(QMouseEvent *event)
+{
+    qDebug() << event;
+
+    isLeftMouseBtnPressed = false;
+    isMouseDrag = false;
+    QListView::mouseReleaseEvent(event);
 }
 
 //QModelIndex ThumbView::moveCursor(QAbstractItemView::CursorAction cursorAction,

@@ -618,6 +618,14 @@ ulong Metadata::find(QString s, ulong offset, ulong range)
 
 bool Metadata::readXMP(ulong offset)
 {
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::readXMP(ulong offset)";
+    #endif
+    }
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
 
     // skip over APP FFE1 bytes
@@ -627,7 +635,7 @@ bool Metadata::readXMP(ulong offset)
     bool xmpFound = false;
     QByteArray xmpByteArray;
 
-    qDebug() << "Starting readXMP";
+//    qDebug() << "Starting readXMP";
     // look for the start of XMP block = "<?xpacket begin" ...
     for(ulong i = 0; i < 200; i++) {
         uint byte = get1(file.read(1));
@@ -714,7 +722,7 @@ bool Metadata::readXMP(ulong offset)
                 count++;
                 xmp.readNext();
                 if(xmp.qualifiedName() == "" && !xmp.isWhitespace()) {
-                    qDebug() << xmp.qualifiedName() << xmp.text();
+//                    qDebug() << xmp.qualifiedName() << xmp.text();
                     creator = xmp.text().toString();
                     notFound = false;
                 }
@@ -729,7 +737,7 @@ bool Metadata::readXMP(ulong offset)
                 count++;
                 xmp.readNext();
                 if(xmp.qualifiedName() == "" && !xmp.isWhitespace()) {
-                    qDebug() << xmp.qualifiedName() << xmp.text();
+//                    qDebug() << xmp.qualifiedName() << xmp.text();
                     xmpTitle = xmp.text().toString();
                     notFound = false;
                 }
@@ -744,7 +752,7 @@ bool Metadata::readXMP(ulong offset)
                 count++;
                 xmp.readNext();
                 if(xmp.qualifiedName() == "" && !xmp.isWhitespace()) {
-                    qDebug() << xmp.qualifiedName() << xmp.text();
+//                    qDebug() << xmp.qualifiedName() << xmp.text();
                     copyright = xmp.text().toString();
                     notFound = false;
                 }
@@ -761,12 +769,12 @@ bool Metadata::readXMP(ulong offset)
             }
         }
     }
-    qDebug() << "Lens:" << lens;
-    qDebug() << "Creator" << creator;
-    qDebug() << "Copyright" << copyright;
-    qDebug() << "xmpTitle" << xmpTitle;
-    qDebug() << "email" << email;
-    qDebug() << "url" << url;
+//    qDebug() << "Lens:" << lens;
+//    qDebug() << "Creator" << creator;
+//    qDebug() << "Copyright" << copyright;
+//    qDebug() << "xmpTitle" << xmpTitle;
+//    qDebug() << "email" << email;
+//    qDebug() << "url" << url;
 
 
 }
@@ -1544,20 +1552,13 @@ bool Metadata::formatJPG()
     qDebug() << "Metadata::formatJPG";
     #endif
     }
-    //file.open in readMetadata
+    //file.open happens in readMetadata
     order = 0x4D4D;
     ulong startOffset = 0;
     if (get2(file.read(2)) != 0xFFD8) return 0;
 
     // build a hash of jpg segment offsets
     getSegments(file.pos());
-
-//    // get the APP segment - should be FFE1
-//    ulong appSegment = get2(file.read(2));
-//    // get length of first APP segment
-//    ulong appLength = get2(file.read(2));
-//    // get offset to next APP segment
-//    ulong nextAppOffset = appLength + file.pos() - 2;
 
     // read the EXIF data
     if (segmentHash.contains("EXIF")) file.seek(segmentHash["EXIF"]);
@@ -1581,97 +1582,115 @@ bool Metadata::formatJPG()
 
     // read IFD0
     ulong nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
-    // get Model
-    (ifdDataHash.contains(272))
-        ? model = getString(ifdDataHash.value(272).tagValue + startOffset,
-        ifdDataHash.value(272).tagCount)
-        : model = "";
-    // get DateTime
-    (ifdDataHash.contains(306))
-        ? dateTime = getString(ifdDataHash.value(306).tagValue + startOffset,
-        ifdDataHash.value(306).tagCount)
-        : dateTime = "";
-    // orientation
-    (ifdDataHash.contains(274))
-        ? orientation = ifdDataHash.value(274).tagValue
-        : orientation = 1;
-    // ifdEXIF offset
     ulong offsetEXIF;
     (ifdDataHash.contains(34665))
         ? offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset
         : offsetEXIF = 0;    // read IFD1 - unfortunately nothing of interest
 
-    // check for daisy chain next IFD
+    if (readNonEssentialMetadata) {
+        // IFD0: Orientation
+        (ifdDataHash.contains(274))
+            ? orientation = ifdDataHash.value(274).tagValue
+            : orientation = 1;
+
+        // IFD0: Model
+        (ifdDataHash.contains(272))
+            ? model = getString(ifdDataHash.value(272).tagValue + startOffset,
+            ifdDataHash.value(272).tagCount)
+            : model = "";
+
+        // IFD0: DateTime
+        (ifdDataHash.contains(306))
+            ? dateTime = getString(ifdDataHash.value(306).tagValue + startOffset,
+            ifdDataHash.value(306).tagCount)
+            : dateTime = "";
+    }
+
+    // read IFD1
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
-    (ifdDataHash.contains(513))
-        ? offsetThumbJPG = ifdDataHash.value(513).tagValue + 12
-        : offsetThumbJPG = 0;
-    (ifdDataHash.contains(514))
-        ? lengthThumbJPG = ifdDataHash.value(514).tagValue
-        : lengthThumbJPG = 0;
+
+    if (readEssentialMetadata) {
+        // IFD1: thumbnail offset and length
+        (ifdDataHash.contains(513))
+            ? offsetThumbJPG = ifdDataHash.value(513).tagValue + 12
+            : offsetThumbJPG = 0;
+        (ifdDataHash.contains(514))
+            ? lengthThumbJPG = ifdDataHash.value(514).tagValue
+            : lengthThumbJPG = 0;
+    }
 
     // read EXIF
     readIFD("IFD Exif", offsetEXIF);
-    // get shutter speed
-    if (ifdDataHash.contains(33434)) {
-        float x = getReal(ifdDataHash.value(33434).tagValue + startOffset);
-        if (x <1 ) {
-            uint t = qRound(1/x);
-            exposureTime = "1/" + QString::number(t);
-            exposureTimeNum = x;
+
+    if (readEssentialMetadata) {
+        // EXIF: width
+        (ifdDataHash.contains(40962))
+            ? width = ifdDataHash.value(40962).tagValue
+            : width = 0;
+        // EXIF: height
+        (ifdDataHash.contains(40963))
+            ? height = ifdDataHash.value(40963).tagValue
+            : height = 0;
+
+        if (!width || !height) getDimensions(0);
+    }
+
+    if (readNonEssentialMetadata) {
+        // EXIF: shutter speed
+        if (ifdDataHash.contains(33434)) {
+            float x = getReal(ifdDataHash.value(33434).tagValue + startOffset);
+            if (x <1 ) {
+                uint t = qRound(1/x);
+                exposureTime = "1/" + QString::number(t);
+                exposureTimeNum = x;
+            } else {
+                uint t = (uint)x;
+                exposureTime = QString::number(t);
+                exposureTimeNum = t;
+            }
+            exposureTime += " sec";
         } else {
-            uint t = (uint)x;
-            exposureTime = QString::number(t);
-            exposureTimeNum = t;
+            exposureTime = "";
         }
-        exposureTime += " sec";
-    } else {
-        exposureTime = "";
-    }
-    // aperture
-    if (ifdDataHash.contains(33437)) {
-        float x = getReal(ifdDataHash.value(33437).tagValue + startOffset);
-        aperture = "f/" + QString::number(x, 'f', 1);
-        apertureNum = qRound(x * 10) / 10.0;
-    } else {
-        aperture = "";
-        apertureNum = 0;
-    }
-    //ISO
-    if (ifdDataHash.contains(34855)) {
-        ulong x = ifdDataHash.value(34855).tagValue;
-        ISONum = static_cast<int>(x);
-        ISO = QString::number(ISONum);
-//        ISO = "ISO " + QString::number(x);
-    } else {
-        ISO = "";
-        ISONum = 0;
-    }
-    // focal length
-    if (ifdDataHash.contains(37386)) {
-        float x = getReal(ifdDataHash.value(37386).tagValue + startOffset);
-        focalLengthNum = static_cast<int>(x);
-        focalLength = QString::number(x, 'f', 0) + "mm";
-    } else {
-        focalLength = "";
-        focalLengthNum = 0;
-    }
-    // width
-    (ifdDataHash.contains(40962))
-        ? width = ifdDataHash.value(40962).tagValue
-        : width = 0;
-    // height
-    (ifdDataHash.contains(40963))
-        ? height = ifdDataHash.value(40963).tagValue
-        : height = 0;
 
-    if (!width || !height) getDimensions(0);
+        // EXIF: aperture
+        if (ifdDataHash.contains(33437)) {
+            float x = getReal(ifdDataHash.value(33437).tagValue + startOffset);
+            aperture = "f/" + QString::number(x, 'f', 1);
+            apertureNum = qRound(x * 10) / 10.0;
+        } else {
+            aperture = "";
+            apertureNum = 0;
+        }
 
-    // read next app segment
-    if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
+        // EXIF: ISO
+        if (ifdDataHash.contains(34855)) {
+            ulong x = ifdDataHash.value(34855).tagValue;
+            ISONum = static_cast<int>(x);
+            ISO = QString::number(ISONum);
+        } else {
+            ISO = "";
+            ISONum = 0;
+        }
+
+        // EXIF: focal length
+        if (ifdDataHash.contains(37386)) {
+            float x = getReal(ifdDataHash.value(37386).tagValue + startOffset);
+            focalLengthNum = static_cast<int>(x);
+            focalLength = QString::number(x, 'f', 0) + "mm";
+        } else {
+            focalLength = "";
+            focalLengthNum = 0;
+        }
+    }
+
+    // read IPTC
+    if (readNonEssentialMetadata)
+        if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
 
     // read XMP
-    if (segmentHash.contains("XMP")) readXMP(segmentHash["XMP"]);
+    if (okToReadXMP)
+        if (segmentHash.contains("XMP")) readXMP(segmentHash["XMP"]);
 
     if (report) reportMetadata();
     return true;
@@ -2160,7 +2179,7 @@ void Metadata::loadFromThread(QFileInfo fileInfo)
     loadImageMetadata(fileInfo);
 }
 
-bool Metadata::loadImageMetadata(const QFileInfo &fileInfo)
+bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, bool essential, bool nonEssential)
 {
     {
     #ifdef ISDEBUG
@@ -2169,6 +2188,12 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo)
     }
     // check if already loaded
     if (metaCache[fileInfo.filePath()].isLoaded) return true;
+
+    // For JPG, readNonEssentialMetadata adds 10-15% time to load
+    readEssentialMetadata = essential;
+    readNonEssentialMetadata = nonEssential;
+    // XMP is slow, anywhere from 400 - 1000% longer to load
+    okToReadXMP = false;
 
     bool result;
     QString shootingInfo;

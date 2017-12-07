@@ -218,7 +218,8 @@ bool DataModel::addFiles()
     }
 
     qDebug() << "Add files elapsed time =" << t.restart() << "ms for "
-             << dir->entryInfoList().size() << "files";
+             << dir->entryInfoList().size() << "files"
+             << "from" << dir->dirName();
     filters->addCategoryFromData(typesMap, filters->types);
     return true;
 }

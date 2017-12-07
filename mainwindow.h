@@ -38,6 +38,7 @@ class MW : public QMainWindow
     Q_OBJECT
 
     friend class Prefdlg;
+    friend class ThumbView;
 //    friend class ZoomDlg;
 
 public:
@@ -151,6 +152,8 @@ public:
         GridTab
     };
 
+    QString prevMode;
+
     bool isSlideShowActive;
     bool copyOp;
     int maxThumbSpaceHeight;
@@ -163,8 +166,10 @@ protected:
     void keyPressEvent(QKeyEvent *event);
     void keyReleaseEvent(QKeyEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);
-//    void mouseDoubleClickEvent(QMouseEvent *event);
+//    void mouseMoveEvent(QMouseEvent *event);
 //    void mousePressEvent(QMouseEvent *event);
+//    void mouseReleaseEvent(QMouseEvent *event);
+//    void mouseDoubleClickEvent(QMouseEvent *event);
 
 public slots:
     void folderSelectionChange();
@@ -562,6 +567,9 @@ private:
     bool isInitializing;
     bool isStressTest;
     bool hasGridBeenActivated;
+
+    bool isLeftMouseBtnPressed = false;
+    bool isMouseDrag = false;
 
     bool sortMenuUpdateToMatchTable = false;
 

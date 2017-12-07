@@ -2,12 +2,12 @@
 #define THUMBVIEW_H
 
 #include <QtWidgets>
+//#include "mainwindow.h"
 #include "global.h"
 #include "fstree.h"
 #include "metadata.h"
 #include "datamodel.h"
 #include "thumbviewdelegate.h"
-//#include "thumbviewfilter.h"
 #include "filters.h"
 
 //class Scrollbar : public QScrollBar
@@ -72,6 +72,7 @@ public:
     QString filterStr;
     bool pickFilter;
     bool readyToScroll;
+    bool scrollPaintFound;
 
 public slots:
     void horizontalScrollBarRangeChanged();
@@ -112,11 +113,13 @@ protected:
     void startDrag(Qt::DropActions);
     void wheelEvent(QWheelEvent *event);
     void mousePressEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
     void resizeEvent(QResizeEvent* event);
 //    QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction,
 //                           Qt::KeyboardModifiers modifiers);
-//    bool event(QEvent* event);      // key capture
+    bool event(QEvent* event);      // key capture
 
 private:
     void initLoad();
@@ -132,10 +135,11 @@ private:
     int getNextPick();
     int getPrevPick();
 
-    QWidget *mw;
     DataModel *dm;
-//    Scrollbar *scrollbar;
     QSize treeViewSize;
+
+    bool isLeftMouseBtnPressed;
+    bool isMouseDrag;
 
 signals:
     void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent

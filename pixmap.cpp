@@ -56,7 +56,7 @@ bool Pixmap::load(QString &fPath, QPixmap &pm)
             // Check if metadata has been cached for this image
             offsetFullJpg = metadata->getOffsetFullJPG(fPath);
             if (offsetFullJpg == 0) {
-                metadata->loadImageMetadata(fPath);
+                metadata->loadImageMetadata(fPath, true, false);
                 //try again
                 offsetFullJpg = metadata->getOffsetFullJPG(fPath);
             }

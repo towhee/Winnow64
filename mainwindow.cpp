@@ -47,6 +47,10 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     // platform specific settings
     setupPlatform();
 
+    // enable touchpad
+//    QCoreApplication::setAttribute(Qt::Window | Qt::AA_SynthesizeTouchForUnhandledMouseEvents);
+//    setWindowFlags( );
+
 /* Initialization process
 *******************************************************************************
 Persistant settings are saved between sessions using QSettings. Persistant
@@ -106,6 +110,7 @@ variables in MW (this class) and managed in the prefDlg class.
     if (!resetSettings && isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
+        qDebug() << "Restoring state - triggers setThumbDockFeatures prematurely";
         restoreState(setting->value("WindowState").toByteArray());
         isFirstTimeNoSettings = false;
     }
@@ -123,6 +128,9 @@ variables in MW (this class) and managed in the prefDlg class.
     else {
         defaultWorkspace();
     }
+
+    // send events to thumbView to monitorsplitter resize of thumbDock
+    qApp->installEventFilter(thumbView);
 
     // process the persistant folder if available
     folderSelectionChange();
@@ -168,6 +176,33 @@ void MW::resizeEvent(QResizeEvent *event)
     emit resizeMW(this->geometry(), centralWidget->geometry());
 }
 
+//void MW::mousePressEvent(QMouseEvent *event)
+//{
+//    qDebug() << event;
+////    if (event->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
+////    if (event->button() == Qt::LeftButton) qDebug() << "mousePressEvent  isLeftMouseBtnPressed" << isLeftMouseBtnPressed;
+////    QMainWindow::mousePressEvent(event);
+//}
+
+//void MW::mouseMoveEvent(QMouseEvent *event)
+//{
+//    qDebug() << event;
+//    if (isLeftMouseBtnPressed) {
+//        isMouseDrag = true;
+//    }
+//    QMainWindow::mouseReleaseEvent(event);
+////    event->ignore();
+//}
+
+//void MW::mouseReleaseEvent(QMouseEvent *event)
+//{
+//    qDebug() << event;
+
+//    isLeftMouseBtnPressed = false;
+//    isMouseDrag = false;
+//    QMainWindow::mouseReleaseEvent(event);
+//}
+
 void MW::keyPressEvent(QKeyEvent *event)
 {
 //    qDebug() << "MW::keyPressEvent" << event;
@@ -188,62 +223,36 @@ thumbdock is resized by the user when:
    - dock area is top or bottom
    - height change of dock changes
 */
-//    qDebug() << "MW events" << obj << event;
+//    qDebug() << "MW events" << obj << event
+//             << "isMouseDrag" << isMouseDrag;
+//    if (event->type() == QEvent::MouseButtonPress) {
+//        qDebug()  << obj << event;
+//    }
 
-    if (event->type() == QEvent::Resize && obj == thumbDock &&
-      !thumbDock->isFloating() && !isInitializing)
-    {
-        if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
-            dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
-        {
-            static int oldHt = 0;
-            QResizeEvent *resizeEvent = static_cast<QResizeEvent*>(event);
-            int newHt = resizeEvent->size().height();
-            if (newHt != oldHt) {
-//                qDebug() << "\nMW::eventFilter dock area"
-//                         << "thumbView->thumbHeight =" << thumbView->thumbHeight
-//                         << "oldHt =" << oldHt
-//                         << "newHt =" << newHt;
-                 thumbView->thumbsFitTopOrBottom();
-//                makeThumbsFitDockAfterResize();
-                 oldHt = newHt;
-             }
-        }
-    }
+//    qDebug() << "G::isMouseDragThumbView" << G::isMouseDragThumbView;
+
+//    if (event->type() == QEvent::Resize &&
+//            obj == thumbDock &&
+//            !thumbDock->isFloating() &&
+//            dockWidgetArea(thumbDock) != Qt::LeftDockWidgetArea &&
+//            dockWidgetArea(thumbDock) != Qt::RightDockWidgetArea &&
+////            G::isMouseDragThumbView &&
+//            !isInitializing)
+//    {
+//        static int oldHt = 0;
+//        QResizeEvent *resizeEvent = static_cast<QResizeEvent*>(event);
+//        int newHt = resizeEvent->size().height();
+//        if (newHt != oldHt) {
+//            thumbView->thumbsFitTopOrBottom();
+//            oldHt = newHt;
+//        }
+//    }
     return QWidget::eventFilter(obj, event);
 }
 
 bool MW::event(QEvent *event)
 {
-    /* Previous stuff no longer req'd
-    qDebug() << "MW::event" << event;
-
-     Consume arrow key events when updating imageView to prevent runon
-    if (event->type() == QEvent::ShortcutOverride && imageView->isBusy) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-        if (keyEvent->key() == Qt::Key_Right ||
-            keyEvent->key() == Qt::Key_Left ||
-            keyEvent->key() == Qt::Key_Down ||
-            keyEvent->key() == Qt::Key_Up)
-        {
-            keyEvent->accept();     // consume keystroke without doing anything
-            return true;
-        }
-
-    }
-
-    if (event->type() == QEvent::KeyRelease) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-
-         Grid or Loupe views
-        if (keyEvent->key() == Qt::Key_G ||
-            keyEvent->key() == Qt::Key_E ||
-            keyEvent->key() == Qt::Key_Return)
-        {
-//            qDebug() << "\n" << event << "\n";
-            thumbView->selectThumb(thumbView->currentIndex());
-        }
-         */
+//    qDebug() << event;
 
         // slideshow
     if (event->type() == QEvent::KeyRelease) {
@@ -346,7 +355,6 @@ void MW::folderSelectionChange()
     QString dirPath;
     QDir testDir;
     if (isInitializing) {
-//        isInitializing = false;
         if (rememberLastDir) {
             dirPath = lastDir;
             // is drive still available and valid?
@@ -407,7 +415,7 @@ void MW::folderSelectionChange()
 //        imageView->infoDropShadow->setVisible(false);
         imageView->emptyFolder();
         cacheLabel->setVisible(false);
-        isInitializing = false;
+//        isInitializing = false;
         return;
     }
 //    qDebug() << "???? thumbView->selectThumb(0)";
@@ -478,9 +486,13 @@ so scrollTo and delegate use of the current index must check the row.
     gridView->scrollToCurrent();
     tableView->scrollToCurrent();
 
+    gridView->hide();
+    gridView->setAttribute(Qt::WA_DontShowOnScreen, true);
+    gridView->setAttribute(Qt::WA_DontShowOnScreen, false);
+    gridView->show();
+
     // update imageView, use cache if image loaded, else read it from file
     QString fPath = current.data(G::FileNameRole).toString();
-    qDebug() << fPath;
     if (imageView->loadImage(current, fPath)) {
         if (G::isThreadTrackingOn) qDebug()
             << "MW::fileSelectionChange - loaded image file " << fPath;
@@ -1882,6 +1894,11 @@ void MW::createThumbView()
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
 
+    qDebug() << "MW::createThumbView"
+             << "thumbView->thumbWidth"
+             << thumbView->thumbWidth;
+
+
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
@@ -1910,6 +1927,10 @@ void MW::createGridView()
     gridView->thumbHeight = setting->value("thumbHeightGrid").toInt();
     gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
     gridView->showThumbLabels = setting->value("showThumbLabelsGrid").toBool();
+
+    qDebug() << "MW::createGridView"
+             << "gridView->thumbWidth"
+             << gridView->thumbWidth;
 
     // double mouse click fires displayLoupe
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -2119,6 +2140,7 @@ void MW::createStatusBar()
     qDebug() << "MW::createStatusBar";
     #endif
     }
+    statusBar()->setObjectName("WinnowStatusBar");
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
 
     cacheLabel = new QLabel();
@@ -2438,6 +2460,7 @@ void MW::setDockFitThumbs()
     qDebug() << "MW::setThumbsFit";
     #endif
     }
+//    qDebug() << "Calling setThumbDockFeatures from MW::setThumbsFit";
     setThumbDockFeatures(dockWidgetArea(thumbDock));
 }
 
@@ -2639,6 +2662,7 @@ workspace with a matching name to the action is used.
     qDebug() << "MW::invokeWorkspace";
     #endif
     }
+    qDebug() << "\n======================================= Invoke Workspace ============================================";
     if (fullScreenAction->isChecked() != w.isFullScreen)
         fullScreenAction->setChecked(w.isFullScreen);
     setFullNormal();
@@ -2674,6 +2698,7 @@ workspace with a matching name to the action is used.
     gridView->thumbPadding = w.thumbPaddingGrid,
     gridView->labelFontSize = w.labelFontSizeGrid,
     gridView->showThumbLabels = w.showThumbLabelsGrid;
+//    qDebug() << "Calling setThumbParameters from MW::invokeWorkspace thumbView.thumbWidth" << thumbView->thumbWidth << "gridView.thumbWidth" << gridView->thumbWidth;
     thumbView->setThumbParameters(true);
     gridView->setThumbParameters(false);
     // if in grid view override normal behavior if workspace invoked
@@ -2869,6 +2894,7 @@ app is "stranded" on secondary monitors that are not attached.
 //             << "***  thumbView Ht =" << thumbView->height()
 //             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
 //             << "thumbHeight =" << thumbView->thumbHeight << "\n";
+//    qDebug() << "Calling setThumbParameters from MW::defaultWorkspace thumbView.thumbWidth" << thumbView->thumbWidth << "gridView.thumbWidth" << gridView->thumbWidth;
     thumbView->setThumbParameters(true);
     gridView->setThumbParameters(false);
 
@@ -3281,6 +3307,9 @@ void MW::setShowImageCount()
     qDebug() << "MW::setShowImageCount";
     #endif
     }
+    if (!fsTree->isVisible()) {
+        popUp->showPopup(this, "Show image count is only available when the Folders Panel is visible", 1500, 0.75);
+    }
     bool isShow = showImageCountAction->isChecked();
     // req'd to resize columns
     fsTree->showImageCount = isShow;
@@ -3638,6 +3667,12 @@ void MW::clearThumbsFilter()
 
 void MW::writeSettings()
 {
+/*
+This function is called when exiting the application.
+
+Using QSetting, write the persistent application settings so they can be
+re-established when the application is re-opened.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::writeSettings";
@@ -4306,6 +4341,7 @@ have been resized.
     #endif
     }
 //    if(thumbDock->isVisible())
+//    qDebug() << "Calling setThumbDockFeatures from MW::setThumbDockHeight";
     setThumbDockFeatures(dockWidgetArea(thumbDock));
 }
 
@@ -4324,6 +4360,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     qDebug() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________";
     #endif
     }
+    qDebug() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________";
     if(isInitializing) {
         qDebug() << "Still initializing - cancel setThumbDockFeatures";
 //        return;
@@ -4407,6 +4444,7 @@ lack of notification when the QListView has finished painting itself.
     qDebug() << "MW::loupeDisplay";
     #endif
     }
+    qDebug() << "\n======================================= Loupe ===========================================";
     G::mode = "Loupe";
     // show imageView in the central widget
     centralLayout->setCurrentIndex(LoupeTab);
@@ -4415,10 +4453,20 @@ lack of notification when the QListView has finished painting itself.
         thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
     setThumbDockVisibity();
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+//    qDebug() << "MW::loupeDisplay calling  setThumbParameters  "
+//             << "thumbView->thumbWidth"
+//             << thumbView->thumbWidth
+//             << "gridView->thumbWidth"
+//             << gridView->thumbWidth
+//             << "isInitializing" << isInitializing;
+
     thumbView->setThumbParameters(true);
     // limit time spent intercepting paint events to call scrollToCurrent
     thumbView->readyToScroll = true;
     QTimer::singleShot(2000, this, SLOT(cancelNeedToScroll()));
+
+    prevMode = "Loupe";
 }
 
 void MW::gridDisplay()
@@ -4436,6 +4484,7 @@ lack of notification when the QListView has finished painting itself.
     qDebug() << "MW::gridDisplay";
     #endif
     }
+    qDebug() << "\n======================================= Grid ============================================";
     G::mode = "Grid";
     hasGridBeenActivated = true;
     // remember previous state of thumbDock so can recover if change mode
@@ -4446,11 +4495,21 @@ lack of notification when the QListView has finished painting itself.
     setThumbDockVisibity();
     // show tableView in central widget
     centralLayout->setCurrentIndex(GridTab);
+
+//    qDebug() << "MW::gridDisplay calling  setThumbParameters  "
+//             << "thumbView->thumbWidth"
+//             << thumbView->thumbWidth
+//             << "gridView->thumbWidth"
+//             << gridView->thumbWidth
+//             << "isInitializing" << isInitializing;;
+
     gridView->setThumbParameters(false);
     gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     // limit time spent intercepting paint events to call scrollToCurrent
     gridView->readyToScroll = true;
     QTimer::singleShot(2000, this, SLOT(cancelNeedToScroll()));
+
+    prevMode = "Grid";
 }
 
 void MW::tableDisplay()
@@ -4460,16 +4519,20 @@ void MW::tableDisplay()
     qDebug() << "MW::tableDisplay";
     #endif
     }
+    qDebug() << "\n======================================= Table===========================================";
     G::mode = "Table";
 
     // show tableView in central widget
     centralLayout->setCurrentIndex(TableTab);
 
     // if was in grid mode then restore thumbdock to previous state
-    thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
+    if (hasGridBeenActivated)
+        thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
     setThumbDockVisibity();
 
+    thumbView->setThumbParameters(true);
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
     tableView->scrollToCurrent();
 
     // if the zoom dialog was open then close it as no image visible to zoom
@@ -4487,6 +4550,7 @@ void MW::compareDisplay()
     qDebug() << "MW::compareDisplay";
     #endif
     }
+    qDebug() << "\n======================================= Compare =========================================";
     int n = thumbView->selectionModel()->selectedRows().count();
     if (n < 2) {
         popUp->showPopup(this, "Select more than one image to compare.", 1000, 0.75);
@@ -4500,6 +4564,7 @@ void MW::compareDisplay()
 
     // if was in grid mode make sure thumbDock is visible in compare mode
     if (G::mode == "Grid") {
+//        qDebug() << "Calling setThumbDockFeatures from MW::MW::compareDisplay";
         setThumbDockFeatures(dockWidgetArea(thumbDock));
         thumbDockVisibleAction->setChecked(true);
         setThumbDockVisibity();
@@ -4573,9 +4638,19 @@ void MW::setCentralView()
         isFirstTimeNoSettings = false;
         return;
     }
+    qDebug() << "MW::setCentralView  "
+             << "asLoupeAction->isChecked()" << asLoupeAction->isChecked()
+             << "asGridAction->isChecked()" << asGridAction->isChecked()
+             << "asTableAction->isChecked()" << asTableAction->isChecked()
+             << "asCompareAction->isChecked()" << asCompareAction->isChecked()
+             << "isInitializing" << isInitializing;;
+
     if (asLoupeAction->isChecked()) loupeDisplay();
     if (asGridAction->isChecked()) gridDisplay();
-    if (asTableAction->isChecked()) tableDisplay();
+    if (asTableAction->isChecked()) {
+//        loupeDisplay();
+        tableDisplay();
+    }
     if (asCompareAction->isChecked()) compareDisplay();
 }
 

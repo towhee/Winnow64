@@ -28,7 +28,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-    void loadImageMetadata(QFileInfo);
+    void loadImageMetadata(QFileInfo, bool, bool);
     void loadThumbCache();
     void loadImageCache();
     void updateIsRunning(bool);
