@@ -1,4 +1,3 @@
-- Check cache logic - seems broken when get to end of folder and start back
 - Add current folder to bookmarks
 - Add zoom increment amount to preferences
 - Change infoView to combine infoModel and ok
@@ -27,6 +26,7 @@
 - Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Check cache logic - seems broken when get to end of folder and start back
 - Done: ThumbDock thumb size forgotten after grid view sometimes
 - Done: Add pref for fields to show in infoView and tableView
 - Done: Still problem with toggle zoom

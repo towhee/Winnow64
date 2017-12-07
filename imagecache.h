@@ -63,7 +63,7 @@ private:
         float sizeMB;
     } cacheItem;
 
-    QList<CacheItem> cacheMgr, cacheMgrCopy;
+    QList<CacheItem> cacheItemList, cacheItemListCopy;
 
     struct Cache {
         uint key;                   // current image
@@ -90,6 +90,7 @@ private:
     QList<uint>toDecache;
 
     ulong getImCacheSize();         // add up total MB cached
+    bool cacheUpToDate();           // target range all cached
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
     bool nextToCache();             // find highest priority not cached
@@ -102,7 +103,7 @@ private:
     int pxStart(int key);           // start current position on statusbar
     int pxEnd(int key);             // end current position on statusbar
     QSize scalePreview(ulong w, ulong h);
-    void reportCacheManager(QString title);
+    void reportCache(QString title = "");
     void track(QString fPath, QString msg);
 };
 

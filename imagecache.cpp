@@ -136,7 +136,7 @@ void ImageCache::cacheStatus()
      * dependent on setTargetRange() being up-to-date  */
 
     // trap instance where cache out of sync
-    if(cache.totFiles-1 > cacheMgr.length()) return;
+    if(cache.totFiles-1 > cacheItemList.length()) return;
 
     // The app status bar is 25 pixels high.  Create a bitmap the height of the
     // status bar and cache.pxTotWidth wide the same color as the app status bar.
@@ -207,7 +207,7 @@ void ImageCache::cacheStatus()
 
     // show the rectangle for the current cache by painting each item that has been cached
     for (int i=0; i<cache.totFiles; ++i) {
-        if (cacheMgr.at(i).isCached) {
+        if (cacheItemList.at(i).isCached) {
             pnt.fillRect(QRect(pxStart(i), htOffset, cache.pxUnitWidth+1, ht), cacheCurrentColor);
         }
     }
@@ -258,9 +258,9 @@ ulong ImageCache::getImCacheSize()
     #endif
     }
     ulong cacheMB = 0;
-    for (int i=0; i<cacheMgr.size(); ++i) {
-        if (cacheMgr.at(i).isCached)
-            cacheMB += cacheMgr.at(i).sizeMB;
+    for (int i=0; i<cacheItemList.size(); ++i) {
+        if (cacheItemList.at(i).isCached)
+            cacheMB += cacheItemList.at(i).sizeMB;
     }
     return cacheMB;
 }
@@ -298,37 +298,37 @@ void ImageCache::setTargetRange()
     toDecache.clear();
 
     // sort by priority to make it easy to find highest priority not already cached
-    std::sort(cacheMgr.begin(), cacheMgr.end(), &ImageCache::prioritySort);
+    std::sort(cacheItemList.begin(), cacheItemList.end(), &ImageCache::prioritySort);
 
     // assign target files to cache and build a list by priority
     // also build a list of files to dechache
     uint sumMB = 0;
     for (int i=0; i<cache.totFiles; ++i) {
-        sumMB += cacheMgr.at(i).sizeMB;
+        sumMB += cacheItemList.at(i).sizeMB;
         if (sumMB < cache.maxMB) {
-            cacheMgr[i].isTarget = true;
-            if (!cacheMgr.at(i).isCached)
-                toCache.append(cacheMgr.at(i).origKey);
+            cacheItemList[i].isTarget = true;
+            if (!cacheItemList.at(i).isCached)
+                toCache.append(cacheItemList.at(i).origKey);
         }
         else {
-            cacheMgr[i].isTarget = false;
-            if (cacheMgr.at(i).isCached)
-                toDecache.prepend(cacheMgr.at(i).origKey);
+            cacheItemList[i].isTarget = false;
+            if (cacheItemList.at(i).isCached)
+                toDecache.prepend(cacheItemList.at(i).origKey);
         }
     }
 
     // return order to key - same as thumbnails
-    std::sort(cacheMgr.begin(), cacheMgr.end(), &ImageCache::keySort);
+    std::sort(cacheItemList.begin(), cacheItemList.end(), &ImageCache::keySort);
 
     int i;
     for (i=0; i<cache.totFiles; ++i) {
-        if (cacheMgr.at(i).isTarget) {
+        if (cacheItemList.at(i).isTarget) {
             cache.targetFirst = i;
             break;
         }
     }
     for (int j=i; j<cache.totFiles; ++j) {
-        if (!cacheMgr.at(j).isTarget) {
+        if (!cacheItemList.at(j).isTarget) {
             cache.targetLast = j-1;
             break;
         }
@@ -400,7 +400,7 @@ void ImageCache::setPriorities(int key)
     }
     int aheadPos;
     int behindPos;
-    cacheMgr[key].priority = 0;
+    cacheItemList[key].priority = 0;
     int i = 1;                  // start at 1 because current pos preset to zero
     if (cache.isForward) {
         aheadPos = key + 1;
@@ -409,13 +409,13 @@ void ImageCache::setPriorities(int key)
             for (int b = behindPos; b > behindPos - behindAmount; --b) {
                 for (int a = aheadPos; a < aheadPos + aheadAmount; ++a) {
                     if (a >= cache.totFiles) break;
-                    cacheMgr[a].priority = i++;
+                    cacheItemList[a].priority = i++;
                     if (i >= cache.totFiles) break;
                     if (a == aheadPos + aheadAmount - 1 && b < 0) aheadPos += aheadAmount;
                 }
                 aheadPos += aheadAmount;
                 if (b < 0) break;
-                cacheMgr[b].priority = i++;
+                cacheItemList[b].priority = i++;
                 if (i > cache.totFiles) break;
             }
             behindPos -= behindAmount;
@@ -428,14 +428,14 @@ void ImageCache::setPriorities(int key)
             for (int b = behindPos; b < behindPos + behindAmount; ++b) {
                 for (int a = aheadPos; a > aheadPos - aheadAmount; --a) {
                     if (a < 0) break;
-                    cacheMgr[a].priority = i++;
+                    cacheItemList[a].priority = i++;
                     if (i >= cache.totFiles) break;
                     if (a == aheadPos - aheadAmount + 1 && b > cache.totFiles)
                         aheadPos -= aheadAmount;
                 }
                 aheadPos -= aheadAmount;
                 if (b >= cache.totFiles) break;
-                cacheMgr[b].priority = i++;
+                cacheItemList[b].priority = i++;
                 if (i > cache.totFiles) break;
             }
             behindPos += behindAmount;
@@ -443,6 +443,14 @@ void ImageCache::setPriorities(int key)
     }
 
 //    reportCacheManager("setPriorities");
+}
+
+bool ImageCache::cacheUpToDate()
+{
+    for (int i = 0; i < cache.totFiles; ++i)
+        if (cacheItemList[i].isTarget)
+          if (cacheItemList[i].isCached == false) return false;
+    return true;
 }
 
 void ImageCache::checkForOrphans()
@@ -465,10 +473,10 @@ void ImageCache::checkForOrphans()
     #endif
     }
     for (int i = 0; i < cache.totFiles; ++i) {
-        if (imCache.contains(cacheMgr.at(i).fName)) {
-            if (!cacheMgr.at(i).isTarget) {
-                imCache.remove(cacheMgr.at(i).fName);
-                cacheMgr[i].isCached = false;
+        if (imCache.contains(cacheItemList.at(i).fName)) {
+            if (!cacheItemList.at(i).isTarget) {
+                imCache.remove(cacheItemList.at(i).fName);
+                cacheItemList[i].isCached = false;
 /*              qDebug() << "\n***********************************************************************"
                          << "\nREMOVED FROM IMAGE BUFFER:"
                          << cacheMgr.at(i).fName
@@ -479,7 +487,7 @@ void ImageCache::checkForOrphans()
     }
 }
 
-void ImageCache::reportCacheManager(QString title)
+void ImageCache::reportCache(QString title)
 {
     {
     #ifdef ISDEBUG
@@ -488,20 +496,21 @@ void ImageCache::reportCacheManager(QString title)
     }
     qDebug() << "\n" << title << "Key:" << cache.key
              <<  "cacheMB:" << cache.currMB
-             << "Wt:" << cache.wtAhead
+             << "Wt ahead:" << cache.wtAhead
+             << "Direction ahead:" << cache.isForward
              << "Total files:" << cache.totFiles;
     qDebug() << "\nIndex      Key      OrigKey    Priority         Target      Cached         SizeMB    Width      Height         FName";
     for (int i=0; i<cache.totFiles; ++i) {
         qDebug() << i << "\t"
-                 << cacheMgr.at(i).key << "\t"
-                 << cacheMgr.at(i).origKey << "\t"
-                 << cacheMgr.at(i).priority << "\t"
-                 << cacheMgr.at(i).isTarget << "\t"
-                 << cacheMgr.at(i).isCached << "\t"
-                 << cacheMgr.at(i).sizeMB << "\t"
-                 << metadata->getWidth(cacheMgr.at(i).fName) << "\t"
-                 << metadata->getHeight(cacheMgr.at(i).fName) << "\t"
-                 << cacheMgr.at(i).fName;
+                 << cacheItemList.at(i).key << "\t"
+                 << cacheItemList.at(i).origKey << "\t"
+                 << cacheItemList.at(i).priority << "\t"
+                 << cacheItemList.at(i).isTarget << "\t"
+                 << cacheItemList.at(i).isCached << "\t"
+                 << cacheItemList.at(i).sizeMB << "\t"
+                 << metadata->getWidth(cacheItemList.at(i).fName) << "\t"
+                 << metadata->getHeight(cacheItemList.at(i).fName) << "\t"
+                 << cacheItemList.at(i).fName;
     }
 }
 
@@ -572,7 +581,7 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
 //    }
 
     imCache.clear();
-    cacheMgr.clear();
+    cacheItemList.clear();
 
     // cache is a structure to hold cache management parameters
     cache.key = 0;
@@ -581,6 +590,7 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
     cache.isForward = true;
     // the amount of memory to allocate to the cache
     cache.maxMB = cacheSizeMB;
+    cache.maxMB = 100;       // testing overrride
     cache.isShowCacheStatus = isShowCacheStatus;
     cache.wtAhead = cacheWtAhead;
     // the width of the status progress bar representing all the images
@@ -618,7 +628,7 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
             h = p.height();
             cacheItem.sizeMB += (float)w * h / 256000;
         }
-        cacheMgr.append(cacheItem);
+        cacheItemList.append(cacheItem);
 
         folderMB += cacheItem.sizeMB;
     }
@@ -653,32 +663,39 @@ updated.  Image caching is reactivated.
     qDebug() << "ImageView::updateImageCache";
     #endif
     }
+    qDebug() << "\nImageView::updateImageCache";
 
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
 
 //    cache.key = imageList.indexOf(currentImageFullPath);
 
-    for (int i = 0; i < cacheMgr.count(); i++) {
-        if (cacheMgr.at(i).fName == currentImageFullPath) {
+    // get cache item key
+    for (int i = 0; i < cacheItemList.count(); i++) {
+        if (cacheItemList.at(i).fName == currentImageFullPath) {
             cache.key = i;
-            continue;
+            break;
         }
     }
 
+    qDebug() << "cache.key" << cache.key;
+
     if (cache.isShowCacheStatus) cacheStatus();
     cache.isForward = (cache.key >= cache.prevKey);
+    // reverse if at end of list
+    if (cache.key == cacheItemList.count() - 1) cache.isForward = false;
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();
 
-    // if all images are cached then we're all done
-    bool allImagesCached = true;
-    for (int i = 0; i < cache.totFiles; ++i)
-        allImagesCached = cacheMgr.at(i).isCached;
-    if(allImagesCached) return;
-
     setPriorities(cache.key);
     setTargetRange();
+
+    reportCache("Start of update: current image: " + currentImageFullPath);
+
+    // if all images are cached then we're done
+    qDebug() << "cacheUpToDate()" << cacheUpToDate();
+    if (cacheUpToDate()) return;
+
     start(IdlePriority);
 }
 
@@ -698,8 +715,8 @@ If there is filtering then the entire cache is reloaded.
 //    return;
     if (isRunning()) stopImageCache();
 
-    cacheMgrCopy = cacheMgr;
-    cacheMgr.clear();
+    cacheItemListCopy = cacheItemList;
+    cacheItemList.clear();
 
     int filterRowCount = filterFilePathList.count();
 
@@ -715,17 +732,17 @@ If there is filtering then the entire cache is reloaded.
                      << filterFilePathList[row]
                      << currentImageFullPath;
                      */
-            if(cacheMgrCopy.at(i).fName == filterFilePathList[row]) break;
+            if(cacheItemListCopy.at(i).fName == filterFilePathList[row]) break;
         }
         cacheItem.fName = filterFilePathList[row];
-        cacheItem.isCached = cacheMgrCopy.at(i).isCached;
-        cacheItem.isTarget = cacheMgrCopy.at(i).isTarget;
+        cacheItem.isCached = cacheItemListCopy.at(i).isCached;
+        cacheItem.isTarget = cacheItemListCopy.at(i).isTarget;
         cacheItem.key = row;
-        cacheItem.origKey = cacheMgrCopy.at(i).origKey;
-        cacheItem.priority = cacheMgrCopy.at(i).priority;
-        cacheItem.sizeMB = cacheMgrCopy.at(i).sizeMB;
+        cacheItem.origKey = cacheItemListCopy.at(i).origKey;
+        cacheItem.priority = cacheItemListCopy.at(i).priority;
+        cacheItem.sizeMB = cacheItemListCopy.at(i).sizeMB;
 
-        cacheMgr.append(cacheItem);
+        cacheItemList.append(cacheItem);
     }
 
 /*    qDebug() << "\nIndex      Key     OrigKey     Priority         Target     Cached          SizeMB    Width      Height        FName";
@@ -743,7 +760,7 @@ If there is filtering then the entire cache is reloaded.
     }
     */
 
-    cacheMgrCopy.clear();
+    cacheItemListCopy.clear();
 
     cache.totFiles = filterRowCount;
     cache.pxUnitWidth = (float)cache.pxTotWidth/filterRowCount;
@@ -781,7 +798,7 @@ void ImageCache::run()
         }
 
         // check can read image from file
-        QString fPath = cacheMgr.at(cache.toCacheKey).fName;
+        QString fPath = cacheItemList.at(cache.toCacheKey).fName;
         if (fPath == prevFileName) return;
         if (G::isThreadTrackingOn) track(fPath, "Reading");
         QPixmap pm;
@@ -792,17 +809,17 @@ void ImageCache::run()
 //            qDebug() << "load pixmap elapsed time =" << fPath << t.restart();
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
-            uint roomRqd = cacheMgr.at(cache.toCacheKey).sizeMB;
+            uint roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
             while (room < roomRqd) {
                 // make some room by removing lowest priority cached image
                 if(nextToDecache()) {
     //                qDebug() << "Removing" << cacheMgr[cache.toDecacheKey].fName
     //                         << "Before count" << imCache.count();
-                    imCache.remove(cacheMgr[cache.toDecacheKey].fName);
+                    imCache.remove(cacheItemList[cache.toDecacheKey].fName);
     //                qDebug() << "After count" << imCache.count();
                     if (!toDecache.isEmpty()) toDecache.removeFirst();
-                    cacheMgr[cache.toDecacheKey].isCached = false;
-                    cache.currMB -= cacheMgr[cache.toDecacheKey].sizeMB;
+                    cacheItemList[cache.toDecacheKey].isCached = false;
+                    cache.currMB -= cacheItemList[cache.toDecacheKey].sizeMB;
                     room = cache.maxMB - cache.currMB;
                 }
                 else break;
@@ -817,7 +834,7 @@ void ImageCache::run()
                 imCache.insert(fPath + "_Preview", pm.scaled(cache.previewSize,
                    Qt::KeepAspectRatio, Qt::FastTransformation));
             }
-            cacheMgr[cache.toCacheKey].isCached = true;
+            cacheItemList[cache.toCacheKey].isCached = true;
 //            mutex.unlock();
             if (!toCache.isEmpty()) toCache.removeFirst();
             cache.currMB = getImCacheSize();
