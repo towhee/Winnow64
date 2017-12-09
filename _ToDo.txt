@@ -1,22 +1,30 @@
-- Add current folder to bookmarks
-- Add zoom increment amount to preferences
+BUGS
+- Mode switching cursor/currentIndex scroll issues
+- Beef up deleted or renamed or corrupted folder
+- Not reading metadata from iphone jpgs
+PERFORMANCE
+- Separate thread to load XMP data after thumbnails loaded
+- Improve performance for large files (D850)
+- Improve producer/consumer image cache performance
+CODE IMPROVEMENTS
+- Possibly combine workspaces into an actionGroup so can check active workspace
+- Tweak panning in compareView (eliminate incremental scrolling)
 - Change infoView to combine infoModel and ok
+ENHANCEMENTS
+- Add current folder to bookmarks
+- Read/write XMP sidecars
+- Add zoom increment amount to preferences
 - Remember column order in tableView and workspace
-- Check for Tif support in Qt
+- Add Tif support
+- Add more raw file formats - DNG, Sony, Fuji, Panasonic
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Rotate selected images
 - Combine raw+jpg option
-- Possibly combine workspaces into an actionGroup so can check active workspace
 - Recent copy to folders in copy dialog
-- Not reading metadata from iphone jpgs
 - Disable menu "add bookmark" when folders not selected??
-- Improve performance for large files (D850)
-- Improve producer/consumer image cache performance
-- Tweak panning in compareView (eliminate incremental scrolling)
 - Tweak context menus
 - Initial setup (other than workspace)
 - Add preferences for info label
-- Add more raw file formats
 - Eject card
 - Open with another app
 - Run droplet
@@ -26,6 +34,9 @@
 - Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+- Done: Fixed logic for deleted or renamed or corrupted folder - still needs more love
+- Done: Added filter to full screen options in prefdlg
+- Done: If open in grid mode and switch to loupe right away thumbView not on current index
 - Done: Check cache logic - seems broken when get to end of folder and start back
 - Done: ThumbDock thumb size forgotten after grid view sometimes
 - Done: Add pref for fields to show in infoView and tableView

@@ -959,44 +959,31 @@ thumbDock height.
     setThumbParameters(false);
 }
 
-void ThumbView::scrollToCurrent()
+void ThumbView::scrollToCurrent(int row)
 {
+/*
+This is called from ThumbView::eventFilter after the eventFilter intercepts the
+last scrollbar paint event for the newly visible ThumbView.  ThumbView is newly
+visible because in a mode change in MW (ie from Grid to Loupe) thumbView was
+hidden in Grid but visible in Loupe.  Widgets will not respond while hidden so
+we must wait until ThumbView is visible and completely repainted.  It takes a
+while for the scrollbars to finish painting, so when that is done, we want to
+scroll to the current position.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::scrollToCurrent";
     #endif
     }
-    /*
-    int row = currentIndex().row();
-    int tRows = dm->sf->rowCount();
-    float location = (float)row / tRows;
-    qDebug() << row << tRows << location;
+/*
+    qDebug() << objectName() << "ThumbView::scrollToCurrent" << currentIndex();
+    qDebug() << "verticalScrollBar()->maximum():" << verticalScrollBar()->maximum();
+    qDebug() << "horizontalScrollBar()->maximum():" << horizontalScrollBar()->maximum(); */
 
-    int min = verticalScrollBar()->minimum();
-    int max = verticalScrollBar()->maximum();
-    int range = max - min;
-
-    int scrollLocation = min + location * range;
-    verticalScrollBar()->setValue(scrollLocation);
-
-    qDebug() << "Vertical scrollbar: min, max, range, loc"
-             << min << max << range << scrollLocation;
-
-     min = horizontalScrollBar()->minimum();
-     max = horizontalScrollBar()->maximum();
-     range = max - min;
-
-     scrollLocation = min + location * range;
-    horizontalScrollBar()->setValue(scrollLocation);
-
-    qDebug() << "Horizontal scrollbar: min, max, range, loc"
-             << min << max << range << scrollLocation;
-
-    return;
-    */
-
-//    qDebug() << "ThumbView::scrollToCurrent" << currentIndex();
-    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+    QModelIndex idx = dm->sf->index(row, 0);
+    scrollTo(idx, ScrollHint::PositionAtCenter);
+    qDebug() << "scrollToCurrent" << objectName() << currentIndex();
+    readyToScroll = false;
 }
 
 void ThumbView::updateLayout()
@@ -1011,38 +998,81 @@ void ThumbView::horizontalScrollBarRangeChanged()
     qDebug() << "ThumbView::horizontalScrollBarRangeChanged";
 }
 
-bool ThumbView::event(QEvent *event)
-{
-//    qDebug() << "ThumbView::event" << event;
-    QListView::event(event);
-}
-
 bool ThumbView::eventFilter(QObject *obj, QEvent *event)
 {
 /*
-The thumbView scrollBar paint events are monitored in conjunction with a timer
-to repeatedly attempt to scroll to the currentIndex of ThumbView after it has
-been hidden.  It takes quite a while for the scrollBars to be painted and there
-does not appear to be any signal or event when it is finished hence this cludge.
-
-Events are filtered from qApp here by an installEventFilter in the MW contructor
-to monitor the splitter resize of the thumbdock when it is docked horizontally.
-In this situation, as the vertical height of the thumbDock changes the size of
-the thumbnails is modified to fit the thumbDock by calling thumbsFitTopOrBottom.
-The mouse events determine when a mouseDrag operation is happening in combination
-with thumbDock resizing.  The thumbDock is referenced from the parent because
-thumbView is a friend class to MW.
+Note that in addition to the ThumbView events all the qApp events are sent here
+by an installEventFilter in the MW constructor. The qApp events are required to
+monitor mouse events outside ThumbView (the thumbDock splitter area in this
+case).
 */
 
-    // filter to scrollTo after final scrollbar paint
+    /* ThumbView is ready-to-go and can scroll to whereever we want:
+
+    When the user changes modes in MW (ie from Grid to Loupe) a ThumbView
+    instance (either thumbView or gridView) can change state from hidden to
+    visible. Since hidden widgets cannot be accessed we need to wait until the
+    ThumbView becomes visible and fully repainted before attempting to scroll
+    to the current index. The thumbView scrollBar paint events are monitored
+    and when the last paint event occurs the scrollToCurrent function is
+    called. The last paint event is identified by calculating the maximum of
+    the scrollbar range and comparing it to the paint event, which updates the
+    range each time. With larger datasets (ie 1500+ thumbs) it can take a
+    number of paint events and 100s of ms to complete. A flag is assigned
+    (readyToScroll) to show when we need to monitor so not checking needlessly.
+    Unfortunately there does not appear to be any signal or event when
+    ThumbView is finished hence this cludge.
+    */
 
     if(event->type() == QEvent::Paint
             && readyToScroll
             && (obj->objectName() == "ThumbViewVerticalScrollBar"
             || obj->objectName() == "ThumbViewHorizontalScrollBar"))
-        scrollToCurrent();
+    {
+//        qDebug() << "\nThumbView event filter" << objectName() << obj << event;
+        if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
+            int pageWidth = viewport()->width();
+            int thumbWidth = getThumbCellSize().width();
+            float thumbsPerPage = (float)pageWidth / thumbWidth;
+            int n = dm->sf->rowCount();
+            float pages = float(n) / thumbsPerPage - 1;
+            float hMax = pages * pageWidth;
+            if (horizontalScrollBar()->maximum() > 0.95 * hMax) {
+                qDebug() << "Event Filter sending row:" << mw->currentRow
+                         << "horizontalScrollBarMax" << horizontalScrollBar()->maximum()
+                         << "hMax" << hMax;
+                scrollToCurrent(mw->currentRow);
+            }
+        }
+         if (obj->objectName() == "ThumbViewVerticalScrollBar") {
+             int pageWidth = viewport()->width();
+             int pageHeight = viewport()->height();
+             int thumbWidth = getThumbCellSize().width();
+             int thumbHeight = getThumbCellSize().height();
+             float thumbsPerPage = pageWidth / thumbWidth * (float)pageHeight / thumbHeight;
+             int n = dm->sf->rowCount();
+             float pages = float(n) / thumbsPerPage - 1;
+             float vMax = pages * pageHeight;
+             if (verticalScrollBar()->maximum() > 0.95 * vMax){
+                 qDebug() << "Event Filter sending row:" << mw->currentRow
+                 << "verticalScrollBarMax" << verticalScrollBar()->maximum()
+                 << "vMax" << vMax;
+                 scrollToCurrent(mw->currentRow);
+             }
+         }
+    }
 
-    // events required to filter splitter resize of top/bottom thumbDock
+    /* A splitter resize of top/bottom thumbDock is happening:
+
+    Events are filtered from qApp here by an installEventFilter in the MW
+    contructor to monitor the splitter resize of the thumbdock when it is
+    docked horizontally. In this situation, as the vertical height of the
+    thumbDock changes the size of the thumbnails is modified to fit the
+    thumbDock by calling thumbsFitTopOrBottom. The mouse events determine when
+    a mouseDrag operation is happening in combination with thumbDock resizing.
+    The thumbDock is referenced from the parent because thumbView is a friend
+    class to MW.
+    */
 
     if (event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *e = (QMouseEvent *)event;
@@ -1073,7 +1103,7 @@ thumbView is a friend class to MW.
            qDebug() << "ThumbView event filter" << obj << event;
    */
 
-    return QWidget::eventFilter(obj, event);
+    return QListView::eventFilter(obj, event);
 }
 
 void ThumbView::wheelEvent(QWheelEvent *event)
@@ -1100,7 +1130,6 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     #endif
     }
     bool dock = false;
-    qDebug() << "ThumbView::mousePressEvent   dock at bottom =" << dock;
     QListView::mousePressEvent(event);
 
     // capture mouse click position for imageView zoom/pan
@@ -1109,7 +1138,7 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
         if (event->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
 
         QModelIndex idx = currentIndex();
-        qDebug() << "Row =" << idx.row();
+//        qDebug() << "Row =" << idx.row();
         QRect iconRect = idx.data(G::ThumbRectRole).toRect();
         QPoint mousePt = event->pos();
         QPoint iconPt = mousePt - iconRect.topLeft();
@@ -1136,8 +1165,6 @@ void ThumbView::mouseMoveEvent(QMouseEvent *event)
 
 void ThumbView::mouseReleaseEvent(QMouseEvent *event)
 {
-    qDebug() << event;
-
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
     QListView::mouseReleaseEvent(event);

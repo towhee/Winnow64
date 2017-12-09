@@ -76,7 +76,7 @@ public:
 
 public slots:
     void horizontalScrollBarRangeChanged();
-    void scrollToCurrent();
+    void scrollToCurrent(int row);
     void thumbsEnlarge();
     void thumbsShrink();
     void thumbsFit(Qt::DockWidgetArea area);
@@ -119,7 +119,7 @@ protected:
     void resizeEvent(QResizeEvent* event);
 //    QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction,
 //                           Qt::KeyboardModifiers modifiers);
-    bool event(QEvent* event);      // key capture
+//    bool event(QEvent* event);      // key capture
 
 private:
     void initLoad();

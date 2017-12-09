@@ -336,7 +336,7 @@
    <widget class="QLineEdit" name="descriptionLineEdit">
     <property name="geometry">
      <rect>
-      <x>135</x>
+      <x>145</x>
       <y>99</y>
       <width>361</width>
       <height>20</height>
@@ -356,7 +356,7 @@
      <rect>
       <x>20</x>
       <y>100</y>
-      <width>101</width>
+      <width>121</width>
       <height>20</height>
      </rect>
     </property>
@@ -377,7 +377,7 @@
      <rect>
       <x>20</x>
       <y>140</y>
-      <width>111</width>
+      <width>121</width>
       <height>16</height>
      </rect>
     </property>
@@ -393,7 +393,7 @@
    <widget class="QSpinBox" name="spinBoxStartNumber">
     <property name="geometry">
      <rect>
-      <x>140</x>
+      <x>150</x>
       <y>137</y>
       <width>61</width>
       <height>22</height>

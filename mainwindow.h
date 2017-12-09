@@ -137,6 +137,7 @@ public:
     struct FullScreenDocks {
         bool isFolders;
         bool isFavs;
+        bool isFilters;
         bool isMetadata;
         bool isThumbs;
         bool isStatusBar;
@@ -153,6 +154,8 @@ public:
     };
 
     QString prevMode;
+    int currentRow;             // the current row in fileSelection
+    bool modeChangeJustHappened;
 
     bool isSlideShowActive;
     bool copyOp;
@@ -244,7 +247,8 @@ private slots:
     void setTrackpadScroll(bool trackpadScroll);
     void setIngestRootFolder(QString rootFolder);
     void setSlideShowParameters(int delay, bool isRandom);
-    void setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs, bool isStatusBar);
+    void setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
+                            bool isMetadata, bool isThumbs, bool isStatusBar);
     void slideShow();
     void nextSlide();
     void setCacheParameters(int size, bool show, int width, int wtAhead,

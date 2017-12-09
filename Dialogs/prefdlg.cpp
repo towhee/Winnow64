@@ -65,6 +65,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     // full screen
     ui->foldersChk->setChecked(mw->fullScreenDocks.isFolders);
     ui->favsChk->setChecked(mw->fullScreenDocks.isFavs);
+    ui->filtersChk->setChecked(mw->fullScreenDocks.isFilters);
     ui->metadataChk->setChecked(mw->fullScreenDocks.isMetadata);
     ui->thumbsChk->setChecked(mw->fullScreenDocks.isThumbs);
     ui->statusBarChk->setChecked(mw->fullScreenDocks.isStatusBar);
@@ -574,37 +575,62 @@ void Prefdlg::on_fontSizeSlider_2_valueChanged(int value)
 // full screen preferences
 void Prefdlg::on_foldersChk_clicked()
 {
-    emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
-                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked(),
+    emit updateFullScreenDocks(ui->foldersChk->isChecked(),
+                               ui->favsChk->isChecked(),
+                               ui->filtersChk->isChecked(),
+                               ui->metadataChk->isChecked(),
+                               ui->thumbsChk->isChecked(),
                                ui->statusBarChk->isChecked());
 }
 
 void Prefdlg::on_favsChk_clicked()
 {
-    emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
-                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked(),
+    emit updateFullScreenDocks(ui->foldersChk->isChecked(),
+                               ui->favsChk->isChecked(),
+                               ui->filtersChk->isChecked(),
+                               ui->metadataChk->isChecked(),
+                               ui->thumbsChk->isChecked(),
+                               ui->statusBarChk->isChecked());
+}
+
+void Prefdlg::on_filtersChk_clicked()
+{
+    emit updateFullScreenDocks(ui->foldersChk->isChecked(),
+                               ui->favsChk->isChecked(),
+                               ui->filtersChk->isChecked(),
+                               ui->metadataChk->isChecked(),
+                               ui->thumbsChk->isChecked(),
                                ui->statusBarChk->isChecked());
 }
 
 void Prefdlg::on_metadataChk_clicked()
 {
-    emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
-                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked(),
+    emit updateFullScreenDocks(ui->foldersChk->isChecked(),
+                               ui->favsChk->isChecked(),
+                               ui->filtersChk->isChecked(),
+                               ui->metadataChk->isChecked(),
+                               ui->thumbsChk->isChecked(),
                                ui->statusBarChk->isChecked());
 }
 
 void Prefdlg::on_thumbsChk_clicked()
 {
-    emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
-                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked(),
+    emit updateFullScreenDocks(ui->foldersChk->isChecked(),
+                               ui->favsChk->isChecked(),
+                               ui->filtersChk->isChecked(),
+                               ui->metadataChk->isChecked(),
+                               ui->thumbsChk->isChecked(),
                                ui->statusBarChk->isChecked());
 }
 
 
 void Prefdlg::on_statusBarChk_clicked()
 {
-    emit updateFullScreenDocks(ui->foldersChk->isChecked(), ui->favsChk->isChecked(),
-                               ui->metadataChk->isChecked(), ui->thumbsChk->isChecked(),
+    emit updateFullScreenDocks(ui->foldersChk->isChecked(),
+                               ui->favsChk->isChecked(),
+                               ui->filtersChk->isChecked(),
+                               ui->metadataChk->isChecked(),
+                               ui->thumbsChk->isChecked(),
                                ui->statusBarChk->isChecked());
 }
 

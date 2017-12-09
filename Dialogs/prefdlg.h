@@ -30,7 +30,7 @@ signals:
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
             int cacheStatusWidth, int cacheWtAhead, bool usePreview,
                                int previewWidth, int previewHeight, bool activity);
-    void updateFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata,
+    void updateFullScreenDocks(bool isFolders, bool isFavs, bool isFilters, bool isMetadata,
                                bool isThumbs, bool isStatusBar);
 
 private slots:
@@ -76,6 +76,7 @@ private slots:
     void on_listWidget_currentItemChanged(QListWidgetItem *current);
     void on_foldersChk_clicked();
     void on_favsChk_clicked();
+    void on_filtersChk_clicked();
     void on_metadataChk_clicked();
     void on_thumbsChk_clicked();
     void on_statusBarChk_clicked();

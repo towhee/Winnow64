@@ -207,6 +207,10 @@ void MW::keyPressEvent(QKeyEvent *event)
 {
 //    qDebug() << "MW::keyPressEvent" << event;
 //    QMainWindow::keyPressEvent(event);
+    if (event->key() == Qt::Key_X) {
+//        thumbView->scrollToCurrent();
+        qDebug() << "keypress x event";
+    }
 }
 
 void MW::keyReleaseEvent(QKeyEvent *event)
@@ -357,15 +361,25 @@ void MW::folderSelectionChange()
     if (isInitializing) {
         if (rememberLastDir) {
             dirPath = lastDir;
+            qDebug() << "Last folder opened was" << lastDir;
             // is drive still available and valid?
             QStorageInfo testStorage;
-            testStorage.setPath(dirPath);
-            if (!testStorage.isValid()) return;
+            // is folder still available and valid?
             testDir.setPath(dirPath);
-            // deleted or renamed or corrupted folder
-            if (!testDir.exists() || !testDir.isReadable()) return;
-            fsTree->setCurrentIndex(fsTree->fsModel->index(dirPath));
-        }
+            if (testDir.exists() && testDir.isReadable())
+                fsTree->setCurrentIndex(fsTree->fsModel->index(dirPath));
+            else {
+                isInitializing = false;
+                qDebug() << "deleted or renamed or corrupted folder";
+                qDebug() << "testStorage.isValid()" << testStorage.isValid();
+                qDebug() << "testDir.exists()" << testDir.exists();
+                qDebug() << "testDir.isReadable()" << testDir.isReadable();
+            /*  QString msg = "Attempted to load the last folder opened called "
+                        + lastDir + ".  It appears to be missing.";
+                QMessageBox::information(this, "Oops", msg, QMessageBox::Ok);
+                */
+                return;
+            }
     }
     else {
         dirPath = getSelectedPath();
@@ -465,41 +479,51 @@ so scrollTo and delegate use of the current index must check the row.
     qDebug() << "\n**********************************MW::fileSelectionChange";
     #endif
     }
+
     // if starting program, set first image to display
     if(previous.row() == -1) thumbView->selectThumb(0);
-
 
     // user clicks outside thumb but inside treeView dock
     QModelIndexList selected = selectionModel->selectedIndexes();
     if (selected.isEmpty()) return;
 
+    if (modeChangeJustHappened) {
+        modeChangeJustHappened = false;
+        thumbView->setCurrentIndex(previous);
+    }
+//    thumbView->setCurrentIndex(current);
+    currentRow = current.row();
+    qDebug() << "fileSelectionChange  mode =" << G::mode
+             << "prevMode =" << prevMode
+             << "currentRow = " << currentRow
+             << "previousRow = " << previous.row()
+             << current;
+
     // update delegates so they can highlight the current item
-    int currentRow = current.row();
     thumbView->thumbViewDelegate->currentRow = currentRow;
     gridView->thumbViewDelegate->currentRow = currentRow;
 
-    // limit time polling scrollbar paint events (MW::eventFilter)
-    thumbView->readyToScroll = true;
-    QTimer::singleShot(2000, this, SLOT(cancelNeedToScroll()));
-
     // scroll views to center on currentIndex
-    gridView->scrollToCurrent();
-    tableView->scrollToCurrent();
+//    thumbView->setAutoScroll(false);  // no effect
+    if (thumbView->isVisible()) thumbView->scrollTo(current, QAbstractItemView::ScrollHint::EnsureVisible);
+    if (gridView->isVisible()) gridView->scrollTo(current, QAbstractItemView::ScrollHint::EnsureVisible);
+    if (tableView->isVisible()) tableView->scrollTo(current, QAbstractItemView::ScrollHint::EnsureVisible);
 
-    gridView->hide();
-    gridView->setAttribute(Qt::WA_DontShowOnScreen, true);
-    gridView->setAttribute(Qt::WA_DontShowOnScreen, false);
-    gridView->show();
+//    if (thumbView->isVisible()) thumbView->scrollToCurrent(currentRow);
+
+    QString fPath = current.data(G::FileNameRole).toString();
+    infoView->updateInfo(fPath);
+    updateStatus(true);
 
     // update imageView, use cache if image loaded, else read it from file
-    QString fPath = current.data(G::FileNameRole).toString();
-    if (imageView->loadImage(current, fPath)) {
-        if (G::isThreadTrackingOn) qDebug()
-            << "MW::fileSelectionChange - loaded image file " << fPath;
-        updatePick();
-        updateRating();
-        updateColorClass();
-        infoView->updateInfo(fPath);
+    if (G::mode == "Loupe") {
+        if (imageView->loadImage(current, fPath)) {
+            if (G::isThreadTrackingOn) qDebug()
+                << "MW::fileSelectionChange - loaded image file " << fPath;
+            updatePick();
+            updateRating();
+            updateColorClass();
+        }
     }
 
     /* If the metadataCache is finished then update the imageCache,
@@ -1883,7 +1907,7 @@ void MW::createThumbView()
     }
     thumbView = new ThumbView(this, dm);
     thumbView->setObjectName("ThumbView");
-    // set here, as gridView, which is another ThumbView object, is different
+    // set here, as gridView, which is another ThumbView instance, is different
 //    thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
     // loadSettings has not run yet (dependencies, but QSettings has been opened
@@ -2256,7 +2280,9 @@ QString fileSym = "📷";
         zoomPct = QString::number(qRound(zoom*100)) + "% zoom";
 
         QString pickedSoFar = pickMemSize + " picked";
-        base = fileCount + spacer + zoomPct + spacer + pickedSoFar + spacer;;
+        base = fileCount;
+        if (G::mode == "Loupe" || G::mode == "Compare") base += (spacer + zoomPct);
+        base += (spacer + pickedSoFar + spacer);
     }
 
     status = " " + base + s;
@@ -2451,6 +2477,8 @@ void MW::cancelNeedToScroll()
     thumbView->readyToScroll = false;
     gridView->readyToScroll = false;
     tableView->readyToScroll = false;
+//    QApplication::postEvent(this, new QKeyEvent(QEvent::KeyPress, Qt::Key_X, Qt::NoModifier, "X"));
+    qDebug() << "MW::cancelNeedToScroll";
 }
 
 void MW::setDockFitThumbs()
@@ -3093,12 +3121,8 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-    qDebug() << "tableView->ok";
-    for(int i = 0; i < dm->columnCount(); i++) {
-        QString field = tableView->ok->index(i, 0).data().toString();
-        bool showField = tableView->ok->index(i, 1).data().toBool();
-        qDebug() << field << showField;
-    }
+    qDebug() << "getThumbCellSize " << thumbView->getThumbCellSize();
+    qDebug() << "getThumbSpaceMax" << thumbView->getThumbSpaceMax();
 
 
 //    metadata->readMetadata(true, thumbView->getCurrentFilename());
@@ -3284,8 +3308,8 @@ void MW::preferences()
             this, SLOT(setSlideShowParameters(int, bool)));
     connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, bool, int, int, bool)),
             this, SLOT(setCacheParameters(int, bool, int, int, bool, int, int, bool)));
-    connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool)),
-            this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool)));
+    connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool,bool)),
+            this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool,bool)));
     prefdlg->exec();
 }
 
@@ -3371,7 +3395,8 @@ void MW::setIngestRootFolder(QString rootFolder)
     ingestRootFolder = rootFolder;
 }
 
-void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool isThumbs, bool isStatusBar)
+void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
+                            bool isMetadata, bool isThumbs, bool isStatusBar)
 {
     {
     #ifdef ISDEBUG
@@ -3380,6 +3405,7 @@ void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isMetadata, bool i
     }
     fullScreenDocks.isFolders = isFolders;
     fullScreenDocks.isFavs = isFavs;
+    fullScreenDocks.isFilters = isFilters;
     fullScreenDocks.isMetadata = isMetadata;
     fullScreenDocks.isThumbs = isThumbs;
     fullScreenDocks.isStatusBar = isStatusBar;
@@ -3435,7 +3461,7 @@ void MW::toggleFullScreen()
         setFolderDockVisibility();
         favDockVisibleAction->setChecked(fullScreenDocks.isFavs);
         setFavDockVisibility();
-        filterDockVisibleAction->setChecked(fullScreenDocks.isFavs);
+        filterDockVisibleAction->setChecked(fullScreenDocks.isFilters);
         setFilterDockVisibility();
         metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
         setMetadataDockVisibility();
@@ -3719,6 +3745,7 @@ re-established when the application is re-opened.
     // full screen
     setting->setValue("isFullScreenFolders", (bool)fullScreenDocks.isFolders);
     setting->setValue("isFullScreenFavs", (bool)fullScreenDocks.isFavs);
+    setting->setValue("isFullScreenFilters", (bool)fullScreenDocks.isFilters);
     setting->setValue("isFullScreenMetadata", (bool)fullScreenDocks.isMetadata);
     setting->setValue("isFullScreenThumbs", (bool)fullScreenDocks.isThumbs);
     setting->setValue("isFullScreenStatusBar", (bool)fullScreenDocks.isStatusBar);
@@ -3943,6 +3970,7 @@ Preferences are located in the prefdlg class and updated here.
     // full screen
     fullScreenDocks.isFolders = setting->value("isFullScreenFolders").toBool();
     fullScreenDocks.isFavs = setting->value("isFullScreenFavs").toBool();
+    fullScreenDocks.isFilters = setting->value("isFullScreenFilters").toBool();
     fullScreenDocks.isMetadata = setting->value("isFullScreenMetadata").toBool();
     fullScreenDocks.isThumbs = setting->value("isFullScreenThumbs").toBool();
     fullScreenDocks.isStatusBar = setting->value("isFullScreenStatusBar").toBool();
@@ -4360,9 +4388,9 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     qDebug() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________";
     #endif
     }
-    qDebug() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________";
+//    qDebug() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________";
     if(isInitializing) {
-        qDebug() << "Still initializing - cancel setThumbDockFeatures";
+//        qDebug() << "Still initializing - cancel setThumbDockFeatures";
 //        return;
     }
 
@@ -4446,25 +4474,46 @@ lack of notification when the QListView has finished painting itself.
     }
     qDebug() << "\n======================================= Loupe ===========================================";
     G::mode = "Loupe";
+
+    int previousRow;
+    bool updateToPrevRowWhenNotVisible = false;
+    qDebug() << "Loupe: thumbView->isVisible()" << thumbView->isVisible() << "currentRow" << currentRow;
+    if (!thumbView->isVisible()) {
+        previousRow = currentRow;
+        updateToPrevRowWhenNotVisible = true;
+    }
     // show imageView in the central widget
+    modeChangeJustHappened = true;
     centralLayout->setCurrentIndex(LoupeTab);
+    modeChangeJustHappened = false;
     // if was in grid mode then restore thumbdock to previous state
     if (hasGridBeenActivated)
         thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
     setThumbDockVisibity();
+    if (updateToPrevRowWhenNotVisible) thumbView->setCurrentIndex(dm->sf->index(previousRow, 0));
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
-//    qDebug() << "MW::loupeDisplay calling  setThumbParameters  "
-//             << "thumbView->thumbWidth"
-//             << thumbView->thumbWidth
-//             << "gridView->thumbWidth"
-//             << gridView->thumbWidth
-//             << "isInitializing" << isInitializing;
+    // update imageView, use cache if image loaded, else read it from file
+    QModelIndex idx = thumbView->currentIndex();
+    QString fPath = idx.data(G::FileNameRole).toString();
+    if (imageView->isVisible()) {
+        if (imageView->loadImage(idx, fPath)) {
+            if (G::isThreadTrackingOn) qDebug()
+                << "MW::fileSelectionChange - loaded image file " << fPath;
+            updatePick();
+            updateRating();
+            updateColorClass();
+        }
+    }
 
     thumbView->setThumbParameters(true);
+
     // limit time spent intercepting paint events to call scrollToCurrent
-    thumbView->readyToScroll = true;
-    QTimer::singleShot(2000, this, SLOT(cancelNeedToScroll()));
+
+    if (thumbView->isVisible()) {
+        thumbView->scrollToCurrent(currentRow);
+        thumbView->readyToScroll = true;
+    }
 
     prevMode = "Loupe";
 }
@@ -4488,7 +4537,6 @@ lack of notification when the QListView has finished painting itself.
     G::mode = "Grid";
     hasGridBeenActivated = true;
     // remember previous state of thumbDock so can recover if change mode
-    qDebug() << "thumbDockVisibleAction->isChecked()" << thumbDockVisibleAction->isChecked();
     wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
     thumbDockVisibleAction->setChecked(false);
@@ -4496,18 +4544,13 @@ lack of notification when the QListView has finished painting itself.
     // show tableView in central widget
     centralLayout->setCurrentIndex(GridTab);
 
-//    qDebug() << "MW::gridDisplay calling  setThumbParameters  "
-//             << "thumbView->thumbWidth"
-//             << thumbView->thumbWidth
-//             << "gridView->thumbWidth"
-//             << gridView->thumbWidth
-//             << "isInitializing" << isInitializing;;
-
     gridView->setThumbParameters(false);
     gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     // limit time spent intercepting paint events to call scrollToCurrent
     gridView->readyToScroll = true;
-    QTimer::singleShot(2000, this, SLOT(cancelNeedToScroll()));
+
+    // if the zoom dialog was open then close it as no image visible to zoom
+    emit closeZoomDlg();
 
     prevMode = "Grid";
 }
@@ -4534,6 +4577,7 @@ void MW::tableDisplay()
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     tableView->scrollToCurrent();
+    if (thumbView->isVisible()) thumbView->readyToScroll = true;
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();

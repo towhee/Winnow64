@@ -590,7 +590,6 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
     cache.isForward = true;
     // the amount of memory to allocate to the cache
     cache.maxMB = cacheSizeMB;
-    cache.maxMB = 100;       // testing overrride
     cache.isShowCacheStatus = isShowCacheStatus;
     cache.wtAhead = cacheWtAhead;
     // the width of the status progress bar representing all the images
@@ -663,7 +662,7 @@ updated.  Image caching is reactivated.
     qDebug() << "ImageView::updateImageCache";
     #endif
     }
-    qDebug() << "\nImageView::updateImageCache";
+//    qDebug() << "\nImageView::updateImageCache";
 
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
@@ -678,8 +677,6 @@ updated.  Image caching is reactivated.
         }
     }
 
-    qDebug() << "cache.key" << cache.key;
-
     if (cache.isShowCacheStatus) cacheStatus();
     cache.isForward = (cache.key >= cache.prevKey);
     // reverse if at end of list
@@ -690,10 +687,9 @@ updated.  Image caching is reactivated.
     setPriorities(cache.key);
     setTargetRange();
 
-    reportCache("Start of update: current image: " + currentImageFullPath);
+//    reportCache("Start of update: current image: " + currentImageFullPath);
 
     // if all images are cached then we're done
-    qDebug() << "cacheUpToDate()" << cacheUpToDate();
     if (cacheUpToDate()) return;
 
     start(IdlePriority);
