@@ -339,8 +339,6 @@ void MW::folderSelectionChange()
     }
     // Stop any threads that might be running.
     thumbCacheThread->stopThumbCache();
-//    QThread::msleep(2000);        // no effect on crash
-//    qDebug() << "thumbCacheThread->isRunning" << thumbCacheThread->isRunning();
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
 
@@ -362,6 +360,7 @@ void MW::folderSelectionChange()
     QDir testDir;
     if (isInitializing) {
         if (rememberLastDir) {
+            // lastDir is from QSettings for persistent memory between sessions
             dirPath = lastDir;
             /*
                qDebug() << "Last folder opened was" << lastDir;
@@ -374,11 +373,12 @@ void MW::folderSelectionChange()
                 fsTree->setCurrentIndex(fsTree->fsModel->index(dirPath));
             else {
                 isInitializing = false;
+                /*
                 qDebug() << "deleted or renamed or corrupted folder";
                 qDebug() << "testStorage.isValid()" << testStorage.isValid();
                 qDebug() << "testDir.exists()" << testDir.exists();
                 qDebug() << "testDir.isReadable()" << testDir.isReadable();
-            /*  QString msg = "Attempted to load the last folder opened called "
+                QString msg = "Attempted to load the last folder opened called "
                         + lastDir + ".  It appears to be missing.";
                 QMessageBox::information(this, "Oops", msg, QMessageBox::Ok);
                 */
@@ -427,21 +427,15 @@ void MW::folderSelectionChange()
     loaded by loadThumbCache.  If no images in new folder then cleanup and exit.
     MW::fileSelectionChange triggered by DataModel->load         */
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
-        // MW::fileSelectionChange triggered by dm->load
         updateStatus(false, "No images in this folder");
         infoView->clearInfo();
         metadata->clearMetadata();
-//        imageView->infoDropShadow->setVisible(false);
         imageView->emptyFolder();
         cacheLabel->setVisible(false);
-//        isInitializing = false;
         return;
     }
-//    qDebug() << "???? thumbView->selectThumb(0)";
+
     thumbView->selectThumb(0);
-//    selectionModel->select(thumbView->currentIndex(), QItemSelectionModel::Select);
-//    QModelIndexList selected = selectionModel->selectedIndexes();
-//    qDebug() << "Selected =" << selected;
     thumbView->sortThumbs(1, false);
 
     // no ratings or label color classes set yet so hide classificationLabel
@@ -455,6 +449,7 @@ void MW::folderSelectionChange()
      image cache holds as many full size images in memory as possible. */
      updateStatus(false, "Collecting metadata for all images in folder(s)");
      loadMetadataCache();
+     // format pickMemSize as bytes, KB, MB or GB
      pickMemSize = formatMemoryReqdForPicks(memoryReqdForPicks());
      updateStatus(true);
 }
@@ -537,7 +532,6 @@ so scrollTo and delegate use of the current index must check the row.
     if (G::lastThumbChangeEvent == "MouseClick")
         QTimer::singleShot(1, this, SLOT(delayScroll()));
     else {
-        qDebug() << "Not a mouse click";
         if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);
         if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
                  QAbstractItemView::ScrollHint::PositionAtCenter);
@@ -683,8 +677,7 @@ void MW::checkDirState(const QModelIndex &, int, int)
     }
     if (isInitializing) return;
 
-    if (!QDir().exists(currentViewDir))
-    {
+    if (!QDir().exists(currentViewDir)) {
         currentViewDir = "";
     }
 }
@@ -1490,6 +1483,11 @@ void MW::createActions()
     addAction(helpShortcutsAction);
     connect(helpShortcutsAction, SIGNAL(triggered()), this, SLOT(helpShortcuts()));
 
+    helpWelcomeAction = new QAction(tr("Show welcome screen"), this);
+    helpWelcomeAction->setObjectName("helpWelcome");
+    addAction(helpWelcomeAction);
+    connect(helpWelcomeAction, SIGNAL(triggered()), this, SLOT(helpWelcome()));
+
     // Possibly needed actions
 
 //    enterAction = new QAction(tr("Enter"), this);
@@ -1695,6 +1693,7 @@ void MW::createMenus()
     helpMenu->addAction(aboutAction);
     helpMenu->addAction(helpAction);
     helpMenu->addAction(helpShortcutsAction);
+    helpMenu->addAction(helpWelcomeAction);
 
     // Separator Action
     QAction *separatorAction = new QAction(this);
@@ -1790,18 +1789,22 @@ void MW::createMenus()
     mainContextActions->append(helpGroupAct);
 
     // Central Widget mode context menu
-    imageView->addActions(*mainContextActions);
-    imageView->setContextMenuPolicy(Qt::ActionsContextMenu);
+    centralWidget->addActions(*mainContextActions);
+    centralWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-    tableView->addActions(*mainContextActions);
-    tableView->setContextMenuPolicy(Qt::ActionsContextMenu);
+//    imageView->addActions(*mainContextActions);
+//    imageView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-    gridView->addActions(*mainContextActions);
-    gridView->setContextMenuPolicy(Qt::ActionsContextMenu);
+//    tableView->addActions(*mainContextActions);
+//    tableView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-    compareImages->addActions(*mainContextActions);
-    compareImages->setContextMenuPolicy(Qt::ActionsContextMenu);
+//    gridView->addActions(*mainContextActions);
+//    gridView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
+//    compareImages->addActions(*mainContextActions);
+//    compareImages->setContextMenuPolicy(Qt::ActionsContextMenu);
+
+    // docking panels context menus
     fsTree->addActions(*fsTreeActions);
     fsTree->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -1842,7 +1845,7 @@ void MW::setupCentralWidget()
     qDebug() << "MW::setupCentralWidget";
     #endif
     }
-    QScrollArea *welcome = new QScrollArea;
+    welcome = new QScrollArea;
     Ui::welcomeScrollArea ui;
     ui.setupUi(welcome);
 
@@ -2277,6 +2280,45 @@ parameters.  Any visibility changes are executed.
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     thumbThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+}
+
+QString MW::getPosition()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ng MW::getPosition()";
+    #endif
+    }
+    QString fileCount = "";
+    QModelIndex idx = thumbView->currentIndex();
+    long rowCount = dm->sf->rowCount();
+    if (rowCount > 0) {
+        int row = idx.row() + 1;
+        fileCount = QString::number(row) + " of "
+            + QString::number(rowCount);
+    }
+    if (subFoldersAction->isChecked()) fileCount += " including subfolders";
+    return fileCount;
+}
+
+QString MW::getZoom()
+{
+    qreal zoom;
+    if (G::mode == "Compare") zoom = compareImages->zoomValue;
+    else zoom = imageView->zoom;
+    return QString::number(qRound(zoom*100)) + "% zoom";
+}
+
+QString MW::getPicked()
+{
+    QModelIndex idx;
+    int count = 0;
+    for (int row = 0; row < dm->sf->rowCount(); row++)
+        if (dm->sf->index(row, G::PickedColumn).data() == "true") count++;
+    return QString::number(count) + " - " + pickMemSize;
 }
 
 void MW::updateStatus(bool keepBase, QString s)
@@ -4399,16 +4441,14 @@ void MW::setThumbDockHeight()
 {
 /*
 Helper slot to call setThumbDockFeatures when the dockWidgetArea is not known,
-which is the case when calling from another class like thumbView after thumbnails
-have been resized.
+which is the case when signalling from another class like thumbView after
+thumbnails have been resized.
 */
     {
     #ifdef ISDEBUG
     qDebug() << "MW::setThumbDockHeight";
     #endif
     }
-//    if(thumbDock->isVisible())
-//    qDebug() << "Calling setThumbDockFeatures from MW::setThumbDockHeight";
     setThumbDockFeatures(dockWidgetArea(thumbDock));
 }
 
@@ -5731,13 +5771,6 @@ void MW::helpShortcuts()
     Ui::shortcutsForm ui;
     ui.setupUi(helpShortcuts);
 
-    // set row heights in tree widget
-//    QTreeWidgetItemIterator it(ui.treeWidget);
-//    while (*it) {
-//        (*it)->setSizeHint(0, QSize(20, 20));
-//        ++it;
-//    }
-
     ui.treeWidget->setColumnWidth(0, 250);
     ui.treeWidget->setColumnWidth(1, 100);
     ui.treeWidget->setColumnWidth(2, 250);
@@ -5749,6 +5782,11 @@ void MW::helpShortcuts()
 //    ui.scrollAreaWidgetContents->setStyleSheet("QTreeView::item { height: 20px;}");
 
     helpShortcuts->show();
+}
+
+void MW::helpWelcome()
+{
+    centralLayout->setCurrentIndex(StartTab);
 }
 
 void MW::test()

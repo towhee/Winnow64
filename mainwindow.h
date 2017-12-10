@@ -39,6 +39,7 @@ class MW : public QMainWindow
 
     friend class Prefdlg;
     friend class ThumbView;
+    friend class InfoView;
 //    friend class ZoomDlg;
 
 public:
@@ -315,6 +316,7 @@ private slots:
 
     void help();
     void helpShortcuts();
+    void helpWelcome();
 
     void delayScroll();
     void test();    // for debugging
@@ -494,6 +496,7 @@ private:
     QAction *aboutAction;
     QAction *helpAction;
     QAction *helpShortcutsAction;
+    QAction *helpWelcomeAction;
 
     // General
 
@@ -630,6 +633,9 @@ private:
     void populateWorkspace(int n, QString name);
     void syncWorkspaceMenu();
     void getSubfolders(QString fPath);
+    QString getPosition();
+    QString getZoom();
+    QString getPicked();
 
     void addRecentFolder(QString fPath);
     void syncRecentFoldersMenu();

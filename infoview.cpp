@@ -2,13 +2,16 @@
 
 #include "infoview.h"
 #include "global.h"
-
+#include "mainwindow.h"     // friend of MW
 
 /*
 Should change infoModel to create list of metadata items plus show column.  Then
 update the metadata in the value column instead of the current clear and rebuild
 table strategy.
 */
+
+// friend of MW
+MW *mwInfo;
 
 InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTableView(parent)
 {
@@ -18,6 +21,8 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTableView(parent)
     #endif
     }
     this->metadata = metadata;
+    // this works because InfoView is a friend class of MW
+    mwInfo = qobject_cast<MW*>(parent);
 
     infoModel = new QStandardItemModel(this);
     setModel(infoModel);
@@ -88,24 +93,29 @@ every time a new image is selected.
     ok->setHorizontalHeaderItem(1, new QStandardItem(QString("Show")));
 
     // these fields must exactly match ones in updateInfo() !!
-    ok->insertRow(0);   ok->setData(ok->index(0, 0),  "File name");
-    ok->insertRow(1);   ok->setData(ok->index(1, 0),  "Location");
-    ok->insertRow(2);   ok->setData(ok->index(2, 0),  "Size");
-    ok->insertRow(3);   ok->setData(ok->index(3, 0),  "Date/Time");
-    ok->insertRow(4);   ok->setData(ok->index(4, 0),  "Modified");
-    ok->insertRow(5);   ok->setData(ok->index(5, 0),  "Dimensions");
-    ok->insertRow(6);   ok->setData(ok->index(6, 0),  "Megapixels");
-    ok->insertRow(7);   ok->setData(ok->index(7, 0),  "Model");
-    ok->insertRow(8);   ok->setData(ok->index(8, 0),  "Lens");
-    ok->insertRow(9);   ok->setData(ok->index(9, 0),  "Shutter speed");
-    ok->insertRow(10);  ok->setData(ok->index(10, 0), "Aperture");
-    ok->insertRow(11);  ok->setData(ok->index(11, 0), "ISO");
-    ok->insertRow(12);  ok->setData(ok->index(12, 0), "Focal length");
-    ok->insertRow(13);  ok->setData(ok->index(13, 0), "Title");
-    ok->insertRow(14);  ok->setData(ok->index(14, 0), "Creator");
-    ok->insertRow(15);  ok->setData(ok->index(15, 0), "Copyright");
-    ok->insertRow(16);  ok->setData(ok->index(16, 0), "Email");
-    ok->insertRow(17);  ok->setData(ok->index(17, 0), "Url");
+    int i = 0;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Folder");         i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "File name");      i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Location");       i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Size");           i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Date/Time");      i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Modified");       i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Dimensions");     i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Megapixels");     i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Model");          i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Lens");           i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Shutter speed");  i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Aperture");       i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "ISO");            i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Focal length");   i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Title");          i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Creator");        i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Copyright");      i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Email");          i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Url");            i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Position");       i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Zoom");           i++;
+    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Picked");         i++;
 
     for(int row = 0; row < ok->rowCount(); row++)
         ok->setData(ok->index(row, 1), true);
@@ -219,6 +229,11 @@ void InfoView::updateInfo(const QString &fPath)
     if (!metadata->isLoaded(fPath)) {
         metadata->loadImageMetadata(fPath, true, true);
     }
+
+    key = tr("Folder");
+    val = imageInfo.dir().dirName();
+    addEntry(key, val);
+
     key = tr("File name");
     val = imageInfo.fileName();
     addEntry(key, val);
@@ -291,6 +306,18 @@ void InfoView::updateInfo(const QString &fPath)
 
     key = tr("Url");
     val = metadata->getUrl(fPath);
+    addEntry(key, val);
+
+    key = tr("Position");
+    val = mwInfo->getPosition();
+    addEntry(key, val);
+
+    key = tr("Zoom");
+    val = mwInfo->getZoom();
+    addEntry(key, val);
+
+    key = tr("Picked");
+    val = mwInfo->getPicked();
     addEntry(key, val);
 
     if (G::isThreadTrackingOn) qDebug()

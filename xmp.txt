@@ -373,6 +373,322 @@ From JPG file /Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg
    </rdf:RDF>
 </x:xmpmeta>
 
+Photshop info for above
+
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c140 79.160451, 2017/05/06-01:08:21        ">
+   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+      <rdf:Description rdf:about=""
+            xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+            xmlns:dc="http://purl.org/dc/elements/1.1/"
+            xmlns:aux="http://ns.adobe.com/exif/1.0/aux/"
+            xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
+            xmlns:stEvt="http://ns.adobe.com/xap/1.0/sType/ResourceEvent#"
+            xmlns:stRef="http://ns.adobe.com/xap/1.0/sType/ResourceRef#"
+            xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+            xmlns:xmpRights="http://ns.adobe.com/xap/1.0/rights/"
+            xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/"
+            xmlns:photomechanic="http://ns.camerabits.com/photomechanic/1.0/"
+            xmlns:Iptc4xmpCore="http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/"
+            xmlns:tiff="http://ns.adobe.com/tiff/1.0/"
+            xmlns:exif="http://ns.adobe.com/exif/1.0/">
+         <xmp:ModifyDate>2017-01-29T15:55:29-08:00</xmp:ModifyDate>
+         <xmp:CreatorTool>Adobe Photoshop Lightroom 6.7 (Macintosh)</xmp:CreatorTool>
+         <xmp:MetadataDate>2017-01-29T15:55:29-08:00</xmp:MetadataDate>
+         <xmp:Label>Winner</xmp:Label>
+         <xmp:Rating>5</xmp:Rating>
+         <xmp:CreateDate>2017-01-28T07:28:39</xmp:CreateDate>
+         <dc:format>image/jpeg</dc:format>
+         <dc:title>
+            <rdf:Alt>
+               <rdf:li xml:lang="x-default">Cordova Bay Sunrise</rdf:li>
+            </rdf:Alt>
+         </dc:title>
+         <dc:rights>
+            <rdf:Alt>
+               <rdf:li xml:lang="x-default">2017 Rory Hill</rdf:li>
+            </rdf:Alt>
+         </dc:rights>
+         <dc:creator>
+            <rdf:Seq>
+               <rdf:li>Rory Hill</rdf:li>
+            </rdf:Seq>
+         </dc:creator>
+         <aux:SerialNumber>022121000990</aux:SerialNumber>
+         <aux:LensInfo>600/1 600/1 0/0 0/0</aux:LensInfo>
+         <aux:Lens>EF600mm f/4L IS II USM</aux:Lens>
+         <aux:LensID>494</aux:LensID>
+         <aux:LensSerialNumber>0630000060</aux:LensSerialNumber>
+         <aux:ApproximateFocusDistance>4294967295/1</aux:ApproximateFocusDistance>
+         <aux:FlashCompensation>0/1</aux:FlashCompensation>
+         <aux:Firmware>1.0.5</aux:Firmware>
+         <aux:ImageNumber>0</aux:ImageNumber>
+         <xmpMM:DocumentID>xmp.did:a6e3cb7a-b2bc-4357-85f9-0930ea0a24bd</xmpMM:DocumentID>
+         <xmpMM:OriginalDocumentID>F479FCBD60FA31E0E38E0C96CF1E20C5</xmpMM:OriginalDocumentID>
+         <xmpMM:InstanceID>xmp.iid:a6e3cb7a-b2bc-4357-85f9-0930ea0a24bd</xmpMM:InstanceID>
+         <xmpMM:History>
+            <rdf:Seq>
+               <rdf:li rdf:parseType="Resource">
+                  <stEvt:action>derived</stEvt:action>
+                  <stEvt:parameters>converted from image/x-canon-cr2 to image/jpeg, saved to new location</stEvt:parameters>
+               </rdf:li>
+               <rdf:li rdf:parseType="Resource">
+                  <stEvt:action>saved</stEvt:action>
+                  <stEvt:instanceID>xmp.iid:a6e3cb7a-b2bc-4357-85f9-0930ea0a24bd</stEvt:instanceID>
+                  <stEvt:when>2017-01-29T15:55:29-08:00</stEvt:when>
+                  <stEvt:softwareAgent>Adobe Photoshop Lightroom 6.7 (Macintosh)</stEvt:softwareAgent>
+                  <stEvt:changed>/</stEvt:changed>
+               </rdf:li>
+            </rdf:Seq>
+         </xmpMM:History>
+         <xmpMM:DerivedFrom rdf:parseType="Resource">
+            <stRef:documentID>F479FCBD60FA31E0E38E0C96CF1E20C5</stRef:documentID>
+            <stRef:originalDocumentID>F479FCBD60FA31E0E38E0C96CF1E20C5</stRef:originalDocumentID>
+         </xmpMM:DerivedFrom>
+         <crs:Version>9.7</crs:Version>
+         <crs:ProcessVersion>6.7</crs:ProcessVersion>
+         <crs:WhiteBalance>Custom</crs:WhiteBalance>
+         <crs:AutoWhiteVersion>134348800</crs:AutoWhiteVersion>
+         <crs:Temperature>7022</crs:Temperature>
+         <crs:Tint>+8</crs:Tint>
+         <crs:Saturation>0</crs:Saturation>
+         <crs:Sharpness>30</crs:Sharpness>
+         <crs:LuminanceSmoothing>20</crs:LuminanceSmoothing>
+         <crs:ColorNoiseReduction>25</crs:ColorNoiseReduction>
+         <crs:VignetteAmount>0</crs:VignetteAmount>
+         <crs:ShadowTint>0</crs:ShadowTint>
+         <crs:RedHue>0</crs:RedHue>
+         <crs:RedSaturation>0</crs:RedSaturation>
+         <crs:GreenHue>0</crs:GreenHue>
+         <crs:GreenSaturation>0</crs:GreenSaturation>
+         <crs:BlueHue>0</crs:BlueHue>
+         <crs:BlueSaturation>0</crs:BlueSaturation>
+         <crs:Vibrance>0</crs:Vibrance>
+         <crs:HueAdjustmentRed>0</crs:HueAdjustmentRed>
+         <crs:HueAdjustmentOrange>0</crs:HueAdjustmentOrange>
+         <crs:HueAdjustmentYellow>0</crs:HueAdjustmentYellow>
+         <crs:HueAdjustmentGreen>0</crs:HueAdjustmentGreen>
+         <crs:HueAdjustmentAqua>0</crs:HueAdjustmentAqua>
+         <crs:HueAdjustmentBlue>0</crs:HueAdjustmentBlue>
+         <crs:HueAdjustmentPurple>0</crs:HueAdjustmentPurple>
+         <crs:HueAdjustmentMagenta>0</crs:HueAdjustmentMagenta>
+         <crs:SaturationAdjustmentRed>0</crs:SaturationAdjustmentRed>
+         <crs:SaturationAdjustmentOrange>0</crs:SaturationAdjustmentOrange>
+         <crs:SaturationAdjustmentYellow>0</crs:SaturationAdjustmentYellow>
+         <crs:SaturationAdjustmentGreen>0</crs:SaturationAdjustmentGreen>
+         <crs:SaturationAdjustmentAqua>0</crs:SaturationAdjustmentAqua>
+         <crs:SaturationAdjustmentBlue>0</crs:SaturationAdjustmentBlue>
+         <crs:SaturationAdjustmentPurple>0</crs:SaturationAdjustmentPurple>
+         <crs:SaturationAdjustmentMagenta>0</crs:SaturationAdjustmentMagenta>
+         <crs:LuminanceAdjustmentRed>0</crs:LuminanceAdjustmentRed>
+         <crs:LuminanceAdjustmentOrange>0</crs:LuminanceAdjustmentOrange>
+         <crs:LuminanceAdjustmentYellow>0</crs:LuminanceAdjustmentYellow>
+         <crs:LuminanceAdjustmentGreen>0</crs:LuminanceAdjustmentGreen>
+         <crs:LuminanceAdjustmentAqua>0</crs:LuminanceAdjustmentAqua>
+         <crs:LuminanceAdjustmentBlue>0</crs:LuminanceAdjustmentBlue>
+         <crs:LuminanceAdjustmentPurple>0</crs:LuminanceAdjustmentPurple>
+         <crs:LuminanceAdjustmentMagenta>0</crs:LuminanceAdjustmentMagenta>
+         <crs:SplitToningShadowHue>0</crs:SplitToningShadowHue>
+         <crs:SplitToningShadowSaturation>0</crs:SplitToningShadowSaturation>
+         <crs:SplitToningHighlightHue>0</crs:SplitToningHighlightHue>
+         <crs:SplitToningHighlightSaturation>0</crs:SplitToningHighlightSaturation>
+         <crs:SplitToningBalance>0</crs:SplitToningBalance>
+         <crs:ParametricShadows>0</crs:ParametricShadows>
+         <crs:ParametricDarks>0</crs:ParametricDarks>
+         <crs:ParametricLights>0</crs:ParametricLights>
+         <crs:ParametricHighlights>0</crs:ParametricHighlights>
+         <crs:ParametricShadowSplit>25</crs:ParametricShadowSplit>
+         <crs:ParametricMidtoneSplit>50</crs:ParametricMidtoneSplit>
+         <crs:ParametricHighlightSplit>75</crs:ParametricHighlightSplit>
+         <crs:SharpenRadius>+0.7</crs:SharpenRadius>
+         <crs:SharpenDetail>65</crs:SharpenDetail>
+         <crs:SharpenEdgeMasking>15</crs:SharpenEdgeMasking>
+         <crs:PostCropVignetteAmount>0</crs:PostCropVignetteAmount>
+         <crs:GrainAmount>0</crs:GrainAmount>
+         <crs:LuminanceNoiseReductionDetail>50</crs:LuminanceNoiseReductionDetail>
+         <crs:ColorNoiseReductionDetail>50</crs:ColorNoiseReductionDetail>
+         <crs:LuminanceNoiseReductionContrast>0</crs:LuminanceNoiseReductionContrast>
+         <crs:ColorNoiseReductionSmoothness>50</crs:ColorNoiseReductionSmoothness>
+         <crs:LensProfileEnable>1</crs:LensProfileEnable>
+         <crs:LensManualDistortionAmount>0</crs:LensManualDistortionAmount>
+         <crs:PerspectiveVertical>0</crs:PerspectiveVertical>
+         <crs:PerspectiveHorizontal>0</crs:PerspectiveHorizontal>
+         <crs:PerspectiveRotate>0.0</crs:PerspectiveRotate>
+         <crs:PerspectiveScale>100</crs:PerspectiveScale>
+         <crs:PerspectiveAspect>0</crs:PerspectiveAspect>
+         <crs:PerspectiveUpright>0</crs:PerspectiveUpright>
+         <crs:PerspectiveX>0.00</crs:PerspectiveX>
+         <crs:PerspectiveY>0.00</crs:PerspectiveY>
+         <crs:AutoLateralCA>1</crs:AutoLateralCA>
+         <crs:Exposure2012>0.00</crs:Exposure2012>
+         <crs:Contrast2012>0</crs:Contrast2012>
+         <crs:Highlights2012>-61</crs:Highlights2012>
+         <crs:Shadows2012>0</crs:Shadows2012>
+         <crs:Whites2012>0</crs:Whites2012>
+         <crs:Blacks2012>0</crs:Blacks2012>
+         <crs:Clarity2012>0</crs:Clarity2012>
+         <crs:DefringePurpleAmount>0</crs:DefringePurpleAmount>
+         <crs:DefringePurpleHueLo>30</crs:DefringePurpleHueLo>
+         <crs:DefringePurpleHueHi>70</crs:DefringePurpleHueHi>
+         <crs:DefringeGreenAmount>0</crs:DefringeGreenAmount>
+         <crs:DefringeGreenHueLo>40</crs:DefringeGreenHueLo>
+         <crs:DefringeGreenHueHi>60</crs:DefringeGreenHueHi>
+         <crs:Dehaze>0</crs:Dehaze>
+         <crs:ToneMapStrength>0</crs:ToneMapStrength>
+         <crs:ConvertToGrayscale>False</crs:ConvertToGrayscale>
+         <crs:ToneCurveName>Linear</crs:ToneCurveName>
+         <crs:ToneCurveName2012>Linear</crs:ToneCurveName2012>
+         <crs:CameraProfile>Camera Neutral</crs:CameraProfile>
+         <crs:LensProfileSetup>LensDefaults</crs:LensProfileSetup>
+         <crs:LensProfileName>Adobe (Canon EF 600mm f/4L IS II USM)</crs:LensProfileName>
+         <crs:LensProfileFilename>Canon EOS-1Ds Mark III (Canon EF 600mm f4L IS II USM) - RAW.lcp</crs:LensProfileFilename>
+         <crs:LensProfileDigest>E6F7B7B83A2CE23614DB44C871766B5C</crs:LensProfileDigest>
+         <crs:LensProfileDistortionScale>100</crs:LensProfileDistortionScale>
+         <crs:LensProfileChromaticAberrationScale>100</crs:LensProfileChromaticAberrationScale>
+         <crs:LensProfileVignettingScale>100</crs:LensProfileVignettingScale>
+         <crs:UprightVersion>151388160</crs:UprightVersion>
+         <crs:UprightCenterMode>0</crs:UprightCenterMode>
+         <crs:UprightCenterNormX>0.5</crs:UprightCenterNormX>
+         <crs:UprightCenterNormY>0.5</crs:UprightCenterNormY>
+         <crs:UprightFocalMode>0</crs:UprightFocalMode>
+         <crs:UprightFocalLength35mm>35</crs:UprightFocalLength35mm>
+         <crs:UprightPreview>False</crs:UprightPreview>
+         <crs:UprightTransformCount>6</crs:UprightTransformCount>
+         <crs:UprightFourSegmentsCount>0</crs:UprightFourSegmentsCount>
+         <crs:HasSettings>True</crs:HasSettings>
+         <crs:CropAngle>0.507333</crs:CropAngle>
+         <crs:CropConstrainToWarp>0</crs:CropConstrainToWarp>
+         <crs:AlreadyApplied>True</crs:AlreadyApplied>
+         <crs:ToneCurve>
+            <rdf:Seq>
+               <rdf:li>0, 0</rdf:li>
+               <rdf:li>255, 255</rdf:li>
+            </rdf:Seq>
+         </crs:ToneCurve>
+         <crs:ToneCurveRed>
+            <rdf:Seq>
+               <rdf:li>0, 0</rdf:li>
+               <rdf:li>255, 255</rdf:li>
+            </rdf:Seq>
+         </crs:ToneCurveRed>
+         <crs:ToneCurveGreen>
+            <rdf:Seq>
+               <rdf:li>0, 0</rdf:li>
+               <rdf:li>255, 255</rdf:li>
+            </rdf:Seq>
+         </crs:ToneCurveGreen>
+         <crs:ToneCurveBlue>
+            <rdf:Seq>
+               <rdf:li>0, 0</rdf:li>
+               <rdf:li>255, 255</rdf:li>
+            </rdf:Seq>
+         </crs:ToneCurveBlue>
+         <crs:ToneCurvePV2012>
+            <rdf:Seq>
+               <rdf:li>0, 0</rdf:li>
+               <rdf:li>255, 255</rdf:li>
+            </rdf:Seq>
+         </crs:ToneCurvePV2012>
+         <crs:ToneCurvePV2012Red>
+            <rdf:Seq>
+               <rdf:li>0, 0</rdf:li>
+               <rdf:li>255, 255</rdf:li>
+            </rdf:Seq>
+         </crs:ToneCurvePV2012Red>
+         <crs:ToneCurvePV2012Green>
+            <rdf:Seq>
+               <rdf:li>0, 0</rdf:li>
+               <rdf:li>255, 255</rdf:li>
+            </rdf:Seq>
+         </crs:ToneCurvePV2012Green>
+         <crs:ToneCurvePV2012Blue>
+            <rdf:Seq>
+               <rdf:li>0, 0</rdf:li>
+               <rdf:li>255, 255</rdf:li>
+            </rdf:Seq>
+         </crs:ToneCurvePV2012Blue>
+         <xmpRights:Marked>True</xmpRights:Marked>
+         <photoshop:DateCreated>2017-01-28T07:28:39</photoshop:DateCreated>
+         <photoshop:LegacyIPTCDigest>7486537F7F689B1F82CC580BCB63166B</photoshop:LegacyIPTCDigest>
+         <photoshop:Urgency>0</photoshop:Urgency>
+         <photoshop:ColorMode>3</photoshop:ColorMode>
+         <photoshop:ICCProfile>sRGB IEC61966-2.1</photoshop:ICCProfile>
+         <photomechanic:ColorClass>1</photomechanic:ColorClass>
+         <photomechanic:Tagged>False</photomechanic:Tagged>
+         <photomechanic:Prefs>0:1:5:000000</photomechanic:Prefs>
+         <photomechanic:PMVersion>PM5</photomechanic:PMVersion>
+         <Iptc4xmpCore:CreatorContactInfo rdf:parseType="Resource">
+            <Iptc4xmpCore:CiAdrCity>Nanimo</Iptc4xmpCore:CiAdrCity>
+            <Iptc4xmpCore:CiAdrRegion>BC</Iptc4xmpCore:CiAdrRegion>
+            <Iptc4xmpCore:CiAdrCtry>Canada</Iptc4xmpCore:CiAdrCtry>
+            <Iptc4xmpCore:CiEmailWork>hillrg@hotmail.com</Iptc4xmpCore:CiEmailWork>
+            <Iptc4xmpCore:CiUrlWork>roryhill.zenfolio.com</Iptc4xmpCore:CiUrlWork>
+         </Iptc4xmpCore:CreatorContactInfo>
+         <tiff:ImageWidth>2048</tiff:ImageWidth>
+         <tiff:ImageLength>1365</tiff:ImageLength>
+         <tiff:BitsPerSample>
+            <rdf:Seq>
+               <rdf:li>8</rdf:li>
+               <rdf:li>8</rdf:li>
+               <rdf:li>8</rdf:li>
+            </rdf:Seq>
+         </tiff:BitsPerSample>
+         <tiff:PhotometricInterpretation>2</tiff:PhotometricInterpretation>
+         <tiff:SamplesPerPixel>3</tiff:SamplesPerPixel>
+         <tiff:XResolution>240/1</tiff:XResolution>
+         <tiff:YResolution>240/1</tiff:YResolution>
+         <tiff:ResolutionUnit>2</tiff:ResolutionUnit>
+         <tiff:Make>Canon</tiff:Make>
+         <tiff:Model>Canon EOS 7D Mark II</tiff:Model>
+         <exif:ExifVersion>0230</exif:ExifVersion>
+         <exif:ColorSpace>1</exif:ColorSpace>
+         <exif:PixelXDimension>2048</exif:PixelXDimension>
+         <exif:PixelYDimension>1365</exif:PixelYDimension>
+         <exif:DateTimeOriginal>2017-01-28T07:28:39</exif:DateTimeOriginal>
+         <exif:ExposureTime>1/200</exif:ExposureTime>
+         <exif:FNumber>4/1</exif:FNumber>
+         <exif:ExposureProgram>1</exif:ExposureProgram>
+         <exif:ISOSpeedRatings>
+            <rdf:Seq>
+               <rdf:li>1250</rdf:li>
+            </rdf:Seq>
+         </exif:ISOSpeedRatings>
+         <exif:ShutterSpeedValue>7643856/1000000</exif:ShutterSpeedValue>
+         <exif:ApertureValue>4000000/1000000</exif:ApertureValue>
+         <exif:ExposureBiasValue>0/1</exif:ExposureBiasValue>
+         <exif:MaxApertureValue>4/1</exif:MaxApertureValue>
+         <exif:MeteringMode>5</exif:MeteringMode>
+         <exif:Flash rdf:parseType="Resource">
+            <exif:Fired>False</exif:Fired>
+            <exif:Return>0</exif:Return>
+            <exif:Mode>2</exif:Mode>
+            <exif:Function>False</exif:Function>
+            <exif:RedEyeMode>False</exif:RedEyeMode>
+         </exif:Flash>
+         <exif:FocalLength>600/1</exif:FocalLength>
+         <exif:FocalPlaneXResolution>79937569/32768</exif:FocalPlaneXResolution>
+         <exif:FocalPlaneYResolution>79937569/32768</exif:FocalPlaneYResolution>
+         <exif:FocalPlaneResolutionUnit>3</exif:FocalPlaneResolutionUnit>
+         <exif:CustomRendered>0</exif:CustomRendered>
+         <exif:ExposureMode>1</exif:ExposureMode>
+         <exif:WhiteBalance>0</exif:WhiteBalance>
+         <exif:SceneCaptureType>0</exif:SceneCaptureType>
+         <exif:SubSecTimeOriginal>49</exif:SubSecTimeOriginal>
+         <exif:SubSecTimeDigitized>49</exif:SubSecTimeDigitized>
+         <exif:SerialNumber>022121000990</exif:SerialNumber>
+         <exif:LensInfo>
+            <rdf:Seq>
+               <rdf:li>600/1</rdf:li>
+            </rdf:Seq>
+         </exif:LensInfo>
+         <exif:Lens>EF600mm f/4L IS II USM</exif:Lens>
+         <exif:LensSerialNumber>0630000060</exif:LensSerialNumber>
+         <exif:SensitivityType>2</exif:SensitivityType>
+         <exif:RecommendedExposureIndex>1250</exif:RecommendedExposureIndex>
+      </rdf:Description>
+   </rdf:RDF>
+</x:xmpmeta>
+
+
 
 From D850 NEF
 
