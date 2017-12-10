@@ -1,5 +1,5 @@
 BUGS
-- Mode switching cursor/currentIndex scroll issues
+- Pick thumbUp sometimes not in sync between image and thumbnails
 - Beef up deleted or renamed or corrupted folder
 - Not reading metadata from iphone jpgs
 PERFORMANCE
@@ -34,6 +34,8 @@ ENHANCEMENTS
 - Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor, always show if ESC
+
+- Done: Mode switching cursor/currentIndex scroll issues
 - Done: Fixed logic for deleted or renamed or corrupted folder - still needs more love
 - Done: Added filter to full screen options in prefdlg
 - Done: If open in grid mode and switch to loupe right away thumbView not on current index

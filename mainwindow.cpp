@@ -461,18 +461,26 @@ void MW::folderSelectionChange()
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
 {
-/* Triggered when file selection changes (folder change selects new image, so
-it also triggers this function). The new image is loaded, the pick status is
-updated and the infoView metadata is updated. Update the imageCache if
-necessary. The imageCache will not be updated if triggered by folderSelectionChange.
+/*
+Triggered when file selection changes (folder change selects new image, so it
+also triggers this function). The new image is loaded, the pick status is
+updated and the infoView metadata is updated. The imageCache is updated if
+necessary. The imageCache will not be updated if triggered by
+folderSelectionChange since a new one will be build.
 
 It has proven quite difficult to sync the thumbView, tableView and gridView,
-keeping the currentIndex in the center position (scrolling).  The issue is timing
-as it can take the scrollbars a while to finish painting.  Several scrollbar
-paint events are fired, so the solution implemented is to set a readyToScroll
-flag when a new image is selected and set a timer to turn the flag off after
-1000ms.  During that time any scrollbar paint events trigger the scrollToCurrent
-function, which in turn tries to scrollTo with a center position scroll hint.
+keeping the currentIndex in the center position (scrolling). The issue is
+timing as it can take the scrollbars a while to finish painting and there inn't
+an event to notify the view is ready for action. One to many scrollbar paint
+events are fired, and the scrollbar->maximum() value is tested against a
+calculated maximum to determin when the last paint event has fired. The
+scrollToCurrent function is called. It has also been necessary to write custom
+scrollbar functions because the scrollTo(idx, positionAtCenter) does not always
+work. Finally, when QAbstractItemView acceptes a mouse press it adds a 100ms
+delay to avoid double clicks but this plays havoc with the scrolling, so a flag
+is used to track which actions are triggering changes in the datamodel index.
+If it is a mouse press then a singeShot timer in invoked to delay the scrolling
+to after QAbstractItemView is finished.
 
 Note that the datamodel includes multiple columns for each row and the index
 sent to fileSelectionChange could be for a column other than 0 (from tableView)
@@ -491,12 +499,18 @@ so scrollTo and delegate use of the current index must check the row.
     QModelIndexList selected = selectionModel->selectedIndexes();
     if (selected.isEmpty()) return;
 
+    /* When a mode change occurs, part of the activating process to make the new
+       view visible includes setting the currentIndex to what the view was at
+       last time it was active.  Consequently we have to save the latest index
+       and reapply here.
+       */
     if (modeChangeJustHappened) {
         modeChangeJustHappened = false;
         thumbView->setCurrentIndex(previous);
     }
     else thumbView->setCurrentIndex(current);
-//
+
+    // record current row as it is used to sync everything
     currentRow = current.row();
     /*
 //    qDebug() << "\nfileSelectionChange  mode =" << G::mode
@@ -517,7 +531,9 @@ so scrollTo and delegate use of the current index must check the row.
     thumbView->thumbViewDelegate->currentRow = currentRow;
     gridView->thumbViewDelegate->currentRow = currentRow;
 
-    // Qt has 100ms delay in QAbstractItemView::mousePressEvent for double-clicks - aarg!
+    /* Scroll all visible views to the current row. Qt has 100ms delay in
+    QAbstractItemView::mousePressEvent for double-clicks - aarg!
+    */
     if (G::lastThumbChangeEvent == "MouseClick")
         QTimer::singleShot(1, this, SLOT(delayScroll()));
     else {
@@ -528,8 +544,13 @@ so scrollTo and delegate use of the current index must check the row.
     }
     G::lastThumbChangeEvent = "";
 
+    // the file path is used as an index in ImageView and Metadata
     QString fPath = current.data(G::FileNameRole).toString();
+
+    // update the matadata panel
     infoView->updateInfo(fPath);
+
+    // update the status bar with ie "5 of 290   30% zoom   3.6GB picked"
     updateStatus(true);
 
     // update imageView, use cache if image loaded, else read it from file
@@ -4491,24 +4512,31 @@ lack of notification when the QListView has finished painting itself.
     #endif
     }
     qDebug() << "\n======================================= Loupe ===========================================";
+    qDebug() << "Loupe: thumbView->isVisible()" << thumbView->isVisible() << "currentRow" << currentRow;
+
     G::mode = "Loupe";
 
-    int previousRow;
-    bool updateToPrevRowWhenNotVisible = false;
-    qDebug() << "Loupe: thumbView->isVisible()" << thumbView->isVisible() << "currentRow" << currentRow;
-    if (!thumbView->isVisible()) {
-        previousRow = currentRow;
-        updateToPrevRowWhenNotVisible = true;
-    }
-    // show imageView in the central widget
+    // save the current row as it will be lost when ThumbView becomes visible
+    int previousRow = currentRow;
+
+    // flag so can adjust index in fileSelectionChange as well
     modeChangeJustHappened = true;
+
+    /* show imageView in the central widget. This makes thumbView visible, and
+    it updates the index to its previous state.  The index update triggers
+    fileSelectionChange  */
     centralLayout->setCurrentIndex(LoupeTab);
     modeChangeJustHappened = false;
+
+    // recover the current index
+    thumbView->setCurrentIndex(dm->sf->index(previousRow, 0));
+    currentRow = previousRow;       // used by eventFilter in ThumbView
+
     // if was in grid mode then restore thumbdock to previous state
     if (hasGridBeenActivated)
         thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
     setThumbDockVisibity();
-    if (updateToPrevRowWhenNotVisible) thumbView->setCurrentIndex(dm->sf->index(previousRow, 0));
+
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // update imageView, use cache if image loaded, else read it from file
@@ -4524,14 +4552,12 @@ lack of notification when the QListView has finished painting itself.
         }
     }
 
+    // req'd to show thumbs first time
     thumbView->setThumbParameters(true);
 
-    // limit time spent intercepting paint events to call scrollToCurrent
-
-//    if (thumbView->isVisible())
-//        thumbView->scrollToCurrent(currentRow);
-//    else
-        thumbView->readyToScroll = true;
+    /* flag to intercept scrollbar paint events in ThumbView::eventFilter and
+    scroll to position when the painting is completed */
+    thumbView->readyToScroll = true;
 
     prevMode = "Loupe";
 }

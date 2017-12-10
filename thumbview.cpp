@@ -1002,6 +1002,10 @@ int ThumbView::getHorizontalScrollBarOffset(int row)
 {
     int pageWidth = viewport()->width();
     int thumbWidth = getThumbCellSize().width();
+
+    if (pageWidth < 40 || thumbWidth < 40)
+        return;
+
     float thumbsPerPage = (double)pageWidth / thumbWidth;
     int n = dm->sf->rowCount();
     float pages = float(n) / thumbsPerPage - 1;
@@ -1036,10 +1040,15 @@ int ThumbView::getVerticalScrollBarOffset(int row)
     int pageHeight = viewport()->height();
     int thumbWidth = getThumbCellSize().width();
     int thumbHeight = getThumbCellSize().height();
+
+    if (pageWidth < 40 ||pageHeight < 40 || thumbWidth < 40 || thumbHeight < 40)
+        return;
+
     float thumbsPerPage = pageWidth / thumbWidth * (float)pageHeight / thumbHeight;
     float thumbRowsPerPage = (float)pageHeight / thumbHeight;
     int n = dm->sf->rowCount();
-    float pages = float(n) / thumbsPerPage - 1;
+    qDebug() << "thumbsPerPage" << thumbsPerPage;
+    float pages = (float(n) / thumbsPerPage) - 1;
     int vMax = pages * pageWidth;
 
     int thumbRow = row / (pageWidth / thumbWidth);
@@ -1145,21 +1154,25 @@ case).
             || obj->objectName() == "ThumbViewHorizontalScrollBar"))
     {
 
-        qDebug() << "\nThumbView event filter" << objectName() << obj << event;
+//        qDebug() << "\nThumbView event filter" << objectName() << obj << event;
 
         if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
+            qDebug() << objectName() << "HorScrollCurrentMax / FinalMax:"
+                     << horizontalScrollBar()->maximum()
+                     << getHorizontalScrollBarMax();
             if (horizontalScrollBar()->maximum() > 0.95 * getHorizontalScrollBarMax()) {
-                /*
                      qDebug() << objectName()
                          << ": Event Filter sending row =" << mw->currentRow
                          << "horizontalScrollBarMax Qt vs Me"
                          << horizontalScrollBar()->maximum()
                          << getHorizontalScrollBarMax();
-                         */
                 scrollToCurrent(mw->currentRow);
             }
         }
          if (obj->objectName() == "ThumbViewVerticalScrollBar") {
+             qDebug() << objectName() << "VerScrollCurrentMax / FinalMax:"
+                      << verticalScrollBar()->maximum()
+                      << getVerticalScrollBarMax();
              if (verticalScrollBar()->maximum() > 0.95 * getVerticalScrollBarMax()){
 
                  qDebug() << objectName()
