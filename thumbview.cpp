@@ -617,6 +617,8 @@ void ThumbView::selectThumb(QModelIndex idx)
     #endif
     }
     if (idx.isValid()) {
+        qDebug() << objectName() << "::selectThumb(index)" << idx;
+        G::lastThumbChangeEvent = "KeyStroke";    // either KeyStroke or MouseClick
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
     }
@@ -959,6 +961,18 @@ thumbDock height.
     setThumbParameters(false);
 }
 
+void ThumbView::updateLayout()
+{
+    QEvent event{QEvent::LayoutRequest};
+    QListView::updateGeometries();
+    QListView::event(&event);
+}
+
+//void ThumbView::scrollTo(const QModelIndex &index, ScrollHint hint)
+//{
+//    // prevent access to parent QAbstractItemView
+//}
+
 void ThumbView::scrollToCurrent(int row)
 {
 /*
@@ -975,27 +989,128 @@ scroll to the current position.
     qDebug() << "ThumbView::scrollToCurrent";
     #endif
     }
-/*
-    qDebug() << objectName() << "ThumbView::scrollToCurrent" << currentIndex();
-    qDebug() << "verticalScrollBar()->maximum():" << verticalScrollBar()->maximum();
-    qDebug() << "horizontalScrollBar()->maximum():" << horizontalScrollBar()->maximum(); */
 
-    QModelIndex idx = dm->sf->index(row, 0);
-    scrollTo(idx, ScrollHint::PositionAtCenter);
-    qDebug() << "scrollToCurrent" << objectName() << currentIndex();
+    if (!isWrapping())
+        horizontalScrollBar()->setValue(getHorizontalScrollBarOffset(row));
+    else
+        verticalScrollBar()->setValue(getVerticalScrollBarOffset(row));
+
     readyToScroll = false;
 }
 
-void ThumbView::updateLayout()
+int ThumbView::getHorizontalScrollBarOffset(int row)
 {
-    QEvent event{QEvent::LayoutRequest};
-    QListView::updateGeometries();
-    QListView::event(&event);
+    int pageWidth = viewport()->width();
+    int thumbWidth = getThumbCellSize().width();
+    float thumbsPerPage = (double)pageWidth / thumbWidth;
+    int n = dm->sf->rowCount();
+    float pages = float(n) / thumbsPerPage - 1;
+    float hMax = pages * pageWidth;
+
+    int startNoScrollItems = pageWidth / thumbWidth / 2;
+    float fractpart = fmodf (thumbsPerPage / 2 , 1.0);
+    int thumbCntrOffset = (0.5 - fractpart) * thumbWidth;
+    int scrollOffset = (row - startNoScrollItems) * thumbWidth + thumbCntrOffset;
+    if (scrollOffset < 0) scrollOffset = 0;
+    if (scrollOffset > hMax) scrollOffset = hMax;
+    /*
+    qDebug() << objectName()
+             << "Row =" << mw->currentRow
+             << "horizontalScrollBarMax Qt vs Me"
+             << horizontalScrollBar()->maximum()
+             << hMax
+             << "Total Pages =" << pages
+             << "Item Width =" << thumbWidth
+             << "ViewPort Width =" << pageWidth
+             << "startNoScrollItems =" << startNoScrollItems
+             << "thumbCntrOffset" << thumbCntrOffset
+             << "Current/Estimate Pos = " << horizontalScrollBar()->value()
+             << scrollOffset;
+*/
+    return scrollOffset;
 }
 
-void ThumbView::horizontalScrollBarRangeChanged()
+int ThumbView::getVerticalScrollBarOffset(int row)
 {
-    qDebug() << "ThumbView::horizontalScrollBarRangeChanged";
+    int pageWidth = viewport()->width();
+    int pageHeight = viewport()->height();
+    int thumbWidth = getThumbCellSize().width();
+    int thumbHeight = getThumbCellSize().height();
+    float thumbsPerPage = pageWidth / thumbWidth * (float)pageHeight / thumbHeight;
+    float thumbRowsPerPage = (float)pageHeight / thumbHeight;
+    int n = dm->sf->rowCount();
+    float pages = float(n) / thumbsPerPage - 1;
+    int vMax = pages * pageWidth;
+
+    int thumbRow = row / (pageWidth / thumbWidth);
+    int startNoScrollItems = thumbRowsPerPage / 2;
+    float fractpart = fmodf (thumbRowsPerPage / 2 , 1.0);
+    int thumbCntrOffset = (0.5 - fractpart) * thumbHeight;
+    int scrollOffset = (thumbRow - startNoScrollItems) * thumbHeight + thumbCntrOffset;
+    if (scrollOffset < 0) scrollOffset = 0;
+    if (scrollOffset > vMax) scrollOffset = vMax;
+    /*
+    qDebug() << objectName()
+             << "Row =" << mw->currentRow
+             << "thumbRow" << thumbRow
+             << "verticalScrollBarMax Qt vs Me"
+             << verticalScrollBar()->maximum()
+             << vMax
+             << "Total Pages =" << pages
+             << "Item Height =" << thumbHeight
+             << "ViewPort Height =" << pageHeight
+             << "startNoScrollItems =" << startNoScrollItems
+             << "thumbCntrOffset" << thumbCntrOffset
+             << "Current/Estimate Pos = " << verticalScrollBar()->value()
+             << scrollOffset;
+*/
+    return scrollOffset;
+}
+int ThumbView::getHorizontalScrollBarMax()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "humbView::getHorizontalScrollBarMax()";
+    #endif
+    }
+    int pageWidth = viewport()->width();
+    int thumbWidth = getThumbCellSize().width();
+    float thumbsPerPage = (double)pageWidth / thumbWidth;
+    int n = dm->sf->rowCount();
+    float pages = float(n) / thumbsPerPage - 1;
+    float hMax = pages * pageWidth;
+    return hMax;
+}
+
+int ThumbView::getVerticalScrollBarMax()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "humbView::getVerticalScrollBarMax()";
+    #endif
+    }
+    int pageWidth = viewport()->width();
+    int pageHeight = viewport()->height();
+    int thumbWidth = getThumbCellSize().width();
+    int thumbHeight = getThumbCellSize().height();
+    float thumbsPerPage = pageWidth / thumbWidth * (float)pageHeight / thumbHeight;
+    int n = dm->sf->rowCount();
+    float pages = float(n) / thumbsPerPage - 1;
+    int vMax = pages * pageHeight;
+    /*
+    qDebug() << objectName()
+             << "Row =" << mw->currentRow
+             << "verticalScrollBarMax Qt vs Me"
+             << verticalScrollBar()->maximum()
+             << vMax;
+             */
+    return vMax;
 }
 
 bool ThumbView::eventFilter(QObject *obj, QEvent *event)
@@ -1029,35 +1144,31 @@ case).
             && (obj->objectName() == "ThumbViewVerticalScrollBar"
             || obj->objectName() == "ThumbViewHorizontalScrollBar"))
     {
-//        qDebug() << "\nThumbView event filter" << objectName() << obj << event;
+
+        qDebug() << "\nThumbView event filter" << objectName() << obj << event;
+
         if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
-            int pageWidth = viewport()->width();
-            int thumbWidth = getThumbCellSize().width();
-            float thumbsPerPage = (float)pageWidth / thumbWidth;
-            int n = dm->sf->rowCount();
-            float pages = float(n) / thumbsPerPage - 1;
-            float hMax = pages * pageWidth;
-            if (horizontalScrollBar()->maximum() > 0.95 * hMax) {
-                qDebug() << "Event Filter sending row:" << mw->currentRow
-                         << "horizontalScrollBarMax" << horizontalScrollBar()->maximum()
-                         << "hMax" << hMax;
+            if (horizontalScrollBar()->maximum() > 0.95 * getHorizontalScrollBarMax()) {
+                /*
+                     qDebug() << objectName()
+                         << ": Event Filter sending row =" << mw->currentRow
+                         << "horizontalScrollBarMax Qt vs Me"
+                         << horizontalScrollBar()->maximum()
+                         << getHorizontalScrollBarMax();
+                         */
                 scrollToCurrent(mw->currentRow);
             }
         }
          if (obj->objectName() == "ThumbViewVerticalScrollBar") {
-             int pageWidth = viewport()->width();
-             int pageHeight = viewport()->height();
-             int thumbWidth = getThumbCellSize().width();
-             int thumbHeight = getThumbCellSize().height();
-             float thumbsPerPage = pageWidth / thumbWidth * (float)pageHeight / thumbHeight;
-             int n = dm->sf->rowCount();
-             float pages = float(n) / thumbsPerPage - 1;
-             float vMax = pages * pageHeight;
-             if (verticalScrollBar()->maximum() > 0.95 * vMax){
-                 qDebug() << "Event Filter sending row:" << mw->currentRow
-                 << "verticalScrollBarMax" << verticalScrollBar()->maximum()
-                 << "vMax" << vMax;
+             if (verticalScrollBar()->maximum() > 0.95 * getVerticalScrollBarMax()){
+
+                 qDebug() << objectName()
+                          << ": Event Filter sending row =" << mw->currentRow
+                          << "verticalScrollBarMax Qt vs Me"
+                          << verticalScrollBar()->maximum()
+                          << getVerticalScrollBarMax();
                  scrollToCurrent(mw->currentRow);
+
              }
          }
     }
@@ -1130,6 +1241,7 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     #endif
     }
     bool dock = false;
+    G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
     QListView::mousePressEvent(event);
 
     // capture mouse click position for imageView zoom/pan

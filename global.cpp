@@ -10,6 +10,7 @@ namespace G
     QColor labelPurpleColor(QColor(128,0,128,128));     // Dark magenta
 
     QString mode;                       // In MW: Loupe, Grid, Table or Compare
+    QString lastThumbChangeEvent;
 
     // not persistent
     bool isThreadTrackingOn;

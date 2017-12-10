@@ -316,7 +316,7 @@ private slots:
     void help();
     void helpShortcuts();
 
-    void cancelNeedToScroll();
+    void delayScroll();
     void test();    // for debugging
 
     //    void cutThumbs();

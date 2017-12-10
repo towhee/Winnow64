@@ -22,6 +22,7 @@ public slots:
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
+    void mousePressEvent(QMouseEvent *event);
 
 private:
     ThumbView *thumbView;

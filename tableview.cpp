@@ -75,6 +75,13 @@ bool TableView::eventFilter(QObject *obj, QEvent *event)
     }
     return QWidget::eventFilter(obj, event);
 }
+
+void TableView::mousePressEvent(QMouseEvent *event)
+{
+    G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
+    QTableView::mousePressEvent(event);
+}
+
 void TableView::mouseDoubleClickEvent(QMouseEvent *event)
 {
     {
@@ -123,7 +130,7 @@ QSettings has been loaded.
 
 void TableView::showOrHide()
 {
-    qDebug() << "TableView::showOrHide";
+//    qDebug() << "TableView::showOrHide";
     for(int i = 0; i < ok->rowCount(); i++) {
         bool showField = ok->index(i, 1).data().toBool();
         if (showField) showColumn(i + 1);

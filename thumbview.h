@@ -9,6 +9,7 @@
 #include "datamodel.h"
 #include "thumbviewdelegate.h"
 #include "filters.h"
+#include <math.h>
 
 //class Scrollbar : public QScrollBar
 //{
@@ -65,6 +66,12 @@ public:
     QString getCurrentFilename();       //not used, but might be handy
     void setThumbParameters(bool okayToUpdateThumbDockHeight);
 
+//    void scrollTo(const QModelIndex &index, ScrollHint hint);
+    int getHorizontalScrollBarOffset(int row);
+    int getVerticalScrollBarOffset(int row);
+    int getHorizontalScrollBarMax();
+    int getVerticalScrollBarMax();
+
     QItemSelectionModel *thumbViewSelection;
 
     int thumbSize;
@@ -75,7 +82,6 @@ public:
     bool scrollPaintFound;
 
 public slots:
-    void horizontalScrollBarRangeChanged();
     void scrollToCurrent(int row);
     void thumbsEnlarge();
     void thumbsShrink();

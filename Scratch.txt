@@ -1,52 +1,8 @@
-Exited in loupe view - thumbs correct
-
-MW::createThumbView thumbView->thumbWidth 95
-QFont::setPixelSize: Pixel size <= 0 (0)
-MW::createGridView gridView->thumbWidth 160
-Restoring state - triggers setThumbDockFeatures prematurely
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________
-Still initializing - cancel setThumbDockFeatures
-QMainWidget::resizeDocks: all sizes need to be larger than 0
-MW::setCentralView   asLoupeAction->isChecked() true asGridAction->isChecked() false asTableAction->isChecked() false asCompareAction->isChecked() false isInitializing true
-MW::loupeDisplay calling  setThumbParameters   thumbView->thumbWidth 95 gridView->thumbWidth 160 isInitializing true
-ThumbView::setThumbParameters   thumbWidth 95
-Calling setThumbDockFeatures from MW::setThumbDockHeight
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________
-Still initializing - cancel setThumbDockFeatures
-Add files elapsed time = 16 ms for  50 files
-"/Users/roryhill/Pictures/2017-05-30_Ferryland/2017-05-30_0001.CR2"
-Calling thumbView->thumbsFitTopOrBottom from MW::Resize event    thumbView->thumbWidth 95 gridView->thumbWidth 160 isInitializing false
-Calling setThumbParameters from ThumbView::thumbsFitTopOrBottom thumbWidth 95
-ThumbView::setThumbParameters   thumbWidth 95
-thumbDockVisibleAction->isChecked() true
-
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Exited in grid view - thumbs wrong when switch to loupe view
-
-MW::createThumbView thumbView->thumbWidth 95
-QFont::setPixelSize: Pixel size <= 0 (0)
-MW::createGridView gridView->thumbWidth 160
-Restoring state - triggers setThumbDockFeatures prematurely
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________
-Still initializing - cancel setThumbDockFeatures
-MW::setCentralView   asLoupeAction->isChecked() false asGridAction->isChecked() true asTableAction->isChecked() false asCompareAction->isChecked() false isInitializing true
-thumbDockVisibleAction->isChecked() true
-MW::gridDisplay calling  setThumbParameters   thumbView->thumbWidth 95 gridView->thumbWidth 160 isInitializing true
-ThumbView::setThumbParameters   thumbWidth 160
-QFont::setPixelSize: Pixel size <= 0 (0)
-Add files elapsed time = 17 ms for  50 files
-"/Users/roryhill/Pictures/2017-05-30_Ferryland/2017-05-30_0001.CR2"
-
-
-
-
-
-
-
-
-
-
-
-
-
+"ThumbView" Row = 0 horizontalScrollBarMax Qt vs Me 8800 27223 Total Pages = 272.23 Item Width = 89 ViewPort Width = 100 Current Pos =  0
+"ThumbView" Row = 1 horizontalScrollBarMax Qt vs Me 26051 26051 Total Pages = 20.4803 Item Width = 89 ViewPort Width = 1272 Current Pos =  0
+"ThumbView" Row = 2 horizontalScrollBarMax Qt vs Me 26051 26051 Total Pages = 20.4803 Item Width = 89 ViewPort Width = 1272 Current Pos =  0
+"ThumbView" Row = 3 horizontalScrollBarMax Qt vs Me 26051 26051 Total Pages = 20.4803 Item Width = 89 ViewPort Width = 1272 Current Pos =  0
+"ThumbView" Row = 8 horizontalScrollBarMax Qt vs Me 26051 26051 Total Pages = 20.4803 Item Width = 89 ViewPort Width = 1272 Current Pos =  32
+"ThumbView" Row = 9 horizontalScrollBarMax Qt vs Me 26051 26051 Total Pages = 20.4803 Item Width = 89 ViewPort Width = 1272 Current Pos =  121
+"ThumbView" Row = 10 horizontalScrollBarMax Qt vs Me 26051 26051 Total Pages = 20.4803 Item Width = 89 ViewPort Width = 1272 Current Pos =  210
+"ThumbView" Row = 11 horizontalScrollBarMax Qt vs Me 26051 26051 Total Pages = 20.4803 Item Width = 89 ViewPort Width = 1272 Current Pos =  299

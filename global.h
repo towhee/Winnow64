@@ -61,6 +61,7 @@ enum dataModelColumns {
     extern QColor labelPurpleColor;
 
     extern QString mode;
+    extern QString lastThumbChangeEvent;
 
     extern bool isThreadTrackingOn;
     extern bool isNewFolderLoaded;

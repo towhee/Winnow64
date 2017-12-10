@@ -178,10 +178,12 @@ void MW::resizeEvent(QResizeEvent *event)
 
 //void MW::mousePressEvent(QMouseEvent *event)
 //{
-//    qDebug() << event;
+////    qDebug() << event;
 ////    if (event->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
 ////    if (event->button() == Qt::LeftButton) qDebug() << "mousePressEvent  isLeftMouseBtnPressed" << isLeftMouseBtnPressed;
 ////    QMainWindow::mousePressEvent(event);
+//    lastIndexChangeEvent = "MouseClick";
+//    QAbstractItemView::mousePressEvent(event);
 //}
 
 //void MW::mouseMoveEvent(QMouseEvent *event)
@@ -361,7 +363,9 @@ void MW::folderSelectionChange()
     if (isInitializing) {
         if (rememberLastDir) {
             dirPath = lastDir;
-            qDebug() << "Last folder opened was" << lastDir;
+            /*
+               qDebug() << "Last folder opened was" << lastDir;
+               */
             // is drive still available and valid?
             QStorageInfo testStorage;
             // is folder still available and valid?
@@ -380,6 +384,7 @@ void MW::folderSelectionChange()
                 */
                 return;
             }
+        }
     }
     else {
         dirPath = getSelectedPath();
@@ -455,7 +460,6 @@ void MW::folderSelectionChange()
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
-//void MW::fileSelectionChange()
 {
 /* Triggered when file selection changes (folder change selects new image, so
 it also triggers this function). The new image is loaded, the pick status is
@@ -491,25 +495,38 @@ so scrollTo and delegate use of the current index must check the row.
         modeChangeJustHappened = false;
         thumbView->setCurrentIndex(previous);
     }
-//    thumbView->setCurrentIndex(current);
+    else thumbView->setCurrentIndex(current);
+//
     currentRow = current.row();
-    qDebug() << "fileSelectionChange  mode =" << G::mode
-             << "prevMode =" << prevMode
-             << "currentRow = " << currentRow
-             << "previousRow = " << previous.row()
-             << current;
+    /*
+//    qDebug() << "\nfileSelectionChange  mode =" << G::mode
+//             << "prevMode =" << prevMode
+//             << "currentRow = " << currentRow
+//             << "previousRow = " << previous.row()
+//             << "current" << current;
+//    qDebug() << "thumbView: Visible" << thumbView->isVisible() << "Row =" << thumbView->currentIndex().row() << "Col =" << thumbView->currentIndex().column();
+//    qDebug() << "gridView : Visible" << gridView->isVisible() << "Row =" << gridView->currentIndex().row() << "Col =" << gridView->currentIndex().column();
+//    qDebug() << "tableView: Visible" << tableView->isVisible() << "Row =" << tableView->currentIndex().row() << "Col =" << tableView->currentIndex().column();
+//    if (!thumbView->isWrapping()) thumbView->getHorizontalScrollBarOffset(currentRow);
+//    gridView->scrollTo(current, QAbstractItemView::ScrollHint::PositionAtCenter);
+//    if (gridView->isVisible()) gridView->getVerticalScrollBarOffset(currentRow);
+//    thumbView->getVerticalScrollBarMax();
+*/
 
     // update delegates so they can highlight the current item
     thumbView->thumbViewDelegate->currentRow = currentRow;
     gridView->thumbViewDelegate->currentRow = currentRow;
 
-    // scroll views to center on currentIndex
-//    thumbView->setAutoScroll(false);  // no effect
-    if (thumbView->isVisible()) thumbView->scrollTo(current, QAbstractItemView::ScrollHint::EnsureVisible);
-    if (gridView->isVisible()) gridView->scrollTo(current, QAbstractItemView::ScrollHint::EnsureVisible);
-    if (tableView->isVisible()) tableView->scrollTo(current, QAbstractItemView::ScrollHint::EnsureVisible);
-
-//    if (thumbView->isVisible()) thumbView->scrollToCurrent(currentRow);
+    // Qt has 100ms delay in QAbstractItemView::mousePressEvent for double-clicks - aarg!
+    if (G::lastThumbChangeEvent == "MouseClick")
+        QTimer::singleShot(1, this, SLOT(delayScroll()));
+    else {
+        qDebug() << "Not a mouse click";
+        if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);
+        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
+                 QAbstractItemView::ScrollHint::PositionAtCenter);
+    }
+    G::lastThumbChangeEvent = "";
 
     QString fPath = current.data(G::FileNameRole).toString();
     infoView->updateInfo(fPath);
@@ -1907,6 +1924,7 @@ void MW::createThumbView()
     }
     thumbView = new ThumbView(this, dm);
     thumbView->setObjectName("ThumbView");
+    thumbView->setAutoScroll(false);
     // set here, as gridView, which is another ThumbView instance, is different
 //    thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
@@ -1918,10 +1936,9 @@ void MW::createThumbView()
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
 
-    qDebug() << "MW::createThumbView"
-             << "thumbView->thumbWidth"
-             << thumbView->thumbWidth;
-
+//    qDebug() << "MW::createThumbView"
+//             << "thumbView->thumbWidth"
+//             << thumbView->thumbWidth;
 
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -1944,6 +1961,7 @@ void MW::createGridView()
     gridView = new ThumbView(this, dm);
     gridView->setObjectName("GridView");
     gridView->setWrapping(true);
+    gridView->setAutoScroll(false);
 
     gridView->thumbSpacing = setting->value("thumbSpacingGrid").toInt();
     gridView->thumbPadding = setting->value("thumbPaddingGrid").toInt();
@@ -1952,9 +1970,9 @@ void MW::createGridView()
     gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
     gridView->showThumbLabels = setting->value("showThumbLabelsGrid").toBool();
 
-    qDebug() << "MW::createGridView"
-             << "gridView->thumbWidth"
-             << gridView->thumbWidth;
+//    qDebug() << "MW::createGridView"
+//             << "gridView->thumbWidth"
+//             << gridView->thumbWidth;
 
     // double mouse click fires displayLoupe
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -1973,6 +1991,7 @@ dependent on datamodel and thumbView.
     #endif
     }
     tableView = new TableView(dm, thumbView);
+    tableView->setAutoScroll(false);
 
     // update menu "sort by" to match tableView sort change
     connect(tableView->horizontalHeader(),
@@ -2472,13 +2491,13 @@ void MW::showHiddenFiles()
     fsTree->setModelFlags();
 }
 
-void MW::cancelNeedToScroll()
+void MW::delayScroll()
 {
-    thumbView->readyToScroll = false;
-    gridView->readyToScroll = false;
-    tableView->readyToScroll = false;
-//    QApplication::postEvent(this, new QKeyEvent(QEvent::KeyPress, Qt::Key_X, Qt::NoModifier, "X"));
-    qDebug() << "MW::cancelNeedToScroll";
+    // scroll views to center on currentIndex
+    if (thumbView->isVisible()) thumbView->scrollToCurrent(currentRow);
+    if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);
+    if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
+             QAbstractItemView::ScrollHint::PositionAtCenter);
 }
 
 void MW::setDockFitThumbs()
@@ -3121,8 +3140,7 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-    qDebug() << "getThumbCellSize " << thumbView->getThumbCellSize();
-    qDebug() << "getThumbSpaceMax" << thumbView->getThumbSpaceMax();
+    qDebug() << "Horizontal scrollbar position" << thumbView->horizontalScrollBar()->value();
 
 
 //    metadata->readMetadata(true, thumbView->getCurrentFilename());
@@ -4510,10 +4528,10 @@ lack of notification when the QListView has finished painting itself.
 
     // limit time spent intercepting paint events to call scrollToCurrent
 
-    if (thumbView->isVisible()) {
-        thumbView->scrollToCurrent(currentRow);
+//    if (thumbView->isVisible())
+//        thumbView->scrollToCurrent(currentRow);
+//    else
         thumbView->readyToScroll = true;
-    }
 
     prevMode = "Loupe";
 }
@@ -4584,7 +4602,7 @@ void MW::tableDisplay()
 
     // limit time spent intercepting paint events to call scrollToCurrent
 //    thumbView->readyToScroll = true;
-//    QTimer::singleShot(1000, this, SLOT(cancelNeedToScroll()));
+//    QTimer::singleShot(1000, this, SLOT(delayScroll()));
 }
 
 void MW::compareDisplay()
