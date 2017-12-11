@@ -180,7 +180,8 @@ bool DataModel::addFiles()
         setData(index(row, G::PathColumn), fileInfo.absoluteFilePath(), Qt::ToolTipRole);
         setData(index(row, G::PathColumn), fileInfo.path(), G::PathRole);   // can we combine and eliminate
         setData(index(row, G::PathColumn), QRect(), G::ThumbRectRole);
-        setData(index(row, G::PathColumn), Qt::AlignCenter, Qt::TextAlignmentRole);  */
+        setData(index(row, G::PathColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+*/
 
         item = new QStandardItem();
         item->setData("", Qt::DisplayRole);     // column 0 just displays icon

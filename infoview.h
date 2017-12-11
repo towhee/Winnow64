@@ -18,6 +18,35 @@ public:
     // datamodel for metadata to show or hide
     QStandardItemModel *ok;
 
+    enum infoModelRows {
+        FolderRow,
+        FileNameRow,
+        LocationRow,
+        SizeRow,
+        DateTimeRow,
+        ModifiedRow,
+        BlankEntryRow1,
+        DimensionsRow,
+        MegaPixelsRow,
+        ModelRow,
+        LensRow,
+        ShutterSpeedRow,
+        ApertureRow,
+        ISORow,
+        FocalLengthRow,
+        TitleRow,
+        CreatorRow,
+        CopyrightRow,
+        EmailRow,
+        UrlRow,
+        BlankEntryRow2,
+        PositionRow,
+        ZoomRow,
+        PickedRow,
+        AfterLastItem   // insert additional items before this
+    };
+
+
 public slots:
     void showOrHide();
 	void showInfoViewMenu(QPoint pt);
@@ -28,16 +57,12 @@ private slots:
 protected:
 
 private:
-    QStandardItemModel *infoModel;
 	QModelIndex selectedEntry;
 	QMenu *infoMenu;
 	QAction *copyAction;
     Metadata *metadata;
 
-//    void clear();
-    void createOkToShow();
-    void addEntry(QString &key, QString &value);
-    void addTitleEntry(QString title);
+    void setupOk();
     void tweakHeaders();
 };
 

@@ -1,17 +1,6 @@
-
-
 #include "infoview.h"
 #include "global.h"
-#include "mainwindow.h"     // friend of MW
 
-/*
-Should change infoModel to create list of metadata items plus show column.  Then
-update the metadata in the value column instead of the current clear and rebuild
-table strategy.
-*/
-
-// friend of MW
-MW *mwInfo;
 
 InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTableView(parent)
 {
@@ -21,17 +10,17 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTableView(parent)
     #endif
     }
     this->metadata = metadata;
-    // this works because InfoView is a friend class of MW
-    mwInfo = qobject_cast<MW*>(parent);
 
-    infoModel = new QStandardItemModel(this);
-    setModel(infoModel);
+    ok = new QStandardItemModel(this);
+    setupOk();
+    setModel(ok);
 
     setSelectionMode(QAbstractItemView::NoSelection);
 	verticalHeader()->setVisible(false);
 	verticalHeader()->setDefaultSectionSize(verticalHeader()->minimumSectionSize());
     horizontalHeader()->setVisible(true);
     horizontalHeader()->setStretchLastSection(true);
+    hideColumn(0);
     setAlternatingRowColors(true);
     setShowGrid(true);
 
@@ -42,11 +31,10 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTableView(parent)
     // InfoView menu
 	infoMenu = new QMenu("");
 	copyAction = new QAction(tr("Copy"), this);
+
 	connect(copyAction, SIGNAL(triggered()), this, SLOT(copyEntry()));
 	infoMenu->addAction(copyAction);
 	setContextMenuPolicy(Qt::CustomContextMenu);
-
-    createOkToShow();
 
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),
             SLOT(showInfoViewMenu(QPoint)));
@@ -74,51 +62,59 @@ void InfoView::tweakHeaders()
     horizontalHeader()->setFixedHeight(1);
 }
 
-void InfoView::createOkToShow()
+void InfoView::setupOk()
 {
 /*
-Create a datamodel called (ok) to hold all metadata items in infoModel and a
-boolean flag indicating whether to show or hide each item. It would make sense
-to consolidate this into the infoModel datamodel, which is currently cleared
-every time a new image is selected.
+The datamodel called (ok) holds all metadata items shown in the InfoView
+QTableView. It contains three columns:
+
+    ● A boolean flag to show or hide a row of the table
+    ● The name of the information item
+    ● The value of the information item
+
+The information items are metadata about the file, such as name or path;
+information about the image, such as aperture or dimensions; and application
+status information, such as number of items picked or current item selected.
 */
     {
     #ifdef ISDEBUG
     qDebug() << "InfoView::createOkToShow";
     #endif
     }
-    ok = new QStandardItemModel;
-
     ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
-    ok->setHorizontalHeaderItem(1, new QStandardItem(QString("Show")));
+    ok->setHorizontalHeaderItem(1, new QStandardItem(QString("Value")));
+    ok->setHorizontalHeaderItem(2, new QStandardItem(QString("Show")));
 
-    // these fields must exactly match ones in updateInfo() !!
-    int i = 0;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Folder");         i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "File name");      i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Location");       i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Size");           i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Date/Time");      i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Modified");       i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Dimensions");     i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Megapixels");     i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Model");          i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Lens");           i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Shutter speed");  i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Aperture");       i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "ISO");            i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Focal length");   i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Title");          i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Creator");        i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Copyright");      i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Email");          i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Url");            i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Position");       i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Zoom");           i++;
-    ok->insertRow(i);   ok->setData(ok->index(i, 0), "Picked");         i++;
+    // create all the rows req'd using global enum infoModelItems
+    ok->insertRows(0, AfterLastItem);
 
+    // Set field description
+    ok->setData(ok->index(FolderRow, 1), "Folder");
+    ok->setData(ok->index(FileNameRow, 1), "File name");
+    ok->setData(ok->index(LocationRow, 1), "Location");
+    ok->setData(ok->index(SizeRow, 1), "Size");
+    ok->setData(ok->index(DateTimeRow, 1), "Created");
+    ok->setData(ok->index(ModifiedRow, 1), "Modified");
+    ok->setData(ok->index(DimensionsRow, 1), "Dimensions");
+    ok->setData(ok->index(MegaPixelsRow, 1), "Megapixels");
+    ok->setData(ok->index(ModelRow, 1), "Model");
+    ok->setData(ok->index(LensRow, 1), "Lens");
+    ok->setData(ok->index(ShutterSpeedRow, 1), "Shutter speed");
+    ok->setData(ok->index(ApertureRow, 1), "Aperture");
+    ok->setData(ok->index(ISORow, 1), "ISO");
+    ok->setData(ok->index(FocalLengthRow, 1), "Focal length");
+    ok->setData(ok->index(TitleRow, 1), "Title");
+    ok->setData(ok->index(CreatorRow, 1), "Creator");
+    ok->setData(ok->index(CopyrightRow, 1), "Copyright");
+    ok->setData(ok->index(EmailRow, 1), "Email");
+    ok->setData(ok->index(UrlRow, 1), "Url");
+    ok->setData(ok->index(PositionRow, 1), "Position");
+    ok->setData(ok->index(ZoomRow, 1), "Zoom");
+    ok->setData(ok->index(PickedRow, 1), "Picked");
+
+    // set default to show all rows - overridden in preferences
     for(int row = 0; row < ok->rowCount(); row++)
-        ok->setData(ok->index(row, 1), true);
+        ok->setData(ok->index(row, 0), true);
 
     connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
             this, SLOT(showOrHide()));
@@ -131,9 +127,9 @@ Shows or hides each metadata item in the metadata panel based on the boolean
 flag in the datamodel ok.  The show/hide is set in the prefdlg, which is in
 sync with ok.
 
-When called, the function iterates through all the metadata items in ok and looks
-for the field in infoModel.  It then shows or hides the table row based on the
-ok show flag.
+When called, the function iterates through all the metadata items in ok and
+looks for the field in ok. It then shows or hides the table row based on the ok
+show flag.
 */
     {
     #ifdef ISDEBUG
@@ -141,50 +137,15 @@ ok show flag.
     #endif
     }
     for(int row = 0; row < ok->rowCount(); row++) {
-        QString field = ok->index(row, 0).data().toString();
-        bool showField = ok->index(row, 1).data().toBool();
-        int tRow;
-        for(tRow = 0; tRow < infoModel->rowCount(); tRow++) {
-            QString infoField = infoModel->index(tRow, 0).data().toString();
-            if (infoField == field) break;
-        }
-        if (showField) showRow(tRow);
-        else hideRow(tRow);
+        bool showField = ok->index(row, 0).data().toBool();
+        if (showField) showRow(row);
+        else hideRow(row);
     }
 }
 
-void InfoView::addEntry(QString &key, QString &value)
+void InfoView::clearInfo()
 {
-    {
-    #ifdef ISDEBUG
-    qDebug() << "InfoView::addEntry" << key << value;
-    #endif
-    }
-	int atRow = infoModel->rowCount();
-	QStandardItem *itemKey = new QStandardItem(key);
-	infoModel->insertRow(atRow, itemKey);
-	if (!value.isEmpty()) {
-		QStandardItem *itemVal = new QStandardItem(value);
-		itemVal->setToolTip(value);
-		infoModel->setItem(atRow, 1, itemVal);
-	}
-}
-
-void InfoView::addTitleEntry(QString title)
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "InfoView::addTitleEntry" << title;
-    #endif
-    }
-
-	int atRow = infoModel->rowCount();
-	QStandardItem *itemKey = new QStandardItem(title);
-	infoModel->insertRow(atRow, itemKey);
-
-	QFont boldFont;
-	boldFont.setBold(true);
-    itemKey->setData(boldFont, Qt::FontRole);
+    ok->clear();
 }
 
 void InfoView::copyEntry()
@@ -195,20 +156,9 @@ void InfoView::copyEntry()
     #endif
     }
 	if (selectedEntry.isValid())
-		QApplication::clipboard()->setText(infoModel->itemFromIndex(selectedEntry)->toolTip());
+        QApplication::clipboard()->setText(ok->itemFromIndex(selectedEntry)->toolTip());
 }
 
-void InfoView::clearInfo()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "InfoView::clearInfo";
-    #endif
-    }
-    infoModel->clear();
-}
-
-// Get embedded jpg if raw file from here???
 void InfoView::updateInfo(const QString &fPath)
 {
     {
@@ -217,116 +167,48 @@ void InfoView::updateInfo(const QString &fPath)
     #endif
     }
 
-    infoModel->clear();
-
-    QString key;
-    QString val;
-
     QFileInfo imageInfo = QFileInfo(fPath);
-//    infoView->addTitleEntry(tr("General             "));
 
-//    qDebug() << "InfoView::updateInfo - check isLoaded" << fPath;
+    // make sure there is metadata for this image
     if (!metadata->isLoaded(fPath)) {
         metadata->loadImageMetadata(fPath, true, true);
     }
 
-    key = tr("Folder");
-    val = imageInfo.dir().dirName();
-    addEntry(key, val);
-
-    key = tr("File name");
-    val = imageInfo.fileName();
-    addEntry(key, val);
-
-    key = tr("Location");
-    val = imageInfo.path();
-    addEntry(key, val);
-
-    key = tr("Size");
-    val = QString::number(imageInfo.size() / 1024000.0, 'f', 2) + " MB";
-    addEntry(key, val);
-
-    key = tr("Date/Time");
-    val = metadata->getDateTime(fPath);
-    addEntry(key, val);
-
-    key = tr("Modified");
-    val = imageInfo.lastModified().toString(Qt::SystemLocaleShortDate);
-    addEntry(key, val);
-
-    key = tr("Dimensions");
     uint width = metadata->getWidth(fPath);
     uint height = metadata->getHeight(fPath);
-    val = QString::number(width) + "x" + QString::number(height);
-    addEntry(key, val);
 
-    key = tr("Megapixels");
-    val = QString::number((width * height) / 1000000.0, 'f', 2);
-    addEntry(key, val);
+    // update items
+    ok->setData(ok->index(FolderRow, 2), imageInfo.dir().dirName());
+    ok->setData(ok->index(FileNameRow, 2), imageInfo.fileName());
+    ok->setData(ok->index(LocationRow, 2), imageInfo.path());
+    ok->setData(ok->index(SizeRow, 2), QString::number(imageInfo.size() / 1024000.0, 'f', 2) + " MB");
+    ok->setData(ok->index(DateTimeRow, 2), metadata->getDateTime(fPath));
+    ok->setData(ok->index(ModifiedRow, 2), imageInfo.lastModified().toString(Qt::SystemLocaleShortDate));
+    ok->setData(ok->index(DimensionsRow, 2), QString::number(width) + "x" + QString::number(height));
+    ok->setData(ok->index(MegaPixelsRow, 2), QString::number((width * height) / 1000000.0, 'f', 1));
+    ok->setData(ok->index(ModelRow, 2), metadata->getModel(fPath));
+    ok->setData(ok->index(LensRow, 2), metadata->getLens(fPath));
+    ok->setData(ok->index(ShutterSpeedRow, 2), metadata->getExposureTime(fPath));
+    ok->setData(ok->index(ApertureRow, 2), metadata->getAperture(fPath));
+    ok->setData(ok->index(ISORow, 2), metadata->getISO(fPath));
+    ok->setData(ok->index(FocalLengthRow, 2), metadata->getFocalLength(fPath));
+    ok->setData(ok->index(TitleRow, 2), metadata->getTitle(fPath));
+    ok->setData(ok->index(CreatorRow, 2), metadata->getCreator(fPath));
+    ok->setData(ok->index(CopyrightRow, 2), metadata->getCopyright(fPath));
+    ok->setData(ok->index(EmailRow, 2), metadata->getEmail(fPath));
+    ok->setData(ok->index(UrlRow, 2), metadata->getUrl(fPath));
 
-    key = tr("Model");
-    val = metadata->getModel(fPath);
-    addEntry(key, val);
-
-    key = tr("Lens");
-    val = metadata->getLens(fPath);
-    addEntry(key, val);
-
-    key = tr("Shutter speed");
-    val = metadata->getExposureTime(fPath);
-    addEntry(key, val);
-
-    key = tr("Aperture");
-    val = metadata->getAperture(fPath);
-    addEntry(key, val);
-
-    key = tr("ISO");
-    val = metadata->getISO(fPath);
-    addEntry(key, val);
-
-    key = tr("Focal length");
-    val = metadata->getFocalLength(fPath);
-    addEntry(key, val);
-
-    key = tr("Title");
-    val = metadata->getTitle(fPath);
-    addEntry(key, val);
-
-    key = tr("Creator");
-    val = metadata->getCreator(fPath);
-    addEntry(key, val);
-
-    key = tr("Copyright");
-    val = metadata->getCopyright(fPath);
-    addEntry(key, val);
-
-    key = tr("Email");
-    val = metadata->getEmail(fPath);
-    addEntry(key, val);
-
-    key = tr("Url");
-    val = metadata->getUrl(fPath);
-    addEntry(key, val);
-
-    key = tr("Position");
-    val = mwInfo->getPosition();
-    addEntry(key, val);
-
-    key = tr("Zoom");
-    val = mwInfo->getZoom();
-    addEntry(key, val);
-
-    key = tr("Picked");
-    val = mwInfo->getPicked();
-    addEntry(key, val);
+    // set tooltips
+    for (int row = 0; row < ok->rowCount(); row++) {
+        QModelIndex idx = ok->index(row, 2);
+        QString value = qvariant_cast<QString>(idx.data());
+        qDebug() << "Value =" << value;
+        ok->setData(idx, value, Qt::ToolTipRole);
+    }
 
     if (G::isThreadTrackingOn) qDebug()
         << "ThumbView::updateExifInfo - loaded metadata display info for"
         << fPath;
-
-//    key = tr("Error");
-//    val = metadata->getErr(imageFullPath);
-//    addEntry(key, val);
 
     tweakHeaders();
     showOrHide();

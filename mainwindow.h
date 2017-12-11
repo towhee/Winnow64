@@ -641,7 +641,7 @@ private:
     void syncRecentFoldersMenu();
 
     qulonglong memoryReqdForPicks();
-    QString formatMemoryReqdForPicks(qulonglong bytes);
+    QString formatMemoryReqd(qulonglong bytes);
 
     void stressTest();
 

@@ -74,7 +74,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     okInfo = mw->infoView->ok;
     ui->infoFieldsTable->setModel(okInfo);
     for(int row = 0; row < okInfo->rowCount(); row++) {
-        QModelIndex idx = okInfo->index(row,1);
+        QModelIndex idx = okInfo->index(row, 0);
         ui->infoFieldsTable->setIndexWidget(idx, new QCheckBox);
         // set state to match data model value
         QWidget *wid = ui->infoFieldsTable->indexWidget(idx);
@@ -84,10 +84,11 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
 //        box->setStyleSheet("QCheckBox::item { height: 10px;}");
         connect(box, SIGNAL(clicked(bool)), this, SLOT(on_infoField_changed()));
     }
-    ui->infoFieldsTable->horizontalHeader()->moveSection(1, 0);
+//    ui->infoFieldsTable->horizontalHeader()->moveSection(1, 0);
     ui->infoFieldsTable->horizontalHeader()->setVisible(false);
     ui->infoFieldsTable->horizontalHeader()->setStretchLastSection(true);
     ui->infoFieldsTable->verticalHeader()->setVisible(false);
+    ui->infoFieldsTable->hideColumn(2);
     ui->infoFieldsTable->resizeColumnsToContents();
 //    ui->infoFieldsTable->setStyleSheet("QTableView::item {height: 10px;}");  // no work
     ui->infoFieldsTable->setStyleSheet("QTableView {border: 1px solid rgb(85,85,85);}");  // no work
@@ -96,7 +97,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     okTable = mw->tableView->ok;
     ui->tableFieldsTable->setModel(okTable);
     for(int row = 0; row < okTable->rowCount(); row++) {
-        QModelIndex idx = okTable->index(row,1);
+        QModelIndex idx = okTable->index(row, 1);
         ui->tableFieldsTable->setIndexWidget(idx, new QCheckBox);
         // set state to match data model value
         QWidget *wid1 = ui->tableFieldsTable->indexWidget(idx);
@@ -133,7 +134,7 @@ infoView->showOrHide(), which will show or hide each metadata item in the
 Metadata panel.
 */
     for(int row = 0; row < okInfo->rowCount(); row++) {
-        QModelIndex idx = okInfo->index(row,1);
+        QModelIndex idx = okInfo->index(row, 0);
         QWidget *wid = ui->infoFieldsTable->indexWidget(idx);
         QCheckBox *box = qobject_cast<QCheckBox*>(wid);
         okInfo->setData(idx, box->isChecked());

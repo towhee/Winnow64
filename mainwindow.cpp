@@ -450,7 +450,7 @@ void MW::folderSelectionChange()
      updateStatus(false, "Collecting metadata for all images in folder(s)");
      loadMetadataCache();
      // format pickMemSize as bytes, KB, MB or GB
-     pickMemSize = formatMemoryReqdForPicks(memoryReqdForPicks());
+     pickMemSize = formatMemoryReqd(memoryReqdForPicks());
      updateStatus(true);
 }
 
@@ -2309,7 +2309,7 @@ QString MW::getZoom()
     qreal zoom;
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
-    return QString::number(qRound(zoom*100)) + "% zoom";
+    return QString::number(qRound(zoom*100)); // + "% zoom";
 }
 
 QString MW::getPicked()
@@ -2318,7 +2318,10 @@ QString MW::getPicked()
     int count = 0;
     for (int row = 0; row < dm->sf->rowCount(); row++)
         if (dm->sf->index(row, G::PickedColumn).data() == "true") count++;
-    return QString::number(count) + " - " + pickMemSize;
+    QString image = count == 1 ? " image, " : " images, ";
+
+    if (count == 0) return "No picks";
+    return QString::number(count) + image  + pickMemSize;
 }
 
 void MW::updateStatus(bool keepBase, QString s)
@@ -2369,6 +2372,10 @@ QString fileSym = "📷";
 
     status = " " + base + s;
     stateLabel->setText(status);
+
+    infoView->ok->setData(infoView->ok->index(infoView->PositionRow, 2), getPosition());
+    infoView->ok->setData(infoView->ok->index(infoView->ZoomRow, 2), getZoom());
+    infoView->ok->setData(infoView->ok->index(infoView->PickedRow, 2), getPicked());
 }
 
 void MW::updateMetadataThreadRunStatus(bool isRunning)
@@ -3875,18 +3882,8 @@ re-established when the application is re-opened.
     setting->beginGroup("InfoFields");
     setting->remove("");
     for(int row = 0; row < infoView->ok->rowCount(); row++) {
-        QString field = infoView->ok->index(row, 0).data().toString();
-        bool showField = infoView->ok->index(row, 1).data().toBool();
-        setting->setValue(field, showField);
-    }
-    setting->endGroup();
-
-    /* InfoView okToShow fields */
-    setting->beginGroup("InfoFields");
-    setting->remove("");
-    for(int row = 0; row < infoView->ok->rowCount(); row++) {
-        QString field = infoView->ok->index(row, 0).data().toString();
-        bool showField = infoView->ok->index(row, 1).data().toBool();
+        QString field = infoView->ok->index(row, 1).data().toString();
+        bool showField = infoView->ok->index(row, 0).data().toBool();
         setting->setValue(field, showField);
     }
     setting->endGroup();
@@ -4091,14 +4088,23 @@ Preferences are located in the prefdlg class and updated here.
     setting->beginGroup("InfoFields");
     QStringList okFields = setting->childKeys();
     QList<QStandardItem *> itemList;
+    // go through every setting
     for (int i = 0; i < okFields.size(); ++i) {
         QString okField = okFields.at(i);
         bool okToShow = setting->value(okField).toBool();
-        itemList = infoView->ok->findItems(okField);
-        if (itemList.length()) {
-            int row = itemList[0]->row();
-            QModelIndex idx = infoView->ok->index(row, 1);
-            infoView->ok->setData(idx, okToShow, Qt::EditRole);
+        int row;
+        QModelIndex idx;
+        // search for the matching item in the infoView
+        for (row = 0; row < infoView->ok->rowCount(); row++) {
+            idx = infoView->ok->index(row, 1);
+            QString fieldName = qvariant_cast<QString>(idx.data());
+            // find the match
+            if (fieldName == okField) {
+                QModelIndex idxChk = infoView->ok->index(row, 0);
+                // set the flag whether to display or not
+                infoView->ok->setData(idxChk, okToShow, Qt::EditRole);
+                break;
+            }
         }
     }
     setting->endGroup();
@@ -5090,7 +5096,7 @@ void MW::togglePick()
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
-    pickMemSize = formatMemoryReqdForPicks(memoryReqdForPicks());
+    pickMemSize = formatMemoryReqd(memoryReqdForPicks());
     updateStatus(true, "");
 }
 
@@ -5127,18 +5133,18 @@ qulonglong MW::memoryReqdForPicks()
     return memTot;
 }
 
-QString MW::formatMemoryReqdForPicks(qulonglong bytes)
+QString MW::formatMemoryReqd(qulonglong bytes)
 {
     qulonglong x = 1024;
     if(bytes == 0) return "0";
     if(bytes < x) return QString::number(bytes) + " bytes";
-    if(bytes < x * 1024) return QString::number(bytes / x) + "KB";
+    if(bytes < x * 1024) return QString::number(bytes / x) + " KB";
     x *= 1024;
-    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + "MB";
+    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + " MB";
     x *= 1024;
-    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + "GB";
+    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + " GB";
     x *= 1024;
-    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + "TB";
+    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + " TB";
     return "More than TB";
 }
 
