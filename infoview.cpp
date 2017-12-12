@@ -1,6 +1,14 @@
 #include "infoview.h"
 #include "global.h"
 
+/*
+This class shows information in a two column table.
+
+Column 1 = Item Description
+Column 2 = Item Value
+
+It is used to show some file, image and application state information.
+*/
 
 InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTableView(parent)
 {
@@ -202,7 +210,6 @@ void InfoView::updateInfo(const QString &fPath)
     for (int row = 0; row < ok->rowCount(); row++) {
         QModelIndex idx = ok->index(row, 2);
         QString value = qvariant_cast<QString>(idx.data());
-        qDebug() << "Value =" << value;
         ok->setData(idx, value, Qt::ToolTipRole);
     }
 

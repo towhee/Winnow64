@@ -1,5 +1,5 @@
 BUGS
-- Focal length and shutter speed showing incorrectly for some files ie 2017-05-30_0081_1000px.jpg
+- Calc actual 100% pixels and set zoom to match
 - QFSFileEngine::open: No file name specified
 - Beef up deleted or renamed or corrupted folder
 - Not reading metadata from iphone jpgs
@@ -10,10 +10,10 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Change InfoView to a TreeView.
 - Make data/time formating consistent ie InfoView created vs modified
 - Add status dock
 - Tweak default workspace to match current layout
-- Calc actual 100% pixels and set zoom to match
 - Add current folder to bookmarks
 - Read/write XMP sidecars
 - Add zoom increment amount to preferences
@@ -38,7 +38,8 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
-- Done: Change infoView to combine ok and ok
+- Done: Focal length and shutter speed showing incorrectly for some files ie 2017-05-30_0081_1000px.jpg
+- Done: Change infoView to combine ok and infoView datamodels
 - Done: Add Folder to InfoView (also Position, Zoom and Picked)
 - Done: Thumbs resizing to fit height in side docks
 - Done: Mode switching cursor/currentIndex scroll issues

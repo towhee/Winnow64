@@ -587,8 +587,9 @@ float Metadata::getReal(long offset)
     file.seek(offset);
     ulong a = get4(file.read(4));
     ulong b = get4(file.read(4));
-    if (b==0) return 0;
-    float x = (float)a/b;
+    qDebug() << "a =" << a << "b =" << b << "a/b =" << (float)a/b;
+    if (b == 0) return 0;
+    float x = (float)a / b;
     return x;
 }
 
@@ -940,18 +941,23 @@ bool Metadata::getDimensions(ulong jpgOffset)
 //    qDebug() << "Metadata::getDimensions";
 //    #endif
     }
+    long order1 = order;
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
     ulong marker = 0;
     ulong offset = jpgOffset + 2;
     while (marker != 0xFFC0) {
         file.seek(offset);           // APP1 FFE*
         marker = get2(file.read(2));
-        if (marker < 0xFF01) return false;
+        if (marker < 0xFF01) {
+            order = order1;
+            return false;
+        }
         offset = get2(file.peek(2)) + file.pos();
     }
     file.seek(file.pos()+3);
     width = get2(file.read(2));
     height = get2(file.read(2));
+    order = order1;
     return true;
 }
 
@@ -1638,9 +1644,14 @@ bool Metadata::formatJPG()
     if (readNonEssentialMetadata) {
         // EXIF: shutter speed
         if (ifdDataHash.contains(33434)) {
+            qDebug() << "order =" << QString::number(order, 16)
+                     << "ifdDataHash.value(33434).tagValue + startOffset"
+                     << ifdDataHash.value(33434).tagValue + startOffset
+                     << "getReal(ifdDataHash.value(33434).tagValue + startOffset)"
+                     << getReal(ifdDataHash.value(33434).tagValue + startOffset);
             float x = getReal(ifdDataHash.value(33434).tagValue + startOffset);
-            if (x <1 ) {
-                uint t = qRound(1/x);
+            if (x < 1 ) {
+                uint t = qRound(1 / x);
                 exposureTime = "1/" + QString::number(t);
                 exposureTimeNum = x;
             } else {
@@ -1752,6 +1763,7 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
     int msDelay = 0;
     int msInc = 1;
     bool fileOpened = false;
+    qDebug() << "fPath =" << fPath;
     do {
         if (file.open(QIODevice::ReadOnly)) {
 //            qDebug() << "MetadataCache opened. Delay =" << msDelay << imageFullPath;

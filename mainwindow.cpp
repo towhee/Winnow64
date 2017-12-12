@@ -2306,14 +2306,30 @@ QString MW::getPosition()
 
 QString MW::getZoom()
 {
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ng MW::getZoom()";
+    #endif
+    }
     qreal zoom;
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
-    return QString::number(qRound(zoom*100)); // + "% zoom";
+    return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
 
 QString MW::getPicked()
 {
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ng MW::getPicked()";
+    #endif
+    }
     QModelIndex idx;
     int count = 0;
     for (int row = 0; row < dm->sf->rowCount(); row++)
@@ -2326,6 +2342,9 @@ QString MW::getPicked()
 
 void MW::updateStatus(bool keepBase, QString s)
 {
+/*
+
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::updateStatus";
