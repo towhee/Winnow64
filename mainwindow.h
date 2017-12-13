@@ -27,7 +27,7 @@
 #include "tableview.h"
 #include "thumbcache.h"
 #include "workspacedlg.h"
-#include "zoomdlg.h"
+#include "zoomDlg.h"
 
 #include "ui_helpform.h"
 #include "ui_shortcutsform.h"
@@ -544,6 +544,7 @@ private:
     InfoView *infoView;
     CopyPickDlg *copyPickDlg;
     WorkspaceDlg *workspaceDlg;
+    ZoomDlg *zoomDlg = 0;
     PopUp *popUp;
     QTimer *slideShowTimer;
     QWidget *folderDockOrigWidget;

@@ -587,7 +587,7 @@ float Metadata::getReal(long offset)
     file.seek(offset);
     ulong a = get4(file.read(4));
     ulong b = get4(file.read(4));
-    qDebug() << "a =" << a << "b =" << b << "a/b =" << (float)a/b;
+//    qDebug() << "a =" << a << "b =" << b << "a/b =" << (float)a/b;
     if (b == 0) return 0;
     float x = (float)a / b;
     return x;
@@ -1644,11 +1644,11 @@ bool Metadata::formatJPG()
     if (readNonEssentialMetadata) {
         // EXIF: shutter speed
         if (ifdDataHash.contains(33434)) {
-            qDebug() << "order =" << QString::number(order, 16)
-                     << "ifdDataHash.value(33434).tagValue + startOffset"
-                     << ifdDataHash.value(33434).tagValue + startOffset
-                     << "getReal(ifdDataHash.value(33434).tagValue + startOffset)"
-                     << getReal(ifdDataHash.value(33434).tagValue + startOffset);
+//            qDebug() << "order =" << QString::number(order, 16)
+//                     << "ifdDataHash.value(33434).tagValue + startOffset"
+//                     << ifdDataHash.value(33434).tagValue + startOffset
+//                     << "getReal(ifdDataHash.value(33434).tagValue + startOffset)"
+//                     << getReal(ifdDataHash.value(33434).tagValue + startOffset);
             float x = getReal(ifdDataHash.value(33434).tagValue + startOffset);
             if (x < 1 ) {
                 uint t = qRound(1 / x);
@@ -1763,7 +1763,7 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
     int msDelay = 0;
     int msInc = 1;
     bool fileOpened = false;
-    qDebug() << "fPath =" << fPath;
+    qDebug() << "Metadata::readMetadata  fPath =" << fPath;
     do {
         if (file.open(QIODevice::ReadOnly)) {
 //            qDebug() << "MetadataCache opened. Delay =" << msDelay << imageFullPath;

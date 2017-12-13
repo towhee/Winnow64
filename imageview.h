@@ -20,6 +20,7 @@ public:
               bool isShootingInfoVisible);
 
     qreal zoom;
+    qreal refZoom;                      // adjusted to real screen pixels
     qreal toggleZoom;
 
     DropShadowLabel *infoDropShadow;

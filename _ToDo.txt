@@ -1,7 +1,7 @@
 BUGS
+- # images in folder not show on first shortcut click
+- # images in folder weird column widths sometimes
 - Calc actual 100% pixels and set zoom to match
-- QFSFileEngine::open: No file name specified
-- Beef up deleted or renamed or corrupted folder
 - Not reading metadata from iphone jpgs
 PERFORMANCE
 - Separate thread to load XMP data after thumbnails loaded
@@ -11,7 +11,7 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
 - Change InfoView to a TreeView.
-- Make data/time formating consistent ie InfoView created vs modified
+- Make data/time formatting consistent ie InfoView created vs modified
 - Add status dock
 - Tweak default workspace to match current layout
 - Add current folder to bookmarks
@@ -38,6 +38,10 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: QFSFileEngine::open: No file name specified
+- Done: Beef up deleted or renamed or corrupted folder
+- Done: Change shortcut T in zoom dialog
+- Done: Fix shortcut Z in zoom Dialog
 - Done: Focal length and shutter speed showing incorrectly for some files ie 2017-05-30_0081_1000px.jpg
 - Done: Change infoView to combine ok and infoView datamodels
 - Done: Add Folder to InfoView (also Position, Zoom and Picked)

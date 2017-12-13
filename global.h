@@ -63,6 +63,8 @@ enum dataModelColumns {
     extern QString mode;
     extern QString lastThumbChangeEvent;
 
+    extern qreal refScaleAdjustment;
+
     extern bool isThreadTrackingOn;
     extern bool isNewFolderLoaded;
     extern int scrollBarThickness;
@@ -74,7 +76,7 @@ enum dataModelColumns {
     extern bool isTimer;
 }
 
-//#define ISDEBUG        // Uncomment this line to show debugging output
+#define ISDEBUG        // Uncomment this line to show debugging output
 
 #endif // GLOBAL_H
 

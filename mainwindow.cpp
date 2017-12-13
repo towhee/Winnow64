@@ -34,7 +34,29 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     this->setWindowTitle("Winnow");
     this->setObjectName("WinnowMW");
 
-//    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    qDebug() << "QGuiApplication::primaryScreen()->devicePixelRatio()"
+            << QGuiApplication::primaryScreen()->devicePixelRatio();
+    qreal dpr = QGuiApplication::primaryScreen()->devicePixelRatio();
+
+    QRect rect = QGuiApplication::primaryScreen()->geometry();
+    qreal screenMax = qMax(rect.width(), rect.height());
+    G::refScaleAdjustment = 2880 / screenMax;
+
+    int realScreenMax = QGuiApplication::primaryScreen()->physicalSize().width();
+    qreal logicalDpi = QGuiApplication::primaryScreen()->logicalDotsPerInch();
+    qreal physicalDpi = QGuiApplication::primaryScreen()->physicalDotsPerInch();
+    QSizeF physicalSize = QGuiApplication::primaryScreen()->physicalSize();
+//    refScreenAdjustment
+    qDebug() << "\nQGuiApplication::primaryScreen()->geometry()" << QGuiApplication::primaryScreen()->geometry().width()
+             << "\nQGuiApplication::primaryScreen()->physicalSize()" << QGuiApplication::primaryScreen()->physicalSize().width()
+             << "\ndevicePixelRatio" << dpr
+             << "\nlogicalDpi" << QGuiApplication::primaryScreen()->logicalDotsPerInch()
+             << "\nphysicalDpi" << QGuiApplication::primaryScreen()->physicalDotsPerInch()
+             << "\nphysicalSize" << QGuiApplication::primaryScreen()->physicalSize()
+             << "\nQApplication::desktop()->availableGeometry(this)"<< QApplication::desktop()->availableGeometry(this)
+             << "\n";
+
     isInitializing = true;
     isSlideShowActive = false;
     maxThumbSpaceHeight = 160 + 12 + 1;     // rgh not being used
@@ -131,6 +153,8 @@ variables in MW (this class) and managed in the prefDlg class.
 
     // send events to thumbView to monitorsplitter resize of thumbDock
     qApp->installEventFilter(thumbView);
+
+//    QObject *zoomDlg = 0;
 
     // process the persistant folder if available
     folderSelectionChange();
@@ -483,12 +507,16 @@ so scrollTo and delegate use of the current index must check the row.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "\n**********************************MW::fileSelectionChange";
+    qDebug() << "\n**********************************MW::fileSelectionChange**********************************";
     #endif
     }
 
     // if starting program, set first image to display
-    if(previous.row() == -1) thumbView->selectThumb(0);
+//    if (previous.row() == -1) thumbView->selectThumb(0);
+    if (current.row() == -1) {
+        thumbView->selectThumb(0);
+        return;
+    }
 
     // user clicks outside thumb but inside treeView dock
     QModelIndexList selected = selectionModel->selectedIndexes();
@@ -540,9 +568,10 @@ so scrollTo and delegate use of the current index must check the row.
 
     // the file path is used as an index in ImageView and Metadata
     QString fPath = current.data(G::FileNameRole).toString();
+//    qDebug() << "current index" << current << "fPath" << fPath << "Metadata loaded" << metadataLoaded;
 
     // update the matadata panel
-    infoView->updateInfo(fPath);
+    if (metadataLoaded) infoView->updateInfo(fPath);
 
     // update the status bar with ie "5 of 290   30% zoom   3.6GB picked"
     updateStatus(true);
@@ -2317,6 +2346,8 @@ QString MW::getZoom()
     qreal zoom;
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
+    zoom *= G::refScaleAdjustment;
+
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
 
@@ -2381,6 +2412,7 @@ QString fileSym = "📷";
         qreal zoom;
         if (G::mode == "Compare") zoom = compareImages->zoomValue;
         else zoom = imageView->zoom;
+        zoom *= G::refScaleAdjustment;
         zoomPct = QString::number(qRound(zoom*100)) + "% zoom";
 
         QString pickedSoFar = pickMemSize + " picked";
@@ -3632,33 +3664,42 @@ are not applicable.
         return;
     }
 
+    // toggle zoomDlg (if open then close)
+    if (zoomDlg) {
+        if (zoomDlg->isVisible()) {
+            zoomDlg->close();
+            return;
+        }
+    }
+
     // the dialog positions itself relative to the main window and central widget.
     QRect a = this->geometry();
     QRect c = centralWidget->geometry();
-    ZoomDlg *zoomdlg = new ZoomDlg(this, imageView->zoom, a, c);
+    zoomDlg = new ZoomDlg(this, imageView->zoom, a, c);
+//    ZoomDlg *zoomDlg = new ZoomDlg(this, imageView->zoom, a, c);
 
     // update the imageView and compareView classes if there is a zoom change
-    connect(zoomdlg, SIGNAL(zoom(qreal)), imageView, SLOT(zoomTo(qreal)));
-    connect(zoomdlg, SIGNAL(zoom(qreal)), compareImages, SLOT(zoomTo(qreal)));
+    connect(zoomDlg, SIGNAL(zoom(qreal)), imageView, SLOT(zoomTo(qreal)));
+    connect(zoomDlg, SIGNAL(zoom(qreal)), compareImages, SLOT(zoomTo(qreal)));
 
     // update the imageView and compareView classes if there is a toggleZoomValue change
-    connect(zoomdlg, SIGNAL(updateToggleZoom(qreal)),
+    connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)),
             imageView, SLOT(updateToggleZoom(qreal)));
-    connect(zoomdlg, SIGNAL(updateToggleZoom(qreal)),
+    connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)),
             compareImages, SLOT(updateToggleZoom(qreal)));
 
     // if zoom change in parent send it to the zoom dialog
-    connect(imageView, SIGNAL(zoomChange(qreal)), zoomdlg, SLOT(zoomChange(qreal)));
-    connect(compareImages, SIGNAL(zoomChange(qreal)), zoomdlg, SLOT(zoomChange(qreal)));
+    connect(imageView, SIGNAL(zoomChange(qreal)), zoomDlg, SLOT(zoomChange(qreal)));
+    connect(compareImages, SIGNAL(zoomChange(qreal)), zoomDlg, SLOT(zoomChange(qreal)));
 
     // if main window resized then re-position zoom dialog
-    connect(this, SIGNAL(resizeMW(QRect,QRect)), zoomdlg, SLOT(positionWindow(QRect,QRect)));
+    connect(this, SIGNAL(resizeMW(QRect,QRect)), zoomDlg, SLOT(positionWindow(QRect,QRect)));
 
     // if view change other than loupe then close zoomDlg
-    connect(this, SIGNAL(closeZoomDlg()), zoomdlg, SLOT(close()));
+    connect(this, SIGNAL(closeZoomDlg()), zoomDlg, SLOT(close()));
 
     // use show so dialog will be non-modal
-    zoomdlg->show();
+    zoomDlg->show();
 }
 
 void MW::zoomIn()
@@ -4791,13 +4832,14 @@ void MW::setCentralView()
         isFirstTimeNoSettings = false;
         return;
     }
+    /*
     qDebug() << "MW::setCentralView  "
              << "asLoupeAction->isChecked()" << asLoupeAction->isChecked()
              << "asGridAction->isChecked()" << asGridAction->isChecked()
              << "asTableAction->isChecked()" << asTableAction->isChecked()
              << "asCompareAction->isChecked()" << asCompareAction->isChecked()
              << "isInitializing" << isInitializing;;
-
+    */
     if (asLoupeAction->isChecked()) loupeDisplay();
     if (asGridAction->isChecked()) gridDisplay();
     if (asTableAction->isChecked()) {

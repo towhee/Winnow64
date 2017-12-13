@@ -12,6 +12,8 @@ namespace G
     QString mode;                       // In MW: Loupe, Grid, Table or Compare
     QString lastThumbChangeEvent;
 
+    qreal refScaleAdjustment;
+
     // not persistent
     bool isThreadTrackingOn;
     bool isNewFolderLoaded;

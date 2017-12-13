@@ -1,4 +1,4 @@
-#include "zoomdlg.h"
+#include "zoomDlg.h"
 #include "ui_zoomdlg.h"
 #include "QDebug"
 
@@ -70,7 +70,7 @@ controls are updated to the current scale.
     #endif
     }
     // convert to percentage for persentation
-    zoom *= 100;
+    zoom *= (100 * G::refScaleAdjustment);
 
     // update controls
     ui->zoomSB->setValue(qRound(zoom));
@@ -92,7 +92,7 @@ to only changes made lacally via the isActiveWindow flag.
     qDebug() << "ZoomDlg::on_zoomSB_valueChanged" << value;
     #endif
     }
-    if (isActiveWindow()) emit zoom((qreal)value/100);
+    if (isActiveWindow()) emit zoom((qreal)value / 100 / G::refScaleAdjustment);
 }
 
 void ZoomDlg::on_toggleZoomAmountBtn_clicked()
@@ -100,7 +100,7 @@ void ZoomDlg::on_toggleZoomAmountBtn_clicked()
     QString msg = "Toggle zoom amount changed to " +
                   QString::number(ui->zoomSB->value()) + "%";
     popUp->showPopup(this, msg, 1500, 0.75);
-    qreal zoomVal = (qreal)ui->zoomSB->value() / 100;
+    qreal zoomVal = (qreal)ui->zoomSB->value() / 100 / G::refScaleAdjustment;
     emit updateToggleZoom(zoomVal);
 //    QDialog::accept();
 }
