@@ -7,7 +7,12 @@
 #include <iostream>
 #include <iomanip>
 
+<<<<<<< Updated upstream
 //#include <ApplicationServices/ApplicationServices.h>
+=======
+#include <QtMacExtras>
+#include <ApplicationServices/ApplicationServices.h>
+>>>>>>> Stashed changes
 //#include <CoreServices/CoreServices.h>
 //#include "CoreGraphics/CoreGraphics.h";
 

@@ -35,8 +35,10 @@ public:
             QPen catPen(Qt::white);
             painter->setPen(catPen);
         }
-        painter->drawText(textRect, Qt::AlignVCenter|Qt::TextSingleLine,
-                          index.data().toString());
+        QString text = index.data().toString();
+
+        QString elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
+        painter->drawText(textRect, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
 
         painter->setPen(QColor(75,75,75));
         painter->drawRect(option.rect);

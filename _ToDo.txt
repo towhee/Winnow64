@@ -9,10 +9,10 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Tweak default workspace to match current layout
-- InfoView elide text
+- Add filters activated status (red text on image?)
 - Make data/time formatting consistent ie InfoView created vs modified
 - Read/write XMP sidecars
+- No wrap thumbs anywhere
 - Add status dock
 - Add current folder to bookmarks
 - Combine raw+jpg option
@@ -37,6 +37,8 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: InfoView elide text
+- Done: Tweak default workspace to match current layout
 - Done: Change InfoView to a TreeView
 - Done: # images in folder not show on first shortcut click
 - Done: # images in folder weird column widths sometimes

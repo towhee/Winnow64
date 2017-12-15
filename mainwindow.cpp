@@ -2900,7 +2900,6 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.isMetadataDockLocked = metadataDockLockAction->isChecked();
     wsd.isThumbDockLocked = thumbDockLockAction->isChecked();
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
-//    wsd.isIconDisplay = asIconsAction->isChecked();
 
     wsd.isLoupeDisplay = asLoupeAction->isChecked();
     wsd.isGridDisplay = asGridAction->isChecked();
@@ -3037,16 +3036,16 @@ app is "stranded" on secondary monitors that are not attached.
     metadataDockVisibleAction->setChecked(true);
     thumbDockVisibleAction->setChecked(true);
 
-    folderDockLockAction->setChecked(false);
-    favDockLockAction->setChecked(false);
-    filterDockLockAction->setChecked(false);
-    metadataDockLockAction->setChecked(false);
+    folderDockLockAction->setChecked(true);
+    favDockLockAction->setChecked(true);
+    filterDockLockAction->setChecked(true);
+    metadataDockLockAction->setChecked(true);
     thumbDockLockAction->setChecked(false);
 
     thumbView->thumbSpacing = 0;
     thumbView->thumbPadding = 0;
-    thumbView->thumbWidth = 120;
-    thumbView->thumbHeight = 120;
+    thumbView->thumbWidth = 100;
+    thumbView->thumbHeight = 100;
     thumbView->labelFontSize = 8;
     thumbView->showThumbLabels = true;
 
@@ -3079,8 +3078,10 @@ app is "stranded" on secondary monitors that are not attached.
     addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::BottomDockWidgetArea, thumbDock);
 
-//    MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
-//    MW::tabifyDockWidget(folderDock, favDock);
+    MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
+    MW::tabifyDockWidget(folderDock, favDock);
+    MW::tabifyDockWidget(favDock, filterDock);
+    MW::tabifyDockWidget(filterDock, metadataDock);
 
 //    // enable the folder dock (first one in tab)
 //    QList<QTabBar *> tabList = findChildren<QTabBar *>();
@@ -3090,6 +3091,7 @@ app is "stranded" on secondary monitors that are not attached.
     resizeDocks({thumbDock}, {160}, Qt::Vertical);
     setDockFitThumbs();
     asLoupeAction->setChecked(true);
+    infoVisibleAction->setChecked(true);
     updateState();
 }
 

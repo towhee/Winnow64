@@ -20,3 +20,19 @@ void DataModel::walkTree(const QModelIndex &row)
         }
     }
 }
+
+// Another walk tree
+
+void forEach(QAbstractItemModel* model, QModelIndex parent = QModelIndex()) {
+    for (int r = 0; r < model->rowCount(parent); ++r) {
+        QModelIndex index = model->index(r, 0, parent);
+        QVariant name = model->data(index);
+        qDebug() << name;
+        // here is your applicable code
+        if( model->hasChildren(index) ) {
+            forEach(model, index);
+        }
+    }
+}
+
+forEach(&model);
