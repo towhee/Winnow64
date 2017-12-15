@@ -36,9 +36,9 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
 #if defined(Q_OS_MAC)
    int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
+   qDebug() << "screenWidth" << screenWidth << QPaintDevice::devicePixelRatio();
 //    double bSF = [[NSScreen mainScreen]backingScaleFactor];
 #endif
-   qDebug() << "screenWidth" << screenWidth << QPaintDevice::devicePixelRatio();
 
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     qDebug() << "QGuiApplication::primaryScreen()->devicePixelRatio()"

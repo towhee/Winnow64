@@ -143,7 +143,7 @@ For convenience, set window focus on mouseover
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ZoomDlg::enterEvent" << currentImagePath;
+//    qDebug() << "ZoomDlg::enterEvent" << currentImagePath;
     #endif
     }
     qDebug() << "ZoomDlg enter event";
