@@ -215,7 +215,7 @@ to prevent jarring changes in perceived scale by the user.
         }
     }
 //    qDebug() << "elapsed:" << t.nsecsElapsed();
-    qDebug() << "Device Pixel Ratio" << devicePixelRatio() << devicePixelRatioF() << devicePixelRatioFScale();
+//    qDebug() << "Device Pixel Ratio" << devicePixelRatio() << devicePixelRatioF() << devicePixelRatioFScale();
     return isLoaded;
 }
 

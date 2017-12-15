@@ -1,6 +1,5 @@
 BUGS
-- # images in folder not show on first shortcut click
-- # images in folder weird column widths sometimes
+- Icon padding becomes 2
 - Calc actual 100% pixels and set zoom to match
 - Not reading metadata from iphone jpgs
 PERFORMANCE
@@ -10,34 +9,37 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Change InfoView to a TreeView.
-- Make data/time formatting consistent ie InfoView created vs modified
-- Add status dock
 - Tweak default workspace to match current layout
-- Add current folder to bookmarks
+- Change InfoView to a TreeView
+- InfoView elide text
+- Make data/time formatting consistent ie InfoView created vs modified
 - Read/write XMP sidecars
+- Add status dock
+- Add current folder to bookmarks
+- Combine raw+jpg option
+- Recent copy to folders in ingest dialog
+- Open with another app
 - Add zoom increment amount to preferences
+- Edit title in metadata?
+- Add preferences for info label
+- Add Ingest token builder
 - Remember column order in tableView and workspace
 - Add Tif support
 - Add more raw file formats - DNG, Sony, Fuji, Panasonic ...
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Rotate selected images
-- Combine raw+jpg option
-- Recent copy to folders in copy dialog
 - Disable menu "add bookmark" when folders not selected??
 - Tweak context menus
 - Initial setup (other than workspace)
-- Add preferences for info label
 - Eject card
-- Open with another app
 - Run droplet
 - Redirect report metadata to a text window so Qt Creator not req'd
-- Add Ingest token builder
 - Deleteop, removeBookmarkAction cleanup
-- Edit title in metadata?
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: # images in folder not show on first shortcut click
+- Done: # images in folder weird column widths sometimes
 - Done: QFSFileEngine::open: No file name specified
 - Done: Beef up deleted or renamed or corrupted folder
 - Done: Change shortcut T in zoom dialog

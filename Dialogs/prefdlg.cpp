@@ -72,26 +72,34 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
 
     // InfoView fields to show
     okInfo = mw->infoView->ok;
-    ui->infoFieldsTable->setModel(okInfo);
+    ui->infoFieldsTreeView->setModel(okInfo);
     for(int row = 0; row < okInfo->rowCount(); row++) {
-        QModelIndex idx = okInfo->index(row, 0);
-        ui->infoFieldsTable->setIndexWidget(idx, new QCheckBox);
+        QModelIndex parentIdx = okInfo->index(row, 0);
+        QModelIndex idx = okInfo->index(row, 2);
+        ui->infoFieldsTreeView->setIndexWidget(idx, new QCheckBox);
         // set state to match data model value
-        QWidget *wid = ui->infoFieldsTable->indexWidget(idx);
+        QWidget *wid = ui->infoFieldsTreeView->indexWidget(idx);
         QCheckBox *box= qobject_cast<QCheckBox*>(wid);
         box->setChecked(idx.data().toBool());
-//        box->resize(box->width(), box->height() - 4);  box height = 18
-//        box->setStyleSheet("QCheckBox::item { height: 10px;}");
         connect(box, SIGNAL(clicked(bool)), this, SLOT(on_infoField_changed()));
+        for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
+            QModelIndex idx = okInfo->index(childRow, 2, parentIdx);
+            ui->infoFieldsTreeView->setIndexWidget(idx, new QCheckBox);
+            // set state to match data model value
+            QWidget *wid = ui->infoFieldsTreeView->indexWidget(idx);
+            QCheckBox *box= qobject_cast<QCheckBox*>(wid);
+            box->setChecked(idx.data().toBool());
+            connect(box, SIGNAL(clicked(bool)), this, SLOT(on_infoField_changed()));
+        }
     }
-//    ui->infoFieldsTable->horizontalHeader()->moveSection(1, 0);
-    ui->infoFieldsTable->horizontalHeader()->setVisible(false);
-    ui->infoFieldsTable->horizontalHeader()->setStretchLastSection(true);
-    ui->infoFieldsTable->verticalHeader()->setVisible(false);
-    ui->infoFieldsTable->hideColumn(2);
-    ui->infoFieldsTable->resizeColumnsToContents();
-//    ui->infoFieldsTable->setStyleSheet("QTableView::item {height: 10px;}");  // no work
-    ui->infoFieldsTable->setStyleSheet("QTableView {border: 1px solid rgb(85,85,85);}");  // no work
+    ui->infoFieldsTreeView->setRootIsDecorated(false);
+    ui->infoFieldsTreeView->setWordWrap(false);
+    ui->infoFieldsTreeView->header()->moveSection(2, 0);
+    ui->infoFieldsTreeView->setHeaderHidden(true);
+    ui->infoFieldsTreeView->setColumnWidth(2, 20);
+    ui->infoFieldsTreeView->hideColumn(1);
+    ui->infoFieldsTreeView->expandAll();
+    ui->infoFieldsTreeView->setStyleSheet("QTableView {border: 1px solid rgb(85,85,85);}");  // no work
 
     // TableView fields to show
     okTable = mw->tableView->ok;
@@ -134,10 +142,17 @@ infoView->showOrHide(), which will show or hide each metadata item in the
 Metadata panel.
 */
     for(int row = 0; row < okInfo->rowCount(); row++) {
-        QModelIndex idx = okInfo->index(row, 0);
-        QWidget *wid = ui->infoFieldsTable->indexWidget(idx);
+        QModelIndex parentIdx = okInfo->index(row, 0);
+        QModelIndex idx = okInfo->index(row, 2);
+        QWidget *wid = ui->infoFieldsTreeView->indexWidget(idx);
         QCheckBox *box = qobject_cast<QCheckBox*>(wid);
         okInfo->setData(idx, box->isChecked());
+        for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
+            QModelIndex idx = okInfo->index(childRow, 2, parentIdx);
+            QWidget *wid = ui->infoFieldsTreeView->indexWidget(idx);
+            QCheckBox *box = qobject_cast<QCheckBox*>(wid);
+            okInfo->setData(idx, box->isChecked());
+        }
     }
 }
 

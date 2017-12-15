@@ -56,7 +56,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>5</number>
+    <number>6</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -1683,7 +1683,7 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>162</width>
+         <width>181</width>
          <height>341</height>
         </rect>
        </property>
@@ -1696,10 +1696,16 @@
          </widget>
         </item>
         <item>
-         <widget class="QTableView" name="infoFieldsTable">
+         <widget class="QTreeView" name="infoFieldsTreeView">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
           <property name="maximumSize">
            <size>
-            <width>160</width>
+            <width>16777215</width>
             <height>16777215</height>
            </size>
           </property>
@@ -1723,9 +1729,9 @@
      <widget class="QFrame" name="frame_3">
       <property name="geometry">
        <rect>
-        <x>210</x>
+        <x>240</x>
         <y>0</y>
-        <width>221</width>
+        <width>191</width>
         <height>341</height>
        </rect>
       </property>

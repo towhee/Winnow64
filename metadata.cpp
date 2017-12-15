@@ -1763,7 +1763,7 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
     int msDelay = 0;
     int msInc = 1;
     bool fileOpened = false;
-    qDebug() << "Metadata::readMetadata  fPath =" << fPath;
+//    qDebug() << "Metadata::readMetadata  fPath =" << fPath;
     do {
         if (file.open(QIODevice::ReadOnly)) {
 //            qDebug() << "MetadataCache opened. Delay =" << msDelay << imageFullPath;

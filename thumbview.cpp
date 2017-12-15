@@ -1048,7 +1048,7 @@ int ThumbView::getVerticalScrollBarOffset(int row)
     float thumbsPerPage = pageWidth / thumbWidth * (float)pageHeight / thumbHeight;
     float thumbRowsPerPage = (float)pageHeight / thumbHeight;
     int n = dm->sf->rowCount();
-    qDebug() << "thumbsPerPage" << thumbsPerPage;
+//    qDebug() << "thumbsPerPage" << thumbsPerPage;
     float pages = (float(n) / thumbsPerPage) - 1;
     int vMax = pages * pageWidth;
 

@@ -7,6 +7,10 @@
 #include <iostream>
 #include <iomanip>
 
+#include <ApplicationServices/ApplicationServices.h>
+//#include <CoreServices/CoreServices.h>
+//#include "CoreGraphics/CoreGraphics.h";
+
 #include "bookmarks.h"
 #include "compareImages.h"
 #include "copypickdlg.h"
@@ -164,12 +168,12 @@ public:
     QString pickMemSize;
 
 protected:
+    bool eventFilter(QObject *obj, QEvent *event);
     void moveEvent(QMoveEvent *event);
     void resizeEvent(QResizeEvent *event);
     void closeEvent(QCloseEvent *event);
     void keyPressEvent(QKeyEvent *event);
     void keyReleaseEvent(QKeyEvent *event);
-    bool eventFilter(QObject *obj, QEvent *event);
 //    void mouseMoveEvent(QMouseEvent *event);
 //    void mousePressEvent(QMouseEvent *event);
 //    void mouseReleaseEvent(QMouseEvent *event);

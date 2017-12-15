@@ -34,6 +34,12 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     this->setWindowTitle("Winnow");
     this->setObjectName("WinnowMW");
 
+#if defined(Q_OS_MAC)
+   int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
+//    double bSF = [[NSScreen mainScreen]backingScaleFactor];
+#endif
+   qDebug() << "screenWidth" << screenWidth << QPaintDevice::devicePixelRatio();
+
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     qDebug() << "QGuiApplication::primaryScreen()->devicePixelRatio()"
             << QGuiApplication::primaryScreen()->devicePixelRatio();
@@ -41,7 +47,9 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     QRect rect = QGuiApplication::primaryScreen()->geometry();
     qreal screenMax = qMax(rect.width(), rect.height());
-    G::refScaleAdjustment = 2880 / screenMax;
+
+    G::refScaleAdjustment = 1;
+//    G::refScaleAdjustment = 2880 / screenMax;
 
     int realScreenMax = QGuiApplication::primaryScreen()->physicalSize().width();
     qreal logicalDpi = QGuiApplication::primaryScreen()->logicalDotsPerInch();
@@ -253,30 +261,10 @@ thumbdock is resized by the user when:
    - dock area is top or bottom
    - height change of dock changes
 */
-//    qDebug() << "MW events" << obj << event
-//             << "isMouseDrag" << isMouseDrag;
-//    if (event->type() == QEvent::MouseButtonPress) {
-//        qDebug()  << obj << event;
-//    }
-
-//    qDebug() << "G::isMouseDragThumbView" << G::isMouseDragThumbView;
-
+//    qDebug() << "MW events" << obj << event;
 //    if (event->type() == QEvent::Resize &&
 //            obj == thumbDock &&
-//            !thumbDock->isFloating() &&
-//            dockWidgetArea(thumbDock) != Qt::LeftDockWidgetArea &&
-//            dockWidgetArea(thumbDock) != Qt::RightDockWidgetArea &&
-////            G::isMouseDragThumbView &&
-//            !isInitializing)
-//    {
-//        static int oldHt = 0;
-//        QResizeEvent *resizeEvent = static_cast<QResizeEvent*>(event);
-//        int newHt = resizeEvent->size().height();
-//        if (newHt != oldHt) {
-//            thumbView->thumbsFitTopOrBottom();
-//            oldHt = newHt;
-//        }
-//    }
+
     return QWidget::eventFilter(obj, event);
 }
 
@@ -442,6 +430,19 @@ void MW::folderSelectionChange()
     // add to recent folders
     addRecentFolder(currentViewDir);
 
+    // show image count in Folders (fsTree) if showImageCountAction isChecked
+    qDebug() << "showImageCountAction->isChecked()"<< showImageCountAction->isChecked()
+             << "fsTree->isVisible()" << fsTree->isVisible();
+    if (showImageCountAction->isChecked()) {
+        // req'd to resize columns
+        fsTree->showImageCount = true;
+        // req'd to show imageCount in data
+        fsTree->fsModel->showImageCount = true;
+        fsTree->resizeColumns();
+        fsTree->repaint();
+        fsTree->fsModel->fetchMore(fsTree->rootIndex());
+    }
+
     /* We do not want to update the imageCache while metadata is still being
     loaded.  The imageCache update is triggered in fileSelectionChange,
     which is also executed when the change file event is fired. */
@@ -520,7 +521,7 @@ so scrollTo and delegate use of the current index must check the row.
 
     // user clicks outside thumb but inside treeView dock
     QModelIndexList selected = selectionModel->selectedIndexes();
-    if (selected.isEmpty()) return;
+    if (selected.isEmpty() && !isInitializing) return;
 
     /* When a mode change occurs, part of the activating process to make the new
        view visible includes setting the currentIndex to what the view was at
@@ -571,7 +572,7 @@ so scrollTo and delegate use of the current index must check the row.
 //    qDebug() << "current index" << current << "fPath" << fPath << "Metadata loaded" << metadataLoaded;
 
     // update the matadata panel
-    if (metadataLoaded) infoView->updateInfo(fPath);
+    infoView->updateInfo(fPath);
 
     // update the status bar with ie "5 of 290   30% zoom   3.6GB picked"
     updateStatus(true);
@@ -2424,9 +2425,9 @@ QString fileSym = "📷";
     status = " " + base + s;
     stateLabel->setText(status);
 
-    infoView->ok->setData(infoView->ok->index(infoView->PositionRow, 2), getPosition());
-    infoView->ok->setData(infoView->ok->index(infoView->ZoomRow, 2), getZoom());
-    infoView->ok->setData(infoView->ok->index(infoView->PickedRow, 2), getPicked());
+    infoView->ok->setData(infoView->ok->index(infoView->PositionRow, 1, infoView->statusInfoIdx), getPosition());
+    infoView->ok->setData(infoView->ok->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), getZoom());
+    infoView->ok->setData(infoView->ok->index(infoView->PickedRow, 1, infoView->statusInfoIdx), getPicked());
 }
 
 void MW::updateMetadataThreadRunStatus(bool isRunning)
@@ -3941,11 +3942,23 @@ re-established when the application is re-opened.
     /* InfoView okToShow fields */
     setting->beginGroup("InfoFields");
     setting->remove("");
-    for(int row = 0; row < infoView->ok->rowCount(); row++) {
-        QString field = infoView->ok->index(row, 1).data().toString();
-        bool showField = infoView->ok->index(row, 0).data().toBool();
+    QStandardItemModel *k = infoView->ok;
+    for(int row = 0; row < k->rowCount(); row++) {
+        QModelIndex parentIdx = k->index(row, 0);
+        QString field = k->index(row, 0).data().toString();
+        bool showField = k->index(row, 2).data().toBool();
         setting->setValue(field, showField);
+        for (int childRow = 0; childRow < k->rowCount(parentIdx); childRow++) {
+            QString field = k->index(childRow, 0, parentIdx).data().toString();
+            bool showField = k->index(childRow, 2, parentIdx).data().toBool();
+            setting->setValue(field, showField);
+        }
     }
+//    for(int row = 0; row < infoView->ok->rowCount(); row++) {
+//        QString field = infoView->ok->index(row, 1).data().toString();
+//        bool showField = infoView->ok->index(row, 0).data().toBool();
+//        setting->setValue(field, showField);
+//    }
     setting->endGroup();
 
     /* TableView okToShow fields */
@@ -4145,29 +4158,55 @@ Preferences are located in the prefdlg class and updated here.
     wasThumbDockVisibleBeforeGridInvoked = setting->value("wasThumbDockVisibleBeforeGridInvoked").toBool();
 
     /* read InfoView okToShow fields */
+    qDebug() << "\nread InfoView okToShow fields\n";
     setting->beginGroup("InfoFields");
     QStringList okFields = setting->childKeys();
     QList<QStandardItem *> itemList;
     // go through every setting
+    bool isFound;
     for (int i = 0; i < okFields.size(); ++i) {
+        isFound = false;
         QString okField = okFields.at(i);
         bool okToShow = setting->value(okField).toBool();
         int row;
         QModelIndex idx;
+        QStandardItemModel *k = infoView->ok;
         // search for the matching item in the infoView
-        for (row = 0; row < infoView->ok->rowCount(); row++) {
-            idx = infoView->ok->index(row, 1);
+        for (row = 0; row < k->rowCount(); row++) {
+            isFound = false;
+            idx = k->index(row, 0);
             QString fieldName = qvariant_cast<QString>(idx.data());
             // find the match
+            qDebug() << "Comparing parent" << fieldName << "to"<< okField;
             if (fieldName == okField) {
-                QModelIndex idxChk = infoView->ok->index(row, 0);
+                QModelIndex idxChk = k->index(row, 2);
                 // set the flag whether to display or not
-                infoView->ok->setData(idxChk, okToShow, Qt::EditRole);
+                k->setData(idxChk, okToShow, Qt::EditRole);
+                qDebug() << "Parent match so set to" << okToShow << idx << "\n";
+                isFound = true;
                 break;
             }
+            for (int childRow = 0; childRow < k->rowCount(idx); childRow++) {
+                QModelIndex idxChild = k->index(childRow, 0, idx);
+                QString fieldName = qvariant_cast<QString>(idxChild.data());
+                // find the match
+                qDebug() << "Comparing child" << fieldName << "to"<< okField;
+                if (fieldName == okField) {
+                    QModelIndex idxChk = k->index(row, 2);
+                    // set the flag whether to display or not
+                    k->setData(idxChk, okToShow, Qt::EditRole);
+                    qDebug() << "Child match so set to" << okToShow << idxChild << "\n";
+                    isFound = true;
+                    break;
+                }
+                if (isFound) break;
+            }
+            if (isFound) break;
         }
     }
     setting->endGroup();
+
+    infoView->showOrHide();
 
     /* read TableView okToShow fields */
     setting->beginGroup("TableFields");

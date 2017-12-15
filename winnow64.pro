@@ -96,3 +96,5 @@ macx {
     QMAKE_MAC_SDK = macosx10.12
 }
 
+mac:LIBS += -framework ApplicationServices
+
