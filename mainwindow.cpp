@@ -4158,44 +4158,46 @@ Preferences are located in the prefdlg class and updated here.
     wasThumbDockVisibleBeforeGridInvoked = setting->value("wasThumbDockVisibleBeforeGridInvoked").toBool();
 
     /* read InfoView okToShow fields */
-    qDebug() << "\nread InfoView okToShow fields\n";
+//    qDebug() << "\nread InfoView okToShow fields\n";
     setting->beginGroup("InfoFields");
-    QStringList okFields = setting->childKeys();
+    QStringList setFields = setting->childKeys();
     QList<QStandardItem *> itemList;
-    // go through every setting
+    QStandardItemModel *k = infoView->ok;
+    // go through every setting in QSettings
     bool isFound;
-    for (int i = 0; i < okFields.size(); ++i) {
+    for (int i = 0; i < setFields.size(); ++i) {
         isFound = false;
-        QString okField = okFields.at(i);
-        bool okToShow = setting->value(okField).toBool();
+        // Get a field and boolean
+        QString setField = setFields.at(i);
+        bool okToShow = setting->value(setField).toBool();
         int row;
-        QModelIndex idx;
-        QStandardItemModel *k = infoView->ok;
-        // search for the matching item in the infoView
+        // search for the matching item in infoView
         for (row = 0; row < k->rowCount(); row++) {
             isFound = false;
-            idx = k->index(row, 0);
-            QString fieldName = qvariant_cast<QString>(idx.data());
+            QModelIndex idParent = k->index(row, 0);
+            QString fieldName = qvariant_cast<QString>(idParent.data());
             // find the match
-            qDebug() << "Comparing parent" << fieldName << "to"<< okField;
-            if (fieldName == okField) {
-                QModelIndex idxChk = k->index(row, 2);
+//            qDebug() << "Comparing parent" << fieldName << "to"<< setField;
+            if (fieldName == setField) {
+                QModelIndex idParentChk = k->index(row, 2);
                 // set the flag whether to display or not
-                k->setData(idxChk, okToShow, Qt::EditRole);
-                qDebug() << "Parent match so set to" << okToShow << idx << "\n";
+                k->setData(idParentChk, okToShow, Qt::EditRole);
+//                qDebug() << "Parent match so set to" << okToShow
+//                         << idParent.data().toString() << "\n";
                 isFound = true;
                 break;
             }
-            for (int childRow = 0; childRow < k->rowCount(idx); childRow++) {
-                QModelIndex idxChild = k->index(childRow, 0, idx);
-                QString fieldName = qvariant_cast<QString>(idxChild.data());
+            for (int childRow = 0; childRow < k->rowCount(idParent); childRow++) {
+                QModelIndex idChild = k->index(childRow, 0, idParent);
+                QString fieldName = qvariant_cast<QString>(idChild.data());
                 // find the match
-                qDebug() << "Comparing child" << fieldName << "to"<< okField;
-                if (fieldName == okField) {
-                    QModelIndex idxChk = k->index(row, 2);
+//                qDebug() << "Comparing child" << fieldName << "to"<< setField;
+                if (fieldName == setField) {
+                    QModelIndex idChildChk = k->index(childRow, 2, idParent);
                     // set the flag whether to display or not
-                    k->setData(idxChk, okToShow, Qt::EditRole);
-                    qDebug() << "Child match so set to" << okToShow << idxChild << "\n";
+                    k->setData(idChildChk, okToShow, Qt::EditRole);
+//                    qDebug() << "Child match so set to" << okToShow
+//                             << idChild.data().toString() << "\n";
                     isFound = true;
                     break;
                 }
@@ -4206,16 +4208,14 @@ Preferences are located in the prefdlg class and updated here.
     }
     setting->endGroup();
 
-    infoView->showOrHide();
-
     /* read TableView okToShow fields */
     setting->beginGroup("TableFields");
-    okFields = setting->childKeys();
+    setFields = setting->childKeys();
 //    QList<QStandardItem *> itemList;
-    for (int i = 0; i < okFields.size(); ++i) {
-        QString okField = okFields.at(i);
-        bool okToShow = setting->value(okField).toBool();
-        itemList = tableView->ok->findItems(okField);
+    for (int i = 0; i <setFields.size(); ++i) {
+        QString setField = setFields.at(i);
+        bool okToShow = setting->value(setField).toBool();
+        itemList = tableView->ok->findItems(setField);
         if (itemList.length()) {
             int row = itemList[0]->row();
             QModelIndex idx = tableView->ok->index(row, 1);

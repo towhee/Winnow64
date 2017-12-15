@@ -10,7 +10,6 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
 - Tweak default workspace to match current layout
-- Change InfoView to a TreeView
 - InfoView elide text
 - Make data/time formatting consistent ie InfoView created vs modified
 - Read/write XMP sidecars
@@ -38,6 +37,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Change InfoView to a TreeView
 - Done: # images in folder not show on first shortcut click
 - Done: # images in folder weird column widths sometimes
 - Done: QFSFileEngine::open: No file name specified

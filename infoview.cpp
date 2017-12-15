@@ -223,19 +223,20 @@ show flag.
     qDebug() << "InfoView::showOrHide()";
     #endif
     }
+//    qDebug() << "ShorOrHide List:";
     bool okToShow;
     for(int row = 0; row < ok->rowCount(); row++) {
         QModelIndex parentIdx = ok->index(row, 0);
         okToShow = ok->index(row, 2).data().toBool();
-        qDebug() << parentIdx.data().toString() << okToShow;
+//        qDebug() << parentIdx.data().toString() << okToShow;
         setRowHidden(row, QModelIndex(), !okToShow);
         for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
             okToShow = ok->index(childRow, 2, parentIdx).data().toBool();
-            qDebug() << ok->index(childRow, 0, parentIdx).data().toString() << okToShow;
+//            qDebug() << ok->index(childRow, 0, parentIdx).data().toString() << okToShow;
             setRowHidden(childRow, parentIdx, !okToShow);
         }
     }
-    qDebug() << "ShorOrHide completed\n";
+//    qDebug() << "ShorOrHide completed\n";
 }
 
 void InfoView::clearInfo()
