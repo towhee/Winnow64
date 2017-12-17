@@ -21,6 +21,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->maxRecentSB->setValue(mw->maxRecentFolders);
     ui->trackpadIterateRadio->setChecked(!mw->imageView->useWheelToScroll);
     ui->trackpadScrollRadio->setChecked(mw->imageView->useWheelToScroll);
+    ui->displayHorizontalPixelsSB->setValue(mw->displayHorizontalPixels);
+    ui->displayVerticalPixelsSB->setValue(mw->displayVerticalPixels);
 
     // thumbs
     ui->iconWidthSlider->setValue(mw->thumbView->thumbWidth);
@@ -493,8 +495,6 @@ void Prefdlg::on_maxRecentSB_destroyed()
     }
 }
 
-
-
 void Prefdlg::on_trackpadIterateRadio_clicked()
 {
     if(okToUpdate) {
@@ -506,6 +506,22 @@ void Prefdlg::on_trackpadScrollRadio_clicked()
 {
     if(okToUpdate) {
         emit updateTrackpadScroll(true);
+    }
+}
+
+void Prefdlg::on_displayHorizontalPixelsSB_valueChanged(int arg1)
+{
+    if(okToUpdate) {
+        emit updateDisplayResolution(ui->displayHorizontalPixelsSB->value(),
+                                     ui->displayVerticalPixelsSB->value());
+    }
+}
+
+void Prefdlg::on_displayVerticalPixelsSB_valueChanged(int arg1)
+{
+    if(okToUpdate) {
+        emit updateDisplayResolution(ui->displayHorizontalPixelsSB->value(),
+                                     ui->displayVerticalPixelsSB->value());
     }
 }
 
@@ -649,4 +665,5 @@ void Prefdlg::on_statusBarChk_clicked()
                                ui->thumbsChk->isChecked(),
                                ui->statusBarChk->isChecked());
 }
+
 

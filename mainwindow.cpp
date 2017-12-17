@@ -34,36 +34,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     this->setWindowTitle("Winnow");
     this->setObjectName("WinnowMW");
 
-#if defined(Q_OS_MAC)
-   int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
-   qDebug() << "screenWidth" << screenWidth << QPaintDevice::devicePixelRatio();
-//    double bSF = [[NSScreen mainScreen]backingScaleFactor];
-#endif
-
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    qDebug() << "QGuiApplication::primaryScreen()->devicePixelRatio()"
-            << QGuiApplication::primaryScreen()->devicePixelRatio();
-    qreal dpr = QGuiApplication::primaryScreen()->devicePixelRatio();
-
-    QRect rect = QGuiApplication::primaryScreen()->geometry();
-    qreal screenMax = qMax(rect.width(), rect.height());
-
-    G::refScaleAdjustment = 1;
-//    G::refScaleAdjustment = 2880 / screenMax;
-
-    int realScreenMax = QGuiApplication::primaryScreen()->physicalSize().width();
-    qreal logicalDpi = QGuiApplication::primaryScreen()->logicalDotsPerInch();
-    qreal physicalDpi = QGuiApplication::primaryScreen()->physicalDotsPerInch();
-    QSizeF physicalSize = QGuiApplication::primaryScreen()->physicalSize();
-//    refScreenAdjustment
-    qDebug() << "\nQGuiApplication::primaryScreen()->geometry()" << QGuiApplication::primaryScreen()->geometry().width()
-             << "\nQGuiApplication::primaryScreen()->physicalSize()" << QGuiApplication::primaryScreen()->physicalSize().width()
-             << "\ndevicePixelRatio" << dpr
-             << "\nlogicalDpi" << QGuiApplication::primaryScreen()->logicalDotsPerInch()
-             << "\nphysicalDpi" << QGuiApplication::primaryScreen()->physicalDotsPerInch()
-             << "\nphysicalSize" << QGuiApplication::primaryScreen()->physicalSize()
-             << "\nQApplication::desktop()->availableGeometry(this)"<< QApplication::desktop()->availableGeometry(this)
-             << "\n";
 
     isInitializing = true;
     isSlideShowActive = false;
@@ -370,6 +341,7 @@ void MW::folderSelectionChange()
 
     QString dirPath;
     QDir testDir;
+
     if (isInitializing) {
         if (rememberLastDir) {
             // lastDir is from QSettings for persistent memory between sessions
@@ -2347,7 +2319,7 @@ QString MW::getZoom()
     qreal zoom;
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
-    zoom *= G::refScaleAdjustment;
+    zoom *= G::actualDevicePixelRatio;
 
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
@@ -2413,7 +2385,7 @@ QString fileSym = "📷";
         qreal zoom;
         if (G::mode == "Compare") zoom = compareImages->zoomValue;
         else zoom = imageView->zoom;
-        zoom *= G::refScaleAdjustment;
+        zoom *= G::actualDevicePixelRatio;
         zoomPct = QString::number(qRound(zoom*100)) + "% zoom";
 
         QString pickedSoFar = pickMemSize + " picked";
@@ -3440,6 +3412,8 @@ void MW::preferences()
             this, SLOT(setMaxRecentFolders(int)));
     connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
             this, SLOT(setTrackpadScroll(bool)));
+    connect(prefdlg, SIGNAL(updateDisplayResolution(int,int)),
+            this, SLOT(setDisplayResolution(int,int)));
     connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool)),
             thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
     connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool)),
@@ -3453,6 +3427,7 @@ void MW::preferences()
     connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool,bool)),
             this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool,bool)));
     prefdlg->exec();
+    setActualDevicePixelRation();
 }
 
 void MW::setIncludeSubFolders()
@@ -3525,6 +3500,60 @@ void MW::setTrackpadScroll(bool trackpadScroll)
     #endif
     }
     imageView->useWheelToScroll = trackpadScroll;
+}
+
+void MW::setDisplayResolution(int horizontalPixels, int verticalPixels)
+{
+    displayHorizontalPixels = horizontalPixels;
+    displayVerticalPixels = verticalPixels;
+    qDebug() << "setDisplayresolution" << displayHorizontalPixels << displayVerticalPixels;
+//    setActualDevicePixelRation();
+}
+
+void MW::setActualDevicePixelRation()
+{
+    int virtualWidth = QGuiApplication::primaryScreen()->geometry().width();
+    if (displayHorizontalPixels > 0)
+        G::actualDevicePixelRatio = (float)displayHorizontalPixels / virtualWidth;
+    else
+        G::actualDevicePixelRatio = QPaintDevice::devicePixelRatio();
+    qDebug() << "setActualDevicePixelRation   screen->geometry().width()"
+             << virtualWidth
+             << displayHorizontalPixels
+             << G::actualDevicePixelRatio;
+
+/*  Screen information
+#if defined(Q_OS_MAC)
+       int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
+       qDebug() << "screenWidth" << screenWidth << QPaintDevice::devicePixelRatio();
+        float bSF = QtMac::macBackingScaleFactor();
+        qDebug() << "QtMac::BackingScaleFactor()" << bSF;
+    #endif
+
+        qDebug() << "QGuiApplication::primaryScreen()->devicePixelRatio()"
+                << QGuiApplication::primaryScreen()->devicePixelRatio();
+        qreal dpr = QGuiApplication::primaryScreen()->devicePixelRatio();
+
+        QRect rect = QGuiApplication::primaryScreen()->geometry();
+        qreal screenMax = qMax(rect.width(), rect.height());
+
+        G::actualDevicePixelRatio = 1;
+        G::actualDevicePixelRatio = 2880 / screenMax;
+
+        int realScreenMax = QGuiApplication::primaryScreen()->physicalSize().width();
+        qreal logicalDpi = QGuiApplication::primaryScreen()->logicalDotsPerInch();
+        qreal physicalDpi = QGuiApplication::primaryScreen()->physicalDotsPerInch();
+        QSizeF physicalSize = QGuiApplication::primaryScreen()->physicalSize();
+
+        qDebug() << "\nQGuiApplication::primaryScreen()->geometry()" << QGuiApplication::primaryScreen()->geometry().width()
+                 << "\nQGuiApplication::primaryScreen()->physicalSize()" << QGuiApplication::primaryScreen()->physicalSize().width()
+                 << "\ndevicePixelRatio" << dpr
+                 << "\nlogicalDpi" << QGuiApplication::primaryScreen()->logicalDotsPerInch()
+                 << "\nphysicalDpi" << QGuiApplication::primaryScreen()->physicalDotsPerInch()
+                 << "\nphysicalSize" << QGuiApplication::primaryScreen()->physicalSize()
+                 << "\nQApplication::desktop()->availableGeometry(this)"<< QApplication::desktop()->availableGeometry(this)
+                 << "\n";
+                 */
 }
 
 void MW::setIngestRootFolder(QString rootFolder)
@@ -3858,6 +3887,8 @@ re-established when the application is re-opened.
     // general
     setting->setValue("lastPrefPage", (int)lastPrefPage);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
+    setting->setValue("displayHorizontalPixels", displayHorizontalPixels);
+    setting->setValue("displayVerticalPixels", displayVerticalPixels);
     // files
 //    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
     setting->setValue("rememberLastDir", rememberLastDir);
@@ -4097,6 +4128,8 @@ Preferences are located in the prefdlg class and updated here.
     lastPrefPage = setting->value("lastPrefPage").toInt();
     imageView->toggleZoom = setting->value("toggleZoomValue").toReal();
     compareImages->toggleZoom = setting->value("toggleZoomValue").toReal();
+    displayHorizontalPixels = setting->value("displayHorizontalPixels").toInt();
+    displayVerticalPixels = setting->value("displayVerticalPixels").toInt();
 
     // files
 //    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();
@@ -4517,6 +4550,7 @@ condition of actions sets the visibility of all window components. */
     setThumbDockLockMode();
     setShootingInfo();
     setCentralView();
+    setActualDevicePixelRation();
     isUpdatingState = false;
 //    reportState();
 }
@@ -5795,6 +5829,15 @@ void MW::revealFile()
     qDebug() << "MW::revealFile";
     #endif
     }
+
+//    QProcess *process = new QProcess(this);
+//    QString path = QDir::toNativeSeparators(QApplication::applicationPath);
+//    #if defined(Q_OS_WIN)
+//    process->start("explorer.exe",  QStringList() << path);
+//    #elif defined(Q_OS_MAC)
+//    process->start("open", QStringList() << path);
+//    #endif
+//    return;
 
     // See http://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
     // for details

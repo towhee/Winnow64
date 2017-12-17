@@ -36,3 +36,6 @@ void forEach(QAbstractItemModel* model, QModelIndex parent = QModelIndex()) {
 }
 
 forEach(&model);
+
+// reveal in ...
+

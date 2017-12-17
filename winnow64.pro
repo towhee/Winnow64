@@ -2,7 +2,9 @@ TEMPLATE = app
 TARGET = Winnow
 INCLUDEPATH += .
 INCLUDEPATH += Dialogs
+INCLUDEPATH += MacOS
 
+QT += gui-private
 QT += widgets
 
 HEADERS += \
@@ -33,7 +35,9 @@ HEADERS += \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
     Dialogs/popup.h \
-    Dialogs/zoomDlg.h
+    Dialogs/zoomDlg.h \
+    MacOS/macscale.h \
+    MacOS/macScale_p.h
 
 SOURCES += \
     bookmarks.cpp \
@@ -66,6 +70,8 @@ SOURCES += \
     Dialogs/popup.cpp \
     Dialogs/zoomDlg.cpp
 
+OBJECTIVE_SOURCES += MacOS/macscale.mm
+
 FORMS += \
     copypickdlg.ui \
     prefdlg.ui \
@@ -92,10 +98,12 @@ DISTFILES += \
     xmp.txt \
     _ToDo.txt
 
-macx {
-    QMAKE_MAC_SDK = macosx10.12
-}
+#macx {
+#    QMAKE_MAC_SDK = macosx10.12
+#}
 
-QT += macextras
+#QT += macextras
 mac:LIBS += -framework ApplicationServices
+mac:LIBS += -framework AppKit
+#mac:LIBS += -v
 

@@ -7,14 +7,13 @@
 #include <iostream>
 #include <iomanip>
 
-<<<<<<< Updated upstream
-//#include <ApplicationServices/ApplicationServices.h>
-=======
-#include <QtMacExtras>
+#if defined(Q_OS_MAC)
+#include "macscale.h"
 #include <ApplicationServices/ApplicationServices.h>
->>>>>>> Stashed changes
+//#include <QtMacExtras>
 //#include <CoreServices/CoreServices.h>
 //#include "CoreGraphics/CoreGraphics.h";
+#endif
 
 #include "bookmarks.h"
 #include "compareImages.h"
@@ -120,6 +119,8 @@ public:
     int folderMaxWidth = 600;       // not in preferences or QSetting
     // general
     int lastPrefPage;
+    int displayHorizontalPixels;
+    int displayVerticalPixels;
 
     // preferences: files
     bool rememberLastDir;
@@ -255,6 +256,7 @@ private slots:
     void setIncludeSubFolders();
     void setMaxRecentFolders(int prefMaxRecentFolders);
     void setTrackpadScroll(bool trackpadScroll);
+    void setDisplayResolution(int horizontalPixels, int verticalPixels);
     void setIngestRootFolder(QString rootFolder);
     void setSlideShowParameters(int delay, bool isRandom);
     void setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
@@ -646,6 +648,7 @@ private:
     QString getPosition();
     QString getZoom();
     QString getPicked();
+    void setActualDevicePixelRation();
 
     void addRecentFolder(QString fPath);
     void syncRecentFoldersMenu();

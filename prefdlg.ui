@@ -56,14 +56,14 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>6</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>160</y>
+       <y>140</y>
        <width>431</width>
        <height>91</height>
       </rect>
@@ -112,7 +112,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>30</y>
+       <y>20</y>
        <width>431</width>
        <height>101</height>
       </rect>
@@ -159,7 +159,7 @@
        <rect>
         <x>20</x>
         <y>65</y>
-        <width>181</width>
+        <width>171</width>
         <height>16</height>
        </rect>
       </property>
@@ -173,12 +173,92 @@
       </property>
      </widget>
     </widget>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>250</y>
+       <width>431</width>
+       <height>80</height>
+      </rect>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;In some operating systems it is difficult to obtain the actual screen resolution.  This is used to make one display pixel = one image pixel.  This insures that zooming to 100% is showing 1:1 display to image pixels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="title">
+      <string>Display Size</string>
+     </property>
+     <widget class="QSpinBox" name="displayHorizontalPixelsSB">
+      <property name="geometry">
+       <rect>
+        <x>130</x>
+        <y>37</y>
+        <width>64</width>
+        <height>24</height>
+       </rect>
+      </property>
+      <property name="minimum">
+       <number>100</number>
+      </property>
+      <property name="maximum">
+       <number>10000</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_21">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>111</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Horizontal Pixels</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_22">
+      <property name="geometry">
+       <rect>
+        <x>210</x>
+        <y>40</y>
+        <width>111</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Vertical Pixels</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="displayVerticalPixelsSB">
+      <property name="geometry">
+       <rect>
+        <x>330</x>
+        <y>37</y>
+        <width>64</width>
+        <height>24</height>
+       </rect>
+      </property>
+      <property name="minimum">
+       <number>100</number>
+      </property>
+      <property name="maximum">
+       <number>10000</number>
+      </property>
+     </widget>
+    </widget>
    </widget>
    <widget class="QWidget" name="pageCache">
     <widget class="QSpinBox" name="cacheSizeSpinbox">
      <property name="geometry">
       <rect>
-       <x>140</x>
+       <x>160</x>
        <y>30</y>
        <width>51</width>
        <height>24</height>
@@ -197,7 +277,7 @@
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>140</x>
+       <x>160</x>
        <y>70</y>
        <width>115</width>
        <height>151</height>

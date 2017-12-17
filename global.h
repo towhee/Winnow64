@@ -63,7 +63,7 @@ enum dataModelColumns {
     extern QString mode;
     extern QString lastThumbChangeEvent;
 
-    extern qreal refScaleAdjustment;
+    extern qreal actualDevicePixelRatio;
 
     extern bool isThreadTrackingOn;
     extern bool isNewFolderLoaded;

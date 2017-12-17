@@ -12,7 +12,7 @@ namespace G
     QString mode;                       // In MW: Loupe, Grid, Table or Compare
     QString lastThumbChangeEvent;
 
-    qreal refScaleAdjustment;
+    qreal actualDevicePixelRatio;
 
     // not persistent
     bool isThreadTrackingOn;
