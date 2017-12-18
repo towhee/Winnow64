@@ -31,7 +31,7 @@
      <x>0</x>
      <y>0</y>
      <width>799</width>
-     <height>629</height>
+     <height>661</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -107,6 +107,13 @@
           </widget>
          </item>
         </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="monitorSizeBtn">
+        <property name="text">
+         <string>Please confirm your monitor resolution</string>
+        </property>
        </widget>
       </item>
       <item alignment="Qt::AlignTop">

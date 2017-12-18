@@ -1,5 +1,4 @@
 BUGS
-- No vertical scrolling in FSTree
 - Icon padding becomes 2 for no apparent reason
 PERFORMANCE
 - Separate thread to load XMP data after thumbnails loaded
@@ -8,6 +7,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Confirm monitor size in welcome
 - Add filters activated status (red text on image?)
 - Make data/time formatting consistent ie InfoView created vs modified
 - Read/write XMP sidecars
@@ -37,6 +37,8 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Preferences has monitor size entry twice
+- Done: No vertical scrolling in FSTree
 - Done: Not reading metadata from iphone jpgs
 - Done: Calc actual 100% pixels and set zoom to match
 - Done: InfoView elide text

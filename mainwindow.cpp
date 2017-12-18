@@ -1857,6 +1857,7 @@ void MW::setupCentralWidget()
     welcome = new QScrollArea;
     Ui::welcomeScrollArea ui;
     ui.setupUi(welcome);
+    connect(ui.monitorSizeBtn, SIGNAL(clicked(bool)), this, SLOT(preferences()));
 
     centralLayout->addWidget(welcome);     // first time open program tips
     centralLayout->addWidget(imageView);
@@ -2260,7 +2261,7 @@ void MW::createStatusBar()
 }
 
 void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
-           bool usePreview, int previewWidth, int previewHeight, bool activity)
+           bool usePreview, bool activity)
 {
 /*
 This slot signalled from the preferences dialog with changes to the cache
@@ -2276,11 +2277,12 @@ parameters.  Any visibility changes are executed.
     cacheStatusWidth = width;
     cacheWtAhead = wtAhead;
     isCachePreview = usePreview;
-    cachePreviewWidth = previewWidth;
-    cachePreviewHeight = previewHeight;
+    // moved to MW::setDisplayresolution
+//    cachePreviewWidth = previewWidth;
+//    cachePreviewHeight = previewHeight;
     isShowCacheThreadActivity = activity;
     imageCacheThread->updateImageCacheParam(size, show, width, wtAhead,
-             usePreview, previewWidth, previewHeight);
+             usePreview, displayHorizontalPixels, displayVerticalPixels);
     QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
     imageCacheThread->updateImageCache(fPath);
 
@@ -3429,8 +3431,8 @@ void MW::preferences()
 //            this, SLOT(setThumbDockParameters(bool, bool, bool)));
     connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
             this, SLOT(setSlideShowParameters(int, bool)));
-    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, bool, int, int, bool)),
-            this, SLOT(setCacheParameters(int, bool, int, int, bool, int, int, bool)));
+    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, bool, bool)),
+            this, SLOT(setCacheParameters(int, bool, int, int, bool, bool)));
     connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool,bool)),
             this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool,bool)));
     prefdlg->exec();
@@ -3513,6 +3515,8 @@ void MW::setDisplayResolution(int horizontalPixels, int verticalPixels)
 {
     displayHorizontalPixels = horizontalPixels;
     displayVerticalPixels = verticalPixels;
+    cachePreviewWidth = horizontalPixels;
+    cachePreviewHeight = verticalPixels;
     qDebug() << "setDisplayresolution" << displayHorizontalPixels << displayVerticalPixels;
 //    setActualDevicePixelRation();
 }

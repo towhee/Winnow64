@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>708</width>
-    <height>450</height>
+    <height>464</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -26,13 +26,16 @@
    <property name="geometry">
     <rect>
      <x>570</x>
-     <y>400</y>
+     <y>410</y>
      <width>75</width>
      <height>23</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When closing the preferences dialog all changes will by retained.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="text">
-    <string>Close</string>
+    <string>Okay</string>
    </property>
    <attribute name="buttonGroup">
     <string notr="true">buttonGroup</string>
@@ -44,7 +47,7 @@
      <x>210</x>
      <y>20</y>
      <width>481</width>
-     <height>361</height>
+     <height>370</height>
     </rect>
    </property>
    <property name="font">
@@ -56,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>6</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -367,15 +370,18 @@
      <property name="geometry">
       <rect>
        <x>200</x>
-       <y>294</y>
+       <y>270</y>
        <width>161</width>
-       <height>16</height>
+       <height>20</height>
       </rect>
      </property>
      <property name="font">
       <font>
        <pointsize>12</pointsize>
       </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This sets the width of the cache status shown on the application status bar.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
       <string>Cache status width (px)</string>
@@ -385,7 +391,7 @@
      <property name="geometry">
       <rect>
        <x>360</x>
-       <y>290</y>
+       <y>269</y>
        <width>71</width>
        <height>24</height>
       </rect>
@@ -394,6 +400,9 @@
       <font>
        <pointsize>12</pointsize>
       </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This sets the width of the cache status shown on the application status bar.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="minimum">
       <number>100</number>
@@ -454,15 +463,18 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>293</y>
+       <y>269</y>
        <width>151</width>
-       <height>17</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="font">
       <font>
        <pointsize>12</pointsize>
       </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This will show the cache status in the status bar at the bottom of the application.  If you do not see the status bar you can enable it in the Windows menu or by pressing F10.  If you hover over the cache status another tooltip will explain the colour codes for the current file, target cache, current cache and total images.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
       <string>Show cache status</string>
@@ -472,7 +484,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>230</y>
+       <y>240</y>
        <width>341</width>
        <height>20</height>
       </rect>
@@ -482,105 +494,18 @@
        <pointsize>12</pointsize>
       </font>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The largest preview embedded in the image file will be cached.  However, for large files this can take time.  This option tells the application to first create a smaller preview that will fit your monitor while the larger one is being built.  Try checking this option if you are experiencing some latency in loupe mode.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
       <string>Cache previews scaled to monitor resolution</string>
-     </property>
-    </widget>
-    <widget class="QSpinBox" name="previewWidthSB">
-     <property name="geometry">
-      <rect>
-       <x>130</x>
-       <y>250</y>
-       <width>60</width>
-       <height>24</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="minimum">
-      <number>1000</number>
-     </property>
-     <property name="maximum">
-      <number>5000</number>
-     </property>
-     <property name="singleStep">
-      <number>200</number>
-     </property>
-     <property name="value">
-      <number>3000</number>
-     </property>
-    </widget>
-    <widget class="QSpinBox" name="previewHeightSB">
-     <property name="geometry">
-      <rect>
-       <x>260</x>
-       <y>250</y>
-       <width>60</width>
-       <height>24</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="minimum">
-      <number>1000</number>
-     </property>
-     <property name="maximum">
-      <number>5000</number>
-     </property>
-     <property name="singleStep">
-      <number>200</number>
-     </property>
-     <property name="value">
-      <number>2000</number>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_9">
-     <property name="geometry">
-      <rect>
-       <x>80</x>
-       <y>253</y>
-       <width>41</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Width</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_20">
-     <property name="geometry">
-      <rect>
-       <x>210</x>
-       <y>253</y>
-       <width>41</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Height</string>
      </property>
     </widget>
     <widget class="QCheckBox" name="showCacheThreadActivityChk">
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>320</y>
+       <y>300</y>
        <width>211</width>
        <height>17</height>
       </rect>
@@ -589,6 +514,9 @@
       <font>
        <pointsize>12</pointsize>
       </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This will display three small activity lights on the status bar at the bottom of the application window.  The activity lights turn green when there is caching activity for building metadata, thumbnails and full scale images.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
       <string>Show cache thread activity</string>
@@ -646,6 +574,9 @@
        <pointsize>12</pointsize>
       </font>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This sets the amount of time each image is displayed before the next image appears.  If set to zero then each image will be displayed until you manually move forward or backwards.  Note that you can also change this delay while the slideshow is active by pressing the zero to nine (0 - 9) keys.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
     </widget>
     <widget class="QLabel" name="label_11">
      <property name="geometry">
@@ -660,6 +591,9 @@
       <font>
        <pointsize>12</pointsize>
       </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This sets the amount of time each image is displayed before the next image appears.  If set to zero then each image will be displayed until you manually move forward or backwards.  Note that you can also change this delay while the slideshow is active by pressing the zero to nine (0 - 9) keys.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
       <string>Delay (sec)</string>
@@ -1628,7 +1562,7 @@
       </font>
      </property>
      <property name="text">
-      <string>When full screen is chosen, select which docks should be also visible.  Hiding all the docks will result in only the loupe view or grid of all the thumbnails being visible.</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When full screen is chosen, select which panels should be visible. Hiding all the docks will result in only the loupe view or grid of all the thumbnails being visible.  You can still show/hide panels in the usual way, so this is just a customization to shortcut to your usual full screen preference.&lt;/p&gt;&lt;p&gt;When you leave full screen view the application will return to its prior state.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -1641,7 +1575,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>90</y>
+       <y>110</y>
        <width>221</width>
        <height>141</height>
       </rect>
@@ -1734,7 +1668,7 @@
        <x>10</x>
        <y>10</y>
        <width>460</width>
-       <height>340</height>
+       <height>351</height>
       </rect>
      </property>
      <property name="frameShape">
@@ -1749,8 +1683,11 @@
         <x>20</x>
         <y>0</y>
         <width>181</width>
-        <height>341</height>
+        <height>351</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select which items to show or hide in the metadata panel.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="frameShape">
        <enum>QFrame::NoFrame</enum>
@@ -1764,7 +1701,7 @@
          <x>0</x>
          <y>0</y>
          <width>181</width>
-         <height>341</height>
+         <height>351</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -1799,7 +1736,16 @@
            <enum>QFrame::Plain</enum>
           </property>
           <property name="lineWidth">
-           <number>1</number>
+           <number>0</number>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>1</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="headerHidden">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -1812,8 +1758,11 @@
         <x>240</x>
         <y>0</y>
         <width>191</width>
-        <height>341</height>
+        <height>351</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select which items to show or hide in the table mode view.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="frameShape">
        <enum>QFrame::NoFrame</enum>
@@ -1827,7 +1776,7 @@
          <x>10</x>
          <y>0</y>
          <width>162</width>
-         <height>341</height>
+         <height>351</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -1846,6 +1795,15 @@
             <height>16777215</height>
            </size>
           </property>
+          <property name="iconSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+          <attribute name="verticalHeaderDefaultSectionSize">
+           <number>18</number>
+          </attribute>
          </widget>
         </item>
        </layout>
@@ -1860,7 +1818,7 @@
      <x>10</x>
      <y>20</y>
      <width>191</width>
-     <height>360</height>
+     <height>370</height>
     </rect>
    </property>
    <property name="frameShape">
@@ -1873,10 +1831,10 @@
     <widget class="QListWidget" name="listWidget">
      <property name="geometry">
       <rect>
-       <x>0</x>
+       <x>-10</x>
        <y>10</y>
        <width>191</width>
-       <height>351</height>
+       <height>360</height>
       </rect>
      </property>
      <property name="frameShadow">

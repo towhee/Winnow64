@@ -264,8 +264,7 @@ private slots:
     void slideShow();
     void nextSlide();
     void setCacheParameters(int size, bool show, int width, int wtAhead,
-                            bool isCachePreview, int cachePreviewWidth,
-                            int cachePreviewHeight, bool activity);
+                            bool isCachePreview, bool activity);
     void selectAllThumbs();
     void removeBookmark();
     void rotateLeft();
