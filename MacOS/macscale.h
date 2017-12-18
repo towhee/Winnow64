@@ -3,6 +3,7 @@
 
 #include "MacOS/macScale.h"
 #include <QtCore/qglobal.h>
+#include <QSize>
 
 //#define Q_MACEXTRAS_EXPORT Q_DECL_EXPORT
 
@@ -11,7 +12,8 @@
 
 namespace QtMac {
 
-float macBackingScaleFactor();
+QSizeF macBackingScaleFactor();
+//float macBackingScaleFactor();
 //Q_MACEXTRAS_EXPORT float macBackingScaleFactor();
 
 }  // namespace QtMac

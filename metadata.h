@@ -8,6 +8,7 @@
 #include <QDebug>
 #include <QHash>
 #include <QList>
+#include <QtEndian>
 #include <iostream>
 #include <iomanip>
 #include <QElapsedTimer>
@@ -39,6 +40,7 @@ public:
     ulong width;
     ulong height;
     QString dateTime;
+    QString make;
     QString model;
     QString exposureTime;
     float exposureTimeNum;
@@ -80,6 +82,7 @@ public:
     ulong width;
     ulong height;
     QString dateTime;
+    QString make;
     QString model;
     QString exposureTime;
     float exposureTimeNum;
@@ -121,7 +124,8 @@ public:
     void setPick(const QString &imageFileName, bool choice);
     void clear();
     void clearMetadata();
-    bool loadImageMetadata(const QFileInfo &fileInfo, bool essential = true, bool nonEssential = true);
+    bool loadImageMetadata(const QFileInfo &fileInfo, bool essential = true,
+                           bool nonEssential = true, bool isReport = false);
     bool isLoaded(const QString &imageFullPath);
     ulong getOffsetFullJPG(const QString &imageFullPath);
     ulong getLengthFullJPG(const QString &imageFullPath);

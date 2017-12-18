@@ -1,6 +1,5 @@
 BUGS
 - Icon padding becomes 2 for no apparent reason
-- Not reading metadata from iphone jpgs
 PERFORMANCE
 - Separate thread to load XMP data after thumbnails loaded
 - Improve producer/consumer image cache performance for large files
@@ -37,6 +36,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Not reading metadata from iphone jpgs
 - Done: Calc actual 100% pixels and set zoom to match
 - Done: InfoView elide text
 - Done: Tweak default workspace to match current layout

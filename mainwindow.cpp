@@ -36,7 +36,14 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
-    isInitializing = true;
+#if defined(Q_OS_MAC)
+       int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
+       qDebug() << "screenWidth" << screenWidth << QPaintDevice::devicePixelRatio();
+        QSizeF display = QtMac::macBackingScaleFactor();
+        qDebug() << "QtMac::BackingScaleFactor()" << display;
+#endif
+
+        isInitializing = true;
     isSlideShowActive = false;
     maxThumbSpaceHeight = 160 + 12 + 1;     // rgh not being used
 //    maxThumbSpaceHeight = 160 + qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
@@ -3427,7 +3434,7 @@ void MW::preferences()
     connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool,bool)),
             this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool,bool)));
     prefdlg->exec();
-    setActualDevicePixelRation();
+//    setActualDevicePixelRation();
 }
 
 void MW::setIncludeSubFolders()
@@ -3528,7 +3535,7 @@ void MW::setActualDevicePixelRation()
        qDebug() << "screenWidth" << screenWidth << QPaintDevice::devicePixelRatio();
         float bSF = QtMac::macBackingScaleFactor();
         qDebug() << "QtMac::BackingScaleFactor()" << bSF;
-    #endif
+#endif
 
         qDebug() << "QGuiApplication::primaryScreen()->devicePixelRatio()"
                 << QGuiApplication::primaryScreen()->devicePixelRatio();
@@ -4550,7 +4557,7 @@ condition of actions sets the visibility of all window components. */
     setThumbDockLockMode();
     setShootingInfo();
     setCentralView();
-    setActualDevicePixelRation();
+//    setActualDevicePixelRation();
     isUpdatingState = false;
 //    reportState();
 }

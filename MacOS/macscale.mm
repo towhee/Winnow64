@@ -3,7 +3,12 @@
 #import <AppKit/AppKit.h>
 
 namespace QtMac {
-float macBackingScaleFactor() {
-        return [[NSScreen mainScreen] backingScaleFactor];
+QSizeF macBackingScaleFactor() {
+    NSScreen *screen = [NSScreen mainScreen];
+    NSDictionary *description = [screen deviceDescription];
+    NSSize displayPixelSize = [[description objectForKey:NSDeviceSize] sizeValue];
+    return QSizeF(displayPixelSize.width, displayPixelSize.height);
+
+//    return [[NSScreen mainScreen] backingScaleFactor];
 }
 }  // namespace QtMac

@@ -525,7 +525,7 @@ void Metadata::reportMetadata()
 
 void Metadata::track(QString fPath, QString msg)
 {
-    if (G::isThreadTrackingOn) qDebug() << "• Metadata Caching" << fPath << msg;
+//    if (G::isThreadTrackingOn) qDebug() << "• Metadata Caching" << fPath << msg;
 }
 
 
@@ -855,10 +855,12 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
     QString pos;
     QString tagDescription;
     for (int i=0; i<tags; i++){
+        if (report) pos = QString::number(file.pos(), 16).toUpper();
         tagId = get2(file.read(2));
         tagType = get2(file.read(2));
         tagCount = get4(file.read(4));
-        tagValue = get4(file.read(4));
+        if (tagType == 3) tagValue = get2(file.read(4));
+        else tagValue = get4(file.read(4));
 
         ifdData.tagType = tagType;
         ifdData.tagCount = tagCount;
@@ -874,7 +876,7 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
                 : tagDescription = "Undefined tag";
 
         if (report) {
-            pos = QString::number(file.pos(), 16).toUpper();
+//            pos = QString::number(file.pos(), 16).toUpper();
             std::cout << std::setw(8) << std::setfill(' ') << std::right << pos.toStdString()
                       << std::setw(7) << std::setfill(' ') << std::right << tagId
                       << std::setw(9) << std::setfill(' ') << std::right << tagType
@@ -882,6 +884,7 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
                       << std::setw(10) << std::setfill(' ') << std::right << tagValue
                       << "   "
                       << std::setw(20) << std::left << tagDescription.toStdString()
+                      << std::setw(20) << std::right << QString::number(order, 16).toUpper().toStdString()
                       << "\n";
             std::cout << std::flush;
         }
@@ -931,6 +934,16 @@ void Metadata::getSegments(ulong offset)
             segmentHash[segCodeHash[marker]] = offset;
         }
         offset = nextOffset;
+    }
+    if (report) {
+        qDebug() << "\n SEGMENT HASH";
+        qDebug() << "Segment\tOffset";
+        QHashIterator<QString, ulong> i(segmentHash);
+        while (i.hasNext()) {
+            i.next();
+            qDebug() << i.key() << ": " << i.value();
+//            std::cout << i.key() << "\t\t" << i.value() << std::endl;
+        }
     }
 }
 
@@ -1583,7 +1596,8 @@ bool Metadata::formatJPG()
         // add condition to check for EOF
     }
     uint a = get2(file.read(2));  // magic 42
-    a = get2(file.read(2));
+    a = get4(file.read(4));
+//    a = get2(file.read(2));
     ulong offsetIfd0 = a + startOffset;
 
     // read IFD0
@@ -1598,6 +1612,12 @@ bool Metadata::formatJPG()
         (ifdDataHash.contains(274))
             ? orientation = ifdDataHash.value(274).tagValue
             : orientation = 1;
+
+        // IFD0: Make
+        (ifdDataHash.contains(271))
+            ? make = getString(ifdDataHash.value(271).tagValue + startOffset,
+            ifdDataHash.value(271).tagCount)
+            : make = "";
 
         // IFD0: Model
         (ifdDataHash.contains(272))
@@ -1757,7 +1777,7 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
                           << "\n" << std::flush;
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
-    if (G::isThreadTrackingOn) track(fPath, "Reading ");
+//    if (G::isThreadTrackingOn) track(fPath, "Reading ");
     bool success = false;
     int totDelay = 50;
     int msDelay = 0;
@@ -1780,7 +1800,7 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
             err = "Could not open file to read metadata";    // try again
             QThread::msleep(msInc);
             msDelay += msInc;
-            if (G::isThreadTrackingOn) track(fPath, err);
+//            if (G::isThreadTrackingOn) track(fPath, err);
         }
     }
     while ((msDelay < totDelay) && !success);
@@ -1788,7 +1808,7 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
     // not all files have thumb or small jpg embedded
     if (offsetFullJPG == 0 && fileOpened) {
         err = "No embedded JPG found";
-        if (G::isThreadTrackingOn) track(fPath, err);
+//        if (G::isThreadTrackingOn) track(fPath, err);
     }
 
     if (offsetSmallJPG == 0) offsetSmallJPG = offsetFullJPG;
@@ -2191,7 +2211,9 @@ void Metadata::loadFromThread(QFileInfo fileInfo)
     loadImageMetadata(fileInfo);
 }
 
-bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, bool essential, bool nonEssential)
+bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
+                                 bool essential, bool nonEssential,
+                                 bool isReport)
 {
     {
     #ifdef ISDEBUG
@@ -2211,7 +2233,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, bool essential, bool
     QString shootingInfo;
 
     ImageMetadata imageMetadata;
-    result = readMetadata(false, fileInfo.filePath());
+    result = readMetadata(isReport, fileInfo.filePath());
 
     imageMetadata.isPicked = false;
     imageMetadata.offsetFullJPG = offsetFullJPG;
