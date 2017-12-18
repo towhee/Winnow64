@@ -28,8 +28,10 @@ signals:
     void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
                                int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
+
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
-            int cacheStatusWidth, int previewWidth, int previewHeight, bool activity);
+            int cacheStatusWidth, int wtAhead, bool usePreview, bool activity);
+
     void updateFullScreenDocks(bool isFolders, bool isFavs, bool isFilters, bool isMetadata,
                                bool isThumbs, bool isStatusBar);
 

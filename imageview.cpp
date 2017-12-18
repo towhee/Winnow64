@@ -887,6 +887,12 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
     QWidget::mouseDoubleClickEvent(event);
 }
 
+bool ImageView::eventFilter(QObject *obj, QEvent *event)
+{
+    qDebug() << "ImageView event filter" << obj << event;
+    return QGraphicsView::eventFilter(obj, event);
+}
+
 void ImageView::mousePressEvent(QMouseEvent *event)
 {
     {
@@ -900,16 +906,20 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     if (currentImagePath.isEmpty()) return;
 
     // prevent zooming when right click for context menu
-    if (event->button() == Qt::RightButton) return;
+    if (event->button() == Qt::RightButton) {
+        return;
+    }
 
     isMouseDoubleClick = false;
     if (event->button() == Qt::LeftButton) {
+        qDebug() << "Left mouse click";
         isLeftMouseBtnPressed = true;
         scrollCount = 0;                // still used?
         mousePressPt.setX(event->x());
         mousePressPt.setY(event->y());
+        QGraphicsView::mousePressEvent(event);
     }
-    QGraphicsView::mousePressEvent(event);
+//    QGraphicsView::mousePressEvent(event);
 }
 
 void ImageView::mouseMoveEvent(QMouseEvent *event)
@@ -946,6 +956,10 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     #ifdef ISDEBUG
     qDebug() << "ImageView::mouseReleaseEvent";
     #endif
+    }
+    // prevent zooming when right click for context menu
+    if (event->button() == Qt::RightButton) {
+        return;
     }
 //    qDebug() << "mouseReleaseEvent" << event << "isMouseDrag" << isMouseDrag;
     isLeftMouseBtnPressed = false;

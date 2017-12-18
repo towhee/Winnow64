@@ -35,6 +35,7 @@ private:
     void accept();
     void updateExistingSequence();
     int getSequenceStart(const QString &path);
+
     QStringList *existFiles;
     QFileInfoList pickList;
     QFileSystemModel fileSystemModel;

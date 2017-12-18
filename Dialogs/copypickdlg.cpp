@@ -32,14 +32,13 @@ CopyPickDlg::CopyPickDlg(QWidget *parent, QFileInfoList &imageList,
     QString s3 = QString::number(fileMB, 'f', 1);
     ui->statsLabel->setText(s1 + s2 + s3 + "MB");
 
+    // get year and month from the first image
     fileNameDatePrefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
     dateTime = metadata->getDateTime(pickList.at(0).absoluteFilePath());
-//    year = metadata->getYear(pickList.at(0).absoluteFilePath());
     year = dateTime.left(4);
     month = dateTime.mid(5,2);
 
     QString rootFolder = ingestRootFolder;
-//    QString rootFolder = "E:/" + year + "/" + year + month + "/";
     ui->parentFolderLabel->setText(rootFolder);
 //    ui->folderLabel->setText(fileNameDatePrefix);
     folderPath = "E:/" + year + "/" + year + month + "/" + fileNameDatePrefix;
@@ -58,8 +57,10 @@ CopyPickDlg::~CopyPickDlg()
 
 void CopyPickDlg::accept()
 {
+
     QDir dir;
-    dir.mkdir(folderPath);
+    bool success = dir.mkdir(folderPath);
+    qDebug() << folderPath << success;
     ui->progressBar->setVisible(true);
     QString prefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
     for (int i=0; i < pickList.size(); ++i) {
@@ -72,6 +73,7 @@ void CopyPickDlg::accept()
         QString suffix = "." + fileInfo.completeSuffix();
         QString source = fileInfo.absoluteFilePath();
         QString destination = folderPath + "/" + prefix + sequence + suffix;
+        qDebug() << "Copying " << source << " to " << destination;
         QFile::copy(source, destination);
     }
     QDialog::accept();
@@ -89,21 +91,9 @@ void CopyPickDlg::updateExistingSequence()
 
 void CopyPickDlg::on_selectFolderBtn_clicked()
 {
-//    QString root;
-//#ifdef Q_OS_LINIX
-//    root = "/users/roryhill/pictures";
-//#endif
-//#ifdef Q_OS_WIN
-////    root = fileSystemModel.myComputer().toString();
-//#endif
-//#ifdef Q_OS_MAC
-//    root = "/users/roryhill/pictures";
-//#endif
-
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
-//    QString root = "D:/";
     qDebug() << fileSystemModel.myComputer().toString();
-//    qDebug() << root;
+    qDebug() << root;
     QString s;
     s = QFileDialog::getExistingDirectory
         (this, tr("Choose Ingest Folder"), root,
@@ -118,17 +108,14 @@ void CopyPickDlg::on_selectFolderBtn_clicked()
 
 void CopyPickDlg::on_selectParentFolderBtn_clicked()
 {
-//    QString root = "E:/2016";
-    QString root = "/users/roryhill/pictures";
     QString s;
     s = QFileDialog::getExistingDirectory
-        (this, tr("Choose Root Folder"), root,
+        (this, tr("Choose Root Folder"),  "/home",
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 //    qDebug() << "Folderpath: " << s;
     if (s.length() > 0) {
         rootFolderPath = s + "/" + year + month + "/";
         ui->parentFolderLabel->setText(rootFolderPath);
-//        folderPath = s + "/" + metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
         updateFolderPath();
         updateExistingSequence();
     }
@@ -140,6 +127,8 @@ void CopyPickDlg::updateFolderPath()
         rootFolderPath = ui->parentFolderLabel->text();
     else
         rootFolderPath = defaultRootFolderPath;
+
+    // send to MW where it will be saved in QSettings
     emit updateIngestRootFolder(rootFolderPath);
 
     folderBase = fileNameDatePrefix;
@@ -151,7 +140,9 @@ void CopyPickDlg::updateFolderPath()
     else
         folderPath = rootFolderPath + folderBase + folderDescription;
 
-    // build filename for result group
+    // build filename for result group YYYY-MM-DD_XXXX.SUFFIX
+
+    // file prefix YYYY-MM-DD comes prebuilt from Metadata class
     QString prefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
     int startNum = ui->spinBoxStartNumber->value();
     QString sequence = "_" + QString("%1").arg(startNum, 4 , 10, QChar('0'));
@@ -189,9 +180,8 @@ void CopyPickDlg::on_spinBoxStartNumber_valueChanged(const QString &arg1)
 int CopyPickDlg::getSequenceStart(const QString &path)
 {
     QDir dir(path);
-//    dir.setPath("/users/roryhill/Pictures/2048JPG");
-//    dir.setPath(folderPath);
-//    if (!dir.exists()) return 0;
+    if (!dir.exists()) return 0;
+
     QStringList numbers;
     numbers << "0" << "1" << "2" << "3" << "4" << "5" << "6" << "7" << "8" <<"9";
     QString seq;    // existing number in file

@@ -164,7 +164,8 @@ bool FSTree::eventFilter(QObject *obj, QEvent *event)
 {
 //    qDebug() << "fsTree events" << obj << event;
     if (event->type() == QEvent::Paint) resizeColumns();
-    QTreeView::eventFilter(obj, event);
+    return QTreeView::eventFilter(obj, event);
+//    return true;
 }
 
 void FSTree::dragEnterEvent(QDragEnterEvent *event)

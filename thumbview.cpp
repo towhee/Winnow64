@@ -1237,7 +1237,9 @@ case).
                (obj->objectName() == "ThumbViewHorScrollBar" ||
                 obj->objectName() == "WinnowStatusBar"))
            qDebug() << "ThumbView event filter" << obj << event;
+            qDebug() << obj << event;
    */
+
 
     return QListView::eventFilter(obj, event);
 }
