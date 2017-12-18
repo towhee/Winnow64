@@ -7,12 +7,11 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Confirm monitor size in welcome
-- Add filters activated status (red text on image?)
 - Make data/time formatting consistent ie InfoView created vs modified
 - Read/write XMP sidecars
+- Open with ...
+- Drag and drop a selection of thumbs (only first currently dragged)
 - No wrap thumbs anywhere
-- Add status dock
 - Add current folder to bookmarks
 - Combine raw+jpg option
 - Get actual monitor resolution for actualDevicePixelRatio calculation
@@ -29,6 +28,7 @@ ENHANCEMENTS
 - Rotate selected images
 - Disable menu "add bookmark" when folders not selected??
 - Tweak context menus
+- Add filters activated status (red text on image?)
 - Initial setup (other than workspace)
 - Eject card
 - Run droplet
@@ -37,6 +37,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Confirm monitor size in welcome
 - Done: Preferences has monitor size entry twice
 - Done: No vertical scrolling in FSTree
 - Done: Not reading metadata from iphone jpgs

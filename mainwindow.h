@@ -211,7 +211,8 @@ private slots:
     void quickFilter();
     void sortThumbnails();
 //    void reload();
-    void preferences();
+    void monitorPreference();
+    void preferences(int page = -1);
     void oldPreferences();
     void toggleFullScreen();
     void escapeFullScreen();

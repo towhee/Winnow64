@@ -1857,7 +1857,7 @@ void MW::setupCentralWidget()
     welcome = new QScrollArea;
     Ui::welcomeScrollArea ui;
     ui.setupUi(welcome);
-    connect(ui.monitorSizeBtn, SIGNAL(clicked(bool)), this, SLOT(preferences()));
+    connect(ui.monitorSizeBtn, SIGNAL(clicked(bool)), this, SLOT(monitorPreference()));
 
     centralLayout->addWidget(welcome);     // first time open program tips
     centralLayout->addWidget(imageView);
@@ -3402,7 +3402,20 @@ void MW::chooseExternalApp()
     process->start(program, args);
 }
 
-void MW::preferences()
+void MW::monitorPreference()
+{
+/*
+Called from welcome screen.  Opens preferences on monitor resolution page.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::monitorPreference()";
+    #endif
+    }
+    preferences(0);
+}
+
+void MW::preferences(int page)
 {
 /*
 
@@ -3412,7 +3425,8 @@ void MW::preferences()
     qDebug() << "MW::preferences";
     #endif
     }
-    Prefdlg *prefdlg = new Prefdlg(this, lastPrefPage);
+    if (page == -1) page = lastPrefPage;
+    Prefdlg *prefdlg = new Prefdlg(this, page);
     connect(prefdlg, SIGNAL(updatePage(int)),
         this, SLOT(setPrefPage(int)));
     connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
