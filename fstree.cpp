@@ -128,6 +128,8 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
 
     setHeaderHidden(true);
     setIndentation(12);
+//    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
     connect(this, SIGNAL(expanded(const QModelIndex &)), this, SLOT(resizeColumns()));
     connect(this, SIGNAL(collapsed(const QModelIndex &)), this, SLOT(resizeColumns()));
