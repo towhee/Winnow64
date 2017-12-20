@@ -192,7 +192,7 @@ Helper function for in class calls where thumb parameters already defined
 
 void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
         int _thumbSpacing, int _thumbPadding, int _labelFontSize,
-        bool _showThumbLabels)
+        bool _showThumbLabels, bool _wrapThumbs)
 {
     {
     #ifdef ISDEBUG
@@ -205,6 +205,7 @@ void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
     thumbPadding = _thumbPadding;
     labelFontSize = _labelFontSize;
     showThumbLabels = _showThumbLabels;
+    wrapThumbs = _wrapThumbs;
 
 //    qDebug() << "Calling setThumbParameters from ThumbView::setThumbParameters with args thumbWidth" << thumbWidth ;
     setThumbParameters(true);
@@ -855,7 +856,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         } while (improving);
 //        qDebug() << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
         setThumbParameters(thumbWidth, thumbHeight, thumbSpacing,
-                           thumbPadding, labelFontSize, showThumbLabels);
+                           thumbPadding, labelFontSize, showThumbLabels, wrapThumbs);
         return;
     }
     // all wrapping is row wrapping
@@ -887,7 +888,8 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         setThumbParameters(false);
     }
     // no wrapping - must be bottom or top dock area
-    else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea){
+    else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea
+             || !wrapThumbs){
         // set target ht based on space with scrollbar (always on)
         int ht = height();
         int scrollHeight = 12;
@@ -926,8 +928,8 @@ thumbDock height.
     qDebug() << "MW::thumbsFitTopOrBottom";
     #endif
     }
-    qDebug() << "MW::thumbsFitTopOrBottom   isFloating ="
-             << mw->thumbDock->isFloating();
+//    qDebug() << "MW::thumbsFitTopOrBottom   isFloating ="
+//             << mw->thumbDock->isFloating();
     /*
     thumbSpace anatomy (see ThumbViewDelegate)
      */
@@ -1228,7 +1230,9 @@ case).
             if (isMouseDrag)
                 if (!mw->thumbDock->isFloating()) {
                     Qt::DockWidgetArea area = mw->dockWidgetArea(mw->thumbDock);
-                    if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea)
+                    if (area == Qt::BottomDockWidgetArea
+                            || area == Qt::TopDockWidgetArea
+                            || !wrapThumbs)
                         thumbsFitTopOrBottom();
                 }
 

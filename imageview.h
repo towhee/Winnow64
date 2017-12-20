@@ -59,7 +59,7 @@ private slots:
     void upgradeToFullSize();
 
 protected:
-    bool eventFilter(QObject *obj, QEvent *event);
+//    bool eventFilter(QObject *obj, QEvent *event);
     void resizeEvent(QResizeEvent *event);
     void scrollContentsBy(int dx, int dy);
     void dragMoveEvent(QDragMoveEvent *event);

@@ -39,6 +39,7 @@ public:
     int thumbPadding;
     int labelFontSize;
     bool showThumbLabels;
+    bool wrapThumbs;
 
     bool isTopOrBottomDock;
     bool isFloat;       // set by MW ...
@@ -94,7 +95,7 @@ public slots:
     void refreshThumbs();
     void setIcon(QStandardItem *item, QImage thumb, QString folderPath);
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
-             int _thumbPadding, int _labelFontSize, bool _showThumbLabels);
+             int _thumbPadding, int _labelFontSize, bool _showThumbLabels, bool _wrapThumbs);
 //    void setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid, int _thumbSpacingGrid,
 //             int _thumbPaddingGrid, int _labelFontSizeGrid, bool _showThumbLabelsGrid);
     void reportThumbs();

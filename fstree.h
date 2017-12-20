@@ -7,6 +7,17 @@
 #ifndef FSTREE_H
 #define FSTREE_H
 
+class FSFilter : public QSortFilterProxyModel
+{
+    Q_OBJECT
+
+public:
+    FSFilter(QObject *parent);
+
+protected:
+    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const; // override;
+};
+
 class FSModel : public QFileSystemModel
 {
 public:
@@ -28,11 +39,16 @@ class FSTree : public QTreeView
 
 public:
     FSTree(QWidget *parent, Metadata *metadata, bool showImageCount);
-	FSModel *fsModel;
+
+    QFileSystemModel *fsModel;
+//    FSModel *fsModel;
+
+    FSFilter *fsFilter;
+
 	QModelIndex getCurrentIndex();
     bool showImageCount;
 	void setModelFlags();
-//    void showSupportedImageCount();
+    void showSupportedImageCount();
 
 public slots:
     void resizeColumns();

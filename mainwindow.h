@@ -11,8 +11,8 @@
 #include "macscale.h"
 #include <ApplicationServices/ApplicationServices.h>
 //#include <QtMacExtras>
-//#include <CoreServices/CoreServices.h>
-//#include "CoreGraphics/CoreGraphics.h";
+#include <CoreServices/CoreServices.h>
+#include "CoreGraphics/CoreGraphics.h";
 #endif
 
 #include "bookmarks.h"
@@ -89,6 +89,7 @@ public:
         int thumbHeight;
         int labelFontSize;
         bool showThumbLabels;
+        bool wrapThumbs;
         int thumbSpacingGrid;
         int thumbPaddingGrid;
         int thumbWidthGrid;

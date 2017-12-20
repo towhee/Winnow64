@@ -887,12 +887,6 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
     QWidget::mouseDoubleClickEvent(event);
 }
 
-bool ImageView::eventFilter(QObject *obj, QEvent *event)
-{
-    qDebug() << "ImageView event filter" << obj << event;
-    return QGraphicsView::eventFilter(obj, event);
-}
-
 void ImageView::mousePressEvent(QMouseEvent *event)
 {
     {

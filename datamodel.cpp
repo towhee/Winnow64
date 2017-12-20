@@ -380,10 +380,10 @@ map to columns in the data model ie Picked, Rating, Label ...
                 QVariant dataValue = idx.data(Qt::EditRole);
                 QVariant filterValue = (*filter)->data(1, Qt::EditRole);
 
-//                QString itemName = (*filter)->text(0);      // for debugging
-//                qDebug() << itemCategory << itemName
-//                         << "Comparing" << dataValue << filterValue << (dataValue == filterValue);
-
+/*                QString itemName = (*filter)->text(0);      // for debugging
+                qDebug() << itemCategory << itemName
+                         << "Comparing" << dataValue << filterValue << (dataValue == filterValue);
+*/
                 if (dataValue == filterValue) isMatch = true;
             }
         }

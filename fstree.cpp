@@ -1,5 +1,40 @@
-
 #include "fstree.h"
+
+/*------------------------------------------------------------------------------
+CLASS FSFilter subclassing QSortFilterProxyModel
+------------------------------------------------------------------------------*/
+
+FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
+{
+
+}
+
+bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
+{
+    return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
+//    invalidateFilter();
+//    QFileSystemModel *sm = qobject_cast<QFileSystemModel*>(sourceModel());
+//    if (sourceParent == sm->index(sm->rootPath())) {
+//        return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
+//    }
+    if (sourceParent.row() == -1) return true;
+    if (!sourceParent.isValid()) return true;
+//    if (!sourceParent.child(sourceRow, 0).isValid()) return false;
+
+    QString fParentPath = sourceParent.data(QFileSystemModel::FilePathRole).toString();
+    QString fPath = sourceParent.child(sourceRow, 0).data(QFileSystemModel::FilePathRole).toString();
+    QFileInfo info(fPath);
+    if (info.isHidden()) return false;
+    qDebug() << fPath
+             << fParentPath
+             << "absolutePath" << info.absolutePath()
+             << "absoluteFilePath" << info.absoluteFilePath()
+             << "isHidden" << info.isHidden()
+             << "isSymLink" << info.isSymLink();
+
+    if (fParentPath == "/" && fPath != "/Users" && fPath != "/Volumes") return false;
+    return true;
+}
 
 /*------------------------------------------------------------------------------
 CLASS FSModel subclassing QFileSystemModel
@@ -56,7 +91,7 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
         return QFileSystemModel::headerData(section, orientation, role);
 }
 
-QVariant FSModel::data(const QModelIndex & index, int role) const
+QVariant FSModel::data(const QModelIndex &index, int role) const
 {
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
@@ -96,11 +131,13 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     qDebug() << "FSTree::FSTree";
     #endif
     }
-	setAcceptDrops(true);
-	setDragEnabled(true);
-	setDragDropMode(QAbstractItemView::InternalMove);
+//    fsModel = new FSModel(this, metadata, showImageCount);
+    fsFilter = new FSFilter(fsModel);
 
-    fsModel = new FSModel(this, metadata, showImageCount);
+//    fsFilter->setSourceModel(fsModel);
+
+//    fsModel->sort(0, Qt::AscendingOrder);
+
     this->metadata = metadata;
 
     fileFilters = new QStringList;
@@ -114,10 +151,12 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
 #endif
 #ifdef Q_OS_MAC
     fsModel->setRootPath("/Volumes");
+//      fsModel->setRootPath("");
 #endif
 
-	setModelFlags();
-	setModel(fsModel);
+    setModelFlags();
+    setModel(fsModel);
+//    setModel(fsFilter);
 
     QModelIndex rootIdx = fsModel->index(0, 0, QModelIndex().parent());
     setRootIndex(rootIdx);
@@ -126,13 +165,32 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
         hideColumn(i);
     }
 
+    setSortingEnabled(true);
+    sortByColumn(0, Qt::AscendingOrder);
     setHeaderHidden(true);
-    setIndentation(12);
-//    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    setIndentation(10);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
-    connect(this, SIGNAL(expanded(const QModelIndex &)), this, SLOT(resizeColumns()));
-    connect(this, SIGNAL(collapsed(const QModelIndex &)), this, SLOT(resizeColumns()));
+    setAcceptDrops(true);
+    setDragEnabled(true);
+    setDragDropMode(QAbstractItemView::InternalMove);
+
+//    connect(this, SIGNAL(expanded(const QModelIndex &)), this, SLOT(resizeColumns()));
+//    connect(this, SIGNAL(collapsed(const QModelIndex &)), this, SLOT(resizeColumns()));
+}
+
+void FSTree::setModelFlags()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "FSTree::setModelFlags";
+    #endif
+    }
+    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot);
+//    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
+
+//	if (G::showHiddenFiles)
+//		fsModel->setFilter(fsModel->filter() | QDir::Hidden);
 }
 
 QModelIndex FSTree::getCurrentIndex()
@@ -147,25 +205,22 @@ QModelIndex FSTree::getCurrentIndex()
 
 void FSTree::resizeColumns()
 {
-    if (showImageCount) {
-        imageCountColumnWidth = 45;
-        showColumn(4);
-        setColumnWidth(4, imageCountColumnWidth);
-    }
-    else {
-        imageCountColumnWidth = 0;
-        hideColumn(4);
-    }
-    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth);
-
+//    if (showImageCount) {
+//        imageCountColumnWidth = 45;
+//        showColumn(4);
+//        setColumnWidth(4, imageCountColumnWidth);
+//    }
+//    else {
+//        imageCountColumnWidth = 0;
+//        hideColumn(4);
+//    }
+//    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth);
 }
 
 bool FSTree::eventFilter(QObject *obj, QEvent *event)
 {
-//    qDebug() << "fsTree events" << obj << event;
-    if (event->type() == QEvent::Paint) resizeColumns();
+//    if (event->type() == QEvent::Paint) resizeColumns();
     return QTreeView::eventFilter(obj, event);
-//    return true;
 }
 
 void FSTree::dragEnterEvent(QDragEnterEvent *event)
@@ -203,48 +258,38 @@ void FSTree::dropEvent(QDropEvent *event)
 	}
 }
 
-void FSTree::setModelFlags()
+ /*Tried to update count after tree created but no access to add to datamodel
+ in QFileSystemModel.  The solution is to return data on-the-fly that is not
+ stored in the datamodel.  This causes the tree to be laggy.
+
+ Kept as comment for future reference
+
+void FSTree::showSupportedImageCount()
 {
-    {
-    #ifdef ISDEBUG
-    qDebug() << "FSTree::setModelFlags";
-    #endif
-    }
-	fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot);
-//	if (G::showHiddenFiles)
-//		fsModel->setFilter(fsModel->filter() | QDir::Hidden);
+    // do some initializing
+    fileFilters->clear();
+    foreach (const QString &str, metadata->supportedFormats)
+            fileFilters->append("*." + str);
+    dir->setNameFilters(*fileFilters);
+    dir->setFilter(QDir::Files);
+
+    walkTree(rootIndex());
 }
 
-// Tried to update count after tree created but no access to add to datamodel
-// in QFileSystemModel.  The solution is to return data on-the-fly that is not
-// stored in the datamodel.  This causes the tree to be laggy.
+void FSTree::walkTree(const QModelIndex &row)
+{
+    if (fsModel->hasChildren(row)) {
+        for (int i = 0; i < fsModel->rowCount(row); ++i){
+            QModelIndex idx = fsModel->index(i, 0, row);
+            QString fPath = qvariant_cast<QString>(idx.data(QFileSystemModel::FilePathRole));
+            dir->setPath(fPath);
+            QModelIndex idx2 = fsModel->index(i, 4, row);
+            fsModel->setData(idx2, dir->entryInfoList().size(), Qt::DisplayRole);
+            fsModel->setData(idx2, dir->entryInfoList().size(), Qt::EditRole);
+            qDebug() << fPath << dir->entryInfoList().size();
+            walkTree(idx);
+        }
+    }
+}
+*/
 
-// Kept as comment for future reference
-
-//void FSTree::showSupportedImageCount()
-//{
-//    // do some initializing
-//    fileFilters->clear();
-//    foreach (const QString &str, metadata->supportedFormats)
-//            fileFilters->append("*." + str);
-//    dir->setNameFilters(*fileFilters);
-//    dir->setFilter(QDir::Files);
-
-//    walkTree(rootIndex());
-//}
-
-//void FSTree::walkTree(const QModelIndex &row)
-//{
-//    if (fsModel->hasChildren(row)) {
-//        for (int i = 0; i < fsModel->rowCount(row); ++i){
-//            QModelIndex idx = fsModel->index(i, 0, row);
-//            QString fPath = qvariant_cast<QString>(idx.data(QFileSystemModel::FilePathRole));
-//            dir->setPath(fPath);
-//            QModelIndex idx2 = fsModel->index(i, 4, row);
-//            fsModel->setData(idx2, dir->entryInfoList().size(), Qt::DisplayRole);
-//            fsModel->setData(idx2, dir->entryInfoList().size(), Qt::EditRole);
-//            qDebug() << fPath << dir->entryInfoList().size();
-//            walkTree(idx);
-//        }
-//    }
-//}

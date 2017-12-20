@@ -38,7 +38,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
 #if defined(Q_OS_MAC)
        int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
-       qDebug() << "screenWidth" << screenWidth << QPaintDevice::devicePixelRatio();
+//       int screenWidth1 = CGDisplayModeGetWidth(CGMainDisplayID());
+//       qDebug() << "screenWidth" << screenWidth << screenWidth1 << QPaintDevice::devicePixelRatio();
         QSizeF display = QtMac::macBackingScaleFactor();
         qDebug() << "QtMac::BackingScaleFactor()" << display;
 #endif
@@ -410,15 +411,16 @@ void MW::folderSelectionChange()
     addRecentFolder(currentViewDir);
 
     // show image count in Folders (fsTree) if showImageCountAction isChecked
-    qDebug() << "showImageCountAction->isChecked()"<< showImageCountAction->isChecked()
-             << "fsTree->isVisible()" << fsTree->isVisible();
+//    qDebug() << "showImageCountAction->isChecked()"<< showImageCountAction->isChecked()
+//             << "fsTree->isVisible()" << fsTree->isVisible();
     if (showImageCountAction->isChecked()) {
         // req'd to resize columns
         fsTree->showImageCount = true;
         // req'd to show imageCount in data
-        fsTree->fsModel->showImageCount = true;
-        fsTree->resizeColumns();
-        fsTree->repaint();
+//        fsTree->fsModel->showImageCount = true;
+
+//        fsTree->resizeColumns();
+//        fsTree->repaint();
         fsTree->fsModel->fetchMore(fsTree->rootIndex());
     }
 
@@ -1969,6 +1971,7 @@ void MW::createThumbView()
     thumbView->thumbHeight = setting->value("thumbHeight").toInt();
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
+    thumbView->wrapThumbs = setting->value("wrapThumbs").toBool();
 
 //    qDebug() << "MW::createThumbView"
 //             << "thumbView->thumbWidth"
@@ -2842,6 +2845,7 @@ workspace with a matching name to the action is used.
     thumbView->thumbPadding = w.thumbPadding,
     thumbView->labelFontSize = w.labelFontSize,
     thumbView->showThumbLabels = w.showThumbLabels;
+    thumbView->wrapThumbs = w.wrapThumbs;
     gridView->thumbWidth = w.thumbWidthGrid,
     gridView->thumbHeight = w.thumbHeightGrid,
     gridView->thumbSpacing = w.thumbSpacingGrid,
@@ -2893,6 +2897,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.thumbHeight = thumbView->thumbHeight;
     wsd.labelFontSize = thumbView->labelFontSize;
     wsd.showThumbLabels = thumbView->showThumbLabels;
+    wsd.wrapThumbs = thumbView->wrapThumbs;
 
     wsd.thumbSpacingGrid = gridView->thumbSpacing;
     wsd.thumbPaddingGrid = gridView->thumbPadding;
@@ -3029,6 +3034,7 @@ app is "stranded" on secondary monitors that are not attached.
     thumbView->thumbHeight = 100;
     thumbView->labelFontSize = 8;
     thumbView->showThumbLabels = true;
+    thumbView->wrapThumbs = false;
 
     gridView->thumbSpacing = 0;
     gridView->thumbPadding = 0;
@@ -3138,6 +3144,7 @@ void MW::reportWorkspace(int n)
              << "\nthumbHeight" << ws.thumbHeight
              << "\nlabelFontSize" << ws.labelFontSize
              << "\nshowThumbLabels" << ws.showThumbLabels
+             << "\nwrapThumbs" << ws.wrapThumbs
              << "\nthumbSpacingGrid" << ws.thumbSpacingGrid
              << "\nthumbPaddingGrid" << ws.thumbPaddingGrid
              << "\nthumbWidthGrid" << ws.thumbWidthGrid
@@ -3180,6 +3187,7 @@ void MW::loadWorkspaces()
         ws.thumbHeight = setting->value("thumbHeight").toInt();
         ws.labelFontSize = setting->value("labelFontSize").toInt();
         ws.showThumbLabels = setting->value("showThumbLabels").toBool();
+        ws.wrapThumbs = setting->value("wrapThumbs").toBool();
         ws.thumbSpacingGrid = setting->value("thumbSpacingGrid").toInt();
         ws.thumbPaddingGrid = setting->value("thumbPaddingGrid").toInt();
         ws.thumbWidthGrid = setting->value("thumbWidthGrid").toInt();
@@ -3225,6 +3233,7 @@ void MW::reportState()
              << "\nthumbHeight" << w.thumbHeight
              << "\nlabelFontSize" << w.labelFontSize
              << "\nshowThumbLabels" << w.showThumbLabels
+             << "\nwrapThumbs" << w.wrapThumbs
              << "\nthumbSpacingGrid" << w.thumbSpacingGrid
              << "\nthumbPaddingGrid" << w.thumbPaddingGrid
              << "\nthumbWidthGrid" << w.thumbWidthGrid
@@ -3437,10 +3446,10 @@ void MW::preferences(int page)
             this, SLOT(setTrackpadScroll(bool)));
     connect(prefdlg, SIGNAL(updateDisplayResolution(int,int)),
             this, SLOT(setDisplayResolution(int,int)));
-    connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool)),
-            thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
-    connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool)),
-            gridView, SLOT(setThumbParameters(int, int, int, int, int, bool)));
+    connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool,bool)),
+            thumbView, SLOT(setThumbParameters(int, int, int, int, int, bool,bool)));
+    connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool,bool)),
+            gridView, SLOT(setThumbParameters(int, int, int, int, int, bool, bool)));
 //    connect(prefdlg, SIGNAL(updateThumbDockParameters(bool, bool, bool)),
 //            this, SLOT(setThumbDockParameters(bool, bool, bool)));
     connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
@@ -3478,7 +3487,9 @@ void MW::setShowImageCount()
     // req'd to resize columns
     fsTree->showImageCount = isShow;
     // req'd to show imageCount in data
-    fsTree->fsModel->showImageCount = isShow;
+
+//    fsTree->fsModel->showImageCount = isShow;
+
     fsTree->resizeColumns();
     fsTree->repaint();
     if (isShow) fsTree->fsModel->fetchMore(fsTree->rootIndex());
@@ -3930,6 +3941,8 @@ re-established when the application is re-opened.
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showThumbLabels", (bool)thumbView->showThumbLabels);
+    setting->setValue("wrapThumbs", (bool)thumbView->wrapThumbs);
+
     setting->setValue("thumbSpacingGrid", gridView->thumbSpacing);
     setting->setValue("thumbPaddingGrid", gridView->thumbPadding);
     setting->setValue("thumbWidthGrid", gridView->thumbWidth);
@@ -4087,6 +4100,7 @@ re-established when the application is re-opened.
         setting->setValue("thumbHeight", ws.thumbHeight);
         setting->setValue("labelFontSize", ws.labelFontSize);
         setting->setValue("showThumbLabels", ws.showThumbLabels);
+        setting->setValue("wrapThumbs", ws.wrapThumbs);
         setting->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
         setting->setValue("thumbPaddingGrid", ws.thumbPaddingGrid);
         setting->setValue("thumbWidthGrid", ws.thumbWidthGrid);
@@ -4647,7 +4661,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
        thumbs).  The vertical scrollbar depends on whether wrapping is checked
        in preferences.
     */
-    if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea)
+    if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea || !thumbView->wrapThumbs)
     {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |

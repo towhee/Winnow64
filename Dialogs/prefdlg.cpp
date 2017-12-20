@@ -31,6 +31,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->thumbSpacingSlider->setValue(mw->thumbView->thumbSpacing);
     ui->fontSizeSlider->setValue(mw->thumbView->labelFontSize);
     ui->showThumbLabelChk->setChecked(mw->thumbView->showThumbLabels);
+    ui->wrapChk->setChecked(mw->thumbView->wrapThumbs);
     ui->lockDimChk->setChecked(true);
 
     // thumbsGrid
@@ -193,7 +194,8 @@ void Prefdlg::on_iconWidthSlider_valueChanged(int value)
                                    ui->thumbSpacingSlider->value(),
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
-                                   ui->showThumbLabelChk->isChecked());
+                                   ui->showThumbLabelChk->isChecked(),
+                                   ui->wrapChk->isChecked());
     }
 }
 
@@ -208,7 +210,8 @@ void Prefdlg::on_iconHeightSlider_valueChanged(int value)
                                    ui->thumbSpacingSlider->value(),
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
-                                   ui->showThumbLabelChk->isChecked());
+                                   ui->showThumbLabelChk->isChecked(),
+                                   ui->wrapChk->isChecked());
     }
 }
 
@@ -220,7 +223,8 @@ void Prefdlg::on_thumbSpacingSlider_valueChanged(int value)
                                    ui->thumbSpacingSlider->value(),
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
-                                   ui->showThumbLabelChk->isChecked());
+                                   ui->showThumbLabelChk->isChecked(),
+                                   ui->wrapChk->isChecked());
     }
 }
 
@@ -232,7 +236,8 @@ void Prefdlg::on_iconPaddingSlider_valueChanged(int value)
                                    ui->thumbSpacingSlider->value(),
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
-                                   ui->showThumbLabelChk->isChecked());
+                                   ui->showThumbLabelChk->isChecked(),
+                                   ui->wrapChk->isChecked());
     }
 }
 
@@ -245,7 +250,21 @@ void Prefdlg::on_showThumbLabelChk_clicked()
                                    ui->thumbSpacingSlider->value(),
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
-                                   ui->showThumbLabelChk->isChecked());
+                                   ui->showThumbLabelChk->isChecked(),
+                                   ui->wrapChk->isChecked());
+    }
+}
+
+void Prefdlg::on_wrapChk_clicked()
+{
+    if (okToUpdate) {
+        emit updateThumbParameters(ui->iconWidthSlider->value(),
+                                   ui->iconHeightSlider->value(),
+                                   ui->thumbSpacingSlider->value(),
+                                   ui->iconPaddingSlider->value(),
+                                   ui->fontSizeSlider->value(),
+                                   ui->showThumbLabelChk->isChecked(),
+                                   ui->wrapChk->isChecked());
     }
 }
 
@@ -257,7 +276,8 @@ void Prefdlg::on_fontSizeSlider_valueChanged(int value)
                                    ui->thumbSpacingSlider->value(),
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
-                                   ui->showThumbLabelChk->isChecked());
+                                   ui->showThumbLabelChk->isChecked(),
+                                   ui->wrapChk->isChecked());
     }
 }
 
@@ -631,5 +651,3 @@ void Prefdlg::on_statusBarChk_clicked()
                                ui->thumbsChk->isChecked(),
                                ui->statusBarChk->isChecked());
 }
-
-

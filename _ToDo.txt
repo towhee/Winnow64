@@ -1,6 +1,5 @@
 BUGS
 - Pick thumb not always showing one main image in loupe mode
-- windows right click on main image zooms
 - Icon padding becomes 2 for no apparent reason
 PERFORMANCE
 - Separate thread to load XMP data after thumbnails loaded
@@ -9,11 +8,11 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Sort folders in ascending order
 - Make data/time formatting consistent ie InfoView created vs modified
 - Read/write XMP sidecars
 - Open with ...
 - Drag and drop a selection of thumbs (only first currently dragged)
-- No wrap thumbs anywhere
 - Add current folder to bookmarks
 - Combine raw+jpg option
 - Get actual monitor resolution for actualDevicePixelRatio calculation
@@ -39,6 +38,8 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: windows right click on main image zooms
+- Done: No wrap thumbs anywhere
 - Done: Confirm monitor size in welcome
 - Done: Preferences has monitor size entry twice
 - Done: No vertical scrolling in FSTree

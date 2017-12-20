@@ -24,7 +24,7 @@ signals:
     void updateTrackpadScroll(bool trackpadScroll);
     void updateDisplayResolution(int horizontalPixels, int verticalPixels);
     void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
-            int thumbPadding, int labelFontSize, bool showThumbLabels);
+            int thumbPadding, int labelFontSize, bool showThumbLabels, bool wrapThumbs);
     void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
                                int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
@@ -89,6 +89,8 @@ private slots:
     void on_displayHorizontalPixelsSB_valueChanged(int arg1);
 
     void on_displayVerticalPixelsSB_valueChanged(int arg1);
+
+    void on_wrapChk_clicked();
 
 private:
 
