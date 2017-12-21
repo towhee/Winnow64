@@ -11,6 +11,11 @@ FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
 
 bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
+#if defined(Q_OS_LINIX) || defined(Q_OS_WIN)
+   return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
+#endif
+
+#ifdef Q_OS_MAC
     if (sourceParent.row() == -1) return true;
     if (!sourceParent.isValid()) return true;
 
@@ -28,6 +33,7 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
     if (fParentPath == "/") return false;
     if (info.isHidden()) return false;
     return true;
+#endif
 }
 
 /*------------------------------------------------------------------------------
@@ -128,30 +134,24 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     fileFilters = new QStringList;
     dir = new QDir();
 
-//    fsModel = new QFileSystemModel;
     fsModel = new FSModel(this, metadata, showImageCount);
-    fsModel->setRootPath("");
+#ifdef Q_OS_LINIX
+    fsModel->setRootPath("/Volumes");
+#endif
+#ifdef Q_OS_WIN
+    fsModel->setRootPath(fileSystemModel.myComputer().toString());
+#endif
+#ifdef Q_OS_MAC
 //    fsModel->setRootPath("/Volumes");
-
-    qDebug() << "fsModel->myComputer()" << fsModel->myComputer();
+      fsModel->setRootPath("");
+      setRootIsDecorated(false);
+#endif
 
     fsFilter = new FSFilter(fsModel);
     fsFilter->setSourceModel(fsModel);
 
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     setModel(fsFilter);
-    /*
-//#ifdef Q_OS_LINIX
-//    fsModel->setRootPath("/Volumes");
-//#endif
-//#ifdef Q_OS_WIN
-//    fsModel->setRootPath(fileSystemModel.myComputer().toString());
-//#endif
-//#ifdef Q_OS_MAC
-////    fsModel->setRootPath("/Volumes");
-//      fsModel->setRootPath("");
-//#endif
-*/
 
     setRootIndex(fsModel->index(0, 0));
 
@@ -161,7 +161,6 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
 
     setSortingEnabled(true);
     sortByColumn(0, Qt::AscendingOrder);
-    setRootIsDecorated(false);
     setHeaderHidden(true);
     setIndentation(12);
 
