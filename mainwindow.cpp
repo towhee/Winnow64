@@ -411,21 +411,14 @@ void MW::folderSelectionChange()
     addRecentFolder(currentViewDir);
 
     // show image count in Folders (fsTree) if showImageCountAction isChecked
-//    qDebug() << "showImageCountAction->isChecked()"<< showImageCountAction->isChecked()
-//             << "fsTree->isVisible()" << fsTree->isVisible();
     if (showImageCountAction->isChecked()) {
-        // req'd to resize columns
-//        fsTree->showImageCount = true;
-        // req'd to show imageCount in data
         fsTree->fsModel->showImageCount = true;
-//        fsTree->repaint();
-
-        // not working
-//        fsTree->expand(fsTree->rootIndex());
         fsTree->expand(fsTree->fsFilter->index(0,0));
-
         fsTree->fsModel->fetchMore(fsTree->rootIndex());
     }
+
+    // scroll to current selection in Folders
+//    fsTree->scrollToCurrent();
 
     /* We do not want to update the imageCache while metadata is still being
     loaded.  The imageCache update is triggered in fileSelectionChange,
@@ -458,6 +451,7 @@ void MW::folderSelectionChange()
      image cache holds as many full size images in memory as possible. */
      updateStatus(false, "Collecting metadata for all images in folder(s)");
      loadMetadataCache();
+
      // format pickMemSize as bytes, KB, MB or GB
      pickMemSize = formatMemoryReqd(memoryReqdForPicks());
      updateStatus(true);
@@ -675,7 +669,10 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     qDebug() << "MW::bookmarkClicked";
     #endif
     }
-    fsTree->setCurrentIndex(fsTree->fsModel->index(item->toolTip(col)));
+    QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
+    QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
+    fsTree->setCurrentIndex(filterIdx);
+    fsTree->scrollTo(filterIdx);
     folderSelectionChange();
 }
 

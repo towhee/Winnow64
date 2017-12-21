@@ -40,12 +40,11 @@ class FSTree : public QTreeView
 public:
     FSTree(QWidget *parent, Metadata *metadata, bool showImageCount);
 
-//    QFileSystemModel *fsModel;
     FSModel *fsModel;
-
     FSFilter *fsFilter;
 
 	QModelIndex getCurrentIndex();
+    void scrollToCurrent();
     bool showImageCount;
 	void setModelFlags();
     void showSupportedImageCount();

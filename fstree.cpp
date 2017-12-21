@@ -163,15 +163,11 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     sortByColumn(0, Qt::AscendingOrder);
     setRootIsDecorated(false);
     setHeaderHidden(true);
-    setIndentation(20);
-//    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setIndentation(12);
 
     setAcceptDrops(true);
     setDragEnabled(true);
     setDragDropMode(QAbstractItemView::InternalMove);
-
-//    connect(this, SIGNAL(expanded(const QModelIndex &)), this, SLOT(resizeColumns()));
-//    connect(this, SIGNAL(collapsed(const QModelIndex &)), this, SLOT(resizeColumns()));
 }
 
 void FSTree::setModelFlags()
@@ -184,6 +180,21 @@ void FSTree::setModelFlags()
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
 }
 
+void FSTree::scrollToCurrent()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "FSTree::scrollToCurrent()";
+    #endif
+    }
+    QModelIndex idx = getCurrentIndex();
+    qDebug() << "Is there a valid index?" << idx.isValid();
+    if (idx.isValid()) scrollTo(idx);
+}
+
 QModelIndex FSTree::getCurrentIndex()
 {
     {
@@ -191,7 +202,11 @@ QModelIndex FSTree::getCurrentIndex()
     qDebug() << "FSTree::getCurrentIndex";
     #endif
     }
-	return selectedIndexes().first();
+    QModelIndex idx;
+    if (selectedIndexes().size() > 0)
+        idx = fsFilter->mapFromSource(selectedIndexes().first());
+    else idx = fsModel->index(-1, -1, QModelIndex());
+    return idx;
 }
 
 void FSTree::resizeColumns()
