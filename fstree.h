@@ -40,8 +40,8 @@ class FSTree : public QTreeView
 public:
     FSTree(QWidget *parent, Metadata *metadata, bool showImageCount);
 
-    QFileSystemModel *fsModel;
-//    FSModel *fsModel;
+//    QFileSystemModel *fsModel;
+    FSModel *fsModel;
 
     FSFilter *fsFilter;
 
@@ -57,7 +57,7 @@ protected:
 	void dragEnterEvent(QDragEnterEvent *event);
 	void dragMoveEvent(QDragMoveEvent *event);
 	void dropEvent(QDropEvent *event);
-    bool eventFilter(QObject *obj, QEvent *event);
+    void paintEvent(QPaintEvent *event);
 
 signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);

@@ -11,28 +11,22 @@ FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
 
 bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
-    return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
-//    invalidateFilter();
-//    QFileSystemModel *sm = qobject_cast<QFileSystemModel*>(sourceModel());
-//    if (sourceParent == sm->index(sm->rootPath())) {
-//        return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
-//    }
     if (sourceParent.row() == -1) return true;
     if (!sourceParent.isValid()) return true;
-//    if (!sourceParent.child(sourceRow, 0).isValid()) return false;
 
     QString fParentPath = sourceParent.data(QFileSystemModel::FilePathRole).toString();
     QString fPath = sourceParent.child(sourceRow, 0).data(QFileSystemModel::FilePathRole).toString();
     QFileInfo info(fPath);
-    if (info.isHidden()) return false;
-    qDebug() << fPath
-             << fParentPath
+    /*
+    qDebug() << "fPath" << fPath
+             << "fParentPath" << fParentPath
              << "absolutePath" << info.absolutePath()
              << "absoluteFilePath" << info.absoluteFilePath()
-             << "isHidden" << info.isHidden()
-             << "isSymLink" << info.isSymLink();
-
-    if (fParentPath == "/" && fPath != "/Users" && fPath != "/Volumes") return false;
+             << "isHidden" << info.isHidden();
+*/
+    if (fParentPath == "/" && (fPath == "/Users" || fPath == "/Volumes")) return true;
+    if (fParentPath == "/") return false;
+    if (info.isHidden()) return false;
     return true;
 }
 
@@ -83,8 +77,7 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
 {
     if (orientation == Qt::Horizontal && section == imageCountColumn)
     {
-        if(role == Qt::DisplayRole)
-            return QVariant("#");
+        if (role == Qt::DisplayRole) return QVariant("#");
         return QVariant();
      }
      else
@@ -131,35 +124,36 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     qDebug() << "FSTree::FSTree";
     #endif
     }
-//    fsModel = new FSModel(this, metadata, showImageCount);
-    fsFilter = new FSFilter(fsModel);
-
-//    fsFilter->setSourceModel(fsModel);
-
-//    fsModel->sort(0, Qt::AscendingOrder);
-
     this->metadata = metadata;
-
     fileFilters = new QStringList;
     dir = new QDir();
 
-#ifdef Q_OS_LINIX
-    fsModel->setRootPath("/Volumes");
-#endif
-#ifdef Q_OS_WIN
-    fsModel->setRootPath(fileSystemModel.myComputer().toString());
-#endif
-#ifdef Q_OS_MAC
-    fsModel->setRootPath("/Volumes");
+//    fsModel = new QFileSystemModel;
+    fsModel = new FSModel(this, metadata, showImageCount);
+    fsModel->setRootPath("");
+//    fsModel->setRootPath("/Volumes");
+
+    qDebug() << "fsModel->myComputer()" << fsModel->myComputer();
+
+    fsFilter = new FSFilter(fsModel);
+    fsFilter->setSourceModel(fsModel);
+
+    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
+    setModel(fsFilter);
+    /*
+//#ifdef Q_OS_LINIX
+//    fsModel->setRootPath("/Volumes");
+//#endif
+//#ifdef Q_OS_WIN
+//    fsModel->setRootPath(fileSystemModel.myComputer().toString());
+//#endif
+//#ifdef Q_OS_MAC
+////    fsModel->setRootPath("/Volumes");
 //      fsModel->setRootPath("");
-#endif
+//#endif
+*/
 
-    setModelFlags();
-    setModel(fsModel);
-//    setModel(fsFilter);
-
-    QModelIndex rootIdx = fsModel->index(0, 0, QModelIndex().parent());
-    setRootIndex(rootIdx);
+    setRootIndex(fsModel->index(0, 0));
 
     for (int i = 1; i <= 3; ++i) {
         hideColumn(i);
@@ -167,9 +161,10 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
 
     setSortingEnabled(true);
     sortByColumn(0, Qt::AscendingOrder);
+    setRootIsDecorated(false);
     setHeaderHidden(true);
-    setIndentation(10);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setIndentation(20);
+//    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
     setAcceptDrops(true);
     setDragEnabled(true);
@@ -186,11 +181,7 @@ void FSTree::setModelFlags()
     qDebug() << "FSTree::setModelFlags";
     #endif
     }
-    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot);
-//    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
-
-//	if (G::showHiddenFiles)
-//		fsModel->setFilter(fsModel->filter() | QDir::Hidden);
+    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
 }
 
 QModelIndex FSTree::getCurrentIndex()
@@ -205,22 +196,22 @@ QModelIndex FSTree::getCurrentIndex()
 
 void FSTree::resizeColumns()
 {
-//    if (showImageCount) {
-//        imageCountColumnWidth = 45;
-//        showColumn(4);
-//        setColumnWidth(4, imageCountColumnWidth);
-//    }
-//    else {
-//        imageCountColumnWidth = 0;
-//        hideColumn(4);
-//    }
-//    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth);
+    if (showImageCount) {
+        imageCountColumnWidth = 45;
+        showColumn(4);
+        setColumnWidth(4, imageCountColumnWidth);
+    }
+    else {
+        imageCountColumnWidth = 0;
+        hideColumn(4);
+    }
+    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth);
 }
 
-bool FSTree::eventFilter(QObject *obj, QEvent *event)
+void FSTree::paintEvent(QPaintEvent *event)
 {
-//    if (event->type() == QEvent::Paint) resizeColumns();
-    return QTreeView::eventFilter(obj, event);
+    resizeColumns();
+    QTreeView::paintEvent(event);
 }
 
 void FSTree::dragEnterEvent(QDragEnterEvent *event)

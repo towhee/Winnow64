@@ -417,10 +417,13 @@ void MW::folderSelectionChange()
         // req'd to resize columns
         fsTree->showImageCount = true;
         // req'd to show imageCount in data
-//        fsTree->fsModel->showImageCount = true;
-
-//        fsTree->resizeColumns();
+        fsTree->fsModel->showImageCount = true;
 //        fsTree->repaint();
+
+        // not working
+//        fsTree->expand(fsTree->rootIndex());
+        fsTree->expand(fsTree->fsFilter->index(0,0));
+
         fsTree->fsModel->fetchMore(fsTree->rootIndex());
     }
 
@@ -700,14 +703,12 @@ QString MW::getSelectedPath()
     qDebug() << "MW::getSelectedPath";
     #endif
     }
-    QModelIndexList selectedDirs = fsTree->selectionModel()->selectedRows();
-    if (selectedDirs.size() && selectedDirs[0].isValid())
-    {
-        QFileInfo dirInfo = QFileInfo(fsTree->fsModel->filePath(selectedDirs[0]));
-        return dirInfo.absoluteFilePath();
-    }
-    else
-        return "";
+    if (fsTree->selectionModel()->selectedRows().size() == 0) return "";
+    QModelIndex idx = fsTree->selectionModel()->selectedRows().at(0);
+    if (!idx.isValid()) return "";
+    QString path = idx.data(QFileSystemModel::FilePathRole).toString();
+    QFileInfo dirInfo = QFileInfo(path);
+    return dirInfo.absoluteFilePath();
 }
 
 void MW::createActions()
@@ -2160,11 +2161,11 @@ void MW::createFSTree()
 
     connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
 
-    connect(fsTree->fsModel, SIGNAL(rowsRemoved(const QModelIndex &, int, int)),
-            this, SLOT(checkDirState(const QModelIndex &, int, int)));
+//    connect(fsTree->fsModel, SIGNAL(rowsRemoved(const QModelIndex &, int, int)),
+//            this, SLOT(checkDirState(const QModelIndex &, int, int)));
 
-    connect(fsTree, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
-            this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
+//    connect(fsTree, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
+//            this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
 }
 
 void MW::createFilterView()
