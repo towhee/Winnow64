@@ -415,7 +415,7 @@ void MW::folderSelectionChange()
 //             << "fsTree->isVisible()" << fsTree->isVisible();
     if (showImageCountAction->isChecked()) {
         // req'd to resize columns
-        fsTree->showImageCount = true;
+//        fsTree->showImageCount = true;
         // req'd to show imageCount in data
 //        fsTree->fsModel->showImageCount = true;
 

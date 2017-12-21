@@ -131,8 +131,10 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     qDebug() << "FSTree::FSTree";
     #endif
     }
+    fsModel = new QFileSystemModel;
 //    fsModel = new FSModel(this, metadata, showImageCount);
-    fsFilter = new FSFilter(fsModel);
+
+    //    fsFilter = new FSFilter(fsModel);
 
 //    fsFilter->setSourceModel(fsModel);
 
