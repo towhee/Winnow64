@@ -417,9 +417,6 @@ void MW::folderSelectionChange()
         fsTree->fsModel->fetchMore(fsTree->rootIndex());
     }
 
-    // scroll to current selection in Folders
-//    fsTree->scrollToCurrent();
-
     /* We do not want to update the imageCache while metadata is still being
     loaded.  The imageCache update is triggered in fileSelectionChange,
     which is also executed when the change file event is fired. */
@@ -546,8 +543,7 @@ so scrollTo and delegate use of the current index must check the row.
     G::lastThumbChangeEvent = "";
 
     // the file path is used as an index in ImageView and Metadata
-    QString fPath = current.data(G::FileNameRole).toString();
-//    qDebug() << "current index" << current << "fPath" << fPath << "Metadata loaded" << metadataLoaded;
+    QString fPath = dm->sf->index(currentRow, 0).data(G::FileNameRole).toString();
 
     // update the matadata panel
     infoView->updateInfo(fPath);

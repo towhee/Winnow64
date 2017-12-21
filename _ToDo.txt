@@ -8,8 +8,6 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Sort folders in ascending order
-- Make data/time formatting consistent ie InfoView created vs modified
 - Read/write XMP sidecars
 - Open with ...
 - Drag and drop a selection of thumbs (only first currently dragged)
@@ -38,6 +36,9 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Make data/time formatting consistent ie InfoView created vs modified
+- Done: Only show Users and Volumes on Mac
+- Done: Sort folders in ascending order
 - Done: windows right click on main image zooms
 - Done: No wrap thumbs anywhere
 - Done: Confirm monitor size in welcome
