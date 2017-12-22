@@ -36,15 +36,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
-#if defined(Q_OS_MAC)
-       int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
-//       int screenWidth1 = CGDisplayModeGetWidth(CGMainDisplayID());
-//       qDebug() << "screenWidth" << screenWidth << screenWidth1 << QPaintDevice::devicePixelRatio();
-        QSizeF display = QtMac::macBackingScaleFactor();
-        qDebug() << "QtMac::BackingScaleFactor()" << display;
-#endif
-
-        isInitializing = true;
+    isInitializing = true;
     isSlideShowActive = false;
     maxThumbSpaceHeight = 160 + 12 + 1;     // rgh not being used
 //    maxThumbSpaceHeight = 160 + qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
@@ -129,6 +121,7 @@ variables in MW (this class) and managed in the prefDlg class.
 
     setupCentralWidget();
     createAppStyle();
+    setActualDevicePixelRation();       // dependent on Settings
 
     // recall previous thumbDock state in case last closed in Grid mode
     thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
@@ -170,6 +163,11 @@ void MW::setupPlatform()
     #ifdef Q_OS_MAC
         G::devicePixelRatio = 2;
         setWindowIcon(QIcon(":/images/winnow.icns"));
+        int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
+ //       int screenWidth1 = CGDisplayModeGetWidth(CGMainDisplayID());
+ //       qDebug() << "screenWidth" << screenWidth << screenWidth1 << QPaintDevice::devicePixelRatio();
+         QSizeF display = QtMac::macBackingScaleFactor();
+         qDebug() << "QtMac::BackingScaleFactor()" << display;
     #endif
 }
 
@@ -216,21 +214,21 @@ void MW::resizeEvent(QResizeEvent *event)
 //    QMainWindow::mouseReleaseEvent(event);
 //}
 
-void MW::keyPressEvent(QKeyEvent *event)
-{
-//    qDebug() << "MW::keyPressEvent" << event;
-//    QMainWindow::keyPressEvent(event);
-    if (event->key() == Qt::Key_X) {
-//        thumbView->scrollToCurrent();
-        qDebug() << "keypress x event";
-    }
-}
+//void MW::keyPressEvent(QKeyEvent *event)
+//{
+////    qDebug() << "MW::keyPressEvent" << event;
+////    QMainWindow::keyPressEvent(event);
+//    if (event->key() == Qt::Key_X) {
+////        thumbView->scrollToCurrent();
+//        qDebug() << "keypress x event";
+//    }
+//}
 
-void MW::keyReleaseEvent(QKeyEvent *event)
-{
-//    qDebug() << "MW::keyReleaseEvent" << event;
-//    QMainWindow::keyReleaseEvent(event);
-}
+//void MW::keyReleaseEvent(QKeyEvent *event)
+//{
+////    qDebug() << "MW::keyReleaseEvent" << event;
+////    QMainWindow::keyReleaseEvent(event);
+//}
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
@@ -333,8 +331,10 @@ void MW::folderSelectionChange()
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
 
+    // used by SortFilter, set true when ImageCacheTread starts
     G::isNewFolderLoaded = false;
-    updateStatus(false, "");
+
+    clearStatus();
     pickMemSize = "";
 
     // stop slideshow if a new folder is selected
@@ -350,50 +350,27 @@ void MW::folderSelectionChange()
     QString dirPath;
     QDir testDir;
 
+    // Just opened application
     if (isInitializing) {
         if (rememberLastDir) {
             // lastDir is from QSettings for persistent memory between sessions
-            dirPath = lastDir;
-            /*
-               qDebug() << "Last folder opened was" << lastDir;
-               */
-            // is drive still available and valid?
-            QStorageInfo testStorage;
-            // is folder still available and valid?
-            testDir.setPath(dirPath);
-            if (testDir.exists() && testDir.isReadable())
-                fsTree->setCurrentIndex(fsTree->fsModel->index(dirPath));
+            if (isFolderValid(lastDir, false)) {
+                dirPath = lastDir;
+                fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath)));
+            }
             else {
-                isInitializing = false;
-                /*
-                qDebug() << "deleted or renamed or corrupted folder";
-                qDebug() << "testStorage.isValid()" << testStorage.isValid();
-                qDebug() << "testDir.exists()" << testDir.exists();
-                qDebug() << "testDir.isReadable()" << testDir.isReadable();
-                QString msg = "Attempted to load the last folder opened called "
-                        + lastDir + ".  It appears to be missing.";
-                QMessageBox::information(this, "Oops", msg, QMessageBox::Ok);
-                */
-                return;
+               isInitializing = false;
+               return;
             }
         }
     }
+    // folder selected from Folders or Bookmarks(Favs)
     else {
         dirPath = getSelectedPath();
-        testDir.setPath(dirPath);
-//        qDebug() << "MW::folderSelectionChange ^^^^^^^^^^^ " << dirPath;
     }
 
-    if (!testDir.exists()) {
-        QMessageBox msgBox;
-        msgBox.critical(this, tr("Error"), tr("The folder does not exist or is not available"));
-        return;
-    }
-
-    // check if unmounted USB drive
-    if (!testDir.isReadable()) {
-        QMessageBox msgBox;
-        msgBox.critical(this, tr("Error"), tr("The folder is not readable"));
+    // confirm folder exists and is readable, report if not and do not process
+    if (!isFolderValid(dirPath, true)) {
         return;
     }
 
@@ -2293,11 +2270,14 @@ parameters.  Any visibility changes are executed.
 QString MW::getPosition()
 {
 /*
+This function is used by MW::updateStatus to report the current image
+relative to all the images in the folder ie 17 of 80.
 
+It is displayed on the status bar and in the infoView.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ng MW::getPosition()";
+    qDebug() << "MW::getPosition()";
     #endif
     }
     QString fileCount = "";
@@ -2353,7 +2333,8 @@ QString MW::getPicked()
 void MW::updateStatus(bool keepBase, QString s)
 {
 /*
-
+Reports status informationon the status bar and in InfoView.  If keepBase = true
+then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
 */
     {
     #ifdef ISDEBUG
@@ -2379,33 +2360,36 @@ QString fileSym = "📷";
 
     // image of total: fileCount
     if (keepBase) {
-        QModelIndex idx = thumbView->currentIndex();
-        long rowCount = dm->sf->rowCount();
-        if (rowCount > 0) {
-            int row = idx.row() + 1;
-            fileCount = QString::number(row) + " of "
-                + QString::number(rowCount);
-        }
-        if (subFoldersAction->isChecked()) fileCount += " including subfolders";
-
-        qreal zoom;
-        if (G::mode == "Compare") zoom = compareImages->zoomValue;
-        else zoom = imageView->zoom;
-        zoom *= G::actualDevicePixelRatio;
-        zoomPct = QString::number(qRound(zoom*100)) + "% zoom";
-
-        QString pickedSoFar = pickMemSize + " picked";
-        base = fileCount;
-        if (G::mode == "Loupe" || G::mode == "Compare") base += (spacer + zoomPct);
-        base += (spacer + pickedSoFar + spacer);
+        base = getPosition();
+        base += spacer + getZoom() + " zoom";
+        base += spacer + getPicked() + " picked";
+        base += spacer;
     }
 
     status = " " + base + s;
     stateLabel->setText(status);
 
-    infoView->ok->setData(infoView->ok->index(infoView->PositionRow, 1, infoView->statusInfoIdx), getPosition());
-    infoView->ok->setData(infoView->ok->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), getZoom());
-    infoView->ok->setData(infoView->ok->index(infoView->PickedRow, 1, infoView->statusInfoIdx), getPicked());
+    // update InfoView
+    QStandardItemModel *k = infoView->ok;
+    if (keepBase) {
+        k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), getPosition());
+        k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), getZoom());
+        k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), getPicked());
+    }
+    else {
+        k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
+        k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
+        k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
+    }
+}
+
+void MW::clearStatus()
+{
+    stateLabel->setText("");
+    QStandardItemModel *k = infoView->ok;
+    k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
+    k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
+    k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
 }
 
 void MW::updateMetadataThreadRunStatus(bool isRunning)
@@ -5939,6 +5923,30 @@ void MW::openInExplorer()
 
     QProcess *process = new QProcess(this);
     process->start("explorer.exe", args);
+}
+
+bool MW::isFolderValid(QString &fPath, bool report)
+{
+    QDir testDir(fPath);
+
+    if (!testDir.exists()) {
+        if (report) {
+//            QMessageBox msgBox;;
+            QMessageBox::critical(this, tr("Error"), tr("The folder does not exist or is not available"));
+        }
+        return false;
+    }
+
+    // check if unmounted USB drive
+    if (!testDir.isReadable()) {
+        if (report) {
+//            QMessageBox msgBox;
+            QMessageBox::critical(this, tr("Error"), tr("The folder is not readable"));
+        }
+        return false;
+    }
+
+    return true;
 }
 
 void MW::help()

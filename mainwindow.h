@@ -179,8 +179,8 @@ protected:
     void moveEvent(QMoveEvent *event);
     void resizeEvent(QResizeEvent *event);
     void closeEvent(QCloseEvent *event);
-    void keyPressEvent(QKeyEvent *event);
-    void keyReleaseEvent(QKeyEvent *event);
+//    void keyPressEvent(QKeyEvent *event);
+//    void keyReleaseEvent(QKeyEvent *event);
 //    void mouseMoveEvent(QMouseEvent *event);
 //    void mousePressEvent(QMouseEvent *event);
 //    void mouseReleaseEvent(QMouseEvent *event);
@@ -234,6 +234,7 @@ private slots:
 //    void zoomTo(float zoomTo);
     void zoomToggle();
     void updateStatus(bool showFileCount, QString s = "");
+    void clearStatus();
     void updateMetadataThreadRunStatus(bool isRun);
     void updateThumbThreadRunStatus(bool isRun);
     void updateImageThreadRunStatus(bool isRun);
@@ -650,6 +651,7 @@ private:
     QString getZoom();
     QString getPicked();
     void setActualDevicePixelRation();
+    bool isFolderValid(QString &fPath, bool report);
 
     void addRecentFolder(QString fPath);
     void syncRecentFoldersMenu();

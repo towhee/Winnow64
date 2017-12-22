@@ -69,6 +69,7 @@ controls are updated to the current scale.
     qDebug() << "ZoomDlg::zoomChange" << zoom;
     #endif
     }
+    qDebug() << "ZoomDlg::zoomChange" << zoom << G::actualDevicePixelRatio;
     // convert to percentage for persentation
     zoom *= (100 * G::actualDevicePixelRatio);
 
