@@ -523,7 +523,8 @@ void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
                                        ui->iconPaddingSlider_2->value(),
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
-                                       ui->showThumbLabelChk_2->isChecked());
+                                       ui->showThumbLabelChk_2->isChecked(),
+                                       true);
     }
 }
 
@@ -538,7 +539,8 @@ void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
                                        ui->iconPaddingSlider_2->value(),
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
-                                       ui->showThumbLabelChk_2->isChecked());
+                                       ui->showThumbLabelChk_2->isChecked(),
+                                       true);
     }
 }
 
@@ -550,7 +552,8 @@ void Prefdlg::on_thumbSpacingSlider_2_valueChanged(int value)
                                        ui->iconPaddingSlider_2->value(),
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
-                                       ui->showThumbLabelChk_2->isChecked());
+                                       ui->showThumbLabelChk_2->isChecked(),
+                                       true);
     }
 }
 
@@ -562,7 +565,8 @@ void Prefdlg::on_iconPaddingSlider_2_valueChanged(int value)
                                        ui->iconPaddingSlider_2->value(),
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
-                                       ui->showThumbLabelChk_2->isChecked());
+                                       ui->showThumbLabelChk_2->isChecked(),
+                                       true);
     }
 }
 
@@ -574,7 +578,8 @@ void Prefdlg::on_showThumbLabelChk_2_clicked()
                                        ui->iconPaddingSlider_2->value(),
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
-                                       ui->showThumbLabelChk_2->isChecked());
+                                       ui->showThumbLabelChk_2->isChecked(),
+                                       true);
     }
 }
 
@@ -586,7 +591,8 @@ void Prefdlg::on_fontSizeSlider_2_valueChanged(int value)
                                        ui->iconPaddingSlider_2->value(),
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
-                                       ui->showThumbLabelChk_2->isChecked());
+                                       ui->showThumbLabelChk_2->isChecked(),
+                                       true);
     }
 }
 

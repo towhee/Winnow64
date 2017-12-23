@@ -3545,7 +3545,7 @@ void MW::setDisplayResolution(int horizontalPixels, int verticalPixels)
     cachePreviewWidth = horizontalPixels;
     cachePreviewHeight = verticalPixels;
     qDebug() << "setDisplayresolution" << displayHorizontalPixels << displayVerticalPixels;
-//    setActualDevicePixelRation();
+    setActualDevicePixelRation();
 }
 
 void MW::setActualDevicePixelRation()
@@ -5979,6 +5979,11 @@ bool MW::isFolderValid(QString &fPath, bool report)
     }
 
     return true;
+}
+
+void MW::messageView(QString &msg)
+{
+
 }
 
 void MW::help()

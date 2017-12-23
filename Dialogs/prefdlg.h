@@ -26,7 +26,7 @@ signals:
     void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
             int thumbPadding, int labelFontSize, bool showThumbLabels, bool wrapThumbs);
     void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
-                               int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid);
+            int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid, bool wrapThumbs);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
 
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,

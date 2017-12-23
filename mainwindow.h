@@ -162,7 +162,8 @@ public:
         LoupeTab,
         CompareTab,
         TableTab,
-        GridTab
+        GridTab,
+        MessageTab
     };
 
     QString prevMode;
@@ -326,6 +327,8 @@ private slots:
     void defaultWorkspace();
     void reportWorkspace(int n);
     void loadWorkspaces();
+
+    void messageView(QString &msg);
 
     void help();
     void helpShortcuts();
