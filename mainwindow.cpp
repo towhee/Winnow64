@@ -22,7 +22,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     G::isThreadTrackingOn = false;
 
     // testing/debugging
-    bool resetSettings = false;
+    bool isLoadSettings = true;
+
     isStressTest = false;
     // Global timer
     G::isTimer = false;
@@ -105,10 +106,12 @@ variables in MW (this class) and managed in the prefDlg class.
 //    updateExternalApps();       // dependent on createActions
     handleStartupArgs();
 
-    bool isSettings = loadSettings();//dependent on bookmarks and actions
-    loadShortcuts(true);            // dependent on createActions
+    bool isSettings = false;
+    if (isLoadSettings) {
+        isSettings = loadSettings();//dependent on bookmarks and actions
+    }
 
-    if (!resetSettings && isSettings) {
+    if (isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         qDebug() << "Restoring state - triggers setThumbDockFeatures prematurely";
@@ -119,6 +122,7 @@ variables in MW (this class) and managed in the prefDlg class.
         isFirstTimeNoSettings = true;
     }
 
+    loadShortcuts(true);            // dependent on createActions
     setupCentralWidget();
     createAppStyle();
     setActualDevicePixelRation();       // dependent on Settings
@@ -126,10 +130,10 @@ variables in MW (this class) and managed in the prefDlg class.
     // recall previous thumbDock state in case last closed in Grid mode
     thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
 
-    if (isSettings && !resetSettings) updateState();
-    else {
+    if (isSettings)
+        updateState();
+    else
         defaultWorkspace();
-    }
 
     // send events to thumbView to monitorsplitter resize of thumbDock
     qApp->installEventFilter(thumbView);
@@ -137,7 +141,8 @@ variables in MW (this class) and managed in the prefDlg class.
 //    QObject *zoomDlg = 0;
 
     // process the persistant folder if available
-    folderSelectionChange();
+    qDebug() << rememberLastDir;
+    if (rememberLastDir) folderSelectionChange();
 
 //struct sysinfo sys_info;
 //totalmem=(qint32)(sys_info.totalram/1048576);
@@ -348,6 +353,12 @@ void MW::folderSelectionChange()
         updateState();
     }
 
+    // if at welcome screen and then select a folder
+    if (centralLayout->currentIndex() == StartTab) {
+        asLoupeAction->setChecked(true);
+        updateState();
+    }
+
     QString dirPath;
     QDir testDir;
 
@@ -366,12 +377,16 @@ void MW::folderSelectionChange()
         }
     }
     // folder selected from Folders or Bookmarks(Favs)
-    else {
+    if (!isInitializing || !rememberLastDir) {
         dirPath = getSelectedPath();
     }
 
+    qDebug () << "*********************************************************************************"
+              << dirPath
+              << "*********************************************************************************";
+
     // confirm folder exists and is readable, report if not and do not process
-    if (!isFolderValid(dirPath, true)) {
+    if (!isFolderValid(dirPath, false)) {
         return;
     }
 
@@ -399,6 +414,10 @@ void MW::folderSelectionChange()
     loaded.  The imageCache update is triggered in fileSelectionChange,
     which is also executed when the change file event is fired. */
     metadataLoaded = false;
+
+    qDebug() << "metadataCacheThread->isRunning" << metadataCacheThread->isRunning();
+    qDebug() << "thumbCacheThread->isRunning" << thumbCacheThread->isRunning();
+    qDebug() << "imageCacheThread->isRunning" << imageCacheThread->isRunning();
 
     /* Need to gather directory file info first (except icon/thumb) which is
     loaded by loadThumbCache.  If no images in new folder then cleanup and exit.
@@ -3049,12 +3068,16 @@ app is "stranded" on secondary monitors that are not attached.
     MW::tabifyDockWidget(favDock, filterDock);
     MW::tabifyDockWidget(filterDock, metadataDock);
 
+    folderDock->show();
+    folderDock->raise();
+    resizeDocks({folderDock}, {275}, Qt::Horizontal);
+
 //    // enable the folder dock (first one in tab)
 //    QList<QTabBar *> tabList = findChildren<QTabBar *>();
 //    QTabBar* widgetTabBar = tabList.at(0);
 //    widgetTabBar->setCurrentIndex(0);
 
-    resizeDocks({thumbDock}, {160}, Qt::Vertical);
+    resizeDocks({thumbDock}, {100}, Qt::Vertical);
     setDockFitThumbs();
     asLoupeAction->setChecked(true);
     infoVisibleAction->setChecked(true);
@@ -3233,8 +3256,8 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-    qDebug() << "Horizontal scrollbar position" << thumbView->horizontalScrollBar()->value();
-
+//    qDebug() << "Horizontal scrollbar position" << thumbView->horizontalScrollBar()->value();
+    metadata->reportMetadataAllFiles();
 
 //    metadata->readMetadata(true, thumbView->getCurrentFilename());
 }
@@ -4117,6 +4140,7 @@ Preferences are located in the prefdlg class and updated here.
     if (!setting->contains("cacheSizeMB")) {
         // general
         lastPrefPage = 0;
+        imageView->toggleZoom = 1.0;
         rememberLastDir = true;
         maxRecentFolders = 10;
         bookmarks->bookmarkPaths.insert(QDir::homePath());
@@ -5929,6 +5953,13 @@ void MW::openInExplorer()
 bool MW::isFolderValid(QString &fPath, bool report)
 {
     QDir testDir(fPath);
+
+    if (fPath.length() == 0) {
+        if (report) {
+            QMessageBox::critical(this, tr("Error"), tr("The assigned folder name is blank"));
+        }
+        return false;
+    }
 
     if (!testDir.exists()) {
         if (report) {

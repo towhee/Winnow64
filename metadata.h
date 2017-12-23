@@ -71,6 +71,7 @@ class Metadata
 public:
     Metadata();
     bool readMetadata(bool report, const QString &imageFullPath);
+    void reportMetadataAllFiles();
 
     ulong offsetFullJPG;
     ulong lengthFullJPG;

@@ -1,4 +1,8 @@
 BUGS
+- update zoom factor when change monitor resolution
+- not updating preferences not showing ie thumb parameters
+- not reading tifs
+- dies when quickly change folders
 - Pick thumb not always showing one main image in loupe mode
 - Icon padding becomes 2 for no apparent reason
 PERFORMANCE
@@ -36,6 +40,8 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: not showing thumbs for D:\pictures\automask
+- Done: zooming to 0% (set default at 100%)
 - Done: Make data/time formatting consistent ie InfoView created vs modified
 - Done: Only show Users and Volumes on Mac
 - Done: Sort folders in ascending order

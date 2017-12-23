@@ -523,6 +523,44 @@ void Metadata::reportMetadata()
 //    qDebug() << "focalLength35mm" << focalLength35mm;
 }
 
+void Metadata::reportMetadataAllFiles()
+{
+    QMapIterator<QString, ImageMetadata> i(metaCache);
+    while (i.hasNext())  {
+        i.next();
+        offsetFullJPG;
+        lengthFullJPG = i.value().lengthFullJPG;
+        offsetThumbJPG = i.value().offsetThumbJPG;
+        lengthThumbJPG = i.value().lengthThumbJPG;
+        offsetSmallJPG = i.value().offsetSmallJPG;
+        lengthSmallJPG = i.value().lengthSmallJPG;
+        width = i.value().width;
+        height = i.value().height;
+        dateTime = i.value().dateTime;
+        model = i.value().model;
+        exposureTime = i.value().exposureTime;
+        exposureTimeNum = i.value().exposureTimeNum;
+        aperture = i.value().aperture;
+        apertureNum = i.value().apertureNum;
+        ISO = i.value().ISO;
+        ISONum = i.value().ISONum;
+        focalLength = i.value().focalLength;
+        focalLengthNum = i.value().focalLengthNum;
+        title = i.value().title;
+        lens = i.value().lens;
+        creator = i.value().creator;
+        copyright = i.value().copyright;
+        email = i.value().email;
+        url = i.value().url;
+
+        std::cout << "\n";
+        std::cout << std::setw(16) << std::setfill(' ') << std::left << "FILE:"
+                  << std::setw(16) << std::setfill(' ') << std::left << i.key().toStdString()
+                  << "\n";
+        reportMetadata();
+    }
+}
+
 void Metadata::track(QString fPath, QString msg)
 {
 //    if (G::isThreadTrackingOn) qDebug() << "• Metadata Caching" << fPath << msg;
@@ -1579,6 +1617,15 @@ bool Metadata::formatJPG()
     // build a hash of jpg segment offsets
     getSegments(file.pos());
 
+    // check if JFIF
+    if (segmentHash.contains("JFIF")) {
+        // it's a jpg so the whole thing is the full length jpg and no other
+        // metadata available
+        offsetFullJPG = 0;
+        lengthFullJPG = file.size();
+        return true;;
+    }
+
     // read the EXIF data
     if (segmentHash.contains("EXIF")) file.seek(segmentHash["EXIF"]);
     else return false;
@@ -1599,6 +1646,10 @@ bool Metadata::formatJPG()
     a = get4(file.read(4));
 //    a = get2(file.read(2));
     ulong offsetIfd0 = a + startOffset;
+
+    // it's a jpg so the whole thing is the full length jpg
+    offsetFullJPG = 0;
+    lengthFullJPG = file.size();
 
     // read IFD0
     ulong nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
@@ -1811,8 +1862,14 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
 //        if (G::isThreadTrackingOn) track(fPath, err);
     }
 
-    if (offsetSmallJPG == 0) offsetSmallJPG = offsetFullJPG;
-    if (offsetThumbJPG == 0) offsetThumbJPG = offsetSmallJPG;
+    if (offsetSmallJPG == 0) {
+        offsetSmallJPG = offsetFullJPG;
+        lengthSmallJPG = lengthFullJPG;
+    }
+    if (offsetThumbJPG == 0) {
+        offsetThumbJPG = offsetSmallJPG;
+        lengthThumbJPG = lengthSmallJPG;
+    }
 
 //    qDebug() << fPath << offsetThumbJPG << offsetSmallJPG << offsetFullJPG;
 

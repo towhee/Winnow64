@@ -162,7 +162,7 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     setSortingEnabled(true);
     sortByColumn(0, Qt::AscendingOrder);
     setHeaderHidden(true);
-    setIndentation(12);
+    setIndentation(16);
 
     setAcceptDrops(true);
     setDragEnabled(true);
