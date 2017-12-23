@@ -243,7 +243,20 @@ show flag.
 
 void InfoView::clearInfo()
 {
-    ok->clear();
+/*
+Clear all the values but leave the keys and show flags alone
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "InfoView::clearInfo";
+    #endif
+    }
+    return;
+    for(int row = 0; row < ok->rowCount(); row++) {
+        for (int childRow = 0; childRow < ok->rowCount(ok->index(row, 0)); childRow++) {
+            ok->setData(ok->index(childRow, 1), "");
+        }
+    }
 }
 
 void InfoView::copyEntry()

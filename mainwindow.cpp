@@ -335,6 +335,7 @@ void MW::folderSelectionChange()
     G::isNewFolderLoaded = false;
 
     clearStatus();
+//    infoView->clearInfo();
     pickMemSize = "";
 
     // stop slideshow if a new folder is selected
@@ -404,10 +405,12 @@ void MW::folderSelectionChange()
     MW::fileSelectionChange triggered by DataModel->load         */
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         updateStatus(false, "No images in this folder");
+        popUp->showPopup(this, "The folder " + currentViewDir + " does not have any eligible images", 3000, 0.9);
         infoView->clearInfo();
         metadata->clearMetadata();
         imageView->emptyFolder();
         cacheLabel->setVisible(false);
+        isInitializing = false;
         return;
     }
 
@@ -2282,12 +2285,14 @@ It is displayed on the status bar and in the infoView.
     }
     QString fileCount = "";
     QModelIndex idx = thumbView->currentIndex();
+    if (!idx.isValid()) return "";
+    qDebug() << "MW::getPosition  idx =" << idx;
     long rowCount = dm->sf->rowCount();
-    if (rowCount > 0) {
-        int row = idx.row() + 1;
-        fileCount = QString::number(row) + " of "
-            + QString::number(rowCount);
-    }
+    if (rowCount <= 0) return "";
+    qDebug() << "MW::getPosition  rowCount =" << rowCount;
+    int row = idx.row() + 1;
+    fileCount = QString::number(row) + " of "
+        + QString::number(rowCount);
     if (subFoldersAction->isChecked()) fileCount += " including subfolders";
     return fileCount;
 }
@@ -2299,7 +2304,7 @@ QString MW::getZoom()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ng MW::getZoom()";
+    qDebug() << "MW::getZoom()";
     #endif
     }
     qreal zoom;
@@ -2317,7 +2322,7 @@ QString MW::getPicked()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ng MW::getPicked()";
+    qDebug() << "MW::getPicked()";
     #endif
     }
     QModelIndex idx;
@@ -2386,10 +2391,6 @@ QString fileSym = "📷";
 void MW::clearStatus()
 {
     stateLabel->setText("");
-    QStandardItemModel *k = infoView->ok;
-    k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
-    k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
-    k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
 }
 
 void MW::updateMetadataThreadRunStatus(bool isRunning)

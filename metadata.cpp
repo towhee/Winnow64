@@ -47,7 +47,7 @@ void Metadata::initSupportedFiles()
     supportedFormats << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
     "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
     "orf" << "pbm" << "pgm" << "png" << "ppm" << "svg" << "svgz" << "tga" <<
-    "wbmp" << "webp" << "xbm" << "xpm";
+    "tif" << "wbmp" << "webp" << "xbm" << "xpm";
 }
 
 void Metadata::initSegCodeHash()
