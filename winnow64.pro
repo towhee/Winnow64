@@ -35,7 +35,7 @@ HEADERS += \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
     Dialogs/popup.h \
-    Dialogs/zoomDlg.h \
+    Dialogs/zoomdlg.h \
     MacOS/macscale.h \
     MacOS/macScale_p.h
 
@@ -68,7 +68,7 @@ SOURCES += \
     Dialogs/workspacedlg.cpp \
     Dialogs/copypickdlg.cpp \
     Dialogs/popup.cpp \
-    Dialogs/zoomDlg.cpp
+    Dialogs/zoomdlg.cpp
 
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 
@@ -82,7 +82,7 @@ FORMS += \
     introduction.ui \
     welcome.ui \
     shortcutsform.ui \
-    zoomDlg.ui \
+    zoomdlg.ui \
     message.ui
 
 RESOURCES += winnow.qrc

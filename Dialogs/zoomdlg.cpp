@@ -1,4 +1,4 @@
-#include "zoomDlg.h"
+#include "zoomdlg.h"
 #include "ui_zoomdlg.h"
 #include "QDebug"
 

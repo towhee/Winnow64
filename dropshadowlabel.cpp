@@ -14,6 +14,9 @@ void DropShadowLabel::paintEvent(QPaintEvent *event)
     qDebug() << "DropShadowLabel::paintEvent";
     #endif
     }
+
+//    QVariant x = event->     // suppress compiler warning
+
     QPainter painter(this);
 
     painter.setRenderHint(QPainter::Antialiasing, true);
@@ -26,5 +29,7 @@ void DropShadowLabel::paintEvent(QPaintEvent *event)
     painter.drawText(rect2, text());
     painter.setPen(Qt::white);
     painter.drawText(rect1, text());
+
+    QLabel::paintEvent(event);
 }
 

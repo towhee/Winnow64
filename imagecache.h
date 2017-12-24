@@ -66,8 +66,8 @@ private:
     QList<CacheItem> cacheItemList, cacheItemListCopy;
 
     struct Cache {
-        uint key;                   // current image
-        uint prevKey;               // used to establish directionof travel
+        int key;                    // current image
+        int prevKey;               // used to establish directionof travel
         QString dir;                // compare to input to see if different
         uint toCacheKey;            // next file to cache
         uint toDecacheKey;          // next file to remove from cache

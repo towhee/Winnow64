@@ -12,6 +12,7 @@ CompareImages::CompareImages(QWidget *parent,
     qDebug() << "CompareImages::CompareImages";
     #endif
     }
+    parent = 0;        // suppress compiler warning
     this->metadata = metadata;
     this->thumbView = thumbView;
     this->imageCacheThread = imageCacheThread;
@@ -269,7 +270,7 @@ int CompareImages::current()
     }
     QModelIndex idx = thumbView->currentIndex();
     for (int i = 0; i < imList->count(); ++i) {
-        QModelIndex idxItem = imList->at(i)->imageIndex;
+//        QModelIndex idxItem = imList->at(i)->imageIndex;
         if (imList->at(i)->imageIndex == idx) {
             return i;
         }

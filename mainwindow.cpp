@@ -115,7 +115,7 @@ variables in MW (this class) and managed in the prefDlg class.
     if (isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
-        qDebug() << "Restoring state - triggers setThumbDockFeatures prematurely";
+//        qDebug() << "Restoring state - triggers setThumbDockFeatures prematurely";
         restoreState(setting->value("WindowState").toByteArray());
         isFirstTimeNoSettings = false;
     }
@@ -169,11 +169,11 @@ void MW::setupPlatform()
     #ifdef Q_OS_MAC
         G::devicePixelRatio = 2;
         setWindowIcon(QIcon(":/images/winnow.icns"));
-        int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
+//        int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
  //       int screenWidth1 = CGDisplayModeGetWidth(CGMainDisplayID());
  //       qDebug() << "screenWidth" << screenWidth << screenWidth1 << QPaintDevice::devicePixelRatio();
-         QSizeF display = QtMac::macBackingScaleFactor();
-         qDebug() << "QtMac::BackingScaleFactor()" << display;
+//         QSizeF display = QtMac::macBackingScaleFactor();
+//         qDebug() << "QtMac::BackingScaleFactor()" << display;
     #endif
 }
 
@@ -390,9 +390,9 @@ void MW::folderSelectionChange()
     }
     bookmarks->select(dirPath);
 
-    qDebug () << "*************************************************************"
-              << dirPath
-              << "*************************************************************";
+//    qDebug () << "*************************************************************"
+//              << dirPath
+//              << "*************************************************************";
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(dirPath, true, false)) {
@@ -424,9 +424,9 @@ void MW::folderSelectionChange()
     which is also executed when the change file event is fired. */
     metadataLoaded = false;
 
-    qDebug() << "metadataCacheThread->isRunning" << metadataCacheThread->isRunning();
-    qDebug() << "thumbCacheThread->isRunning" << thumbCacheThread->isRunning();
-    qDebug() << "imageCacheThread->isRunning" << imageCacheThread->isRunning();
+//    qDebug() << "metadataCacheThread->isRunning" << metadataCacheThread->isRunning();
+//    qDebug() << "thumbCacheThread->isRunning" << thumbCacheThread->isRunning();
+//    qDebug() << "imageCacheThread->isRunning" << imageCacheThread->isRunning();
 
     /* Need to gather directory file info first (except icon/thumb) which is
     loaded by loadThumbCache.  If no images in new folder then cleanup and exit.
@@ -2323,10 +2323,10 @@ It is displayed on the status bar and in the infoView.
     QString fileCount = "";
     QModelIndex idx = thumbView->currentIndex();
     if (!idx.isValid()) return "";
-    qDebug() << "MW::getPosition  idx =" << idx;
+//    qDebug() << "MW::getPosition  idx =" << idx;
     long rowCount = dm->sf->rowCount();
     if (rowCount <= 0) return "";
-    qDebug() << "MW::getPosition  rowCount =" << rowCount;
+//    qDebug() << "MW::getPosition  rowCount =" << rowCount;
     int row = idx.row() + 1;
     fileCount = QString::number(row) + " of "
         + QString::number(rowCount);
@@ -3574,10 +3574,10 @@ void MW::setActualDevicePixelRation()
         G::actualDevicePixelRatio = (float)displayHorizontalPixels / virtualWidth;
     else
         G::actualDevicePixelRatio = QPaintDevice::devicePixelRatio();
-    qDebug() << "setActualDevicePixelRation   screen->geometry().width()"
-             << virtualWidth
-             << displayHorizontalPixels
-             << G::actualDevicePixelRatio;
+//    qDebug() << "setActualDevicePixelRation   screen->geometry().width()"
+//             << virtualWidth
+//             << displayHorizontalPixels
+//             << G::actualDevicePixelRatio;
 
 /*  Screen information
 #if defined(Q_OS_MAC)
@@ -4698,7 +4698,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
             int minHt = thumbView->getThumbSpaceMin();
 //            int scrollBarHeight = 12;
 //            int scrollBarHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
-            int test = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+//            int test = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
 //            qDebug() << "qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent)" << test;
 
             int thumbCellHt = thumbView->getThumbCellSize().height();
@@ -4754,7 +4754,7 @@ lack of notification when the QListView has finished painting itself.
     #endif
     }
     qDebug() << "\n======================================= Loupe ===========================================";
-    qDebug() << "Loupe: thumbView->isVisible()" << thumbView->isVisible() << "currentRow" << currentRow;
+//    qDebug() << "Loupe: thumbView->isVisible()" << thumbView->isVisible() << "currentRow" << currentRow;
 
     G::mode = "Loupe";
 

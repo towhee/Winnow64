@@ -528,7 +528,7 @@ void Metadata::reportMetadataAllFiles()
     QMapIterator<QString, ImageMetadata> i(metaCache);
     while (i.hasNext())  {
         i.next();
-        offsetFullJPG;
+        offsetFullJPG = i.value().offsetFullJPG;
         lengthFullJPG = i.value().lengthFullJPG;
         offsetThumbJPG = i.value().offsetThumbJPG;
         lengthThumbJPG = i.value().lengthThumbJPG;
@@ -563,7 +563,7 @@ void Metadata::reportMetadataAllFiles()
 
 void Metadata::track(QString fPath, QString msg)
 {
-//    if (G::isThreadTrackingOn) qDebug() << "• Metadata Caching" << fPath << msg;
+    if (G::isThreadTrackingOn) qDebug() << "• Metadata Caching" << fPath << msg;
 }
 
 
@@ -729,7 +729,7 @@ bool Metadata::readXMP(ulong offset)
     if (!xmpFound) return false;
 
     QXmlStreamReader xmp(xmpByteArray);
-    bool err = xmp.hasError();
+//    bool err = xmp.hasError();
 
     // search xmp for data
     while(!xmp.atEnd() && !xmp.hasError()) {
@@ -815,7 +815,7 @@ bool Metadata::readXMP(ulong offset)
 //    qDebug() << "email" << email;
 //    qDebug() << "url" << url;
 
-
+    return false;
 }
 
 
@@ -846,7 +846,7 @@ void Metadata::readIPTC(ulong offset)
         file.seek(file.pos() + pasStrLen - 1);
         // read size of resource data
         ulong resourceDataSize = get4(file.read(4));
-        ulong endResourceData = file.pos() + resourceDataSize - 4;
+        qint64 endResourceData = file.pos() + resourceDataSize - 4;
 
         // read data blocks searching for title (0x05)
         bool foundTitle = false;
@@ -1062,7 +1062,7 @@ void Metadata::formatNikon()
     ulong offsetIfd0 = get4(file.read(4));
 
     // Nikon does not chaim IFDs
-    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
+//    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
 
 /*
     // test working

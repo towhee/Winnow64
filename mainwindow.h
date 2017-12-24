@@ -8,11 +8,11 @@
 #include <iomanip>
 
 #if defined(Q_OS_MAC)
-#include "macscale.h"
+#include "macScale.h"
 #include <ApplicationServices/ApplicationServices.h>
 //#include <QtMacExtras>
 #include <CoreServices/CoreServices.h>
-#include "CoreGraphics/CoreGraphics.h";
+#include "CoreGraphics/CoreGraphics.h"
 #endif
 
 #include "bookmarks.h"
@@ -35,7 +35,7 @@
 #include "tableview.h"
 #include "thumbcache.h"
 #include "workspacedlg.h"
-#include "zoomDlg.h"
+#include "zoomdlg.h"
 
 #include "ui_helpform.h"
 #include "ui_shortcutsform.h"

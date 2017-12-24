@@ -187,7 +187,7 @@ void Prefdlg::on_iconWidthSlider_valueChanged(int value)
 {
     if (okToUpdate) {
         if (ui->lockDimChk->isChecked()) {
-            ui->iconHeightSlider->setValue(ui->iconWidthSlider->value());
+            ui->iconHeightSlider->setValue(value);
         }
         emit updateThumbParameters(ui->iconWidthSlider->value(),
                                    ui->iconHeightSlider->value(),
@@ -203,7 +203,7 @@ void Prefdlg::on_iconHeightSlider_valueChanged(int value)
 {
     if (okToUpdate) {
         if (ui->lockDimChk->isChecked()) {
-            ui->iconWidthSlider->setValue(ui->iconHeightSlider->value());
+            ui->iconWidthSlider->setValue(value);
         }
         emit updateThumbParameters(ui->iconWidthSlider->value(),
                                    ui->iconHeightSlider->value(),
@@ -215,7 +215,7 @@ void Prefdlg::on_iconHeightSlider_valueChanged(int value)
     }
 }
 
-void Prefdlg::on_thumbSpacingSlider_valueChanged(int value)
+void Prefdlg::on_thumbSpacingSlider_valueChanged(int /* not used */)
 {
     if (okToUpdate) {
         emit updateThumbParameters(ui->iconWidthSlider->value(),
@@ -228,7 +228,7 @@ void Prefdlg::on_thumbSpacingSlider_valueChanged(int value)
     }
 }
 
-void Prefdlg::on_iconPaddingSlider_valueChanged(int value)
+void Prefdlg::on_iconPaddingSlider_valueChanged(int /* not used */)
 {
     if (okToUpdate) {
         emit updateThumbParameters(ui->iconWidthSlider->value(),
@@ -268,7 +268,7 @@ void Prefdlg::on_wrapChk_clicked()
     }
 }
 
-void Prefdlg::on_fontSizeSlider_valueChanged(int value)
+void Prefdlg::on_fontSizeSlider_valueChanged(int /* not used */)
 {
     if (okToUpdate) {
         emit updateThumbParameters(ui->iconWidthSlider->value(),
@@ -282,7 +282,7 @@ void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 }
 
 // slideshow
-void Prefdlg::on_slideshowDelaySpinbox_valueChanged(int value)
+void Prefdlg::on_slideshowDelaySpinbox_valueChanged(int /* not used */)
 {
     if (okToUpdate) {
         emit updateSlideShowParameters(ui->slideshowDelaySpinbox->value(),
@@ -299,7 +299,7 @@ void Prefdlg::on_slideshowRandomChk_clicked()
 }
 
 // cache
-void Prefdlg::on_cacheSizeSpinbox_valueChanged(int value)
+void Prefdlg::on_cacheSizeSpinbox_valueChanged(int /* not used */)
 {
     if (okToUpdate) {
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
@@ -335,7 +335,7 @@ void Prefdlg::on_showCacheThreadActivityChk_clicked()
     }
 }
 
-void Prefdlg::on_cacheStatusWidthSpin_valueChanged(int value)
+void Prefdlg::on_cacheStatusWidthSpin_valueChanged(int /* not used */)
 {
     if (okToUpdate) {
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
@@ -435,7 +435,7 @@ void Prefdlg::on_cachePreviewsChk_clicked()
                                ui->showCacheThreadActivityChk->isChecked());
 }
 
-void Prefdlg::on_previewWidthSB_valueChanged(int value)
+void Prefdlg::on_previewWidthSB_valueChanged(int /* not used */)
 {
     emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                ui->showCacheStatusChk->isChecked(),
@@ -445,7 +445,7 @@ void Prefdlg::on_previewWidthSB_valueChanged(int value)
                                ui->showCacheThreadActivityChk->isChecked());
 }
 
-void Prefdlg::on_previewHeightSB_valueChanged(int value)
+void Prefdlg::on_previewHeightSB_valueChanged(int /* not used */)
 {
     emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                ui->showCacheStatusChk->isChecked(),
@@ -462,7 +462,7 @@ void Prefdlg::on_rememberFolderChk_clicked()
     }
 }
 
-void Prefdlg::on_maxRecentSB_valueChanged(int value)
+void Prefdlg::on_maxRecentSB_valueChanged(int /* not used */)
 {
 //    if (okToUpdate) {
 //        emit updateMaxRecentFolders(ui->maxRecentSB->value());
@@ -495,7 +495,7 @@ void Prefdlg::on_trackpadScrollRadio_clicked()
     }
 }
 
-void Prefdlg::on_displayHorizontalPixelsSB_valueChanged(int arg1)
+void Prefdlg::on_displayHorizontalPixelsSB_valueChanged(int /* not used */)
 {
     if(okToUpdate) {
         emit updateDisplayResolution(ui->displayHorizontalPixelsSB->value(),
@@ -503,7 +503,7 @@ void Prefdlg::on_displayHorizontalPixelsSB_valueChanged(int arg1)
     }
 }
 
-void Prefdlg::on_displayVerticalPixelsSB_valueChanged(int arg1)
+void Prefdlg::on_displayVerticalPixelsSB_valueChanged(int /* not used */)
 {
     if(okToUpdate) {
         emit updateDisplayResolution(ui->displayHorizontalPixelsSB->value(),
@@ -516,7 +516,7 @@ void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
         if (ui->lockDimChk_2->isChecked()) {
-            ui->iconHeightSlider_2->setValue(ui->iconWidthSlider_2->value());
+            ui->iconHeightSlider_2->setValue(value);
         }
         emit updateThumbGridParameters(ui->iconWidthSlider_2->value(),
                                        ui->iconHeightSlider_2->value(),
@@ -528,7 +528,7 @@ void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
     }
 }
 
-void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
+void Prefdlg::on_iconHeightSlider_2_valueChanged(int /* not used */)
 {
     if (okToUpdate) {
         if (ui->lockDimChk_2->isChecked()) {
@@ -544,7 +544,7 @@ void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
     }
 }
 
-void Prefdlg::on_thumbSpacingSlider_2_valueChanged(int value)
+void Prefdlg::on_thumbSpacingSlider_2_valueChanged(int /* not used */)
 {
     if (okToUpdate) {
         emit updateThumbGridParameters(ui->iconWidthSlider_2->value(),
@@ -557,7 +557,7 @@ void Prefdlg::on_thumbSpacingSlider_2_valueChanged(int value)
     }
 }
 
-void Prefdlg::on_iconPaddingSlider_2_valueChanged(int value)
+void Prefdlg::on_iconPaddingSlider_2_valueChanged(int /* not used */)
 {
     if (okToUpdate) {
         emit updateThumbGridParameters(ui->iconWidthSlider_2->value(),
@@ -583,7 +583,7 @@ void Prefdlg::on_showThumbLabelChk_2_clicked()
     }
 }
 
-void Prefdlg::on_fontSizeSlider_2_valueChanged(int value)
+void Prefdlg::on_fontSizeSlider_2_valueChanged(int /* not used */)
 {
     if (okToUpdate) {
         emit updateThumbGridParameters(ui->iconWidthSlider_2->value(),

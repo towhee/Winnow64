@@ -41,6 +41,8 @@ void CircleLabel::setDiameter(int diameter)
 
 void CircleLabel::paintEvent(QPaintEvent *event)
 {
+    QVariant x = event->type();     // suppress compiler warning
+
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setRenderHint(QPainter::TextAntialiasing, true);

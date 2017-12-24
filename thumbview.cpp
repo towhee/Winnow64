@@ -1271,7 +1271,7 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     qDebug() << "ThumbView::mousePressEvent";
     #endif
     }
-    bool dock = false;
+//    bool dock = false;
     G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
     QListView::mousePressEvent(event);
 

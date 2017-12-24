@@ -62,7 +62,7 @@ protected:
 //    bool eventFilter(QObject *obj, QEvent *event);
     void resizeEvent(QResizeEvent *event);
     void scrollContentsBy(int dx, int dy);
-    void dragMoveEvent(QDragMoveEvent *event);
+//    void dragMoveEvent(QDragMoveEvent *event);
 //    void showEvent(QShowEvent *event);
     void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

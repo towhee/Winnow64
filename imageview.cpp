@@ -199,7 +199,7 @@ to prevent jarring changes in perceived scale by the user.
         setSceneRect(scene->itemsBoundingRect());
         if (!metadata->isLoaded(currentImagePath)) {
             QFileInfo fileInfo(currentImagePath);
-            bool loadMeta = metadata->loadImageMetadata(fileInfo);
+//            bool loadMeta = metadata->loadImageMetadata(fileInfo);
         }
         shootingInfo = metadata->getShootingInfo(currentImagePath) + "\n" +
                 metadata->getTitle(currentImagePath);
@@ -834,10 +834,10 @@ void ImageView::scrollContentsBy(int dx, int dy)
 
 // MOUSE CONTROL
 
-void ImageView::dragMoveEvent(QDragMoveEvent *event)
-{
-    qDebug() << "drag";
-}
+//void ImageView::dragMoveEvent(QDragMoveEvent *event)
+//{
+//    qDebug() << "drag";
+//}
 
 void ImageView::wheelEvent(QWheelEvent *event)
 {
@@ -980,6 +980,7 @@ void ImageView::enterEvent(QEvent *event)
     qDebug() << "ImageView::enterEvent";
     #endif
     }
+    QVariant x = event->type();     // suppress compiler warning
     this->setFocus();
 //    qDebug() << qApp->focusWidget() << imageIndex << thumbView->currentIndex();
     if (imageIndex != thumbView->currentIndex()) {

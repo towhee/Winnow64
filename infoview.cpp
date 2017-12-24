@@ -6,8 +6,9 @@ class InfoDelegate : public QStyledItemDelegate
 public:
     explicit InfoDelegate(QObject *parent = 0) : QStyledItemDelegate(parent) { }
 
-    QSize sizeHint(const QStyleOptionViewItem &option,  const QModelIndex &index) const
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const
     {
+        index.isValid();          // suppress compiler warning
         return QSize(option.rect.width(), 24);
     }
 

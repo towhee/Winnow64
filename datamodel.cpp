@@ -240,7 +240,7 @@ which is created in MW, and in InfoView.
     QElapsedTimer t;
     t.start();
 
-    static QStandardItem *item;
+//    static QStandardItem *item;
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
@@ -413,7 +413,7 @@ map to columns in the data model ie Picked, Rating, Label ...
     return isMatch;
 }
 
-void SortFilter::filterChanged(QTreeWidgetItem* x, int col)
+void SortFilter::filterChanged(QTreeWidgetItem* /* not used */, int /* not used */)
 {
 /*
 This slot is called when data changes in the filters widget.  The proxy (this)
