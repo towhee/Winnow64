@@ -15,7 +15,7 @@ void DropShadowLabel::paintEvent(QPaintEvent *event)
     #endif
     }
 
-//    QVariant x = event->     // suppress compiler warning
+//    QVariant x = event->type();     // suppress compiler warning
 
     QPainter painter(this);
 

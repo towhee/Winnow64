@@ -1062,7 +1062,8 @@ void Metadata::formatNikon()
     ulong offsetIfd0 = get4(file.read(4));
 
     // Nikon does not chaim IFDs
-//    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
+//    ulong nextIFDOffset =
+    readIFD("IFD0", offsetIfd0);
 
 /*
     // test working
@@ -1361,7 +1362,8 @@ void Metadata::formatOlympus()
     // get offset to first IFD and read it
     ulong offsetIfd0 = get4(file.read(4));
 
-    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
+//    ulong nextIFDOffset =
+            readIFD("IFD0", offsetIfd0);
 
     // pull data reqd from IFD0
     (ifdDataHash.contains(272))
@@ -1580,7 +1582,9 @@ void Metadata::formatFuji()
     // get endian
     order = get2(file.read(4));
     // get offset to first IFD and read it
-    ulong offsetIfd0 = get4(file.read(4));
+
+//    ulong offsetIfd0 = // suppress compiler warning until finish with this
+    get4(file.read(4));
 
 //    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
 

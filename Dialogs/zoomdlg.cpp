@@ -137,7 +137,7 @@ void ZoomDlg::on_radio200Button_clicked()
     emit zoom(2.0);
 }
 
-void ZoomDlg::enterEvent(QEvent *event)
+void ZoomDlg::enterEvent(QEvent* /*event*/)
 {
 /*
 For convenience, set window focus on mouseover

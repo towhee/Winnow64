@@ -45,7 +45,7 @@ thumbMargin = thumbSpace - thumb (all the space between the thumb and thumbSpace
 
 ThumbViewDelegate::ThumbViewDelegate(QObject *parent)
 {
-//    this->parent = parent;
+    parent->isWidgetType();     // suppress compiler warning
     itemBorderThickness = 2;
     thumbBorderThickness = 2;
     thumbBorderPadding = 1;         // allow small gap between thumb and outer border
@@ -112,14 +112,14 @@ int ThumbViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
     return thumbHeight <= 160 ? thumbHeight : 160;
 }
 
-void ThumbViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex previous)
+void ThumbViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex /*previous*/)
 {
     currentRow = current.row();     // this slot not being used
     qDebug() << "TestTestTest";
 //    currentIndex = current;
 }
 
-QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
+QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option,
                               const QModelIndex &index) const
 {
     {
@@ -127,6 +127,8 @@ QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option ,
 //    qDebug() << "ThumbViewDelegate::sizeHint" << index.data(Qt::DisplayRole);
     #endif
     }
+    option.HasCheckIndicator;           // suppress compiler warning
+    index.isValid();                    // suppress compiler warning
     QFont font = QApplication::font();
 //    font.setPixelSize(9);
     QFontMetrics fm(font);

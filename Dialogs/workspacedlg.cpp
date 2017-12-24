@@ -91,7 +91,7 @@ void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
     editMode = true;
 }
 
-void WorkspaceDlg::on_workspaceCB_highlighted(int index)
+void WorkspaceDlg::on_workspaceCB_highlighted(int /*index*/)
 {
     {
     #ifdef ISDEBUG
@@ -117,7 +117,7 @@ void WorkspaceDlg::on_reportLinkButton_clicked()
 //    emit reportWorkspace(n);
 }
 
-void WorkspaceDlg::on_workspaceCB_currentIndexChanged(int index)
+void WorkspaceDlg::on_workspaceCB_currentIndexChanged(int /*index*/)
 {
 //    ui->workspaceIndexLbl->setText(QString::number(index));
 }

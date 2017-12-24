@@ -82,7 +82,7 @@ void TableView::mousePressEvent(QMouseEvent *event)
     QTableView::mousePressEvent(event);
 }
 
-void TableView::mouseDoubleClickEvent(QMouseEvent *event)
+void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)
 {
     {
     #ifdef ISDEBUG
@@ -146,7 +146,7 @@ PickItemDelegate::PickItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 {
 }
 
-QString PickItemDelegate::displayText(const QVariant& value, const QLocale& locale) const
+QString PickItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
     return (value == "true") ? "✓" : "";
 }
@@ -155,7 +155,7 @@ ApertureItemDelegate::ApertureItemDelegate(QObject* parent): QStyledItemDelegate
 {
 }
 
-QString ApertureItemDelegate::displayText(const QVariant& value, const QLocale& locale) const
+QString ApertureItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
     if (value == 0) return QString();
 
@@ -166,7 +166,7 @@ ExposureTimeItemDelegate::ExposureTimeItemDelegate(QObject* parent): QStyledItem
 {
 }
 
-QString ExposureTimeItemDelegate::displayText(const QVariant& value, const QLocale& locale) const
+QString ExposureTimeItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
     if (value == 0)
     return QString();
@@ -187,7 +187,7 @@ FocalLengthItemDelegate::FocalLengthItemDelegate(QObject* parent): QStyledItemDe
 {
 }
 
-QString FocalLengthItemDelegate::displayText(const QVariant& value, const QLocale& locale) const
+QString FocalLengthItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
     if (value == 0)
     return QString();
@@ -199,7 +199,7 @@ FileSizeItemDelegate::FileSizeItemDelegate(QObject* parent): QStyledItemDelegate
 {
 }
 
-QString FileSizeItemDelegate::displayText(const QVariant& value, const QLocale& locale) const
+QString FileSizeItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
     return QLocale(QLocale::English).toString(value.toDouble(), 'f', 0);
 }

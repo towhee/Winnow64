@@ -169,11 +169,13 @@ void CopyPickDlg::updateFolderPath()
 
 void CopyPickDlg::on_descriptionLineEdit_textChanged(const QString &arg1)
 {
+    arg1.isEmpty();             // suppress compiler warning
     updateFolderPath();
 }
 
 void CopyPickDlg::on_spinBoxStartNumber_valueChanged(const QString &arg1)
 {
+    arg1.isEmpty();             // suppress compiler warning
     updateFolderPath();
 }
 

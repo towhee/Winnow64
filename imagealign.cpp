@@ -36,7 +36,7 @@ QPointF ImageAlign::alignImage(QImage *baseImage, QImage *image, QPointF &basePo
     uint h = alignThumb->height() - targetSize;
 
     ulong diff;
-    ulong lowestDiff = 999999999999999;
+    ulong lowestDiff = (ulong)999999999999999;
     QPoint bestAlignPt;
     int t = targetSize;
     uint count = 0;
