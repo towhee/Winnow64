@@ -42,6 +42,19 @@ void BookMarks::reloadBookmarks()
     }
 }
 
+void BookMarks::select(QString fPath)
+{
+//    QString folderName = QFileInfo(fPath).fileName();
+    if (bookmarkPaths.contains(fPath)) {
+        QList <QTreeWidgetItem *> items;
+        items = findItems(QFileInfo(fPath).fileName(), Qt::MatchExactly);
+        if (items.length() > 0) {
+            setCurrentItem(items[0]);
+            setCurrentIndex(selectedIndexes().at(0));
+        }
+    }
+}
+
 void BookMarks::resizeTreeColumn(const QModelIndex &)
 {
     {

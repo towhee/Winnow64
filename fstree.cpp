@@ -191,7 +191,7 @@ void FSTree::scrollToCurrent()
     }
     QModelIndex idx = getCurrentIndex();
     qDebug() << "Is there a valid index?" << idx.isValid();
-    if (idx.isValid()) scrollTo(idx);
+    if (idx.isValid()) scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
 QModelIndex FSTree::getCurrentIndex()

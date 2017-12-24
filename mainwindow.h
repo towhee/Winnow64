@@ -40,6 +40,7 @@
 #include "ui_helpform.h"
 #include "ui_shortcutsform.h"
 #include "ui_welcome.h"
+#include "ui_message.h"
 
 class MW : public QMainWindow
 {
@@ -170,6 +171,7 @@ public:
     int currentRow;             // the current row in fileSelection
     bool modeChangeJustHappened;
 
+    bool isCurrentFolderOkay;
     bool isSlideShowActive;
     bool copyOp;
     int maxThumbSpaceHeight;
@@ -327,8 +329,6 @@ private slots:
     void defaultWorkspace();
     void reportWorkspace(int n);
     void loadWorkspaces();
-
-    void messageView(QString &msg);
 
     void help();
     void helpShortcuts();
@@ -528,6 +528,8 @@ private:
     //    QAction *deleteAction;
 
     QScrollArea *welcome;       // welcome screen for first time use
+    QWidget *messageView;
+    Ui::message msg;
     QLineEdit *filterBar;
     QLabel *stateLabel;
     QLabel *cacheLabel;
@@ -628,6 +630,7 @@ private:
     void createGridView();
     void createSelectionModel();
     void createStatusBar();
+    void createMessageView();
     void createAppStyle();
     void setupCentralWidget();
     void setupPlatform();
@@ -654,7 +657,8 @@ private:
     QString getZoom();
     QString getPicked();
     void setActualDevicePixelRation();
-    bool isFolderValid(QString &fPath, bool report);
+    bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
+    void setCentralMessage(QString message);
 
     void addRecentFolder(QString fPath);
     void syncRecentFoldersMenu();

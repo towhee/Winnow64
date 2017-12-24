@@ -98,6 +98,7 @@ variables in MW (this class) and managed in the prefDlg class.
     createBookmarks();          // dependent on loadSettings
     createDocks();              // dependent on FSTree, Bookmarks, ThumbView, Metadata, InfoView
     createStatusBar();
+    createMessageView();
 
     loadWorkspaces();           // req'd by actions and menu
     createActions();            // dependent on above
@@ -339,6 +340,9 @@ void MW::folderSelectionChange()
     // used by SortFilter, set true when ImageCacheTread starts
     G::isNewFolderLoaded = false;
 
+    // used by updateStatus
+    isCurrentFolderOkay = false;
+
     clearStatus();
 //    infoView->clearInfo();
     pickMemSize = "";
@@ -354,7 +358,8 @@ void MW::folderSelectionChange()
     }
 
     // if at welcome screen and then select a folder
-    if (centralLayout->currentIndex() == StartTab) {
+    if (centralLayout->currentIndex() == StartTab
+            || centralLayout->currentIndex() == MessageTab) {
         asLoupeAction->setChecked(true);
         updateState();
     }
@@ -366,12 +371,15 @@ void MW::folderSelectionChange()
     if (isInitializing) {
         if (rememberLastDir) {
             // lastDir is from QSettings for persistent memory between sessions
-            if (isFolderValid(lastDir, false)) {
+            if (isFolderValid(lastDir, true, true)) {
                 dirPath = lastDir;
                 fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath)));
             }
             else {
                isInitializing = false;
+               QModelIndex idx = fsTree->fsModel->index(dirPath);
+               if (fsTree->fsModel->hasIndex(idx.row(), idx.column(), idx.parent()))
+                    fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(idx));
                return;
             }
         }
@@ -380,13 +388,14 @@ void MW::folderSelectionChange()
     if (!isInitializing || !rememberLastDir) {
         dirPath = getSelectedPath();
     }
+    bookmarks->select(dirPath);
 
-    qDebug () << "*********************************************************************************"
+    qDebug () << "*************************************************************"
               << dirPath
-              << "*********************************************************************************";
+              << "*************************************************************";
 
     // confirm folder exists and is readable, report if not and do not process
-    if (!isFolderValid(dirPath, false)) {
+    if (!isFolderValid(dirPath, true, false)) {
         return;
     }
 
@@ -424,7 +433,8 @@ void MW::folderSelectionChange()
     MW::fileSelectionChange triggered by DataModel->load         */
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         updateStatus(false, "No images in this folder");
-        popUp->showPopup(this, "The folder " + currentViewDir + " does not have any eligible images", 3000, 0.9);
+//        popUp->showPopup(this, "The folder " + currentViewDir + " does not have any eligible images", 3000, 0.9);
+        setCentralMessage("The folder " + currentViewDir + " does not have any eligible images");
         infoView->clearInfo();
         metadata->clearMetadata();
         imageView->emptyFolder();
@@ -432,6 +442,9 @@ void MW::folderSelectionChange()
         isInitializing = false;
         return;
     }
+
+    // made it this far, folder must have eligible images and good-to-go
+    isCurrentFolderOkay = true;
 
     thumbView->selectThumb(0);
     thumbView->sortThumbs(1, false);
@@ -664,11 +677,15 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     qDebug() << "MW::bookmarkClicked";
     #endif
     }
-    QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
-    QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
-    fsTree->setCurrentIndex(filterIdx);
-    fsTree->scrollTo(filterIdx);
-    folderSelectionChange();
+//    QString fPath = item->text(0);
+    const QString fPath =  item->toolTip(col);
+    if (isFolderValid(fPath, true, false)) {
+        QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
+        QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
+        fsTree->setCurrentIndex(filterIdx);
+        fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
+        folderSelectionChange();
+    }
 }
 
 // called when signal rowsRemoved from FSTree
@@ -1859,6 +1876,7 @@ void MW::setupCentralWidget()
     centralLayout->addWidget(compareImages);
     centralLayout->addWidget(tableView);
     centralLayout->addWidget(gridView);
+    centralLayout->addWidget(messageView);
 //    centralLayout->setCurrentIndex(0);
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
@@ -2350,7 +2368,7 @@ QString MW::getPicked()
         if (dm->sf->index(row, G::PickedColumn).data() == "true") count++;
     QString image = count == 1 ? " image, " : " images, ";
 
-    if (count == 0) return "No picks";
+    if (count == 0) return "Nothing";
     return QString::number(count) + image  + pickMemSize;
 }
 
@@ -2383,7 +2401,7 @@ QString fileSym = "📷";
 */
 
     // image of total: fileCount
-    if (keepBase) {
+    if (keepBase && isCurrentFolderOkay) {
         base = getPosition();
         base += spacer + getZoom() + " zoom";
         base += spacer + getPicked() + " picked";
@@ -3256,8 +3274,9 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
+    setCentralMessage("A message to central");
 //    qDebug() << "Horizontal scrollbar position" << thumbView->horizontalScrollBar()->value();
-    metadata->reportMetadataAllFiles();
+//    metadata->reportMetadataAllFiles();
 
 //    metadata->readMetadata(true, thumbView->getCurrentFilename());
 }
@@ -5950,21 +5969,32 @@ void MW::openInExplorer()
     process->start("explorer.exe", args);
 }
 
-bool MW::isFolderValid(QString &fPath, bool report)
+bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
 {
     QDir testDir(fPath);
+    QString msg;
 
     if (fPath.length() == 0) {
         if (report) {
-            QMessageBox::critical(this, tr("Error"), tr("The assigned folder name is blank"));
+            qDebug() << "MW::isFolderValid  fPath.length() == 0" << fPath;
+//            QMessageBox::critical(this, tr("Error"), tr("The assigned folder name is blank"));
+            msg = "The selected folder (" + fPath + ") does not have any images that can be shown in Winnow.";
+            updateStatus(false, msg);
+            setCentralMessage(msg);
         }
         return false;
     }
 
     if (!testDir.exists()) {
         if (report) {
-//            QMessageBox msgBox;;
-            QMessageBox::critical(this, tr("Error"), tr("The folder does not exist or is not available"));
+//            QMessageBox::critical(this, tr("Error"), tr("The folder does not exist or is not available"));
+            if (isRemembered)
+                msg = "The last folder from your previous session (" + fPath + ") does not exist or is not available";
+            else
+                msg = "The folder (" + fPath + ") does not exist or is not available";
+
+            updateStatus(false, msg);
+            setCentralMessage(msg);
         }
         return false;
     }
@@ -5972,8 +6002,9 @@ bool MW::isFolderValid(QString &fPath, bool report)
     // check if unmounted USB drive
     if (!testDir.isReadable()) {
         if (report) {
-//            QMessageBox msgBox;
-            QMessageBox::critical(this, tr("Error"), tr("The folder is not readable"));
+            msg = "The folder (" + fPath + ") is not readable.  Perhaps it was a USB drive that is not currently mounted.";
+            updateStatus(false, msg);
+            setCentralMessage(msg);
         }
         return false;
     }
@@ -5981,9 +6012,18 @@ bool MW::isFolderValid(QString &fPath, bool report)
     return true;
 }
 
-void MW::messageView(QString &msg)
+void MW::createMessageView()
 {
+    messageView = new QWidget;
+    msg.setupUi(messageView);
+//    Ui::message ui;
+//    ui.setupUi(messageView);
+}
 
+void MW::setCentralMessage(QString message)
+{
+    msg.msgLabel->setText(message);
+    centralLayout->setCurrentIndex(MessageTab);
 }
 
 void MW::help()

@@ -38,6 +38,8 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: show failed folder selection in central widget as a message
+- Done: select bookmark when folder changes
 - Done: not updating preferences not showing ie thumb parameters
 - Done: update zoom factor when change monitor resolution
 - Done: not showing thumbs for D:\pictures\automask

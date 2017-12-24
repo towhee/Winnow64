@@ -244,17 +244,17 @@ show flag.
 void InfoView::clearInfo()
 {
 /*
-Clear all the values but leave the keys and show flags alone
+Clear all the values but leave the keys and flags alone
 */
     {
     #ifdef ISDEBUG
     qDebug() << "InfoView::clearInfo";
     #endif
     }
-    return;
     for(int row = 0; row < ok->rowCount(); row++) {
-        for (int childRow = 0; childRow < ok->rowCount(ok->index(row, 0)); childRow++) {
-            ok->setData(ok->index(childRow, 1), "");
+        QModelIndex parentIdx = ok->index(row, 0);
+        for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
+            ok->setData(ok->index(childRow, 1, parentIdx), "");
         }
     }
 }
