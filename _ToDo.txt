@@ -4,6 +4,7 @@ BUGS
 - Pick thumb not always showing one main image in loupe mode
 - Icon padding becomes 2 for no apparent reason
 PERFORMANCE
+- Try starting thumb cache 200ms after metadataCache starts
 - Separate thread to load XMP data after thumbnails loaded
 - Improve producer/consumer image cache performance for large files
 CODE IMPROVEMENTS
@@ -38,6 +39,8 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: slow reading nef thumbs (what has changed)
+- Done: zoom radio buttons not correct zoom values
 - Done: show failed folder selection in central widget as a message
 - Done: select bookmark when folder changes
 - Done: not updating preferences not showing ie thumb parameters

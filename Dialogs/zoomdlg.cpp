@@ -109,32 +109,32 @@ void ZoomDlg::on_toggleZoomAmountBtn_clicked()
 // radio buttons for quick zoom setting at popular scales
 void ZoomDlg::on_radio25Button_clicked()
 {
-    emit zoom(0.25);
+    emit zoom(0.25 / G::actualDevicePixelRatio);
 }
 
 void ZoomDlg::on_radio50Button_clicked()
 {
-    emit zoom(0.50);
+    emit zoom(0.50 / G::actualDevicePixelRatio);
 }
 
 void ZoomDlg::on_radio66Button_clicked()
 {
-    emit zoom(0.666667);
+    emit zoom(0.666667 / G::actualDevicePixelRatio);
 }
 
 void ZoomDlg::on_radio100Button_clicked()
 {
-    emit zoom(1.0);
+    emit zoom(1.0 / G::actualDevicePixelRatio);
 }
 
 void ZoomDlg::on_radio133Button_clicked()
 {
-    emit zoom(1.33333333);
+    emit zoom(1.33333333 / G::actualDevicePixelRatio);
 }
 
 void ZoomDlg::on_radio200Button_clicked()
 {
-    emit zoom(2.0);
+    emit zoom(2.0 / G::actualDevicePixelRatio);
 }
 
 void ZoomDlg::enterEvent(QEvent* /*event*/)

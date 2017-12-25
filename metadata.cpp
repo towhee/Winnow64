@@ -13,6 +13,7 @@ Metadata::Metadata()
     initSegCodeHash();
     initExifHash();
     initIfdHash();
+    initNikonMakerHash();
     initSupportedFiles();
     report = false;
 }
@@ -445,6 +446,100 @@ void Metadata::initIfdHash()
     ifdHash[50779] = "CalibrationIlluminant2";
     ifdHash[50780] = "BestQualityScale";
     ifdHash[50784] = "Alias Layer Metadata";
+}
+
+void Metadata::initNikonMakerHash()
+{
+    nikonMakerHash[1] = "Nikon Makernote version";
+    nikonMakerHash[2] = "ISO speed setting";
+    nikonMakerHash[3] = "Color mode";
+    nikonMakerHash[4] = "Image quality setting";
+    nikonMakerHash[5] = "White balance";
+    nikonMakerHash[6] = "Image sharpening setting";
+    nikonMakerHash[7] = "Focus mode";
+    nikonMakerHash[8] = "Flash setting";
+    nikonMakerHash[9] = "Flash device";
+    nikonMakerHash[10] = "Unknown";
+    nikonMakerHash[11] = "White balance bias";
+    nikonMakerHash[12] = "WB RB levels";
+    nikonMakerHash[13] = "Program shift";
+    nikonMakerHash[14] = "Exposure difference";
+    nikonMakerHash[15] = "ISO selection";
+    nikonMakerHash[16] = "Data dump";
+    nikonMakerHash[17] = "Offset to an IFD containing a preview image";
+    nikonMakerHash[18] = "Flash compensation setting";
+    nikonMakerHash[19] = "ISO setting";
+    nikonMakerHash[22] = "Image boundary";
+    nikonMakerHash[23] = "Flash exposure comp";
+    nikonMakerHash[24] = "Flash bracket compensation applied";
+    nikonMakerHash[25] = "AE bracket compensation applied";
+    nikonMakerHash[26] = "Image processing";
+    nikonMakerHash[27] = "Crop high speed";
+    nikonMakerHash[28] = "Exposure tuning";
+    nikonMakerHash[29] = "Serial Number";
+    nikonMakerHash[30] = "Color space";
+    nikonMakerHash[31] = "VR info";
+    nikonMakerHash[32] = "Image authentication";
+    nikonMakerHash[34] = "ActiveD-lighting";
+    nikonMakerHash[35] = "Picture control";
+    nikonMakerHash[36] = "World time";
+    nikonMakerHash[37] = "ISO info";
+    nikonMakerHash[42] = "Vignette control";
+    nikonMakerHash[128] = "Image adjustment setting";
+    nikonMakerHash[129] = "Tone compensation";
+    nikonMakerHash[130] = "Auxiliary lens adapter";
+    nikonMakerHash[131] = "Lens type";
+    nikonMakerHash[132] = "Lens";
+    nikonMakerHash[133] = "Manual focus distance";
+    nikonMakerHash[134] = "Digital zoom setting";
+    nikonMakerHash[135] = "Mode of flash used";
+    nikonMakerHash[136] = "AF info";
+    nikonMakerHash[137] = "Shooting mode";
+    nikonMakerHash[138] = "Auto bracket release";
+    nikonMakerHash[139] = "Lens FStops";
+    nikonMakerHash[140] = "Contrast curve";
+    nikonMakerHash[141] = "Color hue";
+    nikonMakerHash[143] = "Scene mode";
+    nikonMakerHash[144] = "Light source";
+    nikonMakerHash[145] = "Shot info";
+    nikonMakerHash[146] = "Hue adjustment";
+    nikonMakerHash[147] = "NEF compression";
+    nikonMakerHash[148] = "Saturation";
+    nikonMakerHash[149] = "Noise reduction";
+    nikonMakerHash[150] = "Linearization table";
+    nikonMakerHash[151] = "Color balance";
+    nikonMakerHash[152] = "Lens data settings";
+    nikonMakerHash[153] = "Raw image center";
+    nikonMakerHash[154] = "Sensor pixel size";
+    nikonMakerHash[155] = "Unknown";
+    nikonMakerHash[156] = "Scene assist";
+    nikonMakerHash[158] = "Retouch history";
+    nikonMakerHash[159] = "Unknown";
+    nikonMakerHash[160] = "Camera serial number";
+    nikonMakerHash[162] = "Image data size";
+    nikonMakerHash[163] = "Unknown";
+    nikonMakerHash[165] = "Image count";
+    nikonMakerHash[166] = "Deleted image count";
+    nikonMakerHash[167] = "Number of shots taken by camera";
+    nikonMakerHash[168] = "Flash info";
+    nikonMakerHash[169] = "Image optimization";
+    nikonMakerHash[170] = "Saturation";
+    nikonMakerHash[171] = "Program variation";
+    nikonMakerHash[172] = "Image stabilization";
+    nikonMakerHash[173] = "AF response";
+    nikonMakerHash[176] = "Multi exposure";
+    nikonMakerHash[177] = "High ISO Noise Reduction";
+    nikonMakerHash[179] = "Toning effect";
+    nikonMakerHash[183] = "AF info 2";
+    nikonMakerHash[184] = "File info";
+    nikonMakerHash[185] = "AF tune";
+    nikonMakerHash[3584] = "PrintIM information";
+    nikonMakerHash[3585] = "Capture data";
+    nikonMakerHash[3593] = "Capture version";
+    nikonMakerHash[3598] = "Capture offsets";
+    nikonMakerHash[3600] = "Scan IFD";
+    nikonMakerHash[3613] = "ICC profile";
+    nikonMakerHash[3614] = "Capture output";
 }
 
 void Metadata::reportMetadata()
@@ -887,7 +982,7 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
         std::cout << "\n*******************************"
                   << hdr.toStdString()
                   << "*******************************";
-        std::cout << "\n  Offset  tagId  tagType  tagCount  tagValue   tagDescription\n";
+        std::cout << "\n  Offset  tagId  tagType  tagCount  tagValue   tagDescription                                    Order\n";
         std::cout << std::flush;
     }
     QString pos;
@@ -906,14 +1001,17 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
 
         ifdDataHash.insert(tagId, ifdData);
 
-        if (hdr.left(3) == "Sub" || hdr.left(3) == "IFD")
-            (ifdHash.contains(tagId))? tagDescription = ifdHash.value(tagId)
-                : tagDescription = "Undefined tag";
-        if (hdr == "IFD Exif")
-            (exifHash.contains(tagId))? tagDescription = exifHash.value(tagId)
-                : tagDescription = "Undefined tag";
-
         if (report) {
+            if (hdr == "IFD Exif")
+                (exifHash.contains(tagId)) ? tagDescription = exifHash.value(tagId)
+                    : tagDescription = "Undefined tag";
+            else if (hdr == "IFD Nikon Maker Note")
+                (nikonMakerHash.contains(tagId)) ? tagDescription = nikonMakerHash.value(tagId)
+                    : tagDescription = "Undefined tag";
+            else if (hdr.left(3) == "Sub" || hdr.left(3) == "IFD")
+                (ifdHash.contains(tagId)) ? tagDescription = ifdHash.value(tagId)
+                    : tagDescription = "Undefined tag";
+
 //            pos = QString::number(file.pos(), 16).toUpper();
             std::cout << std::setw(8) << std::setfill(' ') << std::right << pos.toStdString()
                       << std::setw(7) << std::setfill(' ') << std::right << tagId
@@ -921,8 +1019,8 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
                       << std::setw(10) << std::setfill(' ') << std::right << tagCount
                       << std::setw(10) << std::setfill(' ') << std::right << tagValue
                       << "   "
-                      << std::setw(20) << std::left << tagDescription.toStdString()
-                      << std::setw(20) << std::right << QString::number(order, 16).toUpper().toStdString()
+                      << std::setw(50) << std::left << tagDescription.toStdString()
+                      << std::setw(4) << std::right << QString::number(order, 16).toUpper().toStdString()
                       << "\n";
             std::cout << std::flush;
         }
@@ -1606,6 +1704,146 @@ void Metadata::formatFuji()
 
 }
 
+bool Metadata::formatTIF()
+{
+    //file.open happens in readMetadata
+
+    // set arbitrary order
+    order = 0x4D4D;
+    ulong startOffset = 0;
+
+    // first two bytes is the endian order
+    order = get2(file.read(2));
+    if (order != 0x4D4D && order != 0x4949) return false;
+
+    // should be magic number 42 next
+    if (get2(file.read(2)) != 42) return false;
+
+    // read offset to first IFD
+    ulong ifdOffset = get4(file.read(4));
+    ulong nextIFDOffset = readIFD("IFD0", ifdOffset);
+
+    // pull from IFD0
+
+    // IFD0: Model
+    (ifdDataHash.contains(272))
+        ? model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount)
+        : model = "";
+
+    // IFD0: Make
+    (ifdDataHash.contains(271))
+        ? make = getString(ifdDataHash.value(271).tagValue + startOffset,
+        ifdDataHash.value(271).tagCount)
+        : make = "";
+
+    // IFD0: DateTime
+    (ifdDataHash.contains(306))
+        ? dateTime = getString(ifdDataHash.value(306).tagValue + startOffset,
+        ifdDataHash.value(306).tagCount)
+        : dateTime = "";
+
+    // IFD0: Title (ImageDescription)
+    (ifdDataHash.contains(270))
+        ? title = getString(ifdDataHash.value(315).tagValue + startOffset,
+        ifdDataHash.value(270).tagCount)
+        : title = "";
+
+    // IFD0: Creator (artist)
+    (ifdDataHash.contains(315))
+        ? creator = getString(ifdDataHash.value(315).tagValue + startOffset,
+        ifdDataHash.value(315).tagCount)
+        : creator = "";
+
+    // IFD0: Copyright
+    (ifdDataHash.contains(33432))
+            ? copyright = getString(ifdDataHash.value(33432).tagValue + startOffset,
+                                  ifdDataHash.value(33432).tagCount)
+            : copyright = "";
+
+    // IFD0: width
+    (ifdDataHash.contains(256))
+        ? width = ifdDataHash.value(256).tagValue
+        : width = 0;
+
+    // IFD0: height
+    (ifdDataHash.contains(257))
+        ? height = ifdDataHash.value(257).tagValue
+        : height = 0;
+
+    if (!width || !height) getDimensions(0);
+
+
+    // IFD0: EXIF offset
+    ulong ifdEXIFOffset = 0;
+    if (ifdDataHash.contains(34665))
+        ifdEXIFOffset = ifdDataHash.value(34665).tagValue;
+
+    if (ifdEXIFOffset) readIFD("IFD Exif", ifdEXIFOffset);
+
+    // EXIF: shutter speed
+    if (ifdDataHash.contains(33434)) {
+        float x = getReal(ifdDataHash.value(33434).tagValue + startOffset);
+        if (x < 1 ) {
+            uint t = qRound(1 / x);
+            exposureTime = "1/" + QString::number(t);
+            exposureTimeNum = x;
+        } else {
+            uint t = (uint)x;
+            exposureTime = QString::number(t);
+            exposureTimeNum = t;
+        }
+        exposureTime += " sec";
+    } else {
+        exposureTime = "";
+    }
+
+    // EXIF: aperture
+    if (ifdDataHash.contains(33437)) {
+        float x = getReal(ifdDataHash.value(33437).tagValue + startOffset);
+        aperture = "f/" + QString::number(x, 'f', 1);
+        apertureNum = qRound(x * 10) / 10.0;
+    } else {
+        aperture = "";
+        apertureNum = 0;
+    }
+
+    // EXIF: ISO
+    if (ifdDataHash.contains(34855)) {
+        ulong x = ifdDataHash.value(34855).tagValue;
+        ISONum = static_cast<int>(x);
+        ISO = QString::number(ISONum);
+    } else {
+        ISO = "";
+        ISONum = 0;
+    }
+
+    // EXIF: focal length
+    if (ifdDataHash.contains(37386)) {
+        float x = getReal(ifdDataHash.value(37386).tagValue + startOffset);
+        focalLengthNum = static_cast<int>(x);
+        focalLength = QString::number(x, 'f', 0) + "mm";
+    } else {
+        focalLength = "";
+        focalLengthNum = 0;
+    }
+
+    // IFD0: IPTC offset
+    ulong ifdIPTCOffset = 0;
+    if (ifdDataHash.contains(33723))
+        ifdEXIFOffset = ifdDataHash.value(33723).tagValue;
+
+    if (ifdIPTCOffset) readIPTC(ifdIPTCOffset);
+
+    // IFD0: XMP offset
+    ulong ifdXMPOffset = 0;
+    if (ifdDataHash.contains(700))
+        ifdEXIFOffset = ifdDataHash.value(700).tagValue;
+
+    if (report) reportMetadata();
+
+    return true;
+}
+
 bool Metadata::formatJPG()
 {
     {
@@ -1847,6 +2085,7 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
             if (ext == "orf") formatOlympus();
             if (ext == "arw") formatSony();
             if (ext == "jpg") formatJPG();
+            if (ext == "tif") formatTIF();
             fileOpened = true;
             file.close();
             success = true;

@@ -119,16 +119,16 @@ void ThumbViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex /*prev
 //    currentIndex = current;
 }
 
-QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem &option,
-                              const QModelIndex &index) const
+QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
+                              const QModelIndex& /*index*/) const
 {
     {
     #ifdef ISDEBUG
 //    qDebug() << "ThumbViewDelegate::sizeHint" << index.data(Qt::DisplayRole);
     #endif
     }
-    option.HasCheckIndicator;           // suppress compiler warning
-    index.isValid();                    // suppress compiler warning
+//    option.HasCheckIndicator;           // suppress compiler warning
+//    index.isValid();                    // suppress compiler warning
     QFont font = QApplication::font();
 //    font.setPixelSize(9);
     QFontMetrics fm(font);

@@ -7,15 +7,13 @@ DropShadowLabel::DropShadowLabel(QWidget *parent) : QLabel(parent)
     setFont(QFont("Tahoma", 50));
 }
 
-void DropShadowLabel::paintEvent(QPaintEvent *event)
+void DropShadowLabel::paintEvent(QPaintEvent* /*event*/)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "DropShadowLabel::paintEvent";
     #endif
     }
-
-//    QVariant x = event->type();     // suppress compiler warning
 
     QPainter painter(this);
 
@@ -29,7 +27,5 @@ void DropShadowLabel::paintEvent(QPaintEvent *event)
     painter.drawText(rect2, text());
     painter.setPen(Qt::white);
     painter.drawText(rect1, text());
-
-    QLabel::paintEvent(event);
 }
 

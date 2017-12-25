@@ -14,7 +14,7 @@
 #include <QElapsedTimer>
 #include <QThread>
 
-//#include "global.h"
+#include "global.h"
 
 class IFDData
 {
@@ -172,7 +172,7 @@ private:
     QFile file;
     QHash<uint, IFDData> ifdDataHash;
     QHash<uint, IFDData>::iterator ifdIter;
-    QHash<ulong, QString> exifHash, ifdHash, gpsHash, segCodeHash;
+    QHash<ulong, QString> exifHash, ifdHash, gpsHash, segCodeHash, nikonMakerHash;
     QHash<QString, ulong> segmentHash;
 
     // was metadata
@@ -186,6 +186,7 @@ private:
     void initSegCodeHash();
     void initExifHash();
     void initIfdHash();
+    void initNikonMakerHash();
 
     uint get1(QByteArray c);
     ulong get2(QByteArray c);
@@ -210,6 +211,7 @@ private:
     void formatSony();
     void formatFuji();
     bool formatJPG();
+    bool formatTIF();
 
 signals:
 
