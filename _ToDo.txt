@@ -1,5 +1,6 @@
 BUGS
-- ToggleZoom not being saved correctly
+- Info status not reporting correctly while thumbs loading and zoom
+- Gets stuck in F mode where cannot resize
 - Pick thumb not always showing one main image in loupe mode
 - Icon padding becomes 2 for no apparent reason
 PERFORMANCE
@@ -38,6 +39,9 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: No title metadata from TIF
+- Done: Not reading lens model in JPG files
+- Done: ToggleZoom not being saved correctly
 - Done: Not reading TIF thumbs after first file
 - Done: dies when quickly change folders
 - Done: not reading tifs

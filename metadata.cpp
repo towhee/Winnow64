@@ -18,13 +18,17 @@ Metadata::Metadata()
     report = false;
 }
 
-/*
-    * At start of file determine endian
-    * Read IFD0 (has ref tagid 330 to offset and number of subIFDs
-    * Read subIFDs
-    * IFD data is stored in ifdDataHash(tagId, IFDData)
-    * Walk JPEG markers to find FFC0 (has image width/height)
+/* METADATA NOTES
 
+Endian:
+
+    Big endian = 4D4D and reads bytes from left to right
+                 ie 3F2A = 16170
+                 ie 00000001 = 1
+
+    Litte endian = 4949 and reads bytes from right to left
+                 ie 3f2A gets read as 2A3F = 10815
+                 ie 00000001 gets read as 01000000 = 16777216
 
 
 */
@@ -921,25 +925,36 @@ bool Metadata::readXMP(ulong offset)
 
 void Metadata::readIPTC(ulong offset)
 {
-    order = 0x4D4D;                  // only IFD/EXIF can be little endian
+/*
+If the IPTC data is in a JPG segment then there is some header info to get
+through to get to the start of the actual IPTC data blocks.
 
-    // skip the APP marker FFED and length bytes
-    file.seek(offset + 2);
-//    ulong appLength = get2(file.read(2));
-    ulong segmentLength = get2(file.read(2));
+If the IPTC data is in a photoshop TIF file, then the IPTC offset is directly
+to the first IPTC data block so we can skip the search req'd if it was JPG.
+*/
+    order = 0x4D4D;                  // only IFD/EXIF can be little endian
     bool foundIPTC = false;
-    ulong count = 0;
-    while (!foundIPTC && count < segmentLength) {
-        count +=2;
-        // find "8BIM" = 0x3842 0x494D
-        if (get2(file.read(2)) == 0x3842) {
-            if (get2(file.read(2)) == 0x494D) {
-                // is it IPTC data?
-                if (get2(file.read(2)) == 0x0404) foundIPTC = true;
+    file.seek(offset);
+
+    // check to see if the offset is a JPG segment
+    ulong marker = get2(file.peek(2));
+    if (marker == 0xFFED) {
+        // skip the APP marker FFED and length bytes
+        file.seek(offset + 2);
+        ulong segmentLength = get2(file.read(2));
+        ulong count = 0;
+        while (!foundIPTC && count < segmentLength) {
+            count +=2;
+            // find "8BIM" = 0x3842 0x494D
+            if (get2(file.read(2)) == 0x3842) {
+                if (get2(file.read(2)) == 0x494D) {
+                    // is it IPTC data?
+                    if (get2(file.read(2)) == 0x0404) foundIPTC = true;
+                }
             }
         }
-    }
-    if (foundIPTC) {
+        if (!foundIPTC) return;
+
         // calc pascal-style string length
         int pasStrLen = file.read(1).toInt() + 1;
         pasStrLen = (pasStrLen % 2) ? pasStrLen + 1: pasStrLen;
@@ -947,23 +962,25 @@ void Metadata::readIPTC(ulong offset)
         // read size of resource data
         ulong resourceDataSize = get4(file.read(4));
         qint64 endResourceData = file.pos() + resourceDataSize - 4;
+    }
 
-        // read data blocks searching for title (0x05)
-        bool foundTitle = false;
-        while (!foundTitle) {
-            // every block starts with tag marker 0x1C
-            uint tagMarker = get1(file.read(1));
-            if (tagMarker != 0x1C) break;
-            uint recordNumber = get1(file.read(1));
-            uint tag = get1(file.read(1));
-            uint dataLength = get2(file.read(2));
-            if (recordNumber == 2 && tag == 5) {
-                title = file.read(dataLength);
-                foundTitle = true;
-            }
-            else file.seek(file.pos() + dataLength);
-            if (file.pos() > endResourceData) break;
+    // read IPTC data blocks searching for title (0x05)
+    bool foundTitle = false;
+    while (!foundTitle) {
+        // every block starts with tag marker 0x1C
+        uint tagMarker = get1(file.read(1));
+        if (tagMarker != 0x1C) break;
+        uint recordNumber = get1(file.read(1));
+        uint tag = get1(file.read(1));
+        uint dataLength = get2(file.read(2));
+        if (recordNumber == 2 && tag == 5) {
+            title = file.read(dataLength);
+            qDebug() << "IPTC title length =" << dataLength
+                     << "title =" << title;
+            foundTitle = true;
         }
+        else file.seek(file.pos() + dataLength);
+//        if (file.pos() > endResourceData) break;
     }
 }
 
@@ -1120,6 +1137,15 @@ QList<ulong> Metadata::getSubIfdOffsets(ulong subIFDaddr, int count)
 
 void Metadata::getSegments(ulong offset)
 {
+/*
+The JPG file structure is based around a series of file segments.  The marker at
+the start of each segment is FFC0 to FFFE (see initSegCodeHash). The next two
+bytes is the incremental offset to the next segment.
+
+This function walks through all the segments and records their global offsets in
+segmentHash.  segmentHash is used by formatJPG to access the EXIF, IPTC and XMP
+segments.
+*/
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
     uint marker = 0xFFFF;
     while (marker > 0xFFBF) {
@@ -1139,13 +1165,16 @@ void Metadata::getSegments(ulong offset)
         offset = nextOffset;
     }
     if (report) {
-        qDebug() << "\n SEGMENT HASH";
-        qDebug() << "Segment\tOffset";
+        std::cout << "\n*******************************"
+                  << "SEGMENT HASH"
+                  << "*******************************";
+//        std::cout << "\n SEGMENT HASH" << std::flush;
+        std::cout << "\nSegment\tOffset\n";
         QHashIterator<QString, ulong> i(segmentHash);
         while (i.hasNext()) {
             i.next();
-            qDebug() << i.key() << ": " << i.value();
-//            std::cout << i.key() << "\t\t" << i.value() << std::endl;
+//            qDebug() << i.key() << ": " << i.value();
+            std::cout << i.key().toStdString() << ":\t" << i.value() << std::endl;
         }
     }
 }
@@ -1918,6 +1947,7 @@ bool Metadata::formatTIF()
 
     // Photoshop: **************************************************************
     // Get embedded JPG if available
+
     foundTifThumb = false;
     if (ifdPhotoshopOffset) readIRB(ifdPhotoshopOffset);
 
@@ -2093,6 +2123,12 @@ bool Metadata::formatJPG()
             focalLength = "";
             focalLengthNum = 0;
         }
+
+        // EXIF: lens model
+        (ifdDataHash.contains(42036))
+                ? lens = getString(ifdDataHash.value(42036).tagValue + startOffset,
+                                      ifdDataHash.value(42036).tagCount)
+                : lens = "";
     }
 
     // read IPTC
@@ -2154,7 +2190,7 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
 //    t.start();
     clearMetadata();
     file.setFileName(fPath);
-    if (report) std::cout << "\nFile name =" << fPath.toStdString()
+    if (report) std::cout << "\nFile name = " << fPath.toStdString()
                           << "\n" << std::flush;
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();

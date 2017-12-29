@@ -225,11 +225,11 @@ void MW::resizeEvent(QResizeEvent *event)
 void MW::keyPressEvent(QKeyEvent *event)
 {
 
-    if(event->modifiers() & Qt::ShiftModifier) isShift = true;
-    else isShift = false;
-    qDebug() << "MW::keyPressEvent" << event << isShift;
+//    if(event->modifiers() & Qt::ShiftModifier) isShift = true;
+//    else isShift = false;
+//    qDebug() << "MW::keyPressEvent" << event << isShift;
 
-//    QMainWindow::keyPressEvent(event);
+    QMainWindow::keyPressEvent(event);
 //    if (event->key() == Qt::Key_X) {
 //        thumbView->scrollToCurrent();
 //        qDebug() << "keypress x event";
@@ -239,10 +239,10 @@ void MW::keyPressEvent(QKeyEvent *event)
 void MW::keyReleaseEvent(QKeyEvent *event)
 {
 
-    isShift = false;
+//    isShift = false;
 
-    qDebug() << "MW::keyReleaseEvent" << event << isShift;
-//    QMainWindow::keyReleaseEvent(event);
+//    qDebug() << "MW::keyReleaseEvent" << event << isShift;
+    QMainWindow::keyReleaseEvent(event);
 }
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
@@ -567,6 +567,7 @@ so scrollTo and delegate use of the current index must check the row.
 
     // the file path is used as an index in ImageView and Metadata
     QString fPath = dm->sf->index(currentRow, 0).data(G::FileNameRole).toString();
+    qDebug() << fPath;
 
     // update the matadata panel
     infoView->updateInfo(fPath);
@@ -4207,8 +4208,11 @@ Preferences are located in the prefdlg class and updated here.
 
     // general
     lastPrefPage = setting->value("lastPrefPage").toInt();
-    imageView->toggleZoom = setting->value("toggleZoomValue").toReal();
-    compareImages->toggleZoom = setting->value("toggleZoomValue").toReal();
+    qreal tempZoom = setting->value("toggleZoomValue").toReal();
+    if (tempZoom > 3) tempZoom = 1;
+    if (tempZoom < 0.25) tempZoom = 1;
+    imageView->toggleZoom = tempZoom;
+    compareImages->toggleZoom = tempZoom;
     displayHorizontalPixels = setting->value("displayHorizontalPixels").toInt();
     displayVerticalPixels = setting->value("displayVerticalPixels").toInt();
 
@@ -6080,7 +6084,10 @@ void MW::helpWelcome()
 
 void MW::testMetadata()
 {
-    QString fPath = "D:/Pictures/Zenfolio/2009-08-28_0454-1.tif";
+    qDebug() << "MW::testMetadata";
+//    QString fPath = "D:/Pictures/_ThumbTest/test1.jpg";
+    QString fPath = "D:/Pictures/_TIFF/2017-01-25_0911.tif";
+//    QString fPath = "D:/Pictures/Zenfolio/2009-08-28_0454-1.tif";
     metadata->readMetadata(true, fPath);
 }
 
