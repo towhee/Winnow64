@@ -18,6 +18,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     /* Note ISDEBUG is in globals.h
        Deactivate debug reporting by commenting ISDEBUG  */
 
+    qDebug() << "isShift =" << isShift;
+
     // use this to show thread activity
     G::isThreadTrackingOn = false;
 
@@ -142,8 +144,8 @@ variables in MW (this class) and managed in the prefDlg class.
 //    QObject *zoomDlg = 0;
 
     // process the persistant folder if available
-    qDebug() << rememberLastDir;
-    if (rememberLastDir) folderSelectionChange();
+//    qDebug() << rememberLastDir;
+    if (rememberLastDir && !isShift) folderSelectionChange();
 
 //struct sysinfo sys_info;
 //totalmem=(qint32)(sys_info.totalram/1048576);
@@ -220,21 +222,28 @@ void MW::resizeEvent(QResizeEvent *event)
 //    QMainWindow::mouseReleaseEvent(event);
 //}
 
-//void MW::keyPressEvent(QKeyEvent *event)
-//{
-////    qDebug() << "MW::keyPressEvent" << event;
-////    QMainWindow::keyPressEvent(event);
+void MW::keyPressEvent(QKeyEvent *event)
+{
+
+    if(event->modifiers() & Qt::ShiftModifier) isShift = true;
+    else isShift = false;
+    qDebug() << "MW::keyPressEvent" << event << isShift;
+
+//    QMainWindow::keyPressEvent(event);
 //    if (event->key() == Qt::Key_X) {
-////        thumbView->scrollToCurrent();
+//        thumbView->scrollToCurrent();
 //        qDebug() << "keypress x event";
 //    }
-//}
+}
 
-//void MW::keyReleaseEvent(QKeyEvent *event)
-//{
-////    qDebug() << "MW::keyReleaseEvent" << event;
-////    QMainWindow::keyReleaseEvent(event);
-//}
+void MW::keyReleaseEvent(QKeyEvent *event)
+{
+
+    isShift = false;
+
+    qDebug() << "MW::keyReleaseEvent" << event << isShift;
+//    QMainWindow::keyReleaseEvent(event);
+}
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
@@ -332,6 +341,8 @@ void MW::folderSelectionChange()
                     "\n*************************************************************************";
     #endif
     }
+    qDebug() << "\n\nMW::folderSelectionChange"
+                "\n*************************************************************************";
     // Stop any threads that might be running.
     thumbCacheThread->stopThumbCache();
     imageCacheThread->stopImageCache();
@@ -614,7 +625,7 @@ folder(s) has been loaded.  This function is called from the metadataCacheThread
     qDebug() << "MW::loadThumbCache";
     #endif
     }
-    thumbCacheThread->stopThumbCache();
+//    thumbCacheThread->stopThumbCache();
     thumbCacheThread->loadThumbCache();
 }
 
@@ -1508,6 +1519,15 @@ void MW::createActions()
     helpWelcomeAction->setObjectName("helpWelcome");
     addAction(helpWelcomeAction);
     connect(helpWelcomeAction, SIGNAL(triggered()), this, SLOT(helpWelcome()));
+
+    // Testing
+
+    testMetadataAction = new QAction(tr("Test Metadata"), this);
+    testMetadataAction->setObjectName("testMetadata");
+    addAction(testMetadataAction);
+    testMetadataAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+M"));
+    connect(testMetadataAction, SIGNAL(triggered()),
+            this, SLOT(testMetadata()));
 
     // Possibly needed actions
 
@@ -3274,11 +3294,11 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-    setCentralMessage("A message to central");
+//    setCentralMessage("A message to central");
 //    qDebug() << "Horizontal scrollbar position" << thumbView->horizontalScrollBar()->value();
 //    metadata->reportMetadataAllFiles();
 
-//    metadata->readMetadata(true, thumbView->getCurrentFilename());
+    metadata->readMetadata(true, thumbView->getCurrentFilename());
 }
 
 void MW::about()
@@ -6058,9 +6078,10 @@ void MW::helpWelcome()
     centralLayout->setCurrentIndex(StartTab);
 }
 
-void MW::test()
+void MW::testMetadata()
 {
-    recoverSelection();
+    QString fPath = "D:/Pictures/Zenfolio/2009-08-28_0454-1.tif";
+    metadata->readMetadata(true, fPath);
 }
 
 // End MW

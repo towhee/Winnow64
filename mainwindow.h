@@ -54,6 +54,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
+    bool isShift;               // used when opening if shift key pressed
+
     int debugThumbHt;
 
     int copyCutCount;   // req'd?
@@ -182,8 +184,8 @@ protected:
     void moveEvent(QMoveEvent *event);
     void resizeEvent(QResizeEvent *event);
     void closeEvent(QCloseEvent *event);
-//    void keyPressEvent(QKeyEvent *event);
-//    void keyReleaseEvent(QKeyEvent *event);
+    void keyPressEvent(QKeyEvent *event);
+    void keyReleaseEvent(QKeyEvent *event);
 //    void mouseMoveEvent(QMouseEvent *event);
 //    void mousePressEvent(QMouseEvent *event);
 //    void mouseReleaseEvent(QMouseEvent *event);
@@ -335,7 +337,7 @@ private slots:
     void helpWelcome();
 
     void delayScroll();
-    void test();    // for debugging
+    void testMetadata();    // for debugging
 
     //    void cutThumbs();
 //    void copyThumbs();
@@ -515,6 +517,7 @@ private:
     QAction *helpWelcomeAction;
 
     // General
+    QAction *testMetadataAction;    // only available via shortcut key
 
     // Might need
     QAction *pasteAction;

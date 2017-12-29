@@ -1,6 +1,5 @@
 BUGS
-- not reading tifs
-- dies when quickly change folders
+- ToggleZoom not being saved correctly
 - Pick thumb not always showing one main image in loupe mode
 - Icon padding becomes 2 for no apparent reason
 PERFORMANCE
@@ -39,6 +38,9 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Not reading TIF thumbs after first file
+- Done: dies when quickly change folders
+- Done: not reading tifs
 - Done: slow reading nef thumbs (what has changed)
 - Done: zoom radio buttons not correct zoom values
 - Done: show failed folder selection in central widget as a message

@@ -167,6 +167,7 @@ public:
     bool okToReadXMP;
     bool readEssentialMetadata;
     bool readNonEssentialMetadata;
+    bool foundTifThumb;
 
 private:
     QFile file;
@@ -196,6 +197,7 @@ private:
     bool readXMP(ulong offset);
     void readIPTC(ulong offset);
     ulong readIFD(QString hdr, ulong offset);
+    bool readIRB(ulong offset);
     QList<ulong> getSubIfdOffsets(ulong subIFDaddr, int count);
 //    ulong getExifOffset(ulong offsetIfd0);      //update to use ifdDataHash
     QString getString(ulong offset, ulong length);

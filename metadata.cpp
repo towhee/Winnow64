@@ -214,6 +214,11 @@ void Metadata::initExifHash()
     exifHash[41995] = "DeviceSettingDescription";
     exifHash[41996] = "SubjectDistanceRange";
     exifHash[42016] = "ImageUniqueID";
+    exifHash[42033] = "Camera serial number";
+    exifHash[42034] = "Lens specification";
+    exifHash[42035] = "Lens make";
+    exifHash[42036] = "Lens model";
+    exifHash[42037] = "Lens serial number";
 }
 
 void Metadata::initIfdHash()
@@ -962,6 +967,66 @@ void Metadata::readIPTC(ulong offset)
     }
 }
 
+bool Metadata::readIRB(ulong offset)
+{
+/*
+Read a Image Resource Block looking for embedded thumb
+    - see https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/
+This is a recursive function, iterating through consecutive resource blocks until
+the embedded jpg preview is found (irbID == 1036)
+*/
+    {
+//    #ifdef ISDEBUG
+//    qDebug() << "Metadata::readIRB";
+//    #endif
+    }
+//    static bool foundThumb;
+
+    // Photoshop IRBs use big endian
+    long oldOrder = order;
+    order = 0x4D4D;
+
+    // check signature to make sure this is the start of an IRB
+    file.seek(offset);
+    QByteArray irbSignature("8BIM");
+    QByteArray signature = file.read(4);
+    if (signature != irbSignature) {
+        order = oldOrder;
+        return foundTifThumb;
+    }
+
+    // Get the IRB ID (we're looking for 1036 = thumb)
+    uint irbID = get2(file.read(2));
+    if (irbID == 1036) foundTifThumb = true;
+
+    // read the pascal string which we don't care about
+    uint pascalStringLength = get2(file.read(2));
+    if (pascalStringLength > 0) file.read(pascalStringLength);
+
+    // get the length of the IRB data block
+    ulong dataBlockLength = get4(file.read(4));
+    // round to even 2 bytes
+    dataBlockLength % 2 == 0 ? dataBlockLength : dataBlockLength++;
+
+    // reset order as going to return or recurse next
+    order = oldOrder;
+
+    // found the thumb, collect offsets and return
+    if (foundTifThumb) {
+        offsetThumbJPG = file.pos() + 28;
+        lengthThumbJPG = dataBlockLength - 28;
+        return foundTifThumb;
+    }
+
+    // did not find the thumb, try again
+    file.read(dataBlockLength);
+    offset = file.pos();
+    readIRB(offset);
+
+    // make the compiler happy
+    return false;
+}
+
 ulong Metadata::readIFD(QString hdr, ulong offset)
 {
     {
@@ -976,6 +1041,8 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
 
     file.seek(offset);
     int tags = get2(file.read(2));
+
+//    qDebug() << "Number of tags =" << tags << "offset =" << offset;
 
     // iterate through IFD0, looking for the subIFD tag
     if (report) {
@@ -1723,7 +1790,7 @@ bool Metadata::formatTIF()
     ulong ifdOffset = get4(file.read(4));
     ulong nextIFDOffset = readIFD("IFD0", ifdOffset);
 
-    // pull from IFD0
+    // IFD0: *******************************************************************
 
     // IFD0: Model
     (ifdDataHash.contains(272))
@@ -1772,11 +1839,27 @@ bool Metadata::formatTIF()
 
     if (!width || !height) getDimensions(0);
 
-
     // IFD0: EXIF offset
     ulong ifdEXIFOffset = 0;
     if (ifdDataHash.contains(34665))
         ifdEXIFOffset = ifdDataHash.value(34665).tagValue;
+
+    // IFD0: Photoshop offset
+    ulong ifdPhotoshopOffset = 0;
+    if (ifdDataHash.contains(34377))
+        ifdPhotoshopOffset = ifdDataHash.value(34377).tagValue;
+
+    // IFD0: IPTC offset
+    ulong ifdIPTCOffset = 0;
+    if (ifdDataHash.contains(33723))
+        ifdIPTCOffset = ifdDataHash.value(33723).tagValue;
+
+    // IFD0: XMP offset
+    ulong ifdXMPOffset = 0;
+    if (ifdDataHash.contains(700))
+        ifdXMPOffset = ifdDataHash.value(700).tagValue;
+
+    // EXIF: *******************************************************************
 
     if (ifdEXIFOffset) readIFD("IFD Exif", ifdEXIFOffset);
 
@@ -1827,17 +1910,21 @@ bool Metadata::formatTIF()
         focalLengthNum = 0;
     }
 
-    // IFD0: IPTC offset
-    ulong ifdIPTCOffset = 0;
-    if (ifdDataHash.contains(33723))
-        ifdEXIFOffset = ifdDataHash.value(33723).tagValue;
+    // EXIF: lens model
+    (ifdDataHash.contains(42036))
+            ? lens = getString(ifdDataHash.value(42036).tagValue + startOffset,
+                                  ifdDataHash.value(42036).tagCount)
+            : lens = "";
+
+    // Photoshop: **************************************************************
+    // Get embedded JPG if available
+    foundTifThumb = false;
+    if (ifdPhotoshopOffset) readIRB(ifdPhotoshopOffset);
+
+    // IPTC: *******************************************************************
+    // Get title if available
 
     if (ifdIPTCOffset) readIPTC(ifdIPTCOffset);
-
-    // IFD0: XMP offset
-    ulong ifdXMPOffset = 0;
-    if (ifdDataHash.contains(700))
-        ifdEXIFOffset = ifdDataHash.value(700).tagValue;
 
     if (report) reportMetadata();
 
@@ -2062,6 +2149,7 @@ bool Metadata::readMetadata(bool rpt, const QString &fPath)
     }
     report = rpt;
 //    report = false;
+//    report = true;
 //    QElapsedTimer t;
 //    t.start();
     clearMetadata();
