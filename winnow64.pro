@@ -38,6 +38,11 @@ HEADERS += \
     Dialogs/zoomdlg.h \
     MacOS/macscale.h \
     MacOS/macScale_p.h
+#    exiftool/ExifTool.h \
+#    exiftool/ExifToolPipe.h \
+#    exiftool/TagInfo.h \
+#    c/wait.h \
+#    c/unistd.h
 
 SOURCES += \
     bookmarks.cpp \
@@ -102,6 +107,7 @@ DISTFILES += \
 #macx {
 #    QMAKE_MAC_SDK = macosx10.12
 #}
+
 
 #QT += macextras
 mac:LIBS += -framework ApplicationServices

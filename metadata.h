@@ -39,7 +39,7 @@ public:
     int orientation;
     ulong width;
     ulong height;
-    QString dateTime;
+    QString created;
     QString make;
     QString model;
     QString exposureTime;
@@ -57,6 +57,8 @@ public:
     QString copyright;
     QString email;
     QString url;
+    QString serialNumber;
+    ulong shutterCount;
     int year;
     int month;
     int day;
@@ -82,7 +84,7 @@ public:
     int orientation;
     ulong width;
     ulong height;
-    QString dateTime;
+    QString created;
     QString make;
     QString model;
     QString exposureTime;
@@ -100,6 +102,8 @@ public:
 //    QString xmpTitle;
     QString email;
     QString url;
+    QString serialNumber;
+    ulong shutterCount;
 
     QString err;
 
@@ -121,6 +125,8 @@ public:
         "float8"
     }  */
 
+//    void reportViaExiftool(QString fPath);
+
     void removeImage(QString &imageFileName);
     void setPick(const QString &imageFileName, bool choice);
     void clear();
@@ -140,7 +146,7 @@ public:
 
     int getImageOrientation(QString &imageFileName);
     bool getPick(const QString &imageFileName);
-    QString getDateTime(const QString &imageFileName);
+    QString getCreated(const QString &imageFileName);
     QString getModel(const QString &imageFileName);
     QString getExposureTime( const QString &imageFileName);
     float getExposureTimeNum( const QString &imageFileName);
@@ -169,12 +175,16 @@ public:
     bool readNonEssentialMetadata;
     bool foundTifThumb;
 
+    QString nikonLensCode;
+
 private:
     QFile file;
     QHash<uint, IFDData> ifdDataHash;
     QHash<uint, IFDData>::iterator ifdIter;
     QHash<ulong, QString> exifHash, ifdHash, gpsHash, segCodeHash, nikonMakerHash;
     QHash<QString, ulong> segmentHash;
+//    QHash<QByteArray, QString> nikonLensHash;
+    QHash<QString, QString> nikonLensHash;
 
     // was metadata
     QMap<QString, ImageMetadata> metaCache;
@@ -188,10 +198,13 @@ private:
     void initExifHash();
     void initIfdHash();
     void initNikonMakerHash();
+    void initNikonLensHash();
 
     uint get1(QByteArray c);
     ulong get2(QByteArray c);
+    ulong get2(long offset);
     ulong get4(QByteArray c);
+    ulong get4(long offset);
     float getReal(long offset);
     ulong find(QString s, ulong offset, ulong range);
     bool readXMP(ulong offset);
@@ -201,8 +214,11 @@ private:
     QList<ulong> getSubIfdOffsets(ulong subIFDaddr, int count);
 //    ulong getExifOffset(ulong offsetIfd0);      //update to use ifdDataHash
     QString getString(ulong offset, ulong length);
+    QByteArray getByteArray(ulong offset, ulong length);
     void getSegments(ulong offset);
     bool getDimensions(ulong jpgOffset);
+
+    QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
 
     void reportMetadata();
     void reportIfdDataHash();

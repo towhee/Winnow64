@@ -5,9 +5,10 @@
 /*
 File naming is based on building a file path consisting of:
 
-    Root Folder + Folder + File Base Name + File Sequence + File Suffix
+    Root Folder + Path to base folder + File Base Name + File Sequence + File Suffix
 
-    Root Folder: where all the images are located YYYY/YYYYMM/
+    Root Folder: where all the images are located ie e:\ or users/pictures
+    PathToBaseFolder: ie e:/YYYY/YYMM
     Folder: where current images are to be copied YYYY-MM-DD_Description
     File Base Name: YYYY-MM-DD (fileNameDatePrefix)
     File Sequence: _XXXX
@@ -34,20 +35,24 @@ CopyPickDlg::CopyPickDlg(QWidget *parent, QFileInfoList &imageList,
 
     // get year and month from the first image
     fileNameDatePrefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
-    dateTime = metadata->getDateTime(pickList.at(0).absoluteFilePath());
-    year = dateTime.left(4);
-    month = dateTime.mid(5,2);
+    created = metadata->getCreated(pickList.at(0).absoluteFilePath());
+    year = created.left(4);
+    month = created.mid(5,2);
 
-    QString rootFolder = ingestRootFolder;
-    ui->parentFolderLabel->setText(rootFolder);
-//    ui->folderLabel->setText(fileNameDatePrefix);
-    folderPath = "E:/" + year + "/" + year + month + "/" + fileNameDatePrefix;
-//    folderPath = "/users/roryhill/pictures/" + fileNameDatePrefix;
+    rootFolderPath = ingestRootFolder;
+    ui->rootFolderLabel->setText(rootFolderPath);
+
+    pathToBaseFolder = rootFolderPath + year + "/" + year + month + "/" ;
+    ui->parentFolderLabel->setText(pathToBaseFolder);
+
+    folderPath = pathToBaseFolder + "/" + fileNameDatePrefix;
+    ui->folderLabel->setText(folderPath);
+
     updateFolderPath();
-    ui->descriptionLineEdit->setFocus();
+    getSequenceStart(folderPath);
+    updateExistingSequence();
 
-    qDebug() << "\ngetSequenceStart()";
-    getSequenceStart("");
+    ui->descriptionLineEdit->setFocus();
 }
 
 CopyPickDlg::~CopyPickDlg()
@@ -58,9 +63,15 @@ CopyPickDlg::~CopyPickDlg()
 void CopyPickDlg::accept()
 {
 
-    QDir dir;
-    bool success = dir.mkdir(folderPath);
-    qDebug() << folderPath << success;
+    QDir dir(folderPath);
+    if (!dir.exists()) {
+        if(!dir.mkpath(folderPath)) {
+            QMessageBox::critical(this, tr("Error"),
+                 "The folder (" + folderPath + ") was not created.");
+            QDialog::accept();
+            return;
+        }
+    }
     ui->progressBar->setVisible(true);
     QString prefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
     for (int i=0; i < pickList.size(); ++i) {
@@ -123,22 +134,23 @@ void CopyPickDlg::on_selectParentFolderBtn_clicked()
 
 void CopyPickDlg::updateFolderPath()
 {
-    if(ui->parentFolderLabel->text().length() > 0)
-        rootFolderPath = ui->parentFolderLabel->text();
+    if(ui->rootFolderLabel->text().length() > 0)
+        rootFolderPath = ui->rootFolderLabel->text();
     else
         rootFolderPath = defaultRootFolderPath;
 
     // send to MW where it will be saved in QSettings
     emit updateIngestRootFolder(rootFolderPath);
 
+    pathToBaseFolder = rootFolderPath + "/" + year + "/" + year + month + "/" ;
+    ui->parentFolderLabel->setText(pathToBaseFolder);
+
     folderBase = fileNameDatePrefix;
     folderDescription = (ui->descriptionLineEdit->text().length() > 0)
             ? "_" + ui->descriptionLineEdit->text() : "";
 
-    if(ui->folderLabel->text().length() > 0)
-        folderPath = ui->folderLabel->text();
-    else
-        folderPath = rootFolderPath + folderBase + folderDescription;
+    folderPath = pathToBaseFolder + folderBase + folderDescription;
+    ui->folderLabel->setText(folderPath);
 
     // build filename for result group YYYY-MM-DD_XXXX.SUFFIX
 
@@ -212,4 +224,19 @@ int CopyPickDlg::getSequenceStart(const QString &path)
         qDebug() << fName << fName.indexOf(".", 0) << seq << sequence;
     }
     return sequence;
+}
+
+void CopyPickDlg::on_selectRoottFolderBtn_clicked()
+{
+    QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
+    QString rootFolderPath;
+    rootFolderPath = QFileDialog::getExistingDirectory
+        (this, tr("Choose Root Folder"), root,
+        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    if (rootFolderPath.length() > 0) {
+        ui->rootFolderLabel->setText(rootFolderPath);
+    }
+    updateFolderPath();
+    updateExistingSequence();
+
 }

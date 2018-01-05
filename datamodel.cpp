@@ -203,7 +203,7 @@ bool DataModel::addFiles()
         setData(index(row, G::TypeColumn), s);
         setData(index(row, G::SizeColumn), fileInfo.size());
         setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        setData(index(row, G::CreatedColumn), fileInfo.created());
+//        setData(index(row, G::CreatedColumn), fileInfo.created());
         setData(index(row, G::ModifiedColumn), fileInfo.lastModified());
         setData(index(row, G::PickedColumn), "false");
         setData(index(row, G::LabelColumn), "");
@@ -255,13 +255,14 @@ which is created in MW, and in InfoView.
 
         uint width = metadata->getWidth(fPath);
         uint height = metadata->getHeight(fPath);
+        QString created = metadata->getCreated(fPath);
         QString mp = QString::number((width * height) / 1000000.0, 'f', 2);
         QString dim = QString::number(width) + "x" + QString::number(height);
-        QString aperture = metadata->getAperture(fPath);
+//        QString aperture = metadata->getAperture(fPath);
         float apertureNum = metadata->getApertureNum(fPath);
         QString ss = metadata->getExposureTime(fPath);
         float ssNum = metadata->getExposureTimeNum(fPath);
-        QString iso = metadata->getISO(fPath);
+//        QString iso = metadata->getISO(fPath);
         int isoNum = metadata->getISONum(fPath);
         QString model = metadata->getModel(fPath);
         modelMap[model] = model;
@@ -278,6 +279,7 @@ which is created in MW, and in InfoView.
         QString email = metadata->getEmail(fPath);
         QString url = metadata->getUrl(fPath);
 
+        setData(index(row, G::CreatedColumn), created);
         setData(index(row, G::MegaPixelsColumn), mp);
         setData(index(row, G::DimensionsColumn), dim);
         setData(index(row, G::ApertureColumn), apertureNum);

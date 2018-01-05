@@ -27,6 +27,8 @@ private slots:
     void updateFolderPath();
     void on_descriptionLineEdit_textChanged(const QString &arg1);
 
+    void on_selectRoottFolderBtn_clicked();
+
 signals:
     void updateIngestRootFolder(QString rootFolderPath);
 
@@ -44,13 +46,14 @@ private:
     QString defaultRootFolderPath;
 
     QString rootFolderPath;
+    QString pathToBaseFolder;
     QString folderBase;
     QString folderDescription;
     QString fileNameDatePrefix;
     QString fileNameSequence;
     QString fileSuffix;
 
-    QString dateTime;
+    QString created;
     QString year;
     QString month;
 

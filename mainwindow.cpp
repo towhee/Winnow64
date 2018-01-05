@@ -3299,6 +3299,9 @@ void MW::reportMetadata()
 //    qDebug() << "Horizontal scrollbar position" << thumbView->horizontalScrollBar()->value();
 //    metadata->reportMetadataAllFiles();
 
+//    metadata->reportViaExiftool(thumbView->getCurrentFilename());
+//    metadata->reportMetadataExiv2(thumbView->getCurrentFilename());
+
     metadata->readMetadata(true, thumbView->getCurrentFilename());
 }
 
@@ -6086,7 +6089,8 @@ void MW::testMetadata()
 {
     qDebug() << "MW::testMetadata";
 //    QString fPath = "D:/Pictures/_ThumbTest/test1.jpg";
-    QString fPath = "D:/Pictures/_TIFF/2017-01-25_0911.tif";
+//    QString fPath = "D:/Pictures/_TIFF/2017-01-25_0911.tif";
+    QString fPath = "D:/Pictures/_ThumbTest/2015-05-03_0012.NEF";
 //    QString fPath = "D:/Pictures/Zenfolio/2009-08-28_0454-1.tif";
     metadata->readMetadata(true, fPath);
 }

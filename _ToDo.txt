@@ -1,8 +1,9 @@
 BUGS
+- Thumb creation bogs down in some folders under stress testing
 - Info status not reporting correctly while thumbs loading and zoom
 - Gets stuck in F mode where cannot resize
 - Pick thumb not always showing one main image in loupe mode
-- Icon padding becomes 2 for no apparent reason
+- Icon padding becomes 2 for no apparent reason periodically
 PERFORMANCE
 - Try starting thumb cache 200ms after metadataCache starts
 - Separate thread to load XMP data after thumbnails loaded
@@ -14,6 +15,7 @@ ENHANCEMENTS
 - Read/write XMP sidecars
 - Open with ...
 - Drag and drop a selection of thumbs (only first currently dragged)
+- Drag and drop image onto Winnow - show image and load folder
 - Add current folder to bookmarks
 - Combine raw+jpg option
 - Get actual monitor resolution for actualDevicePixelRatio calculation
@@ -39,6 +41,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Decrypted nikon lens info
 - Done: No title metadata from TIF
 - Done: Not reading lens model in JPG files
 - Done: ToggleZoom not being saved correctly

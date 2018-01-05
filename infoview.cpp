@@ -179,7 +179,7 @@ status information, such as number of items picked or current item selected.
     ok->setData(ok->index(FileNameRow, 0, fileInfoIdx), "File name");
     ok->setData(ok->index(LocationRow, 0, fileInfoIdx), "Location");
     ok->setData(ok->index(SizeRow, 0, fileInfoIdx), "Size");
-    ok->setData(ok->index(DateTimeRow, 0, fileInfoIdx), "Created");
+    ok->setData(ok->index(CreatedRow, 0, fileInfoIdx), "Created");
     ok->setData(ok->index(ModifiedRow, 0, fileInfoIdx), "Modified");
     ok->setData(ok->index(DimensionsRow, 0, fileInfoIdx), "Dimensions");
     ok->setData(ok->index(MegaPixelsRow, 0, fileInfoIdx), "Megapixels");
@@ -288,15 +288,16 @@ void InfoView::updateInfo(const QString &fPath)
 
     uint width = metadata->getWidth(fPath);
     uint height = metadata->getHeight(fPath);
-    QString created = imageInfo.created().toString("yyyy-MM-dd hh:mm:ss.z");
-    QString modified = imageInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss.z");
+//    QString created = imageInfo.created().toString("yyyy-MM-dd hh:mm:ss.z");
+//    QString modified = imageInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss.z");
+    QString modified = imageInfo.lastModified().toString("yyyy:MM:dd hh:mm:ss");
 
     // update items
     ok->setData(ok->index(FolderRow, 1, fileInfoIdx), imageInfo.dir().dirName());
     ok->setData(ok->index(FileNameRow, 1, fileInfoIdx), imageInfo.fileName());
     ok->setData(ok->index(LocationRow, 1, fileInfoIdx), imageInfo.path());
     ok->setData(ok->index(SizeRow, 1, fileInfoIdx), QString::number(imageInfo.size() / 1024000.0, 'f', 2) + " MB");
-    ok->setData(ok->index(DateTimeRow, 1, fileInfoIdx), created);
+    ok->setData(ok->index(CreatedRow, 1, fileInfoIdx), metadata->getCreated(fPath));
     ok->setData(ok->index(ModifiedRow, 1, fileInfoIdx), modified);
     ok->setData(ok->index(DimensionsRow, 1, fileInfoIdx), QString::number(width) + "x" + QString::number(height));
     ok->setData(ok->index(MegaPixelsRow, 1, fileInfoIdx), QString::number((width * height) / 1000000.0, 'f', 1));
