@@ -125,6 +125,7 @@ public:
     int lastPrefPage;
     int displayHorizontalPixels;
     int displayVerticalPixels;
+    bool autoIngestFolderPath;
 
     // preferences: files
     bool rememberLastDir;
@@ -265,7 +266,7 @@ private slots:
     void setMaxRecentFolders(int prefMaxRecentFolders);
     void setTrackpadScroll(bool trackpadScroll);
     void setDisplayResolution(int horizontalPixels, int verticalPixels);
-    void setIngestRootFolder(QString rootFolder);
+    void setIngestRootFolder(QString rootFolder, bool isAuto);
     void setSlideShowParameters(int delay, bool isRandom);
     void setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
                             bool isMetadata, bool isThumbs, bool isStatusBar);

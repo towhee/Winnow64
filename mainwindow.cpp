@@ -3637,7 +3637,7 @@ void MW::setActualDevicePixelRation()
                  */
 }
 
-void MW::setIngestRootFolder(QString rootFolder)
+void MW::setIngestRootFolder(QString rootFolder, bool isAuto)
 {
     {
     #ifdef ISDEBUG
@@ -3645,6 +3645,7 @@ void MW::setIngestRootFolder(QString rootFolder)
     #endif
     }
     ingestRootFolder = rootFolder;
+    autoIngestFolderPath = isAuto;
 }
 
 void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
@@ -3970,6 +3971,7 @@ re-established when the application is re-opened.
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
     setting->setValue("displayHorizontalPixels", displayHorizontalPixels);
     setting->setValue("displayVerticalPixels", displayVerticalPixels);
+    setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
     // files
 //    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
     setting->setValue("rememberLastDir", rememberLastDir);
@@ -4190,6 +4192,7 @@ Preferences are located in the prefdlg class and updated here.
         imageView->useWheelToScroll = true;
         imageView->toggleZoom = 1.0;
         compareImages->toggleZoom = 1.0;
+        autoIngestFolderPath = false;
 
       // slideshow
         slideShowDelay = 5;
@@ -4218,6 +4221,7 @@ Preferences are located in the prefdlg class and updated here.
     compareImages->toggleZoom = tempZoom;
     displayHorizontalPixels = setting->value("displayHorizontalPixels").toInt();
     displayVerticalPixels = setting->value("displayVerticalPixels").toInt();
+    autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
 
     // files
 //    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();
@@ -5381,9 +5385,10 @@ void MW::copyPicks()
     }
     if (thumbView->isPick()) {
         QFileInfoList imageList = thumbView->getPicks();
-        copyPickDlg = new CopyPickDlg(this, imageList, metadata, ingestRootFolder);
-        connect(copyPickDlg, SIGNAL(updateIngestRootFolder(QString)),
-                this, SLOT(setIngestRootFolder(QString)));
+        copyPickDlg = new CopyPickDlg(this, imageList, metadata,
+                                      ingestRootFolder, autoIngestFolderPath);
+        connect(copyPickDlg, SIGNAL(updateIngestParameters(QString,bool)),
+                this, SLOT(setIngestRootFolder(QString,bool)));
         copyPickDlg->exec();
         delete copyPickDlg;
     }
