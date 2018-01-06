@@ -18,7 +18,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     /* Note ISDEBUG is in globals.h
        Deactivate debug reporting by commenting ISDEBUG  */
 
-    qDebug() << "isShift =" << isShift;
+//    qDebug() << "isShift =" << isShift;
 
     // use this to show thread activity
     G::isThreadTrackingOn = false;
@@ -47,6 +47,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     recentFolders = new QStringList;
     popUp = new PopUp;
     hasGridBeenActivated = true;
+    isDragDrop = false;
+    setAcceptDrops(true);
 
     // platform specific settings
     setupPlatform();
@@ -284,6 +286,34 @@ bool MW::event(QEvent *event)
         }
     }
     return QMainWindow::event(event);
+}
+
+// DRAG AND DROP
+
+void MW::dragEnterEvent(QDragEnterEvent *event)
+{
+    event->acceptProposedAction();
+//    emit changed(event->mimeData());
+}
+
+void MW::dropEvent(QDropEvent *event)
+{
+    const QMimeData* mimeData = event->mimeData();
+
+    // check for our needed mime type, here a file or a list of files
+    qDebug() << "MW::dropEvent"
+             << "mimeData->hasUrls()" << mimeData->hasUrls()
+             << "mimeData->hasImage()" << mimeData->hasImage();
+    if (mimeData->hasUrls())
+    {
+        dragDropFilePath = mimeData->urls().at(0).toLocalFile();
+        QFileInfo fInfo = QFileInfo(dragDropFilePath);
+        dragDropFolderPath = fInfo.absoluteDir().absolutePath();
+        qDebug() << "dragDropFilePath" << dragDropFilePath
+                 << "dragDropFolderPath" << dragDropFolderPath;
+        isDragDrop = true;
+        folderSelectionChange();
+    }
 }
 
 // Do we need this?  rgh
@@ -724,11 +754,16 @@ QString MW::getSelectedPath()
     qDebug() << "MW::getSelectedPath";
     #endif
     }
+    if (isDragDrop) {
+        isDragDrop = false;
+        return dragDropFolderPath;
+    }
     if (fsTree->selectionModel()->selectedRows().size() == 0) return "";
     QModelIndex idx = fsTree->selectionModel()->selectedRows().at(0);
     if (!idx.isValid()) return "";
     QString path = idx.data(QFileSystemModel::FilePathRole).toString();
     QFileInfo dirInfo = QFileInfo(path);
+    qDebug() << "MW::getSelectedPath::" << dirInfo.absoluteFilePath();
     return dirInfo.absoluteFilePath();
 }
 

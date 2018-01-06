@@ -41,6 +41,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Improve ingest layout, add manual option
 - Done: Decrypted nikon lens info
 - Done: No title metadata from TIF
 - Done: Not reading lens model in JPG files

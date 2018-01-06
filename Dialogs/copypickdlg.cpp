@@ -49,14 +49,10 @@ CopyPickDlg::CopyPickDlg(QWidget *parent, QFileInfoList &imageList,
     pathToBaseFolder = rootFolderPath + year + "/" + year + month + "/" ;
     ui->parentFolderLabel->setText(pathToBaseFolder);
 
-//    folderPath = pathToBaseFolder + fileNameDatePrefix;
-//    ui->folderLabel->setText(folderPath);
-
     updateFolderPath();
     getSequenceStart(folderPath);
     updateExistingSequence();
 
-//    ui->line->setStyleSheet("QFrame{background:gray;}");
     if (isAuto) {
         ui->descriptionLineEdit->setFocus();
         ui->autoRadio->setChecked(true);
@@ -75,9 +71,6 @@ CopyPickDlg::~CopyPickDlg()
 
 void CopyPickDlg::accept()
 {
-//    qDebug() << folderPath;
-//    return;
-
     QDir dir(folderPath);
     if (!dir.exists()) {
         if(!dir.mkpath(folderPath)) {
@@ -199,11 +192,8 @@ void CopyPickDlg::buildFileNameSequence()
     QString fileName2 = "/" + prefix + sequence + suffix;
     sequence = "_" + QString("%1").arg(startNum + fileCount - 1, 4 , 10, QChar('0'));
     QString fileNameN = "/" + prefix + sequence + suffix;
-//    ui->folderPathLabel->setStyleSheet("QLabel{color:rgb(180,180,120);}");
     ui->folderPathLabel->setText(folderPath + fileName1);
     ui->folderPathLabel->setToolTip(folderPath + fileName1);
-//    ui->folderPathLabel_2->setStyleSheet("QLabel{color:rgb(180,180,120);}");
-//    ui->folderPathLabel_4->setStyleSheet("QLabel{color:rgb(180,180,120);}");
     if(fileCount > 1) {
         ui->folderPathLabel_2->setText(folderPath + fileName2);
         ui->folderPathLabel_2->setToolTip(folderPath + fileName2);
@@ -216,12 +206,10 @@ void CopyPickDlg::buildFileNameSequence()
         ui->folderPathLabel_4->setText(folderPath + fileName1);
         ui->folderPathLabel_4->setToolTip(folderPath + fileName1);
     }
-//    ui->folderLabel->setText(fileNameDatePrefix + folderDescription);
 }
 
 void CopyPickDlg::on_descriptionLineEdit_textChanged(const QString& /*arg1*/)
 {
-//    arg1.isEmpty();             // suppress compiler warning
     updateFolderPath();
     ui->autoRadio->setChecked(true);
     updateStyleOfFolderLabels();
@@ -275,27 +263,6 @@ int CopyPickDlg::getSequenceStart(const QString &path)
     return sequence;
 }
 
-
-//void CopyPickDlg::on_autoRadio_clicked()
-//{
-////    if (ui->folderLabel->text().length() > 0) {
-////        updateFolderPath();
-////        updateStyleOfFolderLabels();
-////        getSequenceStart(folderPath);
-////        updateExistingSequence();
-////    }
-//}
-
-//void CopyPickDlg::on_manualRadio_clicked()
-//{
-////    if (ui->manualFolderLabel->text().length() > 0) {
-////        folderPath = ui->manualFolderLabel->text();
-////        buildFileNameSequence();
-////        updateExistingSequence();
-////        updateStyleOfFolderLabels();
-////    }
-//}
-
 void CopyPickDlg::updateStyleOfFolderLabels()
 {
     if (ui->autoRadio->isChecked()) {
@@ -307,11 +274,6 @@ void CopyPickDlg::updateStyleOfFolderLabels()
         ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(180,180,120);}");
     }
 }
-
-//void CopyPickDlg::on_descriptionLineEdit_selectionChanged()
-//{
-//    updateStyleOfFolderLabels();
-//}
 
 void CopyPickDlg::on_autoRadio_toggled(bool checked)
 {

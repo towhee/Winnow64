@@ -93,6 +93,8 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     loadFullSizeTimer->setInterval(500);
     connect(loadFullSizeTimer, SIGNAL(timeout()), this, SLOT(upgradeToFullSize()));
 
+    setAcceptDrops(true);
+
 //    mouseZoomFit = true;
     isMouseDrag = false;
     isLeftMouseBtnPressed = false;
@@ -987,6 +989,37 @@ void ImageView::enterEvent(QEvent *event)
         thumbView->setCurrentIndex(imageIndex);
     }
 }
+
+// DRAG AND DROP
+
+//void ImageView::dragEnterEvent(QDragEnterEvent *event)
+//{
+//    event->acceptProposedAction();
+////    emit changed(event->mimeData());
+//}
+
+//void ImageView::dropEvent(QDropEvent *event)
+//{
+//    const QMimeData* mimeData = event->mimeData();
+
+//    // check for our needed mime type, here a file or a list of files
+//    qDebug() << "ImageView::dropEvent"
+//             << "mimeData->hasUrls()" << mimeData->hasUrls()
+//             << "mimeData->hasImage()" << mimeData->hasImage();
+////    if (mimeData->hasImage())
+////    if (mimeData->hasUrls())
+////    {
+////      QStringList pathList;
+////      QList<QUrl> urlList = mimeData->urls();
+////      // extract the local paths of the files
+////      for (int i = 0; i < urlList.size(); +i)
+////      {
+////        pathList.append(urlList.at(i).toLocalFile());
+////      }
+////      qDebug() << pathList;
+////    }
+
+//}
 
 // COPY AND PASTE
 

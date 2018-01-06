@@ -71,6 +71,9 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event);
     void enterEvent(QEvent *event);
     void paintEvent(QPaintEvent *event);
+//    void dropEvent(QDropEvent *event);
+//    void dragEnterEvent(QDragEnterEvent *event);
+
 
 private:
     QWidget *mainWindow;
