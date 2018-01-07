@@ -54,6 +54,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
+    QString version = "0.901";
+
     bool isShift;               // used when opening if shift key pressed
 
     int debugThumbHt;

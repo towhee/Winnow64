@@ -3376,7 +3376,7 @@ void MW::about()
     qDebug() << "MW::about";
     #endif
     }
-    QString aboutString = "<h2>Winnow v1.0</h2>"
+    QString aboutString = "<h2>Winnow version " + version + "</h2>"
         + tr("<p>Image viewer and ingester</p>")
         + "Qt v" + QT_VERSION_STR
         + "<p></p>"
