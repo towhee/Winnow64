@@ -77,6 +77,7 @@ void MetadataCache::run()
     QElapsedTimer t;
     t.start();
 
+    qDebug() << "MetadataCache::run   Started";
     emit updateIsRunning(true);
     QString fPath;
     int thumbCacheThreshold = 20;
@@ -103,12 +104,14 @@ void MetadataCache::run()
             emit loadThumbCache();
         }
     }
-    qDebug() << "Total elapsed time to read metadata =" << t.elapsed() << "ms";
+    qDebug() << "MetadataCache::run   Completed"
+             << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
 
     /* after read metadata okay to cache thumbs and images, where the target
     cache needs to know how big each image is (width, height) and the offset
     to embedded jpgs */
     if (totRows < thumbCacheThreshold) emit loadThumbCache();
+
     emit loadImageCache();
 
     // update status in statusbar

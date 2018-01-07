@@ -82,6 +82,9 @@ void ThumbCache::run()
     #endif
     }
     qDebug() << "ThumbCache::run   abort =" << abort;
+    QElapsedTimer t;
+    t.start();
+
     emit updateIsRunning(true);
 
     QImageReader thumbReader;
@@ -278,6 +281,9 @@ void ThumbCache::run()
 //            return;
 //        }
     }
+    qDebug() << "ThumbCache::run   Completed"
+             << "Total elapsed time to cache thumbs =" << t.elapsed() << "ms";
+
     emit updateIsRunning(false);
     emit updateStatus(true, "All thumbs cached");
     refreshThumbs();

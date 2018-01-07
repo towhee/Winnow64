@@ -109,9 +109,10 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     }
     this->dm = dm;
 
-    // this works because ThumbView is a friend class of MW
+    // this works because ThumbView is a friend class of MW.  It is used in the
+    // event filter to access the thumbDock
     mw = qobject_cast<MW*>(parent);
-//    qDebug() << "mw->maxRecentFolders" << mw->maxRecentFolders;
+
     pickFilter = false;
 
     setViewMode(QListView::IconMode);
@@ -645,13 +646,10 @@ void ThumbView::selectThumb(QString &fName)
     qDebug() << "ThumbView::selectThumb(filename)";
     #endif
     }
-    QModelIndexList idxList = dm->match(dm->index(0, 0), G::FileNameRole, fName);
+    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::FileNameRole, fName);
     QModelIndex idx = idxList[0];
-//    thumbViewDelegate->currentIndex = idx;
-//    QItemSelection selection(idx, idx);
-//    thumbViewSelection->select(selection, QItemSelectionModel::Select);
-    qDebug() << "scrollto: ThumbView::selectThumb(filename)" << fName;
-    if (idx.isValid()) scrollTo(idx, ScrollHint::PositionAtCenter);
+    qDebug() << "selectThumb  idx.row()" << idx.row();
+    if(idx.isValid()) selectThumb(idx);
 }
 
 void ThumbView::selectNext()
@@ -925,7 +923,7 @@ thumbDock height.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::thumbsFitTopOrBottom";
+    qDebug() << "ThumbView::thumbsFitTopOrBottom";
     #endif
     }
 //    qDebug() << "MW::thumbsFitTopOrBottom   isFloating ="

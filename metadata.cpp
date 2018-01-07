@@ -1611,8 +1611,8 @@ to the first IPTC data block so we can skip the search req'd if it was JPG.
         uint dataLength = get2(file.read(2));
         if (recordNumber == 2 && tag == 5) {
             title = file.read(dataLength);
-            qDebug() << "IPTC title length =" << dataLength
-                     << "title =" << title;
+//            qDebug() << "IPTC title length =" << dataLength
+//                     << "title =" << title;
             foundTitle = true;
         }
         else file.seek(file.pos() + dataLength);

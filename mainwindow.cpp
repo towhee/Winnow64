@@ -19,6 +19,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
        Deactivate debug reporting by commenting ISDEBUG  */
 
 //    qDebug() << "isShift =" << isShift;
+    isShift = false;
 
     // use this to show thread activity
     G::isThreadTrackingOn = false;
@@ -308,7 +309,13 @@ void MW::dropEvent(QDropEvent *event)
     {
         dragDropFilePath = mimeData->urls().at(0).toLocalFile();
         QFileInfo fInfo = QFileInfo(dragDropFilePath);
-        dragDropFolderPath = fInfo.absoluteDir().absolutePath();
+        if (fInfo.isDir()) {
+            dragDropFolderPath = fInfo.absoluteFilePath();
+            dragDropFilePath = "";
+        }
+        else {
+            dragDropFolderPath = fInfo.absoluteDir().absolutePath();
+        }
         qDebug() << "dragDropFilePath" << dragDropFilePath
                  << "dragDropFolderPath" << dragDropFolderPath;
         isDragDrop = true;
@@ -429,11 +436,9 @@ void MW::folderSelectionChange()
     if (!isInitializing || !rememberLastDir) {
         dirPath = getSelectedPath();
     }
-    bookmarks->select(dirPath);
+    qDebug() << "MW::folderSelectionChange  dirPath =" << dirPath;
 
-//    qDebug () << "*************************************************************"
-//              << dirPath
-//              << "*************************************************************";
+    bookmarks->select(dirPath);
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(dirPath, true, false)) {
@@ -469,6 +474,8 @@ void MW::folderSelectionChange()
 //    qDebug() << "thumbCacheThread->isRunning" << thumbCacheThread->isRunning();
 //    qDebug() << "imageCacheThread->isRunning" << imageCacheThread->isRunning();
 
+    qDebug() << "MW::folderSelectionChange  load datamodel for" << currentViewDir;
+
     /* Need to gather directory file info first (except icon/thumb) which is
     loaded by loadThumbCache.  If no images in new folder then cleanup and exit.
     MW::fileSelectionChange triggered by DataModel->load         */
@@ -481,13 +488,22 @@ void MW::folderSelectionChange()
         imageView->emptyFolder();
         cacheLabel->setVisible(false);
         isInitializing = false;
+        isDragDrop = false;
         return;
     }
 
     // made it this far, folder must have eligible images and good-to-go
     isCurrentFolderOkay = true;
 
-    thumbView->selectThumb(0);
+    qDebug() << "MW::folderSelectionChange  thumbView->selectThumb(7/0)";
+    if (isDragDrop && dragDropFilePath.length() > 0) {
+//        thumbView->selectThumb(7);
+        thumbView->selectThumb(dragDropFilePath);
+        isDragDrop = false;
+    }
+    else {
+        thumbView->selectThumb(0);
+    }
     thumbView->sortThumbs(1, false);
 
     // no ratings or label color classes set yet so hide classificationLabel
@@ -495,16 +511,19 @@ void MW::folderSelectionChange()
 
      /* Must load metadata first, as it contains the file offsets and lengths
      for the thumbnail and full size embedded jpgs and the image width and
-     height, req'd in imageCache to manage cache max size. Triggers
-     loadThumbCache and loadImageCache when finished metadata cache. The thumb
-     cache includes icons (thumbnails) for all the images in the folder. The
-     image cache holds as many full size images in memory as possible. */
+     height, req'd in imageCache to manage cache max size. The metadataCaching
+     thread triggers loadThumbCache and loadImageCache when finished metadata
+     cache. The thumb cache includes icons (thumbnails) for all the images in
+     the folder. The image cache holds as many full size images in memory as
+     allocated. */
+
      updateStatus(false, "Collecting metadata for all images in folder(s)");
      loadMetadataCache();
 
      // format pickMemSize as bytes, KB, MB or GB
      pickMemSize = formatMemoryReqd(memoryReqdForPicks());
      updateStatus(true);
+     qDebug() << "\n\nMW::folderSelectionChange   End of function";
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
@@ -518,13 +537,13 @@ folderSelectionChange since a new one will be build.
 
 It has proven quite difficult to sync the thumbView, tableView and gridView,
 keeping the currentIndex in the center position (scrolling). The issue is
-timing as it can take the scrollbars a while to finish painting and there inn't
+timing as it can take the scrollbars a while to finish painting and there isn't
 an event to notify the view is ready for action. One to many scrollbar paint
 events are fired, and the scrollbar->maximum() value is tested against a
-calculated maximum to determin when the last paint event has fired. The
+calculated maximum to determine when the last paint event has fired. The
 scrollToCurrent function is called. It has also been necessary to write custom
 scrollbar functions because the scrollTo(idx, positionAtCenter) does not always
-work. Finally, when QAbstractItemView acceptes a mouse press it adds a 100ms
+work. Finally, when QAbstractItemView accepts a mouse press it adds a 100ms
 delay to avoid double clicks but this plays havoc with the scrolling, so a flag
 is used to track which actions are triggering changes in the datamodel index.
 If it is a mouse press then a singeShot timer in invoked to delay the scrolling
@@ -540,12 +559,19 @@ so scrollTo and delegate use of the current index must check the row.
     #endif
     }
 
+     qDebug() << "MW::fileSelectionChange   Start  CurrentIndex =" << current;
+
     // if starting program, set first image to display
 //    if (previous.row() == -1) thumbView->selectThumb(0);
     if (current.row() == -1) {
         thumbView->selectThumb(0);
         return;
     }
+
+//    if (isDragDrop && dragDropFilePath.length() > 0) {
+//        thumbView->selectThumb(dragDropFilePath);
+//        isDragDrop = false;
+//    }
 
     // user clicks outside thumb but inside treeView dock
     QModelIndexList selected = selectionModel->selectedIndexes();
@@ -597,7 +623,7 @@ so scrollTo and delegate use of the current index must check the row.
 
     // the file path is used as an index in ImageView and Metadata
     QString fPath = dm->sf->index(currentRow, 0).data(G::FileNameRole).toString();
-    qDebug() << fPath;
+    qDebug() << "MW::fileSelectionChange" << fPath;
 
     // update the matadata panel
     infoView->updateInfo(fPath);
@@ -632,6 +658,8 @@ so scrollTo and delegate use of the current index must check the row.
         }
         if(thumbDock->isFloating()) thumbView->setWrapping(true);
     }
+    qDebug() << "MW::fileSelectionChange   End of function";
+
 }
 
 void MW::loadMetadataCache()
@@ -754,16 +782,17 @@ QString MW::getSelectedPath()
     qDebug() << "MW::getSelectedPath";
     #endif
     }
-    if (isDragDrop) {
-        isDragDrop = false;
-        return dragDropFolderPath;
-    }
+    qDebug() << "MW::getSelectedPath";
+
+    if (isDragDrop)  return dragDropFolderPath;
+
     if (fsTree->selectionModel()->selectedRows().size() == 0) return "";
+
     QModelIndex idx = fsTree->selectionModel()->selectedRows().at(0);
     if (!idx.isValid()) return "";
+
     QString path = idx.data(QFileSystemModel::FilePathRole).toString();
     QFileInfo dirInfo = QFileInfo(path);
-    qDebug() << "MW::getSelectedPath::" << dirInfo.absoluteFilePath();
     return dirInfo.absoluteFilePath();
 }
 
@@ -890,7 +919,7 @@ void MW::createActions()
     runDropletAction->setObjectName("runDroplet");
     runDropletAction->setShortcut(QKeySequence("A"));
     addAction(runDropletAction);
-    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(test()));
+//    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(test()));
 //    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(reportState()));
 //    connect(runDropletAction, SIGNAL(triggered()), this, SLOT(runDroplet()));
 

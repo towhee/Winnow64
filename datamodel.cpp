@@ -142,9 +142,10 @@ bool DataModel::addFiles()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::addFiles";
+    qDebug() << "DataModel::addFiles";
     #endif
     }
+    qDebug() << "DataModel::addFiles    Started";
     QElapsedTimer t;
     t.start();
 
@@ -237,6 +238,8 @@ which is created in MW, and in InfoView.
     qDebug() << "DataModel::addMetadataToModel";
     #endif
     }
+    qDebug() << "DataModel::addMetadataToModel    Started";
+
     QElapsedTimer t;
     t.start();
 
@@ -305,7 +308,8 @@ which is created in MW, and in InfoView.
     filters->addCategoryFromData(titleMap, filters->titles);
     filters->addCategoryFromData(creatorMap, filters->creators);
 
-//    qDebug() << "add metadata elapsed time =" << t.restart();
+    qDebug() << "DataModel::addMetadataToModel    Completed"
+             << " elapsed time =" << t.restart() << "ms";
 
 }
 
