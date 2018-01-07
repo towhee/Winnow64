@@ -41,6 +41,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Add more raw file formats - Sony
 - Done: Improve ingest layout, add manual option
 - Done: Decrypted nikon lens info
 - Done: No title metadata from TIF

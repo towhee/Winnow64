@@ -14,6 +14,7 @@ Metadata::Metadata()
     initExifHash();
     initIfdHash();
     initNikonMakerHash();
+    initSonyMakerHash();
     initNikonLensHash();
     initSupportedFiles();
     report = false;
@@ -46,6 +47,27 @@ TIF data types:
     11      single float
     12      double float
 
+Source:  D:\My Projects\Winnow Project\IFD.xlsx in status tab
+
+Item             :	arw	cr2	jpg	nef	orf	sr2	tif
+Created          :			x	x
+Modified         :			x
+Dimensions       :			x	x
+Aperture         :			x	x
+Shutterspeed     :			x	x
+ISO              :			x	x
+Model            :			x	x
+Lens             :			x	x
+Focal length     :			x	x
+Camera SN        :				x
+Lens SN          :				x
+Shutter count    :				x
+Title            :			x
+Copyright        :			x
+Email            :			x
+Url              :			x
+
+
 */
 
 void Metadata::initSupportedFiles()
@@ -57,17 +79,17 @@ void Metadata::initSupportedFiles()
     }
     // add raw file types here as they are supported
 //    rawFormats << "arw" << "cr2" << "nef" << "orf";
-    rawFormats << "cr2" << "nef" << "orf";
+    rawFormats << "arw" << "cr2" << "nef" << "orf" << "sr2";
 
 //    supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
 //    "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
 //    "orf" << "pbm" << "pgm" << "png" << "ppm" << "svg" << "svgz" << "tga" <<
 //    "wbmp" << "webp" << "xbm" << "xpm";
 
-    supportedFormats << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
+    supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
     "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
-    "orf" << "pbm" << "pgm" << "png" << "ppm" << "svg" << "svgz" << "tga" <<
-    "tif" << "wbmp" << "webp" << "xbm" << "xpm";
+    "orf" << "pbm" << "pgm" << "png" << "ppm" << "sr2" << "svg" << "svgz" <<
+    "tga" << "tif" << "wbmp" << "webp" << "xbm" << "xpm";
 }
 
 void Metadata::initSegCodeHash()
@@ -470,6 +492,63 @@ void Metadata::initIfdHash()
     ifdHash[50779] = "CalibrationIlluminant2";
     ifdHash[50780] = "BestQualityScale";
     ifdHash[50784] = "Alias Layer Metadata";
+}
+
+void Metadata::initSonyMakerHash()
+{
+    sonyMakerHash[258] = "Image quality";
+    sonyMakerHash[260] = "Flash exposure compensation in EV";
+    sonyMakerHash[261] = "Teleconverter Model";
+    sonyMakerHash[274] = "White Balance Fine Tune Value";
+    sonyMakerHash[276] = "Camera Settings";
+    sonyMakerHash[277] = "White balance";
+    sonyMakerHash[278] = "Unknown";
+    sonyMakerHash[3584] = "PrintIM information";
+    sonyMakerHash[4096] = "Multi Burst Mode";
+    sonyMakerHash[4097] = "Multi Burst Image Width";
+    sonyMakerHash[4098] = "Multi Burst Image Height";
+    sonyMakerHash[4099] = "Panorama";
+    sonyMakerHash[8192] = "Unknown";
+    sonyMakerHash[8193] = "JPEG preview image";
+    sonyMakerHash[8194] = "Unknown";
+    sonyMakerHash[8195] = "Unknown";
+    sonyMakerHash[8196] = "Contrast";
+    sonyMakerHash[8197] = "Saturation";
+    sonyMakerHash[8198] = "Unknown";
+    sonyMakerHash[8199] = "Unknown";
+    sonyMakerHash[8200] = "Unknown";
+    sonyMakerHash[8201] = "Unknown";
+    sonyMakerHash[8202] = "High Definition Range Mode";
+    sonyMakerHash[8203] = "Multi Frame Noise Reduction";
+    sonyMakerHash[12288] = "Shot Information IFD";
+    sonyMakerHash[45056] = "File Format";
+    sonyMakerHash[45057] = "Sony Model ID";
+    sonyMakerHash[45088] = "Color Reproduction";
+    sonyMakerHash[45089] = "Color Temperature";
+    sonyMakerHash[45090] = "Color Compensation Filter";
+    sonyMakerHash[45091] = "Scene Mode";
+    sonyMakerHash[45092] = "Zone Matching";
+    sonyMakerHash[45093] = "Dynamic Range Optimizer";
+    sonyMakerHash[45094] = "Image stabilization";
+    sonyMakerHash[45095] = "Lens identifier";
+    sonyMakerHash[45096] = "Minolta MakerNote";
+    sonyMakerHash[45097] = "Color Mode";
+    sonyMakerHash[45099] = "Full Image Size";
+    sonyMakerHash[45100] = "Preview image size";
+    sonyMakerHash[45120] = "Macro";
+    sonyMakerHash[45121] = "Exposure Mode";
+    sonyMakerHash[45122] = "Focus Mode";
+    sonyMakerHash[45123] = "AF Mode";
+    sonyMakerHash[45124] = "AF Illuminator";
+    sonyMakerHash[45127] = "JPEG Quality";
+    sonyMakerHash[45128] = "Flash Level";
+    sonyMakerHash[45129] = "Release Mode";
+    sonyMakerHash[45130] = "Shot number in continuous burst mode";
+    sonyMakerHash[45131] = "Anti-Blur";
+    sonyMakerHash[45134] = "Long Exposure Noise Reduction";
+    sonyMakerHash[45135] = "Dynamic Range Optimizer";
+    sonyMakerHash[45138] = "Intelligent Auto";
+    sonyMakerHash[45140] = "White balance 2";
 }
 
 void Metadata::initNikonMakerHash()
@@ -1699,17 +1778,19 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
     if (report) {
         std::cout << "\n*******************************"
                   << hdr.toStdString()
-                  << "*******************************";
+                  << "*********************************"
+                  << "*********************************";
         std::cout << "\nIFDOffset  Hex: "
                   << QString::number(offset, 16).toUpper().toStdString()
                   << "   Dec: " << offset;
-        std::cout << "\n  Offset  tagId  tagType  tagCount  tagValue   tagDescription                                    Order\n";
+        std::cout << "\n  Offset     hex  tagId   hex  tagType  tagCount  tagValue   tagDescription                                    Order\n";
         std::cout << std::flush;
     }
-    QString pos;
+    ulong pos;
     QString tagDescription;
     for (int i=0; i<tags; i++){
-        if (report) pos = QString::number(file.pos(), 16).toUpper();
+//        if (report) pos = QString::number(file.pos(), 16).toUpper();
+        pos = file.pos();
         tagId = get2(file.read(2));
         tagType = get2(file.read(2));
         tagCount = get4(file.read(4));
@@ -1729,13 +1810,18 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
             else if (hdr == "IFD Nikon Maker Note")
                 (nikonMakerHash.contains(tagId)) ? tagDescription = nikonMakerHash.value(tagId)
                     : tagDescription = "Undefined tag";
+            else if (hdr == "IFD Sony Maker Note")
+                (sonyMakerHash.contains(tagId)) ? tagDescription = sonyMakerHash.value(tagId)
+                    : tagDescription = "Undefined tag";
             else if (hdr.left(3) == "Sub" || hdr.left(3) == "IFD")
                 (ifdHash.contains(tagId)) ? tagDescription = ifdHash.value(tagId)
                     : tagDescription = "Undefined tag";
 
 //            pos = QString::number(file.pos(), 16).toUpper();
-            std::cout << std::setw(8) << std::setfill(' ') << std::right << pos.toStdString()
+            std::cout << std::setw(8) << std::setfill(' ') << std::right << QString::number(pos, 10).toUpper().toStdString()
+                      << std::setw(8) << std::setfill(' ') << std::right << QString::number(pos, 16).toUpper().toStdString()
                       << std::setw(7) << std::setfill(' ') << std::right << tagId
+                      << std::setw(6) << std::setfill(' ') << std::right << QString::number(tagId, 16).toUpper().toStdString()
                       << std::setw(9) << std::setfill(' ') << std::right << tagType
                       << std::setw(10) << std::setfill(' ') << std::right << tagCount
                       << std::setw(10) << std::setfill(' ') << std::right << tagValue
@@ -2103,7 +2189,6 @@ void Metadata::formatCanon()
     #endif
     }
     //file.open in readMetadata
-//    file.open(QIODevice::ReadOnly);
     // get endian
     order = get2(file.read(4));
     // is canon always offset 16 to IFD0 ???
@@ -2355,7 +2440,7 @@ void Metadata::formatSony()
     qDebug() << "Metadata::formatSony";
     #endif
     }
-//    file.open(QIODevice::ReadOnly);
+    //file.open in readMetadata
     // get endian
     order = get2(file.read(4));
     // get offset to first IFD and read it
@@ -2365,10 +2450,10 @@ void Metadata::formatSony()
 
     // pull data reqd from IFD0
     (ifdDataHash.contains(513))
-        ? offsetFullJPG = ifdDataHash.value(273).tagValue
+        ? offsetFullJPG = ifdDataHash.value(513).tagValue
         : offsetFullJPG = 0;
     (ifdDataHash.contains(514))
-        ? lengthFullJPG = ifdDataHash.value(279).tagValue
+        ? lengthFullJPG = ifdDataHash.value(514).tagValue
         : lengthFullJPG = 0;
     (ifdDataHash.contains(273))
         ? offsetThumbJPG = ifdDataHash.value(273).tagValue
@@ -2382,9 +2467,9 @@ void Metadata::formatSony()
     (ifdDataHash.contains(274))
         ? orientation = ifdDataHash.value(274).tagValue
         : orientation = 1;
-    (ifdDataHash.contains(306))
-        ? created = getString(ifdDataHash.value(306).tagValue, ifdDataHash.value(306).tagCount)
-        : created = "";
+//    (ifdDataHash.contains(306))
+//        ? created = getString(ifdDataHash.value(306).tagValue, ifdDataHash.value(306).tagCount)
+//        : created = "";
 
     ulong offsetEXIF;
     (ifdDataHash.contains(34665))
@@ -2392,6 +2477,15 @@ void Metadata::formatSony()
         : offsetEXIF = 0;
 
     if (nextIFDOffset) readIFD("IFD1", nextIFDOffset);
+
+    // IFD 1:
+    (ifdDataHash.contains(513))
+        ? offsetThumbJPG = ifdDataHash.value(513).tagValue
+        : offsetThumbJPG = 0;
+    (ifdDataHash.contains(514))
+        ? lengthThumbJPG = ifdDataHash.value(514).tagValue
+        : lengthThumbJPG = 0;
+
 
     // Sony provides an offset in IFD0 to the offsets for
     // all the subIFDs
@@ -2409,7 +2503,22 @@ void Metadata::formatSony()
 
     // get the offset for ExifIFD and read it
     readIFD("IFD Exif", offsetEXIF);
-    // get shutter speed
+
+    // IFD EXIF: dimensions
+    (ifdDataHash.contains(40962))
+        ? width = ifdDataHash.value(40962).tagValue
+        : width = 0;
+    (ifdDataHash.contains(40963))
+        ? height = ifdDataHash.value(40963).tagValue
+        : height = 0;
+
+    // IFD EXIF: created datetime
+    (ifdDataHash.contains(36868))
+        ? created = getString(ifdDataHash.value(36868).tagValue,
+        ifdDataHash.value(36868).tagCount)
+        : created = "";
+
+    // IFD Exif: get shutter speed
     if (ifdDataHash.contains(33434)) {
         float x = getReal(ifdDataHash.value(33434).tagValue);
         if (x <1 ) {
@@ -2425,7 +2534,8 @@ void Metadata::formatSony()
     } else {
         exposureTime = "";
     }
-    // aperture
+
+    // IFD Exif: aperture
     if (ifdDataHash.contains(33437)) {
         float x = getReal(ifdDataHash.value(33437).tagValue);
         aperture = "f/" + QString::number(x, 'f', 1);
@@ -2434,7 +2544,8 @@ void Metadata::formatSony()
         aperture = "";
         apertureNum = 0;
     }
-    //ISO
+
+    //IFD Exif: ISO
     if (ifdDataHash.contains(34855)) {
         ulong x = ifdDataHash.value(34855).tagValue;
         ISONum = static_cast<int>(x);
@@ -2444,7 +2555,8 @@ void Metadata::formatSony()
         ISO = "";
         ISONum = 0;
     }
-    // focal length
+
+    // IFD Exif: focal length
     if (ifdDataHash.contains(37386)) {
         float x = getReal(ifdDataHash.value(37386).tagValue);
         focalLengthNum = static_cast<int>(x);
@@ -2452,6 +2564,19 @@ void Metadata::formatSony()
     } else {
         focalLength = "";
         focalLengthNum = 0;
+    }
+
+    // IFD Exif: lens
+    (ifdDataHash.contains(42036))
+        ? lens = getString(ifdDataHash.value(42036).tagValue,
+        ifdDataHash.value(42036).tagCount)
+        : lens = "";
+
+    // Exif: read makernoteIFD
+
+    if (ifdDataHash.contains(37500)) {
+        ulong makerOffset = ifdDataHash.value(37500).tagValue;
+        readIFD("IFD Sony Maker Note", makerOffset);
     }
 
     if (report) reportMetadata();

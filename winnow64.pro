@@ -102,7 +102,8 @@ DISTFILES += \
     snippets.txt \
     Deploy.txt \
     xmp.txt \
-    _ToDo.txt
+    _ToDo.txt \
+    metadata.txt
 
 #macx {
 #    QMAKE_MAC_SDK = macosx10.12

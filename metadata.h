@@ -181,7 +181,8 @@ private:
     QFile file;
     QHash<uint, IFDData> ifdDataHash;
     QHash<uint, IFDData>::iterator ifdIter;
-    QHash<ulong, QString> exifHash, ifdHash, gpsHash, segCodeHash, nikonMakerHash;
+    QHash<ulong, QString> exifHash, ifdHash, gpsHash, segCodeHash,
+        nikonMakerHash, sonyMakerHash;
     QHash<QString, ulong> segmentHash;
 //    QHash<QByteArray, QString> nikonLensHash;
     QHash<QString, QString> nikonLensHash;
@@ -198,6 +199,7 @@ private:
     void initExifHash();
     void initIfdHash();
     void initNikonMakerHash();
+    void initSonyMakerHash();
     void initNikonLensHash();
 
     uint get1(QByteArray c);
