@@ -18,6 +18,7 @@ ENHANCEMENTS
 - Drag and drop image onto Winnow - show image and load folder
 - Add current folder to bookmarks
 - Combine raw+jpg option
+- Get Sony image count, camera SN
 - Get actual monitor resolution for actualDevicePixelRatio calculation
 - Recent copy to folders in ingest dialog
 - Open with another app

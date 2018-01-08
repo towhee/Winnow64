@@ -15,6 +15,7 @@
 #include <QThread>
 
 #include "global.h"
+#include "ui_metadatareport.h"
 
 class IFDData
 {
@@ -142,7 +143,6 @@ public:
     ulong getLengthSmallJPG(const QString &imageFullPath);
     ulong getWidth(const QString &imageFullPath);
     ulong getHeight(const QString &imageFullPath);
-    QString rpt;
 
     int getImageOrientation(QString &imageFileName);
     bool getPick(const QString &imageFileName);
@@ -192,6 +192,8 @@ private:
 //    Metadata metadata;
 
     bool report;
+    QString reportString;
+    QTextStream rpt;
     long order;
 
     void initSupportedFiles();
@@ -223,6 +225,7 @@ private:
     QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
 
     void reportMetadata();
+    void reportMetadataHeader(QString title);
     void reportIfdDataHash();
 
     void formatNikon();

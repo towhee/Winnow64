@@ -1644,8 +1644,8 @@ void MW::createMenus()
 //    fileMenu->addSeparator();
 //    fileMenu->addAction(renameAction);
 //    fileMenu->addAction(runDropletAction);
-//    fileMenu->addSeparator();
-//    fileMenu->addAction(reportMetadataAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(reportMetadataAction);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);    // Appears in Winnow menu in OSX
 

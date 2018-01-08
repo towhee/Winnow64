@@ -88,7 +88,8 @@ FORMS += \
     welcome.ui \
     shortcutsform.ui \
     zoomdlg.ui \
-    message.ui
+    message.ui \
+    metadatareport.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns

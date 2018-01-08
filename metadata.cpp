@@ -1314,7 +1314,64 @@ void Metadata::reportMetadata()
               << "\n";
     std::cout << std::flush;
 
-//    qDebug() << "focalLength35mm" << focalLength35mm;
+    rpt << "\n";
+    rpt.reset();
+    rpt.setFieldAlignment(QTextStream::AlignLeft);
+
+    rpt.setFieldWidth(20); rpt << "offsetFullJPG"  << offsetFullJPG;    rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "lengthFullJPG"  << lengthFullJPG;    rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "offsetThumbJPG" << offsetThumbJPG;   rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "lengthThumbJPG" << lengthThumbJPG;   rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20);  rpt << "offsetSmallJPG" << offsetSmallJPG;  rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "lengthSmallJPG" << lengthSmallJPG;   rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "orientation"    << orientation;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "width"          << width;            rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "height"         << height;           rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "created"        << created;          rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "model"          << model;            rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "exposureTime"   << exposureTime;     rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "aperture"       << aperture;         rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "ISO"            << ISO;              rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "focalLength"    << focalLength;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "title"          << title;            rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "lens"           << lens;             rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "creator"        << creator;          rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "copyright"      << copyright;        rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "email"          << email;            rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "url"            << url;              rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "serialNumber"   << serialNumber;     rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "shutterCount"   << shutterCount;     rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "nikonLensCode"  << nikonLensCode;    rpt.setFieldWidth(0); rpt << "\n";
+
+    QDialog *dlg = new QDialog;
+    Ui::metadataReporttDlg md;
+    md.setupUi(dlg);
+    md.textBrowser->setText(reportString);
+    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+    dlg->show();
+}
+
+void Metadata::reportMetadataHeader(QString title)
+{
+    int hdrWidth = 90;
+    int titleWidth = title.size() + 4;
+    int padWidth = (hdrWidth - titleWidth) / 2;
+    rpt.reset();
+    rpt << "\n";
+    rpt.setPadChar('-');
+    rpt.setFieldWidth(padWidth);
+    rpt.setFieldAlignment(QTextStream::AlignRight);
+    rpt << "-";
+    rpt.reset();
+    rpt.setFieldWidth(titleWidth);
+    rpt.setFieldAlignment(QTextStream::AlignCenter);
+    rpt << title;
+    rpt.setPadChar('-');
+    rpt.setFieldWidth(padWidth);
+    rpt.setFieldAlignment(QTextStream::AlignRight);
+    rpt << "-";
+    rpt.reset();
+    rpt << "\n";
 }
 
 void Metadata::reportMetadataAllFiles()
@@ -1783,8 +1840,14 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
         std::cout << "\nIFDOffset  Hex: "
                   << QString::number(offset, 16).toUpper().toStdString()
                   << "   Dec: " << offset;
-        std::cout << "\n  Offset     hex  tagId   hex  tagType  tagCount  tagValue   tagDescription                                    Order\n";
+        std::cout << "\n  Offset     hex  tagId   hex  tagType  tagCount  tagValue   tagDescription\n";
         std::cout << std::flush;
+
+        reportMetadataHeader(hdr);
+        rpt << "IFDOffset  Hex: "
+            << QString::number(offset, 16).toUpper()
+            << "   Dec: " << offset << "\n"
+            << "  Offset     hex  tagId   hex  tagType  tagCount  tagValue   tagDescription\n";
     }
     ulong pos;
     QString tagDescription;
@@ -1830,16 +1893,50 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
                       << std::setw(4) << std::right << QString::number(order, 16).toUpper().toStdString()
                       << "\n";
             std::cout << std::flush;
+
+//            rpt.setPadChar(" ");
+            rpt.setFieldWidth(8);
+            rpt.setFieldAlignment(QTextStream::AlignRight);
+            rpt << QString::number(pos, 10).toUpper();
+            rpt << QString::number(pos, 16).toUpper();
+            rpt.setFieldWidth(7);
+            rpt << tagId;
+            rpt.setFieldWidth(6);
+            rpt << QString::number(tagId, 16).toUpper();
+            rpt.setFieldWidth(9);
+            rpt << tagType;
+            rpt.setFieldWidth(10);
+            rpt << tagCount << tagValue;
+            rpt.setFieldWidth(3);
+            rpt << "   ";
+            rpt.setFieldWidth(50);
+            rpt.setFieldAlignment(QTextStream::AlignLeft);
+            rpt << tagDescription;
+            rpt.reset();
+            rpt << "\n";
+
         }
         // quit if more than 200 tags - prob error
         if (i>200) break;
     }
     ulong nextIFDOffset = get4(file.read(4));
-    if (report) std::cout << std::setw(8) << std::setfill(' ') << std::right
+    if (report) {
+        std::cout << std::setw(8) << std::setfill(' ') << std::right
              << QString::number(file.pos(), 16).toUpper().toStdString()
              << " nextIFDOffset = "
              << QString::number(nextIFDOffset, 16).toUpper().toStdString()
              << "\n" << std::flush;
+
+        rpt.setFieldWidth(8);
+        rpt.setFieldAlignment(QTextStream::AlignRight);
+        rpt << QString::number(file.pos(), 10).toUpper();
+        rpt << QString::number(file.pos(), 16).toUpper();
+        rpt.reset();
+        rpt << " nextIFDOffset = ";
+        rpt << QString::number(nextIFDOffset, 10).toUpper();
+        rpt << " / " << QString::number(nextIFDOffset, 16).toUpper();
+        rpt << "\n";
+    }
     return(nextIFDOffset);
 }
 
@@ -1893,11 +1990,17 @@ segments.
                   << "*******************************";
 //        std::cout << "\n SEGMENT HASH" << std::flush;
         std::cout << "\nSegment\tOffset\n";
+
+        reportMetadataHeader("JPG Segment Hash");
+        rpt << "Segment\tOffset\tHex\n";
+
         QHashIterator<QString, ulong> i(segmentHash);
         while (i.hasNext()) {
             i.next();
 //            qDebug() << i.key() << ": " << i.value();
             std::cout << i.key().toStdString() << ":\t" << i.value() << std::endl;
+            rpt << i.key() << ":\t" << i.value() << "\t"
+                << QString::number(i.value(), 16).toUpper() << "\n";
         }
     }
 }
@@ -2128,6 +2231,13 @@ void Metadata::formatNikon()
                       << "  Maker offset base = "
                       << QString::number(makerOffsetBase, 16).toStdString()
                       << " / " << makerOffsetBase;
+
+            rpt << "\nMaker Offset = "
+                << makerOffset
+                << " / " << QString::number(makerOffset, 16)
+                << "  Maker offset base = "
+                << makerOffsetBase
+                << " / " << QString::number(makerOffsetBase, 16);
         }
 
         readIFD("IFD Nikon Maker Note", makerOffsetBase + 8);
@@ -3013,22 +3123,31 @@ void Metadata::clearMetadata()
     nikonLensCode = "";
 }
 
-bool Metadata::readMetadata(bool rpt, const QString &fPath)
+bool Metadata::readMetadata(bool isReport, const QString &fPath)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "Metadata::readMetadata";
     #endif
     }
-    report = rpt;
+    report = isReport;
+
+    if (report) {
+        rpt.flush();
+        reportString = "";
+        rpt.setString(&reportString);
+    }
 //    report = false;
 //    report = true;
 //    QElapsedTimer t;
 //    t.start();
     clearMetadata();
     file.setFileName(fPath);
-    if (report) std::cout << "\nFile name = " << fPath.toStdString()
-                          << "\n" << std::flush;
+    if (report) {
+        std::cout << "\nFile name = " << fPath.toStdString()
+                  << "\n" << std::flush;
+        rpt << "\nFile name = " << fPath << "\n";
+    }
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
 //    if (G::isThreadTrackingOn) track(fPath, "Reading ");
