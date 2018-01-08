@@ -58,7 +58,8 @@ public:
     QString copyright;
     QString email;
     QString url;
-    QString serialNumber;
+    QString cameraSN;
+    QString lensSN;
     ulong shutterCount;
     int year;
     int month;
@@ -103,7 +104,8 @@ public:
 //    QString xmpTitle;
     QString email;
     QString url;
-    QString serialNumber;
+    QString cameraSN;
+    QString lensSN;
     ulong shutterCount;
 
     QString err;
@@ -182,7 +184,7 @@ private:
     QHash<uint, IFDData> ifdDataHash;
     QHash<uint, IFDData>::iterator ifdIter;
     QHash<ulong, QString> exifHash, ifdHash, gpsHash, segCodeHash,
-        nikonMakerHash, sonyMakerHash;
+        nikonMakerHash, sonyMakerHash, canonMakerHash, canonFileInfoHash;
     QHash<QString, ulong> segmentHash;
 //    QHash<QByteArray, QString> nikonLensHash;
     QHash<QString, QString> nikonLensHash;
@@ -201,6 +203,7 @@ private:
     void initExifHash();
     void initIfdHash();
     void initNikonMakerHash();
+    void initCanonMakerHash();
     void initSonyMakerHash();
     void initNikonLensHash();
 

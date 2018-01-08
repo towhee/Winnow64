@@ -14,6 +14,7 @@ Metadata::Metadata()
     initExifHash();
     initIfdHash();
     initNikonMakerHash();
+    initCanonMakerHash();
     initSonyMakerHash();
     initNikonLensHash();
     initSupportedFiles();
@@ -549,6 +550,79 @@ void Metadata::initSonyMakerHash()
     sonyMakerHash[45135] = "Dynamic Range Optimizer";
     sonyMakerHash[45138] = "Intelligent Auto";
     sonyMakerHash[45140] = "White balance 2";
+}
+
+void Metadata::initCanonMakerHash()
+{
+    canonMakerHash[0] = "Unknown";
+    canonMakerHash[1] = "Various camera settings";
+    canonMakerHash[2] = "Focal length";
+    canonMakerHash[3] = "Unknown";
+    canonMakerHash[4] = "Shot information";
+    canonMakerHash[5] = "Panorama";
+    canonMakerHash[6] = "Image type";
+    canonMakerHash[7] = "Firmware version";
+    canonMakerHash[8] = "File number";
+    canonMakerHash[9] = "Owner Name";
+    canonMakerHash[12] = "Camera serial number";
+    canonMakerHash[13] = "Camera info";
+    canonMakerHash[15] = "Custom Functions";
+    canonMakerHash[16] = "Model ID";
+    canonMakerHash[18] = "Picture info";
+    canonMakerHash[19] = "Thumbnail image valid area";
+    canonMakerHash[21] = "Serial number format";
+    canonMakerHash[26] = "Super macro";
+    canonMakerHash[38] = "AF info";
+    canonMakerHash[131] = "Original decision data offset";
+    canonMakerHash[147] = "FileInfo tags";
+    canonMakerHash[149] = "Lens model";
+    canonMakerHash[150] = "Internal serial number";
+    canonMakerHash[151] = "Dust removal data";
+    canonMakerHash[153] = "Custom functions";
+    canonMakerHash[160] = "Processing info";
+    canonMakerHash[164] = "White balance table";
+    canonMakerHash[170] = "Measured color";
+    canonMakerHash[180] = "ColorSpace";
+    canonMakerHash[181] = "Unknown";
+    canonMakerHash[192] = "Unknown";
+    canonMakerHash[193] = "Unknown";
+    canonMakerHash[208] = "VRD offset";
+    canonMakerHash[224] = "Sensor info";
+    canonMakerHash[16385] = "Color data";
+    canonMakerHash[16386] = "CRWParam?";
+    canonMakerHash[16387] = "ColorInfo Tags";
+    canonMakerHash[16389] = "(unknown 49kB block, not copied to JPEG images)";
+    canonMakerHash[16392] = "PictureStyleUserDef";
+    canonMakerHash[16393] = "PictureStylePC";
+    canonMakerHash[16400] = "CustomPictureStyleFileName";
+    canonMakerHash[16403] = "AFMicroAdj";
+    canonMakerHash[16405] = "VignettingCorr ";
+    canonMakerHash[16406] = "Canon VignettingCorr2 Tags";
+    canonMakerHash[16408] = "Canon LightingOpt Tags";
+    canonMakerHash[16409] = "Canon LensInfo Tags";
+    canonMakerHash[16416] = "Canon Ambience Tags";
+    canonMakerHash[16417] = "Canon MultiExp Tags";
+    canonMakerHash[16420] = "Canon FilterInfo Tags";
+    canonMakerHash[16421] = "Canon HDRInfo Tags";
+    canonMakerHash[16424] = "Canon AFConfig Tags";
+
+    canonFileInfoHash[1] = "File number / Shutter count";
+    canonFileInfoHash[3] = "Bracket mode";
+    canonFileInfoHash[4] = "Bracket value";
+    canonFileInfoHash[5] = "Bracket shot number";
+    canonFileInfoHash[6] = "Raw JPG quality";
+    canonFileInfoHash[7] = "Raw JPG size";
+    canonFileInfoHash[8] = "Long exposure noise reduction";
+    canonFileInfoHash[9] = "WB bracket mode";
+    canonFileInfoHash[12] = "WB bracket value AB";
+    canonFileInfoHash[13] = "WB bracket value GM";
+    canonFileInfoHash[14] = "Filter effect";
+    canonFileInfoHash[15] = "Toning effect";
+    canonFileInfoHash[16] = "Macro magnification";
+    canonFileInfoHash[19] = "Live view shooting";
+    canonFileInfoHash[20] = "Focus distance upper";
+    canonFileInfoHash[21] = "Focus distance lower";
+    canonFileInfoHash[25] = "Flash exposure lock";
 }
 
 void Metadata::initNikonMakerHash()
@@ -1239,81 +1313,6 @@ void Metadata::reportMetadata()
     qDebug() << "Metadata::reportMetadata";
     #endif
     }
-    std::cout << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "offsetFullJPG"
-              << std::setw(16) << std::setfill(' ') << std::left << offsetFullJPG
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "lengthFullJPG"
-              << std::setw(16) << std::setfill(' ') << std::left << lengthFullJPG
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "offsetThumbJPG"
-              << std::setw(16) << std::setfill(' ') << std::left << offsetThumbJPG
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "lengthThumbJPG"
-              << std::setw(16) << std::setfill(' ') << std::left << lengthThumbJPG
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "offsetSmallJPG"
-              << std::setw(16) << std::setfill(' ') << std::left << offsetSmallJPG
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "lengthSmallJPG"
-              << std::setw(16) << std::setfill(' ') << std::left << lengthSmallJPG
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "orientation"
-              << std::setw(16) << std::setfill(' ') << std::left << orientation
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "width"
-              << std::setw(16) << std::setfill(' ') << std::left << width
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "height"
-              << std::setw(16) << std::setfill(' ') << std::left << height
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "created"
-              << std::setw(16) << std::setfill(' ') << std::left << created.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "model"
-              << std::setw(16) << std::setfill(' ') << std::left << model.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "exposureTime"
-              << std::setw(16) << std::setfill(' ') << std::left << exposureTime.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "aperture"
-              << std::setw(16) << std::setfill(' ') << std::left << aperture.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "ISO"
-              << std::setw(16) << std::setfill(' ') << std::left << ISO.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "focalLength"
-              << std::setw(16) << std::setfill(' ') << std::left << focalLength.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "title"
-              << std::setw(16) << std::setfill(' ') << std::left << title.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "lens"
-              << std::setw(16) << std::setfill(' ') << std::left << lens.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "creator"
-              << std::setw(16) << std::setfill(' ') << std::left << creator.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "copyright"
-              << std::setw(16) << std::setfill(' ') << std::left << copyright.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "email"
-              << std::setw(16) << std::setfill(' ') << std::left << email.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "url"
-              << std::setw(16) << std::setfill(' ') << std::left << url.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "serial number"
-              << std::setw(16) << std::setfill(' ') << std::left << serialNumber.toStdString()
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "shutter count"
-              << std::setw(16) << std::setfill(' ') << std::left << shutterCount
-              << "\n";
-    std::cout << std::setw(16) << std::setfill(' ') << std::left << "nikon lens code"
-              << std::setw(16) << std::setfill(' ') << std::left << nikonLensCode.toStdString()
-              << "\n";
-    std::cout << std::flush;
-
     rpt << "\n";
     rpt.reset();
     rpt.setFieldAlignment(QTextStream::AlignLeft);
@@ -1322,7 +1321,7 @@ void Metadata::reportMetadata()
     rpt.setFieldWidth(20); rpt << "lengthFullJPG"  << lengthFullJPG;    rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "offsetThumbJPG" << offsetThumbJPG;   rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "lengthThumbJPG" << lengthThumbJPG;   rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20);  rpt << "offsetSmallJPG" << offsetSmallJPG;  rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "offsetSmallJPG" << offsetSmallJPG;   rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "lengthSmallJPG" << lengthSmallJPG;   rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "orientation"    << orientation;      rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "width"          << width;            rpt.setFieldWidth(0); rpt << "\n";
@@ -1339,7 +1338,8 @@ void Metadata::reportMetadata()
     rpt.setFieldWidth(20); rpt << "copyright"      << copyright;        rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "email"          << email;            rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "url"            << url;              rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "serialNumber"   << serialNumber;     rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "cameraSN"       << cameraSN;         rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "lensSN"         << lensSN;           rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "shutterCount"   << shutterCount;     rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "nikonLensCode"  << nikonLensCode;    rpt.setFieldWidth(0); rpt << "\n";
 
@@ -1349,6 +1349,7 @@ void Metadata::reportMetadata()
     md.textBrowser->setText(reportString);
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     dlg->show();
+    std::cout << reportString.toStdString() << std::flush;
 }
 
 void Metadata::reportMetadataHeader(QString title)
@@ -1829,20 +1830,8 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
     file.seek(offset);
     int tags = get2(file.read(2));
 
-//    qDebug() << "Number of tags =" << tags << "offset =" << offset;
-
     // iterate through IFD0, looking for the subIFD tag
     if (report) {
-        std::cout << "\n*******************************"
-                  << hdr.toStdString()
-                  << "*********************************"
-                  << "*********************************";
-        std::cout << "\nIFDOffset  Hex: "
-                  << QString::number(offset, 16).toUpper().toStdString()
-                  << "   Dec: " << offset;
-        std::cout << "\n  Offset     hex  tagId   hex  tagType  tagCount  tagValue   tagDescription\n";
-        std::cout << std::flush;
-
         reportMetadataHeader(hdr);
         rpt << "IFDOffset  Hex: "
             << QString::number(offset, 16).toUpper()
@@ -1873,6 +1862,12 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
             else if (hdr == "IFD Nikon Maker Note")
                 (nikonMakerHash.contains(tagId)) ? tagDescription = nikonMakerHash.value(tagId)
                     : tagDescription = "Undefined tag";
+            else if (hdr == "IFD Canon Maker Note")
+                (canonMakerHash.contains(tagId)) ? tagDescription = canonMakerHash.value(tagId)
+                    : tagDescription = "Undefined tag";
+            else if (hdr == "IFD Canon FileInfo")
+                (canonFileInfoHash.contains(tagId)) ? tagDescription = canonFileInfoHash.value(tagId)
+                    : tagDescription = "Undefined tag";
             else if (hdr == "IFD Sony Maker Note")
                 (sonyMakerHash.contains(tagId)) ? tagDescription = sonyMakerHash.value(tagId)
                     : tagDescription = "Undefined tag";
@@ -1880,21 +1875,6 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
                 (ifdHash.contains(tagId)) ? tagDescription = ifdHash.value(tagId)
                     : tagDescription = "Undefined tag";
 
-//            pos = QString::number(file.pos(), 16).toUpper();
-            std::cout << std::setw(8) << std::setfill(' ') << std::right << QString::number(pos, 10).toUpper().toStdString()
-                      << std::setw(8) << std::setfill(' ') << std::right << QString::number(pos, 16).toUpper().toStdString()
-                      << std::setw(7) << std::setfill(' ') << std::right << tagId
-                      << std::setw(6) << std::setfill(' ') << std::right << QString::number(tagId, 16).toUpper().toStdString()
-                      << std::setw(9) << std::setfill(' ') << std::right << tagType
-                      << std::setw(10) << std::setfill(' ') << std::right << tagCount
-                      << std::setw(10) << std::setfill(' ') << std::right << tagValue
-                      << "   "
-                      << std::setw(50) << std::left << tagDescription.toStdString()
-                      << std::setw(4) << std::right << QString::number(order, 16).toUpper().toStdString()
-                      << "\n";
-            std::cout << std::flush;
-
-//            rpt.setPadChar(" ");
             rpt.setFieldWidth(8);
             rpt.setFieldAlignment(QTextStream::AlignRight);
             rpt << QString::number(pos, 10).toUpper();
@@ -1921,12 +1901,6 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
     }
     ulong nextIFDOffset = get4(file.read(4));
     if (report) {
-        std::cout << std::setw(8) << std::setfill(' ') << std::right
-             << QString::number(file.pos(), 16).toUpper().toStdString()
-             << " nextIFDOffset = "
-             << QString::number(nextIFDOffset, 16).toUpper().toStdString()
-             << "\n" << std::flush;
-
         rpt.setFieldWidth(8);
         rpt.setFieldAlignment(QTextStream::AlignRight);
         rpt << QString::number(file.pos(), 10).toUpper();
@@ -1985,20 +1959,12 @@ segments.
         offset = nextOffset;
     }
     if (report) {
-        std::cout << "\n*******************************"
-                  << "SEGMENT HASH"
-                  << "*******************************";
-//        std::cout << "\n SEGMENT HASH" << std::flush;
-        std::cout << "\nSegment\tOffset\n";
-
         reportMetadataHeader("JPG Segment Hash");
         rpt << "Segment\tOffset\tHex\n";
 
         QHashIterator<QString, ulong> i(segmentHash);
         while (i.hasNext()) {
             i.next();
-//            qDebug() << i.key() << ": " << i.value();
-            std::cout << i.key().toStdString() << ":\t" << i.value() << std::endl;
             rpt << i.key() << ":\t" << i.value() << "\t"
                 << QString::number(i.value(), 16).toUpper() << "\n";
         }
@@ -2225,13 +2191,6 @@ void Metadata::formatNikon()
         ulong makerOffsetBase = file.pos() - 2;
 
         if (report) {
-            std::cout << "\nMaker Offset = "
-                      << QString::number(makerOffset, 16).toStdString()
-                      << " / " << makerOffset
-                      << "  Maker offset base = "
-                      << QString::number(makerOffsetBase, 16).toStdString()
-                      << " / " << makerOffsetBase;
-
             rpt << "\nMaker Offset = "
                 << makerOffset
                 << " / " << QString::number(makerOffset, 16)
@@ -2243,9 +2202,9 @@ void Metadata::formatNikon()
         readIFD("IFD Nikon Maker Note", makerOffsetBase + 8);
         // Get serial number, shutter count and lens type to decrypt the lens info
         (ifdDataHash.contains(29))
-            ? serialNumber = getString(ifdDataHash.value(29).tagValue + makerOffsetBase,
+            ? cameraSN = getString(ifdDataHash.value(29).tagValue + makerOffsetBase,
                                        ifdDataHash.value(29).tagCount)
-            : serialNumber = "";
+            : cameraSN = "";
         (ifdDataHash.contains(167))
             ? shutterCount = ifdDataHash.value(167).tagValue
             : shutterCount = 0;
@@ -2254,7 +2213,7 @@ void Metadata::formatNikon()
             ? lensType = ifdDataHash.value(131).tagValue
             : lensType = 0;
 
-        uint32_t serial = serialNumber.toInt();
+        uint32_t serial = cameraSN.toInt();
         uint32_t count = shutterCount;
         QByteArray encryptedLensInfo;
         (ifdDataHash.contains(152))
@@ -2318,6 +2277,12 @@ void Metadata::formatCanon()
     (ifdDataHash.contains(274))
         ? orientation = ifdDataHash.value(274).tagValue
         : orientation = 1;
+    (ifdDataHash.contains(315))
+        ? creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount)
+        : creator = "";
+    (ifdDataHash.contains(315))
+        ? copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount)
+        : copyright = "";
 //    (ifdDataHash.contains(306))
 //        ? created = getString(ifdDataHash.value(306).tagValue, ifdDataHash.value(306).tagCount)
 //        : created = "";
@@ -2413,6 +2378,44 @@ void Metadata::formatCanon()
         focalLength = "";
         focalLengthNum = 0;
     }
+    // IFD Exif: lens
+    (ifdDataHash.contains(42036))
+        ? lens = getString(ifdDataHash.value(42036).tagValue,
+        ifdDataHash.value(42036).tagCount)
+        : lens = "";
+
+    // IFD Exif: camera serial number
+    (ifdDataHash.contains(42033))
+        ? cameraSN = getString(ifdDataHash.value(42033).tagValue,
+        ifdDataHash.value(42033).tagCount)
+        : cameraSN = "";
+
+    // IFD Exif: lens serial nember
+    (ifdDataHash.contains(42037))
+        ? lensSN = getString(ifdDataHash.value(42037).tagValue,
+        ifdDataHash.value(42037).tagCount)
+        : lensSN = "";
+
+    // Exif: read makernoteIFD
+
+    if (ifdDataHash.contains(37500)) {
+        ulong makerOffset = ifdDataHash.value(37500).tagValue;
+        readIFD("IFD Canon Maker Note", makerOffset);
+    }
+
+    // Maker tag:  FileInfo IFD
+    if (ifdDataHash.contains(147)) {
+        ulong makerOffset = ifdDataHash.value(147).tagValue;
+        readIFD("IFD Canon FileInfo", makerOffset);
+    }
+
+
+
+    // IFD Canon maker note: camera owner
+//    (ifdDataHash.contains(9))
+//        ? creator = getString(ifdDataHash.value(9).tagValue,
+//        ifdDataHash.value(9).tagCount)
+//        : creator = "";
 
     // read next app segment
     if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
@@ -2936,7 +2939,7 @@ bool Metadata::formatJPG()
         // add condition to check for EOF
     }
 
-    if (report) std::cout << "\n startOffset = " << startOffset;
+    if (report) rpt << "\n startOffset = " << startOffset;
 
     uint a = get2(file.read(2));  // magic 42
     a = get4(file.read(4));
@@ -3117,7 +3120,7 @@ void Metadata::clearMetadata()
     url = "";
     err = "";
     shutterCount = 0;
-    serialNumber = "";
+    cameraSN = "";
 
     ifdDataHash.clear();
     nikonLensCode = "";
@@ -3144,8 +3147,6 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
     clearMetadata();
     file.setFileName(fPath);
     if (report) {
-        std::cout << "\nFile name = " << fPath.toStdString()
-                  << "\n" << std::flush;
         rpt << "\nFile name = " << fPath << "\n";
     }
     QFileInfo fileInfo(fPath);
