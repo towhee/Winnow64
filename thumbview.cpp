@@ -594,7 +594,12 @@ useful.
     return SelectedThumbsPaths;
 }
 
-void ThumbView::setIcon(QStandardItem *item, QImage thumb, QString folderPath)
+bool ThumbView::isThumb(int row)
+{
+    return dm->sf->index(row, 0).data(Qt::DecorationRole).isNull();
+}
+
+void ThumbView::setIcon(int row, QImage thumb)
 {
     {
     #ifdef ISDEBUG
@@ -605,8 +610,16 @@ void ThumbView::setIcon(QStandardItem *item, QImage thumb, QString folderPath)
      * a race condition can arise.  Make sure the item is referring to the
      * current directory.  If not, item will be a dereferenced pointer and
      * cause a segmentation fault crash */
-    if (folderPath != dm->currentFolderPath) return;
+    QStandardItem *item = new QStandardItem;
+    QModelIndex idx = dm->index(row, 0, QModelIndex());
+    if (!idx.isValid()) return;
+    item = dm->itemFromIndex(idx);
+//    item = dm->itemFromIndex(*idx);
+
     item->setIcon(QPixmap::fromImage(thumb));
+//    item->setIcon(QPixmap::fromImage(*thumb));
+
+//    delete item;
 }
 
 // Used by thumbnail navigation (left, right, up, down etc)

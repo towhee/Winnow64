@@ -2403,11 +2403,11 @@ void Metadata::formatCanon()
         readIFD("IFD Canon Maker Note", makerOffset);
     }
 
-    // Maker tag:  FileInfo IFD
-    if (ifdDataHash.contains(147)) {
-        ulong makerOffset = ifdDataHash.value(147).tagValue;
-        readIFD("IFD Canon FileInfo", makerOffset);
-    }
+//    // Maker tag:  FileInfo IFD
+//    if (ifdDataHash.contains(147)) {
+//        ulong makerOffset = ifdDataHash.value(147).tagValue;
+//        readIFD("IFD Canon FileInfo", makerOffset);
+//    }
 
 
 
@@ -3598,9 +3598,11 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::loadImageMetadata";
+        qDebug() <<  "Metadata::loadImageMetadata";
     #endif
     }
+//    qDebug() << "Metadata::loadImageMetadata  fileInfo.filePath() ="
+//             << fileInfo.filePath();
     // check if already loaded
     if (metaCache[fileInfo.filePath()].isLoaded) return true;
 

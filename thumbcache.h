@@ -24,20 +24,31 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-    void setIcon(QStandardItem*, QImage, QString);
+    void setIcon(QModelIndex&, QImage&, QString&);
+    void updateLoadThumb(QString fPath, QString errMsg);
     void updateIsRunning(bool);
     void updateStatus(bool, QString);
     void refreshThumbs();
 
 private:
+    DataModel *dm;
+    Metadata *metadata;
     QMutex mutex;
     QWaitCondition condition;
     bool abort;
 
+    QString fPath;
+    QString folderPath;
+    QImage thumb;
+    QSize thumbMax;         // rgh review hard coding thumb size
+    QString err;            // type of error
+
+    bool loadThumb(int row);
+    bool loadFromData(QFile imFile, QString fPath);
+    bool loadFromEntireFile(QFile imFile, QString fPath);
+    void checkOrientation();
 
     void track(QString fPath, QString msg);
-    DataModel *dm;
-    Metadata *metadata;
 };
 
 #endif // THUMBCACHE_H

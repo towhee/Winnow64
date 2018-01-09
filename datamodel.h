@@ -40,6 +40,7 @@ public:
     void addMetadata();
     void updateImageList();
     void sortThumbs(int sortColumn, bool isReverse);
+    QModelIndex find(QString fPath);
 
     SortFilter *sf;
     QFileInfoList fileInfoList;
@@ -51,6 +52,7 @@ public:
 signals:
 
 public slots:
+    void thumbLoaded(QString fPath, QString errMsg);
 
 private:
     QWidget *mw;

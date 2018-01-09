@@ -37,12 +37,8 @@ HEADERS += \
     Dialogs/popup.h \
     Dialogs/zoomdlg.h \
     MacOS/macscale.h \
-    MacOS/macScale_p.h
-#    exiftool/ExifTool.h \
-#    exiftool/ExifToolPipe.h \
-#    exiftool/TagInfo.h \
-#    c/wait.h \
-#    c/unistd.h
+    MacOS/macScale_p.h \
+    thumb.h
 
 SOURCES += \
     bookmarks.cpp \
@@ -73,7 +69,8 @@ SOURCES += \
     Dialogs/workspacedlg.cpp \
     Dialogs/copypickdlg.cpp \
     Dialogs/popup.cpp \
-    Dialogs/zoomdlg.cpp
+    Dialogs/zoomdlg.cpp \
+    thumb.cpp
 
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 

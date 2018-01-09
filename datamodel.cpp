@@ -211,6 +211,8 @@ bool DataModel::addFiles()
         setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
         setData(index(row, G::RatingColumn), "");
         setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        setData(index(row, G::MetadataLoadedColumn), false);
+        setData(index(row, G::ThumbLoadedColumn), false);
 
         /* the rest of the data model columns are added after the metadata
         has been loaded, when the image caching is called.  See
@@ -300,6 +302,7 @@ which is created in MW, and in InfoView.
         setData(index(row, G::CopyrightColumn), copyright);
         setData(index(row, G::EmailColumn), email);
         setData(index(row, G::UrlColumn), url);
+        setData(index(row, G::MetadataLoadedColumn), true);
     }
     // build filter items
     filters->addCategoryFromData(modelMap, filters->models);
@@ -311,6 +314,20 @@ which is created in MW, and in InfoView.
     qDebug() << "DataModel::addMetadataToModel    Completed"
              << " elapsed time =" << t.restart() << "ms";
 
+}
+
+QModelIndex DataModel::find(QString fPath)
+{
+    QModelIndexList idxList = sf->match(sf->index(0, 0), G::FileNameRole, fPath);
+    if (idxList.size() > 0 && idxList[0].isValid()) {
+        return idxList[0];
+    }
+    return index(-1, -1);       // invalid index
+}
+
+void DataModel::thumbLoaded(QString fPath, QString errMsg)
+{
+    qDebug() << "DataModel::thumbLoaded" << errMsg << fPath;
 }
 
 void DataModel::updateImageList()

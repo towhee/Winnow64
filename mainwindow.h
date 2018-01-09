@@ -31,6 +31,7 @@
 #include "popup.h"
 #include "prefdlg.h"
 #include "global.h"
+#include "thumb.h"
 #include "thumbview.h"
 #include "tableview.h"
 #include "thumbcache.h"
@@ -54,7 +55,7 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.901";
+    QString version = "0.902 Redid thumb caching";
 
     bool isShift;               // used when opening if shift key pressed
 
@@ -570,6 +571,7 @@ private:
     MetadataCache *metadataCacheThread;
     ImageCache *imageCacheThread;
     ThumbCache *thumbCacheThread;
+    Thumb *thumb;
     InfoView *infoView;
     CopyPickDlg *copyPickDlg;
     WorkspaceDlg *workspaceDlg;

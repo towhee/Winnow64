@@ -83,6 +83,11 @@ variables in MW (this class) and managed in the prefDlg class.
 • Load shortcuts (based on being able to edit shortcuts)
 • Execute updateState function to implement all persistant state settings
 
+• Select a folder
+  • Load datamodel with QDir info on each image file
+  • Add the rest of the metadata to datamodel (incl thumbs as icons)
+  • Build the image cache
+
 */
 
     // structure to hold persistant settings between sessions
@@ -90,7 +95,7 @@ variables in MW (this class) and managed in the prefDlg class.
 
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel
-    createDataModel();          // dependent on FilterView, creates Metadata
+    createDataModel();          // dependent on FilterView, creates Metadata, Thumb
     createThumbView();          // dependent on QSetting, filterView
     createGridView();
     createTableView();          // dependent on centralWidget
@@ -659,6 +664,13 @@ so scrollTo and delegate use of the current index must check the row.
         if(thumbDock->isFloating()) thumbView->setWrapping(true);
     }
     qDebug() << "MW::fileSelectionChange   End of function";
+
+    // load thumbnail if not done yet
+    if (thumbView->isThumb(currentRow)) {
+        QImage image;
+        thumb->loadThumb(fPath, image);
+        thumbView->setIcon(currentRow, image);
+    }
 
 }
 
@@ -1976,6 +1988,7 @@ void MW::createDataModel()
     }
     metadata = new Metadata;
     dm = new DataModel(this, metadata, filters);
+    thumb = new Thumb(this, metadata);
 
     connect(dm->sf, SIGNAL(reloadImageCache()),
             this, SLOT(loadFilteredImageCache()));
@@ -2028,14 +2041,17 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(updateIsRunning(bool)),
             this, SLOT(updateMetadataThreadRunStatus(bool)));
 
-    connect(thumbCacheThread, SIGNAL(setIcon(QStandardItem*, QImage, QString)),
-            thumbView, SLOT(setIcon(QStandardItem*, QImage, QString)));
+    connect(metadataCacheThread, SIGNAL(setIcon(int, QImage)),
+            thumbView, SLOT(setIcon(int, QImage)));
+
+    connect(metadataCacheThread, SIGNAL(refreshThumbs()),
+            thumbView, SLOT(refreshThumbs()));
+
+    connect(thumbCacheThread, SIGNAL(updateLoadThumb(QString,QString)),
+            dm, SLOT(thumbLoaded(QString,QString)));
 
     connect(thumbCacheThread, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
-
-    connect(thumbCacheThread, SIGNAL(refreshThumbs()),
-            thumbView, SLOT(refreshThumbs()));
 
     connect(thumbCacheThread, SIGNAL(updateIsRunning(bool)),
             this, SLOT(updateThumbThreadRunStatus(bool)));
@@ -2057,6 +2073,7 @@ void MW::createThumbView()
     thumbView = new ThumbView(this, dm);
     thumbView->setObjectName("ThumbView");
     thumbView->setAutoScroll(false);
+
     // set here, as gridView, which is another ThumbView instance, is different
 //    thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
@@ -2304,7 +2321,6 @@ void MW::createAppStyle()
     }
     // add error trapping for file io  rgh todo
     QFile fStyle(":/qss/winnow.css");
-//    QFile fStyle(":/qss/teststyle.css");
     fStyle.open(QIODevice::ReadOnly);
     this->setStyleSheet(fStyle.readAll());
 }

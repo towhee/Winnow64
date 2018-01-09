@@ -10,6 +10,7 @@
 #include <QWaitCondition>
 #include "datamodel.h"
 #include "metadata.h"
+#include "thumb.h"
 
 
 class MetadataCache : public QThread
@@ -28,7 +29,10 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-    void loadImageMetadata(QFileInfo, bool, bool);
+    void setIcon(int, QImage);
+//    void setIcon(QModelIndex*, QImage*, QString);
+    void refreshThumbs();
+    void loadImageMetadata(QFileInfo, bool, bool, bool);
     void loadThumbCache();
     void loadImageCache();
     void updateIsRunning(bool);
@@ -40,6 +44,15 @@ private:
     bool abort;
     DataModel *dm;
     Metadata *metadata;
+    Thumb *thumb;
+
+    QModelIndex idx;
+//    QModelIndex *idx = new QModelIndex;
+//    QFileInfo fileInfo;
+//    QString fPath;
+    QSize thumbMax;         // rgh review hard coding thumb size
+//    QImage thumb;
+    QString err;            // type of error
 
     void track(QString fPath, QString msg);
 };

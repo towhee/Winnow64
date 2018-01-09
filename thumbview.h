@@ -50,6 +50,7 @@ public:
     ThumbViewDelegate *thumbViewDelegate;
     void selectThumb(int row);
     void selectThumb(QString &filePath);
+    bool isThumb(int row);
     void reportThumb();                             //debugging thumb roles
 
     int getFirstVisible();
@@ -93,7 +94,7 @@ public slots:
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
 
     void refreshThumbs();
-    void setIcon(QStandardItem *item, QImage thumb, QString folderPath);
+    void setIcon(int row, QImage thumb);
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
              int _thumbPadding, int _labelFontSize, bool _showThumbLabels, bool _wrapThumbs);
 //    void setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid, int _thumbSpacingGrid,

@@ -1,4 +1,5 @@
 BUGS
+- Toggle zoom wrong place when using preview size cached image
 - When drag drop folder panel does not update
 - Thumb creation bogs down in some folders under stress testing
 - Info status not reporting correctly while thumbs loading and zoom
