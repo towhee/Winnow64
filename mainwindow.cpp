@@ -857,7 +857,7 @@ void MW::createActions()
 
     QString reveal = "Reveal";
     #ifdef Q_OS_WIN
-        reveal = "Reveal in Explorer";
+        reveal = "Open in Explorer";
     #endif
     #ifdef Q_OS_MAC
         reveal = "Reveal in Finder";
@@ -1820,8 +1820,10 @@ void MW::createMenus()
 
     // thumbview context menu
     QList<QAction *> *thumbViewActions = new QList<QAction *>;
+    thumbViewActions->append(revealFileAction);
     thumbViewActions->append(openAction);
     thumbViewActions->append(openWithMenuAction);
+    thumbViewActions->append(separatorAction);
     thumbViewActions->append(selectAllAction);
     thumbViewActions->append(invertSelectionAction);
     thumbViewActions->append(separatorAction);
@@ -3351,6 +3353,7 @@ void MW::about()
         + "Qt v" + QT_VERSION_STR
         + "<p></p>"
         + "<p>Author: Rory Hill."
+        + "<p>Latest change: " + versionDetail
         + "<p>Winnow is licensed under the GNU General Public License version 3</p>";
 
     QMessageBox::about(this, tr("About") + " Winnow", aboutString);
@@ -4593,7 +4596,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         filterGreenAction->setShortcut(QKeySequence("Shift+8"));
         filterBlueAction->setShortcut(QKeySequence("Shift+9"));
         filterPurpleAction->setShortcut(QKeySequence("Shift+0"));
-        reportMetadataAction->setShortcut(QKeySequence("Ctrl+R"));
+        reportMetadataAction->setShortcut(QKeySequence("Shift+Ctrl+R"));
         slideShowAction->setShortcut(QKeySequence("S"));
         thumbsFitAction->setShortcut(QKeySequence("Alt+]"));
         thumbsEnlargeAction->setShortcut(QKeySequence("]"));
@@ -4612,7 +4615,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         asGridAction->setShortcut(QKeySequence("G"));
         asTableAction->setShortcut(QKeySequence("T"));
         asCompareAction->setShortcut(QKeySequence("C"));
-        revealFileAction->setShortcut(QKeySequence("Ctrl+F"));
+        revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
         zoomOutAction->setShortcut(QKeySequence("-"));
         zoomInAction->setShortcut(QKeySequence("+"));
         zoomToggleAction->setShortcut(QKeySequence("Space"));
@@ -5950,70 +5953,38 @@ void MW::openFolder()
 
 void MW::revealFile()
 {
+/*
+See http://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
+for details
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::revealFile";
     #endif
     }
-
-//    QProcess *process = new QProcess(this);
-//    QString path = QDir::toNativeSeparators(QApplication::applicationPath);
-//    #if defined(Q_OS_WIN)
-//    process->start("explorer.exe",  QStringList() << path);
-//    #elif defined(Q_OS_MAC)
-//    process->start("open", QStringList() << path);
-//    #endif
-//    return;
-
-    // See http://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
-    // for details
-
-    QString pathToReveal = thumbView->getCurrentFilename();
-
-    // Mac, Windows support folder or file.
+    QString path = thumbView->getCurrentFilename();
+    QFileInfo info(path);
 #if defined(Q_OS_WIN)
-//    const QString explorer = Environment::systemEnvironment().searchInPath(QLatin1String("explorer.exe"));
-//    if (explorer.isEmpty()) {
-//        QMessageBox::warning(this,
-//                             tr("Launching Windows Explorer failed"),
-//                             tr("Could not find explorer.exe in path to launch Windows Explorer."));
-//        return;
-//    }
-//    QString param;
-//    if (!QFileInfo(pathIn).isDir())
-//        param = QLatin1String("/select,");
-//    param += QDir::toNativeSeparators(pathIn);
-//    QString command = explorer + " " + param;
-//    QString command = explorer + " " + param;
-//    QProcess::startDetached(command);
-
+    QStringList args;
+    if (!info.isDir())
+        args << "/select,";
+    args << QDir::toNativeSeparators(path);
+    if (QProcess::startDetached("explorer", args))
+        return;
 #elif defined(Q_OS_MAC)
-    Q_UNUSED(this)
-    QStringList scriptArgs;
-    scriptArgs << QLatin1String("-e")
-            << QString::fromLatin1("tell application \"Finder\" to reveal POSIX file \"%1\"")
-            .arg(pathToReveal);
-    QProcess::execute(QLatin1String("/usr/bin/osascript"), scriptArgs);
-    scriptArgs.clear();
-    scriptArgs << QLatin1String("-e")
-            << QLatin1String("tell application \"Finder\" to activate");
-    QProcess::execute("/usr/bin/osascript", scriptArgs);
-#else
-    // we cannot select a file here, because no file browser really supports it...
-    const QFileInfo fileInfo(pathIn);
-    const QString folder = fileInfo.absoluteFilePath();
-    const QString app = Utils::UnixUtils::fileBrowser(Core::ICore::instance()->settings());
-    QProcess browserProc;
-    const QString browserArgs = Utils::UnixUtils::substituteFileBrowserParameters(app, folder);
-    if (debug)
-        qDebug() <<  browserArgs;
-    bool success = browserProc.startDetached(browserArgs);
-    const QString error = QString::fromLocal8Bit(browserProc.readAllStandardError());
-    success = success && error.isEmpty();
-    if (!success)
-        showGraphicalShellError(parent, app, error);
+    QStringList args;
+    args << "-e";
+    args << "tell application \"Finder\"";
+    args << "-e";
+    args << "activate";
+    args << "-e";
+    args << "select POSIX file \"" + path + "\"";
+    args << "-e";
+    args << "end tell";
+    if (!QProcess::execute("/usr/bin/osascript", args))
+        return;
 #endif
-
+    QDesktopServices::openUrl(QUrl::fromLocalFile(info.isDir()? path : info.path()));
 }
 
 void MW::openInFinder()

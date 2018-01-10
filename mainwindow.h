@@ -54,7 +54,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.902 Redid thumb caching";
+    QString version = "0.903";
+    QString versionDetail = "Added show in explorer";
 
     bool isShift;               // used when opening if shift key pressed
 
