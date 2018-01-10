@@ -1795,6 +1795,12 @@ void MW::createMenus()
     // Separator Action
     QAction *separatorAction = new QAction(this);
     separatorAction->setSeparator(true);
+    QAction *separatorAction1 = new QAction(this);
+    separatorAction1->setSeparator(true);
+    QAction *separatorAction2 = new QAction(this);
+    separatorAction2->setSeparator(true);
+    QAction *separatorAction3 = new QAction(this);
+    separatorAction3->setSeparator(true);
 
     // FSTree context menu
     QList<QAction *> *fsTreeActions = new QList<QAction *>;
@@ -1802,9 +1808,11 @@ void MW::createMenus()
     fsTreeActions->append(revealFileAction);
     fsTreeActions->append(separatorAction);
     fsTreeActions->append(pasteAction);
-    fsTreeActions->append(separatorAction);
+    fsTreeActions->append(separatorAction1);
     fsTreeActions->append(openWithMenuAction);
     fsTreeActions->append(addBookmarkAction);
+    fsTreeActions->append(separatorAction2);
+    fsTreeActions->append(folderDockLockAction);
 
     // filters context menu
     QList<QAction *> *filterActions = new QList<QAction *>;
@@ -1812,11 +1820,23 @@ void MW::createMenus()
     filterActions->append(separatorAction);
     filterActions->append(expandAllAction);
     filterActions->append(collapseAllAction);
+    filterActions->append(separatorAction1);
+    filterActions->append(filterDockLockAction);
 
     // bookmarks context menu
-    bookmarks->addAction(pasteAction);
-    bookmarks->addAction(removeBookmarkAction);
-    bookmarks->setContextMenuPolicy(Qt::ActionsContextMenu);
+    QList<QAction *> *favActions = new QList<QAction *>;
+    favActions->append(pasteAction);
+    favActions->append(removeBookmarkAction);
+    favActions->append(separatorAction);
+    favActions->append(favDockLockAction);
+
+    // metadata context menu
+    QList<QAction *> *metadataActions = new QList<QAction *>;
+    metadataActions->append(infoView->copyInfoAction);
+    metadataActions->append(reportMetadataAction);
+    metadataActions->append(prefAction);
+    metadataActions->append(separatorAction);
+    metadataActions->append(metadataDockLockAction);
 
     // thumbview context menu
     QList<QAction *> *thumbViewActions = new QList<QAction *>;
@@ -1826,7 +1846,7 @@ void MW::createMenus()
     thumbViewActions->append(separatorAction);
     thumbViewActions->append(selectAllAction);
     thumbViewActions->append(invertSelectionAction);
-    thumbViewActions->append(separatorAction);
+    thumbViewActions->append(separatorAction1);
     thumbViewActions->append(reportMetadataAction);
 
 //    // imageview/tableview/gridview/compareview context menu
@@ -1907,8 +1927,14 @@ void MW::createMenus()
     fsTree->addActions(*fsTreeActions);
     fsTree->setContextMenuPolicy(Qt::ActionsContextMenu);
 
+    bookmarks->addActions(*favActions);
+    bookmarks->setContextMenuPolicy(Qt::ActionsContextMenu);
+
     filters->addActions(*filterActions);
     filters->setContextMenuPolicy(Qt::ActionsContextMenu);
+
+    infoView->addActions(*metadataActions);
+    infoView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     thumbView->addActions(*thumbViewActions);
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);
@@ -3332,12 +3358,6 @@ void MW::reportMetadata()
     #endif
     }
 //    setCentralMessage("A message to central");
-//    qDebug() << "Horizontal scrollbar position" << thumbView->horizontalScrollBar()->value();
-//    metadata->reportMetadataAllFiles();
-
-//    metadata->reportViaExiftool(thumbView->getCurrentFilename());
-//    metadata->reportMetadataExiv2(thumbView->getCurrentFilename());
-
     metadata->readMetadata(true, thumbView->getCurrentFilename());
 }
 

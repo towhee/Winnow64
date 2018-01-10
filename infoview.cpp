@@ -93,11 +93,11 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 
    // InfoView menu
 	infoMenu = new QMenu("");
-	copyAction = new QAction(tr("Copy"), this);
+    copyInfoAction = new QAction(tr("Copy item"), this);
 
-	connect(copyAction, SIGNAL(triggered()), this, SLOT(copyEntry()));
-	infoMenu->addAction(copyAction);
-	setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(copyInfoAction, SIGNAL(triggered()), this, SLOT(copyEntry()));
+//	infoMenu->addAction(copyAction);
+//	setContextMenuPolicy(Qt::CustomContextMenu);
 
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),
             SLOT(showInfoViewMenu(QPoint)));

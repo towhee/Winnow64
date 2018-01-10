@@ -1,4 +1,5 @@
 BUGS
+- Copy metadata item not working (was working before)
 - Toggle zoom wrong place when using preview size cached image
 - When drag drop folder panel does not update
 - Thumb creation bogs down in some folders under stress testing
@@ -6,8 +7,8 @@ BUGS
 - Gets stuck in F mode where cannot resize
 - Pick thumb not always showing one main image in loupe mode
 - Icon padding becomes 2 for no apparent reason periodically
+- Combobox not showing down arrow
 PERFORMANCE
-- Try starting thumb cache 200ms after metadataCache starts
 - Separate thread to load XMP data after thumbnails loaded
 - Improve producer/consumer image cache performance for large files
 CODE IMPROVEMENTS
@@ -23,7 +24,6 @@ ENHANCEMENTS
 - Get Sony image count, camera SN
 - Get actual monitor resolution for actualDevicePixelRatio calculation
 - Recent copy to folders in ingest dialog
-- Open with another app
 - Add zoom increment amount to preferences
 - Edit title in metadata?
 - Add preferences for info label
@@ -44,6 +44,8 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Reveal in explorer / finder
+- Done: Merged metadata and thumb caching: more stable and faster
 - Done: Added version to Help > About
 - Done: Add more raw file formats - Sony
 - Done: Improve ingest layout, add manual option

@@ -38,6 +38,8 @@ public:
     QModelIndex tagInfoIdx;
     QModelIndex statusInfoIdx;
 
+    QAction *copyInfoAction;
+
     enum categories {
         fileInfoCat,
         imageInfoCat,
