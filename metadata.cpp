@@ -2280,7 +2280,7 @@ void Metadata::formatCanon()
     (ifdDataHash.contains(315))
         ? creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount)
         : creator = "";
-    (ifdDataHash.contains(315))
+    (ifdDataHash.contains(33432))
         ? copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount)
         : copyright = "";
 //    (ifdDataHash.contains(306))
@@ -2974,6 +2974,14 @@ bool Metadata::formatJPG()
             ? model = getString(ifdDataHash.value(272).tagValue + startOffset,
             ifdDataHash.value(272).tagCount)
             : model = "";
+
+        (ifdDataHash.contains(315))
+            ? creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount)
+            : creator = "";
+
+        (ifdDataHash.contains(33432))
+            ? copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount)
+            : copyright = "";
 
         // IFD0: DateTime
 //        (ifdDataHash.contains(306))

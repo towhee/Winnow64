@@ -564,7 +564,7 @@ so scrollTo and delegate use of the current index must check the row.
     #endif
     }
 
-     qDebug() << "MW::fileSelectionChange   Start  CurrentIndex =" << current;
+//     qDebug() << "MW::fileSelectionChange   Start  CurrentIndex =" << current;
 
     // if starting program, set first image to display
 //    if (previous.row() == -1) thumbView->selectThumb(0);
@@ -628,7 +628,6 @@ so scrollTo and delegate use of the current index must check the row.
 
     // the file path is used as an index in ImageView and Metadata
     QString fPath = dm->sf->index(currentRow, 0).data(G::FileNameRole).toString();
-    qDebug() << "MW::fileSelectionChange" << fPath;
 
     // update the matadata panel
     infoView->updateInfo(fPath);
@@ -663,7 +662,7 @@ so scrollTo and delegate use of the current index must check the row.
         }
         if(thumbDock->isFloating()) thumbView->setWrapping(true);
     }
-    qDebug() << "MW::fileSelectionChange   End of function";
+//    qDebug() << "MW::fileSelectionChange   End of function";
 
     // load thumbnail if not done yet
     if (thumbView->isThumb(currentRow)) {
