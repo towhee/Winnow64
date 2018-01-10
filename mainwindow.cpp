@@ -2373,7 +2373,6 @@ parameters.  Any visibility changes are executed.
     // update visibility if preferences have been changed
     cacheLabel->setVisible(isShowCacheStatus);
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
-//    thumbThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
 }
 
@@ -5294,7 +5293,6 @@ void MW::setCacheStatusVisibility()
     }
     cacheLabel->setVisible(isShowCacheStatus);
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
-//    thumbThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
 }
 
