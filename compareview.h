@@ -4,7 +4,7 @@
 #include <QtWidgets>
 #include "metadata.h"
 #include "imagecache.h"
-#include "thumbcache.h"
+#include "thumbview.h"
 #include "circlelabel.h"
 #include "pixmap.h"
 

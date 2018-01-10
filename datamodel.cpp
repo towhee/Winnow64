@@ -91,7 +91,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfolders)
 /*
 When a new folder is selected load it into the data model.  This clears the
 model and populates the data model with all the cached thumbnail pixmaps from
-thumbCache.  If load subfolders has been chosen then the entire subfolder
+metadataCache.  If load subfolders has been chosen then the entire subfolder
 heirarchy is loaded.
 */
     {

@@ -34,7 +34,6 @@
 #include "thumb.h"
 #include "thumbview.h"
 #include "tableview.h"
-#include "thumbcache.h"
 #include "workspacedlg.h"
 #include "zoomdlg.h"
 
@@ -250,10 +249,8 @@ private slots:
     void updateStatus(bool showFileCount, QString s = "");
     void clearStatus();
     void updateMetadataThreadRunStatus(bool isRun);
-    void updateThumbThreadRunStatus(bool isRun);
     void updateImageThreadRunStatus(bool isRun);
     void loadMetadataCache();
-    void loadThumbCache();
     void loadImageCache();
     void loadFilteredImageCache();
     void addNewBookmark();
@@ -570,7 +567,6 @@ private:
     CompareImages *compareImages;
     MetadataCache *metadataCacheThread;
     ImageCache *imageCacheThread;
-    ThumbCache *thumbCacheThread;
     Thumb *thumb;
     InfoView *infoView;
     CopyPickDlg *copyPickDlg;

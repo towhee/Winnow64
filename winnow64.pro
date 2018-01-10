@@ -27,7 +27,6 @@ HEADERS += \
     metadata.h \
     pixmap.h \
     tableview.h \
-    thumbcache.h \
     thumbview.h \
     thumbviewdelegate.h \
     testaligndlg.h \
@@ -61,7 +60,6 @@ SOURCES += \
     metadata.cpp \
     pixmap.cpp \
     tableview.cpp \
-    thumbcache.cpp \
     thumbview.cpp \
     thumbviewdelegate.cpp \
     testaligndlg.cpp \
