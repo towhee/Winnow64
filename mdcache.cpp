@@ -70,6 +70,56 @@ void MetadataCache::loadMetadataCache()
     }
 }
 
+bool MetadataCache::loadMetadata()
+{
+/*
+Load the metadata and thumb (icon) for all the image files in a folder.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MetadataCache::loadMetadata";
+    #endif
+    }
+    qDebug() << "MetadataCache::loadMetadata";
+    bool allMetadataLoaded = true;
+    int thumbCacheThreshold = 20;
+    int totRows = dm->rowCount();
+    for (int row = 0; row < totRows; ++row) {
+        if (abort) {
+            emit updateIsRunning(false);
+            return false;
+        }
+        idx = dm->index(row, 0);
+        QString fPath = idx.data(Qt::ToolTipRole).toString();
+        QString s = "Loading metadata " + QString::number(row + 1) + " of " + QString::number(totRows);
+        emit updateStatus(false, s);
+
+        /* InfoView::updateInfo might have already loaded by getting here first
+           as it is executed when the first image is loaded  */
+        if (!metadata->isLoaded(fPath)) {
+            QFileInfo fileInfo(fPath);
+//            emit loadImageMetadata(fileInfo, true, true, false);
+            mutex.lock();
+            if (!metadata->loadImageMetadata(fileInfo, true, true, false))
+                allMetadataLoaded = false;
+            if (row % thumbCacheThreshold == 0) {
+                emit refreshThumbs();
+            }
+            mutex.unlock();
+        }
+
+        bool isThumbLoaded = idx.data(Qt::DecorationRole).isValid();
+        if (!isThumbLoaded) {
+            QImage image;
+            isThumbLoaded = thumb->loadThumb(fPath, image);
+//            QImage *imagePtr = &image;
+            if (isThumbLoaded) emit setIcon(row, image);
+            else allMetadataLoaded = false;
+        }
+    }
+    return allMetadataLoaded;
+}
+
 void MetadataCache::run()
 {
     {
@@ -80,42 +130,20 @@ void MetadataCache::run()
     QElapsedTimer t;
     t.start();
 
-    QString folderPath;
-    QString fPath;
-
-    qDebug() << "MetadataCache::run   Started";
     emit updateIsRunning(true);
-    int thumbCacheThreshold = 20;
-    int totRows = dm->rowCount();
-    for (int row = 0; row < totRows; ++row) {
+
+    // Load all metadata, make multiple attempts if not all metadata loaded
+    bool allMetadataLoaded = false;
+    do {
         if (abort) {
             emit updateIsRunning(false);
             return;
         }
-        idx = dm->index(row, 0);
-        fPath = idx.data(Qt::ToolTipRole).toString();
-        QString s = "Loading metadata " + QString::number(row + 1) + " of " + QString::number(totRows);
-        emit updateStatus(false, s);
-        /* InfoView::updateInfo might have already loaded by getting here first
-           as it is executed when the first image is loaded  */
-        if (!metadata->isLoaded(fPath)) {
-            QFileInfo fileInfo(fPath);
-            folderPath = fileInfo.path();
-//            emit loadImageMetadata(fileInfo, true, true, false);
-            mutex.lock();
-            metadata->loadImageMetadata(fileInfo, true, true, false);
-            if (row % thumbCacheThreshold == 0) {
-                emit refreshThumbs();
-            }
-            mutex.unlock();
-        }
-        QImage image;
-        thumb->loadThumb(fPath, image);
-        QImage *imagePtr = &image;
-        emit setIcon(row, image);
+        allMetadataLoaded = loadMetadata();
     }
-    qDebug() << "MetadataCache::run   Completed"
-             << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
+    while (!allMetadataLoaded || t.elapsed() > 5000);
+
+    qDebug() << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
 
     /* after read metadata okay to images, where the target
     cache needs to know how big each image is (width, height) and the offset

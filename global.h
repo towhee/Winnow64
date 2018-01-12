@@ -50,8 +50,6 @@ enum dataModelColumns {
     CopyrightColumn,
     EmailColumn,
     UrlColumn,
-    MetadataLoadedColumn,
-    ThumbLoadedColumn,
     TotalColumns    // insert additional columns before this
 };
 

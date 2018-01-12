@@ -52,7 +52,6 @@ public:
 signals:
 
 public slots:
-    void thumbLoaded(QString fPath, QString errMsg);
 
 private:
     QWidget *mw;

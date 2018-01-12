@@ -28,9 +28,12 @@ public:
 
 class ImageMetadata
 {
-
+/*
+This class structure of all the fields in metadata is used to insert a new item
+into "QMap<QString, ImageMetadata> metaCache" in Metadata::loadImageMetadata.
+*/
 public:
-    bool isPicked;          //rgh
+    bool isPicked;          //rgh required?
     ulong offsetFullJPG;
     ulong lengthFullJPG;
     ulong offsetThumbJPG;
@@ -65,9 +68,9 @@ public:
     int month;
     int day;
     QString copyFileNamePrefix;
-    bool isLoaded = false;
+    bool metadataLoaded = false;    // all metadata except thumb
+    bool isThumbLoaded;             // refers to thumb only
     QString err = "";
-
 };
 
 class Metadata
@@ -77,6 +80,7 @@ public:
     bool readMetadata(bool report, const QString &imageFullPath);
     void reportMetadataAllFiles();
 
+    // variables used to hold data before insertion into QMap metaCache
     ulong offsetFullJPG;
     ulong lengthFullJPG;
     ulong offsetThumbJPG;
@@ -101,12 +105,12 @@ public:
     QString lens;
     QString creator;
     QString copyright;
-//    QString xmpTitle;
     QString email;
     QString url;
     QString cameraSN;
     QString lensSN;
     ulong shutterCount;
+    // end variables used to hold data
 
     QString err;
 
@@ -128,8 +132,6 @@ public:
         "float8"
     }  */
 
-//    void reportViaExiftool(QString fPath);
-
     void removeImage(QString &imageFileName);
     void setPick(const QString &imageFileName, bool choice);
     void clear();
@@ -137,6 +139,7 @@ public:
     bool loadImageMetadata(const QFileInfo &fileInfo, bool essential = true,
                            bool nonEssential = true, bool isReport = false);
     bool isLoaded(const QString &imageFullPath);
+    bool isThumbLoaded(const QString &imageFullPath);
     ulong getOffsetFullJPG(const QString &imageFullPath);
     ulong getLengthFullJPG(const QString &imageFullPath);
     ulong getOffsetThumbJPG(const QString &imageFullPath);

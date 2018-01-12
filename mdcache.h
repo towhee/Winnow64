@@ -33,7 +33,7 @@ signals:
 //    void setIcon(QModelIndex*, QImage*, QString);
     void refreshThumbs();
     void loadImageMetadata(QFileInfo, bool, bool, bool);
-    void loadThumbCache();
+//    void loadThumbCache();
     void loadImageCache();
     void updateIsRunning(bool);
     void updateStatus(bool, QString);
@@ -47,13 +47,10 @@ private:
     Thumb *thumb;
 
     QModelIndex idx;
-//    QModelIndex *idx = new QModelIndex;
-//    QFileInfo fileInfo;
-//    QString fPath;
     QSize thumbMax;         // rgh review hard coding thumb size
-//    QImage thumb;
     QString err;            // type of error
 
+    bool loadMetadata();
     void track(QString fPath, QString msg);
 };
 

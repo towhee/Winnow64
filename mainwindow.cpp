@@ -2038,8 +2038,8 @@ void MW::createCaching()
     metadataCacheThread = new MetadataCache(this, dm, metadata);
     imageCacheThread = new ImageCache(this, metadata);
 
-    connect(metadataCacheThread, SIGNAL(loadThumbCache()),
-            this, SLOT(loadThumbCache()));
+//    connect(metadataCacheThread, SIGNAL(loadThumbCache()),
+//            this, SLOT(loadThumbCache()));
 
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));

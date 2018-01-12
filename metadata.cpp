@@ -3148,10 +3148,6 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
         reportString = "";
         rpt.setString(&reportString);
     }
-//    report = false;
-//    report = true;
-//    QElapsedTimer t;
-//    t.start();
     clearMetadata();
     file.setFileName(fPath);
     if (report) {
@@ -3168,7 +3164,6 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
 //    qDebug() << "Metadata::readMetadata  fPath =" << fPath;
     do {
         if (file.open(QIODevice::ReadOnly)) {
-//            qDebug() << "MetadataCache opened. Delay =" << msDelay << imageFullPath;
             if (ext == "nef") formatNikon();
             if (ext == "cr2") formatCanon();
             if (ext == "orf") formatOlympus();
@@ -3205,8 +3200,8 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
 
 //    qDebug() << fPath << offsetThumbJPG << offsetSmallJPG << offsetFullJPG;
 
-    if (!success) track(fPath, "FAILED TO LOAD METADATA");
-    else track(fPath, "Success");
+    if (success) track(fPath, "Success");
+    else track(fPath, "FAILED TO LOAD METADATA");
 
 //    if (GData::isTimer) qDebug() << "Time to read metadata =" << t.elapsed();
     return success;
@@ -3229,12 +3224,17 @@ bool Metadata::isLoaded(const QString &imageFileName)
     qDebug() << "Metadata::isLoaded" << imageFileName;
     #endif
     }
-//    qDebug() << "metaCache.contains(imageFileName)"
-//             << imageFileName
-//             << metaCache.contains(imageFileName)
-//             << "metaCache[imageFileName].isLoaded"
-//             << metaCache[imageFileName].isLoaded;
-    return metaCache[imageFileName].isLoaded;
+    return metaCache[imageFileName].metadataLoaded;
+}
+
+bool Metadata::isThumbLoaded(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::isThumbLoaded" << imageFileName;
+    #endif
+    }
+    return metaCache[imageFileName].isThumbLoaded;
 }
 
 ulong Metadata::getOffsetFullJPG(const QString &imageFileName)
@@ -3612,7 +3612,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 //    qDebug() << "Metadata::loadImageMetadata  fileInfo.filePath() ="
 //             << fileInfo.filePath();
     // check if already loaded
-    if (metaCache[fileInfo.filePath()].isLoaded) return true;
+    if (metaCache[fileInfo.filePath()].metadataLoaded) return true;
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load
     readEssentialMetadata = essential;
@@ -3668,7 +3668,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
     if (shootingInfo.length() > 0) imageMetadata.shootingInfo = shootingInfo;
     if (orientation) imageMetadata.orientation = orientation;
-    imageMetadata.isLoaded = true;
+    imageMetadata.metadataLoaded = result;
 
     metaCache.insert(fileInfo.filePath(), imageMetadata);
 
