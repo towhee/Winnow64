@@ -1409,44 +1409,47 @@ void ThumbView::copyThumbs()
 
 void ThumbView::startDrag(Qt::DropActions)
 {
-/* Drag and drop thumbs to another program.
- */
+/*
+Drag and drop thumbs to another program.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::startDrag";
     #endif
     }
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::startDrag";
-    #endif
-    }
-    QModelIndexList indexesList = selectionModel()->selectedIndexes();
-    if (indexesList.isEmpty()) {
+
+    QModelIndexList selection = selectionModel()->selectedRows();
+    if (selection.isEmpty()) {
         return;
     }
 
     QDrag *drag = new QDrag(this);
     QMimeData *mimeData = new QMimeData;
     QList<QUrl> urls;
-    for (QModelIndexList::const_iterator it = indexesList.constBegin(),
-         end = indexesList.constEnd();
-         it != end; ++it)
-    {
-        urls << QUrl(it->data(G::FileNameRole).toString());
+//    for (QModelIndexList::const_iterator it = indexesList.constBegin(),
+//         end = indexesList.constEnd();
+//         it != end; ++it)
+//    {
+//        urls << QUrl(it->data(G::FileNameRole).toString());
+//    }
+
+    for(int i = 0; i < selection.count(); ++i) {
+        urls << QUrl(selection.at(i).data(G::FileNameRole).toString());
     }
+    qDebug() << urls;
+
     mimeData->setUrls(urls);
     drag->setMimeData(mimeData);
     QPixmap pix;
-    if (indexesList.count() > 1) {
+    if (selection.count() > 1) {
         pix = QPixmap(128, 112);
         pix.fill(Qt::transparent);
         QPainter painter(&pix);
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QPen(Qt::white, 2));
         int x = 0, y = 0, xMax = 0, yMax = 0;
-        for (int i = 0; i < qMin(5, indexesList.count()); ++i) {
-            QPixmap pix = dm->item(indexesList.at(i).row())->icon().pixmap(72);
+        for (int i = 0; i < qMin(5, selection.count()); ++i) {
+            QPixmap pix = dm->item(selection.at(i).row())->icon().pixmap(72);
             if (i == 4) {
                 x = (xMax - pix.width()) / 2;
                 y = (yMax - pix.height()) / 2;
@@ -1462,7 +1465,7 @@ void ThumbView::startDrag(Qt::DropActions)
         pix = pix.copy(0, 0, xMax, yMax);
         drag->setPixmap(pix);
     } else {
-        pix = dm->item(indexesList.at(0).row())->icon().pixmap(128);
+        pix = dm->item(selection.at(0).row())->icon().pixmap(128);
         drag->setPixmap(pix);
     }
     drag->setHotSpot(QPoint(pix.width() / 2, pix.height() / 2));

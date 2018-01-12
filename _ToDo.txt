@@ -1,8 +1,9 @@
 BUGS
+- Drag drop to photoshop not working
 - Copy metadata item not working (was working before)
 - Toggle zoom wrong place when using preview size cached image
-- When drag drop folder panel does not update
-- Thumb creation bogs down in some folders under stress testing
+- When drag drop onto winnow folder panel does not update
+- Thumb creation bogs down in some folders under stress testing (might be fixed but not finished)
 - Info status not reporting correctly while thumbs loading and zoom
 - Gets stuck in F mode where cannot resize
 - Pick thumb not always showing one main image in loupe mode
@@ -17,17 +18,16 @@ CODE IMPROVEMENTS
 ENHANCEMENTS
 - Read/write XMP sidecars
 - Open with ...
-- Drag and drop a selection of thumbs (only first currently dragged)
-- Drag and drop image onto Winnow - show image and load folder
+- Drag and drop a selection of thumbs
 - Add current folder to bookmarks
 - Combine raw+jpg option
 - Get Sony image count, camera SN
 - Get actual monitor resolution for actualDevicePixelRatio calculation
 - Recent copy to folders in ingest dialog
 - Add zoom increment amount to preferences
-- Edit title in metadata?
+- Edit title in metadata
 - Add preferences for info label
-- Add Ingest token builder
+- Add Ingest token builder (see http://doc.qt.io/qt-5/qtwidgets-draganddrop-fridgemagnets-example.html)
 - Remember column order in tableView and workspace
 - Add Tif support
 - Add more raw file formats - DNG, Sony, Fuji, Panasonic ...
@@ -44,6 +44,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Drag and drop image onto Winnow - show image and load folder
 - Done: Reveal in explorer / finder
 - Done: Merged metadata and thumb caching: more stable and faster
 - Done: Added version to Help > About
