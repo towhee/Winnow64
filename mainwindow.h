@@ -175,6 +175,7 @@ public:
 
     QString prevMode;
     int currentRow;             // the current row in fileSelection
+    bool allMetadataLoaded;
     bool modeChangeJustHappened;
 
     bool isCurrentFolderOkay;
@@ -251,7 +252,9 @@ private slots:
     void clearStatus();
     void updateMetadataThreadRunStatus(bool isRun);
     void updateImageThreadRunStatus(bool isRun);
-    void loadMetadataCache();
+    void updateAllMetadataLoaded(bool isLoaded);
+    void loadMetadataCacheScrollEvent();
+    void loadMetadataCache(int startRow = 0);
     void loadImageCache();
     void loadFilteredImageCache();
     void addNewBookmark();

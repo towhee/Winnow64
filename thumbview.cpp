@@ -397,7 +397,10 @@ of images in the selected folder.
     QRect thumbViewRect = viewport()->rect();
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
-            qDebug() << "1st row" << row;
+            QRect thumbRect = visualRect(dm->sf->index(row, 0));
+            qDebug() << "ThumbView::getFirstVisible  row =" << row
+                     << "thumbRect =" << thumbRect
+                     << "thumbViewRect =" << thumbViewRect;
             return row;
         }
     }
@@ -1115,7 +1118,7 @@ int ThumbView::getVerticalScrollBarMax()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "humbView::getVerticalScrollBarMax()";
+    qDebug() << "ThumbView::getVerticalScrollBarMax()";
     #endif
     }
     int pageWidth = viewport()->width();

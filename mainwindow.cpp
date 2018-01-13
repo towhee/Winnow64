@@ -520,7 +520,7 @@ void MW::folderSelectionChange()
      allocated. */
 
      updateStatus(false, "Collecting metadata for all images in folder(s)");
-     loadMetadataCache();
+     loadMetadataCache(0);
 
      // format pickMemSize as bytes, KB, MB or GB
      pickMemSize = formatMemoryReqd(memoryReqdForPicks());
@@ -667,10 +667,29 @@ so scrollTo and delegate use of the current index must check the row.
         thumb->loadThumb(fPath, image);
         thumbView->setIcon(currentRow, image);
     }
-
 }
 
-void MW::loadMetadataCache()
+void MW::updateAllMetadataLoaded(bool isLoaded)
+{
+    allMetadataLoaded = isLoaded;
+}
+
+void MW::loadMetadataCacheScrollEvent()
+{
+//    int startRow = gridView->getFirstVisible();
+//    qDebug() << "MW::loadMetadataCacheScrollEvent  startRow ="
+//             << startRow
+//             << "allMetadataLoaded =" << allMetadataLoaded;
+    if (!allMetadataLoaded) {
+        int startRow = gridView->getFirstVisible();
+        qDebug() << "MW::loadMetadataCacheScrollEvent  startRow ="
+                 << startRow
+                 << "allMetadataLoaded =" << allMetadataLoaded;
+        if (startRow > 0) loadMetadataCache(startRow);
+    }
+}
+
+void MW::loadMetadataCache(int startRow)
 {
     {
     #ifdef ISDEBUG
@@ -678,7 +697,9 @@ void MW::loadMetadataCache()
     #endif
     }
     metadataCacheThread->stopMetadateCache();
-    metadataCacheThread->loadMetadataCache();
+
+    // startRow in case user scrolls ahead and thumbs not yet loaded
+    metadataCacheThread->loadMetadataCache(startRow);
 }
 
 void MW::loadImageCache()
@@ -2038,8 +2059,8 @@ void MW::createCaching()
     metadataCacheThread = new MetadataCache(this, dm, metadata);
     imageCacheThread = new ImageCache(this, metadata);
 
-//    connect(metadataCacheThread, SIGNAL(loadThumbCache()),
-//            this, SLOT(loadThumbCache()));
+    connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
+            this, SLOT(updateAllMetadataLoaded(bool)));
 
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));
@@ -2071,9 +2092,6 @@ void MW::createThumbView()
     thumbView->setObjectName("ThumbView");
     thumbView->setAutoScroll(false);
 
-    // set here, as gridView, which is another ThumbView instance, is different
-//    thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-
     // loadSettings has not run yet (dependencies, but QSettings has been opened
     thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
     thumbView->thumbPadding = setting->value("thumbPadding").toInt();
@@ -2082,10 +2100,6 @@ void MW::createThumbView()
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
     thumbView->wrapThumbs = setting->value("wrapThumbs").toBool();
-
-//    qDebug() << "MW::createThumbView"
-//             << "thumbView->thumbWidth"
-//             << thumbView->thumbWidth;
 
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -2096,6 +2110,8 @@ void MW::createThumbView()
     connect(thumbView, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
 
+    connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
+            this, SLOT(loadMetadataCacheScrollEvent()));
     }
 
 void MW::createGridView()
@@ -2123,6 +2139,9 @@ void MW::createGridView()
 
     // double mouse click fires displayLoupe
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
+
+    connect(gridView->verticalScrollBar(), SIGNAL(valueChanged(int)),
+            this, SLOT(loadMetadataCacheScrollEvent()));
 }
 
 void MW::createTableView()

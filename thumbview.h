@@ -53,8 +53,6 @@ public:
     bool isThumb(int row);
     void reportThumb();                             //debugging thumb roles
 
-    int getFirstVisible();
-    int getLastVisible();
 
     QFileInfoList getPicks();
     bool isPick();
@@ -92,6 +90,9 @@ public slots:
     void toggleFilterPick(bool isFilter);
     void invertSelection();                         //in use
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
+
+    int getFirstVisible();
+    int getLastVisible();
 
     void refreshThumbs();
     void setIcon(int row, QImage thumb);

@@ -49,16 +49,19 @@ void MetadataCache::track(QString fPath, QString msg)
     if (G::isThreadTrackingOn) qDebug() << "• Metadata Caching" << fPath << msg;
 }
 
-void MetadataCache::loadMetadataCache()
+void MetadataCache::loadMetadataCache(int startRow)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "MetadataCache::loadMetadataCache";
     #endif
     }
+    allMetadataLoaded = false;
+    this->startRow = startRow;
+    qDebug() << "MetadataCache::loadMetadataCache  startRow =" << startRow;
     if (!isRunning()) {
         abort = false;
-        start(LowPriority);
+        start(TimeCriticalPriority);
     } else {
         mutex.lock();
         abort = true;
@@ -80,28 +83,42 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     qDebug() << "MetadataCache::loadMetadata";
     #endif
     }
-    qDebug() << "MetadataCache::loadMetadata";
-    bool allMetadataLoaded = true;
+    qDebug() << "MetadataCache::loadMetadata    startRow ="
+             << startRow
+             << "  allMetadataLoaded =" << allMetadataLoaded;
+    bool metadataLoaded = true;
     int thumbCacheThreshold = 20;
     int totRows = dm->rowCount();
-    for (int row = 0; row < totRows; ++row) {
+    // if start row > 0 then scroll event from user jumped ahead before all metadata loaded
+    int firstRow = startRow;
+    // might be unloaded metadata before start row
+    if (startRow > 0) metadataLoaded = false;
+    for (int row = firstRow; row < totRows; ++row) {
+        idx = dm->index(row, 0);
+        QString fPath = idx.data(Qt::ToolTipRole).toString();
         if (abort) {
+            qDebug() << "Aborting at row =" << row << fPath;
+            allMetadataLoaded = false;
+            emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false);
             return false;
         }
-        idx = dm->index(row, 0);
-        QString fPath = idx.data(Qt::ToolTipRole).toString();
         QString s = "Loading metadata " + QString::number(row + 1) + " of " + QString::number(totRows);
         emit updateStatus(false, s);
 
         /* InfoView::updateInfo might have already loaded by getting here first
            as it is executed when the first image is loaded  */
+        qDebug() << "Attempting to load metadata for row" << row
+                 << fPath;
         if (!metadata->isLoaded(fPath)) {
             QFileInfo fileInfo(fPath);
 //            emit loadImageMetadata(fileInfo, true, true, false);
             mutex.lock();
-            if (!metadata->loadImageMetadata(fileInfo, true, true, false))
-                allMetadataLoaded = false;
+            if (!metadata->loadImageMetadata(fileInfo, true, true, false)) {
+                metadataLoaded = false;
+                qDebug () << "Row =" << row
+                          << "Unable to load metadata for" << fPath;
+            }
             if (row % thumbCacheThreshold == 0) {
                 emit refreshThumbs();
             }
@@ -114,10 +131,11 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             isThumbLoaded = thumb->loadThumb(fPath, image);
 //            QImage *imagePtr = &image;
             if (isThumbLoaded) emit setIcon(row, image);
-            else allMetadataLoaded = false;
+            else metadataLoaded = false;
         }
     }
-    return allMetadataLoaded;
+    startRow = 0;
+    return metadataLoaded;
 }
 
 void MetadataCache::run()
@@ -127,21 +145,24 @@ void MetadataCache::run()
     qDebug() << "MetadataCache::run";
     #endif
     }
-    QElapsedTimer t;
     t.start();
 
     emit updateIsRunning(true);
 
     // Load all metadata, make multiple attempts if not all metadata loaded
-    bool allMetadataLoaded = false;
+    allMetadataLoaded = false;
     do {
         if (abort) {
+            qDebug() << "Aborting from MetadataCache::run";
+            allMetadataLoaded = false;
+            emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false);
             return;
         }
         allMetadataLoaded = loadMetadata();
+        qDebug() << "MetadataCache::run   elapsed time" << t.elapsed();
     }
-    while (!allMetadataLoaded || t.elapsed() > 5000);
+    while (!allMetadataLoaded && t.elapsed() < 5000);
 
     qDebug() << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
 
@@ -152,6 +173,7 @@ void MetadataCache::run()
 
     // update status in statusbar
     emit updateIsRunning(false);
+    emit updateAllMetadataLoaded(allMetadataLoaded);
 }
 
 
