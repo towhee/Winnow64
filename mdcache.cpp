@@ -83,9 +83,9 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     qDebug() << "MetadataCache::loadMetadata";
     #endif
     }
-    qDebug() << "MetadataCache::loadMetadata    startRow ="
-             << startRow
-             << "  allMetadataLoaded =" << allMetadataLoaded;
+//    qDebug() << "MetadataCache::loadMetadata    startRow ="
+//             << startRow
+//             << "  allMetadataLoaded =" << allMetadataLoaded;
     bool metadataLoaded = true;
     int thumbCacheThreshold = 20;
     int totRows = dm->rowCount();
@@ -163,6 +163,7 @@ void MetadataCache::run()
         qDebug() << "MetadataCache::run   elapsed time" << t.elapsed();
     }
     while (!allMetadataLoaded && t.elapsed() < 5000);
+    emit updateAllMetadataLoaded(allMetadataLoaded);
 
     qDebug() << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
 
@@ -173,7 +174,6 @@ void MetadataCache::run()
 
     // update status in statusbar
     emit updateIsRunning(false);
-    emit updateAllMetadataLoaded(allMetadataLoaded);
 }
 
 

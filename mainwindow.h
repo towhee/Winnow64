@@ -253,7 +253,9 @@ private slots:
     void updateMetadataThreadRunStatus(bool isRun);
     void updateImageThreadRunStatus(bool isRun);
     void updateAllMetadataLoaded(bool isLoaded);
-    void loadMetadataCacheScrollEvent();
+    void delayProcessLoadMetadataCacheScrollEvent();
+    void loadMetadataCacheThumbScrollEvent();
+    void loadMetadataCacheGridScrollEvent();
     void loadMetadataCache(int startRow = 0);
     void loadImageCache();
     void loadFilteredImageCache();
@@ -611,6 +613,10 @@ private:
     bool isMouseDrag = false;
 
     bool sortMenuUpdateToMatchTable = false;
+
+    bool newScrollSignal;           // used for scroll signal delay in case many/sec
+    QTimer *metadataCacheScrollTimer;
+    int metadataCacheStartRow;
 
     bool needThumbsRefresh;         // req'd?
     bool thumbViewBusy;             // req'd?

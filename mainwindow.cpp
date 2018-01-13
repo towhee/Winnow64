@@ -51,6 +51,12 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     isDragDrop = false;
     setAcceptDrops(true);
 
+    // setup delay before processing scroll signals in case many/sec
+    metadataCacheScrollTimer = new QTimer(this);
+    metadataCacheScrollTimer->setSingleShot(true);
+    connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
+            SLOT(delayProcessLoadMetadataCacheScrollEvent()));
+
     // platform specific settings
     setupPlatform();
 
@@ -388,6 +394,7 @@ void MW::folderSelectionChange()
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
+    allMetadataLoaded = false;
 
     // used by SortFilter, set true when ImageCacheTread starts
     G::isNewFolderLoaded = false;
@@ -671,20 +678,32 @@ so scrollTo and delegate use of the current index must check the row.
 
 void MW::updateAllMetadataLoaded(bool isLoaded)
 {
+/*
+This slot is signalled from the metadataCacheThread when all the metadata has
+been cached (including the thumbs).
+*/
     allMetadataLoaded = isLoaded;
 }
 
-void MW::loadMetadataCacheScrollEvent()
+void MW::loadMetadataCacheThumbScrollEvent()
 {
-//    int startRow = gridView->getFirstVisible();
-//    qDebug() << "MW::loadMetadataCacheScrollEvent  startRow ="
-//             << startRow
+    metadataCacheStartRow = thumbView->getFirstVisible();
+    metadataCacheScrollTimer->start(300);
+}
+
+void MW::loadMetadataCacheGridScrollEvent()
+{
+    metadataCacheStartRow = gridView->getFirstVisible();
+    metadataCacheScrollTimer->start(300);
+}
+
+void MW::delayProcessLoadMetadataCacheScrollEvent()
+{
+    int startRow = metadataCacheStartRow;
+//    qDebug() << "MW::loadMetadataCacheGridScrollEvent  "
+//             << "startRow =" << startRow
 //             << "allMetadataLoaded =" << allMetadataLoaded;
-    if (!allMetadataLoaded) {
-        int startRow = gridView->getFirstVisible();
-        qDebug() << "MW::loadMetadataCacheScrollEvent  startRow ="
-                 << startRow
-                 << "allMetadataLoaded =" << allMetadataLoaded;
+    if (!allMetadataLoaded && metadataCacheThread->isRunning()) {
         if (startRow > 0) loadMetadataCache(startRow);
     }
 }
@@ -696,6 +715,7 @@ void MW::loadMetadataCache(int startRow)
     qDebug() << "MW::loadMetadataCache";
     #endif
     }
+    qDebug() << "MW::loadMetadataCache    startRow =" << startRow;
     metadataCacheThread->stopMetadateCache();
 
     // startRow in case user scrolls ahead and thumbs not yet loaded
@@ -2111,8 +2131,11 @@ void MW::createThumbView()
             this, SLOT(updateStatus(bool, QString)));
 
     connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheScrollEvent()));
-    }
+            this, SLOT(loadMetadataCacheThumbScrollEvent()));
+
+    connect(thumbView->horizontalScrollBar(), SIGNAL(valueChanged(int)),
+            this, SLOT(loadMetadataCacheThumbScrollEvent()));
+}
 
 void MW::createGridView()
 {
@@ -2141,7 +2164,7 @@ void MW::createGridView()
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
     connect(gridView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheScrollEvent()));
+            this, SLOT(loadMetadataCacheGridScrollEvent()));
 }
 
 void MW::createTableView()

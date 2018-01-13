@@ -1,4 +1,9 @@
 BUGS
+- ThumbView at bottom not always sizing to incl scrollbar
+- Is there an embedded jog in focus stack tifs
+- Confirm tif metadata for focus stacks (app out msg)
+- Open folder not working
+- Recent folder not working
 - Drag drop to photoshop not working
 - Copy metadata item not working (was working before)
 - Toggle zoom wrong place when using preview size cached image
