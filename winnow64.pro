@@ -37,7 +37,8 @@ HEADERS += \
     Dialogs/zoomdlg.h \
     MacOS/macscale.h \
     MacOS/macScale_p.h \
-    thumb.h
+    thumb.h \
+    progressbar.h
 
 SOURCES += \
     bookmarks.cpp \
@@ -68,7 +69,8 @@ SOURCES += \
     Dialogs/copypickdlg.cpp \
     Dialogs/popup.cpp \
     Dialogs/zoomdlg.cpp \
-    thumb.cpp
+    thumb.cpp \
+    progressbar.cpp
 
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 

@@ -136,7 +136,7 @@ void ImageCache::cacheStatus()
      * dependent on setTargetRange() being up-to-date  */
 
     // trap instance where cache out of sync
-    if(cache.totFiles-1 > cacheItemList.length()) return;
+    if(cache.totFiles - 1 > cacheItemList.length()) return;
 
     // The app status bar is 25 pixels high.  Create a bitmap the height of the
     // status bar and cache.pxTotWidth wide the same color as the app status bar.

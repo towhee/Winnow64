@@ -33,9 +33,9 @@ signals:
 //    void setIcon(QModelIndex*, QImage*, QString);
     void refreshThumbs();
     void loadImageMetadata(QFileInfo, bool, bool, bool);
-//    void loadThumbCache();
     void loadImageCache();
     void updateIsRunning(bool);
+    void showCacheStatus(QImage imCacheStatus);
     void updateStatus(bool, QString);
     void updateAllMetadataLoaded(bool);
 
@@ -46,6 +46,8 @@ private:
     DataModel *dm;
     Metadata *metadata;
     Thumb *thumb;
+    QMap<int, bool> loadMap;
+    QString folderPath;
 
     QModelIndex idx;
     int startRow;
@@ -53,8 +55,22 @@ private:
     QString err;            // type of error
     bool allMetadataLoaded;
 
-    bool loadMetadata();
+    void createCacheStatus();
+    void updateCacheStatus(int row);
+    void checkIfNewFolder();
+    void loadMetadata();
     void track(QString fPath, QString msg);
+
+    // cache status
+    QImage *cacheStatusImage;
+    QLinearGradient *loadedGradient;
+    QPainter *pnt;
+    int pxTotWidth;
+    int pxUnitWidth;
+    int htOffset;       // the offset from the top of pnt to the progress bar
+    int ht;             // the height of the progress bar
+
+    bool isShowCacheStatus;
 
     QElapsedTimer t;
 };

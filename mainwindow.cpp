@@ -51,12 +51,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     isDragDrop = false;
     setAcceptDrops(true);
 
-    // setup delay before processing scroll signals in case many/sec
-    metadataCacheScrollTimer = new QTimer(this);
-    metadataCacheScrollTimer->setSingleShot(true);
-    connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
-            SLOT(delayProcessLoadMetadataCacheScrollEvent()));
-
     // platform specific settings
     setupPlatform();
 
@@ -527,7 +521,7 @@ void MW::folderSelectionChange()
      allocated. */
 
      updateStatus(false, "Collecting metadata for all images in folder(s)");
-     loadMetadataCache(0);
+     metadataCacheThread->loadMetadataCache(0);
 
      // format pickMemSize as bytes, KB, MB or GB
      pickMemSize = formatMemoryReqd(memoryReqdForPicks());
@@ -682,29 +676,69 @@ void MW::updateAllMetadataLoaded(bool isLoaded)
 This slot is signalled from the metadataCacheThread when all the metadata has
 been cached (including the thumbs).
 */
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::updateAllMetadataLoaded";
+    #endif
+    }
     allMetadataLoaded = isLoaded;
 }
 
 void MW::loadMetadataCacheThumbScrollEvent()
 {
+/*
+See MetadataCache::run comments in mdcache.cpp.  A 300ms singleshot timer
+insures that the metadata caching is not restarted until there is a pause in
+the scolling.
+
+This function is connected to the value change signal in both the thumbView
+horizontal and vertical scrollbars.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::loadMetadataCacheThumbScrollEvent";
+    #endif
+    }
+    if (allMetadataLoaded)  return;
     metadataCacheStartRow = thumbView->getFirstVisible();
     metadataCacheScrollTimer->start(300);
 }
 
 void MW::loadMetadataCacheGridScrollEvent()
 {
+/*
+See MetadataCache::run comments in mdcache.cpp.  A 300ms singleshot timer
+insures that the metadata caching is not restarted until there is a pause in
+the scolling.
+
+This function is connected to the value change signal in the gridView
+vertical scrollbar (does not have a horizontal scrollbar).
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::loadMetadataCacheGridScrollEvent";
+    #endif
+    }
+    if (allMetadataLoaded)  return;
     metadataCacheStartRow = gridView->getFirstVisible();
     metadataCacheScrollTimer->start(300);
 }
 
 void MW::delayProcessLoadMetadataCacheScrollEvent()
 {
-    int startRow = metadataCacheStartRow;
-//    qDebug() << "MW::loadMetadataCacheGridScrollEvent  "
-//             << "startRow =" << startRow
-//             << "allMetadataLoaded =" << allMetadataLoaded;
+/*
+If there has not been another call to this function in 300ms then the
+metadataCacheThread is restarted at the row of the first visible thumb after
+the scrolling.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::delayProcessLoadMetadataCacheScrollEvent";
+    #endif
+    }
     if (!allMetadataLoaded && metadataCacheThread->isRunning()) {
-        if (startRow > 0) loadMetadataCache(startRow);
+        if (metadataCacheStartRow > 0)
+            metadataCacheThread->loadMetadataCache(metadataCacheStartRow);
     }
 }
 
@@ -743,7 +777,7 @@ been consumed or all the images are cached.
     QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 
     QString fPath = indexesList.first().data(G::FileNameRole).toString();
-    // imageChacheThread checks if already running and restarts
+    // imageCacheThread checks if already running and restarts
     imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
@@ -2045,8 +2079,8 @@ void MW::createDataModel()
 void MW::createSelectionModel()
 {
 /*
-The application only has one selection model which is shared by ThumbView and
-TableView, insuring that each view is in sync.
+The application only has one selection model which is shared by ThumbView,
+GridView and TableView, insuring that each view is in sync.
 */
     {
     #ifdef ISDEBUG
@@ -2079,6 +2113,20 @@ void MW::createCaching()
     metadataCacheThread = new MetadataCache(this, dm, metadata);
     imageCacheThread = new ImageCache(this, metadata);
 
+    /* When a new folder is selected the metadataCacheThread is started to
+       load all the metadata and thumbs for each image.  If the user scrolls
+       during the cahe process then the metadataCacheThread is restarted at the
+       first visible thumb to speed up the display of the thumbs for the user.
+       However, if every scroll event triggered a restart it would be
+       inefficient, so this timer is used to wait for a pause in the scrolling
+       before triggering a restart at the new place.
+    */
+    metadataCacheScrollTimer = new QTimer(this);
+    metadataCacheScrollTimer->setSingleShot(true);
+
+    connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
+            SLOT(delayProcessLoadMetadataCacheScrollEvent()));
+
     connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
             this, SLOT(updateAllMetadataLoaded(bool)));
 
@@ -2093,6 +2141,9 @@ void MW::createCaching()
 
     connect(metadataCacheThread, SIGNAL(refreshThumbs()),
             thumbView, SLOT(refreshThumbs()));
+
+    connect(metadataCacheThread, SIGNAL(showCacheStatus(const QImage)),
+            this, SLOT(showCacheStatus(const QImage)));
 
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool)),
             this, SLOT(updateImageThreadRunStatus(bool)));
@@ -2576,11 +2627,18 @@ void MW::updateMetadataThreadRunStatus(bool isRunning)
     qDebug() << "MW::updataMetadataThreadRunStatus";
     #endif
     }
-    if (isRunning)
+    if (isRunning) {
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
-    else
+        #ifdef Q_OS_WIN
+        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Green;font-size: 24px;}");
+        #endif
+    }
+    else {
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:Gray;}");
-
+        #ifdef Q_OS_WIN
+        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Gray;font-size: 24px;}");
+        #endif
+    }
     metadataThreadRunningLabel->setText("◉");
 }
 
@@ -2591,10 +2649,18 @@ void MW::updateImageThreadRunStatus(bool isRunning)
     qDebug() << "MW::updateImageThreadRunStatus";
     #endif
     }
-    if (isRunning)
+    if (isRunning) {
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
-    else
+        #ifdef Q_OS_WIN
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;font-size: 24px;}");
+        #endif
+    }
+    else {
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Gray;}");
+        #ifdef Q_OS_WIN
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Gray;font-size: 24px;}");
+        #endif
+    }
     imageThreadRunningLabel->setText("◉");
 }
 
@@ -2606,6 +2672,7 @@ void MW::showCacheStatus(const QImage &imCacheStatus)
     qDebug() << "MW::showCacheStatus";
     #endif
     }
+    qDebug() << "MW::showCacheStatus signalled from metadataCacheThread";
     cacheLabel->setVisible(true);
     cacheLabel->setPixmap(QPixmap::fromImage(imCacheStatus));
 }
