@@ -1,5 +1,5 @@
 BUGS
-- metadataCache not always reading metadata - why?
+- MetadataCache not always reading metadata - why?
 - ThumbView at bottom not always sizing to incl scrollbar
 - Is there an embedded jog in focus stack tifs
 - Confirm tif metadata for focus stacks (app out msg)
@@ -22,6 +22,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- add != filter
 - Use ImageCache status bar to show metadata loading progress
 - Read/write XMP sidecars
 - Open with ...

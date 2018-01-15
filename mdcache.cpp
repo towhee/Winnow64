@@ -218,17 +218,19 @@ Load the metadata and thumb (icon) for all the image files in a folder.
 
         // load metadata
         if (!metadataLoaded) {
-            QFileInfo fileInfo(fPath);
-    //      emit loadImageMetadata(fileInfo, true, true, false);
+          QFileInfo fileInfo(fPath);
+            metadataLoaded = true;
+            // tried emit signal to meatdata but really slow
+            // emit loadImageMetadata(fileInfo, true, true, false);
             mutex.lock();
             if (metadata->loadImageMetadata(fileInfo, true, true, false)) {
                 metadataLoaded = true;
             }
             mutex.unlock();
 
-            if (row % thumbCacheThreshold == 0) {
-                emit refreshThumbs();
-            }
+//            if (row % thumbCacheThreshold == 0) {
+//                emit refreshThumbs();
+//            }
         }
 
         if (!thumbLoaded) {

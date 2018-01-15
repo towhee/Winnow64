@@ -1,6 +1,7 @@
 #ifndef METADATA_H
 #define METADATA_H
 
+#include <QObject>
 #include <QCoreApplication>
 #include <QXmlStreamReader>
 #include <QFile>
@@ -73,12 +74,14 @@ public:
     QString err = "";
 };
 
-class Metadata
+class Metadata : public QObject
 {
+    Q_OBJECT
 public:
-    Metadata();
+    Metadata(QObject *parent = 0);
     bool readMetadata(bool report, const QString &imageFullPath);
     void reportMetadataAllFiles();
+    void reportMetadata();
 
     // variables used to hold data before insertion into QMap metaCache
     ulong offsetFullJPG;
@@ -136,8 +139,6 @@ public:
     void setPick(const QString &imageFileName, bool choice);
     void clear();
     void clearMetadata();
-    bool loadImageMetadata(const QFileInfo &fileInfo, bool essential = true,
-                           bool nonEssential = true, bool isReport = false);
     bool isLoaded(const QString &imageFullPath);
     bool isThumbLoaded(const QString &imageFullPath);
     ulong getOffsetFullJPG(const QString &imageFullPath);
@@ -230,7 +231,6 @@ private:
 
     QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
 
-    void reportMetadata();
     void reportMetadataHeader(QString title);
     void reportIfdDataHash();
 
@@ -245,7 +245,9 @@ private:
 signals:
 
 public slots:
-    void loadFromThread(QFileInfo fileInfo);
+    void loadFromThread(QFileInfo &fileInfo);
+    bool loadImageMetadata(const QFileInfo &fileInfo, bool essential = true,
+                           bool nonEssential = true, bool isReport = false);
 
 private:
     void track(QString fPath, QString msg);

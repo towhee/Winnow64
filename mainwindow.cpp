@@ -396,7 +396,6 @@ void MW::folderSelectionChange()
     // used by updateStatus
     isCurrentFolderOkay = false;
 
-    clearStatus();
 //    infoView->clearInfo();
     pickMemSize = "";
 
@@ -526,7 +525,6 @@ void MW::folderSelectionChange()
      // format pickMemSize as bytes, KB, MB or GB
      pickMemSize = formatMemoryReqd(memoryReqdForPicks());
      updateStatus(true);
-     qDebug() << "\n\nMW::folderSelectionChange   End of function";
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
@@ -2127,6 +2125,9 @@ void MW::createCaching()
     connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
             SLOT(delayProcessLoadMetadataCacheScrollEvent()));
 
+    connect(metadataCacheThread, SIGNAL(loadImageMetadata(QFileInfo)),
+            metadata, SLOT(loadFromThread(QFileInfo)));
+
     connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
             this, SLOT(updateAllMetadataLoaded(bool)));
 
@@ -2672,7 +2673,7 @@ void MW::showCacheStatus(const QImage &imCacheStatus)
     qDebug() << "MW::showCacheStatus";
     #endif
     }
-    qDebug() << "MW::showCacheStatus signalled from metadataCacheThread";
+//    qDebug() << "MW::showCacheStatus signalled from metadataCacheThread";
     cacheLabel->setVisible(true);
     cacheLabel->setPixmap(QPixmap::fromImage(imCacheStatus));
 }
@@ -3023,7 +3024,7 @@ workspace with a matching name to the action is used.
     qDebug() << "MW::invokeWorkspace";
     #endif
     }
-    qDebug() << "\n======================================= Invoke Workspace ============================================";
+//    qDebug() << "\n======================================= Invoke Workspace ============================================";
     if (fullScreenAction->isChecked() != w.isFullScreen)
         fullScreenAction->setChecked(w.isFullScreen);
     setFullNormal();
@@ -3467,7 +3468,9 @@ void MW::reportMetadata()
     #endif
     }
 //    setCentralMessage("A message to central");
+    qDebug() << "thumbView->getCurrentFilename()" << thumbView->getCurrentFilename();
     metadata->readMetadata(true, thumbView->getCurrentFilename());
+//    metadata->reportMetadataAllFiles();
 }
 
 void MW::about()
@@ -4950,7 +4953,7 @@ lack of notification when the QListView has finished painting itself.
     qDebug() << "MW::loupeDisplay";
     #endif
     }
-    qDebug() << "\n======================================= Loupe ===========================================";
+//    qDebug() << "\n======================================= Loupe ===========================================";
 //    qDebug() << "Loupe: thumbView->isVisible()" << thumbView->isVisible() << "currentRow" << currentRow;
 
     G::mode = "Loupe";
@@ -5016,7 +5019,7 @@ lack of notification when the QListView has finished painting itself.
     qDebug() << "MW::gridDisplay";
     #endif
     }
-    qDebug() << "\n======================================= Grid ============================================";
+//    qDebug() << "\n======================================= Grid ============================================";
     G::mode = "Grid";
     hasGridBeenActivated = true;
     // remember previous state of thumbDock so can recover if change mode
@@ -5045,7 +5048,7 @@ void MW::tableDisplay()
     qDebug() << "MW::tableDisplay";
     #endif
     }
-    qDebug() << "\n======================================= Table===========================================";
+//    qDebug() << "\n======================================= Table===========================================";
     G::mode = "Table";
 
     // show tableView in central widget
@@ -5077,7 +5080,7 @@ void MW::compareDisplay()
     qDebug() << "MW::compareDisplay";
     #endif
     }
-    qDebug() << "\n======================================= Compare =========================================";
+//    qDebug() << "\n======================================= Compare =========================================";
     int n = thumbView->selectionModel()->selectedRows().count();
     if (n < 2) {
         popUp->showPopup(this, "Select more than one image to compare.", 1000, 0.75);

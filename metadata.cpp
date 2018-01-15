@@ -2,7 +2,7 @@
 #include <QDebug>
 #include "global.h"
 
-Metadata::Metadata()
+Metadata::Metadata(QObject *parent) : QObject(parent)
 {
     {
     #ifdef ISDEBUG
@@ -1313,6 +1313,7 @@ void Metadata::reportMetadata()
     qDebug() << "Metadata::reportMetadata";
     #endif
     }
+    qDebug() << "Metadata::reportMetadata";
     rpt << "\n";
     rpt.reset();
     rpt.setFieldAlignment(QTextStream::AlignLeft);
@@ -1405,10 +1406,8 @@ void Metadata::reportMetadataAllFiles()
         email = i.value().email;
         url = i.value().url;
 
-        std::cout << "\n";
-        std::cout << std::setw(16) << std::setfill(' ') << std::left << "FILE:"
-                  << std::setw(16) << std::setfill(' ') << std::left << i.key().toStdString()
-                  << "\n";
+        rpt << "\n";
+        std::cout << "FILE: " << i.key().toStdString()<< "\n";
         reportMetadata();
     }
 }
@@ -1940,6 +1939,7 @@ This function walks through all the segments and records their global offsets in
 segmentHash.  segmentHash is used by formatJPG to access the EXIF, IPTC and XMP
 segments.
 */
+    segmentHash.clear();
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
     uint marker = 0xFFFF;
     while (marker > 0xFFBF) {
@@ -2919,7 +2919,7 @@ bool Metadata::formatJPG()
         // metadata available
         offsetFullJPG = 0;
         lengthFullJPG = file.size();
-        return true;;
+        return true;
     }
 
     // read the EXIF data
@@ -3105,6 +3105,8 @@ void Metadata::clearMetadata()
     qDebug() << "Metadata::clearMetadata";
     #endif
     }
+    metaCache.clear();
+
     offsetFullJPG = 0;
     lengthFullJPG = 0;
     offsetThumbJPG = 0;
@@ -3147,6 +3149,7 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
         rpt.flush();
         reportString = "";
         rpt.setString(&reportString);
+        qDebug() << "report = true";
     }
     clearMetadata();
     file.setFileName(fPath);
@@ -3176,6 +3179,7 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
         }
         else {
             err = "Could not open file to read metadata";    // try again
+            qDebug() << msDelay << "ms delay" << err << fPath;
             QThread::msleep(msInc);
             msDelay += msInc;
 //            if (G::isThreadTrackingOn) track(fPath, err);
@@ -3184,8 +3188,9 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
     while ((msDelay < totDelay) && !success);
 
     // not all files have thumb or small jpg embedded
-    if (offsetFullJPG == 0 && fileOpened) {
+    if (offsetFullJPG == 0 && ext != "jpg" && fileOpened) {
         err = "No embedded JPG found";
+        qDebug() << "No embedded JPG found for" << fPath;
 //        if (G::isThreadTrackingOn) track(fPath, err);
     }
 
@@ -3194,6 +3199,7 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
         lengthSmallJPG = lengthFullJPG;
     }
     if (offsetThumbJPG == 0) {
+        qDebug() << "No embedded thumbnail JPG found for" << fPath;
         offsetThumbJPG = offsetSmallJPG;
         lengthThumbJPG = lengthSmallJPG;
     }
@@ -3201,7 +3207,10 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
 //    qDebug() << fPath << offsetThumbJPG << offsetSmallJPG << offsetFullJPG;
 
     if (success) track(fPath, "Success");
-    else track(fPath, "FAILED TO LOAD METADATA");
+    else {
+        track(fPath, "FAILED TO LOAD METADATA");
+        qDebug() << "FAILED TO LOAD METADATA" << fPath;
+    }
 
 //    if (GData::isTimer) qDebug() << "Time to read metadata =" << t.elapsed();
     return success;
@@ -3595,9 +3604,9 @@ void Metadata::clear()
     metaCache.clear();
 }
 
-void Metadata::loadFromThread(QFileInfo fileInfo)
+void Metadata::loadFromThread(QFileInfo &fileInfo)
 {
-    loadImageMetadata(fileInfo);
+    loadImageMetadata(fileInfo, true, true, false);
 }
 
 bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,

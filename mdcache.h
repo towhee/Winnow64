@@ -32,7 +32,7 @@ signals:
     void setIcon(int, QImage);
 //    void setIcon(QModelIndex*, QImage*, QString);
     void refreshThumbs();
-    void loadImageMetadata(QFileInfo, bool, bool, bool);
+    void loadImageMetadata(QFileInfo);
     void loadImageCache();
     void updateIsRunning(bool);
     void showCacheStatus(QImage imCacheStatus);
