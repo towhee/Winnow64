@@ -24,7 +24,8 @@ public:
     void initImageCache(QStringList &imageList, int &cacheSizeMB,
              bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead,
              bool &usePreview, int &previewWidth, int &previewHeight);
-    void updateImageCache(QString  &currentImageFullPath);
+    void updateImageCache(QString  &fPath);
+    void updateCacheStatusCurrentImagePosition(QString &fPath);
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
              int &cacheStatusWidth, int &cacheWtAhead, bool &usePreview,
              int &previewWidth, int &previewHeight);
@@ -32,7 +33,9 @@ public:
              QString &currentImageFullPath);
     void stopImageCache();
     QSize getPreviewSize();
-    QHash<QString, QPixmap> imCache;
+
+//    QHash<QString, QPixmap> imCache;
+    QHash<QString, QImage> imCache;
 
 signals:
     void showCacheStatus(QImage imCacheStatus);

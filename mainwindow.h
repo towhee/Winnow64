@@ -258,6 +258,7 @@ private slots:
     void loadMetadataCacheGridScrollEvent();
     void loadMetadataCache(int startRow = 0);
     void loadImageCache();
+    void updateImageCache();
     void loadFilteredImageCache();
     void addNewBookmark();
     void reportMetadata();
@@ -613,6 +614,9 @@ private:
     bool isMouseDrag = false;
 
     bool sortMenuUpdateToMatchTable = false;
+
+    QString imageCacheFilePath;
+    QTimer *imageCacheTimer;
 
     bool newScrollSignal;           // used for scroll signal delay in case many/sec
     QTimer *metadataCacheScrollTimer;

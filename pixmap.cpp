@@ -8,6 +8,15 @@ Pixmap::Pixmap(QObject *parent, Metadata *metadata) : QObject(parent)
 
 bool Pixmap::load(QString &fPath, QPixmap &pm)
 {
+    QImage image;
+    bool success = load(fPath, image);
+    pm = QPixmap::fromImage(image);
+    return success;
+}
+
+
+bool Pixmap::load(QString &fPath, QImage &image)
+{
 /*  Reads the embedded jpg (known offset and length) and converts it into a
     pixmap.
 
@@ -45,7 +54,7 @@ bool Pixmap::load(QString &fPath, QPixmap &pm)
     QString err;            // type of error
 
     ulong offsetFullJpg = 0;
-    QImage image;
+//    QImage image;
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
     QFile imFile(fPath);
@@ -140,7 +149,7 @@ bool Pixmap::load(QString &fPath, QPixmap &pm)
         }
     }
 
-    pm = QPixmap::fromImage(image);
+//    pm = QPixmap::fromImage(image);
 
     // must adjust pixmap dpi in case retinal display macs
 //    pm.setDevicePixelRatio(GData::devicePixelRatio);

@@ -160,9 +160,9 @@ to prevent jarring changes in perceived scale by the user.
         bool previewBigEnough = previewFit > zoom;
 
         // initially load a preview if available and big enough
-        if (tryPreview && imageCacheThread->imCache.contains(fPath + "_Preview") &&
-                previewBigEnough) {
-            pmItem->setPixmap(imageCacheThread->imCache.value(fPath + "_Preview"));
+        if (tryPreview && imageCacheThread->imCache.contains(fPath + "_Preview")
+        && previewBigEnough) {
+            pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath + "_Preview")));
             isPreview = true;
             // if prev smaller than view then next image should also be smaller
             // since each image may be different sizes have to equalize scale
@@ -173,7 +173,8 @@ to prevent jarring changes in perceived scale by the user.
         }
         // otherwise load full size image from cache
         else {
-            pmItem->setPixmap(imageCacheThread->imCache.value(fPath));
+            pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
+            //qApp->processEvents();    // faster but unstable and erratic
             isPreview = false;
             isLoaded = true;
         }
@@ -237,7 +238,7 @@ are matched:
     }
     loadFullSizeTimer->stop();
     if(imageCacheThread->imCache.contains(currentImagePath)) {
-        pmItem->setPixmap(imageCacheThread->imCache.value(currentImagePath));
+        pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(currentImagePath)));
         setSceneRect(scene->itemsBoundingRect());
         isPreview = false;
         qreal prevZoomFit = zoomFit;

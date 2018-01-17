@@ -50,7 +50,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 - Done: Thumb creation bogs down in some folders under stress testing (might be fixed but not finished)
-- Done: When drag drop onto winnow folder panel does not update
+it- Done: When drag drop onto winnow folder panel does not update
 - Done: Open folder not working
 - Done: Recent folder not working
 - Done: Only show zoom % in statusbar in loupe and compare modes

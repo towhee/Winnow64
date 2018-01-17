@@ -141,7 +141,7 @@ or loads the file otherwise.
 
     // load the image from the image cache if available
     if (imageCacheThread->imCache.contains(fPath)) {
-        pmItem->setPixmap(imageCacheThread->imCache.value(fPath));
+        pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
         isLoaded = true;
     }
     else {

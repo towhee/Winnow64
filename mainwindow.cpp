@@ -649,10 +649,15 @@ so scrollTo and delegate use of the current index must check the row.
         }
     }
 
-    /* If the metadataCache is finished then update the imageCache,
-     and keep it up-to-date with the current image selection. */
+    /* If the metadataCache is finished then update the imageCache, and keep it
+    up-to-date with the current image selection. The image caching is delayed
+    on a singleshot QTimer to avoid jamming the caching when rapidly proceeding
+    through images (ie with arrow key held down) */
+
     if (metadataLoaded) {
-        imageCacheThread->updateImageCache(fPath);
+        imageCacheFilePath = fPath;
+        imageCacheThread->updateCacheStatusCurrentImagePosition(imageCacheFilePath);
+        imageCacheTimer->start(250);
     }
 
     // terminate initializing flag (set when new folder selected)
@@ -759,6 +764,12 @@ void MW::loadMetadataCache(int startRow)
 
     // startRow in case user scrolls ahead and thumbs not yet loaded
     metadataCacheThread->loadMetadataCache(startRow);
+}
+
+void MW::updateImageCache()
+{
+    qDebug() << "MW::updateImageCache";
+    imageCacheThread->updateImageCache(imageCacheFilePath);
 }
 
 void MW::loadImageCache()
@@ -2152,6 +2163,12 @@ void MW::createCaching()
 
     connect(metadataCacheThread, SIGNAL(showCacheStatus(const QImage)),
             this, SLOT(showCacheStatus(const QImage)));
+
+    imageCacheTimer = new QTimer(this);
+    imageCacheTimer->setSingleShot(true);
+
+    connect(imageCacheTimer, SIGNAL(timeout()), this,
+            SLOT(updateImageCache()));
 
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool)),
             this, SLOT(updateImageThreadRunStatus(bool)));

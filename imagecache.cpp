@@ -206,7 +206,7 @@ void ImageCache::cacheStatus()
     pnt.fillRect(QRect(pxTargetStart, htOffset, pxTargetWidth, ht), cacheTargetColor);
 
     // show the rectangle for the current cache by painting each item that has been cached
-    for (int i=0; i<cache.totFiles; ++i) {
+    for (int i=0; i < cache.totFiles; ++i) {
         if (cacheItemList.at(i).isCached) {
             pnt.fillRect(QRect(pxStart(i), htOffset, cache.pxUnitWidth+1, ht), cacheCurrentColor);
         }
@@ -721,9 +721,25 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus
     cache.previewSize = QSize(previewWidth, previewHeight);
 }
 
+void ImageCache::updateCacheStatusCurrentImagePosition(QString &fPath)
+{
+/*
+This function is called from MW::fileSelectionChange to update the position of
+the current image in the cache status on the statusbar.  Normally this would be
+called from updateImageCache (below) but it is triggered from a QTimer when
+cycling through images to improve performance.
+*/
+    for (int i = 0; i < cacheItemList.count(); i++) {
+        if (cacheItemList.at(i).fName == fPath) {
+            cache.key = i;
+            break;
+        }
+    }
 
+    if (cache.isShowCacheStatus) cacheStatus();
+}
 
-void ImageCache::updateImageCache(QString &currentImageFullPath)
+void ImageCache::updateImageCache(QString &fPath)
 {
 /*
 Updates the cache for the current image in the data model.  The cache key is
@@ -740,11 +756,11 @@ updated.  Image caching is reactivated.
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
 
-//    cache.key = imageList.indexOf(currentImageFullPath);
+//    cache.key = imageList.indexOf(fPath);
 
     // get cache item key
     for (int i = 0; i < cacheItemList.count(); i++) {
-        if (cacheItemList.at(i).fName == currentImageFullPath) {
+        if (cacheItemList.at(i).fName == fPath) {
             cache.key = i;
             break;
         }
@@ -870,11 +886,14 @@ void ImageCache::run()
         QString fPath = cacheItemList.at(cache.toCacheKey).fName;
         if (fPath == prevFileName) return;
         if (G::isThreadTrackingOn) track(fPath, "Reading");
-        QPixmap pm;
-//        QPixmap *pm = new QPixmap;
+
+//        QPixmap im;
+        QImage im;
+
+//        QPixmap *im = new QPixmap;
 //        QElapsedTimer t;
 //        t.start();
-        if (pixmap->load(fPath, pm)) {
+        if (pixmap->load(fPath, im)) {
 //            qDebug() << "load pixmap elapsed time =" << fPath << t.restart();
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
@@ -893,14 +912,11 @@ void ImageCache::run()
                 }
                 else break;
             }
-//            pm.setDevicePixelRatio(1.33333333);
-//            pm->setDevicePixelRatio(G::devicePixelRatio);
-
 //            mutex.lock();
-            imCache.insert(fPath, pm);
-//            imCache.insert(fPath, *pm);
+            imCache.insert(fPath, im);
+//            imCache.insert(fPath, *im);
             if (cache.usePreview) {
-                imCache.insert(fPath + "_Preview", pm.scaled(cache.previewSize,
+                imCache.insert(fPath + "_Preview", im.scaled(cache.previewSize,
                    Qt::KeepAspectRatio, Qt::FastTransformation));
             }
             cacheItemList[cache.toCacheKey].isCached = true;
@@ -908,7 +924,7 @@ void ImageCache::run()
             if (!toCache.isEmpty()) toCache.removeFirst();
             cache.currMB = getImCacheSize();
             cacheStatus();
-//            delete pm;
+//            delete im;
         }
         prevFileName = fPath;
     }

@@ -12,6 +12,7 @@ class Pixmap : public QObject
 public:
     explicit Pixmap(QObject *parent, Metadata *metadata);
     bool load(QString &fPath, QPixmap &pm);
+    bool load(QString &fPath, QImage &image);
 
 private:
     Metadata *metadata;
