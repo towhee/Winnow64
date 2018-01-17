@@ -99,8 +99,8 @@ heirarchy is loaded.
     qDebug() << "ThumbView::load";
     #endif
     }
-
     currentFolderPath = folderPath;
+    removeRows(0, rowCount());
 
     // do some initializing
     fileFilters->clear();
@@ -111,7 +111,6 @@ heirarchy is loaded.
     dir->setPath(currentFolderPath);
     dir->setSorting(QDir::Name);
 
-    removeRows(0, rowCount());
     fileInfoList.clear();
 
     // clear all items for filters based on data content ie file types, camera model

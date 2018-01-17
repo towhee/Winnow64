@@ -1429,12 +1429,6 @@ Drag and drop thumbs to another program.
     QDrag *drag = new QDrag(this);
     QMimeData *mimeData = new QMimeData;
     QList<QUrl> urls;
-//    for (QModelIndexList::const_iterator it = indexesList.constBegin(),
-//         end = indexesList.constEnd();
-//         it != end; ++it)
-//    {
-//        urls << QUrl(it->data(G::FileNameRole).toString());
-//    }
 
     for(int i = 0; i < selection.count(); ++i) {
         urls << QUrl(selection.at(i).data(G::FileNameRole).toString());

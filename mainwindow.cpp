@@ -390,6 +390,13 @@ void MW::folderSelectionChange()
     metadataCacheThread->stopMetadateCache();
     allMetadataLoaded = false;
 
+    if (!isInitializing) {
+        dm->removeRows(0, dm->rowCount());
+        popUp->showPopup(this, "Collecting file information", 0, 0.5);
+        updateStatus(false, "Collecting file information for all images in folder(s)");
+        qApp->processEvents();
+    }
+
     // used by SortFilter, set true when ImageCacheTread starts
     G::isNewFolderLoaded = false;
 
@@ -417,9 +424,8 @@ void MW::folderSelectionChange()
     }
 
     QString dirPath;
-    QDir testDir;
 
-    // Just opened application
+    // If just opened application
     if (isInitializing) {
         if (rememberLastDir) {
             // lastDir is from QSettings for persistent memory between sessions
@@ -440,7 +446,8 @@ void MW::folderSelectionChange()
     if (!isInitializing || !rememberLastDir) {
         dirPath = getSelectedPath();
     }
-    qDebug() << "MW::folderSelectionChange  dirPath =" << dirPath;
+    qDebug() << "MW::folderSelectionChange  dirPath =" << dirPath
+             << "isInitializing =" << isInitializing;
 
     bookmarks->select(dirPath);
 
@@ -482,18 +489,24 @@ void MW::folderSelectionChange()
     /* Need to gather directory file info first (except icon/thumb) which is
     loaded by metadataCache.  If no images in new folder then cleanup and exit.
     MW::fileSelectionChange triggered by DataModel->load         */
+    QElapsedTimer t;
+    t.start();
+//    popUp->showPopup(this, "Collecting file information", 2000, 0.75);
+
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         updateStatus(false, "No images in this folder");
 //        popUp->showPopup(this, "The folder " + currentViewDir + " does not have any eligible images", 3000, 0.9);
         setCentralMessage("The folder " + currentViewDir + " does not have any eligible images");
         infoView->clearInfo();
-        metadata->clearMetadata();
+        metadata->clear();
         imageView->emptyFolder();
         cacheLabel->setVisible(false);
         isInitializing = false;
         isDragDrop = false;
         return;
     }
+
+    qDebug() << "Time to collect folder file information =" << t.elapsed();
 
     // made it this far, folder must have eligible images and good-to-go
     isCurrentFolderOkay = true;
@@ -519,6 +532,7 @@ void MW::folderSelectionChange()
      is finished. The image cache holds as many full size images in memory as
      allocated. */
 
+     popUp->close();
      updateStatus(false, "Collecting metadata for all images in folder(s)");
      metadataCacheThread->loadMetadataCache(0);
 
@@ -2594,7 +2608,8 @@ QString fileSym = "📷";
     // image of total: fileCount
     if (keepBase && isCurrentFolderOkay) {
         base = getPosition();
-        base += spacer + getZoom() + " zoom";
+        if (G::mode == "Loupe" || G::mode == "Compare")
+            base += spacer + getZoom() + " zoom";
         base += spacer + getPicked() + " picked";
         base += spacer;
     }
@@ -3468,7 +3483,7 @@ void MW::reportMetadata()
     #endif
     }
 //    setCentralMessage("A message to central");
-    qDebug() << "thumbView->getCurrentFilename()" << thumbView->getCurrentFilename();
+//    qDebug() << "thumbView->getCurrentFilename()" << thumbView->getCurrentFilename();
     metadata->readMetadata(true, thumbView->getCurrentFilename());
 //    metadata->reportMetadataAllFiles();
 }
@@ -4957,6 +4972,7 @@ lack of notification when the QListView has finished painting itself.
 //    qDebug() << "Loupe: thumbView->isVisible()" << thumbView->isVisible() << "currentRow" << currentRow;
 
     G::mode = "Loupe";
+    updateStatus(true);
 
     // save the current row as it will be lost when ThumbView becomes visible
     int previousRow = currentRow;
@@ -5021,6 +5037,7 @@ lack of notification when the QListView has finished painting itself.
     }
 //    qDebug() << "\n======================================= Grid ============================================";
     G::mode = "Grid";
+    updateStatus(true);
     hasGridBeenActivated = true;
     // remember previous state of thumbDock so can recover if change mode
     wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
@@ -5050,6 +5067,7 @@ void MW::tableDisplay()
     }
 //    qDebug() << "\n======================================= Table===========================================";
     G::mode = "Table";
+    updateStatus(true);
 
     // show tableView in central widget
     centralLayout->setCurrentIndex(TableTab);
@@ -5081,6 +5099,7 @@ void MW::compareDisplay()
     #endif
     }
 //    qDebug() << "\n======================================= Compare =========================================";
+    updateStatus(true);
     int n = thumbView->selectionModel()->selectedRows().count();
     if (n < 2) {
         popUp->showPopup(this, "Select more than one image to compare.", 1000, 0.75);

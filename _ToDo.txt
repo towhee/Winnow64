@@ -1,4 +1,6 @@
 BUGS
+- On opening app changes size
+- Only show zoom % in statusbar in loupe and compare modes
 - MetadataCache not always reading metadata - why?
 - ThumbView at bottom not always sizing to incl scrollbar
 - Is there an embedded jog in focus stack tifs

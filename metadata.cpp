@@ -1998,30 +1998,6 @@ bool Metadata::getDimensions(ulong jpgOffset)
     return true;
 }
 
-//ulong Metadata::getExifOffset(ulong offsetIfd0)
-//{
-//    {
-////    #ifdef ISDEBUG
-////    qDebug() << "Metadata::getExifOffset";
-////    #endif
-//    }
-//    ulong tagId, tagType = 0;
-//    ulong tagCount, tagValue, exifIFDaddr = 0;
-//    file.seek(offsetIfd0);
-//    ulong tags = get2(file.read(2));
-//    for (ulong i=0; i<tags; i++){
-//        tagId = get2(file.read(2));
-//        tagType = get2(file.read(2));
-//        tagCount = get4(file.read(4));
-//        tagValue = get4(file.read(4));
-//        if (tagId == 34665) {
-//            exifIFDaddr = tagValue;
-//            break;
-//        }
-//    }
-//    return tagValue;
-//}
-
 void Metadata::formatNikon()
 {
     {
@@ -3105,8 +3081,6 @@ void Metadata::clearMetadata()
     qDebug() << "Metadata::clearMetadata";
     #endif
     }
-    metaCache.clear();
-
     offsetFullJPG = 0;
     lengthFullJPG = 0;
     offsetThumbJPG = 0;

@@ -146,13 +146,11 @@ void MetadataCache::createCacheStatus()
     cacheAllColor.setColorAt(1, QColor(100,100,100));
 
     // color for the portion that has been cached
-    loadedGradient = new QLinearGradient(0, htOffset, 0, ht+htOffset);
-    // Purple/Blue
-    loadedGradient->setColorAt(0, QColor(100,100,150));
-    loadedGradient->setColorAt(1, QColor(50,50,100));    // show the rectangle for entire bar, representing all the files available
-    // Green
-//    loadedGradient->setColorAt(0, QColor(108,150,108));
-//    loadedGradient->setColorAt(1, QColor(58,100,58));    // show the rectangle for entire bar, representing all the files available
+    loadedGradient.setStart(0, htOffset);
+    loadedGradient.setFinalStop(0, ht+htOffset);
+    // Blue
+    loadedGradient.setColorAt(0, QColor(100,100,150));
+    loadedGradient.setColorAt(1, QColor(50,50,100));    // show the rectangle for entire bar, representing all the files available
 
     pnt->fillRect(QRect(0, htOffset, pxTotWidth, ht), cacheAllColor);
 }
@@ -160,14 +158,11 @@ void MetadataCache::createCacheStatus()
 void MetadataCache::updateCacheStatus(int row)
 {
     // show the rectangle for the current cache by painting each item that has been cached
-    int totRows = dm->rowCount();
-    int pxStart = ((float)row / totRows) * pxTotWidth;
-//    qDebug() << "pxStart" << pxStart  << "row" << row << "totRows" << totRows;
-    pnt->fillRect(QRect(pxStart, htOffset, pxUnitWidth+1, ht), *loadedGradient);
+    int pxStart = ((float)row / dm->rowCount()) * pxTotWidth;
+    pnt->fillRect(QRect(pxStart, htOffset, pxUnitWidth+1, ht), loadedGradient);
 
     // ping mainwindow to show cache update in the status bar
     if (isShowCacheStatus) emit showCacheStatus(*cacheStatusImage);
-    //    pnt.fillRect(QRect(100, htOffset, 50+1, ht), cacheCurrentColor);
 }
 
 void MetadataCache::track(QString fPath, QString msg)
@@ -287,6 +282,7 @@ that have been missed.
             return;
         }
         loadMetadata();
+        // check if all metadata and thumbs have been loaded
         allMetadataLoaded = true;
         for(int i = 0; i < dm->rowCount(); ++i) {
             if (!loadMap[i]) {
@@ -301,13 +297,11 @@ that have been missed.
 
     qDebug() << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
 
-    /* after read metadata okay to images, where the target
-    cache needs to know how big each image is (width, height) and the offset
-    to embedded jpgs */
+    /* after loading metadata it is okay to cache full size images, where the
+    target cache needs to know how big each image is (width, height) and the
+    offset to embedded full size jpgs */
     emit loadImageCache();
 
     // update status in statusbar
     emit updateIsRunning(false);
 }
-
-

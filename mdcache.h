@@ -63,7 +63,8 @@ private:
 
     // cache status
     QImage *cacheStatusImage;
-    QLinearGradient *loadedGradient;
+    QLinearGradient loadedGradient;
+//    QLinearGradient *loadedGradient;
     QPainter *pnt;
     int pxTotWidth;
     int pxUnitWidth;

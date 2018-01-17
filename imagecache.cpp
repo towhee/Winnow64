@@ -258,7 +258,7 @@ ulong ImageCache::getImCacheSize()
     #endif
     }
     ulong cacheMB = 0;
-    for (int i=0; i<cacheItemList.size(); ++i) {
+    for (int i = 0; i < cacheItemList.size(); ++i) {
         if (cacheItemList.at(i).isCached)
             cacheMB += cacheItemList.at(i).sizeMB;
     }
@@ -343,7 +343,6 @@ bool ImageCache::nextToCache()
     qDebug() << "ImageCache::nextToCache";
     #endif
     }
-//    qDebug() << "ImageCache::nextToCache length =" << toCache.length();
     if (toCache.length() > 0) {
         cache.toCacheKey = toCache.first();
         return true;
@@ -494,24 +493,98 @@ void ImageCache::reportCache(QString title)
     qDebug() << "ImageCache::reportCacheManager";
     #endif
     }
+    QString reportString;
+    QTextStream rpt;
+    rpt.flush();
+    reportString = "";
+    rpt.setString(&reportString);
+
     qDebug() << "\n" << title << "Key:" << cache.key
              <<  "cacheMB:" << cache.currMB
              << "Wt ahead:" << cache.wtAhead
              << "Direction ahead:" << cache.isForward
-             << "Total files:" << cache.totFiles;
-    qDebug() << "\nIndex      Key      OrigKey    Priority         Target      Cached         SizeMB    Width      Height         FName";
+             << "Total files:" << cache.totFiles << "\n";
+
+    rpt.reset();
+    rpt.setFieldAlignment(QTextStream::AlignRight);
+    rpt.setFieldWidth(9);
+    rpt << "Index"
+        << "Key"
+        << "OrigKey"
+        << "Priority"
+        << "Target"
+        << "Cached"
+        << "SizeMB"
+        << "Width"
+        << "Height";
+    rpt.setFieldWidth(3);
+    rpt << "   ";
+    rpt.setFieldAlignment(QTextStream::AlignLeft);
+    rpt.setFieldWidth(50);
+    rpt << "File Name";
+    rpt.setFieldWidth(0);
+    rpt << "\n";
+    std::cout << reportString.toStdString() << std::flush;
+
     for (int i=0; i<cache.totFiles; ++i) {
-        qDebug() << i << "\t"
-                 << cacheItemList.at(i).key << "\t"
-                 << cacheItemList.at(i).origKey << "\t"
-                 << cacheItemList.at(i).priority << "\t"
-                 << cacheItemList.at(i).isTarget << "\t"
-                 << cacheItemList.at(i).isCached << "\t"
-                 << cacheItemList.at(i).sizeMB << "\t"
-                 << metadata->getWidth(cacheItemList.at(i).fName) << "\t"
-                 << metadata->getHeight(cacheItemList.at(i).fName) << "\t"
-                 << cacheItemList.at(i).fName;
+        rpt.flush();
+        reportString = "";
+        rpt.setFieldWidth(9);
+        rpt.setFieldAlignment(QTextStream::AlignRight);
+        rpt << i
+            << cacheItemList.at(i).key
+            << cacheItemList.at(i).origKey
+            << cacheItemList.at(i).priority
+            << cacheItemList.at(i).isTarget
+            << cacheItemList.at(i).isCached
+            << cacheItemList.at(i).sizeMB
+            << metadata->getWidth(cacheItemList.at(i).fName)
+            << metadata->getHeight(cacheItemList.at(i).fName);
+        rpt.setFieldWidth(3);
+        rpt << "   ";
+        rpt.setFieldAlignment(QTextStream::AlignLeft);
+        rpt.setFieldWidth(50);
+        rpt  << cacheItemList.at(i).fName;
+        rpt.setFieldWidth(0);
+        rpt << "\n";
+
+        std::cout << reportString.toStdString() << std::flush;
     }
+}
+
+void ImageCache::reportCacheProgress(QString action)
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.flush();
+    reportString = "";
+    rpt.setString(&reportString);
+    if (action == "Hdr") {
+        rpt << "\nCache Progress:  total cache allocation = " << cache.maxMB << "MB\n";
+        rpt.reset();
+        rpt.setFieldAlignment(QTextStream::AlignLeft);
+        rpt.setFieldWidth(8); rpt << "Action";
+        rpt.setFieldAlignment(QTextStream::AlignRight);
+        rpt.setFieldWidth(7); rpt << "currMB";
+        rpt.setFieldWidth(8); rpt << "nTarget";
+        rpt.setFieldWidth(8); rpt << "sTarget";
+        rpt.setFieldWidth(8); rpt << "eTarget";
+        rpt.setFieldWidth(7); rpt << "nCache";
+        rpt.setFieldWidth(9); rpt << "nDecache\n";
+        qDebug() << reportString;
+        return;
+    }
+
+    rpt.flush();
+    rpt.setFieldAlignment(QTextStream::AlignLeft);
+    rpt.setFieldWidth(8);  rpt << action;
+    rpt.setFieldAlignment(QTextStream::AlignRight);
+    rpt.setFieldWidth(7);  rpt << cache.currMB;
+    rpt.setFieldWidth(8);  rpt << cache.targetLast - cache.targetFirst;
+    rpt.setFieldWidth(8);  rpt << cache.targetFirst;
+    rpt.setFieldWidth(8);  rpt << cache.targetLast;
+//    rpt.setFieldWidth(7);  rpt << currMB;
+//    rpt.setFieldWidth(9);  rpt << currMB;
 }
 
 int ImageCache::pxMid(int key)
@@ -633,7 +706,7 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
     }
     cache.folderMB = qRound(folderMB);
 
-//    reportCacheManager("Initialize test");
+//    reportCache("Initialize test");
 }
 
 void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,

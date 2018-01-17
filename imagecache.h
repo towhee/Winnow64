@@ -67,7 +67,7 @@ private:
 
     struct Cache {
         int key;                    // current image
-        int prevKey;               // used to establish directionof travel
+        int prevKey;                // used to establish directionof travel
         QString dir;                // compare to input to see if different
         uint toCacheKey;            // next file to cache
         uint toDecacheKey;          // next file to remove from cache
@@ -95,7 +95,7 @@ private:
     void setTargetRange();          // define start and end key in the target range to cache
     bool nextToCache();             // find highest priority not cached
     bool nextToDecache();           // find lowest priority cached - return -1 if none cached
-    void checkForOrphans();                 // check no strays in imageCache from jumping around
+    void checkForOrphans();         // check no strays in imageCache from jumping around
     static bool prioritySort(const CacheItem &p1, const CacheItem &p2);
     static bool keySort(const CacheItem &k1, const CacheItem &k2);
     void cacheStatus();             // update the cache status visual bar
@@ -104,6 +104,7 @@ private:
     int pxEnd(int key);             // end current position on statusbar
     QSize scalePreview(ulong w, ulong h);
     void reportCache(QString title = "");
+    void reportCacheProgress(QString action);
     void track(QString fPath, QString msg);
 };
 

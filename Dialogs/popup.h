@@ -29,12 +29,12 @@ public slots:
     void show();                            /* own widget displaying method
                                              * It is necessary to pre-animation settings
                                              * */
-
-private slots:
-    void hideAnimation();                   // Slot start the animation hide
     void hide();                            /* At the end of the animation, it is checked in a given slot,
                                              * Does the widget visible, or to hide
                                              * */
+
+private slots:
+    void hideAnimation();                   // Slot start the animation hide
 
 private:
     QLabel label;

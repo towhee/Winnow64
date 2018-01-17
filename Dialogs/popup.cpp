@@ -18,6 +18,7 @@ PopUp::PopUp(QWidget *parent) : QWidget(parent)
 
     label.setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
     label.setStyleSheet("QLabel { color : white; "
+                        "font-size: 20px;"
                         "margin-top: 6px;"
                         "margin-bottom: 6px;"
                         "margin-left: 10px;"
@@ -57,11 +58,12 @@ void PopUp::setPopupText(const QString &text)
 
 void PopUp::show()
 {
-    setWindowOpacity(0.0);  // Set the transparency to zero
-
-    animation.setDuration(150);     // Configuring the duration of the animation
-    animation.setStartValue(0.0);   // The start value is 0 (fully transparent widget)
-    animation.setEndValue(popupOpacity);     // End - completely opaque widget
+    if (popupDuration > 0) {
+        setWindowOpacity(0.0);                  // Set the transparency to zero
+        animation.setDuration(150);             // Configuring the duration of the animation
+        animation.setStartValue(0.0);           // The start value is 0 (fully transparent widget)
+        animation.setEndValue(popupOpacity);    // End - completely opaque widget
+    }
 
     int pW = width();
     int pH = height();
@@ -78,8 +80,11 @@ void PopUp::show()
 
     QWidget::show();
 
-    animation.start();
-    timer->start(popupDuration);
+    if (popupDuration > 0) animation.start();
+//    animation.start();
+
+    // set popupDuration = 0 to keep open and manually close like a msgbox
+    if (popupDuration > 0) timer->start(popupDuration);
 }
 
 void PopUp::hideAnimation()
