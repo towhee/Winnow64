@@ -163,6 +163,7 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     sortByColumn(0, Qt::AscendingOrder);
     setHeaderHidden(true);
     setIndentation(16);
+    setSelectionMode(QAbstractItemView::SingleSelection);
 
     setAcceptDrops(true);
     setDragEnabled(true);
@@ -192,6 +193,11 @@ void FSTree::scrollToCurrent()
     QModelIndex idx = getCurrentIndex();
     qDebug() << "Is there a valid index?" << idx.isValid();
     if (idx.isValid()) scrollTo(idx, QAbstractItemView::PositionAtCenter);
+}
+
+void FSTree::select(QString dirPath)
+{
+    setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
 }
 
 QModelIndex FSTree::getCurrentIndex()

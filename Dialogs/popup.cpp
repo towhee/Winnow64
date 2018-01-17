@@ -64,6 +64,7 @@ void PopUp::show()
         animation.setStartValue(0.0);           // The start value is 0 (fully transparent widget)
         animation.setEndValue(popupOpacity);    // End - completely opaque widget
     }
+    else setWindowOpacity(popupOpacity);
 
     int pW = width();
     int pH = height();

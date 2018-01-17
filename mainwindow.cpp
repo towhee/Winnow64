@@ -324,6 +324,7 @@ void MW::dropEvent(QDropEvent *event)
         qDebug() << "dragDropFilePath" << dragDropFilePath
                  << "dragDropFolderPath" << dragDropFolderPath;
         isDragDrop = true;
+        fsTree->select(dragDropFolderPath);
         folderSelectionChange();
     }
 }
@@ -402,8 +403,6 @@ void MW::folderSelectionChange()
 
     // used by updateStatus
     isCurrentFolderOkay = false;
-
-//    infoView->clearInfo();
     pickMemSize = "";
 
     // stop slideshow if a new folder is selected
@@ -431,7 +430,8 @@ void MW::folderSelectionChange()
             // lastDir is from QSettings for persistent memory between sessions
             if (isFolderValid(lastDir, true, true)) {
                 dirPath = lastDir;
-                fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath)));
+//                fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath)));
+                fsTree->select(dirPath);
             }
             else {
                isInitializing = false;
@@ -446,24 +446,29 @@ void MW::folderSelectionChange()
     if (!isInitializing || !rememberLastDir) {
         dirPath = getSelectedPath();
     }
-    qDebug() << "MW::folderSelectionChange  dirPath =" << dirPath
-             << "isInitializing =" << isInitializing;
 
-    bookmarks->select(dirPath);
-
-    // confirm folder exists and is readable, report if not and do not process
-    if (!isFolderValid(dirPath, true, false)) {
-        return;
-    }
+    qDebug() << "folderSelectionChange directory =" << dirPath;
 
     // ignore if present folder is rechosen
     if (dirPath == currentViewDir) {
-        if (!subFoldersAction->isChecked()) return;
+        if (!subFoldersAction->isChecked()) {
+            popUp->close();
+            return;
+        }
     }
     else {
         currentViewDir = dirPath;
         // cannot accidentally see all subfolders - must set after selecting folder
         subFoldersAction->setChecked(false);
+    }
+
+    // sync the favs / bookmarks with the folders view fsTree
+    bookmarks->select(dirPath);
+
+    // confirm folder exists and is readable, report if not and do not process
+    if (!isFolderValid(dirPath, true, false)) {
+        if (popUp->isVisible()) popUp->close();
+        return;
     }
 
     // add to recent folders
@@ -480,22 +485,11 @@ void MW::folderSelectionChange()
     loaded.  The imageCache update is triggered in fileSelectionChange,
     which is also executed when the change file event is fired. */
     metadataLoaded = false;
-
-//    qDebug() << "metadataCacheThread->isRunning" << metadataCacheThread->isRunning();
-//    qDebug() << "imageCacheThread->isRunning" << imageCacheThread->isRunning();
-
-    qDebug() << "MW::folderSelectionChange  load datamodel for" << currentViewDir;
-
     /* Need to gather directory file info first (except icon/thumb) which is
     loaded by metadataCache.  If no images in new folder then cleanup and exit.
     MW::fileSelectionChange triggered by DataModel->load         */
-    QElapsedTimer t;
-    t.start();
-//    popUp->showPopup(this, "Collecting file information", 2000, 0.75);
-
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         updateStatus(false, "No images in this folder");
-//        popUp->showPopup(this, "The folder " + currentViewDir + " does not have any eligible images", 3000, 0.9);
         setCentralMessage("The folder " + currentViewDir + " does not have any eligible images");
         infoView->clearInfo();
         metadata->clear();
@@ -506,34 +500,33 @@ void MW::folderSelectionChange()
         return;
     }
 
-    qDebug() << "Time to collect folder file information =" << t.elapsed();
-
-    // made it this far, folder must have eligible images and good-to-go
+    // made it this far, folder must have eligible images and is good-to-go
     isCurrentFolderOkay = true;
 
-    qDebug() << "MW::folderSelectionChange  thumbView->selectThumb(7/0)";
+    // folder change triggered by dragdrop event
     if (isDragDrop && dragDropFilePath.length() > 0) {
-//        thumbView->selectThumb(7);
         thumbView->selectThumb(dragDropFilePath);
         isDragDrop = false;
     }
     else {
         thumbView->selectThumb(0);
     }
+
+    // default sort by file name
     thumbView->sortThumbs(1, false);
 
     // no ratings or label color classes set yet so hide classificationLabel
     imageView->classificationLabel->setVisible(false);
 
+    popUp->close();
+    updateStatus(false, "Collecting metadata for all images in folder(s)");
+
      /* Must load metadata first, as it contains the file offsets and lengths
      for the thumbnail and full size embedded jpgs and the image width and
      height, req'd in imageCache to manage cache max size. The metadataCaching
      thread also loads the thumbnails. It triggers the loadImageCache when it
-     is finished. The image cache holds as many full size images in memory as
-     allocated. */
+     is finished. The image cache is limited by the amount of memory allocated. */
 
-     popUp->close();
-     updateStatus(false, "Collecting metadata for all images in folder(s)");
      metadataCacheThread->loadMetadataCache(0);
 
      // format pickMemSize as bytes, KB, MB or GB
@@ -2898,8 +2891,9 @@ void MW::invokeRecentFolder(QAction *recentFolderActions)
     #endif
     }
     qDebug() << recentFolderActions->text();
-    QString dir = recentFolderActions->text();
-    fsTree->setCurrentIndex(fsTree->fsModel->index(dir));
+    QString dirPath = recentFolderActions->text();
+//    fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath)));
+    fsTree->select(dirPath);
     folderSelectionChange();
 }
 
@@ -6096,9 +6090,11 @@ void MW::openFolder()
     qDebug() << "MW::openOp";
     #endif
     }
-    QString dir = QFileDialog::getExistingDirectory(this, tr("Open Folder"),
+    QString dirPath = QFileDialog::getExistingDirectory(this, tr("Open Folder"),
          "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-    fsTree->setCurrentIndex(fsTree->fsModel->index(dir));
+    qDebug() << "New folder is" << dirPath;
+//    fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath)));
+    fsTree->select(dirPath);
     folderSelectionChange();
 }
 

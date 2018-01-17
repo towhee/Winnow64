@@ -1,17 +1,12 @@
 BUGS
+- Invert selection does not work
 - On opening app changes size
-- Only show zoom % in statusbar in loupe and compare modes
-- MetadataCache not always reading metadata - why?
 - ThumbView at bottom not always sizing to incl scrollbar
-- Is there an embedded jog in focus stack tifs
+- Is there an embedded jpg in focus stack tifs
 - Confirm tif metadata for focus stacks (app out msg)
-- Open folder not working
-- Recent folder not working
 - Drag drop to photoshop not working
 - Copy metadata item not working (was working before)
 - Toggle zoom wrong place when using preview size cached image
-- When drag drop onto winnow folder panel does not update
-- Thumb creation bogs down in some folders under stress testing (might be fixed but not finished)
 - Info status not reporting correctly while thumbs loading and zoom
 - Gets stuck in F mode where cannot resize
 - Pick thumb not always showing one main image in loupe mode
@@ -54,6 +49,12 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Thumb creation bogs down in some folders under stress testing (might be fixed but not finished)
+- Done: When drag drop onto winnow folder panel does not update
+- Done: Open folder not working
+- Done: Recent folder not working
+- Done: Only show zoom % in statusbar in loupe and compare modes
+- Done: MetadataCache not always reading metadata - why?
 - Done: Drag and drop image onto Winnow - show image and load folder
 - Done: Reveal in explorer / finder
 - Done: Merged metadata and thumb caching: more stable and faster
