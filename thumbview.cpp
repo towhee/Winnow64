@@ -633,6 +633,7 @@ void ThumbView::selectThumb(QModelIndex idx)
     qDebug() << "ThumbView::selectThumb(index)" << idx;
     #endif
     }
+    qDebug() << "ThumbView::selectThumb(index)" << idx;
     if (idx.isValid()) {
 //        qDebug() << objectName() << "::selectThumb(index)" << idx;
         G::lastThumbChangeEvent = "KeyStroke";    // either KeyStroke or MouseClick
@@ -1348,7 +1349,7 @@ void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
     // do not displayLoupe if already displayed
     if (G::mode != "Loupe") emit displayLoupe();
     // delay reqd
-    QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
+//    QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
 }
 
 void ThumbView::delaySelectCurrentThumb()

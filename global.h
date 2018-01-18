@@ -1,6 +1,7 @@
-
 #ifndef GLOBAL_H
 #define GLOBAL_H
+
+//#define ISDEBUG        // Uncomment this line to show debugging output
 
 #include <QtWidgets>
 #include <QColor>
@@ -11,47 +12,47 @@
 
 namespace G
 {
-enum UserRoles {
-    FileNameRole = Qt::UserRole + 1,
-    SortRole,
-    LoadedRole,
-    PickedRole,
-    ThumbRectRole,
-    PathRole,
-    FileTypeRole,
-    FileSizeRole,
-    CreatedRole,
-    ModifiedRole,
-    LabelRole,
-    RatingRole,
-    ColumnRole
-};
+    enum UserRoles {
+        FileNameRole = Qt::UserRole + 1,
+        SortRole,
+        LoadedRole,
+        PickedRole,
+        ThumbRectRole,
+        PathRole,
+        FileTypeRole,
+        FileSizeRole,
+        CreatedRole,
+        ModifiedRole,
+        LabelRole,
+        RatingRole,
+        ColumnRole
+    };
 
-enum dataModelColumns {
-    PathColumn,
-    NameColumn,
-    PickedColumn,
-    LabelColumn,
-    RatingColumn,
-    TypeColumn,
-    SizeColumn,
-    CreatedColumn,
-    ModifiedColumn,
-    CreatorColumn,
-    MegaPixelsColumn,
-    DimensionsColumn,
-    ApertureColumn,
-    ShutterspeedColumn,
-    ISOColumn,
-    CameraModelColumn,
-    LensColumn,
-    FocalLengthColumn,
-    TitleColumn,
-    CopyrightColumn,
-    EmailColumn,
-    UrlColumn,
-    TotalColumns    // insert additional columns before this
-};
+    enum dataModelColumns {
+        PathColumn,
+        NameColumn,
+        PickedColumn,
+        LabelColumn,
+        RatingColumn,
+        TypeColumn,
+        SizeColumn,
+        CreatedColumn,
+        ModifiedColumn,
+        CreatorColumn,
+        MegaPixelsColumn,
+        DimensionsColumn,
+        ApertureColumn,
+        ShutterspeedColumn,
+        ISOColumn,
+        CameraModelColumn,
+        LensColumn,
+        FocalLengthColumn,
+        TitleColumn,
+        CopyrightColumn,
+        EmailColumn,
+        UrlColumn,
+        TotalColumns    // insert additional columns before this
+    };
 
     extern QColor labelNoneColor;
     extern QColor labelRedColor;
@@ -72,11 +73,8 @@ enum dataModelColumns {
     extern QModelIndexList copyCutIdxList;  // req'd?
     extern QStringList copyCutFileList;     // req'd?
     extern QElapsedTimer t;
-    extern QString appName;                 // may be req'd for mult workspaces + be persistent
     extern bool isTimer;
 }
-
-//#define ISDEBUG        // Uncomment this line to show debugging output
 
 #endif // GLOBAL_H
 

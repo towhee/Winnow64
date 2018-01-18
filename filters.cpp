@@ -241,7 +241,6 @@ void Filters::collapseAllFilters()
     collapseAll();
 }
 
-
 void Filters::addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category)
 {
 /* All the values for a category are collected into a QMap object in DataModel
@@ -249,7 +248,7 @@ as the model data is added from the images in the folder.  The list is passed
 here, where unique values are extracted and added to the category.  For example,
 there could be multiple file types in the folder like JPG and NEF.  A QMap
 object is used so the items can be sorted by key in the same order as the
-tableView.  This function should only be used for dynamic categories (see
+tableView.  This function should only be used for dynamic categories - see
 createDynamicFilters;
 */
     {

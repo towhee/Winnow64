@@ -14,6 +14,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     qDebug() << "MW::MW";
     #endif
     }
+//    hide();
 
     /* Note ISDEBUG is in globals.h
        Deactivate debug reporting by commenting ISDEBUG  */
@@ -34,9 +35,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 //        G::t.start();
     #endif
 
-    G::appName = "Winnow";
     this->setWindowTitle("Winnow");
-    this->setObjectName("WinnowMW");
+//    this->setObjectName("WinnowMW");
 
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
@@ -132,6 +132,8 @@ variables in MW (this class) and managed in the prefDlg class.
     else {
         isFirstTimeNoSettings = true;
     }
+
+    show();
 
     loadShortcuts(true);            // dependent on createActions
     setupCentralWidget();
@@ -1256,6 +1258,11 @@ void MW::createActions()
     addAction(filterPurpleAction);
     connect(filterPurpleAction,  SIGNAL(triggered()), this, SLOT(quickFilter()));
 
+    filterInvertAction = new QAction(tr("Invert Filter"), this);
+    filterInvertAction->setCheckable(true);
+    addAction(filterInvertAction);
+    connect(filterInvertAction,  SIGNAL(triggered()), this, SLOT(invertFilters()));
+
     // Sort Menu
 
     sortFileNameAction = new QAction(tr("Sort by file name"), this);
@@ -1799,6 +1806,8 @@ void MW::createMenus()
     filterMenu->addAction(filterGreenAction);
     filterMenu->addAction(filterBlueAction);
     filterMenu->addAction(filterPurpleAction);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterInvertAction);
 
     // Sort Menu
 
@@ -2413,7 +2422,7 @@ void MW::createBookmarks()
     qDebug() << "MW::createBookmarks";
     #endif
     }
-    bookmarks = new BookMarks(this);
+    bookmarks = new BookMarks(this, metadata, setting->value("showImageCount").toBool());
 
     bookmarks->setMaximumWidth(folderMaxWidth);
 
@@ -2490,7 +2499,7 @@ void MW::createStatusBar()
     statusBar()->addWidget(stateLabel);
 }
 
-void MW::setCacheParameters(int size, bool show, int width, int wtAhead,
+void MW::setCacheParameters(int size, bool show, int delay, int width, int wtAhead,
            bool usePreview, bool activity)
 {
 /*
@@ -2502,8 +2511,10 @@ parameters.  Any visibility changes are executed.
     qDebug() << "MW::setCacheParameters";
     #endif
     }
+    qDebug() << "MW::setCacheParameters   delay =" << delay;
     cacheSizeMB = size * 1000;      // Entered as GB in pref dlg
     isShowCacheStatus = show;
+    cacheDelay = delay;
     cacheStatusWidth = width;
     cacheWtAhead = wtAhead;
     isCachePreview = usePreview;
@@ -2787,6 +2798,23 @@ void MW::quickFilter()
     if (filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Checked);
     if (filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Checked);
     if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Checked);
+}
+
+void MW::invertFilters()
+{
+/*
+Currently this is just clearing filters ...
+*/
+    if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Unchecked);
+    if (filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Unchecked);
+    if (filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Unchecked);
+    if (filterRating4Action->isChecked()) filters->ratings4->setCheckState(0, Qt::Unchecked);
+    if (filterRating5Action->isChecked()) filters->ratings5->setCheckState(0, Qt::Unchecked);
+    if (filterRedAction->isChecked()) filters->labelsRed->setCheckState(0, Qt::Unchecked);
+    if (filterYellowAction->isChecked()) filters->labelsYellow->setCheckState(0, Qt::Unchecked);
+    if (filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Unchecked);
+    if (filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Unchecked);
+    if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Unchecked);
 }
 
 void MW::sortThumbnails()
@@ -3694,8 +3722,8 @@ void MW::preferences(int page)
 //            this, SLOT(setThumbDockParameters(bool, bool, bool)));
     connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
             this, SLOT(setSlideShowParameters(int, bool)));
-    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, bool, bool)),
-            this, SLOT(setCacheParameters(int, bool, int, int, bool, bool)));
+    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, int, bool, bool)),
+            this, SLOT(setCacheParameters(int, bool, int, int, int, bool, bool)));
     connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool,bool)),
             this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool,bool)));
     prefdlg->exec();
@@ -4198,6 +4226,7 @@ re-established when the application is re-opened.
     // cache
     setting->setValue("cacheSizeMB", (int)cacheSizeMB);
     setting->setValue("isShowCacheStatus", (bool)isShowCacheStatus);
+    setting->setValue("cacheDelay", (int)cacheDelay);
     setting->setValue("isShowCacheThreadActivity", (bool)isShowCacheThreadActivity);
     setting->setValue("cacheStatusWidth", (int)cacheStatusWidth);
     setting->setValue("cacheWtAhead", (int)cacheWtAhead);
@@ -4397,6 +4426,7 @@ Preferences are located in the prefdlg class and updated here.
         // cache
         cacheSizeMB = 2000;
         isShowCacheStatus = false;
+        cacheDelay = 250;
         isShowCacheThreadActivity = false;
         cacheStatusWidth = 200;
         cacheWtAhead = 5;
@@ -4434,6 +4464,7 @@ Preferences are located in the prefdlg class and updated here.
     // cache
     cacheSizeMB = setting->value("cacheSizeMB").toInt();
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
+    cacheDelay = setting->value("cacheDelay").toInt();
     isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
     cacheStatusWidth = setting->value("cacheStatusWidth").toInt();
     cacheWtAhead = setting->value("cacheWtAhead").toInt();

@@ -54,8 +54,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.903";
-    QString versionDetail = "Added show in explorer";
+    QString version = "0.904";
+    QString versionDetail = "Basic display engine completed";
 
     bool isShift;               // used when opening if shift key pressed
 
@@ -145,6 +145,7 @@ public:
     // preferences: cache
     int cacheSizeMB;
     bool isShowCacheStatus;
+    int cacheDelay;
     bool isShowCacheThreadActivity;
     int cacheStatusWidth;
     int cacheWtAhead;
@@ -225,8 +226,8 @@ private slots:
     void setRating();
     void setColorClass();
     void quickFilter();
+    void invertFilters();
     void sortThumbnails();
-//    void reload();
     void monitorPreference();
     void preferences(int page = -1);
     void oldPreferences();
@@ -284,7 +285,7 @@ private slots:
                             bool isMetadata, bool isThumbs, bool isStatusBar);
     void slideShow();
     void nextSlide();
-    void setCacheParameters(int size, bool show, int width, int wtAhead,
+    void setCacheParameters(int size, bool show, int delay, int width, int wtAhead,
                             bool isCachePreview, bool activity);
     void selectAllThumbs();
     void removeBookmark();
@@ -448,6 +449,7 @@ private:
     QAction *filterGreenAction;
     QAction *filterBlueAction;
     QAction *filterPurpleAction;
+    QAction *filterInvertAction;
 
     // Sort Menu
     QActionGroup *sortGroupAction;

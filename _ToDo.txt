@@ -14,7 +14,6 @@ BUGS
 - Combobox not showing down arrow
 PERFORMANCE
 - Separate thread to load XMP data after thumbnails loaded
-- Improve producer/consumer image cache performance for large files
 CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
@@ -49,8 +48,9 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done!!: Improve producer/consumer image cache performance for large files
 - Done: Thumb creation bogs down in some folders under stress testing (might be fixed but not finished)
-it- Done: When drag drop onto winnow folder panel does not update
+- Done: When drag drop onto winnow folder panel does not update
 - Done: Open folder not working
 - Done: Recent folder not working
 - Done: Only show zoom % in statusbar in loupe and compare modes

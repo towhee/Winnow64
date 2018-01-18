@@ -373,8 +373,6 @@ map to columns in the data model ie Picked, Rating, Label ...
     static int counter = 0;
     counter++;
 //    qDebug() << "Filtering" << counter;
-    QString itemCategory = "Just starting";
-
     int dataModelColumn;
     bool isMatch = true;                   // overall match
     bool isCategoryUnchecked = true;

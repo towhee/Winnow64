@@ -1,24 +1,31 @@
 #include "bookmarks.h"
 
-BookMarks::BookMarks(QWidget *parent) : QTreeWidget(parent)
+BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount)
+    : QTreeWidget(parent)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "BookMarks::BookMarks";
     #endif
     }
-	setAcceptDrops(true);
+    this->metadata = metadata;
+    this->showImageCount = true;// showImageCount;
+
+    fileFilters = new QStringList;
+    fileFilters->clear();
+    foreach (const QString &str, metadata->supportedFormats)
+            fileFilters->append("*." + str);
+    dir = new QDir();
+    dir->setNameFilters(*fileFilters);
+    dir->setFilter(QDir::Files);
+
+    setAcceptDrops(true);
 	setDragEnabled(false);
 	setDragDropMode(QAbstractItemView::DropOnly);
 
-    connect(this, SIGNAL(expanded(const QModelIndex &)), this,
-            SLOT(resizeTreeColumn(const QModelIndex &)));
-    connect(this, SIGNAL(collapsed(const QModelIndex &)), this,
-            SLOT(resizeTreeColumn(const QModelIndex &)));
-
     setRootIsDecorated(false);
-	setColumnCount(1);
-	setHeaderHidden(true);
+    setColumnCount(2);
+    setHeaderHidden(true);
     setSortingEnabled(true);
     sortByColumn(0, Qt::AscendingOrder);
 }
@@ -39,6 +46,10 @@ void BookMarks::reloadBookmarks()
         item->setIcon(0, QIcon(":/images/bookmarks.png"));
         item->setToolTip(0, itemPath);
         insertTopLevelItem(0, item);
+        dir->setPath(itemPath);
+        int count = dir->entryInfoList().size();
+        item->setText(1, QString::number(count));
+        item->setTextAlignment(1, Qt::AlignRight);
     }
 }
 
@@ -55,14 +66,19 @@ void BookMarks::select(QString fPath)
     }
 }
 
-void BookMarks::resizeTreeColumn(const QModelIndex &)
+void BookMarks::resizeEvent(QResizeEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    qDebug() << "BookMarks::resizeTreeColumn";
-    #endif
+    if (showImageCount) {
+        imageCountColumnWidth = 45;
+        showColumn(1);
+        setColumnWidth(1, imageCountColumnWidth);
     }
-	resizeColumnToContents(0);
+    else {
+        imageCountColumnWidth = 0;
+        hideColumn(1);
+    }
+    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth);
+    QTreeWidget::resizeEvent(event);
 }
 
 void BookMarks::removeBookmark()

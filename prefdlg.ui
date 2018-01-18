@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>3</number>
+    <number>1</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -79,8 +79,8 @@
        <rect>
         <x>20</x>
         <y>30</y>
-        <width>311</width>
-        <height>54</height>
+        <width>337</width>
+        <height>65</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -261,8 +261,8 @@
     <widget class="QSpinBox" name="cacheSizeSpinbox">
      <property name="geometry">
       <rect>
-       <x>160</x>
-       <y>30</y>
+       <x>140</x>
+       <y>20</y>
        <width>51</width>
        <height>24</height>
       </rect>
@@ -274,16 +274,16 @@
       <number>1</number>
      </property>
      <property name="maximum">
-      <number>16</number>
+      <number>64</number>
      </property>
     </widget>
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>160</x>
-       <y>70</y>
-       <width>115</width>
-       <height>170</height>
+       <x>140</x>
+       <y>58</y>
+       <width>143</width>
+       <height>205</height>
       </rect>
      </property>
      <property name="font">
@@ -369,9 +369,9 @@
     <widget class="QLabel" name="label_10">
      <property name="geometry">
       <rect>
-       <x>200</x>
-       <y>270</y>
-       <width>161</width>
+       <x>185</x>
+       <y>290</y>
+       <width>171</width>
        <height>20</height>
       </rect>
      </property>
@@ -386,12 +386,15 @@
      <property name="text">
       <string>Cache status width (px)</string>
      </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
     </widget>
     <widget class="QSpinBox" name="cacheStatusWidthSpin">
      <property name="geometry">
       <rect>
        <x>360</x>
-       <y>269</y>
+       <y>289</y>
        <width>71</width>
        <height>24</height>
       </rect>
@@ -420,8 +423,8 @@
     <widget class="QLabel" name="label_8">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>34</y>
+       <x>10</x>
+       <y>24</y>
        <width>121</width>
        <height>16</height>
       </rect>
@@ -437,12 +440,15 @@
      <property name="text">
       <string>Cache size (GB)</string>
      </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
     </widget>
     <widget class="QLabel" name="label">
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>70</y>
+       <y>60</y>
        <width>111</width>
        <height>16</height>
       </rect>
@@ -458,12 +464,15 @@
      <property name="text">
       <string>Cache strategy</string>
      </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
     </widget>
     <widget class="QCheckBox" name="showCacheStatusChk">
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>269</y>
+       <y>289</y>
        <width>151</width>
        <height>21</height>
       </rect>
@@ -505,7 +514,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>300</y>
+       <y>320</y>
        <width>211</width>
        <height>17</height>
       </rect>
@@ -520,6 +529,55 @@
      </property>
      <property name="text">
       <string>Show cache thread activity</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_9">
+     <property name="geometry">
+      <rect>
+       <x>260</x>
+       <y>24</y>
+       <width>91</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then wieghting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Delay (ms)</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QSpinBox" name="cacheDelaySpinbox">
+     <property name="geometry">
+      <rect>
+       <x>360</x>
+       <y>20</y>
+       <width>71</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then wieghting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>500</number>
+     </property>
+     <property name="singleStep">
+      <number>25</number>
+     </property>
+     <property name="value">
+      <number>250</number>
      </property>
     </widget>
    </widget>
@@ -1590,7 +1648,7 @@
        <x>20</x>
        <y>110</y>
        <width>221</width>
-       <height>170</height>
+       <height>205</height>
       </rect>
      </property>
      <property name="font">
@@ -1713,7 +1771,7 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>181</width>
+         <width>198</width>
          <height>351</height>
         </rect>
        </property>
@@ -1788,7 +1846,7 @@
         <rect>
          <x>10</x>
          <y>0</y>
-         <width>162</width>
+         <width>188</width>
          <height>351</height>
         </rect>
        </property>

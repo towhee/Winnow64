@@ -50,6 +50,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     // cache
     ui->cacheSizeSpinbox->setValue(mw->cacheSizeMB / 1000);
     ui->showCacheStatusChk->setChecked(mw->isShowCacheStatus);
+    ui->cacheDelaySpinbox->setValue(mw->cacheDelay);
     ui->showCacheThreadActivityChk->setChecked(mw->isShowCacheThreadActivity);
     ui->cacheStatusWidthSpin->setValue(mw->cacheStatusWidth);
     cacheWtAhead = mw->cacheWtAhead;
@@ -304,6 +305,7 @@ void Prefdlg::on_cacheSizeSpinbox_valueChanged(int /* not used */)
     if (okToUpdate) {
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                    ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheDelaySpinbox->value(),
                                    ui->cacheStatusWidthSpin->value(),
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
@@ -316,6 +318,20 @@ void Prefdlg::on_showCacheStatusChk_clicked()
     if (okToUpdate) {
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                    ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheDelaySpinbox->value(),
+                                   ui->cacheStatusWidthSpin->value(),
+                                   cacheWtAhead,
+                                   ui->cachePreviewsChk->isChecked(),
+                                   ui->showCacheThreadActivityChk->isChecked());
+    }
+}
+
+void Prefdlg::on_cacheDelaySpinbox_valueChanged(int /* not used */)
+{
+    if (okToUpdate) {
+        emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
+                                   ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheDelaySpinbox->value(),
                                    ui->cacheStatusWidthSpin->value(),
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
@@ -328,6 +344,7 @@ void Prefdlg::on_showCacheThreadActivityChk_clicked()
     if (okToUpdate) {
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                    ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheDelaySpinbox->value(),
                                    ui->cacheStatusWidthSpin->value(),
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
@@ -340,6 +357,7 @@ void Prefdlg::on_cacheStatusWidthSpin_valueChanged(int /* not used */)
     if (okToUpdate) {
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                    ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheDelaySpinbox->value(),
                                    ui->cacheStatusWidthSpin->value(),
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
@@ -353,6 +371,7 @@ void Prefdlg::on_cache50AheadRadio_clicked()
         cacheWtAhead = 5;
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                    ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheDelaySpinbox->value(),
                                    ui->cacheStatusWidthSpin->value(),
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
@@ -366,6 +385,7 @@ void Prefdlg::on_cache60AheadRadio_clicked()
         cacheWtAhead = 6;
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                    ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheDelaySpinbox->value(),
                                    ui->cacheStatusWidthSpin->value(),
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
@@ -379,10 +399,11 @@ void Prefdlg::on_cache70AheadRadio_clicked()
         cacheWtAhead = 7;
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                    ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheDelaySpinbox->value(),
                                    ui->cacheStatusWidthSpin->value(),
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
-                                    ui->showCacheThreadActivityChk->isChecked());
+                                   ui->showCacheThreadActivityChk->isChecked());
     }
 }
 
@@ -392,6 +413,7 @@ void Prefdlg::on_cache80AheadRadio_clicked()
         cacheWtAhead = 8;
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                    ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheDelaySpinbox->value(),
                                    ui->cacheStatusWidthSpin->value(),
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
@@ -405,6 +427,7 @@ void Prefdlg::on_cache90AheadRadio_clicked()
         cacheWtAhead = 9;
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                    ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheDelaySpinbox->value(),
                                    ui->cacheStatusWidthSpin->value(),
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
@@ -418,6 +441,7 @@ void Prefdlg::on_cache100AheadRadio_clicked()
         cacheWtAhead = 10;
         emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                    ui->showCacheStatusChk->isChecked(),
+                                   ui->cacheDelaySpinbox->value(),
                                    ui->cacheStatusWidthSpin->value(),
                                    cacheWtAhead,
                                    ui->cachePreviewsChk->isChecked(),
@@ -429,26 +453,7 @@ void Prefdlg::on_cachePreviewsChk_clicked()
 {
     emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
                                ui->showCacheStatusChk->isChecked(),
-                               ui->cacheStatusWidthSpin->value(),
-                               cacheWtAhead,
-                               ui->cachePreviewsChk->isChecked(),
-                               ui->showCacheThreadActivityChk->isChecked());
-}
-
-void Prefdlg::on_previewWidthSB_valueChanged(int /* not used */)
-{
-    emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
-                               ui->showCacheStatusChk->isChecked(),
-                               ui->cacheStatusWidthSpin->value(),
-                               cacheWtAhead,
-                               ui->cachePreviewsChk->isChecked(),
-                               ui->showCacheThreadActivityChk->isChecked());
-}
-
-void Prefdlg::on_previewHeightSB_valueChanged(int /* not used */)
-{
-    emit updateCacheParameters(ui->cacheSizeSpinbox->value(),
-                               ui->showCacheStatusChk->isChecked(),
+                               ui->cacheDelaySpinbox->value(),
                                ui->cacheStatusWidthSpin->value(),
                                cacheWtAhead,
                                ui->cachePreviewsChk->isChecked(),

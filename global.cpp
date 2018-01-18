@@ -22,7 +22,6 @@ namespace G
     QModelIndexList copyCutIdxList;
     QStringList copyCutFileList;
     QElapsedTimer t;
-    QString appName;
     bool isTimer;
 }
 

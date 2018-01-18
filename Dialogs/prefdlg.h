@@ -29,7 +29,7 @@ signals:
             int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid, bool wrapThumbs);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
 
-    void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus,
+    void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus, int cacheDelay,
             int cacheStatusWidth, int wtAhead, bool usePreview, bool activity);
 
     void updateFullScreenDocks(bool isFolders, bool isFavs, bool isFilters, bool isMetadata,
@@ -48,8 +48,6 @@ private slots:
     void on_iconPaddingSlider_valueChanged(int value);
     void on_showThumbLabelChk_clicked();
     void on_fontSizeSlider_valueChanged(int value);
-//    void on_wrapThumbsChk_clicked();
-//    void on_vertTitleChk_clicked();
     // thumbsGrid
     void on_iconWidthSlider_2_valueChanged(int value);
     void on_iconHeightSlider_2_valueChanged(int value);
@@ -63,6 +61,7 @@ private slots:
     // cache
     void on_cacheSizeSpinbox_valueChanged(int value);
     void on_showCacheStatusChk_clicked();
+    void on_cacheDelaySpinbox_valueChanged(int value);
     void on_showCacheThreadActivityChk_clicked();
     void on_cacheStatusWidthSpin_valueChanged(int value);
     void on_cache50AheadRadio_clicked();
@@ -72,8 +71,6 @@ private slots:
     void on_cache90AheadRadio_clicked();
     void on_cache100AheadRadio_clicked();
     void on_cachePreviewsChk_clicked();
-    void on_previewWidthSB_valueChanged(int value);
-    void on_previewHeightSB_valueChanged(int value);
     void on_maxRecentSB_valueChanged(int value);
     void on_listWidget_currentItemChanged(QListWidgetItem *current);
     void on_foldersChk_clicked();
