@@ -37,6 +37,13 @@ signals:
 
 #include <QStyledItemDelegate>
 
+class RefineItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit RefineItemDelegate(QObject* parent = 0);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+};
+
 class PickItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:

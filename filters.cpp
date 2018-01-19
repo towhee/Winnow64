@@ -47,12 +47,27 @@ void Filters::createPredefinedFilters()
     qDebug() << "Filters::createPredefinedFilters";
     #endif
     }
+    refine = new QTreeWidgetItem(this);
+    refine->setText(0, "Refine");
+    refine->setFont(0, categoryFont);
+    refine->setBackground(0, categoryBackground);
+    refine->setBackground(1, categoryBackground);
+    refine->setData(0, G::ColumnRole, G::RefineColumn);
+    refineFalse = new QTreeWidgetItem(refine);
+    refineFalse->setText(0, "");
+    refineFalse->setCheckState(0, Qt::Unchecked);
+    refineFalse->setData(1, Qt::EditRole, false);
+    refineTrue = new QTreeWidgetItem(refine);
+    refineTrue->setText(0, "True");
+    refineTrue->setCheckState(0, Qt::Unchecked);
+    refineTrue->setData(1, Qt::EditRole, true);
+
     picks = new QTreeWidgetItem(this);
     picks->setText(0, "Picks");
     picks->setFont(0, categoryFont);
     picks->setBackground(0, categoryBackground);
     picks->setBackground(1, categoryBackground);
-    picks->setData(0, G::ColumnRole, G::PickedColumn);
+    picks->setData(0, G::ColumnRole, G::PickColumn);
     picksFalse = new QTreeWidgetItem(picks);
     picksFalse->setText(0, "");
     picksFalse->setCheckState(0, Qt::Unchecked);

@@ -541,7 +541,7 @@ void MW::folderSelectionChange()
      thread also loads the thumbnails. It triggers the loadImageCache when it
      is finished. The image cache is limited by the amount of memory allocated. */
 
-     metadataCacheThread->loadMetadataCache(0);
+     metadataCacheThread->loadMetadataCache(0, isShowCacheStatus, cacheStatusWidth);
 
      // format pickMemSize as bytes, KB, MB or GB
      pickMemSize = formatMemoryReqd(memoryReqdForPicks());
@@ -762,7 +762,8 @@ the scrolling.
     }
     if (!allMetadataLoaded && metadataCacheThread->isRunning()) {
         if (metadataCacheStartRow > 0)
-            metadataCacheThread->loadMetadataCache(metadataCacheStartRow);
+            metadataCacheThread->loadMetadataCache(metadataCacheStartRow,
+                  isShowCacheStatus, cacheStatusWidth);
     }
 }
 
@@ -777,7 +778,7 @@ void MW::loadMetadataCache(int startRow)
     metadataCacheThread->stopMetadateCache();
 
     // startRow in case user scrolls ahead and thumbs not yet loaded
-    metadataCacheThread->loadMetadataCache(startRow);
+    metadataCacheThread->loadMetadataCache(startRow, isShowCacheStatus, cacheStatusWidth);
 }
 
 void MW::updateImageCache()
@@ -1044,6 +1045,11 @@ void MW::createActions()
     addAction(invertSelectionAction);
     connect(invertSelectionAction, SIGNAL(triggered()), thumbView,
             SLOT(invertSelection()));
+
+    refineAction = new QAction(tr("Refine"), this);
+    refineAction->setObjectName("Refine");
+    addAction(refineAction);
+    connect(refineAction, SIGNAL(triggered()), dm, SLOT(refine()));
 
     pickAction = new QAction(tr("Pick"), this);
     pickAction->setObjectName("togglePick");
@@ -1757,6 +1763,7 @@ void MW::createMenus()
     editMenu->addAction(selectAllAction);
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
+    editMenu->addAction(refineAction);
     editMenu->addAction(pickAction);
     editMenu->addAction(filterPickAction);
     editMenu->addSeparator();
@@ -2603,7 +2610,7 @@ QString MW::getPicked()
     QModelIndex idx;
     int count = 0;
     for (int row = 0; row < dm->sf->rowCount(); row++)
-        if (dm->sf->index(row, G::PickedColumn).data() == "true") count++;
+        if (dm->sf->index(row, G::PickColumn).data() == "true") count++;
     QString image = count == 1 ? " image, " : " images, ";
 
     if (count == 0) return "Nothing";
@@ -2845,7 +2852,7 @@ void MW::sortThumbnails()
     if (sortFileSizeAction->isChecked()) sortColumn = G::SizeColumn;
     if (sortCreateAction->isChecked()) sortColumn = G::CreatedColumn;
     if (sortModifyAction->isChecked()) sortColumn = G::ModifiedColumn;
-    if (sortPickAction->isChecked()) sortColumn = G::PickedColumn;
+    if (sortPickAction->isChecked()) sortColumn = G::PickColumn;
     if (sortLabelAction->isChecked()) sortColumn = G::LabelColumn;
     if (sortRatingAction->isChecked()) sortColumn = G::RatingColumn;
     if (sortMegaPixelsAction->isChecked()) sortColumn = G::MegaPixelsColumn;
@@ -4746,6 +4753,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
         selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
         invertSelectionAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
+        refineAction->setShortcut(QKeySequence("Ctrl+Alt+R"));
         pickAction->setShortcut(QKeySequence("`"));
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
         ingestAction->setShortcut(QKeySequence("Q"));
@@ -5504,14 +5512,14 @@ void MW::togglePick()
     QString pickStatus;
 
     foreach (idx, idxList) {
-        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickedColumn);
+        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
         pickStatus = pickStatus == "true" ? "false" : "true";
         dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
     }
 
     idx = thumbView->currentIndex();
-    QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickedColumn);
+    QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
     pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
     bool isPick = (pickStatus == "true");
 
@@ -5539,7 +5547,7 @@ of the "thumbs up" icon that highlights if the image has been picked.
     #endif
     }
     int row = thumbView->currentIndex().row();
-    QModelIndex idx = dm->index(row, G::PickedColumn);
+    QModelIndex idx = dm->index(row, G::PickColumn);
     bool isPick = qvariant_cast<bool>(idx.data(Qt::EditRole));
     if (asLoupeAction->isChecked())
         (isPick) ? imageView->pickLabel->setVisible(true)
@@ -5551,7 +5559,7 @@ qulonglong MW::memoryReqdForPicks()
 {
     qulonglong memTot = 0;
     for(int row = 0; row < dm->sf->rowCount(); row++) {
-        QModelIndex idx = dm->sf->index(row, G::PickedColumn);
+        QModelIndex idx = dm->sf->index(row, G::PickColumn);
         if(qvariant_cast<QString>(idx.data(Qt::EditRole)) == "true") {
             idx = dm->sf->index(row, G::SizeColumn);
             memTot += idx.data(Qt::EditRole).toULongLong();

@@ -21,7 +21,7 @@ public:
     MetadataCache(QObject *parent, DataModel *dm,
                   Metadata *metadata);
     ~MetadataCache();
-    void loadMetadataCache(int startRow);
+    void loadMetadataCache(int startRow, bool isShowCacheStatus, int cacheStatusWidth);
     void stopMetadateCache();
     bool restart;
 
@@ -72,6 +72,7 @@ private:
     int ht;             // the height of the progress bar
 
     bool isShowCacheStatus;
+    int cacheStatusWidth;
 
     QElapsedTimer t;
 };

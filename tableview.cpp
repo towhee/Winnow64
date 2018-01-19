@@ -31,8 +31,11 @@ TableView::TableView(DataModel *dm, ThumbView *thumbView)
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setDefaultSectionSize(24);
 
+    RefineItemDelegate *refineItemDelegate = new RefineItemDelegate;
+    setItemDelegateForColumn(G::RefineColumn, refineItemDelegate);
+
     PickItemDelegate *pickItemDelegate = new PickItemDelegate;
-    setItemDelegateForColumn(G::PickedColumn, pickItemDelegate);
+    setItemDelegateForColumn(G::PickColumn, pickItemDelegate);
 
     ApertureItemDelegate *apertureItemDelegate = new ApertureItemDelegate;
     setItemDelegateForColumn(G::ApertureColumn, apertureItemDelegate);
@@ -141,6 +144,17 @@ void TableView::showOrHide()
 //------------------------------------------------------------------------------
 //   DELEGATES
 //------------------------------------------------------------------------------
+
+RefineItemDelegate::RefineItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString RefineItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+    qDebug() << "RefineItemDelegate::displayTextRefineItemDelegate::displayText  value ="
+             << value;
+    return (value.toBool()) ? "true" : "";
+}
 
 PickItemDelegate::PickItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 {

@@ -28,10 +28,15 @@ namespace G
         ColumnRole
     };
 
+    /*
+    dataModel setHorizontalHeaderItem must include all prior enum but
+    not in the same order!
+    */
     enum dataModelColumns {
         PathColumn,
         NameColumn,
-        PickedColumn,
+        RefineColumn,
+        PickColumn,
         LabelColumn,
         RatingColumn,
         TypeColumn,

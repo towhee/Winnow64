@@ -9,6 +9,9 @@ class Filters : public QTreeWidget
     Q_OBJECT
 public:
     Filters(QWidget *parent);
+    QTreeWidgetItem *refine;
+    QTreeWidgetItem *refineFalse;
+    QTreeWidgetItem *refineTrue;
     QTreeWidgetItem *picks;
     QTreeWidgetItem *picksFalse;
     QTreeWidgetItem *picksTrue;

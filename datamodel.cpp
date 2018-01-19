@@ -15,6 +15,7 @@ The data is structured in columns:
     ● File size:        from QFileInfoList  EditRole
     ● File created:     from QFileInfoList  EditRole
     ● File modified:    from QFileInfoList  EditRole
+    ● Refined:          refine function     EditRole
     ● Picked:           user edited         EditRole
     ● Rating:           user edited         EditRole
     ● Label:            user edited         EditRole
@@ -53,9 +54,12 @@ enum for roles and columns are in global.cpp
     this->filters = filters;
 
     setSortRole(Qt::EditRole);
+
+    // must include all prior Global dataModelColumns (any order okay)
     setHorizontalHeaderItem(G::PathColumn, new QStandardItem(QString("Icon")));
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem(QString("File Name")));
-    setHorizontalHeaderItem(G::PickedColumn, new QStandardItem("Pick"));
+    setHorizontalHeaderItem(G::RefineColumn, new QStandardItem("Refine"));
+    setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick"));
     setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour"));
     setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating"));
     setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type"));
@@ -205,7 +209,8 @@ bool DataModel::addFiles()
         setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
 //        setData(index(row, G::CreatedColumn), fileInfo.created());
         setData(index(row, G::ModifiedColumn), fileInfo.lastModified());
-        setData(index(row, G::PickedColumn), "false");
+        setData(index(row, G::RefineColumn), false);
+        setData(index(row, G::PickColumn), "false");
         setData(index(row, G::LabelColumn), "");
         setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
         setData(index(row, G::RatingColumn), "");
@@ -345,6 +350,32 @@ changes the sort or filter.
     }
 }
 
+void DataModel::refine()
+{
+/*
+Clears refine for all rows, sets refine = true if pick = true, and clears pick
+for all rows.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "ThumbView::refine";
+    #endif
+    }
+    qDebug() << "ThumbView::refine";
+    // clear refine = pick
+    for (int row = 0; row < rowCount(); ++row)
+        if (index(row, G::PickColumn).data() == "true")
+            setData(index(row, G::RefineColumn), true);
+    else setData(index(row, G::RefineColumn), false);
+
+    // clear all picks
+    for (int row = 0; row < rowCount(); ++row)
+        setData(index(row, G::PickColumn), "false");
+
+    // reset filters
+    filters->uncheckAllFilters();
+    filters->refineTrue->setCheckState(0, Qt::Checked);
+}
 
 // -----------------------------------------------------------------------------
 // SortFilter Class used to filter by row

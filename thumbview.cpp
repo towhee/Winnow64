@@ -452,7 +452,7 @@ bool ThumbView::isPick()
     #endif
     }
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
-        QModelIndex idx = dm->sf->index(row, G::PickedColumn);
+        QModelIndex idx = dm->sf->index(row, G::PickColumn);
         if (idx.data(Qt::EditRole).toString() == "true") return true;
     }
     return false;
@@ -471,7 +471,7 @@ folder.
     }
     QFileInfoList fileInfoList;
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
-        QModelIndex idx = dm->sf->index(row, G::PickedColumn);
+        QModelIndex idx = dm->sf->index(row, G::PickColumn);
         if (idx.data(Qt::EditRole).toString() == "true") {
             QModelIndex pathIdx = dm->sf->index(row, 0);
             QString fPath = pathIdx.data(G::FileNameRole).toString();
@@ -494,7 +494,7 @@ int ThumbView::getNextPick()
     int rowCount = dm->sf->rowCount();
     QModelIndex idx;
     while (frwd < rowCount) {
-        idx = dm->sf->index(frwd, G::PickedColumn);
+        idx = dm->sf->index(frwd, G::PickColumn);
         if (idx.data(Qt::EditRole).toString() == "true") return frwd;
         ++frwd;
     }
@@ -512,7 +512,7 @@ int ThumbView::getPrevPick()
 //    int rowCount = dm->sf->rowCount();
     QModelIndex idx;
     while (back >= 0) {
-        idx = dm->sf->index(back, G::PickedColumn);
+        idx = dm->sf->index(back, G::PickColumn);
         if (idx.data(Qt::EditRole).toString() == "true") return back;
         --back;
     }
@@ -532,9 +532,9 @@ int ThumbView::getNearestPick()
     int rowCount = dm->sf->rowCount();
     QModelIndex idx;
     while (back >=0 || frwd < rowCount) {
-        if (back >=0) idx = dm->sf->index(back, G::PickedColumn);
+        if (back >=0) idx = dm->sf->index(back, G::PickColumn);
         if (idx.data(Qt::EditRole).toString() == "true") return back;
-        if (frwd < rowCount) idx = dm->sf->index(frwd, G::PickedColumn);
+        if (frwd < rowCount) idx = dm->sf->index(frwd, G::PickColumn);
         if (idx.data(Qt::EditRole).toString() == "true") return frwd;
         --back;
         ++frwd;

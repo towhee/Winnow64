@@ -44,7 +44,8 @@ void MetadataCache::stopMetadateCache()
     }
 }
 
-void MetadataCache::loadMetadataCache(int startRow)
+void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus,
+                                      int cacheStatusWidth)
 {
     {
     #ifdef ISDEBUG
@@ -62,6 +63,8 @@ void MetadataCache::loadMetadataCache(int startRow)
     abort = false;
     allMetadataLoaded = false;
     this->startRow = startRow;
+    this->isShowCacheStatus = isShowCacheStatus;
+    this->cacheStatusWidth = cacheStatusWidth;
     checkIfNewFolder();
     start(TimeCriticalPriority);
 }
@@ -82,10 +85,9 @@ used to confirm all the metadata is loaded before ending the metadata cache.
         for(int i = 0; i < dm->rowCount(); ++i) loadMap[i] = false;
         folderPath = dm->currentFolderPath;
         allMetadataLoaded = false;
-        isShowCacheStatus = true;  // rgh
         qDebug() << "pxUnitWidth" << pxUnitWidth;
         createCacheStatus();
-        emit showCacheStatus(*cacheStatusImage);
+        if (isShowCacheStatus) emit showCacheStatus(*cacheStatusImage);
     }
 }
 
@@ -133,7 +135,7 @@ void MetadataCache::createCacheStatus()
     cacheStatusImage->fill(cacheBGColor);
     pnt = new QPainter(cacheStatusImage);
 
-    pxTotWidth = 400;  // rgh
+    pxTotWidth = cacheStatusWidth;
     pxUnitWidth = qRound((float)pxTotWidth/dm->rowCount());
     if (pxUnitWidth == 0) pxUnitWidth++;
 

@@ -169,7 +169,7 @@ textRect         = a rectangle below itemRect
 //    QString fName = index.model()->index(row, G::PathColumn).data(G::FileNameRole).toString();
     QString labelColor = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
-    bool isPicked = index.model()->index(row, G::PickedColumn).data(Qt::EditRole).toBool();
+    bool isPicked = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toBool();
 
 //    qDebug() << "ThumbViewDelegate::paint" << fName
 //             << "current index" << currentIndex

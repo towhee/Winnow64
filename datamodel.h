@@ -52,6 +52,7 @@ public:
 signals:
 
 public slots:
+    void refine();
 
 private:
     QWidget *mw;

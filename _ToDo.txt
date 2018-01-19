@@ -1,10 +1,11 @@
 BUGS
-- Not remembering max recent folders
+- Creator wrong
 - Invert selection does not work
 - ThumbView at bottom not always sizing to incl scrollbar
 - Is there an embedded jpg in focus stack tifs
 - Confirm tif metadata for focus stacks (app out msg)
 - Drag drop to photoshop not working
+- Drag drop onto graphicsview not working
 - Copy metadata item not working (was working before)
 - Toggle zoom wrong place when using preview size cached image
 - Info status not reporting correctly while thumbs loading and zoom
@@ -18,7 +19,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- add != filter
+- Add refine feature
 - Read/write XMP sidecars
 - Open with ...
 - Drag and drop a selection of thumbs
@@ -47,6 +48,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Not remembering max recent folders
 - Done: On opening app changes size
 - Done: Show image count in bookmarks
 - Done: Use ImageCache status bar to show metadata loading progress

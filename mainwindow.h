@@ -404,6 +404,7 @@ private:
     QAction *selectAllAction;
     QAction *invertSelectionAction;
     QAction *copyImagesAction;
+    QAction *refineAction;
     QAction *pickAction;
     QAction *filterPickAction;
     QAction *rotateLeftAction;
