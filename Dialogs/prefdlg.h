@@ -20,7 +20,6 @@ signals:
     void updatePage(int page);
     void updateRememberFolder(bool rememberFolder);
     void updateInclSubfolders(bool inclSubfolders);
-    void updateMaxRecentFolders(int maxRecentFolders);
     void updateTrackpadScroll(bool trackpadScroll);
     void updateDisplayResolution(int horizontalPixels, int verticalPixels);
     void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
@@ -38,7 +37,6 @@ signals:
 private slots:
     // general
     void on_rememberFolderChk_clicked();
-    void on_maxRecentSB_destroyed();
     void on_trackpadIterateRadio_clicked();
     void on_trackpadScrollRadio_clicked();
     // thumbs
@@ -71,7 +69,7 @@ private slots:
     void on_cache90AheadRadio_clicked();
     void on_cache100AheadRadio_clicked();
     void on_cachePreviewsChk_clicked();
-    void on_maxRecentSB_valueChanged(int value);
+
     void on_listWidget_currentItemChanged(QListWidgetItem *current);
     void on_foldersChk_clicked();
     void on_favsChk_clicked();
@@ -79,22 +77,17 @@ private slots:
     void on_metadataChk_clicked();
     void on_thumbsChk_clicked();
     void on_statusBarChk_clicked();
-
     void on_infoField_changed();
     void on_tableField_changed();
-
     void on_displayHorizontalPixelsSB_valueChanged(int arg1);
-
     void on_displayVerticalPixelsSB_valueChanged(int arg1);
-
     void on_wrapChk_clicked();
 
 private:
-
     Ui::Prefdlg *ui;
     QStandardItemModel *okInfo;
     QStandardItemModel *okTable;
-    void accept();
+    void reject();
     bool okToUpdate;
 
    int cacheWtAhead;

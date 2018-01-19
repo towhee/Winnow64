@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>1</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -128,7 +128,7 @@
        <rect>
         <x>20</x>
         <y>30</y>
-        <width>221</width>
+        <width>261</width>
         <height>20</height>
        </rect>
       </property>
@@ -139,40 +139,6 @@
       </property>
       <property name="text">
        <string>Remember previous folder</string>
-      </property>
-     </widget>
-     <widget class="QSpinBox" name="maxRecentSB">
-      <property name="geometry">
-       <rect>
-        <x>200</x>
-        <y>60</y>
-        <width>48</width>
-        <height>24</height>
-       </rect>
-      </property>
-      <property name="minimum">
-       <number>5</number>
-      </property>
-      <property name="maximum">
-       <number>50</number>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_13">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>65</y>
-        <width>171</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Maximum recent folders</string>
       </property>
      </widget>
     </widget>
@@ -281,7 +247,7 @@
      <property name="geometry">
       <rect>
        <x>140</x>
-       <y>58</y>
+       <y>53</y>
        <width>143</width>
        <height>205</height>
       </rect>

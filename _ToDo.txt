@@ -1,6 +1,6 @@
 BUGS
+- Not remembering max recent folders
 - Invert selection does not work
-- On opening app changes size
 - ThumbView at bottom not always sizing to incl scrollbar
 - Is there an embedded jpg in focus stack tifs
 - Confirm tif metadata for focus stacks (app out msg)
@@ -19,7 +19,6 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
 - add != filter
-- Use ImageCache status bar to show metadata loading progress
 - Read/write XMP sidecars
 - Open with ...
 - Drag and drop a selection of thumbs
@@ -48,6 +47,9 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: On opening app changes size
+- Done: Show image count in bookmarks
+- Done: Use ImageCache status bar to show metadata loading progress
 - Done!!: Improve producer/consumer image cache performance for large files
 - Done: Thumb creation bogs down in some folders under stress testing (might be fixed but not finished)
 - Done: When drag drop onto winnow folder panel does not update

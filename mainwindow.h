@@ -134,7 +134,7 @@ public:
     bool rememberLastDir;
     QString lastDir;
     bool inclSubfolders;
-    int maxRecentFolders = 10;
+    int maxRecentFolders = 20;
     QString ingestRootFolder;
 
     // preferences: slideshow
@@ -166,11 +166,11 @@ public:
     QString currentViewDir;
 
     enum centralWidgetTabs {
-        StartTab,
         LoupeTab,
         CompareTab,
         TableTab,
         GridTab,
+        StartTab,
         MessageTab
     };
 
@@ -276,7 +276,6 @@ private slots:
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
     void setIncludeSubFolders();
-    void setMaxRecentFolders(int prefMaxRecentFolders);
     void setTrackpadScroll(bool trackpadScroll);
     void setDisplayResolution(int horizontalPixels, int verticalPixels);
     void setIngestRootFolder(QString rootFolder, bool isAuto);
@@ -607,6 +606,7 @@ private:
     bool wasThumbDockVisibleBeforeGridInvoked;
     bool isUpdatingState;
 
+    bool isLoadSettings;
     bool isFirstTimeNoSettings;
     bool isInitializing;
     bool isStressTest;
@@ -681,12 +681,11 @@ private:
     QString getPosition();
     QString getZoom();
     QString getPicked();
-    void setActualDevicePixelRation();
+    void setActualDevicePixelRatio();
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
     void setCentralMessage(QString message);
 
     void addRecentFolder(QString fPath);
-    void syncRecentFoldersMenu();
 
     qulonglong memoryReqdForPicks();
     QString formatMemoryReqd(qulonglong bytes);

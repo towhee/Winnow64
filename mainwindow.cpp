@@ -26,7 +26,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     G::isThreadTrackingOn = false;
 
     // testing/debugging
-    bool isLoadSettings = true;
+    isLoadSettings = true;
 
     isStressTest = false;
     // Global timer
@@ -125,7 +125,6 @@ variables in MW (this class) and managed in the prefDlg class.
     if (isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
-//        qDebug() << "Restoring state - triggers setThumbDockFeatures prematurely";
         restoreState(setting->value("WindowState").toByteArray());
         isFirstTimeNoSettings = false;
     }
@@ -133,12 +132,10 @@ variables in MW (this class) and managed in the prefDlg class.
         isFirstTimeNoSettings = true;
     }
 
-    show();
-
     loadShortcuts(true);            // dependent on createActions
     setupCentralWidget();
     createAppStyle();
-    setActualDevicePixelRation();       // dependent on Settings
+    setActualDevicePixelRatio();       // dependent on Settings
 
     // recall previous thumbDock state in case last closed in Grid mode
     thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
@@ -151,7 +148,6 @@ variables in MW (this class) and managed in the prefDlg class.
     // send events to thumbView to monitorsplitter resize of thumbDock
     qApp->installEventFilter(thumbView);
 
-//    QObject *zoomDlg = 0;
 
     // process the persistant folder if available
 //    qDebug() << rememberLastDir;
@@ -162,6 +158,22 @@ variables in MW (this class) and managed in the prefDlg class.
 //freemem=(qint32)(sys_info.freeram/1048576); // divide by 1024*1024 = 1048576
 
 //qDebug() << "total mem:" << totalmem << " free mem:" << freemem;
+}
+
+void MW::closeEvent(QCloseEvent *event)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::closeEvent";
+    #endif
+    }
+    imageCacheThread->exit();
+    if (isLoadSettings) writeSettings();
+    hide();
+    if (!QApplication::clipboard()->image().isNull()) {
+        QApplication::clipboard()->clear();
+    }
+    event->accept();
 }
 
 void MW::setupPlatform()
@@ -925,7 +937,7 @@ void MW::createActions()
 
     // general connection to handle invoking new recent folders
     // MacOS will not allow runtime menu insertions.  Cludge workaround
-    // add 10 dummy menu items and then hide until use.
+    // add 20 dummy menu items and then hide until use.
     int n = recentFolders->count();
     for (int i = 0; i < maxRecentFolders; i++) {
         QString name;
@@ -944,7 +956,6 @@ void MW::createActions()
             addAction(recentFolderActions.at(i));
         }
         if (i >= n) recentFolderActions.at(i)->setVisible(false);
-//        recentFolderActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
     }
     addActions(recentFolderActions);
 
@@ -2073,13 +2084,14 @@ void MW::setupCentralWidget()
     welcome = new QScrollArea;
     Ui::welcomeScrollArea ui;
     ui.setupUi(welcome);
+//    welcome->setVisible(false);   //nada
     connect(ui.monitorSizeBtn, SIGNAL(clicked(bool)), this, SLOT(monitorPreference()));
 
-    centralLayout->addWidget(welcome);     // first time open program tips
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
     centralLayout->addWidget(tableView);
     centralLayout->addWidget(gridView);
+    centralLayout->addWidget(welcome);     // first time open program tips
     centralLayout->addWidget(messageView);
 //    centralLayout->setCurrentIndex(0);
     centralWidget->setLayout(centralLayout);
@@ -2922,10 +2934,23 @@ void MW::addRecentFolder(QString fPath)
     qDebug() << "MW::addRecentFolder";
     #endif
     }
-    if (!recentFolders->contains(fPath))
-        recentFolders->prepend(fPath);
-        // sync menu items
-        syncRecentFoldersMenu();
+    if (!recentFolders->contains(fPath)) recentFolders->prepend(fPath);
+    // sync menu items
+    // trim excess items
+//    while (recentFolders->count() > maxRecentFolders) {
+//        recentFolders->removeAt(recentFolders->count() - 1);
+//    }
+    int count = recentFolders->count();
+    for (int i = 0; i < maxRecentFolders; i++) {
+        if (i < count) {
+            recentFolderActions.at(i)->setText(recentFolders->at(i));
+            recentFolderActions.at(i)->setVisible(true);
+        }
+        else {
+            recentFolderActions.at(i)->setText("Future recent folder" + QString::number(i));
+            recentFolderActions.at(i)->setVisible(false);
+        }
+    }
 }
 
 void MW::invokeRecentFolder(QAction *recentFolderActions)
@@ -2940,31 +2965,6 @@ void MW::invokeRecentFolder(QAction *recentFolderActions)
 //    fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath)));
     fsTree->select(dirPath);
     folderSelectionChange();
-}
-
-void MW::syncRecentFoldersMenu()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::syncRecentFoldersMenu";
-    #endif
-    }
-    // trim excess items
-    while (recentFolders->count() > maxRecentFolders) {
-        recentFolders->removeAt(recentFolders->count() - 1);
-    }
-    int count = recentFolders->count();
-    for (int i = 0; i < maxRecentFolders; i++) {
-        if (i < count) {
-            recentFolderActions.at(i)->setText(recentFolders->at(i));
-            recentFolderActions.at(i)->setVisible(true);
-        }
-        else {
-            recentFolderActions.at(i)->setText("Future recent folder" + QString::number(i));
-            recentFolderActions.at(i)->setVisible(false);
-        }
-//        qDebug() << "sync menu" << i << recentFolderActions.at(i)->text();
-    }
 }
 
 /* WORKSPACES
@@ -3708,8 +3708,6 @@ void MW::preferences(int page)
         this, SLOT(setPrefPage(int)));
     connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
             this, SLOT(setRememberLastDir(bool)));
-    connect(prefdlg, SIGNAL(updateMaxRecentFolders(int)),
-            this, SLOT(setMaxRecentFolders(int)));
     connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
             this, SLOT(setTrackpadScroll(bool)));
     connect(prefdlg, SIGNAL(updateDisplayResolution(int,int)),
@@ -3783,17 +3781,6 @@ void MW::setRememberLastDir(bool prefRememberFolder)
     rememberLastDir = prefRememberFolder;
 }
 
-void MW::setMaxRecentFolders(int prefMaxRecentFolders)
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::setMaxRecentFolders";
-    #endif
-    }
-    maxRecentFolders = prefMaxRecentFolders;
-    syncRecentFoldersMenu();
-}
-
 void MW::setTrackpadScroll(bool trackpadScroll)
 {
     {
@@ -3811,10 +3798,10 @@ void MW::setDisplayResolution(int horizontalPixels, int verticalPixels)
     cachePreviewWidth = horizontalPixels;
     cachePreviewHeight = verticalPixels;
     qDebug() << "setDisplayresolution" << displayHorizontalPixels << displayVerticalPixels;
-    setActualDevicePixelRation();
+    setActualDevicePixelRatio();
 }
 
-void MW::setActualDevicePixelRation()
+void MW::setActualDevicePixelRatio()
 {
     int virtualWidth = QGuiApplication::primaryScreen()->geometry().width();
     if (displayHorizontalPixels > 0)
@@ -4201,7 +4188,7 @@ re-established when the application is re-opened.
     setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("showImageCount", showImageCountAction->isChecked());
-    setting->setValue("maxRecentFolders", maxRecentFolders);
+//    setting->setValue("maxRecentFolders", maxRecentFolders);
     setting->setValue("useWheelToScroll", imageView->useWheelToScroll);
     setting->setValue("ingestRootFolder", ingestRootFolder);
     // thumbs
@@ -4411,7 +4398,7 @@ Preferences are located in the prefdlg class and updated here.
         lastPrefPage = 0;
         imageView->toggleZoom = 1.0;
         rememberLastDir = true;
-        maxRecentFolders = 10;
+//        maxRecentFolders = 10;
         bookmarks->bookmarkPaths.insert(QDir::homePath());
         imageView->useWheelToScroll = true;
         imageView->toggleZoom = 1.0;
@@ -4453,7 +4440,7 @@ Preferences are located in the prefdlg class and updated here.
     rememberLastDir = setting->value("rememberLastDir").toBool();
     lastDir = setting->value("lastDir").toString();
     showImageCountAction->setChecked(setting->value("showImageCount").toBool());
-    maxRecentFolders = setting->value("maxRecentFolders").toInt();
+//    maxRecentFolders = setting->value("maxRecentFolders").toInt();
     ingestRootFolder = setting->value("ingestRootFolder").toString();
     // trackpad
     imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
@@ -5490,23 +5477,6 @@ void MW::setCacheStatusVisibility()
     cacheLabel->setVisible(isShowCacheStatus);
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
-}
-
-void MW::closeEvent(QCloseEvent *event)
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::closeEvent";
-    #endif
-    }
-    imageCacheThread->exit();
-//    thumbView->abort();
-    writeSettings();
-    hide();
-    if (!QApplication::clipboard()->image().isNull()) {
-        QApplication::clipboard()->clear();
-    }
-    event->accept();
 }
 
 // not used

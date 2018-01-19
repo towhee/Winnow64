@@ -18,7 +18,6 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
 
     // general
     ui->rememberFolderChk->setChecked(mw->rememberLastDir);
-    ui->maxRecentSB->setValue(mw->maxRecentFolders);
     ui->trackpadIterateRadio->setChecked(!mw->imageView->useWheelToScroll);
     ui->trackpadScrollRadio->setChecked(mw->imageView->useWheelToScroll);
     ui->displayHorizontalPixelsSB->setValue(mw->displayHorizontalPixels);
@@ -131,9 +130,9 @@ Prefdlg::~Prefdlg()
     delete ui;
 }
 
-void Prefdlg::accept()
+void Prefdlg::reject()
 {
-    QDialog::accept();
+    QDialog::reject();
 }
 
 void Prefdlg::on_infoField_changed()
@@ -464,25 +463,6 @@ void Prefdlg::on_rememberFolderChk_clicked()
 {
     if (okToUpdate) {
         emit updateRememberFolder(ui->rememberFolderChk->isChecked());
-    }
-}
-
-void Prefdlg::on_maxRecentSB_valueChanged(int /* not used */)
-{
-//    if (okToUpdate) {
-//        emit updateMaxRecentFolders(ui->maxRecentSB->value());
-//    }
-}
-
-void Prefdlg::on_maxRecentSB_destroyed()
-{
-    /* Do not update until dialog closing.  If the previous value was 10 and
-     * then changed to 50 this would be two updates: 5 and 50.  The change to
-     * 5 would result in the list from 6-10 being pruned in the menu before
-     * the max was increased to 50.
-     */
-    if (okToUpdate) {
-        emit updateMaxRecentFolders(ui->maxRecentSB->value());
     }
 }
 
