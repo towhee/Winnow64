@@ -151,8 +151,6 @@ RefineItemDelegate::RefineItemDelegate(QObject* parent): QStyledItemDelegate(par
 
 QString RefineItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
-    qDebug() << "RefineItemDelegate::displayTextRefineItemDelegate::displayText  value ="
-             << value;
     return (value.toBool()) ? "true" : "";
 }
 

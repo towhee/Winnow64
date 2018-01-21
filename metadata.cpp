@@ -2936,27 +2936,29 @@ bool Metadata::formatJPG()
     if (readNonEssentialMetadata) {
         // IFD0: Orientation
         (ifdDataHash.contains(274))
-            ? orientation = ifdDataHash.value(274).tagValue
+            ? orientation = ifdDataHash.value(274).tagValue + startOffset
             : orientation = 1;
 
         // IFD0: Make
         (ifdDataHash.contains(271))
             ? make = getString(ifdDataHash.value(271).tagValue + startOffset,
-            ifdDataHash.value(271).tagCount)
+                               ifdDataHash.value(271).tagCount)
             : make = "";
 
         // IFD0: Model
         (ifdDataHash.contains(272))
             ? model = getString(ifdDataHash.value(272).tagValue + startOffset,
-            ifdDataHash.value(272).tagCount)
+                                ifdDataHash.value(272).tagCount)
             : model = "";
 
         (ifdDataHash.contains(315))
-            ? creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount)
+            ? creator = getString(ifdDataHash.value(315).tagValue + startOffset,
+                                  ifdDataHash.value(315).tagCount)
             : creator = "";
 
         (ifdDataHash.contains(33432))
-            ? copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount)
+            ? copyright = getString(ifdDataHash.value(33432).tagValue + startOffset,
+                                    ifdDataHash.value(33432).tagCount)
             : copyright = "";
 
         // IFD0: DateTime
@@ -3164,7 +3166,7 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
     // not all files have thumb or small jpg embedded
     if (offsetFullJPG == 0 && ext != "jpg" && fileOpened) {
         err = "No embedded JPG found";
-        qDebug() << "No embedded JPG found for" << fPath;
+//        qDebug() << "No embedded JPG found for" << fPath;
 //        if (G::isThreadTrackingOn) track(fPath, err);
     }
 

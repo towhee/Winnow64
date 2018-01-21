@@ -50,6 +50,7 @@ public:
     QString currentFolderPath;
 
 signals:
+    void popup(QString msg, int ms, float opacity);
 
 public slots:
     void refine();

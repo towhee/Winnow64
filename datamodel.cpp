@@ -148,7 +148,7 @@ bool DataModel::addFiles()
     qDebug() << "DataModel::addFiles";
     #endif
     }
-    qDebug() << "DataModel::addFiles    Started";
+//    qDebug() << "DataModel::addFiles    Started";
     QElapsedTimer t;
     t.start();
 
@@ -225,9 +225,9 @@ bool DataModel::addFiles()
 //        qDebug() << "Row =" << row << fPath;
     }
 
-    qDebug() << "Add files elapsed time =" << t.restart() << "ms for "
-             << dir->entryInfoList().size() << "files"
-             << "from" << dir->dirName();
+//    qDebug() << "Add files elapsed time =" << t.restart() << "ms for "
+//             << dir->entryInfoList().size() << "files"
+//             << "from" << dir->dirName();
     filters->addCategoryFromData(typesMap, filters->types);
     return true;
 }
@@ -244,7 +244,7 @@ which is created in MW, and in InfoView.
     qDebug() << "DataModel::addMetadataToModel";
     #endif
     }
-    qDebug() << "DataModel::addMetadataToModel    Started";
+//    qDebug() << "DataModel::addMetadataToModel    Started";
 
     QElapsedTimer t;
     t.start();
@@ -315,8 +315,8 @@ which is created in MW, and in InfoView.
     filters->addCategoryFromData(titleMap, filters->titles);
     filters->addCategoryFromData(creatorMap, filters->creators);
 
-    qDebug() << "DataModel::addMetadataToModel    Completed"
-             << " elapsed time =" << t.restart() << "ms";
+//    qDebug() << "DataModel::addMetadataToModel    Completed"
+//             << " elapsed time =" << t.restart() << "ms";
 
 }
 
@@ -362,6 +362,20 @@ for all rows.
     #endif
     }
     qDebug() << "ThumbView::refine";
+    // Are there any picks to refine?
+    bool isPick = false;
+    for (int row = 0; row < rowCount(); ++row) {
+        if (index(row, G::PickColumn).data() == "true") {
+            isPick = true;
+            break;
+        }
+    }
+
+    if (!isPick) {
+        emit popup("There are no picks to refine", 2000, 0.75);
+        return;
+    }
+
     // clear refine = pick
     for (int row = 0; row < rowCount(); ++row)
         if (index(row, G::PickColumn).data() == "true")

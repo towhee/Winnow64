@@ -52,7 +52,6 @@ void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus,
     qDebug() << "MetadataCache::loadMetadataCache";
     #endif
     }
-    qDebug() << "MetadataCache::loadMetadataCache  startRow =" << startRow;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -85,7 +84,6 @@ used to confirm all the metadata is loaded before ending the metadata cache.
         for(int i = 0; i < dm->rowCount(); ++i) loadMap[i] = false;
         folderPath = dm->currentFolderPath;
         allMetadataLoaded = false;
-        qDebug() << "pxUnitWidth" << pxUnitWidth;
         createCacheStatus();
         if (isShowCacheStatus) emit showCacheStatus(*cacheStatusImage);
     }
@@ -297,7 +295,7 @@ that have been missed.
     while (!allMetadataLoaded && t.elapsed() < 30000);
     emit updateAllMetadataLoaded(allMetadataLoaded);
 
-    qDebug() << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
+//    qDebug() << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
 
     /* after loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the

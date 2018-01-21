@@ -349,6 +349,7 @@ private slots:
     void helpShortcuts();
     void helpWelcome();
 
+    void popup(QString msg, int ms, float opacity);
     void delayScroll();
     void testMetadata();    // for debugging
 

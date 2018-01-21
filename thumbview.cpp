@@ -81,8 +81,7 @@ ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
         MW::setThumbDockFeatures.
 
         Also, when thumbs are resized the height of the thumbDock is adjusted
-        to accomodate the new thumb height, factoring in whether a scrollbar is
-        required.
+        to accomodate the new thumb height.
 
     Thumb resize to fit in dock:
 
@@ -183,11 +182,11 @@ Helper function for in class calls where thumb parameters already defined
     qDebug() << "ThumbView::setThumbParameters";
     #endif
     }
-//    qDebug() << "ThumbView::setThumbParameters  "
-//             << "thumbWidth" << thumbWidth;
     setSpacing(thumbSpacing);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels);
+    qDebug() << "🔎🔎🔎 ThumbView::setThumbParameters  thumbHeight =" << thumbHeight
+             << "okayToUpdateThumbDockHeight =" << okayToUpdateThumbDockHeight;
     if(okayToUpdateThumbDockHeight) emit updateThumbDockHeight();
 }
 
@@ -239,6 +238,7 @@ QSize ThumbView::getThumbCellSize()
     qDebug() << "ThumbView::getThumbCellSize";
     #endif
     }
+    setThumbParameters(false);
     return thumbViewDelegate->getThumbCell();
 }
 
@@ -633,9 +633,7 @@ void ThumbView::selectThumb(QModelIndex idx)
     qDebug() << "ThumbView::selectThumb(index)" << idx;
     #endif
     }
-    qDebug() << "ThumbView::selectThumb(index)" << idx;
     if (idx.isValid()) {
-//        qDebug() << objectName() << "::selectThumb(index)" << idx;
         G::lastThumbChangeEvent = "KeyStroke";    // either KeyStroke or MouseClick
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
@@ -783,6 +781,7 @@ void ThumbView::thumbsEnlarge()
         if (thumbWidth > 160) thumbWidth = 160;
         if (thumbHeight > 160) thumbHeight = 160;
     }
+    qDebug() << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsEnlarge  thumbHeight =" << thumbHeight;
 //    qDebug() << "Calling setThumbParameters from ThumbView::thumbsEnlarge thumbWidth" << thumbWidth ;
     setThumbParameters(true);
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
@@ -801,6 +800,7 @@ void ThumbView::thumbsShrink()
         if (thumbWidth < 40) thumbWidth = 40;
         if (thumbHeight < 40) thumbHeight = 40;
     }
+    qDebug() << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsShring  thumbHeight =" << thumbHeight;
 //    qDebug() << "Calling setThumbParameters from ThumbView::thumbsShrink thumbWidth" << thumbWidth ;
     setThumbParameters(true);
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
@@ -838,6 +838,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     qDebug() << "ThumbView::thumbsFit";
     #endif
     }
+    qDebug() << "🔎🔎🔎 Entering ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
     if (G::mode == "Grid") {
         return;
 
@@ -922,8 +923,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         thumbHeight = thumbSpaceHeight - margin;
         thumbWidth = thumbHeight * aspect;
 
-        qDebug() << "ht" << ht
-                 << "thumbHeight" << thumbHeight;
+        qDebug() << "🔎🔎🔎 ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
 
         // change the thumbnail size in thumbViewDelegate
 //        qDebug() << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
@@ -937,6 +937,9 @@ void ThumbView::thumbsFitTopOrBottom()
 Called by eventFilter when a thumbDock resize event occurs triggered by the
 user resizing the thumbDock. Adjust the size of the thumbs to fit the new
 thumbDock height.
+
+Note that MW events have been sent to thumbView by installEventFilter in MW
+constructor.
 */
     {
     #ifdef ISDEBUG
@@ -968,7 +971,9 @@ thumbDock height.
         thumbWidth = 160;
         thumbHeight = 160 / aspect;
     }
-/*        qDebug() << "netViewportHt" << netViewportHt
+    qDebug() << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsFitTopOrBottom      thumbHeight = " << thumbHeight;
+
+    /*        qDebug() << "netViewportHt" << netViewportHt
              << "hMin / hMax" << hMin << hMax
              << "newThumbSpaceHt" << newThumbSpaceHt
              << "thumbHeight" << thumbView->thumbHeight
@@ -1056,24 +1061,24 @@ int ThumbView::getVerticalScrollBarOffset(int row)
 {
     int pageWidth = viewport()->width();
     int pageHeight = viewport()->height();
-    int thumbWidth = getThumbCellSize().width();
-    int thumbHeight = getThumbCellSize().height();
+    int thumbCellWidth = getThumbCellSize().width();
+    int thumbCellHeight = getThumbCellSize().height();
 
-    if (pageWidth < 40 ||pageHeight < 40 || thumbWidth < 40 || thumbHeight < 40)
+    if (pageWidth < 40 ||pageHeight < 40 || thumbCellWidth < 40 || thumbCellHeight < 40)
         return 0;
 
-    float thumbsPerPage = pageWidth / thumbWidth * (float)pageHeight / thumbHeight;
-    float thumbRowsPerPage = (float)pageHeight / thumbHeight;
+    float thumbsPerPage = pageWidth / thumbCellWidth * (float)pageHeight / thumbCellHeight;
+    float thumbRowsPerPage = (float)pageHeight / thumbCellHeight;
     int n = dm->sf->rowCount();
 //    qDebug() << "thumbsPerPage" << thumbsPerPage;
     float pages = (float(n) / thumbsPerPage) - 1;
     int vMax = pages * pageWidth;
 
-    int thumbRow = row / (pageWidth / thumbWidth);
+    int thumbRow = row / (pageWidth / thumbCellWidth);
     int startNoScrollItems = thumbRowsPerPage / 2;
     float fractpart = fmodf (thumbRowsPerPage / 2 , 1.0);
-    int thumbCntrOffset = (0.5 - fractpart) * thumbHeight;
-    int scrollOffset = (thumbRow - startNoScrollItems) * thumbHeight + thumbCntrOffset;
+    int thumbCntrOffset = (0.5 - fractpart) * thumbCellHeight;
+    int scrollOffset = (thumbRow - startNoScrollItems) * thumbCellHeight + thumbCntrOffset;
     if (scrollOffset < 0) scrollOffset = 0;
     if (scrollOffset > vMax) scrollOffset = vMax;
     /*
@@ -1084,7 +1089,7 @@ int ThumbView::getVerticalScrollBarOffset(int row)
              << verticalScrollBar()->maximum()
              << vMax
              << "Total Pages =" << pages
-             << "Item Height =" << thumbHeight
+             << "Item Height =" << thumbCellHeight
              << "ViewPort Height =" << pageHeight
              << "startNoScrollItems =" << startNoScrollItems
              << "thumbCntrOffset" << thumbCntrOffset
@@ -1124,9 +1129,9 @@ int ThumbView::getVerticalScrollBarMax()
     }
     int pageWidth = viewport()->width();
     int pageHeight = viewport()->height();
-    int thumbWidth = getThumbCellSize().width();
-    int thumbHeight = getThumbCellSize().height();
-    float thumbsPerPage = pageWidth / thumbWidth * (float)pageHeight / thumbHeight;
+    int thumbCellWidth = getThumbCellSize().width();
+    int thumbCellHeight = getThumbCellSize().height();
+    float thumbsPerPage = pageWidth / thumbCellWidth * (float)pageHeight / thumbCellHeight;
     int n = dm->sf->rowCount();
     float pages = float(n) / thumbsPerPage - 1;
     int vMax = pages * pageHeight;
@@ -1149,7 +1154,7 @@ monitor mouse events outside ThumbView (the thumbDock splitter area in this
 case).
 */
 
-    /* ThumbView is ready-to-go and can scroll to whereever we want:
+    /* ThumbView is ready-to-go and can scroll to wherever we want:
 
     When the user changes modes in MW (ie from Grid to Loupe) a ThumbView
     instance (either thumbView or gridView) can change state from hidden to
@@ -1226,6 +1231,7 @@ case).
     if (event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *e = (QMouseEvent *)event;
         if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
+        qDebug() << "🔎🔎🔎 ThumbView::eventFilter   event->type() == QEvent::MouseButtonPress";
     }
 
     if (event->type() == QEvent::MouseButtonRelease) {
@@ -1233,23 +1239,40 @@ case).
         if (e->button() == Qt::LeftButton) {
             isLeftMouseBtnPressed = false;
             isMouseDrag = false;
+            qDebug() << "🔎🔎🔎 ThumbView::eventFilter   event->type() == QEvent::MouseButtonRelease";
         }
     }
 
     if (event->type() == QEvent::MouseMove) {
         if (isLeftMouseBtnPressed) isMouseDrag = true;
+//        qDebug() << "🔎🔎🔎 ThumbView::eventFilter   event->type() == QEvent::MouseMove";
     }
 
-    if (obj == mw->thumbDock)
-        if (event->type() == QEvent::Resize)
-            if (isMouseDrag)
+    if (event->type() == QEvent::MouseButtonDblClick) {
+        qDebug() << "🔎🔎🔎 ThumbView::eventFilter   event->type() == QEvent::MouseButtonDblClick"
+                 << "   Object =" << obj;
+        isMouseDrag = false;
+    }
+
+    if (obj == mw->thumbDock) {
+
+        if (event->type() == QEvent::Resize) {
+            if (isMouseDrag) {
                 if (!mw->thumbDock->isFloating()) {
                     Qt::DockWidgetArea area = mw->dockWidgetArea(mw->thumbDock);
                     if (area == Qt::BottomDockWidgetArea
                             || area == Qt::TopDockWidgetArea
                             || !wrapThumbs)
+                        qDebug() << "🔎🔎🔎 Calling thumbsFitTopOrBottom from "
+                                 << "ThumbView::eventFilter    thumbHeight ="
+                                 << thumbHeight
+                                 << "isDoubleClick =" << isDoubleClick
+                                 << "isMouseDrag" << isMouseDrag;
                         thumbsFitTopOrBottom();
                 }
+            }
+        }
+    }
 
     /* Filter and debug testing
        if (event->type() == QEvent::Paint &&
@@ -1288,6 +1311,7 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     }
 //    bool dock = false;
     G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
+    qDebug() << "🔎🔎🔎 ThumbView::mousePressEvent ";
     QListView::mousePressEvent(event);
 
     // capture mouse click position for imageView zoom/pan
@@ -1316,13 +1340,14 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
 
 void ThumbView::mouseMoveEvent(QMouseEvent *event)
 {
-    qDebug() << event;
+    qDebug() << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event;
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }
 
 void ThumbView::mouseReleaseEvent(QMouseEvent *event)
 {
+    qDebug() << "🔎🔎🔎 ThumbView::mouseReleaseEvent ";
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
     QListView::mouseReleaseEvent(event);
@@ -1336,7 +1361,6 @@ void ThumbView::mouseReleaseEvent(QMouseEvent *event)
 
 //}
 
-
 void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
 {
     {
@@ -1344,10 +1368,15 @@ void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
     qDebug() << "ThumbView::mouseDoubleClickEvent";
     #endif
     }
+    isDoubleClick = true;
     QListView::mouseDoubleClickEvent(event);
 
     // do not displayLoupe if already displayed
-    if (G::mode != "Loupe") emit displayLoupe();
+    if (G::mode != "Loupe") {
+        qDebug() << "🔎🔎🔎 ThumbView::mouseDoubleClickEvent   thumbHeight ="  << thumbHeight;
+//        emit updateThumbDockHeight();
+        emit displayLoupe();
+    }
     // delay reqd
 //    QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
 }

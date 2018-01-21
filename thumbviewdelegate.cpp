@@ -65,8 +65,8 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     font.setPixelSize(labelFontSize);
     QFontMetrics fm(font);
     fontHt = fm.height();
-    if (thumbWidth < 40) thumbWidth = 100;
-    if (thumbHeight < 40) thumbHeight = 100;
+    if (thumbWidth < 40) thumbWidth = 40;
+    if (thumbHeight < 40) thumbHeight = 40;
 
     thumbSize.setWidth(thumbWidth);
     thumbSize.setHeight(thumbHeight);

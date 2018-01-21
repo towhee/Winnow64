@@ -398,8 +398,8 @@ void MW::folderSelectionChange()
                     "\n*************************************************************************";
     #endif
     }
-    qDebug() << "\n\nMW::folderSelectionChange"
-                "\n*************************************************************************";
+//    qDebug() << "\n\nMW::folderSelectionChange"
+//                "\n*************************************************************************";
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
@@ -460,8 +460,6 @@ void MW::folderSelectionChange()
     if (!isInitializing || !rememberLastDir) {
         dirPath = getSelectedPath();
     }
-
-    qDebug() << "folderSelectionChange directory =" << dirPath;
 
     // ignore if present folder is rechosen
     if (dirPath == currentViewDir) {
@@ -2118,6 +2116,9 @@ void MW::createDataModel()
 
     connect(dm->sf, SIGNAL(reloadImageCache()),
             this, SLOT(loadFilteredImageCache()));
+
+    connect(dm, SIGNAL(popup(QString,int,float)),
+            this, SLOT(popup(QString,int,float)));
 }
 
 void MW::createSelectionModel()
@@ -2224,6 +2225,8 @@ void MW::createThumbView()
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
     thumbView->wrapThumbs = setting->value("wrapThumbs").toBool();
+
+    qDebug() << "🔎🔎🔎 MW::createThumbView    thumbHeight =" << thumbView->thumbHeight;
 
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -2720,17 +2723,30 @@ void MW::updateImageThreadRunStatus(bool isRunning)
     imageThreadRunningLabel->setText("◉");
 }
 
-// used by ImageCache thread to show image cache building progress
+//
 void MW::showCacheStatus(const QImage &imCacheStatus)
 {
+/*
+Used by MetadataCache and ImageCache threads to show image cache building
+progress.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::showCacheStatus";
     #endif
     }
-//    qDebug() << "MW::showCacheStatus signalled from metadataCacheThread";
     cacheLabel->setVisible(true);
     cacheLabel->setPixmap(QPixmap::fromImage(imCacheStatus));
+}
+
+void MW::popup(QString msg, int ms, float opacity)
+{
+/*
+This slot is available for other classes to signal in order to show popup
+messages, such as DataModel, which does not have access to MW, which is required
+by popUp to center itself in the app window.
+*/
+    popUp->showPopup(this, msg, ms, opacity);
 }
 
 void MW::reindexImageCache()
@@ -3122,7 +3138,8 @@ workspace with a matching name to the action is used.
     gridView->thumbPadding = w.thumbPaddingGrid,
     gridView->labelFontSize = w.labelFontSizeGrid,
     gridView->showThumbLabels = w.showThumbLabelsGrid;
-//    qDebug() << "Calling setThumbParameters from MW::invokeWorkspace thumbView.thumbWidth" << thumbView->thumbWidth << "gridView.thumbWidth" << gridView->thumbWidth;
+    qDebug() << "🔎🔎🔎 Calling setThumbParameters from MW::invokeWorkspace thumbHeight ="
+             << thumbView->thumbHeight;
     thumbView->setThumbParameters(true);
     gridView->setThumbParameters(false);
     // if in grid view override normal behavior if workspace invoked
@@ -3320,6 +3337,7 @@ app is "stranded" on secondary monitors that are not attached.
 //             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
 //             << "thumbHeight =" << thumbView->thumbHeight << "\n";
 //    qDebug() << "Calling setThumbParameters from MW::defaultWorkspace thumbView.thumbWidth" << thumbView->thumbWidth << "gridView.thumbWidth" << gridView->thumbWidth;
+    qDebug() << "🔎🔎🔎 Calling setThumbParameters from MW::defaultWorkspace     thumbHeight ="  << thumbView->thumbHeight;
     thumbView->setThumbParameters(true);
     gridView->setThumbParameters(false);
 
@@ -4203,6 +4221,7 @@ re-established when the application is re-opened.
     setting->setValue("thumbPadding", thumbView->thumbPadding);
     setting->setValue("thumbWidth", thumbView->thumbWidth);
     setting->setValue("thumbHeight", thumbView->thumbHeight);
+    qDebug() << "🔎🔎🔎 MW::writeSettings     thumbHeight ="  << thumbView->thumbHeight;        setting->setValue("labelFontSize", ws.labelFontSize);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showThumbLabels", (bool)thumbView->showThumbLabels);
     setting->setValue("wrapThumbs", (bool)thumbView->wrapThumbs);
@@ -4363,7 +4382,7 @@ re-established when the application is re-opened.
         setting->setValue("thumbPadding", ws.thumbPadding);
         setting->setValue("thumbWidth", ws.thumbWidth);
         setting->setValue("thumbHeight", ws.thumbHeight);
-        setting->setValue("labelFontSize", ws.labelFontSize);
+qDebug() << "🔎🔎🔎 MW::writeSettings     thumbHeight ="  << thumbView->thumbHeight;        setting->setValue("labelFontSize", ws.labelFontSize);
         setting->setValue("showThumbLabels", ws.showThumbLabels);
         setting->setValue("wrapThumbs", ws.wrapThumbs);
         setting->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
@@ -4903,6 +4922,7 @@ thumbnails have been resized.
     qDebug() << "MW::setThumbDockHeight";
     #endif
     }
+    qDebug() << "🔎🔎🔎 MW::setThumbDockHeight   thumbHeight ="  << thumbView->thumbHeight;;
     setThumbDockFeatures(dockWidgetArea(thumbDock));
 }
 
@@ -4985,6 +5005,8 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         thumbView->setWrapping(true);
         thumbView->isTopOrBottomDock = false;
     }
+    qDebug() << "🔎🔎🔎 MW::setThumbDockFeatures     thumbHeight ="  << thumbView->thumbHeight;
+
 }
 
 void MW::loupeDisplay()
@@ -5093,6 +5115,7 @@ lack of notification when the QListView has finished painting itself.
     emit closeZoomDlg();
 
     prevMode = "Grid";
+    qDebug() << "🔎🔎🔎 MW::gridDisplay    thumbHeight =" << thumbView->thumbHeight;
 }
 
 void MW::tableDisplay()
@@ -5122,10 +5145,6 @@ void MW::tableDisplay()
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
-
-    // limit time spent intercepting paint events to call scrollToCurrent
-//    thumbView->readyToScroll = true;
-//    QTimer::singleShot(1000, this, SLOT(delayScroll()));
 }
 
 void MW::compareDisplay()

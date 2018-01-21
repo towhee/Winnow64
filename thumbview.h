@@ -149,6 +149,7 @@ private:
 
     bool isLeftMouseBtnPressed;
     bool isMouseDrag;
+    bool isDoubleClick;
 
 signals:
     void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent
