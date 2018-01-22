@@ -3791,12 +3791,16 @@ void MW::chooseExternalApp()
 
     // this launches photoshop but does not open jpg
     QProcess *process = new QProcess(this);
-//    QString program = "/Applications/Preview.app";
-//    QString program = "/Applications/Adobe Photoshop CC 2015.5/Adobe Photoshop CC 2015.5.app";
-    QString program = "/Applications/Google Chrome.app";
+
+    QString a = "C:/Program Files/Adobe/Adobe Photoshop CC 2018/photoshop.exe";
+    a = QChar('\"') + a + QChar('\"');
+    QString c = "D:/Pictures/Business Card/2006-05-06_0005-Edit.psd";
+    c = QChar('\"') + c + QChar('\"');
+
+    QString program = a;
     QStringList args;
-//    args << "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg";
-    args << "/Users/roryhill/Pictures/Eva/2016-10-25_0198.jpg";
+    args << c;
+
     process->start(program, args);
 }
 
