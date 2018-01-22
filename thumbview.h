@@ -11,27 +11,12 @@
 #include "filters.h"
 #include <math.h>
 
-//class Scrollbar : public QScrollBar
-//{
-//    Q_OBJECT
-
-//public:
-//    Scrollbar(QWidget *parent);
-//    void test();
-
-//protected:
-//    bool eventFilter(QObject *obj, QEvent *event);
-
-//signals:
-//    void updateScrollTo();
-//};
-
 class ThumbView : public QListView
 {
     Q_OBJECT
 
 public:
-    ThumbView(QWidget *parent, DataModel *dm);
+    ThumbView(QWidget *parent, DataModel *dm, QString objName);
 
     int thumbWidth;
     int thumbHeight;
@@ -53,7 +38,6 @@ public:
     bool isThumb(int row);
     void reportThumb();                             //debugging thumb roles
 
-
     QFileInfoList getPicks();
     bool isPick();
     int getThumbSpaceMin();
@@ -64,9 +48,8 @@ public:
     QStringList getSelectedThumbsList();        //used by tags, might be useful
     int getCurrentRow();
     QString getCurrentFilename();       //not used, but might be handy
-    void setThumbParameters(bool okayToUpdateThumbDockHeight);
+    void setThumbParameters();
 
-//    void scrollTo(const QModelIndex &index, ScrollHint hint);
     int getHorizontalScrollBarOffset(int row);
     int getVerticalScrollBarOffset(int row);
     int getHorizontalScrollBarMax();
@@ -97,9 +80,8 @@ public slots:
     void refreshThumbs();
     void setIcon(int row, QImage thumb);
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
-             int _thumbPadding, int _labelFontSize, bool _showThumbLabels, bool _wrapThumbs);
-//    void setThumbGridParameters(int _thumbWidthGrid, int _thumbHeightGrid, int _thumbSpacingGrid,
-//             int _thumbPaddingGrid, int _labelFontSizeGrid, bool _showThumbLabelsGrid);
+             int _thumbPadding, int _labelFontSize, bool _showThumbLabels,
+             bool _wrapThumbs);
     void reportThumbs();
     void selectThumb(QModelIndex idx);
     void selectNext();
@@ -118,7 +100,6 @@ private slots:
     void delaySelectCurrentThumb();
 
 protected:
-    bool eventFilter(QObject *obj, QEvent *event);
     void startDrag(Qt::DropActions);
     void wheelEvent(QWheelEvent *event);
     void mousePressEvent(QMouseEvent *event);
@@ -149,7 +130,6 @@ private:
 
     bool isLeftMouseBtnPressed;
     bool isMouseDrag;
-    bool isDoubleClick;
 
 signals:
     void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent

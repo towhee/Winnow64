@@ -84,10 +84,9 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
         thumbSpace.setHeight(thumbSize.height()
                              + thumbBorderThickness*2
                              + thumbBorderPadding*2
-//                             + itemPadding*2
                              + fontHt
                              + itemBorderThickness*2
-                             + itemPadding);
+                             + itemPadding*2);
 //    reportThumbAttributes();
 }
 

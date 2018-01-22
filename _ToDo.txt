@@ -1,5 +1,6 @@
 BUGS
-- ThumbView at bottom not always sizing to incl scrollbar
+- In Grid double click can thumb not in middle of grid
+- Caching thumbs is sometimes slow
 - Invert selection does not work
 - Is there an embedded jpg in focus stack tifs
 - Confirm tif metadata for focus stacks (app out msg)
@@ -10,7 +11,6 @@ BUGS
 - Info status not reporting correctly while thumbs loading and zoom
 - Gets stuck in F mode where cannot resize
 - Pick thumb not always showing one main image in loupe mode
-- Icon padding becomes 2 for no apparent reason periodically
 - Combobox not showing down arrow
 PERFORMANCE
 - Separate thread to load XMP data after thumbnails loaded
@@ -46,6 +46,8 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Icon padding becomes 2 for no apparent reason periodically
+- Done: ThumbView at bottom not always sizing to incl scrollbar
 - Done: Creator wrong
 - Done: Add refine feature
 - Done: Not remembering max recent folders

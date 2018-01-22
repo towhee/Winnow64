@@ -98,7 +98,7 @@ ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
 // Declare here as #include "mainwindow" causes errors if put in header
 MW *mw;
 
-ThumbView::ThumbView(QWidget *parent, DataModel *dm)
+ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
     : QListView(parent)
 {
     {
@@ -107,6 +107,7 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm)
     #endif
     }
     this->dm = dm;
+    setObjectName(objName);
 
     // this works because ThumbView is a friend class of MW.  It is used in the
     // event filter to access the thumbDock
@@ -172,10 +173,27 @@ void ThumbView::refreshThumbs() {
 //    emit updateThumbDockHeight();
 }
 
-void ThumbView::setThumbParameters(bool okayToUpdateThumbDockHeight)
+void ThumbView::setThumbParameters()
 {
 /*
-Helper function for in class calls where thumb parameters already defined
+When thumb parameters (height, width, padding, fontsize, showLabels) are
+changed this function is called from:
+
+    MW::invokeWorkspace
+    MW::defaultWorkspace
+    MW::loupeDisplay
+    MW::gridDisplay
+    MW::tableDisplay
+    MW::CompareDisplay
+    prefdlg signal updateThumbParameters
+    prefdlg signal updateGridParameters
+
+There are two instances of ThumbView: thumbView and gridView. They are
+distinguished by their assigned object names: "Thumbnails" and "Grid".
+
+Both instances update the delegate. If it is the "Thumbnails" thumbView
+instance then the thumb dock is signalled so it can be resized to fit the
+possibly altered thumbnail dimensions.
 */
     {
     #ifdef ISDEBUG
@@ -185,9 +203,7 @@ Helper function for in class calls where thumb parameters already defined
     setSpacing(thumbSpacing);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels);
-    qDebug() << "🔎🔎🔎 ThumbView::setThumbParameters  thumbHeight =" << thumbHeight
-             << "okayToUpdateThumbDockHeight =" << okayToUpdateThumbDockHeight;
-    if(okayToUpdateThumbDockHeight) emit updateThumbDockHeight();
+    if(objectName() == "Thumbnails") emit updateThumbDockHeight();
 }
 
 void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
@@ -206,9 +222,7 @@ void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
     labelFontSize = _labelFontSize;
     showThumbLabels = _showThumbLabels;
     wrapThumbs = _wrapThumbs;
-
-//    qDebug() << "Calling setThumbParameters from ThumbView::setThumbParameters with args thumbWidth" << thumbWidth ;
-    setThumbParameters(true);
+    setThumbParameters();
 }
 
 int ThumbView::getThumbSpaceMin()
@@ -238,7 +252,7 @@ QSize ThumbView::getThumbCellSize()
     qDebug() << "ThumbView::getThumbCellSize";
     #endif
     }
-    setThumbParameters(false);
+//    setThumbParameters(false);    // reqd?  rgh
     return thumbViewDelegate->getThumbCell();
 }
 
@@ -783,7 +797,7 @@ void ThumbView::thumbsEnlarge()
     }
     qDebug() << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsEnlarge  thumbHeight =" << thumbHeight;
 //    qDebug() << "Calling setThumbParameters from ThumbView::thumbsEnlarge thumbWidth" << thumbWidth ;
-    setThumbParameters(true);
+    setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
@@ -802,7 +816,7 @@ void ThumbView::thumbsShrink()
     }
     qDebug() << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsShring  thumbHeight =" << thumbHeight;
 //    qDebug() << "Calling setThumbParameters from ThumbView::thumbsShrink thumbWidth" << thumbWidth ;
-    setThumbParameters(true);
+    setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
@@ -901,7 +915,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
             padding++;
         } while (improving);
 //        qDebug() << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
-        setThumbParameters(false);
+//        setThumbParameters();
     }
     // no wrapping - must be bottom or top dock area
     else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea
@@ -927,7 +941,9 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
 
         // change the thumbnail size in thumbViewDelegate
 //        qDebug() << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
-        setThumbParameters(false);
+        setSpacing(thumbSpacing);
+        thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+            thumbPadding, labelFontSize, showThumbLabels);
     }
 }
 
@@ -940,18 +956,14 @@ thumbDock height.
 
 Note that MW events have been sent to thumbView by installEventFilter in MW
 constructor.
+
+For thumbSpace anatomy (see ThumbViewDelegate)
 */
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::thumbsFitTopOrBottom";
     #endif
     }
-//    qDebug() << "MW::thumbsFitTopOrBottom   isFloating ="
-//             << mw->thumbDock->isFloating();
-    /*
-    thumbSpace anatomy (see ThumbViewDelegate)
-     */
-//    int scrollHeight = 12;
     float aspect = (float)thumbWidth / thumbHeight;
     // viewport available height
     int netViewportHt = height() - G::scrollBarThickness;
@@ -971,17 +983,9 @@ constructor.
         thumbWidth = 160;
         thumbHeight = 160 / aspect;
     }
-    qDebug() << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsFitTopOrBottom      thumbHeight = " << thumbHeight;
-
-    /*        qDebug() << "netViewportHt" << netViewportHt
-             << "hMin / hMax" << hMin << hMax
-             << "newThumbSpaceHt" << newThumbSpaceHt
-             << "thumbHeight" << thumbView->thumbHeight
-             << "thumbWidth" << thumbView->thumbWidth;
-             */
-
-//    qDebug() << "Calling setThumbParameters from ThumbView::thumbsFitTopOrBottom thumbWidth" << thumbWidth ;
-    setThumbParameters(false);
+    setSpacing(thumbSpacing);
+    thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+        thumbPadding, labelFontSize, showThumbLabels);
 }
 
 void ThumbView::updateLayout()
@@ -990,11 +994,6 @@ void ThumbView::updateLayout()
     QListView::updateGeometries();
     QListView::event(&event);
 }
-
-//void ThumbView::scrollTo(const QModelIndex &index, ScrollHint hint)
-//{
-//    // prevent access to parent QAbstractItemView
-//}
 
 void ThumbView::scrollToCurrent(int row)
 {
@@ -1145,147 +1144,6 @@ int ThumbView::getVerticalScrollBarMax()
     return vMax;
 }
 
-bool ThumbView::eventFilter(QObject *obj, QEvent *event)
-{
-/*
-Note that in addition to the ThumbView events all the qApp events are sent here
-by an installEventFilter in the MW constructor. The qApp events are required to
-monitor mouse events outside ThumbView (the thumbDock splitter area in this
-case).
-*/
-
-    /* ThumbView is ready-to-go and can scroll to wherever we want:
-
-    When the user changes modes in MW (ie from Grid to Loupe) a ThumbView
-    instance (either thumbView or gridView) can change state from hidden to
-    visible. Since hidden widgets cannot be accessed we need to wait until the
-    ThumbView becomes visible and fully repainted before attempting to scroll
-    to the current index. The thumbView scrollBar paint events are monitored
-    and when the last paint event occurs the scrollToCurrent function is
-    called. The last paint event is identified by calculating the maximum of
-    the scrollbar range and comparing it to the paint event, which updates the
-    range each time. With larger datasets (ie 1500+ thumbs) it can take a
-    number of paint events and 100s of ms to complete. A flag is assigned
-    (readyToScroll) to show when we need to monitor so not checking needlessly.
-    Unfortunately there does not appear to be any signal or event when
-    ThumbView is finished hence this cludge.
-    */
-
-    if(event->type() == QEvent::Paint
-            && readyToScroll
-            && (obj->objectName() == "ThumbViewVerticalScrollBar"
-            || obj->objectName() == "ThumbViewHorizontalScrollBar"))
-    {
-
-//        qDebug() << "\nThumbView event filter" << objectName() << obj << event;
-
-        if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
-            /*
-            qDebug() << objectName() << "HorScrollCurrentMax / FinalMax:"
-                     << horizontalScrollBar()->maximum()
-                     << getHorizontalScrollBarMax();
-                     */
-            if (horizontalScrollBar()->maximum() > 0.95 * getHorizontalScrollBarMax()) {
-                 /*
-                 qDebug() << objectName()
-                     << ": Event Filter sending row =" << mw->currentRow
-                     << "horizontalScrollBarMax Qt vs Me"
-                     << horizontalScrollBar()->maximum()
-                     << getHorizontalScrollBarMax();
-                     */
-                scrollToCurrent(mw->currentRow);
-            }
-        }
-        if (obj->objectName() == "ThumbViewVerticalScrollBar") {
-             /*
-             qDebug() << objectName() << "VerScrollCurrentMax / FinalMax:"
-                      << verticalScrollBar()->maximum()
-                      << getVerticalScrollBarMax();
-                      */
-             if (verticalScrollBar()->maximum() > 0.95 * getVerticalScrollBarMax()){
-                 /*
-                 qDebug() << objectName()
-                          << ": Event Filter sending row =" << mw->currentRow
-                          << "verticalScrollBarMax Qt vs Me"
-                          << verticalScrollBar()->maximum()
-                          << getVerticalScrollBarMax();
-
-                */
-                 scrollToCurrent(mw->currentRow);
-             }
-         }
-    }
-
-    /* A splitter resize of top/bottom thumbDock is happening:
-
-    Events are filtered from qApp here by an installEventFilter in the MW
-    contructor to monitor the splitter resize of the thumbdock when it is
-    docked horizontally. In this situation, as the vertical height of the
-    thumbDock changes the size of the thumbnails is modified to fit the
-    thumbDock by calling thumbsFitTopOrBottom. The mouse events determine when
-    a mouseDrag operation is happening in combination with thumbDock resizing.
-    The thumbDock is referenced from the parent because thumbView is a friend
-    class to MW.
-    */
-
-    if (event->type() == QEvent::MouseButtonPress) {
-        QMouseEvent *e = (QMouseEvent *)event;
-        if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
-        qDebug() << "🔎🔎🔎 ThumbView::eventFilter   event->type() == QEvent::MouseButtonPress";
-    }
-
-    if (event->type() == QEvent::MouseButtonRelease) {
-        QMouseEvent *e = (QMouseEvent *)event;
-        if (e->button() == Qt::LeftButton) {
-            isLeftMouseBtnPressed = false;
-            isMouseDrag = false;
-            qDebug() << "🔎🔎🔎 ThumbView::eventFilter   event->type() == QEvent::MouseButtonRelease";
-        }
-    }
-
-    if (event->type() == QEvent::MouseMove) {
-        if (isLeftMouseBtnPressed) isMouseDrag = true;
-//        qDebug() << "🔎🔎🔎 ThumbView::eventFilter   event->type() == QEvent::MouseMove";
-    }
-
-    if (event->type() == QEvent::MouseButtonDblClick) {
-        qDebug() << "🔎🔎🔎 ThumbView::eventFilter   event->type() == QEvent::MouseButtonDblClick"
-                 << "   Object =" << obj;
-        isMouseDrag = false;
-    }
-
-    if (obj == mw->thumbDock) {
-
-        if (event->type() == QEvent::Resize) {
-            if (isMouseDrag) {
-                if (!mw->thumbDock->isFloating()) {
-                    Qt::DockWidgetArea area = mw->dockWidgetArea(mw->thumbDock);
-                    if (area == Qt::BottomDockWidgetArea
-                            || area == Qt::TopDockWidgetArea
-                            || !wrapThumbs)
-                        qDebug() << "🔎🔎🔎 Calling thumbsFitTopOrBottom from "
-                                 << "ThumbView::eventFilter    thumbHeight ="
-                                 << thumbHeight
-                                 << "isDoubleClick =" << isDoubleClick
-                                 << "isMouseDrag" << isMouseDrag;
-                        thumbsFitTopOrBottom();
-                }
-            }
-        }
-    }
-
-    /* Filter and debug testing
-       if (event->type() == QEvent::Paint &&
-               (obj->objectName() == "ThumbViewHorScrollBar" ||
-                obj->objectName() == "WinnowStatusBar"))
-           qDebug() << "ThumbView event filter" << obj << event;
-            qDebug() << obj << event;
-   */
-
-
-    return QListView::eventFilter(obj, event);
-}
-
 void ThumbView::wheelEvent(QWheelEvent *event)
 {
     {
@@ -1368,17 +1226,14 @@ void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
     qDebug() << "ThumbView::mouseDoubleClickEvent";
     #endif
     }
-    isDoubleClick = true;
     QListView::mouseDoubleClickEvent(event);
 
     // do not displayLoupe if already displayed
     if (G::mode != "Loupe") {
-        qDebug() << "🔎🔎🔎 ThumbView::mouseDoubleClickEvent   thumbHeight ="  << thumbHeight;
-//        emit updateThumbDockHeight();
         emit displayLoupe();
     }
-    // delay reqd
-//    QTimer::singleShot(100, this, SLOT(delaySelectCurrentThumb()));
+    // delay reqd    this doesn't help
+//    QTimer::singleShot(110, this, SLOT(delaySelectCurrentThumb()));
 }
 
 void ThumbView::delaySelectCurrentThumb()

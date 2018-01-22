@@ -91,7 +91,7 @@ private:
     bool okToUpdate;
 
    int cacheWtAhead;
-
+    QString source;     // "thumbView" or "gridView"
 
 };
 
