@@ -1,6 +1,6 @@
 For Mac:
-cd /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_9_2_clang_64bit-Release
-/Users/roryhill/Qt/5.9.2/clang_64/bin/macdeployqt Winnow.app
+cd /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_10_0_clang_64bit-Release
+/Users/roryhill/Qt/5.10.0/clang_64/bin/macdeployqt Winnow.app
 
 For Win:
 CD "C:\program files\winnow"

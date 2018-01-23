@@ -26,7 +26,9 @@ HEADERS += \
     mdcache.h \
     metadata.h \
     pixmap.h \
+    progressbar.h \
     tableview.h \
+    thumb.h \
     thumbview.h \
     thumbviewdelegate.h \
     testaligndlg.h \
@@ -34,11 +36,10 @@ HEADERS += \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
     Dialogs/popup.h \
+    Dialogs/processdlg.h \
     Dialogs/zoomdlg.h \
     MacOS/macscale.h \
-    MacOS/macScale_p.h \
-    thumb.h \
-    progressbar.h
+    MacOS/macScale_p.h
 
 SOURCES += \
     bookmarks.cpp \
@@ -60,17 +61,18 @@ SOURCES += \
     mdcache.cpp \
     metadata.cpp \
     pixmap.cpp \
+    progressbar.cpp \
     tableview.cpp \
     thumbview.cpp \
     thumbviewdelegate.cpp \
     testaligndlg.cpp \
-    Dialogs/prefdlg.cpp \
-    Dialogs/workspacedlg.cpp \
+    thumb.cpp \
     Dialogs/copypickdlg.cpp \
     Dialogs/popup.cpp \
-    Dialogs/zoomdlg.cpp \
-    thumb.cpp \
-    progressbar.cpp
+    Dialogs/prefdlg.cpp \
+    Dialogs/processdlg.cpp \
+    Dialogs/workspacedlg.cpp \
+    Dialogs/zoomdlg.cpp
 
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 
@@ -86,7 +88,8 @@ FORMS += \
     shortcutsform.ui \
     zoomdlg.ui \
     message.ui \
-    metadatareport.ui
+    metadatareport.ui \
+    processdlg.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns
