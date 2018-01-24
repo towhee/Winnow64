@@ -30,6 +30,7 @@
 #include "metadata.h"
 #include "popup.h"
 #include "prefdlg.h"
+#include "processdlg.h"
 #include "global.h"
 #include "thumb.h"
 #include "thumbview.h"
@@ -230,6 +231,7 @@ private slots:
     void sortThumbnails();
     void monitorPreference();
     void preferences(int page = -1);
+    void openWithProgramManagement();
     void oldPreferences();
     void toggleFullScreen();
     void escapeFullScreen();

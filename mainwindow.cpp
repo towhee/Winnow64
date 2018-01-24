@@ -1017,7 +1017,7 @@ void MW::createActions()
     chooseAppAction = new QAction(tr("Manage External Applications"), this);
     chooseAppAction->setObjectName("chooseApp");
     addAction(chooseAppAction);
-    connect(chooseAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
+    connect(chooseAppAction, SIGNAL(triggered()), this, SLOT(openWithProgramManagement()));
 //    chooseAppAction->setMenu(openWithMenu);
 
     newAppAction = new QAction(tr("New app"), this);
@@ -3666,6 +3666,12 @@ void MW::about()
     QMessageBox::about(this, tr("About") + " Winnow", aboutString);
 }
 
+void MW::openWithProgramManagement()
+{
+    Processdlg *processdlg = new Processdlg(externalApps, this);
+    processdlg->exec();
+}
+
 void MW::cleanupSender()
 {
     {
@@ -4429,8 +4435,12 @@ re-established when the application is re-opened.
     setting->beginGroup("ExternalApps");
     setting->remove("");
     QMapIterator<QString, QString> eaIter(externalApps);
+    qDebug() << "externalApps" << externalApps;
     while (eaIter.hasNext()) {
         eaIter.next();
+        qDebug() << "MW::writeSettings  ExternalApps  "
+                 << "eaIter.key() =" << eaIter.key()
+                 << "eaIter.value() =" << eaIter.value();
         setting->setValue(eaIter.key(), eaIter.value());
     }
     setting->endGroup();
