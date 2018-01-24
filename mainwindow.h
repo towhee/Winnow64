@@ -363,8 +363,8 @@ private:
 
     QMenuBar *thumbsMenuBar;
     QMenu *fileMenu;
-        QMenu *openWithMenu;
-        QMenu *recentFoldersMenu;
+    QMenu *openWithMenu;
+    QMenu *recentFoldersMenu;
     QMenu *editMenu;
     QMenu *goMenu;
     QMenu *filterMenu;
@@ -386,8 +386,10 @@ private:
     QAction *openAction;
     QAction *revealFileAction;
     QAction *openWithMenuAction;
+        QAction *manageAppAction;
+        QList<QAction *> appActions;
     QAction *recentFoldersAction;
-    QList<QAction *> recentFolderActions;
+        QList<QAction *> recentFolderActions;
     QAction *subFoldersAction;
     QAction *addBookmarkAction;
     QAction *removeBookmarkAction;
@@ -399,9 +401,6 @@ private:
     QAction *exitAction;
 
     // Open with menu in File menu
-    QAction *newAppAction;
-    QAction *deleteAppAction;
-    QAction *chooseAppAction;  // replaced by newAppAction?
 
     // Edit menu
     QAction *selectAllAction;

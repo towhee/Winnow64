@@ -1000,35 +1000,53 @@ void MW::createActions()
     qDebug() << "MW::createActions";
     #endif
     }
+    int n;          // used to populate action lists
+
     // File menu
 
-    //rgh need slot function
     openAction = new QAction(tr("Open Folder"), this);
     openAction->setObjectName("openFolder");
     addAction(openAction);
     connect(openAction, SIGNAL(triggered()), this, SLOT(openFolder()));
 
     openWithMenu = new QMenu(tr("Open With..."));
+
     openWithMenuAction = new QAction(tr("Open With..."), this);
     openWithMenuAction->setObjectName("openWithMenu");
     addAction(openWithMenuAction);
     openWithMenuAction->setMenu(openWithMenu);
 
-    chooseAppAction = new QAction(tr("Manage External Applications"), this);
-    chooseAppAction->setObjectName("chooseApp");
-    addAction(chooseAppAction);
-    connect(chooseAppAction, SIGNAL(triggered()), this, SLOT(openWithProgramManagement()));
-//    chooseAppAction->setMenu(openWithMenu);
+    manageAppAction = new QAction(tr("Manage External Applications"), this);
+    manageAppAction->setObjectName("chooseApp");
+    addAction(manageAppAction);
+    connect(manageAppAction, SIGNAL(triggered()), this, SLOT(openWithProgramManagement()));
 
-    newAppAction = new QAction(tr("New app"), this);
-    newAppAction->setObjectName("newApp");
-    addAction(newAppAction);
-//    connect(newAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
+    /* read external apps from QStettings */
+    setting->beginGroup("ExternalApps");
+    QStringList extApps = setting->childKeys();
+    n = extApps.size();
 
-    deleteAppAction = new QAction(tr("Delete app"), this);
-    deleteAppAction->setObjectName("deleteApp");
-    addAction(deleteAppAction);
-//    connect(deleteAppAction, SIGNAL(triggered()), this, SLOT(chooseExternalApp()));
+    for (int i = 0; i < 10; ++i) {
+        QString name;
+        QString objName = "";
+        if (i < n) {
+            externalApps[extApps.at(i)] = setting->value(extApps.at(i)).toString();
+            name = extApps.at(i);
+            objName = "app" + QString::number(i);
+        }
+        else name = "Future app" + QString::number(i);
+
+        if (i < n) {
+            appActions.at(i)->setShortcut(QKeySequence("Alt+" + QString::number(i)));
+            appActions.at(i)->setObjectName(objName);
+            appActions.at(i)->setText(name);
+            appActions.at(i)->setVisible(true);
+            addAction(appActions.at(i));
+        }
+        if (i >= n) appActions.at(i)->setVisible(false);
+        appActions.at(i)->setShortcut(QKeySequence("Alt+" + QString::number(i)));
+    }
+    setting->endGroup();
 
     recentFoldersMenu = new QMenu(tr("Recent folders..."));
     recentFoldersAction = new QAction(tr("Recent folders..."), this);
@@ -1039,7 +1057,7 @@ void MW::createActions()
     // general connection to handle invoking new recent folders
     // MacOS will not allow runtime menu insertions.  Cludge workaround
     // add 20 dummy menu items and then hide until use.
-    int n = recentFolders->count();
+    n = recentFolders->count();
     for (int i = 0; i < maxRecentFolders; i++) {
         QString name;
         QString objName = "";
@@ -1830,9 +1848,7 @@ void MW::createMenus()
     fileGroupAct->setMenu(fileMenu);
     fileMenu->addAction(openAction);
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
-    openWithMenu->addAction(chooseAppAction);
-    openWithMenu->addAction(newAppAction);
-    openWithMenu->addAction(deleteAppAction);
+    openWithMenu->addAction(manageAppAction);
     recentFoldersMenu = fileMenu->addMenu(tr("Recent folders"));
     // add 10 dummy menu items for custom workspaces
     for (int i = 0; i < maxRecentFolders; i++) {
@@ -3779,7 +3795,7 @@ void MW::updateExternalApps()
     }
 
     openWithMenu->addSeparator();
-    openWithMenu->addAction(chooseAppAction);
+    openWithMenu->addAction(manageAppAction);
 }
 
 void MW::chooseExternalApp()
@@ -4700,12 +4716,7 @@ Preferences are located in the prefdlg class and updated here.
     setting->endGroup();
 
     /* read external apps */
-    setting->beginGroup("ExternalApps");
-    QStringList extApps = setting->childKeys();
-    for (int i = 0; i < extApps.size(); ++i) {
-        externalApps[extApps.at(i)] = setting->value(extApps.at(i)).toString();
-    }
-    setting->endGroup();
+    /* moved to createActions as required to populate open with ... menu */
 
     /* read bookmarks */
     setting->beginGroup("Bookmarks");
