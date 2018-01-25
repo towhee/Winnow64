@@ -17,6 +17,7 @@ Processdlg::Processdlg(QMap<QString, QString>& externalApps, QWidget *parent)
         it.next();
         QTableWidgetItem *item0 = new QTableWidgetItem(it.key());
         QTableWidgetItem *item1 = new QTableWidgetItem(it.value());
+        item1->setFlags(item1->flags() & ~Qt::ItemIsEditable); // non editable
         qDebug() << "Processdlg::Processdlg"
                  << "  it.key() =" << it.key()
                  << "  it.value() =" << it.value();

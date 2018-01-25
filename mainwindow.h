@@ -692,6 +692,7 @@ private:
 
     qulonglong memoryReqdForPicks();
     QString formatMemoryReqd(qulonglong bytes);
+    QString enquote(QString &s);
 
     void stressTest();
 

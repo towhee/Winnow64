@@ -1025,7 +1025,7 @@ void MW::createActions()
     setting->beginGroup("ExternalApps");
     QStringList extApps = setting->childKeys();
     n = extApps.size();
-
+    qDebug() << "read external apps from QSettings   n =" << n;
     for (int i = 0; i < 10; ++i) {
         QString name;
         QString objName = "";
@@ -1036,6 +1036,7 @@ void MW::createActions()
         }
         else name = "Future app" + QString::number(i);
 
+        appActions.append(new QAction(name, this));
         if (i < n) {
             appActions.at(i)->setShortcut(QKeySequence("Alt+" + QString::number(i)));
             appActions.at(i)->setObjectName(objName);
@@ -1045,7 +1046,9 @@ void MW::createActions()
         }
         if (i >= n) appActions.at(i)->setVisible(false);
         appActions.at(i)->setShortcut(QKeySequence("Alt+" + QString::number(i)));
+        connect(appActions.at(i), SIGNAL(triggered(bool)), this, SLOT(runExternalApp()));
     }
+    addActions(appActions);
     setting->endGroup();
 
     recentFoldersMenu = new QMenu(tr("Recent folders..."));
@@ -1849,6 +1852,11 @@ void MW::createMenus()
     fileMenu->addAction(openAction);
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
     openWithMenu->addAction(manageAppAction);
+    openWithMenu->addSeparator();
+    // add 10 dummy menu items for external apps
+    for (int i = 0; i < 10; i++) {
+        openWithMenu->addAction(appActions.at(i));
+    }
     recentFoldersMenu = fileMenu->addMenu(tr("Recent folders"));
     // add 10 dummy menu items for custom workspaces
     for (int i = 0; i < maxRecentFolders; i++) {
@@ -3658,9 +3666,11 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-//    setCentralMessage("A message to central");
+    updateExternalApps();
+//    metadata->readMetadata(true, thumbView->getCurrentFilename());
+
+    //    setCentralMessage("A message to central");
 //    qDebug() << "thumbView->getCurrentFilename()" << thumbView->getCurrentFilename();
-    metadata->readMetadata(true, thumbView->getCurrentFilename());
 //    metadata->reportMetadataAllFiles();
 }
 
@@ -3686,6 +3696,7 @@ void MW::openWithProgramManagement()
 {
     Processdlg *processdlg = new Processdlg(externalApps, this);
     processdlg->exec();
+    updateExternalApps();
 }
 
 void MW::cleanupSender()
@@ -3709,7 +3720,11 @@ void MW::externalAppError()
     msgBox.critical(this, tr("Error"), tr("Failed to start external application."));
 }
 
-// rgh requires tweaking ??
+QString MW::enquote(QString &s)
+{
+    return QChar('\"') + s + QChar('\"');
+}
+
 void MW::runExternalApp()
 {
     {
@@ -3718,84 +3733,52 @@ void MW::runExternalApp()
     #endif
     }
     QString execCommand;
-    QString selectedFileNames("");
-    execCommand = externalApps[((QAction*) sender())->text()];
+    execCommand = enquote(externalApps[((QAction*) sender())->text()]);
+    QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedRows();
 
+    if (selectedIdxList.size() < 1)
+    {
+        popup("No images have been selected", 2000, 0.75);
+        return;
+    }
 
-
-//        Change imageView->currentImagePath to use treeView->currentIndex()...
-//        execCommand += " \"" + imageView->currentImagePath + "\"";
-        if (QApplication::focusWidget() == fsTree) {
-            selectedFileNames += " \"" + getSelectedPath() + "\"";
-        } else {
-
-            QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedIndexes();
-            if (selectedIdxList.size() < 1)
-            {
-                setStatus(tr("Invalid selection."));
-                return;
-            }
-
-            selectedFileNames += " ";
-//            for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn)
-//            {
-//                selectedFileNames += "\"" +
-////                    thumbView->thumbViewModel->item(selectedIdxList[tn].row())->data(G::FileNameRole).toString();
-//                if (tn)
-//                    selectedFileNames += "\" ";
-//            }
-        }
-
-        execCommand += selectedFileNames;
-        qDebug() << "MW::cleanupSender  " << execCommand;
+    QStringList arguments;
+    for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn) {
+        QString s = selectedIdxList[tn].data(G::FileNameRole).toString();
+        arguments << enquote(s);
+    }
 
     QProcess *externalProcess = new QProcess();
     connect(externalProcess, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(cleanupSender()));
     connect(externalProcess, SIGNAL(error(QProcess::ProcessError)), this, SLOT(externalAppError()));
-    externalProcess->start(execCommand);
+    externalProcess->start(execCommand, arguments);
 }
 
 void MW::updateExternalApps()
 {
+/*
+Menus cannot be added/deleted at runtime in MacOS so 10 menu items are created
+in the MW constructor and then edited here based on changes made in processdlg.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "MW::updateExternalApps";
     #endif
     }
-    int actionNum = 0;
     QMapIterator<QString, QString> eaIter(externalApps);
-
-    QList<QAction*> actionList = openWithMenu->actions();
-    if (!actionList.empty()) {
-
-        for (int i = 0; i < actionList.size(); ++i)
-        {
-            QAction *action = actionList.at(i);
-            if (action->isSeparator())
-                break;
-            openWithMenu->removeAction(action);
-            imageView->removeAction(action);
-            delete action;
-        }
-
-        openWithMenu->clear();
-    }
-
-    while (eaIter.hasNext())
-    {
-        ++actionNum;
+    int i = 0;
+    while (eaIter.hasNext()) {
         eaIter.next();
-        QAction *extAppAct = new QAction(eaIter.key(), this);
-        if (actionNum < 10)
-            extAppAct->setShortcut(QKeySequence("Alt+" + QString::number(actionNum)));
-        extAppAct->setIcon(QIcon::fromTheme(eaIter.key()));
-        connect(extAppAct, SIGNAL(triggered()), this, SLOT(runExternalApp()));
-        openWithMenu->addAction(extAppAct);
-        imageView->addAction(extAppAct);
+        appActions.at(i)->setObjectName("app" + QString::number(i));
+        appActions.at(i)->setText(eaIter.key());
+        appActions.at(i)->setVisible(true);
+        i++;
     }
 
-    openWithMenu->addSeparator();
-    openWithMenu->addAction(manageAppAction);
+    for (i; i < 10; i++) {
+        appActions.at(i)->setVisible(false);
+        appActions.at(i)->setText("");
+    }
 }
 
 void MW::chooseExternalApp()
