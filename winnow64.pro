@@ -36,10 +36,10 @@ HEADERS += \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
     Dialogs/popup.h \
-    Dialogs/processdlg.h \
     Dialogs/zoomdlg.h \
     MacOS/macscale.h \
-    MacOS/macScale_p.h
+    MacOS/macScale_p.h \
+    Dialogs/appdlg.h
 
 SOURCES += \
     bookmarks.cpp \
@@ -70,9 +70,9 @@ SOURCES += \
     Dialogs/copypickdlg.cpp \
     Dialogs/popup.cpp \
     Dialogs/prefdlg.cpp \
-    Dialogs/processdlg.cpp \
     Dialogs/workspacedlg.cpp \
-    Dialogs/zoomdlg.cpp
+    Dialogs/zoomdlg.cpp \
+    Dialogs/appdlg.cpp
 
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 
@@ -89,7 +89,7 @@ FORMS += \
     zoomdlg.ui \
     message.ui \
     metadatareport.ui \
-    processdlg.ui
+    appdlg.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns

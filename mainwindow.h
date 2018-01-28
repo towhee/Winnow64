@@ -15,6 +15,7 @@
 #include "CoreGraphics/CoreGraphics.h"
 #endif
 
+#include "appdlg.h"
 #include "bookmarks.h"
 #include "compareImages.h"
 #include "copypickdlg.h"
@@ -30,7 +31,6 @@
 #include "metadata.h"
 #include "popup.h"
 #include "prefdlg.h"
-#include "processdlg.h"
 #include "global.h"
 #include "thumb.h"
 #include "thumbview.h"
@@ -127,6 +127,7 @@ public:
     int folderMaxWidth = 600;       // not in preferences or QSetting
     // general
     int lastPrefPage;
+    bool mouseClickScroll;      // positionAtCenter scrolling when mouse click?
     int displayHorizontalPixels;
     int displayVerticalPixels;
     bool autoIngestFolderPath;
@@ -277,6 +278,7 @@ private slots:
     void updateColorClass();
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
+    void setMouseClickScroll(bool prefMouseClickScroll);
     void setIncludeSubFolders();
     void setTrackpadScroll(bool trackpadScroll);
     void setDisplayResolution(int horizontalPixels, int verticalPixels);
@@ -301,7 +303,7 @@ private slots:
     void updateExternalApps();
     void runExternalApp();
     void cleanupSender();
-    void externalAppError();
+    void externalAppError(QProcess::ProcessError err);
 
     void setFullNormal();
     void setCentralView();

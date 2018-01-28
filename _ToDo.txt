@@ -1,10 +1,8 @@
 BUGS
-- In Grid double click can thumb not in middle of grid
+- Open with ... (doesn't work on macOS)
 - Caching thumbs is sometimes slow
-- Invert selection does not work
-- Is there an embedded jpg in focus stack tifs
 - Confirm tif metadata for focus stacks (app out msg)
-- Drag drop to photoshop not working
+- Drag drop to photoshop not working (works in MacOs)
 - Drag drop onto graphicsview not working
 - Copy metadata item not working (was working before)
 - Toggle zoom wrong place when using preview size cached image
@@ -19,7 +17,6 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
 - Read/write XMP sidecars
-- Open with ...
 - Drag and drop a selection of thumbs
 - Add current folder to bookmarks
 - Combine raw+jpg option
@@ -31,7 +28,6 @@ ENHANCEMENTS
 - Add preferences for info label
 - Add Ingest token builder (see http://doc.qt.io/qt-5/qtwidgets-draganddrop-fridgemagnets-example.html)
 - Remember column order in tableView and workspace
-- Add Tif support
 - Add more raw file formats - DNG, Sony, Fuji, Panasonic ...
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Rotate selected images
@@ -46,6 +42,9 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: In Grid double click on thumb selects wrong image as scrollToCenter occurs
+- Done: Invert selection does not work
+- Done: Add Tif support
 - Done: Icon padding becomes 2 for no apparent reason periodically
 - Done: ThumbView at bottom not always sizing to incl scrollbar
 - Done: Creator wrong

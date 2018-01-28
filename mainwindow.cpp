@@ -302,31 +302,31 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                      << getHorizontalScrollBarMax();
                      */
             if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
-                 /*
+
                  qDebug() << objectName()
-                     << ": Event Filter sending row =" << mw->currentRow
+                     << ": Event Filter sending row =" << currentRow
                      << "horizontalScrollBarMax Qt vs Me"
-                     << horizontalScrollBar()->maximum()
-                     << getHorizontalScrollBarMax();
-                     */
+                     << thumbView->horizontalScrollBar()->maximum()
+                     << thumbView->getHorizontalScrollBarMax();
+
                 thumbView->scrollToCurrent(currentRow);
             }
         }
         if (obj->objectName() == "ThumbViewVerticalScrollBar") {
              /*
              qDebug() << objectName() << "VerScrollCurrentMax / FinalMax:"
-                      << verticalScrollBar()->maximum()
-                      << getVerticalScrollBarMax();
-                      */
-             if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
-                 /*
-                 qDebug() << objectName()
-                          << ": Event Filter sending row =" << mw->currentRow
-                          << "verticalScrollBarMax Qt vs Me"
-                          << verticalScrollBar()->maximum()
-                          << getVerticalScrollBarMax();
+                      << thumbView->verticalScrollBar()->maximum()
+                      << thumbView->getVerticalScrollBarMax();*/
 
-                */
+             if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
+
+                 qDebug() << objectName()
+                          << ": Event Filter sending row =" << currentRow
+                          << "verticalScrollBarMax Qt vs Me"
+                          << thumbView->verticalScrollBar()->maximum()
+                          << thumbView->getVerticalScrollBarMax();
+
+
                  thumbView->scrollToCurrent(currentRow);
              }
          }
@@ -502,6 +502,12 @@ void MW::folderSelectionChange()
     }
 //    qDebug() << "\n\nMW::folderSelectionChange"
 //                "\n*************************************************************************";
+    // Check if same folder
+    QString dirPath;
+    if (!isInitializing || !rememberLastDir) {
+        if (currentViewDir == getSelectedPath()) return;
+     }
+
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
@@ -537,8 +543,6 @@ void MW::folderSelectionChange()
         asLoupeAction->setChecked(true);
         updateState();
     }
-
-    QString dirPath;
 
     // If just opened application
     if (isInitializing) {
@@ -581,6 +585,7 @@ void MW::folderSelectionChange()
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(dirPath, true, false)) {
+        qDebug() << "invalid folder - popUp->isVisible =" << popUp->isVisible();
         if (popUp->isVisible()) popUp->close();
         return;
     }
@@ -605,6 +610,7 @@ void MW::folderSelectionChange()
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         updateStatus(false, "No images in this folder");
         setCentralMessage("The folder " + currentViewDir + " does not have any eligible images");
+        popUp->close();
         infoView->clearInfo();
         metadata->clear();
         imageView->emptyFolder();
@@ -734,8 +740,14 @@ so scrollTo and delegate use of the current index must check the row.
     /* Scroll all visible views to the current row. Qt has 100ms delay in
     QAbstractItemView::mousePressEvent for double-clicks - aarg!
     */
-    if (G::lastThumbChangeEvent == "MouseClick")
-        QTimer::singleShot(1, this, SLOT(delayScroll()));
+    qDebug() << "MW::fileSelectionChange  "
+             << "G::lastThumbChangeEvent =" << G::lastThumbChangeEvent
+             << "mouseClickScroll =" << mouseClickScroll;
+
+    if (G::lastThumbChangeEvent == "MouseClick") {
+        if (mouseClickScroll)
+            QTimer::singleShot(1, this, SLOT(delayScroll()));
+    }
     else {
         if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);
         if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
@@ -979,8 +991,6 @@ QString MW::getSelectedPath()
     qDebug() << "MW::getSelectedPath";
     #endif
     }
-    qDebug() << "MW::getSelectedPath";
-
     if (isDragDrop)  return dragDropFolderPath;
 
     if (fsTree->selectionModel()->selectedRows().size() == 0) return "";
@@ -1025,7 +1035,6 @@ void MW::createActions()
     setting->beginGroup("ExternalApps");
     QStringList extApps = setting->childKeys();
     n = extApps.size();
-    qDebug() << "read external apps from QSettings   n =" << n;
     for (int i = 0; i < 10; ++i) {
         QString name;
         QString objName = "";
@@ -3016,6 +3025,11 @@ void MW::showHiddenFiles()
 
 void MW::delayScroll()
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::delayScroll";
+    #endif
+    }
     // scroll views to center on currentIndex
     if (thumbView->isVisible()) thumbView->scrollToCurrent(currentRow);
     if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);
@@ -3258,8 +3272,6 @@ workspace with a matching name to the action is used.
     gridView->thumbPadding = w.thumbPaddingGrid,
     gridView->labelFontSize = w.labelFontSizeGrid,
     gridView->showThumbLabels = w.showThumbLabelsGrid;
-    qDebug() << "🔎🔎🔎 Calling setThumbParameters from MW::invokeWorkspace thumbHeight ="
-             << thumbView->thumbHeight;
     thumbView->setThumbParameters();
     gridView->setThumbParameters();
     // if in grid view override normal behavior if workspace invoked
@@ -3694,8 +3706,8 @@ void MW::about()
 
 void MW::openWithProgramManagement()
 {
-    Processdlg *processdlg = new Processdlg(externalApps, this);
-    processdlg->exec();
+    Appdlg *appdlg = new Appdlg(externalApps, this);
+    appdlg->exec();
     updateExternalApps();
 }
 
@@ -3709,7 +3721,7 @@ void MW::cleanupSender()
     delete QObject::sender();
 }
 
-void MW::externalAppError()
+void MW::externalAppError(QProcess::ProcessError err)
 {
     {
     #ifdef ISDEBUG
@@ -3717,6 +3729,7 @@ void MW::externalAppError()
     #endif
     }
     QMessageBox msgBox;
+    qDebug() << "externalAppError  err =" << err;
     msgBox.critical(this, tr("Error"), tr("Failed to start external application."));
 }
 
@@ -3732,9 +3745,14 @@ void MW::runExternalApp()
     qDebug() << "MW::runExternalApp";
     #endif
     }
-    QString execCommand;
-    execCommand = enquote(externalApps[((QAction*) sender())->text()]);
+    QString app;
+    app = enquote(externalApps[((QAction*) sender())->text()]);
     QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedRows();
+
+//    QString x = "/Applications/Adobe Photoshop CC 2018/Adobe Photoshop CC 2018.app/Contents/MacOS/Adobe Photoshop CC 2018";
+//    QString x = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app/Contents/MacOS/Adobe Photoshop CS6";
+    QString x = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app";
+    app = "\"/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app\"";
 
     if (selectedIdxList.size() < 1)
     {
@@ -3743,15 +3761,32 @@ void MW::runExternalApp()
     }
 
     QStringList arguments;
-    for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn) {
-        QString s = selectedIdxList[tn].data(G::FileNameRole).toString();
-        arguments << enquote(s);
-    }
+//    for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn) {
+//        QString s = selectedIdxList[tn].data(G::FileNameRole).toString();
+//        arguments << enquote(s);
+//    }
+    arguments << "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg";
 
-    QProcess *externalProcess = new QProcess();
-    connect(externalProcess, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(cleanupSender()));
-    connect(externalProcess, SIGNAL(error(QProcess::ProcessError)), this, SLOT(externalAppError()));
-    externalProcess->start(execCommand, arguments);
+    std::cout << "MW::runExternalApp()  " << app.toStdString()
+              << " " << arguments.at(0).toStdString() << std::flush;
+
+    QProcess *process = new QProcess();
+    connect(process, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(cleanupSender()));
+    connect(process, SIGNAL(error(QProcess::ProcessError)), this, SLOT(externalAppError(QProcess::ProcessError)));
+
+    process->setArguments(arguments);
+    process->setProgram(app);
+    process->start();
+
+    process->start(app);
+//     process->start(app, arguments);
+//     process->start(app, {"/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"});
+
+//    if ( !process->waitForFinished(-1))
+//        qDebug() << process->readAllStandardError();
+
+    //this works in terminal"
+    // open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
 }
 
 void MW::updateExternalApps()
@@ -3838,6 +3873,8 @@ void MW::preferences(int page)
         this, SLOT(setPrefPage(int)));
     connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
             this, SLOT(setRememberLastDir(bool)));
+    connect(prefdlg, SIGNAL(updateMouseClickScroll(bool)),
+            this, SLOT(setMouseClickScroll(bool)));
     connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
             this, SLOT(setTrackpadScroll(bool)));
     connect(prefdlg, SIGNAL(updateDisplayResolution(int,int)),
@@ -3903,12 +3940,16 @@ void MW::setPrefPage(int page)
 
 void MW::setRememberLastDir(bool prefRememberFolder)
 {
+}
+
+void MW::setMouseClickScroll(bool prefMouseClickScroll)
+{
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::setRememberLastDir";
+    qDebug() << "MW::setMouseClickScroll";
     #endif
     }
-    rememberLastDir = prefRememberFolder;
+    mouseClickScroll = prefMouseClickScroll;
 }
 
 void MW::setTrackpadScroll(bool trackpadScroll)
@@ -4308,6 +4349,7 @@ re-established when the application is re-opened.
     }
     // general
     setting->setValue("lastPrefPage", (int)lastPrefPage);
+    setting->setValue("mouseClickScroll", (bool)mouseClickScroll);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
     setting->setValue("displayHorizontalPixels", displayHorizontalPixels);
     setting->setValue("displayVerticalPixels", displayVerticalPixels);
@@ -4434,12 +4476,8 @@ re-established when the application is re-opened.
     setting->beginGroup("ExternalApps");
     setting->remove("");
     QMapIterator<QString, QString> eaIter(externalApps);
-    qDebug() << "externalApps" << externalApps;
     while (eaIter.hasNext()) {
         eaIter.next();
-        qDebug() << "MW::writeSettings  ExternalApps  "
-                 << "eaIter.key() =" << eaIter.key()
-                 << "eaIter.value() =" << eaIter.value();
         setting->setValue(eaIter.key(), eaIter.value());
     }
     setting->endGroup();
@@ -4490,7 +4528,6 @@ re-established when the application is re-opened.
         setting->setValue("thumbPadding", ws.thumbPadding);
         setting->setValue("thumbWidth", ws.thumbWidth);
         setting->setValue("thumbHeight", ws.thumbHeight);
-qDebug() << "🔎🔎🔎 MW::writeSettings     thumbHeight ="  << thumbView->thumbHeight;        setting->setValue("labelFontSize", ws.labelFontSize);
         setting->setValue("showThumbLabels", ws.showThumbLabels);
         setting->setValue("wrapThumbs", ws.wrapThumbs);
         setting->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
@@ -4532,6 +4569,7 @@ Preferences are located in the prefdlg class and updated here.
         lastPrefPage = 0;
         imageView->toggleZoom = 1.0;
         rememberLastDir = true;
+        mouseClickScroll = false;
 //        maxRecentFolders = 10;
         bookmarks->bookmarkPaths.insert(QDir::homePath());
         imageView->useWheelToScroll = true;
@@ -4560,6 +4598,7 @@ Preferences are located in the prefdlg class and updated here.
 
     // general
     lastPrefPage = setting->value("lastPrefPage").toInt();
+    mouseClickScroll = setting->value("mouseClickScroll").toBool();
     qreal tempZoom = setting->value("toggleZoomValue").toReal();
     if (tempZoom > 3) tempZoom = 1;
     if (tempZoom < 0.25) tempZoom = 1;

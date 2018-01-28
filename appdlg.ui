@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Processdlg</class>
- <widget class="QDialog" name="Processdlg">
+ <class>Appdlg</class>
+ <widget class="QDialog" name="Appdlg">
   <property name="geometry">
    <rect>
     <x>0</x>

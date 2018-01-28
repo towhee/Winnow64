@@ -20,6 +20,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->rememberFolderChk->setChecked(mw->rememberLastDir);
     ui->trackpadIterateRadio->setChecked(!mw->imageView->useWheelToScroll);
     ui->trackpadScrollRadio->setChecked(mw->imageView->useWheelToScroll);
+    ui->mouseClickScrollChk->setChecked((mw->mouseClickScroll));
     ui->displayHorizontalPixelsSB->setValue(mw->displayHorizontalPixels);
     ui->displayVerticalPixelsSB->setValue(mw->displayVerticalPixels);
 
@@ -461,8 +462,12 @@ void Prefdlg::on_cachePreviewsChk_clicked()
 
 void Prefdlg::on_rememberFolderChk_clicked()
 {
+}
+
+void Prefdlg::on_mouseClickScrollChk_clicked()
+{
     if (okToUpdate) {
-        emit updateRememberFolder(ui->rememberFolderChk->isChecked());
+        emit updateMouseClickScroll(ui->mouseClickScrollChk->isChecked());
     }
 }
 
@@ -642,3 +647,4 @@ void Prefdlg::on_statusBarChk_clicked()
                                ui->thumbsChk->isChecked(),
                                ui->statusBarChk->isChecked());
 }
+

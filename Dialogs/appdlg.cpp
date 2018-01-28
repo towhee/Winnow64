@@ -1,8 +1,8 @@
-#include "processdlg.h"
-#include "ui_processdlg.h"
+#include "appdlg.h"
+#include "ui_appdlg.h"
 
-Processdlg::Processdlg(QMap<QString, QString>& externalApps, QWidget *parent)
-    : xApps(externalApps), QDialog(parent), ui(new Ui::Processdlg)
+Appdlg::Appdlg(QMap<QString, QString>& externalApps, QWidget *parent)
+    : xApps(externalApps), QDialog(parent), ui(new Ui::Appdlg)
 {
     ui->setupUi(this);
     QStringList hdrs;
@@ -18,7 +18,7 @@ Processdlg::Processdlg(QMap<QString, QString>& externalApps, QWidget *parent)
         QTableWidgetItem *item0 = new QTableWidgetItem(it.key());
         QTableWidgetItem *item1 = new QTableWidgetItem(it.value());
         item1->setFlags(item1->flags() & ~Qt::ItemIsEditable); // non editable
-        qDebug() << "Processdlg::Processdlg"
+        qDebug() << "Appdlg::Appdlg"
                  << "  it.key() =" << it.key()
                  << "  it.value() =" << it.value();
         ui->apps->insertRow(rowCount);
@@ -28,12 +28,12 @@ Processdlg::Processdlg(QMap<QString, QString>& externalApps, QWidget *parent)
     }
 }
 
-Processdlg::~Processdlg()
+Appdlg::~Appdlg()
 {
     delete ui;
 }
 
-void Processdlg::reject()
+void Appdlg::reject()
 {
     qDebug() << "Leaving...";
     xApps.clear();
@@ -46,7 +46,7 @@ void Processdlg::reject()
     QDialog::reject();
 }
 
-void Processdlg::on_addBtn_clicked()
+void Appdlg::on_addBtn_clicked()
 {
     int rowCount = ui->apps->rowCount();
     if (rowCount >= 10) {
@@ -68,7 +68,7 @@ void Processdlg::on_addBtn_clicked()
 //    delete item1;
 }
 
-void Processdlg::on_removeBtn_clicked()
+void Appdlg::on_removeBtn_clicked()
 {
     QModelIndex idx;
     qDebug() << "on_removeBtn_clicked   current row =" << ui->apps->currentRow();

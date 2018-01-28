@@ -27,8 +27,8 @@
     <rect>
      <x>570</x>
      <y>410</y>
-     <width>75</width>
-     <height>23</height>
+     <width>121</width>
+     <height>31</height>
     </rect>
    </property>
    <property name="toolTip">
@@ -66,7 +66,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>140</y>
+       <y>90</y>
        <width>431</width>
        <height>91</height>
       </rect>
@@ -78,9 +78,9 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>30</y>
+        <y>27</y>
         <width>337</width>
-        <height>65</height>
+        <height>51</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -115,9 +115,9 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>20</y>
+       <y>10</y>
        <width>431</width>
-       <height>101</height>
+       <height>71</height>
       </rect>
      </property>
      <property name="title">
@@ -146,7 +146,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>250</y>
+       <y>270</y>
        <width>431</width>
        <height>80</height>
       </rect>
@@ -222,6 +222,37 @@
       </property>
      </widget>
     </widget>
+    <widget class="QGroupBox" name="groupBoxFolders_2">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>190</y>
+       <width>431</width>
+       <height>71</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Mouse click selection</string>
+     </property>
+     <widget class="QCheckBox" name="mouseClickScrollChk">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>30</y>
+        <width>371</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Scroll to position at center when mouse click</string>
+      </property>
+     </widget>
+    </widget>
    </widget>
    <widget class="QWidget" name="pageCache">
     <widget class="QSpinBox" name="cacheSizeSpinbox">
@@ -249,7 +280,7 @@
        <x>140</x>
        <y>53</y>
        <width>143</width>
-       <height>205</height>
+       <height>181</height>
       </rect>
      </property>
      <property name="font">
@@ -389,9 +420,9 @@
     <widget class="QLabel" name="label_8">
      <property name="geometry">
       <rect>
-       <x>10</x>
+       <x>30</x>
        <y>24</y>
-       <width>121</width>
+       <width>91</width>
        <height>16</height>
       </rect>
      </property>
@@ -407,13 +438,13 @@
       <string>Cache size (GB)</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
      </property>
     </widget>
     <widget class="QLabel" name="label">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>30</x>
        <y>60</y>
        <width>111</width>
        <height>16</height>
@@ -431,7 +462,7 @@
       <string>Cache strategy</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
      </property>
     </widget>
     <widget class="QCheckBox" name="showCacheStatusChk">
@@ -491,7 +522,7 @@
       </font>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This will display three small activity lights on the status bar at the bottom of the application window.  The activity lights turn green when there is caching activity for building metadata, thumbnails and full scale images.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This will display two small activity lights on the status bar at the bottom of the application window. The activity lights turn green when there is caching activity for building metadata/thumbnails and full scale images.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
       <string>Show cache thread activity</string>
@@ -512,7 +543,7 @@
       </font>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then wieghting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Caching images and rendering the selected image simultaneously can degrade performance when rapidly moving through images.  The delay allows the next image selected to be rendered without any caching activity.  Try experimenting with the delay value if you are experiencing hesitation rendering the selected image.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
       <string>Delay (ms)</string>
@@ -531,7 +562,7 @@
       </rect>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then wieghting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Caching images and rendering the selected image simultaneously can degrade performance when rapidly moving through images.  The delay allows the next image selected to be rendered without any caching activity.  Try experimenting with the delay value if you are experiencing hesitation rendering the selected image.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="minimum">
       <number>0</number>

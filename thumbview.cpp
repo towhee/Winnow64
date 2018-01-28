@@ -620,7 +620,7 @@ void ThumbView::setIcon(int row, QImage thumb)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::setIcon" << folderPath;
+    qDebug() << "ThumbView::setIcon" << row;
     #endif
     }
     /* If a new folder is selected while the previous folder is being cached
@@ -647,6 +647,7 @@ void ThumbView::selectThumb(QModelIndex idx)
     qDebug() << "ThumbView::selectThumb(index)" << idx;
     #endif
     }
+    qDebug() << "ThumbView::selectThumb(index)" << idx;
     if (idx.isValid()) {
         G::lastThumbChangeEvent = "KeyStroke";    // either KeyStroke or MouseClick
         setCurrentIndex(idx);
@@ -1005,6 +1006,10 @@ hidden in Grid but visible in Loupe.  Widgets will not respond while hidden so
 we must wait until ThumbView is visible and completely repainted.  It takes a
 while for the scrollbars to finish painting, so when that is done, we want to
 scroll to the current position.
+
+It is also called from MW::delayScroll, which in turn, is called by
+MW::fileSelectionChange when a new image is selected and the selection was
+triggered by a mouse click and MW::mouseClickScroll == true.
 */
     {
     #ifdef ISDEBUG
@@ -1221,19 +1226,21 @@ void ThumbView::mouseReleaseEvent(QMouseEvent *event)
 
 void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
 {
+/*
+Show the image in loupe view.  Scroll the thumbView or gridView to position at
+center.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::mouseDoubleClickEvent";
     #endif
     }
     QListView::mouseDoubleClickEvent(event);
-
     // do not displayLoupe if already displayed
     if (G::mode != "Loupe") {
         emit displayLoupe();
     }
-    // delay reqd    this doesn't help
-//    QTimer::singleShot(110, this, SLOT(delaySelectCurrentThumb()));
+    scrollToCurrent(currentIndex().row());
 }
 
 void ThumbView::delaySelectCurrentThumb()
@@ -1264,10 +1271,10 @@ Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct
     QModelIndex lastIndex = dm->sf->index(dm->sf->rowCount() - 1, 0);
     toggleSelection.select(firstIndex, lastIndex);
     selectionModel()->select(toggleSelection, QItemSelectionModel::Toggle);
-    if(selectedIndexes().count() > 0) {
-        QModelIndex idx = selectedIndexes().at(0);
-        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::Select);
-    }
+//    if(selectedIndexes().count() > 0) {
+//        QModelIndex idx = selectedIndexes().at(0);
+//        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::Select);
+//    }
 }
 
 void ThumbView::copyThumbs()

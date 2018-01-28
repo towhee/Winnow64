@@ -19,6 +19,7 @@ public:
 signals:
     void updatePage(int page);
     void updateRememberFolder(bool rememberFolder);
+    void updateMouseClickScroll(bool mouseClickScroll);
     void updateInclSubfolders(bool inclSubfolders);
     void updateTrackpadScroll(bool trackpadScroll);
     void updateDisplayResolution(int horizontalPixels, int verticalPixels);
@@ -82,6 +83,8 @@ private slots:
     void on_displayHorizontalPixelsSB_valueChanged(int arg1);
     void on_displayVerticalPixelsSB_valueChanged(int arg1);
     void on_wrapChk_clicked();
+
+    void on_mouseClickScrollChk_clicked();
 
 private:
     Ui::Prefdlg *ui;

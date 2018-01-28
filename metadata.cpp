@@ -82,11 +82,6 @@ void Metadata::initSupportedFiles()
 //    rawFormats << "arw" << "cr2" << "nef" << "orf";
     rawFormats << "arw" << "cr2" << "nef" << "orf" << "sr2";
 
-//    supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
-//    "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
-//    "orf" << "pbm" << "pgm" << "png" << "ppm" << "svg" << "svgz" << "tga" <<
-//    "wbmp" << "webp" << "xbm" << "xpm";
-
     supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
     "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
     "orf" << "pbm" << "pgm" << "png" << "ppm" << "sr2" << "svg" << "svgz" <<

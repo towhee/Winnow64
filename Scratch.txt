@@ -16,3 +16,10 @@ jom 1.1.2 - empower your cores
 encryptedLensInfo:  "30323034053770c47fbd38bf5e5f49769e454f7ca489e6becc8527ad115c8d9e92"
 lensInfo:           "30323034152489061140577b a2 48 5c 80 24 24 a4 24 0c5217540a0000010503000000"
                                               a2 48 5c 80 24 24 a4 24
+
+
+    QString app = "\"/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app\"";
+    QStringList arguments;
+    arguments << "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg";
+    QProcess *process = new QProcess();
+    process->start(app);
