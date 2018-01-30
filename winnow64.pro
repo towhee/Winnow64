@@ -36,6 +36,7 @@ HEADERS += \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
     Dialogs/popup.h \
+    Dialogs/tokendlg.h \
     Dialogs/zoomdlg.h \
     MacOS/macscale.h \
     MacOS/macScale_p.h \
@@ -70,6 +71,7 @@ SOURCES += \
     Dialogs/copypickdlg.cpp \
     Dialogs/popup.cpp \
     Dialogs/prefdlg.cpp \
+    Dialogs/tokendlg.cpp \
     Dialogs/workspacedlg.cpp \
     Dialogs/zoomdlg.cpp \
     Dialogs/appdlg.cpp
@@ -89,7 +91,8 @@ FORMS += \
     zoomdlg.ui \
     message.ui \
     metadatareport.ui \
-    appdlg.ui
+    appdlg.ui \
+    tokendlg.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns
@@ -104,7 +107,8 @@ DISTFILES += \
     Deploy.txt \
     xmp.txt \
     _ToDo.txt \
-    metadata.txt
+    metadata.txt \
+    Tokens.txt
 
 #macx {
 #    QMAKE_MAC_SDK = macosx10.12

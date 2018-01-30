@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>704</width>
-    <height>682</height>
+    <height>727</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -26,7 +26,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>430</y>
+     <y>510</y>
      <width>661</width>
      <height>111</height>
     </rect>
@@ -449,102 +449,11 @@
     </property>
    </widget>
   </widget>
-  <widget class="QGroupBox" name="groupBox_3">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>600</y>
-     <width>661</width>
-     <height>61</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>10</pointsize>
-    </font>
-   </property>
-   <property name="title">
-    <string/>
-   </property>
-   <widget class="QDialogButtonBox" name="buttonBox">
-    <property name="geometry">
-     <rect>
-      <x>480</x>
-      <y>20</y>
-      <width>156</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-      <weight>50</weight>
-      <bold>false</bold>
-     </font>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
-    <property name="standardButtons">
-     <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-    </property>
-   </widget>
-   <widget class="QLabel" name="statsLabel">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>20</y>
-      <width>241</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-     </font>
-    </property>
-    <property name="text">
-     <string>632 files using 830MB</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="tokenEditorBtn">
-    <property name="geometry">
-     <rect>
-      <x>277</x>
-      <y>20</y>
-      <width>101</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-      <weight>50</weight>
-      <bold>false</bold>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the &lt;span style=&quot; font-weight:600;&quot;&gt;root folder&lt;/span&gt; where your images reside. A new folder will be created in this root folder. The new folder will have the format YYYY-MM-DD_Description.&lt;/p&gt;&lt;p&gt;NOTE: If the image folder has been selected (Folder Button) then that will override the root folder selection.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Root Folder&lt;/span&gt; + &lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base &lt;/span&gt;+ &lt;span style=&quot; color:#fd8008;&quot;&gt;Folder Description&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base&lt;/span&gt; and &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;//user/username/pictures/2017-10/&lt;/span&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;/&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-    </property>
-    <property name="text">
-     <string>Customize</string>
-    </property>
-    <property name="autoDefault">
-     <bool>false</bool>
-    </property>
-    <property name="default">
-     <bool>false</bool>
-    </property>
-    <property name="flat">
-     <bool>false</bool>
-    </property>
-   </widget>
-  </widget>
   <widget class="QProgressBar" name="progressBar">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>560</y>
+     <y>640</y>
      <width>661</width>
      <height>20</height>
     </rect>
@@ -567,7 +476,7 @@
      <x>20</x>
      <y>20</y>
      <width>660</width>
-     <height>301</height>
+     <height>341</height>
     </rect>
    </property>
    <property name="font">
@@ -585,7 +494,7 @@
     <property name="geometry">
      <rect>
       <x>65</x>
-      <y>256</y>
+      <y>286</y>
       <width>101</width>
       <height>25</height>
      </rect>
@@ -617,10 +526,15 @@
     <property name="geometry">
      <rect>
       <x>25</x>
-      <y>100</y>
+      <y>130</y>
       <width>140</width>
       <height>20</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+     </font>
     </property>
     <property name="toolTip">
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -636,10 +550,15 @@
     <property name="geometry">
      <rect>
       <x>25</x>
-      <y>130</y>
+      <y>160</y>
       <width>140</width>
       <height>20</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+     </font>
     </property>
     <property name="toolTip">
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -674,8 +593,8 @@
    <widget class="QLineEdit" name="descriptionLineEdit">
     <property name="geometry">
      <rect>
-      <x>180</x>
-      <y>165</y>
+      <x>190</x>
+      <y>195</y>
       <width>271</width>
       <height>20</height>
      </rect>
@@ -693,7 +612,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>220</y>
+      <y>250</y>
       <width>511</width>
       <height>17</height>
      </rect>
@@ -713,7 +632,7 @@
     <property name="geometry">
      <rect>
       <x>190</x>
-      <y>260</y>
+      <y>290</y>
       <width>460</width>
       <height>20</height>
      </rect>
@@ -737,7 +656,7 @@
     <property name="geometry">
      <rect>
       <x>65</x>
-      <y>66</y>
+      <y>96</y>
       <width>101</width>
       <height>25</height>
      </rect>
@@ -769,7 +688,7 @@
     <property name="geometry">
      <rect>
       <x>190</x>
-      <y>70</y>
+      <y>100</y>
       <width>460</width>
       <height>20</height>
      </rect>
@@ -793,7 +712,7 @@
     <property name="geometry">
      <rect>
       <x>190</x>
-      <y>100</y>
+      <y>130</y>
       <width>460</width>
       <height>20</height>
      </rect>
@@ -817,7 +736,7 @@
     <property name="geometry">
      <rect>
       <x>190</x>
-      <y>130</y>
+      <y>160</y>
       <width>460</width>
       <height>20</height>
      </rect>
@@ -844,7 +763,7 @@
     <property name="geometry">
      <rect>
       <x>25</x>
-      <y>166</y>
+      <y>196</y>
       <width>140</width>
       <height>20</height>
      </rect>
@@ -868,7 +787,7 @@
     <property name="geometry">
      <rect>
       <x>40</x>
-      <y>200</y>
+      <y>230</y>
       <width>610</width>
       <height>1</height>
      </rect>
@@ -883,14 +802,83 @@
      <enum>Qt::Horizontal</enum>
     </property>
    </widget>
+   <widget class="QLabel" name="label_4">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>60</y>
+      <width>140</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+    <property name="text">
+     <string>Template:</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="comboBox">
+    <property name="geometry">
+     <rect>
+      <x>190</x>
+      <y>60</y>
+      <width>321</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="currentText">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="tokenEditorBtn">
+    <property name="geometry">
+     <rect>
+      <x>530</x>
+      <y>60</y>
+      <width>101</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
+     </font>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the &lt;span style=&quot; font-weight:600;&quot;&gt;root folder&lt;/span&gt; where your images reside. A new folder will be created in this root folder. The new folder will have the format YYYY-MM-DD_Description.&lt;/p&gt;&lt;p&gt;NOTE: If the image folder has been selected (Folder Button) then that will override the root folder selection.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Root Folder&lt;/span&gt; + &lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base &lt;/span&gt;+ &lt;span style=&quot; color:#fd8008;&quot;&gt;Folder Description&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base&lt;/span&gt; and &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;//user/username/pictures/2017-10/&lt;/span&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;/&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+    <property name="text">
+     <string>Edit template(s)</string>
+    </property>
+    <property name="autoDefault">
+     <bool>false</bool>
+    </property>
+    <property name="default">
+     <bool>false</bool>
+    </property>
+    <property name="flat">
+     <bool>false</bool>
+    </property>
+   </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_4">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>340</y>
+     <y>380</y>
      <width>660</width>
-     <height>71</height>
+     <height>121</height>
     </rect>
    </property>
    <property name="font">
@@ -899,14 +887,14 @@
     </font>
    </property>
    <property name="title">
-    <string>File name sequencing</string>
+    <string>File name and sequencing</string>
    </property>
    <widget class="QLabel" name="existingSequenceLabel">
     <property name="geometry">
      <rect>
-      <x>230</x>
-      <y>29</y>
-      <width>421</width>
+      <x>250</x>
+      <y>80</y>
+      <width>391</width>
       <height>20</height>
      </rect>
     </property>
@@ -923,8 +911,8 @@
    <widget class="QLabel" name="label_3">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>30</y>
+      <x>60</x>
+      <y>81</y>
       <width>121</width>
       <height>16</height>
      </rect>
@@ -941,9 +929,9 @@
    <widget class="QSpinBox" name="spinBoxStartNumber">
     <property name="geometry">
      <rect>
-      <x>160</x>
-      <y>27</y>
-      <width>61</width>
+      <x>190</x>
+      <y>78</y>
+      <width>51</width>
       <height>22</height>
      </rect>
     </property>
@@ -962,6 +950,116 @@
      <number>9999</number>
     </property>
    </widget>
+   <widget class="QLabel" name="label_5">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>40</y>
+      <width>140</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+    <property name="text">
+     <string>Template:</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="comboBox_2">
+    <property name="geometry">
+     <rect>
+      <x>190</x>
+      <y>40</y>
+      <width>321</width>
+      <height>26</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="tokenEditorBtn_2">
+    <property name="geometry">
+     <rect>
+      <x>530</x>
+      <y>40</y>
+      <width>101</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
+     </font>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the &lt;span style=&quot; font-weight:600;&quot;&gt;root folder&lt;/span&gt; where your images reside. A new folder will be created in this root folder. The new folder will have the format YYYY-MM-DD_Description.&lt;/p&gt;&lt;p&gt;NOTE: If the image folder has been selected (Folder Button) then that will override the root folder selection.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Root Folder&lt;/span&gt; + &lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base &lt;/span&gt;+ &lt;span style=&quot; color:#fd8008;&quot;&gt;Folder Description&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base&lt;/span&gt; and &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;//user/username/pictures/2017-10/&lt;/span&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;/&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+    <property name="text">
+     <string>Edit template(s)</string>
+    </property>
+    <property name="autoDefault">
+     <bool>false</bool>
+    </property>
+    <property name="default">
+     <bool>false</bool>
+    </property>
+    <property name="flat">
+     <bool>false</bool>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QDialogButtonBox" name="buttonBox">
+   <property name="geometry">
+    <rect>
+     <x>475</x>
+     <y>680</y>
+     <width>201</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+     <weight>50</weight>
+     <bold>false</bold>
+    </font>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Horizontal</enum>
+   </property>
+   <property name="standardButtons">
+    <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+   </property>
+   <property name="centerButtons">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="statsLabel">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>680</y>
+     <width>241</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>632 files using 830MB</string>
+   </property>
   </widget>
  </widget>
  <resources/>

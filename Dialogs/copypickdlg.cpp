@@ -297,3 +297,20 @@ void CopyPickDlg::on_autoRadio_toggled(bool checked)
     }
     emit updateIngestParameters(rootFolderPath, isAuto);
 }
+
+void CopyPickDlg::on_tokenEditorBtn_clicked()
+{
+    QStringList pathTokens;
+    pathTokens << "YYYY"
+               << "YY"
+               << "MONTH"
+               << "MM"
+               << "DAY"
+               << "DD"
+               << "TITLE"
+               << "AUTHOR"
+               << "COPYRIGHT";
+
+    TokenDlg *tokenDlg = new TokenDlg(pathTokens, this);
+    tokenDlg->exec();
+}

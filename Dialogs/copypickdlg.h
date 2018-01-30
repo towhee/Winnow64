@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QtWidgets>
 #include "thumbview.h"
+#include "tokendlg.h"
 
 namespace Ui {
 class CopyPickDlg;
@@ -35,6 +36,8 @@ private slots:
 //    void on_descriptionLineEdit_selectionChanged();
 
     void on_autoRadio_toggled(bool checked);
+
+    void on_tokenEditorBtn_clicked();
 
 signals:
     void updateIngestParameters(QString rootFolderPath, bool isAuto);

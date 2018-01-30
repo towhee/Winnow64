@@ -74,3 +74,8 @@ void Appdlg::on_removeBtn_clicked()
     qDebug() << "on_removeBtn_clicked   current row =" << ui->apps->currentRow();
     ui->apps->removeRow(ui->apps->currentRow());
 }
+
+void Appdlg::on_okBtn_clicked()
+{
+    accept();
+}

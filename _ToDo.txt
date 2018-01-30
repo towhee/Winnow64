@@ -1,4 +1,5 @@
 BUGS
+- Image caching not always updating
 - Open with ... (doesn't work on macOS)
 - Caching thumbs is sometimes slow
 - Confirm tif metadata for focus stacks (app out msg)
@@ -42,6 +43,8 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Cmd click does not add to selection on first click
+- Done: implement metadata caching delay preference (currently 300ms hard coded)
 - Done: In Grid double click on thumb selects wrong image as scrollToCenter occurs
 - Done: Invert selection does not work
 - Done: Add Tif support

@@ -740,10 +740,6 @@ so scrollTo and delegate use of the current index must check the row.
     /* Scroll all visible views to the current row. Qt has 100ms delay in
     QAbstractItemView::mousePressEvent for double-clicks - aarg!
     */
-    qDebug() << "MW::fileSelectionChange  "
-             << "G::lastThumbChangeEvent =" << G::lastThumbChangeEvent
-             << "mouseClickScroll =" << mouseClickScroll;
-
     if (G::lastThumbChangeEvent == "MouseClick") {
         if (mouseClickScroll)
             QTimer::singleShot(1, this, SLOT(delayScroll()));
@@ -837,7 +833,7 @@ horizontal and vertical scrollbars.
     }
     if (allMetadataLoaded)  return;
     metadataCacheStartRow = thumbView->getFirstVisible();
-    metadataCacheScrollTimer->start(300);
+    metadataCacheScrollTimer->start(cacheDelay);
 }
 
 void MW::loadMetadataCacheGridScrollEvent()
@@ -857,7 +853,7 @@ vertical scrollbar (does not have a horizontal scrollbar).
     }
     if (allMetadataLoaded)  return;
     metadataCacheStartRow = gridView->getFirstVisible();
-    metadataCacheScrollTimer->start(300);
+    metadataCacheScrollTimer->start(cacheDelay);
 }
 
 void MW::delayProcessLoadMetadataCacheScrollEvent()
@@ -895,7 +891,11 @@ void MW::loadMetadataCache(int startRow)
 
 void MW::updateImageCache()
 {
+    {
+    #ifdef ISDEBUG
     qDebug() << "MW::updateImageCache";
+    #endif
+    }
     imageCacheThread->updateImageCache(imageCacheFilePath);
 }
 
@@ -3745,14 +3745,23 @@ void MW::runExternalApp()
     qDebug() << "MW::runExternalApp";
     #endif
     }
+    // this works:
+//    QDesktopServices::openUrl(QUrl("file:///Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"));
+//    return;
+
     QString app;
-    app = enquote(externalApps[((QAction*) sender())->text()]);
+    app = externalApps[((QAction*) sender())->text()];
+//    app = enquote(externalApps[((QAction*) sender())->text()]);
     QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedRows();
 
-//    QString x = "/Applications/Adobe Photoshop CC 2018/Adobe Photoshop CC 2018.app/Contents/MacOS/Adobe Photoshop CC 2018";
-//    QString x = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app/Contents/MacOS/Adobe Photoshop CS6";
-    QString x = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app";
-    app = "\"/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app\"";
+//    app = "/Applications/Adobe Photoshop CC 2018/Adobe Photoshop CC 2018.app/Contents/MacOS/Adobe Photoshop CC 2018";
+//    app = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app/Contents/MacOS/Adobe Photoshop CS6";
+//    QString x = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app";
+//    app = "\"/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app\"";
+
+    std::cout << app.toStdString() << std::endl << std::flush;
+//    app = "/Applications/Preview.app";
+//    std::cout << app.toStdString() << std::endl << std::flush;
 
     if (selectedIdxList.size() < 1)
     {
@@ -3763,12 +3772,14 @@ void MW::runExternalApp()
     QStringList arguments;
 //    for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn) {
 //        QString s = selectedIdxList[tn].data(G::FileNameRole).toString();
-//        arguments << enquote(s);
+//        arguments << s;
+////        arguments << enquote(s);
 //    }
     arguments << "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg";
+//    arguments << "/Users/roryhill/Pictures/Eva/2016-06-21_0002.jpg";
 
-    std::cout << "MW::runExternalApp()  " << app.toStdString()
-              << " " << arguments.at(0).toStdString() << std::flush;
+//    std::cout << "MW::runExternalApp()  " << app.toStdString()
+//              << " " << arguments.at(0).toStdString() << std::flush;
 
     QProcess *process = new QProcess();
     connect(process, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(cleanupSender()));
@@ -3778,7 +3789,7 @@ void MW::runExternalApp()
     process->setProgram(app);
     process->start();
 
-    process->start(app);
+//    process->start(app);
 //     process->start(app, arguments);
 //     process->start(app, {"/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"});
 

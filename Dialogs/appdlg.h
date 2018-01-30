@@ -20,6 +20,8 @@ private slots:
     void on_addBtn_clicked();
     void on_removeBtn_clicked();
 
+    void on_okBtn_clicked();
+
 private:
     Ui::Appdlg *ui;
     QMap<QString, QString>& xApps;

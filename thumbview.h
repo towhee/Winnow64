@@ -97,7 +97,7 @@ public slots:
     void sortThumbs(int sortColumn, bool isReverse);
 
 private slots:
-    void delaySelectCurrentThumb();
+//    void delaySelectCurrentThumb();
 
 protected:
     void startDrag(Qt::DropActions);

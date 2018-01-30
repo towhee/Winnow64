@@ -647,7 +647,6 @@ void ThumbView::selectThumb(QModelIndex idx)
     qDebug() << "ThumbView::selectThumb(index)" << idx;
     #endif
     }
-    qDebug() << "ThumbView::selectThumb(index)" << idx;
     if (idx.isValid()) {
         G::lastThumbChangeEvent = "KeyStroke";    // either KeyStroke or MouseClick
         setCurrentIndex(idx);
@@ -1172,9 +1171,8 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     qDebug() << "ThumbView::mousePressEvent";
     #endif
     }
-//    bool dock = false;
+//    qDebug() << "🔎🔎🔎 ThumbView::mousePressEvent ";
     G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
-    qDebug() << "🔎🔎🔎 ThumbView::mousePressEvent ";
     QListView::mousePressEvent(event);
 
     // capture mouse click position for imageView zoom/pan
@@ -1183,7 +1181,6 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
         if (event->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
 
         QModelIndex idx = currentIndex();
-//        qDebug() << "Row =" << idx.row();
         QRect iconRect = idx.data(G::ThumbRectRole).toRect();
         QPoint mousePt = event->pos();
         QPoint iconPt = mousePt - iconRect.topLeft();
@@ -1199,18 +1196,20 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
             thumbClick(xPct, yPct);    //signal used in ThumbView::mousePressEvent
         }
     }
+    // 2nd call to QListView to capture cmd clicks (not sure why req'd)
+    QListView::mousePressEvent(event);
 }
 
 void ThumbView::mouseMoveEvent(QMouseEvent *event)
 {
-    qDebug() << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event;
+//    qDebug() << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event;
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }
 
 void ThumbView::mouseReleaseEvent(QMouseEvent *event)
 {
-    qDebug() << "🔎🔎🔎 ThumbView::mouseReleaseEvent ";
+//    qDebug() << "🔎🔎🔎 ThumbView::mouseReleaseEvent ";
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
     QListView::mouseReleaseEvent(event);
@@ -1243,18 +1242,18 @@ center.
     scrollToCurrent(currentIndex().row());
 }
 
-void ThumbView::delaySelectCurrentThumb()
-{
-/*
-Called by mouseDoubleClickEvent.
-*/
-    {
-    #ifdef ISDEBUG
-    qDebug() << "ThumbView::delaySelectCurrentThumb";
-    #endif
-    }
-    selectThumb(currentIndex());
-}
+//void ThumbView::delaySelectCurrentThumb()
+//{
+///*
+//Called by mouseDoubleClickEvent.
+//*/
+//    {
+//    #ifdef ISDEBUG
+//    qDebug() << "ThumbView::delaySelectCurrentThumb";
+//    #endif
+//    }
+//    selectThumb(currentIndex());
+//}
 
 void ThumbView::invertSelection()
 {
