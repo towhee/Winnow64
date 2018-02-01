@@ -4,10 +4,11 @@ BUGS
 - Caching thumbs is sometimes slow
 - Confirm tif metadata for focus stacks (app out msg)
 - Drag drop to photoshop not working (works in MacOs)
-- Drag drop onto graphicsview not working
+- Drag drop onto graphicsview (main image) not working
 - Copy metadata item not working (was working before)
 - Toggle zoom wrong place when using preview size cached image
 - Info status not reporting correctly while thumbs loading and zoom
+- Icon padding becomes 2 for no apparent reason periodically
 - Gets stuck in F mode where cannot resize
 - Pick thumb not always showing one main image in loupe mode
 - Combobox not showing down arrow
@@ -17,6 +18,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Add filter for date
 - Read/write XMP sidecars
 - Drag and drop a selection of thumbs
 - Add current folder to bookmarks
@@ -38,17 +40,16 @@ ENHANCEMENTS
 - Initial setup (other than workspace)
 - Eject card
 - Run droplet
-- Redirect report metadata to a text window so Qt Creator not req'd
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Redirect report metadata to a text window so Qt Creator not req'd
 - Done: Cmd click does not add to selection on first click
 - Done: implement metadata caching delay preference (currently 300ms hard coded)
 - Done: In Grid double click on thumb selects wrong image as scrollToCenter occurs
 - Done: Invert selection does not work
 - Done: Add Tif support
-- Done: Icon padding becomes 2 for no apparent reason periodically
 - Done: ThumbView at bottom not always sizing to incl scrollbar
 - Done: Creator wrong
 - Done: Add refine feature

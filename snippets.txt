@@ -1,3 +1,10 @@
+// iterate a list
+QListWidget *list = new QListidget;
+for (const auto& i : list) {
+    qDebug() << i;
+}
+
+
 // Regular expression
 QRegExp rx("^(Border|Text|Shape|Graphic)$");
 
@@ -22,7 +29,6 @@ void DataModel::walkTree(const QModelIndex &row)
 }
 
 // Another walk tree
-
 void forEach(QAbstractItemModel* model, QModelIndex parent = QModelIndex()) {
     for (int r = 0; r < model->rowCount(parent); ++r) {
         QModelIndex index = model->index(r, 0, parent);
@@ -34,8 +40,4 @@ void forEach(QAbstractItemModel* model, QModelIndex parent = QModelIndex()) {
         }
     }
 }
-
-forEach(&model);
-
-// reveal in ...
 
