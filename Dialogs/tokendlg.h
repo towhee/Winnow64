@@ -2,24 +2,22 @@
 #define TOKENDLG_H
 
 #include <QtWidgets>
-//#include <QDialog>
-//#include <QTextEdit>
-//#include <QDropEvent>
-//#include <QMimeData>
 
-//class TokenList : public QListWidget
-//{
-//    Q_OBJECT
+class TokenList : public QListWidget
+{
+    Q_OBJECT
 
-//public:
-//    explicit TokenList(QWidget *parent = nullptr);
+public:
+    explicit TokenList(QWidget *parent = nullptr);
 
-//    static QString puzzleMimeType() { return QStringLiteral("application/x-hotspot"); }
+protected:
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
 
-//protected:
-//    void dragMoveEvent(QDragMoveEvent *event) override;
-//    void startDrag(Qt::DropActions supportedActions) override;
-//};
+private:
+    void startDrag();
+    QPoint startPos;
+};
 
 class TokenEdit : public QTextEdit
 {
@@ -30,8 +28,9 @@ public:
 protected:
 //    void dragEnterEvent(QDragEnterEvent *event) override;
 //    void dropEvent(QDropEvent *event) override;
-    bool canInsertFromMimeData(const QMimeData *source) const override;
+//    bool canInsertFromMimeData(const QMimeData *source) const override;
     void insertFromMimeData(const QMimeData *source) override;
+    void showEvent(QShowEvent *event) override;
 
 private:
     QTextDocument *textDoc;
