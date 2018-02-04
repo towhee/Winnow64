@@ -53,6 +53,23 @@ TokenEdit::TokenEdit(QWidget *parent) : QTextEdit(parent)
     textDoc = new QTextDocument(this);
     lastPosition = 0;
     setDocument(textDoc);
+
+    QLabel background("Drag tokens here");
+    background.resize(size());
+    background.setAlignment(Qt::AlignHCenter | Qt::AlignCenter);
+    QFont font = background.font();
+    font.setPointSize(24);
+    background.setFont(font);
+    background.setStyleSheet("QLabel {background-color: rgb(60,60,60); color: rgb(80,80,80);}");
+    QPixmap pixmap(background.size());
+    background.render(&pixmap);
+    QImage image(pixmap.toImage());
+    QUrl url("bk");
+    textDoc->addResource(QTextDocument::ImageResource, url, image);
+
+    setStyleSheet("QTextEdit {background-image: url(bk);}");
+    //  background-image: url(bk);
+
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(positionChanged()));
 }
 
