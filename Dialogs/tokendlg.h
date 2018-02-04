@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 
+/*****************************************************************************/
 class TokenList : public QListWidget
 {
     Q_OBJECT
@@ -19,23 +20,36 @@ private:
     QPoint startPos;
 };
 
+/*****************************************************************************/
 class TokenEdit : public QTextEdit
 {
     Q_OBJECT
 public:
     explicit TokenEdit(QWidget *parent = nullptr);
+    QStringList tokenList;
 
 protected:
-//    void dragEnterEvent(QDragEnterEvent *event) override;
-//    void dropEvent(QDropEvent *event) override;
-//    bool canInsertFromMimeData(const QMimeData *source) const override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void keyReleaseEvent(QKeyEvent *event) override;
     void insertFromMimeData(const QMimeData *source) override;
     void showEvent(QShowEvent *event) override;
 
+private slots:
+    void positionChanged();
+    void selectToken(int position);
+
 private:
     QTextDocument *textDoc;
+    QTextCharFormat tokenFormat;
+    int lastPosition;
+
+    bool isToken(int pos);
+    int tokenStart;
+    int tokenEnd;
+    QString currentToken;
 };
 
+/*****************************************************************************/
 namespace Ui {
 class TokenDlg;
 }
