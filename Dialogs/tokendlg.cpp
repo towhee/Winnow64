@@ -54,20 +54,12 @@ TokenEdit::TokenEdit(QWidget *parent) : QTextEdit(parent)
     lastPosition = 0;
     setDocument(textDoc);
 
-    QLabel background("Drag tokens here");
-    background.resize(size());
-    background.setAlignment(Qt::AlignHCenter | Qt::AlignCenter);
-    QFont font = background.font();
-    font.setPointSize(24);
-    background.setFont(font);
-    background.setStyleSheet("QLabel {background-color: rgb(60,60,60); color: rgb(80,80,80);}");
-    QPixmap pixmap(background.size());
-    background.render(&pixmap);
-    QImage image(pixmap.toImage());
-    QUrl url("bk");
-    textDoc->addResource(QTextDocument::ImageResource, url, image);
 
-    setStyleSheet("QTextEdit {background-image: url(bk);}");
+//    QImage image(pixmap.toImage());
+//    QUrl url("bk");
+//    textDoc->addResource(QTextDocument::ImageResource, url, image);
+
+//    setStyleSheet("QTextEdit {background-image: url(bk);}");
     //  background-image: url(bk);
 
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(positionChanged()));
@@ -122,6 +114,29 @@ void TokenEdit::showEvent(QShowEvent *event)
     tokenFormat.setForeground(QColor(Qt::white));
     qDebug() << "tokenFormat.foreground =" << tokenFormat.foreground();
     setTextColor(Qt::white);
+
+    QLabel bgLbl("Drag tokens here");
+    qDebug() << "size()" << size();
+    bgLbl.resize(size());
+    qDebug() << "lbl size()" << bgLbl.size();
+
+    bgLbl.setAlignment(Qt::AlignHCenter | Qt::AlignCenter);
+    QFont font = bgLbl.font();
+    font.setPointSize(24);
+    bgLbl.setFont(font);
+    bgLbl.setStyleSheet("QLabel {background-color: rgb(60,60,60); color: rgb(80,80,80);}");
+    QPixmap pixmap(bgLbl.size());
+    bgLbl.render(&pixmap);
+
+    QMessageBox msg;
+    msg.setIconPixmap(pixmap);
+    msg.exec();
+
+    QPalette palette;
+    palette.setBrush(QPalette::Window, QBrush(pixmap));
+    setPalette(palette);
+    setAutoFillBackground(true);
+
 }
 
 void TokenEdit::selectToken(int position)
@@ -208,6 +223,15 @@ TokenDlg::TokenDlg(QStringList &tokenList, QWidget *parent) :
     ui->tokenList->setDragEnabled(true);
     ui->tokenList->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->tokenEdit->tokenList = tokenList;
+
+
+//    ui->bgLbl->setText("Drag tokens here");
+//    ui->bgLbl->setAlignment(Qt::AlignHCenter | Qt::AlignCenter);
+//    QFont font = ui->bgLbl->font();
+//    font.setPointSize(24);
+//    ui->bgLbl->setFont(font);
+//    ui->bgLbl->setStyleSheet("QLabel {background-color: rgb(60,60,60); color: rgb(80,80,80);}");
+
 }
 
 TokenDlg::~TokenDlg()
