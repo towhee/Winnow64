@@ -46,18 +46,35 @@ void TokenList::startDrag()
    TokenEdit Class
 *******************************************************************************/
 
-TokenEdit::TokenEdit(QWidget *parent) : QTextEdit(parent)
+TokenEdit::TokenEdit(QWidget *parent) :
+    QTextEdit(parent)
 {
     setAcceptDrops(true);
     setLineWrapMode(QTextEdit::NoWrap);
     textDoc = new QTextDocument(this);
     lastPosition = 0;
     setDocument(textDoc);
-//background-image: url(qrc:/images/tokenBackground.png)
-//    setStyleSheet("QTextEdit {background-color: red;}");
-//    setStyleSheet("QTextEdit {background-image: url(\"tokenBackground.png\");}");
-
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(positionChanged()));
+}
+
+QString TokenEdit::parse()
+{
+    QString s;
+    int i = 0;
+    for (int x = 0; x < textDoc->characterCount(); x++)
+        qDebug() << "x =" << x << "char =" << textDoc->characterAt(x);
+    while (i < textDoc->characterCount()) {
+        if (isToken(i + 1)) {
+            qDebug() << "currentToken =" << currentToken;
+            s.append(tokenMap[currentToken]);
+            i = tokenEnd;
+        }
+        else {
+            s.append(textDoc->characterAt(i));
+            i++;
+        }
+    }
+    return s;
 }
 
 bool TokenEdit::isToken(int pos)
@@ -92,7 +109,8 @@ bool TokenEdit::isToken(int pos)
             for (int j = startPos; j < i; j++) {
                 token.append(textDoc->characterAt(j));
             }
-            if (tokenList.contains(token)) {
+            qDebug() << "tokenMap.contains(token)" << token;
+            if (tokenMap.contains(token)) {
                 currentToken = token;
                 tokenStart = startPos - 1;
                 tokenEnd = i + 1;
@@ -107,35 +125,24 @@ bool TokenEdit::isToken(int pos)
 void TokenEdit::showEvent(QShowEvent *event)
 {
     tokenFormat.setForeground(QColor(Qt::white));
-    qDebug() << "tokenFormat.foreground =" << tokenFormat.foreground();
     setTextColor(Qt::white);
-    setStyleSheet(QStringLiteral("background-image: url(qrc:/images/tokenBackground.png)"));
-//    setStyleSheet(QStringLiteral("background: red;"));
+    setStyleSheet(QStringLiteral("background-image: url(:/images/tokenBackground.png)"));
 
-//    QLabel bgLbl("Drag tokens here");
-//    qDebug() << "size()" << size();
-//    bgLbl.resize(size());
-//    qDebug() << "lbl size()" << bgLbl.size();
+    /*  Create background png file
+    QLabel bgLbl("Drag tokens here");
+    qDebug() << "size()" << size();
+    bgLbl.resize(size());
+    qDebug() << "lbl size()" << bgLbl.size();
 
-//    bgLbl.setAlignment(Qt::AlignHCenter | Qt::AlignCenter);
-//    QFont font = bgLbl.font();
-//    font.setPointSize(24);
-//    bgLbl.setFont(font);
-//    bgLbl.setStyleSheet("QLabel {background-color: rgb(60,60,60); color: rgb(80,80,80);}");
-//    QPixmap pixmap(bgLbl.size());
-//    bgLbl.render(&pixmap);
-//    QImage image(pixmap.toImage());
-//    image.save("/Users/roryhill/Pictures/tokenBackground.png", "PNG");
-
-//    QMessageBox msg;
-//    msg.setIconPixmap(pixmap);
-//    msg.exec();
-
-//    QPalette palette;
-//    palette.setBrush(QPalette::Window, QBrush(pixmap));
-//    setPalette(palette);
-//    setAutoFillBackground(true);
-
+    bgLbl.setAlignment(Qt::AlignHCenter | Qt::AlignCenter);
+    QFont font = bgLbl.font();
+    font.setPointSize(24);
+    bgLbl.setFont(font);
+    bgLbl.setStyleSheet("QLabel {background-color: rgb(60,60,60); color: rgb(80,80,80);}");
+    QPixmap pixmap(bgLbl.size());
+    bgLbl.render(&pixmap);
+    QImage image(pixmap.toImage());
+    image.save(":/images/tokenBackground.png", "PNG");  */
 }
 
 void TokenEdit::selectToken(int position)
@@ -195,6 +202,7 @@ void TokenEdit::keyPressEvent(QKeyEvent *event)
 void TokenEdit::keyReleaseEvent(QKeyEvent *event)
 {
     QTextEdit::keyReleaseEvent(event);
+    parseUpdated(parse());
 }
 
 void TokenEdit::insertFromMimeData(const QMimeData *source)
@@ -206,34 +214,59 @@ void TokenEdit::insertFromMimeData(const QMimeData *source)
     lastPosition = cursor.position();
 //    selectToken(lastPosition - 1);
     setFocus();
+    parseUpdated(parse());
 }
 
 /*******************************************************************************
    TokenDlg Class
 *******************************************************************************/
 
-TokenDlg::TokenDlg(QStringList &tokenList, QWidget *parent) :
+TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap, QWidget *parent) :
+    tokenMap(tokenMap),
     QDialog(parent),
     ui(new Ui::TokenDlg)
 {
     ui->setupUi(this);
     setAcceptDrops(true);
-    ui->tokenList->insertItems(0, tokenList);
+
+    QMap<QString, QString>::iterator i;
+    for (i = tokenMap.begin(); i != tokenMap.end(); ++i)
+        ui->tokenList->insertItem(0, i.key());
     ui->tokenList->setDragEnabled(true);
     ui->tokenList->setSelectionMode(QAbstractItemView::SingleSelection);
-    ui->tokenEdit->tokenList = tokenList;
 
+    ui->tokenEdit->tokenMap = tokenMap;
 
-//    ui->bgLbl->setText("Drag tokens here");
-//    ui->bgLbl->setAlignment(Qt::AlignHCenter | Qt::AlignCenter);
-//    QFont font = ui->bgLbl->font();
-//    font.setPointSize(24);
-//    ui->bgLbl->setFont(font);
-//    ui->bgLbl->setStyleSheet("QLabel {background-color: rgb(60,60,60); color: rgb(80,80,80);}");
-
+    connect(ui->tokenEdit, SIGNAL(parseUpdated(QString)),
+            this, SLOT(updateExample(QString)));
 }
 
 TokenDlg::~TokenDlg()
 {
     delete ui;
+}
+
+void TokenDlg::updateExample(QString s)
+{
+    ui->resultLbl->setText(s);
+}
+
+void TokenDlg::on_okBtn_clicked()
+{
+    accept();
+}
+
+void TokenDlg::on_cancelBtn_clicked()
+{
+    reject();
+}
+
+void TokenDlg::on_deleteBtn_clicked()
+{
+
+}
+
+void TokenDlg::on_newBtn_clicked()
+{
+
 }

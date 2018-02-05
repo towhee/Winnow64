@@ -31,7 +31,7 @@
     <rect>
      <x>150</x>
      <y>130</y>
-     <width>571</width>
+     <width>561</width>
      <height>61</height>
     </rect>
    </property>
@@ -88,7 +88,7 @@
     <rect>
      <x>150</x>
      <y>240</y>
-     <width>581</width>
+     <width>551</width>
      <height>16</height>
     </rect>
    </property>
@@ -96,14 +96,17 @@
     <string/>
    </property>
   </widget>
-  <widget class="QComboBox" name="comboBox">
+  <widget class="QComboBox" name="templatesCB">
    <property name="geometry">
     <rect>
      <x>150</x>
      <y>50</y>
-     <width>571</width>
+     <width>561</width>
      <height>26</height>
     </rect>
+   </property>
+   <property name="editable">
+    <bool>true</bool>
    </property>
   </widget>
   <widget class="QLabel" name="label_4">
@@ -122,7 +125,7 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>340</x>
+     <x>310</x>
      <y>290</y>
      <width>395</width>
      <height>32</height>
@@ -130,28 +133,28 @@
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <widget class="QPushButton" name="pushButton_2">
+     <widget class="QPushButton" name="newBtn">
       <property name="text">
-       <string>Add</string>
+       <string>New</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QPushButton" name="pushButton_4">
+     <widget class="QPushButton" name="deleteBtn">
       <property name="text">
        <string>Delete</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QPushButton" name="pushButton_3">
+     <widget class="QPushButton" name="cancelBtn">
       <property name="text">
        <string>Cancel</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QPushButton" name="pushButton">
+     <widget class="QPushButton" name="okBtn">
       <property name="text">
        <string>Okay</string>
       </property>
@@ -162,13 +165,13 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>TokenEdit</class>
-   <extends>QTextEdit</extends>
+   <class>TokenList</class>
+   <extends>QListWidget</extends>
    <header>tokendlg.h</header>
   </customwidget>
   <customwidget>
-   <class>TokenList</class>
-   <extends>QListWidget</extends>
+   <class>TokenEdit</class>
+   <extends>QTextEdit</extends>
    <header>tokendlg.h</header>
   </customwidget>
  </customwidgets>

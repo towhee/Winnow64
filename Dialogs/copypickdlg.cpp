@@ -300,17 +300,35 @@ void CopyPickDlg::on_autoRadio_toggled(bool checked)
 
 void CopyPickDlg::on_tokenEditorBtn_clicked()
 {
-    QStringList pathTokens;
-    pathTokens << "YYYY"
-               << "YY"
-               << "MONTH"
-               << "MM"
-               << "DAY"
-               << "DD"
-               << "TITLE"
-               << "AUTHOR"
-               << "COPYRIGHT";
+    QMap<QString, QString> tokenMap;
+    tokenMap["YYYY"] = "2018";
+    tokenMap["YY"] = "18";
+    tokenMap["MONTH"] = "JANUARY";
+    tokenMap["Month"] = "January";
+    tokenMap["MON"] = "JAN";
+    tokenMap["Mon"] = "Jan";
+    tokenMap["MM"] = "01";
+    tokenMap["DAY"] = "WEDNESDAY";
+    tokenMap["Day"] = "Wednesday";
+    tokenMap["DDD"] = "WED";
+    tokenMap["Ddd"] = "Wed";
+    tokenMap["DD"] = "07";
+    tokenMap["TITLE"] = "Hill_Wedding";
+    tokenMap["AUTHOR"] = "Rory Hill";
+    tokenMap["COPYRIGHT"] = "2018 Rory Hill";
 
-    TokenDlg *tokenDlg = new TokenDlg(pathTokens, this);
+//    QStringList pathTokens;
+//    pathTokens << "YYYY"
+//               << "YY"
+//               << "MONTH"
+//               << "MM"
+//               << "DAY"
+//               << "DDD"
+//               << "DD"
+//               << "TITLE"
+//               << "AUTHOR"
+//               << "COPYRIGHT";
+
+    TokenDlg *tokenDlg = new TokenDlg(tokenMap, this);
     tokenDlg->exec();
 }
