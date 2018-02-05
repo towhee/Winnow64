@@ -108,5 +108,6 @@
         <file>images/ThumbsUp48.png</file>
         <file>images/NoImagesInFolder.png</file>
         <file>qss/winnow.css</file>
+        <file>images/tokenBackground.png</file>
     </qresource>
 </RCC>

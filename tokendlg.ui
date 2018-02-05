@@ -7,11 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>739</width>
-    <height>526</height>
+    <height>354</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Token Editor</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
   </property>
   <widget class="TokenList" name="tokenList">
    <property name="geometry">
@@ -155,22 +158,6 @@
      </widget>
     </item>
    </layout>
-  </widget>
-  <widget class="QLabel" name="bgLbl">
-   <property name="geometry">
-    <rect>
-     <x>140</x>
-     <y>400</y>
-     <width>571</width>
-     <height>61</height>
-    </rect>
-   </property>
-   <property name="frameShape">
-    <enum>QFrame::Box</enum>
-   </property>
-   <property name="text">
-    <string>TextLabel</string>
-   </property>
   </widget>
  </widget>
  <customwidgets>

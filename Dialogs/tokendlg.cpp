@@ -53,14 +53,9 @@ TokenEdit::TokenEdit(QWidget *parent) : QTextEdit(parent)
     textDoc = new QTextDocument(this);
     lastPosition = 0;
     setDocument(textDoc);
-
-
-//    QImage image(pixmap.toImage());
-//    QUrl url("bk");
-//    textDoc->addResource(QTextDocument::ImageResource, url, image);
-
-//    setStyleSheet("QTextEdit {background-image: url(bk);}");
-    //  background-image: url(bk);
+//background-image: url(qrc:/images/tokenBackground.png)
+//    setStyleSheet("QTextEdit {background-color: red;}");
+//    setStyleSheet("QTextEdit {background-image: url(\"tokenBackground.png\");}");
 
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(positionChanged()));
 }
@@ -114,28 +109,32 @@ void TokenEdit::showEvent(QShowEvent *event)
     tokenFormat.setForeground(QColor(Qt::white));
     qDebug() << "tokenFormat.foreground =" << tokenFormat.foreground();
     setTextColor(Qt::white);
+    setStyleSheet(QStringLiteral("background-image: url(qrc:/images/tokenBackground.png)"));
+//    setStyleSheet(QStringLiteral("background: red;"));
 
-    QLabel bgLbl("Drag tokens here");
-    qDebug() << "size()" << size();
-    bgLbl.resize(size());
-    qDebug() << "lbl size()" << bgLbl.size();
+//    QLabel bgLbl("Drag tokens here");
+//    qDebug() << "size()" << size();
+//    bgLbl.resize(size());
+//    qDebug() << "lbl size()" << bgLbl.size();
 
-    bgLbl.setAlignment(Qt::AlignHCenter | Qt::AlignCenter);
-    QFont font = bgLbl.font();
-    font.setPointSize(24);
-    bgLbl.setFont(font);
-    bgLbl.setStyleSheet("QLabel {background-color: rgb(60,60,60); color: rgb(80,80,80);}");
-    QPixmap pixmap(bgLbl.size());
-    bgLbl.render(&pixmap);
+//    bgLbl.setAlignment(Qt::AlignHCenter | Qt::AlignCenter);
+//    QFont font = bgLbl.font();
+//    font.setPointSize(24);
+//    bgLbl.setFont(font);
+//    bgLbl.setStyleSheet("QLabel {background-color: rgb(60,60,60); color: rgb(80,80,80);}");
+//    QPixmap pixmap(bgLbl.size());
+//    bgLbl.render(&pixmap);
+//    QImage image(pixmap.toImage());
+//    image.save("/Users/roryhill/Pictures/tokenBackground.png", "PNG");
 
-    QMessageBox msg;
-    msg.setIconPixmap(pixmap);
-    msg.exec();
+//    QMessageBox msg;
+//    msg.setIconPixmap(pixmap);
+//    msg.exec();
 
-    QPalette palette;
-    palette.setBrush(QPalette::Window, QBrush(pixmap));
-    setPalette(palette);
-    setAutoFillBackground(true);
+//    QPalette palette;
+//    palette.setBrush(QPalette::Window, QBrush(pixmap));
+//    setPalette(palette);
+//    setAutoFillBackground(true);
 
 }
 
