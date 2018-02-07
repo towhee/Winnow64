@@ -17,6 +17,7 @@ encryptedLensInfo:  "30323034053770c47fbd38bf5e5f49769e454f7ca489e6becc8527ad115
 lensInfo:           "30323034152489061140577b a2 48 5c 80 24 24 a4 24 0c5217540a0000010503000000"
                                               a2 48 5c 80 24 24 a4 24
 
+{YYYY}/{YYYY}{MM}/{YYYY}-{MM}-{DD}
 
     QString app = "\"/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app\"";
     QStringList arguments;

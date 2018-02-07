@@ -19,31 +19,32 @@ public:
                          QFileInfoList &imageList,
                          Metadata *metadata,
                          QString ingestRootFolder,
+                         QMap<QString, QString>& pathTemplates,
+                         QMap<QString, QString>& filenameTemplates,
                          bool isAuto);
     ~CopyPickDlg();
 
 private slots:
+    void updateFolderPath();
     void on_selectFolderBtn_clicked();
     void on_selectRootFolderBtn_clicked();
     void on_spinBoxStartNumber_valueChanged(const QString &arg1);
-    void updateFolderPath();
     void on_descriptionLineEdit_textChanged(const QString &);
-
-//    void on_autoRadio_clicked();
-
-//    void on_manualRadio_clicked();
-
-//    void on_descriptionLineEdit_selectionChanged();
-
     void on_autoRadio_toggled(bool checked);
+    void on_pathTemplatesBtn_clicked();
 
-    void on_tokenEditorBtn_clicked();
+    void on_pathTemplatesCB_currentIndexChanged(const QString &arg1);
+
+    void on_filenameTemplatesBtn_clicked();
 
 signals:
     void updateIngestParameters(QString rootFolderPath, bool isAuto);
 
 private:
     Ui::CopyPickDlg *ui;
+    void initTokenMap();
+    bool isToken(const QMap<QString,QString>& map, QString tokenString, int pos);
+    QString parseTokenString(QFileInfo info, const QMap<QString,QString>& map, QString tokenString);
     void accept();
     void buildFileNameSequence();
     void updateExistingSequence();
@@ -57,13 +58,18 @@ private:
     QFileInfoList pickList;
     QFileSystemModel fileSystemModel;
     Metadata *metadata;
+
+    QMap<QString, QString> tokenMap;
+    QMap<QString, QString> &pathTemplatesMap;
+    QMap<QString, QString> &filenameTemplatesMap;
+
     QString folderPath; // rootFolderPath + folderBase + folderDescription
     QString defaultRootFolderPath;
 
     QString rootFolderPath;
     QString pathToBaseFolder;
     QString folderBase;
-    QString folderDescription;
+    QString baseFolderDescription;
     QString fileNameDatePrefix;
     QString fileNameSequence;
     QString fileSuffix;
@@ -71,9 +77,13 @@ private:
     QString created;
     QString year;
     QString month;
+    QDateTime createdDate;
 
     int fileCount;
     float fileMB;
+
+    QString currentToken;
+    int tokenStart, tokenEnd;
 };
 
 #endif // COPYPICKDLG_H

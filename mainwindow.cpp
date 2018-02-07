@@ -5762,7 +5762,8 @@ void MW::copyPicks()
     if (thumbView->isPick()) {
         QFileInfoList imageList = thumbView->getPicks();
         copyPickDlg = new CopyPickDlg(this, imageList, metadata,
-                                      ingestRootFolder, autoIngestFolderPath);
+             ingestRootFolder, pathTemplates, filenameTemplates,
+             autoIngestFolderPath);
         connect(copyPickDlg, SIGNAL(updateIngestParameters(QString,bool)),
                 this, SLOT(setIngestRootFolder(QString,bool)));
         copyPickDlg->exec();

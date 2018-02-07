@@ -28,6 +28,7 @@ public:
     explicit TokenEdit(QWidget *parent = nullptr);
     QStringList tokenList;
     QMap<QString, QString> tokenMap;
+    QString parse();
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -48,7 +49,6 @@ private:
     int lastPosition;
 
     bool isToken(int pos);
-    QString parse();
     int tokenStart;
     int tokenEnd;
     QString currentToken;
@@ -64,7 +64,10 @@ class TokenDlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit TokenDlg(QMap<QString, QString>& tokenMap, QWidget *parent = 0);
+    explicit TokenDlg(QMap<QString, QString>& tokenMap,
+                      QMap<QString, QString> &templatesMap,
+                      QString title,
+                      QWidget *parent = 0);
     ~TokenDlg();
 
 public slots:
@@ -72,13 +75,17 @@ public slots:
 
 private slots:
     void on_okBtn_clicked();
-    void on_cancelBtn_clicked();
     void on_deleteBtn_clicked();
     void on_newBtn_clicked();
+
+    void on_templatesCB_editTextChanged(const QString &arg1);
+
+    void on_templatesCB_activated(const QString &arg1);
 
 private:
     Ui::TokenDlg *ui;
     QMap<QString, QString>& tokenMap;
+    QMap<QString, QString>& templatesMap;
 };
 
 #endif // TOKENDLG_H

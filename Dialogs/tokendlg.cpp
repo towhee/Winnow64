@@ -221,17 +221,25 @@ void TokenEdit::insertFromMimeData(const QMimeData *source)
    TokenDlg Class
 *******************************************************************************/
 
-TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap, QWidget *parent) :
+TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
+                   QMap<QString, QString> &templatesMap,
+                   QString title,
+                   QWidget *parent) :
     tokenMap(tokenMap),
+    templatesMap(templatesMap),
     QDialog(parent),
     ui(new Ui::TokenDlg)
 {
     ui->setupUi(this);
+    setWindowTitle(title);
     setAcceptDrops(true);
 
     QMap<QString, QString>::iterator i;
     for (i = tokenMap.begin(); i != tokenMap.end(); ++i)
         ui->tokenList->insertItem(0, i.key());
+    for (i = templatesMap.begin(); i != templatesMap.end(); ++i)
+        ui->templatesCB->insertItem(0, i.key());
+
     ui->tokenList->setDragEnabled(true);
     ui->tokenList->setSelectionMode(QAbstractItemView::SingleSelection);
 
@@ -239,6 +247,8 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap, QWidget *parent) :
 
     connect(ui->tokenEdit, SIGNAL(parseUpdated(QString)),
             this, SLOT(updateExample(QString)));
+
+
 }
 
 TokenDlg::~TokenDlg()
@@ -256,11 +266,6 @@ void TokenDlg::on_okBtn_clicked()
     accept();
 }
 
-void TokenDlg::on_cancelBtn_clicked()
-{
-    reject();
-}
-
 void TokenDlg::on_deleteBtn_clicked()
 {
 
@@ -268,5 +273,19 @@ void TokenDlg::on_deleteBtn_clicked()
 
 void TokenDlg::on_newBtn_clicked()
 {
+    QString newTemplate = "New template " + QString::number(ui->templatesCB->count());
+    ui->templatesCB->addItem(newTemplate);
+    templatesMap[newTemplate] = "";
+}
 
+void TokenDlg::on_templatesCB_editTextChanged(const QString &arg1)
+{
+    qDebug() << "TokenDlg::on_templatesCB_editTextChanged to " << arg1;
+    ui->tokenEdit->setText(templatesMap[arg1]);
+    ui->tokenEdit->parseUpdated(ui->tokenEdit->parse());
+}
+
+void TokenDlg::on_templatesCB_activated(const QString &arg1)
+{
+    qDebug() << "TokenDlg::on_templatesCB_activated to " << arg1;
 }

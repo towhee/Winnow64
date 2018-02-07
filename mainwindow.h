@@ -67,6 +67,8 @@ public:
     QSettings *setting;
     QMap<QString, QAction *> actionKeys;
     QMap<QString, QString> externalApps;
+    QMap<QString, QString> pathTemplates;
+    QMap<QString, QString> filenameTemplates;
 
     QDockWidget *thumbDock;
 

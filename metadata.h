@@ -44,7 +44,9 @@ public:
     int orientation;
     ulong width;
     ulong height;
+    QString dimensions;
     QString created;
+    QDateTime createdDate;
     QString make;
     QString model;
     QString exposureTime;
@@ -94,6 +96,7 @@ public:
     ulong width;
     ulong height;
     QString created;
+    QDateTime createdDate;
     QString make;
     QString model;
     QString exposureTime;
@@ -149,10 +152,11 @@ public:
     ulong getLengthSmallJPG(const QString &imageFullPath);
     ulong getWidth(const QString &imageFullPath);
     ulong getHeight(const QString &imageFullPath);
-
+    QString getDimensions(const QString &imageFullPath);
     int getImageOrientation(QString &imageFileName);
     bool getPick(const QString &imageFileName);
     QString getCreated(const QString &imageFileName);
+    QString getMake(const QString &imageFileName);
     QString getModel(const QString &imageFileName);
     QString getExposureTime( const QString &imageFileName);
     float getExposureTimeNum( const QString &imageFileName);
@@ -169,6 +173,7 @@ public:
     QString getCopyright(const QString &imageFileName);
     QString getEmail(const QString &imageFileName);
     QString getUrl(const QString &imageFileName);
+    QDateTime getCreatedDate(const QString &imageFileName);
     int getYear(const QString &imageFileName);
     int getMonth(const QString &imageFileName);
     int getDay(const QString &imageFileName);

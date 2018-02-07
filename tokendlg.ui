@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>739</width>
+    <width>766</width>
     <height>354</height>
    </rect>
   </property>
@@ -21,7 +21,7 @@
     <rect>
      <x>30</x>
      <y>50</y>
-     <width>111</width>
+     <width>141</width>
      <height>271</height>
     </rect>
    </property>
@@ -29,7 +29,7 @@
   <widget class="TokenEdit" name="tokenEdit">
    <property name="geometry">
     <rect>
-     <x>150</x>
+     <x>180</x>
      <y>130</y>
      <width>561</width>
      <height>61</height>
@@ -60,7 +60,7 @@
   <widget class="QLabel" name="label_2">
    <property name="geometry">
     <rect>
-     <x>150</x>
+     <x>180</x>
      <y>110</y>
      <width>91</width>
      <height>16</height>
@@ -73,7 +73,7 @@
   <widget class="QLabel" name="label_3">
    <property name="geometry">
     <rect>
-     <x>150</x>
+     <x>180</x>
      <y>220</y>
      <width>141</width>
      <height>16</height>
@@ -86,7 +86,7 @@
   <widget class="QLabel" name="resultLbl">
    <property name="geometry">
     <rect>
-     <x>150</x>
+     <x>180</x>
      <y>240</y>
      <width>551</width>
      <height>16</height>
@@ -99,7 +99,7 @@
   <widget class="QComboBox" name="templatesCB">
    <property name="geometry">
     <rect>
-     <x>150</x>
+     <x>180</x>
      <y>50</y>
      <width>561</width>
      <height>26</height>
@@ -112,7 +112,7 @@
   <widget class="QLabel" name="label_4">
    <property name="geometry">
     <rect>
-     <x>160</x>
+     <x>190</x>
      <y>30</y>
      <width>91</width>
      <height>16</height>
@@ -125,7 +125,7 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>310</x>
+     <x>340</x>
      <y>290</y>
      <width>395</width>
      <height>32</height>
@@ -143,13 +143,6 @@
      <widget class="QPushButton" name="deleteBtn">
       <property name="text">
        <string>Delete</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="cancelBtn">
-      <property name="text">
-       <string>Cancel</string>
       </property>
      </widget>
     </item>

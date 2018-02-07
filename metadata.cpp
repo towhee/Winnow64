@@ -1385,6 +1385,7 @@ void Metadata::reportMetadataAllFiles()
         width = i.value().width;
         height = i.value().height;
         created = i.value().created;
+        createdDate = i.value().createdDate;
         model = i.value().model;
         exposureTime = i.value().exposureTime;
         exposureTimeNum = i.value().exposureTimeNum;
@@ -2093,6 +2094,7 @@ void Metadata::formatNikon()
         ? created = getString(ifdDataHash.value(36868).tagValue,
         ifdDataHash.value(36868).tagCount)
         : created = "";
+    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
 
     // Exif: get shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -2293,6 +2295,7 @@ void Metadata::formatCanon()
         ? created = getString(ifdDataHash.value(36868).tagValue,
         ifdDataHash.value(36868).tagCount)
         : created = "";
+    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -2438,6 +2441,7 @@ void Metadata::formatOlympus()
         ? created = getString(ifdDataHash.value(36868).tagValue,
         ifdDataHash.value(36868).tagCount)
         : created = "";
+    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
 
     // get shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -2601,6 +2605,7 @@ void Metadata::formatSony()
         ? created = getString(ifdDataHash.value(36868).tagValue,
         ifdDataHash.value(36868).tagCount)
         : created = "";
+    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
 
     // IFD Exif: get shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -2694,6 +2699,7 @@ void Metadata::formatFuji()
     (ifdDataHash.contains(272))
         ? created = getString(ifdDataHash.value(306).tagValue, ifdDataHash.value(306).tagCount)
         : created = "";
+    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
 
     ulong offsetEXIF;
     (ifdDataHash.contains(34665))
@@ -2799,6 +2805,7 @@ bool Metadata::formatTIF()
         ? created = getString(ifdDataHash.value(36868).tagValue,
         ifdDataHash.value(36868).tagCount)
         : created = "";
+    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -2999,6 +3006,7 @@ bool Metadata::formatJPG()
             ? created = getString(ifdDataHash.value(36868).tagValue + startOffset,
             ifdDataHash.value(36868).tagCount)
             : created = "";
+        if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
 
         // EXIF: shutter speed
         if (ifdDataHash.contains(33434)) {
@@ -3297,6 +3305,26 @@ ulong Metadata::getHeight(const QString &imageFileName)
     return metaCache[imageFileName].height;
 }
 
+QString Metadata::getDimensions(const QString &imageFileName)
+{
+    {
+#ifdef ISDEBUG
+        qDebug() << "Metadata::getHeight" << imageFileName;
+#endif
+    }
+    return metaCache[imageFileName].dimensions;
+}
+
+QDateTime Metadata::getCreatedDate(const QString &imageFileName)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::getCreated" << imageFileName;
+    #endif
+    }
+    return metaCache[imageFileName].createdDate;
+}
+
 QString Metadata::getCreated(const QString &imageFileName)
 {
     {
@@ -3347,12 +3375,22 @@ QString Metadata::getCopyFileNamePrefix(const QString &imageFileName)
     return metaCache[imageFileName].copyFileNamePrefix;
 }
 
-QString Metadata::getModel(const QString &imageFileName)
+QString Metadata::getMake(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
     qDebug() << "Metadata::getModel" << imageFileName;
     #endif
+    }
+    return metaCache[imageFileName].make;
+}
+
+QString Metadata::getModel(const QString &imageFileName)
+{
+    {
+#ifdef ISDEBUG
+        qDebug() << "Metadata::getModel" << imageFileName;
+#endif
     }
     return metaCache[imageFileName].model;
 }
@@ -3440,9 +3478,9 @@ int Metadata::getFocalLengthNum(const QString &imageFileName)
 QString Metadata::getTitle(const QString &imageFileName)
 {
     {
-    #ifdef ISDEBUG
-    qDebug() << "Metadata::getTitle" << imageFileName;
-    #endif
+#ifdef ISDEBUG
+        qDebug() << "Metadata::getTitle" << imageFileName;
+#endif
     }
     return metaCache[imageFileName].title;
 }
@@ -3615,7 +3653,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.lengthSmallJPG = lengthSmallJPG;
     imageMetadata.width = width;
     imageMetadata.height = height;
+    imageMetadata.dimensions = QString::number(width) + "x" + QString::number(height);
     imageMetadata.created = created;
+    imageMetadata.createdDate = createdDate;
     imageMetadata.model = model;
     imageMetadata.exposureTime = exposureTime;
     imageMetadata.exposureTimeNum = exposureTimeNum;

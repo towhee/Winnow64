@@ -587,7 +587,7 @@
      </font>
     </property>
     <property name="text">
-     <string>Automatically generate folder from root folder</string>
+     <string>Automatically generate destination folder from root folder</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="descriptionLineEdit">
@@ -625,7 +625,7 @@
      </font>
     </property>
     <property name="text">
-     <string>Manually select folder</string>
+     <string>Manually select destination folder</string>
     </property>
    </widget>
    <widget class="QLabel" name="manualFolderLabel">
@@ -826,7 +826,7 @@
      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
     </property>
    </widget>
-   <widget class="QComboBox" name="comboBox">
+   <widget class="QComboBox" name="pathTemplatesCB">
     <property name="geometry">
      <rect>
       <x>190</x>
@@ -839,7 +839,7 @@
      <string/>
     </property>
    </widget>
-   <widget class="QPushButton" name="tokenEditorBtn">
+   <widget class="QPushButton" name="pathTemplatesBtn">
     <property name="geometry">
      <rect>
       <x>530</x>
@@ -857,6 +857,9 @@
     </property>
     <property name="toolTip">
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the &lt;span style=&quot; font-weight:600;&quot;&gt;root folder&lt;/span&gt; where your images reside. A new folder will be created in this root folder. The new folder will have the format YYYY-MM-DD_Description.&lt;/p&gt;&lt;p&gt;NOTE: If the image folder has been selected (Folder Button) then that will override the root folder selection.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Root Folder&lt;/span&gt; + &lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base &lt;/span&gt;+ &lt;span style=&quot; color:#fd8008;&quot;&gt;Folder Description&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base&lt;/span&gt; and &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;//user/username/pictures/2017-10/&lt;/span&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;/&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+    <property name="toolTipDuration">
+     <number>-3</number>
     </property>
     <property name="text">
      <string>Edit template(s)</string>
@@ -974,7 +977,7 @@
      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
     </property>
    </widget>
-   <widget class="QComboBox" name="comboBox_2">
+   <widget class="QComboBox" name="filenameTemplatesCB">
     <property name="geometry">
      <rect>
       <x>190</x>
@@ -984,7 +987,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="tokenEditorBtn_2">
+   <widget class="QPushButton" name="filenameTemplatesBtn">
     <property name="geometry">
      <rect>
       <x>530</x>

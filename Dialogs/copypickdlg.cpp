@@ -3,7 +3,27 @@
 #include <QDebug>
 
 /*
-File naming is based on building a file path consisting of:
+Files are copied to a destination based on building a file path consisting of:
+
+      Root Folder                   (rootFolderPath)
+    + Path to base folder           (pathToBaseFolder) source pathTemplateString
+    + Base Folder Description       (baseFolderDescription)
+    + File Name                     (fileBaseName)     source filenameTemplateString
+    + File Suffix                   (fileSuffix)
+
+    ie E:/2018/201802/2018-02-08 Rory birthday/2018-02-08_0001.NEF
+
+    rootFolderPath:         ie "E:/" where all the images are located
+    pathToBaseFolder:       ie "2018/201802/2018-02-08" from the path template
+    baseFolderDescription:  ie "Rory birthday" a description appended to the pathToBaseFolder
+    fileBaseName:           ie "2018-02-08_0001" from the filename template
+    fileSuffix:             ie ".NEF"
+
+    folderPath:             ie "E:/2018/201802/2018-02-08 Rory birthday/"
+                            where current images are to be copied YYYY-MM-DD_Description
+
+
+    --------------- was this ---------------
 
     Root Folder + Path to base folder + File Base Name + File Sequence + File Suffix
 
@@ -14,11 +34,19 @@ File naming is based on building a file path consisting of:
     File Sequence: _XXXX
     File Suffix: ie .NEF
 */
-CopyPickDlg::CopyPickDlg(QWidget *parent, QFileInfoList &imageList,
-                         Metadata *metadata, QString ingestRootFolder,
+
+CopyPickDlg::CopyPickDlg(QWidget *parent,
+                         QFileInfoList &imageList,
+                         Metadata *metadata,
+                         QString ingestRootFolder,
+                         QMap<QString, QString> &pathTemplates,
+                         QMap<QString, QString> &filenameTemplates,
                          bool isAuto) :
-    QDialog(parent),
-    ui(new Ui::CopyPickDlg)
+
+                         QDialog(parent),
+                         pathTemplatesMap(pathTemplates),
+                         filenameTemplatesMap(filenameTemplates),
+                         ui(new Ui::CopyPickDlg)
 {
     ui->setupUi(this);
 
@@ -35,23 +63,39 @@ CopyPickDlg::CopyPickDlg(QWidget *parent, QFileInfoList &imageList,
     QString s1 = QString::number(fileCount);
     QString s2 = fileCount == 1 ? " file using " : " files using ";
     QString s3 = QString::number(fileMB, 'f', 1);
-    ui->statsLabel->setText(s1 + s2 + s3 + "MB");
+    ui->statsLabel->setText(s1 + s2 + s3 + " MB");
 
     // get year and month from the first image
+//    QString fPath = pickList.at(0).absoluteFilePath();
+//    int year = metadata->getYear(fPath);
+//    int month = metadata->getDay(fPath);
+//    int day = metadata->getDay(fPath);
+//    date.setDate(year, month, day);
+
     fileNameDatePrefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
     created = metadata->getCreated(pickList.at(0).absoluteFilePath());
+    qDebug() << "created =" << created;
     year = created.left(4);
     month = created.mid(5,2);
 
     rootFolderPath = ingestRootFolder;
     ui->rootFolderLabel->setText(rootFolderPath);
 
-    pathToBaseFolder = rootFolderPath + year + "/" + year + month + "/" ;
-    ui->parentFolderLabel->setText(pathToBaseFolder);
+    // initialize templates and tokens
+    initTokenMap();
+    QMap<QString, QString>::iterator i;
+    if (pathTemplatesMap.count() == 0) {
+        pathTemplatesMap["YYYY/YYMM/YYYY-MM-DD"] = "{YYYY}/{YYYY}{MM}/{YYYY}-{MM}-{DD}";
+        pathTemplatesMap["YYYY-MM-DD"] = "{YYYY}-{MM}-{DD}";
+    }
+    for (i = pathTemplatesMap.begin(); i != pathTemplatesMap.end(); ++i)
+        ui->pathTemplatesCB->insertItem(0, i.key());
 
-    updateFolderPath();
-    getSequenceStart(folderPath);
-    updateExistingSequence();
+    if (filenameTemplatesMap.count() == 0) {
+        filenameTemplatesMap["YYYY-MM-DD_XXXX"] = "{YYYY}-{MM}-{DD}_{XXXX}";
+    }
+    for (i = filenameTemplatesMap.begin(); i != filenameTemplatesMap.end(); ++i)
+        ui->filenameTemplatesCB->insertItem(0, i.key());
 
     if (isAuto) {
         ui->descriptionLineEdit->setFocus();
@@ -151,7 +195,7 @@ void CopyPickDlg::on_selectRootFolderBtn_clicked()
     // send to MW where it will be saved in QSettings
     emit updateIngestParameters(rootFolderPath, isAuto);
 
-    pathToBaseFolder = rootFolderPath + year + "/" + year + month + "/";
+    pathToBaseFolder = rootFolderPath + "/" + year + month + "/";
     ui->parentFolderLabel->setText(pathToBaseFolder);
 
     updateFolderPath();
@@ -160,15 +204,140 @@ void CopyPickDlg::on_selectRootFolderBtn_clicked()
     updateStyleOfFolderLabels();
 }
 
+bool CopyPickDlg::isToken(const QMap<QString,QString>& map, QString tokenString, int pos)
+{
+    QChar ch = tokenString.at(pos);
+    if (ch.unicode() == 8233) return false;
+    if (ch == "{") return false;
+    if (pos == 0) return false;
+
+    // look backwards
+    bool foundPossibleTokenStart = false;
+    int startPos;
+    for (int i = pos; i >= 0; i--) {
+        ch = tokenString.at(i);
+        if (i < pos && ch == "}") return false;
+        if (ch == "{") {
+            foundPossibleTokenStart = true;
+            startPos = i + 1;
+        }
+        if (foundPossibleTokenStart) break;
+    }
+
+    if (!foundPossibleTokenStart) return false;
+
+    // look forwards
+    QString token;
+    int n = tokenString.length();
+    for (int i = pos; i < tokenString.length(); i++) {
+        ch = tokenString.at(i);
+        if (ch == "}") {
+            for (int j = startPos; j < i; j++) {
+                token.append(tokenString.at(j));
+            }
+            qDebug() << "tokenMap.contains(token)" << token;
+            if (tokenMap.contains(token)) {
+                currentToken = token;
+                tokenStart = startPos - 1;
+                tokenEnd = i + 1;
+                return true;
+            }
+            qDebug() << "token =" << token;
+        }
+    }
+    return false;
+}
+
+QString CopyPickDlg::parseTokenString(QFileInfo info,
+                                      const QMap<QString,
+                                      QString>& map,
+                                      QString tokenString)
+{
+    QString fPath = info.absoluteFilePath();
+    createdDate = metadata->getCreatedDate(fPath);
+    QString s;
+    int i = 0;
+    for (int x = 0; x < tokenString.length(); x++)
+        qDebug() << "x =" << x << "char =" << tokenString.at(x);
+    while (i < tokenString.length()) {
+        if (isToken(map, tokenString, i + 1)) {
+            QString tokenResult;
+            qDebug() << "currentToken =" << currentToken;
+            // get metadata related to token
+            if (currentToken == "YYYY")
+                tokenResult = createdDate.date().toString("yyyy");
+            if (currentToken == "YY")
+                tokenResult = createdDate.date().toString("yy");
+            if (currentToken == "MONTH")
+                tokenResult = createdDate.date().toString("MMMM").toUpper();
+            if (currentToken == "Month")
+                tokenResult = createdDate.date().toString("MMMM");
+            if (currentToken == "MON")
+                tokenResult = createdDate.date().toString("MMM").toUpper();
+            if (currentToken == "Mon")
+                tokenResult = createdDate.date().toString("MMM");
+            if (currentToken == "MM")
+                tokenResult = createdDate.date().toString("MM");
+            if (currentToken == "DAY")
+                tokenResult = createdDate.date().toString("dddd").toUpper();
+            if (currentToken == "Day")
+                tokenResult = createdDate.date().toString("dddd");
+            if (currentToken == "DDD")
+                tokenResult = createdDate.date().toString("ddd").toUpper();
+            if (currentToken == "Ddd")
+                tokenResult = createdDate.date().toString("ddd");
+            if (currentToken == "DD")
+                tokenResult = createdDate.date().toString("dd");
+            if (currentToken == "HOUR")
+                tokenResult = createdDate.date().toString("hh");
+            if (currentToken == "MINUTE")
+                tokenResult = createdDate.date().toString("mm");
+            if (currentToken == "SECOND")
+                tokenResult = createdDate.date().toString("ss");
+            if (currentToken == "TITLE")
+                tokenResult = metadata->getTitle(fPath);
+            if (currentToken == "CREATOR")
+                tokenResult = metadata->getCreator(fPath);
+            if (currentToken == "COPYRIGHT")
+                tokenResult = metadata->getCopyright(fPath);
+            if (currentToken == "ORIGINAL FILENAME")
+                tokenResult = info.baseName();
+            if (currentToken == "MAKE")
+                tokenResult = metadata->getMake(fPath);
+            if (currentToken == "MODEL")
+                tokenResult = metadata->getModel(fPath);
+            if (currentToken == "DIMENSIONS")
+                tokenResult = metadata->getDimensions(fPath);
+            if (currentToken == "SHUTTER SPEED")
+                tokenResult = metadata->getExposureTime(fPath);
+            if (currentToken == "APERTURE")
+                tokenResult = metadata->getAperture(fPath);
+            if (currentToken == "ISO")
+                tokenResult = metadata->getISO(fPath);
+            if (currentToken == "FOCAL LENGTH")
+                tokenResult = metadata->getFocalLength(fPath);
+
+            s.append(tokenResult);
+            i = tokenEnd;
+        }
+        else {
+            s.append(tokenString.at(i));
+            i++;
+        }
+    }
+    return s;
+}
+
 void CopyPickDlg::updateFolderPath()
 {
     if (ui->autoRadio->isChecked() || isInitializing) {
-        folderBase = fileNameDatePrefix;
+//        folderBase = fileNameDatePrefix;
 
-        folderDescription = (ui->descriptionLineEdit->text().length() > 0)
+        baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
                 ? "_" + ui->descriptionLineEdit->text() : "";
 
-        folderPath = pathToBaseFolder + folderBase + folderDescription;
+        folderPath = pathToBaseFolder + baseFolderDescription;
+//        folderPath = pathToBaseFolder + folderBase + baseFolderDescription;
         ui->folderLabel->setText(folderPath);
     }
     else {
@@ -298,9 +467,8 @@ void CopyPickDlg::on_autoRadio_toggled(bool checked)
     emit updateIngestParameters(rootFolderPath, isAuto);
 }
 
-void CopyPickDlg::on_tokenEditorBtn_clicked()
+void CopyPickDlg::initTokenMap()
 {
-    QMap<QString, QString> tokenMap;
     tokenMap["YYYY"] = "2018";
     tokenMap["YY"] = "18";
     tokenMap["MONTH"] = "JANUARY";
@@ -313,22 +481,46 @@ void CopyPickDlg::on_tokenEditorBtn_clicked()
     tokenMap["DDD"] = "WED";
     tokenMap["Ddd"] = "Wed";
     tokenMap["DD"] = "07";
+    tokenMap["HOUR"] = "08";
+    tokenMap["MINUTE"] = "32";
+    tokenMap["SECOND"] = "45";
     tokenMap["TITLE"] = "Hill_Wedding";
-    tokenMap["AUTHOR"] = "Rory Hill";
+    tokenMap["CREATOR"] = "Rory Hill";
     tokenMap["COPYRIGHT"] = "2018 Rory Hill";
+    tokenMap["ORIGINAL FILENAME"] = "_C8I0024";
+    tokenMap["MAKE"] = "Canon";
+    tokenMap["MODEL"] = "Canon EOS-1D X Mark II";
+    tokenMap["DIMENSIONS"] = "5472x3648";
+    tokenMap["SHUTTER SPEED"] = "1/1000 sec";
+    tokenMap["APERTURE"] = "f/5.6";
+    tokenMap["ISO"] = "1600";
+    tokenMap["FOCAL LENGTH"] = "840 mm";
+}
 
-//    QStringList pathTokens;
-//    pathTokens << "YYYY"
-//               << "YY"
-//               << "MONTH"
-//               << "MM"
-//               << "DAY"
-//               << "DDD"
-//               << "DD"
-//               << "TITLE"
-//               << "AUTHOR"
-//               << "COPYRIGHT";
+void CopyPickDlg::on_pathTemplatesCB_currentIndexChanged(const QString &arg1)
+{
+//    QString sMap = ui->pathTemplatesCB->currentText();
+    QString tokenString = pathTemplatesMap[arg1];
+    pathToBaseFolder = rootFolderPath + parseTokenString(pickList.at(0), pathTemplatesMap, tokenString);
+//    pathToBaseFolder = rootFolderPath + "/" + year + month + "/" ;
+    ui->parentFolderLabel->setText(pathToBaseFolder);
 
-    TokenDlg *tokenDlg = new TokenDlg(tokenMap, this);
+    updateFolderPath();
+    getSequenceStart(folderPath);
+    updateExistingSequence();
+
+}
+
+void CopyPickDlg::on_pathTemplatesBtn_clicked()
+{
+    QString title = "Token Editor - Path from Root to Destination Folder";
+    TokenDlg *tokenDlg = new TokenDlg(tokenMap, pathTemplatesMap, title, this);
+    tokenDlg->exec();
+}
+
+void CopyPickDlg::on_filenameTemplatesBtn_clicked()
+{
+    QString title = "Token Editor - File Name";
+    TokenDlg *tokenDlg = new TokenDlg(tokenMap, filenameTemplatesMap, title, this);
     tokenDlg->exec();
 }
