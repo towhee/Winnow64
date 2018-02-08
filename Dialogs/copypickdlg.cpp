@@ -49,6 +49,8 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
                          ui(new Ui::CopyPickDlg)
 {
     ui->setupUi(this);
+    ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
+    ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
 
     isInitializing = true;
     this->isAuto = isAuto;
@@ -74,7 +76,7 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
 
     fileNameDatePrefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
     created = metadata->getCreated(pickList.at(0).absoluteFilePath());
-    qDebug() << "created =" << created;
+//    qDebug() << "created =" << created;
     year = created.left(4);
     month = created.mid(5,2);
 
@@ -235,7 +237,7 @@ bool CopyPickDlg::isToken(const QMap<QString,QString>& map, QString tokenString,
             for (int j = startPos; j < i; j++) {
                 token.append(tokenString.at(j));
             }
-            qDebug() << "tokenMap.contains(token)" << token;
+//            qDebug() << "tokenMap.contains(token)" << token;
             if (tokenMap.contains(token)) {
                 currentToken = token;
                 tokenStart = startPos - 1;
@@ -257,12 +259,12 @@ QString CopyPickDlg::parseTokenString(QFileInfo info,
     createdDate = metadata->getCreatedDate(fPath);
     QString s;
     int i = 0;
-    for (int x = 0; x < tokenString.length(); x++)
-        qDebug() << "x =" << x << "char =" << tokenString.at(x);
+//    for (int x = 0; x < tokenString.length(); x++)
+//        qDebug() << "x =" << x << "char =" << tokenString.at(x);
     while (i < tokenString.length()) {
         if (isToken(map, tokenString, i + 1)) {
             QString tokenResult;
-            qDebug() << "currentToken =" << currentToken;
+//            qDebug() << "currentToken =" << currentToken;
             // get metadata related to token
             if (currentToken == "YYYY")
                 tokenResult = createdDate.date().toString("yyyy");

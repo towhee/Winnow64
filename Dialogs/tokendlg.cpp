@@ -46,6 +46,12 @@ void TokenList::startDrag()
    TokenEdit Class
 *******************************************************************************/
 
+/* TokenEdit is a subclass of QTextEdit to manage tokenized text. It tokenizes
+dragged text in insertFromMimeData and has a parse function to use the tokens
+to look up corresponding metadata.
+
+  */
+
 TokenEdit::TokenEdit(QWidget *parent) :
     QTextEdit(parent)
 {
@@ -55,17 +61,18 @@ TokenEdit::TokenEdit(QWidget *parent) :
     lastPosition = 0;
     setDocument(textDoc);
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(positionChanged()));
+    connect(this, SIGNAL(textChanged()), this, parse());
 }
 
 QString TokenEdit::parse()
 {
     QString s;
     int i = 0;
-    for (int x = 0; x < textDoc->characterCount(); x++)
-        qDebug() << "x =" << x << "char =" << textDoc->characterAt(x);
+//    for (int x = 0; x < textDoc->characterCount(); x++)
+//        qDebug() << "x =" << x << "char =" << textDoc->characterAt(x);
     while (i < textDoc->characterCount()) {
         if (isToken(i + 1)) {
-            qDebug() << "currentToken =" << currentToken;
+//            qDebug() << "currentToken =" << currentToken;
             s.append(tokenMap[currentToken]);
             i = tokenEnd;
         }
@@ -74,6 +81,7 @@ QString TokenEdit::parse()
             i++;
         }
     }
+    parseUpdated(s);
     return s;
 }
 
@@ -109,14 +117,14 @@ bool TokenEdit::isToken(int pos)
             for (int j = startPos; j < i; j++) {
                 token.append(textDoc->characterAt(j));
             }
-            qDebug() << "tokenMap.contains(token)" << token;
+//            qDebug() << "tokenMap.contains(token)" << token;
             if (tokenMap.contains(token)) {
                 currentToken = token;
                 tokenStart = startPos - 1;
                 tokenEnd = i + 1;
                 return true;
             }
-            qDebug() << "token =" << token;
+//            qDebug() << "token =" << token;
         }
     }
     return false;
@@ -193,17 +201,16 @@ void TokenEdit::keyPressEvent(QKeyEvent *event)
     case Qt::Key_Delete:
         selectToken(textCursor().position() + 1);
     case Qt::Key_Backspace:
-        qDebug() << "Qt::Key_Back";
         selectToken(textCursor().position() - 1);
     }
     QTextEdit::keyPressEvent(event);
 }
 
-void TokenEdit::keyReleaseEvent(QKeyEvent *event)
-{
-    QTextEdit::keyReleaseEvent(event);
-    parseUpdated(parse());
-}
+//void TokenEdit::keyReleaseEvent(QKeyEvent *event)
+//{
+////    QTextEdit::keyReleaseEvent(event);
+////    parseUpdated(parse());
+//}
 
 void TokenEdit::insertFromMimeData(const QMimeData *source)
 {
@@ -233,12 +240,26 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
     ui->setupUi(this);
     setWindowTitle(title);
     setAcceptDrops(true);
+    ui->templatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
 
+    // Populate token list
     QMap<QString, QString>::iterator i;
     for (i = tokenMap.begin(); i != tokenMap.end(); ++i)
         ui->tokenList->insertItem(0, i.key());
-    for (i = templatesMap.begin(); i != templatesMap.end(); ++i)
-        ui->templatesCB->insertItem(0, i.key());
+
+    /* The template token data is stored in a QMap and its keys are used to
+    populate the templateCB dropdown. The values are shown in tokenEdit. Since
+    the keys (descriptions) can be edited in templateCB (renaming) we need
+    something to howd the QMap keys to sync templatesCB, tokenEdit and the
+    QMap. This is accomplished by also saving the keys in the templateCB as
+    tooltips. When the dialog closes via the Ok button the QMap is updated to
+    match any changes made to templatesCB and tokenEdit. */
+    int row = 0;
+    for (i = templatesMap.begin(); i != templatesMap.end(); ++i) {
+        ui->templatesCB->addItem(i.key());
+        ui->templatesCB->setItemData(row, i.key(), Qt::ToolTipRole);
+        row++;
+    }
 
     ui->tokenList->setDragEnabled(true);
     ui->tokenList->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -247,8 +268,8 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
 
     connect(ui->tokenEdit, SIGNAL(parseUpdated(QString)),
             this, SLOT(updateExample(QString)));
-
-
+    connect(ui->tokenEdit, SIGNAL(textChanged()),
+            this, SLOT(updateTemplate()));
 }
 
 TokenDlg::~TokenDlg()
@@ -261,8 +282,19 @@ void TokenDlg::updateExample(QString s)
     ui->resultLbl->setText(s);
 }
 
+void TokenDlg::updateTemplate()
+{
+    QString key = ui->templatesCB->currentData(Qt::ToolTipRole).toString();
+    templatesMap[key] = ui->tokenEdit->toPlainText();
+}
+
 void TokenDlg::on_okBtn_clicked()
 {
+    for (i = templatesMap.begin(); i != templatesMap.end(); ++i)
+        qDebug() << "templatesMap" << i.key();
+
+    for (int n = 0; n < ui->templatesCB->count(); n++)
+        qDebug() << "ui->templatesCB" << ui->templatesCB->itemText(n);
     accept();
 }
 
@@ -280,9 +312,21 @@ void TokenDlg::on_newBtn_clicked()
 
 void TokenDlg::on_templatesCB_editTextChanged(const QString &arg1)
 {
-    qDebug() << "TokenDlg::on_templatesCB_editTextChanged to " << arg1;
-    ui->tokenEdit->setText(templatesMap[arg1]);
+    QString key = ui->templatesCB->currentData(Qt::ToolTipRole).toString();
+    qDebug() << "TokenDlg::on_templatesCB_editTextChanged to " << arg1
+             << "Tooltip" << key;
+    ui->tokenEdit->setText(templatesMap[key]);
     ui->tokenEdit->parseUpdated(ui->tokenEdit->parse());
+
+
+
+//    for (i = templatesMap.begin(); i != templatesMap.end(); ++i)
+//        qDebug() << "templatesMap" << i.key();
+
+//    for (int n = 0; n < ui->templatesCB->count(); n++)
+//        qDebug() << "ui->templatesCB" << ui->templatesCB->itemText(n);
+
+
 }
 
 void TokenDlg::on_templatesCB_activated(const QString &arg1)

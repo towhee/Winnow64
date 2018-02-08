@@ -371,6 +371,9 @@ QComboBox:hover, QComboBox:focus {
     border-color: silver;
 }
 
+QComboBox QAbstractItemView::item {
+    height: 24px;
+}
 /*
 QComboBox:editable {
     background: white;

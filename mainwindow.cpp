@@ -319,13 +319,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                       << thumbView->getVerticalScrollBarMax();*/
 
              if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
-
+                /*
                  qDebug() << objectName()
                           << ": Event Filter sending row =" << currentRow
                           << "verticalScrollBarMax Qt vs Me"
                           << thumbView->verticalScrollBar()->maximum()
-                          << thumbView->getVerticalScrollBarMax();
-
+                          << thumbView->getVerticalScrollBarMax();*/
 
                  thumbView->scrollToCurrent(currentRow);
              }
@@ -4483,6 +4482,25 @@ re-established when the application is re-opened.
     }
     setting->endGroup();
 
+    /* Tokens used for ingest operations */
+    setting->beginGroup("PathTokens");
+    setting->remove("");
+    // save path templates
+    QMapIterator<QString, QString> pathIter(pathTemplates);
+    while (pathIter.hasNext()) {
+        pathIter.next();
+        setting->setValue(pathIter.key(), pathIter.value());
+    }
+    setting->endGroup();
+    // save filename templates
+    setting->beginGroup("FileNameTokens");
+    QMapIterator<QString, QString> filenameIter(filenameTemplates);
+    while (filenameIter.hasNext()) {
+        filenameIter.next();
+        setting->setValue(filenameIter.key(), filenameIter.value());
+    }
+    setting->endGroup();
+
     /* External apps */
     setting->beginGroup("ExternalApps");
     setting->remove("");
@@ -4750,6 +4768,24 @@ Preferences are located in the prefdlg class and updated here.
 
     /* read external apps */
     /* moved to createActions as required to populate open with ... menu */
+
+    /* read ingest token templates */
+    setting->beginGroup("PathTokens");
+    QStringList keys = setting->childKeys();
+    for (int i = 0; i < keys.size(); ++i) {
+        QString key = keys.at(i).toString();
+        pathTemplates[key] = setting->value(key);
+    }
+    setting->endGroup();
+
+    setting->beginGroup("FilenameTokens");
+    keys = setting->childKeys();
+    for (int i = 0; i < keys.size(); ++i) {
+        QString key = keys.at(i).toString();
+        filenameTemplates[key] = setting->value(key);
+    }
+    setting->endGroup();
+
 
     /* read bookmarks */
     setting->beginGroup("Bookmarks");

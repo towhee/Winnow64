@@ -32,7 +32,7 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
-    void keyReleaseEvent(QKeyEvent *event) override;
+//    void keyReleaseEvent(QKeyEvent *event) override;
     void insertFromMimeData(const QMimeData *source) override;
     void showEvent(QShowEvent *event) override;
 
@@ -72,6 +72,7 @@ public:
 
 public slots:
     void updateExample(QString s);
+    void updateTemplate();
 
 private slots:
     void on_okBtn_clicked();
