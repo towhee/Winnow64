@@ -4773,16 +4773,16 @@ Preferences are located in the prefdlg class and updated here.
     setting->beginGroup("PathTokens");
     QStringList keys = setting->childKeys();
     for (int i = 0; i < keys.size(); ++i) {
-        QString key = keys.at(i).toString();
-        pathTemplates[key] = setting->value(key);
+        QString key = keys.at(i);
+        pathTemplates[key] = setting->value(key).toString();
     }
     setting->endGroup();
 
     setting->beginGroup("FilenameTokens");
     keys = setting->childKeys();
     for (int i = 0; i < keys.size(); ++i) {
-        QString key = keys.at(i).toString();
-        filenameTemplates[key] = setting->value(key);
+        QString key = keys.at(i);
+        filenameTemplates[key] = setting->value(key).toString();
     }
     setting->endGroup();
 

@@ -28,13 +28,15 @@ public:
     explicit TokenEdit(QWidget *parent = nullptr);
     QStringList tokenList;
     QMap<QString, QString> tokenMap;
-    QString parse();
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
 //    void keyReleaseEvent(QKeyEvent *event) override;
     void insertFromMimeData(const QMimeData *source) override;
     void showEvent(QShowEvent *event) override;
+
+public slots:
+    QString parse();
 
 private slots:
     void positionChanged();

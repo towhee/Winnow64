@@ -61,7 +61,7 @@ TokenEdit::TokenEdit(QWidget *parent) :
     lastPosition = 0;
     setDocument(textDoc);
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(positionChanged()));
-    connect(this, SIGNAL(textChanged()), this, parse());
+    connect(this, SIGNAL(textChanged()), this, SLOT(parse()));
 }
 
 QString TokenEdit::parse()
@@ -290,17 +290,34 @@ void TokenDlg::updateTemplate()
 
 void TokenDlg::on_okBtn_clicked()
 {
-    for (i = templatesMap.begin(); i != templatesMap.end(); ++i)
-        qDebug() << "templatesMap" << i.key();
+/*
+Check if any templates have been renamed. If so, make a new template QMap,
+using templatesCB to supply the new keys. Populate the values from the original
+template QMap, using the old keys which are retained in templatesCB in the
+toolTipRole. Then swap templatesMap with newTemplatesMap.
+*/
+    bool isRenamedKey = false;
+    for (int i = 0; i < ui->templatesCB->count(); i++)
+        if (!templatesMap.contains(ui->templatesCB->itemText(i)))
+            isRenamedKey = true;
 
-    for (int n = 0; n < ui->templatesCB->count(); n++)
-        qDebug() << "ui->templatesCB" << ui->templatesCB->itemText(n);
+    if (isRenamedKey) {
+        QMap<QString, QString> newTemplatesMap;
+        for (int i = 0; i < ui->templatesCB->count(); i++) {
+            QString key = ui->templatesCB->itemText(i);
+            QString oldKey = ui->templatesCB->itemData(i, Qt::ToolTipRole).toString();
+            newTemplatesMap[key] = templatesMap[oldKey];
+        }
+        templatesMap.swap(newTemplatesMap);
+    }
     accept();
 }
 
 void TokenDlg::on_deleteBtn_clicked()
 {
-
+    QString key = ui->templatesCB->currentData(Qt::ToolTipRole).toString();
+    ui->templatesCB->removeItem(ui->templatesCB->currentIndex());
+    templatesMap.remove(key);
 }
 
 void TokenDlg::on_newBtn_clicked()
