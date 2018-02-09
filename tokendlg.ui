@@ -106,7 +106,10 @@
     </rect>
    </property>
    <property name="editable">
-    <bool>true</bool>
+    <bool>false</bool>
+   </property>
+   <property name="insertPolicy">
+    <enum>QComboBox::InsertAtBottom</enum>
    </property>
   </widget>
   <widget class="QLabel" name="label_4">
@@ -133,7 +136,20 @@
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
+     <widget class="QPushButton" name="renameBtn">
+      <property name="focusPolicy">
+       <enum>Qt::NoFocus</enum>
+      </property>
+      <property name="text">
+       <string>Rename</string>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QPushButton" name="newBtn">
+      <property name="focusPolicy">
+       <enum>Qt::NoFocus</enum>
+      </property>
       <property name="text">
        <string>New</string>
       </property>
@@ -141,6 +157,9 @@
     </item>
     <item>
      <widget class="QPushButton" name="deleteBtn">
+      <property name="focusPolicy">
+       <enum>Qt::NoFocus</enum>
+      </property>
       <property name="text">
        <string>Delete</string>
       </property>
@@ -148,6 +167,9 @@
     </item>
     <item>
      <widget class="QPushButton" name="okBtn">
+      <property name="focusPolicy">
+       <enum>Qt::NoFocus</enum>
+      </property>
       <property name="text">
        <string>Okay</string>
       </property>

@@ -67,7 +67,7 @@ class TokenDlg : public QDialog
 
 public:
     explicit TokenDlg(QMap<QString, QString>& tokenMap,
-                      QMap<QString, QString> &templatesMap,
+                      QMap<QString, QString>& templatesMap,
                       QString title,
                       QWidget *parent = 0);
     ~TokenDlg();
@@ -75,15 +75,15 @@ public:
 public slots:
     void updateExample(QString s);
     void updateTemplate();
+    void updateTokenEdit(QModelIndex idx);
 
 private slots:
     void on_okBtn_clicked();
     void on_deleteBtn_clicked();
     void on_newBtn_clicked();
-
-    void on_templatesCB_editTextChanged(const QString &arg1);
-
     void on_templatesCB_activated(const QString &arg1);
+    void on_renameBtn_clicked();
+    void on_templatesCB_currentIndexChanged(int row);
 
 private:
     Ui::TokenDlg *ui;
