@@ -39,13 +39,17 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
                          QFileInfoList &imageList,
                          Metadata *metadata,
                          QString ingestRootFolder,
-                         QMap<QString, QString> &pathTemplates,
-                         QMap<QString, QString> &filenameTemplates,
+                         QMap<QString, QString>& pathTemplates,
+                         QMap<QString, QString>& filenameTemplates,
+                         int& pathTemplateSelected,
+                         int& filenameTemplateSelected,
                          bool isAuto) :
 
                          QDialog(parent),
                          pathTemplatesMap(pathTemplates),
                          filenameTemplatesMap(filenameTemplates),
+                         pathTemplateSelected(pathTemplateSelected),
+                         filenameTemplateSelected(filenameTemplateSelected),
                          ui(new Ui::CopyPickDlg)
 {
     ui->setupUi(this);
@@ -92,12 +96,15 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
     }
     for (i = pathTemplatesMap.begin(); i != pathTemplatesMap.end(); ++i)
         ui->pathTemplatesCB->insertItem(0, i.key());
+     ui->pathTemplatesCB->setCurrentIndex(pathTemplateSelected);
 
     if (filenameTemplatesMap.count() == 0) {
         filenameTemplatesMap["YYYY-MM-DD_XXXX"] = "{YYYY}-{MM}-{DD}_{XXXX}";
+        filenameTemplatesMap["Original filename"] = "ORIGINAL FILENAME";
     }
     for (i = filenameTemplatesMap.begin(); i != filenameTemplatesMap.end(); ++i)
         ui->filenameTemplatesCB->insertItem(0, i.key());
+    ui->filenameTemplatesCB->setCurrentIndex(filenameTemplateSelected);
 
     if (isAuto) {
         ui->descriptionLineEdit->setFocus();
@@ -198,7 +205,7 @@ void CopyPickDlg::on_selectRootFolderBtn_clicked()
     emit updateIngestParameters(rootFolderPath, isAuto);
 
     pathToBaseFolder = rootFolderPath + "/" + year + month + "/";
-    ui->parentFolderLabel->setText(pathToBaseFolder);
+//    ui->parentFolderLabel->setText(pathToBaseFolder);
 
     updateFolderPath();
     updateExistingSequence();
@@ -501,11 +508,12 @@ void CopyPickDlg::initTokenMap()
 
 void CopyPickDlg::on_pathTemplatesCB_currentIndexChanged(const QString &arg1)
 {
-//    QString sMap = ui->pathTemplatesCB->currentText();
     QString tokenString = pathTemplatesMap[arg1];
     pathToBaseFolder = rootFolderPath + parseTokenString(pickList.at(0), pathTemplatesMap, tokenString);
-//    pathToBaseFolder = rootFolderPath + "/" + year + month + "/" ;
-    ui->parentFolderLabel->setText(pathToBaseFolder);
+    if (!isInitializing) pathTemplateSelected = ui->pathTemplatesCB->currentIndex();
+
+    qDebug() << "on_pathTemplatesCB_currentIndexChanged  pathTemplateSelected ="
+             << pathTemplateSelected;
 
     updateFolderPath();
     getSequenceStart(folderPath);
@@ -513,16 +521,26 @@ void CopyPickDlg::on_pathTemplatesCB_currentIndexChanged(const QString &arg1)
 
 }
 
+void CopyPickDlg::on_filenameTemplatesCB_currentIndexChanged(const QString &arg1)
+{
+    if (!isInitializing) filenameTemplateSelected = ui->filenameTemplatesCB->currentIndex();
+
+}
+
 void CopyPickDlg::on_pathTemplatesBtn_clicked()
 {
     QString title = "Token Editor - Path from Root to Destination Folder";
-    TokenDlg *tokenDlg = new TokenDlg(tokenMap, pathTemplatesMap, title, this);
+    int row = ui->pathTemplatesCB->currentIndex();
+    qDebug() << "on_pathTemplatesBtn_clicked  row =" << row;
+    TokenDlg *tokenDlg = new TokenDlg(tokenMap, pathTemplatesMap, row, title, this);
     tokenDlg->exec();
 }
 
 void CopyPickDlg::on_filenameTemplatesBtn_clicked()
 {
     QString title = "Token Editor - File Name";
-    TokenDlg *tokenDlg = new TokenDlg(tokenMap, filenameTemplatesMap, title, this);
+    int row = ui->filenameTemplatesCB->currentIndex();
+    TokenDlg *tokenDlg = new TokenDlg(tokenMap, filenameTemplatesMap, row, title, this);
     tokenDlg->exec();
 }
+

@@ -18,6 +18,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Add Ingest token builder
 - Add filter for date
 - Read/write XMP sidecars
 - Drag and drop a selection of thumbs
@@ -29,9 +30,8 @@ ENHANCEMENTS
 - Add zoom increment amount to preferences
 - Edit title in metadata
 - Add preferences for info label
-- Add Ingest token builder (see http://doc.qt.io/qt-5/qtwidgets-draganddrop-fridgemagnets-example.html)
 - Remember column order in tableView and workspace
-- Add more raw file formats - DNG, Sony, Fuji, Panasonic ...
+- Add more raw file formats - DNG, Fuji, Panasonic ...
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Rotate selected images
 - Disable menu "add bookmark" when folders not selected??

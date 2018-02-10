@@ -69,6 +69,8 @@ public:
     QMap<QString, QString> externalApps;
     QMap<QString, QString> pathTemplates;
     QMap<QString, QString> filenameTemplates;
+    int pathTemplateSelected;
+    int filenameTemplateSelected;
 
     QDockWidget *thumbDock;
 

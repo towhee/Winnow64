@@ -40,7 +40,8 @@ HEADERS += \
     Dialogs/zoomdlg.h \
     MacOS/macscale.h \
     MacOS/macScale_p.h \
-    Dialogs/appdlg.h
+    Dialogs/appdlg.h \
+    Dialogs/renamedlg.h
 
 SOURCES += \
     bookmarks.cpp \
@@ -74,7 +75,8 @@ SOURCES += \
     Dialogs/tokendlg.cpp \
     Dialogs/workspacedlg.cpp \
     Dialogs/zoomdlg.cpp \
-    Dialogs/appdlg.cpp
+    Dialogs/appdlg.cpp \
+    Dialogs/renamedlg.cpp
 
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 
@@ -92,7 +94,8 @@ FORMS += \
     message.ui \
     metadatareport.ui \
     appdlg.ui \
-    tokendlg.ui
+    tokendlg.ui \
+    Dialogs/renamedlg.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns

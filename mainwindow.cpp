@@ -4483,6 +4483,7 @@ re-established when the application is re-opened.
     setting->endGroup();
 
     /* Tokens used for ingest operations */
+    setting->setValue("pathTemplateSelected", (int)pathTemplateSelected);
     setting->beginGroup("PathTokens");
     setting->remove("");
     // save path templates
@@ -4493,6 +4494,7 @@ re-established when the application is re-opened.
     }
     setting->endGroup();
     // save filename templates
+    setting->setValue("filenameTemplateSelected", (int)filenameTemplateSelected);
     setting->beginGroup("FileNameTokens");
     QMapIterator<QString, QString> filenameIter(filenameTemplates);
     while (filenameIter.hasNext()) {
@@ -4770,6 +4772,7 @@ Preferences are located in the prefdlg class and updated here.
     /* moved to createActions as required to populate open with ... menu */
 
     /* read ingest token templates */
+    pathTemplateSelected = setting->value("pathTemplateSelected").toInt();
     setting->beginGroup("PathTokens");
     QStringList keys = setting->childKeys();
     for (int i = 0; i < keys.size(); ++i) {
@@ -4779,6 +4782,7 @@ Preferences are located in the prefdlg class and updated here.
     setting->endGroup();
 
     setting->beginGroup("FilenameTokens");
+    filenameTemplateSelected = setting->value("filenameTemplateSelected").toInt();
     keys = setting->childKeys();
     for (int i = 0; i < keys.size(); ++i) {
         QString key = keys.at(i);
@@ -5796,14 +5800,21 @@ void MW::copyPicks()
     #endif
     }
     if (thumbView->isPick()) {
+        qDebug() << "MW::copyPicks"
+                 << "pathTemplateSelected =" << pathTemplateSelected
+                 << "filenameTemplateSelected =" << filenameTemplateSelected;
         QFileInfoList imageList = thumbView->getPicks();
         copyPickDlg = new CopyPickDlg(this, imageList, metadata,
              ingestRootFolder, pathTemplates, filenameTemplates,
+             pathTemplateSelected, filenameTemplateSelected,
              autoIngestFolderPath);
         connect(copyPickDlg, SIGNAL(updateIngestParameters(QString,bool)),
                 this, SLOT(setIngestRootFolder(QString,bool)));
         copyPickDlg->exec();
         delete copyPickDlg;
+        qDebug() << "MW::copyPicks"
+                 << "pathTemplateSelected =" << pathTemplateSelected
+                 << "filenameTemplateSelected =" << filenameTemplateSelected;
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);

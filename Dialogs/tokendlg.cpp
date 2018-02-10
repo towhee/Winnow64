@@ -206,12 +206,6 @@ void TokenEdit::keyPressEvent(QKeyEvent *event)
     QTextEdit::keyPressEvent(event);
 }
 
-//void TokenEdit::keyReleaseEvent(QKeyEvent *event)
-//{
-////    QTextEdit::keyReleaseEvent(event);
-////    parseUpdated(parse());
-//}
-
 void TokenEdit::insertFromMimeData(const QMimeData *source)
 {
     QString token = source->text();
@@ -229,7 +223,7 @@ void TokenEdit::insertFromMimeData(const QMimeData *source)
 *******************************************************************************/
 
 TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
-                   QMap<QString, QString> &templatesMap,
+                   QMap<QString, QString> &templatesMap, int index,
                    QString title,
                    QWidget *parent) :
     tokenMap(tokenMap),
@@ -247,6 +241,7 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
     for (i = tokenMap.begin(); i != tokenMap.end(); ++i)
         ui->tokenList->insertItem(0, i.key());
 
+
     /* The template token data is stored in a QMap and its keys are used to
     populate the templateCB dropdown. The values are shown in tokenEdit. Since
     the keys (descriptions) can be edited in templateCB (renaming) we need
@@ -261,13 +256,14 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
         row++;
     }
 
+    // select same item as parent
+    qDebug() << "TokenDlg  row =" << index;
+    ui->templatesCB->setCurrentIndex(index);
     ui->tokenList->setDragEnabled(true);
     ui->tokenList->setSelectionMode(QAbstractItemView::SingleSelection);
 
     ui->tokenEdit->tokenMap = tokenMap;
 
-    connect(ui->tokenList, SIGNAL(activated(QModelIndex)),
-            this, SLOT(updateTokenEdit(QModelIndex)));
     connect(ui->tokenEdit, SIGNAL(parseUpdated(QString)),
             this, SLOT(updateExample(QString)));
     connect(ui->tokenEdit, SIGNAL(textChanged()),
@@ -292,12 +288,12 @@ void TokenDlg::updateTemplate()
     templatesMap[key] = ui->tokenEdit->toPlainText();
 }
 
-void TokenDlg::updateTokenEdit(QModelIndex idx)
-{
-    qDebug() << "TokenDlg::updateTokenEdit   row =" << idx.row();
-//    QString key = ui->templatesCB->itemData(row, Qt::ToolTipRole).toString();
-//    ui->tokenEdit->setText(templatesMap[key]);
-}
+//void TokenDlg::updateTokenEdit(QModelIndex idx)
+//{
+//    qDebug() << "TokenDlg::updateTokenEdit   row =" << idx.row();
+////    QString key = ui->templatesCB->itemData(row, Qt::ToolTipRole).toString();
+////    ui->tokenEdit->setText(templatesMap[key]);
+//}
 
 void TokenDlg::on_okBtn_clicked()
 {
@@ -333,18 +329,31 @@ void TokenDlg::on_deleteBtn_clicked()
     templatesMap.remove(key);
 }
 
+QStringList TokenDlg::existingTemplates(int row)
+{
+    QStringList list;
+    for (int i = 0; i < ui->templatesCB->count(); ++i) {
+        if (i != row) {
+            list.append(ui->templatesCB->itemText(i));
+        }
+    }
+    return list;
+}
+
 void TokenDlg::on_newBtn_clicked()
 {
     qDebug() << "TokenDlg::on_newBtn_clicked";
     QString newTemplate;
     int index;
-    int n = ui->templatesCB->count();
-    do {
-        newTemplate = "New template " + QString::number(n);
-        index = ui->templatesCB->findText(newTemplate);
-        n++;
+
+    QStringList existing = existingTemplates(-1);
+    RenameDlg *nameDlg = new RenameDlg(newTemplate, existing,
+             "New Template", "Enter new template name:", this);
+    if (!nameDlg->exec()) {
+        delete nameDlg;
+        return;
     }
-    while (index > -1);
+    delete nameDlg;
 
     ui->templatesCB->addItem(newTemplate);
     int i = ui->templatesCB->findText(newTemplate);
@@ -362,7 +371,7 @@ void TokenDlg::on_templatesCB_activated(const QString &arg1)
     qDebug() << "TokenDlg::on_templatesCB_activated to " << arg1;
 }
 
-void TokenDlg::on_renameBtn_clicked()
+QString TokenDlg::editTemplateName(QString dlgTitle, int row)
 {
     bool ok;
     int idx = ui->templatesCB->currentIndex();
@@ -381,10 +390,31 @@ void TokenDlg::on_renameBtn_clicked()
     for (i = templatesMap.begin(); i != templatesMap.end(); ++i)
         qDebug() << "templatesMap  " << i.key()
                  << "\n" << templatesMap[i.key()];
+
+    return text;
+}
+
+void TokenDlg::on_renameBtn_clicked()
+{
+    bool ok;
+    int row = ui->templatesCB->currentIndex();
+    QString name = ui->templatesCB->currentText();
+    QStringList existing = existingTemplates(-1);
+    RenameDlg *nameDlg = new RenameDlg(name, existing,
+             "Rename Template", "Rename template name:", this);
+    if (!nameDlg->exec()) {
+        delete nameDlg;
+        return;
+    }
+    ui->templatesCB->setItemText(row, name);
+    delete nameDlg;
 }
 
 void TokenDlg::on_templatesCB_currentIndexChanged(int row)
 {
+/*
+Update tokenEdit with the template token string stored in templatesMap
+*/
     qDebug() << "TokenDlg::on_templatesCB_currentIndexChanged   row =" << row;
     QString key = ui->templatesCB->itemData(row, Qt::ToolTipRole).toString();
     ui->tokenEdit->setText(templatesMap[key]);

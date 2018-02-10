@@ -2,6 +2,7 @@
 #define TOKENDLG_H
 
 #include <QtWidgets>
+#include "renamedlg.h"
 
 /*****************************************************************************/
 class TokenList : public QListWidget
@@ -31,7 +32,6 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
-//    void keyReleaseEvent(QKeyEvent *event) override;
     void insertFromMimeData(const QMimeData *source) override;
     void showEvent(QShowEvent *event) override;
 
@@ -68,6 +68,7 @@ class TokenDlg : public QDialog
 public:
     explicit TokenDlg(QMap<QString, QString>& tokenMap,
                       QMap<QString, QString>& templatesMap,
+                      int index,
                       QString title,
                       QWidget *parent = 0);
     ~TokenDlg();
@@ -75,7 +76,7 @@ public:
 public slots:
     void updateExample(QString s);
     void updateTemplate();
-    void updateTokenEdit(QModelIndex idx);
+//    void updateTokenEdit(QModelIndex idx);
 
 private slots:
     void on_okBtn_clicked();
@@ -89,6 +90,8 @@ private:
     Ui::TokenDlg *ui;
     QMap<QString, QString>& tokenMap;
     QMap<QString, QString>& templatesMap;
+    QString editTemplateName(QString dlgTitle, int row);
+    QStringList existingTemplates(int row = -1);
 };
 
 #endif // TOKENDLG_H

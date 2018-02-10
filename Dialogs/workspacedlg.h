@@ -29,9 +29,7 @@ private slots:
     void on_workspaceCB_editTextChanged(const QString &name);
     void clearStatus();
     void on_workspaceCB_highlighted(int index);
-
     void on_reportLinkButton_clicked();
-
     void on_workspaceCB_currentIndexChanged(int index);
 
 private:

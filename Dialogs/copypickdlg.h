@@ -21,6 +21,8 @@ public:
                          QString ingestRootFolder,
                          QMap<QString, QString>& pathTemplates,
                          QMap<QString, QString>& filenameTemplates,
+                         int& pathTemplateSelected,
+                         int& filenameTemplateSelected,
                          bool isAuto);
     ~CopyPickDlg();
 
@@ -36,6 +38,8 @@ private slots:
     void on_pathTemplatesCB_currentIndexChanged(const QString &arg1);
 
     void on_filenameTemplatesBtn_clicked();
+
+    void on_filenameTemplatesCB_currentIndexChanged(const QString &arg1);
 
 signals:
     void updateIngestParameters(QString rootFolderPath, bool isAuto);
@@ -62,6 +66,9 @@ private:
     QMap<QString, QString> tokenMap;
     QMap<QString, QString> &pathTemplatesMap;
     QMap<QString, QString> &filenameTemplatesMap;
+
+    int& pathTemplateSelected;
+    int& filenameTemplateSelected;
 
     QString folderPath; // rootFolderPath + folderBase + folderDescription
     QString defaultRootFolderPath;

@@ -228,7 +228,7 @@ QScrollBar:vertical {
 QScrollBar::handle:vertical {
     border-right: 0px solid rgb(95,95,95);
     min-height: 20px;
-    border-radius: 5px;  /*not working, border=0, maybe if pad*/
+    border-radius: 2px;  /*not working, border=0, maybe if pad*/
 }
 
 QScrollBar::handle:hover {
@@ -298,7 +298,7 @@ QScrollBar::up-arrow:horizontal, QScrollBar::down-arrow:horizontal {
 QProgressBar {
     background-color: rgb(111,111,111);
     border: 1px solid gray;
-    border-radius: 5px;
+    border-radius: 2px;
 }
 
 QSlider::groove:horizontal {
@@ -322,7 +322,7 @@ QSlider::handle:focus {
     border: 1px solid gray;
     selection-background-color: darkgray;
     padding: 0px;
-    border-radius: 5px;
+    border-radius: 2px;
 }
 
 QLineEdit:hover, QLineEdit:focus {
@@ -333,7 +333,7 @@ QLineEdit:hover, QLineEdit:focus {
 QPushButton {
 /*    color: green;*/
     border: 1px solid gray;
-    border-radius: 5px;
+    border-radius: 2px;
     padding-left: 5px;
     padding-right: 5px;
     padding-top: 3px;
@@ -362,7 +362,7 @@ QPushButton:flat {
 QComboBox {
     border: 1px solid gray;
     selection-background-color: darkgray;
-    border-radius: 5px;
+    border-radius: 2px;
     padding: 0px 10px 1px 8px;  /*text  top, right, bottom, left*/
     min-width: 6em;
 }
@@ -372,7 +372,7 @@ QComboBox:hover, QComboBox:focus {
 }
 
 QComboBox QAbstractItemView::item {
-    height: 24px;
+    height: 20px;
 }
 /*
 QComboBox:editable {
@@ -424,7 +424,7 @@ QSpinBox {
     background-color: rgb(111,111,111);
     border: 1px solid gray;
     selection-background-color: darkgray;
-    border-radius: 5px;
+    border-radius: 2px;
     padding-left: 4px;
 }
 
@@ -452,7 +452,7 @@ QLineEdit {
     padding-top: 1px;
     padding-bottom: 1px;
     padding-left: 4px;
-    border-radius: 5px;
+    border-radius: 2px;
 }
 
 QLineEdit:hover, QLineEdit:focus {
