@@ -66,9 +66,10 @@ class TokenDlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit TokenDlg(QMap<QString, QString>& tokenMap,
-                      QMap<QString, QString>& templatesMap,
-                      int index,
+    explicit TokenDlg(QMap<QString, QString> &tokenMap,
+                      QMap<QString, QString> &templatesMap,
+                      int &index,
+                      QString &currentKey,
                       QString title,
                       QWidget *parent = 0);
     ~TokenDlg();
@@ -90,7 +91,9 @@ private:
     Ui::TokenDlg *ui;
     QMap<QString, QString>& tokenMap;
     QMap<QString, QString>& templatesMap;
-    QString editTemplateName(QString dlgTitle, int row);
+    int &index;
+    QString &currentKey;
+//    QString editTemplateName(QString dlgTitle, int row);
     QStringList existingTemplates(int row = -1);
 };
 

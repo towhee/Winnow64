@@ -2,7 +2,23 @@
 #define RENAMEDLG_H
 
 #include <QtWidgets>
+#include "popup.h"
 
+/*****************************************************************************/
+class RenameEdit : public QLineEdit
+{
+    Q_OBJECT
+public:
+    explicit RenameEdit(QWidget *parent = nullptr);
+
+protected:
+    void keyPressEvent(QKeyEvent *event) override;
+
+private:
+    PopUp *popup;
+};
+
+/*****************************************************************************/
 namespace Ui {
 class RenameDlg;
 }

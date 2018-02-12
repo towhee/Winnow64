@@ -1,6 +1,34 @@
 #include "renamedlg.h"
 #include "ui_renamedlg.h"
 
+/*******************************************************************************
+   RenameEdit Class
+*******************************************************************************/
+
+/* RenameEdit is a subclass of QTextEdit to manage tokenized text. It tokenizes
+dragged text in insertFromMimeData and has a parse function to use the tokens
+to look up corresponding metadata.
+
+  */
+
+RenameEdit::RenameEdit(QWidget *parent) : QTextEdit(parent) {}
+
+void RenameEdit::keyPressEvent(QKeyEvent *event)
+{
+    qDebug() << "RenameDlg::keyPressEvent" << event;
+    switch (event->key()) {
+    case Qt::Key_Slash:
+    case Qt::Key_Backslash:
+        popup->showPopup(this, "The characters \"\\\" and \"/\" are not permitted", 1000, 0.75);
+        return;
+    }
+    QLineEdit::keyPressEvent(event);
+}
+
+/*******************************************************************************
+   RenameDlg Class
+*******************************************************************************/
+
 RenameDlg::RenameDlg(QString &name,
                      QStringList &existingNames,
                      QString dlgTitle,
@@ -21,6 +49,7 @@ RenameDlg::RenameDlg(QString &name,
         existingNamesString.append(existingNames.at(i) + "\n");
     }
     ui->name->setToolTip(existingNamesString);
+    popup = new PopUp;
 }
 
 RenameDlg::~RenameDlg()
@@ -47,6 +76,7 @@ void RenameDlg::on_okBtn_clicked()
     if (isUnique && ui->name->text().length() > 0) {
         name = ui->name->text();
         accept();
+        return;
     }
     reject();
 }

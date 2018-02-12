@@ -95,7 +95,7 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
         pathTemplatesMap["YYYY-MM-DD"] = "{YYYY}-{MM}-{DD}";
     }
     for (i = pathTemplatesMap.begin(); i != pathTemplatesMap.end(); ++i)
-        ui->pathTemplatesCB->insertItem(0, i.key());
+        ui->pathTemplatesCB->addItem(i.key());
      ui->pathTemplatesCB->setCurrentIndex(pathTemplateSelected);
 
     if (filenameTemplatesMap.count() == 0) {
@@ -103,7 +103,7 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
         filenameTemplatesMap["Original filename"] = "ORIGINAL FILENAME";
     }
     for (i = filenameTemplatesMap.begin(); i != filenameTemplatesMap.end(); ++i)
-        ui->filenameTemplatesCB->insertItem(0, i.key());
+        ui->filenameTemplatesCB->addItem(i.key());
     ui->filenameTemplatesCB->setCurrentIndex(filenameTemplateSelected);
 
     if (isAuto) {
@@ -508,12 +508,14 @@ void CopyPickDlg::initTokenMap()
 
 void CopyPickDlg::on_pathTemplatesCB_currentIndexChanged(const QString &arg1)
 {
+    if (arg1 == "") return;
     QString tokenString = pathTemplatesMap[arg1];
     pathToBaseFolder = rootFolderPath + parseTokenString(pickList.at(0), pathTemplatesMap, tokenString);
     if (!isInitializing) pathTemplateSelected = ui->pathTemplatesCB->currentIndex();
 
     qDebug() << "on_pathTemplatesCB_currentIndexChanged  pathTemplateSelected ="
-             << pathTemplateSelected;
+             << pathTemplateSelected
+             << "pathTemplatesMap =" << pathTemplatesMap;
 
     updateFolderPath();
     getSequenceStart(folderPath);
@@ -529,18 +531,34 @@ void CopyPickDlg::on_filenameTemplatesCB_currentIndexChanged(const QString &arg1
 
 void CopyPickDlg::on_pathTemplatesBtn_clicked()
 {
+    // setup TokenDlg
     QString title = "Token Editor - Path from Root to Destination Folder";
-    int row = ui->pathTemplatesCB->currentIndex();
-    qDebug() << "on_pathTemplatesBtn_clicked  row =" << row;
-    TokenDlg *tokenDlg = new TokenDlg(tokenMap, pathTemplatesMap, row, title, this);
+    int index = ui->pathTemplatesCB->currentIndex();
+    qDebug() << "on_pathTemplatesBtn_clicked  row =" << index;
+    QString currentKey = ui->pathTemplatesCB->currentText();
+    TokenDlg *tokenDlg = new TokenDlg(tokenMap, pathTemplatesMap, index,
+                                      currentKey, title, this);
     tokenDlg->exec();
+
+    // rebuild template list and set to same item as TokenDlg for user continuity
+    ui->pathTemplatesCB->clear();
+    QMap<QString, QString>::iterator i;
+    int row = 0;
+    for (i = pathTemplatesMap.begin(); i != pathTemplatesMap.end(); ++i) {
+        ui->pathTemplatesCB->addItem(i.key());
+        if (i.key() == currentKey) index = row;
+        row++;
+    }
+    ui->pathTemplatesCB->setCurrentIndex(row);
+    on_pathTemplatesCB_currentIndexChanged(currentKey);
 }
 
 void CopyPickDlg::on_filenameTemplatesBtn_clicked()
 {
-    QString title = "Token Editor - File Name";
-    int row = ui->filenameTemplatesCB->currentIndex();
-    TokenDlg *tokenDlg = new TokenDlg(tokenMap, filenameTemplatesMap, row, title, this);
-    tokenDlg->exec();
+//    QString title = "Token Editor - File Name";
+//    int index = ui->filenameTemplatesCB->currentIndex();
+//    TokenDlg *tokenDlg = new TokenDlg(tokenMap, filenameTemplatesMap, index, title, this);
+//    tokenDlg->exec();
+//    QMap<QString, QString>::iterator i;
 }
 
