@@ -11,7 +11,11 @@ to look up corresponding metadata.
 
   */
 
-RenameEdit::RenameEdit(QWidget *parent) : QTextEdit(parent) {}
+RenameEdit::RenameEdit(QDialog *parent) : QLineEdit(parent)
+{
+    this->parent = parent;
+    popup = new PopUp;
+}
 
 void RenameEdit::keyPressEvent(QKeyEvent *event)
 {
@@ -19,7 +23,7 @@ void RenameEdit::keyPressEvent(QKeyEvent *event)
     switch (event->key()) {
     case Qt::Key_Slash:
     case Qt::Key_Backslash:
-        popup->showPopup(this, "The characters \"\\\" and \"/\" are not permitted", 1000, 0.75);
+        popup->showPopup(parent, "The characters \"\\\" and \"/\" are not permitted", 1000, 0.75);
         return;
     }
     QLineEdit::keyPressEvent(event);
@@ -49,7 +53,6 @@ RenameDlg::RenameDlg(QString &name,
         existingNamesString.append(existingNames.at(i) + "\n");
     }
     ui->name->setToolTip(existingNamesString);
-    popup = new PopUp;
 }
 
 RenameDlg::~RenameDlg()

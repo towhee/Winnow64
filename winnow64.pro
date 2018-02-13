@@ -81,20 +81,21 @@ SOURCES += \
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 
 FORMS += \
-    copypickdlg.ui \
-    prefdlg.ui \
-    workspacedlg.ui \
-    helpform.ui \
     aligndlg.ui \
-    testaligndlg.ui \
+    appdlg.ui \
+    copypickdlg.ui \
+    helpform.ui \
+    helpingest.ui \
     introduction.ui \
-    welcome.ui \
-    shortcutsform.ui \
-    zoomdlg.ui \
     message.ui \
     metadatareport.ui \
-    appdlg.ui \
+    prefdlg.ui \
+    shortcutsform.ui \
+    testaligndlg.ui \
     tokendlg.ui \
+    welcome.ui \
+    workspacedlg.ui \
+    zoomdlg.ui \
     Dialogs/renamedlg.ui
 
 RESOURCES += winnow.qrc

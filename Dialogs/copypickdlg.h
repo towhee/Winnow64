@@ -6,6 +6,8 @@
 #include "thumbview.h"
 #include "tokendlg.h"
 
+#include "ui_helpingest.h"
+
 namespace Ui {
 class CopyPickDlg;
 }
@@ -40,6 +42,12 @@ private slots:
     void on_filenameTemplatesBtn_clicked();
 
     void on_filenameTemplatesCB_currentIndexChanged(const QString &arg1);
+
+    void on_cancelBtn_clicked();
+
+    void on_okBtn_clicked();
+
+    void on_helpBtn_clicked();
 
 signals:
     void updateIngestParameters(QString rootFolderPath, bool isAuto);

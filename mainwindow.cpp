@@ -4781,8 +4781,9 @@ Preferences are located in the prefdlg class and updated here.
     }
     setting->endGroup();
 
-    setting->beginGroup("FilenameTokens");
     filenameTemplateSelected = setting->value("filenameTemplateSelected").toInt();
+    qDebug() << "MW::loadSettings:  filenameTemplateSelected =" << filenameTemplateSelected;
+    setting->beginGroup("FilenameTokens");
     keys = setting->childKeys();
     for (int i = 0; i < keys.size(); ++i) {
         QString key = keys.at(i);

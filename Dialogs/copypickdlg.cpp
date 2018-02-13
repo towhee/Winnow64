@@ -71,13 +71,6 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
     QString s3 = QString::number(fileMB, 'f', 1);
     ui->statsLabel->setText(s1 + s2 + s3 + " MB");
 
-    // get year and month from the first image
-//    QString fPath = pickList.at(0).absoluteFilePath();
-//    int year = metadata->getYear(fPath);
-//    int month = metadata->getDay(fPath);
-//    int day = metadata->getDay(fPath);
-//    date.setDate(year, month, day);
-
     fileNameDatePrefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
     created = metadata->getCreated(pickList.at(0).absoluteFilePath());
 //    qDebug() << "created =" << created;
@@ -88,10 +81,13 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
     ui->rootFolderLabel->setText(rootFolderPath);
 
     // initialize templates and tokens
+    qDebug() << "CopyPickDlg::CopyPickDlg:  "
+             << "pathTemplateSelected" << pathTemplateSelected
+             << "filenameTemplateSelected" << filenameTemplateSelected;
     initTokenMap();
     QMap<QString, QString>::iterator i;
     if (pathTemplatesMap.count() == 0) {
-        pathTemplatesMap["YYYY/YYMM/YYYY-MM-DD"] = "{YYYY}/{YYYY}{MM}/{YYYY}-{MM}-{DD}";
+        pathTemplatesMap["YYYY̸YYMM̸YYYY-MM-DD"] = "{YYYY}/{YYYY}{MM}/{YYYY}-{MM}-{DD}";
         pathTemplatesMap["YYYY-MM-DD"] = "{YYYY}-{MM}-{DD}";
     }
     for (i = pathTemplatesMap.begin(); i != pathTemplatesMap.end(); ++i)
@@ -100,7 +96,7 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
 
     if (filenameTemplatesMap.count() == 0) {
         filenameTemplatesMap["YYYY-MM-DD_XXXX"] = "{YYYY}-{MM}-{DD}_{XXXX}";
-        filenameTemplatesMap["Original filename"] = "ORIGINAL FILENAME";
+        filenameTemplatesMap["Original filename"] = "{ORIGINAL FILENAME}";
     }
     for (i = filenameTemplatesMap.begin(); i != filenameTemplatesMap.end(); ++i)
         ui->filenameTemplatesCB->addItem(i.key());
@@ -140,14 +136,13 @@ void CopyPickDlg::accept()
         int progress = (i+1)*100/(pickList.size()+1);
         ui->progressBar->setValue(progress);
         qApp->processEvents();
-        qDebug() << "progressBar->value()" << ui->progressBar->value();
         QFileInfo fileInfo = pickList.at(i);
         int seqNum = ui->spinBoxStartNumber->value() + i;
         QString sequence = "_" + QString("%1").arg(seqNum, 4 , 10, QChar('0'));
         QString suffix = "." + fileInfo.completeSuffix();
         QString source = fileInfo.absoluteFilePath();
         QString destination = folderPath + "/" + prefix + sequence + suffix;
-        qDebug() << "Copying " << source << " to " << destination;
+//        qDebug() << "Copying " << source << " to " << destination;
         QFile::copy(source, destination);
     }
     QDialog::accept();
@@ -251,7 +246,7 @@ bool CopyPickDlg::isToken(const QMap<QString,QString>& map, QString tokenString,
                 tokenEnd = i + 1;
                 return true;
             }
-            qDebug() << "token =" << token;
+//            qDebug() << "token =" << token;
         }
     }
     return false;
@@ -436,7 +431,7 @@ int CopyPickDlg::getSequenceStart(const QString &path)
                 }
             }
         }
-        qDebug() << fName << fName.indexOf(".", 0) << seq << sequence;
+//        qDebug() << fName << fName.indexOf(".", 0) << seq << sequence;
     }
     return sequence;
 }
@@ -549,16 +544,49 @@ void CopyPickDlg::on_pathTemplatesBtn_clicked()
         if (i.key() == currentKey) index = row;
         row++;
     }
-    ui->pathTemplatesCB->setCurrentIndex(row);
+    ui->pathTemplatesCB->setCurrentIndex(index);
     on_pathTemplatesCB_currentIndexChanged(currentKey);
 }
 
 void CopyPickDlg::on_filenameTemplatesBtn_clicked()
 {
-//    QString title = "Token Editor - File Name";
-//    int index = ui->filenameTemplatesCB->currentIndex();
-//    TokenDlg *tokenDlg = new TokenDlg(tokenMap, filenameTemplatesMap, index, title, this);
-//    tokenDlg->exec();
-//    QMap<QString, QString>::iterator i;
+    // setup TokenDlg
+    QString title = "Token Editor - Destination File Name";
+    int index = ui->filenameTemplatesCB->currentIndex();
+    qDebug() << "filenameTemplatesCB  row =" << index;
+    QString currentKey = ui->filenameTemplatesCB->currentText();
+    TokenDlg *tokenDlg = new TokenDlg(tokenMap, filenameTemplatesMap, index,
+                                      currentKey, title, this);
+    tokenDlg->exec();
+
+    // rebuild template list and set to same item as TokenDlg for user continuity
+    ui->filenameTemplatesCB->clear();
+    QMap<QString, QString>::iterator i;
+    int row = 0;
+    for (i = filenameTemplatesMap.begin(); i != filenameTemplatesMap.end(); ++i) {
+        ui->filenameTemplatesCB->addItem(i.key());
+        if (i.key() == currentKey) index = row;
+        row++;
+    }
+    ui->filenameTemplatesCB->setCurrentIndex(index);
+    on_filenameTemplatesCB_currentIndexChanged(currentKey);
 }
 
+
+void CopyPickDlg::on_cancelBtn_clicked()
+{
+
+}
+
+void CopyPickDlg::on_okBtn_clicked()
+{
+
+}
+
+void CopyPickDlg::on_helpBtn_clicked()
+{
+    QDialog *helpDoc = new QDialog;
+    Ui::helpIngest ui;
+    ui.setupUi(helpDoc);
+    helpDoc->show();
+}

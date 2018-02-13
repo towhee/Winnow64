@@ -9,12 +9,13 @@ class RenameEdit : public QLineEdit
 {
     Q_OBJECT
 public:
-    explicit RenameEdit(QWidget *parent = nullptr);
+    explicit RenameEdit(QDialog *parent = nullptr);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
 
 private:
+    QDialog *parent;
     PopUp *popup;
 };
 

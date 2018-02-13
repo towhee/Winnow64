@@ -136,22 +136,6 @@ void TokenEdit::showEvent(QShowEvent *event)
     tokenFormat.setForeground(QColor(Qt::white));
     setTextColor(Qt::white);
     setStyleSheet(QStringLiteral("background-image: url(:/images/tokenBackground.png)"));
-
-    /*  Create background png file
-    QLabel bgLbl("Drag tokens here");
-    qDebug() << "size()" << size();
-    bgLbl.resize(size());
-    qDebug() << "lbl size()" << bgLbl.size();
-
-    bgLbl.setAlignment(Qt::AlignHCenter | Qt::AlignCenter);
-    QFont font = bgLbl.font();
-    font.setPointSize(24);
-    bgLbl.setFont(font);
-    bgLbl.setStyleSheet("QLabel {background-color: rgb(60,60,60); color: rgb(80,80,80);}");
-    QPixmap pixmap(bgLbl.size());
-    bgLbl.render(&pixmap);
-    QImage image(pixmap.toImage());
-    image.save(":/images/tokenBackground.png", "PNG");  */
 }
 
 void TokenEdit::selectToken(int position)
@@ -174,8 +158,6 @@ void TokenEdit::positionChanged()
     QTextCursor cursor = textCursor();
     int position = cursor.position();
     if (isToken(position)) {
-//         cursor.setBlockCharFormat(tokenFormat);
-//         setTextCursor(cursor);
          ignore = true;
          if (lastPosition > position) {
             cursor.setPosition(tokenEnd);
@@ -186,12 +168,7 @@ void TokenEdit::positionChanged()
             cursor.setPosition(tokenEnd, QTextCursor::KeepAnchor);
         }
         ignore = false;
-//        mergeCurrentCharFormat(tokenFormat);
         setTextCursor(cursor);
-//        setTextColor(Qt::yellow);
-    }
-    else {
-//        setTextColor(Qt::white);
     }
     lastPosition = textCursor().position();
 }
