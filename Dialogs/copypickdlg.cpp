@@ -572,17 +572,6 @@ void CopyPickDlg::on_filenameTemplatesBtn_clicked()
     on_filenameTemplatesCB_currentIndexChanged(currentKey);
 }
 
-
-void CopyPickDlg::on_cancelBtn_clicked()
-{
-
-}
-
-void CopyPickDlg::on_okBtn_clicked()
-{
-
-}
-
 void CopyPickDlg::on_helpBtn_clicked()
 {
     QDialog *helpDoc = new QDialog;
@@ -590,3 +579,14 @@ void CopyPickDlg::on_helpBtn_clicked()
     ui.setupUi(helpDoc);
     helpDoc->show();
 }
+
+void CopyPickDlg::on_cancelBtn_clicked()
+{
+    reject();
+}
+
+void CopyPickDlg::on_okBtn_clicked()
+{
+    accept();
+}
+

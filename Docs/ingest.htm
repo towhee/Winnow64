@@ -1,16 +1,17 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html xmlns:v="urn:schemas-microsoft-com:vml"
-xmlns:o="urn:schemas-microsoft-com:office:office"
-xmlns:w="urn:schemas-microsoft-com:office:word"
-xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
-xmlns="http://www.w3.org/TR/REC-html40">
-
-<head>
-<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
-<meta name=ProgId content=Word.Document>
-<meta name=Generator content="Microsoft Word 15">
-<meta name=Originator content="Microsoft Word 15">
-<link rel=File-List href="ingest_files/filelist.xml">
-<!--[if gte mso 9]><xml>
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:w="urn:schemas-microsoft-com:office:word"
+  xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
+  xmlns="http://www.w3.org/TR/REC-html40">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;
+      charset=windows-1252">
+    <meta name="ProgId" content="Word.Document">
+    <meta name="Generator" content="Microsoft Word 15">
+    <meta name="Originator" content="Microsoft Word 15">
+    <link rel="File-List" href="ingest_files/filelist.xml">
+    <!--[if gte mso 9]><xml>
  <o:DocumentProperties>
   <o:Author>Rory Hill</o:Author>
   <o:LastAuthor>Rory Hill</o:LastAuthor>
@@ -30,9 +31,10 @@ xmlns="http://www.w3.org/TR/REC-html40">
   <o:AllowPNG/>
  </o:OfficeDocumentSettings>
 </xml><![endif]-->
-<link rel=themeData href="ingest_files/themedata.thmx">
-<link rel=colorSchemeMapping href="ingest_files/colorschememapping.xml">
-<!--[if gte mso 9]><xml>
+    <link rel="themeData" href="ingest_files/themedata.thmx">
+    <link rel="colorSchemeMapping"
+      href="ingest_files/colorschememapping.xml">
+    <!--[if gte mso 9]><xml>
  <w:WordDocument>
   <w:SpellingState>Clean</w:SpellingState>
   <w:GrammarState>Clean</w:GrammarState>
@@ -642,7 +644,7 @@ xmlns="http://www.w3.org/TR/REC-html40">
    Name="List Table 7 Colorful Accent 6"/>
  </w:LatentStyles>
 </xml><![endif]-->
-<style>
+    <style>
 <!--
  /* Font Definitions */
  @font-face
@@ -1523,8 +1525,7 @@ span.GramE
 div.WordSection1
 	{page:WordSection1;}
 -->
-</style>
-<!--[if gte mso 10]>
+</style><!--[if gte mso 10]>
 <style>
  /* Style Definitions */
  table.MsoNormalTable
@@ -1556,76 +1557,123 @@ div.WordSection1
  <o:shapelayout v:ext="edit">
   <o:idmap v:ext="edit" data="1"/>
  </o:shapelayout></xml><![endif]-->
-</head>
-
-<body bgcolor="#6B6B6B" lang=EN-US style='tab-interval:.5in'>
-
-<div class=WordSection1>
-
-<h1>Creating a path to the destination folder</h1>
-
-<p class=MsoNormal>Example:<span style='mso-spacerun:yes'> 
-</span>e:\2018\2018-02\2018-02-23_Spring in Paris</p>
-
-<p class=MsoNormal><span style='color:#C0CF3A;mso-themecolor:accent3'>Root</span>
-<span style='mso-tab-count:1'>   </span>- where your images are stored<br>
-<span style='mso-tab-count:1'>            </span>= e:\<br>
-<span style='mso-tab-count:1'>            </span>- entered in “Ingest Picks”
-dialog</p>
-
-<p class=MsoNormal><span style='color:#C0CF3A;mso-themecolor:accent3'>Template
-path </span>– the path from the root to the destination folder<br>
-<span style='mso-tab-count:1'>            </span>= 2018\2018-02\2018-02-23<br>
-<span style='mso-tab-count:1'>            </span>- based on a template in “Edit
-Template(s)” accessed from the “Ingest Picks” dialog</p>
-
-<p class=MsoNormal><span style='color:#C0CF3A;mso-themecolor:accent3'>Description</span>
-– an optional description appended to the template path<br>
-<span style='mso-tab-count:1'>            </span>= _Spring in Paris<br>
-<span style='mso-tab-count:1'>            </span>- entered in “Ingest Picks”
-dialog</p>
-
-<p class=MsoNormal><o:p>&nbsp;</o:p></p>
-
-<h1>Creating the file names</h1>
-
-<p class=MsoNormal><span style='mso-spacerun:yes'> </span>File names are
-created in the template editor, based on tokens.</p>
-
-<p class=MsoNormal><o:p>&nbsp;</o:p></p>
-
-<h1>What is a template and what are tokens</h1>
-
-<p class=MsoNormal>A template is a structure to use to build a file path or a
-file name.<span style='mso-spacerun:yes'>  </span>You can create templates
-using any descriptive name and create the template using tokens.<span
-style='mso-spacerun:yes'>  </span>Tokens are place holders and the values for
-the tokens are inserted from the metadata in the images.<span
-style='mso-spacerun:yes'>  </span>For example:</p>
-
-<p class=MsoNormal>Template name = “Rory template”<br>
-Template = {YYYY}<span class=GramE>/{</span>YYYY}-{MM}-{DD}</p>
-
-<p class=MsoNormal>{YYYY} = a token (dragged from token list in token editor)</p>
-
-<p class=MsoNormal><o:p>&nbsp;</o:p></p>
-
-<h1>Slashes and back slashes</h1>
-
-<p class=MsoNormal>Do not use “/” or “\” in the template <span class=GramE>name.</span><span
-style='mso-spacerun:yes'>  </span>Windows uses the “\” in file paths while <span
-class=SpellE>MacOS</span> and Linux use “/”.<span style='mso-spacerun:yes'> 
-</span>Since the “\” is also used for escape sequences I suggest you use the “/”.<span
-style='mso-spacerun:yes'>  </span>Winnow will automatically convert this to a “\”
-when creating the path to the destination folder.<span
-style='mso-spacerun:yes'>  </span>For example:</p>
-
-<p class=MsoNormal><span style='mso-tab-count:1'>            </span>Template = {YYYY}<span
-class=GramE>/{</span>YYYY}-{MM}-{DD} will become “2018\2018-02\2018-02-23” in
-windows.</p>
-
-</div>
-
-</body>
-
+  </head>
+  <body style="tab-interval:.5in" lang="EN-US" bgcolor="#6B6B6B">
+    <div class="WordSection1">
+      <h3><font color="#66cccc">Creating a path to the destination
+          folder</font></h3>
+      <p class="MsoNormal"><br>
+        Example:<span style="mso-spacerun:yes">&nbsp;
+          <br>
+        </span><span style="mso-spacerun:yes"></span><br>
+        <span style="mso-spacerun:yes"></span>&nbsp;&nbsp;&nbsp;
+        &nbsp;&nbsp;&nbsp; Windows:&nbsp;&nbsp;&nbsp;
+        e:\2018\2018-02\2018-02-23_Spring in Paris<br>
+        &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; Mac:&nbsp;&nbsp;&nbsp;
+        &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; /users/pictures/Feb/23
+        Paris<br>
+      </p>
+      <p class="MsoNormal"><span
+          style="color:#C0CF3A;mso-themecolor:accent3">Root</span>
+        <span style="mso-tab-count:1">&nbsp;&nbsp; </span>- <br>
+      </p>
+      <p class="MsoNormal">This is the base location where your images
+        are stored.&nbsp; The root is entered in the “Ingest Picks”
+        dialog.</p>
+      <p class="MsoNormal">&nbsp;&nbsp;&nbsp; <span
+          style="mso-tab-count:1"></span>= e:\&nbsp;&nbsp;&nbsp;&nbsp;
+        or&nbsp;&nbsp;&nbsp;&nbsp; /users/pictures/<br>
+        <span style="mso-tab-count:1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        </span><br>
+      </p>
+      <p class="MsoNormal"><span
+          style="color:#C0CF3A;mso-themecolor:accent3">Template
+          path </span><br>
+      </p>
+      <p class="MsoNormal">The path from the root to the destination
+        folder that can be defined by metadata from an image.&nbsp; It
+        is based on a template in “Edit
+        Template(s)” accessed from the “Ingest Picks” dialog.</p>
+      <p class="MsoNormal">&nbsp;&nbsp;&nbsp; <span
+          style="mso-tab-count:1"></span>= "2018\2018-02\2018-02-23"
+        &nbsp;&nbsp; or&nbsp;&nbsp;&nbsp;&nbsp; "Feb/23/"<br>
+        <span style="mso-tab-count:1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        </span>- <br>
+      </p>
+      <p class="MsoNormal"><span
+          style="color:#C0CF3A;mso-themecolor:accent3">Description</span>
+        – an optional description appended to the template path, entered
+        in the “Ingest Picks”
+        dialog.</p>
+      <p class="MsoNormal">&nbsp;&nbsp;&nbsp; <span
+          style="mso-tab-count:1"></span>= "_Spring in
+        Paris"&nbsp;&nbsp;&nbsp; or&nbsp;&nbsp;&nbsp;&nbsp; " Paris"<br>
+        <span style="mso-tab-count:1"></span><br>
+      </p>
+      <font color="#66cccc">
+      </font>
+      <h3><font color="#66cccc">Creating the file names</font></h3>
+      <p class="MsoNormal"><span style="mso-spacerun:yes"></span><br>
+        File names are
+        created in the template editor, based on tokens, including
+        sequence tokens that append digits.<br>
+      </p>
+      <p class="MsoNormal">For example, if the image was taken with a
+        Canon camera on Feb 23, 2018 and was the 36th image picked:<br>
+      </p>
+      <p class="MsoNormal">Template = {YYYY}-{MM}-{DD}_{XXX} will become
+        2018-02-23_036.CR2<br>
+      </p>
+      <p class="MsoNormal"><o:p>&nbsp;</o:p></p>
+      <h3><font color="#66cccc">What is a template and what are tokens</font></h3>
+      <p class="MsoNormal"><br>
+        A template is a structure to use to build a file path or a
+        file name.<span style="mso-spacerun:yes">&nbsp; </span>You can
+        create templates
+        using any descriptive name and create the template using tokens.<span
+          style="mso-spacerun:yes">&nbsp; </span>Tokens are place
+        holders and the values for
+        the tokens are inserted from the metadata in the images.<span
+          style="mso-spacerun:yes">&nbsp; </span>For example:</p>
+      <p class="MsoNormal">Template name = “Rory template”<br>
+        Template = {YYYY}<span class="GramE">/{</span>YYYY}-{MM}-{DD}</p>
+      <p class="MsoNormal">{YYYY} = a token (dragged from token list in
+        token editor)<br>
+        <br>
+      </p>
+      <h3 class="MsoNormal"><font color="#66cccc">Where does the
+          metadata come from</font><br>
+      </h3>
+      <p class="MsoNormal"><o:p><br>
+          The metadata is sourced from the first image picked and all
+          the picked images will be copied to one destination folder.<br>
+          <br>
+        </o:p></p>
+      <h3><font color="#66cccc">Slashes and back slashes</font>
+      </h3>
+      <p class="MsoNormal"><br>
+        Do not use “/” or “\” in the template <span class="GramE">name.</span><span
+          style="mso-spacerun:yes">&nbsp; The template name is used as a
+          key to save the templates between sessions.&nbsp; Slashes do
+          terrible things to the windows registry.<br>
+        </span></p>
+      <p class="MsoNormal"><span style="mso-spacerun:yes">In the
+          template itself, </span>Windows uses the “\” in file paths
+        while <span class="SpellE">MacOS</span> and Linux use “/”.<span
+          style="mso-spacerun:yes">&nbsp;
+        </span>Since the “\” is also used for escape sequences I suggest
+        you use the “/”.<span style="mso-spacerun:yes">&nbsp; </span>Winnow
+        will automatically convert this to a “\”
+        when creating the path to the destination folder in windows.<span
+          style="mso-spacerun:yes">&nbsp; </span><br>
+      </p>
+      <p class="MsoNormal">For example, if the image was taken on Feb
+        23, 2018:</p>
+      <p class="MsoNormal"><span style="mso-tab-count:1"></span>Template
+        = {YYYY}<span class="GramE">/{</span>YYYY}-{MM}-{DD} will become
+        “2018\2018-02\2018-02-23” in
+        windows.<br>
+      </p>
+    </div>
+  </body>
 </html>
