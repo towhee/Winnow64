@@ -24,3 +24,5 @@ lensInfo:           "30323034152489061140577b a2 48 5c 80 24 24 a4 24 0c5217540a
     arguments << "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg";
     QProcess *process = new QProcess();
     process->start(app);
+
+color: rgb(190, 190, 190);\nbackground-color: rgb(85,85,85);

@@ -36,17 +36,11 @@ private slots:
     void on_descriptionLineEdit_textChanged(const QString &);
     void on_autoRadio_toggled(bool checked);
     void on_pathTemplatesBtn_clicked();
-
     void on_pathTemplatesCB_currentIndexChanged(const QString &arg1);
-
     void on_filenameTemplatesBtn_clicked();
-
     void on_filenameTemplatesCB_currentIndexChanged(const QString &arg1);
-
     void on_cancelBtn_clicked();
-
     void on_okBtn_clicked();
-
     void on_helpBtn_clicked();
 
 signals:
@@ -55,8 +49,8 @@ signals:
 private:
     Ui::CopyPickDlg *ui;
     void initTokenMap();
-    bool isToken(const QMap<QString,QString>& map, QString tokenString, int pos);
-    QString parseTokenString(QFileInfo info, const QMap<QString,QString>& map, QString tokenString);
+    bool isToken(QString tokenString, int pos);
+    QString parseTokenString(QFileInfo info, QString tokenString);
     void accept();
     void buildFileNameSequence();
     void updateExistingSequence();
@@ -85,11 +79,15 @@ private:
     QString pathToBaseFolder;
     QString folderBase;
     QString baseFolderDescription;
-    QString fileNameDatePrefix;
-    QString fileNameSequence;
+//    QString fileNameDatePrefix;
+//    QString fileNameSequence;
+//    QString fileNameBase;
     QString fileSuffix;
+    int sequenceWidth;
+    int sequenceStart;
+    int sequenceCount;
 
-    QString created;
+//    QString created;
     QString year;
     QString month;
     QDateTime createdDate;
