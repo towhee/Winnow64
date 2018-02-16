@@ -48,7 +48,17 @@ void TokenList::startDrag()
 
 /* TokenEdit is a subclass of QTextEdit to manage tokenized text. It tokenizes
 dragged text in insertFromMimeData and has a parse function to use the tokens
-to look up corresponding metadata.
+to look up corresponding metadata.  The keys in tokenMap are the available
+tokens, while the values in tokenMap are example metadata to show an example
+result as the template string is constructed.
+
+Some tokenMap items:
+
+    tokenMap["YYYY"] = "2018";
+    tokenMap["YY"] = "18";
+    tokenMap["MONTH"] = "JANUARY";
+    tokenMap["Month"] = "January";
+
 */
 
 TokenEdit::TokenEdit(QWidget *parent) :
@@ -66,6 +76,10 @@ TokenEdit::TokenEdit(QWidget *parent) :
 
 QString TokenEdit::parse()
 {
+/*
+Convert the token string into the metadata it represents. In this case, using
+the example values contained in tokenMap.
+*/
     QString s;
     int i = 0;
     while (i < textDoc->characterCount()) {
@@ -84,6 +98,13 @@ QString TokenEdit::parse()
 
 bool TokenEdit::isToken(int pos)
 {
+/*
+Report if the text cursor is in a token.  If it is, set the token item, and the
+position of the start and end of the token.  This is used to select the token.
+When the token is selected the right and left arrow jump across the entire token
+instead of moving through each character in the token.  Delete and backspace
+removes the entire selection which removes the token.
+*/
     QTextCursor cursor;
     QChar ch = textDoc->characterAt(pos);
     if (ch.unicode() == 8233) return false;
@@ -129,6 +150,7 @@ void TokenEdit::showEvent(QShowEvent *event)
     tokenFormat.setForeground(QColor(Qt::white));
     setTextColor(Qt::white);
     setStyleSheet(QStringLiteral("background-image: url(:/images/tokenBackground.png)"));
+    parse();
 }
 
 void TokenEdit::selectToken(int position)
@@ -186,7 +208,7 @@ void TokenEdit::insertFromMimeData(const QMimeData *source)
     setTextCursor(cursor);
     lastPosition = cursor.position();
     setFocus();
-    parseUpdated(parse());
+    parse();
 }
 
 /*******************************************************************************
@@ -232,7 +254,6 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
     }
 
     // select same item as parent
-    qDebug() << "TokenDlg  row =" << index;
     ui->templatesCB->setCurrentIndex(index);
     ui->tokenList->setDragEnabled(true);
     ui->tokenList->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -252,13 +273,11 @@ TokenDlg::~TokenDlg()
 
 void TokenDlg::updateExample(QString s)
 {
-    qDebug() << "TokenDlg::updateExample";
     ui->resultLbl->setText(s);
 }
 
 void TokenDlg::updateTemplate()
 {
-    qDebug() << "TokenDlg::updateTemplate";
     QString key = ui->templatesCB->currentData(Qt::ToolTipRole).toString();
     templatesMap[key] = ui->tokenEdit->toPlainText();
 }
@@ -341,7 +360,6 @@ void TokenDlg::on_templatesCB_currentIndexChanged(int row)
 /*
 Update tokenEdit with the template token string stored in templatesMap
 */
-    qDebug() << "TokenDlg::on_templatesCB_currentIndexChanged   row =" << row;
     QString key = ui->templatesCB->itemData(row, Qt::ToolTipRole).toString();
     if (templatesMap.contains(key))
         ui->tokenEdit->setText(templatesMap.value(key));
