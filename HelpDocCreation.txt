@@ -1,0 +1,15 @@
+Create a text or html document (ms word is okay).
+
+Do not use any font formating but paragraph indents okay.
+
+Save the file in winfall/docs
+
+Add new file to Resources > winnow.qrc > Docs
+
+Create a new form as a widget.
+    In Design add a textBrowser to the widget.
+    Select the widget and set layout vertical.
+    Select the textBrowser and set the font to 12.
+    Set the text browser source to the document.
+    In the html row select the rich text editor.
+    Format the text.

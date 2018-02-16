@@ -38,7 +38,7 @@
       <widget class="QTextBrowser" name="textBrowser">
        <property name="source">
         <url>
-         <string>qrc:/Docs/ingesthelp.rtf</string>
+         <string>qrc:/Docs/Winnow help.html</string>
         </url>
        </property>
        <property name="openExternalLinks">

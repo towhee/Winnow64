@@ -109,7 +109,6 @@
         <file>images/NoImagesInFolder.png</file>
         <file>qss/winnow.css</file>
         <file>images/tokenBackground.png</file>
-        <file>Docs/ingest.htm</file>
-        <file>Docs/ingesthelp.rtf</file>
+        <file>Docs/ingesthelp.htm</file>
     </qresource>
 </RCC>

@@ -1,7 +1,6 @@
 #ifndef COPYPICKDLG_H
 #define COPYPICKDLG_H
 
-#include <QDialog>
 #include <QtWidgets>
 #include "thumbview.h"
 #include "tokendlg.h"
@@ -32,7 +31,7 @@ private slots:
     void updateFolderPath();
     void on_selectFolderBtn_clicked();
     void on_selectRootFolderBtn_clicked();
-    void on_spinBoxStartNumber_valueChanged(const QString &arg1);
+    void on_spinBoxStartNumber_valueChanged(const QString);
     void on_descriptionLineEdit_textChanged(const QString &);
     void on_autoRadio_toggled(bool checked);
     void on_pathTemplatesBtn_clicked();
@@ -72,24 +71,20 @@ private:
     int& pathTemplateSelected;
     int& filenameTemplateSelected;
 
-    QString folderPath; // rootFolderPath + folderBase + folderDescription
+    QString folderPath; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
     QString defaultRootFolderPath;
 
     QString rootFolderPath;
-    QString pathToBaseFolder;
-    QString folderBase;
+    QString fromRootToBaseFolder;
     QString baseFolderDescription;
-//    QString fileNameDatePrefix;
-//    QString fileNameSequence;
-//    QString fileNameBase;
-    QString fileSuffix;
-    int sequenceWidth;
-    int sequenceStart;
-    int sequenceCount;
+    QString folderBase;
 
-//    QString created;
-    QString year;
-    QString month;
+    QString fileSuffix;
+
+    int seqWidth;
+    int seqStart;
+    int seqNum;
+
     QDateTime createdDate;
 
     int fileCount;

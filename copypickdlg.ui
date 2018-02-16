@@ -42,6 +42,9 @@
      <pointsize>10</pointsize>
     </font>
    </property>
+   <property name="toolTip">
+    <string/>
+   </property>
    <property name="title">
     <string>Images will be copied and renamed to</string>
    </property>
@@ -149,6 +152,9 @@
      <font>
       <pointsize>10</pointsize>
      </font>
+    </property>
+    <property name="toolTip">
+     <string/>
     </property>
     <property name="styleSheet">
      <string notr="true">color:rgb(180,180,120)</string>
@@ -265,6 +271,9 @@
       <pointsize>10</pointsize>
      </font>
     </property>
+    <property name="toolTip">
+     <string/>
+    </property>
     <property name="styleSheet">
      <string notr="true">color:rgb(180,180,120)</string>
     </property>
@@ -325,6 +334,9 @@
      <font>
       <pointsize>10</pointsize>
      </font>
+    </property>
+    <property name="toolTip">
+     <string/>
     </property>
     <property name="frameShape">
      <enum>QFrame::Box</enum>
@@ -438,6 +450,9 @@
       <pointsize>10</pointsize>
      </font>
     </property>
+    <property name="toolTip">
+     <string/>
+    </property>
     <property name="styleSheet">
      <string notr="true">color:rgb(180,180,120)</string>
     </property>
@@ -463,6 +478,9 @@
      <pointsize>10</pointsize>
     </font>
    </property>
+   <property name="toolTip">
+    <string/>
+   </property>
    <property name="value">
     <number>0</number>
    </property>
@@ -483,6 +501,9 @@
     <font>
      <pointsize>10</pointsize>
     </font>
+   </property>
+   <property name="toolTip">
+    <string/>
    </property>
    <property name="title">
     <string>Select destination folder</string>
@@ -507,7 +528,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the folder where you wish to copy the picks. This will override the root folder selection.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Folder&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:  &lt;span style=&quot; color:#fc0107;&quot;&gt;//users/username/Pictures/Harry Birthday/&lt;/span&gt;&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
     <property name="text">
      <string> Folder</string>
@@ -537,7 +558,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
     <property name="text">
      <string>Destination folder:</string>
@@ -562,6 +583,9 @@
       <bold>false</bold>
      </font>
     </property>
+    <property name="toolTip">
+     <string/>
+    </property>
     <property name="text">
      <string>Automatically generate destination folder from root folder</string>
     </property>
@@ -581,7 +605,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
    </widget>
    <widget class="QRadioButton" name="manualRadio">
@@ -600,6 +624,9 @@
       <bold>false</bold>
      </font>
     </property>
+    <property name="toolTip">
+     <string/>
+    </property>
     <property name="text">
      <string>Manually select destination folder</string>
     </property>
@@ -617,6 +644,9 @@
      <font>
       <pointsize>10</pointsize>
      </font>
+    </property>
+    <property name="toolTip">
+     <string/>
     </property>
     <property name="styleSheet">
      <string notr="true"/>
@@ -645,7 +675,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt; root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;NOTE: If the image folder has been selected manually (Folder Button) then that will override the auto folder selection if &amp;quot;Mauually select folder&amp;quot; is checked.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
     <property name="text">
      <string>Root Folder</string>
@@ -675,7 +705,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt; root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;NOTE: If the image folder has been selected manually (Folder Button) then that will override the auto folder selection if &amp;quot;Mauually select folder&amp;quot; is checked.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
     <property name="frameShape">
      <enum>QFrame::Box</enum>
@@ -699,7 +729,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
     <property name="styleSheet">
      <string notr="true"/>
@@ -726,7 +756,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
     <property name="text">
      <string>Append Description:</string>
@@ -743,6 +773,9 @@
       <width>610</width>
       <height>1</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string/>
     </property>
     <property name="styleSheet">
      <string notr="true">background:rgb(95,95,95)</string>
@@ -769,7 +802,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
     <property name="text">
      <string>Template:</string>
@@ -786,6 +819,9 @@
       <width>321</width>
       <height>26</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string/>
     </property>
     <property name="currentText">
      <string/>
@@ -808,7 +844,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the &lt;span style=&quot; font-weight:600;&quot;&gt;root folder&lt;/span&gt; where your images reside. A new folder will be created in this root folder. The new folder will have the format YYYY-MM-DD_Description.&lt;/p&gt;&lt;p&gt;NOTE: If the image folder has been selected (Folder Button) then that will override the root folder selection.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Root Folder&lt;/span&gt; + &lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base &lt;/span&gt;+ &lt;span style=&quot; color:#fd8008;&quot;&gt;Folder Description&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base&lt;/span&gt; and &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;//user/username/pictures/2017-10/&lt;/span&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;/&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
     <property name="toolTipDuration">
      <number>-3</number>
@@ -835,6 +871,9 @@
       <height>25</height>
      </rect>
     </property>
+    <property name="toolTip">
+     <string/>
+    </property>
     <property name="text">
      <string>How this works</string>
     </property>
@@ -854,6 +893,9 @@
      <pointsize>10</pointsize>
     </font>
    </property>
+   <property name="toolTip">
+    <string/>
+   </property>
    <property name="title">
     <string>File name and sequencing</string>
    </property>
@@ -865,6 +907,9 @@
       <width>391</width>
       <height>20</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string/>
     </property>
     <property name="styleSheet">
      <string notr="true"/>
@@ -890,6 +935,9 @@
       <pointsize>10</pointsize>
      </font>
     </property>
+    <property name="toolTip">
+     <string/>
+    </property>
     <property name="text">
      <string>Start sequence from:</string>
     </property>
@@ -909,7 +957,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;The &lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;sequence&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt; is appended to the File Base to make the file name that will contain the images. The file name will be formated YYYY-MM-DD_Sequence. For example &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#fc02ff;&quot;&gt;_0089&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;.&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;cr2&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;If the folder already exists the sequence start number will default to one greater than the highest sequence found in the folder.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
     <property name="minimum">
      <number>1</number>
@@ -933,7 +981,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;How auto-generate folder works:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;How the file path is built:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;Root Folder + Folder Path + Folder Base + Folder Description + File Base + Sequence + Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Root folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: root where your images reside ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures or E:/&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder Path&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;:  heirarchical structure ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018/2018-02&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Folder&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  the folder where the images will be copied in the form FolderBase_Description:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;/&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt; Folder base&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;8018-02-22&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#000000;&quot;&gt;Folder description&lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#000000;&quot;&gt;: Description ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;Paris&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;File name&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;:  YYYY-MM-DD_XXXX.cr2  ie &lt;/span&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#0000ff;&quot;&gt;//user/username/pictures/2018/2018-02/2018-02-22_Paris/2018-02-22_0089.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
     <property name="text">
      <string>Template:</string>
@@ -950,6 +998,9 @@
       <width>321</width>
       <height>26</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string/>
     </property>
    </widget>
    <widget class="QPushButton" name="filenameTemplatesBtn">
@@ -969,7 +1020,7 @@
      </font>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the &lt;span style=&quot; font-weight:600;&quot;&gt;root folder&lt;/span&gt; where your images reside. A new folder will be created in this root folder. The new folder will have the format YYYY-MM-DD_Description.&lt;/p&gt;&lt;p&gt;NOTE: If the image folder has been selected (Folder Button) then that will override the root folder selection.&lt;/p&gt;&lt;p&gt;How the file path is built:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;Root Folder&lt;/span&gt; + &lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base &lt;/span&gt;+ &lt;span style=&quot; color:#fd8008;&quot;&gt;Folder Description&lt;/span&gt; + &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; + &lt;span style=&quot; color:#fc02ff;&quot;&gt;Sequence&lt;/span&gt; + &lt;span style=&quot; color:#996633;&quot;&gt;Suffix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;Folder Base&lt;/span&gt; and &lt;span style=&quot; color:#0000ff;&quot;&gt;File Base&lt;/span&gt; = YYYY-MM-DD&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#fc0107;&quot;&gt;//user/username/pictures/2017-10/&lt;/span&gt;&lt;span style=&quot; color:#197a17;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fd8008;&quot;&gt;_Paris&lt;/span&gt;/&lt;span style=&quot; color:#0000ff;&quot;&gt;2017-10-18&lt;/span&gt;&lt;span style=&quot; color:#fc02ff;&quot;&gt;_0001&lt;/span&gt;&lt;span style=&quot; color:#996633;&quot;&gt;.cr2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string/>
     </property>
     <property name="text">
      <string>Edit template(s)</string>
@@ -999,11 +1050,14 @@
      <pointsize>10</pointsize>
     </font>
    </property>
+   <property name="toolTip">
+    <string/>
+   </property>
    <property name="text">
     <string>632 files using 830MB</string>
    </property>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>480</x>
@@ -1011,6 +1065,9 @@
      <width>195</width>
      <height>30</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string/>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
@@ -1020,6 +1077,9 @@
         <width>93</width>
         <height>0</height>
        </size>
+      </property>
+      <property name="toolTip">
+       <string/>
       </property>
       <property name="text">
        <string>Cancel</string>
@@ -1033,6 +1093,9 @@
         <width>93</width>
         <height>0</height>
        </size>
+      </property>
+      <property name="toolTip">
+       <string/>
       </property>
       <property name="text">
        <string>Okay</string>

@@ -85,7 +85,6 @@ FORMS += \
     appdlg.ui \
     copypickdlg.ui \
     helpform.ui \
-    helpingest.ui \
     introduction.ui \
     message.ui \
     metadatareport.ui \
@@ -96,7 +95,8 @@ FORMS += \
     welcome.ui \
     workspacedlg.ui \
     zoomdlg.ui \
-    Dialogs/renamedlg.ui
+    Dialogs/renamedlg.ui \
+    helpingest.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns
@@ -112,7 +112,8 @@ DISTFILES += \
     xmp.txt \
     _ToDo.txt \
     metadata.txt \
-    Tokens.txt
+    Tokens.txt \
+    HelpDocCreation.txt
 
 #macx {
 #    QMAKE_MAC_SDK = macosx10.12

@@ -6,7 +6,7 @@
 Files are copied to a destination based on building a file path consisting of:
 
       Root Folder                   (rootFolderPath)
-    + Path to base folder           (pathToBaseFolder) source pathTemplateString
+    + Path to base folder           (fromRootToBaseFolder) source pathTemplateString
     + Base Folder Description       (baseFolderDescription)
     + File Name                     (fileBaseName)     source filenameTemplateString
     + File Suffix                   (fileSuffix)
@@ -14,25 +14,14 @@ Files are copied to a destination based on building a file path consisting of:
     ie E:/2018/201802/2018-02-08 Rory birthday/2018-02-08_0001.NEF
 
     rootFolderPath:         ie "E:/" where all the images are located
-    pathToBaseFolder:       ie "2018/201802/2018-02-08" from the path template
-    baseFolderDescription:  ie "Rory birthday" a description appended to the pathToBaseFolder
+    fromRootToBaseFolder:   ie "2018/201802/2018-02-08" from the path template
+    baseFolderDescription:  ie " Rory birthday" a description appended to the pathToBaseFolder
     fileBaseName:           ie "2018-02-08_0001" from the filename template
     fileSuffix:             ie ".NEF"
 
     folderPath:             ie "E:/2018/201802/2018-02-08 Rory birthday/"
-                            where current images are to be copied YYYY-MM-DD_Description
-
-
-    --------------- was this ---------------
-
-    Root Folder + Path to base folder + File Base Name + File Sequence + File Suffix
-
-    Root Folder: where all the images are located ie e:\ or users/pictures
-    PathToBaseFolder: ie e:/YYYY/YYMM
-    Folder: where current images are to be copied YYYY-MM-DD_Description
-    File Base Name: YYYY-MM-DD (fileNameDatePrefix)
-    File Sequence: _XXXX
-    File Suffix: ie .NEF
+        = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
+        = the copy to destination
 */
 
 CopyPickDlg::CopyPickDlg(QWidget *parent,
@@ -56,7 +45,6 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
                          isAuto(isAuto),
                          ui(new Ui::CopyPickDlg)
 {
-    qDebug() << "CopyPickDlg::CopyPickDlg";
     ui->setupUi(this);
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
@@ -73,11 +61,9 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
     ui->statsLabel->setText(s1 + s2 + s3 + " MB");
 
     ui->rootFolderLabel->setText(rootFolderPath);
+    ui->rootFolderLabel->setToolTip(ui->rootFolderLabel->text());
 
     // initialize templates and tokens
-    qDebug() << "CopyPickDlg::CopyPickDlg:  "
-             << "pathTemplateSelected" << pathTemplateSelected
-             << "filenameTemplateSelected" << filenameTemplateSelected;
     initTokenMap();
     QMap<QString, QString>::iterator i;
     if (pathTemplatesMap.count() == 0) {
@@ -96,6 +82,7 @@ CopyPickDlg::CopyPickDlg(QWidget *parent,
         ui->filenameTemplatesCB->addItem(i.key());
     ui->filenameTemplatesCB->setCurrentIndex(filenameTemplateSelected);
 
+    // isAuto uses tokens, else use manual dest folder choice
     if (isAuto) {
         ui->descriptionLineEdit->setFocus();
         ui->autoRadio->setChecked(true);
@@ -115,7 +102,6 @@ CopyPickDlg::~CopyPickDlg()
 
 void CopyPickDlg::accept()
 {
-    qDebug() << "CopyPickDlg::accept";
     QDir dir(folderPath);
     if (!dir.exists()) {
         if(!dir.mkpath(folderPath)) {
@@ -125,20 +111,28 @@ void CopyPickDlg::accept()
             return;
         }
     }
-    ui->progressBar->setVisible(true);
-    QString prefix = metadata->getCopyFileNamePrefix(pickList.at(0).absoluteFilePath());
 
+    QString key = ui->filenameTemplatesCB->currentText();
+    QString tokenString;
+    if (filenameTemplatesMap.contains(key))
+        tokenString = filenameTemplatesMap[key];
+    else {
+        // add message explaining failure
+        return;
+    }
+
+    // copy picked images
     for (int i=0; i < pickList.size(); ++i) {
         int progress = (i+1)*100/(pickList.size()+1);
         ui->progressBar->setValue(progress);
         qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
-        int seqNum = ui->spinBoxStartNumber->value() + i;
-        QString sequence = "_" + QString("%1").arg(seqNum, 4 , 10, QChar('0'));
-        QString suffix = "." + fileInfo.completeSuffix();
         QString source = fileInfo.absoluteFilePath();
-        QString destination = folderPath + "/" + prefix + sequence + suffix;
-//        qDebug() << "Copying " << source << " to " << destination;
+        // seqNum is required by parseTokenString
+        seqNum =  ui->spinBoxStartNumber->value() + i;
+        QString fileName =  parseTokenString(pickList.at(i), tokenString);
+        QString suffix = "." + fileInfo.completeSuffix();
+        QString destination = folderPath + fileName + suffix;
         QFile::copy(source, destination);
     }
     QDialog::accept();
@@ -146,7 +140,6 @@ void CopyPickDlg::accept()
 
 void CopyPickDlg::updateExistingSequence()
 {
-    qDebug() << "CopyPickDlg::updateExistingSequence";
     QDir dir(folderPath);
     if(dir.exists()) {
         int sequenceNum = getSequenceStart(folderPath);
@@ -166,7 +159,6 @@ void CopyPickDlg::updateExistingSequence()
 
 void CopyPickDlg::on_selectFolderBtn_clicked()
 {
-    qDebug() << "CopyPickDlg::on_selectFolderBtn_clicked";
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     QString s;
     s = QFileDialog::getExistingDirectory
@@ -175,6 +167,7 @@ void CopyPickDlg::on_selectFolderBtn_clicked()
     if (s.length() > 0) {
         folderPath = s;
         ui->manualFolderLabel->setText(folderPath);
+        ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
     }
     buildFileNameSequence();
     updateExistingSequence();
@@ -184,22 +177,18 @@ void CopyPickDlg::on_selectFolderBtn_clicked()
 
 void CopyPickDlg::on_selectRootFolderBtn_clicked()
 {
-    qDebug() << "CopyPickDlg::on_selectRootFolderBtn_clicked";
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
-//    QString rootFolderPath;
     rootFolderPath = QFileDialog::getExistingDirectory
         (this, tr("Choose Root Folder"), root,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
     if (rootFolderPath.length() > 0) {
         ui->rootFolderLabel->setText(rootFolderPath);
+        ui->rootFolderLabel->setToolTip(ui->rootFolderLabel->text());
     }
 
     // send to MW where it will be saved in QSettings
     emit updateIngestParameters(rootFolderPath, isAuto);
-
-    pathToBaseFolder = rootFolderPath + "/" + year + month + "/";
-//    ui->parentFolderLabel->setText(pathToBaseFolder);
 
     updateFolderPath();
     updateExistingSequence();
@@ -209,9 +198,8 @@ void CopyPickDlg::on_selectRootFolderBtn_clicked()
 
 bool CopyPickDlg::isToken(QString tokenString, int pos)
 {
-    qDebug() << "CopyPickDlg::isToken  tokenString =" << tokenString;
     QChar ch = tokenString.at(pos);
-    if (ch.unicode() == 8233) return false;
+    if (ch.unicode() == 8233) return false;  // Paragraph Separator
     if (ch == "{") return false;
     if (pos == 0) return false;
 
@@ -239,14 +227,12 @@ bool CopyPickDlg::isToken(QString tokenString, int pos)
             for (int j = startPos; j < i; j++) {
                 token.append(tokenString.at(j));
             }
-//            qDebug() << "tokenMap.contains(token)" << token;
             if (tokenMap.contains(token)) {
                 currentToken = token;
                 tokenStart = startPos - 1;
                 tokenEnd = i + 1;
                 return true;
             }
-//            qDebug() << "token =" << token;
         }
     }
     return false;
@@ -255,17 +241,13 @@ bool CopyPickDlg::isToken(QString tokenString, int pos)
 QString CopyPickDlg::parseTokenString(QFileInfo info,
                                       QString tokenString)
 {
-    qDebug() << "CopyPickDlg::parseTokenString";
     QString fPath = info.absoluteFilePath();
     createdDate = metadata->getCreatedDate(fPath);
     QString s;
     int i = 0;
-//    for (int x = 0; x < tokenString.length(); x++)
-//        qDebug() << "x =" << x << "char =" << tokenString.at(x);
     while (i < tokenString.length()) {
         if (isToken(tokenString, i + 1)) {
             QString tokenResult;
-//            qDebug() << "currentToken =" << currentToken;
             // get metadata related to token
             if (currentToken == "YYYY")
                 tokenResult = createdDate.date().toString("yyyy");
@@ -319,10 +301,10 @@ QString CopyPickDlg::parseTokenString(QFileInfo info,
                 tokenResult = metadata->getISO(fPath);
             if (currentToken == "FOCAL LENGTH")
                 tokenResult = metadata->getFocalLength(fPath);
-            // sequence from XX to XXXXXXX.  sequnceCount must be pre-assigned.
+            // sequence from XX to XXXXXXX.  seqNum must be pre-assigned.
             if (currentToken.left(2) == "XX") {
-                sequenceWidth = currentToken.length();
-                tokenResult = QString("%1").arg(sequenceCount, sequenceWidth , 10, QChar('0'));
+                seqWidth = currentToken.length();
+                tokenResult = QString("%1").arg(seqNum, seqWidth , 10, QChar('0'));
             }
 
             s.append(tokenResult);
@@ -338,36 +320,36 @@ QString CopyPickDlg::parseTokenString(QFileInfo info,
 
 void CopyPickDlg::updateFolderPath()
 {
-    qDebug() << "CopyPickDlg::updateFolderPath";
     if (ui->autoRadio->isChecked() || isInitializing) {
         baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
                 ? ui->descriptionLineEdit->text() : "";
-        folderPath = pathToBaseFolder + baseFolderDescription + "/";
+        folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
         ui->folderLabel->setText(folderPath);
+        ui->folderLabel->setToolTip(ui->folderLabel->text());
     }
     else {
         folderPath = ui->manualFolderLabel->text() + "/";
     }
-//    buildFileNameSequence();
+    updateExistingSequence();
 }
 
 void CopyPickDlg::buildFileNameSequence()
 {
-    qDebug() << "CopyPickDlg::buildFileNameSequence";
     if (isInitializing) return;
     // build filename from tokenString
     QString key = ui->filenameTemplatesCB->currentText();
     QString tokenString;
     if (filenameTemplatesMap.contains(key))
         tokenString = filenameTemplatesMap[key];
-    // sequenceCount is required by parseTokenString
-    sequenceCount =  ui->spinBoxStartNumber->value();
+    // seqNum is required by parseTokenString
+    seqStart =  ui->spinBoxStartNumber->value();
+    seqNum = seqStart;
     QString fileName1 =  parseTokenString(pickList.at(0), tokenString);
-    sequenceCount++;
+    seqNum++;
     QString fileName2;
     if (fileCount > 1)
         fileName2 = parseTokenString(pickList.at(1), tokenString);
-    sequenceCount = sequenceStart + fileCount;
+    seqNum = seqStart + fileCount - 1;
     QString fileNameN = parseTokenString(pickList.at(fileCount - 1), tokenString);
     ui->folderPathLabel->setText(folderPath + fileName1);
     ui->folderPathLabel->setToolTip(folderPath + fileName1);
@@ -387,22 +369,18 @@ void CopyPickDlg::buildFileNameSequence()
 
 void CopyPickDlg::on_descriptionLineEdit_textChanged(const QString& /*arg1*/)
 {
-    qDebug() << "CopyPickDlg::on_descriptionLineEdit_textChanged";
     updateFolderPath();
     ui->autoRadio->setChecked(true);
     updateStyleOfFolderLabels();
 }
 
-void CopyPickDlg::on_spinBoxStartNumber_valueChanged(const QString &arg1)
+void CopyPickDlg::on_spinBoxStartNumber_valueChanged(const QString /* &arg1 */)
 {
-    qDebug() << "CopyPickDlg::on_spinBoxStartNumber_valueChanged";
-    arg1.isEmpty();             // suppress compiler warning
     updateFolderPath();
 }
 
 int CopyPickDlg::getSequenceStart(const QString &path)
 {
-    qDebug() << "CopyPickDlg::getSequenceStart";
     QDir dir(path);
     if (!dir.exists()) return 0;
 
@@ -438,14 +416,12 @@ int CopyPickDlg::getSequenceStart(const QString &path)
                 }
             }
         }
-//        qDebug() << fName << fName.indexOf(".", 0) << seq << sequence;
     }
     return sequence;
 }
 
 void CopyPickDlg::updateStyleOfFolderLabels()
 {
-    qDebug() << "CopyPickDlg::updateStyleOfFolderLabels";
     if (ui->autoRadio->isChecked()) {
         ui->folderLabel->setStyleSheet("QLabel{color:rgb(180,180,120);}");
         ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
@@ -458,7 +434,6 @@ void CopyPickDlg::updateStyleOfFolderLabels()
 
 void CopyPickDlg::on_autoRadio_toggled(bool checked)
 {
-    qDebug() << "CopyPickDlg::on_autoRadio_toggled";
     if (checked) {      // auto
         isAuto = true;
         if (ui->folderLabel->text().length() > 0) {
@@ -519,37 +494,25 @@ void CopyPickDlg::initTokenMap()
 
 void CopyPickDlg::on_pathTemplatesCB_currentIndexChanged(const QString &arg1)
 {
-    qDebug() << "CopyPickDlg::on_pathTemplatesCB_currentIndexChanged";
     if (arg1 == "") return;
     QString tokenString = pathTemplatesMap[arg1];
-    pathToBaseFolder = rootFolderPath + parseTokenString(pickList.at(0), tokenString);
+    fromRootToBaseFolder = parseTokenString(pickList.at(0), tokenString);
     if (!isInitializing) pathTemplateSelected = ui->pathTemplatesCB->currentIndex();
-
-//    qDebug() << "on_pathTemplatesCB_currentIndexChanged  pathTemplateSelected ="
-//             << pathTemplateSelected
-//             << "pathTemplatesMap =" << pathTemplatesMap;
-
     updateFolderPath();
-    sequenceStart = getSequenceStart(folderPath);
+    seqStart = getSequenceStart(folderPath);
     updateExistingSequence();
-
 }
 
 void CopyPickDlg::on_filenameTemplatesCB_currentIndexChanged(const QString &arg1)
 {
-    qDebug() << "CopyPickDlg::on_filenameTemplatesCB_currentIndexChanged";
     if (arg1 == "") return;
     QString tokenString = filenameTemplatesMap[arg1];
     if (!isInitializing) filenameTemplateSelected = ui->filenameTemplatesCB->currentIndex();
-//    fileNameBase = parseTokenString(pickList.at(0), filenameTemplatesMap, tokenString);
-//    sequenceCount = getSequenceStart(folderPath);
     updateExistingSequence();
-//    buildFileNameSequence();
 }
 
 void CopyPickDlg::on_pathTemplatesBtn_clicked()
 {
-    qDebug() << "CopyPickDlg::on_pathTemplatesBtn_clicked";
     // setup TokenDlg
     QString title = "Token Editor - Path from Root to Destination Folder";
     int index = ui->pathTemplatesCB->currentIndex();
@@ -574,7 +537,6 @@ void CopyPickDlg::on_pathTemplatesBtn_clicked()
 
 void CopyPickDlg::on_filenameTemplatesBtn_clicked()
 {
-    qDebug() << "CopyPickDlg::on_filenameTemplatesBtn_clicked";
     // setup TokenDlg
     QString title = "Token Editor - Destination File Name";
     int index = ui->filenameTemplatesCB->currentIndex();
@@ -599,7 +561,7 @@ void CopyPickDlg::on_filenameTemplatesBtn_clicked()
 
 void CopyPickDlg::on_helpBtn_clicked()
 {
-    QDialog *helpDoc = new QDialog;
+    QWidget *helpDoc = new QWidget;
     Ui::helpIngest ui;
     ui.setupUi(helpDoc);
     helpDoc->show();

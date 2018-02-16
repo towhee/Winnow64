@@ -77,13 +77,11 @@ public:
 public slots:
     void updateExample(QString s);
     void updateTemplate();
-//    void updateTokenEdit(QModelIndex idx);
 
 private slots:
     void on_okBtn_clicked();
     void on_deleteBtn_clicked();
     void on_newBtn_clicked();
-    void on_templatesCB_activated(const QString &arg1);
     void on_renameBtn_clicked();
     void on_templatesCB_currentIndexChanged(int row);
 
@@ -93,7 +91,6 @@ private:
     QMap<QString, QString>& templatesMap;
     int &index;
     QString &currentKey;
-//    QString editTemplateName(QString dlgTitle, int row);
     QStringList existingTemplates(int row = -1);
 };
 
