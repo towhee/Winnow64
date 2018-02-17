@@ -3677,8 +3677,11 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-    updateExternalApps();
-//    metadata->readMetadata(true, thumbView->getCurrentFilename());
+    metadata->readMetadata(true, thumbView->getCurrentFilename());
+//    QByteArray xmp = metadata->getXMP(thumbView->getCurrentFilename());
+//    std::cout << xmp.toStdString() << std::endl;
+
+    //    updateExternalApps();
 
     //    setCentralMessage("A message to central");
 //    qDebug() << "thumbView->getCurrentFilename()" << thumbView->getCurrentFilename();
@@ -4966,7 +4969,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
         selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
         invertSelectionAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
-        refineAction->setShortcut(QKeySequence("Ctrl+Alt+R"));
+        refineAction->setShortcut(QKeySequence("R"));
         pickAction->setShortcut(QKeySequence("`"));
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
         ingestAction->setShortcut(QKeySequence("Q"));

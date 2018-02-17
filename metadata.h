@@ -1,19 +1,22 @@
 #ifndef METADATA_H
 #define METADATA_H
 
-#include <QObject>
-#include <QCoreApplication>
-#include <QXmlStreamReader>
-#include <QFile>
-#include <QFileInfo>
-#include <QDebug>
-#include <QHash>
-#include <QList>
-#include <QtEndian>
+#include <QtWidgets>
+#include <QtCore>
+#include <QtXmlPatterns>
+//#include <QObject>
+//#include <QCoreApplication>
+//#include <QXmlStreamReader>
+//#include <QFile>
+//#include <QFileInfo>
+//#include <QDebug>
+//#include <QHash>
+//#include <QList>
+//#include <QtEndian>
 #include <iostream>
 #include <iomanip>
-#include <QElapsedTimer>
-#include <QThread>
+//#include <QElapsedTimer>
+//#include <QThread>
 
 #include "global.h"
 #include "ui_metadatareport.h"
@@ -41,6 +44,7 @@ public:
     ulong lengthThumbJPG;
     ulong offsetSmallJPG;
     ulong lengthSmallJPG;
+    ulong offsetXMP;
     int orientation;
     ulong width;
     ulong height;
@@ -92,6 +96,7 @@ public:
     ulong lengthThumbJPG;
     ulong offsetSmallJPG;
     ulong lengthSmallJPG;
+    ulong offsetXMP;
     int orientation;
     ulong width;
     ulong height;
@@ -180,6 +185,7 @@ public:
     QString getErr(const QString &imageFileName);
     void setErr(const QString &imageFileName, const QString &err);
     QString getCopyFileNamePrefix(const QString &imageFileName);
+    QByteArray getXMP(const QString &imageFileName);
 
     bool okToReadXMP;
     bool readEssentialMetadata;
@@ -224,6 +230,7 @@ private:
     float getReal(long offset);
     ulong find(QString s, ulong offset, ulong range);
     bool readXMP(ulong offset);
+    QByteArray extractXMP(ulong offset);
     void readIPTC(ulong offset);
     ulong readIFD(QString hdr, ulong offset);
     bool readIRB(ulong offset);

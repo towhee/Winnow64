@@ -4,8 +4,9 @@ INCLUDEPATH += .
 INCLUDEPATH += Dialogs
 INCLUDEPATH += MacOS
 
-QT += gui-private
+#QT += gui-private
 QT += widgets
+QT += xmlpatterns
 
 HEADERS += \
     bookmarks.h \

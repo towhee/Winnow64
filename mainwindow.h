@@ -55,8 +55,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.904";
-    QString versionDetail = "Basic display engine completed";
+    QString version = "0.910";
+    QString versionDetail = "Token editor completed";
 
     bool isShift;               // used when opening if shift key pressed
 
