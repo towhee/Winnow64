@@ -1319,7 +1319,7 @@ void Metadata::reportMetadata()
     rpt.setFieldWidth(20); rpt << "lengthThumbJPG" << lengthThumbJPG;   rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "offsetSmallJPG" << offsetSmallJPG;   rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "lengthSmallJPG" << lengthSmallJPG;   rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "offsetXMP"      << offsetXMP;        rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "offsetXMP"      << offsetXmp;        rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "orientation"    << orientation;      rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "width"          << width;            rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "height"         << height;           rpt.setFieldWidth(0); rpt << "\n";
@@ -1340,28 +1340,31 @@ void Metadata::reportMetadata()
     rpt.setFieldWidth(20); rpt << "shutterCount"   << shutterCount;     rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "nikonLensCode"  << nikonLensCode;    rpt.setFieldWidth(0); rpt << "\n";
 
-    rpt << "\nXMP Extract:\n\n";
-    QByteArray xmpByteArray = extractXMP(offsetXMP);
-    QString xmp = QTextCodec::codecForMib(106)->toUnicode(xmpByteArray);
-    QXmlQuery query;
-    query.setQuery(xmp);
+    if (isXmp) {
+        rpt << "\nXMP Extract:\n\n";
+        if (!okToReadXmp) xmp = extractXmp(offsetXmp);
+        QString xmpString = QTextCodec::codecForMib(106)->toUnicode(xmp);
+        QXmlQuery query;
+        query.setQuery(xmpString);
 
-    // Set up the output device
-    QByteArray outArray;
-    QBuffer buffer(&outArray);
-    buffer.open(QIODevice::ReadWrite);
+        // Set up the output device
+        QByteArray outArray;
+        QBuffer buffer(&outArray);
+        buffer.open(QIODevice::ReadWrite);
 
-    QXmlFormatter formatter(query, &buffer);
-    query.evaluateTo(&formatter);
+        // format xmp
+        QXmlFormatter formatter(query, &buffer);
+        query.evaluateTo(&formatter);
 
-    xmp = QTextCodec::codecForMib(106)->toUnicode(outArray);
-    rpt << xmp;
+        xmpString = QTextCodec::codecForMib(106)->toUnicode(outArray);
+        rpt << xmpString;
+    }
 
     QDialog *dlg = new QDialog;
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
     md.textBrowser->setText(reportString);
-    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+//    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     dlg->show();
     std::cout << reportString.toStdString() << std::flush;
 }
@@ -1521,8 +1524,14 @@ QByteArray Metadata::getByteArray(ulong offset, ulong length)
     return(file.read(length));
 }
 
-ulong Metadata::find(QString s, ulong offset, ulong range)
+ulong Metadata::findInFile(QString s, ulong offset, ulong range)
 {
+/*
+Returns the file offset to the start of the search string. If not
+found returns -1.
+
+QFile file must be assigned and open.
+*/
     uint firstCharCode = static_cast<unsigned int>(s[0].unicode());
     file.seek(offset);
     for (ulong i = offset; i < offset + range; i++) {
@@ -1531,13 +1540,8 @@ ulong Metadata::find(QString s, ulong offset, ulong range)
             for (int j = 1; j < s.length(); j++) {
                 uint nextCharCode = static_cast<unsigned int>(s[j].unicode());
                 uint byte = get1(file.read(1));
-//                QString byteHex = QString::number(byte, 16).toUpper();
-//                QString byteString = QChar(byte);
-//                qDebug() << file.pos() << x << s[j] << "==>"
-//                         << byte << byteHex << byteString;
                 if (byte != nextCharCode) rejected = true;
                 if (rejected) break;
-//                if (get1(file.read(1)) != x) break;
             }
             if (!rejected) return file.pos() - s.length();
         }
@@ -1545,29 +1549,91 @@ ulong Metadata::find(QString s, ulong offset, ulong range)
     return -1;
 }
 
-QByteArray Metadata::extractXMP(ulong offset)
+int Metadata::extractXmpRating(const QString &imageFileName)
+{
+    QByteArray ss("xmp:Rating=\"");
+    if (imageFileName.length() > 0) xmp = metaCache[imageFileName].xmp;
+    if (xmp.size() > 0) {
+        int startPos = xmp.indexOf(ss);
+        if (startPos > -1) {
+            startPos += ss.length();
+            int endPos = xmp.indexOf("\"", startPos);
+            QByteArray result = xmp.mid(startPos, endPos - startPos);
+            xmpRating = QTextCodec::codecForMib(106)->toUnicode(result).toInt();
+            return xmpRating;
+        }
+    }
+    return -1;
+}
+
+QString Metadata::extractXmpLabel(const QString &imageFileName)
+{
+    QByteArray ss("xmp:Label=\"");
+    if (imageFileName.length() > 0) xmp = metaCache[imageFileName].xmp;
+    if (xmp.size() > 0) {
+        int startPos = xmp.indexOf(ss);
+        if (startPos > -1) {
+            startPos += ss.length();
+            int endPos = xmp.indexOf("\"", startPos);
+            QByteArray result = xmp.mid(startPos, endPos - startPos);
+            xmpLabel = QTextCodec::codecForMib(106)->toUnicode(result);
+            return xmpLabel;
+        }
+    }
+    return -1;
+}
+
+QString Metadata::extractXmpTitle(const QString &imageFileName)
+{
+    QByteArray ss("dc:title");
+    if (imageFileName.length() > 0) xmp = metaCache[imageFileName].xmp;
+    if (xmp.size() > 0) {
+        int startPos = xmp.indexOf(ss);
+        if (startPos > -1) {
+            startPos += ss.length();
+            startPos = xmp.indexOf("rdf:li", startPos);
+            startPos = xmp.indexOf(">", startPos) + 1;
+            int endPos = xmp.indexOf("<", startPos);
+            QByteArray result = xmp.mid(startPos, endPos - startPos);
+            xmpTitle = QTextCodec::codecForMib(106)->toUnicode(result);
+            return xmpTitle;
+        }
+    }
+    return -1;
+}
+
+void Metadata::injectXmpTitle(const QString &imageFileName, const QString &title)
+{
+    QByteArray newTitle;
+    newTitle.append(title);
+    QByteArray oldTitle;
+    if (metaCache.contains(imageFileName))
+        oldTitle.append(metaCache[imageFileName].xmpTitle);
+    if (xmpTitle.length() > 0) {
+        metaCache[imageFileName].xmp.replace(oldTitle, newTitle);
+    }
+}
+
+QByteArray Metadata::extractXmp(ulong offset)
 {
     qDebug() << "Metadata::extractXMP(ulong offset)" << offset;
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
-    // file is opened in getXMP
-    file.seek(offset + 2);
-    ulong nextOffset = file.pos() + get2(file.read(2));
-    ulong segmentLength = nextOffset - offset;
-
-    ulong xmpOffsetStart = find("<x:xmpmeta", offset + 23, segmentLength);
-    ulong xmpOffsetEnd = find("</x:xmpmeta", xmpOffsetStart + 15, segmentLength) + 12;
+    ulong segmentLength = nextOffsetXmp - offset;
+    ulong xmpOffsetStart = findInFile("<x:xmpmeta", offset + 23, segmentLength);
+    ulong xmpOffsetEnd = findInFile("</x:xmpmeta", xmpOffsetStart + 15, segmentLength) + 12;
     ulong xmpLength = xmpOffsetEnd - xmpOffsetStart;
 
+    // file is opened prior to calling this function
     file.seek(xmpOffsetStart);
-    QByteArray xmpByteArray = file.read(xmpLength);
-    QString xmp = QTextCodec::codecForMib(106)->toUnicode(xmpByteArray);
-    qDebug() << "xmpOffsetStart =" << xmpOffsetStart
-             << "\nxmpOffsetEnd =" << xmpOffsetEnd
-             << "\n"; // << xmp;
+    xmp = file.read(xmpLength);
+//    QString xmp = QTextCodec::codecForMib(106)->toUnicode(xmpByteArray);
+//    qDebug() << "xmpOffsetStart =" << xmpOffsetStart
+//             << "\nxmpOffsetEnd =" << xmpOffsetEnd
+//             << "\n"; // << xmp;
 
-    std::cout << xmpByteArray.toStdString() << std::endl;
+//    std::cout << xmpByteArray.toStdString() << std::endl;
 
-    return xmpByteArray;
+    return xmp;
 }
 
 bool Metadata::readXMP(ulong offset)
@@ -1597,8 +1663,8 @@ bool Metadata::readXMP(ulong offset)
         if (byte == 0x3C) {
             xmpOffsetStart = file.pos() - 1;
             QString s = "<?xpacket end";
-            ulong xmpOffsetEnd = find(s, xmpOffsetStart, 64555);
-            xmpOffsetEnd = find(">", xmpOffsetEnd, 100) + 2;  // 38306
+            ulong xmpOffsetEnd = findInFile(s, xmpOffsetStart, 64555);
+            xmpOffsetEnd = findInFile(">", xmpOffsetEnd, 100) + 2;  // 38306
             ulong xmpLength = xmpOffsetEnd - xmpOffsetStart;
             file.seek(xmpOffsetStart);
             xmpByteArray = file.read(xmpLength);
@@ -1972,13 +2038,16 @@ void Metadata::getSegments(ulong offset)
 /*
 The JPG file structure is based around a series of file segments.  The marker at
 the start of each segment is FFC0 to FFFE (see initSegCodeHash). The next two
-bytes is the incremental offset to the next segment.
+bytes are the incremental offset to the next segment.
 
 This function walks through all the segments and records their global offsets in
 segmentHash.  segmentHash is used by formatJPG to access the EXIF, IPTC and XMP
 segments.
+
+In addition, the XMP offset and nextOffset are set to facilitate editing XMP data.
 */
     segmentHash.clear();
+    isXmp = false;
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
     uint marker = 0xFFFF;
     while (marker > 0xFFBF) {
@@ -1990,7 +2059,12 @@ segments.
             QString segName = file.read(4);
             if (segName == "Exif") segmentHash["EXIF"] = offset;
             if (segName == "http") segName += file.read(15);
-            if (segName == "http://ns.adobe.com") segmentHash["XMP"] = offset;
+            if (segName == "http://ns.adobe.com") {
+                segmentHash["XMP"] = offset;
+                offsetXmp = offset;
+                nextOffsetXmp = nextOffset;
+                isXmp = true;
+            }
         }
         else if (segCodeHash.contains(marker)) {
             segmentHash[segCodeHash[marker]] = offset;
@@ -3115,10 +3189,12 @@ bool Metadata::formatJPG()
         if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
 
     // read XMP
-    if (segmentHash.contains("XMP")) offsetXMP = segmentHash["XMP"];
-//    if (segmentHash.contains("XMP")) extractXMP(segmentHash["XMP"]);
-    if (okToReadXMP)
-        if (segmentHash.contains("XMP")) readXMP(segmentHash["XMP"]);
+    if (isXmp && okToReadXmp) {
+        xmp = extractXmp(offsetXmp);
+        xmpRating = extractXmpRating();
+        xmpLabel = extractXmpLabel();
+        xmpTitle = extractXmpTitle();
+    }
 
     if (report) reportMetadata();
     return true;
@@ -3137,7 +3213,7 @@ void Metadata::clearMetadata()
     lengthThumbJPG = 0;
     offsetSmallJPG = 0;
     lengthSmallJPG = 0;
-    offsetXMP = 0;
+    offsetXmp = 0;
     width = 0;
     height = 0;
     orientation = 0;
@@ -3591,15 +3667,35 @@ QString Metadata::getShootingInfo(const QString &imageFileName)
     return metaCache[imageFileName].shootingInfo;
 }
 
-QByteArray Metadata::getXMP(const QString &imageFileName)
+QByteArray Metadata::getXmp(const QString &imageFileName)
 {
     QByteArray xmp;
     file.setFileName(imageFileName);
     if (file.open(QIODevice::ReadOnly)) {
-        xmp = extractXMP(offsetXMP);
+        xmp = extractXmp(offsetXmp);
         file.close();
     }
     return xmp;
+}
+
+int Metadata::getXmpRating(const QString &imageFileName)
+{
+    return extractXmpRating(imageFileName);
+}
+
+QString Metadata::getXmpLabel(const QString &imageFileName)
+{
+    return extractXmpLabel(imageFileName);
+}
+
+QString Metadata::getXmpTitle(const QString &imageFileName)
+{
+    return extractXmpTitle(imageFileName);
+}
+
+void Metadata::setXmpTitle(const QString &imageFileName, const QString &title)
+{
+    injectXmpTitle(imageFileName, title);
 }
 
 QString Metadata::getErr(const QString &imageFileName)
@@ -3672,12 +3768,12 @@ void Metadata::clear()
 
 void Metadata::loadFromThread(QFileInfo &fileInfo)
 {
-    loadImageMetadata(fileInfo, true, true, false);
+    loadImageMetadata(fileInfo, true, true, false, true);
 }
 
 bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
                                  bool essential, bool nonEssential,
-                                 bool isReport)
+                                 bool isReport, bool isLoadXmp)
 {
     {
     #ifdef ISDEBUG
@@ -3692,8 +3788,8 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     // For JPG, readNonEssentialMetadata adds 10-15% time to load
     readEssentialMetadata = essential;
     readNonEssentialMetadata = nonEssential;
-    // XMP is slow, anywhere from 400 - 1000% longer to load
-    okToReadXMP = false;
+    okToReadXmp = isLoadXmp;
+    okToReadXmp = true;
 
     bool result;
     QString shootingInfo;
@@ -3708,7 +3804,13 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.lengthThumbJPG = lengthThumbJPG;
     imageMetadata.offsetSmallJPG = offsetSmallJPG;
     imageMetadata.lengthSmallJPG = lengthSmallJPG;
-    imageMetadata.offsetXMP = offsetXMP;
+    imageMetadata.offsetXmp = offsetXmp;
+    imageMetadata.nextOffsetXmp = nextOffsetXmp;
+    imageMetadata.isXmp = isXmp;
+    imageMetadata.xmpRating = xmpRating;
+    imageMetadata.xmpTitle = xmpTitle;
+    imageMetadata.xmpLabel = xmpLabel;
+    imageMetadata.xmp = xmp;
     imageMetadata.width = width;
     imageMetadata.height = height;
     imageMetadata.dimensions = QString::number(width) + "x" + QString::number(height);

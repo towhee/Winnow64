@@ -233,6 +233,8 @@ private slots:
     void setColorClass();
     void quickFilter();
     void invertFilters();
+    void refine();
+    void uncheckAllFilters();
     void sortThumbnails();
     void monitorPreference();
     void preferences(int page = -1);

@@ -1178,12 +1178,10 @@ void MW::createActions()
     refineAction = new QAction(tr("Refine"), this);
     refineAction->setObjectName("Refine");
     addAction(refineAction);
-    connect(refineAction, SIGNAL(triggered()), dm, SLOT(refine()));
+    connect(refineAction, SIGNAL(triggered()), this, SLOT(refine()));
 
     pickAction = new QAction(tr("Pick"), this);
     pickAction->setObjectName("togglePick");
-    pickAction->setCheckable(true);
-    pickAction->setChecked(false);
     addAction(pickAction);
     connect(pickAction, SIGNAL(triggered()), this, SLOT(togglePick()));
 
@@ -1342,7 +1340,7 @@ void MW::createActions()
     uncheckAllFiltersAction = new QAction(tr("Uncheck all filters"), this);
     uncheckAllFiltersAction->setObjectName("uncheckAllFilters");
     addAction(uncheckAllFiltersAction);
-    connect(uncheckAllFiltersAction, SIGNAL(triggered()), filters, SLOT(uncheckAllFilters()));
+    connect(uncheckAllFiltersAction, SIGNAL(triggered()), this, SLOT(uncheckAllFilters()));
 
     expandAllAction = new QAction(tr("Expand all filters"), this);
     expandAllAction->setObjectName("expandAll");
@@ -2980,6 +2978,28 @@ Currently this is just clearing filters ...
     if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Unchecked);
 }
 
+void MW::uncheckAllFilters()
+{
+    filters->uncheckAllFilters();
+    filterPickAction->setChecked(false);
+    filterRating1Action->setChecked(false);
+    filterRating2Action->setChecked(false);
+    filterRating3Action->setChecked(false);
+    filterRating4Action->setChecked(false);
+    filterRating5Action->setChecked(false);
+    filterRedAction->setChecked(false);
+    filterYellowAction->setChecked(false);
+    filterGreenAction->setChecked(false);
+    filterBlueAction->setChecked(false);
+    filterPurpleAction->setChecked(false);
+}
+
+void MW::refine()
+{
+    uncheckAllFilters();
+    dm->refine();
+}
+
 void MW::sortThumbnails()
 {
     {
@@ -3678,11 +3698,16 @@ void MW::reportMetadata()
     #endif
     }
     metadata->readMetadata(true, thumbView->getCurrentFilename());
-//    QByteArray xmp = metadata->getXMP(thumbView->getCurrentFilename());
+    qDebug() << "metadata->getXmpRating() =" << metadata->getXmpRating(thumbView->getCurrentFilename());
+    qDebug() << "metadata->getXmpLabel() =" << metadata->getXmpLabel(thumbView->getCurrentFilename());
+    qDebug() << "metadata->getXmpTitle() =" << metadata->getXmpTitle(thumbView->getCurrentFilename());
+    metadata->setXmpTitle(thumbView->getCurrentFilename(), "Brand new title");
+    metadata->readMetadata(true, thumbView->getCurrentFilename());
+
+
+    //    QByteArray xmp = metadata->getXmp(thumbView->getCurrentFilename());
 //    std::cout << xmp.toStdString() << std::endl;
-
     //    updateExternalApps();
-
     //    setCentralMessage("A message to central");
 //    qDebug() << "thumbView->getCurrentFilename()" << thumbView->getCurrentFilename();
 //    metadata->reportMetadataAllFiles();

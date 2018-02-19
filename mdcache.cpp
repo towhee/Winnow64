@@ -218,7 +218,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             // tried emit signal to meatdata but really slow
             // emit loadImageMetadata(fileInfo, true, true, false);
             mutex.lock();
-            if (metadata->loadImageMetadata(fileInfo, true, true, false)) {
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
                 metadataLoaded = true;
             }
             mutex.unlock();

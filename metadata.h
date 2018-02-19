@@ -44,7 +44,13 @@ public:
     ulong lengthThumbJPG;
     ulong offsetSmallJPG;
     ulong lengthSmallJPG;
-    ulong offsetXMP;
+    ulong offsetXmp;
+    ulong nextOffsetXmp;
+    bool isXmp;
+    int xmpRating;
+    QString xmpTitle;
+    QString xmpLabel;
+    QByteArray xmp;
     int orientation;
     ulong width;
     ulong height;
@@ -96,7 +102,13 @@ public:
     ulong lengthThumbJPG;
     ulong offsetSmallJPG;
     ulong lengthSmallJPG;
-    ulong offsetXMP;
+    ulong offsetXmp;
+    ulong nextOffsetXmp;
+    bool isXmp;
+    int xmpRating;
+    QString xmpTitle;
+    QString xmpLabel;
+    QByteArray xmp;
     int orientation;
     ulong width;
     ulong height;
@@ -185,9 +197,13 @@ public:
     QString getErr(const QString &imageFileName);
     void setErr(const QString &imageFileName, const QString &err);
     QString getCopyFileNamePrefix(const QString &imageFileName);
-    QByteArray getXMP(const QString &imageFileName);
+    QByteArray getXmp(const QString &imageFileName);
+    QString getXmpTitle(const QString &imageFileName);
+    void setXmpTitle(const QString &imageFileName, const QString &title);
+    int getXmpRating(const QString &imageFileName);
+    QString getXmpLabel(const QString &imageFileName);
 
-    bool okToReadXMP;
+    bool okToReadXmp;
     bool readEssentialMetadata;
     bool readNonEssentialMetadata;
     bool foundTifThumb;
@@ -228,9 +244,15 @@ private:
     ulong get4(QByteArray c);
     ulong get4(long offset);
     float getReal(long offset);
-    ulong find(QString s, ulong offset, ulong range);
+    ulong findInFile(QString s, ulong offset, ulong range);
     bool readXMP(ulong offset);
-    QByteArray extractXMP(ulong offset);
+    int extractXmpRating(const QString &imageFileName = "");
+    void injectXmpRating(const QString &imageFileName, int &rating);
+    QString extractXmpLabel(const QString &imageFileName = "");
+    void injectXmpLabel(const QString &imageFileName, QString &label);
+    QString extractXmpTitle(const QString &imageFileName = "");
+    void injectXmpTitle(const QString &imageFileName, const QString &title);
+    QByteArray extractXmp(ulong offset);
     void readIPTC(ulong offset);
     ulong readIFD(QString hdr, ulong offset);
     bool readIRB(ulong offset);
@@ -258,8 +280,11 @@ signals:
 
 public slots:
     void loadFromThread(QFileInfo &fileInfo);
-    bool loadImageMetadata(const QFileInfo &fileInfo, bool essential = true,
-                           bool nonEssential = true, bool isReport = false);
+    bool loadImageMetadata(const QFileInfo &fileInfo,
+                           bool essential = true,
+                           bool nonEssential = true,
+                           bool isReport = false,
+                           bool isLoadXmp = false);
 
 private:
     void track(QString fPath, QString msg);
