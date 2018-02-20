@@ -77,19 +77,19 @@ QGroupBox {
     margin-top: 6px; /* leave space at the top for the title */
 }
 
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    /*subcontrol-position: top: -6px;
+    subcontrol-position: left: 6px;*/
+}
+
 QLabel {
     border: none;
 }
 
 QStatusbar::item {
     border: none;
-}
-
-QGroupBox::title {
-    subcontrol-origin: margin;
-    subcontrol-position: top center; /* position at the top center */
-    /* padding-left: 20px;
-    padding-top: -6px; */
 }
 
 QDockWidget > QWidget {

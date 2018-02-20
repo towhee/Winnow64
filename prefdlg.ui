@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>1</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -80,7 +80,7 @@
         <x>20</x>
         <y>27</y>
         <width>337</width>
-        <height>51</height>
+        <height>65</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -161,9 +161,9 @@
       <property name="geometry">
        <rect>
         <x>130</x>
-        <y>37</y>
+        <y>39</y>
         <width>64</width>
-        <height>24</height>
+        <height>18</height>
        </rect>
       </property>
       <property name="minimum">
@@ -209,9 +209,9 @@
       <property name="geometry">
        <rect>
         <x>330</x>
-        <y>37</y>
+        <y>39</y>
         <width>64</width>
-        <height>24</height>
+        <height>18</height>
        </rect>
       </property>
       <property name="minimum">
@@ -259,9 +259,9 @@
      <property name="geometry">
       <rect>
        <x>140</x>
-       <y>20</y>
+       <y>23</y>
        <width>51</width>
-       <height>24</height>
+       <height>18</height>
       </rect>
      </property>
      <property name="toolTip">
@@ -280,7 +280,7 @@
        <x>140</x>
        <y>53</y>
        <width>143</width>
-       <height>181</height>
+       <height>205</height>
       </rect>
      </property>
      <property name="font">
@@ -367,9 +367,9 @@
      <property name="geometry">
       <rect>
        <x>185</x>
-       <y>290</y>
+       <y>291</y>
        <width>171</width>
-       <height>20</height>
+       <height>18</height>
       </rect>
      </property>
      <property name="font">
@@ -391,9 +391,9 @@
      <property name="geometry">
       <rect>
        <x>360</x>
-       <y>289</y>
+       <y>290</y>
        <width>71</width>
-       <height>24</height>
+       <height>18</height>
       </rect>
      </property>
      <property name="font">
@@ -512,7 +512,7 @@
       <rect>
        <x>20</x>
        <y>320</y>
-       <width>211</width>
+       <width>351</width>
        <height>17</height>
       </rect>
      </property>
@@ -556,9 +556,9 @@
      <property name="geometry">
       <rect>
        <x>360</x>
-       <y>20</y>
+       <y>23</y>
        <width>71</width>
-       <height>24</height>
+       <height>18</height>
       </rect>
      </property>
      <property name="toolTip">
@@ -619,9 +619,9 @@
      <property name="geometry">
       <rect>
        <x>200</x>
-       <y>41</y>
+       <y>40</y>
        <width>48</width>
-       <height>24</height>
+       <height>18</height>
       </rect>
      </property>
      <property name="font">
@@ -637,9 +637,9 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>45</y>
+       <y>40</y>
        <width>111</width>
-       <height>16</height>
+       <height>18</height>
       </rect>
      </property>
      <property name="font">
@@ -1900,10 +1900,16 @@
      <property name="geometry">
       <rect>
        <x>0</x>
-       <y>10</y>
+       <y>9</y>
        <width>191</width>
-       <height>360</height>
+       <height>361</height>
       </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">border: none;</string>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
      </property>
      <property name="frameShadow">
       <enum>QFrame::Plain</enum>
