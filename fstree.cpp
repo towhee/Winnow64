@@ -151,8 +151,8 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     fsFilter = new FSFilter(fsModel);
     fsFilter->setSourceModel(fsModel);
 
-    fsModel->setFilter(QDir::AllDirs);
-//    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
+//    fsModel->setFilter(QDir::AllDirs);
+    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     setModel(fsFilter);
 
     setRootIndex(fsModel->index(0, 0));
