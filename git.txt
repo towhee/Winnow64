@@ -4,6 +4,8 @@ git clone https://github.com/towhee/Winnow64
 git config --global user.email "hillrg@hotmail.com"
 git config --global user.name "towhee"
 
+git config --global credential.helper cache     // for linux
+
 cd to Winnow64
 git status
 
