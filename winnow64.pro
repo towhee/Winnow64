@@ -114,7 +114,8 @@ DISTFILES += \
     _ToDo.txt \
     metadata.txt \
     Tokens.txt \
-    HelpDocCreation.txt
+    HelpDocCreation.txt \
+    git.txt
 
 #macx {
 #    QMAKE_MAC_SDK = macosx10.12

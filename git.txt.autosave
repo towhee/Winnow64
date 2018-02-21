@@ -1,0 +1,13 @@
+cd to parent folder for repository
+git clone https://github.com/towhee/Winnow64
+
+cd to Winnow64
+git status
+
+git add -all
+
+git commit -m "description of changes"
+
+git push origin
+
+git fetch origin

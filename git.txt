@@ -1,0 +1,10 @@
+cd to parent folder for repositore
+git clone https://github.com/towhee/Winnow64
+
+git add -all
+
+git commit -m "description of changes"
+
+git push origin
+
+git fetch origin

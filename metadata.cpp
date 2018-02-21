@@ -1580,7 +1580,7 @@ QString Metadata::extractXmpLabel(const QString &imageFileName)
             return xmpLabel;
         }
     }
-    return -1;
+    return "";
 }
 
 QString Metadata::extractXmpTitle(const QString &imageFileName)
@@ -1599,7 +1599,7 @@ QString Metadata::extractXmpTitle(const QString &imageFileName)
             return xmpTitle;
         }
     }
-    return -1;
+    return "";
 }
 
 void Metadata::injectXmpTitle(const QString &imageFileName, const QString &title)

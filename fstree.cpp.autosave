@@ -137,7 +137,7 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
 
     fsModel = new FSModel(this, metadata, showImageCount);
 #ifdef Q_OS_LINIX
-    fsModel->setRootPath("/home/rory/Pictures");
+    fsModel->setRootPath("/home");
 #endif
 #ifdef Q_OS_WIN
     fsModel->setRootPath(fileSystemModel.myComputer().toString());
