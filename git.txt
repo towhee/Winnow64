@@ -1,10 +1,16 @@
-cd to parent folder for repositore
+cd to parent folder for repository
 git clone https://github.com/towhee/Winnow64
 
-git add -all
+git config --global user.email "hillrg@hotmail.com"
+git config --global user.name "towhee"
+
+cd to Winnow64
+git status
+
+git add --all
 
 git commit -m "description of changes"
 
-git push origin
+git push // password = Qtc++2013
 
 git fetch origin
