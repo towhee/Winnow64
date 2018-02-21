@@ -1,3 +1,6 @@
+user name = towhee
+password = Qtc++2013
+
 cd to parent folder for repository
 git clone https://github.com/towhee/Winnow64
 
