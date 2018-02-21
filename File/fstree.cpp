@@ -45,8 +45,11 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
 #endif
 
 #ifdef Q_OS_LINIX
-   return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
+    return true;
+//   return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
 #endif
+
+    return true;
 }
 
 /*------------------------------------------------------------------------------
@@ -147,13 +150,12 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     dir = new QDir();
 
     fsModel = new FSModel(this, metadata);
-//    fsModel = new FSModel(this, metadata, showImageCount);
-
-//    fsModel = new QFileSystemModel;
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
+    fsModel->setRootPath("");
 
-#ifdef Q_OS_LINIX
-    fsModel->setRootPath("/home");
+#ifdef Q_OS_LINIX   // not recognized for some reason
+    fsModel->setRootPath("");
+//    fsModel->setRootPath("/home");
 #endif
 
 #ifdef Q_OS_WIN
@@ -178,8 +180,8 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     fsFilter->setSortRole(QFileSystemModel::FilePathRole);
 
     // treeview setup
-    setModel(fsFilter);
-//    setModel(fsModel);
+//    setModel(fsFilter);
+    setModel(fsModel);
 
     for (int i = 1; i <= 3; ++i)
         hideColumn(i);
