@@ -4,21 +4,13 @@
 #include <QtWidgets>
 #include <QtCore>
 #include <QtXmlPatterns>
-//#include <QObject>
-//#include <QCoreApplication>
-//#include <QXmlStreamReader>
-//#include <QFile>
-//#include <QFileInfo>
-//#include <QDebug>
-//#include <QHash>
-//#include <QList>
-//#include <QtEndian>
 #include <iostream>
 #include <iomanip>
 //#include <QElapsedTimer>
 //#include <QThread>
 
 #include "global.h"
+#include "xmp.h"
 #include "ui_metadatareport.h"
 
 class IFDData
@@ -44,13 +36,22 @@ public:
     ulong lengthThumbJPG;
     ulong offsetSmallJPG;
     ulong lengthSmallJPG;
-    ulong offsetXmp;
-    ulong nextOffsetXmp;
+
+    ulong xmpSegmentOffset;
+    ulong xmpNextSegmentOffset;
+
+    ulong xmpmetaStartOffset;
+    ulong xmpmetaEndOffset;
+    bool xmpRatingChanged;
+    bool xmpLabelChanged;
+    bool xmpTitleChanged;
     bool isXmp;
     int xmpRating;
     QString xmpTitle;
     QString xmpLabel;
-    QByteArray xmp;
+    QByteArray xmpBa;
+
+//    Xmp *xmp;
     int orientation;
     ulong width;
     ulong height;
@@ -69,6 +70,8 @@ public:
     int focalLengthNum;
     QString shootingInfo;
     QString title;
+    QString rating;
+    QString label;
     QString lens;
     QString creator;
     QString copyright;
@@ -96,22 +99,32 @@ public:
     void reportMetadata();
 
     // variables used to hold data before insertion into QMap metaCache
+    bool isPicked;
     ulong offsetFullJPG;
     ulong lengthFullJPG;
     ulong offsetThumbJPG;
     ulong lengthThumbJPG;
     ulong offsetSmallJPG;
     ulong lengthSmallJPG;
-    ulong offsetXmp;
-    ulong nextOffsetXmp;
+
+    ulong xmpSegmentOffset;
+    ulong xmpNextSegmentOffset;
+    ulong xmpmetaStartOffset;
+    ulong xmpmetaEndOffset;
+    bool xmpRatingChanged;
+    bool xmpLabelChanged;
+    bool xmpTitleChanged;
     bool isXmp;
     int xmpRating;
     QString xmpTitle;
     QString xmpLabel;
-    QByteArray xmp;
+    QByteArray xmpBa;
+
+//    Xmp xmp;
     int orientation;
     ulong width;
     ulong height;
+    QString dimensions;
     QString created;
     QDateTime createdDate;
     QString make;
@@ -124,7 +137,10 @@ public:
     int ISONum;
     QString focalLength;
     int focalLengthNum;
+    QString shootingInfo;
     QString title;
+    QString rating;
+    QString label;
     QString lens;
     QString creator;
     QString copyright;
@@ -200,8 +216,10 @@ public:
     QByteArray getXmp(const QString &imageFileName);
     QString getXmpTitle(const QString &imageFileName);
     void setXmpTitle(const QString &imageFileName, const QString &title);
-    int getXmpRating(const QString &imageFileName);
+    QString getXmpRating(const QString &imageFileName);
+    void setXmpRating(const QString &imageFileName, const QString &rating);
     QString getXmpLabel(const QString &imageFileName);
+    bool getFileWithXmpEdits(QFile &file, const QString &imageFileName);
 
     bool okToReadXmp;
     bool readEssentialMetadata;
@@ -225,6 +243,7 @@ private:
 //    Metadata metadata;
 
     bool report;
+    QString xmpString;
     QString reportString;
     QTextStream rpt;
     long order;
@@ -246,12 +265,15 @@ private:
     float getReal(long offset);
     ulong findInFile(QString s, ulong offset, ulong range);
     bool readXMP(ulong offset);
+    QString readXmpItem(const QByteArray &item, const QString &imageFileName = "");
+    void writeXmpItem(const QString &value, const QByteArray &item, const QString &imageFileName = "");
     int extractXmpRating(const QString &imageFileName = "");
+    void editXmpRating(const QString &imageFileName, const QString &rating);
     void injectXmpRating(const QString &imageFileName, int &rating);
     QString extractXmpLabel(const QString &imageFileName = "");
     void injectXmpLabel(const QString &imageFileName, QString &label);
     QString extractXmpTitle(const QString &imageFileName = "");
-    void injectXmpTitle(const QString &imageFileName, const QString &title);
+    void editXmpTitle(const QString &imageFileName, const QString &title);
     QByteArray extractXmp(ulong offset);
     void readIPTC(ulong offset);
     ulong readIFD(QString hdr, ulong offset);
@@ -262,6 +284,8 @@ private:
     QByteArray getByteArray(ulong offset, ulong length);
     void getSegments(ulong offset);
     bool getDimensions(ulong jpgOffset);
+
+    void setMetadata(const QString &imageFileName);
 
     QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
 

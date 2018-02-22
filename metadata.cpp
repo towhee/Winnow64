@@ -1319,7 +1319,9 @@ void Metadata::reportMetadata()
     rpt.setFieldWidth(20); rpt << "lengthThumbJPG" << lengthThumbJPG;   rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "offsetSmallJPG" << offsetSmallJPG;   rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "lengthSmallJPG" << lengthSmallJPG;   rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "offsetXMP"      << offsetXmp;        rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "offsetXMPSeg"   << xmpSegmentOffset; rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "xmpmetaStartOffset" << xmpmetaStartOffset;   rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "xmpmetaEndOffset"   << xmpmetaEndOffset;     rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "orientation"    << orientation;      rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "width"          << width;            rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "height"         << height;           rpt.setFieldWidth(0); rpt << "\n";
@@ -1340,10 +1342,12 @@ void Metadata::reportMetadata()
     rpt.setFieldWidth(20); rpt << "shutterCount"   << shutterCount;     rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "nikonLensCode"  << nikonLensCode;    rpt.setFieldWidth(0); rpt << "\n";
 
-    if (isXmp) {
+    if (isXmp && xmpString.length() > 0) {
         rpt << "\nXMP Extract:\n\n";
-        if (!okToReadXmp) xmp = extractXmp(offsetXmp);
-        QString xmpString = QTextCodec::codecForMib(106)->toUnicode(xmp);
+//        if (!okToReadXmp) xmpBa = extractXmp(xmpSegmentOffset);
+//        QString xmpString = QTextCodec::codecForMib(106)->toUnicode(xmpBa);
+//        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+//        QString xmpString = xmp.metaAsString();
         QXmlQuery query;
         query.setQuery(xmpString);
 
@@ -1549,16 +1553,102 @@ QFile file must be assigned and open.
     return -1;
 }
 
+bool Metadata::getFileWithXmpEdits(QFile &file, const QString &imageFileName)
+{
+    setMetadata(imageFileName);
+    if (!xmpRatingChanged || !xmpLabelChanged || !xmpTitleChanged) {
+        return false;
+    }
+
+}
+
+QString Metadata::readXmpItem(const QByteArray &item, const QString &imageFileName)
+{
+/*
+item = "xmp:Rating" or "xmp:Lable" or "dc:title"
+*/
+    if (imageFileName.length() > 0) xmpBa = metaCache[imageFileName].xmpBa;
+    int startPos = xmpBa.indexOf(item, 0);
+    if (startPos == -1) return "";
+
+    // item exists, check if schema is xmp or dc
+    int endPos;
+    bool foundItem = false;
+    if (item.at(0) == 0x78) {               // xmp schema 0x78 = "x" for "xmp"
+        startPos += item.length();
+        QChar c = xmpBa.at(startPos);
+        // (xmpBa.at(startPos) == QString::QString("="));     // this works too
+        if (xmpBa.at(startPos) == 0x3D) {                     // = "="
+            if (xmpBa.at(++startPos) == 0x22) {               // = double quote "
+                endPos = xmpBa.indexOf("\"", ++startPos);
+                foundItem = true;
+            }
+            else return "";
+        }
+
+        if (xmpBa.at(startPos) == 0x3E) {                     // = ">"
+            endPos = xmpBa.indexOf("<", ++startPos);
+            foundItem = true;
+        }
+    }
+
+    if (foundItem) {
+        QByteArray result = xmpBa.mid(startPos, endPos - startPos);
+        QString value = QTextCodec::codecForMib(106)->toUnicode(result);
+        return value;
+    }
+    return "";
+}
+
+void Metadata::writeXmpItem(const QString &value,
+                            const QByteArray &item,
+                            const QString &imageFileName)
+{
+/*
+item = "xmp:Rating" or "xmp:Lable" or "dc:title"
+*/
+    if (imageFileName.length() > 0) xmpBa = metaCache[imageFileName].xmpBa;
+    int startPos = xmpBa.indexOf(item, 0);
+    if (startPos == -1) return;
+
+    // item exists, check if schema is xmp or dc
+    int endPos;
+    bool foundItem = false;
+    if (item.at(0) == 0x78) {               // xmp schema 0x78 = "x" for "xmp"
+        // schema = xmp
+        startPos += item.length();
+        QChar c = xmpBa.at(startPos);
+        // (xmpBa.at(startPos) == QString::QString("="));     // this works too
+        if (xmpBa.at(startPos) == 0x3D) {                     // = "="
+            if (xmpBa.at(++startPos) == 0x22) {               // = double quote "
+                endPos = xmpBa.indexOf("\"", ++startPos);
+                foundItem = true;
+            }
+            else return;
+        }
+
+        if (xmpBa.at(startPos) == 0x3E) {                     // = ">"
+            endPos = xmpBa.indexOf("<", ++startPos);
+            foundItem = true;
+        }
+    }
+    if (foundItem) {
+        QByteArray newValue;
+        newValue.append(value);
+        xmpBa.replace(startPos, endPos - startPos, newValue);
+    }
+}
+
 int Metadata::extractXmpRating(const QString &imageFileName)
 {
     QByteArray ss("xmp:Rating=\"");
-    if (imageFileName.length() > 0) xmp = metaCache[imageFileName].xmp;
-    if (xmp.size() > 0) {
-        int startPos = xmp.indexOf(ss);
+    if (imageFileName.length() > 0) xmpBa = metaCache[imageFileName].xmpBa;
+    if (xmpBa.size() > 0) {
+        int startPos = xmpBa.indexOf(ss);
         if (startPos > -1) {
             startPos += ss.length();
-            int endPos = xmp.indexOf("\"", startPos);
-            QByteArray result = xmp.mid(startPos, endPos - startPos);
+            int endPos = xmpBa.indexOf("\"", startPos);
+            QByteArray result = xmpBa.mid(startPos, endPos - startPos);
             xmpRating = QTextCodec::codecForMib(106)->toUnicode(result).toInt();
             return xmpRating;
         }
@@ -1566,16 +1656,33 @@ int Metadata::extractXmpRating(const QString &imageFileName)
     return -1;
 }
 
+void Metadata::editXmpRating(const QString &imageFileName, const QString &rating)
+{
+    QByteArray newRating;
+    newRating.append(rating);
+    QByteArray oldRating;
+    QByteArray ss("xmp:Rating");
+    if (metaCache.contains(imageFileName)) {
+        if (metaCache[imageFileName].xmpBa.contains(ss)) {
+            QString rating = metaCache[imageFileName].xmpRating;
+            oldRating.append(rating);
+            if (rating.length() > 0) {
+                metaCache[imageFileName].xmpBa.replace(oldRating, newRating);
+            }
+        }
+    }
+}
+
 QString Metadata::extractXmpLabel(const QString &imageFileName)
 {
     QByteArray ss("xmp:Label=\"");
-    if (imageFileName.length() > 0) xmp = metaCache[imageFileName].xmp;
-    if (xmp.size() > 0) {
-        int startPos = xmp.indexOf(ss);
+    if (imageFileName.length() > 0) xmpBa = metaCache[imageFileName].xmpBa;
+    if (xmpBa.size() > 0) {
+        int startPos = xmpBa.indexOf(ss);
         if (startPos > -1) {
             startPos += ss.length();
-            int endPos = xmp.indexOf("\"", startPos);
-            QByteArray result = xmp.mid(startPos, endPos - startPos);
+            int endPos = xmpBa.indexOf("\"", startPos);
+            QByteArray result = xmpBa.mid(startPos, endPos - startPos);
             xmpLabel = QTextCodec::codecForMib(106)->toUnicode(result);
             return xmpLabel;
         }
@@ -1586,15 +1693,15 @@ QString Metadata::extractXmpLabel(const QString &imageFileName)
 QString Metadata::extractXmpTitle(const QString &imageFileName)
 {
     QByteArray ss("dc:title");
-    if (imageFileName.length() > 0) xmp = metaCache[imageFileName].xmp;
-    if (xmp.size() > 0) {
-        int startPos = xmp.indexOf(ss);
+    if (imageFileName.length() > 0) xmpBa = metaCache[imageFileName].xmpBa;
+    if (xmpBa.size() > 0) {
+        int startPos = xmpBa.indexOf(ss);
         if (startPos > -1) {
             startPos += ss.length();
-            startPos = xmp.indexOf("rdf:li", startPos);
-            startPos = xmp.indexOf(">", startPos) + 1;
-            int endPos = xmp.indexOf("<", startPos);
-            QByteArray result = xmp.mid(startPos, endPos - startPos);
+            startPos = xmpBa.indexOf("rdf:li", startPos);
+            startPos = xmpBa.indexOf(">", startPos) + 1;
+            int endPos = xmpBa.indexOf("<", startPos);
+            QByteArray result = xmpBa.mid(startPos, endPos - startPos);
             xmpTitle = QTextCodec::codecForMib(106)->toUnicode(result);
             return xmpTitle;
         }
@@ -1602,7 +1709,7 @@ QString Metadata::extractXmpTitle(const QString &imageFileName)
     return "";
 }
 
-void Metadata::injectXmpTitle(const QString &imageFileName, const QString &title)
+void Metadata::editXmpTitle(const QString &imageFileName, const QString &title)
 {
     QByteArray newTitle;
     newTitle.append(title);
@@ -1610,7 +1717,7 @@ void Metadata::injectXmpTitle(const QString &imageFileName, const QString &title
     if (metaCache.contains(imageFileName))
         oldTitle.append(metaCache[imageFileName].xmpTitle);
     if (xmpTitle.length() > 0) {
-        metaCache[imageFileName].xmp.replace(oldTitle, newTitle);
+        metaCache[imageFileName].xmpBa.replace(oldTitle, newTitle);
     }
 }
 
@@ -1618,14 +1725,14 @@ QByteArray Metadata::extractXmp(ulong offset)
 {
     qDebug() << "Metadata::extractXMP(ulong offset)" << offset;
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
-    ulong segmentLength = nextOffsetXmp - offset;
-    ulong xmpOffsetStart = findInFile("<x:xmpmeta", offset + 23, segmentLength);
-    ulong xmpOffsetEnd = findInFile("</x:xmpmeta", xmpOffsetStart + 15, segmentLength) + 12;
-    ulong xmpLength = xmpOffsetEnd - xmpOffsetStart;
+    ulong segmentLength = xmpNextSegmentOffset - offset;
+    xmpmetaStartOffset = findInFile("<x:xmpmeta", offset + 23, segmentLength);
+    xmpmetaEndOffset = findInFile("</x:xmpmeta", xmpmetaStartOffset + 15, segmentLength) + 12;
+    ulong xmpLength = xmpmetaEndOffset - xmpmetaStartOffset;
 
     // file is opened prior to calling this function
-    file.seek(xmpOffsetStart);
-    xmp = file.read(xmpLength);
+    file.seek(xmpmetaStartOffset);
+    xmpBa = file.read(xmpLength);
 //    QString xmp = QTextCodec::codecForMib(106)->toUnicode(xmpByteArray);
 //    qDebug() << "xmpOffsetStart =" << xmpOffsetStart
 //             << "\nxmpOffsetEnd =" << xmpOffsetEnd
@@ -1633,7 +1740,7 @@ QByteArray Metadata::extractXmp(ulong offset)
 
 //    std::cout << xmpByteArray.toStdString() << std::endl;
 
-    return xmp;
+    return xmpBa;
 }
 
 bool Metadata::readXMP(ulong offset)
@@ -1677,26 +1784,26 @@ bool Metadata::readXMP(ulong offset)
 
     // report
 //    QXmlStreamReader xmp(xmpByteArray);
-//    while(!xmp.atEnd() && !xmp.hasError()) {
-//        QXmlStreamReader::TokenType token = xmp.readNext();
+//    while(!xmpBa.atEnd() && !xmpBa.hasError()) {
+//        QXmlStreamReader::TokenType token = xmpBa.readNext();
 ////        if (token != QXmlStreamReader::StartElement &&
 ////            token != QXmlStreamReader::QXmlStreamReader::Characters) continue;
-////        if (xmp.isWhitespace()) continue;
-////        if (xmp.qualifiedName() == "rdf:li") continue;
-////        if (xmp.qualifiedName() == "rdf:Seq") continue;
-////        if (xmp.qualifiedName() == "rdf:Alt") continue;
-////        if (xmp.text() == "" && xmp.qualifiedName() == "") continue;
+////        if (xmpBa.isWhitespace()) continue;
+////        if (xmpBa.qualifiedName() == "rdf:li") continue;
+////        if (xmpBa.qualifiedName() == "rdf:Seq") continue;
+////        if (xmpBa.qualifiedName() == "rdf:Alt") continue;
+////        if (xmpBa.text() == "" && xmpBa.qualifiedName() == "") continue;
 
-//        if (xmp.attributes().count() == 0)
-//            qDebug()  << "qualifiedName:" << xmp.qualifiedName()
-//                      << "isWhitespace" << xmp.isWhitespace()
-//                      << "Text:" << xmp.text();
-//        for(int i = 0; i < xmp.attributes().size(); i++) {
-//            qDebug() << "qualifiedName:" << xmp.qualifiedName()
-//                     << "Text:" << xmp.text()
-//                     << xmp.attributes().at(i).prefix()
-//                     << xmp.attributes().at(i).name()
-//                     << xmp.attributes().at(i).value();
+//        if (xmpBa.attributes().count() == 0)
+//            qDebug()  << "qualifiedName:" << xmpBa.qualifiedName()
+//                      << "isWhitespace" << xmpBa.isWhitespace()
+//                      << "Text:" << xmpBa.text();
+//        for(int i = 0; i < xmpBa.attributes().size(); i++) {
+//            qDebug() << "qualifiedName:" << xmpBa.qualifiedName()
+//                     << "Text:" << xmpBa.text()
+//                     << xmpBa.attributes().at(i).prefix()
+//                     << xmpBa.attributes().at(i).name()
+//                     << xmpBa.attributes().at(i).value();
 //        }
 //    }
 
@@ -1709,83 +1816,83 @@ bool Metadata::readXMP(ulong offset)
     QString xmpTitle;
     if (!xmpFound) return false;
 
-    QXmlStreamReader xmp(xmpByteArray);
-//    bool err = xmp.hasError();
+    QXmlStreamReader xmpBa(xmpByteArray);
+//    bool err = xmpBa.hasError();
 
     // search xmp for data
-    while(!xmp.atEnd() && !xmp.hasError()) {
-        QXmlStreamReader::TokenType token = xmp.readNext();
+    while(!xmpBa.atEnd() && !xmpBa.hasError()) {
+        QXmlStreamReader::TokenType token = xmpBa.readNext();
         // lots of stuff to ignore
         if (token != QXmlStreamReader::StartElement &&
             token != QXmlStreamReader::QXmlStreamReader::Characters) continue;
-        if (xmp.isWhitespace()) continue;
-        if (xmp.qualifiedName() == "rdf:li") continue;
-        if (xmp.qualifiedName() == "rdf:Seq") continue;
-        if (xmp.qualifiedName() == "rdf:Alt") continue;
-        if (xmp.text() == "" && xmp.qualifiedName() == "") continue;
+        if (xmpBa.isWhitespace()) continue;
+        if (xmpBa.qualifiedName() == "rdf:li") continue;
+        if (xmpBa.qualifiedName() == "rdf:Seq") continue;
+        if (xmpBa.qualifiedName() == "rdf:Alt") continue;
+        if (xmpBa.text() == "" && xmpBa.qualifiedName() == "") continue;
 
         // get lens
-        if (xmp.qualifiedName() == "rdf:Description") {
-            for(int i = 0; i < xmp.attributes().size(); i++) {
-                if (xmp.attributes().at(i).name() == "Lens") {
-                    lens = xmp.attributes().at(i).value().toString();
+        if (xmpBa.qualifiedName() == "rdf:Description") {
+            for(int i = 0; i < xmpBa.attributes().size(); i++) {
+                if (xmpBa.attributes().at(i).name() == "Lens") {
+                    lens = xmpBa.attributes().at(i).value().toString();
                     break;
                 }
             }
         }
 
         // get creator
-        if (xmp.qualifiedName() == "dc:creator") {
+        if (xmpBa.qualifiedName() == "dc:creator") {
             int count = 0;
             bool notFound = true;
             while(notFound || count < 4) {
                 count++;
-                xmp.readNext();
-                if(xmp.qualifiedName() == "" && !xmp.isWhitespace()) {
-//                    qDebug() << xmp.qualifiedName() << xmp.text();
-                    creator = xmp.text().toString();
+                xmpBa.readNext();
+                if(xmpBa.qualifiedName() == "" && !xmpBa.isWhitespace()) {
+//                    qDebug() << xmpBa.qualifiedName() << xmpBa.text();
+                    creator = xmpBa.text().toString();
                     notFound = false;
                 }
             }
         }
 
         // get xmpTitle (already tried in IPTC so this is redundent
-        if (xmp.qualifiedName() == "dc:title") {
+        if (xmpBa.qualifiedName() == "dc:title") {
             int count = 0;
             bool notFound = true;
             while(notFound || count < 4) {
                 count++;
-                xmp.readNext();
-                if(xmp.qualifiedName() == "" && !xmp.isWhitespace()) {
-//                    qDebug() << xmp.qualifiedName() << xmp.text();
-                    xmpTitle = xmp.text().toString();
+                xmpBa.readNext();
+                if(xmpBa.qualifiedName() == "" && !xmpBa.isWhitespace()) {
+//                    qDebug() << xmpBa.qualifiedName() << xmpBa.text();
+                    xmpTitle = xmpBa.text().toString();
                     notFound = false;
                 }
             }
         }
 
         // get copyright
-        if (xmp.qualifiedName() == "dc:rights") {
+        if (xmpBa.qualifiedName() == "dc:rights") {
             int count = 0;
             bool notFound = true;
             while(notFound || count < 4) {
                 count++;
-                xmp.readNext();
-                if(xmp.qualifiedName() == "" && !xmp.isWhitespace()) {
-//                    qDebug() << xmp.qualifiedName() << xmp.text();
-                    copyright = xmp.text().toString();
+                xmpBa.readNext();
+                if(xmpBa.qualifiedName() == "" && !xmpBa.isWhitespace()) {
+//                    qDebug() << xmpBa.qualifiedName() << xmpBa.text();
+                    copyright = xmpBa.text().toString();
                     notFound = false;
                 }
             }
         }
 
         // get email and url
-        if (xmp.qualifiedName() == "Iptc4xmpCore:CreatorContactInfo") {
-            for(int i = 0; i < xmp.attributes().size(); i++) {
-                if (xmp.attributes().at(i).name() == "CiEmailWork")
-                    email = xmp.attributes().at(i).value().toString();
-                if (xmp.attributes().at(i).name() == "CiUrlWork")
-                    url = xmp.attributes().at(i).value().toString();
+        if (xmpBa.qualifiedName() == "Iptc4xmpCore:CreatorContactInfo") {
+            for(int i = 0; i < xmpBa.attributes().size(); i++) {
+                if (xmpBa.attributes().at(i).name() == "CiEmailWork")
+                    email = xmpBa.attributes().at(i).value().toString();
+                if (xmpBa.attributes().at(i).name() == "CiUrlWork")
+                    url = xmpBa.attributes().at(i).value().toString();
             }
         }
     }
@@ -2061,8 +2168,8 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
             if (segName == "http") segName += file.read(15);
             if (segName == "http://ns.adobe.com") {
                 segmentHash["XMP"] = offset;
-                offsetXmp = offset;
-                nextOffsetXmp = nextOffset;
+                xmpSegmentOffset = offset;
+                xmpNextSegmentOffset = nextOffset;
                 isXmp = true;
             }
         }
@@ -3190,10 +3297,12 @@ bool Metadata::formatJPG()
 
     // read XMP
     if (isXmp && okToReadXmp) {
-        xmp = extractXmp(offsetXmp);
-        xmpRating = extractXmpRating();
-        xmpLabel = extractXmpLabel();
-        xmpTitle = extractXmpTitle();
+        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+        rating = xmp.getItem("Rating");     // case is important "Rating"
+        label = xmp.getItem("Label");       // case is important "Label"
+        title = xmp.getItem("title");       // case is important "title"
+
+        if (report) xmpString = xmp.metaAsString();
     }
 
     if (report) reportMetadata();
@@ -3213,7 +3322,7 @@ void Metadata::clearMetadata()
     lengthThumbJPG = 0;
     offsetSmallJPG = 0;
     lengthSmallJPG = 0;
-    offsetXmp = 0;
+    xmpSegmentOffset = 0;
     width = 0;
     height = 0;
     orientation = 0;
@@ -3669,18 +3778,23 @@ QString Metadata::getShootingInfo(const QString &imageFileName)
 
 QByteArray Metadata::getXmp(const QString &imageFileName)
 {
-    QByteArray xmp;
+    QByteArray xmpB;
     file.setFileName(imageFileName);
     if (file.open(QIODevice::ReadOnly)) {
-        xmp = extractXmp(offsetXmp);
+        xmpB = extractXmp(xmpSegmentOffset);
         file.close();
     }
-    return xmp;
+    return xmpB;
 }
 
-int Metadata::getXmpRating(const QString &imageFileName)
+QString Metadata::getXmpRating(const QString &imageFileName)
 {
-    return extractXmpRating(imageFileName);
+    return readXmpItem("xmp:Rating", imageFileName);
+}
+
+void Metadata::setXmpRating(const QString &imageFileName, const QString &rating)
+{
+    writeXmpItem(rating, "xmp:Rating", imageFileName);
 }
 
 QString Metadata::getXmpLabel(const QString &imageFileName)
@@ -3695,8 +3809,9 @@ QString Metadata::getXmpTitle(const QString &imageFileName)
 
 void Metadata::setXmpTitle(const QString &imageFileName, const QString &title)
 {
-    injectXmpTitle(imageFileName, title);
+    editXmpTitle(imageFileName, title);
 }
+
 
 QString Metadata::getErr(const QString &imageFileName)
 {
@@ -3804,13 +3919,21 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.lengthThumbJPG = lengthThumbJPG;
     imageMetadata.offsetSmallJPG = offsetSmallJPG;
     imageMetadata.lengthSmallJPG = lengthSmallJPG;
-    imageMetadata.offsetXmp = offsetXmp;
-    imageMetadata.nextOffsetXmp = nextOffsetXmp;
+
+    imageMetadata.xmpSegmentOffset = xmpSegmentOffset;
+    imageMetadata.xmpNextSegmentOffset = xmpNextSegmentOffset;
+    imageMetadata.xmpmetaStartOffset = xmpmetaStartOffset;
+    imageMetadata.xmpmetaEndOffset = xmpmetaEndOffset;
+    imageMetadata.xmpRatingChanged = xmpRatingChanged;
+    imageMetadata.xmpLabelChanged = xmpLabelChanged;
+    imageMetadata.xmpTitleChanged = xmpTitleChanged;
     imageMetadata.isXmp = isXmp;
     imageMetadata.xmpRating = xmpRating;
     imageMetadata.xmpTitle = xmpTitle;
     imageMetadata.xmpLabel = xmpLabel;
-    imageMetadata.xmp = xmp;
+    imageMetadata.xmpBa = xmpBa;
+
+//    imageMetadata.xmp = xmp;
     imageMetadata.width = width;
     imageMetadata.height = height;
     imageMetadata.dimensions = QString::number(width) + "x" + QString::number(height);
@@ -3853,4 +3976,49 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     metaCache.insert(fileInfo.filePath(), imageMetadata);
 
     return result;
+}
+
+void Metadata::setMetadata(const QString &imageFileName)
+{
+    isPicked =  metaCache[imageFileName].isPicked;
+    offsetFullJPG = metaCache[imageFileName].offsetFullJPG;
+    lengthFullJPG = metaCache[imageFileName].lengthFullJPG;
+    offsetThumbJPG = metaCache[imageFileName].offsetThumbJPG;
+    lengthThumbJPG = metaCache[imageFileName].lengthThumbJPG;
+    offsetSmallJPG = metaCache[imageFileName].offsetSmallJPG;
+    lengthSmallJPG = metaCache[imageFileName].lengthSmallJPG;
+    xmpSegmentOffset = metaCache[imageFileName].xmpSegmentOffset;
+    xmpNextSegmentOffset = metaCache[imageFileName].xmpNextSegmentOffset;
+    xmpmetaStartOffset = metaCache[imageFileName].xmpmetaStartOffset;
+    xmpmetaEndOffset = metaCache[imageFileName].xmpmetaEndOffset;
+    xmpRatingChanged = metaCache[imageFileName].xmpRatingChanged;
+    xmpLabelChanged = metaCache[imageFileName].xmpLabelChanged;
+    xmpTitleChanged = metaCache[imageFileName].xmpTitleChanged;
+    isXmp = metaCache[imageFileName].isXmp;
+    xmpRating = metaCache[imageFileName].xmpRating;
+    xmpTitle = metaCache[imageFileName].xmpTitle;
+    xmpLabel = metaCache[imageFileName].xmpLabel;
+//    xmp = metaCache[imageFileName].xmp;
+    width = metaCache[imageFileName].width;
+    height = metaCache[imageFileName].height;
+    dimensions = metaCache[imageFileName].dimensions;
+    created = metaCache[imageFileName].created;
+    createdDate = metaCache[imageFileName].createdDate;
+    model = metaCache[imageFileName].model;
+    exposureTime = metaCache[imageFileName].exposureTime;
+    exposureTimeNum = metaCache[imageFileName].exposureTimeNum;
+    aperture = metaCache[imageFileName].aperture;
+    apertureNum = metaCache[imageFileName].apertureNum;
+    ISO = metaCache[imageFileName].ISO;
+    ISONum = metaCache[imageFileName].ISONum;
+    focalLength = metaCache[imageFileName].focalLength;
+    focalLengthNum = metaCache[imageFileName].focalLengthNum;
+    title = metaCache[imageFileName].title;
+    lens = metaCache[imageFileName].lens;
+    creator = metaCache[imageFileName].creator;
+    copyright = metaCache[imageFileName].copyright;
+    email = metaCache[imageFileName].email;
+    url = metaCache[imageFileName].url;
+    orientation = metaCache[imageFileName].orientation;
+    shootingInfo = metaCache[imageFileName].shootingInfo;
 }

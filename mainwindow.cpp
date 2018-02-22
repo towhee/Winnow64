@@ -3697,15 +3697,14 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-//    metadata->readMetadata(true, thumbView->getCurrentFilename());
-//    qDebug() << "metadata->getXmpRating() =" << metadata->getXmpRating(thumbView->getCurrentFilename());
+    metadata->readMetadata(true, thumbView->getCurrentFilename());
+
+    qDebug() << "metadata->getXmpRating() =" << metadata->getXmpRating(thumbView->getCurrentFilename());
 //    qDebug() << "metadata->getXmpLabel() =" << metadata->getXmpLabel(thumbView->getCurrentFilename());
 //    qDebug() << "metadata->getXmpTitle() =" << metadata->getXmpTitle(thumbView->getCurrentFilename());
 //    metadata->setXmpTitle(thumbView->getCurrentFilename(), "Brand new title");
 //    metadata->readMetadata(true, thumbView->getCurrentFilename());
 
-    QString dirPath = QFileDialog::getExistingDirectory(this, tr("Open Folder"),
-         "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
     //    QByteArray xmp = metadata->getXmp(thumbView->getCurrentFilename());
 //    std::cout << xmp.toStdString() << std::endl;

@@ -42,7 +42,8 @@ HEADERS += \
     MacOS/macscale.h \
     MacOS/macScale_p.h \
     Dialogs/appdlg.h \
-    Dialogs/renamedlg.h
+    Dialogs/renamedlg.h \
+    xmp.h
 
 SOURCES += \
     bookmarks.cpp \
@@ -77,7 +78,8 @@ SOURCES += \
     Dialogs/workspacedlg.cpp \
     Dialogs/zoomdlg.cpp \
     Dialogs/appdlg.cpp \
-    Dialogs/renamedlg.cpp
+    Dialogs/renamedlg.cpp \
+    xmp.cpp
 
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 
