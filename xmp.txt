@@ -162,23 +162,35 @@ From camera and then sidecar from FastRawViewer:
 </x:xmpmeta>
 
 
-From camera and then Photoshop with title added:
+From camera and then Photoshop with email and url added:
 
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c142 79.160924, 2017/07/13-01:06:39        ">
     <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-        <rdf:Description xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-                        xmlns:dc="http://purl.org/dc/elements/1.1/"
-                        xmlns:aux="http://ns.adobe.com/exif/1.0/aux/"
-                        xmlns:exifEX="http://cipa.jp/exif/1.0/"
-                        xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/"
-                        xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
-                        xmlns:stEvt="http://ns.adobe.com/xap/1.0/sType/ResourceEvent#" rdf:about=""
-                        xmp:Rating="0" xmp:ModifyDate="2018-02-23T04:24:41-08:00" xmp:CreateDate="2018-02-21T09:07:16" xmp:MetadataDate="2018-02-23T04:24:41-08:00" dc:format="image/jpeg"
-                        aux:SerialNumber="052111000128" aux:LensInfo="100/1 400/1 0/0 0/0" aux:Lens="EF100-400mm f/4.5-5.6L IS II USM" aux:LensID="747" aux:LensSerialNumber="4010004437"
-                        aux:ImageNumber="0" aux:ApproximateFocusDistance="839/10" aux:FlashCompensation="0/1" aux:Firmware="1.1.3" exifEX:LensModel="EF100-400mm f/4.5-5.6L IS II USM"
-                        photoshop:DateCreated="2018-02-21T09:07:16.005" photoshop:ColorMode="3" photoshop:ICCProfile="Adobe RGB (1998)"
-                        xmpMM:DocumentID="adobe:docid:photoshop:1a2bcccb-e61d-3a41-9b1b-18d1a3be5c73" xmpMM:InstanceID="xmp.iid:3d1f41c4-6894-6a49-9c3b-14edfaad7767"
-                        xmpMM:OriginalDocumentID="283EEBCE29539B0FCA56457908B821CD">
+        <rdf:Description xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:aux="http://ns.adobe.com/exif/1.0/aux/"
+        xmlns:exifEX="http://cipa.jp/exif/1.0/" xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
+        xmlns:stEvt="http://ns.adobe.com/xap/1.0/sType/ResourceEvent#" xmlns:xmpRights="http://ns.adobe.com/xap/1.0/rights/"
+        xmlns:Iptc4xmpCore="http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/" rdf:about=""
+            xmp:Rating="0"
+            xmp:ModifyDate="2018-02-23T12:06:59-08:00"
+            xmp:CreateDate="2018-02-21T09:07:16"
+            xmp:MetadataDate="2018-02-23T12:06:59-08:00"
+            dc:format="image/jpeg"
+            aux:SerialNumber="052111000128"
+            aux:LensInfo="100/1 400/1 0/0 0/0"
+            aux:Lens="EF100-400mm f/4.5-5.6L IS II USM"
+            aux:LensID="747" aux:LensSerialNumber="4010004437"
+            aux:ImageNumber="0"
+            aux:ApproximateFocusDistance="839/10"
+            aux:FlashCompensation="0/1"
+            aux:Firmware="1.1.3"
+            exifEX:LensModel="EF100-400mm f/4.5-5.6L IS II USM"
+            photoshop:DateCreated="2018-02-21T09:07:16.005"
+            photoshop:ColorMode="3"
+            photoshop:ICCProfile="Adobe RGB (1998)"
+            xmpMM:DocumentID="adobe:docid:photoshop:42dc13ed-d276-ae4a-9c26-5527779b2b05"
+            xmpMM:InstanceID="xmp.iid:c74d0319-e991-d345-b374-dfb5cd74ac40"
+            xmpMM:OriginalDocumentID="57F276B108F077A9A39031800BE9F09A"
+            xmpRights:Marked="True">
             <dc:creator>
                 <rdf:Seq>
                     <rdf:li>Rory Hill</rdf:li>
@@ -189,17 +201,22 @@ From camera and then Photoshop with title added:
                     <rdf:li xml:lang="x-default">2018 Rory Hill</rdf:li>
                 </rdf:Alt>
             </dc:rights>
-            <dc:title>
-                <rdf:Alt>
-                    <rdf:li xml:lang="x-default">New title from photoshop</rdf:li>
-                </rdf:Alt>
-            </dc:title>
+            <dc:subject>
+                <rdf:Bag>
+                    <rdf:li>Garage</rdf:li>
+                    <rdf:li>Neighbour</rdf:li>
+                    <rdf:li>Door</rdf:li>
+                </rdf:Bag>
+            </dc:subject>
             <xmpMM:History>
                 <rdf:Seq>
-                    <rdf:li stEvt:action="saved" stEvt:instanceID="xmp.iid:1580e82c-8c85-4241-97f9-49f054d45c17" stEvt:when="2018-02-23T04:24:41-08:00" stEvt:softwareAgent="Adobe Photoshop CC (Windows)" stEvt:changed="/"/>
-                    <rdf:li stEvt:action="saved" stEvt:instanceID="xmp.iid:3d1f41c4-6894-6a49-9c3b-14edfaad7767" stEvt:when="2018-02-23T04:24:41-08:00" stEvt:softwareAgent="Adobe Photoshop CC (Windows)" stEvt:changed="/"/>
+                    <rdf:li stEvt:action="saved" stEvt:instanceID="xmp.iid:01b33155-68a8-e34d-acdb-1f37d1201e25" stEvt:when="2018-02-23T12:06:59-08:00"
+                        stEvt:softwareAgent="Adobe Photoshop CC (Windows)" stEvt:changed="/"/>
+                    <rdf:li stEvt:action="saved" stEvt:instanceID="xmp.iid:c74d0319-e991-d345-b374-dfb5cd74ac40" stEvt:when="2018-02-23T12:06:59-08:00"
+                        stEvt:softwareAgent="Adobe Photoshop CC (Windows)" stEvt:changed="/"/>
                 </rdf:Seq>
             </xmpMM:History>
+            <Iptc4xmpCore:CreatorContactInfo Iptc4xmpCore:CiEmailWork="hillrg@hotmail.com" Iptc4xmpCore:CiUrlWork="https://www.flickr.com/photos/roryhill/"/>
         </rdf:Description>
     </rdf:RDF>
 </x:xmpmeta>

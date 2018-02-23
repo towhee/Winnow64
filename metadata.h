@@ -39,16 +39,7 @@ public:
 
     ulong xmpSegmentOffset;
     ulong xmpNextSegmentOffset;
-
-    ulong xmpmetaStartOffset;
-    ulong xmpmetaEndOffset;
     bool isXmp;
-    int xmpRating;
-    QString xmpTitle;
-    QString xmpLabel;
-    QByteArray xmpBa;
-
-//    Xmp *xmp;
     int orientation;
     ulong width;
     ulong height;
@@ -67,11 +58,11 @@ public:
     int focalLengthNum;
     QString shootingInfo;
     QString title;
-    QString _title;
+    QString _title;                     // original value
     QString rating;
-    QString _rating;
+    QString _rating;                    // original value
     QString label;
-    QString _label;
+    QString _label;                     // original value
     QString lens;
     QString creator;
     QString copyright;
@@ -109,15 +100,7 @@ public:
 
     ulong xmpSegmentOffset;
     ulong xmpNextSegmentOffset;
-    ulong xmpmetaStartOffset;
-    ulong xmpmetaEndOffset;
     bool isXmp;
-    int xmpRating;
-    QString xmpTitle;
-    QString xmpLabel;
-    QByteArray xmpBa;
-
-//    Xmp xmp;
     int orientation;
     ulong width;
     ulong height;
@@ -136,11 +119,11 @@ public:
     int focalLengthNum;
     QString shootingInfo;
     QString title;
-    QString _title;
+    QString _title;                         // original value
     QString rating;
-    QString _rating;
+    QString _rating;                        // original value
     QString label;
-    QString _label;
+    QString _label;                         // original value
     QString lens;
     QString creator;
     QString copyright;
@@ -239,6 +222,7 @@ private:
     // was metadata
     QMap<QString, ImageMetadata> metaCache;
 //    Metadata metadata;
+    QString fName;    // for debugging
 
     bool report;
     QString xmpString;

@@ -2,18 +2,29 @@
 
 Xmp::Xmp(QFile &file, ulong &offset, ulong &nextOffset, QObject *parent) :  QObject(parent)
 {
-    xmpSegmentOffset = offset;
-    ulong xmpLength = nextOffset - offset;
-    file.seek(offset);
-    xmpBa = file.read(xmpLength);
-    xmpmetaStart = xmpBa.indexOf("<x:xmpmeta");
-    xmpmetaEnd = xmpBa.indexOf("</x:xmpmeta", xmpmetaStart + 20) + 12;
-    xmpPacketEnd = xmpBa.indexOf("<?xpacket end", xmpmetaEnd);
-    xmpmetaRoom = xmpPacketEnd - xmpmetaStart;
-    xmpmetaOffset = xmpSegmentOffset + xmpmetaStart;
-
-    int xmpmetaLength = xmpmetaEnd - xmpmetaStart;
-    xmpBa = xmpBa.mid(xmpmetaStart, xmpmetaLength);
+    if (offset > 0) {
+        xmpSegmentOffset = offset;
+        ulong xmpLength = nextOffset - offset;
+        file.seek(offset);
+        xmpBa = file.read(xmpLength);
+        xmpmetaStart = xmpBa.indexOf("<x:xmpmeta");
+        xmpmetaEnd = xmpBa.indexOf("</x:xmpmeta", xmpmetaStart + 20) + 12;
+        xmpPacketEnd = xmpBa.indexOf("<?xpacket end", xmpmetaEnd);
+        xmpmetaRoom = xmpPacketEnd - xmpmetaStart;
+        xmpmetaOffset = xmpSegmentOffset + xmpmetaStart;
+        int xmpmetaLength = xmpmetaEnd - xmpmetaStart;
+        xmpBa = xmpBa.mid(xmpmetaStart, xmpmetaLength);
+    }
+    // no file xmp data, use the sidecar skeleton
+    else {
+        xmpBa = sidecarSkeleton;
+        xmpmetaStart = 0;
+        xmpmetaEnd = xmpBa.length();
+    }
+    xmpSchemaList << "Rating" << "Label" << "ModifyDate" << "CreateDate";
+    dcSchemaList << "title" << "rights" << "creator";
+    auxSchemaList << "Lens" << "LensSerialNumber" << "SerialNumber";
+    iptc4xmpCoreSchemaList << "CiUrlWork" << "CiEmailWork";
 }
 
 void Xmp::checkSchemas()
@@ -85,21 +96,9 @@ bool Xmp::writeSidecar(QFile &file, QByteArray &newBuf)
     return true;
 }
 
-void Xmp::set(QFile &file, ulong &offset, ulong &nextOffset, QByteArray &xmpBA)
-{
-    ulong xmpLength = nextOffset - offset;
-    file.seek(offset);
-    xmpBa = file.read(xmpLength);
-    xmpmetaStart = xmpBa.indexOf("<x:xmpmeta");
-    xmpmetaEnd = xmpBa.indexOf("</x:xmpmeta", xmpmetaStart + 20) + 12;
-
-}
-
 QString Xmp::metaAsString()
 {
-//    int length = xmpmetaEnd - xmpmetaStart;
     return QTextCodec::codecForMib(106)->toUnicode(xmpBa);
-//    return QTextCodec::codecForMib(106)->toUnicode(xmpBa.mid(xmpmetaStart, length));
 }
 
 QString Xmp::getItem(QByteArray item)
@@ -115,31 +114,78 @@ xmp schema can have two formats:
 dc schema:
     <dc:title> <rdf:Alt> <rdf:li xml:lang="x-default">Cormorant in California</rdf:li> </rdf:Alt> </dc:title>
 */
+    int startPos;
+    QByteArray searchItem;
     QString schema;
-    if (item == "Rating" || item == "Label") {
+    bool foundSchema = false;
+    if (xmpSchemaList.contains(item)) {
         item.prepend("xmp:");
         schema = "xmp";
+        searchItem = item;
+        searchItem.append("=\"");
+        startPos = xmpBa.indexOf(searchItem, xmpmetaStart);
+        if (startPos == -1) {
+            searchItem = item;
+            searchItem.append(">");
+            startPos = xmpBa.indexOf(searchItem, xmpmetaStart);
+        }
+        foundSchema = true;
     }
-    if (item == "title") {
+    if (!foundSchema && dcSchemaList.contains(item)) {
         item.prepend("dc:");
         schema = "dc";
+        searchItem = item;
+        searchItem.append(">");
+        startPos = xmpBa.indexOf(searchItem, xmpmetaStart);
+        foundSchema = true;
     }
-    int startPos = xmpBa.indexOf(item, xmpmetaStart);
+    if (!foundSchema && auxSchemaList.contains(item)) {
+        item.prepend("aux:");
+        schema = "aux";
+        searchItem = item;
+        searchItem.append("=\"");
+        startPos = xmpBa.indexOf(searchItem, xmpmetaStart);
+        if (startPos == -1) {
+            searchItem = item;
+            searchItem.append(">");
+            startPos = xmpBa.indexOf(searchItem, xmpmetaStart);
+        }
+        foundSchema = true;
+    }
+    if (!foundSchema && iptc4xmpCoreSchemaList.contains(item)) {
+        item.prepend("Iptc4xmpCore:");
+        schema = "Iptc4xmpCore";
+        searchItem = item;
+        searchItem.append("=\"");
+        startPos = xmpBa.indexOf(searchItem, xmpmetaStart);
+        if (startPos == -1) {
+            searchItem = item;
+            searchItem.append(">");
+            startPos = xmpBa.indexOf(searchItem, xmpmetaStart);
+        }
+        foundSchema = true;
+    }
+
     if (startPos == -1) return "";
 
     // item exists, check if schema is xmp or dc
     int endPos;
     bool foundItem = false;
-    startPos += item.length();
+    startPos += searchItem.length() - 1;
+    QByteArray temp = xmpBa.mid(startPos, 100);
 
-    if (schema == "xmp") {
-        if (xmpBa.at(startPos) == 0x3D) {                     // = '=' or QString::QString("=")
-            if (xmpBa.at(++startPos) == 0x22) {               // = '"'
-                endPos = xmpBa.indexOf("\"", ++startPos);
-                foundItem = true;
-            }
-            else return "";
+    if (schema == "dc") {
+        startPos = xmpBa.indexOf("rdf:li", startPos);
+        startPos = xmpBa.indexOf(">", startPos) + 1;
+        endPos = xmpBa.indexOf("<", startPos);
+        foundItem = true;
+    }
+    else {
+        if (xmpBa.at(startPos) == 0x22) {               // = '"'
+            endPos = xmpBa.indexOf("\"", ++startPos);
+            foundItem = true;
         }
+        else return "";
 
         if (xmpBa.at(startPos) == 0x3E) {                     // = '>'
             endPos = xmpBa.indexOf("<", ++startPos);
@@ -147,15 +193,6 @@ dc schema:
         }
     }
 
-    if (schema == "dc") {
-        QByteArray temp = xmpBa.mid(startPos, 100);
-        startPos = xmpBa.indexOf("rdf:li", startPos);
-        temp = xmpBa.mid(startPos, 100);
-        startPos = xmpBa.indexOf(">", startPos) + 1;
-        temp = xmpBa.mid(startPos, 100);
-        endPos = xmpBa.indexOf("<", startPos);
-        foundItem = true;
-    }
 
     if (foundItem) {
         QByteArray result = xmpBa.mid(startPos, endPos - startPos);

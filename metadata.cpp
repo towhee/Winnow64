@@ -1320,8 +1320,6 @@ void Metadata::reportMetadata()
     rpt.setFieldWidth(20); rpt << "offsetSmallJPG" << offsetSmallJPG;   rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "lengthSmallJPG" << lengthSmallJPG;   rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "offsetXMPSeg"   << xmpSegmentOffset; rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "xmpmetaStartOffset" << xmpmetaStartOffset;   rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "xmpmetaEndOffset"   << xmpmetaEndOffset;     rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "orientation"    << orientation;      rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "width"          << width;            rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "height"         << height;           rpt.setFieldWidth(0); rpt << "\n";
@@ -2096,11 +2094,14 @@ void Metadata::formatNikon()
 //        ? created = getString(ifdDataHash.value(306).tagValue, ifdDataHash.value(306).tagCount)
 //        : created = "";
 
+    // xmp offset
     if (ifdDataHash.contains(700)) {
         xmpSegmentOffset = ifdDataHash.value(700).tagValue;
         // xmpNextSegmentOffset used to later calc available room in xmp
         xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
+        isXmp = true;
     }
+    else isXmp = false;
 
     ulong offsetEXIF;
     (ifdDataHash.contains(34665))
@@ -2292,6 +2293,13 @@ void Metadata::formatNikon()
         rating = xmp.getItem("Rating");     // case is important "Rating"
         label = xmp.getItem("Label");       // case is important "Label"
         title = xmp.getItem("title");       // case is important "title"
+        cameraSN = xmp.getItem("SerialNumber");
+        lens = xmp.getItem("Lens");
+        lensSN = xmp.getItem("LensSerialNumber");
+        creator = xmp.getItem("creator");
+        copyright = xmp.getItem("rights");
+        email = xmp.getItem("CiEmailWork");
+        url = xmp.getItem("CiUrlWork");
 
         // save original values so can determine if edited when writing changes
         _title = title;
@@ -2335,6 +2343,16 @@ void Metadata::formatCanon()
     (ifdDataHash.contains(315))
         ? creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount)
         : creator = "";
+
+    // xmp offset
+    if (ifdDataHash.contains(700)) {
+        xmpSegmentOffset = ifdDataHash.value(700).tagValue;
+        // xmpNextSegmentOffset used to later calc available room in xmp
+        xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
+        isXmp = true;
+    }
+    else isXmp = false;
+
     (ifdDataHash.contains(33432))
         ? copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount)
         : copyright = "";
@@ -2479,6 +2497,28 @@ void Metadata::formatCanon()
     // read XMP
     if (segmentHash.contains("XMP")) readXMP(segmentHash["XMP"]);
 
+    // read XMP
+    if (isXmp && okToReadXmp) {
+        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+        rating = xmp.getItem("Rating");     // case is important "Rating"
+        label = xmp.getItem("Label");       // case is important "Label"
+        title = xmp.getItem("title");       // case is important "title"
+        cameraSN = xmp.getItem("SerialNumber");
+        if (lens.isEmpty()) lens = xmp.getItem("Lens");
+        lensSN = xmp.getItem("LensSerialNumber");
+        creator = xmp.getItem("creator");
+        copyright = xmp.getItem("rights");
+        email = xmp.getItem("CiEmailWork");
+        url = xmp.getItem("CiUrlWork");
+
+        // save original values so can determine if edited when writing changes
+        _title = title;
+        _rating = rating;
+        _label = label;
+
+        if (report) xmpString = xmp.metaAsString();
+    }
+
     if (report) reportMetadata();
 }
 
@@ -2599,6 +2639,8 @@ void Metadata::formatOlympus()
 
         }
     }
+
+    // Olympus does not embed xmp in raw files
 
     if (report) reportMetadata();
 }
@@ -2749,6 +2791,8 @@ void Metadata::formatSony()
         ulong makerOffset = ifdDataHash.value(37500).tagValue;
         readIFD("IFD Sony Maker Note", makerOffset);
     }
+
+    // Sony does not embed xmp in raw files
 
     if (report) reportMetadata();
 
@@ -3154,11 +3198,20 @@ bool Metadata::formatJPG()
         if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
 
     // read XMP
+    QString filePath = fName;       // for debugging
+
     if (isXmp && okToReadXmp) {
         Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
         rating = xmp.getItem("Rating");     // case is important "Rating"
         label = xmp.getItem("Label");       // case is important "Label"
         title = xmp.getItem("title");       // case is important "title"
+        cameraSN = xmp.getItem("SerialNumber");
+        if (lens.isEmpty()) lens = xmp.getItem("Lens");
+        lensSN = xmp.getItem("LensSerialNumber");
+        creator = xmp.getItem("creator");
+        copyright = xmp.getItem("rights");
+        email = xmp.getItem("CiEmailWork");
+        url = xmp.getItem("CiUrlWork");
 
         // save original values so can determine if edited when writing changes
         _title = title;
@@ -3227,6 +3280,9 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
     }
     clearMetadata();
     file.setFileName(fPath);
+
+    fName = fPath;      // for debugging
+
     if (report) {
         rpt << "\nFile name = " << fPath << "\n";
     }
@@ -3766,18 +3822,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.lengthThumbJPG = lengthThumbJPG;
     imageMetadata.offsetSmallJPG = offsetSmallJPG;
     imageMetadata.lengthSmallJPG = lengthSmallJPG;
-
     imageMetadata.xmpSegmentOffset = xmpSegmentOffset;
     imageMetadata.xmpNextSegmentOffset = xmpNextSegmentOffset;
-    imageMetadata.xmpmetaStartOffset = xmpmetaStartOffset;
-    imageMetadata.xmpmetaEndOffset = xmpmetaEndOffset;
     imageMetadata.isXmp = isXmp;
-    imageMetadata.xmpRating = xmpRating;
-    imageMetadata.xmpTitle = xmpTitle;
-    imageMetadata.xmpLabel = xmpLabel;
-    imageMetadata.xmpBa = xmpBa;
-
-//    imageMetadata.xmp = xmp;
     imageMetadata.width = width;
     imageMetadata.height = height;
     imageMetadata.dimensions = QString::number(width) + "x" + QString::number(height);
@@ -3838,13 +3885,7 @@ void Metadata::setMetadata(const QString &imageFileName)
     lengthSmallJPG = metaCache[imageFileName].lengthSmallJPG;
     xmpSegmentOffset = metaCache[imageFileName].xmpSegmentOffset;
     xmpNextSegmentOffset = metaCache[imageFileName].xmpNextSegmentOffset;
-    xmpmetaStartOffset = metaCache[imageFileName].xmpmetaStartOffset;
-    xmpmetaEndOffset = metaCache[imageFileName].xmpmetaEndOffset;
     isXmp = metaCache[imageFileName].isXmp;
-    xmpRating = metaCache[imageFileName].xmpRating;
-    xmpTitle = metaCache[imageFileName].xmpTitle;
-    xmpLabel = metaCache[imageFileName].xmpLabel;
-//    xmp = metaCache[imageFileName].xmp;
     width = metaCache[imageFileName].width;
     height = metaCache[imageFileName].height;
     dimensions = metaCache[imageFileName].dimensions;
