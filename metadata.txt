@@ -1,0 +1,2 @@
+Use Exiftool example:
+D:\Pictures\_Exiftool>exiftool -title="This is a test title" D:\Pictures\_xmptest\Canon xmptest_exiftool.JPG

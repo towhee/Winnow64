@@ -42,9 +42,6 @@ public:
 
     ulong xmpmetaStartOffset;
     ulong xmpmetaEndOffset;
-    bool xmpRatingChanged;
-    bool xmpLabelChanged;
-    bool xmpTitleChanged;
     bool isXmp;
     int xmpRating;
     QString xmpTitle;
@@ -70,8 +67,11 @@ public:
     int focalLengthNum;
     QString shootingInfo;
     QString title;
+    QString _title;
     QString rating;
+    QString _rating;
     QString label;
+    QString _label;
     QString lens;
     QString creator;
     QString copyright;
@@ -111,9 +111,6 @@ public:
     ulong xmpNextSegmentOffset;
     ulong xmpmetaStartOffset;
     ulong xmpmetaEndOffset;
-    bool xmpRatingChanged;
-    bool xmpLabelChanged;
-    bool xmpTitleChanged;
     bool isXmp;
     int xmpRating;
     QString xmpTitle;
@@ -139,8 +136,11 @@ public:
     int focalLengthNum;
     QString shootingInfo;
     QString title;
+    QString _title;
     QString rating;
+    QString _rating;
     QString label;
+    QString _label;
     QString lens;
     QString creator;
     QString copyright;
@@ -201,6 +201,8 @@ public:
     int getFocalLengthNum(const QString &imageFileName);
     QString getShootingInfo(const QString &imageFileName);
     QString getTitle(const QString &imageFileName);
+    QString getRating(const QString &imageFileName);
+    QString getLabel(const QString &imageFileName);
     QString getLens(const QString &imageFileName);
     QString getCreator(const QString &imageFileName);
     QString getCopyright(const QString &imageFileName);
@@ -213,13 +215,9 @@ public:
     QString getErr(const QString &imageFileName);
     void setErr(const QString &imageFileName, const QString &err);
     QString getCopyFileNamePrefix(const QString &imageFileName);
-    QByteArray getXmp(const QString &imageFileName);
-    QString getXmpTitle(const QString &imageFileName);
-    void setXmpTitle(const QString &imageFileName, const QString &title);
-    QString getXmpRating(const QString &imageFileName);
-    void setXmpRating(const QString &imageFileName, const QString &rating);
-    QString getXmpLabel(const QString &imageFileName);
-    bool getFileWithXmpEdits(QFile &file, const QString &imageFileName);
+    void setXmpTitle(const QString &imageFileName, const QByteArray &title);
+
+    void writeXmp(const QString &imageFileName);
 
     bool okToReadXmp;
     bool readEssentialMetadata;
@@ -244,6 +242,7 @@ private:
 
     bool report;
     QString xmpString;
+    ulong xmpmetaRoom;
     QString reportString;
     QTextStream rpt;
     long order;
@@ -265,16 +264,6 @@ private:
     float getReal(long offset);
     ulong findInFile(QString s, ulong offset, ulong range);
     bool readXMP(ulong offset);
-    QString readXmpItem(const QByteArray &item, const QString &imageFileName = "");
-    void writeXmpItem(const QString &value, const QByteArray &item, const QString &imageFileName = "");
-    int extractXmpRating(const QString &imageFileName = "");
-    void editXmpRating(const QString &imageFileName, const QString &rating);
-    void injectXmpRating(const QString &imageFileName, int &rating);
-    QString extractXmpLabel(const QString &imageFileName = "");
-    void injectXmpLabel(const QString &imageFileName, QString &label);
-    QString extractXmpTitle(const QString &imageFileName = "");
-    void editXmpTitle(const QString &imageFileName, const QString &title);
-    QByteArray extractXmp(ulong offset);
     void readIPTC(ulong offset);
     ulong readIFD(QString hdr, ulong offset);
     bool readIRB(ulong offset);

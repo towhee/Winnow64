@@ -15,19 +15,38 @@ public:
     bool setItem(QByteArray item, QByteArray value);
     QString metaAsString();
     void set(QFile &file, ulong &offset, ulong &nextOffset, QByteArray &xmpBA);
+    bool writeJPG(QFile &file, QByteArray &newBuf);
+    bool writeSidecar(QFile &file, QByteArray &newBuf);
 
 signals:
 
 public slots:
 
 private:
-    QByteArray xmpBa;
-    ulong xmpLength;
-    int xmpmetaStart;
-    int xmpmetaEnd;
+    void checkSchemas();
+    int schemaInsertPos(QByteArray schema);
+    void report();
 
-    QByteArray xmpPrefix;
-    QByteArray xmpSuffix;
+    QByteArray xmpBa;               // the xmpmeta packet
+    ulong xmpSegmentOffset;         // file offset to start of xmp segment
+    ulong xmpmetaOffset;            // file offset to start of xmpmeta packet
+    ulong xmpLength;                // length of xmp segment
+    ulong xmpmetaStart;             // offset from start of xmp segment
+    ulong xmpmetaEnd;               // offset from start of xmp segment
+    ulong xmpPacketEnd;             // offset from start of xmp segment
+    ulong xmpmetaRoom;              // xmpPacketEnd - xmpmetaStart
+
+    QString assignmentMethod;       // brackets or equals
+
+    QByteArray xmpmetaPrefix = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">";
+    QByteArray xmpmetaSuffix = "</x:xmpmeta>";
+    QByteArray rdfPrefix = "<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">";
+    QByteArray rdfSuffix = "</rdf:RDF>";
+    QByteArray rdfDescriptionPrefix = "<rdf:Description";  // + schemas
+    QByteArray rdfDescriptionSuffix = "</rdf:Description>";
+    QByteArray xmpSchema = " xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"";
+    QByteArray dcSchema = " xmlns:dc=\"http://purl.org/dc/elements/1.1/\"";
+
 };
 
 #endif // XMP_H

@@ -2,14 +2,87 @@
 
 Xmp::Xmp(QFile &file, ulong &offset, ulong &nextOffset, QObject *parent) :  QObject(parent)
 {
+    xmpSegmentOffset = offset;
     ulong xmpLength = nextOffset - offset;
     file.seek(offset);
     xmpBa = file.read(xmpLength);
     xmpmetaStart = xmpBa.indexOf("<x:xmpmeta");
     xmpmetaEnd = xmpBa.indexOf("</x:xmpmeta", xmpmetaStart + 20) + 12;
+    xmpPacketEnd = xmpBa.indexOf("<?xpacket end", xmpmetaEnd);
+    xmpmetaRoom = xmpPacketEnd - xmpmetaStart;
+    xmpmetaOffset = xmpSegmentOffset + xmpmetaStart;
 
-    xmpPrefix = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\"><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><rdf:Description rdf:about=\"\" xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\">";
-    xmpSuffix = "</rdf:Description></rdf:RDF></x:xmpmeta>";
+    int xmpmetaLength = xmpmetaEnd - xmpmetaStart;
+    xmpBa = xmpBa.mid(xmpmetaStart, xmpmetaLength);
+}
+
+void Xmp::checkSchemas()
+{
+    bool isXmpSchema = true;
+    bool isDcSchema = true;
+    if (xmpBa.indexOf("xmlns:xmp", xmpmetaStart) == -1) isXmpSchema = false;
+    if (xmpBa.indexOf("xmlns:dc", xmpmetaStart) == -1) isDcSchema = false;
+    if (isXmpSchema && isDcSchema) return;
+    QByteArray rdfDescription = "<rdf:Description";
+    int len = rdfDescription.length();
+    int pos = xmpBa.indexOf(rdfDescription, xmpmetaStart) + len;
+    if (!isXmpSchema) xmpBa.insert(pos, xmpSchema);
+    if (!isDcSchema) xmpBa.insert(pos, dcSchema);
+}
+
+int Xmp::schemaInsertPos(QByteArray schema)
+{
+    int pos;
+    int schemaStart;
+    assignmentMethod = "";
+
+    // search string ie "<dc:"
+    QByteArray s1 = "<" + schema + ":";
+    QByteArray s2 = " " + schema + ":";
+
+    // find the schema section
+    if (schema == "xmp")
+        schemaStart = xmpBa.indexOf("xmlns:xmp", xmpmetaStart);
+    if (schema == "dc")
+        schemaStart = xmpBa.indexOf("xmlns:dc", xmpmetaStart);
+
+    // if already some schema data return pos of first one
+    pos = xmpBa.indexOf(s1, schemaStart);
+    if (pos > -1) {
+        assignmentMethod = "brackets";
+        return pos;
+    }
+    pos = xmpBa.indexOf(s2, schemaStart);
+    if (pos > -1) {
+        assignmentMethod = "equals";
+        return pos;
+    }
+
+    // no existing schema data, insert at beginning of schema range
+    pos = xmpBa.indexOf(">", schemaStart) + 1;
+    assignmentMethod = "brackets";
+    return pos;
+}
+
+bool Xmp::writeJPG(QFile &file, QByteArray &newBuf)
+{
+    file.seek(0);
+    QByteArray buf = file.readAll();
+    newBuf = buf;
+    if (xmpBa.length() < xmpmetaRoom) {
+        newBuf.replace(xmpmetaOffset, xmpBa.length(), xmpBa);
+    }
+    // not enough room, insert and update offset next segment
+    else {
+
+    }
+    return true;
+}
+
+bool Xmp::writeSidecar(QFile &file, QByteArray &newBuf)
+{
+    newBuf = xmpBa;
+    return true;
 }
 
 void Xmp::set(QFile &file, ulong &offset, ulong &nextOffset, QByteArray &xmpBA)
@@ -20,14 +93,13 @@ void Xmp::set(QFile &file, ulong &offset, ulong &nextOffset, QByteArray &xmpBA)
     xmpmetaStart = xmpBa.indexOf("<x:xmpmeta");
     xmpmetaEnd = xmpBa.indexOf("</x:xmpmeta", xmpmetaStart + 20) + 12;
 
-    xmpPrefix = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\"><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><rdf:Description rdf:about=\"\" xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\">";
-    xmpSuffix = "</rdf:Description></rdf:RDF></x:xmpmeta>";
 }
 
 QString Xmp::metaAsString()
 {
-    int length = xmpmetaEnd - xmpmetaStart;
-    return QTextCodec::codecForMib(106)->toUnicode(xmpBa.mid(xmpmetaStart, length));
+//    int length = xmpmetaEnd - xmpmetaStart;
+    return QTextCodec::codecForMib(106)->toUnicode(xmpBa);
+//    return QTextCodec::codecForMib(106)->toUnicode(xmpBa.mid(xmpmetaStart, length));
 }
 
 QString Xmp::getItem(QByteArray item)
@@ -88,8 +160,8 @@ dc schema:
     if (foundItem) {
         QByteArray result = xmpBa.mid(startPos, endPos - startPos);
         QString value = QTextCodec::codecForMib(106)->toUnicode(result);
-        qDebug() << "Xmp::getItem  item =" << item
-                 << "  value =" << value;
+//        qDebug() << "Xmp::getItem  item =" << item
+//                 << "  value =" << value;
         return value;
     }
     return "";
@@ -108,7 +180,8 @@ xmp schema can have two formats:
 dc schema:
     <dc:title> <rdf:Alt> <rdf:li xml:lang="x-default">Cormorant in California</rdf:li> </rdf:Alt> </dc:title>
 */
-    QString schema;
+    report();
+    QByteArray schema;
     if (item == "Rating" || item == "Label") {
         item.prepend("xmp:");
         schema = "xmp";
@@ -117,25 +190,40 @@ dc schema:
         item.prepend("dc:");
         schema = "dc";
     }
+
+    // make sure schema exists in xmp
+    checkSchemas();
+
     int startPos = xmpBa.indexOf(item, xmpmetaStart);
 
     // does xmp item exist already
     if (startPos == -1) {
         // not found, create new item
         QByteArray newItem;
-        startPos = xmpBa.indexOf("rdf:Description");
-        startPos = xmpBa.indexOf(">") + 1;
-        if (schema = "xmp") {
-            newItem.append("<");
-            newItem.append(item);
-            newItem.append(">");
-            newItem.append(value);
-            newItem.append("</");
-            newItem.append(item);
-            newItem.append(">");
-            xmpBa.insert(startPos, newItem);
+        startPos = schemaInsertPos(schema);     //
+        if (schema == "xmp") {
+            if (assignmentMethod == "brackets") {
+                // ie <xmp:Rating>3</xmp:Rating>
+                newItem.append("<");
+                newItem.append(item);
+                newItem.append(">");
+                newItem.append(value);
+                newItem.append("</");
+                newItem.append(item);
+                newItem.append(">");
+                xmpBa.insert(startPos, newItem);
+            }
+            if (assignmentMethod == "equals") {
+                // ie xmp:Rating="3"
+                newItem.append(item);
+                newItem.append("=\"");
+                newItem.append(value);
+                newItem.append("\" ");
+                xmpBa.insert(startPos, newItem);
+            }
         }
-        if (schema = "dc") {
+        if (schema == "dc") {
+            // ie <dc:title><rdf:Alt><rdf:li xml:lang="x-default">title</rdf:li></rdf:Alt></dc:title>
             newItem.append("<");
             newItem.append(item);
             newItem.append("> <rdf:Alt> <rdf:li xml:lang=\"x-default\">");
@@ -143,8 +231,14 @@ dc schema:
             newItem.append("</rdf:li> </rdf:Alt> </");
             newItem.append(item);
             newItem.append(">");
+            qDebug() << "\nBefore set title:\n"
+                     << metaAsString();
             xmpBa.insert(startPos, newItem);
+            qDebug() << "\nAfter set title:\n"
+                     << metaAsString();
         }
+//        report();
+        return true;
     }
 
     // item exists, replace item
@@ -179,7 +273,31 @@ dc schema:
 
     if (foundItem) {
         xmpBa.replace(startPos, endPos - startPos, value);
+        report();
         return true;
     }
     return false;
+}
+
+void Xmp::report()
+{
+
+    QXmlQuery query;
+    query.setQuery(metaAsString());
+
+    // Set up the output device
+    QByteArray outArray;
+    QBuffer buffer(&outArray);
+    buffer.open(QIODevice::ReadWrite);
+
+    // format xmp
+    QXmlFormatter formatter(query, &buffer);
+    query.evaluateTo(&formatter);
+
+    QString xmpString = QTextCodec::codecForMib(106)->toUnicode(outArray);
+
+    QMessageBox msg;
+    msg.setText(metaAsString());
+//    msg.setText(xmpString);
+    msg.exec();
 }

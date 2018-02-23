@@ -54,8 +54,9 @@ public:
 /*
 This class shows information in a two column table.
 
-Column 1 = Item Description
-Column 2 = Item Value
+Column 0 = Item Description
+Column 1 = Item Value
+Column 2 = Flag to show or hide row
 
 It is used to show some file, image and application state information.
 */
@@ -79,8 +80,7 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     setExpandsOnDoubleClick(true);
     setHeaderHidden(true);
     setAlternatingRowColors(true);
-    setEditTriggers(QAbstractItemView::NoEditTriggers);
-    setSelectionMode(QAbstractItemView::NoSelection);
+    setSelectionMode(QAbstractItemView::SingleSelection);
     setFirstColumnSpanned(0, QModelIndex(), true);
     setFirstColumnSpanned(1, QModelIndex(), true);
     setFirstColumnSpanned(2, QModelIndex(), true);
@@ -131,9 +131,9 @@ void InfoView::setupOk()
 The datamodel called (ok) holds all metadata items shown in the InfoView
 QTableView. It contains three columns:
 
-    ● A boolean flag to show or hide a row of the table
-    ● The name of the information item
-    ● The value of the information item
+    ● (0) The name of the information item
+    ● (1) The value of the information item
+    ● (2) A boolean flag to show or hide a row of the table
 
 The information items are metadata about the file, such as name or path;
 information about the image, such as aperture or dimensions; and application
@@ -199,12 +199,19 @@ status information, such as number of items picked or current item selected.
     ok->setData(ok->index(PickedRow, 0, statusInfoIdx), "Picked");
 
     // set default to show all rows - overridden in preferences
+    // set all items not editable
     for(int row = 0; row < ok->rowCount(); row++) {
         ok->setData(ok->index(row, 2), true);
         for (int childRow = 0; childRow < ok->rowCount(ok->index(row, 0)); childRow++) {
             ok->setData(ok->index(childRow, 2, ok->index(row, 0)), true);
+            ok->itemFromIndex(ok->index(childRow, 1, ok->index(row, 0)))->setEditable(false);
+//            ok->itemFromIndex(ok->index(childRow, 1, ok->index(row, 0)))->setSelectable(false);
         }
     }
+
+    // set editable fields
+    ok->itemFromIndex(ok->index(TitleRow, 1, tagInfoIdx))->setEditable(true);
+//    ok->itemFromIndex(ok->index(TitleRow, 1, tagInfoIdx))->setSelectable(true);
 
     connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
             this, SLOT(showOrHide()));

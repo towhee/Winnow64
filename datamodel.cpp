@@ -211,10 +211,10 @@ bool DataModel::addFiles()
         setData(index(row, G::ModifiedColumn), fileInfo.lastModified());
         setData(index(row, G::RefineColumn), false);
         setData(index(row, G::PickColumn), "false");
-        setData(index(row, G::LabelColumn), "");
-        setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-        setData(index(row, G::RatingColumn), "");
-        setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+//        setData(index(row, G::LabelColumn), "");
+//        setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+//        setData(index(row, G::RatingColumn), "");
+//        setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
 //        setData(index(row, G::MetadataLoadedColumn), false);
 //        setData(index(row, G::ThumbLoadedColumn), false);
 
@@ -262,6 +262,8 @@ which is created in MW, and in InfoView.
         QModelIndex idx = index(row, G::PathColumn);
         QString fPath = idx.data(G::FileNameRole).toString();
 
+        QString label = metadata->getLabel(fPath);
+        QString rating = metadata->getRating(fPath);
         uint width = metadata->getWidth(fPath);
         uint height = metadata->getHeight(fPath);
         QString created = metadata->getCreated(fPath);
@@ -288,6 +290,10 @@ which is created in MW, and in InfoView.
         QString email = metadata->getEmail(fPath);
         QString url = metadata->getUrl(fPath);
 
+        setData(index(row, G::LabelColumn), label);
+        setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        setData(index(row, G::RatingColumn), rating);
+        setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
         setData(index(row, G::CreatedColumn), created);
         setData(index(row, G::MegaPixelsColumn), mp);
         setData(index(row, G::DimensionsColumn), dim);
