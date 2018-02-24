@@ -231,6 +231,7 @@ private slots:
     void copyPicks();
     void setRating();
     void setColorClass();
+    void updateTitle(QStandardItem* item);
     void quickFilter();
     void invertFilters();
     void refine();

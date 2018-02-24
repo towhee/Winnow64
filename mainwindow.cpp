@@ -252,10 +252,9 @@ void MW::keyPressEvent(QKeyEvent *event)
 //    qDebug() << "MW::keyPressEvent" << event << isShift;
 
     QMainWindow::keyPressEvent(event);
-//    if (event->key() == Qt::Key_X) {
-//        thumbView->scrollToCurrent();
-//        qDebug() << "keypress x event";
-//    }
+    if (event->key() == Qt::Key_Return) {
+        loupeDisplay();
+    }
 }
 
 void MW::keyReleaseEvent(QKeyEvent *event)
@@ -387,7 +386,7 @@ bool MW::event(QEvent *event)
 {
 //    qDebug() << event;
 
-        // slideshow
+    // slideshow
     if (event->type() == QEvent::KeyRelease) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
 
@@ -1561,10 +1560,10 @@ void MW::createActions()
     asLoupeAction->setCheckable(true);
 //    asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool() ||
 //                              setting->value("isCompareDisplay").toBool());
-    // add secondary shortcut (primary defined in loadShortcuts)
-    QShortcut *enter = new QShortcut(QKeySequence("Return"), this);
     addAction(asLoupeAction);
-    connect(enter, SIGNAL(activated()), asLoupeAction, SLOT(trigger()));
+    // add secondary shortcut (primary defined in loadShortcuts)
+//    QShortcut *enter = new QShortcut(QKeySequence("Return"), this);
+//    connect(enter, SIGNAL(activated()), asLoupeAction, SLOT(trigger()));
     connect(asLoupeAction, SIGNAL(triggered()), this, SLOT(loupeDisplay()));
 
     asGridAction = new QAction(tr("Grid"), this);
@@ -2472,6 +2471,10 @@ InfoView shows basic metadata in a dock widget.
     }
     infoView = new InfoView(this, metadata);
     infoView->setMaximumWidth(folderMaxWidth);
+
+    connect(infoView->ok, SIGNAL(itemChanged(QStandardItem*)),
+            this, SLOT(updateTitle(QStandardItem*)));
+
 }
 
 void MW::createDocks()
@@ -2787,6 +2790,10 @@ QString fileSym = "📷";
     stateLabel->setText(status);
 
     // update InfoView
+
+    // flag updates so itemChanged be ignored in MW::updateTitle
+    infoView->isNewImageDataChange = true;
+
     QStandardItemModel *k = infoView->ok;
     if (keepBase) {
         k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), getPosition());
@@ -2798,6 +2805,7 @@ QString fileSym = "📷";
         k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
         k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
     }
+    infoView->isNewImageDataChange = false;
 }
 
 void MW::clearStatus()
@@ -5242,9 +5250,9 @@ currentindex.
 Note: When the thumbDock thumbView is displayed it needs to be scrolled to the
 currentIndex since it has been "hidden". However, the scrollbars take a long
 time to paint after the view show event, so the ThumbView::scrollToCurrent
-function must be delayed. This is done by the eventFilter in ThumbView,
-intercepted the scrollbar paint events. This is a bit of a cludge to get around
-lack of notification when the QListView has finished painting itself.
+function must be delayed. This is done by the eventFilter in MW, intercepting
+the scrollbar paint events. This is a bit of a cludge to get around lack of
+notification when the QListView has finished painting itself.
 */
     {
     #ifdef ISDEBUG
@@ -6011,6 +6019,56 @@ color class is called label.
 
     if (G::mode == "Compare")
         compareImages->ratingColorClass(rating, labelColor, idx);
+}
+
+void MW::updateTitle(QStandardItem* item)
+{
+/*
+This slot is called when there is a data change in InfoView. If the title has been
+edited in InfoView then all selected image titles are updated to the new title.
+Both the data model and metadata are updated.  If xmp edits are enabled the new
+title is embedded in the image metadata, either internally or as a sidecar when
+ingesting.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "MW::updateTitle";
+    #endif
+    }
+
+    if (infoView->isNewImageDataChange) return;
+
+    QString title = item->data(Qt::DisplayRole).toString();
+    QString fPath = thumbView->getCurrentFilename();
+    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    int row = item->index().row();
+    QModelIndex par = item->index().parent();
+
+    bool test = par == infoView->tagInfoIdx;
+    qDebug() << "MW::updateTitle " << item->data(Qt::DisplayRole).toString()
+             << " par =" << par << " row =" << row
+             << " par == infoView->tagInfoIdx" << test;
+
+    if (par == infoView->tagInfoIdx && row == infoView->TitleRow) {
+
+        qDebug() << "if (par == infoView->tagInfoIdx && row == infoView->TitleRow)";
+
+        if (title != metadata->getTitle(fPath)) {
+            for (int i = 0; i < selection.count(); ++i) {
+                // update data model
+                QModelIndex idx = dm->sf->index(selection.at(i).row(), G::TitleColumn);
+                dm->sf->setData(idx, title, Qt::EditRole);
+                idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
+                QString path = idx.data(G::FileNameRole).toString();
+                qDebug () << path;
+                // update metadata
+                metadata->setTitle(path, title);
+            }
+
+//            metadata->setTitle(fPath, title);
+//            qDebug() << "InfoView::itemChanged  " << title;
+        }
+    }
 }
 
 void MW::getSubfolders(QString fPath)

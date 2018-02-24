@@ -61,7 +61,7 @@ Column 2 = Flag to show or hide row
 It is used to show some file, image and application state information.
 */
 
-InfoView::InfoView(QWidget *parent, Metadata *metadata, DataModel *dm) : QTreeView(parent)
+InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 {
     {
     #ifdef ISDEBUG
@@ -69,7 +69,6 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata, DataModel *dm) : QTreeVi
     #endif
     }
     this->metadata = metadata;
-    this->dm = dm;
 
     ok = new QStandardItemModel(this);
     setupOk();
@@ -209,6 +208,7 @@ status information, such as number of items picked or current item selected.
         ok->setData(ok->index(row, 2), true);
         for (int childRow = 0; childRow < ok->rowCount(ok->index(row, 0)); childRow++) {
             ok->setData(ok->index(childRow, 2, ok->index(row, 0)), true);
+            ok->itemFromIndex(ok->index(childRow, 0, ok->index(row, 0)))->setEditable(false);
             ok->itemFromIndex(ok->index(childRow, 1, ok->index(row, 0)))->setEditable(false);
 //            ok->itemFromIndex(ok->index(childRow, 1, ok->index(row, 0)))->setSelectable(false);
         }
@@ -220,27 +220,6 @@ status information, such as number of items picked or current item selected.
 
     connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
             this, SLOT(showOrHide()));
-}
-
-void InfoView::itemChanged(QStandardItem *item)
-{
-    QString title = item->data(Qt::DisplayRole).toString();
-    int row = item->index().row();
-    QModelIndex par = item->index().parent();
-    if (par == tagInfoIdx && row == TitleRow) {
-        if (title != metadata->getTitle(fPath)) {
-            for (int i = 0; i < selection.count(); ++i) {
-                QModelIndex idx = dm->sf->index(selection.at(i).row(), G::TitleColumn);
-                dm->sf->setData(idx, title, Qt::EditRole);
-                idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
-                QString path = idx.data();
-                qDebug () << path;
-            }
-
-//            metadata->setTitle(fPath, title);
-//            qDebug() << "InfoView::itemChanged  " << title;
-        }
-    }
 }
 
 void InfoView::showOrHide()
@@ -312,6 +291,9 @@ void InfoView::updateInfo(const QString &fPath)
     #endif
     }
 
+    // flag updates so itemChanged be ignored in MW::updateTitle
+    isNewImageDataChange = true;
+
     QFileInfo imageInfo = QFileInfo(fPath);
 
     // make sure there is metadata for this image
@@ -344,14 +326,17 @@ void InfoView::updateInfo(const QString &fPath)
     ok->setData(ok->index(EmailRow, 1, tagInfoIdx), metadata->getEmail(fPath));
     ok->setData(ok->index(UrlRow, 1, tagInfoIdx), metadata->getUrl(fPath));
 
-    this->fPath = fPath;
+    this->fPath = fPath;        // not used, convenience value for future use
 
     // set tooltips
-//    for (int row = 0; row < ok->rowCount(); row++) {
-//        QModelIndex idx = ok->index(row, 1);
-//        QString value = qvariant_cast<QString>(idx.data());
-//        ok->setData(idx, value, Qt::ToolTipRole);
-//    }
+    for(int row = 0; row < ok->rowCount(); row++) {
+        QModelIndex parentIdx = ok->index(row, 0);
+        for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
+            QModelIndex idx = ok->index(childRow, 1, parentIdx);
+            QString value = qvariant_cast<QString>(idx.data());
+            ok->setData(idx, value, Qt::ToolTipRole);
+        }
+    }
 
     if (G::isThreadTrackingOn) qDebug()
         << "ThumbView::updateExifInfo - loaded metadata display info for"
@@ -359,4 +344,17 @@ void InfoView::updateInfo(const QString &fPath)
 
     tweakHeaders();
     showOrHide();
+
+    isNewImageDataChange = false;
+}
+
+void InfoView::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        QModelIndex index = indexAt(event->pos());
+        if (index.column() == 1) { // column you want to use for one click
+            edit(index);
+        }
+    }
+    QTreeView::mousePressEvent(event);
 }

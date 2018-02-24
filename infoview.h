@@ -9,24 +9,12 @@
 
 #include "global.h"
 
-//class InfoDelegate : public QStyledItemDelegate
-//{
-//    Q_OBJECT
-
-//public:
-//    InfoDelegate(QObject *parent);
-
-//    void paint(QPainter *painter, const QStyleOptionViewItem &option,
-//               const QModelIndex &index) const;
-
-//};
-
 class InfoView : public QTreeView
 {
 	Q_OBJECT
 
 public:
-    InfoView(QWidget *parent, Metadata *metadata, DataModel *dm);
+    InfoView(QWidget *parent, Metadata *metadata);
     void updateInfo(const QString &imageFullPath);
     void clearInfo();
 
@@ -40,6 +28,7 @@ public:
     QModelIndex statusInfoIdx;
 
     QAction *copyInfoAction;
+    bool isNewImageDataChange;
 
     enum categories {
         fileInfoCat,
@@ -94,88 +83,19 @@ public slots:
 	void copyEntry();
 
 private slots:
-    void itemChanged(QStandardItem* item);
 
 protected:
+    void mousePressEvent(QMouseEvent *event);
 
 private:
-	QModelIndex selectedEntry;
+    void setupOk();
+    void tweakHeaders();
+
+    QModelIndex selectedEntry;
 	QMenu *infoMenu;
 	QAction *copyAction;
     Metadata *metadata;
-    DataModel *dm;
     QString fPath;
-
-    void setupOk();
-    void tweakHeaders();
 };
 
 #endif // INFOVIEW_H
-
-//#ifndef INFOVIEW_H
-//#define INFOVIEW_H
-
-//#include <QtWidgets>
-//#include "metadata.h"
-
-//class InfoView : public QTableView
-//{
-//	Q_OBJECT
-
-//public:
-//    InfoView(QWidget *parent, Metadata *metadata);
-//    void updateInfo(const QString &imageFullPath);
-//    void clearInfo();
-
-//    // datamodel for metadata to show or hide
-//    QStandardItemModel *ok;
-
-//    enum infoModelRows {
-//        FolderRow,
-//        FileNameRow,
-//        LocationRow,
-//        SizeRow,
-//        CreatedRow,
-//        ModifiedRow,
-//        BlankEntryRow1,
-//        DimensionsRow,
-//        MegaPixelsRow,
-//        ModelRow,
-//        LensRow,
-//        ShutterSpeedRow,
-//        ApertureRow,
-//        ISORow,
-//        FocalLengthRow,
-//        TitleRow,
-//        CreatorRow,
-//        CopyrightRow,
-//        EmailRow,
-//        UrlRow,
-//        BlankEntryRow2,
-//        PositionRow,
-//        ZoomRow,
-//        PickedRow,
-//        AfterLastItem   // insert additional items before this
-//    };
-
-
-//public slots:
-//    void showOrHide();
-//	void showInfoViewMenu(QPoint pt);
-//	void copyEntry();
-
-//private slots:
-
-//protected:
-
-//private:
-//	QModelIndex selectedEntry;
-//	QMenu *infoMenu;
-//	QAction *copyAction;
-//    Metadata *metadata;
-
-//    void setupOk();
-//    void tweakHeaders();
-//};
-
-//#endif // INFOVIEW_H
