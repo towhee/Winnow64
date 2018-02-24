@@ -5,6 +5,7 @@
 
 #include <QtWidgets>
 #include "metadata.h"
+#include "datamodel.h"
 
 #include "global.h"
 
@@ -25,7 +26,7 @@ class InfoView : public QTreeView
 	Q_OBJECT
 
 public:
-    InfoView(QWidget *parent, Metadata *metadata);
+    InfoView(QWidget *parent, Metadata *metadata, DataModel *dm);
     void updateInfo(const QString &imageFullPath);
     void clearInfo();
 
@@ -102,6 +103,7 @@ private:
 	QMenu *infoMenu;
 	QAction *copyAction;
     Metadata *metadata;
+    DataModel *dm;
     QString fPath;
 
     void setupOk();

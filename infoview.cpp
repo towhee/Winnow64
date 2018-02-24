@@ -61,7 +61,7 @@ Column 2 = Flag to show or hide row
 It is used to show some file, image and application state information.
 */
 
-InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
+InfoView::InfoView(QWidget *parent, Metadata *metadata, DataModel *dm) : QTreeView(parent)
 {
     {
     #ifdef ISDEBUG
@@ -69,6 +69,7 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     #endif
     }
     this->metadata = metadata;
+    this->dm = dm;
 
     ok = new QStandardItemModel(this);
     setupOk();
@@ -228,8 +229,16 @@ void InfoView::itemChanged(QStandardItem *item)
     QModelIndex par = item->index().parent();
     if (par == tagInfoIdx && row == TitleRow) {
         if (title != metadata->getTitle(fPath)) {
-            metadata->setTitle(fPath, title);
-            qDebug() << "InfoView::itemChanged  " << title;
+            for (int i = 0; i < selection.count(); ++i) {
+                QModelIndex idx = dm->sf->index(selection.at(i).row(), G::TitleColumn);
+                dm->sf->setData(idx, title, Qt::EditRole);
+                idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
+                QString path = idx.data();
+                qDebug () << path;
+            }
+
+//            metadata->setTitle(fPath, title);
+//            qDebug() << "InfoView::itemChanged  " << title;
         }
     }
 }
