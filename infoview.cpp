@@ -81,6 +81,7 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     setHeaderHidden(true);
     setAlternatingRowColors(true);
     setSelectionMode(QAbstractItemView::SingleSelection);
+    setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::SelectedClicked);
     setFirstColumnSpanned(0, QModelIndex(), true);
     setFirstColumnSpanned(1, QModelIndex(), true);
     setFirstColumnSpanned(2, QModelIndex(), true);
@@ -101,6 +102,9 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),
             SLOT(showInfoViewMenu(QPoint)));
+
+    connect(ok, SIGNAL(itemChanged(QStandardItem*)),
+            this, SLOT(itemChanged(QStandardItem*)));
 }
 
 void InfoView::showInfoViewMenu(QPoint pt)
@@ -217,6 +221,19 @@ status information, such as number of items picked or current item selected.
             this, SLOT(showOrHide()));
 }
 
+void InfoView::itemChanged(QStandardItem *item)
+{
+    QString title = item->data(Qt::DisplayRole).toString();
+    int row = item->index().row();
+    QModelIndex par = item->index().parent();
+    if (par == tagInfoIdx && row == TitleRow) {
+        if (title != metadata->getTitle(fPath)) {
+            metadata->setTitle(fPath, title);
+            qDebug() << "InfoView::itemChanged  " << title;
+        }
+    }
+}
+
 void InfoView::showOrHide()
 {
 /*
@@ -317,6 +334,8 @@ void InfoView::updateInfo(const QString &fPath)
     ok->setData(ok->index(CopyrightRow, 1, tagInfoIdx), metadata->getCopyright(fPath));
     ok->setData(ok->index(EmailRow, 1, tagInfoIdx), metadata->getEmail(fPath));
     ok->setData(ok->index(UrlRow, 1, tagInfoIdx), metadata->getUrl(fPath));
+
+    this->fPath = fPath;
 
     // set tooltips
 //    for (int row = 0; row < ok->rowCount(); row++) {

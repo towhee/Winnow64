@@ -217,7 +217,7 @@ xmp schema can have two formats:
 dc schema:
     <dc:title> <rdf:Alt> <rdf:li xml:lang="x-default">Cormorant in California</rdf:li> </rdf:Alt> </dc:title>
 */
-    report();
+//    report();
     QByteArray schema;
     if (item == "Rating" || item == "Label") {
         item.prepend("xmp:");
@@ -310,7 +310,7 @@ dc schema:
 
     if (foundItem) {
         xmpBa.replace(startPos, endPos - startPos, value);
-        report();
+//        report();
         return true;
     }
     return false;

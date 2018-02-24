@@ -81,6 +81,9 @@ void Metadata::initSupportedFiles()
     // add raw file types here as they are supported
 //    rawFormats << "arw" << "cr2" << "nef" << "orf";
     rawFormats << "arw" << "cr2" << "nef" << "orf" << "sr2";
+    sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "sr2";
+    internalXmpFormats << "jpg";
+    xmpWriteFormats << "jpg" << "arw" << "cr2" << "nef" << "orf" << "sr2";
 
     supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
     "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
@@ -1526,8 +1529,13 @@ QByteArray Metadata::getByteArray(ulong offset, ulong length)
     return(file.read(length));
 }
 
-void Metadata::writeXmp(const QString &fPath)
+bool Metadata::writeXmp(const QString &fPath, QByteArray &buffer)
 {
+    // is xmp supported for this file
+    QFileInfo info(fPath);
+    QString suffix = info.suffix().toLower();
+    if (!xmpWriteFormats.contains(suffix)) return false;
+
     // set locals to image data  ie title = metaCache[fPath].title
     setMetadata(fPath);
 
@@ -1535,22 +1543,32 @@ void Metadata::writeXmp(const QString &fPath)
     bool ratingChanged = rating != _rating;
     bool labelChanged = label != _label;
     bool titleChanged = title != _title;
-    if (!ratingChanged && !labelChanged && !titleChanged) return;
+    if (!ratingChanged && !labelChanged && !titleChanged) return false;
 
-    // data edited, save file with changes
+    // data edited, open image file
     file.setFileName(fPath);
     file.open(QIODevice::ReadOnly);
-    QByteArray newBuf;
+
+    // update xmp data
     Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
-    if (ratingChanged) xmp.setItem("rating", rating.toLatin1());
-    if (labelChanged) xmp.setItem("label", label.toLatin1());
+    if (ratingChanged) xmp.setItem("Rating", rating.toLatin1());
+    if (labelChanged) xmp.setItem("Label", label.toLatin1());
     if (titleChanged) xmp.setItem("title", title.toLatin1());
-    xmp.writeJPG(file, newBuf);
-    QFileInfo info(fPath);
+
+
+    // get the buffer to write to a new file
+    if (suffix == "jpg")
+        xmp.writeJPG(file, buffer);
+    if (sidecarFormats.contains(suffix))
+        xmp.writeSidecar(file, buffer);
+
+    return true;
+
+    // write the updated xmp in file if JPG, TIF or sidecar if raw
     QString newName = info.path() + "/" + "test.jpg";
     QFile newFile(newName);
     newFile.open(QIODevice::WriteOnly);
-    newFile.write(newBuf);
+    newFile.write(buffer);
 }
 
 ulong Metadata::findInFile(QString s, ulong offset, ulong range)
@@ -2292,14 +2310,14 @@ void Metadata::formatNikon()
         Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
         rating = xmp.getItem("Rating");     // case is important "Rating"
         label = xmp.getItem("Label");       // case is important "Label"
-        title = xmp.getItem("title");       // case is important "title"
-        cameraSN = xmp.getItem("SerialNumber");
-        lens = xmp.getItem("Lens");
-        lensSN = xmp.getItem("LensSerialNumber");
-        creator = xmp.getItem("creator");
-        copyright = xmp.getItem("rights");
-        email = xmp.getItem("CiEmailWork");
-        url = xmp.getItem("CiUrlWork");
+        if (title.isEmpty()) title = xmp.getItem("title");       // case is important "title"
+        if (cameraSN.isEmpty()) cameraSN = xmp.getItem("SerialNumber");
+        if (lens.isEmpty()) lens = xmp.getItem("Lens");
+        if (lensSN.isEmpty()) lensSN = xmp.getItem("LensSerialNumber");
+        if (creator.isEmpty()) creator = xmp.getItem("creator");
+        if (copyright.isEmpty()) copyright = xmp.getItem("rights");
+        if (email.isEmpty()) email = xmp.getItem("CiEmailWork");
+        if (url.isEmpty()) url = xmp.getItem("CiUrlWork");
 
         // save original values so can determine if edited when writing changes
         _title = title;
@@ -3706,13 +3724,18 @@ QString Metadata::getShootingInfo(const QString &imageFileName)
     return metaCache[imageFileName].shootingInfo;
 }
 
-void Metadata::setXmpTitle(const QString &imageFileName, const QByteArray &title)
+void Metadata::setTitle(const QString &imageFileName, const QString &title)
 {
-    file.setFileName(imageFileName);
-    file.open(QIODevice::ReadOnly);
-    setMetadata(imageFileName);
-    Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
-    xmp.setItem("title", title);
+    metaCache[imageFileName].title = title;
+}
+
+void Metadata::setLabel(const QString &imageFileName, const QString &label)
+{
+    metaCache[imageFileName].label = label;
+}
+void Metadata::setRating(const QString &imageFileName, const QString &rating)
+{
+    metaCache[imageFileName].rating = rating;
 }
 
 

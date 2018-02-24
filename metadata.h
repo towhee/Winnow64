@@ -137,6 +137,9 @@ public:
     QString err;
 
     QStringList rawFormats;
+    QStringList sidecarFormats;
+    QStringList internalXmpFormats;
+    QStringList xmpWriteFormats;
     QStringList supportedFormats;
 /*
     enum tagDataType {
@@ -198,9 +201,11 @@ public:
     QString getErr(const QString &imageFileName);
     void setErr(const QString &imageFileName, const QString &err);
     QString getCopyFileNamePrefix(const QString &imageFileName);
-    void setXmpTitle(const QString &imageFileName, const QByteArray &title);
+    void setTitle(const QString &imageFileName, const QString &title);
+    void setLabel(const QString &imageFileName, const QString &label);
+    void setRating(const QString &imageFileName, const QString &rating);
 
-    void writeXmp(const QString &imageFileName);
+    bool writeXmp(const QString &imageFileName, QByteArray &buffer);
 
     bool okToReadXmp;
     bool readEssentialMetadata;

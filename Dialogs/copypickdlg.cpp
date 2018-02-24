@@ -131,9 +131,36 @@ void CopyPickDlg::accept()
         // seqNum is required by parseTokenString
         seqNum =  ui->spinBoxStartNumber->value() + i;
         QString fileName =  parseTokenString(pickList.at(i), tokenString);
-        QString suffix = "." + fileInfo.completeSuffix();
-        QString destination = folderPath + fileName + suffix;
-        QFile::copy(source, destination);
+        QString suffix = fileInfo.completeSuffix().toLower();
+        QString dotSuffix = "." + suffix;
+
+        // buffer to hold file with edited xmp data
+        QByteArray buffer;
+
+        // if there is edited xmp data in an eligible file format
+        if (metadata->writeXmp(source, buffer)) {
+            // write a sidecar
+            if (metadata->sidecarFormats.contains(suffix)) {
+                QString sidecar = folderPath + fileName + ".xmp";
+                QFile sidecarFile(sidecar);
+                sidecarFile.open(QIODevice::WriteOnly);
+                sidecarFile.write(buffer);
+                // copy image file
+                QString destination = folderPath + fileName + dotSuffix;
+                QFile::copy(source, destination);            }
+            // write inside the source file
+            if (metadata->internalXmpFormats.contains(suffix)) {
+                QString destination = folderPath + fileName + dotSuffix;
+                QFile newFile(destination);
+                newFile.open(QIODevice::WriteOnly);
+                newFile.write(buffer);
+            }
+        }
+        // no xmp data, just copy source to destination
+        else {
+            QString destination = folderPath + fileName + dotSuffix;
+            QFile::copy(source, destination);
+        }
     }
     QDialog::accept();
 }

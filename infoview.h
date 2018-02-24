@@ -93,6 +93,7 @@ public slots:
 	void copyEntry();
 
 private slots:
+    void itemChanged(QStandardItem* item);
 
 protected:
 
@@ -101,6 +102,7 @@ private:
 	QMenu *infoMenu;
 	QAction *copyAction;
     Metadata *metadata;
+    QString fPath;
 
     void setupOk();
     void tweakHeaders();

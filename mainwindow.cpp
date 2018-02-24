@@ -5894,6 +5894,10 @@ the rating for all the selected thumbs.
         QModelIndex idx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
         dm->sf->setData(idx, rating, Qt::EditRole);
     }
+
+    // update metadata
+    metadata->setRating(thumbView->getCurrentFilename(), rating);
+
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
     updateRating();
@@ -5971,6 +5975,9 @@ set the color class for all the selected thumbs.
         QModelIndex idx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
         dm->sf->setData(idx, labelColor, Qt::EditRole);
     }
+    // update metadata
+    metadata->setLabel(thumbView->getCurrentFilename(), labelColor);
+
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
     tableView->resizeColumnToContents(G::LabelColumn);
