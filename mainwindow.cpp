@@ -91,7 +91,7 @@ variables in MW (this class) and managed in the prefDlg class.
 */
 
     // structure to hold persistant settings between sessions
-    setting = new QSettings("Winnow", "winnow_100");
+    setting = new QSettings("Winnow", "winnow_101");
 
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel
@@ -118,6 +118,7 @@ variables in MW (this class) and managed in the prefDlg class.
     handleStartupArgs();
 
     bool isSettings = false;
+    // isLoadSettings used for debugging
     if (isLoadSettings) {
         isSettings = loadSettings();//dependent on bookmarks and actions
     }
