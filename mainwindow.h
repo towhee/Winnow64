@@ -619,6 +619,7 @@ private:
     bool isUpdatingState;
 
     bool isLoadSettings;
+    bool isSettings;
     bool isFirstTimeNoSettings;
     bool isInitializing;
     bool isStressTest;

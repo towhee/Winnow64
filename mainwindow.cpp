@@ -91,7 +91,7 @@ variables in MW (this class) and managed in the prefDlg class.
 */
 
     // structure to hold persistant settings between sessions
-    setting = new QSettings("Winnow", "winnow_101");
+    setting = new QSettings("Winnow", "winnow_100");
 
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel
@@ -117,7 +117,7 @@ variables in MW (this class) and managed in the prefDlg class.
 //    updateExternalApps();       // dependent on createActions
     handleStartupArgs();
 
-    bool isSettings = false;
+    isSettings = false;
     // isLoadSettings used for debugging
     if (isLoadSettings) {
         isSettings = loadSettings();//dependent on bookmarks and actions
@@ -153,6 +153,9 @@ variables in MW (this class) and managed in the prefDlg class.
     // process the persistant folder if available
 //    qDebug() << rememberLastDir;
     if (rememberLastDir && !isShift) folderSelectionChange();
+
+    if (!isSettings) centralLayout->setCurrentIndex(StartTab);
+    isSettings = true;
 
 //struct sysinfo sys_info;
 //totalmem=(qint32)(sys_info.totalram/1048576);
@@ -5475,11 +5478,13 @@ void MW::setCentralView()
     qDebug() << "MW::setCentralView";
     #endif
     }
-    if(isFirstTimeNoSettings) {
-        centralLayout->setCurrentIndex(StartTab);
-        isFirstTimeNoSettings = false;
-        return;
-    }
+    if (!isSettings) return;
+
+//    if(isFirstTimeNoSettings) {
+//        centralLayout->setCurrentIndex(StartTab);
+//        isFirstTimeNoSettings = false;
+//        return;
+//    }
     /*
     qDebug() << "MW::setCentralView  "
              << "asLoupeAction->isChecked()" << asLoupeAction->isChecked()
