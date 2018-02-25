@@ -18,6 +18,8 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- scroll thumbwheel advance in loupe view
+- add metadata performance options to preferences
 - add MetadateDate to Xmp
 - allow update creator, copyright, email and url
 - Add filter for date (Year, Month, Day)

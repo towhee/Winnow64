@@ -849,8 +849,8 @@ void ImageView::wheelEvent(QWheelEvent *event)
     qDebug() << "ImageView::wheelEvent";
     #endif
     }
+
     // if trackpad scrolling set in preferences then default behavior
-//    qDebug() << event << "useWheelToScroll =" << useWheelToScroll << "isMouseDrag" << isMouseDrag;
     if(useWheelToScroll) {
         QGraphicsView::wheelEvent(event);
         isTrackpadScroll = true;
@@ -860,15 +860,13 @@ void ImageView::wheelEvent(QWheelEvent *event)
     // otherwise trapckpad swiping = next/previous image
     static int delta;
     delta += event->delta();
-//    qDebug() << "ImageView::wheelEvent   delta =" << delta
-//             << "angleDelta =" << event->angleDelta()
-//             << "phase =" << event->phase();
     int deltaThreshold = 40;
 
     if(delta > deltaThreshold) {
         thumbView->selectPrev();
         delta = 0;
     }
+
     if(delta < (-deltaThreshold)) {
         thumbView->selectNext();
         delta = 0;
@@ -884,9 +882,7 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
     #endif
     }
     // placeholder function pending use
-
-    //    isMouseDoubleClick = true;
-//    qDebug() << "ImageView::mouseDoubleClickEvent" << "isMouseDrag" << isMouseDrag;
+    // isMouseDoubleClick = true;
     QWidget::mouseDoubleClickEvent(event);
 }
 
@@ -897,13 +893,24 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     qDebug() << "ImageView::mousePressEvent";
     #endif
     }
-//    qDebug() << "mousePressEvent" << event << "isMouseDrag" << isMouseDrag;
+    qDebug() << "mousePressEvent" << event << "isMouseDrag" << isMouseDrag
+             << "button =" << event->button();
 
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
 
     // prevent zooming when right click for context menu
     if (event->button() == Qt::RightButton) {
+        return;
+    }
+
+    // forward and back buttons
+    if (event->button() == Qt::BackButton) {
+        thumbView->selectPrev();
+        return;
+    }
+    if (event->button() == Qt::ForwardButton) {
+        thumbView->selectNext();
         return;
     }
 
@@ -958,7 +965,18 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     if (event->button() == Qt::RightButton) {
         return;
     }
-//    qDebug() << "mouseReleaseEvent" << event << "isMouseDrag" << isMouseDrag;
+
+    // prevent zooming when forward and back buttons
+    if (event->button() == Qt::BackButton
+    ||  event->button() == Qt::ForwardButton) {
+        return;
+    }
+    if (event->button() == Qt::ForwardButton) {
+        thumbView->selectNext();
+        return;
+    }
+
+    //    qDebug() << "mouseReleaseEvent" << event << "isMouseDrag" << isMouseDrag;
     isLeftMouseBtnPressed = false;
     if (isMouseDrag || isMouseDoubleClick) {
 //        qDebug() << "mouseReleaseEvent  if (isMouseDrag || isMouseDoubleClick)" << event << "isMouseDrag" << isMouseDrag;
