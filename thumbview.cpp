@@ -203,7 +203,10 @@ possibly altered thumbnail dimensions.
     setSpacing(thumbSpacing);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels);
-    if(objectName() == "Thumbnails") emit updateThumbDockHeight();
+    if(objectName() == "Thumbnails") {
+        if (!mw->thumbDock->isFloating())
+            emit updateThumbDockHeight();
+    }
 }
 
 void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,

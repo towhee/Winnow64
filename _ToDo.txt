@@ -13,13 +13,14 @@ BUGS
 - Pick thumb not always showing one main image in loupe mode
 - Combobox not showing down arrow
 PERFORMANCE
-- Separate thread to load XMP data after thumbnails loaded
+- Can be slow when usb card images cached
 CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Add filter for date
-- Read/write XMP sidecars
+- add MetadateDate to Xmp
+- allow update creator, copyright, email and url
+- Add filter for date (Year, Month, Day)
 - Drag and drop a selection of thumbs
 - Add current folder to bookmarks
 - Combine raw+jpg option
@@ -27,7 +28,6 @@ ENHANCEMENTS
 - Get actual monitor resolution for actualDevicePixelRatio calculation
 - Recent copy to folders in ingest dialog
 - Add zoom increment amount to preferences
-- Edit title in metadata
 - Add preferences for info label
 - Remember column order in tableView and workspace
 - Add more raw file formats - DNG, Fuji, Panasonic ...
@@ -43,6 +43,12 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Menu visibility and window title bar not updating when change workspace
+- Done: Thumb wrapping and thumbdock size wrong for floating thumbdock workspaces
+- Done: Olympus creator and copyright
+- Done: Get Olympus lens
+- Done: Edit title in metadata
+- Done: Read/write XMP sidecars
 - Done: Add Ingest token builder
 - Done: Redirect report metadata to a text window so Qt Creator not req'd
 - Done: Cmd click does not add to selection on first click

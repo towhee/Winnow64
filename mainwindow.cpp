@@ -1553,7 +1553,7 @@ void MW::createActions()
     infoVisibleAction->setCheckable(true);
 //    infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());  // from QSettings
     addAction(infoVisibleAction);
-    connect(infoVisibleAction, SIGNAL(triggered()), this, SLOT(setShootingInfo()));
+    connect(infoVisibleAction, SIGNAL(triggered()), this, SLOT(setShootingInfoVisibility()));
 
 
     asLoupeAction = new QAction(tr("Loupe"), this);
@@ -3244,7 +3244,7 @@ void MW::invokeWorkspaceFromAction(QAction *workAction)
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == workAction->text()) {
             invokeWorkspace(workspaces->at(i));
-//            reportWorkspace(i);         // rgh remove after debugging
+            reportWorkspace(i);         // rgh remove after debugging
             return;
         }
     }
@@ -3268,7 +3268,10 @@ workspace with a matching name to the action is used.
     setFullNormal();
     restoreGeometry(w.geometry);
     restoreState(w.state);
+    // two restoreState req'd for going from docked to floating docks
+    restoreState(w.state);
     windowTitleBarVisibleAction->setChecked(w.isWindowTitleBarVisible);
+//    menuBarVisibleAction->setChecked(true);
     menuBarVisibleAction->setChecked(w.isMenuBarVisible);
     statusBarVisibleAction->setChecked(w.isStatusBarVisible);
     folderDockVisibleAction->setChecked(w.isFolderDockVisible);
@@ -3293,6 +3296,7 @@ workspace with a matching name to the action is used.
     thumbView->labelFontSize = w.labelFontSize,
     thumbView->showThumbLabels = w.showThumbLabels;
     thumbView->wrapThumbs = w.wrapThumbs;
+    thumbView->setWrapping(w.wrapThumbs);
     gridView->thumbWidth = w.thumbWidthGrid,
     gridView->thumbHeight = w.thumbHeightGrid,
     gridView->thumbSpacing = w.thumbSpacingGrid,
@@ -3316,7 +3320,6 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
     wsd.isFullScreen = isFullScreen();
-//    wsd.isFullScreen = fullScreenAction->isChecked();
     wsd.isWindowTitleBarVisible = windowTitleBarVisibleAction->isChecked();
     wsd.isMenuBarVisible = menuBarVisibleAction->isChecked();
     wsd.isStatusBarVisible = statusBarVisibleAction->isChecked();
@@ -4583,7 +4586,7 @@ re-established when the application is re-opened.
         setting->setValue("state", ws.state);
         setting->setValue("isFullScreen", ws.isFullScreen);
         setting->setValue("isWindowTitleBarVisible", ws.isWindowTitleBarVisible);
-        setting->setValue("isMenuBarBarVisible", ws.isMenuBarVisible);
+        setting->setValue("isMenuBarVisible", ws.isMenuBarVisible);
         setting->setValue("isStatusBarVisible", ws.isStatusBarVisible);
         setting->setValue("isFolderDockVisible", ws.isFolderDockVisible);
         setting->setValue("isFavDockVisible", ws.isFavDockVisible);
@@ -5101,6 +5104,7 @@ condition of actions sets the visibility of all window components. */
     }
     // set flag so
     isUpdatingState = true;
+    setWindowsTitleBarVisibility();
     setMenuBarVisibility();
     setStatusBarVisibility();
     setCacheStatusVisibility();
@@ -5114,7 +5118,7 @@ condition of actions sets the visibility of all window components. */
     setFilterDockLockMode();
     setMetadataDockLockMode();
     setThumbDockLockMode();
-    setShootingInfo();
+    setShootingInfoVisibility();
     setCentralView();
 //    setActualDevicePixelRation();
     isUpdatingState = false;
@@ -5195,6 +5199,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
         thumbView->setWrapping(false);
+        qDebug() << "MW::setThumbDockFeatures   thumbView->setWrapping(false);";
         thumbView->isTopOrBottomDock = true;
         // if thumbDock area changed then set dock height to thumb sizw
         if (!thumbDock->isFloating() && !asGridAction->isChecked()) {
@@ -5491,10 +5496,10 @@ void MW::setCentralView()
     if (asCompareAction->isChecked()) compareDisplay();
 }
 
-void MW::setShootingInfo() {
+void MW::setShootingInfoVisibility() {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::setShootingInfo";
+    qDebug() << "MW::setShootingInfoVisibility";
     #endif
     }
     imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
@@ -5545,6 +5550,7 @@ void MW::setThumbDockVisibity()
     #endif
     }
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
+//    thumbView->setWrapping(thumbView->wrapThumbs);    // nada
     if (G::mode != "Grid")
         wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
 }

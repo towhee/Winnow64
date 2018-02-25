@@ -1464,11 +1464,6 @@ uint Metadata::get1(QByteArray c)
 
 ulong Metadata::get2(QByteArray c)
 {
-     {
-//     #ifdef ISDEBUG
-//     qDebug() << "Metadata::get2";
-//     #endif
-     }
      if (order == 0x4D4D) return static_cast<unsigned long>
              ((c[0]&0xFF) << 8 | (c[1]&0xFF));
      else return static_cast<unsigned int>
@@ -1477,11 +1472,6 @@ ulong Metadata::get2(QByteArray c)
 
 ulong Metadata::get4(QByteArray c)
 {
-    {
-//    #ifdef ISDEBUG
-//    qDebug() << "Metadata::get4";
-//    #endif
-    }
     if (order == 0x4D4D) return static_cast<unsigned long>
             ((c[0]&0xFF) << 24 | (c[1]&0xFF) << 16 | (c[2]&0xFF) << 8 | (c[3]&0xFF));
     else return static_cast<unsigned long>
@@ -2014,7 +2004,9 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
         file.seek(offset);           // APP1 FFE*
         marker = get2(file.read(2));
         if (marker < 0xFFC0) break;
-        ulong nextOffset = file.pos() + get2(file.read(2));
+        ulong pos = file.pos();
+        ulong nex = get2(file.read(2));
+        ulong nextOffset = pos + nex;
         if (marker == 0xFFE1) {
             QString segName = file.read(4);
             if (segName == "Exif") segmentHash["EXIF"] = offset;
@@ -2565,9 +2557,12 @@ void Metadata::formatOlympus()
     (ifdDataHash.contains(274))
         ? orientation = ifdDataHash.value(274).tagValue
         : orientation = 1;
-//    (ifdDataHash.contains(272))
-//        ? created = getString(ifdDataHash.value(306).tagValue, ifdDataHash.value(306).tagCount)
-//        : created = "";
+    (ifdDataHash.contains(315))
+        ? creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount)
+        : creator = "";
+    (ifdDataHash.contains(33432))
+        ? copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount)
+        : copyright = "";
 
     // get the offset for ExifIFD and read it
     ulong offsetEXIF;
@@ -2626,6 +2621,11 @@ void Metadata::formatOlympus()
     } else {
         focalLength = "";
         focalLengthNum = 0;
+    }
+    // lens
+    if (ifdDataHash.contains(42036)) {
+        lens = getString(ifdDataHash.value(42036).tagValue,
+                ifdDataHash.value(42036).tagCount);
     }
 
     // read makernoteIFD
@@ -3218,6 +3218,9 @@ bool Metadata::formatJPG()
     // read XMP
     QString filePath = fName;       // for debugging
 
+//    qDebug() << "Metadata::formatJPG just before xmp" << filePath
+//             << " isXmp =" << isXmp << " okToReadXmp =" << okToReadXmp;
+
     if (isXmp && okToReadXmp) {
         Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
         rating = xmp.getItem("Rating");     // case is important "Rating"
@@ -3237,7 +3240,7 @@ bool Metadata::formatJPG()
         _label = label;
 
         if (report) xmpString = xmp.metaAsString();
-        qDebug() << "Metadata::formatJPG  " << xmpString;
+//        qDebug() << "Metadata::formatJPG  " << xmpString;
     }
 
     if (report) reportMetadata();

@@ -55,8 +55,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.910";
-    QString versionDetail = "Token editor completed";
+    QString version = "0.920";
+    QString versionDetail = "Added XMP support";
 
     bool isShift;               // used when opening if shift key pressed
 
@@ -277,7 +277,7 @@ private slots:
     void bookmarkClicked(QTreeWidgetItem *item, int col);
     void setThumbsFilter();
     void clearThumbsFilter();
-    void setShootingInfo();
+    void setShootingInfoVisibility();
     void setCacheStatusVisibility();
     void togglePick();
     void updatePick();
