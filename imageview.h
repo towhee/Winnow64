@@ -34,6 +34,7 @@ public:
     bool useWheelToScroll;
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
+    void rotate(int degrees);
     void moveShootingInfo(QString infoString);
     QLabel *pickLabel;      // visibility controlled in MW
     CircleLabel *classificationLabel;

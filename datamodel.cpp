@@ -21,12 +21,16 @@ The data is structured in columns:
     ● Label:            user edited         EditRole
     ● MegaPixels:       from metadata       EditRole
     ● Dimensions:       from metadata       EditRole
+    ● Rotation:         user edited         EditRole
     ● Aperture:         from metadata       EditRole
     ● ShutterSpeed:     from metadata       EditRole
     ● ISO:              from metadata       EditRole
     ● CameraModel:      from metadata       EditRole
     ● FocalLength:      from metadata       EditRole
     ● Title:            from metadata       EditRole
+    ● Copyright:        from metadata       EditRole
+    ● Email:            from metadata       EditRole
+    ● Url:              from metadata       EditRole
 
 Note that more items such as the file offsets to embedded JPG are stored in
 the metadata structure which is indexed by the file path.
@@ -42,6 +46,29 @@ number of datamodel columns.  Filtering also updates all views and the image
 cache is reloaded.
 
 enum for roles and columns are in global.cpp
+
+Code examples for model:
+
+    // current selection:
+    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+
+    // an index of Rating in the selection:
+    QModelIndex idx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
+
+    // value of Rating:
+    rating = idx.data(Qt::EditRole).toString();
+
+    // to edit a value in the model
+    dm->sf->setData(index(row, G::RotationColumn), value);
+
+    // file path for current index (primary selection)
+    fPath = thumbView->currentIndex().data(G::FilePathRole).toString();
+
+    // to get a QItem from a filtered or sorted datamodel selection
+    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    QModelIndex idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
+    QStandardItem *item = new QStandardItem;
+    item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
 
 */
     {
@@ -69,6 +96,7 @@ enum for roles and columns are in global.cpp
     setHorizontalHeaderItem(G::CreatorColumn, new QStandardItem("Creator"));
     setHorizontalHeaderItem(G::MegaPixelsColumn, new QStandardItem("MPix"));
     setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions"));
+    setHorizontalHeaderItem(G::RotationColumn, new QStandardItem("Rot"));
     setHorizontalHeaderItem(G::ApertureColumn, new QStandardItem("Aperture"));
     setHorizontalHeaderItem(G::ShutterspeedColumn, new QStandardItem("Shutter"));
     setHorizontalHeaderItem(G::ISOColumn, new QStandardItem("ISO"));
@@ -180,7 +208,7 @@ bool DataModel::addFiles()
         appendRow(item);
         int row = item->index().row();
         setData(index(row, G::PathColumn), fileInfo.fileName(), Qt::DisplayRole);
-        setData(index(row, G::PathColumn), fileInfo.filePath(), G::FileNameRole);
+        setData(index(row, G::PathColumn), fileInfo.filePath(), G::FilePathRole);
         setData(index(row, G::PathColumn), fileInfo.absoluteFilePath(), Qt::ToolTipRole);
         setData(index(row, G::PathColumn), fileInfo.path(), G::PathRole);   // can we combine and eliminate
         setData(index(row, G::PathColumn), QRect(), G::ThumbRectRole);
@@ -189,7 +217,7 @@ bool DataModel::addFiles()
 
         item = new QStandardItem();
         item->setData("", Qt::DisplayRole);     // column 0 just displays icon
-        item->setData(fileInfo.filePath(), G::FileNameRole);
+        item->setData(fileInfo.filePath(), G::FilePathRole);
         item->setData(fileInfo.absoluteFilePath(), Qt::ToolTipRole);
         item->setData(QRect(), G::ThumbRectRole);     // define later when read
         item->setData(fileInfo.path(), G::PathRole);
@@ -260,7 +288,7 @@ which is created in MW, and in InfoView.
 
     for(int row = 0; row < rowCount(); row++) {
         QModelIndex idx = index(row, G::PathColumn);
-        QString fPath = idx.data(G::FileNameRole).toString();
+        QString fPath = idx.data(G::FilePathRole).toString();
 
         QString label = metadata->getLabel(fPath);
         QString rating = metadata->getRating(fPath);
@@ -297,6 +325,8 @@ which is created in MW, and in InfoView.
         setData(index(row, G::CreatedColumn), created);
         setData(index(row, G::MegaPixelsColumn), mp);
         setData(index(row, G::DimensionsColumn), dim);
+        setData(index(row, G::RotationColumn), 0);
+        setData(index(row, G::RotationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
         setData(index(row, G::ApertureColumn), apertureNum);
         setData(index(row, G::ApertureColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
         setData(index(row, G::ShutterspeedColumn), ssNum);
@@ -328,7 +358,7 @@ which is created in MW, and in InfoView.
 
 QModelIndex DataModel::find(QString fPath)
 {
-    QModelIndexList idxList = sf->match(sf->index(0, 0), G::FileNameRole, fPath);
+    QModelIndexList idxList = sf->match(sf->index(0, 0), G::FilePathRole, fPath);
     if (idxList.size() > 0 && idxList[0].isValid()) {
         return idxList[0];
     }
@@ -350,7 +380,7 @@ changes the sort or filter.
 //    qDebug() << "ThumbView::updateImageList";
     imageFilePathList.clear();
     for(int row = 0; row < sf->rowCount(); row++) {
-        QString fPath = sf->index(row, 0).data(G::FileNameRole).toString();
+        QString fPath = sf->index(row, 0).data(G::FilePathRole).toString();
         imageFilePathList.append(fPath);
 //        qDebug() << "&&&&&&&&&&&&&&&&&& updateImageList:" << fPath;
     }

@@ -754,7 +754,7 @@ so scrollTo and delegate use of the current index must check the row.
     G::lastThumbChangeEvent = "";
 
     // the file path is used as an index in ImageView and Metadata
-    QString fPath = dm->sf->index(currentRow, 0).data(G::FileNameRole).toString();
+    QString fPath = dm->sf->index(currentRow, 0).data(G::FilePathRole).toString();
 
     // update the matadata panel
     infoView->updateInfo(fPath);
@@ -921,7 +921,7 @@ been consumed or all the images are cached.
     tableView->setColumnWidth(G::PathColumn, 24+8);
     QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 
-    QString fPath = indexesList.first().data(G::FileNameRole).toString();
+    QString fPath = indexesList.first().data(G::FilePathRole).toString();
     // imageCacheThread checks if already running and restarts
     imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
@@ -938,7 +938,7 @@ void MW::loadFilteredImageCache()
     }
     qDebug() << "MW::loadFilteredImageCache";
     QModelIndex idx = thumbView->currentIndex();
-    QString fPath = idx.data(G::FileNameRole).toString();
+    QString fPath = idx.data(G::FilePathRole).toString();
     thumbView->selectThumb(idx);
 
     dm->updateImageList();
@@ -2679,7 +2679,7 @@ parameters.  Any visibility changes are executed.
     isShowCacheThreadActivity = activity;
     imageCacheThread->updateImageCacheParam(size, show, width, wtAhead,
              usePreview, displayHorizontalPixels, displayVerticalPixels);
-    QString fPath = thumbView->currentIndex().data(G::FileNameRole).toString();
+    QString fPath = thumbView->currentIndex().data(G::FilePathRole).toString();
     imageCacheThread->updateImageCache(fPath);
 
     // update visibility if preferences have been changed
@@ -2773,7 +2773,7 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
 /* Possible status info
 
 QString fName = idx.data(Qt::EditRole).toString();
-QString fPath = idx.data(G::FileNameRole).toString();
+QString fPath = idx.data(G::FilePathRole).toString();
 QString shootingInfo = metadata->getShootingInfo(fPath);
 QString err = metadata->getErr(fPath);
 QString magnify = "🔎";
@@ -2899,11 +2899,11 @@ void MW::reindexImageCache()
     if (!sfRowCount) return;
     dm->updateImageList();
     QModelIndex idx = thumbView->currentIndex();
-    QString currentFilePath = idx.data(G::FileNameRole).toString();
+    QString currentFilePath = idx.data(G::FilePathRole).toString();
     qDebug() << "reindexImageCache current" << currentFilePath;
     if(!dm->imageFilePathList.contains(currentFilePath)) {
         idx = dm->sf->index(0, 0);
-        currentFilePath = idx.data(G::FileNameRole).toString();
+        currentFilePath = idx.data(G::FilePathRole).toString();
         qDebug() << "reindexImageCache updated" << currentFilePath;
     }
 //    QString currentFileName = dm->sf->index(0, 1).data(Qt::EditRole).toString();
@@ -3817,7 +3817,7 @@ void MW::runExternalApp()
 
     QStringList arguments;
 //    for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn) {
-//        QString s = selectedIdxList[tn].data(G::FileNameRole).toString();
+//        QString s = selectedIdxList[tn].data(G::FilePathRole).toString();
 //        arguments << s;
 ////        arguments << enquote(s);
 //    }
@@ -4305,11 +4305,8 @@ void MW::rotateLeft()
     qDebug() << "MW::rotateLeft";
     #endif
     }
-//    GData::rotation -= 90;
-//    if (GData::rotation < 0)
-//        GData::rotation = 270;
+    setRotation(270);
 //    imageView->refresh();
-//    imageView->setFeedback(tr("Rotation %1°").arg(QString::number(GData::rotation)));
 }
 
 void MW::rotateRight()
@@ -4319,11 +4316,70 @@ void MW::rotateRight()
     qDebug() << "MW::rotateRight";
     #endif
     }
-//    GData::rotation += 90;
-//    if (GData::rotation > 270)
-//        GData::rotation = 0;
+    setRotation(90);
 //    imageView->refresh();
-//    imageView->setFeedback(tr("Rotation %1°").arg(QString::number(GData::rotation)));
+}
+
+void MW::setRotation(int degrees)
+{
+/*
+Rotate the loupe view image.
+
+Rotate all selected thumbnails by the specified degrees. 90 = rotate right and
+270 = rotate left.
+
+Rotate all selected cached full size imagesby the specified degrees.
+
+When images are added to the image cache (ImageCache) they are rotated by the
+metadata orientation + the edited rotation.  Newly cached images are always
+rotation up-to-date.
+
+When there is a rotation action (rotateLeft or rotateRight) the current
+rotation amount (in degrees) is updated in the datamodel and Metadata. Metadata
+is updated, duplicating the datamodel because the Metadata class is already
+being accessed by ImageCache but the datamodel is not.
+
+Also, the orientation metadata must be updated for any images ingested.
+*/
+    // rotate current loupe view image
+    imageView->rotate(degrees);
+
+    // iterate selection
+    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    for (int i = 0; i < selection.count(); ++i) {
+        // update rotation amount in the data model
+        int row = selection.at(i).row();
+        QModelIndex rotIdx = dm->sf->index(row, G::RotationColumn);
+        int prevRotation = rotIdx.data(Qt::EditRole).toInt();
+        int newRotation = prevRotation + degrees;
+        if (newRotation > 360) newRotation = newRotation - 360;
+        dm->sf->setData(rotIdx, newRotation);
+
+        // update rotation amount in the Metadata
+        // metadata is easier to access than the datamodel in ImageCache so
+        // duplicate saving rotation in Metadata
+        QModelIndex idx = dm->sf->index(row, G::PathColumn);
+        QString fPath = idx.data(G::FilePathRole).toString();
+        metadata->setRotation(fPath, newRotation);
+
+        // rotate thumbnail(s)
+        QTransform trans;
+        trans.rotate(degrees);
+        QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
+//        QModelIndex thumbIdx = dm->sf->index(selection.at(i).row(), G::PathColumn);
+        QStandardItem *item = new QStandardItem;
+        item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
+        QPixmap pm = item->icon().pixmap(160, 160);
+        pm = pm.transformed(trans, Qt::SmoothTransformation);
+        item->setIcon(pm);
+        thumbView->refreshThumbs();
+        QApplication::processEvents();
+
+        // rotate selected cached full size images
+        if (imageCacheThread->imCache.contains(fPath)) {
+            imageCacheThread->imCache.value(fPath).transformed(trans, Qt::SmoothTransformation);
+        }
+    }
 }
 
 bool MW::isValidPath(QString &path)
@@ -5299,7 +5355,7 @@ notification when the QListView has finished painting itself.
 
     // update imageView, use cache if image loaded, else read it from file
     QModelIndex idx = thumbView->currentIndex();
-    QString fPath = idx.data(G::FileNameRole).toString();
+    QString fPath = idx.data(G::FilePathRole).toString();
     if (imageView->isVisible()) {
         if (imageView->loadImage(idx, fPath)) {
             if (G::isThreadTrackingOn) qDebug()
@@ -5479,26 +5535,9 @@ void MW::setCentralView()
     #endif
     }
     if (!isSettings) return;
-
-//    if(isFirstTimeNoSettings) {
-//        centralLayout->setCurrentIndex(StartTab);
-//        isFirstTimeNoSettings = false;
-//        return;
-//    }
-    /*
-    qDebug() << "MW::setCentralView  "
-             << "asLoupeAction->isChecked()" << asLoupeAction->isChecked()
-             << "asGridAction->isChecked()" << asGridAction->isChecked()
-             << "asTableAction->isChecked()" << asTableAction->isChecked()
-             << "asCompareAction->isChecked()" << asCompareAction->isChecked()
-             << "isInitializing" << isInitializing;;
-    */
     if (asLoupeAction->isChecked()) loupeDisplay();
     if (asGridAction->isChecked()) gridDisplay();
-    if (asTableAction->isChecked()) {
-//        loupeDisplay();
-        tableDisplay();
-    }
+    if (asTableAction->isChecked()) tableDisplay();
     if (asCompareAction->isChecked()) compareDisplay();
 }
 
@@ -6071,7 +6110,7 @@ ingesting.
                 QModelIndex idx = dm->sf->index(selection.at(i).row(), G::TitleColumn);
                 dm->sf->setData(idx, title, Qt::EditRole);
                 idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
-                QString path = idx.data(G::FileNameRole).toString();
+                QString path = idx.data(G::FilePathRole).toString();
                 qDebug () << path;
                 // update metadata
                 metadata->setTitle(path, title);

@@ -79,7 +79,6 @@ void Metadata::initSupportedFiles()
     #endif
     }
     // add raw file types here as they are supported
-//    rawFormats << "arw" << "cr2" << "nef" << "orf";
     rawFormats << "arw" << "cr2" << "nef" << "orf" << "sr2";
     sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "sr2";
     internalXmpFormats << "jpg";
@@ -3216,11 +3215,6 @@ bool Metadata::formatJPG()
         if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
 
     // read XMP
-    QString filePath = fName;       // for debugging
-
-//    qDebug() << "Metadata::formatJPG just before xmp" << filePath
-//             << " isXmp =" << isXmp << " okToReadXmp =" << okToReadXmp;
-
     if (isXmp && okToReadXmp) {
         Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
         rating = xmp.getItem("Rating");     // case is important "Rating"
@@ -3354,6 +3348,9 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
         offsetThumbJPG = offsetSmallJPG;
         lengthThumbJPG = lengthSmallJPG;
     }
+
+    // initialize edited rotation
+    rotationDegrees = 0;
 
 //    qDebug() << fPath << offsetThumbJPG << offsetSmallJPG << offsetFullJPG;
 
@@ -3736,6 +3733,7 @@ void Metadata::setLabel(const QString &imageFileName, const QString &label)
 {
     metaCache[imageFileName].label = label;
 }
+
 void Metadata::setRating(const QString &imageFileName, const QString &rating)
 {
     metaCache[imageFileName].rating = rating;
@@ -3769,15 +3767,28 @@ int Metadata::getImageOrientation(QString &imageFileName)
     qDebug() << "Metadata::getImageOrientation" << imageFileName;
     #endif
     }
-//    if (metaCache.contains(imageFileName)|| loadImageMetadata(imageFileName)) {
-//        return metaCache[imageFileName].orientation;
-//    }
-//    return 0;
-
     if (metaCache.contains(imageFileName)) {
         return metaCache[imageFileName].orientation;
     }
     else return 0;
+}
+
+int Metadata::getRotation(QString &imageFileName)
+{
+    {
+#ifdef ISDEBUG
+        qDebug() << "Metadata::getRotation" << imageFileName;
+#endif
+    }
+    if (metaCache.contains(imageFileName)) {
+        return metaCache[imageFileName].rotationDegrees;
+    }
+    else return 0;
+}
+
+void Metadata::setRotation(const QString &imageFileName, const int rotationDegrees)
+{
+    metaCache[imageFileName].rotationDegrees = rotationDegrees;
 }
 
 bool Metadata::getPick(const QString &imageFileName)
@@ -3854,6 +3865,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.width = width;
     imageMetadata.height = height;
     imageMetadata.dimensions = QString::number(width) + "x" + QString::number(height);
+    imageMetadata.rotationDegrees = rotationDegrees;
     imageMetadata.created = created;
     imageMetadata.createdDate = createdDate;
     imageMetadata.model = model;
@@ -3915,6 +3927,7 @@ void Metadata::setMetadata(const QString &imageFileName)
     width = metaCache[imageFileName].width;
     height = metaCache[imageFileName].height;
     dimensions = metaCache[imageFileName].dimensions;
+    rotationDegrees = metaCache[imageFileName].rotationDegrees;
     created = metaCache[imageFileName].created;
     createdDate = metaCache[imageFileName].createdDate;
     model = metaCache[imageFileName].model;

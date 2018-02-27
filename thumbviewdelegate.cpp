@@ -165,7 +165,7 @@ textRect         = a rectangle below itemRect
     // get data from model
     int row = index.row();
     QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
-//    QString fName = index.model()->index(row, G::PathColumn).data(G::FileNameRole).toString();
+//    QString fName = index.model()->index(row, G::PathColumn).data(G::FilePathRole).toString();
     QString labelColor = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     bool isPicked = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toBool();

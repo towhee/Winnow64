@@ -1,4 +1,5 @@
 BUGS
+- Possible to overwrite tiles during ingest
 - Image caching not always updating
 - Open with ... (doesn't work on macOS)
 - Caching thumbs is sometimes slow
@@ -18,6 +19,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Add complete for ingest description
 - scroll thumbwheel advance in loupe view
 - add metadata performance options to preferences
 - add MetadateDate to Xmp
@@ -45,6 +47,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Fixed start first time not working
 - Done: Menu visibility and window title bar not updating when change workspace
 - Done: Thumb wrapping and thumbdock size wrong for floating thumbdock workspaces
 - Done: Olympus creator and copyright

@@ -13,7 +13,7 @@
 namespace G
 {
     enum UserRoles {
-        FileNameRole = Qt::UserRole + 1,
+        FilePathRole = Qt::UserRole + 1,
         SortRole,
         LoadedRole,
         PickedRole,
@@ -46,6 +46,7 @@ namespace G
         CreatorColumn,
         MegaPixelsColumn,
         DimensionsColumn,
+        RotationColumn,
         ApertureColumn,
         ShutterspeedColumn,
         ISOColumn,

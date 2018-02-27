@@ -306,7 +306,7 @@ void ThumbView::reportThumb()
     qDebug() << "\n ***** THUMB INFO *****";
     qDebug() << "Row =" << currThumb;
     qDebug() << "LoadedRole " << G::LoadedRole << dm->item(currThumb)->data(G::LoadedRole).toBool();
-    qDebug() << "FileNameRole " << G::FileNameRole << dm->item(currThumb)->data(G::FileNameRole).toString();
+    qDebug() << "FileNameRole " << G::FilePathRole << dm->item(currThumb)->data(G::FilePathRole).toString();
     qDebug() << "SortRole " << G::SortRole << dm->item(currThumb)->data(G::SortRole).toInt();
     qDebug() << "PickedRole " << G::PickedRole << dm->item(currThumb)->data(G::PickedRole).toString();
     qDebug() << "FileTypeRole " << G::FileTypeRole << dm->item(currThumb)->data(G::FileTypeRole).toString();
@@ -455,7 +455,7 @@ QString ThumbView::getCurrentFilename()
     qDebug() << "ThumbView::getCurrentFilename";
     #endif
     }
-    return currentIndex().data(G::FileNameRole).toString();
+    return currentIndex().data(G::FilePathRole).toString();
 }
 
 // PICKS: Items that have been picked
@@ -491,7 +491,7 @@ folder.
         QModelIndex idx = dm->sf->index(row, G::PickColumn);
         if (idx.data(Qt::EditRole).toString() == "true") {
             QModelIndex pathIdx = dm->sf->index(row, 0);
-            QString fPath = pathIdx.data(G::FileNameRole).toString();
+            QString fPath = pathIdx.data(G::FilePathRole).toString();
             QFileInfo fileInfo(fPath);
             qDebug() << fPath;
             fileInfoList.append(fileInfo);
@@ -609,7 +609,7 @@ useful.
     QStringList SelectedThumbsPaths;
 
     for (int tn = indexesList.size() - 1; tn >= 0 ; --tn) {
-        SelectedThumbsPaths << indexesList[tn].data(G::FileNameRole).toString();
+        SelectedThumbsPaths << indexesList[tn].data(G::FilePathRole).toString();
     }
     return SelectedThumbsPaths;
 }
@@ -621,25 +621,24 @@ bool ThumbView::isThumb(int row)
 
 void ThumbView::setIcon(int row, QImage thumb)
 {
+/*
+This slot is signalled from metadataCacheThread to set the thumbView icon.
+
+If a new folder is selected while the previous folder is being cached a race
+condition can arise. Make sure the item is referring to the current directory.
+If not, item will be a dereferenced pointer and cause a segmentation fault
+crash.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << "ThumbView::setIcon" << row;
     #endif
     }
-    /* If a new folder is selected while the previous folder is being cached
-     * a race condition can arise.  Make sure the item is referring to the
-     * current directory.  If not, item will be a dereferenced pointer and
-     * cause a segmentation fault crash */
     QStandardItem *item = new QStandardItem;
     QModelIndex idx = dm->index(row, 0, QModelIndex());
     if (!idx.isValid()) return;
     item = dm->itemFromIndex(idx);
-//    item = dm->itemFromIndex(*idx);
-
     item->setIcon(QPixmap::fromImage(thumb));
-//    item->setIcon(QPixmap::fromImage(*thumb));
-
-//    delete item;
 }
 
 // Used by thumbnail navigation (left, right, up, down etc)
@@ -678,7 +677,7 @@ void ThumbView::selectThumb(QString &fName)
     qDebug() << "ThumbView::selectThumb(filename)";
     #endif
     }
-    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::FileNameRole, fName);
+    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::FilePathRole, fName);
     QModelIndex idx = idxList[0];
     qDebug() << "selectThumb  idx.row()" << idx.row();
     if(idx.isValid()) selectThumb(idx);
@@ -1298,7 +1297,7 @@ void ThumbView::copyThumbs()
          end = indexesList.constEnd();
          it != end; ++it)
     {
-        urls << QUrl(it->data(G::FileNameRole).toString());
+        urls << QUrl(it->data(G::FilePathRole).toString());
     }
     mimeData->setUrls(urls);
     clipboard->setMimeData(mimeData);
@@ -1325,7 +1324,7 @@ Drag and drop thumbs to another program.
     QList<QUrl> urls;
 
     for(int i = 0; i < selection.count(); ++i) {
-        urls << QUrl(selection.at(i).data(G::FileNameRole).toString());
+        urls << QUrl(selection.at(i).data(G::FilePathRole).toString());
     }
     qDebug() << urls;
 

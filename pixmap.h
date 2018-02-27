@@ -5,6 +5,7 @@
 #include <QtWidgets>
 #include <QHash>
 #include "metadata.h"
+#include "datamodel.h"
 
 class Pixmap : public QObject
 {

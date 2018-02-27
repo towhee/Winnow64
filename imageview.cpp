@@ -177,6 +177,7 @@ to prevent jarring changes in perceived scale by the user.
             //qApp->processEvents();    // faster but unstable and erratic
             isPreview = false;
             isLoaded = true;
+            qDebug() << "Imageview::loadImage  pmItem->boundingRect() =" << pmItem->boundingRect();
         }
 //        qDebug() << "set pixmap elapsed time =" << fPath << t.nsecsElapsed();
     }
@@ -293,6 +294,7 @@ is zoomed.
              << "rect().width() =" << rect().width()
              << "sceneRect().width() =" << sceneRect().width();
              */
+
     matrix.reset();
     matrix.scale(zoom, zoom);
     setMatrix(matrix);
@@ -646,6 +648,28 @@ defaults to 1.0
     else if (zoom == zoomFit) zoom = toggleZoom;
     else if (isZoom) zoom = zoomFit;
     scale();
+}
+
+void ImageView::rotate(int degrees)
+{
+    // extract pixmap, rotate and reset to pmItem
+    QPixmap pm = pmItem->pixmap();
+    QTransform trans;
+    trans.rotate(degrees);
+    pmItem->setPixmap(pm.transformed(trans, Qt::SmoothTransformation));
+
+    // reset the scene
+    setSceneRect(scene->itemsBoundingRect());
+
+    // recalc zoomFit factor
+    zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
+    qDebug() << "Imageview::rotate  after getFitScaleFactor zoomFit =" << zoomFit;
+
+    // if in isFit mode then zoom accordingly
+    if (isFit) {
+        zoom = zoomFit;
+        scale();
+    }
 }
 
 void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)

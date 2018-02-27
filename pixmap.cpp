@@ -136,17 +136,29 @@ bool Pixmap::load(QString &fPath, QImage &image)
     // rotate if portrait image
     QTransform trans;
     int orientation = metadata->getImageOrientation(fPath);
+    int rotationDegrees = metadata->getRotation(fPath);
+    qDebug() << "Pixmap::load  rotationDegrees =" << rotationDegrees
+             << "fPath =" << fPath;
+    int degrees;
     if (orientation) {
         switch(orientation) {
             case 6:
-                trans.rotate(90);
-                image = image.transformed(trans, Qt::SmoothTransformation) ;
+                degrees = rotationDegrees + 90;
+                if (degrees > 360) degrees = degrees - 360;
+                trans.rotate(degrees);
+                image = image.transformed(trans, Qt::SmoothTransformation);
                 break;
             case 8:
-                trans.rotate(270);
+                degrees = rotationDegrees + 270;
+                if (degrees > 360) degrees = degrees - 360;
+                trans.rotate(degrees);
                 image = image.transformed(trans, Qt::SmoothTransformation);
                 break;
         }
+    }
+    else if (rotationDegrees){
+        trans.rotate(rotationDegrees);
+        image = image.transformed(trans, Qt::SmoothTransformation);
     }
 
 //    pm = QPixmap::fromImage(image);

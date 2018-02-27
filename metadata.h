@@ -41,6 +41,7 @@ public:
     ulong xmpNextSegmentOffset;
     bool isXmp;
     int orientation;
+    int rotationDegrees;            // additional rotation from edit
     ulong width;
     ulong height;
     QString dimensions;
@@ -102,6 +103,7 @@ public:
     ulong xmpNextSegmentOffset;
     bool isXmp;
     int orientation;
+    int rotationDegrees;            // additional rotation from edit
     ulong width;
     ulong height;
     QString dimensions;
@@ -173,6 +175,8 @@ public:
     ulong getHeight(const QString &imageFullPath);
     QString getDimensions(const QString &imageFullPath);
     int getImageOrientation(QString &imageFileName);
+    int getRotation(QString &imageFileName);
+    void setRotation(const QString &imageFileName, const int rotationDegrees);
     bool getPick(const QString &imageFileName);
     QString getCreated(const QString &imageFileName);
     QString getMake(const QString &imageFileName);
@@ -187,8 +191,11 @@ public:
     int getFocalLengthNum(const QString &imageFileName);
     QString getShootingInfo(const QString &imageFileName);
     QString getTitle(const QString &imageFileName);
+    void setTitle(const QString &imageFileName, const QString &title);
     QString getRating(const QString &imageFileName);
+    void setRating(const QString &imageFileName, const QString &rating);
     QString getLabel(const QString &imageFileName);
+    void setLabel(const QString &imageFileName, const QString &label);
     QString getLens(const QString &imageFileName);
     QString getCreator(const QString &imageFileName);
     QString getCopyright(const QString &imageFileName);
@@ -201,9 +208,6 @@ public:
     QString getErr(const QString &imageFileName);
     void setErr(const QString &imageFileName, const QString &err);
     QString getCopyFileNamePrefix(const QString &imageFileName);
-    void setTitle(const QString &imageFileName, const QString &title);
-    void setLabel(const QString &imageFileName, const QString &label);
-    void setRating(const QString &imageFileName, const QString &rating);
 
     bool writeXmp(const QString &imageFileName, QByteArray &buffer);
 
