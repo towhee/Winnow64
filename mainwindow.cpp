@@ -3712,7 +3712,7 @@ void MW::reportMetadata()
     qDebug() << "MW::reportMetadata";
     #endif
     }
-//    metadata->writeXmp(thumbView->getCurrentFilename());
+//    metadata->writeMetadata(thumbView->getCurrentFilename());
     metadata->readMetadata(true, thumbView->getCurrentFilename());
 
 //    metadata->setXmpTitle(thumbView->getCurrentFilename(), "a new title");

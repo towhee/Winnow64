@@ -686,7 +686,7 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
     #endif
     }
     QTransform trans;
-    int orientation = metadata->getImageOrientation(imageFullPath);
+    int orientation = metadata->getOrientation(imageFullPath);
 
     switch(orientation) {
         case 2:

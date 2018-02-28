@@ -13,6 +13,7 @@ Metadata::Metadata(QObject *parent) : QObject(parent)
     initSegCodeHash();
     initExifHash();
     initIfdHash();
+    initOrientationHash();
     initNikonMakerHash();
     initCanonMakerHash();
     initSonyMakerHash();
@@ -490,6 +491,28 @@ void Metadata::initIfdHash()
     ifdHash[50779] = "CalibrationIlluminant2";
     ifdHash[50780] = "BestQualityScale";
     ifdHash[50784] = "Alias Layer Metadata";
+}
+
+void Metadata::initOrientationHash()
+{
+    orientationDescription[1] = "Horizontal";
+    orientationDescription[2] = "Mirrow horizontal";
+    orientationDescription[3] = "Rotate 180";
+    orientationDescription[4] = "Mirror vertical";
+    orientationDescription[5] = "Mirror horizontal and rotate 270";
+    orientationDescription[6] = "Rotate 90";
+    orientationDescription[7] = "Mirror horizontal and rotate 90";
+    orientationDescription[8] = "Rotate 270";
+
+    orientationToDegrees[1] = 0;
+    orientationToDegrees[3] = 180;
+    orientationToDegrees[6] = 90;
+    orientationToDegrees[8] = 270;
+
+    orientationFromDegrees[0] = 1;
+    orientationFromDegrees[90] = 6;
+    orientationFromDegrees[180] = 3;
+    orientationFromDegrees[270] = 8;
 }
 
 void Metadata::initSonyMakerHash()
@@ -1315,32 +1338,33 @@ void Metadata::reportMetadata()
     rpt.reset();
     rpt.setFieldAlignment(QTextStream::AlignLeft);
 
-    rpt.setFieldWidth(20); rpt << "offsetFullJPG"  << offsetFullJPG;    rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "lengthFullJPG"  << lengthFullJPG;    rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "offsetThumbJPG" << offsetThumbJPG;   rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "lengthThumbJPG" << lengthThumbJPG;   rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "offsetSmallJPG" << offsetSmallJPG;   rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "lengthSmallJPG" << lengthSmallJPG;   rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "offsetXMPSeg"   << xmpSegmentOffset; rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "orientation"    << orientation;      rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "width"          << width;            rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "height"         << height;           rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "created"        << created;          rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "model"          << model;            rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "exposureTime"   << exposureTime;     rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "aperture"       << aperture;         rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "ISO"            << ISO;              rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "focalLength"    << focalLength;      rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "title"          << title;            rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "lens"           << lens;             rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "creator"        << creator;          rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "copyright"      << copyright;        rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "email"          << email;            rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "url"            << url;              rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "cameraSN"       << cameraSN;         rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "lensSN"         << lensSN;           rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "shutterCount"   << shutterCount;     rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "nikonLensCode"  << nikonLensCode;    rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "offsetFullJPG"       << offsetFullJPG;       rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "lengthFullJPG"       << lengthFullJPG;       rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "offsetThumbJPG"      << offsetThumbJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "lengthThumbJPG"      << lengthThumbJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "offsetSmallJPG"      << offsetSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "lengthSmallJPG"      << lengthSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "offsetXMPSeg"        << xmpSegmentOffset;    rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "offsetOrientation"   << orientationOffset;   rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "orientation"         << orientation;         rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "width"               << width;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "height"              << height;              rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "created"             << created;             rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "model"               << model;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "exposureTime"        << exposureTime;        rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "aperture"            << aperture;            rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "ISO"                 << ISO;                 rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "focalLength"         << focalLength;         rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "title"               << title;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "lens"                << lens;                rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "creator"             << creator;             rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "copyright"           << copyright;           rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "email"               << email;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "url"                 << url;                 rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "cameraSN"            << cameraSN;            rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "lensSN"              << lensSN;              rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "shutterCount"        << shutterCount;        rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "nikonLensCode"       << nikonLensCode;       rpt.setFieldWidth(0); rpt << "\n";
 
     if (isXmp && xmpString.length() > 0) {
         rpt << "\nXMP Extract:\n\n";
@@ -1518,8 +1542,20 @@ QByteArray Metadata::getByteArray(ulong offset, ulong length)
     return(file.read(length));
 }
 
-bool Metadata::writeXmp(const QString &fPath, QByteArray &buffer)
+int Metadata::getNewOrientation(int orientation, int rotation)
 {
+    int degrees = orientationToDegrees[orientation];
+    degrees += rotation;
+    if (degrees > 270) degrees -= 360;
+    return orientationFromDegrees[degrees];
+}
+
+bool Metadata::writeMetadata(const QString &fPath, QByteArray &buffer)
+{
+/*
+Called from ingest (copypickdlg).  The copied image includes edited metadata
+that is updated here.
+*/
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
@@ -1528,36 +1564,57 @@ bool Metadata::writeXmp(const QString &fPath, QByteArray &buffer)
     // set locals to image data  ie title = metaCache[fPath].title
     setMetadata(fPath);
 
+    bool useSidecar = sidecarFormats.contains(suffix);
+
+    // new orientation
+    uint newOrientation = getNewOrientation(orientation, rotationDegrees);
+
     // has metadata been edited? ( _ is original data)
     bool ratingChanged = rating != _rating;
     bool labelChanged = label != _label;
     bool titleChanged = title != _title;
-    if (!ratingChanged && !labelChanged && !titleChanged) return false;
+    bool orientationChanged = orientation != newOrientation;
+    if (   !ratingChanged
+        && !labelChanged
+        && !titleChanged
+        && !orientationChanged ) return false;
 
     // data edited, open image file
     file.setFileName(fPath);
     file.open(QIODevice::ReadOnly);
 
     // update xmp data
-    Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+    Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset, useSidecar);
+
+    // orientation is written to xmp sidecars only
+    if (orientationChanged && useSidecar) {
+        QString s = QString::number(newOrientation);
+        xmp.setItem("Orientation", s.toLatin1());
+    }
     if (ratingChanged) xmp.setItem("Rating", rating.toLatin1());
     if (labelChanged) xmp.setItem("Label", label.toLatin1());
     if (titleChanged) xmp.setItem("title", title.toLatin1());
 
-
     // get the buffer to write to a new file
-    if (suffix == "jpg")
-        xmp.writeJPG(file, buffer);
-    if (sidecarFormats.contains(suffix))
-        xmp.writeSidecar(file, buffer);
+    if (suffix == "jpg") {
+        file.seek(0);
+        buffer = file.readAll();
+        /* Update orientation first, as orientation is written to EXIF, not
+        XMP, for known formats. Writing subsequent xmp could change file length
+        and make the orientationOffset incorrect.
+        */
+        if (orientationChanged) {
+            QChar c = newOrientation & 0xFF;
+            QByteArray ba;
+            ba.append(c);
+            buffer.replace(orientationOffset, 1, ba);
+        }
+        xmp.writeJPG(buffer);
+    }
+    if (useSidecar)
+        xmp.writeSidecar(buffer);
 
     return true;
-
-    // write the updated xmp in file if JPG, TIF or sidecar if raw
-    QString newName = info.path() + "/" + "test.jpg";
-    QFile newFile(newName);
-    newFile.open(QIODevice::WriteOnly);
-    newFile.write(buffer);
 }
 
 ulong Metadata::findInFile(QString s, ulong offset, ulong range)
@@ -1899,6 +1956,8 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
         tagId = get2(file.read(2));
         tagType = get2(file.read(2));
         tagCount = get4(file.read(4));
+        // check for orientation and save offset for subsequent writing
+        if (hdr == "IFD0" && tagId == 274) orientationOffset = file.pos();
         if (tagType == 3) tagValue = get2(file.read(4));
         else tagValue = get4(file.read(4));
 
@@ -2297,26 +2356,26 @@ void Metadata::formatNikon()
     }
 
     // read XMP
-    if (isXmp && okToReadXmp) {
-        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
-        rating = xmp.getItem("Rating");     // case is important "Rating"
-        label = xmp.getItem("Label");       // case is important "Label"
-        if (title.isEmpty()) title = xmp.getItem("title");       // case is important "title"
-        if (cameraSN.isEmpty()) cameraSN = xmp.getItem("SerialNumber");
-        if (lens.isEmpty()) lens = xmp.getItem("Lens");
-        if (lensSN.isEmpty()) lensSN = xmp.getItem("LensSerialNumber");
-        if (creator.isEmpty()) creator = xmp.getItem("creator");
-        if (copyright.isEmpty()) copyright = xmp.getItem("rights");
-        if (email.isEmpty()) email = xmp.getItem("CiEmailWork");
-        if (url.isEmpty()) url = xmp.getItem("CiUrlWork");
+//    if (isXmp && okToReadXmp) {
+//        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+//        rating = xmp.getItem("Rating");     // case is important "Rating"
+//        label = xmp.getItem("Label");       // case is important "Label"
+//        if (title.isEmpty()) title = xmp.getItem("title");       // case is important "title"
+//        if (cameraSN.isEmpty()) cameraSN = xmp.getItem("SerialNumber");
+//        if (lens.isEmpty()) lens = xmp.getItem("Lens");
+//        if (lensSN.isEmpty()) lensSN = xmp.getItem("LensSerialNumber");
+//        if (creator.isEmpty()) creator = xmp.getItem("creator");
+//        if (copyright.isEmpty()) copyright = xmp.getItem("rights");
+//        if (email.isEmpty()) email = xmp.getItem("CiEmailWork");
+//        if (url.isEmpty()) url = xmp.getItem("CiUrlWork");
 
-        // save original values so can determine if edited when writing changes
-        _title = title;
-        _rating = rating;
-        _label = label;
+//        // save original values so can determine if edited when writing changes
+//        _title = title;
+//        _rating = rating;
+//        _label = label;
 
-        if (report) xmpString = xmp.metaAsString();
-    }
+//        if (report) xmpString = xmp.metaAsString();
+//    }
 
     if (report) reportMetadata();
 
@@ -2330,6 +2389,7 @@ void Metadata::formatCanon()
     #endif
     }
     //file.open in readMetadata
+
     // get endian
     order = get2(file.read(4));
     // is canon always offset 16 to IFD0 ???
@@ -3064,7 +3124,6 @@ bool Metadata::formatJPG()
 
     uint a = get2(file.read(2));  // magic 42
     a = get4(file.read(4));
-//    a = get2(file.read(2));
     ulong offsetIfd0 = a + startOffset;
 
     // it's a jpg so the whole thing is the full length jpg
@@ -3078,12 +3137,12 @@ bool Metadata::formatJPG()
         ? offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset
         : offsetEXIF = 0;    // read IFD1 - unfortunately nothing of interest
 
-    if (readNonEssentialMetadata) {
-        // IFD0: Orientation
-        (ifdDataHash.contains(274))
-            ? orientation = ifdDataHash.value(274).tagValue + startOffset
-            : orientation = 1;
+    // IFD0: Orientation
+    (ifdDataHash.contains(274))
+        ? orientation = ifdDataHash.value(274).tagValue
+        : orientation = 1;
 
+    if (readNonEssentialMetadata) {
         // IFD0: Make
         (ifdDataHash.contains(271))
             ? make = getString(ifdDataHash.value(271).tagValue + startOffset,
@@ -3255,9 +3314,10 @@ void Metadata::clearMetadata()
     offsetSmallJPG = 0;
     lengthSmallJPG = 0;
     xmpSegmentOffset = 0;
+    orientationOffset = 0;
     width = 0;
     height = 0;
-    orientation = 0;
+    orientation = 1;
     created = "";
     model = "";
     exposureTime = "";
@@ -3760,11 +3820,11 @@ void Metadata::setErr(const QString &imageFileName, const QString &err)
     metaCache[imageFileName].err = err;
 }
 
-int Metadata::getImageOrientation(QString &imageFileName)
+int Metadata::getOrientation(QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getImageOrientation" << imageFileName;
+    qDebug() << "Metadata::getOrientation" << imageFileName;
     #endif
     }
     if (metaCache.contains(imageFileName)) {
@@ -3862,6 +3922,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.xmpSegmentOffset = xmpSegmentOffset;
     imageMetadata.xmpNextSegmentOffset = xmpNextSegmentOffset;
     imageMetadata.isXmp = isXmp;
+    imageMetadata.orientationOffset = orientationOffset;
     imageMetadata.width = width;
     imageMetadata.height = height;
     imageMetadata.dimensions = QString::number(width) + "x" + QString::number(height);
@@ -3924,6 +3985,7 @@ void Metadata::setMetadata(const QString &imageFileName)
     xmpSegmentOffset = metaCache[imageFileName].xmpSegmentOffset;
     xmpNextSegmentOffset = metaCache[imageFileName].xmpNextSegmentOffset;
     isXmp = metaCache[imageFileName].isXmp;
+    orientationOffset = metaCache[imageFileName].orientationOffset;
     width = metaCache[imageFileName].width;
     height = metaCache[imageFileName].height;
     dimensions = metaCache[imageFileName].dimensions;

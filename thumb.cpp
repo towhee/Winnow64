@@ -16,7 +16,7 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
 {
     // check orientation and rotate if portrait
     QTransform trans;
-    int orientation = metadata->getImageOrientation(fPath);
+    int orientation = metadata->getOrientation(fPath);
     switch(orientation) {
         case 6:
             trans.rotate(90);

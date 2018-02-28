@@ -154,7 +154,7 @@ void CopyPickDlg::accept()
         QByteArray buffer;
 
         // if there is edited xmp data in an eligible file format
-        if (metadata->writeXmp(source, buffer)) {
+        if (metadata->writeMetadata(source, buffer)) {
             // write a sidecar
             if (metadata->sidecarFormats.contains(suffix)) {
                 QString sidecar = folderPath + fileName + ".xmp";

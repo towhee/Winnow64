@@ -40,6 +40,7 @@ public:
     ulong xmpSegmentOffset;
     ulong xmpNextSegmentOffset;
     bool isXmp;
+    ulong orientationOffset;
     int orientation;
     int rotationDegrees;            // additional rotation from edit
     ulong width;
@@ -102,6 +103,7 @@ public:
     ulong xmpSegmentOffset;
     ulong xmpNextSegmentOffset;
     bool isXmp;
+    ulong orientationOffset;
     int orientation;
     int rotationDegrees;            // additional rotation from edit
     ulong width;
@@ -174,7 +176,7 @@ public:
     ulong getWidth(const QString &imageFullPath);
     ulong getHeight(const QString &imageFullPath);
     QString getDimensions(const QString &imageFullPath);
-    int getImageOrientation(QString &imageFileName);
+    int getOrientation(QString &imageFileName);
     int getRotation(QString &imageFileName);
     void setRotation(const QString &imageFileName, const int rotationDegrees);
     bool getPick(const QString &imageFileName);
@@ -209,7 +211,7 @@ public:
     void setErr(const QString &imageFileName, const QString &err);
     QString getCopyFileNamePrefix(const QString &imageFileName);
 
-    bool writeXmp(const QString &imageFileName, QByteArray &buffer);
+    bool writeMetadata(const QString &imageFileName, QByteArray &buffer);
 
     bool okToReadXmp;
     bool readEssentialMetadata;
@@ -227,6 +229,9 @@ private:
     QHash<QString, ulong> segmentHash;
 //    QHash<QByteArray, QString> nikonLensHash;
     QHash<QString, QString> nikonLensHash;
+    QHash<int, QString> orientationDescription;
+    QHash<int,int> orientationToDegrees;
+    QHash<int,int> orientationFromDegrees;
 
     // was metadata
     QMap<QString, ImageMetadata> metaCache;
@@ -244,6 +249,7 @@ private:
     void initSegCodeHash();
     void initExifHash();
     void initIfdHash();
+    void initOrientationHash();
     void initNikonMakerHash();
     void initCanonMakerHash();
     void initSonyMakerHash();
@@ -266,6 +272,7 @@ private:
     QByteArray getByteArray(ulong offset, ulong length);
     void getSegments(ulong offset);
     bool getDimensions(ulong jpgOffset);
+    int getNewOrientation(int orientation, int rotation);
 
     void setMetadata(const QString &imageFileName);
 

@@ -10,19 +10,20 @@ class Xmp : public QObject
 {
     Q_OBJECT
 public:
-    Xmp(QFile &file, ulong &offset, ulong &nextOffset, QObject *parent = nullptr);
+    Xmp(QFile &file, ulong &offset, ulong &nextOffset, bool useSidecar = false,
+        QObject *parent = nullptr);
     QString getItem(QByteArray item);
     bool setItem(QByteArray item, QByteArray value);
     QString metaAsString();
-    bool writeJPG(QFile &file, QByteArray &newBuf);
-    bool writeSidecar(QFile &file, QByteArray &newBuf);
+    bool writeJPG(QByteArray &buffer);
+    bool writeSidecar(QByteArray &buffer);
 
 signals:
 
 public slots:
 
 private:
-    void checkSchemas();
+    void insertSchemas(QByteArray &item);
     int schemaInsertPos(QByteArray schema);
     void report();
 
@@ -36,6 +37,9 @@ private:
     ulong xmpmetaRoom;              // xmpPacketEnd - xmpmetaStart
 
     QString assignmentMethod;       // brackets or equals
+    QByteArray fileType;            // uppercase suffix
+    QHash<QByteArray,QByteArray> schemaHash;
+    QHash<QByteArray,QByteArray> startTagHash;
 
     QByteArrayList xmpSchemaList;
     QByteArrayList dcSchemaList;
@@ -48,13 +52,20 @@ private:
     QByteArray rdfSuffix = "</rdf:RDF>";
     QByteArray rdfDescriptionPrefix = "<rdf:Description";  // + schemas
     QByteArray rdfDescriptionSuffix = "</rdf:Description>";
-    QByteArray xmpSchema = " xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"";
-    QByteArray dcSchema = " xmlns:dc=\"http://purl.org/dc/elements/1.1/\"";
+    QByteArray xmpSchema = "\n\t\t\txmlns:xmp=\"http://ns.adobe.com/xap/1.0/\" ";
+    QByteArray dcSchema = "\n\t\t\txmlns:dc=\"http://purl.org/dc/elements/1.1/\" ";
+    QByteArray tifSchema = "\n\t\t\txmlns:tiff=\"http://ns.adobe.com/tiff/1.0/\" ";
+    QByteArray psSchema = "\n\t\t\txmlns:photoshop=\"http://ns.adobe.com/photoshop/1.0/\" ";
     QByteArray sidecarSkeleton = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">"
-         "<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">"
-         "<rdf:Description xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\" "
-         "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" rdf:about=\"\">"
-         "</rdf:Description></rdf:RDF></x:xmpmeta>";
+         "\n\t<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">"
+         "\n\t\t<rdf:Description "
+         "\n\t\t\trdf:about=\"\">"
+         "\n\t\t</rdf:Description>\n\t</rdf:RDF>\n</x:xmpmeta>";
+    QByteArray sidecarExtension = "<photoshop:SidecarForExtension>XXX</photoshop:SidecarForExtension>";
+    //         "xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\" "
+    //         "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" "
+    //         "xmlns:tiff=\"http://ns.adobe.com/tiff/1.0/\" "
+    //         "xmlns:photoshop=\"http://ns.adobe.com/photoshop/1.0/\" "
 };
 
 #endif // XMP_H

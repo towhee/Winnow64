@@ -134,7 +134,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     // rotate if portrait image
     QTransform trans;
-    int orientation = metadata->getImageOrientation(fPath);
+    int orientation = metadata->getOrientation(fPath);
     int rotationDegrees = metadata->getRotation(fPath);
     int degrees;
     if (orientation) {
