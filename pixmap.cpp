@@ -14,7 +14,6 @@ bool Pixmap::load(QString &fPath, QPixmap &pm)
     return success;
 }
 
-
 bool Pixmap::load(QString &fPath, QImage &image)
 {
 /*  Reads the embedded jpg (known offset and length) and converts it into a
@@ -137,8 +136,6 @@ bool Pixmap::load(QString &fPath, QImage &image)
     QTransform trans;
     int orientation = metadata->getImageOrientation(fPath);
     int rotationDegrees = metadata->getRotation(fPath);
-    qDebug() << "Pixmap::load  rotationDegrees =" << rotationDegrees
-             << "fPath =" << fPath;
     int degrees;
     if (orientation) {
         switch(orientation) {

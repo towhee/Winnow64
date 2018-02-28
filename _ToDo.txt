@@ -1,5 +1,4 @@
 BUGS
-- Possible to overwrite tiles during ingest
 - Image caching not always updating
 - Open with ... (doesn't work on macOS)
 - Caching thumbs is sometimes slow
@@ -47,6 +46,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Possible to overwrite tiles during ingest
 - Done: Fixed start first time not working
 - Done: Menu visibility and window title bar not updating when change workspace
 - Done: Thumb wrapping and thumbdock size wrong for floating thumbdock workspaces

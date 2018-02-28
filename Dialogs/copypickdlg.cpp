@@ -100,6 +100,22 @@ CopyPickDlg::~CopyPickDlg()
     delete ui;
 }
 
+void CopyPickDlg::renameIfExists(QString &destination,
+                                 QString &fileName,
+                                 QString &dotSuffix)
+{
+    int count = 0;
+    bool fileAlreadyExists = true;
+    do {
+        QFile testFile(destination);
+        if (testFile.exists()) {
+            QString s = "_" + QString::number(++count);
+            destination = folderPath + fileName + s + dotSuffix;
+        }
+        else fileAlreadyExists = false;
+    } while (fileAlreadyExists);
+}
+
 void CopyPickDlg::accept()
 {
     QDir dir(folderPath);
@@ -147,6 +163,7 @@ void CopyPickDlg::accept()
                 sidecarFile.write(buffer);
                 // copy image file
                 QString destination = folderPath + fileName + dotSuffix;
+                renameIfExists(destination, fileName, dotSuffix);
                 QFile::copy(source, destination);            }
             // write inside the source file
             if (metadata->internalXmpFormats.contains(suffix)) {
@@ -159,6 +176,7 @@ void CopyPickDlg::accept()
         // no xmp data, just copy source to destination
         else {
             QString destination = folderPath + fileName + dotSuffix;
+            renameIfExists(destination, fileName, dotSuffix);
             QFile::copy(source, destination);
         }
     }

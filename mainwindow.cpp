@@ -4366,7 +4366,6 @@ Also, the orientation metadata must be updated for any images ingested.
         QTransform trans;
         trans.rotate(degrees);
         QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
-//        QModelIndex thumbIdx = dm->sf->index(selection.at(i).row(), G::PathColumn);
         QStandardItem *item = new QStandardItem;
         item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
         QPixmap pm = item->icon().pixmap(160, 160);
@@ -4377,7 +4376,8 @@ Also, the orientation metadata must be updated for any images ingested.
 
         // rotate selected cached full size images
         if (imageCacheThread->imCache.contains(fPath)) {
-            imageCacheThread->imCache.value(fPath).transformed(trans, Qt::SmoothTransformation);
+            QImage *image = &imageCacheThread->imCache[fPath];
+            *image = image->transformed(trans, Qt::SmoothTransformation);
         }
     }
 }

@@ -55,11 +55,11 @@ private:
     void updateExistingSequence();
     int getSequenceStart(const QString &path);
     void updateStyleOfFolderLabels();
+    void renameIfExists(QString &destination, QString &fileName, QString &dotSuffix);
 
     bool isInitializing;
     bool isAuto;
 
-    QStringList *existFiles;
     QFileInfoList pickList;
     QFileSystemModel fileSystemModel;
     Metadata *metadata;

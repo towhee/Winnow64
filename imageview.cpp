@@ -177,7 +177,6 @@ to prevent jarring changes in perceived scale by the user.
             //qApp->processEvents();    // faster but unstable and erratic
             isPreview = false;
             isLoaded = true;
-            qDebug() << "Imageview::loadImage  pmItem->boundingRect() =" << pmItem->boundingRect();
         }
 //        qDebug() << "set pixmap elapsed time =" << fPath << t.nsecsElapsed();
     }
@@ -652,6 +651,14 @@ defaults to 1.0
 
 void ImageView::rotate(int degrees)
 {
+/*
+This is called from MW::setRotation and rotates the image currently shown in
+loupe view.  Loupe view is a QGraphicsView of the QGraphicsScene scene.  The
+scene contains one QGraphicsItem pmItem, which in turn, contains the pixmap.
+When the pixmap is rotated the scene bounding rectangle must be adjusted and
+the zoom factor to fit recalculated.  Finally, scale() is called to fit the
+image if the image was not zoomed.
+*/
     // extract pixmap, rotate and reset to pmItem
     QPixmap pm = pmItem->pixmap();
     QTransform trans;
@@ -663,7 +670,6 @@ void ImageView::rotate(int degrees)
 
     // recalc zoomFit factor
     zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
-    qDebug() << "Imageview::rotate  after getFitScaleFactor zoomFit =" << zoomFit;
 
     // if in isFit mode then zoom accordingly
     if (isFit) {

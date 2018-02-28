@@ -34,7 +34,6 @@ public:
     void stopImageCache();
     QSize getPreviewSize();
 
-//    QHash<QString, QPixmap> imCache;
     QHash<QString, QImage> imCache;
 
 signals:
