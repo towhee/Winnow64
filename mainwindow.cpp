@@ -1823,12 +1823,12 @@ void MW::createActions()
 
     // Testing
 
-    testMetadataAction = new QAction(tr("Test Metadata"), this);
-    testMetadataAction->setObjectName("testMetadata");
-    addAction(testMetadataAction);
-    testMetadataAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+M"));
-    connect(testMetadataAction, SIGNAL(triggered()),
-            this, SLOT(testMetadata()));
+    testAction = new QAction(tr("Test Metadata"), this);
+    testAction->setObjectName("test");
+    addAction(testAction);
+    testAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+T"));
+    connect(testAction, SIGNAL(triggered()),
+            this, SLOT(test()));
 
     // Possibly needed actions
 
@@ -2092,12 +2092,17 @@ void MW::createMenus()
     // thumbview context menu
     QList<QAction *> *thumbViewActions = new QList<QAction *>;
     thumbViewActions->append(revealFileAction);
-    thumbViewActions->append(openAction);
     thumbViewActions->append(openWithMenuAction);
     thumbViewActions->append(separatorAction);
     thumbViewActions->append(selectAllAction);
     thumbViewActions->append(invertSelectionAction);
     thumbViewActions->append(separatorAction1);
+    thumbViewActions->append(rotateRightAction);
+    thumbViewActions->append(rotateLeftAction);
+    thumbViewActions->append(separatorAction2);
+    thumbViewActions->append(thumbsEnlargeAction);
+    thumbViewActions->append(thumbsShrinkAction);
+    thumbViewActions->append(separatorAction3);
     thumbViewActions->append(reportMetadataAction);
 
 //    // imageview/tableview/gridview/compareview context menu
@@ -6091,7 +6096,6 @@ ingesting.
     QModelIndex par = item->index().parent();
     if (par != infoView->tagInfoIdx) return;
 
-//    QString title = item->data(Qt::DisplayRole).toString();
     QString tagValue = item->data(Qt::DisplayRole).toString();
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     int row = item->index().row();
@@ -6118,29 +6122,6 @@ ingesting.
         if (tagName == "Email") metadata->setEmail(fPath, tagValue);
         if (tagName == "Url") metadata->setUrl(fPath, tagValue);
     }
-
-//    bool test = par == infoView->tagInfoIdx;
-//    qDebug() << "MW::metadataChanged " << item->data(Qt::DisplayRole).toString()
-//             << " par =" << par << " row =" << row
-//             << " par == infoView->tagInfoIdx" << test;
-
-//    if (par == infoView->tagInfoIdx && row == infoView->TitleRow) {
-
-//        qDebug() << "if (par == infoView->tagInfoIdx && row == infoView->TitleRow)";
-
-//        if (title != metadata->getTitle(fPath)) {
-//            for (int i = 0; i < selection.count(); ++i) {
-//                // update data model
-//                QModelIndex idx = dm->sf->index(selection.at(i).row(), G::TitleColumn);
-//                dm->sf->setData(idx, title, Qt::EditRole);
-//                idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
-//                QString path = idx.data(G::FilePathRole).toString();
-//                qDebug () << path;
-//                // update metadata
-//                metadata->setTitle(path, title);
-//            }
-//        }
-//    }
 }
 
 void MW::getSubfolders(QString fPath)
@@ -6654,14 +6635,14 @@ void MW::helpWelcome()
     centralLayout->setCurrentIndex(StartTab);
 }
 
-void MW::testMetadata()
+void MW::test()
 {
-    qDebug() << "MW::testMetadata";
-//    QString fPath = "D:/Pictures/_ThumbTest/test1.jpg";
-//    QString fPath = "D:/Pictures/_TIFF/2017-01-25_0911.tif";
-    QString fPath = "D:/Pictures/_ThumbTest/Sony7R2.arw";
-//    QString fPath = "D:/Pictures/Zenfolio/2009-08-28_0454-1.tif";
-    metadata->readMetadata(true, fPath);
+    QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
+        (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
+    qDebug() << modifyDate;
+//    qDebug() << QDateTime::currentDateTime().toOffsetFromUtc(QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
+    // xmp:ModifyDate="2017-12-21T16:51:02-08:00"
+    //                "2018-03-01T05:42:22-08:00"
 }
 
 // End MW

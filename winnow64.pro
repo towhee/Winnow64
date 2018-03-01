@@ -10,12 +10,10 @@ QT += xmlpatterns
 
 HEADERS += \
     bookmarks.h \
-    circlelabel.h \
     compareImages.h \
     compareview.h \
     datamodel.h \
     dircompleter.h \
-    dropshadowlabel.h \
     filters.h \
     fstree.h \
     global.h \
@@ -25,14 +23,12 @@ HEADERS += \
     infoview.h \
     mainwindow.h \
     mdcache.h \
-    metadata.h \
     pixmap.h \
     progressbar.h \
     tableview.h \
     thumb.h \
     thumbview.h \
     thumbviewdelegate.h \
-    testaligndlg.h \
     Dialogs/prefdlg.h \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
@@ -43,16 +39,18 @@ HEADERS += \
     MacOS/macScale_p.h \
     Dialogs/appdlg.h \
     Dialogs/renamedlg.h \
-    xmp.h
+    Metadata/metadata.h \
+    Metadata/xmp.h \
+    Utilities/circlelabel.h \
+    Utilities/dropshadowlabel.h \
+    Dialogs/testaligndlg.h
 
 SOURCES += \
     bookmarks.cpp \
-    circlelabel.cpp \
     compareImages.cpp \
     compareview.cpp \
     datamodel.cpp \
     dircompleter.cpp \
-    dropshadowlabel.cpp \
     filters.cpp \
     fstree.cpp \
     global.cpp \
@@ -63,13 +61,11 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     mdcache.cpp \
-    metadata.cpp \
     pixmap.cpp \
     progressbar.cpp \
     tableview.cpp \
     thumbview.cpp \
     thumbviewdelegate.cpp \
-    testaligndlg.cpp \
     thumb.cpp \
     Dialogs/copypickdlg.cpp \
     Dialogs/popup.cpp \
@@ -79,7 +75,11 @@ SOURCES += \
     Dialogs/zoomdlg.cpp \
     Dialogs/appdlg.cpp \
     Dialogs/renamedlg.cpp \
-    xmp.cpp
+    Metadata/metadata.cpp \
+    Metadata/xmp.cpp \
+    Utilities/dropshadowlabel.cpp \
+    Utilities/circlelabel.cpp \
+    Dialogs/testaligndlg.cpp
 
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 

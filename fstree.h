@@ -2,7 +2,7 @@
 
 #include <QtWidgets>
 #include "global.h"
-#include "metadata.h"
+#include "Metadata/metadata.h"
 
 #ifndef FSTREE_H
 #define FSTREE_H

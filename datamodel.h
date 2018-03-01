@@ -2,7 +2,7 @@
 #define DATAMODEL_H
 
 #include <QtWidgets>
-#include "metadata.h"
+#include "Metadata/metadata.h"
 #include "filters.h"
 #include "global.h"
 

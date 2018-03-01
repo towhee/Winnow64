@@ -4,7 +4,7 @@
 #define INFOVIEW_H
 
 #include <QtWidgets>
-#include "metadata.h"
+#include "Metadata/metadata.h"
 #include "datamodel.h"
 
 #include "global.h"

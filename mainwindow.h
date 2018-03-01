@@ -28,7 +28,7 @@
 #include "infoview.h"
 #include "mainwindow.h"
 #include "mdcache.h"
-#include "metadata.h"
+#include "Metadata/metadata.h"
 #include "popup.h"
 #include "prefdlg.h"
 #include "global.h"
@@ -363,7 +363,7 @@ private slots:
 
     void popup(QString msg, int ms, float opacity);
     void delayScroll();
-    void testMetadata();    // for debugging
+    void test();    // for debugging
 
     //    void cutThumbs();
 //    void copyThumbs();
@@ -544,7 +544,7 @@ private:
     QAction *helpWelcomeAction;
 
     // General
-    QAction *testMetadataAction;    // only available via shortcut key
+    QAction *testAction;    // only available via shortcut key
 
     // Might need
     QAction *pasteAction;

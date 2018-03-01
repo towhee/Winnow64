@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QtWidgets>
-#include "metadata.h"
+#include "Metadata/metadata.h"
 
 class Thumb : public QObject
 {

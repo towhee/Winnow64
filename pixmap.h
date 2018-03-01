@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QtWidgets>
 #include <QHash>
-#include "metadata.h"
+#include "Metadata/metadata.h"
 #include "datamodel.h"
 
 class Pixmap : public QObject

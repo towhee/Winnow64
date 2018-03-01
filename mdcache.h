@@ -9,7 +9,7 @@
 #include <QThread>
 #include <QWaitCondition>
 #include "datamodel.h"
-#include "metadata.h"
+#include "Metadata/metadata.h"
 #include "thumb.h"
 
 

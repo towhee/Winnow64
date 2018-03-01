@@ -3,7 +3,7 @@
 
 #include <QtWidgets>
 #include "global.h"
-#include "metadata.h"
+#include "Metadata/metadata.h"
 
 class BookMarks : public QTreeWidget
 {

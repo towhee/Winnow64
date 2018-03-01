@@ -1,5 +1,12 @@
 #include "xmp.h"
 
+/*
+Xmp reads and writes xmp tags to a QByteArray buffer.  The buffer is read from
+the image file, based on supplied ofsets.  If there is no xmp data in the image
+file or the file format is not documented then the xmp tags are written to a
+sidecar buffer.
+*/
+
 Xmp::Xmp(QFile &file, ulong &offset, ulong &nextOffset, bool useSidecar,
          QObject *parent) :  QObject(parent)
 {
@@ -33,6 +40,7 @@ Xmp::Xmp(QFile &file, ulong &offset, ulong &nextOffset, bool useSidecar,
     schemaHash["Label"] = "xmp";                    // read/write
     schemaHash["ModifyDate"] = "xmp";               // write only
     schemaHash["CreateDate"] = "xmp";               // read only
+    schemaHash["ModifyDate"] = "xmp";               // write only
     schemaHash["title"] = "dc";                     // read/write
     schemaHash["rights"] = "dc";                    // read/write
     schemaHash["creator"] = "dc";                   // read/write
@@ -150,6 +158,8 @@ xmp schema can have two formats:
 
 dc schema:
     <dc:title> <rdf:Alt> <rdf:li xml:lang="x-default">Cormorant in California</rdf:li> </rdf:Alt> </dc:title>
+
+xmp:ModifyDate="2017-12-21T16:51:02-08:00"
 */
     int startPos;
     QByteArray searchItem;

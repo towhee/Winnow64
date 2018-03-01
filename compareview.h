@@ -2,10 +2,10 @@
 #define COMPAREVIEW_H
 
 #include <QtWidgets>
-#include "metadata.h"
+#include "Metadata/metadata.h"
 #include "imagecache.h"
 #include "thumbview.h"
-#include "circlelabel.h"
+#include "Utilities/circlelabel.h"
 #include "pixmap.h"
 
 class CompareView : public QGraphicsView

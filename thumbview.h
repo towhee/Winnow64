@@ -5,7 +5,7 @@
 //#include "mainwindow.h"
 #include "global.h"
 #include "fstree.h"
-#include "metadata.h"
+#include "Metadata/metadata.h"
 #include "datamodel.h"
 #include "thumbviewdelegate.h"
 #include "filters.h"

@@ -2,7 +2,7 @@
 #define COMPARE_H
 
 #include <QtWidgets>
-#include "metadata.h"
+#include "Metadata/metadata.h"
 #include "thumbview.h"
 #include "compareview.h"
 #include "imagealign.h"

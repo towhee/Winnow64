@@ -3,11 +3,11 @@
 
 #include <QtWidgets>
 #include <QHash>
-#include "metadata.h"
+#include "Metadata/metadata.h"
 #include "imagecache.h"
 #include "thumbview.h"
-#include "dropshadowlabel.h"
-#include "circlelabel.h"
+#include "Utilities/dropshadowlabel.h"
+#include "Utilities/circlelabel.h"
 #include "pixmap.h"
 
 class ImageView : public QGraphicsView
