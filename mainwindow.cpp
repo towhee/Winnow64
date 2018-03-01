@@ -2477,7 +2477,7 @@ InfoView shows basic metadata in a dock widget.
     infoView->setMaximumWidth(folderMaxWidth);
 
     connect(infoView->ok, SIGNAL(itemChanged(QStandardItem*)),
-            this, SLOT(updateTitle(QStandardItem*)));
+            this, SLOT(metadataChanged(QStandardItem*)));
 
 }
 
@@ -2795,7 +2795,7 @@ QString fileSym = "📷";
 
     // update InfoView
 
-    // flag updates so itemChanged be ignored in MW::updateTitle
+    // flag updates so itemChanged be ignored in MW::metadataChanged
     infoView->isNewImageDataChange = true;
 
     QStandardItemModel *k = infoView->ok;
@@ -6072,7 +6072,7 @@ color class is called label.
         compareImages->ratingColorClass(rating, labelColor, idx);
 }
 
-void MW::updateTitle(QStandardItem* item)
+void MW::metadataChanged(QStandardItem* item)
 {
 /*
 This slot is called when there is a data change in InfoView. If the title has been
@@ -6083,43 +6083,64 @@ ingesting.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::updateTitle";
+    qDebug() << "MW::metadataChanged";
     #endif
     }
 
     if (infoView->isNewImageDataChange) return;
+    QModelIndex par = item->index().parent();
+    if (par != infoView->tagInfoIdx) return;
 
-    QString title = item->data(Qt::DisplayRole).toString();
-    QString fPath = thumbView->getCurrentFilename();
+//    QString title = item->data(Qt::DisplayRole).toString();
+    QString tagValue = item->data(Qt::DisplayRole).toString();
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     int row = item->index().row();
-    QModelIndex par = item->index().parent();
+    QModelIndex tagIdx = infoView->ok->index(row, 0, par);
+    QString tagName = tagIdx.data().toString();
 
-    bool test = par == infoView->tagInfoIdx;
-    qDebug() << "MW::updateTitle " << item->data(Qt::DisplayRole).toString()
-             << " par =" << par << " row =" << row
-             << " par == infoView->tagInfoIdx" << test;
+    QHash<QString,int> col;
+    col["Title"] = G::TitleColumn;
+    col["Creator"] = G::CreatorColumn;
+    col["Copyright"] = G::CopyrightColumn;
+    col["Email"] = G::EmailColumn;
+    col["Url"] = G::UrlColumn;
 
-    if (par == infoView->tagInfoIdx && row == infoView->TitleRow) {
-
-        qDebug() << "if (par == infoView->tagInfoIdx && row == infoView->TitleRow)";
-
-        if (title != metadata->getTitle(fPath)) {
-            for (int i = 0; i < selection.count(); ++i) {
-                // update data model
-                QModelIndex idx = dm->sf->index(selection.at(i).row(), G::TitleColumn);
-                dm->sf->setData(idx, title, Qt::EditRole);
-                idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
-                QString path = idx.data(G::FilePathRole).toString();
-                qDebug () << path;
-                // update metadata
-                metadata->setTitle(path, title);
-            }
-
-//            metadata->setTitle(fPath, title);
-//            qDebug() << "InfoView::itemChanged  " << title;
-        }
+    for (int i = 0; i < selection.count(); ++i) {
+        // update data model
+        QModelIndex idx = dm->sf->index(selection.at(i).row(), col[tagName]);
+        dm->sf->setData(idx, tagValue, Qt::EditRole);
+        idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
+        QString fPath = idx.data(G::FilePathRole).toString();
+        // update metadata
+        if (tagName == "Title") metadata->setTitle(fPath, tagValue);
+        if (tagName == "Creator") metadata->setCreator(fPath, tagValue);
+        if (tagName == "Copyright") metadata->setCopyright(fPath, tagValue);
+        if (tagName == "Email") metadata->setEmail(fPath, tagValue);
+        if (tagName == "Url") metadata->setUrl(fPath, tagValue);
     }
+
+//    bool test = par == infoView->tagInfoIdx;
+//    qDebug() << "MW::metadataChanged " << item->data(Qt::DisplayRole).toString()
+//             << " par =" << par << " row =" << row
+//             << " par == infoView->tagInfoIdx" << test;
+
+//    if (par == infoView->tagInfoIdx && row == infoView->TitleRow) {
+
+//        qDebug() << "if (par == infoView->tagInfoIdx && row == infoView->TitleRow)";
+
+//        if (title != metadata->getTitle(fPath)) {
+//            for (int i = 0; i < selection.count(); ++i) {
+//                // update data model
+//                QModelIndex idx = dm->sf->index(selection.at(i).row(), G::TitleColumn);
+//                dm->sf->setData(idx, title, Qt::EditRole);
+//                idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
+//                QString path = idx.data(G::FilePathRole).toString();
+//                qDebug () << path;
+//                // update metadata
+//                metadata->setTitle(path, title);
+//            }
+//        }
+//    }
 }
 
 void MW::getSubfolders(QString fPath)

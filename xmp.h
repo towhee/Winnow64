@@ -62,10 +62,8 @@ private:
          "\n\t\t\trdf:about=\"\">"
          "\n\t\t</rdf:Description>\n\t</rdf:RDF>\n</x:xmpmeta>";
     QByteArray sidecarExtension = "<photoshop:SidecarForExtension>XXX</photoshop:SidecarForExtension>";
-    //         "xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\" "
-    //         "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" "
-    //         "xmlns:tiff=\"http://ns.adobe.com/tiff/1.0/\" "
-    //         "xmlns:photoshop=\"http://ns.adobe.com/photoshop/1.0/\" "
+    QByteArray rdfSeq = "<rdf:Seq><rdf:li>XXX</rdf:li></rdf:Seq>";
+    QByteArray rdfList = "<TAG><rdf:Alt><rdf:li xml:lang=\"x-default\">XXX</rdf:li></rdf:Alt></TAG>";
 };
 
 #endif // XMP_H

@@ -67,9 +67,13 @@ public:
     QString _label;                     // original value
     QString lens;
     QString creator;
+    QString _creator;                   // original value
     QString copyright;
+    QString _copyright;                 // original value
     QString email;
+    QString _email;                     // original value
     QString url;
+    QString _url;                       // original value
     QString cameraSN;
     QString lensSN;
     ulong shutterCount;
@@ -130,9 +134,13 @@ public:
     QString _label;                         // original value
     QString lens;
     QString creator;
+    QString _creator;                       // original value
     QString copyright;
+    QString _copyright;                     // original value
     QString email;
+    QString _email;                         // original value
     QString url;
+    QString _url;                           // original value
     QString cameraSN;
     QString lensSN;
     ulong shutterCount;
@@ -200,9 +208,13 @@ public:
     void setLabel(const QString &imageFileName, const QString &label);
     QString getLens(const QString &imageFileName);
     QString getCreator(const QString &imageFileName);
+    void setCreator(const QString &imageFileName, const QString &creator);
     QString getCopyright(const QString &imageFileName);
+    void setCopyright(const QString &imageFileName, const QString &copyright);
     QString getEmail(const QString &imageFileName);
+    void setEmail(const QString &imageFileName, const QString &email);
     QString getUrl(const QString &imageFileName);
+    void setUrl(const QString &imageFileName, const QString &url);
     QDateTime getCreatedDate(const QString &imageFileName);
     int getYear(const QString &imageFileName);
     int getMonth(const QString &imageFileName);

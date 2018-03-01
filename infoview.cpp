@@ -210,13 +210,15 @@ status information, such as number of items picked or current item selected.
             ok->setData(ok->index(childRow, 2, ok->index(row, 0)), true);
             ok->itemFromIndex(ok->index(childRow, 0, ok->index(row, 0)))->setEditable(false);
             ok->itemFromIndex(ok->index(childRow, 1, ok->index(row, 0)))->setEditable(false);
-//            ok->itemFromIndex(ok->index(childRow, 1, ok->index(row, 0)))->setSelectable(false);
         }
     }
 
     // set editable fields
     ok->itemFromIndex(ok->index(TitleRow, 1, tagInfoIdx))->setEditable(true);
-//    ok->itemFromIndex(ok->index(TitleRow, 1, tagInfoIdx))->setSelectable(true);
+    ok->itemFromIndex(ok->index(CreatorRow, 1, tagInfoIdx))->setEditable(true);
+    ok->itemFromIndex(ok->index(CopyrightRow, 1, tagInfoIdx))->setEditable(true);
+    ok->itemFromIndex(ok->index(EmailRow, 1, tagInfoIdx))->setEditable(true);
+    ok->itemFromIndex(ok->index(UrlRow, 1, tagInfoIdx))->setEditable(true);
 
     connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
             this, SLOT(showOrHide()));
@@ -291,7 +293,7 @@ void InfoView::updateInfo(const QString &fPath)
     #endif
     }
 
-    // flag updates so itemChanged be ignored in MW::updateTitle
+    // flag updates so itemChanged be ignored in MW::metadataChanged
     isNewImageDataChange = true;
 
     QFileInfo imageInfo = QFileInfo(fPath);

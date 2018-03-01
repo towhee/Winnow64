@@ -29,19 +29,19 @@ Xmp::Xmp(QFile &file, ulong &offset, ulong &nextOffset, bool useSidecar,
     auxSchemaList << "Lens" << "LensSerialNumber" << "SerialNumber";
     iptc4xmpCoreSchemaList << "CiUrlWork" << "CiEmailWork";
 
-    schemaHash["Rating"] = "xmp";
-    schemaHash["Label"] = "xmp";
-    schemaHash["ModifyDate"] = "xmp";
-    schemaHash["CreateDate"] = "xmp";
-    schemaHash["title"] = "dc";
-    schemaHash["rights"] = "dc";
-    schemaHash["creator"] = "dc";
-    schemaHash["Lens"] = "aux";
-    schemaHash["LensSerialNumber"] = "aux";
-    schemaHash["SerialNumber"] = "aux";
-    schemaHash["CiUrlWork"] = "Iptc4xmpCore";
-    schemaHash["CiEmailWork"] = "Iptc4xmpCore";
-    schemaHash["Orientation"] = "tiff";
+    schemaHash["Rating"] = "xmp";                   // read/write
+    schemaHash["Label"] = "xmp";                    // read/write
+    schemaHash["ModifyDate"] = "xmp";               // write only
+    schemaHash["CreateDate"] = "xmp";               // read only
+    schemaHash["title"] = "dc";                     // read/write
+    schemaHash["rights"] = "dc";                    // read/write
+    schemaHash["creator"] = "dc";                   // read/write
+    schemaHash["Lens"] = "aux";                     // read only
+    schemaHash["LensSerialNumber"] = "aux";         // read only
+    schemaHash["SerialNumber"] = "aux";             // read only
+    schemaHash["CiEmailWork"] = "Iptc4xmpCore";     // read/write
+    schemaHash["CiUrlWork"] = "Iptc4xmpCore";       // read/write
+    schemaHash["Orientation"] = "tiff";             // write (sidecars only)
 }
 
 void Xmp::insertSchemas(QByteArray &item)
@@ -214,7 +214,6 @@ xmp schema can have two formats:
 dc schema for title:
     <dc:title> <rdf:Alt> <rdf:li xml:lang="x-default">Cormorant in California</rdf:li> </rdf:Alt> </dc:title>
 */
-//    report();
     // ie schema = "Rating"
     QByteArray schema = schemaHash[item];
 
@@ -232,13 +231,13 @@ dc schema for title:
 
     int startPos = xmpBa.indexOf(tag, xmpmetaStart);
 
-    // does xmp item exist already
+    // does item exist already
     if (startPos == -1) {
         // not found, create new item
         QByteArray newItem;
         newItem.clear();
         startPos = schemaInsertPos(schema);     // determines assignmentMethod
-        if (schema == "xmp" || schema == "tiff") {
+        if (schema == "xmp" || schema == "tiff" || "Iptc4xmpCore" || "aux") {
             if (assignmentMethod == "brackets") {
                 // ie <xmp:Rating>3</xmp:Rating>
                 newItem = "\n\t\t\t<";
@@ -274,7 +273,7 @@ dc schema for title:
                 xmpBa.insert(startPos, newItem);
             }
         }
-        if (schema == "dc") {
+        if (item == "title" || item == "rights") {
             // ie <dc:title><rdf:Alt><rdf:li xml:lang="x-default">title</rdf:li></rdf:Alt></dc:title>
             newItem.append("\n\t\t\t<");
             newItem.append(tag);
@@ -289,7 +288,18 @@ dc schema for title:
 //            qDebug() << "\nAfter set title:\n"
 //                     << metaAsString();
         }
-//        report();
+        if (item == "creator") {
+            // ie <dc:title><rdf:Seq><rdf:li>creator</rdf:li></rdf:Seq></dc:title>
+            newItem.append("\n\t\t\t<");
+            newItem.append(tag);
+            newItem.append("><rdf:Seq><rdf:li>");
+            newItem.append(value);
+            newItem.append("</rdf:li></rdf:Seq></");
+            newItem.append(tag);
+            newItem.append(">");
+            xmpBa.insert(startPos, newItem);
+        }
+        // item created
         return true;
     }
 
@@ -298,7 +308,16 @@ dc schema for title:
     bool foundItem = false;
     startPos += tag.length();
 
-    if (schema == "xmp") {
+    if (item == "title" || item == "rights" || item == "creator") {
+        QByteArray temp = xmpBa.mid(startPos, 100);
+        startPos = xmpBa.indexOf("rdf:li", startPos);
+        temp = xmpBa.mid(startPos, 100);
+        startPos = xmpBa.indexOf(">", startPos) + 1;
+        temp = xmpBa.mid(startPos, 100);
+        endPos = xmpBa.indexOf("<", startPos);
+        foundItem = true;
+    }
+    else {
         if (xmpBa.at(startPos) == 0x3D) {                     // = '=' or QString::QString("=")
             if (xmpBa.at(++startPos) == 0x22) {               // = '"'
                 endPos = xmpBa.indexOf("\"", ++startPos);
@@ -311,16 +330,6 @@ dc schema for title:
             endPos = xmpBa.indexOf("<", ++startPos);
             foundItem = true;
         }
-    }
-
-    if (schema == "dc") {
-        QByteArray temp = xmpBa.mid(startPos, 100);
-        startPos = xmpBa.indexOf("rdf:li", startPos);
-        temp = xmpBa.mid(startPos, 100);
-        startPos = xmpBa.indexOf(">", startPos) + 1;
-        temp = xmpBa.mid(startPos, 100);
-        endPos = xmpBa.indexOf("<", startPos);
-        foundItem = true;
     }
 
     if (foundItem) {

@@ -1553,8 +1553,10 @@ int Metadata::getNewOrientation(int orientation, int rotation)
 bool Metadata::writeMetadata(const QString &fPath, QByteArray &buffer)
 {
 /*
-Called from ingest (copypickdlg).  The copied image includes edited metadata
-that is updated here.
+Called from ingest (copypickdlg).  If it is a supported image type a copy of the
+image file is made and any metadata changes are updated in buffer.  If it is a
+raw file in the sidecarFormats hash then the xmp data for existing and changed
+metadata is written to buffer and the original image file is copied unchanged.
 */
     // is xmp supported for this file
     QFileInfo info(fPath);
@@ -1573,10 +1575,18 @@ that is updated here.
     bool ratingChanged = rating != _rating;
     bool labelChanged = label != _label;
     bool titleChanged = title != _title;
+    bool creatorChanged = title != _title;
+    bool copyrightChanged = copyright != _copyright;
+    bool emailChanged = email != _email;
+    bool urlChanged = url != _url;
     bool orientationChanged = orientation != newOrientation;
     if (   !ratingChanged
         && !labelChanged
         && !titleChanged
+        && !creatorChanged
+        && !copyrightChanged
+        && !emailChanged
+        && !urlChanged
         && !orientationChanged ) return false;
 
     // data edited, open image file
@@ -1594,6 +1604,10 @@ that is updated here.
     if (ratingChanged) xmp.setItem("Rating", rating.toLatin1());
     if (labelChanged) xmp.setItem("Label", label.toLatin1());
     if (titleChanged) xmp.setItem("title", title.toLatin1());
+    if (creatorChanged) xmp.setItem("creator", creator.toLatin1());
+    if (copyrightChanged) xmp.setItem("rights", copyright.toLatin1());
+    if (emailChanged) xmp.setItem("CiEmailWork", email.toLatin1());
+    if (titleChanged) xmp.setItem("CiUrlWork", title.toLatin1());
 
     // get the buffer to write to a new file
     if (suffix == "jpg") {
@@ -3789,6 +3803,26 @@ void Metadata::setTitle(const QString &imageFileName, const QString &title)
     metaCache[imageFileName].title = title;
 }
 
+void Metadata::setCreator(const QString &imageFileName, const QString &creator)
+{
+    metaCache[imageFileName].creator = creator;
+}
+
+void Metadata::setCopyright(const QString &imageFileName, const QString &copyright)
+{
+    metaCache[imageFileName].copyright = copyright;
+}
+
+void Metadata::setEmail(const QString &imageFileName, const QString &email)
+{
+    metaCache[imageFileName].email = email;
+}
+
+void Metadata::setUrl(const QString &imageFileName, const QString &url)
+{
+    metaCache[imageFileName].url = url;
+}
+
 void Metadata::setLabel(const QString &imageFileName, const QString &label)
 {
     metaCache[imageFileName].label = label;
@@ -3946,9 +3980,13 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata._label = _label;
     imageMetadata.lens = lens;
     imageMetadata.creator = creator;
+    imageMetadata._creator = _creator;
     imageMetadata.copyright = copyright;
+    imageMetadata._copyright = _copyright;
     imageMetadata.email = email;
+    imageMetadata._email = _email;
     imageMetadata.url = url;
+    imageMetadata._url = _url;
     imageMetadata.year = created.left(4).toInt();
     imageMetadata.month = created.mid(5,2).toInt();
     imageMetadata.day = created.mid(8,2).toInt();
@@ -4009,9 +4047,13 @@ void Metadata::setMetadata(const QString &imageFileName)
     _label = metaCache[imageFileName]._label;
     lens = metaCache[imageFileName].lens;
     creator = metaCache[imageFileName].creator;
+    _creator = metaCache[imageFileName]._creator;
     copyright = metaCache[imageFileName].copyright;
+    _copyright = metaCache[imageFileName]._copyright;
     email = metaCache[imageFileName].email;
+    _email = metaCache[imageFileName]._email;
     url = metaCache[imageFileName].url;
+    _url = metaCache[imageFileName]._url;
     orientation = metaCache[imageFileName].orientation;
     shootingInfo = metaCache[imageFileName].shootingInfo;
 }

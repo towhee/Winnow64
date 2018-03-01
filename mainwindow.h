@@ -232,7 +232,7 @@ private slots:
     void setRating();
     void setColorClass();
     void setRotation(int degrees);
-    void updateTitle(QStandardItem* item);
+    void metadataChanged(QStandardItem* item);
     void quickFilter();
     void invertFilters();
     void refine();
