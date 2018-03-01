@@ -43,6 +43,8 @@ namespace G
         SizeColumn,
         CreatedColumn,
         ModifiedColumn,
+        YearColumn,
+        DayColumn,
         CreatorColumn,
         MegaPixelsColumn,
         DimensionsColumn,

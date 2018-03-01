@@ -195,6 +195,20 @@ by addCategoryFromData.
     creators->setBackground(0, categoryBackground);
     creators->setBackground(1, categoryBackground);
     creators->setData(0, G::ColumnRole, G::CreatorColumn);
+
+    years = new QTreeWidgetItem(this);
+    years->setText(0, "Years");
+    years->setFont(0, categoryFont);
+    years->setBackground(0, categoryBackground);
+    years->setBackground(1, categoryBackground);
+    years->setData(0, G::ColumnRole, G::YearColumn);
+
+    days = new QTreeWidgetItem(this);
+    days->setText(0, "Days");
+    days->setFont(0, categoryFont);
+    days->setBackground(0, categoryBackground);
+    days->setBackground(1, categoryBackground);
+    days->setData(0, G::ColumnRole, G::DayColumn);
 }
 
 void Filters::removeChildrenDynamicFilters()

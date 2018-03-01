@@ -93,6 +93,8 @@ Code examples for model:
     setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size"));
     setHorizontalHeaderItem(G::CreatedColumn, new QStandardItem("Created"));
     setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified"));
+    setHorizontalHeaderItem(G::YearColumn, new QStandardItem("Year"));
+    setHorizontalHeaderItem(G::DayColumn, new QStandardItem("Day"));
     setHorizontalHeaderItem(G::CreatorColumn, new QStandardItem("Creator"));
     setHorizontalHeaderItem(G::MegaPixelsColumn, new QStandardItem("MPix"));
     setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions"));
@@ -239,18 +241,10 @@ bool DataModel::addFiles()
         setData(index(row, G::ModifiedColumn), fileInfo.lastModified());
         setData(index(row, G::RefineColumn), false);
         setData(index(row, G::PickColumn), "false");
-//        setData(index(row, G::LabelColumn), "");
-//        setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-//        setData(index(row, G::RatingColumn), "");
-//        setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-//        setData(index(row, G::MetadataLoadedColumn), false);
-//        setData(index(row, G::ThumbLoadedColumn), false);
 
         /* the rest of the data model columns are added after the metadata
         has been loaded, when the image caching is called.  See
         MW::loadImageCache and thumbView::addMetadataToModel    */
-
-//        qDebug() << "Row =" << row << fPath;
     }
 
 //    qDebug() << "Add files elapsed time =" << t.restart() << "ms for "
@@ -285,6 +279,8 @@ which is created in MW, and in InfoView.
     QMap<QVariant, QString> titleMap;
     QMap<QVariant, QString> flMap;
     QMap<QVariant, QString> creatorMap;
+    QMap<QVariant, QString> yearMap;
+    QMap<QVariant, QString> dayMap;
 
     for(int row = 0; row < rowCount(); row++) {
         QModelIndex idx = index(row, G::PathColumn);
@@ -295,6 +291,9 @@ which is created in MW, and in InfoView.
         uint width = metadata->getWidth(fPath);
         uint height = metadata->getHeight(fPath);
         QString created = metadata->getCreated(fPath);
+        QString year = created.left(4);
+        QString day = created.left(10);
+        day.replace(":", "-");
         QString mp = QString::number((width * height) / 1000000.0, 'f', 2);
         QString dim = QString::number(width) + "x" + QString::number(height);
 //        QString aperture = metadata->getAperture(fPath);
@@ -304,25 +303,30 @@ which is created in MW, and in InfoView.
 //        QString iso = metadata->getISO(fPath);
         int isoNum = metadata->getISONum(fPath);
         QString model = metadata->getModel(fPath);
-        modelMap[model] = model;
         QString lens = metadata->getLens(fPath);
-        lensMap[lens] = lens;
         QString fl = metadata->getFocalLength(fPath);
         int flNum = metadata->getFocalLengthNum(fPath);
-        flMap[flNum] = fl;
         QString title = metadata->getTitle(fPath);
-        titleMap[title] = title;
         QString creator = metadata->getCreator(fPath);
-        creatorMap[creator] = creator;
         QString copyright = metadata->getCopyright(fPath);
         QString email = metadata->getEmail(fPath);
         QString url = metadata->getUrl(fPath);
+
+        creatorMap[creator] = creator;
+        yearMap[year] = year;
+        dayMap[day] = day;
+        modelMap[model] = model;
+        lensMap[lens] = lens;
+        flMap[flNum] = fl;
+        titleMap[title] = title;
 
         setData(index(row, G::LabelColumn), label);
         setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
         setData(index(row, G::RatingColumn), rating);
         setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
         setData(index(row, G::CreatedColumn), created);
+        setData(index(row, G::YearColumn), created.left(4));
+        setData(index(row, G::DayColumn), day);
         setData(index(row, G::MegaPixelsColumn), mp);
         setData(index(row, G::DimensionsColumn), dim);
         setData(index(row, G::RotationColumn), 0);
@@ -350,6 +354,8 @@ which is created in MW, and in InfoView.
     filters->addCategoryFromData(flMap, filters->focalLengths);
     filters->addCategoryFromData(titleMap, filters->titles);
     filters->addCategoryFromData(creatorMap, filters->creators);
+    filters->addCategoryFromData(yearMap, filters->years);
+    filters->addCategoryFromData(dayMap, filters->days);
 
 //    qDebug() << "DataModel::addMetadataToModel    Completed"
 //             << " elapsed time =" << t.restart() << "ms";

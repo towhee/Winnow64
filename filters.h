@@ -35,6 +35,8 @@ public:
     QTreeWidgetItem *lenses;
     QTreeWidgetItem *creators;
     QTreeWidgetItem *focalLengths;
+    QTreeWidgetItem *years;
+    QTreeWidgetItem *days;
 
     void createPredefinedFilters();
     void createDynamicFilters();

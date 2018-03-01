@@ -755,6 +755,7 @@ so scrollTo and delegate use of the current index must check the row.
 
     // the file path is used as an index in ImageView and Metadata
     QString fPath = dm->sf->index(currentRow, 0).data(G::FilePathRole).toString();
+    setWindowTitle("Winnow - " + fPath);
 
     // update the matadata panel
     infoView->updateInfo(fPath);

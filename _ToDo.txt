@@ -22,7 +22,6 @@ ENHANCEMENTS
 - Refresh
 - Add complete for ingest description
 - add metadata performance options to preferences
-- Add filter for date (Year, Month, Day)
 - Drag and drop a selection of thumbs
 - Add current folder to bookmarks
 - Combine raw+jpg option
@@ -45,6 +44,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Add filter for date (Year, Month, Day)
 - Done: add MetadateDate to Xmp
 - Done: Add rotate to thumb context menu
 - Done: Allow update creator, copyright, email and url
