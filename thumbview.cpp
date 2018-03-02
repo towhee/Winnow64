@@ -1324,7 +1324,8 @@ Drag and drop thumbs to another program.
     QList<QUrl> urls;
 
     for(int i = 0; i < selection.count(); ++i) {
-        urls << QUrl(selection.at(i).data(G::FilePathRole).toString());
+        QString fPath = selection.at(i).data(G::FilePathRole).toString();
+        urls << QUrl::fromLocalFile(fPath);
     }
     qDebug() << urls;
 

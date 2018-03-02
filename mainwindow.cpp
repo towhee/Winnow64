@@ -2421,7 +2421,7 @@ dependent on datamodel and thumbView.
     qDebug() << "MW::createTableView";
     #endif
     }
-    tableView = new TableView(dm, thumbView);
+    tableView = new TableView(dm);
     tableView->setAutoScroll(false);
 
     // update menu "sort by" to match tableView sort change
@@ -6638,9 +6638,12 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
-        (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
-    qDebug() << modifyDate;
+    QDateTime dt = QDateTime::fromSecsSinceEpoch(1507681529.3377);
+
+    qDebug() << dt;
+
+    //    QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
+    //        (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
 //    qDebug() << QDateTime::currentDateTime().toOffsetFromUtc(QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
     // xmp:ModifyDate="2017-12-21T16:51:02-08:00"
     //                "2018-03-01T05:42:22-08:00"

@@ -11,7 +11,7 @@ class TableView : public QTableView
     Q_OBJECT
 
 public:
-    TableView(DataModel *dm, ThumbView *thumbView);
+    TableView(DataModel *dm);
     void scrollToCurrent();
     bool readyToScroll;
     QStandardItemModel *ok;

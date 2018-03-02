@@ -1,6 +1,6 @@
 #include "tableview.h"
 
-TableView::TableView(DataModel *dm, ThumbView *thumbView)
+TableView::TableView(DataModel *dm)
 {
 /*
 
@@ -11,7 +11,6 @@ TableView::TableView(DataModel *dm, ThumbView *thumbView)
     #endif
     }
 
-    this->thumbView = thumbView;
     this->dm = dm;
 
     setModel(dm->sf);
@@ -133,7 +132,10 @@ QSettings has been loaded.
 
 void TableView::showOrHide()
 {
-//    qDebug() << "TableView::showOrHide";
+/*
+The ok datamodel (table fields to show) is edited in the preferences dialog
+and this slot is then signalled to update which fields are visible.
+*/
     for(int i = 0; i < ok->rowCount(); i++) {
         bool showField = ok->index(i, 1).data().toBool();
         if (showField) showColumn(i + 1);

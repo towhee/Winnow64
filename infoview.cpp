@@ -305,14 +305,14 @@ void InfoView::updateInfo(const QString &fPath)
 
     uint width = metadata->getWidth(fPath);
     uint height = metadata->getHeight(fPath);
-    QString modified = imageInfo.lastModified().toString("yyyy:MM:dd hh:mm:ss");
+    QString modified = imageInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
 
     // update items
     ok->setData(ok->index(FolderRow, 1, fileInfoIdx), imageInfo.dir().dirName());
     ok->setData(ok->index(FileNameRow, 1, fileInfoIdx), imageInfo.fileName());
     ok->setData(ok->index(LocationRow, 1, fileInfoIdx), imageInfo.path());
     ok->setData(ok->index(SizeRow, 1, fileInfoIdx), QString::number(imageInfo.size() / 1024000.0, 'f', 2) + " MB");
-    ok->setData(ok->index(CreatedRow, 1, fileInfoIdx), metadata->getCreated(fPath));
+    ok->setData(ok->index(CreatedRow, 1, fileInfoIdx), metadata->getCreatedDate(fPath).toString("yyyy-MM-dd hh:mm:ss"));
     ok->setData(ok->index(ModifiedRow, 1, fileInfoIdx), modified);
     ok->setData(ok->index(DimensionsRow, 1, fileInfoIdx), metadata->getDimensions(fPath));
     ok->setData(ok->index(MegaPixelsRow, 1, fileInfoIdx), QString::number((width * height) / 1000000.0, 'f', 1));

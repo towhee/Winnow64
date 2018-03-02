@@ -9,12 +9,15 @@ image files, defined in the metadata class, are files Winnow knows how to decode
 
 The data is structured in columns:
 
-    ● Path:             from QFileInfoList  ToolTipRole + G::ThumbRectRole (icon)
+    ● Path:             from QFileInfoList  FilePathRole + ToolTipRole + G::ThumbRectRole (icon)
     ● File name:        from QFileInfoList
     ● File type:        from QFileInfoList  EditRole
     ● File size:        from QFileInfoList  EditRole
     ● File created:     from QFileInfoList  EditRole
     ● File modified:    from QFileInfoList  EditRole
+    ● Year:             from metadata       createdDate
+    ● Day:              from metadata       createdDate
+    ● Creator:          from metadata       EditRole
     ● Refined:          refine function     EditRole
     ● Picked:           user edited         EditRole
     ● Rating:           user edited         EditRole
@@ -237,8 +240,7 @@ bool DataModel::addFiles()
         setData(index(row, G::TypeColumn), s);
         setData(index(row, G::SizeColumn), fileInfo.size());
         setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-//        setData(index(row, G::CreatedColumn), fileInfo.created());
-        setData(index(row, G::ModifiedColumn), fileInfo.lastModified());
+        setData(index(row, G::ModifiedColumn), fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss"));
         setData(index(row, G::RefineColumn), false);
         setData(index(row, G::PickColumn), "false");
 
@@ -246,10 +248,6 @@ bool DataModel::addFiles()
         has been loaded, when the image caching is called.  See
         MW::loadImageCache and thumbView::addMetadataToModel    */
     }
-
-//    qDebug() << "Add files elapsed time =" << t.restart() << "ms for "
-//             << dir->entryInfoList().size() << "files"
-//             << "from" << dir->dirName();
     filters->addCategoryFromData(typesMap, filters->types);
     return true;
 }
@@ -290,24 +288,22 @@ which is created in MW, and in InfoView.
         QString rating = metadata->getRating(fPath);
         uint width = metadata->getWidth(fPath);
         uint height = metadata->getHeight(fPath);
-        QString created = metadata->getCreated(fPath);
-        QString year = created.left(4);
-        QString day = created.left(10);
-        day.replace(":", "-");
+        QDateTime createdDate = metadata->getCreatedDate(fPath);
+        QString createdDT = createdDate.toString("yyyy-MM-dd hh:mm:ss");
+        QString year = createdDate.toString("yyyy");
+        QString day = createdDate.toString("yyyy-MM-dd");
         QString mp = QString::number((width * height) / 1000000.0, 'f', 2);
         QString dim = QString::number(width) + "x" + QString::number(height);
-//        QString aperture = metadata->getAperture(fPath);
         float apertureNum = metadata->getApertureNum(fPath);
         QString ss = metadata->getExposureTime(fPath);
         float ssNum = metadata->getExposureTimeNum(fPath);
-//        QString iso = metadata->getISO(fPath);
         int isoNum = metadata->getISONum(fPath);
         QString model = metadata->getModel(fPath);
         QString lens = metadata->getLens(fPath);
         QString fl = metadata->getFocalLength(fPath);
         int flNum = metadata->getFocalLengthNum(fPath);
         QString title = metadata->getTitle(fPath);
-        QString creator = metadata->getCreator(fPath);
+        QString creator = metadata->getCreator(fPath).trimmed();
         QString copyright = metadata->getCopyright(fPath);
         QString email = metadata->getEmail(fPath);
         QString url = metadata->getUrl(fPath);
@@ -324,8 +320,8 @@ which is created in MW, and in InfoView.
         setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
         setData(index(row, G::RatingColumn), rating);
         setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-        setData(index(row, G::CreatedColumn), created);
-        setData(index(row, G::YearColumn), created.left(4));
+        setData(index(row, G::CreatedColumn), createdDT);
+        setData(index(row, G::YearColumn), year);
         setData(index(row, G::DayColumn), day);
         setData(index(row, G::MegaPixelsColumn), mp);
         setData(index(row, G::DimensionsColumn), dim);

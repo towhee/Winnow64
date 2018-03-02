@@ -165,78 +165,394 @@ void Metadata::initExifHash()
     qDebug() << "Metadata::initExifHash";
     #endif
     }
-    exifHash[293] = "ExposureTime";
-    exifHash[294] = "FNumber";
-    exifHash[295] = "ExposureProgram";
-    exifHash[296] = "ISOSpeedRatings";
-    exifHash[297] = "ExifVersion";
-    exifHash[304] = "DateTimeOriginal";
-    exifHash[305] = "DateTimeDigitized";
-    exifHash[306] = "ComponentConfiguration";
-    exifHash[307] = "CompressedBitsPerPixel";
-    exifHash[308] = "ShutterSpeedValue";
-    exifHash[309] = "ApertureValue";
-    exifHash[310] = "BrightnessValue";
-    exifHash[311] = "ExposureBiasValue";
-    exifHash[312] = "MaxApertureValue";
-    exifHash[313] = "SubjectDistance";
-    exifHash[320] = "MeteringMode";
-    exifHash[321] = "LightSource";
-    exifHash[322] = "Flash";
-    exifHash[323] = "FocalLength";
-    exifHash[324] = "MakerNote";
-    exifHash[325] = "UserComment";
-    exifHash[326] = "FlashPixVersion";
-    exifHash[327] = "ColorSpace";
-    exifHash[328] = "ExifImageWidth";
-    exifHash[329] = "ExifImageHeight";
-    exifHash[336] = "RelatedSoundFile";
-    exifHash[337] = "ExifInteroperabilityOffset";
-    exifHash[338] = "FocalPlaneXResolution";
-    exifHash[339] = "FocalPlaneYResolution";
-    exifHash[340] = "FocalPlaneResolutionUnit";
-    exifHash[341] = "SensingMethod";
-    exifHash[342] = "FileSource";
-    exifHash[343] = "SceneType";
+//    exifHash[293] = "ExposureTime";
+//    exifHash[294] = "FNumber";
+//    exifHash[295] = "ExposureProgram";
+//    exifHash[296] = "ISOSpeedRatings";
+//    exifHash[297] = "ExifVersion";
+//    exifHash[304] = "DateTimeOriginal";         // 0x0130
+//    exifHash[305] = "DateTimeDigitized";        // 0x0131
+//    exifHash[306] = "ModifyDate";               // 0x0132
+//    exifHash[307] = "CompressedBitsPerPixel";
+//    exifHash[308] = "ShutterSpeedValue";
+//    exifHash[309] = "ApertureValue";
+//    exifHash[310] = "BrightnessValue";
+//    exifHash[311] = "ExposureBiasValue";
+//    exifHash[312] = "MaxApertureValue";
+//    exifHash[313] = "SubjectDistance";
+//    exifHash[320] = "MeteringMode";
+//    exifHash[321] = "LightSource";
+//    exifHash[322] = "Flash";
+//    exifHash[323] = "FocalLength";
+//    exifHash[324] = "MakerNote";
+//    exifHash[325] = "UserComment";
+//    exifHash[326] = "FlashPixVersion";
+//    exifHash[327] = "ColorSpace";
+//    exifHash[328] = "ExifImageWidth";
+//    exifHash[329] = "ExifImageHeight";
+//    exifHash[336] = "RelatedSoundFile";
+//    exifHash[337] = "ExifInteroperabilityOffset";
+//    exifHash[338] = "FocalPlaneXResolution";
+//    exifHash[339] = "FocalPlaneYResolution";
+//    exifHash[340] = "FocalPlaneResolutionUnit";
+//    exifHash[341] = "SensingMethod";
+//    exifHash[342] = "FileSource";
+//    exifHash[343] = "SceneType";
+//    exifHash[33434] = "ExposureTime";
+//    exifHash[33437] = "FNumber";
+//    exifHash[34850] = "ExposureProgram";
+//    exifHash[34852] = "SpectralSensitivity";
+//    exifHash[34855] = "ISOSpeedRatings";
+//    exifHash[34856] = "OECF";
+//    exifHash[36864] = "ExifVersion";
+//    exifHash[36867] = "DateTimeOriginal";
+//    exifHash[36868] = "DateTimeDigitized";
+//    exifHash[37121] = "ComponentsConfiguration";
+//    exifHash[37122] = "CompressedBitsPerPixel";
+//    exifHash[37377] = "ShutterSpeedValue";
+//    exifHash[37378] = "ApertureValue";
+//    exifHash[37379] = "BrightnessValue";
+//    exifHash[37380] = "ExposureBiasValue";
+//    exifHash[37381] = "MaxApertureValue";
+//    exifHash[37382] = "SubjectDistance";
+//    exifHash[37383] = "MeteringMode";
+//    exifHash[37384] = "LightSource";
+//    exifHash[37385] = "Flash";
+//    exifHash[37386] = "FocalLength";
+//    exifHash[37396] = "SubjectArea";
+//    exifHash[37500] = "MakerNote";
+//    exifHash[37510] = "UserComment";
+//    exifHash[37520] = "SubsecTime";
+//    exifHash[37521] = "SubsecTimeOriginal";
+//    exifHash[37522] = "SubsecTimeDigitized";
+//    exifHash[40960] = "FlashpixVersion";
+//    exifHash[40961] = "ColorSpace";
+//    exifHash[40962] = "PixelXDimension";
+//    exifHash[40963] = "PixelYDimension";
+//    exifHash[40964] = "RelatedSoundFile";
+//    exifHash[41483] = "FlashEnergy";
+//    exifHash[41484] = "SpatialFrequencyResponse";
+//    exifHash[41486] = "FocalPlaneXResolution";
+//    exifHash[41487] = "FocalPlaneYResolution";
+//    exifHash[41488] = "FocalPlaneResolutionUnit";
+//    exifHash[41492] = "SubjectLocation";
+//    exifHash[41493] = "ExposureIndex";
+//    exifHash[41495] = "SensingMethod";
+//    exifHash[41728] = "FileSource";
+//    exifHash[41729] = "SceneType";
+//    exifHash[41730] = "CFAPattern";
+//    exifHash[41985] = "CustomRendered";
+//    exifHash[41986] = "ExposureMode";
+//    exifHash[41987] = "WhiteBalance";
+//    exifHash[41988] = "DigitalZoomRatio";
+//    exifHash[41989] = "FocalLengthIn35mmFilm";
+//    exifHash[41990] = "SceneCaptureType";
+//    exifHash[41991] = "GainControl";
+//    exifHash[41992] = "Contrast";
+//    exifHash[41993] = "Saturation";
+//    exifHash[41994] = "Sharpness";
+//    exifHash[41995] = "DeviceSettingDescription";
+//    exifHash[41996] = "SubjectDistanceRange";
+//    exifHash[42016] = "ImageUniqueID";
+//    exifHash[42033] = "Camera serial number";
+//    exifHash[42034] = "Lens specification";
+//    exifHash[42035] = "Lens make";
+//    exifHash[42036] = "Lens model";
+//    exifHash[42037] = "Lens serial number";
+
+    exifHash[1] = "InteropIndex";
+    exifHash[2] = "InteropVersion";
+    exifHash[11] = "ProcessingSoftware";
+    exifHash[254] = "SubfileType";
+    exifHash[255] = "OldSubfileType";
+    exifHash[256] = "ImageWidth";
+    exifHash[257] = "ImageHeight";
+    exifHash[258] = "BitsPerSample";
+    exifHash[259] = "Compression";
+    exifHash[262] = "PhotometricInterpretation";
+    exifHash[263] = "Thresholding";
+    exifHash[264] = "CellWidth";
+    exifHash[265] = "CellLength";
+    exifHash[266] = "FillOrder";
+    exifHash[269] = "DocumentName";
+    exifHash[270] = "ImageDescription";
+    exifHash[271] = "Make";
+    exifHash[272] = "Model";
+    exifHash[273] = "StripOffsets ";
+    exifHash[274] = "Orientation";
+    exifHash[277] = "SamplesPerPixel";
+    exifHash[278] = "RowsPerStrip";
+    exifHash[279] = "StripByteCounts ";
+    exifHash[280] = "MinSampleValue";
+    exifHash[281] = "MaxSampleValue";
+    exifHash[282] = "XResolution";
+    exifHash[283] = "YResolution";
+    exifHash[284] = "PlanarConfiguration";
+    exifHash[285] = "PageName";
+    exifHash[286] = "XPosition";
+    exifHash[287] = "YPosition";
+    exifHash[288] = "FreeOffsets";
+    exifHash[289] = "FreeByteCounts";
+    exifHash[290] = "GrayResponseUnit";
+    exifHash[291] = "GrayResponseCurve";
+    exifHash[292] = "T4Options";
+    exifHash[293] = "T6Options";
+    exifHash[296] = "ResolutionUnit";
+    exifHash[297] = "PageNumber";
+    exifHash[300] = "ColorResponseUnit";
+    exifHash[301] = "TransferFunction";
+    exifHash[305] = "Software";
+    exifHash[306] = "ModifyDate";
+    exifHash[315] = "Artist";
+    exifHash[316] = "HostComputer";
+    exifHash[317] = "Predictor";
+    exifHash[318] = "WhitePoint";
+    exifHash[319] = "PrimaryChromaticities";
+    exifHash[320] = "ColorMap";
+    exifHash[321] = "HalftoneHints";
+    exifHash[322] = "TileWidth";
+    exifHash[323] = "TileLength";
+    exifHash[324] = "TileOffsets";
+    exifHash[325] = "TileByteCounts";
+    exifHash[326] = "BadFaxLines";
+    exifHash[327] = "CleanFaxData";
+    exifHash[328] = "ConsecutiveBadFaxLines";
+    exifHash[330] = "SubIFD ";
+    exifHash[332] = "InkSet";
+    exifHash[333] = "InkNames";
+    exifHash[334] = "NumberofInks";
+    exifHash[336] = "DotRange";
+    exifHash[337] = "TargetPrinter";
+    exifHash[338] = "ExtraSamples";
+    exifHash[339] = "SampleFormat";
+    exifHash[340] = "SMinSampleValue";
+    exifHash[341] = "SMaxSampleValue";
+    exifHash[342] = "TransferRange";
+    exifHash[343] = "ClipPath";
+    exifHash[344] = "XClipPathUnits";
+    exifHash[345] = "YClipPathUnits";
+    exifHash[346] = "Indexed";
+    exifHash[347] = "JPEGTables";
+    exifHash[351] = "OPIProxy";
+    exifHash[400] = "GlobalParametersIFD";
+    exifHash[401] = "ProfileType";
+    exifHash[402] = "FaxProfile";
+    exifHash[403] = "CodingMethods";
+    exifHash[404] = "VersionYear";
+    exifHash[405] = "ModeNumber";
+    exifHash[433] = "Decode";
+    exifHash[434] = "DefaultImageColor";
+    exifHash[435] = "T82Options";
+    exifHash[437] = "JPEGTables";
+    exifHash[512] = "JPEGProc";
+    exifHash[513] = "ThumbnailOffset ";
+    exifHash[514] = "ThumbnailLength ";
+    exifHash[515] = "JPEGRestartInterval";
+    exifHash[517] = "JPEGLosslessPredictors";
+    exifHash[518] = "JPEGPointTransforms";
+    exifHash[519] = "JPEGQTables";
+    exifHash[520] = "JPEGDCTables";
+    exifHash[521] = "JPEGACTables";
+    exifHash[529] = "YCbCrCoefficients";
+    exifHash[530] = "YCbCrSubSampling";
+    exifHash[531] = "YCbCrPositioning";
+    exifHash[532] = "ReferenceBlackWhite";
+    exifHash[559] = "StripRowCounts";
+    exifHash[700] = "ApplicationNotes";
+    exifHash[999] = "USPTOMiscellaneous";
+    exifHash[4096] = "RelatedImageFileFormat";
+    exifHash[4097] = "RelatedImageWidth";
+    exifHash[4098] = "RelatedImageHeight";
+    exifHash[18246] = "Rating";
+    exifHash[18247] = "XP_DIP_XML";
+    exifHash[18248] = "StitchInfo";
+    exifHash[18249] = "RatingPercent";
+    exifHash[28672] = "SonyRawFileType";
+    exifHash[28722] = "VignettingCorrParams";
+    exifHash[28725] = "ChromaticAberrationCorrParams";
+    exifHash[28727] = "DistortionCorrParams";
+    exifHash[32781] = "ImageID";
+    exifHash[32931] = "WangTag1";
+    exifHash[32932] = "WangAnnotation";
+    exifHash[32933] = "WangTag3";
+    exifHash[32934] = "WangTag4";
+    exifHash[32953] = "ImageReferencePoints";
+    exifHash[32954] = "RegionXformTackPoint";
+    exifHash[32955] = "WarpQuadrilateral";
+    exifHash[32956] = "AffineTransformMat";
+    exifHash[32995] = "Matteing";
+    exifHash[32996] = "DataType";
+    exifHash[32997] = "ImageDepth";
+    exifHash[32998] = "TileDepth";
+    exifHash[33300] = "ImageFullWidth";
+    exifHash[33301] = "ImageFullHeight";
+    exifHash[33302] = "TextureFormat";
+    exifHash[33303] = "WrapModes";
+    exifHash[33304] = "FovCot";
+    exifHash[33305] = "MatrixWorldToScreen";
+    exifHash[33306] = "MatrixWorldToCamera";
+    exifHash[33405] = "Model2";
+    exifHash[33421] = "CFARepeatPatternDim";
+    exifHash[33422] = "CFAPattern2";
+    exifHash[33423] = "BatteryLevel";
+    exifHash[33424] = "KodakIFD";
+    exifHash[33432] = "Copyright";
     exifHash[33434] = "ExposureTime";
     exifHash[33437] = "FNumber";
+    exifHash[33445] = "MDFileTag";
+    exifHash[33446] = "MDScalePixel";
+    exifHash[33447] = "MDColorTable";
+    exifHash[33448] = "MDLabName";
+    exifHash[33449] = "MDSampleInfo";
+    exifHash[33450] = "MDPrepDate";
+    exifHash[33451] = "MDPrepTime";
+    exifHash[33452] = "MDFileUnits";
+    exifHash[33550] = "PixelScale";
+    exifHash[33589] = "AdventScale";
+    exifHash[33590] = "AdventRevision";
+    exifHash[33628] = "UIC1Tag";
+    exifHash[33629] = "UIC2Tag";
+    exifHash[33630] = "UIC3Tag";
+    exifHash[33631] = "UIC4Tag";
+    exifHash[33723] = "IPTC-NAA";
+    exifHash[33918] = "IntergraphPacketData";
+    exifHash[33919] = "IntergraphFlagRegisters";
+    exifHash[33920] = "IntergraphMatrix";
+    exifHash[33921] = "INGRReserved";
+    exifHash[33922] = "ModelTiePoint";
+    exifHash[34016] = "Site";
+    exifHash[34017] = "ColorSequence";
+    exifHash[34018] = "IT8Header";
+    exifHash[34019] = "RasterPadding";
+    exifHash[34020] = "BitsPerRunLength";
+    exifHash[34021] = "BitsPerExtendedRunLength";
+    exifHash[34022] = "ColorTable";
+    exifHash[34023] = "ImageColorIndicator";
+    exifHash[34024] = "BackgroundColorIndicator";
+    exifHash[34025] = "ImageColorValue";
+    exifHash[34026] = "BackgroundColorValue";
+    exifHash[34027] = "PixelIntensityRange";
+    exifHash[34028] = "TransparencyIndicator";
+    exifHash[34029] = "ColorCharacterization";
+    exifHash[34030] = "HCUsage";
+    exifHash[34031] = "TrapIndicator";
+    exifHash[34032] = "CMYKEquivalent";
+    exifHash[34118] = "SEMInfo";
+    exifHash[34152] = "AFCP_IPTC";
+    exifHash[34232] = "PixelMagicJBIGOptions";
+    exifHash[34263] = "JPLCartoIFD";
+    exifHash[34264] = "ModelTransform";
+    exifHash[34306] = "WB_GRGBLevels";
+    exifHash[34310] = "LeafData";
+    exifHash[34377] = "PhotoshopSettings";
+    exifHash[34665] = "ExifOffset";
+    exifHash[34675] = "ICC_Profile";
+    exifHash[34687] = "TIFF_FXExtensions";
+    exifHash[34688] = "MultiProfiles";
+    exifHash[34689] = "SharedData";
+    exifHash[34690] = "T88Options";
+    exifHash[34732] = "ImageLayer";
+    exifHash[34735] = "GeoTiffDirectory";
+    exifHash[34736] = "GeoTiffDoubleParams";
+    exifHash[34737] = "GeoTiffAsciiParams";
+    exifHash[34750] = "JBIGOptions";
     exifHash[34850] = "ExposureProgram";
     exifHash[34852] = "SpectralSensitivity";
-    exifHash[34855] = "ISOSpeedRatings";
-    exifHash[34856] = "OECF";
+    exifHash[34853] = "GPSInfo";
+    exifHash[34855] = "ISO";
+    exifHash[34856] = "Opto-ElectricConvFactor";
+    exifHash[34857] = "Interlace";
+    exifHash[34858] = "TimeZoneOffset";
+    exifHash[34859] = "SelfTimerMode";
+    exifHash[34864] = "SensitivityType";
+    exifHash[34865] = "StandardOutputSensitivity";
+    exifHash[34866] = "RecommendedExposureIndex";
+    exifHash[34867] = "ISOSpeed";
+    exifHash[34868] = "ISOSpeedLatitudeyyy";
+    exifHash[34869] = "ISOSpeedLatitudezzz";
+    exifHash[34908] = "FaxRecvParams";
+    exifHash[34909] = "FaxSubAddress";
+    exifHash[34910] = "FaxRecvTime";
+    exifHash[34929] = "FedexEDR";
+    exifHash[34954] = "LeafSubIFD";
     exifHash[36864] = "ExifVersion";
     exifHash[36867] = "DateTimeOriginal";
-    exifHash[36868] = "DateTimeDigitized";
+    exifHash[36868] = "CreateDate";
+    exifHash[36873] = "GooglePlusUploadCode";
+    exifHash[36880] = "OffsetTime";
+    exifHash[36881] = "OffsetTimeOriginal";
+    exifHash[36882] = "OffsetTimeDigitized";
     exifHash[37121] = "ComponentsConfiguration";
     exifHash[37122] = "CompressedBitsPerPixel";
     exifHash[37377] = "ShutterSpeedValue";
     exifHash[37378] = "ApertureValue";
     exifHash[37379] = "BrightnessValue";
-    exifHash[37380] = "ExposureBiasValue";
+    exifHash[37380] = "ExposureCompensation";
     exifHash[37381] = "MaxApertureValue";
     exifHash[37382] = "SubjectDistance";
     exifHash[37383] = "MeteringMode";
     exifHash[37384] = "LightSource";
     exifHash[37385] = "Flash";
     exifHash[37386] = "FocalLength";
+    exifHash[37387] = "FlashEnergy";
+    exifHash[37388] = "SpatialFrequencyResponse";
+    exifHash[37389] = "Noise";
+    exifHash[37390] = "FocalPlaneXResolution";
+    exifHash[37391] = "FocalPlaneYResolution";
+    exifHash[37392] = "FocalPlaneResolutionUnit";
+    exifHash[37393] = "ImageNumber";
+    exifHash[37394] = "SecurityClassification";
+    exifHash[37395] = "ImageHistory";
     exifHash[37396] = "SubjectArea";
+    exifHash[37397] = "ExposureIndex";
+    exifHash[37398] = "TIFF-EPStandardID";
+    exifHash[37399] = "SensingMethod";
+    exifHash[37434] = "CIP3DataFile";
+    exifHash[37435] = "CIP3Sheet";
+    exifHash[37436] = "CIP3Side";
+    exifHash[37439] = "StoNits";
     exifHash[37500] = "MakerNote";
     exifHash[37510] = "UserComment";
-    exifHash[37520] = "SubsecTime";
-    exifHash[37521] = "SubsecTimeOriginal";
-    exifHash[37522] = "SubsecTimeDigitized";
+    exifHash[37520] = "SubSecTime";
+    exifHash[37521] = "SubSecTimeOriginal";
+    exifHash[37522] = "SubSecTimeDigitized";
+    exifHash[37679] = "MSDocumentText";
+    exifHash[37680] = "MSPropertySetStorage";
+    exifHash[37681] = "MSDocumentTextPosition";
+    exifHash[37724] = "ImageSourceData";
+    exifHash[37888] = "AmbientTemperature";
+    exifHash[37889] = "Humidity";
+    exifHash[37890] = "Pressure";
+    exifHash[37891] = "WaterDepth";
+    exifHash[37892] = "Acceleration";
+    exifHash[37893] = "CameraElevationAngle";
+    exifHash[40091] = "XPTitle";
+    exifHash[40092] = "XPComment";
+    exifHash[40093] = "XPAuthor";
+    exifHash[40094] = "XPKeywords";
+    exifHash[40095] = "XPSubject";
     exifHash[40960] = "FlashpixVersion";
     exifHash[40961] = "ColorSpace";
-    exifHash[40962] = "PixelXDimension";
-    exifHash[40963] = "PixelYDimension";
+    exifHash[40962] = "ExifImageWidth";
+    exifHash[40963] = "ExifImageHeight";
     exifHash[40964] = "RelatedSoundFile";
+    exifHash[40965] = "InteropOffset";
+    exifHash[40976] = "SamsungRawPointersOffset";
+    exifHash[40977] = "SamsungRawPointersLength";
+    exifHash[41217] = "SamsungRawByteOrder";
+    exifHash[41218] = "SamsungRawUnknown?";
     exifHash[41483] = "FlashEnergy";
     exifHash[41484] = "SpatialFrequencyResponse";
+    exifHash[41485] = "Noise";
     exifHash[41486] = "FocalPlaneXResolution";
     exifHash[41487] = "FocalPlaneYResolution";
     exifHash[41488] = "FocalPlaneResolutionUnit";
+    exifHash[41489] = "ImageNumber";
+    exifHash[41490] = "SecurityClassification";
+    exifHash[41491] = "ImageHistory";
     exifHash[41492] = "SubjectLocation";
     exifHash[41493] = "ExposureIndex";
+    exifHash[41494] = "TIFF-EPStandardID";
     exifHash[41495] = "SensingMethod";
     exifHash[41728] = "FileSource";
     exifHash[41729] = "SceneType";
@@ -245,7 +561,7 @@ void Metadata::initExifHash()
     exifHash[41986] = "ExposureMode";
     exifHash[41987] = "WhiteBalance";
     exifHash[41988] = "DigitalZoomRatio";
-    exifHash[41989] = "FocalLengthIn35mmFilm";
+    exifHash[41989] = "FocalLengthIn35mmFormat";
     exifHash[41990] = "SceneCaptureType";
     exifHash[41991] = "GainControl";
     exifHash[41992] = "Contrast";
@@ -254,11 +570,161 @@ void Metadata::initExifHash()
     exifHash[41995] = "DeviceSettingDescription";
     exifHash[41996] = "SubjectDistanceRange";
     exifHash[42016] = "ImageUniqueID";
-    exifHash[42033] = "Camera serial number";
-    exifHash[42034] = "Lens specification";
-    exifHash[42035] = "Lens make";
-    exifHash[42036] = "Lens model";
-    exifHash[42037] = "Lens serial number";
+    exifHash[42032] = "OwnerName";
+    exifHash[42033] = "SerialNumber";
+    exifHash[42034] = "LensInfo";
+    exifHash[42035] = "LensMake";
+    exifHash[42036] = "LensModel";
+    exifHash[42037] = "LensSerialNumber";
+    exifHash[42112] = "GDALMetadata";
+    exifHash[42113] = "GDALNoData";
+    exifHash[42240] = "Gamma";
+    exifHash[44992] = "ExpandSoftware";
+    exifHash[44993] = "ExpandLens";
+    exifHash[44994] = "ExpandFilm";
+    exifHash[44995] = "ExpandFilterLens";
+    exifHash[44996] = "ExpandScanner";
+    exifHash[44997] = "ExpandFlashLamp";
+    exifHash[48129] = "PixelFormat";
+    exifHash[48130] = "Transformation";
+    exifHash[48131] = "Uncompressed";
+    exifHash[48132] = "ImageType";
+    exifHash[48256] = "ImageWidth";
+    exifHash[48257] = "ImageHeight";
+    exifHash[48258] = "WidthResolution";
+    exifHash[48259] = "HeightResolution";
+    exifHash[48320] = "ImageOffset";
+    exifHash[48321] = "ImageByteCount";
+    exifHash[48322] = "AlphaOffset";
+    exifHash[48323] = "AlphaByteCount";
+    exifHash[48324] = "ImageDataDiscard";
+    exifHash[48325] = "AlphaDataDiscard";
+    exifHash[50215] = "OceScanjobDesc";
+    exifHash[50216] = "OceApplicationSelector";
+    exifHash[50217] = "OceIDNumber";
+    exifHash[50218] = "OceImageLogic";
+    exifHash[50255] = "Annotations";
+    exifHash[50341] = "PrintIM";
+    exifHash[50547] = "OriginalFileName";
+    exifHash[50560] = "USPTOOriginalContentType";
+    exifHash[50656] = "CR2CFAPattern";
+    exifHash[50706] = "DNGVersion";
+    exifHash[50707] = "DNGBackwardVersion";
+    exifHash[50708] = "UniqueCameraModel";
+    exifHash[50709] = "LocalizedCameraModel";
+    exifHash[50710] = "CFAPlaneColor";
+    exifHash[50711] = "CFALayout";
+    exifHash[50712] = "LinearizationTable";
+    exifHash[50713] = "BlackLevelRepeatDim";
+    exifHash[50714] = "BlackLevel";
+    exifHash[50715] = "BlackLevelDeltaH";
+    exifHash[50716] = "BlackLevelDeltaV";
+    exifHash[50717] = "WhiteLevel";
+    exifHash[50718] = "DefaultScale";
+    exifHash[50719] = "DefaultCropOrigin";
+    exifHash[50720] = "DefaultCropSize";
+    exifHash[50721] = "ColorMatrix1";
+    exifHash[50722] = "ColorMatrix2";
+    exifHash[50723] = "CameraCalibration1";
+    exifHash[50724] = "CameraCalibration2";
+    exifHash[50725] = "ReductionMatrix1";
+    exifHash[50726] = "ReductionMatrix2";
+    exifHash[50727] = "AnalogBalance";
+    exifHash[50728] = "AsShotNeutral";
+    exifHash[50729] = "AsShotWhiteXY";
+    exifHash[50730] = "BaselineExposure";
+    exifHash[50731] = "BaselineNoise";
+    exifHash[50732] = "BaselineSharpness";
+    exifHash[50733] = "BayerGreenSplit";
+    exifHash[50734] = "LinearResponseLimit";
+    exifHash[50735] = "CameraSerialNumber";
+    exifHash[50736] = "DNGLensInfo";
+    exifHash[50737] = "ChromaBlurRadius";
+    exifHash[50738] = "AntiAliasStrength";
+    exifHash[50739] = "ShadowScale";
+    exifHash[50740] = "SR2Private ";
+    exifHash[50741] = "MakerNoteSafety";
+    exifHash[50752] = "RawImageSegmentation";
+    exifHash[50778] = "CalibrationIlluminant1";
+    exifHash[50779] = "CalibrationIlluminant2";
+    exifHash[50780] = "BestQualityScale";
+    exifHash[50781] = "RawDataUniqueID";
+    exifHash[50784] = "AliasLayerMetadata";
+    exifHash[50827] = "OriginalRawFileName";
+    exifHash[50828] = "OriginalRawFileData";
+    exifHash[50829] = "ActiveArea";
+    exifHash[50830] = "MaskedAreas";
+    exifHash[50831] = "AsShotICCProfile";
+    exifHash[50832] = "AsShotPreProfileMatrix";
+    exifHash[50833] = "CurrentICCProfile";
+    exifHash[50834] = "CurrentPreProfileMatrix";
+    exifHash[50879] = "ColorimetricReference";
+    exifHash[50885] = "SRawType";
+    exifHash[50898] = "PanasonicTitle";
+    exifHash[50899] = "PanasonicTitle2";
+    exifHash[50931] = "CameraCalibrationSig";
+    exifHash[50932] = "ProfileCalibrationSig";
+    exifHash[50933] = "ProfileIFD";
+    exifHash[50934] = "AsShotProfileName";
+    exifHash[50935] = "NoiseReductionApplied";
+    exifHash[50936] = "ProfileName";
+    exifHash[50937] = "ProfileHueSatMapDims";
+    exifHash[50938] = "ProfileHueSatMapData1";
+    exifHash[50939] = "ProfileHueSatMapData2";
+    exifHash[50940] = "ProfileToneCurve";
+    exifHash[50941] = "ProfileEmbedPolicy";
+    exifHash[50942] = "ProfileCopyright";
+    exifHash[50964] = "ForwardMatrix1";
+    exifHash[50965] = "ForwardMatrix2";
+    exifHash[50966] = "PreviewApplicationName";
+    exifHash[50967] = "PreviewApplicationVersion";
+    exifHash[50968] = "PreviewSettingsName";
+    exifHash[50969] = "PreviewSettingsDigest";
+    exifHash[50970] = "PreviewColorSpace";
+    exifHash[50971] = "PreviewDateTime";
+    exifHash[50972] = "RawImageDigest";
+    exifHash[50973] = "OriginalRawFileDigest";
+    exifHash[50974] = "SubTileBlockSize";
+    exifHash[50975] = "RowInterleaveFactor";
+    exifHash[50981] = "ProfileLookTableDims";
+    exifHash[50982] = "ProfileLookTableData";
+    exifHash[51008] = "OpcodeList1";
+    exifHash[51009] = "OpcodeList2";
+    exifHash[51022] = "OpcodeList3";
+    exifHash[51041] = "NoiseProfile";
+    exifHash[51043] = "TimeCodes";
+    exifHash[51044] = "FrameRate";
+    exifHash[51058] = "TStop";
+    exifHash[51081] = "ReelName";
+    exifHash[51089] = "OriginalDefaultFinalSize";
+    exifHash[51090] = "OriginalBestQualitySize";
+    exifHash[51091] = "OriginalDefaultCropSize";
+    exifHash[51105] = "CameraLabel";
+    exifHash[51107] = "ProfileHueSatMapEncoding";
+    exifHash[51108] = "ProfileLookTableEncoding";
+    exifHash[51109] = "BaselineExposureOffset";
+    exifHash[51110] = "DefaultBlackRender";
+    exifHash[51111] = "NewRawImageDigest";
+    exifHash[51112] = "RawToPreviewGain";
+    exifHash[51125] = "DefaultUserCrop";
+    exifHash[59932] = "Padding";
+    exifHash[59933] = "OffsetSchema";
+    exifHash[65000] = "OwnerName";
+    exifHash[65001] = "SerialNumber";
+    exifHash[65002] = "Lens";
+    exifHash[65024] = "KDC_IFD";
+    exifHash[65100] = "RawFile";
+    exifHash[65101] = "Converter";
+    exifHash[65102] = "WhiteBalance";
+    exifHash[65105] = "Exposure";
+    exifHash[65106] = "Shadows";
+    exifHash[65107] = "Brightness";
+    exifHash[65108] = "Contrast";
+    exifHash[65109] = "Saturation";
+    exifHash[65110] = "Sharpness";
+    exifHash[65111] = "Smoothness";
+    exifHash[65112] = "MoireFilter";
+
 }
 
 void Metadata::initIfdHash()
@@ -1334,6 +1800,7 @@ void Metadata::reportMetadata()
     #endif
     }
     qDebug() << "Metadata::reportMetadata";
+    QString createdExif = createdDate.toString("yyyy-MM-dd hh:mm:ss");
     rpt << "\n";
     rpt.reset();
     rpt.setFieldAlignment(QTextStream::AlignLeft);
@@ -1349,7 +1816,7 @@ void Metadata::reportMetadata()
     rpt.setFieldWidth(20); rpt << "orientation"         << orientation;         rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "width"               << width;               rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "height"              << height;              rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "created"             << created;             rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "created"             << createdExif;         rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "model"               << model;               rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "exposureTime"        << exposureTime;        rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "aperture"            << aperture;            rpt.setFieldWidth(0); rpt << "\n";
@@ -1422,6 +1889,9 @@ void Metadata::reportMetadataHeader(QString title)
 
 void Metadata::reportMetadataAllFiles()
 {
+/*
+Not used
+*/
     QMapIterator<QString, ImageMetadata> i(metaCache);
     while (i.hasNext())  {
         i.next();
@@ -1433,7 +1903,7 @@ void Metadata::reportMetadataAllFiles()
         lengthSmallJPG = i.value().lengthSmallJPG;
         width = i.value().width;
         height = i.value().height;
-        created = i.value().created;
+//        created = i.value().created;
         createdDate = i.value().createdDate;
         model = i.value().model;
         exposureTime = i.value().exposureTime;
@@ -2001,9 +2471,14 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
             else if (hdr == "IFD Sony Maker Note")
                 (sonyMakerHash.contains(tagId)) ? tagDescription = sonyMakerHash.value(tagId)
                     : tagDescription = "Undefined tag";
+
             else if (hdr.left(3) == "Sub" || hdr.left(3) == "IFD")
-                (ifdHash.contains(tagId)) ? tagDescription = ifdHash.value(tagId)
+                (exifHash.contains(tagId)) ? tagDescription = exifHash.value(tagId)
                     : tagDescription = "Undefined tag";
+
+            //            else if (hdr.left(3) == "Sub" || hdr.left(3) == "IFD")
+//                (ifdHash.contains(tagId)) ? tagDescription = ifdHash.value(tagId)
+//                    : tagDescription = "Undefined tag";
 
             rpt.setFieldWidth(8);
             rpt.setFieldAlignment(QTextStream::AlignRight);
@@ -2176,9 +2651,6 @@ void Metadata::formatNikon()
     (ifdDataHash.contains(274))
         ? orientation = ifdDataHash.value(274).tagValue
         : orientation = 1;
-//    (ifdDataHash.contains(272))
-//        ? created = getString(ifdDataHash.value(306).tagValue, ifdDataHash.value(306).tagCount)
-//        : created = "";
 
     // xmp offset
     if (ifdDataHash.contains(700)) {
@@ -2244,11 +2716,13 @@ void Metadata::formatNikon()
     readIFD("IFD Exif", offsetEXIF);
 
     // EXIF: created datetime
+    QString createdExif;
     (ifdDataHash.contains(36868))
-        ? created = getString(ifdDataHash.value(36868).tagValue,
+        ? createdExif = getString(ifdDataHash.value(36868).tagValue,
         ifdDataHash.value(36868).tagCount)
-        : created = "";
-    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
+        : createdExif = "";
+    if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+    qDebug() << "Metadata::formatNikon  createdDate =" << fName << createdDate;
 
     // Exif: get shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -2443,9 +2917,7 @@ void Metadata::formatCanon()
     (ifdDataHash.contains(33432))
         ? copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount)
         : copyright = "";
-//    (ifdDataHash.contains(306))
-//        ? created = getString(ifdDataHash.value(306).tagValue, ifdDataHash.value(306).tagCount)
-//        : created = "";
+
     // EXIF IFD offset
     ulong offsetEXIF;
     (ifdDataHash.contains(34665))
@@ -2478,11 +2950,12 @@ void Metadata::formatCanon()
     readIFD("IFD Exif", offsetEXIF);
 
     // EXIF: created datetime
+    QString createdExif;
     (ifdDataHash.contains(36868))
-        ? created = getString(ifdDataHash.value(36868).tagValue,
+        ? createdExif = getString(ifdDataHash.value(36868).tagValue,
         ifdDataHash.value(36868).tagCount)
-        : created = "";
-    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
+        : createdExif = "";
+    if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -2649,11 +3122,12 @@ void Metadata::formatOlympus()
     readIFD("IFD Exif", offsetEXIF);
 
     // EXIF: created datetime
+    QString createdExif;
     (ifdDataHash.contains(36868))
-        ? created = getString(ifdDataHash.value(36868).tagValue,
+        ? createdExif = getString(ifdDataHash.value(36868).tagValue,
         ifdDataHash.value(36868).tagCount)
-        : created = "";
-    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
+        : createdExif = "";
+    if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // get shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -2774,9 +3248,6 @@ void Metadata::formatSony()
     (ifdDataHash.contains(274))
         ? orientation = ifdDataHash.value(274).tagValue
         : orientation = 1;
-//    (ifdDataHash.contains(306))
-//        ? created = getString(ifdDataHash.value(306).tagValue, ifdDataHash.value(306).tagCount)
-//        : created = "";
 
     ulong offsetEXIF;
     (ifdDataHash.contains(34665))
@@ -2820,11 +3291,12 @@ void Metadata::formatSony()
         : height = 0;
 
     // IFD EXIF: created datetime
+    QString createdExif;
     (ifdDataHash.contains(36868))
-        ? created = getString(ifdDataHash.value(36868).tagValue,
+        ? createdExif = getString(ifdDataHash.value(36868).tagValue,
         ifdDataHash.value(36868).tagCount)
-        : created = "";
-    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
+        : createdExif = "";
+    if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // IFD Exif: get shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -2917,10 +3389,6 @@ void Metadata::formatFuji()
     (ifdDataHash.contains(274))
         ? orientation = ifdDataHash.value(274).tagValue
         : orientation = 1;
-    (ifdDataHash.contains(272))
-        ? created = getString(ifdDataHash.value(306).tagValue, ifdDataHash.value(306).tagCount)
-        : created = "";
-    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
 
     ulong offsetEXIF;
     (ifdDataHash.contains(34665))
@@ -2960,12 +3428,6 @@ bool Metadata::formatTIF()
         ? make = getString(ifdDataHash.value(271).tagValue + startOffset,
         ifdDataHash.value(271).tagCount)
         : make = "";
-
-    // IFD0: DateTime
-//    (ifdDataHash.contains(306))
-//        ? created = getString(ifdDataHash.value(306).tagValue + startOffset,
-//        ifdDataHash.value(306).tagCount)
-//        : created = "";
 
     // IFD0: Title (ImageDescription)
     (ifdDataHash.contains(270))
@@ -3026,11 +3488,12 @@ bool Metadata::formatTIF()
     if (ifdEXIFOffset) readIFD("IFD Exif", ifdEXIFOffset);
 
     // EXIF: created datetime
+    QString createdExif;
     (ifdDataHash.contains(36868))
-        ? created = getString(ifdDataHash.value(36868).tagValue,
+        ? createdExif = getString(ifdDataHash.value(36868).tagValue,
         ifdDataHash.value(36868).tagCount)
-        : created = "";
-    if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
+        : createdExif = "";
+    if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -3208,12 +3671,6 @@ bool Metadata::formatJPG()
             ? copyright = getString(ifdDataHash.value(33432).tagValue + startOffset,
                                     ifdDataHash.value(33432).tagCount)
             : copyright = "";
-
-        // IFD0: DateTime
-//        (ifdDataHash.contains(306))
-//            ? created = getString(ifdDataHash.value(306).tagValue + startOffset,
-//            ifdDataHash.value(306).tagCount)
-//            : created = "";
     }
 
     // read IFD1
@@ -3248,11 +3705,18 @@ bool Metadata::formatJPG()
     if (readNonEssentialMetadata) {
 
         // EXIF: created datetime
+        QString createdExif;
         (ifdDataHash.contains(36868))
-            ? created = getString(ifdDataHash.value(36868).tagValue + startOffset,
+            ? createdExif = getString(ifdDataHash.value(36868).tagValue + startOffset,
             ifdDataHash.value(36868).tagCount)
-            : created = "";
-        if (created.length() > 0) createdDate = QDateTime::fromString(created, "yyyy:MM:dd hh:mm:ss");
+            : createdExif = "";
+        if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+        // try DateTimeOriginal
+        if (createdExif.length() == 0 && ifdDataHash.contains(36867)) {
+            createdExif = getString(ifdDataHash.value(36867).tagValue + startOffset,
+                ifdDataHash.value(36867).tagCount);
+            if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+        }
 
         // EXIF: shutter speed
         if (ifdDataHash.contains(33434)) {
@@ -3362,7 +3826,7 @@ void Metadata::clearMetadata()
     width = 0;
     height = 0;
     orientation = 1;
-    created = "";
+//    created = "";
     model = "";
     exposureTime = "";
     aperture = "";
@@ -3598,15 +4062,16 @@ QDateTime Metadata::getCreatedDate(const QString &imageFileName)
     return metaCache[imageFileName].createdDate;
 }
 
-QString Metadata::getCreated(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "Metadata::getCreated" << imageFileName;
-    #endif
-    }
-    return metaCache[imageFileName].created;
-}
+//QString Metadata::getCreated(const QString &imageFileName)
+//{
+//    {
+//    #ifdef ISDEBUG
+//    qDebug() << "Metadata::getCreated" << imageFileName;
+//    #endif
+//    }
+//    return "";
+////    return metaCache[imageFileName].created;
+//}
 
 int Metadata::getYear(const QString &imageFileName)
 {
@@ -3991,7 +4456,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.height = height;
     imageMetadata.dimensions = QString::number(width) + "x" + QString::number(height);
     imageMetadata.rotationDegrees = rotationDegrees;
-    imageMetadata.created = created;
+//    imageMetadata.created = created;
     imageMetadata.createdDate = createdDate;
     imageMetadata.model = model;
     imageMetadata.exposureTime = exposureTime;
@@ -4017,15 +4482,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata._email = _email;
     imageMetadata.url = url;
     imageMetadata._url = _url;
-    imageMetadata.year = created.left(4).toInt();
-    imageMetadata.month = created.mid(5,2).toInt();
-    imageMetadata.day = created.mid(8,2).toInt();
+    imageMetadata.copyFileNamePrefix = createdDate.toString("yyyy-MM-dd");
 
-    QString s = created;
-    s.replace(":", "-");
-    imageMetadata.copyFileNamePrefix = s.left(10);
-
-    s = imageMetadata.model;
+    QString s = imageMetadata.model;
     s += "  " + imageMetadata.focalLength;
     s += "  " + imageMetadata.exposureTime;
     s += (imageMetadata.aperture == "") ? "" : " at " + imageMetadata.aperture;
@@ -4058,7 +4517,7 @@ void Metadata::setMetadata(const QString &imageFileName)
     height = metaCache[imageFileName].height;
     dimensions = metaCache[imageFileName].dimensions;
     rotationDegrees = metaCache[imageFileName].rotationDegrees;
-    created = metaCache[imageFileName].created;
+//    created = metaCache[imageFileName].created;
     createdDate = metaCache[imageFileName].createdDate;
     model = metaCache[imageFileName].model;
     exposureTime = metaCache[imageFileName].exposureTime;

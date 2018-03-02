@@ -46,7 +46,6 @@ public:
     ulong width;
     ulong height;
     QString dimensions;
-    QString created;
     QDateTime createdDate;
     QString make;
     QString model;
@@ -113,7 +112,7 @@ public:
     ulong width;
     ulong height;
     QString dimensions;
-    QString created;
+//    QString created;
     QDateTime createdDate;
     QString make;
     QString model;
@@ -188,7 +187,7 @@ public:
     int getRotation(QString &imageFileName);
     void setRotation(const QString &imageFileName, const int rotationDegrees);
     bool getPick(const QString &imageFileName);
-    QString getCreated(const QString &imageFileName);
+//    QString getCreated(const QString &imageFileName);
     QString getMake(const QString &imageFileName);
     QString getModel(const QString &imageFileName);
     QString getExposureTime( const QString &imageFileName);
