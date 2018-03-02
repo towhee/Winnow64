@@ -358,7 +358,7 @@ void Metadata::initExifHash()
     exifHash[531] = "YCbCrPositioning";
     exifHash[532] = "ReferenceBlackWhite";
     exifHash[559] = "StripRowCounts";
-    exifHash[700] = "ApplicationNotes";
+    exifHash[700] = "XMP offset";       // "ApplicationNotes";
     exifHash[999] = "USPTOMiscellaneous";
     exifHash[4096] = "RelatedImageFileFormat";
     exifHash[4097] = "RelatedImageWidth";
@@ -2622,14 +2622,13 @@ void Metadata::formatNikon()
     #endif
     }
     // moved file.open to readMetadata
-//    file.open(QIODevice::ReadOnly);
+
     // get endian
     order = get2(file.read(4));
     // get offset to first IFD and read it
     ulong offsetIfd0 = get4(file.read(4));
 
     // Nikon does not chaim IFDs
-//    ulong nextIFDOffset =
     readIFD("IFD0", offsetIfd0);
 
 /*
@@ -2645,30 +2644,22 @@ void Metadata::formatNikon()
     */
 
     // pull data reqd from IFD0
-    (ifdDataHash.contains(272))
-        ? model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount)
-        : model = "";
-    (ifdDataHash.contains(274))
-        ? orientation = ifdDataHash.value(274).tagValue
-        : orientation = 1;
+    model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
+    orientation = ifdDataHash.value(274).tagValue;
+    creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount);
 
     // xmp offset
-    if (ifdDataHash.contains(700)) {
-        xmpSegmentOffset = ifdDataHash.value(700).tagValue;
-        // xmpNextSegmentOffset used to later calc available room in xmp
-        xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
-        isXmp = true;
-    }
+    xmpSegmentOffset = ifdDataHash.value(700).tagValue;
+    // xmpNextSegmentOffset used to later calc available room in xmp
+    xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
+    if (xmpSegmentOffset) isXmp = true;
     else isXmp = false;
 
-    ulong offsetEXIF;
-    (ifdDataHash.contains(34665))
-        ? offsetEXIF = ifdDataHash.value(34665).tagValue
-        : offsetEXIF = 0;
+    ulong offsetEXIF = 0;
+    offsetEXIF = ifdDataHash.value(34665).tagValue;
 
-    // NIkon provides an offset in IFD0 to the offsets for
-    // all the subIFDs
-    // get the offsets for the subIFD and read them
+    /* NIkon provides an offset in IFD0 to the offsets for all the subIFDs
+    in subIFD0 */
     QList<ulong> ifdOffsets;
     if(ifdDataHash.contains(330)) {
         ifdOffsets = getSubIfdOffsets(ifdDataHash.value(330).tagValue,
@@ -2679,37 +2670,23 @@ void Metadata::formatNikon()
         readIFD(hdr, ifdOffsets[0]);
 
         // pull data reqd from SubIFD1
-        (ifdDataHash.contains(513))
-            ? offsetFullJPG = ifdDataHash.value(513).tagValue
-            : offsetFullJPG = 0;
-        (ifdDataHash.contains(514))
-            ? lengthFullJPG = ifdDataHash.value(514).tagValue
-            : lengthFullJPG = 0;
+        offsetFullJPG = ifdDataHash.value(513).tagValue;
+        lengthFullJPG = ifdDataHash.value(514).tagValue;
 
         // pull data reqd from SubIFD2
         // SubIFD2 contains image width and height
 
         hdr = "SubIFD2";
         readIFD(hdr, ifdOffsets[1]);
-        (ifdDataHash.contains(256))
-            ? width = ifdDataHash.value(256).tagValue
-            : width = 0;
-        (ifdDataHash.contains(257))
-            ? height = ifdDataHash.value(257).tagValue
-            : height = 0;
+        width = ifdDataHash.value(256).tagValue;
+        height = ifdDataHash.value(257).tagValue;
 
         // SubIFD3 contains small size jpg offset and length
 
         hdr = "SubIFD3";
         readIFD(hdr, ifdOffsets[2]);
-
-        // pull data reqd from SubIFD3
-        (ifdDataHash.contains(513))
-            ? offsetSmallJPG = ifdDataHash.value(513).tagValue
-            : offsetSmallJPG = 0;
-        (ifdDataHash.contains(514))
-            ? lengthSmallJPG = ifdDataHash.value(514).tagValue
-            : lengthSmallJPG = 0;
+        offsetSmallJPG = ifdDataHash.value(513).tagValue;
+        lengthSmallJPG = ifdDataHash.value(514).tagValue;
     }
 
     // read ExifIFD
@@ -2717,12 +2694,9 @@ void Metadata::formatNikon()
 
     // EXIF: created datetime
     QString createdExif;
-    (ifdDataHash.contains(36868))
-        ? createdExif = getString(ifdDataHash.value(36868).tagValue,
-        ifdDataHash.value(36868).tagCount)
-        : createdExif = "";
+    createdExif = getString(ifdDataHash.value(36868).tagValue,
+        ifdDataHash.value(36868).tagCount);
     if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
-    qDebug() << "Metadata::formatNikon  createdDate =" << fName << createdDate;
 
     // Exif: get shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -2754,18 +2728,10 @@ void Metadata::formatNikon()
         ulong x = ifdDataHash.value(34855).tagValue;
         ISONum = static_cast<int>(x);
         ISO = QString::number(ISONum);
-//        ISO = "ISO " + QString::number(x);
     } else {
         ISO = "";
         ISONum = 0;
     }
-/*
-//    if (ifdDataHash.contains(41989)) {
-//        focalLength35mm = QString::number(ifdDataHash.value(41989).tagValue) + "mm";
-//    } else {
-//        focalLength35mm = "Unknown";
-//    }
-*/
     // Exif: focal length
     if (ifdDataHash.contains(37386)) {
         float x = getReal(ifdDataHash.value(37386).tagValue);
@@ -2802,25 +2768,17 @@ void Metadata::formatNikon()
 
         readIFD("IFD Nikon Maker Note", makerOffsetBase + 8);
         // Get serial number, shutter count and lens type to decrypt the lens info
-        (ifdDataHash.contains(29))
-            ? cameraSN = getString(ifdDataHash.value(29).tagValue + makerOffsetBase,
-                                       ifdDataHash.value(29).tagCount)
-            : cameraSN = "";
-        (ifdDataHash.contains(167))
-            ? shutterCount = ifdDataHash.value(167).tagValue
-            : shutterCount = 0;
-        uint lensType;
-        (ifdDataHash.contains(131))
-            ? lensType = ifdDataHash.value(131).tagValue
-            : lensType = 0;
+        cameraSN = getString(ifdDataHash.value(29).tagValue + makerOffsetBase,
+                                       ifdDataHash.value(29).tagCount);
+        shutterCount = ifdDataHash.value(167).tagValue;
+        uint lensType = 0;
+        lensType = ifdDataHash.value(131).tagValue;
 
         uint32_t serial = cameraSN.toInt();
         uint32_t count = shutterCount;
-        QByteArray encryptedLensInfo;
-        (ifdDataHash.contains(152))
-            ? encryptedLensInfo = getByteArray(ifdDataHash.value(152).tagValue + makerOffsetBase,
-                                               ifdDataHash.value(152).tagCount)
-            : encryptedLensInfo = "";
+        QByteArray encryptedLensInfo = "";
+        encryptedLensInfo = getByteArray(ifdDataHash.value(152).tagValue + makerOffsetBase,
+                                               ifdDataHash.value(152).tagCount);
         QByteArray lensInfo = nikonDecrypt(encryptedLensInfo, count, serial);
         // the byte array code is in the middle of the lensInfo byte stream
         lensInfo.remove(0, 12);
@@ -2828,7 +2786,6 @@ void Metadata::formatNikon()
         lensInfo.append(lensType);
         nikonLensCode = lensInfo.toHex().toUpper();
         lens = nikonLensHash.value(nikonLensCode);
-//        lens = nikonLensHash.value(lensInfo);
         /*
         or could go with nikonLensHash<QString, QString>
         and use lensInfo.toHex().toUpper() as the key  */
@@ -2838,36 +2795,32 @@ void Metadata::formatNikon()
             readIFD("IFD Nikon Maker Note: PreviewIFD",
                     ifdDataHash.value(17).tagValue + makerOffsetBase);
 
-            (ifdDataHash.contains(513))
-                ? offsetThumbJPG = ifdDataHash.value(513).tagValue + makerOffsetBase
-                : offsetThumbJPG = 0;
-            (ifdDataHash.contains(514))
-                ? lengthThumbJPG = ifdDataHash.value(514).tagValue + makerOffsetBase
-                : lengthThumbJPG = 0;
+            offsetThumbJPG = ifdDataHash.value(513).tagValue + makerOffsetBase;
+            lengthThumbJPG = ifdDataHash.value(514).tagValue + makerOffsetBase;
         }
     }
 
     // read XMP
-//    if (isXmp && okToReadXmp) {
-//        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
-//        rating = xmp.getItem("Rating");     // case is important "Rating"
-//        label = xmp.getItem("Label");       // case is important "Label"
-//        if (title.isEmpty()) title = xmp.getItem("title");       // case is important "title"
-//        if (cameraSN.isEmpty()) cameraSN = xmp.getItem("SerialNumber");
-//        if (lens.isEmpty()) lens = xmp.getItem("Lens");
-//        if (lensSN.isEmpty()) lensSN = xmp.getItem("LensSerialNumber");
-//        if (creator.isEmpty()) creator = xmp.getItem("creator");
-//        if (copyright.isEmpty()) copyright = xmp.getItem("rights");
-//        if (email.isEmpty()) email = xmp.getItem("CiEmailWork");
-//        if (url.isEmpty()) url = xmp.getItem("CiUrlWork");
+    if (isXmp && okToReadXmp) {
+        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+        rating = xmp.getItem("Rating");     // case is important "Rating"
+        label = xmp.getItem("Label");       // case is important "Label"
+        if (title.isEmpty()) title = xmp.getItem("title");       // case is important "title"
+        if (cameraSN.isEmpty()) cameraSN = xmp.getItem("SerialNumber");
+        if (lens.isEmpty()) lens = xmp.getItem("Lens");
+        if (lensSN.isEmpty()) lensSN = xmp.getItem("LensSerialNumber");
+        if (creator.isEmpty()) creator = xmp.getItem("creator");
+        if (copyright.isEmpty()) copyright = xmp.getItem("rights");
+        if (email.isEmpty()) email = xmp.getItem("CiEmailWork");
+        if (url.isEmpty()) url = xmp.getItem("CiUrlWork");
 
-//        // save original values so can determine if edited when writing changes
-//        _title = title;
-//        _rating = rating;
-//        _label = label;
+        // save original values so can determine if edited when writing changes
+        _title = title;
+        _rating = rating;
+        _label = label;
 
-//        if (report) xmpString = xmp.metaAsString();
-//    }
+        if (report) xmpString = xmp.metaAsString();
+    }
 
     if (report) reportMetadata();
 
@@ -3066,7 +3019,7 @@ void Metadata::formatCanon()
         cameraSN = xmp.getItem("SerialNumber");
         if (lens.isEmpty()) lens = xmp.getItem("Lens");
         lensSN = xmp.getItem("LensSerialNumber");
-        creator = xmp.getItem("creator");
+        if (creator.isEmpty()) creator = xmp.getItem("creator");
         copyright = xmp.getItem("rights");
         email = xmp.getItem("CiEmailWork");
         url = xmp.getItem("CiUrlWork");
@@ -3568,7 +3521,7 @@ bool Metadata::formatTIF()
         cameraSN = xmp.getItem("SerialNumber");
         if (lens.isEmpty()) lens = xmp.getItem("Lens");
         lensSN = xmp.getItem("LensSerialNumber");
-        creator = xmp.getItem("creator");
+        if (creator.isEmpty()) creator = xmp.getItem("creator");
         copyright = xmp.getItem("rights");
         email = xmp.getItem("CiEmailWork");
         url = xmp.getItem("CiUrlWork");
@@ -3790,7 +3743,7 @@ bool Metadata::formatJPG()
         cameraSN = xmp.getItem("SerialNumber");
         if (lens.isEmpty()) lens = xmp.getItem("Lens");
         lensSN = xmp.getItem("LensSerialNumber");
-        creator = xmp.getItem("creator");
+        if (creator.isEmpty()) creator = xmp.getItem("creator");
         copyright = xmp.getItem("rights");
         email = xmp.getItem("CiEmailWork");
         url = xmp.getItem("CiUrlWork");
@@ -3841,6 +3794,8 @@ void Metadata::clearMetadata()
     err = "";
     shutterCount = 0;
     cameraSN = "";
+    rating = "";
+    label = "";
 
     ifdDataHash.clear();
     nikonLensCode = "";

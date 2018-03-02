@@ -1,40 +1,34 @@
 BUGS
-- if no created try using xmp
+- Sometimes thumbs do not paint until select
 - Image caching not always updating
 - Open with ... (doesn't work on macOS)
 - Caching thumbs is sometimes slow
 - Confirm tif metadata for focus stacks (app out msg)
-- Drag drop to photoshop not working (works in MacOs)
 - Drag drop onto graphicsview (main image) not working
 - Copy metadata item not working (was working before)
 - Toggle zoom wrong place when using preview size cached image
 - Info status not reporting correctly while thumbs loading and zoom
-- Icon padding becomes 2 for no apparent reason periodically
 - Gets stuck in F mode where cannot resize
 - Pick thumb not always showing one main image in loupe mode
-- Combobox not showing down arrow
 PERFORMANCE
 - Can be slow when usb card images cached
 CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Add wrap to thumb context menu
 - Refresh
 - Add complete for ingest description
 - add metadata performance options to preferences
-- Drag and drop a selection of thumbs
 - Add current folder to bookmarks
 - Combine raw+jpg option
+- info label token builder
 - Get Sony image count, camera SN
 - Get actual monitor resolution for actualDevicePixelRatio calculation
 - Recent copy to folders in ingest dialog
 - Add zoom increment amount to preferences
-- Add preferences for info label
 - Remember column order in tableView and workspace
 - Add more raw file formats - DNG, Fuji, Panasonic ...
 - Zoom rect in thumbnail to show zoom and pan in imageView
-- Rotate selected images
 - Disable menu "add bookmark" when folders not selected??
 - Tweak context menus
 - Add filters activated status (red text on image?)
@@ -45,9 +39,15 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Add wrap to thumb context menu
+- Done: Drag drop to photoshop not working (works in MacOs)
+- Done: if no created try using xmp
+- Done: Drag and drop a selection of thumbs
+- Done: Replace created with createdDate using QDateTime
 - Done: Add filter for date (Year, Month, Day)
 - Done: add MetadateDate to Xmp
 - Done: Add rotate to thumb context menu
+- Done: Rotate selected images
 - Done: Allow update creator, copyright, email and url
 - Done: Edit and write creator, copyright, email, url
 - Done: Possible to overwrite tiles during ingest

@@ -417,17 +417,12 @@ bool MW::event(QEvent *event)
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
     event->acceptProposedAction();
-//    emit changed(event->mimeData());
 }
 
 void MW::dropEvent(QDropEvent *event)
 {
     const QMimeData* mimeData = event->mimeData();
 
-    // check for our needed mime type, here a file or a list of files
-    qDebug() << "MW::dropEvent"
-             << "mimeData->hasUrls()" << mimeData->hasUrls()
-             << "mimeData->hasImage()" << mimeData->hasImage();
     if (mimeData->hasUrls())
     {
         dragDropFilePath = mimeData->urls().at(0).toLocalFile();
@@ -462,31 +457,28 @@ void MW::handleStartupArgs()
 
  A new folder is selected which triggers folderSelectionChange:
 
- 1.  A list of all eligible image files in the folder is generated in
+ -   A list of all eligible image files in the folder is generated in
      DataModel (dm).
 
- 2.  A thread is spawned to cache metadata for all the images.
+ -   A thread is spawned to cache metadata and thumbs for all the images.
 
- 3.  A second thread is spawned by the metadata thread to cache all the
-     thumbnails into thumbView.
-
- 4.  A third thread is spawned by the metadata thread to cache as many full
+ -   A second thread is spawned by the metadata thread to cache as many full
      size images as assigned memory permits.
 
- 5.  Selecting a new folder also causes the selection of the first image
+ -   Selecting a new folder also causes the selection of the first image
      which fires a signal for fileSelectionChange.
 
- 6.  The first image is loaded.  The metadata and thumbnail generation
+ -   The first image is loaded.  The metadata and thumbnail generation
      threads will still be running, but things should appear to be
      speedy for the user.
 
- 7.  The metadata caching thread collects information required by the
+ -   The metadata caching thread collects information required by the
      thumb and image cache threads.
 
-8.   The thumb cache thread needs the file offset and length of the
+ -   The thumb cache thread needs the file offset and length of the
      embedded thumb jpg that is used to create the icons in thumbview.
 
-9    The image caching thread requires the offset and length for the
+ -   The image caching thread requires the offset and length for the
      full size embedded jpg, the image width and height in order to
      calculate memory requirements, build the image priority queues, the
      target range and limit the cache to the assigned maximum size.
@@ -502,8 +494,7 @@ void MW::folderSelectionChange()
                     "\n*************************************************************************";
     #endif
     }
-//    qDebug() << "\n\nMW::folderSelectionChange"
-//                "\n*************************************************************************";
+
     // Check if same folder
     QString dirPath;
     if (!isInitializing || !rememberLastDir) {
@@ -626,11 +617,19 @@ void MW::folderSelectionChange()
     isCurrentFolderOkay = true;
 
     // folder change triggered by dragdrop event
-    if (isDragDrop && dragDropFilePath.length() > 0) {
-        thumbView->selectThumb(dragDropFilePath);
+    bool dragFileSelected = false;
+    if (isDragDrop) {
+        if (dragDropFilePath.length() > 0) {
+            QFileInfo info(dragDropFilePath);
+            QString fileType = info.suffix().toLower();
+            if (metadata->supportedFormats.contains(fileType)) {
+                thumbView->selectThumb(dragDropFilePath);
+                dragFileSelected = true;
+            }
+        }
         isDragDrop = false;
     }
-    else {
+    if (!dragFileSelected) {
         thumbView->selectThumb(0);
     }
 
@@ -688,11 +687,7 @@ so scrollTo and delegate use of the current index must check the row.
     qDebug() << "\n**********************************MW::fileSelectionChange**********************************";
     #endif
     }
-
-//     qDebug() << "MW::fileSelectionChange   Start  CurrentIndex =" << current;
-
     // if starting program, set first image to display
-//    if (previous.row() == -1) thumbView->selectThumb(0);
     if (current.row() == -1) {
         thumbView->selectThumb(0);
         return;
@@ -791,8 +786,10 @@ so scrollTo and delegate use of the current index must check the row.
         if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
             dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
         {
+            thumbsWrapAction->setChecked(false);
             thumbView->setWrapping(false);
         }
+        thumbsWrapAction->setChecked(true);
         if(thumbDock->isFloating()) thumbView->setWrapping(true);
     }
 //    qDebug() << "MW::fileSelectionChange   End of function";
@@ -1615,6 +1612,12 @@ void MW::createActions()
     addAction(zoomToggleAction);
     connect(zoomToggleAction, SIGNAL(triggered()), this, SLOT(zoomToggle()));
 
+    thumbsWrapAction = new QAction(tr("Wrap thumbs"), this);
+    thumbsWrapAction->setObjectName("wrapThumbs");
+    thumbsWrapAction->setCheckable(true);
+    addAction(thumbsWrapAction);
+    connect(thumbsWrapAction, SIGNAL(triggered()), this, SLOT(toggleThumbWrap()));
+
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
     addAction(thumbsEnlargeAction);
@@ -1988,6 +1991,7 @@ void MW::createMenus()
     viewMenu->addAction(zoomOutAction);
     viewMenu->addAction(zoomToggleAction);
     viewMenu->addSeparator();
+    viewMenu->addAction(thumbsWrapAction);
     viewMenu->addAction(thumbsEnlargeAction);
     viewMenu->addAction(thumbsShrinkAction);
 //    viewMenu->addAction(thumbsFitAction);
@@ -2101,6 +2105,7 @@ void MW::createMenus()
     thumbViewActions->append(rotateRightAction);
     thumbViewActions->append(rotateLeftAction);
     thumbViewActions->append(separatorAction2);
+    thumbViewActions->append(thumbsWrapAction);
     thumbViewActions->append(thumbsEnlargeAction);
     thumbViewActions->append(thumbsShrinkAction);
     thumbViewActions->append(separatorAction3);
@@ -3305,6 +3310,7 @@ workspace with a matching name to the action is used.
     thumbView->thumbPadding = w.thumbPadding,
     thumbView->labelFontSize = w.labelFontSize,
     thumbView->showThumbLabels = w.showThumbLabels;
+    thumbsWrapAction->setChecked(w.wrapThumbs);
     thumbView->wrapThumbs = w.wrapThumbs;
     thumbView->setWrapping(w.wrapThumbs);
     gridView->thumbWidth = w.thumbWidthGrid,
@@ -3502,6 +3508,7 @@ app is "stranded" on secondary monitors that are not attached.
     gridView->labelFontSize = 8;
     gridView->showThumbLabels = true;
 
+    thumbsWrapAction->setChecked(false);
     thumbView->setWrapping(false);
 
 //    qDebug() << "\nMW::defaultWorkspace before calling setThumbParameters" << "\n"
@@ -5208,6 +5215,7 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
+        thumbsWrapAction->setChecked(true);
         thumbView->setWrapping(true);
         thumbView->isFloat = isFloat;
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -5264,6 +5272,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
+        thumbsWrapAction->setChecked(false);
         thumbView->setWrapping(false);
         qDebug() << "MW::setThumbDockFeatures   thumbView->setWrapping(false);";
         thumbView->isTopOrBottomDock = true;
@@ -5307,6 +5316,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        thumbsWrapAction->setChecked(true);
         thumbView->setWrapping(true);
         thumbView->isTopOrBottomDock = false;
     }
@@ -5805,6 +5815,12 @@ void MW::setStatus(QString state)
     stateLabel->setText("    " + state + "    ");
 }
 
+void MW::toggleThumbWrap()
+{
+    thumbView->wrapThumbs = !thumbView->wrapThumbs;
+    thumbsWrapAction->setChecked(thumbView->wrapThumbs);
+    thumbView->setWrapping(thumbView->wrapThumbs);
+}
 
 void MW::togglePick()
 {
@@ -6638,6 +6654,8 @@ void MW::helpWelcome()
 
 void MW::test()
 {
+    thumbView->setWrapping(false);
+
     QDateTime dt = QDateTime::fromSecsSinceEpoch(1507681529.3377);
 
     qDebug() << dt;

@@ -227,7 +227,7 @@ textRect         = a rectangle below itemRect
 
     // define colors
     QColor defaultBorderColor(95, 95, 95, 255);
-    QColor currentItemColor(Qt::white);
+    QColor currentItemColor(Qt::yellow);
     QColor selectedNotCurrentItemColor(Qt::lightGray);
     QColor pickColor(Qt::green);
     QPen notPick(defaultBorderColor);

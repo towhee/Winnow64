@@ -1360,7 +1360,8 @@ Drag and drop thumbs to another program.
         drag->setPixmap(pix);
     }
     drag->setHotSpot(QPoint(pix.width() / 2, pix.height() / 2));
-    drag->exec(Qt::CopyAction | Qt::MoveAction | Qt::LinkAction, Qt::IgnoreAction);
+    drag->exec(Qt::CopyAction | Qt::LinkAction, Qt::IgnoreAction);
+//    drag->exec(Qt::CopyAction | Qt::MoveAction | Qt::LinkAction, Qt::IgnoreAction);
 }
 
 // -----------------------------------------------------------------------------

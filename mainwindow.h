@@ -280,6 +280,7 @@ private slots:
     void clearThumbsFilter();
     void setShootingInfoVisibility();
     void setCacheStatusVisibility();
+    void toggleThumbWrap();
     void togglePick();
     void updatePick();
     void updateRating();
@@ -501,6 +502,7 @@ private:
     QAction *zoomOutAction;
     QAction *zoomToggleAction;
     QActionGroup *zoomGroupAction;
+    QAction *thumbsWrapAction;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
     QAction *thumbsFitAction;   // used?? rgh
