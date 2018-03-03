@@ -205,13 +205,13 @@ protected:
 //    void mousePressEvent(QMouseEvent *event);
 //    void mouseReleaseEvent(QMouseEvent *event);
 //    void mouseDoubleClickEvent(QMouseEvent *event);
-    void dropEvent(QDropEvent *event);
+    void dropEvent(const QDropEvent *event);
     void dragEnterEvent(QDragEnterEvent *event);
 
 public slots:
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex previous);
-//    void fileSelectionChange();
+    void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setStatus(QString state);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);

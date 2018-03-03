@@ -419,9 +419,11 @@ void MW::dragEnterEvent(QDragEnterEvent *event)
     event->acceptProposedAction();
 }
 
-void MW::dropEvent(QDropEvent *event)
+void MW::dropEvent(const QDropEvent *event)
 {
+    qDebug() << "MW::dropEvent" << event->mimeData();
     const QMimeData* mimeData = event->mimeData();
+//    handleDrop(event->mimeData());
 
     if (mimeData->hasUrls())
     {
@@ -440,6 +442,28 @@ void MW::dropEvent(QDropEvent *event)
         fsTree->select(dragDropFolderPath);
         folderSelectionChange();
     }
+}
+
+void MW::handleDrop(const QMimeData *mimeData)
+{
+    if (mimeData->hasUrls())
+    {
+        dragDropFilePath = mimeData->urls().at(0).toLocalFile();
+        QFileInfo fInfo = QFileInfo(dragDropFilePath);
+        if (fInfo.isDir()) {
+            dragDropFolderPath = fInfo.absoluteFilePath();
+            dragDropFilePath = "";
+        }
+        else {
+            dragDropFolderPath = fInfo.absoluteDir().absolutePath();
+        }
+        qDebug() << "dragDropFilePath" << dragDropFilePath
+                 << "dragDropFolderPath" << dragDropFolderPath;
+        isDragDrop = true;
+        fsTree->select(dragDropFolderPath);
+        folderSelectionChange();
+    }
+
 }
 
 // Do we need this?  rgh

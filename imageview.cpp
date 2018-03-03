@@ -42,6 +42,9 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     pmItem->setBoundingRegionGranularity(1);
     scene->addItem(pmItem);
 
+    setAcceptDrops(true);
+    pmItem->setAcceptDrops(true);
+
 //    setOptimizationFlags(QGraphicsView::DontSavePainterState);
 //    setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);
 //    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
@@ -93,7 +96,6 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     loadFullSizeTimer->setInterval(500);
     connect(loadFullSizeTimer, SIGNAL(timeout()), this, SLOT(upgradeToFullSize()));
 
-    setAcceptDrops(true);
 
 //    mouseZoomFit = true;
     isMouseDrag = false;
@@ -1041,34 +1043,22 @@ void ImageView::enterEvent(QEvent *event)
 
 // DRAG AND DROP
 
-//void ImageView::dragEnterEvent(QDragEnterEvent *event)
-//{
-//    event->acceptProposedAction();
-////    emit changed(event->mimeData());
-//}
+void ImageView::dragEnterEvent(QDragEnterEvent *event)
+{
+    qDebug() << "ImageView::dragEnterEvent";
+    event->acceptProposedAction();
+//    emit changed(event->mimeData());
+}
 
-//void ImageView::dropEvent(QDropEvent *event)
-//{
-//    const QMimeData* mimeData = event->mimeData();
+void ImageView::dropEvent(QDropEvent *event)
+{
+    qDebug() << "ImageView::dropEvent";
+    const QMimeData* mimeData = event->mimeData();
 
-//    // check for our needed mime type, here a file or a list of files
-//    qDebug() << "ImageView::dropEvent"
-//             << "mimeData->hasUrls()" << mimeData->hasUrls()
-//             << "mimeData->hasImage()" << mimeData->hasImage();
-////    if (mimeData->hasImage())
-////    if (mimeData->hasUrls())
-////    {
-////      QStringList pathList;
-////      QList<QUrl> urlList = mimeData->urls();
-////      // extract the local paths of the files
-////      for (int i = 0; i < urlList.size(); +i)
-////      {
-////        pathList.append(urlList.at(i).toLocalFile());
-////      }
-////      qDebug() << pathList;
-////    }
-
-//}
+    if (mimeData->hasUrls())
+    {
+    }
+}
 
 // COPY AND PASTE
 
