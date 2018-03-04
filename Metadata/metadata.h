@@ -148,6 +148,8 @@ public:
     QString fPath;
     QString err;
 
+    QMap<QString, QString> tokenMap;
+
     QStringList rawFormats;
     QStringList sidecarFormats;
     QStringList internalXmpFormats;
@@ -169,6 +171,7 @@ public:
         "float8"
     }  */
 
+    QString tokenValue(QString &token);
     void removeImage(QString &imageFileName);
     void setPick(const QString &imageFileName, bool choice);
     void clear();
@@ -256,6 +259,7 @@ private:
     QTextStream rpt;
     long order;
 
+    void initTokenMap();
     void initSupportedFiles();
     void initSegCodeHash();
     void initExifHash();

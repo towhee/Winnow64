@@ -241,7 +241,7 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
     /* The template token data is stored in a QMap and its keys are used to
     populate the templateCB dropdown. The values are shown in tokenEdit. Since
     the keys (descriptions) can be edited in templateCB (renaming) we need
-    something to howd the QMap keys to sync templatesCB, tokenEdit and the
+    something to hold the QMap keys to sync templatesCB, tokenEdit and the
     QMap. This is accomplished by also saving the keys in the templateCB as
     tooltips. When the dialog closes via the Ok button the QMap is updated to
     match any changes made to templatesCB and tokenEdit. */

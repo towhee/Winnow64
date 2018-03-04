@@ -206,6 +206,8 @@ to prevent jarring changes in perceived scale by the user.
             QFileInfo fileInfo(currentImagePath);
 //            bool loadMeta = metadata->loadImageMetadata(fileInfo);
         }
+
+        // rgh change to tokenized approach
         shootingInfo = metadata->getShootingInfo(currentImagePath) + "\n" +
                 metadata->getTitle(currentImagePath);
 
