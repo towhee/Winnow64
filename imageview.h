@@ -55,6 +55,7 @@ signals:
     void togglePick();
     void updateStatus(bool, QString);
     void zoomChange(qreal zoomValue);
+    void handleDrop(const QMimeData *mimeData);
 
 private slots:
     void upgradeToFullSize();

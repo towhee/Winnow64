@@ -17,6 +17,7 @@ Metadata::Metadata(QObject *parent) : QObject(parent)
     initNikonMakerHash();
     initCanonMakerHash();
     initSonyMakerHash();
+    initFujiMakerHash();
     initNikonLensHash();
     initSupportedFiles();
     report = false;
@@ -80,14 +81,14 @@ void Metadata::initSupportedFiles()
     #endif
     }
     // add raw file types here as they are supported
-    rawFormats << "arw" << "cr2" << "nef" << "orf" << "sr2";
-    sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "sr2";
+    rawFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2";
+    sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2";
     internalXmpFormats << "jpg";
-    xmpWriteFormats << "jpg" << "arw" << "cr2" << "nef" << "orf" << "sr2";
+    xmpWriteFormats << "jpg" << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2";
 
     supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
     "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
-    "orf" << "pbm" << "pgm" << "png" << "ppm" << "sr2" << "svg" << "svgz" <<
+    "orf" << "pbm" << "pgm" << "png" << "ppm" << "raf" << "sr2" << "svg" << "svgz" <<
     "tga" << "tif" << "wbmp" << "webp" << "xbm" << "xpm";
 }
 
@@ -1038,6 +1039,74 @@ void Metadata::initSonyMakerHash()
     sonyMakerHash[45140] = "White balance 2";
 }
 
+void Metadata::initFujiMakerHash()
+{
+    fujiMakerHash[0] = "Version";
+    fujiMakerHash[16] = "InternalSerialNumber";
+    fujiMakerHash[4096] = "Quality";
+    fujiMakerHash[4097] = "Sharpness";
+    fujiMakerHash[4098] = "WhiteBalance";
+    fujiMakerHash[4099] = "Saturation";
+    fujiMakerHash[4100] = "Contrast";
+    fujiMakerHash[4101] = "ColorTemperature";
+    fujiMakerHash[4102] = "Contrast";
+    fujiMakerHash[4106] = "WhiteBalanceFineTune";
+    fujiMakerHash[4107] = "NoiseReduction";
+    fujiMakerHash[4110] = "HighISONoiseReduction";
+    fujiMakerHash[4112] = "FujiFlashMode";
+    fujiMakerHash[4113] = "FlashExposureComp";
+    fujiMakerHash[4128] = "Macro";
+    fujiMakerHash[4129] = "FocusMode";
+    fujiMakerHash[4130] = "AFMode";
+    fujiMakerHash[4131] = "FocusPixel";
+    fujiMakerHash[4144] = "SlowSync";
+    fujiMakerHash[4145] = "PictureMode";
+    fujiMakerHash[4146] = "ExposureCount";
+    fujiMakerHash[4147] = "EXRAuto";
+    fujiMakerHash[4148] = "EXRMode";
+    fujiMakerHash[4160] = "ShadowTone";
+    fujiMakerHash[4161] = "HighlightTone";
+    fujiMakerHash[4164] = "DigitalZoom";
+    fujiMakerHash[4176] = "ShutterType";
+    fujiMakerHash[4352] = "AutoBracketing";
+    fujiMakerHash[4353] = "SequenceNumber";
+    fujiMakerHash[4435] = "PanoramaAngle";
+    fujiMakerHash[4436] = "PanoramaDirection";
+    fujiMakerHash[4609] = "AdvancedFilter";
+    fujiMakerHash[4624] = "ColorMode";
+    fujiMakerHash[4864] = "BlurWarning";
+    fujiMakerHash[4865] = "FocusWarning";
+    fujiMakerHash[4866] = "ExposureWarning";
+    fujiMakerHash[4868] = "GEImageSize";
+    fujiMakerHash[5120] = "DynamicRange";
+    fujiMakerHash[5121] = "FilmMode";
+    fujiMakerHash[5122] = "DynamicRangeSetting";
+    fujiMakerHash[5123] = "DevelopmentDynamicRange";
+    fujiMakerHash[5124] = "MinFocalLength";
+    fujiMakerHash[5125] = "MaxFocalLength";
+    fujiMakerHash[5126] = "MaxApertureAtMinFocal";
+    fujiMakerHash[5127] = "MaxApertureAtMaxFocal";
+    fujiMakerHash[5131] = "AutoDynamicRange";
+    fujiMakerHash[5154] = "ImageStabilization";
+    fujiMakerHash[5157] = "SceneRecognition";
+    fujiMakerHash[5169] = "Rating";
+    fujiMakerHash[5174] = "ImageGeneration";
+    fujiMakerHash[5176] = "ImageCount";
+    fujiMakerHash[14368] = "FrameRate";
+    fujiMakerHash[14369] = "FrameWidth";
+    fujiMakerHash[14370] = "FrameHeight";
+    fujiMakerHash[16640] = "FacesDetected";
+    fujiMakerHash[16643] = "FacePositions";
+    fujiMakerHash[16896] = "NumFaceElements";
+    fujiMakerHash[16897] = "FaceElementTypes";
+    fujiMakerHash[16899] = "FaceElementPositions";
+    fujiMakerHash[17026] = "FaceRecInfo";
+    fujiMakerHash[32768] = "FileSource";
+    fujiMakerHash[32770] = "OrderNumber";
+    fujiMakerHash[32771] = "FrameNumber";
+    fujiMakerHash[45585] = "Parallax";
+}
+
 void Metadata::initCanonMakerHash()
 {
     canonMakerHash[0] = "Unknown";
@@ -1812,7 +1881,7 @@ void Metadata::reportMetadata()
     rpt.setFieldWidth(20); rpt << "offsetSmallJPG"      << offsetSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "lengthSmallJPG"      << lengthSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "offsetXMPSeg"        << xmpSegmentOffset;    rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "offsetOrientation"   << orientationOffset;   rpt.setFieldWidth(0); rpt << "\n";
+//    rpt.setFieldWidth(20); rpt << "offsetOrientation"   << orientationOffset;   rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "orientation"         << orientation;         rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "width"               << width;               rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "height"              << height;              rpt.setFieldWidth(0); rpt << "\n";
@@ -2471,6 +2540,9 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
             else if (hdr == "IFD Sony Maker Note")
                 (sonyMakerHash.contains(tagId)) ? tagDescription = sonyMakerHash.value(tagId)
                     : tagDescription = "Undefined tag";
+            else if (hdr == "IFD Fuji Maker Note")
+                (fujiMakerHash.contains(tagId)) ? tagDescription = fujiMakerHash.value(tagId)
+                    : tagDescription = "Undefined tag";
 
             else if (hdr.left(3) == "Sub" || hdr.left(3) == "IFD")
                 (exifHash.contains(tagId)) ? tagDescription = exifHash.value(tagId)
@@ -2834,7 +2906,6 @@ void Metadata::formatCanon()
     #endif
     }
     //file.open in readMetadata
-
     // get endian
     order = get2(file.read(4));
     // is canon always offset 16 to IFD0 ???
@@ -2842,60 +2913,35 @@ void Metadata::formatCanon()
     ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
 
     // pull data reqd from IFD0
-    (ifdDataHash.contains(273))
-        ? offsetFullJPG = ifdDataHash.value(273).tagValue
-        : offsetFullJPG = 0;
-    (ifdDataHash.contains(279))
-        ? lengthFullJPG = ifdDataHash.value(279).tagValue
-        : lengthFullJPG = 0;
-    (ifdDataHash.contains(272))
-        ? model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount)
-        : model = "";
-    (ifdDataHash.contains(274))
-        ? orientation = ifdDataHash.value(274).tagValue
-        : orientation = 1;
-    (ifdDataHash.contains(315))
-        ? creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount)
-        : creator = "";
+    offsetFullJPG = ifdDataHash.value(273).tagValue;
+    lengthFullJPG = ifdDataHash.value(279).tagValue;
+    model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
+    orientation = ifdDataHash.value(274).tagValue;
+    creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount);
+    copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount);
 
     // xmp offset
-    if (ifdDataHash.contains(700)) {
-        xmpSegmentOffset = ifdDataHash.value(700).tagValue;
-        // xmpNextSegmentOffset used to later calc available room in xmp
-        xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
-        isXmp = true;
-    }
+    xmpSegmentOffset = ifdDataHash.value(700).tagValue;
+    // xmpNextSegmentOffset used to later calc available room in xmp
+    xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
+    if (xmpSegmentOffset) isXmp = true;
     else isXmp = false;
 
-    (ifdDataHash.contains(33432))
-        ? copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount)
-        : copyright = "";
-
-    // EXIF IFD offset
-    ulong offsetEXIF;
-    (ifdDataHash.contains(34665))
-        ? offsetEXIF = ifdDataHash.value(34665).tagValue
-        : offsetEXIF = 0;
+    // EXIF IFD offset (to be used in a little)
+    ulong offsetEXIF = 0;
+    offsetEXIF = ifdDataHash.value(34665).tagValue;
 
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
 
     // pull data reqd from IFD1
-    (ifdDataHash.contains(513))
-        ? offsetThumbJPG = ifdDataHash.value(513).tagValue
-        : offsetThumbJPG = 0;
-    (ifdDataHash.contains(514))
-        ? lengthThumbJPG = ifdDataHash.value(514).tagValue
-        : lengthThumbJPG = 0;
+    offsetThumbJPG = ifdDataHash.value(513).tagValue;
+    lengthThumbJPG = ifdDataHash.value(514).tagValue;
 
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD2", nextIFDOffset);
 
-    // pull small size jpg from IFD2 (does this work??)
-    (ifdDataHash.contains(273))
-        ? offsetSmallJPG = ifdDataHash.value(273).tagValue
-        : offsetSmallJPG = 0;
-    (ifdDataHash.contains(279))
-        ? lengthSmallJPG = ifdDataHash.value(279).tagValue
-        : lengthSmallJPG = 0;
+    // pull small size jpg from IFD2
+    offsetSmallJPG = ifdDataHash.value(273).tagValue;
+    lengthSmallJPG = ifdDataHash.value(279).tagValue;
 
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD3", nextIFDOffset);
 
@@ -2904,10 +2950,8 @@ void Metadata::formatCanon()
 
     // EXIF: created datetime
     QString createdExif;
-    (ifdDataHash.contains(36868))
-        ? createdExif = getString(ifdDataHash.value(36868).tagValue,
-        ifdDataHash.value(36868).tagCount)
-        : createdExif = "";
+    createdExif = getString(ifdDataHash.value(36868).tagValue,
+        ifdDataHash.value(36868).tagCount);
     if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
@@ -2932,11 +2976,7 @@ void Metadata::formatCanon()
         width = 0;
     }
     // height
-    if (ifdDataHash.contains(40963)) {
-        height = ifdDataHash.value(40963).tagValue;
-    } else {
-        height = 0;
-    }
+    height = ifdDataHash.value(40963).tagValue;
     // aperture
     if (ifdDataHash.contains(33437)) {
         float x = getReal(ifdDataHash.value(33437).tagValue);
@@ -2966,22 +3006,16 @@ void Metadata::formatCanon()
         focalLengthNum = 0;
     }
     // IFD Exif: lens
-    (ifdDataHash.contains(42036))
-        ? lens = getString(ifdDataHash.value(42036).tagValue,
-        ifdDataHash.value(42036).tagCount)
-        : lens = "";
+    lens = getString(ifdDataHash.value(42036).tagValue,
+            ifdDataHash.value(42036).tagCount);
 
     // IFD Exif: camera serial number
-    (ifdDataHash.contains(42033))
-        ? cameraSN = getString(ifdDataHash.value(42033).tagValue,
-        ifdDataHash.value(42033).tagCount)
-        : cameraSN = "";
+    cameraSN = getString(ifdDataHash.value(42033).tagValue,
+            ifdDataHash.value(42033).tagCount);
 
     // IFD Exif: lens serial nember
-    (ifdDataHash.contains(42037))
-        ? lensSN = getString(ifdDataHash.value(42037).tagValue,
-        ifdDataHash.value(42037).tagCount)
-        : lensSN = "";
+    lensSN = getString(ifdDataHash.value(42037).tagValue,
+            ifdDataHash.value(42037).tagCount);
 
     // Exif: read makernoteIFD
 
@@ -3043,43 +3077,28 @@ void Metadata::formatOlympus()
     #endif
     }
     //file.open in readMetadata
-//    file.open(QIODevice::ReadOnly);
-    // get endian
     // get endian
     order = get2(file.read(4));
     // get offset to first IFD and read it
     ulong offsetIfd0 = get4(file.read(4));
 
-//    ulong nextIFDOffset =
-            readIFD("IFD0", offsetIfd0);
+    readIFD("IFD0", offsetIfd0);
 
     // pull data reqd from IFD0
-    (ifdDataHash.contains(272))
-        ? model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount).trimmed()
-        : model = "";
-    (ifdDataHash.contains(274))
-        ? orientation = ifdDataHash.value(274).tagValue
-        : orientation = 1;
-    (ifdDataHash.contains(315))
-        ? creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount)
-        : creator = "";
-    (ifdDataHash.contains(33432))
-        ? copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount)
-        : copyright = "";
+    model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount).trimmed();
+    orientation = ifdDataHash.value(274).tagValue;
+    creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount);
+    copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount);
 
     // get the offset for ExifIFD and read it
     ulong offsetEXIF;
-    (ifdDataHash.contains(34665))
-        ? offsetEXIF = ifdDataHash.value(34665).tagValue
-        : offsetEXIF = 0;
+    offsetEXIF = ifdDataHash.value(34665).tagValue;
     readIFD("IFD Exif", offsetEXIF);
 
     // EXIF: created datetime
     QString createdExif;
-    (ifdDataHash.contains(36868))
-        ? createdExif = getString(ifdDataHash.value(36868).tagValue,
-        ifdDataHash.value(36868).tagCount)
-        : createdExif = "";
+    createdExif = getString(ifdDataHash.value(36868).tagValue,
+        ifdDataHash.value(36868).tagCount);
     if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // get shutter speed
@@ -3127,10 +3146,8 @@ void Metadata::formatOlympus()
         focalLengthNum = 0;
     }
     // lens
-    if (ifdDataHash.contains(42036)) {
-        lens = getString(ifdDataHash.value(42036).tagValue,
+    lens = getString(ifdDataHash.value(42036).tagValue,
                 ifdDataHash.value(42036).tagCount);
-    }
 
     // read makernoteIFD
     // Offsets in makernote are relative to the start of the makernotes
@@ -3138,31 +3155,43 @@ void Metadata::formatOlympus()
     if (ifdDataHash.contains(37500)) {
         // The IFD starts 10 or 12 bits after the offset to make room for the
         // string "OLYMPUS II  "
-//        qDebug() << " ";
-//        qDebug() << "Maker Offset = " << makerOffset;
         readIFD("IFD Olympus Maker Note", makerOffset + 12);
         // Get the thumbnail Jpg offset and length
-        if (ifdDataHash.contains(256)) {
-            offsetThumbJPG = ifdDataHash.value(256).tagValue + makerOffset;
+        offsetThumbJPG = ifdDataHash.value(256).tagValue + makerOffset;
             lengthThumbJPG = ifdDataHash.value(256).tagCount;
-        }
 
         // read CameraSettingsIFD
         if (ifdDataHash.contains(8224)) {
             readIFD("IFD Olympus Maker Note: CameraSettingsIFD",
                     ifdDataHash.value(8224).tagValue + makerOffset);
-            (ifdDataHash.contains(257))
-                ? offsetFullJPG = ifdDataHash.value(257).tagValue + makerOffset
-                : offsetFullJPG = 0;
-            (ifdDataHash.contains(258))
-                ? lengthFullJPG = ifdDataHash.value(258).tagValue
-                : lengthFullJPG = 0;
+            offsetFullJPG = ifdDataHash.value(257).tagValue + makerOffset;
+            lengthFullJPG = ifdDataHash.value(258).tagValue;
             getDimensions(offsetFullJPG);
-
         }
     }
 
     // Olympus does not embed xmp in raw files
+    // read XMP
+    if (isXmp && okToReadXmp) {
+        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+        rating = xmp.getItem("Rating");     // case is important "Rating"
+        label = xmp.getItem("Label");       // case is important "Label"
+        if (title.isEmpty()) title = xmp.getItem("title");       // case is important "title"
+        if (cameraSN.isEmpty()) cameraSN = xmp.getItem("SerialNumber");
+        if (lens.isEmpty()) lens = xmp.getItem("Lens");
+        if (lensSN.isEmpty()) lensSN = xmp.getItem("LensSerialNumber");
+        if (creator.isEmpty()) creator = xmp.getItem("creator");
+        if (copyright.isEmpty()) copyright = xmp.getItem("rights");
+        if (email.isEmpty()) email = xmp.getItem("CiEmailWork");
+        if (url.isEmpty()) url = xmp.getItem("CiUrlWork");
+
+        // save original values so can determine if edited when writing changes
+        _title = title;
+        _rating = rating;
+        _label = label;
+
+        if (report) xmpString = xmp.metaAsString();
+    }
 
     if (report) reportMetadata();
 }
@@ -3183,75 +3212,47 @@ void Metadata::formatSony()
     ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
 
     // pull data reqd from IFD0
-    (ifdDataHash.contains(513))
-        ? offsetFullJPG = ifdDataHash.value(513).tagValue
-        : offsetFullJPG = 0;
-    (ifdDataHash.contains(514))
-        ? lengthFullJPG = ifdDataHash.value(514).tagValue
-        : lengthFullJPG = 0;
-    (ifdDataHash.contains(273))
-        ? offsetThumbJPG = ifdDataHash.value(273).tagValue
-        : offsetThumbJPG = 0;
-    (ifdDataHash.contains(279))
-        ? lengthThumbJPG = ifdDataHash.value(279).tagValue
-        : lengthThumbJPG = 0;
-    (ifdDataHash.contains(272))
-        ? model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount)
-        : model = "";
-    (ifdDataHash.contains(274))
-        ? orientation = ifdDataHash.value(274).tagValue
-        : orientation = 1;
+    offsetFullJPG = ifdDataHash.value(513).tagValue;
+    lengthFullJPG = ifdDataHash.value(514).tagValue;
+    offsetThumbJPG = ifdDataHash.value(273).tagValue;
+    lengthThumbJPG = ifdDataHash.value(279).tagValue;
+    model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
+    orientation = ifdDataHash.value(274).tagValue;
 
     ulong offsetEXIF;
-    (ifdDataHash.contains(34665))
-        ? offsetEXIF = ifdDataHash.value(34665).tagValue
-        : offsetEXIF = 0;
+    offsetEXIF = ifdDataHash.value(34665).tagValue;
 
     if (nextIFDOffset) readIFD("IFD1", nextIFDOffset);
 
     // IFD 1:
-    (ifdDataHash.contains(513))
-        ? offsetThumbJPG = ifdDataHash.value(513).tagValue
-        : offsetThumbJPG = 0;
-    (ifdDataHash.contains(514))
-        ? lengthThumbJPG = ifdDataHash.value(514).tagValue
-        : lengthThumbJPG = 0;
-
+    offsetThumbJPG = ifdDataHash.value(513).tagValue;
+    lengthThumbJPG = ifdDataHash.value(514).tagValue;
 
     // Sony provides an offset in IFD0 to the offsets for
     // all the subIFDs
     // get the offsets for the subIFD and read them
     QList<ulong> ifdOffsets;
-    if(ifdDataHash.contains(330)) {
-        ifdOffsets = getSubIfdOffsets(ifdDataHash.value(330).tagValue,
+    ifdOffsets = getSubIfdOffsets(ifdDataHash.value(330).tagValue,
                                       ifdDataHash.value(330).tagCount);
 
-        // SubIFD1 contains full size jpg offset and length
-        QString hdr = "SubIFD0";
-//        readIFD(hdr, ifdOffsets[0]);
-
-    }
+    // SubIFD1 contains full size jpg offset and length
+    QString hdr = "SubIFD0";
+//     readIFD(hdr, ifdOffsets[0]);     // req'd??
 
     // get the offset for ExifIFD and read it
     readIFD("IFD Exif", offsetEXIF);
 
     // IFD EXIF: dimensions
-    (ifdDataHash.contains(40962))
-        ? width = ifdDataHash.value(40962).tagValue
-        : width = 0;
-    (ifdDataHash.contains(40963))
-        ? height = ifdDataHash.value(40963).tagValue
-        : height = 0;
+    width = ifdDataHash.value(40962).tagValue;
+    height = ifdDataHash.value(40963).tagValue;
 
-    // IFD EXIF: created datetime
+    // EXIF: created datetime
     QString createdExif;
-    (ifdDataHash.contains(36868))
-        ? createdExif = getString(ifdDataHash.value(36868).tagValue,
-        ifdDataHash.value(36868).tagCount)
-        : createdExif = "";
+    createdExif = getString(ifdDataHash.value(36868).tagValue,
+        ifdDataHash.value(36868).tagCount);
     if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
-    // IFD Exif: get shutter speed
+    // Exif: get shutter speed
     if (ifdDataHash.contains(33434)) {
         float x = getReal(ifdDataHash.value(33434).tagValue);
         if (x <1 ) {
@@ -3268,7 +3269,7 @@ void Metadata::formatSony()
         exposureTime = "";
     }
 
-    // IFD Exif: aperture
+    // Exif: aperture
     if (ifdDataHash.contains(33437)) {
         float x = getReal(ifdDataHash.value(33437).tagValue);
         aperture = "f/" + QString::number(x, 'f', 1);
@@ -3278,7 +3279,7 @@ void Metadata::formatSony()
         apertureNum = 0;
     }
 
-    //IFD Exif: ISO
+    //Exif: ISO
     if (ifdDataHash.contains(34855)) {
         ulong x = ifdDataHash.value(34855).tagValue;
         ISONum = static_cast<int>(x);
@@ -3289,7 +3290,7 @@ void Metadata::formatSony()
         ISONum = 0;
     }
 
-    // IFD Exif: focal length
+    // Exif: focal length
     if (ifdDataHash.contains(37386)) {
         float x = getReal(ifdDataHash.value(37386).tagValue);
         focalLengthNum = static_cast<int>(x);
@@ -3299,11 +3300,9 @@ void Metadata::formatSony()
         focalLengthNum = 0;
     }
 
-    // IFD Exif: lens
-    (ifdDataHash.contains(42036))
-        ? lens = getString(ifdDataHash.value(42036).tagValue,
-        ifdDataHash.value(42036).tagCount)
-        : lens = "";
+    // Exif: lens
+    lens = getString(ifdDataHash.value(42036).tagValue,
+        ifdDataHash.value(42036).tagCount);
 
     // Exif: read makernoteIFD
 
@@ -3313,41 +3312,188 @@ void Metadata::formatSony()
     }
 
     // Sony does not embed xmp in raw files
+    // read XMP
+    if (isXmp && okToReadXmp) {
+        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+        rating = xmp.getItem("Rating");     // case is important "Rating"
+        label = xmp.getItem("Label");       // case is important "Label"
+        if (title.isEmpty()) title = xmp.getItem("title");       // case is important "title"
+        if (cameraSN.isEmpty()) cameraSN = xmp.getItem("SerialNumber");
+        if (lens.isEmpty()) lens = xmp.getItem("Lens");
+        if (lensSN.isEmpty()) lensSN = xmp.getItem("LensSerialNumber");
+        if (creator.isEmpty()) creator = xmp.getItem("creator");
+        if (copyright.isEmpty()) copyright = xmp.getItem("rights");
+        if (email.isEmpty()) email = xmp.getItem("CiEmailWork");
+        if (url.isEmpty()) url = xmp.getItem("CiUrlWork");
+
+        // save original values so can determine if edited when writing changes
+        _title = title;
+        _rating = rating;
+        _label = label;
+
+        if (report) xmpString = xmp.metaAsString();
+    }
 
     if (report) reportMetadata();
 
 }
 
-void Metadata::formatFuji()
+bool Metadata::formatFuji()
 {
     {
     #ifdef ISDEBUG
     qDebug() << "Metadata::fuji";
     #endif
     }
-    file.open(QIODevice::ReadOnly);
-    // get endian
-    order = get2(file.read(4));
-    // get offset to first IFD and read it
+    //file.open in readMetadata
 
-//    ulong offsetIfd0 = // suppress compiler warning until finish with this
-    get4(file.read(4));
+    /* Fuji File Format
 
-//    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0);
+    General structure:
+    Fuji information
+    Directory of offsets
+    JPEG file
+    CFA Header
+    CFA
 
-    // pull data reqd from IFD0
-    (ifdDataHash.contains(272))
-        ? model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount)
-        : model = "";
-    (ifdDataHash.contains(274))
-        ? orientation = ifdDataHash.value(274).tagValue
-        : orientation = 1;
+    Offset          Bytes   Description
+    000 - 015       16      "FUJIFILMCCD-RAW "
+    016 - 019       4       Format fersion ie "0201"
+    020 - 027       8       Camera ID ie "FF129502"
+    028 - 059       32      32 bytes for the camera string, \0 terminated
+    Start of offset directory
+    060 - 063       4       Directory version ie "0100", "0159", "0135"
+    064 - 083       20      Unkonwn
+    084 - 087       4       JPEG image offset
+    088 - 091       4       JPEG image length
+    092 - 095       4       CFA Header Offset (Color Filter Array)
+    096 - 099       4       CFA Header Length
+    100 - 103       4       CFA offset
+    104 - 107       4       CFA length
+    108 - (148 or JPG offset) Unknown
+    148 - 151 or close = JPEG image offset FF D8 FF E1
+    */
 
-    ulong offsetEXIF;
-    (ifdDataHash.contains(34665))
-        ? offsetEXIF = ifdDataHash.value(34665).tagValue
-        : offsetEXIF = 0;
+    // Fuji is big endian
+    order = 0x4D4D;
+    ulong startOffset;
 
+    // read first 16 bytes to confirm it is a fuji file
+    if (file.read(16) != "FUJIFILMCCD-RAW ") return false;
+
+    // seek JPEG image offset
+    file.seek(84);
+    offsetFullJPG = get4(file.read(4));
+    lengthFullJPG = get4(file.read(4));
+    file.seek(offsetFullJPG);
+
+    // start on embedded JPEG
+    if (get2(file.read(2)) != 0xFFD8) return false;
+
+    // build a hash of jpg segment offsets
+    getSegments(file.pos());
+
+    // read the EXIF data
+    if (segmentHash.contains("EXIF")) file.seek(segmentHash["EXIF"]);
+    else return false;
+
+    bool foundEndian = false;
+    while (!foundEndian) {
+        ulong a = get2(file.read(2));
+        if (a == 0x4949 || a == 0x4D4D) {
+            order = a;
+            // offsets are from the endian position in JPEGs
+            // therefore must adjust all offsets found in tagValue
+            startOffset = file.pos() - 2;
+            foundEndian = true;
+        }
+        // add condition to check for EOF
+    }
+
+    if (report) rpt << "\n startOffset = " << startOffset;
+
+    uint a = get2(file.read(2));  // magic 42
+    a = get4(file.read(4));
+    ulong offsetIfd0 = a + startOffset;
+
+    // read IFD0:
+    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
+    ulong offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset;
+    orientation = ifdDataHash.value(274).tagValue;
+    make = getString(ifdDataHash.value(271).tagValue + startOffset,
+                     ifdDataHash.value(271).tagCount);
+    model = getString(ifdDataHash.value(272).tagValue + startOffset,
+                      ifdDataHash.value(272).tagCount);
+    copyright = getString(ifdDataHash.value(33432).tagValue + startOffset,
+                          ifdDataHash.value(33432).tagCount);
+
+    // read IFD1
+    if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
+    offsetThumbJPG = ifdDataHash.value(513).tagValue + startOffset;
+    lengthThumbJPG = ifdDataHash.value(514).tagValue + startOffset;
+
+    // read EXIF IFD
+    readIFD("IFD Exif", offsetEXIF);
+
+    // EXIF: shutter speed
+    if (ifdDataHash.contains(33434)) {
+        float x = getReal(ifdDataHash.value(33434).tagValue + startOffset);
+        if (x < 1 ) {
+            uint t = qRound(1 / x);
+            exposureTime = "1/" + QString::number(t);
+            exposureTimeNum = x;
+        } else {
+            uint t = (uint)x;
+            exposureTime = QString::number(t);
+            exposureTimeNum = t;
+        }
+        exposureTime += " sec";
+    } else {
+        exposureTime = "";
+    }
+
+    // EXIF: aperture
+    if (ifdDataHash.contains(33437)) {
+        float x = getReal(ifdDataHash.value(33437).tagValue + startOffset);
+        aperture = "f/" + QString::number(x, 'f', 1);
+        apertureNum = qRound(x * 10) / 10.0;
+    } else {
+        aperture = "";
+        apertureNum = 0;
+    }
+
+    // EXIF: ISO
+    if (ifdDataHash.contains(34855)) {
+        ulong x = ifdDataHash.value(34855).tagValue;
+        ISONum = static_cast<int>(x);
+        ISO = QString::number(ISONum);
+    } else {
+        ISO = "";
+        ISONum = 0;
+    }
+
+    // EXIF: focal length
+    if (ifdDataHash.contains(37386)) {
+        float x = getReal(ifdDataHash.value(37386).tagValue + startOffset);
+        focalLengthNum = static_cast<int>(x);
+        focalLength = QString::number(x, 'f', 0) + "mm";
+    } else {
+        focalLength = "";
+        focalLengthNum = 0;
+    }
+
+    // EXIF: lens model
+    lens = getString(ifdDataHash.value(42036).tagValue + startOffset,
+                     ifdDataHash.value(42036).tagCount);
+
+    // Exif: read makernoteIFD
+    if (ifdDataHash.contains(37500)) {
+        ulong makerOffset = ifdDataHash.value(37500).tagValue + startOffset + 12;
+        readIFD("IFD Fuji Maker Note", makerOffset);
+    }
+
+    if (report) reportMetadata();
+    return true;
 }
 
 bool Metadata::formatTIF()
@@ -3593,37 +3739,18 @@ bool Metadata::formatJPG()
     // read IFD0
     ulong nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
     ulong offsetEXIF;
-    (ifdDataHash.contains(34665))
-        ? offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset
-        : offsetEXIF = 0;    // read IFD1 - unfortunately nothing of interest
-
-    // IFD0: Orientation
-    (ifdDataHash.contains(274))
-        ? orientation = ifdDataHash.value(274).tagValue
-        : orientation = 1;
+    offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset;
+    orientation = ifdDataHash.value(274).tagValue;
 
     if (readNonEssentialMetadata) {
-        // IFD0: Make
-        (ifdDataHash.contains(271))
-            ? make = getString(ifdDataHash.value(271).tagValue + startOffset,
-                               ifdDataHash.value(271).tagCount)
-            : make = "";
-
-        // IFD0: Model
-        (ifdDataHash.contains(272))
-            ? model = getString(ifdDataHash.value(272).tagValue + startOffset,
-                                ifdDataHash.value(272).tagCount)
-            : model = "";
-
-        (ifdDataHash.contains(315))
-            ? creator = getString(ifdDataHash.value(315).tagValue + startOffset,
-                                  ifdDataHash.value(315).tagCount)
-            : creator = "";
-
-        (ifdDataHash.contains(33432))
-            ? copyright = getString(ifdDataHash.value(33432).tagValue + startOffset,
-                                    ifdDataHash.value(33432).tagCount)
-            : copyright = "";
+        make = getString(ifdDataHash.value(271).tagValue + startOffset,
+                         ifdDataHash.value(271).tagCount);
+        model = getString(ifdDataHash.value(272).tagValue + startOffset,
+                          ifdDataHash.value(272).tagCount);
+        creator = getString(ifdDataHash.value(315).tagValue + startOffset,
+                            ifdDataHash.value(315).tagCount);
+        copyright = getString(ifdDataHash.value(33432).tagValue + startOffset,
+                              ifdDataHash.value(33432).tagCount);
     }
 
     // read IFD1
@@ -3631,27 +3758,16 @@ bool Metadata::formatJPG()
 
     if (readEssentialMetadata) {
         // IFD1: thumbnail offset and length
-        (ifdDataHash.contains(513))
-            ? offsetThumbJPG = ifdDataHash.value(513).tagValue + 12
-            : offsetThumbJPG = 0;
-        (ifdDataHash.contains(514))
-            ? lengthThumbJPG = ifdDataHash.value(514).tagValue
-            : lengthThumbJPG = 0;
+        offsetThumbJPG = ifdDataHash.value(513).tagValue + 12;
+        lengthThumbJPG = ifdDataHash.value(514).tagValue;
     }
 
     // read EXIF
     readIFD("IFD Exif", offsetEXIF);
 
     if (readEssentialMetadata) {
-        // EXIF: width
-        (ifdDataHash.contains(40962))
-            ? width = ifdDataHash.value(40962).tagValue
-            : width = 0;
-        // EXIF: height
-        (ifdDataHash.contains(40963))
-            ? height = ifdDataHash.value(40963).tagValue
-            : height = 0;
-
+        width = ifdDataHash.value(40962).tagValue;
+        height = ifdDataHash.value(40963).tagValue;
         if (!width || !height) getDimensions(0);
     }
 
@@ -3659,13 +3775,11 @@ bool Metadata::formatJPG()
 
         // EXIF: created datetime
         QString createdExif;
-        (ifdDataHash.contains(36868))
-            ? createdExif = getString(ifdDataHash.value(36868).tagValue + startOffset,
-            ifdDataHash.value(36868).tagCount)
-            : createdExif = "";
+        createdExif = getString(ifdDataHash.value(36868).tagValue + startOffset,
+            ifdDataHash.value(36868).tagCount);
         if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
         // try DateTimeOriginal
-        if (createdExif.length() == 0 && ifdDataHash.contains(36867)) {
+        if (createdExif.length() == 0) {
             createdExif = getString(ifdDataHash.value(36867).tagValue + startOffset,
                 ifdDataHash.value(36867).tagCount);
             if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
@@ -3673,11 +3787,6 @@ bool Metadata::formatJPG()
 
         // EXIF: shutter speed
         if (ifdDataHash.contains(33434)) {
-//            qDebug() << "order =" << QString::number(order, 16)
-//                     << "ifdDataHash.value(33434).tagValue + startOffset"
-//                     << ifdDataHash.value(33434).tagValue + startOffset
-//                     << "getReal(ifdDataHash.value(33434).tagValue + startOffset)"
-//                     << getReal(ifdDataHash.value(33434).tagValue + startOffset);
             float x = getReal(ifdDataHash.value(33434).tagValue + startOffset);
             if (x < 1 ) {
                 uint t = qRound(1 / x);
@@ -3724,10 +3833,8 @@ bool Metadata::formatJPG()
         }
 
         // EXIF: lens model
-        (ifdDataHash.contains(42036))
-                ? lens = getString(ifdDataHash.value(42036).tagValue + startOffset,
-                                      ifdDataHash.value(42036).tagCount)
-                : lens = "";
+        lens = getString(ifdDataHash.value(42036).tagValue + startOffset,
+                         ifdDataHash.value(42036).tagCount);
     }
 
     // read IPTC
@@ -3782,9 +3889,13 @@ void Metadata::clearMetadata()
 //    created = "";
     model = "";
     exposureTime = "";
+    exposureTimeNum = 0;
     aperture = "";
+    apertureNum = 0;
     ISO = "";
+    ISONum = 0;
     focalLength = "";
+    focalLengthNum = 0;
     title = "";
     lens = "";
     creator = "";
@@ -3794,6 +3905,7 @@ void Metadata::clearMetadata()
     err = "";
     shutterCount = 0;
     cameraSN = "";
+    lensSN = "";
     rating = "";
     label = "";
 
@@ -3801,7 +3913,7 @@ void Metadata::clearMetadata()
     nikonLensCode = "";
 }
 
-bool Metadata::readMetadata(bool isReport, const QString &fPath)
+bool Metadata::readMetadata(bool isReport, const QString &path)
 {
     {
     #ifdef ISDEBUG
@@ -3817,14 +3929,12 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
         qDebug() << "report = true";
     }
     clearMetadata();
-    file.setFileName(fPath);
-
-    fName = fPath;      // for debugging
+    file.setFileName(path);
 
     if (report) {
-        rpt << "\nFile name = " << fPath << "\n";
+        rpt << "\nFile name = " << path << "\n";
     }
-    QFileInfo fileInfo(fPath);
+    QFileInfo fileInfo(path);
     QString ext = fileInfo.completeSuffix().toLower();
 //    if (G::isThreadTrackingOn) track(fPath, "Reading ");
     bool success = false;
@@ -3835,11 +3945,12 @@ bool Metadata::readMetadata(bool isReport, const QString &fPath)
 //    qDebug() << "Metadata::readMetadata  fPath =" << fPath;
     do {
         if (file.open(QIODevice::ReadOnly)) {
-            if (ext == "nef") formatNikon();
-            if (ext == "cr2") formatCanon();
-            if (ext == "orf") formatOlympus();
             if (ext == "arw") formatSony();
+            if (ext == "cr2") formatCanon();
             if (ext == "jpg") formatJPG();
+            if (ext == "nef") formatNikon();
+            if (ext == "orf") formatOlympus();
+            if (ext == "raf") formatFuji();
             if (ext == "tif") formatTIF();
             fileOpened = true;
             file.close();
@@ -4382,7 +4493,8 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 //    qDebug() << "Metadata::loadImageMetadata  fileInfo.filePath() ="
 //             << fileInfo.filePath();
     // check if already loaded
-    if (metaCache[fileInfo.filePath()].metadataLoaded) return true;
+    fPath = fileInfo.filePath();
+    if (metaCache[fPath].metadataLoaded && !isReport) return true;
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load
     readEssentialMetadata = essential;
@@ -4390,11 +4502,11 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     okToReadXmp = isLoadXmp;
     okToReadXmp = true;
 
-    bool result;
-    QString shootingInfo;
-
     ImageMetadata imageMetadata;
-    result = readMetadata(isReport, fileInfo.filePath());
+    bool result = readMetadata(isReport, fileInfo.filePath());
+
+//    if (fPath == "D:/Pictures/_ThumbTest/FujiXT2.RAF")
+//        qDebug() << "Lets break here";
 
     imageMetadata.isPicked = false;
     imageMetadata.offsetFullJPG = offsetFullJPG;
@@ -4444,9 +4556,8 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     s += "  " + imageMetadata.exposureTime;
     s += (imageMetadata.aperture == "") ? "" : " at " + imageMetadata.aperture;
     s += (imageMetadata.ISO == "") ? "" : ", ISO " + imageMetadata.ISO;
-    shootingInfo = s;
 
-    if (shootingInfo.length() > 0) imageMetadata.shootingInfo = shootingInfo;
+    if (shootingInfo.length() > 0) imageMetadata.shootingInfo = s;
     if (orientation) imageMetadata.orientation = orientation;
     imageMetadata.metadataLoaded = result;
 
@@ -4501,3 +4612,229 @@ void Metadata::setMetadata(const QString &imageFileName)
     orientation = metaCache[imageFileName].orientation;
     shootingInfo = metaCache[imageFileName].shootingInfo;
 }
+
+// End Metadata
+
+
+//bool Metadata::formatJPG()
+//{
+//    {
+//    #ifdef ISDEBUG
+//    qDebug() << "Metadata::formatJPG";
+//    #endif
+//    }
+//    //file.open happens in readMetadata
+//    order = 0x4D4D;
+//    ulong startOffset = 0;
+//    if (get2(file.read(2)) != 0xFFD8) return 0;
+
+//    // build a hash of jpg segment offsets
+//    getSegments(file.pos());
+
+//    // check if JFIF
+//    if (segmentHash.contains("JFIF")) {
+//        // it's a jpg so the whole thing is the full length jpg and no other
+//        // metadata available
+//        offsetFullJPG = 0;
+//        lengthFullJPG = file.size();
+//        return true;
+//    }
+
+//    // read the EXIF data
+//    if (segmentHash.contains("EXIF")) file.seek(segmentHash["EXIF"]);
+//    else return false;
+
+//    bool foundEndian = false;
+//    while (!foundEndian) {
+//        ulong a = get2(file.read(2));
+//        if (a == 0x4949 || a == 0x4D4D) {
+//            order = a;
+//            // offsets are from the endian position in JPEGs
+//            // therefore must adjust all offsets found in tagValue
+//            startOffset = file.pos() - 2;
+//            foundEndian = true;
+//        }
+//        // add condition to check for EOF
+//    }
+
+//    if (report) rpt << "\n startOffset = " << startOffset;
+
+//    uint a = get2(file.read(2));  // magic 42
+//    a = get4(file.read(4));
+//    ulong offsetIfd0 = a + startOffset;
+
+//    // it's a jpg so the whole thing is the full length jpg
+//    offsetFullJPG = 0;
+//    lengthFullJPG = file.size();
+
+//    // read IFD0
+//    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
+//    ulong offsetEXIF;
+//    (ifdDataHash.contains(34665))
+//        ? offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset
+//        : offsetEXIF = 0;    // read IFD1 - unfortunately nothing of interest
+
+//    // IFD0: Orientation
+//    (ifdDataHash.contains(274))
+//        ? orientation = ifdDataHash.value(274).tagValue
+//        : orientation = 1;
+
+//    if (readNonEssentialMetadata) {
+//        // IFD0: Make
+//        (ifdDataHash.contains(271))
+//            ? make = getString(ifdDataHash.value(271).tagValue + startOffset,
+//                               ifdDataHash.value(271).tagCount)
+//            : make = "";
+
+//        // IFD0: Model
+//        (ifdDataHash.contains(272))
+//            ? model = getString(ifdDataHash.value(272).tagValue + startOffset,
+//                                ifdDataHash.value(272).tagCount)
+//            : model = "";
+
+//        (ifdDataHash.contains(315))
+//            ? creator = getString(ifdDataHash.value(315).tagValue + startOffset,
+//                                  ifdDataHash.value(315).tagCount)
+//            : creator = "";
+
+//        (ifdDataHash.contains(33432))
+//            ? copyright = getString(ifdDataHash.value(33432).tagValue + startOffset,
+//                                    ifdDataHash.value(33432).tagCount)
+//            : copyright = "";
+//    }
+
+//    // read IFD1
+//    if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
+
+//    if (readEssentialMetadata) {
+//        // IFD1: thumbnail offset and length
+//        (ifdDataHash.contains(513))
+//            ? offsetThumbJPG = ifdDataHash.value(513).tagValue + 12
+//            : offsetThumbJPG = 0;
+//        (ifdDataHash.contains(514))
+//            ? lengthThumbJPG = ifdDataHash.value(514).tagValue
+//            : lengthThumbJPG = 0;
+//    }
+
+//    // read EXIF
+//    readIFD("IFD Exif", offsetEXIF);
+
+//    if (readEssentialMetadata) {
+//        // EXIF: width
+//        (ifdDataHash.contains(40962))
+//            ? width = ifdDataHash.value(40962).tagValue
+//            : width = 0;
+//        // EXIF: height
+//        (ifdDataHash.contains(40963))
+//            ? height = ifdDataHash.value(40963).tagValue
+//            : height = 0;
+
+//        if (!width || !height) getDimensions(0);
+//    }
+
+//    if (readNonEssentialMetadata) {
+
+//        // EXIF: created datetime
+//        QString createdExif;
+//        (ifdDataHash.contains(36868))
+//            ? createdExif = getString(ifdDataHash.value(36868).tagValue + startOffset,
+//            ifdDataHash.value(36868).tagCount)
+//            : createdExif = "";
+//        if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+//        // try DateTimeOriginal
+//        if (createdExif.length() == 0 && ifdDataHash.contains(36867)) {
+//            createdExif = getString(ifdDataHash.value(36867).tagValue + startOffset,
+//                ifdDataHash.value(36867).tagCount);
+//            if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+//        }
+
+//        // EXIF: shutter speed
+//        if (ifdDataHash.contains(33434)) {
+////            qDebug() << "order =" << QString::number(order, 16)
+////                     << "ifdDataHash.value(33434).tagValue + startOffset"
+////                     << ifdDataHash.value(33434).tagValue + startOffset
+////                     << "getReal(ifdDataHash.value(33434).tagValue + startOffset)"
+////                     << getReal(ifdDataHash.value(33434).tagValue + startOffset);
+//            float x = getReal(ifdDataHash.value(33434).tagValue + startOffset);
+//            if (x < 1 ) {
+//                uint t = qRound(1 / x);
+//                exposureTime = "1/" + QString::number(t);
+//                exposureTimeNum = x;
+//            } else {
+//                uint t = (uint)x;
+//                exposureTime = QString::number(t);
+//                exposureTimeNum = t;
+//            }
+//            exposureTime += " sec";
+//        } else {
+//            exposureTime = "";
+//        }
+
+//        // EXIF: aperture
+//        if (ifdDataHash.contains(33437)) {
+//            float x = getReal(ifdDataHash.value(33437).tagValue + startOffset);
+//            aperture = "f/" + QString::number(x, 'f', 1);
+//            apertureNum = qRound(x * 10) / 10.0;
+//        } else {
+//            aperture = "";
+//            apertureNum = 0;
+//        }
+
+//        // EXIF: ISO
+//        if (ifdDataHash.contains(34855)) {
+//            ulong x = ifdDataHash.value(34855).tagValue;
+//            ISONum = static_cast<int>(x);
+//            ISO = QString::number(ISONum);
+//        } else {
+//            ISO = "";
+//            ISONum = 0;
+//        }
+
+//        // EXIF: focal length
+//        if (ifdDataHash.contains(37386)) {
+//            float x = getReal(ifdDataHash.value(37386).tagValue + startOffset);
+//            focalLengthNum = static_cast<int>(x);
+//            focalLength = QString::number(x, 'f', 0) + "mm";
+//        } else {
+//            focalLength = "";
+//            focalLengthNum = 0;
+//        }
+
+//        // EXIF: lens model
+//        (ifdDataHash.contains(42036))
+//                ? lens = getString(ifdDataHash.value(42036).tagValue + startOffset,
+//                                      ifdDataHash.value(42036).tagCount)
+//                : lens = "";
+//    }
+
+//    // read IPTC
+//    if (readNonEssentialMetadata)
+//        if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
+
+//    // read XMP
+//    if (isXmp && okToReadXmp) {
+//        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+//        rating = xmp.getItem("Rating");     // case is important "Rating"
+//        label = xmp.getItem("Label");       // case is important "Label"
+//        title = xmp.getItem("title");       // case is important "title"
+//        cameraSN = xmp.getItem("SerialNumber");
+//        if (lens.isEmpty()) lens = xmp.getItem("Lens");
+//        lensSN = xmp.getItem("LensSerialNumber");
+//        if (creator.isEmpty()) creator = xmp.getItem("creator");
+//        copyright = xmp.getItem("rights");
+//        email = xmp.getItem("CiEmailWork");
+//        url = xmp.getItem("CiUrlWork");
+
+//        // save original values so can determine if edited when writing changes
+//        _title = title;
+//        _rating = rating;
+//        _label = label;
+
+//        if (report) xmpString = xmp.metaAsString();
+////        qDebug() << "Metadata::formatJPG  " << xmpString;
+//    }
+
+//    if (report) reportMetadata();
+//    return true;
+//}
+

@@ -205,7 +205,7 @@ protected:
 //    void mousePressEvent(QMouseEvent *event);
 //    void mouseReleaseEvent(QMouseEvent *event);
 //    void mouseDoubleClickEvent(QMouseEvent *event);
-    void dropEvent(const QDropEvent *event);
+    void dropEvent(QDropEvent *event);
     void dragEnterEvent(QDragEnterEvent *event);
 
 public slots:

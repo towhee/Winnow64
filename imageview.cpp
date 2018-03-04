@@ -1045,19 +1045,12 @@ void ImageView::enterEvent(QEvent *event)
 
 void ImageView::dragEnterEvent(QDragEnterEvent *event)
 {
-    qDebug() << "ImageView::dragEnterEvent";
     event->acceptProposedAction();
-//    emit changed(event->mimeData());
 }
 
 void ImageView::dropEvent(QDropEvent *event)
 {
-    qDebug() << "ImageView::dropEvent";
-    const QMimeData* mimeData = event->mimeData();
-
-    if (mimeData->hasUrls())
-    {
-    }
+    emit handleDrop(event->mimeData());
 }
 
 // COPY AND PASTE

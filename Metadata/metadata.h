@@ -90,7 +90,7 @@ class Metadata : public QObject
     Q_OBJECT
 public:
     Metadata(QObject *parent = 0);
-    bool readMetadata(bool report, const QString &imageFullPath);
+    bool readMetadata(bool report, const QString &path);
     void reportMetadataAllFiles();
     void reportMetadata();
 
@@ -145,6 +145,7 @@ public:
     ulong shutterCount;
     // end variables used to hold data
 
+    QString fPath;
     QString err;
 
     QStringList rawFormats;
@@ -236,7 +237,8 @@ private:
     QHash<uint, IFDData> ifdDataHash;
     QHash<uint, IFDData>::iterator ifdIter;
     QHash<ulong, QString> exifHash, ifdHash, gpsHash, segCodeHash,
-        nikonMakerHash, sonyMakerHash, canonMakerHash, canonFileInfoHash;
+        nikonMakerHash, sonyMakerHash, fujiMakerHash, canonMakerHash,
+        canonFileInfoHash;
     QHash<QString, ulong> segmentHash;
 //    QHash<QByteArray, QString> nikonLensHash;
     QHash<QString, QString> nikonLensHash;
@@ -244,10 +246,8 @@ private:
     QHash<int,int> orientationToDegrees;
     QHash<int,int> orientationFromDegrees;
 
-    // was metadata
+    // metadata cache
     QMap<QString, ImageMetadata> metaCache;
-//    Metadata metadata;
-    QString fName;    // for debugging
 
     bool report;
     QString xmpString;
@@ -264,6 +264,7 @@ private:
     void initNikonMakerHash();
     void initCanonMakerHash();
     void initSonyMakerHash();
+    void initFujiMakerHash();
     void initNikonLensHash();
 
     uint get1(QByteArray c);
@@ -296,7 +297,7 @@ private:
     void formatCanon();
     void formatOlympus();
     void formatSony();
-    void formatFuji();
+    bool formatFuji();
     bool formatJPG();
     bool formatTIF();
 

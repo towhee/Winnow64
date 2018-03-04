@@ -72,6 +72,13 @@ public:
     virtual QString displayText(const QVariant & value, const QLocale & locale) const;
 };
 
+class ISOItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit ISOItemDelegate(QObject* parent = 0);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+};
+
 class FileSizeItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:

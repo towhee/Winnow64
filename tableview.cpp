@@ -42,6 +42,9 @@ TableView::TableView(DataModel *dm)
     ExposureTimeItemDelegate *exposureTimeItemDelegate = new ExposureTimeItemDelegate;
     setItemDelegateForColumn(G::ShutterspeedColumn, exposureTimeItemDelegate);
 
+    ISOItemDelegate *isoItemDelegate = new ISOItemDelegate;
+    setItemDelegateForColumn(G::ISOColumn, isoItemDelegate);
+
     FocalLengthItemDelegate *focalLengthItemDelegate = new FocalLengthItemDelegate;
     setItemDelegateForColumn(G::FocalLengthColumn, focalLengthItemDelegate);
 
@@ -207,6 +210,18 @@ QString FocalLengthItemDelegate::displayText(const QVariant& value, const QLocal
     return QString();
 
     return QString::number(value.toDouble(), 'f', 0) + "mm   ";
+}
+
+ISOItemDelegate::ISOItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString ISOItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+    if (value == 0)
+        return QString();
+
+    return QString::number(value.toDouble(), 'f', 0);
 }
 
 FileSizeItemDelegate::FileSizeItemDelegate(QObject* parent): QStyledItemDelegate(parent)
