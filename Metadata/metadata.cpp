@@ -145,7 +145,7 @@ QString Metadata::tokenValue(QString &token)
 setMetadata must be called first to set matadata variables for the current
 image.
 */
-    x = "";
+    QString x = "";
     if (token == "Newline")
         return "\n";
     if (token == "Path")

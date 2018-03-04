@@ -210,14 +210,14 @@ void MW::closeEvent(QCloseEvent *event)
 void MW::moveEvent(QMoveEvent *event)
 {
     QMainWindow::moveEvent(event);
-    if (!isInitializing)  qDebug() << "MW::resizeEvent" << screen();
+//    if (!isInitializing)  qDebug() << "MW::resizeEvent" << screen();
     emit resizeMW(this->geometry(), centralWidget->geometry());
 }
 
 void MW::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
-    if (!isInitializing)  qDebug() << "MW::resizeEvent" << screen();
+//    if (!isInitializing)  qDebug() << "MW::resizeEvent" << screen();
     emit resizeMW(this->geometry(), centralWidget->geometry());
 }
 

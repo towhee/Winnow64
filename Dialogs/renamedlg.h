@@ -2,7 +2,7 @@
 #define RENAMEDLG_H
 
 #include <QtWidgets>
-#include "popup.h"
+#include "Utilities/popup.h"
 
 /*****************************************************************************/
 class RenameEdit : public QLineEdit

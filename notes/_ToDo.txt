@@ -1,0 +1,310 @@
+BUGS
+- D2H NEFs crash Winnow
+- On Mac slow to read metadata first time, after that it is fast
+- Sometimes thumbs do not paint until select
+- Image caching not always updating
+- Open with ... (doesn't work on macOS)
+- Caching thumbs is sometimes slow
+- Confirm tif metadata for focus stacks (app out msg)
+- Copy metadata item not working (was working before)
+- Toggle zoom wrong place when using preview size cached image
+- Info status not reporting correctly while thumbs loading and zoom
+- Gets stuck in F mode where cannot resize
+- Pick thumb not always showing one main image in loupe mode
+PERFORMANCE
+- Can be slow when usb card images cached
+CODE IMPROVEMENTS
+- Possibly combine workspaces into an actionGroup so can check active workspace
+- Tweak panning in compareView (eliminate incremental scrolling)
+ENHANCEMENTS
+- Refresh
+- Add complete for ingest description
+- add metadata performance options to preferences
+- Add current folder to bookmarks
+- Combine raw+jpg option
+- info label token builder
+- Get Sony image count, camera SN
+- Get actual monitor resolution for actualDevicePixelRatio calculation
+- Recent copy to folders in ingest dialog
+- Add zoom increment amount to preferences
+- Remember column order in tableView and workspace
+- Add more raw file formats - DNG, Panasonic ...
+- Zoom rect in thumbnail to show zoom and pan in imageView
+- Disable menu "add bookmark" when folders not selected??
+- Tweak context menus
+- Add filters activated status (red text on image?)
+- Initial setup (other than workspace)
+- Eject card
+- Run droplet
+- Deleteop, removeBookmarkAction cleanup
+- Clip black area on canon thumbs
+- Hide/show cursor in slideshow, always show if ESC
+
+- Done: Drag drop onto graphicsview (main image) not working
+- Done: Add Fuji support
+- Done: Add wrap to thumb context menu
+- Done: Drag drop to photoshop not working (works in MacOs)
+- Done: if no created try using xmp
+- Done: Drag and drop a selection of thumbs
+- Done: Replace created with createdDate using QDateTime
+- Done: Add filter for date (Year, Month, Day)
+- Done: add MetadateDate to Xmp
+- Done: Add rotate to thumb context menu
+- Done: Rotate selected images
+- Done: Allow update creator, copyright, email and url
+- Done: Edit and write creator, copyright, email, url
+- Done: Possible to overwrite tiles during ingest
+- Done: scroll thumbwheel advance in loupe view
+- Done: Fixed start first time not working
+- Done: Menu visibility and window title bar not updating when change workspace
+- Done: Thumb wrapping and thumbdock size wrong for floating thumbdock workspaces
+- Done: Olympus creator and copyright
+- Done: Get Olympus lens
+- Done: Edit title in metadata
+- Done: Read/write XMP sidecars
+- Done: Add Ingest token builder
+- Done: Redirect report metadata to a text window so Qt Creator not req'd
+- Done: Cmd click does not add to selection on first click
+- Done: implement metadata caching delay preference (currently 300ms hard coded)
+- Done: In Grid double click on thumb selects wrong image as scrollToCenter occurs
+- Done: Invert selection does not work
+- Done: Add Tif support
+- Done: ThumbView at bottom not always sizing to incl scrollbar
+- Done: Creator wrong
+- Done: Add refine feature
+- Done: Not remembering max recent folders
+- Done: On opening app changes size
+- Done: Show image count in bookmarks
+- Done: Use ImageCache status bar to show metadata loading progress
+- Done!!: Improve producer/consumer image cache performance for large files
+- Done: Thumb creation bogs down in some folders under stress testing (might be fixed but not finished)
+- Done: When drag drop onto winnow folder panel does not update
+- Done: Open folder not working
+- Done: Recent folder not working
+- Done: Only show zoom % in statusbar in loupe and compare modes
+- Done: MetadataCache not always reading metadata - why?
+- Done: Drag and drop image onto Winnow - show image and load folder
+- Done: Reveal in explorer / finder
+- Done: Merged metadata and thumb caching: more stable and faster
+- Done: Added version to Help > About
+- Done: Add more raw file formats - Sony
+- Done: Improve ingest layout, add manual option
+- Done: Decrypted nikon lens info
+- Done: No title metadata from TIF
+- Done: Not reading lens model in JPG files
+- Done: ToggleZoom not being saved correctly
+- Done: Not reading TIF thumbs after first file
+- Done: dies when quickly change folders
+- Done: not reading tifs
+- Done: slow reading nef thumbs (what has changed)
+- Done: zoom radio buttons not correct zoom values
+- Done: show failed folder selection in central widget as a message
+- Done: select bookmark when folder changes
+- Done: not updating preferences not showing ie thumb parameters
+- Done: update zoom factor when change monitor resolution
+- Done: not showing thumbs for D:\pictures\automask
+- Done: zooming to 0% (set default at 100%)
+- Done: Make data/time formatting consistent ie InfoView created vs modified
+- Done: Only show Users and Volumes on Mac
+- Done: Sort folders in ascending order
+- Done: windows right click on main image zooms
+- Done: No wrap thumbs anywhere
+- Done: Confirm monitor size in welcome
+- Done: Preferences has monitor size entry twice
+- Done: No vertical scrolling in FSTree
+- Done: Not reading metadata from iphone jpgs
+- Done: Calc actual 100% pixels and set zoom to match
+- Done: InfoView elide text
+- Done: Tweak default workspace to match current layout
+- Done: Change InfoView to a TreeView
+- Done: # images in folder not show on first shortcut click
+- Done: # images in folder weird column widths sometimes
+- Done: QFSFileEngine::open: No file name specified
+- Done: Beef up deleted or renamed or corrupted folder
+- Done: Change shortcut T in zoom dialog
+- Done: Fix shortcut Z in zoom Dialog
+- Done: Focal length and shutter speed showing incorrectly for some files ie 2017-05-30_0081_1000px.jpg
+- Done: Change infoView to combine ok and infoView datamodels
+- Done: Add Folder to InfoView (also Position, Zoom and Picked)
+- Done: Thumbs resizing to fit height in side docks
+- Done: Mode switching cursor/currentIndex scroll issues
+- Done: Fixed logic for deleted or renamed or corrupted folder - still needs more love
+- Done: Added filter to full screen options in prefdlg
+- Done: If open in grid mode and switch to loupe right away thumbView not on current index
+- Done: Check cache logic - seems broken when get to end of folder and start back
+- Done: ThumbDock thumb size forgotten after grid view sometimes
+- Done: Add pref for fields to show in infoView and tableView
+- Done: Still problem with toggle zoom
+- Done: Get comment and copywrite metadata (for JPG)
+- Done: Get lens metadata (for JPG
+- Done: Main context menu only in loupe mode
+- Done: Highlight and set focus on zoom dialog when mouse over
+- Done: UI for changing compare click zoom amount
+- Done: Zooming is not propagating consistently in compareView
+- Done: UpdateStatus signal in compareImages not working
+- Done: Set mouse click zoom amount (default = 100%)
+- Done: Show how much mem req'd for selected images
+- Done: Poor performance - Show how many images in each folder in treeView
+- Done: Show file size in KB/MB/GB
+- Done: Sometimes two mouse clicks reqd in loupe view to toggle zoom
+- Done: Add filter shortcuts and menu
+- Done: Help > Shortcuts
+- Done: Reset currentIndex when invert selection
+- Done: Should not zoom when right click imageView
+- Done: Weird scrolling when pick
+- Done: When thumbDock is floating always wrap thumbs
+- Done: Rename testStyle.css to winnow.css
+- Done: If empty folder then loupe view should be blank
+- Done: Mouse click row in tableView does not scrollTo in thumbView
+- Done: Left key not always moving back
+- Done: Thread activity lights not hiding
+- Done:Full screen mode needs some love
+- Done: Up arrow doing weird stuff when thumbDock wrapping = true
+- Done: thumbDock visibility not remembered between sessions if close from Grid mode
+- Done: Arrow keys in compare mode
+- Done: Add preferences to show/hide cache status and thread activity
+- Done: ThumbDock horizontal scrollbar when wrapping is on - should only be vertical scrollbar
+- Done: Add preference for trackpad pan/advance
+- Done: ThumbView does not scroll to current if was hidden
+- Done: Shortcut to focus on a dock
+- Done: Edit labels not showing in compare view
+- Done: make wasThumbDockVisibleBeforeGridInvoked persistent between sessions
+- Done: Color class not showing on thumbs
+- Done: Settings not remembering to show thumb labels
+- Done: Thumb label not positioning properly
+- Done: Thumb label is showing entire file path instead of just the filename
+- Done: Workspace not remembering thumbs hidden
+- Done: Cmd click on item requires two clicks to select
+- Done: Double click on thumb in Loupe view should be ignored
+- Done: Check full screen logic
+- Done: check all mouse behavior including wheel event and scrolling on track pad
+- Done: Aperture, ss, iso and focal length numbers for raw formats for tableView
+- Done: Compare images not working after images sorted other then filename
+- Done: currentIndex not updating properly after compareView.
+- Done: resize thumbs in top/bottpm thumbDock with scrollbar always on
+- Done: selection when filtered not correct indexes when apply ratings, labels or picks
+- Done: improve performance when opening large folders
+- Done: cmd click to select multiple items crashing
+- Done: multi-select not working in tableView
+- Done: sync selection in thumbView and table
+- Done: fixed thumbView horizontal scrollbar ghosting issue
+- Done: added circleLabel showing rating / color class in imageView
+- Done: thumbDock height adjusts to thumb size chenges in prefDlg
+- Done: increased height of combo dropdown items in workspaceDlg
+- Done: invert ratings and labels by re-entering same value
+- Done: Show check mark in Picked in tableview
+- Done: Reset image cache order and display status when change sort
+- Done: Drives not showing in Files in Windows
+- Done: Sort/filter thumbs
+- Done: Add ratings and labels
+- Done: Set each column for sorting on editrole
+- Done: Resize thumb dock on bottom and top to fit thumbs if no wrap
+- Done: Cleaner font for info on screen
+- Done: Pick label not toggling
+- Done: tweak infoLabel / titleLabel font and size
+- Done: remove iconDisplay from thumbView since added tableView
+- Done: Table view
+- Done: Thumb wrapping gets turned on when thumbDocked on bottom
+- Done: Smooth grid view scrolling
+- Done: Fix hand cursor when loupe view not zoomed
+- Done: ShootingInfo not showing for first image
+- Done: Fix Grid to Compare mode ui glitch
+- Done: Right click should not zoom in imageView or compareView
+- Done: In compare mode shift drag one image with mouse (touch scroll already works)
+- Done: Bookmarks not saved between sessions anymore
+- Done: Reimplement mouse drag scrolling in ImageView and CompareView
+- Done: Get rid of white border around docks
+- Done: Tracked down bug not showing thumbs when open with no QSettings
+- Done: Not remembering to show menu
+- Done: Separate class to load pixmap from image file
+- Done: Get title from meatdata
+- Done: Fixed warning QObject::connect: Cannot queue arguments of type 'QVector<int>'
+- Done: Fix compare clear before next compare
+- Done: ImageView thumbclick broken
+- Done: Compare 2-9 images
+- Done: Convert imageView to use QGraphicsView
+- Done: Set bookmark not working
+- Done: Thumbs fit
+- Done: Fix thumbSize in thumbView (maybe change to thumbWidth??
+- Done: Copy to clipboard
+- Done: drag'n'drop images to another app
+- Done: Fixed thumb update issue when caching a new folder
+- Done: Recent files
+- Done: Goto next pick, previous pick not working
+- Done: Add a help window
+- Done: Open folder
+- Done: Change thumb dock header to vertical when dock to bottom or top
+- Done: Slideshow
+- Done: Clean up startupDir and currentViewDir
+- Done: Include subfolders
+- Done: Add image/gridview to workspace
+- Done: Enlarge/shrink thumbs not working
+- Done: Swap thumbs/viewer (see hideVieweer and showViewer)
+- Done: eliminate global variables
+- Done: eliminated thumb global variables
+- Done: Progress bar not updating when copying
+- Done: Reveal file in explorer/finder
+- Done: Save working spaces and default workspace
+- Done: Save dock lock status (TitleBar) for each dock separately
+- Done: Clean up GData variables
+- Done: redo the options dialog
+- Done: Is updateActions function req'd
+- Done: Show hand when panning
+- Done: Image cache/decache does not follow many file selection jumps
+- Done: The first thumb in folder does not show all metadata until reselect
+- Done: Zoom and pan on mouse click event in thumbnail
+- Done: Add items to main Go menu
+- Done: Up and down arrows not working in thumb grid
+- Done: Modify ImageView to zoom any amount and work with view coordinates
+- Done: Hesitation when zoom, hand icon flickers
+- Done: Cache not tracking ahead and behind direction properly
+- Done: Clean up unused functions esp in thumbview
+- Done: Sort bookmarks so they list in the same order all the time
+- Done: Zoom to thumb mouse click pos not working
+- Done: ImageCache not reinitializing after multiple folder selections
+- Done: Fix thumbs from iphone jpgs not showing
+- Done: Set Esc to leave full screen mode as well as toggle F
+- Done: Lock docks not sticky
+- Done: Comment out pasteThumbs, copyMoveImages, moveImagesTo, cutThumbs, copyThumbs,
+        copyOrCutThumbs, setCopyCutActions, setDeleteAction
+- Done: Improved thumbnail performance by using jpg file embedded thumbnails
+- Done: Added Sony file support
+- Done: Eliminated thumbReader.size().isValid for raw files in ThumbCache?
+- Done: Added Olympus file support
+- Done: Fix loupe view for first image conflict with thumb cache
+- Done: Honour metadata rotation
+- Done: Crash when click on image/view with no image
+- Done: Shrink/Enlarge thumbs not working
+- Done: Thumbs size to fit
+- Done: Show labels causes all thumbs to go blank plus thumbs should resize
+- Done: Read metadata with thumbs or separate thread
+- Done: Toggle filter picks - return to previous thumb position
+- Done: ESC when in fullscreen mode
+- Done: Make context menus consistent with main menu (parent issue?)
+- Done: Show x of y in statusbar
+- Done: Not zoom if click on label outside image
+- Done: Basic copy to folder
+- Done: Prevent zoom100% when image smaller than canvas
+- Done: When zoomed sync with mouse click location on thumb
+- Done: Stay zoomed when move to next
+- Done: Filtered thumbs out of synch with imageview
+- Done: Thumbs not drawing properly until invoke setwrapping at end
+- Done: Zoom in/out from current pan position, not center of image
+- Done: move thumbnail generation to a separate thread
+- Done: Error end of row in thumbnails
+- Done: Draw pretty thumbnails
+- Done: Picks and thumb highlighting
+- Done: Understand thumbViewModel
+- Done: Not sure how... Crash when right click on scroll bar
+- Done: Figure out how to process events before update cache first time
+- Done: Cache full size images in QCache
+- Done: Show first image in folder when selected
+- Done: Remove extraneous menus and functions
+- Done: Add thumbview and image cache status to status bar
+- Done: move image caching to a separate thread
+- Done: Update menu enabled status when close dock
+- Done: Full size previews for raw files
+- Done: zoom to mouse click
+- Done: Thumbs to dock
+- Done: Change default docking locations including tabify
+- Done: Move styles.css to resources

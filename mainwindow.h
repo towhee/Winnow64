@@ -16,25 +16,25 @@
 #endif
 
 #include "appdlg.h"
-#include "bookmarks.h"
-#include "compareImages.h"
+#include "File/bookmarks.h"
+#include "Views/compareImages.h"
 #include "copypickdlg.h"
-#include "datamodel.h"
-#include "dircompleter.h"
-#include "imagecache.h"
-#include "imageview.h"
-#include "filters.h"
-#include "fstree.h"
-#include "infoview.h"
+#include "Datamodel/datamodel.h"
+//#include "dircompleter.h"
+#include "Cache/imagecache.h"
+#include "Views/imageview.h"
+#include "Datamodel/filters.h"
+#include "File/fstree.h"
+#include "Views/infoview.h"
 #include "mainwindow.h"
-#include "mdcache.h"
+#include "Cache/mdcache.h"
 #include "Metadata/metadata.h"
-#include "popup.h"
+#include "Utilities/popup.h"
 #include "prefdlg.h"
 #include "global.h"
-#include "thumb.h"
-#include "thumbview.h"
-#include "tableview.h"
+#include "Image/thumb.h"
+#include "Views/thumbview.h"
+#include "Views/tableview.h"
 #include "workspacedlg.h"
 #include "zoomdlg.h"
 
@@ -491,6 +491,7 @@ private:
     QAction *fullScreenAction;
     QAction *escapeFullScreenAction;
     QAction *infoVisibleAction;
+    QAction *infoSelectAction;
     QActionGroup *centralGroupAction;
     QAction *asGridAction;
     QAction *asTableAction;
@@ -700,6 +701,8 @@ private:
     void setActualDevicePixelRatio();
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
     void setCentralMessage(QString message);
+
+    QSize screen();
 
     void addRecentFolder(QString fPath);
 
