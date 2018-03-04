@@ -3416,6 +3416,8 @@ bool Metadata::formatFuji()
     a = get4(file.read(4));
     ulong offsetIfd0 = a + startOffset;
 
+//    getDimensions(offsetFullJPG);
+
     // read IFD0:
     ulong nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
     ulong offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset;
@@ -3434,6 +3436,9 @@ bool Metadata::formatFuji()
 
     // read EXIF IFD
     readIFD("IFD Exif", offsetEXIF);
+    width = ifdDataHash.value(40962).tagValue;
+    height = ifdDataHash.value(40963).tagValue;
+    if (!width || !height) getDimensions(offsetFullJPG);
 
     // EXIF: shutter speed
     if (ifdDataHash.contains(33434)) {
@@ -3658,7 +3663,7 @@ bool Metadata::formatTIF()
 
     if (ifdIPTCOffset) readIPTC(ifdIPTCOffset);
 
-    // read XMP
+    // read XMP - no XMP in fuji raw files
     if (isXmp && okToReadXmp) {
         Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
         rating = xmp.getItem("Rating");     // case is important "Rating"
@@ -4494,6 +4499,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 //             << fileInfo.filePath();
     // check if already loaded
     fPath = fileInfo.filePath();
+    qDebug() << "Metadata::loadImageMetadata   " << fPath;
     if (metaCache[fPath].metadataLoaded && !isReport) return true;
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load
