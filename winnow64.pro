@@ -9,30 +9,12 @@ QT += widgets
 QT += xmlpatterns
 
 HEADERS += \
-    bookmarks.h \
-    compareImages.h \
-    compareview.h \
-    datamodel.h \
-    dircompleter.h \
-    filters.h \
-    fstree.h \
     global.h \
-    imagealign.h \
-    imagecache.h \
-    imageview.h \
-    infoview.h \
     mainwindow.h \
-    mdcache.h \
-    pixmap.h \
-    progressbar.h \
-    tableview.h \
-    thumb.h \
-    thumbview.h \
-    thumbviewdelegate.h \
     Dialogs/prefdlg.h \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
-    Dialogs/popup.h \
+    Utilities/popup.h \
     Dialogs/tokendlg.h \
     Dialogs/zoomdlg.h \
     MacOS/macscale.h \
@@ -43,32 +25,31 @@ HEADERS += \
     Metadata/xmp.h \
     Utilities/circlelabel.h \
     Utilities/dropshadowlabel.h \
-    Dialogs/testaligndlg.h
+    Dialogs/testaligndlg.h \
+    Utilities/progressbar.h \
+    Views/compareImages.h \
+    Views/compareview.h \
+    Views/imageview.h \
+    Views/infoview.h \
+    Views/tableview.h \
+    Views/thumbview.h \
+    Views/thumbviewdelegate.h \
+    Image/pixmap.h \
+    Image/thumb.h \
+    Image/imagealign.h \
+    Datamodel/datamodel.h \
+    Datamodel/filters.h \
+    File/bookmarks.h \
+    File/fstree.h \
+    Cache/imagecache.h \
+    Cache/mdcache.h
 
 SOURCES += \
-    bookmarks.cpp \
-    compareImages.cpp \
-    compareview.cpp \
-    datamodel.cpp \
-    dircompleter.cpp \
-    filters.cpp \
-    fstree.cpp \
     global.cpp \
-    imagealign.cpp \
-    imagecache.cpp \
-    imageview.cpp \
-    infoview.cpp \
     main.cpp \
     mainwindow.cpp \
-    mdcache.cpp \
-    pixmap.cpp \
-    progressbar.cpp \
-    tableview.cpp \
-    thumbview.cpp \
-    thumbviewdelegate.cpp \
-    thumb.cpp \
     Dialogs/copypickdlg.cpp \
-    Dialogs/popup.cpp \
+    Utilities/popup.cpp \
     Dialogs/prefdlg.cpp \
     Dialogs/tokendlg.cpp \
     Dialogs/workspacedlg.cpp \
@@ -79,45 +60,61 @@ SOURCES += \
     Metadata/xmp.cpp \
     Utilities/dropshadowlabel.cpp \
     Utilities/circlelabel.cpp \
-    Dialogs/testaligndlg.cpp
+    Dialogs/testaligndlg.cpp \
+    Utilities/progressbar.cpp \
+    Views/compareImages.cpp \
+    Views/compareview.cpp \
+    Views/imageview.cpp \
+    Views/infoview.cpp \
+    Views/tableview.cpp \
+    Views/thumbview.cpp \
+    Views/thumbviewdelegate.cpp \
+    Image/pixmap.cpp \
+    Image/thumb.cpp \
+    Image/imagealign.cpp \
+    Datamodel/datamodel.cpp \
+    Datamodel/filters.cpp \
+    File/bookmarks.cpp \
+    File/fstree.cpp \
+    Cache/imagecache.cpp \
+    Cache/mdcache.cpp
 
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 
 FORMS += \
-    aligndlg.ui \
-    appdlg.ui \
-    copypickdlg.ui \
-    helpform.ui \
-    introduction.ui \
-    message.ui \
-    metadatareport.ui \
-    prefdlg.ui \
-    shortcutsform.ui \
-    testaligndlg.ui \
-    tokendlg.ui \
-    welcome.ui \
-    workspacedlg.ui \
-    zoomdlg.ui \
     Dialogs/renamedlg.ui \
-    helpingest.ui
+    Dialogs/aligndlg.ui \
+    Dialogs/appdlg.ui \
+    Dialogs/copypickdlg.ui \
+    Help/helpform.ui \
+    Help/helpingest.ui \
+    Dialogs/prefdlg.ui \
+    Help/shortcutsform.ui \
+    Dialogs/testaligndlg.ui \
+    Dialogs/tokendlg.ui \
+    Dialogs/workspacedlg.ui \
+    Dialogs/zoomdlg.ui \
+    Help/introduction.ui \
+    Help/welcome.ui \
+    Metadata/metadatareport.ui \
+    Help/message.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
 DISTFILES += \
-    Menu.txt \
-    Shortcuts.txt \
-    Scratch.txt \
-    Notes \
-    snippets.txt \
-    Deploy.txt \
-    xmp.txt \
-    _ToDo.txt \
-    metadata.txt \
-    Tokens.txt \
-    HelpDocCreation.txt \
-    git.txt
+    notes/_Notes \
+    notes/_ToDo.txt \
+    notes/Deploy.txt \
+    notes/git.txt \
+    notes/HelpDocCreation.txt \
+    notes/Menu.txt \
+    notes/metadata.txt \
+    notes/Scratch.txt \
+    notes/Shortcuts.txt \
+    notes/snippets.txt \
+    notes/xmp.txt
 
 #macx {
 #    QMAKE_MAC_SDK = macosx10.12

@@ -2,7 +2,7 @@
 #define COPYPICKDLG_H
 
 #include <QtWidgets>
-#include "thumbview.h"
+#include "Views/thumbview.h"
 #include "tokendlg.h"
 
 #include "ui_helpingest.h"

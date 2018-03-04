@@ -210,13 +210,27 @@ void MW::closeEvent(QCloseEvent *event)
 void MW::moveEvent(QMoveEvent *event)
 {
     QMainWindow::moveEvent(event);
+    if (!isInitializing)  qDebug() << "MW::resizeEvent" << screen();
     emit resizeMW(this->geometry(), centralWidget->geometry());
 }
 
 void MW::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
+    if (!isInitializing)  qDebug() << "MW::resizeEvent" << screen();
     emit resizeMW(this->geometry(), centralWidget->geometry());
+}
+
+QSize MW::screen()
+{
+    QWindow *win = new QWindow;
+    QPoint loc = centralWidget->window()->geometry().center();
+    win->setScreen(qApp->screenAt(loc));
+    win->showFullScreen();
+//    qDebug() << "MW::Test  Width =" << win->width() << "Height =" << win->height()
+//             << qApp->screenAt(loc)->name();
+    win->close();
+    return QSize(win->width(), win->height());
 }
 
 //void MW::mousePressEvent(QMouseEvent *event)
@@ -1555,10 +1569,14 @@ void MW::createActions()
     infoVisibleAction = new QAction(tr("Shooting Info"), this);
     infoVisibleAction->setObjectName("toggleInfo");
     infoVisibleAction->setCheckable(true);
-//    infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());  // from QSettings
     addAction(infoVisibleAction);
     connect(infoVisibleAction, SIGNAL(triggered()), this, SLOT(setShootingInfoVisibility()));
 
+    infoSelectAction = new QAction(tr("Select Shooting Info"), this);
+    infoSelectAction->setObjectName("selectInfo");
+    infoSelectAction->setCheckable(true);
+    addAction(infoSelectAction);
+    connect(infoSelectAction, SIGNAL(triggered()), this, SLOT(selectShootingInfo()));
 
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setCheckable(true);
@@ -6659,15 +6677,27 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    thumbView->setWrapping(false);
+    QWindow *win = new QWindow;
+    QPoint loc = centralWidget->window()->geometry().center();
+    win->setScreen(qApp->screenAt(loc));
+    win->showFullScreen();
+    qDebug() << "MW::Test  Width =" << win->width() << "Height =" << win->height()
+             << qApp->screenAt(loc)->name();
+    win->close();
 
-    QDateTime dt = QDateTime::fromSecsSinceEpoch(1507681529.3377);
+//    qDebug() << "MW::Test Screen " << qApp->screenAt(loc)->name();
 
-    qDebug() << dt;
+//    qDebug() << "MW::Test  loc =" << loc;
+
+
+//    qDebug() << "MW::Test  Width =" << width() << "Height =" << height();
+
+    // QDateTime dt = QDateTime::fromSecsSinceEpoch(1507681529.3377);
+    // qDebug() << dt;
 
     //    QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
     //        (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
-//    qDebug() << QDateTime::currentDateTime().toOffsetFromUtc(QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
+    //    qDebug() << QDateTime::currentDateTime().toOffsetFromUtc(QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
     // xmp:ModifyDate="2017-12-21T16:51:02-08:00"
     //                "2018-03-01T05:42:22-08:00"
 }
