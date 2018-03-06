@@ -6,11 +6,11 @@
 #include "Datamodel/datamodel.h"
 #include "Dialogs/tokendlg.h"
 
-class InfoString : public QObject
+class InfoString : public QWidget
 {
     Q_OBJECT
 public:
-    explicit InfoString(QObject *parent,
+    explicit InfoString(QWidget *parent,
                         Metadata *metadata,
                         DataModel *dm,
                         QMap<QString, QString> &infoTemplates,

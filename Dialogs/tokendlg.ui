@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>766</width>
-    <height>354</height>
+    <height>402</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,7 +22,7 @@
      <x>30</x>
      <y>50</y>
      <width>141</width>
-     <height>271</height>
+     <height>321</height>
     </rect>
    </property>
   </widget>
@@ -83,19 +83,6 @@
     <string>Example result:</string>
    </property>
   </widget>
-  <widget class="QLabel" name="resultLbl">
-   <property name="geometry">
-    <rect>
-     <x>180</x>
-     <y>240</y>
-     <width>551</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-  </widget>
   <widget class="QComboBox" name="templatesCB">
    <property name="geometry">
     <rect>
@@ -115,7 +102,7 @@
   <widget class="QLabel" name="label_4">
    <property name="geometry">
     <rect>
-     <x>190</x>
+     <x>180</x>
      <y>30</y>
      <width>91</width>
      <height>16</height>
@@ -128,9 +115,9 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>284</x>
-     <y>290</y>
-     <width>451</width>
+     <x>260</x>
+     <y>340</y>
+     <width>481</width>
      <height>32</height>
     </rect>
    </property>
@@ -227,7 +214,7 @@
       </property>
       <property name="minimumSize">
        <size>
-        <width>93</width>
+        <width>125</width>
         <height>0</height>
        </size>
       </property>
@@ -235,11 +222,24 @@
        <enum>Qt::NoFocus</enum>
       </property>
       <property name="text">
-       <string>Okay</string>
+       <string>Select</string>
       </property>
      </widget>
     </item>
    </layout>
+  </widget>
+  <widget class="QTextBrowser" name="resultText">
+   <property name="geometry">
+    <rect>
+     <x>180</x>
+     <y>240</y>
+     <width>561</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: rgb(66, 66, 66);</string>
+   </property>
   </widget>
  </widget>
  <customwidgets>

@@ -2092,7 +2092,7 @@ int Metadata::getNewOrientation(int orientation, int rotation)
 bool Metadata::writeMetadata(const QString &fPath, QByteArray &buffer)
 {
 /*
-Called from ingest (copypickdlg).  If it is a supported image type a copy of the
+Called from ingest (Ingestdlg).  If it is a supported image type a copy of the
 image file is made and any metadata changes are updated in buffer.  If it is a
 raw file in the sidecarFormats hash then the xmp data for existing and changed
 metadata is written to buffer and the original image file is copied unchanged.
@@ -4528,6 +4528,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.width = width;
     imageMetadata.height = height;
     imageMetadata.dimensions = QString::number(width) + "x" + QString::number(height);
+    imageMetadata.orientation = orientation;
     imageMetadata.rotationDegrees = rotationDegrees;
 //    imageMetadata.created = created;
     imageMetadata.createdDate = createdDate;
@@ -4562,9 +4563,8 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     s += "  " + imageMetadata.exposureTime;
     s += (imageMetadata.aperture == "") ? "" : " at " + imageMetadata.aperture;
     s += (imageMetadata.ISO == "") ? "" : ", ISO " + imageMetadata.ISO;
+    imageMetadata.shootingInfo = s;
 
-    if (shootingInfo.length() > 0) imageMetadata.shootingInfo = s;
-    if (orientation) imageMetadata.orientation = orientation;
     imageMetadata.metadataLoaded = result;
 
     metaCache.insert(fileInfo.filePath(), imageMetadata);
@@ -4620,227 +4620,3 @@ void Metadata::setMetadata(const QString &imageFileName)
 }
 
 // End Metadata
-
-
-//bool Metadata::formatJPG()
-//{
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << "Metadata::formatJPG";
-//    #endif
-//    }
-//    //file.open happens in readMetadata
-//    order = 0x4D4D;
-//    ulong startOffset = 0;
-//    if (get2(file.read(2)) != 0xFFD8) return 0;
-
-//    // build a hash of jpg segment offsets
-//    getSegments(file.pos());
-
-//    // check if JFIF
-//    if (segmentHash.contains("JFIF")) {
-//        // it's a jpg so the whole thing is the full length jpg and no other
-//        // metadata available
-//        offsetFullJPG = 0;
-//        lengthFullJPG = file.size();
-//        return true;
-//    }
-
-//    // read the EXIF data
-//    if (segmentHash.contains("EXIF")) file.seek(segmentHash["EXIF"]);
-//    else return false;
-
-//    bool foundEndian = false;
-//    while (!foundEndian) {
-//        ulong a = get2(file.read(2));
-//        if (a == 0x4949 || a == 0x4D4D) {
-//            order = a;
-//            // offsets are from the endian position in JPEGs
-//            // therefore must adjust all offsets found in tagValue
-//            startOffset = file.pos() - 2;
-//            foundEndian = true;
-//        }
-//        // add condition to check for EOF
-//    }
-
-//    if (report) rpt << "\n startOffset = " << startOffset;
-
-//    uint a = get2(file.read(2));  // magic 42
-//    a = get4(file.read(4));
-//    ulong offsetIfd0 = a + startOffset;
-
-//    // it's a jpg so the whole thing is the full length jpg
-//    offsetFullJPG = 0;
-//    lengthFullJPG = file.size();
-
-//    // read IFD0
-//    ulong nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
-//    ulong offsetEXIF;
-//    (ifdDataHash.contains(34665))
-//        ? offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset
-//        : offsetEXIF = 0;    // read IFD1 - unfortunately nothing of interest
-
-//    // IFD0: Orientation
-//    (ifdDataHash.contains(274))
-//        ? orientation = ifdDataHash.value(274).tagValue
-//        : orientation = 1;
-
-//    if (readNonEssentialMetadata) {
-//        // IFD0: Make
-//        (ifdDataHash.contains(271))
-//            ? make = getString(ifdDataHash.value(271).tagValue + startOffset,
-//                               ifdDataHash.value(271).tagCount)
-//            : make = "";
-
-//        // IFD0: Model
-//        (ifdDataHash.contains(272))
-//            ? model = getString(ifdDataHash.value(272).tagValue + startOffset,
-//                                ifdDataHash.value(272).tagCount)
-//            : model = "";
-
-//        (ifdDataHash.contains(315))
-//            ? creator = getString(ifdDataHash.value(315).tagValue + startOffset,
-//                                  ifdDataHash.value(315).tagCount)
-//            : creator = "";
-
-//        (ifdDataHash.contains(33432))
-//            ? copyright = getString(ifdDataHash.value(33432).tagValue + startOffset,
-//                                    ifdDataHash.value(33432).tagCount)
-//            : copyright = "";
-//    }
-
-//    // read IFD1
-//    if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
-
-//    if (readEssentialMetadata) {
-//        // IFD1: thumbnail offset and length
-//        (ifdDataHash.contains(513))
-//            ? offsetThumbJPG = ifdDataHash.value(513).tagValue + 12
-//            : offsetThumbJPG = 0;
-//        (ifdDataHash.contains(514))
-//            ? lengthThumbJPG = ifdDataHash.value(514).tagValue
-//            : lengthThumbJPG = 0;
-//    }
-
-//    // read EXIF
-//    readIFD("IFD Exif", offsetEXIF);
-
-//    if (readEssentialMetadata) {
-//        // EXIF: width
-//        (ifdDataHash.contains(40962))
-//            ? width = ifdDataHash.value(40962).tagValue
-//            : width = 0;
-//        // EXIF: height
-//        (ifdDataHash.contains(40963))
-//            ? height = ifdDataHash.value(40963).tagValue
-//            : height = 0;
-
-//        if (!width || !height) getDimensions(0);
-//    }
-
-//    if (readNonEssentialMetadata) {
-
-//        // EXIF: created datetime
-//        QString createdExif;
-//        (ifdDataHash.contains(36868))
-//            ? createdExif = getString(ifdDataHash.value(36868).tagValue + startOffset,
-//            ifdDataHash.value(36868).tagCount)
-//            : createdExif = "";
-//        if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
-//        // try DateTimeOriginal
-//        if (createdExif.length() == 0 && ifdDataHash.contains(36867)) {
-//            createdExif = getString(ifdDataHash.value(36867).tagValue + startOffset,
-//                ifdDataHash.value(36867).tagCount);
-//            if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
-//        }
-
-//        // EXIF: shutter speed
-//        if (ifdDataHash.contains(33434)) {
-////            qDebug() << "order =" << QString::number(order, 16)
-////                     << "ifdDataHash.value(33434).tagValue + startOffset"
-////                     << ifdDataHash.value(33434).tagValue + startOffset
-////                     << "getReal(ifdDataHash.value(33434).tagValue + startOffset)"
-////                     << getReal(ifdDataHash.value(33434).tagValue + startOffset);
-//            float x = getReal(ifdDataHash.value(33434).tagValue + startOffset);
-//            if (x < 1 ) {
-//                uint t = qRound(1 / x);
-//                exposureTime = "1/" + QString::number(t);
-//                exposureTimeNum = x;
-//            } else {
-//                uint t = (uint)x;
-//                exposureTime = QString::number(t);
-//                exposureTimeNum = t;
-//            }
-//            exposureTime += " sec";
-//        } else {
-//            exposureTime = "";
-//        }
-
-//        // EXIF: aperture
-//        if (ifdDataHash.contains(33437)) {
-//            float x = getReal(ifdDataHash.value(33437).tagValue + startOffset);
-//            aperture = "f/" + QString::number(x, 'f', 1);
-//            apertureNum = qRound(x * 10) / 10.0;
-//        } else {
-//            aperture = "";
-//            apertureNum = 0;
-//        }
-
-//        // EXIF: ISO
-//        if (ifdDataHash.contains(34855)) {
-//            ulong x = ifdDataHash.value(34855).tagValue;
-//            ISONum = static_cast<int>(x);
-//            ISO = QString::number(ISONum);
-//        } else {
-//            ISO = "";
-//            ISONum = 0;
-//        }
-
-//        // EXIF: focal length
-//        if (ifdDataHash.contains(37386)) {
-//            float x = getReal(ifdDataHash.value(37386).tagValue + startOffset);
-//            focalLengthNum = static_cast<int>(x);
-//            focalLength = QString::number(x, 'f', 0) + "mm";
-//        } else {
-//            focalLength = "";
-//            focalLengthNum = 0;
-//        }
-
-//        // EXIF: lens model
-//        (ifdDataHash.contains(42036))
-//                ? lens = getString(ifdDataHash.value(42036).tagValue + startOffset,
-//                                      ifdDataHash.value(42036).tagCount)
-//                : lens = "";
-//    }
-
-//    // read IPTC
-//    if (readNonEssentialMetadata)
-//        if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
-
-//    // read XMP
-//    if (isXmp && okToReadXmp) {
-//        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
-//        rating = xmp.getItem("Rating");     // case is important "Rating"
-//        label = xmp.getItem("Label");       // case is important "Label"
-//        title = xmp.getItem("title");       // case is important "title"
-//        cameraSN = xmp.getItem("SerialNumber");
-//        if (lens.isEmpty()) lens = xmp.getItem("Lens");
-//        lensSN = xmp.getItem("LensSerialNumber");
-//        if (creator.isEmpty()) creator = xmp.getItem("creator");
-//        copyright = xmp.getItem("rights");
-//        email = xmp.getItem("CiEmailWork");
-//        url = xmp.getItem("CiUrlWork");
-
-//        // save original values so can determine if edited when writing changes
-//        _title = title;
-//        _rating = rating;
-//        _label = label;
-
-//        if (report) xmpString = xmp.metaAsString();
-////        qDebug() << "Metadata::formatJPG  " << xmpString;
-//    }
-
-//    if (report) reportMetadata();
-//    return true;
-//}
-

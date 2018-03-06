@@ -14,7 +14,7 @@ ThumbView does the following:
 
     Manages the file list of eligible images, including attributes for
     selected and picked. Picked files are shown in green and can be filtered
-    and copied to another folder via the copyPickDlg class.
+    and copied to another folder via the ingestDlg class.
 
     The thumbViewDelegate class formats the look of the thumbnails.
 
@@ -460,7 +460,7 @@ QString ThumbView::getCurrentFilename()
 
 // PICKS: Items that have been picked
 
-// used in MW::copyPicks
+// used in MW::ingests
 bool ThumbView::isPick()
 {
     {
@@ -478,7 +478,7 @@ bool ThumbView::isPick()
 QFileInfoList ThumbView::getPicks()
 {
 /* Returns a list of all the files that have been picked.  It is used in
-MW, passing the list on to the copyPicksDlg for ingestion/copying to another
+MW, passing the list on to the ingestsDlg for ingestion/copying to another
 folder.
 */
     {
