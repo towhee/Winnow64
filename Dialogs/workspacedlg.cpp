@@ -1,6 +1,6 @@
 #include "workspacedlg.h"
 #include "ui_workspacedlg.h"
-#include "global.h"
+#include "Main/global.h"
 #include <QDebug>
 #include <QTimer>
 

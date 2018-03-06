@@ -9,8 +9,6 @@ QT += widgets
 QT += xmlpatterns
 
 HEADERS += \
-    global.h \
-    mainwindow.h \
     Dialogs/prefdlg.h \
     Dialogs/workspacedlg.h \
     Dialogs/copypickdlg.h \
@@ -42,12 +40,12 @@ HEADERS += \
     File/bookmarks.h \
     File/fstree.h \
     Cache/imagecache.h \
-    Cache/mdcache.h
+    Cache/mdcache.h \
+    Views/infostring.h \
+    Main/global.h \
+    Main/mainwindow.h
 
 SOURCES += \
-    global.cpp \
-    main.cpp \
-    mainwindow.cpp \
     Dialogs/copypickdlg.cpp \
     Utilities/popup.cpp \
     Dialogs/prefdlg.cpp \
@@ -77,7 +75,11 @@ SOURCES += \
     File/bookmarks.cpp \
     File/fstree.cpp \
     Cache/imagecache.cpp \
-    Cache/mdcache.cpp
+    Cache/mdcache.cpp \
+    Views/infostring.cpp \
+    Main/main.cpp \
+    Main/global.cpp \
+    Main/mainwindow.cpp
 
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 

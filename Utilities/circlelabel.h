@@ -2,7 +2,7 @@
 #define CIRCLELABEL_H
 
 #include <QtWidgets>
-#include "global.h"
+#include "Main/global.h"
 
 class CircleLabel : public QLabel
 {

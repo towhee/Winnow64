@@ -4,7 +4,7 @@
 #include <QtWidgets>
 #include <QDialog>
 #include <Utilities/popup.h>
-#include "global.h"
+#include "Main/global.h"
 
 namespace Ui {
 class ZoomDlg;

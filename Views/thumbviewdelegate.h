@@ -5,7 +5,7 @@
 #include <QtWidgets>
 #include <QStyleOptionViewItem>
 #include <QFont>
-#include "global.h"
+#include "Main/global.h"
 //#include "Views/thumbview.h"
 
 class ThumbViewDelegate : public QStyledItemDelegate

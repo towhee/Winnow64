@@ -1,5 +1,5 @@
 #include "Views/compareImages.h"
-#include "global.h"
+#include "Main/global.h"
 
 CompareImages::CompareImages(QWidget *parent,
                          QWidget *centralWidget,

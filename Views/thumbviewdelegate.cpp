@@ -270,7 +270,7 @@ textRect         = a rectangle below itemRect
     painter->drawRoundedRect(itemRect, 8, 8);
 
     QColor labelColorToUse;
-    if(rating != "" || labelColor != "") {
+    if((rating != "" && rating != "0") || labelColor != "") {
         // ratings/label color
         if (labelColor == "") labelColorToUse = G::labelNoneColor;
         if (labelColor == "Red") labelColorToUse = G::labelRedColor;

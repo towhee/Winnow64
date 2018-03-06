@@ -1,5 +1,5 @@
 #include "compareview.h"
-#include "global.h"
+#include "Main/global.h"
 
 /*  OVERVIEW
 

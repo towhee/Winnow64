@@ -1,5 +1,5 @@
 #include "Image/pixmap.h"
-#include "global.h"
+#include "Main/global.h"
 
 Pixmap::Pixmap(QObject *parent, Metadata *metadata) : QObject(parent)
 {

@@ -1,6 +1,6 @@
 #include <QGraphicsDropShadowEffect>
 #include <math.h>
-#include "global.h"
+#include "Main/global.h"
 #include "Views/imageview.h"
 #include <QApplication>
 

@@ -1,6 +1,6 @@
 #include "Metadata/metadata.h"
 #include <QDebug>
-#include "global.h"
+#include "Main/global.h"
 
 Metadata::Metadata(QObject *parent) : QObject(parent)
 {
@@ -90,149 +90,6 @@ void Metadata::initSupportedFiles()
     "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
     "orf" << "pbm" << "pgm" << "png" << "ppm" << "raf" << "sr2" << "svg" << "svgz" <<
     "tga" << "tif" << "wbmp" << "webp" << "xbm" << "xpm";
-}
-
-void Metadata::initTokenMap()
-{
-    tokenMap["Newline"] = "";
-    tokenMap["Path"] = "users/rory/Pictures/2018/2018-02/2018-02-18_Spring in Paris/018-02-18_0046.cr2";
-    tokenMap["Filename"] = "2018-02-18_0046.cr2";
-    tokenMap["Type"] = "CR2";
-    tokenMap["Pick"] = "True";
-    tokenMap["Rating"] = "4";
-    tokenMap["Label"] = "Red";
-    tokenMap["SizeBytes"] = "3,163,237";
-    tokenMap["MPix"] = "5.18";
-    tokenMap["CreateDate"] = "2018-01-07 14:24:36";
-    tokenMap["YYYY"] = "2018";
-    tokenMap["YY"] = "18";
-    tokenMap["MONTH"] = "JANUARY";
-    tokenMap["Month"] = "January";
-    tokenMap["MON"] = "JAN";
-    tokenMap["Mon"] = "Jan";
-    tokenMap["MM"] = "01";
-    tokenMap["DAY"] = "WEDNESDAY";
-    tokenMap["Day"] = "Wednesday";
-    tokenMap["DDD"] = "WED";
-    tokenMap["Ddd"] = "Wed";
-    tokenMap["DD"] = "07";
-    tokenMap["HOUR"] = "14";
-    tokenMap["MINUTE"] = "24";
-    tokenMap["SECOND"] = "36";
-    tokenMap["ModifiedDate"] = "2018-03-14 07:55:12";
-    tokenMap["Dimensions"] = "5472x3648";
-    tokenMap["Width"] = "5472";
-    tokenMap["Height"] = "3648";
-    tokenMap["Rotation"] = "0";
-    tokenMap["Orientation"] = "0";
-    tokenMap["ShootingInfo"] = "Canon EOS-1D X Mark II 840mm 1/250 sec at f/5.6, ISO 400";
-    tokenMap["Aperture"] = "5.6";
-    tokenMap["ShutterSpeed"] = "1/250";
-    tokenMap["ISO"] = "400";
-    tokenMap["Model"] = "Canon EOS-1D X Mark II";
-    tokenMap["Lens"] = "EF600mm f/4 IS II + 1.4x III";
-    tokenMap["FocalLength"] = "840mm";
-    tokenMap["Creator"] = "Rory Hill";
-    tokenMap["Title"] = "Bald Eagle Snatching Fish";
-    tokenMap["Copyright"] = "2018 Rory Hill";
-    tokenMap["Email"] = "roryhill@something.com";
-    tokenMap["Url"] = "roryhill.somewhere.com";
-}
-
-QString Metadata::tokenValue(QString &token)
-{
-/*
-setMetadata must be called first to set matadata variables for the current
-image.
-*/
-    QString x = "";
-    if (token == "Newline")
-        return "\n";
-    if (token == "Path")
-        return x;
-    if (token == "Filename")
-        return x;
-    if (token == "Type")
-        return x;
-    if (token == "Pick")
-        return x;
-    if (token == "Rating")
-        return x;
-    if (token == "SizeBytes")
-        return x;
-    if (token == "MPix")
-        return x;
-    if (token == "CreateDate")
-        return createdDate.toString("yyyy-MM-dd hh:mm:ss");
-    if (token == "YYYY")
-        return createdDate.date().toString("yyyy");
-    if (token == "YY")
-        return createdDate.date().toString("yy");
-    if (token == "MONTH")
-        return createdDate.date().toString("MMMM").toUpper();
-    if (token == "Month")
-        return createdDate.date().toString("MMMM");
-    if (token == "MON")
-        return createdDate.date().toString("MMM").toUpper();
-    if (token == "Mon")
-        return createdDate.date().toString("MMM");
-    if (token == "MM")
-        return createdDate.date().toString("MM");
-    if (token == "DAY")
-        return createdDate.date().toString("dddd").toUpper();
-    if (token == "Day")
-        return createdDate.date().toString("dddd");
-    if (token == "DDD")
-        return createdDate.date().toString("ddd").toUpper();
-    if (token == "Ddd")
-        return createdDate.date().toString("ddd");
-    if (token == "DD")
-        return createdDate.date().toString("dd");
-    if (token == "HOUR")
-        return createdDate.date().toString("hh");
-    if (token == "MINUTE")
-        return createdDate.date().toString("mm");
-    if (token == "SECOND")
-        return createdDate.date().toString("ss");
-    if (token == "ModifiedDate") {
-        QFileInfo info(fPath);
-        return info.lastModified().toString("yyyy-MM-dd hh:mm:ss");
-    }
-    if (token == "Dimensions")
-        return dimensions;
-    if (token == "Width")
-        return QString::number(width);
-    if (token == "Height")
-        return QString::number(height);
-    if (token == "Rotation")
-        return x;
-    if (token == "Orientation")
-        return x;
-    if (token == "ShootingInfo")
-        return shootingInfo;
-    if (token == "Aperture")
-        return aperture;
-    if (token == "ShutterSpeed")
-        return exposureTime;
-    if (token == "ISO")
-        return ISO;
-    if (token == "Model")
-        return model;
-    if (token == "Lens")
-        return lens;
-    if (token == "FocalLength")
-        return focalLength;
-    if (token == "Creator")
-        return creator;
-    if (token == "Title")
-        return title;
-    if (token == "Copyright")
-        return copyright;
-    if (token == "Email")
-        return email;
-    if (token == "Url")
-        return url;
-
 }
 
 void Metadata::initSegCodeHash()
@@ -4642,7 +4499,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 //             << fileInfo.filePath();
     // check if already loaded
     fPath = fileInfo.filePath();
-    qDebug() << "Metadata::loadImageMetadata   " << fPath;
+//    qDebug() << "Metadata::loadImageMetadata   " << fPath;
     if (metaCache[fPath].metadataLoaded && !isReport) return true;
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load

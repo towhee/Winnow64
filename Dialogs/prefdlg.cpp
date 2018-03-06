@@ -1,7 +1,7 @@
 #include "prefdlg.h"
 #include "ui_prefdlg.h"
-#include "global.h"
-//#include "mainwindow.h"
+#include "Main/global.h"
+//#include "Main/mainwindow.h"
 
 #include <QDebug>
 

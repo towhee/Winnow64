@@ -1,5 +1,5 @@
 #include "Views/thumbview.h"
-#include "mainwindow.h"
+#include "Main/mainwindow.h"
 
 /*  ThumbView Overview
 

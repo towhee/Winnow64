@@ -2,7 +2,7 @@
 #define BOOKMARKS_H
 
 #include <QtWidgets>
-#include "global.h"
+#include "Main/global.h"
 #include "Metadata/metadata.h"
 
 class BookMarks : public QTreeWidget
