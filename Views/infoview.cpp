@@ -1,5 +1,5 @@
 #include "Views/infoview.h"
-#include "global.h"
+#include "Main/global.h"
 
 class InfoDelegate : public QStyledItemDelegate
 {
@@ -103,8 +103,8 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),
             SLOT(showInfoViewMenu(QPoint)));
 
-    connect(ok, SIGNAL(itemChanged(QStandardItem*)),
-            this, SLOT(itemChanged(QStandardItem*)));
+//    connect(ok, SIGNAL(itemChanged(QStandardItem*)),
+//            this, SLOT(itemChanged(QStandardItem*)));
 }
 
 void InfoView::showInfoViewMenu(QPoint pt)

@@ -1,7 +1,7 @@
 
 //#include "dircompleter.h"
-#include "mainwindow.h"
-#include "global.h"
+#include "Main/mainwindow.h"
+#include "Main/global.h"
 //#include "sys/sysinfo"
 
 #define THUMB_SIZE_MIN	40
@@ -319,12 +319,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                      << getHorizontalScrollBarMax();
                      */
             if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
-
+                /*
                  qDebug() << objectName()
                      << ": Event Filter sending row =" << currentRow
                      << "horizontalScrollBarMax Qt vs Me"
                      << thumbView->horizontalScrollBar()->maximum()
-                     << thumbView->getHorizontalScrollBarMax();
+                     << thumbView->getHorizontalScrollBarMax();     */
 
                 thumbView->scrollToCurrent(currentRow);
             }
@@ -1576,7 +1576,7 @@ void MW::createActions()
     infoSelectAction->setObjectName("selectInfo");
     infoSelectAction->setCheckable(true);
     addAction(infoSelectAction);
-    connect(infoSelectAction, SIGNAL(triggered()), this, SLOT(selectShootingInfo()));
+//    connect(infoSelectAction, SIGNAL(triggered()), this, SLOT(selectShootingInfo()));
 
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setCheckable(true);
@@ -4642,6 +4642,16 @@ re-established when the application is re-opened.
     }
     setting->endGroup();
 
+    /* Token templates used for shooting information shown in ImageView */
+    setting->setValue("infoTemplateSelected", (int)infoTemplateSelected);
+    setting->beginGroup("InfoTokens");
+    QMapIterator<QString, QString> infoIter(infoTemplates);
+    while (infoIter.hasNext()) {
+        infoIter.next();
+        setting->setValue(infoIter.key(), infoIter.value());
+    }
+    setting->endGroup();
+
     /* External apps */
     setting->beginGroup("ExternalApps");
     setting->remove("");
@@ -4921,7 +4931,6 @@ Preferences are located in the prefdlg class and updated here.
     setting->endGroup();
 
     filenameTemplateSelected = setting->value("filenameTemplateSelected").toInt();
-    qDebug() << "MW::loadSettings:  filenameTemplateSelected =" << filenameTemplateSelected;
     setting->beginGroup("FilenameTokens");
     keys = setting->childKeys();
     for (int i = 0; i < keys.size(); ++i) {
@@ -4930,6 +4939,15 @@ Preferences are located in the prefdlg class and updated here.
     }
     setting->endGroup();
 
+    /* read info token templates */
+    infoTemplateSelected = setting->value("infoTemplateSelected").toInt();
+    setting->beginGroup("InfoTokens");
+    keys = setting->childKeys();
+    for (int i = 0; i < keys.size(); ++i) {
+        QString key = keys.at(i);
+        infoTemplates[key] = setting->value(key).toString();
+    }
+    setting->endGroup();
 
     /* read bookmarks */
     setting->beginGroup("Bookmarks");
@@ -5297,7 +5315,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetVerticalTitleBar);
         thumbsWrapAction->setChecked(false);
         thumbView->setWrapping(false);
-        qDebug() << "MW::setThumbDockFeatures   thumbView->setWrapping(false);";
+//        qDebug() << "MW::setThumbDockFeatures   thumbView->setWrapping(false);";
         thumbView->isTopOrBottomDock = true;
         // if thumbDock area changed then set dock height to thumb sizw
         if (!thumbDock->isFloating() && !asGridAction->isChecked()) {
@@ -6022,7 +6040,7 @@ imageView and visibility (true if either rating or color class set).
     QModelIndex idx = dm->sf->index(row, G::RatingColumn);
     rating = idx.data(Qt::EditRole).toString();
     imageView->classificationLabel->setText(rating);
-    if (labelColor == "" && rating == "") {
+    if (labelColor == "" && (rating == "" || rating == "0")) {
         imageView->classificationLabel->setVisible(false);
     }
     else {
@@ -6071,7 +6089,8 @@ set the color class for all the selected thumbs.
     if (labelColor == "Blue") imageView->classificationLabel->setBackgroundColor(G::labelBlueColor);
     if (labelColor == "Purple") imageView->classificationLabel->setBackgroundColor(G::labelPurpleColor);
 
-    if (labelColor == "" && rating == "") imageView->classificationLabel->setVisible(false);
+    if (labelColor == ""  && (rating == "" || rating == "0"))
+        imageView->classificationLabel->setVisible(false);
     else imageView->classificationLabel->setVisible(true);
 
     // update the data model
@@ -6110,7 +6129,8 @@ color class is called label.
     if (labelColor == "Green") imageView->classificationLabel->setBackgroundColor(G::labelGreenColor);
     if (labelColor == "Blue") imageView->classificationLabel->setBackgroundColor(G::labelBlueColor);
     if (labelColor == "Purple") imageView->classificationLabel->setBackgroundColor(G::labelPurpleColor);
-    if (labelColor == "" && rating == "") imageView->classificationLabel->setVisible(false);
+    if (labelColor == "" && (rating == "" || rating == "0"))
+            imageView->classificationLabel->setVisible(false);
     else imageView->classificationLabel->setVisible(true);
 
     if (G::mode == "Compare")
@@ -6677,20 +6697,26 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    QWindow *win = new QWindow;
-    QPoint loc = centralWidget->window()->geometry().center();
-    win->setScreen(qApp->screenAt(loc));
-    win->showFullScreen();
-    qDebug() << "MW::Test  Width =" << win->width() << "Height =" << win->height()
-             << qApp->screenAt(loc)->name();
-    win->close();
+    int i = 2387490285;
+    QString s = QLocale(QLocale::English).toString(i);
+    qDebug() << s;
+
+//    QLocale(QLocale::English, QLocale::Canada)
+
+    // this does not work on mac
+//    QWindow *win = new QWindow;
+//    QPoint loc = centralWidget->window()->geometry().center();
+//    win->setScreen(qApp->screenAt(loc));
+//    win->showFullScreen();
+//    qDebug() << "MW::Test  Width =" << win->width() << "Height =" << win->height()
+//             << qApp->screenAt(loc)->name();
+//    win->close();
 
 //    qDebug() << "MW::Test Screen " << qApp->screenAt(loc)->name();
 
 //    qDebug() << "MW::Test  loc =" << loc;
 
 
-//    qDebug() << "MW::Test  Width =" << width() << "Height =" << height();
 
     // QDateTime dt = QDateTime::fromSecsSinceEpoch(1507681529.3377);
     // qDebug() << dt;

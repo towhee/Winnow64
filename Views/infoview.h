@@ -7,7 +7,7 @@
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
 
-#include "global.h"
+#include "Main/global.h"
 
 class InfoView : public QTreeView
 {

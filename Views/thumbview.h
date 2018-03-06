@@ -2,8 +2,8 @@
 #define THUMBVIEW_H
 
 #include <QtWidgets>
-//#include "mainwindow.h"
-#include "global.h"
+//#include "Main/mainwindow.h"
+#include "Main/global.h"
 #include "File/fstree.h"
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"

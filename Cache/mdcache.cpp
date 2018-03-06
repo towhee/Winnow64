@@ -1,4 +1,4 @@
-#include "global.h"
+#include "Main/global.h"
 #include "Cache/mdcache.h"
 
 MetadataCache::MetadataCache(QObject *parent, DataModel *dm,

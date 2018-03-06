@@ -136,26 +136,26 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     dir = new QDir();
 
     fsModel = new FSModel(this, metadata, showImageCount);
+
 #ifdef Q_OS_LINIX
     fsModel->setRootPath("/home");
 #endif
 #ifdef Q_OS_WIN
     fsModel->setRootPath(fileSystemModel.myComputer().toString());
 #endif
-#ifdef Q_OS_MAC
-//    fsModel->setRootPath("/Volumes");
-      fsModel->setRootPath("");
-      setRootIsDecorated(false);
+#ifdef Q_OS_MACOS  // Q_OS_MACOS
+    fsModel->setRootPath("/Volumes");
+    fsModel->setRootPath("/Users");
 #endif
 
     fsFilter = new FSFilter(fsModel);
     fsFilter->setSourceModel(fsModel);
 
 //    fsModel->setFilter(QDir::AllDirs);
-    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
+//    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     setModel(fsFilter);
 
-    setRootIndex(fsModel->index(0, 0));
+    setRootIndex(fsFilter->index(0, 0));
 
     for (int i = 1; i <= 3; ++i) {
         hideColumn(i);

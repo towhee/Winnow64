@@ -4,7 +4,7 @@
 #include <QtWidgets>
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
-#include "global.h"
+#include "Main/global.h"
 
 
 class SortFilter : public QSortFilterProxyModel

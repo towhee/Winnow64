@@ -1,5 +1,5 @@
 #include "Image/imagealign.h"
-#include "global.h"
+#include "Main/global.h"
 #include <QDebug>
 
 ImageAlign::ImageAlign(int thumbSize, qreal targetPct, QObject *parent) : QObject(parent)

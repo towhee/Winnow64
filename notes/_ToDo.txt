@@ -1,6 +1,5 @@
 BUGS
 - D2H NEFs crash Winnow
-- On Mac slow to read metadata first time, after that it is fast
 - Sometimes thumbs do not paint until select
 - Image caching not always updating
 - Open with ... (doesn't work on macOS)
@@ -40,6 +39,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: On Mac slow to read metadata first time, after that it is fast
 - Done: Drag drop onto graphicsview (main image) not working
 - Done: Add Fuji support
 - Done: Add wrap to thumb context menu

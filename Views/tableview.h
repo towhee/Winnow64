@@ -2,7 +2,7 @@
 #define TABLEVIEW_H
 
 #include <QtWidgets>
-#include "global.h"
+#include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Views/thumbview.h"
 

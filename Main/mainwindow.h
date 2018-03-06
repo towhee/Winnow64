@@ -26,12 +26,12 @@
 #include "Datamodel/filters.h"
 #include "File/fstree.h"
 #include "Views/infoview.h"
-#include "mainwindow.h"
+#include "Main/mainwindow.h"
 #include "Cache/mdcache.h"
 #include "Metadata/metadata.h"
 #include "Utilities/popup.h"
 #include "prefdlg.h"
-#include "global.h"
+#include "Main/global.h"
 #include "Image/thumb.h"
 #include "Views/thumbview.h"
 #include "Views/tableview.h"
@@ -67,10 +67,13 @@ public:
     QSettings *setting;
     QMap<QString, QAction *> actionKeys;
     QMap<QString, QString> externalApps;
+
     QMap<QString, QString> pathTemplates;
     QMap<QString, QString> filenameTemplates;
     int pathTemplateSelected;
     int filenameTemplateSelected;
+    QMap<QString, QString> infoTemplates;
+    int currentInfoTemplate;
 
     QDockWidget *thumbDock;
 

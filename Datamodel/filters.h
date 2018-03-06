@@ -2,7 +2,7 @@
 #define FILTERS_H
 
 #include <QtWidgets>
-#include "global.h"
+#include "Main/global.h"
 
 class Filters : public QTreeWidget
 {

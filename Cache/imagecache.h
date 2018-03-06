@@ -3,7 +3,7 @@
 
 #include <QtWidgets>
 #include <QObject>
-#include "global.h"
+#include "Main/global.h"
 #include "Metadata/metadata.h"
 #include <algorithm>         // reqd to sort cache
 #include <QMutex>
