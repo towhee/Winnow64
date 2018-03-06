@@ -84,7 +84,8 @@ the example values contained in tokenMap.
     int i = 0;
     while (i < textDoc->characterCount()) {
         if (isToken(i + 1)) {
-            s.append(tokenMap[currentToken]);
+            if (currentToken == "⏎") s.append("\n");
+            else s.append(tokenMap[currentToken]);
             i = tokenEnd;
         }
         else {
@@ -234,6 +235,7 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
     ui->templatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
 
     // Populate token list
+    ui->tokenList->addItem("⏎");
     QMap<QString, QString>::iterator i;
     for (i = tokenMap.begin(); i != tokenMap.end(); ++i)
         ui->tokenList->addItem(i.key());
@@ -264,6 +266,11 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
             this, SLOT(updateExample(QString)));
     connect(ui->tokenEdit, SIGNAL(textChanged()),
             this, SLOT(updateTemplate()));
+
+    // when called from MW::selectShootingInfo stylesheet not inherited
+    QFile fStyle(":/qss/winnow.css");
+    fStyle.open(QIODevice::ReadOnly);
+    this->setStyleSheet(fStyle.readAll());
 }
 
 TokenDlg::~TokenDlg()
@@ -273,7 +280,7 @@ TokenDlg::~TokenDlg()
 
 void TokenDlg::updateExample(QString s)
 {
-    ui->resultLbl->setText(s);
+    ui->resultText->setText(s);
 }
 
 void TokenDlg::updateTemplate()
@@ -341,7 +348,6 @@ void TokenDlg::on_newBtn_clicked()
 
 void TokenDlg::on_renameBtn_clicked()
 {
-    bool ok;
     int row = ui->templatesCB->currentIndex();
     QString name = ui->templatesCB->currentText();
     QStringList existing = existingTemplates(row);
@@ -363,5 +369,4 @@ Update tokenEdit with the template token string stored in templatesMap
     QString key = ui->templatesCB->itemData(row, Qt::ToolTipRole).toString();
     if (templatesMap.contains(key))
         ui->tokenEdit->setText(templatesMap.value(key));
-
 }

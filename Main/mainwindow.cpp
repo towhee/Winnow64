@@ -1147,7 +1147,7 @@ void MW::createActions()
     ingestAction = new QAction(tr("Ingest picks"), this);
     ingestAction->setObjectName("ingest");
     addAction(ingestAction);
-    connect(ingestAction, SIGNAL(triggered()), this, SLOT(copyPicks()));
+    connect(ingestAction, SIGNAL(triggered()), this, SLOT(ingests()));
 
     // Place keeper for now
     renameAction = new QAction(tr("Rename selected images"), this);
@@ -1572,11 +1572,11 @@ void MW::createActions()
     addAction(infoVisibleAction);
     connect(infoVisibleAction, SIGNAL(triggered()), this, SLOT(setShootingInfoVisibility()));
 
-    infoSelectAction = new QAction(tr("Select Shooting Info"), this);
+    infoSelectAction = new QAction(tr("Select or edit Shooting Info"), this);
     infoSelectAction->setObjectName("selectInfo");
     infoSelectAction->setCheckable(true);
     addAction(infoSelectAction);
-//    connect(infoSelectAction, SIGNAL(triggered()), this, SLOT(selectShootingInfo()));
+    connect(infoSelectAction, SIGNAL(triggered()), this, SLOT(selectShootingInfo()));
 
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setCheckable(true);
@@ -1891,7 +1891,7 @@ void MW::createMenus()
         openWithMenu->addAction(appActions.at(i));
     }
     recentFoldersMenu = fileMenu->addMenu(tr("Recent folders"));
-    // add 10 dummy menu items for custom workspaces
+    // add maxRecentFolders dummy menu items for custom workspaces
     for (int i = 0; i < maxRecentFolders; i++) {
         recentFoldersMenu->addAction(recentFolderActions.at(i));
     }
@@ -2005,6 +2005,7 @@ void MW::createMenus()
     viewMenu->addAction(escapeFullScreenAction);
     viewMenu->addSeparator();
     viewMenu->addAction(infoVisibleAction);
+    viewMenu->addAction(infoSelectAction);
     viewMenu->addSeparator();
     viewMenu->addAction(zoomToAction);
     viewMenu->addAction(zoomInAction);
@@ -4643,7 +4644,7 @@ re-established when the application is re-opened.
     setting->endGroup();
 
     /* Token templates used for shooting information shown in ImageView */
-    setting->setValue("infoTemplateSelected", (int)infoTemplateSelected);
+    setting->setValue("infoTemplateSelected", (int)currentInfoTemplate);
     setting->beginGroup("InfoTokens");
     QMapIterator<QString, QString> infoIter(infoTemplates);
     while (infoIter.hasNext()) {
@@ -4940,7 +4941,7 @@ Preferences are located in the prefdlg class and updated here.
     setting->endGroup();
 
     /* read info token templates */
-    infoTemplateSelected = setting->value("infoTemplateSelected").toInt();
+    currentInfoTemplate = setting->value("currentInfoTemplate").toInt();
     setting->beginGroup("InfoTokens");
     keys = setting->childKeys();
     for (int i = 0; i < keys.size(); ++i) {
@@ -5598,6 +5599,14 @@ void MW::setCentralView()
     if (asCompareAction->isChecked()) compareDisplay();
 }
 
+void MW::selectShootingInfo()
+{
+    // "{Model} {FocalLength}  {ShutterSpeed} sec at f/{Aperture}, ISO {ISO}\n{Title}"
+    InfoString *infoString = new InfoString(this, metadata, dm, infoTemplates,
+                                            currentInfoTemplate);
+    infoString->editTemplates();
+}
+
 void MW::setShootingInfoVisibility() {
     {
     #ifdef ISDEBUG
@@ -5947,27 +5956,27 @@ QString MW::formatMemoryReqd(qulonglong bytes)
     return "More than TB";
 }
 
-void MW::copyPicks()
+void MW::ingests()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MW::copyPicks";
+    qDebug() << "MW::ingests";
     #endif
     }
     if (thumbView->isPick()) {
-        qDebug() << "MW::copyPicks"
+        qDebug() << "MW::ingests"
                  << "pathTemplateSelected =" << pathTemplateSelected
                  << "filenameTemplateSelected =" << filenameTemplateSelected;
         QFileInfoList imageList = thumbView->getPicks();
-        copyPickDlg = new CopyPickDlg(this, imageList, metadata,
+        ingestDlg = new IngestDlg(this, imageList, metadata,
              ingestRootFolder, pathTemplates, filenameTemplates,
              pathTemplateSelected, filenameTemplateSelected,
              autoIngestFolderPath);
-        connect(copyPickDlg, SIGNAL(updateIngestParameters(QString,bool)),
+        connect(ingestDlg, SIGNAL(updateIngestParameters(QString,bool)),
                 this, SLOT(setIngestRootFolder(QString,bool)));
-        copyPickDlg->exec();
-        delete copyPickDlg;
-        qDebug() << "MW::copyPicks"
+        ingestDlg->exec();
+        delete ingestDlg;
+        qDebug() << "MW::ingests"
                  << "pathTemplateSelected =" << pathTemplateSelected
                  << "filenameTemplateSelected =" << filenameTemplateSelected;
     }

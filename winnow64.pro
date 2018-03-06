@@ -11,7 +11,6 @@ QT += xmlpatterns
 HEADERS += \
     Dialogs/prefdlg.h \
     Dialogs/workspacedlg.h \
-    Dialogs/copypickdlg.h \
     Utilities/popup.h \
     Dialogs/tokendlg.h \
     Dialogs/zoomdlg.h \
@@ -43,10 +42,10 @@ HEADERS += \
     Cache/mdcache.h \
     Views/infostring.h \
     Main/global.h \
-    Main/mainwindow.h
+    Main/mainwindow.h \
+    Dialogs/ingestdlg.h
 
 SOURCES += \
-    Dialogs/copypickdlg.cpp \
     Utilities/popup.cpp \
     Dialogs/prefdlg.cpp \
     Dialogs/tokendlg.cpp \
@@ -79,7 +78,8 @@ SOURCES += \
     Views/infostring.cpp \
     Main/main.cpp \
     Main/global.cpp \
-    Main/mainwindow.cpp
+    Main/mainwindow.cpp \
+    Dialogs/ingestdlg.cpp
 
 OBJECTIVE_SOURCES += MacOS/macscale.mm
 

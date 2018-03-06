@@ -1,5 +1,5 @@
-#ifndef COPYPICKDLG_H
-#define COPYPICKDLG_H
+#ifndef INGESTDLG_H
+#define INGESTDLG_H
 
 #include <QtWidgets>
 #include "Views/thumbview.h"
@@ -8,15 +8,15 @@
 #include "ui_helpingest.h"
 
 namespace Ui {
-class CopyPickDlg;
+class IngestDlg;
 }
 
-class CopyPickDlg : public QDialog
+class IngestDlg : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit CopyPickDlg(QWidget *parent,
+    explicit IngestDlg(QWidget *parent,
                          QFileInfoList &imageList,
                          Metadata *metadata,
                          QString ingestRootFolder,
@@ -25,7 +25,7 @@ public:
                          int& pathTemplateSelected,
                          int& filenameTemplateSelected,
                          bool isAuto);
-    ~CopyPickDlg();
+    ~IngestDlg();
 
 private slots:
     void updateFolderPath();
@@ -46,7 +46,7 @@ signals:
     void updateIngestParameters(QString rootFolderPath, bool isAuto);
 
 private:
-    Ui::CopyPickDlg *ui;
+    Ui::IngestDlg *ui;
     void initTokenMap();
     bool isToken(QString tokenString, int pos);
     QString parseTokenString(QFileInfo info, QString tokenString);
@@ -94,4 +94,4 @@ private:
     int tokenStart, tokenEnd;
 };
 
-#endif // COPYPICKDLG_H
+#endif // INGESTDLG_H

@@ -1,12 +1,12 @@
 #include "infostring.h"
 
-InfoString::InfoString(QObject *parent,
+InfoString::InfoString(QWidget *parent,
                        Metadata *metadata,
                        DataModel *dm,
                        QMap<QString, QString> &infoTemplates,
                        int &currentInfoTemplate) :
 
-                       QObject(parent),
+                       QWidget(parent),
                        infoTemplates(infoTemplates),
                        currentInfoTemplate(currentInfoTemplate)
 {
@@ -17,15 +17,17 @@ InfoString::InfoString(QObject *parent,
 
 void InfoString::editTemplates()
 {
-    TokenDlg *tokenDlg = new TokenDlg(tokenMap, infoTemplatesMap, 0,
-                    "Shooting Info in Image View", title, this);
+    int index = 0;
+    QString currentKey = "";
+    TokenDlg *tokenDlg = new TokenDlg(tokenMap, infoTemplates, index,
+          currentKey, "Shooting Info in Image View");
     tokenDlg->exec();
 
 }
 
 void InfoString::initTokenMap()
 {
-    tokenMap["Newline"] = "";
+//    tokenMap["⏎"] = "";
     tokenMap["Path"] = "users/rory/Pictures/2018/2018-02/2018-02-18_Spring in Paris/018-02-18_0046.cr2";
     tokenMap["Filename"] = "2018-02-18_0046.cr2";
     tokenMap["Type"] = "CR2";
@@ -143,15 +145,14 @@ QString InfoString::tokenValue(QString &token,
                                QString &fPath,
                                QModelIndex &idx)
 {
-    QString x = "";
-    if (token == "Newline")
+    if (token == "⏎")
         return "\n";
     if (token == "Path")
         return fPath;
     if (token == "Filename")
         return info.fileName();
     if (token == "Type")
-        return x;
+        return info.suffix().toUpper();
     if (token == "Pick") {
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         return pickIdx.data(Qt::EditRole).toString();

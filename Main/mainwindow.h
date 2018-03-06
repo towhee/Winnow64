@@ -15,26 +15,26 @@
 #include "CoreGraphics/CoreGraphics.h"
 #endif
 
+#include "Main/global.h"
 #include "appdlg.h"
-#include "File/bookmarks.h"
-#include "Views/compareImages.h"
-#include "copypickdlg.h"
 #include "Datamodel/datamodel.h"
-//#include "dircompleter.h"
-#include "Cache/imagecache.h"
-#include "Views/imageview.h"
 #include "Datamodel/filters.h"
+#include "File/bookmarks.h"
 #include "File/fstree.h"
+#include "Views/compareImages.h"
+#include "Views/thumbview.h"
+#include "Views/tableview.h"
+#include "Views/imageview.h"
 #include "Views/infoview.h"
-#include "Main/mainwindow.h"
+#include "Views/infostring.h"
 #include "Cache/mdcache.h"
 #include "Metadata/metadata.h"
 #include "Utilities/popup.h"
-#include "prefdlg.h"
-#include "Main/global.h"
+#include "Cache/imagecache.h"
+#include "ingestdlg.h"
 #include "Image/thumb.h"
-#include "Views/thumbview.h"
-#include "Views/tableview.h"
+//#include "dircompleter.h"
+#include "prefdlg.h"
 #include "workspacedlg.h"
 #include "zoomdlg.h"
 
@@ -231,7 +231,7 @@ signals:
 private slots:
     void setShowImageCount();
     void about();
-    void copyPicks();
+    void ingests();
     void setRating();
     void setColorClass();
     void setRotation(int degrees);
@@ -282,6 +282,7 @@ private slots:
     void setThumbsFilter();
     void clearThumbsFilter();
     void setShootingInfoVisibility();
+    void selectShootingInfo();
     void setCacheStatusVisibility();
     void toggleThumbWrap();
     void togglePick();
@@ -596,7 +597,7 @@ private:
     ImageCache *imageCacheThread;
     Thumb *thumb;
     InfoView *infoView;
-    CopyPickDlg *copyPickDlg;
+    IngestDlg *ingestDlg;
     WorkspaceDlg *workspaceDlg;
     ZoomDlg *zoomDlg = 0;
     PopUp *popUp;
