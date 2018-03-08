@@ -14,7 +14,7 @@ void InfoString::editTemplates()
 {
     int index = getIndex();
     TokenDlg *tokenDlg = new TokenDlg(tokenMap, infoTemplates, index,
-          currentInfoTemplate, "Shooting Info in Image View");
+          currentInfoTemplate, "Shooting Info in Image View", this);
     tokenDlg->exec();
 }
 

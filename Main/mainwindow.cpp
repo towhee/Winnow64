@@ -2481,7 +2481,9 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
         infoString->infoTemplates[key] = setting->value(key).toString();
     }
     setting->endGroup();
-
+    if (!infoString->infoTemplates.contains(" Default"))
+        infoString->infoTemplates[" Default"] =
+        "{Model} {FocalLength}  {ShutterSpeed} at f/{Aperture}, ISO {ISO}\n{Title}";
 
     imageView = new ImageView(this,
                               centralWidget,
@@ -4656,6 +4658,7 @@ re-established when the application is re-opened.
     // save filename templates
     setting->setValue("filenameTemplateSelected", (int)filenameTemplateSelected);
     setting->beginGroup("FileNameTokens");
+    setting->remove("");
     QMapIterator<QString, QString> filenameIter(filenameTemplates);
     while (filenameIter.hasNext()) {
         filenameIter.next();
@@ -4666,6 +4669,7 @@ re-established when the application is re-opened.
     /* Token templates used for shooting information shown in ImageView */
     setting->setValue("currentInfoTemplate", infoString->currentInfoTemplate);
     setting->beginGroup("InfoTokens");
+    setting->remove("");
     QMapIterator<QString, QString> infoIter(infoString->infoTemplates);
     while (infoIter.hasNext()) {
         infoIter.next();
