@@ -5626,6 +5626,13 @@ void MW::setCentralView()
 void MW::selectShootingInfo()
 {
     infoString->editTemplates();
+    // display new info
+    QModelIndex idx = thumbView->currentIndex();
+    QString fPath = thumbView->getCurrentFilename();
+    QString sel = infoString->getCurrentInfoTemplate();
+    QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
+                                        fPath, idx);
+    imageView->moveShootingInfo(info);
 }
 
 void MW::setShootingInfoVisibility() {

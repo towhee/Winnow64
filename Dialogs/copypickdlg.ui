@@ -1060,10 +1060,10 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>480</x>
+     <x>470</x>
      <y>690</y>
-     <width>195</width>
-     <height>30</height>
+     <width>211</width>
+     <height>32</height>
     </rect>
    </property>
    <property name="toolTip">
@@ -1098,7 +1098,7 @@
        <string/>
       </property>
       <property name="text">
-       <string>Okay</string>
+       <string>Ingest</string>
       </property>
      </widget>
     </item>

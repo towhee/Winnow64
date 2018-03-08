@@ -20,10 +20,10 @@ void TokenList::mouseMoveEvent(QMouseEvent *event) {
         if (distance >= QApplication::startDragDistance())
             startDrag(Qt::CopyAction);
     }
-    QListWidget::mouseMoveEvent(event);
+//    QListWidget::mouseMoveEvent(event);
 }
 
-void TokenList::startDrag(Qt::DropActions /*supportedActions*/)
+void TokenList::startDrag(Qt::DropActions /* supportedActions */)
 {
     QString token = "{" + currentItem()->text() +"}";
 
@@ -39,7 +39,8 @@ void TokenList::startDrag(Qt::DropActions /*supportedActions*/)
     drag->setMimeData(data);
     drag->setPixmap(pixmap);
 
-    drag->exec(Qt::CopyAction | Qt::MoveAction);
+    drag->exec();
+//    Qt::DropAction dropAction = drag->exec(Qt::CopyAction);
 //    Qt::DropAction dropAction = drag->exec(Qt::CopyAction | Qt::MoveAction);
 }
 
@@ -242,11 +243,6 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
     setAcceptDrops(true);
     ui->templatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
     ui->templatesCB->setMaxCount(100);
-
-    // when called from MW::selectShootingInfo stylesheet not inherited
-    QFile fStyle(":/qss/winnow.css");
-    fStyle.open(QIODevice::ReadOnly);
-    this->setStyleSheet(fStyle.readAll());
 
     // Populate token list
 //    ui->tokenList->addItem("⏎");

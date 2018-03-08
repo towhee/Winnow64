@@ -226,6 +226,7 @@ public:
     QString getCopyFileNamePrefix(const QString &imageFileName);
 
     bool writeMetadata(const QString &imageFileName, QByteArray &buffer);
+    void setMetadata(const QString &imageFileName);
 
     bool okToReadXmp;
     bool readEssentialMetadata;
@@ -288,7 +289,6 @@ private:
     bool getDimensions(ulong jpgOffset);
     int getNewOrientation(int orientation, int rotation);
 
-    void setMetadata(const QString &imageFileName);
 
     QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
 

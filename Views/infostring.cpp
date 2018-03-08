@@ -154,6 +154,7 @@ setMetadata must be called first to set metadata variables for the current
 image.
 */
     QFileInfo info(fPath);
+    m->setMetadata(fPath);
     QString s;
     int tokenEnd;
     int i = 0;
@@ -176,8 +177,6 @@ QString InfoString::tokenValue(QString &token,
                                QString &fPath,
                                QModelIndex &idx)
 {
-    if (token == "⏎")
-        return "\n";
     if (token == "Path")
         return fPath;
     if (token == "Filename")

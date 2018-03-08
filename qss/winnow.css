@@ -153,6 +153,7 @@ QStackedWidget {
 }
 
 QListWidget {
+    background-color: rgb(77,77,77);
     selection-color: rgb(225,225,0);
     selection-background-color: rgb(85,85,85);
     border: 1px solid rgb(95,95,95);
@@ -332,6 +333,7 @@ QLineEdit:hover, QLineEdit:focus {
 /*PushButton must be before ComboBox*/
 QPushButton {
 /*    color: green;*/
+    background-color: rgb(77,77,77);
     border: 1px solid gray;
     border-radius: 2px;
     padding-left: 5px;
@@ -360,6 +362,7 @@ QPushButton:flat {
 }
 
 QComboBox {
+    background-color: rgb(77,77,77);
     border: 1px solid gray;
     selection-background-color: darkgray;
     border-radius: 2px;
@@ -421,7 +424,7 @@ QComboBox::down-arrow:on { /* shift the arrow when popup is open */
 /* NOTE - the spinbox style is "subclassed" in ZoomDlg, so any changes here
 should also be made there ...  */
 QSpinBox {
-    background-color: rgb(111,111,111);
+    background-color: rgb(77,77,77);
     border: 1px solid gray;
     selection-background-color: darkgray;
     border-radius: 2px;
@@ -442,9 +445,12 @@ QSpinBox::up-button, QSpinBox::down-button  {
     border-width: 0px;
 }
 
+QTextBrowser, QTextEdit {
+    background-color: rgb(77,77,77);
+    border: 1px solid gray;
+}
 
 QLineEdit {
-/*    background-color: rgb(111,111,111);  */
     background-color: rgb(77,77,77);
     border: 1px solid gray;
     margin-left: 5px;   /*Not sure why, but this is required*/

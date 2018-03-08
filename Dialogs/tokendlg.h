@@ -15,9 +15,10 @@ public:
 protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
+    void startDrag(Qt::DropActions /* supportedActions */) override;
 
 private:
-    void startDrag(Qt::DropActions) override;
+//    void startDrag(Qt::DropActions /* supportedActions */) override;
 //    Qt::DropAction supportedDropActions();
     QPoint startPos;
 };

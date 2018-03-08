@@ -2680,8 +2680,10 @@ bool Metadata::getDimensions(ulong jpgOffset)
         offset = get2(file.peek(2)) + file.pos();
     }
     file.seek(file.pos()+3);
-    width = get2(file.read(2));
     height = get2(file.read(2));
+    width = get2(file.read(2));
+//    width = get2(file.read(2));
+//    height = get2(file.read(2));
     order = order1;
     return true;
 }
