@@ -2,7 +2,7 @@
 #include "ui_appdlg.h"
 
 Appdlg::Appdlg(QMap<QString, QString>& externalApps, QWidget *parent)
-    : xApps(externalApps), QDialog(parent), ui(new Ui::Appdlg)
+    : QDialog(parent), ui(new Ui::Appdlg), xApps(externalApps)
 {
     ui->setupUi(this);
     QStringList hdrs;

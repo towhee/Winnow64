@@ -50,6 +50,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
             if (G::isThreadTrackingOn) track(fPath, err);
         }
     }
+    else success = false;
     return success;
 }
 

@@ -9,7 +9,7 @@ BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount)
     #endif
     }
     this->metadata = metadata;
-    this->showImageCount = true;// showImageCount;
+    this->showImageCount = showImageCount;
 
     fileFilters = new QStringList;
     fileFilters->clear();

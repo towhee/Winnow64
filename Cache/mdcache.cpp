@@ -183,7 +183,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
 //    qDebug() << "MetadataCache::loadMetadata    startRow ="
 //             << startRow
 //             << "  allMetadataLoaded =" << allMetadataLoaded;
-    int thumbCacheThreshold = 20;
+//    int thumbCacheThreshold = 20;
     int totRows = dm->rowCount();
     for (int row = startRow; row < totRows; ++row) {
         if (abort) {

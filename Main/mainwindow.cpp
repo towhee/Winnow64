@@ -1574,7 +1574,6 @@ void MW::createActions()
 
     infoSelectAction = new QAction(tr("Select or edit Shooting Info"), this);
     infoSelectAction->setObjectName("selectInfo");
-    infoSelectAction->setCheckable(true);
     addAction(infoSelectAction);
     connect(infoSelectAction, SIGNAL(triggered()), this, SLOT(selectShootingInfo()));
 
@@ -2470,7 +2469,26 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
     qDebug() << "MW::createImageView";
     #endif
     }
-    imageView = new ImageView(this, centralWidget, metadata, imageCacheThread, thumbView,
+     /* This is the info displayed on top of the image in loupe view. It is
+     dependent on template data stored in QSettings */
+    infoString = new InfoString(this, metadata, dm);
+
+    infoString->currentInfoTemplate = setting->value("currentInfoTemplate").toString();
+    setting->beginGroup("InfoTokens");
+    QStringList keys = setting->childKeys();
+    for (int i = 0; i < keys.size(); ++i) {
+        QString key = keys.at(i);
+        infoString->infoTemplates[key] = setting->value(key).toString();
+    }
+    setting->endGroup();
+
+
+    imageView = new ImageView(this,
+                              centralWidget,
+                              metadata,
+                              imageCacheThread,
+                              thumbView,
+                              infoString,
                               setting->value("isImageInfoVisible").toBool());
 
     connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
@@ -3904,7 +3922,8 @@ in the MW constructor and then edited here based on changes made in processdlg.
         i++;
     }
 
-    for (i; i < 10; i++) {
+    int ii = i;
+    for (i = ii; i < 10; i++) {
         appActions.at(i)->setVisible(false);
         appActions.at(i)->setText("");
     }
@@ -4034,6 +4053,7 @@ void MW::setPrefPage(int page)
 
 void MW::setRememberLastDir(bool prefRememberFolder)
 {
+    // rgh is this req'd
 }
 
 void MW::setMouseClickScroll(bool prefMouseClickScroll)
@@ -4644,9 +4664,9 @@ re-established when the application is re-opened.
     setting->endGroup();
 
     /* Token templates used for shooting information shown in ImageView */
-    setting->setValue("infoTemplateSelected", (int)currentInfoTemplate);
+    setting->setValue("currentInfoTemplate", infoString->currentInfoTemplate);
     setting->beginGroup("InfoTokens");
-    QMapIterator<QString, QString> infoIter(infoTemplates);
+    QMapIterator<QString, QString> infoIter(infoString->infoTemplates);
     while (infoIter.hasNext()) {
         infoIter.next();
         setting->setValue(infoIter.key(), infoIter.value());
@@ -4940,15 +4960,15 @@ Preferences are located in the prefdlg class and updated here.
     }
     setting->endGroup();
 
-    /* read info token templates */
-    currentInfoTemplate = setting->value("currentInfoTemplate").toInt();
-    setting->beginGroup("InfoTokens");
-    keys = setting->childKeys();
-    for (int i = 0; i < keys.size(); ++i) {
-        QString key = keys.at(i);
-        infoTemplates[key] = setting->value(key).toString();
-    }
-    setting->endGroup();
+    /* read info token templates moved to createImageView as is reqd early*/
+//    currentInfoTemplate = setting->value("currentInfoTemplate").toString();
+//    setting->beginGroup("InfoTokens");
+//    keys = setting->childKeys();
+//    for (int i = 0; i < keys.size(); ++i) {
+//        QString key = keys.at(i);
+//        infoTemplates[key] = setting->value(key).toString();
+//    }
+//    setting->endGroup();
 
     /* read bookmarks */
     setting->beginGroup("Bookmarks");
@@ -5601,9 +5621,6 @@ void MW::setCentralView()
 
 void MW::selectShootingInfo()
 {
-    // "{Model} {FocalLength}  {ShutterSpeed} sec at f/{Aperture}, ISO {ISO}\n{Title}"
-    InfoString *infoString = new InfoString(this, metadata, dm, infoTemplates,
-                                            currentInfoTemplate);
     infoString->editTemplates();
 }
 
@@ -6706,9 +6723,15 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    int i = 2387490285;
-    QString s = QLocale(QLocale::English).toString(i);
-    qDebug() << s;
+    QString fPath = thumbView->getCurrentFilename();
+    QModelIndex idx = thumbView->currentIndex();
+    QString current = infoString->currentInfoTemplate;
+    QString s = infoString->parseTokenString(infoString->infoTemplates[current], fPath, idx);
+    qDebug() << "MW::test " << current << s;
+
+//    int i = 2387490285;
+//    QString s = QLocale(QLocale::English).toString(i);
+//    qDebug() << s;
 
 //    QLocale(QLocale::English, QLocale::Canada)
 

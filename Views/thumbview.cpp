@@ -414,7 +414,7 @@ of images in the selected folder.
     QRect thumbViewRect = viewport()->rect();
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
-            QRect thumbRect = visualRect(dm->sf->index(row, 0));
+//            QRect thumbRect = visualRect(dm->sf->index(row, 0));
 //            qDebug() << "ThumbView::getFirstVisible  row =" << row
 //                     << "thumbRect =" << thumbRect
 //                     << "thumbViewRect =" << thumbViewRect;

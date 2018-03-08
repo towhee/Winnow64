@@ -20,9 +20,15 @@ Moving is accomplished by adjusting the viewport scrollbars.
 
  */
 
-ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata,
-                     ImageCache *imageCacheThread, ThumbView *thumbView,
-                     bool isShootingInfoVisible): QGraphicsView(centralWidget)
+ImageView::ImageView(QWidget *parent,
+                     QWidget *centralWidget,
+                     Metadata *metadata,
+                     ImageCache *imageCacheThread,
+                     ThumbView *thumbView,
+                     InfoString *infoString,
+                     bool isShootingInfoVisible) :
+
+                     QGraphicsView(centralWidget)
 {
     {
     #ifdef ISDEBUG
@@ -35,6 +41,7 @@ ImageView::ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata
     this->metadata = metadata;
     this->imageCacheThread = imageCacheThread;
     this->thumbView = thumbView;
+    this->infoString = infoString;
     pixmap = new Pixmap(this, metadata);
 
     scene = new QGraphicsScene();
@@ -208,8 +215,12 @@ to prevent jarring changes in perceived scale by the user.
         }
 
         // rgh change to tokenized approach
-        shootingInfo = metadata->getShootingInfo(currentImagePath) + "\n" +
-                metadata->getTitle(currentImagePath);
+//        shootingInfo = metadata->getShootingInfo(currentImagePath) + "\n" +
+//                metadata->getTitle(currentImagePath);
+        QModelIndex idx = thumbView->currentIndex();
+        QString current = infoString->getCurrentInfoTemplate();
+        shootingInfo = infoString->parseTokenString(infoString->infoTemplates[current],
+                                                    currentImagePath, idx);
 
         zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
         if (!firstImageLoaded) {
