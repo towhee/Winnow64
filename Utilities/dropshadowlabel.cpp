@@ -4,6 +4,12 @@
 
 DropShadowLabel::DropShadowLabel(QWidget *parent) : QLabel(parent)
 {
+//    QFont font;
+//    font.setBold(true);
+//    font.setFamily("Monaco");
+//    font.setPixelSize(24);
+//    setFont(font);
+
     setFont(QFont("Tahoma", 50));
 }
 
@@ -22,6 +28,11 @@ void DropShadowLabel::paintEvent(QPaintEvent* /*event*/)
 
     QRect rect1(0, 0, this->width() + 100, this->height() + 20);
     QRect rect2(2, 2, this->width() + 100, this->height() + 20);
+
+    QFont font = painter.font();
+//    font.setPixelSize(16);
+//    font.setBold(true);
+    painter.setFont(font);
 
     painter.setPen(Qt::black);
     painter.drawText(rect2, text());
