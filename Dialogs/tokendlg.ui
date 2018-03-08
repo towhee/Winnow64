@@ -238,7 +238,7 @@
     </rect>
    </property>
    <property name="styleSheet">
-    <string notr="true">background-color: rgb(66, 66, 66);</string>
+    <string notr="true"/>
    </property>
   </widget>
  </widget>
