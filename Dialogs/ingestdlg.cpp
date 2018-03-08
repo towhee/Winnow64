@@ -25,25 +25,25 @@ Files are copied to a destination based on building a file path consisting of:
 */
 
 IngestDlg::IngestDlg(QWidget *parent,
-                         QFileInfoList &imageList,
-                         Metadata *metadata,
-                         QString ingestRootFolder,
-                         QMap<QString, QString>& pathTemplates,
-                         QMap<QString, QString>& filenameTemplates,
-                         int& pathTemplateSelected,
-                         int& filenameTemplateSelected,
-                         bool isAuto) :
+                     QFileInfoList &imageList,
+                     Metadata *metadata,
+                     QString ingestRootFolder,
+                     QMap<QString, QString>& pathTemplates,
+                     QMap<QString, QString>& filenameTemplates,
+                     int& pathTemplateSelected,
+                     int& filenameTemplateSelected,
+                     bool isAuto) :
 
-                         QDialog(parent),
-                         pickList(imageList),
-                         metadata(metadata),
-                         rootFolderPath(ingestRootFolder),
-                         pathTemplatesMap(pathTemplates),
-                         filenameTemplatesMap(filenameTemplates),
-                         pathTemplateSelected(pathTemplateSelected),
-                         filenameTemplateSelected(filenameTemplateSelected),
-                         isAuto(isAuto),
-                         ui(new Ui::IngestDlg)
+                     QDialog(parent),
+                     ui(new Ui::IngestDlg),
+                     isAuto(isAuto),
+                     pickList(imageList),
+                     metadata(metadata),
+                     pathTemplatesMap(pathTemplates),
+                     filenameTemplatesMap(filenameTemplates),
+                     pathTemplateSelected(pathTemplateSelected),
+                     filenameTemplateSelected(filenameTemplateSelected),
+                     rootFolderPath(ingestRootFolder)
 {
     ui->setupUi(this);
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
@@ -265,7 +265,7 @@ bool IngestDlg::isToken(QString tokenString, int pos)
 
     // look forwards
     QString token;
-    int n = tokenString.length();
+//    int n = tokenString.length();
     for (int i = pos; i < tokenString.length(); i++) {
         ch = tokenString.at(i);
         if (ch == "}") {
@@ -585,7 +585,6 @@ void IngestDlg::on_filenameTemplatesBtn_clicked()
     // setup TokenDlg
     QString title = "Token Editor - Destination File Name";
     int index = ui->filenameTemplatesCB->currentIndex();
-    qDebug() << "filenameTemplatesCB  row =" << index;
     QString currentKey = ui->filenameTemplatesCB->currentText();
     TokenDlg *tokenDlg = new TokenDlg(tokenMap, filenameTemplatesMap, index,
                                       currentKey, title, this);

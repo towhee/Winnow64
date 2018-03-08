@@ -1,28 +1,59 @@
-#include "infostring.h"
+#include "Views/infostring.h"
 
-InfoString::InfoString(QWidget *parent,
-                       Metadata *metadata,
-                       DataModel *dm,
-                       QMap<QString, QString> &infoTemplates,
-                       int &currentInfoTemplate) :
-
-                       QWidget(parent),
-                       infoTemplates(infoTemplates),
-                       currentInfoTemplate(currentInfoTemplate)
+InfoString::InfoString(QWidget *parent, Metadata *metadata, DataModel *dm) :
+                       QWidget(parent)
 {
     this->dm = dm;
     m = metadata;
     initTokenMap();
+    infoTemplates[" Default"] = "{Model} {FocalLength}  {ShutterSpeed} at f/{Aperture}, ISO {ISO}\n{Title}";
+    // "{Model} {FocalLength}  {ShutterSpeed} sec at f/{Aperture}, ISO {ISO}\n{Title}"
 }
 
 void InfoString::editTemplates()
 {
-    int index = 0;
-    QString currentKey = "";
+    int index = getIndex();
     TokenDlg *tokenDlg = new TokenDlg(tokenMap, infoTemplates, index,
-          currentKey, "Shooting Info in Image View");
+          currentInfoTemplate, "Shooting Info in Image View");
     tokenDlg->exec();
+}
 
+int InfoString::getIndex()
+{
+/*
+The currentInfoTemplate index in the TokenDlg template combo.
+*/
+    QMap<QString, QString>::iterator i;
+    int index = 0;
+    for (i = infoTemplates.begin(); i != infoTemplates.end(); ++i) {
+       if (i.key() == currentInfoTemplate) return index;
+       index++;
+    }
+    return 0;
+}
+
+QString InfoString::getCurrentInfoTemplate(int index)
+{
+/*
+The currentInfoTemplate matching the index in the TokenDlg template combo
+*/
+    QMap<QString, QString>::iterator i;
+    int ii = 0;
+    for (i = infoTemplates.begin(); i != infoTemplates.end(); ++i) {
+       if (ii == index) return i.key();
+       ii++;
+    }
+    return 0;
+}
+
+//void InfoString::setCurrentInfoTemplate(QString &currentInfoTemplate)
+//{
+//    current = currentInfoTemplate;
+//}
+
+QString InfoString::getCurrentInfoTemplate()
+{
+    return currentInfoTemplate;
 }
 
 void InfoString::initTokenMap()
@@ -76,10 +107,11 @@ void InfoString::initTokenMap()
 bool InfoString::parseToken(QString &tokenString, int pos,
                             QString &token, int &tokenEnd)
 {
+    if (pos <= 0) return false;
+    if (pos >= tokenString.length()) return false;
     QChar ch = tokenString.at(pos);
     if (ch.unicode() == 8233) return false;  // Paragraph Separator
     if (ch == "{") return false;
-    if (pos == 0) return false;
 
     // look backwards
     bool foundPossibleTokenStart = false;
@@ -97,7 +129,6 @@ bool InfoString::parseToken(QString &tokenString, int pos,
     if (!foundPossibleTokenStart) return false;
 
     // look forwards
-    int n = tokenString.length();
     for (int i = pos; i < tokenString.length(); i++) {
         ch = tokenString.at(i);
         if (ch == "}") {
@@ -242,6 +273,7 @@ QString InfoString::tokenValue(QString &token,
         return m->email;
     if (token == "Url")
         return m->url;
+    return "";
 }
 
 

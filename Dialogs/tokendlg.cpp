@@ -18,12 +18,12 @@ void TokenList::mouseMoveEvent(QMouseEvent *event) {
     if (event->buttons() & Qt::LeftButton) {
         int distance = (event->pos() - startPos).manhattanLength();
         if (distance >= QApplication::startDragDistance())
-            startDrag();
+            startDrag(Qt::CopyAction);
     }
     QListWidget::mouseMoveEvent(event);
 }
 
-void TokenList::startDrag()
+void TokenList::startDrag(Qt::DropActions /*supportedActions*/)
 {
     QString token = "{" + currentItem()->text() +"}";
 
@@ -39,8 +39,14 @@ void TokenList::startDrag()
     drag->setMimeData(data);
     drag->setPixmap(pixmap);
 
-    Qt::DropAction dropAction = drag->exec(Qt::CopyAction | Qt::MoveAction);
+    drag->exec(Qt::CopyAction | Qt::MoveAction);
+//    Qt::DropAction dropAction = drag->exec(Qt::CopyAction | Qt::MoveAction);
 }
+
+//Qt::DropAction TokenList::supportedDropActions()
+//{
+//    return Qt::CopyAction;
+//}
 
 /*******************************************************************************
    TokenEdit Class
@@ -152,6 +158,7 @@ void TokenEdit::showEvent(QShowEvent *event)
     setTextColor(Qt::white);
     setStyleSheet(QStringLiteral("background-image: url(:/images/tokenBackground.png)"));
     parse();
+    event->accept();
 }
 
 void TokenEdit::selectToken(int position)
@@ -222,20 +229,27 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
                    QString &currentKey,
                    QString title,
                    QWidget *parent) :
-    tokenMap(tokenMap),
-    templatesMap(templatesMap),
-    index(index),
-    currentKey(currentKey),
-    QDialog(parent),
-    ui(new Ui::TokenDlg)
+
+                   QDialog(parent),
+                   ui(new Ui::TokenDlg),
+                   tokenMap(tokenMap),
+                   templatesMap(templatesMap),
+                   index(index),
+                   currentKey(currentKey)
 {
     ui->setupUi(this);
     setWindowTitle(title);
     setAcceptDrops(true);
     ui->templatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
+    ui->templatesCB->setMaxCount(100);
+
+    // when called from MW::selectShootingInfo stylesheet not inherited
+    QFile fStyle(":/qss/winnow.css");
+    fStyle.open(QIODevice::ReadOnly);
+    this->setStyleSheet(fStyle.readAll());
 
     // Populate token list
-    ui->tokenList->addItem("⏎");
+//    ui->tokenList->addItem("⏎");
     QMap<QString, QString>::iterator i;
     for (i = tokenMap.begin(); i != tokenMap.end(); ++i)
         ui->tokenList->addItem(i.key());
@@ -267,10 +281,6 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
     connect(ui->tokenEdit, SIGNAL(textChanged()),
             this, SLOT(updateTemplate()));
 
-    // when called from MW::selectShootingInfo stylesheet not inherited
-    QFile fStyle(":/qss/winnow.css");
-    fStyle.open(QIODevice::ReadOnly);
-    this->setStyleSheet(fStyle.readAll());
 }
 
 TokenDlg::~TokenDlg()

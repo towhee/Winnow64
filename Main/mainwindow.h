@@ -8,7 +8,7 @@
 #include <iomanip>
 
 #if defined(Q_OS_MAC)
-#include "macScale.h"
+//#include "macScale.h"
 #include <ApplicationServices/ApplicationServices.h>
 //#include <QtMacExtras>
 #include <CoreServices/CoreServices.h>
@@ -72,8 +72,8 @@ public:
     QMap<QString, QString> filenameTemplates;
     int pathTemplateSelected;
     int filenameTemplateSelected;
-    QMap<QString, QString> infoTemplates;
-    int currentInfoTemplate;
+//    QMap<QString, QString> infoTemplates;
+//    QString currentInfoTemplate;
 
     QDockWidget *thumbDock;
 
@@ -591,6 +591,7 @@ private:
     ThumbView *gridView;
     TableView *tableView;
     ImageView *imageView;
+    InfoString *infoString;
     QHeaderView *headerView;
     CompareImages *compareImages;
     MetadataCache *metadataCacheThread;

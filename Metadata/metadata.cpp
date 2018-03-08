@@ -2108,7 +2108,7 @@ metadata is written to buffer and the original image file is copied unchanged.
     bool useSidecar = sidecarFormats.contains(suffix);
 
     // new orientation
-    uint newOrientation = getNewOrientation(orientation, rotationDegrees);
+    int newOrientation = getNewOrientation(orientation, rotationDegrees);
 
     // has metadata been edited? ( _ is original data)
     bool ratingChanged = rating != _rating;
@@ -2400,8 +2400,8 @@ to the first IPTC data block so we can skip the search req'd if it was JPG.
         pasStrLen = (pasStrLen % 2) ? pasStrLen + 1: pasStrLen;
         file.seek(file.pos() + pasStrLen - 1);
         // read size of resource data
-        ulong resourceDataSize = get4(file.read(4));
-        qint64 endResourceData = file.pos() + resourceDataSize - 4;
+//        ulong resourceDataSize = get4(file.read(4));
+//        qint64 endResourceData = file.pos() + resourceDataSize - 4;
     }
 
     // read IPTC data blocks searching for title (0x05)
@@ -3517,8 +3517,8 @@ bool Metadata::formatTIF()
     if (get2(file.read(2)) != 42) return false;
 
     // read offset to first IFD
-    ulong ifdOffset = get4(file.read(4));
-    ulong nextIFDOffset = readIFD("IFD0", ifdOffset);
+//    ulong ifdOffset = get4(file.read(4));
+//    ulong nextIFDOffset = readIFD("IFD0", ifdOffset);
 
     // IFD0: *******************************************************************
 

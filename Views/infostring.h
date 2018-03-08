@@ -10,12 +10,15 @@ class InfoString : public QWidget
 {
     Q_OBJECT
 public:
-    explicit InfoString(QWidget *parent,
-                        Metadata *metadata,
-                        DataModel *dm,
-                        QMap<QString, QString> &infoTemplates,
-                        int &currentInfoTemplate);
+    explicit InfoString(QWidget *parent, Metadata *metadata, DataModel *dm);
     void editTemplates();
+//    void setCurrentInfoTemplate(QString &currentInfoTemplate);
+    QString getCurrentInfoTemplate();
+    QString parseTokenString(QString &tokenString, QString &fPath, QModelIndex &idx);
+
+    QMap<QString, QString> infoTemplates;
+    QString currentInfoTemplate;
+
 signals:
 
 public slots:
@@ -25,13 +28,11 @@ private:
     DataModel *dm;
     QMap<QString,QString> tokenMap;
 
-    QMap<QString, QString> &infoTemplates;
-    int &currentInfoTemplate;
-
     void initTokenMap();
     bool parseToken(QString &tokenString, int pos, QString &token, int &tokenEnd);
-    QString parseTokenString(QString &tokenString, QString &fPath, QModelIndex &idx);
     QString tokenValue(QString &tokenString, QFileInfo &info, QString &fPath, QModelIndex &idx);
+    int getIndex();
+    QString getCurrentInfoTemplate(int index);
 };
 
 #endif // INFOSTRING_H

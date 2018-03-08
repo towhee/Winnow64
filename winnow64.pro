@@ -14,8 +14,8 @@ HEADERS += \
     Utilities/popup.h \
     Dialogs/tokendlg.h \
     Dialogs/zoomdlg.h \
-    MacOS/macscale.h \
-    MacOS/macScale_p.h \
+#    MacOS/macscale.h \
+#    MacOS/macScale_p.h \
     Dialogs/appdlg.h \
     Dialogs/renamedlg.h \
     Metadata/metadata.h \
@@ -81,7 +81,7 @@ SOURCES += \
     Main/mainwindow.cpp \
     Dialogs/ingestdlg.cpp
 
-OBJECTIVE_SOURCES += MacOS/macscale.mm
+# OBJECTIVE_SOURCES += MacOS/macscale.mm
 
 FORMS += \
     Dialogs/renamedlg.ui \

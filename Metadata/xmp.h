@@ -34,7 +34,7 @@ private:
     ulong xmpmetaStart;             // offset from start of xmp segment
     ulong xmpmetaEnd;               // offset from start of xmp segment
     ulong xmpPacketEnd;             // offset from start of xmp segment
-    ulong xmpmetaRoom;              // xmpPacketEnd - xmpmetaStart
+    int xmpmetaRoom;                // xmpPacketEnd - xmpmetaStart
 
     QString assignmentMethod;       // brackets or equals
     QByteArray fileType;            // uppercase suffix

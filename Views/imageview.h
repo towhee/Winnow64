@@ -6,6 +6,7 @@
 #include "Metadata/metadata.h"
 #include "Cache/imagecache.h"
 #include "Views/thumbview.h"
+#include "Views/infostring.h"
 #include "Utilities/dropshadowlabel.h"
 #include "Utilities/circlelabel.h"
 #include "Image/pixmap.h"
@@ -15,8 +16,12 @@ class ImageView : public QGraphicsView
     Q_OBJECT
 
 public:
-    ImageView(QWidget *parent, QWidget *centralWidget, Metadata *metadata,
-              ImageCache *imageCacheThread, ThumbView *thumbView,
+    ImageView(QWidget *parent,
+              QWidget *centralWidget,
+              Metadata *metadata,
+              ImageCache *imageCacheThread,
+              ThumbView *thumbView,
+              InfoString *infoString,
               bool isShootingInfoVisible);
 
     qreal zoom;
@@ -83,6 +88,7 @@ private:
     Metadata *metadata;
     ImageCache *imageCacheThread;
     ThumbView *thumbView;
+    InfoString *infoString;
     Pixmap *pixmap;
     QImageReader imageReader;
     QLabel *imageLabel;

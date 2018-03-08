@@ -38,10 +38,10 @@ RenameDlg::RenameDlg(QString &name,
                      QString dlgTitle,
                      QString nameTitle,
                      QWidget *parent) :
-    name(name),
-    existingNames(existingNames),
     QDialog(parent),
-    ui(new Ui::RenameDlg)
+    ui(new Ui::RenameDlg),
+    name(name),
+    existingNames(existingNames)
 {
     ui->setupUi(this);
     setWindowTitle(dlgTitle);
