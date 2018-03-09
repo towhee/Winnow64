@@ -69,6 +69,9 @@ namespace G
     extern QColor labelBlueColor;
     extern QColor labelPurpleColor;
 
+    extern QStringList ratings;
+    extern QStringList labelColors;
+
     extern QString mode;
     extern QString lastThumbChangeEvent;
 
