@@ -3,7 +3,6 @@ BUGS
 - Sometimes thumbs do not paint until select
 - Image caching not always updating
 - Open with ... (doesn't work on macOS)
-- Caching thumbs is sometimes slow
 - Confirm tif metadata for focus stacks (app out msg)
 - Copy metadata item not working (was working before)
 - Toggle zoom wrong place when using preview size cached image
@@ -21,7 +20,6 @@ ENHANCEMENTS
 - add metadata performance options to preferences
 - Add current folder to bookmarks
 - Combine raw+jpg option
-- info label token builder
 - Get Sony image count, camera SN
 - Get actual monitor resolution for actualDevicePixelRatio calculation
 - Recent copy to folders in ingest dialog
@@ -39,6 +37,8 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Caching thumbs is sometimes slow
+- Done: info label token builder
 - Done: On Mac slow to read metadata first time, after that it is fast
 - Done: Drag drop onto graphicsview (main image) not working
 - Done: Add Fuji support
