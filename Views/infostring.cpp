@@ -5,7 +5,8 @@ InfoString::InfoString(QWidget *parent, Metadata *metadata, DataModel *dm) :
 {
     this->dm = dm;
     m = metadata;
-    initTokenMap();
+    initTokenList();
+    initExampleMap();
     infoTemplates[" Default"] = "{Model} {FocalLength}  {ShutterSpeed} at f/{Aperture}, ISO {ISO}\n{Title}";
     // "{Model} {FocalLength}  {ShutterSpeed} sec at f/{Aperture}, ISO {ISO}\n{Title}"
 }
@@ -13,7 +14,7 @@ InfoString::InfoString(QWidget *parent, Metadata *metadata, DataModel *dm) :
 void InfoString::editTemplates()
 {
     int index = getIndex();
-    TokenDlg *tokenDlg = new TokenDlg(tokenMap, infoTemplates, index,
+    TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, infoTemplates, index,
           currentInfoTemplate, "Shooting Info in Image View", this);
     tokenDlg->exec();
 }
@@ -56,52 +57,97 @@ QString InfoString::getCurrentInfoTemplate()
     return currentInfoTemplate;
 }
 
-void InfoString::initTokenMap()
+void InfoString::initTokenList()
 {
-//    tokenMap["⏎"] = "";
-    tokenMap["Path"] = "users/rory/Pictures/2018/2018-02/2018-02-18_Spring in Paris/018-02-18_0046.cr2";
-    tokenMap["Filename"] = "2018-02-18_0046.cr2";
-    tokenMap["Type"] = "CR2";
-    tokenMap["Pick"] = "True";
-    tokenMap["Rating"] = "4";
-    tokenMap["Label"] = "Red";
-    tokenMap["SizeBytes"] = "3,163,237";
-//    tokenMap["SizeMB"] = "3,163,237";
-    tokenMap["MPix"] = "5.18";
-    tokenMap["CreateDate"] = "2018-01-07 14:24:36";
-    tokenMap["YYYY"] = "2018";
-    tokenMap["YY"] = "18";
-    tokenMap["MONTH"] = "JANUARY";
-    tokenMap["Month"] = "January";
-    tokenMap["MON"] = "JAN";
-    tokenMap["Mon"] = "Jan";
-    tokenMap["MM"] = "01";
-    tokenMap["DAY"] = "WEDNESDAY";
-    tokenMap["Day"] = "Wednesday";
-    tokenMap["DDD"] = "WED";
-    tokenMap["Ddd"] = "Wed";
-    tokenMap["DD"] = "07";
-    tokenMap["HOUR"] = "14";
-    tokenMap["MINUTE"] = "24";
-    tokenMap["SECOND"] = "36";
-    tokenMap["ModifiedDate"] = "2018-03-14 07:55:12";
-    tokenMap["Dimensions"] = "5472x3648";
-    tokenMap["Width"] = "5472";
-    tokenMap["Height"] = "3648";
-    tokenMap["Rotation"] = "0";
-    tokenMap["Orientation"] = "0";
-    tokenMap["ShootingInfo"] = "Canon EOS-1D X Mark II 840mm 1/250 sec at f/5.6, ISO 400";
-    tokenMap["Aperture"] = "5.6";
-    tokenMap["ShutterSpeed"] = "1/250";
-    tokenMap["ISO"] = "400";
-    tokenMap["Model"] = "Canon EOS-1D X Mark II";
-    tokenMap["Lens"] = "EF600mm f/4 IS II + 1.4x III";
-    tokenMap["FocalLength"] = "840mm";
-    tokenMap["Creator"] = "Rory Hill";
-    tokenMap["Title"] = "Bald Eagle Snatching Fish";
-    tokenMap["Copyright"] = "2018 Rory Hill";
-    tokenMap["Email"] = "roryhill@something.com";
-    tokenMap["Url"] = "roryhill.somewhere.com";
+    tokens  << "Path"
+            << "Filename"
+            << "Type"
+            << "Pick"
+            << "Rating"
+            << "Label"
+            << "SizeBytes"
+            << "MPix"
+            << "CreateDate"
+            << "YYYY"
+            << "YY"
+            << "MONTH"
+            << "Month"
+            << "MON"
+            << "Mon"
+            << "MM"
+            << "DAY"
+            << "Day"
+            << "DDD"
+            << "Ddd"
+            << "DD"
+            << "HOUR"
+            << "MINUTE"
+            << "SECOND"
+            << "ModifiedDate"
+            << "Dimensions"
+            << "Width"
+            << "Height"
+            << "Rotation"
+            << "Orientation"
+            << "ShootingInfo"
+            << "Aperture"
+            << "ShutterSpeed"
+            << "ISO"
+            << "Model"
+            << "Lens"
+            << "FocalLength"
+            << "Creator"
+            << "Title"
+            << "Copyright"
+            << "Email"
+            << "Url"
+               ;
+}
+
+void InfoString::initExampleMap()
+{
+    exampleMap["Path"] = "users/rory/Pictures/2018/2018-02/2018-02-18_Spring in Paris/018-02-18_0046.cr2";
+    exampleMap["Filename"] = "2018-02-18_0046.cr2";
+    exampleMap["Type"] = "CR2";
+    exampleMap["Pick"] = "True";
+    exampleMap["Rating"] = "4";
+    exampleMap["Label"] = "Red";
+    exampleMap["SizeBytes"] = "3,163,237";
+    exampleMap["MPix"] = "5.18";
+    exampleMap["CreateDate"] = "2018-01-07 14:24:36";
+    exampleMap["YYYY"] = "2018";
+    exampleMap["YY"] = "18";
+    exampleMap["MONTH"] = "JANUARY";
+    exampleMap["Month"] = "January";
+    exampleMap["MON"] = "JAN";
+    exampleMap["Mon"] = "Jan";
+    exampleMap["MM"] = "01";
+    exampleMap["DAY"] = "WEDNESDAY";
+    exampleMap["Day"] = "Wednesday";
+    exampleMap["DDD"] = "WED";
+    exampleMap["Ddd"] = "Wed";
+    exampleMap["DD"] = "07";
+    exampleMap["HOUR"] = "14";
+    exampleMap["MINUTE"] = "24";
+    exampleMap["SECOND"] = "36";
+    exampleMap["ModifiedDate"] = "2018-03-14 07:55:12";
+    exampleMap["Dimensions"] = "5472x3648";
+    exampleMap["Width"] = "5472";
+    exampleMap["Height"] = "3648";
+    exampleMap["Rotation"] = "0";
+    exampleMap["Orientation"] = "0";
+    exampleMap["ShootingInfo"] = "Canon EOS-1D X Mark II 840mm 1/250 sec at f/5.6, ISO 400";
+    exampleMap["Aperture"] = "5.6";
+    exampleMap["ShutterSpeed"] = "1/250";
+    exampleMap["ISO"] = "400";
+    exampleMap["Model"] = "Canon EOS-1D X Mark II";
+    exampleMap["Lens"] = "EF600mm f/4 IS II + 1.4x III";
+    exampleMap["FocalLength"] = "840mm";
+    exampleMap["Creator"] = "Rory Hill";
+    exampleMap["Title"] = "Bald Eagle Snatching Fish";
+    exampleMap["Copyright"] = "2018 Rory Hill";
+    exampleMap["Email"] = "roryhill@something.com";
+    exampleMap["Url"] = "roryhill.somewhere.com";
 }
 
 bool InfoString::parseToken(QString &tokenString, int pos,
@@ -135,7 +181,7 @@ bool InfoString::parseToken(QString &tokenString, int pos,
             for (int j = startPos; j < i; j++) {
                 token.append(tokenString.at(j));
             }
-            if (tokenMap.contains(token)) {
+            if (exampleMap.contains(token)) {
 //                tokenStart = startPos - 1;
                 tokenEnd = i + 1;
                 return true;

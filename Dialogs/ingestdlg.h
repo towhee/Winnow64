@@ -47,7 +47,8 @@ signals:
 
 private:
     Ui::IngestDlg *ui;
-    void initTokenMap();
+    void initTokenList();
+    void initExampleMap();
     bool isToken(QString tokenString, int pos);
     QString parseTokenString(QFileInfo info, QString tokenString);
     void accept();
@@ -64,7 +65,8 @@ private:
     QFileSystemModel fileSystemModel;
     Metadata *metadata;
 
-    QMap<QString, QString> tokenMap;
+    QStringList tokens;
+    QMap<QString, QString> exampleMap;
     QMap<QString, QString> &pathTemplatesMap;
     QMap<QString, QString> &filenameTemplatesMap;
 

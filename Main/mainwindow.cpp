@@ -6036,7 +6036,7 @@ the rating for all the selected thumbs.
     if (s == "Rate5") rating = "5";
 
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
-    // check if selection is entirely rating already - if so set to no rating
+    // check if selection is entirely set to rating already - if so set to no rating
     bool isAlreadyRating = true;
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex idx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
@@ -6048,7 +6048,8 @@ the rating for all the selected thumbs.
 
     // set the image edits label
     imageView->classificationLabel->setText(rating);
-    if (labelColor == "" && rating == "") imageView->classificationLabel->setVisible(false);
+    if (labelColor == "" && rating == "")
+        imageView->classificationLabel->setVisible(false);
     else imageView->classificationLabel->setVisible(true);
 
     // set the rating
@@ -6080,12 +6081,12 @@ imageView and visibility (true if either rating or color class set).
     QModelIndex idx = dm->sf->index(row, G::RatingColumn);
     rating = idx.data(Qt::EditRole).toString();
     imageView->classificationLabel->setText(rating);
-    if (labelColor == "" && (rating == "" || rating == "0")) {
-        imageView->classificationLabel->setVisible(false);
-    }
-    else {
+
+    if (G::labelColors.contains(labelColor) || G::ratings.contains(rating))
         imageView->classificationLabel->setVisible(true);
-    }
+    else
+        imageView->classificationLabel->setVisible(false);
+
     if (G::mode == "Compare")
         compareImages->ratingColorClass(rating, labelColor, idx);
 }
@@ -6161,23 +6162,11 @@ color class is called label.
     #endif
     }
 
-//    labelColorHash["Red"] = G::labelRedColor;
-//    labelColorHash["Yellow"] = G::labelYellowColor;
-//    labelColorHash["Green"] = G::labelGreenColor;
-//    labelColorHash["Blue"] = G::labelBlueColor;
-//    labelColorHash["Purple"] = G::labelPurpleColor;
-
     int row = thumbView->currentIndex().row();
     QModelIndex idx = dm->sf->index(row, G::LabelColumn);
     labelColor = idx.data(Qt::EditRole).toString();
 
-    if (labelColorHash.contains(labelColor))
-        imageView->classificationLabel->setBackgroundColor(labelColorHash[labelColor]);
-    else
-        imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
-
     imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
-//    if (labelColor == "") imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
     if (labelColor == "Red") imageView->classificationLabel->setBackgroundColor(G::labelRedColor);
     if (labelColor == "Yellow") imageView->classificationLabel->setBackgroundColor(G::labelYellowColor);
     if (labelColor == "Green") imageView->classificationLabel->setBackgroundColor(G::labelGreenColor);
@@ -6188,9 +6177,6 @@ color class is called label.
         imageView->classificationLabel->setVisible(true);
     else
         imageView->classificationLabel->setVisible(false);
-//    if (labelColor == "" && (rating == "" || rating == "0"))
-//            imageView->classificationLabel->setVisible(false);
-//    else imageView->classificationLabel->setVisible(true);
 
     if (G::mode == "Compare")
         compareImages->ratingColorClass(rating, labelColor, idx);

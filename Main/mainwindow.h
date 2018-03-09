@@ -654,7 +654,6 @@ private:
 
     QString rating = "";
     QString labelColor = "";
-    QHash<QString,QColor> labelColorHash;
 
     void createDocks();
     void updateState();
