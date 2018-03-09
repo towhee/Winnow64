@@ -270,14 +270,19 @@ textRect         = a rectangle below itemRect
     painter->drawRoundedRect(itemRect, 8, 8);
 
     QColor labelColorToUse;
-    if((rating != "" && rating != "0") || labelColor != "") {
+
+    if (G::labelColors.contains(labelColor) || G::ratings.contains(rating)) {
+//        if((rating != "" && rating != "0") || labelColor != "") {
         // ratings/label color
-        if (labelColor == "") labelColorToUse = G::labelNoneColor;
-        if (labelColor == "Red") labelColorToUse = G::labelRedColor;
-        if (labelColor == "Yellow") labelColorToUse = G::labelYellowColor;
-        if (labelColor == "Green") labelColorToUse = G::labelGreenColor;
-        if (labelColor == "Blue") labelColorToUse = G::labelBlueColor;
-        if (labelColor == "Purple") labelColorToUse = G::labelPurpleColor;
+//        if (labelColor == "") labelColorToUse = G::labelNoneColor;
+        if (G::labelColors.contains(labelColor)) {
+            if (labelColor == "Red") labelColorToUse = G::labelRedColor;
+            if (labelColor == "Yellow") labelColorToUse = G::labelYellowColor;
+            if (labelColor == "Green") labelColorToUse = G::labelGreenColor;
+            if (labelColor == "Blue") labelColorToUse = G::labelBlueColor;
+            if (labelColor == "Purple") labelColorToUse = G::labelPurpleColor;
+        }
+        else labelColorToUse = G::labelNoneColor;
         painter->setBrush(labelColorToUse);
         QPen ratingPen(labelColorToUse);
         ratingPen.setWidth(0);

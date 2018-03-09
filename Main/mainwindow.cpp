@@ -51,6 +51,9 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     isDragDrop = false;
     setAcceptDrops(true);
 
+    G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
+    G::ratings << "1" << "2" << "3" << "4" << "5";
+
     // platform specific settings
     setupPlatform();
 
@@ -6157,18 +6160,37 @@ color class is called label.
     qDebug() << "MW::updateColorClass";
     #endif
     }
+
+//    labelColorHash["Red"] = G::labelRedColor;
+//    labelColorHash["Yellow"] = G::labelYellowColor;
+//    labelColorHash["Green"] = G::labelGreenColor;
+//    labelColorHash["Blue"] = G::labelBlueColor;
+//    labelColorHash["Purple"] = G::labelPurpleColor;
+
     int row = thumbView->currentIndex().row();
     QModelIndex idx = dm->sf->index(row, G::LabelColumn);
     labelColor = idx.data(Qt::EditRole).toString();
-    if (labelColor == "") imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
+
+    if (labelColorHash.contains(labelColor))
+        imageView->classificationLabel->setBackgroundColor(labelColorHash[labelColor]);
+    else
+        imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
+
+    imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
+//    if (labelColor == "") imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
     if (labelColor == "Red") imageView->classificationLabel->setBackgroundColor(G::labelRedColor);
     if (labelColor == "Yellow") imageView->classificationLabel->setBackgroundColor(G::labelYellowColor);
     if (labelColor == "Green") imageView->classificationLabel->setBackgroundColor(G::labelGreenColor);
     if (labelColor == "Blue") imageView->classificationLabel->setBackgroundColor(G::labelBlueColor);
     if (labelColor == "Purple") imageView->classificationLabel->setBackgroundColor(G::labelPurpleColor);
-    if (labelColor == "" && (rating == "" || rating == "0"))
-            imageView->classificationLabel->setVisible(false);
-    else imageView->classificationLabel->setVisible(true);
+
+    if (G::labelColors.contains(labelColor) || G::ratings.contains(rating))
+        imageView->classificationLabel->setVisible(true);
+    else
+        imageView->classificationLabel->setVisible(false);
+//    if (labelColor == "" && (rating == "" || rating == "0"))
+//            imageView->classificationLabel->setVisible(false);
+//    else imageView->classificationLabel->setVisible(true);
 
     if (G::mode == "Compare")
         compareImages->ratingColorClass(rating, labelColor, idx);
