@@ -272,9 +272,6 @@ textRect         = a rectangle below itemRect
     QColor labelColorToUse;
 
     if (G::labelColors.contains(labelColor) || G::ratings.contains(rating)) {
-//        if((rating != "" && rating != "0") || labelColor != "") {
-        // ratings/label color
-//        if (labelColor == "") labelColorToUse = G::labelNoneColor;
         if (G::labelColors.contains(labelColor)) {
             if (labelColor == "Red") labelColorToUse = G::labelRedColor;
             if (labelColor == "Yellow") labelColorToUse = G::labelYellowColor;

@@ -26,9 +26,11 @@ public slots:
 private:
     Metadata *m;
     DataModel *dm;
-    QMap<QString,QString> tokenMap;
+    QStringList tokens;
+    QMap<QString,QString> exampleMap;
 
-    void initTokenMap();
+    void initTokenList();
+    void initExampleMap();
     bool parseToken(QString &tokenString, int pos, QString &token, int &tokenEnd);
     QString tokenValue(QString &tokenString, QFileInfo &info, QString &fPath, QModelIndex &idx);
     int getIndex();

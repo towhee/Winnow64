@@ -148,7 +148,7 @@ public:
     QString fPath;
     QString err;
 
-    QMap<QString, QString> tokenMap;
+//    QMap<QString, QString> exampleMap;
 
     QStringList rawFormats;
     QStringList sidecarFormats;

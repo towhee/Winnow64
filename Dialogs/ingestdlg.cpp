@@ -64,7 +64,8 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->rootFolderLabel->setToolTip(ui->rootFolderLabel->text());
 
     // initialize templates and tokens
-    initTokenMap();
+    initTokenList();
+    initExampleMap();
     QMap<QString, QString>::iterator i;
     if (pathTemplatesMap.count() == 0) {
         pathTemplatesMap["YYYY̸YYMM̸YYYY-MM-DD"] = "{YYYY}/{YYYY}{MM}/{YYYY}-{MM}-{DD}";
@@ -272,7 +273,7 @@ bool IngestDlg::isToken(QString tokenString, int pos)
             for (int j = startPos; j < i; j++) {
                 token.append(tokenString.at(j));
             }
-            if (tokenMap.contains(token)) {
+            if (exampleMap.contains(token)) {
                 currentToken = token;
                 tokenStart = startPos - 1;
                 tokenEnd = i + 1;
@@ -500,41 +501,80 @@ void IngestDlg::on_autoRadio_toggled(bool checked)
     emit updateIngestParameters(rootFolderPath, isAuto);
 }
 
-void IngestDlg::initTokenMap()
+void IngestDlg::initTokenList()
 {
-    qDebug() << "IngestDlg::initTokenMap";
-    tokenMap["YYYY"] = "2018";
-    tokenMap["YY"] = "18";
-    tokenMap["MONTH"] = "JANUARY";
-    tokenMap["Month"] = "January";
-    tokenMap["MON"] = "JAN";
-    tokenMap["Mon"] = "Jan";
-    tokenMap["MM"] = "01";
-    tokenMap["DAY"] = "WEDNESDAY";
-    tokenMap["Day"] = "Wednesday";
-    tokenMap["DDD"] = "WED";
-    tokenMap["Ddd"] = "Wed";
-    tokenMap["DD"] = "07";
-    tokenMap["HOUR"] = "08";
-    tokenMap["MINUTE"] = "32";
-    tokenMap["SECOND"] = "45";
-    tokenMap["TITLE"] = "Hill_Wedding";
-    tokenMap["CREATOR"] = "Rory Hill";
-    tokenMap["COPYRIGHT"] = "2018 Rory Hill";
-    tokenMap["ORIGINAL FILENAME"] = "_C8I0024";
-    tokenMap["MAKE"] = "Canon";
-    tokenMap["MODEL"] = "Canon EOS-1D X Mark II";
-    tokenMap["DIMENSIONS"] = "5472x3648";
-    tokenMap["SHUTTER SPEED"] = "1/1000 sec";
-    tokenMap["APERTURE"] = "f/5.6";
-    tokenMap["ISO"] = "1600";
-    tokenMap["FOCAL LENGTH"] = "840 mm";
-    tokenMap["XX"] = "01";
-    tokenMap["XXX"] = "001";
-    tokenMap["XXXX"] = "0001";
-    tokenMap["XXXXX"] = "00001";
-    tokenMap["XXXXXX"] = "000001";
-    tokenMap["XXXXXXX"] = "0000001";
+/*
+The list of tokens in the token editor will appear in this order.
+*/
+    tokens  << "ORIGINAL FILENAME"
+            << "YYYY"
+            << "YY"
+            << "MONTH"
+            << "Month"
+            << "MON"
+            << "Mon"
+            << "MM"
+            << "DAY"
+            << "Day"
+            << "DDD"
+            << "Ddd"
+            << "DD"
+            << "HOUR"
+            << "MINUTE"
+            << "SECOND"
+            << "TITLE"
+            << "CREATOR"
+            << "COPYRIGHT"
+            << "MAKE"
+            << "MODEL"
+            << "DIMENSIONS"
+            << "SHUTTER SPEED"
+            << "APERTURE"
+            << "ISO"
+            << "FOCAL LENGTH"
+            << "XX"
+            << "XXX"
+            << "XXXX"
+            << "XXXXX"
+            << "XXXXXX"
+            << "XXXXXXX"
+               ;
+}
+
+void IngestDlg::initExampleMap()
+{
+    exampleMap["ORIGINAL FILENAME"] = "_C8I0024";
+    exampleMap["YYYY"] = "2018";
+    exampleMap["YY"] = "18";
+    exampleMap["MONTH"] = "JANUARY";
+    exampleMap["Month"] = "January";
+    exampleMap["MON"] = "JAN";
+    exampleMap["Mon"] = "Jan";
+    exampleMap["MM"] = "01";
+    exampleMap["DAY"] = "WEDNESDAY";
+    exampleMap["Day"] = "Wednesday";
+    exampleMap["DDD"] = "WED";
+    exampleMap["Ddd"] = "Wed";
+    exampleMap["DD"] = "07";
+    exampleMap["HOUR"] = "08";
+    exampleMap["MINUTE"] = "32";
+    exampleMap["SECOND"] = "45";
+    exampleMap["TITLE"] = "Hill_Wedding";
+    exampleMap["CREATOR"] = "Rory Hill";
+    exampleMap["COPYRIGHT"] = "2018 Rory Hill";
+    exampleMap["MAKE"] = "Canon";
+    exampleMap["MODEL"] = "Canon EOS-1D X Mark II";
+    exampleMap["DIMENSIONS"] = "5472x3648";
+    exampleMap["SHUTTER SPEED"] = "1/1000 sec";
+    exampleMap["APERTURE"] = "f/5.6";
+    exampleMap["ISO"] = "1600";
+    exampleMap["FOCAL LENGTH"] = "840 mm";
+    exampleMap["XX"] = "01";
+    exampleMap["XXX"] = "001";
+    exampleMap["XXXX"] = "0001";
+    exampleMap["XXXXX"] = "00001";
+    exampleMap["XXXXXX"] = "000001";
+    exampleMap["XXXXXXX"] = "0000001";
 }
 
 void IngestDlg::on_pathTemplatesCB_currentIndexChanged(const QString &arg1)
@@ -563,7 +603,7 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
     int index = ui->pathTemplatesCB->currentIndex();
     qDebug() << "on_pathTemplatesBtn_clicked  row =" << index;
     QString currentKey = ui->pathTemplatesCB->currentText();
-    TokenDlg *tokenDlg = new TokenDlg(tokenMap, pathTemplatesMap, index,
+    TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, pathTemplatesMap, index,
                                       currentKey, title, this);
     tokenDlg->exec();
 
@@ -586,7 +626,7 @@ void IngestDlg::on_filenameTemplatesBtn_clicked()
     QString title = "Token Editor - Destination File Name";
     int index = ui->filenameTemplatesCB->currentIndex();
     QString currentKey = ui->filenameTemplatesCB->currentText();
-    TokenDlg *tokenDlg = new TokenDlg(tokenMap, filenameTemplatesMap, index,
+    TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, filenameTemplatesMap, index,
                                       currentKey, title, this);
     tokenDlg->exec();
 

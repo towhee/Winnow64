@@ -30,7 +30,7 @@ class TokenEdit : public QTextEdit
 public:
     explicit TokenEdit(QWidget *parent = nullptr);
     QStringList tokenList;
-    QMap<QString, QString> tokenMap;
+    QMap<QString, QString> exampleMap;
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -68,7 +68,8 @@ class TokenDlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit TokenDlg(QMap<QString, QString> &tokenMap,
+    explicit TokenDlg(QStringList &tokens,
+                      QMap<QString, QString> &exampleMap,
                       QMap<QString, QString> &templatesMap,
                       int &index,
                       QString &currentKey,
@@ -89,7 +90,7 @@ private slots:
 
 private:
     Ui::TokenDlg *ui;
-    QMap<QString, QString>& tokenMap;
+    QMap<QString, QString>& exampleMap;
     QMap<QString, QString>& templatesMap;
     int &index;
     QString &currentKey;

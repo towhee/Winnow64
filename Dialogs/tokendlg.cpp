@@ -55,16 +55,16 @@ void TokenList::startDrag(Qt::DropActions /* supportedActions */)
 
 /* TokenEdit is a subclass of QTextEdit to manage tokenized text. It tokenizes
 dragged text in insertFromMimeData and has a parse function to use the tokens
-to look up corresponding metadata.  The keys in tokenMap are the available
-tokens, while the values in tokenMap are example metadata to show an example
+to look up corresponding metadata.  The keys in exampleMap are the available
+tokens, while the values in exampleMap are example metadata to show an example
 result as the template string is constructed.
 
-Some tokenMap items:
+Some exampleMap items:
 
-    tokenMap["YYYY"] = "2018";
-    tokenMap["YY"] = "18";
-    tokenMap["MONTH"] = "JANUARY";
-    tokenMap["Month"] = "January";
+    exampleMap["YYYY"] = "2018";
+    exampleMap["YY"] = "18";
+    exampleMap["MONTH"] = "JANUARY";
+    exampleMap["Month"] = "January";
 
 */
 
@@ -85,14 +85,14 @@ QString TokenEdit::parse()
 {
 /*
 Convert the token string into the metadata it represents. In this case, using
-the example values contained in tokenMap.
+the example values contained in exampleMap.
 */
     QString s;
     int i = 0;
     while (i < textDoc->characterCount()) {
         if (isToken(i + 1)) {
             if (currentToken == "⏎") s.append("\n");
-            else s.append(tokenMap[currentToken]);
+            else s.append(exampleMap[currentToken]);
             i = tokenEnd;
         }
         else {
@@ -142,7 +142,7 @@ removes the entire selection which removes the token.
             for (int j = startPos; j < i; j++) {
                 token.append(textDoc->characterAt(j));
             }
-            if (tokenMap.contains(token)) {
+            if (exampleMap.contains(token)) {
                 currentToken = token;
                 tokenStart = startPos - 1;
                 tokenEnd = i + 1;
@@ -224,7 +224,8 @@ void TokenEdit::insertFromMimeData(const QMimeData *source)
    TokenDlg Class
 *******************************************************************************/
 
-TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
+TokenDlg::TokenDlg(QStringList &tokens,
+                   QMap<QString, QString> &exampleMap,
                    QMap<QString, QString> &templatesMap,
                    int &index,
                    QString &currentKey,
@@ -233,7 +234,7 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
 
                    QDialog(parent),
                    ui(new Ui::TokenDlg),
-                   tokenMap(tokenMap),
+                   exampleMap(exampleMap),
                    templatesMap(templatesMap),
                    index(index),
                    currentKey(currentKey)
@@ -245,10 +246,12 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
     ui->templatesCB->setMaxCount(100);
 
     // Populate token list
-//    ui->tokenList->addItem("⏎");
-    QMap<QString, QString>::iterator i;
-    for (i = tokenMap.begin(); i != tokenMap.end(); ++i)
-        ui->tokenList->addItem(i.key());
+    for (const auto &i : tokens)
+        ui->tokenList->addItem(i);
+
+//    QMap<QString, QString>::iterator i;
+//    for (i = exampleMap.begin(); i != exampleMap.end(); ++i)
+//        ui->tokenList->addItem(i.key());
 
     /* The template token data is stored in a QMap and its keys are used to
     populate the templateCB dropdown. The values are shown in tokenEdit. Since
@@ -258,6 +261,7 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
     tooltips. When the dialog closes via the Ok button the QMap is updated to
     match any changes made to templatesCB and tokenEdit. */
     int row = 0;
+    QMap<QString, QString>::iterator i;
     for (i = templatesMap.begin(); i != templatesMap.end(); ++i) {
         ui->templatesCB->addItem(i.key());
         ui->templatesCB->setItemData(row, i.key(), Qt::ToolTipRole);
@@ -270,7 +274,7 @@ TokenDlg::TokenDlg(QMap<QString, QString> &tokenMap,
     ui->tokenList->setDragEnabled(true);
     ui->tokenList->setSelectionMode(QAbstractItemView::SingleSelection);
 
-    ui->tokenEdit->tokenMap = tokenMap;
+    ui->tokenEdit->exampleMap = exampleMap;
 
     connect(ui->tokenEdit, SIGNAL(parseUpdated(QString)),
             this, SLOT(updateExample(QString)));
