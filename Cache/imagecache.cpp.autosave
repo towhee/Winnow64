@@ -913,10 +913,6 @@ void ImageCache::run()
         if (!toCache.isEmpty()) toCache.removeFirst();
         cache.currMB = getImCacheSize();
         cacheStatus();
-        // could not load pixmap, remove from toCache
-//        else {
-
-//        }
         prevFileName = fPath;
     }
     checkForOrphans();

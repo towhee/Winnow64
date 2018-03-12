@@ -2,6 +2,26 @@
 #include "ui_tokendlg.h"
 #include <QDebug>
 
+/*
+This group of classes provides a tool to tokenize a string.
+
+For example a date:  2018-03-17 cab be deconstructed into
+
+{YYYY}-{MM}-{DD} where the year, month and day will be substituted from file
+metadata.
+
+Classes:
+
+TokenList = a dragable list of all available tokens.
+
+TokenEdit = a subclassed QTestEdit that accepts drops and treats tokens as
+characters (the cursor only selects the entire token, not individual char).
+
+TokenDlg = a dialog that houses the token editor.
+
+
+*/
+
 /*******************************************************************************
    TokenList Class
 *******************************************************************************/
@@ -20,7 +40,6 @@ void TokenList::mouseMoveEvent(QMouseEvent *event) {
         if (distance >= QApplication::startDragDistance())
             startDrag(Qt::CopyAction);
     }
-//    QListWidget::mouseMoveEvent(event);
 }
 
 void TokenList::startDrag(Qt::DropActions /* supportedActions */)
@@ -40,14 +59,7 @@ void TokenList::startDrag(Qt::DropActions /* supportedActions */)
     drag->setPixmap(pixmap);
 
     drag->exec();
-//    Qt::DropAction dropAction = drag->exec(Qt::CopyAction);
-//    Qt::DropAction dropAction = drag->exec(Qt::CopyAction | Qt::MoveAction);
 }
-
-//Qt::DropAction TokenList::supportedDropActions()
-//{
-//    return Qt::CopyAction;
-//}
 
 /*******************************************************************************
    TokenEdit Class
@@ -155,6 +167,9 @@ removes the entire selection which removes the token.
 
 void TokenEdit::showEvent(QShowEvent *event)
 {
+/*
+These actions must be run after the dialog constructor is finished.
+*/
     tokenFormat.setForeground(QColor(Qt::white));
     setTextColor(Qt::white);
     setStyleSheet(QStringLiteral("background-image: url(:/images/tokenBackground.png)"));
@@ -248,10 +263,6 @@ TokenDlg::TokenDlg(QStringList &tokens,
     // Populate token list
     for (const auto &i : tokens)
         ui->tokenList->addItem(i);
-
-//    QMap<QString, QString>::iterator i;
-//    for (i = exampleMap.begin(); i != exampleMap.end(); ++i)
-//        ui->tokenList->addItem(i.key());
 
     /* The template token data is stored in a QMap and its keys are used to
     populate the templateCB dropdown. The values are shown in tokenEdit. Since
@@ -358,6 +369,9 @@ void TokenDlg::on_newBtn_clicked()
 
 void TokenDlg::on_renameBtn_clicked()
 {
+/*
+As noted in on_okBtn_clicked, renaming the template changes the QMap key.
+*/
     int row = ui->templatesCB->currentIndex();
     QString name = ui->templatesCB->currentText();
     QStringList existing = existingTemplates(row);
