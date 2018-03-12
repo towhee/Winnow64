@@ -22,6 +22,9 @@ Files are copied to a destination based on building a file path consisting of:
     folderPath:             ie "E:/2018/201802/2018-02-08 Rory birthday/"
         = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
         = the copy to destination
+
+    The strings fromRootToBaseFolder and the fileBaseName can be tokenized in TokenDlg,
+    allowing the user to automate the construction of the entire destination file path.
 */
 
 IngestDlg::IngestDlg(QWidget *parent,

@@ -2507,7 +2507,7 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
     }
     ulong pos;
     QString tagDescription;
-    for (int i=0; i<tags; i++){
+    for (int i = 0; i < tags; i++){
 //        if (report) pos = QString::number(file.pos(), 16).toUpper();
         pos = file.pos();
         tagId = get2(file.read(2));
@@ -2705,18 +2705,6 @@ void Metadata::formatNikon()
     // Nikon does not chaim IFDs
     readIFD("IFD0", offsetIfd0);
 
-/*
-    // test working
-    QHashIterator<uint, IFDData> i(ifdDataHash);
-    while (i.hasNext()) {
-        i.next();
-        qDebug() << i.key() << ":"
-                 << i.value().tagType
-                 << i.value().tagCount
-                 << i.value().tagValue;
-    }
-    */
-
     // pull data reqd from IFD0
     model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
     orientation = ifdDataHash.value(274).tagValue;
@@ -2732,35 +2720,44 @@ void Metadata::formatNikon()
     ulong offsetEXIF = 0;
     offsetEXIF = ifdDataHash.value(34665).tagValue;
 
+//    reportMetadata();
+
     /* NIkon provides an offset in IFD0 to the offsets for all the subIFDs
-    in subIFD0 */
+    in subIFD0.    */
     QList<ulong> ifdOffsets;
     if(ifdDataHash.contains(330)) {
-        ifdOffsets = getSubIfdOffsets(ifdDataHash.value(330).tagValue,
+        if (ifdDataHash.value(330).tagCount > 1)
+            ifdOffsets = getSubIfdOffsets(ifdDataHash.value(330).tagValue,
                                       ifdDataHash.value(330).tagCount);
+        else ifdOffsets.append(ifdDataHash.value(330).tagValue);
 
+        QString hdr;
         // SubIFD1 contains full size jpg offset and length
-        QString hdr = "SubIFD1";
-        readIFD(hdr, ifdOffsets[0]);
-
-        // pull data reqd from SubIFD1
-        offsetFullJPG = ifdDataHash.value(513).tagValue;
-        lengthFullJPG = ifdDataHash.value(514).tagValue;
+        if (ifdOffsets.count() > 0) {
+            hdr = "SubIFD1";
+            readIFD(hdr, ifdOffsets[0]);
+            // pull data reqd from SubIFD1
+            offsetFullJPG = ifdDataHash.value(513).tagValue;
+            lengthFullJPG = ifdDataHash.value(514).tagValue;
+        }
 
         // pull data reqd from SubIFD2
         // SubIFD2 contains image width and height
 
-        hdr = "SubIFD2";
-        readIFD(hdr, ifdOffsets[1]);
-        width = ifdDataHash.value(256).tagValue;
-        height = ifdDataHash.value(257).tagValue;
+        if (ifdOffsets.count() > 1) {
+            hdr = "SubIFD2";
+            readIFD(hdr, ifdOffsets[1]);
+            width = ifdDataHash.value(256).tagValue;
+            height = ifdDataHash.value(257).tagValue;
+        }
 
         // SubIFD3 contains small size jpg offset and length
-
-        hdr = "SubIFD3";
-        readIFD(hdr, ifdOffsets[2]);
-        offsetSmallJPG = ifdDataHash.value(513).tagValue;
-        lengthSmallJPG = ifdDataHash.value(514).tagValue;
+        if (ifdOffsets.count() > 2) {
+            hdr = "SubIFD3";
+            readIFD(hdr, ifdOffsets[2]);
+            offsetSmallJPG = ifdDataHash.value(513).tagValue;
+            lengthSmallJPG = ifdDataHash.value(514).tagValue;
+        }
     }
 
     // read ExifIFD
@@ -4485,6 +4482,7 @@ void Metadata::clear()
 
 void Metadata::loadFromThread(QFileInfo &fileInfo)
 {
+    qDebug() << "Metadata::loadFromThread";
     loadImageMetadata(fileInfo, true, true, false, true);
 }
 
@@ -4501,7 +4499,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 //             << fileInfo.filePath();
     // check if already loaded
     fPath = fileInfo.filePath();
-//    qDebug() << "Metadata::loadImageMetadata   " << fPath;
+    qDebug() << "Metadata::loadImageMetadata   " << fPath;
     if (metaCache[fPath].metadataLoaded && !isReport) return true;
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load

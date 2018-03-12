@@ -887,24 +887,15 @@ void ImageCache::run()
         if (fPath == prevFileName) return;
         if (G::isThreadTrackingOn) track(fPath, "Reading");
 
-//        QPixmap im;
         QImage im;
-
-//        QPixmap *im = new QPixmap;
-//        QElapsedTimer t;
-//        t.start();
         if (pixmap->load(fPath, im)) {
-//            qDebug() << "load pixmap elapsed time =" << fPath << t.restart();
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
             uint roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
             while (room < roomRqd) {
                 // make some room by removing lowest priority cached image
                 if(nextToDecache()) {
-    //                qDebug() << "Removing" << cacheMgr[cache.toDecacheKey].fName
-    //                         << "Before count" << imCache.count();
                     imCache.remove(cacheItemList[cache.toDecacheKey].fName);
-    //                qDebug() << "After count" << imCache.count();
                     if (!toDecache.isEmpty()) toDecache.removeFirst();
                     cacheItemList[cache.toDecacheKey].isCached = false;
                     cache.currMB -= cacheItemList[cache.toDecacheKey].sizeMB;
@@ -912,20 +903,20 @@ void ImageCache::run()
                 }
                 else break;
             }
-//            mutex.lock();
             imCache.insert(fPath, im);
-//            imCache.insert(fPath, *im);
             if (cache.usePreview) {
                 imCache.insert(fPath + "_Preview", im.scaled(cache.previewSize,
                    Qt::KeepAspectRatio, Qt::FastTransformation));
             }
-            cacheItemList[cache.toCacheKey].isCached = true;
-//            mutex.unlock();
-            if (!toCache.isEmpty()) toCache.removeFirst();
-            cache.currMB = getImCacheSize();
-            cacheStatus();
-//            delete im;
         }
+        cacheItemList[cache.toCacheKey].isCached = true;
+        if (!toCache.isEmpty()) toCache.removeFirst();
+        cache.currMB = getImCacheSize();
+        cacheStatus();
+        // could not load pixmap, remove from toCache
+//        else {
+
+//        }
         prevFileName = fPath;
     }
     checkForOrphans();

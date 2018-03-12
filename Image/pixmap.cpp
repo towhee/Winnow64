@@ -53,6 +53,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
     QString err;            // type of error
 
     ulong offsetFullJpg = 0;
+    ulong lengthFullJpg = 0;
 //    QImage image;
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
@@ -63,13 +64,15 @@ bool Pixmap::load(QString &fPath, QImage &image)
         do {
             // Check if metadata has been cached for this image
             offsetFullJpg = metadata->getOffsetFullJPG(fPath);
+            lengthFullJpg = metadata->getLengthFullJPG(fPath);
             if (offsetFullJpg == 0) {
                 metadata->loadImageMetadata(fPath, true, false);
                 //try again
                 offsetFullJpg = metadata->getOffsetFullJPG(fPath);
+                lengthFullJpg = metadata->getLengthFullJPG(fPath);
             }
             // try to read the file
-            if (offsetFullJpg > 0) {
+            if (offsetFullJpg > 0 && lengthFullJpg > 0) {
                 if (imFile.open(QIODevice::ReadOnly)) {
                     bool seekSuccess = imFile.seek(offsetFullJpg);
                     if (seekSuccess) {
@@ -94,6 +97,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
                     msDelay += msInc;
                 }
             }
+            err = "Illegal offset to image or no length available";
+            break;
             /*
             qDebug() << "Pixmap::loadPixmap Success =" << success
                      << "msDelay =" << msDelay

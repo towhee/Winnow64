@@ -6080,6 +6080,7 @@ imageView and visibility (true if either rating or color class set).
     int row = thumbView->currentIndex().row();
     QModelIndex idx = dm->sf->index(row, G::RatingColumn);
     rating = idx.data(Qt::EditRole).toString();
+    if (rating == "0") rating = "";
     imageView->classificationLabel->setText(rating);
 
     if (G::labelColors.contains(labelColor) || G::ratings.contains(rating))
