@@ -1,5 +1,5 @@
 BUGS
-- D2H NEFs crash Winnow
+- Check start/end of jpg offsets to confirm D8 and D9
 - Sometimes thumbs do not paint until select
 - Image caching not always updating
 - Open with ... (doesn't work on macOS)
@@ -37,6 +37,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: D2H NEFs crash Winnow
 - Done: Caching thumbs is sometimes slow
 - Done: info label token builder
 - Done: On Mac slow to read metadata first time, after that it is fast

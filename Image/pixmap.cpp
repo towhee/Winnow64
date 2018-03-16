@@ -60,7 +60,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
     QFile imFile(fPath);
 
     if (metadata->rawFormats.contains(ext)) {
-        // raw files not handled by Qt
+        // raw files handled by Qt
         do {
             // Check if metadata has been cached for this image
             offsetFullJpg = metadata->getOffsetFullJPG(fPath);
@@ -76,7 +76,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 if (imFile.open(QIODevice::ReadOnly)) {
                     bool seekSuccess = imFile.seek(offsetFullJpg);
                     if (seekSuccess) {
-                        QByteArray buf = imFile.read(metadata->getLengthFullJPG(fPath));
+                        QByteArray buf = imFile.read(lengthFullJpg);
                         if (image.loadFromData(buf, "JPEG")) {
                             imFile.close();
                             success = true;

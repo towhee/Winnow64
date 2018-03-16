@@ -2754,6 +2754,7 @@ void Metadata::formatNikon()
             // pull data reqd from SubIFD1
             offsetFullJPG = ifdDataHash.value(513).tagValue;
             lengthFullJPG = ifdDataHash.value(514).tagValue;
+            if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
             // D2H and older
             width = ifdDataHash.value(256).tagValue;
             height = ifdDataHash.value(257).tagValue;
@@ -2775,6 +2776,7 @@ void Metadata::formatNikon()
             readIFD(hdr, ifdOffsets[2]);
             offsetSmallJPG = ifdDataHash.value(513).tagValue;
             lengthSmallJPG = ifdDataHash.value(514).tagValue;
+            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
         }
     }
 
@@ -2938,6 +2940,8 @@ void Metadata::formatCanon()
     // pull data reqd from IFD0
     offsetFullJPG = ifdDataHash.value(273).tagValue;
     lengthFullJPG = ifdDataHash.value(279).tagValue;
+    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
+    
     model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
     orientation = ifdDataHash.value(274).tagValue;
     creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount);
@@ -2959,6 +2963,7 @@ void Metadata::formatCanon()
     // pull data reqd from IFD1
     offsetThumbJPG = ifdDataHash.value(513).tagValue;
     lengthThumbJPG = ifdDataHash.value(514).tagValue;
+    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD2", nextIFDOffset);
 
@@ -3181,7 +3186,8 @@ void Metadata::formatOlympus()
         readIFD("IFD Olympus Maker Note", makerOffset + 12);
         // Get the thumbnail Jpg offset and length
         offsetThumbJPG = ifdDataHash.value(256).tagValue + makerOffset;
-            lengthThumbJPG = ifdDataHash.value(256).tagCount;
+        lengthThumbJPG = ifdDataHash.value(256).tagCount;
+        if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
         // read CameraSettingsIFD
         if (ifdDataHash.contains(8224)) {
@@ -3189,6 +3195,7 @@ void Metadata::formatOlympus()
                     ifdDataHash.value(8224).tagValue + makerOffset);
             offsetFullJPG = ifdDataHash.value(257).tagValue + makerOffset;
             lengthFullJPG = ifdDataHash.value(258).tagValue;
+            if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
             getDimensions(offsetFullJPG);
         }
     }
@@ -3237,8 +3244,10 @@ void Metadata::formatSony()
     // pull data reqd from IFD0
     offsetFullJPG = ifdDataHash.value(513).tagValue;
     lengthFullJPG = ifdDataHash.value(514).tagValue;
+    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
     offsetThumbJPG = ifdDataHash.value(273).tagValue;
     lengthThumbJPG = ifdDataHash.value(279).tagValue;
+    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
     model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
     orientation = ifdDataHash.value(274).tagValue;
 
@@ -3250,6 +3259,7 @@ void Metadata::formatSony()
     // IFD 1:
     offsetThumbJPG = ifdDataHash.value(513).tagValue;
     lengthThumbJPG = ifdDataHash.value(514).tagValue;
+    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     // Sony provides an offset in IFD0 to the offsets for
     // all the subIFDs
@@ -3408,6 +3418,7 @@ bool Metadata::formatFuji()
     file.seek(84);
     offsetFullJPG = get4(file.read(4));
     lengthFullJPG = get4(file.read(4));
+    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
     file.seek(offsetFullJPG);
 
     // start on embedded JPEG
@@ -3456,6 +3467,7 @@ bool Metadata::formatFuji()
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
     offsetThumbJPG = ifdDataHash.value(513).tagValue + startOffset;
     lengthThumbJPG = ifdDataHash.value(514).tagValue + startOffset;
+    
 
     // read EXIF IFD
     readIFD("IFD Exif", offsetEXIF);
