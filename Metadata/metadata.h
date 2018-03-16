@@ -82,6 +82,8 @@ public:
     QString copyFileNamePrefix;
     bool metadataLoaded = false;    // all metadata except thumb
     bool isThumbLoaded;             // refers to thumb only
+    bool thumbUnavailable = false;  // no embedded thumb
+    bool imageUnavailable = false;  // no embedded preview
     QString err = "";
 };
 
@@ -147,6 +149,8 @@ public:
 
     QString fPath;
     QString err;
+    bool thumbUnavailable;                  // no embedded thumb
+    bool imageUnavailable;                  // no embedded preview
 
 //    QMap<QString, QString> exampleMap;
 
@@ -221,6 +225,8 @@ public:
     int getYear(const QString &imageFileName);
     int getMonth(const QString &imageFileName);
     int getDay(const QString &imageFileName);
+    bool getImageUnavailable(const QString &imageFileName);
+    bool getThumbUnavailable(const QString &imageFileName);
     QString getErr(const QString &imageFileName);
     void setErr(const QString &imageFileName, const QString &err);
     QString getCopyFileNamePrefix(const QString &imageFileName);
@@ -281,6 +287,7 @@ private:
     void readIPTC(ulong offset);
     ulong readIFD(QString hdr, ulong offset);
     bool readIRB(ulong offset);
+    void verifyEmbeddedJpg(ulong &offset, ulong &length);
     QList<ulong> getSubIfdOffsets(ulong subIFDaddr, int count);
 //    ulong getExifOffset(ulong offsetIfd0);      //update to use ifdDataHash
     QString getString(ulong offset, ulong length);

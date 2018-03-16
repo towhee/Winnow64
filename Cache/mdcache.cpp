@@ -250,7 +250,7 @@ first pass through the images in the folder.  The QMap loadedMap is used to
 track if the metadata and thumb have been cached for each image.  When all items
 in loadedMap == true then okay to finish.
 
-While the MetadataCache is loading the metadata and thumbs the user can impact
+While the MetadataCache is loading the metadata and thumbs, the user can impact
 the process in two ways:
 
 1.  If the user selects an image and the metadata or thumb has not been loaded

@@ -2822,6 +2822,14 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
     qDebug() << "MW::updateStatus";
     #endif
     }
+
+    // check for file error first
+    QString fPath = thumbView->getCurrentFilename();
+    if (metadata->getThumbUnavailable(fPath) || metadata->getImageUnavailable(fPath)) {
+        stateLabel->setText(metadata->getErr(fPath));
+        return;
+    }
+
     QString status;
     QString fileCount = "";
     QString zoomPct = "";
@@ -2851,9 +2859,7 @@ QString fileSym = "📷";
     status = " " + base + s;
     stateLabel->setText(status);
 
-    // update InfoView
-
-    // flag updates so itemChanged be ignored in MW::metadataChanged
+    // update InfoView - flag updates so itemChanged be ignored in MW::metadataChanged
     infoView->isNewImageDataChange = true;
 
     QStandardItemModel *k = infoView->ok;

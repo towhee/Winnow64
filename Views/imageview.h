@@ -83,6 +83,23 @@ protected:
 
 
 private:
+    void noJpgAvailable();
+    qreal getFitScaleFactor(QRectF container, QRectF content);
+    void scale();
+    qreal getZoom();
+
+    QPointF getScrollPct();
+    void getScrollBarStatus();
+    void setScrollBars(QPointF scrollPct);
+
+    void setPreviewDim();
+    void setFullDim();
+
+    bool sceneBiggerThanView();
+    bool resizeIsSmaller();
+    void movePickIcon();
+    void transform();
+
     QWidget *mainWindow;
     QWidget *centralWidget;
     Metadata *metadata;
@@ -172,23 +189,6 @@ private:
     qreal zoomMin = 0.05;   // 5% of original  rgh add to pref
     qreal zoomMax = 8.0;    // 800% of original
 
-    qreal getFitScaleFactor(QRectF container, QRectF content);
-    void scale();
-    qreal getZoom();
-
-    QPointF getScrollPct();
-    void getScrollBarStatus();
-    void setScrollBars(QPointF scrollPct);
-
-    void setPreviewDim();
-    void setFullDim();
-
-    bool sceneBiggerThanView();
-    bool resizeIsSmaller();
-
-    void movePickIcon();
-
-    void transform();
 };
 
 #endif // IMAGEVIEW_H

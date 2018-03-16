@@ -103,18 +103,23 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
 
+    bool success = false;
+    ulong offsetThumb = metadata->getOffsetThumbJPG(fPath);
+    ulong lengthThumb = metadata->getLengthThumbJPG(fPath);
+
+    /* A raw file may not have any embedded jpg or be corrupted.  */
+
+    if (metadata->rawFormats.contains(ext) && lengthThumb == 0) {
+        fPath = ":/images/badImage1.png";
+        loadFromEntireFile(fPath, image);
+        return true;
+    }
+
     /* Reading the thumb directly from the image file is faster than using
     QImageReader (thumbReader) to read the entire jpg and then scaling it
     down. However, not all images have embedded thumbs so make a quick check.
     */
-//    bool isLoaded = metadata->isLoaded(fPath);
-/*        qDebug() << "offsetThumb"  << offsetThumb
-             << "lengthThumb"  << lengthThumb
-             << fPath << isLoaded
-             << "row =" << row;  */
 
-    bool success = false;
-    ulong offsetThumb = metadata->getOffsetThumbJPG(fPath);
     bool readThumbFromJPG = (offsetThumb > 0); // && ext == "jpg");
 
     if (metadata->rawFormats.contains(ext) || readThumbFromJPG) {

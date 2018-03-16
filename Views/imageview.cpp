@@ -146,12 +146,18 @@ to prevent jarring changes in perceived scale by the user.
     // No folder selected yet
     if (fPath == "") return false;
 
-     /* important to keep currentImagePath.  It is used to check if there isn't
-     an image (when currentImagePath.isEmpty() == true) - for example when
-     no folder has been chosen. */
-    currentImagePath = fPath;
-    imageIndex = idx;
-    bool isLoaded = false;
+    /* important to keep currentImagePath.  It is used to check if there isn't
+    an image (when currentImagePath.isEmpty() == true) - for example when
+    no folder has been chosen. */
+   currentImagePath = fPath;
+   imageIndex = idx;
+   bool isLoaded = false;
+
+   // Embedded jpg not found
+   if (metadata->getLengthFullJPG(fPath) == 0) {
+       noJpgAvailable();
+       return false;
+   }
 
     // load the image from the image cache if available
     if (imageCacheThread->imCache.contains(fPath)) {
@@ -159,8 +165,8 @@ to prevent jarring changes in perceived scale by the user.
         bool tryPreview = true;     // for testing
         loadFullSizeTimer->stop();
 
-//        QElapsedTimer t;
-//        t.start();
+/*      QElapsedTimer t;
+        t.start();      */
 
         // get preview size from stored metadata to decide if load preview or full
         setFullDim();               // req'd by setPreviewDim()
@@ -173,9 +179,9 @@ to prevent jarring changes in perceived scale by the user.
         && previewBigEnough) {
             pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath + "_Preview")));
             isPreview = true;
-            // if prev smaller than view then next image should also be smaller
-            // since each image may be different sizes have to equalize scale
-            // zoomFit is still for prev image and previewFit is for current preview
+            /* if preview smaller than view then next image should also be smaller
+            since each image may be different sizes have to equalize scale
+            zoomFit is still for prev image and previewFit is for current preview */
             if (!isFit) zoom *= previewFit / zoomFit;
             isLoaded = true;
             loadFullSizeTimer->start();
@@ -192,16 +198,18 @@ to prevent jarring changes in perceived scale by the user.
     else {
         // load the image from the image file, may need to wait a bit if another thread
         // reading file
-//        qDebug() << ">>>Load image from file";
         int attempts;
-        for (attempts = 0; attempts < 100000; attempts++) {
+//        for (attempts = 0; attempts < 100000; attempts++) {
             isLoaded = pixmap->load(fPath, displayPixmap);
-            if (isLoaded) break;
-        }
+//            if (isLoaded) break;
+//        }
 //        qDebug() << ">>>Attempts to load:" << attempts << "isLoaded:" << isLoaded;
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
             isPreview = false;
+        }
+        else {
+            pmItem->setPixmap(QPixmap(":/images/error_image.png"));
         }
     }
 
@@ -209,14 +217,6 @@ to prevent jarring changes in perceived scale by the user.
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
-        if (!metadata->isLoaded(currentImagePath)) {
-            QFileInfo fileInfo(currentImagePath);
-//            bool loadMeta = metadata->loadImageMetadata(fileInfo);
-        }
-
-        // rgh change to tokenized approach
-//        shootingInfo = metadata->getShootingInfo(currentImagePath) + "\n" +
-//                metadata->getTitle(currentImagePath);
         QModelIndex idx = thumbView->currentIndex();
         QString current = infoString->getCurrentInfoTemplate();
         shootingInfo = infoString->parseTokenString(infoString->infoTemplates[current],
@@ -241,10 +241,8 @@ void ImageView::upgradeToFullSize()
 {
 /* Called after a delay by timer initiated in loadImage. Two prior conditions
 are matched:
-
-    ● If zoomed then the relative scroll position is set.
-    ● If zoomFit then zoomFit is recalculated.
-
+    If zoomed then the relative scroll position is set.
+    If zoomFit then zoomFit is recalculated.
 */
     {
     #ifdef ISDEBUG
@@ -280,13 +278,20 @@ void ImageView::emptyFolder()
     infoDropShadow->setText("");
 }
 
+void ImageView::noJpgAvailable()
+{
+    pmItem->setVisible(false);
+    infoDropShadow->setText("");
+}
+
 void ImageView::scale()
 {
-/* Scales the pixmap to zoom.  Panning is automatically to the cursor position
+/*
+Scales the pixmap to zoom.  Panning is automatically to the cursor position
 because setTransformationAnchor(QGraphicsView::AnchorUnderMouse).
 
 ● The scroll percentage is stored so it can be matched in the next image if it
-is zoomed.
+  is zoomed.
 ● Flags are set for the zoom condition.
 ● The cursor to set to pointer if not zoomed and hand if zoomed.
 ● The pick icon and shooting info text are relocated as necessary.

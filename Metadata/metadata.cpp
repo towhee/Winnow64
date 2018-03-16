@@ -2688,6 +2688,19 @@ bool Metadata::getDimensions(ulong jpgOffset)
     return true;
 }
 
+void Metadata::verifyEmbeddedJpg(ulong &offset, ulong &length)
+{
+    file.seek(offset);
+    if (get2(file.peek(2)) == 0xFFD8) {
+        file.seek(offset + length - 2);
+        if (get2(file.peek(2)) == 0xFFD9) {
+            return;
+        }
+    }
+    offset = 0;
+    length = 0;
+}
+
 void Metadata::formatNikon()
 {
     {
@@ -2723,7 +2736,9 @@ void Metadata::formatNikon()
 //    reportMetadata();
 
     /* NIkon provides an offset in IFD0 to the offsets for all the subIFDs
-    in subIFD0.    */
+    in subIFD0.   Models including the D2H and before have a different structure
+    with only one subIFD and an additional preview IFD identified in maker
+    notes */
     QList<ulong> ifdOffsets;
     if(ifdDataHash.contains(330)) {
         if (ifdDataHash.value(330).tagCount > 1)
@@ -2739,6 +2754,9 @@ void Metadata::formatNikon()
             // pull data reqd from SubIFD1
             offsetFullJPG = ifdDataHash.value(513).tagValue;
             lengthFullJPG = ifdDataHash.value(514).tagValue;
+            // D2H and older
+            width = ifdDataHash.value(256).tagValue;
+            height = ifdDataHash.value(257).tagValue;
         }
 
         // pull data reqd from SubIFD2
@@ -2818,13 +2836,18 @@ void Metadata::formatNikon()
     if (ifdDataHash.contains(37500)) {
 
         /* The makerOffsetBase starts 10 or 12 bits after the offset at endian
-        4949. All offsets in the makernoteIFD are relative to makerOffsetBase.
+        4949 for all recent Nikons. Earlier Nikons, D2H and before, use an endian
+        4D4D.  All offsets in the makernoteIFD are relative to makerOffsetBase.
         */
 
+        long endian;
         bool foundEndian = false;
         file.seek(makerOffset);
         while (!foundEndian) {
-            if (get2(file.read(2)) == 0x4949) foundEndian = true;
+            endian = get2(file.read(2));
+            if (endian == 0x4949 || endian == 0x4D4D) foundEndian = true;
+            order = endian;
+//            if (get2(file.read(2)) == 0x4949) foundEndian = true;
         }
         ulong makerOffsetBase = file.pos() - 2;
 
@@ -2866,8 +2889,9 @@ void Metadata::formatNikon()
             readIFD("IFD Nikon Maker Note: PreviewIFD",
                     ifdDataHash.value(17).tagValue + makerOffsetBase);
 
-            offsetThumbJPG = ifdDataHash.value(513).tagValue + makerOffsetBase;
-            lengthThumbJPG = ifdDataHash.value(514).tagValue + makerOffsetBase;
+            offsetSmallJPG = ifdDataHash.value(513).tagValue + makerOffsetBase;
+            lengthSmallJPG = ifdDataHash.value(514).tagValue; // + makerOffsetBase;
+            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
         }
     }
 
@@ -3977,15 +4001,33 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
 //        if (G::isThreadTrackingOn) track(fPath, err);
     }
 
-    if (offsetSmallJPG == 0) {
+    if (lengthFullJPG == 0) {
+        offsetFullJPG = offsetSmallJPG;
+        lengthFullJPG = lengthSmallJPG;
+    }
+    if (lengthSmallJPG == 0) {
         offsetSmallJPG = offsetFullJPG;
         lengthSmallJPG = lengthFullJPG;
     }
-    if (offsetThumbJPG == 0) {
+    if (lengthThumbJPG == 0) {
         qDebug() << "No embedded thumbnail JPG found for" << fPath;
         offsetThumbJPG = offsetSmallJPG;
         lengthThumbJPG = lengthSmallJPG;
     }
+
+    // error flags
+    thumbUnavailable = imageUnavailable = false;
+    if (lengthFullJPG == 0) {
+        imageUnavailable = true;
+        err = "No embedded preview found or file is corrupted";
+    }
+    if (lengthThumbJPG == 0) {
+        thumbUnavailable = true;
+        err = "No embedded thumbnail or preview found or file is corrupted";
+    }
+
+
+//    if (lengthFullJPG == 0 ) success = false;
 
     // initialize edited rotation
     rotationDegrees = 0;
@@ -4398,6 +4440,15 @@ void Metadata::setRating(const QString &imageFileName, const QString &rating)
     metaCache[imageFileName].rating = rating;
 }
 
+bool Metadata::getThumbUnavailable(const QString &imageFileName)
+{
+    return metaCache[imageFileName].thumbUnavailable;
+}
+
+bool Metadata::getImageUnavailable(const QString &imageFileName)
+{
+    return metaCache[imageFileName].imageUnavailable;
+}
 
 QString Metadata::getErr(const QString &imageFileName)
 {
@@ -4564,6 +4615,10 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     s += (imageMetadata.aperture == "") ? "" : " at " + imageMetadata.aperture;
     s += (imageMetadata.ISO == "") ? "" : ", ISO " + imageMetadata.ISO;
     imageMetadata.shootingInfo = s;
+
+    imageMetadata.thumbUnavailable = thumbUnavailable;
+    imageMetadata.imageUnavailable = imageUnavailable;
+    imageMetadata.err = err;
 
     imageMetadata.metadataLoaded = result;
 
