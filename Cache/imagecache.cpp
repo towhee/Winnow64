@@ -881,7 +881,6 @@ void ImageCache::run()
             emit updateIsRunning(false);
             return;
         }
-        qDebug() << "ImageCache::run while";
 
         // check can read image from file
         QString fPath = cacheItemList.at(cache.toCacheKey).fName;
@@ -912,9 +911,6 @@ void ImageCache::run()
         }
         cacheItemList[cache.toCacheKey].isCached = true;
         if (!toCache.isEmpty()) toCache.removeFirst();
-
-        qDebug() << "ImageCache::run toCache" << toCache;
-
         cache.currMB = getImCacheSize();
         cacheStatus();
         prevFileName = fPath;
