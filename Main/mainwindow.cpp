@@ -31,8 +31,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     isStressTest = false;
     // Global timer
     G::isTimer = false;
-    #ifdef ISDEBUG
-//        G::t.start();
+    #ifdef ISPROFILE
+    G::t.start();
     #endif
 
     this->setWindowTitle("Winnow");
@@ -94,7 +94,7 @@ variables in MW (this class) and managed in the prefDlg class.
 */
 
     // structure to hold persistant settings between sessions
-    setting = new QSettings("Winnow", "winnow_100");
+    setting = new QSettings("Winnow", "winnow_101");
 
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel
@@ -151,14 +151,16 @@ variables in MW (this class) and managed in the prefDlg class.
 
     // send events to thumbView to monitorsplitter resize of thumbDock
     qApp->installEventFilter(this);
-//    qApp->installEventFilter(thumbView);
 
     // process the persistant folder if available
-//    qDebug() << rememberLastDir;
     if (rememberLastDir && !isShift) folderSelectionChange();
 
     if (!isSettings) centralLayout->setCurrentIndex(StartTab);
     isSettings = true;
+
+    #ifdef ISPROFILE
+    qDebug() << "=> MW constructor:" << G::t.restart();
+    #endif
 
 //struct sysinfo sys_info;
 //totalmem=(qint32)(sys_info.totalram/1048576);

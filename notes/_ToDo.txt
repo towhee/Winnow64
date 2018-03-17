@@ -1,5 +1,4 @@
 BUGS
-- Check start/end of jpg offsets to confirm D8 and D9
 - Sometimes thumbs do not paint until select
 - Image caching not always updating
 - Open with ... (doesn't work on macOS)
@@ -15,11 +14,11 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Combine raw+jpg option
 - Refresh
 - Add complete for ingest description
 - add metadata performance options to preferences
 - Add current folder to bookmarks
-- Combine raw+jpg option
 - Get Sony image count, camera SN
 - Get actual monitor resolution for actualDevicePixelRatio calculation
 - Recent copy to folders in ingest dialog
@@ -37,6 +36,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Check start/end of jpg offsets to confirm D8 and D9
 - Done: D2H NEFs crash Winnow
 - Done: Caching thumbs is sometimes slow
 - Done: info label token builder

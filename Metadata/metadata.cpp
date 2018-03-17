@@ -2690,13 +2690,26 @@ bool Metadata::getDimensions(ulong jpgOffset)
 
 void Metadata::verifyEmbeddedJpg(ulong &offset, ulong &length)
 {
+/*
+JPEGs start with FFD8 and end with FFD9.  This function confirms the embedded
+JPEG is correct.  If it is not then the function sets the offset and length
+to zero.  At the end of the readMetadata function the offsets and lengths are
+checked to make sure there is valid data.
+*/
+    {
+    #ifdef ISDEBUG
+    qDebug() << "Metadata::verifyEmbeddedJpg";
+    #endif
+    }
     file.seek(offset);
     if (get2(file.peek(2)) == 0xFFD8) {
         file.seek(offset + length - 2);
         if (get2(file.peek(2)) == 0xFFD9) {
+            // all is well
             return;
         }
     }
+    // problem - set to zero
     offset = 0;
     length = 0;
 }
@@ -2754,6 +2767,7 @@ void Metadata::formatNikon()
             // pull data reqd from SubIFD1
             offsetFullJPG = ifdDataHash.value(513).tagValue;
             lengthFullJPG = ifdDataHash.value(514).tagValue;
+//            if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
             // D2H and older
             width = ifdDataHash.value(256).tagValue;
             height = ifdDataHash.value(257).tagValue;
@@ -2775,6 +2789,7 @@ void Metadata::formatNikon()
             readIFD(hdr, ifdOffsets[2]);
             offsetSmallJPG = ifdDataHash.value(513).tagValue;
             lengthSmallJPG = ifdDataHash.value(514).tagValue;
+//            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
         }
     }
 
@@ -2891,7 +2906,7 @@ void Metadata::formatNikon()
 
             offsetSmallJPG = ifdDataHash.value(513).tagValue + makerOffsetBase;
             lengthSmallJPG = ifdDataHash.value(514).tagValue; // + makerOffsetBase;
-            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
+//            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
         }
     }
 
@@ -2938,6 +2953,8 @@ void Metadata::formatCanon()
     // pull data reqd from IFD0
     offsetFullJPG = ifdDataHash.value(273).tagValue;
     lengthFullJPG = ifdDataHash.value(279).tagValue;
+//    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
+
     model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
     orientation = ifdDataHash.value(274).tagValue;
     creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount);
@@ -2959,6 +2976,7 @@ void Metadata::formatCanon()
     // pull data reqd from IFD1
     offsetThumbJPG = ifdDataHash.value(513).tagValue;
     lengthThumbJPG = ifdDataHash.value(514).tagValue;
+//    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD2", nextIFDOffset);
 
@@ -3181,7 +3199,8 @@ void Metadata::formatOlympus()
         readIFD("IFD Olympus Maker Note", makerOffset + 12);
         // Get the thumbnail Jpg offset and length
         offsetThumbJPG = ifdDataHash.value(256).tagValue + makerOffset;
-            lengthThumbJPG = ifdDataHash.value(256).tagCount;
+        lengthThumbJPG = ifdDataHash.value(256).tagCount;
+//        if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
         // read CameraSettingsIFD
         if (ifdDataHash.contains(8224)) {
@@ -3189,6 +3208,7 @@ void Metadata::formatOlympus()
                     ifdDataHash.value(8224).tagValue + makerOffset);
             offsetFullJPG = ifdDataHash.value(257).tagValue + makerOffset;
             lengthFullJPG = ifdDataHash.value(258).tagValue;
+//            if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
             getDimensions(offsetFullJPG);
         }
     }
@@ -3237,8 +3257,10 @@ void Metadata::formatSony()
     // pull data reqd from IFD0
     offsetFullJPG = ifdDataHash.value(513).tagValue;
     lengthFullJPG = ifdDataHash.value(514).tagValue;
+//    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
     offsetThumbJPG = ifdDataHash.value(273).tagValue;
     lengthThumbJPG = ifdDataHash.value(279).tagValue;
+//    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
     model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
     orientation = ifdDataHash.value(274).tagValue;
 
@@ -3250,6 +3272,7 @@ void Metadata::formatSony()
     // IFD 1:
     offsetThumbJPG = ifdDataHash.value(513).tagValue;
     lengthThumbJPG = ifdDataHash.value(514).tagValue;
+//    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     // Sony provides an offset in IFD0 to the offsets for
     // all the subIFDs
@@ -3408,6 +3431,7 @@ bool Metadata::formatFuji()
     file.seek(84);
     offsetFullJPG = get4(file.read(4));
     lengthFullJPG = get4(file.read(4));
+//    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
     file.seek(offsetFullJPG);
 
     // start on embedded JPEG
@@ -3456,6 +3480,7 @@ bool Metadata::formatFuji()
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
     offsetThumbJPG = ifdDataHash.value(513).tagValue + startOffset;
     lengthThumbJPG = ifdDataHash.value(514).tagValue + startOffset;
+//    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     // read EXIF IFD
     readIFD("IFD Exif", offsetEXIF);
@@ -3947,6 +3972,9 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     #ifdef ISDEBUG
     qDebug() << "Metadata::readMetadata";
     #endif
+    #ifdef ISPROFILE
+    qDebug() << "=> Metadata::readMetadata: Start" << G::t.restart();
+    #endif
     }
     report = isReport;
 
@@ -4026,13 +4054,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         err = "No embedded thumbnail or preview found or file is corrupted";
     }
 
-
-//    if (lengthFullJPG == 0 ) success = false;
-
     // initialize edited rotation
     rotationDegrees = 0;
-
-//    qDebug() << fPath << offsetThumbJPG << offsetSmallJPG << offsetFullJPG;
 
     if (success) track(fPath, "Success");
     else {
@@ -4040,7 +4063,9 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         qDebug() << "FAILED TO LOAD METADATA" << fPath;
     }
 
-//    if (GData::isTimer) qDebug() << "Time to read metadata =" << t.elapsed();
+    #ifdef ISPROFILE
+    qDebug() << "=> Metadata::readMetadata: End" << G::t.nsecsElapsed() << "\t\t\t" << fPath;  G::t.start();
+    #endif
     return success;
 }
 
@@ -4550,7 +4575,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 //             << fileInfo.filePath();
     // check if already loaded
     fPath = fileInfo.filePath();
-    qDebug() << "Metadata::loadImageMetadata   " << fPath;
     if (metaCache[fPath].metadataLoaded && !isReport) return true;
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load
