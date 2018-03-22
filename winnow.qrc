@@ -111,5 +111,7 @@
         <file>images/tokenBackground.png</file>
         <file>Docs/ingesthelp.htm</file>
         <file>images/badImage1.png</file>
+        <file>images/branch-closed.png</file>
+        <file>images/branch-open.png</file>
     </qresource>
 </RCC>

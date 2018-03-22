@@ -175,8 +175,21 @@ QTreeView
 {
     alternate-background-color: rgb(90,90,90);
     color: rgb(190,190,190);
+    font-size: 13px;
     selection-color: rgb(190,190,190);
     selection-background-color: rgb(45,45,45);
+}
+
+QTreeView::branch:has-children:!has-siblings:closed,
+QTreeView::branch:closed:has-children:has-siblings {
+        border-image: none;
+        image: url(:/images/branch-closed.png);
+}
+
+QTreeView::branch:open:has-children:!has-siblings,
+QTreeView::branch:open:has-children:has-siblings  {
+        border-image: none;
+        image: url(:/images/branch-open.png);
 }
 
 QTreeView::item {

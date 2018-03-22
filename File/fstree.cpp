@@ -1,5 +1,7 @@
 #include "File/fstree.h"
 
+QStringList mountedDrives;
+
 /*------------------------------------------------------------------------------
 CLASS FSFilter subclassing QSortFilterProxyModel
 ------------------------------------------------------------------------------*/
@@ -11,9 +13,16 @@ FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
 
 bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
+
+#ifdef Q_OS_WIN
+    if (!sourceParent.isValid()) {      // if is a drive
+        QModelIndex idx = sourceModel()->index(sourceRow, 0, sourceParent);
+        QString path = idx.data(QFileSystemModel::FilePathRole).toString();
+        bool mounted = mountedDrives.contains(path);
+        qDebug() << "FSFilter::filterAcceptsRow  mounted:" << mounted << "path =" << path;
+        if (!mounted) return false;     // do not accept unmounted drives
+    }
     return true;
-#if defined(Q_OS_LINIX) || defined(Q_OS_WIN)
-   return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
 #endif
 
 #ifdef Q_OS_MAC
@@ -35,6 +44,10 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
     if (info.isHidden()) return false;
     return true;
 #endif
+
+#ifdef Q_OS_LINIX
+   return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
+#endif
 }
 
 /*------------------------------------------------------------------------------
@@ -55,18 +68,13 @@ FSModel::FSModel(QWidget *parent, Metadata *metadata, bool showImageCount) : QFi
 
 bool FSModel::hasChildren(const QModelIndex &parent) const
 {
-    {
-    #ifdef ISDEBUG
-//    qDebug() << "FSTree::hasChildren";
-    #endif
-    }
     if (parent.column() > 0)
 		return false;
 
 	if (!parent.isValid()) // drives
 		return true;
 
-	// return false if item cant have children
+    // return false if item can't have children
 	if (parent.flags() &  Qt::ItemNeverHasChildren) {
 		return false;
 	}
@@ -77,11 +85,13 @@ bool FSModel::hasChildren(const QModelIndex &parent) const
 
 int FSModel::columnCount(const QModelIndex &parent) const
 {
+    // add a column for the image count
     return QFileSystemModel::columnCount(parent) + 1;
 }
 
 QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
+    // add header text for the additional image count column
     if (orientation == Qt::Horizontal && section == imageCountColumn)
     {
         if (role == Qt::DisplayRole) return QVariant("#");
@@ -93,6 +103,7 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
 {
+    // returne image count for each folder
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
             QString fPath = qvariant_cast<QString>
@@ -109,6 +120,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
         else
             return QVariant();
     }
+    // return tooltip for folder path
     if (index.column() == 0) {
         if (role == Qt::ToolTipRole) {
             return QFileSystemModel::data(index, QFileSystemModel::FilePathRole);
@@ -116,7 +128,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
         else
             return QFileSystemModel::data(index, role);
     }
-//    else
+    // return parent class data
     return QFileSystemModel::data(index, role);
 }
 
@@ -136,13 +148,25 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     dir = new QDir();
 
     fsModel = new FSModel(this, metadata, showImageCount);
+//    fsModel = new QFileSystemModel;
+    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
 
 #ifdef Q_OS_LINIX
     fsModel->setRootPath("/home");
 #endif
+
 #ifdef Q_OS_WIN
-    fsModel->setRootPath(fileSystemModel.myComputer().toString());
+    // get mounted drives only
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                mountedDrives << storage.rootPath();
+            }
+        }
+    }
+    fsModel->setRootPath("");
 #endif
+
 #ifdef Q_OS_MACOS  // Q_OS_MACOS
     fsModel->setRootPath("/Volumes");
     fsModel->setRootPath("/Users");
@@ -150,36 +174,25 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
 
     fsFilter = new FSFilter(fsModel);
     fsFilter->setSourceModel(fsModel);
+    fsFilter->setSortRole(QFileSystemModel::FilePathRole);
 
-//    fsModel->setFilter(QDir::AllDirs);
-//    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
+    // treeview setup
     setModel(fsFilter);
+//    setModel(fsModel);
 
-    setRootIndex(fsFilter->index(0, 0));
-
-    for (int i = 1; i <= 3; ++i) {
+    for (int i = 1; i <= 3; ++i)
         hideColumn(i);
-    }
 
-    setSortingEnabled(true);
-    sortByColumn(0, Qt::AscendingOrder);
+    setRootIsDecorated(true);
+    setSortingEnabled(false);
     setHeaderHidden(true);
+    sortByColumn(0, Qt::AscendingOrder);
     setIndentation(16);
     setSelectionMode(QAbstractItemView::SingleSelection);
 
     setAcceptDrops(true);
     setDragEnabled(true);
     setDragDropMode(QAbstractItemView::InternalMove);
-}
-
-void FSTree::setModelFlags()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "FSTree::setModelFlags";
-    #endif
-    }
-    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
 }
 
 void FSTree::scrollToCurrent()
@@ -193,7 +206,6 @@ void FSTree::scrollToCurrent()
     #endif
     }
     QModelIndex idx = getCurrentIndex();
-    qDebug() << "Is there a valid index?" << idx.isValid();
     if (idx.isValid()) scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 

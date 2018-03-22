@@ -36,7 +36,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     #endif
 
     this->setWindowTitle("Winnow");
-//    this->setObjectName("WinnowMW");
 
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
@@ -94,7 +93,7 @@ variables in MW (this class) and managed in the prefDlg class.
 */
 
     // structure to hold persistant settings between sessions
-    setting = new QSettings("Winnow", "winnow_101");
+    setting = new QSettings("Winnow", "winnow_100");
 
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel
@@ -3117,7 +3116,7 @@ void MW::showHiddenFiles()
     qDebug() << "MW::showHiddenFiles";
     #endif
     }
-    fsTree->setModelFlags();
+//    fsTree->setModelFlags();
 }
 
 void MW::delayScroll()
