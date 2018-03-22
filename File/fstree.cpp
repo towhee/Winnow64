@@ -19,7 +19,6 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
         QModelIndex idx = sourceModel()->index(sourceRow, 0, sourceParent);
         QString path = idx.data(QFileSystemModel::FilePathRole).toString();
         bool mounted = mountedDrives.contains(path);
-        qDebug() << "FSFilter::filterAcceptsRow  mounted:" << mounted << "path =" << path;
         if (!mounted) return false;     // do not accept unmounted drives
     }
     return true;
@@ -53,11 +52,11 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
 /*------------------------------------------------------------------------------
 CLASS FSModel subclassing QFileSystemModel
 ------------------------------------------------------------------------------*/
-FSModel::FSModel(QWidget *parent, Metadata *metadata, bool showImageCount) : QFileSystemModel(parent)
+FSModel::FSModel(QWidget *parent, Metadata *metadata /*, bool showImageCount */) : QFileSystemModel(parent)
 {
     QStringList *fileFilters = new QStringList;
     dir = new QDir();
-    this->showImageCount = showImageCount;
+//    this->showImageCount = showImageCount;
 
     fileFilters->clear();
     foreach (const QString &str, metadata->supportedFormats)
@@ -103,7 +102,7 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
 {
-    // returne image count for each folder
+    // return image count for each folder
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
             QString fPath = qvariant_cast<QString>
@@ -147,7 +146,9 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     fileFilters = new QStringList;
     dir = new QDir();
 
-    fsModel = new FSModel(this, metadata, showImageCount);
+    fsModel = new FSModel(this, metadata);
+//    fsModel = new FSModel(this, metadata, showImageCount);
+
 //    fsModel = new QFileSystemModel;
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
 
@@ -211,6 +212,7 @@ void FSTree::scrollToCurrent()
 
 void FSTree::select(QString dirPath)
 {
+    qDebug() << "FSTree::select " << dirPath;
     setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
 }
 
@@ -230,7 +232,7 @@ QModelIndex FSTree::getCurrentIndex()
 
 void FSTree::resizeColumns()
 {
-    if (showImageCount) {
+    if (fsModel->showImageCount) {
         imageCountColumnWidth = 45;
         showColumn(4);
         setColumnWidth(4, imageCountColumnWidth);

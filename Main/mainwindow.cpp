@@ -609,7 +609,6 @@ void MW::folderSelectionChange()
     // show image count in Folders (fsTree) if showImageCountAction isChecked
     if (showImageCountAction->isChecked()) {
         fsTree->fsModel->showImageCount = true;
-        fsTree->expand(fsTree->fsFilter->index(0,0));
         fsTree->fsModel->fetchMore(fsTree->rootIndex());
     }
 
@@ -622,7 +621,7 @@ void MW::folderSelectionChange()
     MW::fileSelectionChange triggered by DataModel->load         */
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         updateStatus(false, "No images in this folder");
-        setCentralMessage("The folder " + currentViewDir + " does not have any eligible images");
+        setCentralMessage("The folder \"" + currentViewDir + "\" does not have any eligible images");
         popUp->close();
         infoView->clearInfo();
         metadata->clear();
@@ -4043,7 +4042,7 @@ void MW::setShowImageCount()
     }
     bool isShow = showImageCountAction->isChecked();
     // req'd to resize columns
-    fsTree->showImageCount = isShow;
+    fsTree->fsModel->showImageCount = isShow;
     // req'd to show imageCount in data
 
 //    fsTree->fsModel->showImageCount = isShow;
@@ -6668,7 +6667,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
         if (report) {
             qDebug() << "MW::isFolderValid  fPath.length() == 0" << fPath;
 //            QMessageBox::critical(this, tr("Error"), tr("The assigned folder name is blank"));
-            msg = "The selected folder (" + fPath + ") does not have any images that can be shown in Winnow.";
+            msg = "The selected folder \"" + fPath + "\" does not have any images that can be shown in Winnow.";
             updateStatus(false, msg);
             setCentralMessage(msg);
         }
