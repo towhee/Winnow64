@@ -21,7 +21,7 @@ protected:
 class FSModel : public QFileSystemModel
 {
 public:
-    FSModel(QWidget *parent, Metadata *metadata, bool showImageCount);
+    FSModel(QWidget *parent, Metadata *metadata);
 	bool hasChildren(const QModelIndex &parent) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
@@ -48,8 +48,6 @@ public:
 	QModelIndex getCurrentIndex();
     void select(QString dirPath);
     void scrollToCurrent();
-    bool showImageCount;
-//	void setModelFlags();
     void showSupportedImageCount();
 
 public slots:
