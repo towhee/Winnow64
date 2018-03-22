@@ -4,7 +4,6 @@ INCLUDEPATH += .
 INCLUDEPATH += Dialogs
 INCLUDEPATH += MacOS
 
-#QT += gui-private
 QT += widgets
 QT += xmlpatterns
 

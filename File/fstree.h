@@ -41,13 +41,15 @@ public:
     FSTree(QWidget *parent, Metadata *metadata, bool showImageCount);
 
     FSModel *fsModel;
+//    QFileSystemModel *fsModel;
+
     FSFilter *fsFilter;
 
 	QModelIndex getCurrentIndex();
     void select(QString dirPath);
     void scrollToCurrent();
     bool showImageCount;
-	void setModelFlags();
+//	void setModelFlags();
     void showSupportedImageCount();
 
 public slots:
