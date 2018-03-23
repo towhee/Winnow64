@@ -5,14 +5,14 @@
 CircleLabel::CircleLabel(QWidget *parent)
     : QLabel(parent)
 {
-    setFixedSize(18, 18);
+    setFixedSize(64, 64);
+//    setFixedSize(18, 18);
     setScaledContents(true);
     setAttribute(Qt::WA_TranslucentBackground);
-//    setAlignment(Qt::AlignLeft | Qt::AlignTop);
     setAlignment(Qt::AlignRight | Qt::AlignBottom);
-//    setAlignment(Qt::AlignCenter | Qt::AlignHCenter);
 
     textColor = QColor(Qt::white);
+    diameter = 18;
 }
 
 void CircleLabel::setText(QString rating)
@@ -39,6 +39,7 @@ void CircleLabel::setDiameter(int diameter)
     repaint();
 }
 
+//void CircleLabel::paintEvent(QPaintEvent /* *event */)
 void CircleLabel::paintEvent(QPaintEvent *event)
 {
     QVariant x = event->type();     // suppress compiler warning
@@ -47,7 +48,8 @@ void CircleLabel::paintEvent(QPaintEvent *event)
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setRenderHint(QPainter::TextAntialiasing, true);
 
-    QRect rect(0, 0, 18, 18);
+//    QRect rect(0, 0, 18, 18);
+    QRect rect(0, 0, diameter, diameter);
 //    QRect rect((width() - diameter) / 2, (height() - diameter) / 2, diameter, diameter);
     painter.setBrush(backgroundColor);
 //    painter.setBrush(QColor(255,0,0,128));
@@ -58,7 +60,8 @@ void CircleLabel::paintEvent(QPaintEvent *event)
     ratingTextPen.setWidth(2);
     painter.setPen(ratingTextPen);
     QFont font = painter.font();
-    font.setPixelSize(12);
+    int fontHeight = (int)diameter * 0.66;
+    font.setPixelSize(fontHeight);
     font.setBold(true);
     painter.setFont(font);
     painter.drawText(rect, Qt::AlignCenter, text);

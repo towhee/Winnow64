@@ -38,7 +38,11 @@ class FSTree : public QTreeView
 	Q_OBJECT
 
 public:
-    FSTree(QWidget *parent, Metadata *metadata, bool showImageCount);
+    FSTree(QWidget *parent, Metadata *metadata);
+    void createModel();
+    void refreshModel();
+    void setShowImageCount(bool showImageCount);
+    bool getShowImageCount();
 
     FSModel *fsModel;
 //    QFileSystemModel *fsModel;

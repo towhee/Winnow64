@@ -608,7 +608,8 @@ void MW::folderSelectionChange()
 
     // show image count in Folders (fsTree) if showImageCountAction isChecked
     if (showImageCountAction->isChecked()) {
-        fsTree->fsModel->showImageCount = true;
+        fsTree->setShowImageCount(true);
+//        fsTree->fsModel->showImageCount = true;
         fsTree->fsModel->fetchMore(fsTree->rootIndex());
     }
 
@@ -1129,6 +1130,11 @@ void MW::createActions()
     subFoldersAction->setChecked(false);
     addAction(subFoldersAction);
     connect(subFoldersAction, SIGNAL(triggered()), this, SLOT(setIncludeSubFolders()));
+
+    refreshFoldersAction = new QAction(tr("Refresh folders"), this);
+    refreshFoldersAction->setObjectName("refreshFolders");
+    addAction(refreshFoldersAction);
+    connect(refreshFoldersAction, SIGNAL(triggered()), this, SLOT(refreshFolders()));
 
     showImageCountAction = new QAction(tr("Show image count"), this);
     showImageCountAction->setObjectName("showImageCount");
@@ -1900,6 +1906,8 @@ void MW::createMenus()
     connect(recentFoldersMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeRecentFolder(QAction*)));
     fileMenu->addSeparator();
+    fileMenu->addAction(refreshFoldersAction);
+    fileMenu->addSeparator();
     fileMenu->addAction(ingestAction);
     fileMenu->addSeparator();
     fileMenu->addAction(revealFileAction);
@@ -2082,7 +2090,9 @@ void MW::createMenus()
     separatorAction3->setSeparator(true);
 
     // FSTree context menu
-    QList<QAction *> *fsTreeActions = new QList<QAction *>;
+    fsTreeActions = new QList<QAction *>;
+//    QList<QAction *> *fsTreeActions = new QList<QAction *>;
+    fsTreeActions->append(refreshFoldersAction);
     fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileAction);
     fsTreeActions->append(separatorAction);
@@ -2094,7 +2104,8 @@ void MW::createMenus()
     fsTreeActions->append(folderDockLockAction);
 
     // filters context menu
-    QList<QAction *> *filterActions = new QList<QAction *>;
+    filterActions = new QList<QAction *>;
+//    QList<QAction *> *filterActions = new QList<QAction *>;
     filterActions->append(uncheckAllFiltersAction);
     filterActions->append(separatorAction);
     filterActions->append(expandAllAction);
@@ -2605,8 +2616,10 @@ void MW::createFSTree()
     #endif
     }
     // loadSettings has not run yet (dependencies, but QSettings has been opened
-    fsTree = new FSTree(this, metadata, setting->value("showImageCount").toBool());
+    fsTree = new FSTree(this, metadata);
     fsTree->setMaximumWidth(folderMaxWidth);
+//    fsTree->fsModel->showImageCount = setting->value("showImageCount").toBool();
+    fsTree->setShowImageCount(setting->value("showImageCount").toBool());
 
     connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
 
@@ -4041,12 +4054,7 @@ void MW::setShowImageCount()
         popUp->showPopup(this, "Show image count is only available when the Folders Panel is visible", 1500, 0.75);
     }
     bool isShow = showImageCountAction->isChecked();
-    // req'd to resize columns
-    fsTree->fsModel->showImageCount = isShow;
-    // req'd to show imageCount in data
-
-//    fsTree->fsModel->showImageCount = isShow;
-
+    fsTree->setShowImageCount(isShow);
     fsTree->resizeColumns();
     fsTree->repaint();
     if (isShow) fsTree->fsModel->fetchMore(fsTree->rootIndex());
@@ -5271,6 +5279,15 @@ condition of actions sets the visibility of all window components. */
 //    setActualDevicePixelRation();
     isUpdatingState = false;
 //    reportState();
+}
+
+void MW::refreshFolders()
+{
+//    bool showImageCount = fsTree->fsModel->showImageCount;
+    bool showImageCount = fsTree->getShowImageCount();
+    fsTree->refreshModel();
+    fsTree->setShowImageCount(showImageCount);
+//    fsTree->fsModel->showImageCount = showImageCount;
 }
 
 /*****************************************************************************************
@@ -6749,11 +6766,20 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    QString fPath = thumbView->getCurrentFilename();
-    QModelIndex idx = thumbView->currentIndex();
-    QString current = infoString->currentInfoTemplate;
-    QString s = infoString->parseTokenString(infoString->infoTemplates[current], fPath, idx);
-    qDebug() << "MW::test " << current << s;
+    qDebug() << "Testing";
+    delete fsTree;
+    createFSTree();
+    folderDock->setWidget(fsTree);
+
+//    fsTree->fsModel->setRootPath("");
+//    fsTree->fsModel->setRootPath(fsTree->fsModel->myComputer().toString());
+//    fsTree->fsModel->fetchMore(fsTree->rootIndex());
+
+//    QString fPath = thumbView->getCurrentFilename();
+//    QModelIndex idx = thumbView->currentIndex();
+//    QString current = infoString->currentInfoTemplate;
+//    QString s = infoString->parseTokenString(infoString->infoTemplates[current], fPath, idx);
+//    qDebug() << "MW::test " << current << s;
 
 //    int i = 2387490285;
 //    QString s = QLocale(QLocale::English).toString(i);
