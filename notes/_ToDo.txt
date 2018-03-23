@@ -36,6 +36,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Not showing all folders in folders panel on Linix
 - Done: Check start/end of jpg offsets to confirm D8 and D9
 - Done: D2H NEFs crash Winnow
 - Done: Caching thumbs is sometimes slow

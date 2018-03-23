@@ -113,5 +113,7 @@
         <file>images/badImage1.png</file>
         <file>images/branch-closed.png</file>
         <file>images/branch-open.png</file>
+        <file>images/checkmark48.png</file>
+        <file>images/checkmark.png</file>
     </qresource>
 </RCC>

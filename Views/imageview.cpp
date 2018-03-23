@@ -77,16 +77,16 @@ ImageView::ImageView(QWidget *parent,
     titleDropShadow->setAttribute(Qt::WA_TranslucentBackground);
 
     pickLabel = new QLabel(this);
-//    pickLabel->setFixedSize(64,51);
-    pickLabel->setFixedSize(40,48);
+    pickLabel->setFixedSize(64,64);
     pickLabel->setAttribute(Qt::WA_TranslucentBackground);
-//    pickPixmap = new QPixmap(":/images/checkmark64.png");
-    pickPixmap = new QPixmap(":/images/ThumbsUp48.png");
+    pickPixmap = new QPixmap(":/images/checkmark.png");
     // setPixmap during resize event
     pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
     pickLabel->setVisible(false);
 
     classificationLabel = new CircleLabel(this);
+    classificationLabel->setVisible(false);
+    classificationLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
     classificationLabel->setVisible(false);
 
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
@@ -453,48 +453,56 @@ size.
     QPoint sceneBottomRight;            // bottom right corner of scene in view coord
     sceneBottomRight = mapFromScene(sceneRect().bottomRight());
 
-    intSize p;
-    p.w = pickLabel->width();           // width of the pick symbol
-    p.h = pickLabel->height();          // height of the pick symbol
-    int offset = 10;                    // offset pixels from the edge of image
-    int x, y = 0;                       // top left coordinates of pick symbol
+    int x, y = 0;                       // bottom right coordinates of visible image
 
     int w;                              // width of window or image, whichever is smaller in view coord
     int h;                              // height of window or image, whichever is smaller in view coord
 
     // if the image view is not as wide as the window
     if (sceneBottomRight.x() < rect().width()) {
-        x = sceneBottomRight.x() - p.w - offset;
+        x = sceneBottomRight.x(); // - p.w - offset;
         w = mapFromScene(sceneRect().bottomRight()).x() - mapFromScene(sceneRect().bottomLeft()).x();
     }
     else {
-        x = rect().width() - p.w - offset;
+        x = rect().width(); // - p.w - offset;
         w = rect().width();
     }
 \
     // if the image view is not as high as the window
     if (sceneBottomRight.y() < rect().height()) {
-        y = sceneBottomRight.y() - p.h - offset;
+        y = sceneBottomRight.y(); // - p.h - offset;
         h = mapFromScene(sceneRect().bottomRight()).y() - mapFromScene(sceneRect().topRight()).y();
     }
     else {
-        y = rect().height() - p.h - offset;
+        y = rect().height(); // - p.h - offset;
         h = rect().height();
     }
 
     // resize if necessary
-    qreal f = 0.03;
+    qreal f = 0.1;
     w *= f;
     h *= f;
     int d;                          // dimension of pick image
     w > h ? d = w : d = h;
-    if (d < 20) d = 20;
-    if (d > 40) d = 40;
-    pickLabel->setPixmap(pickPixmap->scaled(d, d, Qt::KeepAspectRatio));
+    if (d < 20) d = 18;
+    if (d > 64) d = 64;
 
-    pickLabel->move(x, y);
-    classificationLabel->move(x + p.w - offset, y + p.h - offset);
-//    classificationLabel->move(x + p.w - offset - d, y + p.h - offset - 0.20 * d);
+    int o = 10;         // offset margin from edge
+
+    // size labels in relation to image size
+    pickLabel->setPixmap(pickPixmap->scaled(d, d, Qt::KeepAspectRatio));
+    d /= 2;
+    if (d < 18) d = 18;
+    classificationLabel->setDiameter(d);
+
+    intSize p, c;
+    p.w = pickLabel->width();
+    p.h = pickLabel->height();
+    c.w = classificationLabel->width();
+    c.h = classificationLabel->height();
+
+    pickLabel->move(x - p.w - o, y - p.h - o);
+    classificationLabel->move(x - d - o/2, y - d - o/2);
 }
 
 void ImageView::resizeEvent(QResizeEvent *event)

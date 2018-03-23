@@ -289,6 +289,7 @@ private slots:
     void updatePick();
     void updateRating();
     void updateColorClass();
+    void refreshFolders();
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
     void setMouseClickScroll(bool prefMouseClickScroll);
@@ -409,6 +410,7 @@ private:
     QAction *addBookmarkAction;
     QAction *removeBookmarkAction;
     QAction *ingestAction;
+    QAction *refreshFoldersAction;
     QAction *renameAction;
     QAction *showImageCountAction;
     QAction *runDropletAction;
@@ -549,6 +551,10 @@ private:
     QAction *helpAction;
     QAction *helpShortcutsAction;
     QAction *helpWelcomeAction;
+
+    // Context menus
+    QList<QAction *> *fsTreeActions;
+    QList<QAction *> *filterActions;
 
     // General
     QAction *testAction;    // only available via shortcut key

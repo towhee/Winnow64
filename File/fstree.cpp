@@ -17,6 +17,7 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
 #ifdef Q_OS_WIN
     if (!sourceParent.isValid()) {      // if is a drive
         QModelIndex idx = sourceModel()->index(sourceRow, 0, sourceParent);
+        bool okay = idx.isValid();
         QString path = idx.data(QFileSystemModel::FilePathRole).toString();
         bool mounted = mountedDrives.contains(path);
         if (!mounted) return false;     // do not accept unmounted drives
@@ -105,6 +106,18 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
 {
+//    QString path = qvariant_cast<QString>(QFileSystemModel::data(index, QFileSystemModel::FilePathRole));
+//    qDebug() << "FSModel::data -" << path;
+//    bool mounted = mountedDrives.contains(path);
+////    if (path == "O:/") {
+//        bool okay = index.isValid();
+//        QFileInfo info(path);
+//        bool readable = info.isReadable();
+////    }
+
+//    if (!index.isValid() || index.model() != this)
+//        return QVariant();
+
     // return image count for each folder
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
@@ -138,7 +151,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
 CLASS FSTree subclassing QTreeView
 ------------------------------------------------------------------------------*/
 
-FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTreeView(parent)
+FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 {
     {
     #ifdef ISDEBUG
@@ -149,40 +162,10 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     fileFilters = new QStringList;
     dir = new QDir();
 
-    fsModel = new FSModel(this, metadata);
-    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
-    fsModel->setRootPath("");
+    // create model and filter
+    createModel();
 
-#ifdef Q_OS_LINIX   // not recognized for some reason
-    fsModel->setRootPath("");
-//    fsModel->setRootPath("/home");
-#endif
-
-#ifdef Q_OS_WIN
-    // get mounted drives only
-    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
-        if (storage.isValid() && storage.isReady()) {
-            if (!storage.isReadOnly()) {
-                mountedDrives << storage.rootPath();
-            }
-        }
-    }
-    fsModel->setRootPath("");
-#endif
-
-#ifdef Q_OS_MACOS  // Q_OS_MACOS
-    fsModel->setRootPath("/Volumes");
-    fsModel->setRootPath("/Users");
-#endif
-
-    fsFilter = new FSFilter(fsModel);
-    fsFilter->setSourceModel(fsModel);
-    fsFilter->setSortRole(QFileSystemModel::FilePathRole);
-
-    // treeview setup
-//    setModel(fsFilter);
-    setModel(fsModel);
-
+    // setup treeview
     for (int i = 1; i <= 3; ++i)
         hideColumn(i);
 
@@ -196,6 +179,67 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata, bool showImageCount) : QTree
     setAcceptDrops(true);
     setDragEnabled(true);
     setDragDropMode(QAbstractItemView::InternalMove);
+}
+
+void FSTree::createModel()
+{
+/*
+Create the model and filter in a separate function as it is also used to refresh
+the folders by deleting the model and re-creating it.
+*/
+    fsModel = new FSModel(this, metadata);
+    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
+    fsModel->setRootPath("");
+
+#ifdef Q_OS_LINIX   // not recognized for some reason
+    fsModel->setRootPath("");
+//    fsModel->setRootPath("/home");
+#endif
+
+#ifdef Q_OS_WIN
+    // get mounted drives only
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+//        qDebug() << "FSTree::createModel  " << storage.rootPath();
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                mountedDrives << storage.rootPath();
+            }
+        }
+    }
+    fsModel->setRootPath(fsModel->myComputer().toString());
+#endif
+
+#ifdef Q_OS_MACOS  // Q_OS_MACOS
+    fsModel->setRootPath("/Volumes");
+    fsModel->setRootPath("/Users");
+#endif
+
+    fsFilter = new FSFilter(fsModel);
+    fsFilter->setSourceModel(fsModel);
+    fsFilter->setSortRole(QFileSystemModel::FilePathRole);
+
+    // apply model to treeview
+    setModel(fsFilter);
+}
+
+void FSTree::refreshModel()
+{
+/*
+Most common use is to refresh the folder panel after inserting a USB connected
+media card.
+*/
+    delete fsModel;
+    createModel();
+}
+
+bool FSTree::getShowImageCount()
+{
+    return fsModel->showImageCount;
+}
+
+void FSTree::setShowImageCount(bool showImageCount)
+{
+    fsModel->showImageCount = showImageCount;
 }
 
 void FSTree::scrollToCurrent()
