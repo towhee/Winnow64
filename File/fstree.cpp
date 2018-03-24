@@ -199,13 +199,18 @@ the folders by deleting the model and re-creating it.
 #ifdef Q_OS_WIN
     // get mounted drives only
     foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
-//        qDebug() << "FSTree::createModel  " << storage.rootPath();
+/*        qDebug() << "FSTree::createModel  " << storage.rootPath()
+                 << "storage.isValid()" << storage.isValid()
+                 << "storage.isReady()" << storage.isReady()
+                 << "storage.isReadOnly()" << storage.isReadOnly();
+                 */
         if (storage.isValid() && storage.isReady()) {
             if (!storage.isReadOnly()) {
                 mountedDrives << storage.rootPath();
             }
         }
     }
+//    fsModel->setRootPath("D:/");
     fsModel->setRootPath(fsModel->myComputer().toString());
 #endif
 

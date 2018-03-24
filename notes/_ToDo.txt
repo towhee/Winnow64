@@ -1,4 +1,5 @@
 BUGS
+- Not finding thumbnail in D850 NEFs
 - Sometimes thumbs do not paint until select
 - Image caching not always updating
 - Open with ... (doesn't work on macOS)
@@ -15,8 +16,6 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
 - Combine raw+jpg option
-- Refresh
-- Add complete for ingest description
 - add metadata performance options to preferences
 - Add current folder to bookmarks
 - Get Sony image count, camera SN
@@ -29,13 +28,14 @@ ENHANCEMENTS
 - Disable menu "add bookmark" when folders not selected??
 - Tweak context menus
 - Add filters activated status (red text on image?)
-- Initial setup (other than workspace)
 - Eject card
 - Run droplet
 - Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Add complete for ingest description
+- Done: Refresh folder panel
 - Done: Not showing all folders in folders panel on Linix
 - Done: Check start/end of jpg offsets to confirm D8 and D9
 - Done: D2H NEFs crash Winnow

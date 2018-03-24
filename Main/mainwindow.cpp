@@ -4723,6 +4723,13 @@ re-established when the application is re-opened.
     }
     setting->endGroup();
 
+    /* save ingest description completer list */
+    setting->beginGroup("IngestDescriptionCompleter");
+    for (const auto& i : ingestDescriptionCompleter) {
+        setting->setValue(i, "");
+    }
+    setting->endGroup();
+
     // save workspaces
     setting->beginWriteArray("workspaces");
     for (int i = 0; i < workspaces->count(); ++i) {
@@ -5007,6 +5014,13 @@ Preferences are located in the prefdlg class and updated here.
         recentFolders->append(setting->value(recentList.at(i)).toString());
     }
     setting->endGroup();
+
+    /* read ingest description completer list */
+    setting->beginGroup("IngestDescriptionCompleter");
+    ingestDescriptionCompleter = setting->childKeys();
+    setting->endGroup();
+
+    qDebug() << ingestDescriptionCompleter;
 
     // moved read workspaces to separate function as req'd by actions while the
     // rest of QSettings are dependent on actions being defined first.
@@ -6025,7 +6039,7 @@ void MW::ingests()
         ingestDlg = new IngestDlg(this, imageList, metadata,
              ingestRootFolder, pathTemplates, filenameTemplates,
              pathTemplateSelected, filenameTemplateSelected,
-             autoIngestFolderPath);
+             ingestDescriptionCompleter, autoIngestFolderPath);
         connect(ingestDlg, SIGNAL(updateIngestParameters(QString,bool)),
                 this, SLOT(setIngestRootFolder(QString,bool)));
         ingestDlg->exec();
@@ -6766,50 +6780,25 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    qDebug() << "Testing";
-    delete fsTree;
-    createFSTree();
-    folderDock->setWidget(fsTree);
-
-//    fsTree->fsModel->setRootPath("");
-//    fsTree->fsModel->setRootPath(fsTree->fsModel->myComputer().toString());
-//    fsTree->fsModel->fetchMore(fsTree->rootIndex());
-
-//    QString fPath = thumbView->getCurrentFilename();
-//    QModelIndex idx = thumbView->currentIndex();
-//    QString current = infoString->currentInfoTemplate;
-//    QString s = infoString->parseTokenString(infoString->infoTemplates[current], fPath, idx);
-//    qDebug() << "MW::test " << current << s;
-
-//    int i = 2387490285;
-//    QString s = QLocale(QLocale::English).toString(i);
-//    qDebug() << s;
-
-//    QLocale(QLocale::English, QLocale::Canada)
 
     // this does not work on mac
-//    QWindow *win = new QWindow;
-//    QPoint loc = centralWidget->window()->geometry().center();
-//    win->setScreen(qApp->screenAt(loc));
-//    win->showFullScreen();
-//    qDebug() << "MW::Test  Width =" << win->width() << "Height =" << win->height()
-//             << qApp->screenAt(loc)->name();
-//    win->close();
+    QWindow *win = new QWindow;
+    QPoint loc = centralWidget->window()->geometry().center();
+    win->setScreen(qApp->screenAt(loc));
+    win->showFullScreen();
+    qDebug() << "MW::Test  Width =" << win->width() << "Height =" << win->height()
+             << qApp->screenAt(loc)->name();
+    win->close();
 
-//    qDebug() << "MW::Test Screen " << qApp->screenAt(loc)->name();
+    qDebug() << "MW::Test Screen qApp->screenAt(loc)->name()" << qApp->screenAt(loc)->name();
 
-//    qDebug() << "MW::Test  loc =" << loc;
+    qDebug() << "MW::Test  loc =" << loc;
 
+    QScreen *screen = qApp->screenAt(loc);
+//    QScreen *screen = QGuiApplication::primaryScreen();
+    QPixmap pm = screen->grabWindow(0);
+    qDebug() << "screen->grabWindow(0)" << pm.width() << pm.height();
 
-
-    // QDateTime dt = QDateTime::fromSecsSinceEpoch(1507681529.3377);
-    // qDebug() << dt;
-
-    //    QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
-    //        (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
-    //    qDebug() << QDateTime::currentDateTime().toOffsetFromUtc(QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
-    // xmp:ModifyDate="2017-12-21T16:51:02-08:00"
-    //                "2018-03-01T05:42:22-08:00"
 }
 
 // End MW

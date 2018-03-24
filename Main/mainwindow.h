@@ -64,6 +64,7 @@ public:
 
     int copyCutCount;   // req'd?
 
+    // QSettings
     QSettings *setting;
     QMap<QString, QAction *> actionKeys;
     QMap<QString, QString> externalApps;
@@ -72,8 +73,8 @@ public:
     QMap<QString, QString> filenameTemplates;
     int pathTemplateSelected;
     int filenameTemplateSelected;
-//    QMap<QString, QString> infoTemplates;
-//    QString currentInfoTemplate;
+
+    QStringList ingestDescriptionCompleter;
 
     QDockWidget *thumbDock;
 

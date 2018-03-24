@@ -17,14 +17,15 @@ class IngestDlg : public QDialog
 
 public:
     explicit IngestDlg(QWidget *parent,
-                         QFileInfoList &imageList,
-                         Metadata *metadata,
-                         QString ingestRootFolder,
-                         QMap<QString, QString>& pathTemplates,
-                         QMap<QString, QString>& filenameTemplates,
-                         int& pathTemplateSelected,
-                         int& filenameTemplateSelected,
-                         bool isAuto);
+                       QFileInfoList &imageList,
+                       Metadata *metadata,
+                       QString ingestRootFolder,
+                       QMap<QString, QString>& pathTemplates,
+                       QMap<QString, QString>& filenameTemplates,
+                       int& pathTemplateSelected,
+                       int& filenameTemplateSelected,
+                       QStringList &ingestDescriptionCompleter,
+                       bool isAuto);
     ~IngestDlg();
 
 private slots:
@@ -72,6 +73,7 @@ private:
 
     int& pathTemplateSelected;
     int& filenameTemplateSelected;
+    QStringList& ingestDescriptionCompleter;
 
     QString folderPath; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
     QString defaultRootFolderPath;
