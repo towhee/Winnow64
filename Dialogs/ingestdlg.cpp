@@ -35,11 +35,13 @@ IngestDlg::IngestDlg(QWidget *parent,
                      QMap<QString, QString>& filenameTemplates,
                      int& pathTemplateSelected,
                      int& filenameTemplateSelected,
+                     QStringList& ingestDescriptionCompleter,
                      bool isAuto) :
 
                      QDialog(parent),
                      ui(new Ui::IngestDlg),
                      isAuto(isAuto),
+                     ingestDescriptionCompleter(ingestDescriptionCompleter),
                      pickList(imageList),
                      metadata(metadata),
                      pathTemplatesMap(pathTemplates),
@@ -95,6 +97,12 @@ IngestDlg::IngestDlg(QWidget *parent,
         ui->selectFolderBtn->setFocus();
         ui->manualRadio->setChecked(true);
     }
+
+    // assign completer to description
+    QCompleter *completer = new QCompleter(this->ingestDescriptionCompleter, this);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    ui->descriptionLineEdit->setCompleter(completer);
+
     isInitializing = false;
     buildFileNameSequence();
 }
@@ -139,6 +147,13 @@ void IngestDlg::accept()
     else {
         // add message explaining failure
         return;
+    }
+
+    // add description to completer list
+    QString desc = ui->descriptionLineEdit->text();
+    if (desc.length() > 0) {
+        if (!ingestDescriptionCompleter.contains(desc))
+            ingestDescriptionCompleter << desc;
     }
 
     // copy picked images
