@@ -176,20 +176,13 @@ void MW::setupPlatform()
     #endif
     }
     #ifdef Q_OS_LINIX
-        G::devicePixelRatio = 1;
+//        G::devicePixelRatio = 1;
     #endif
     #ifdef Q_OS_WIN
-        G::devicePixelRatio = 1;
         setWindowIcon(QIcon(":/images/winnow.png"));
     #endif
     #ifdef Q_OS_MAC
-        G::devicePixelRatio = 2;
         setWindowIcon(QIcon(":/images/winnow.icns"));
-//        int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
- //       int screenWidth1 = CGDisplayModeGetWidth(CGMainDisplayID());
- //       qDebug() << "screenWidth" << screenWidth << screenWidth1 << QPaintDevice::devicePixelRatio();
-//         QSizeF display = QtMac::macBackingScaleFactor();
-//         qDebug() << "QtMac::BackingScaleFactor()" << display;
     #endif
 }
 
@@ -216,6 +209,11 @@ void MW::moveEvent(QMoveEvent *event)
     QMainWindow::moveEvent(event);
 //    if (!isInitializing)  qDebug() << "MW::resizeEvent" << screen();
     emit resizeMW(this->geometry(), centralWidget->geometry());
+    setDisplayResolution();
+    QString dim = QString::number(displayHorizontalPixels) + "x"
+            + QString::number(displayVerticalPixels);
+    QStandardItemModel *k = infoView->ok;
+    k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), dim);
 }
 
 void MW::resizeEvent(QResizeEvent *event)
@@ -225,17 +223,17 @@ void MW::resizeEvent(QResizeEvent *event)
     emit resizeMW(this->geometry(), centralWidget->geometry());
 }
 
-QSize MW::screen()
-{
-    QWindow *win = new QWindow;
-    QPoint loc = centralWidget->window()->geometry().center();
-    win->setScreen(qApp->screenAt(loc));
-    win->showFullScreen();
-//    qDebug() << "MW::Test  Width =" << win->width() << "Height =" << win->height()
-//             << qApp->screenAt(loc)->name();
-    win->close();
-    return QSize(win->width(), win->height());
-}
+//QSize MW::screen()
+//{
+//    QWindow *win = new QWindow;
+//    QPoint loc = centralWidget->window()->geometry().center();
+//    win->setScreen(qApp->screenAt(loc));
+//    win->showFullScreen();
+////    qDebug() << "MW::Test  Width =" << win->width() << "Height =" << win->height()
+////             << qApp->screenAt(loc)->name();
+//    win->close();
+//    return QSize(win->width(), win->height());
+//}
 
 //void MW::mousePressEvent(QMouseEvent *event)
 //{
@@ -2270,7 +2268,7 @@ void MW::setupCentralWidget()
     Ui::welcomeScrollArea ui;
     ui.setupUi(welcome);
 //    welcome->setVisible(false);   //nada
-    connect(ui.monitorSizeBtn, SIGNAL(clicked(bool)), this, SLOT(monitorPreference()));
+//    connect(ui.monitorSizeBtn, SIGNAL(clicked(bool)), this, SLOT(monitorPreference()));
 
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
@@ -3981,18 +3979,18 @@ void MW::chooseExternalApp()
     process->start(program, args);
 }
 
-void MW::monitorPreference()
-{
-/*
-Called from welcome screen.  Opens preferences on monitor resolution page.
-*/
-    {
-    #ifdef ISDEBUG
-    qDebug() << "MW::monitorPreference()";
-    #endif
-    }
-    preferences(0);
-}
+//void MW::monitorPreference()
+//{
+///*
+//Called from welcome screen.  Opens preferences on monitor resolution page.
+//*/
+//    {
+//    #ifdef ISDEBUG
+//    qDebug() << "MW::monitorPreference()";
+//    #endif
+//    }
+//    preferences(0);
+//}
 
 void MW::preferences(int page)
 {
@@ -4014,8 +4012,8 @@ void MW::preferences(int page)
             this, SLOT(setMouseClickScroll(bool)));
     connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
             this, SLOT(setTrackpadScroll(bool)));
-    connect(prefdlg, SIGNAL(updateDisplayResolution(int,int)),
-            this, SLOT(setDisplayResolution(int,int)));
+//    connect(prefdlg, SIGNAL(updateDisplayResolution(int,int)),
+//            this, SLOT(setDisplayResolution(int,int)));
     connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool,bool)),
             thumbView, SLOT(setThumbParameters(int,int,int,int,int,bool,bool)));
     connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool,bool)),
@@ -4095,13 +4093,31 @@ void MW::setTrackpadScroll(bool trackpadScroll)
     imageView->useWheelToScroll = trackpadScroll;
 }
 
-void MW::setDisplayResolution(int horizontalPixels, int verticalPixels)
+void MW::setDisplayResolution()
 {
-    displayHorizontalPixels = horizontalPixels;
-    displayVerticalPixels = verticalPixels;
-    cachePreviewWidth = horizontalPixels;
-    cachePreviewHeight = verticalPixels;
-    qDebug() << "setDisplayresolution" << displayHorizontalPixels << displayVerticalPixels;
+#ifdef Q_OS_WIN
+//    G::devicePixelRatio = 1;
+    QPoint loc = centralWidget->window()->geometry().center();
+    displayHorizontalPixels = qApp->screenAt(loc)->geometry().width();
+    displayVerticalPixels = qApp->screenAt(loc)->geometry().height();
+#endif
+#ifdef Q_OS_MAC
+//    G::devicePixelRatio = 2;
+    auto modes = CGDisplayCopyAllDisplayModes(mainDisplayId, nullptr);
+    auto count = CFArrayGetCount(modes);
+    CGDisplayModeRef mode;
+    int displayHorizontalPixels, displayVerticalPixels = 0;
+    for(auto c = count; c--;) {
+        mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(modes, c);
+        auto w = CGDisplayModeGetWidth(mode);
+        auto h = CGDisplayModeGetHeight(mode);
+        if (w > displayHorizontalPixels) displayHorizontalPixels = (int)w;
+        if (h > displayVerticalPixels) displayVerticalPixels = (int)h;
+    }
+#endif
+
+    cachePreviewWidth = displayHorizontalPixels;
+    cachePreviewHeight = displayVerticalPixels;
     setActualDevicePixelRatio();
 }
 
@@ -4112,12 +4128,8 @@ void MW::setActualDevicePixelRatio()
         G::actualDevicePixelRatio = (float)displayHorizontalPixels / virtualWidth;
     else
         G::actualDevicePixelRatio = QPaintDevice::devicePixelRatio();
-//    qDebug() << "setActualDevicePixelRation   screen->geometry().width()"
-//             << virtualWidth
-//             << displayHorizontalPixels
-//             << G::actualDevicePixelRatio;
 
-/*  Screen information
+/*  MacOS Screen information
 #if defined(Q_OS_MAC)
        int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
        qDebug() << "screenWidth" << screenWidth << QPaintDevice::devicePixelRatio();
@@ -4540,8 +4552,8 @@ re-established when the application is re-opened.
     setting->setValue("lastPrefPage", (int)lastPrefPage);
     setting->setValue("mouseClickScroll", (bool)mouseClickScroll);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
-    setting->setValue("displayHorizontalPixels", displayHorizontalPixels);
-    setting->setValue("displayVerticalPixels", displayVerticalPixels);
+//    setting->setValue("displayHorizontalPixels", displayHorizontalPixels);
+//    setting->setValue("displayVerticalPixels", displayVerticalPixels);
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
     // files
 //    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
@@ -4833,8 +4845,8 @@ Preferences are located in the prefdlg class and updated here.
     if (tempZoom < 0.25) tempZoom = 1;
     imageView->toggleZoom = tempZoom;
     compareImages->toggleZoom = tempZoom;
-    displayHorizontalPixels = setting->value("displayHorizontalPixels").toInt();
-    displayVerticalPixels = setting->value("displayVerticalPixels").toInt();
+//    displayHorizontalPixels = setting->value("displayHorizontalPixels").toInt();
+//    displayVerticalPixels = setting->value("displayVerticalPixels").toInt();
     autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
 
     // files
@@ -6780,24 +6792,27 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-
-    // this does not work on mac
-    QWindow *win = new QWindow;
     QPoint loc = centralWidget->window()->geometry().center();
-    win->setScreen(qApp->screenAt(loc));
-    win->showFullScreen();
-    qDebug() << "MW::Test  Width =" << win->width() << "Height =" << win->height()
-             << qApp->screenAt(loc)->name();
-    win->close();
+    int w = qApp->screenAt(loc)->geometry().width();
+    qDebug() << "MW::test  Screen width =" << w;
 
-    qDebug() << "MW::Test Screen qApp->screenAt(loc)->name()" << qApp->screenAt(loc)->name();
+//    // this does not work on mac
+//    QWindow *win = new QWindow;
+//    QPoint loc = centralWidget->window()->geometry().center();
+//    win->setScreen(qApp->screenAt(loc));
+//    win->showFullScreen();
+//    qDebug() << "MW::Test  Width =" << win->width() << "Height =" << win->height()
+//             << qApp->screenAt(loc)->name();
+//    win->close();
 
-    qDebug() << "MW::Test  loc =" << loc;
+//    qDebug() << "MW::Test Screen qApp->screenAt(loc)->name()" << qApp->screenAt(loc)->name();
 
-    QScreen *screen = qApp->screenAt(loc);
-//    QScreen *screen = QGuiApplication::primaryScreen();
-    QPixmap pm = screen->grabWindow(0);
-    qDebug() << "screen->grabWindow(0)" << pm.width() << pm.height();
+//    qDebug() << "MW::Test  loc =" << loc;
+
+//    QScreen *screen = qApp->screenAt(loc);
+////    QScreen *screen = QGuiApplication::primaryScreen();
+//    QPixmap pm = screen->grabWindow(0);
+//    qDebug() << "screen->grabWindow(0)" << pm.width() << pm.height();
 
 }
 

@@ -22,7 +22,7 @@ signals:
     void updateMouseClickScroll(bool mouseClickScroll);
     void updateInclSubfolders(bool inclSubfolders);
     void updateTrackpadScroll(bool trackpadScroll);
-    void updateDisplayResolution(int horizontalPixels, int verticalPixels);
+//    void updateDisplayResolution(int horizontalPixels, int verticalPixels);
     void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
             int thumbPadding, int labelFontSize, bool showThumbLabels, bool wrapThumbs);
     void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
@@ -80,8 +80,8 @@ private slots:
     void on_statusBarChk_clicked();
     void on_infoField_changed();
     void on_tableField_changed();
-    void on_displayHorizontalPixelsSB_valueChanged(int arg1);
-    void on_displayVerticalPixelsSB_valueChanged(int arg1);
+//    void on_displayHorizontalPixelsSB_valueChanged(int arg1);
+//    void on_displayVerticalPixelsSB_valueChanged(int arg1);
     void on_wrapChk_clicked();
 
     void on_mouseClickScrollChk_clicked();

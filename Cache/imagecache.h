@@ -27,8 +27,7 @@ public:
     void updateImageCache(QString  &fPath);
     void updateCacheStatusCurrentImagePosition(QString &fPath);
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
-             int &cacheStatusWidth, int &cacheWtAhead, bool &usePreview,
-             int &previewWidth, int &previewHeight);
+             int &cacheStatusWidth, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
     void reindexImageCache(QStringList filterFilePathList,
              QString &currentImageFullPath);
     void stopImageCache();

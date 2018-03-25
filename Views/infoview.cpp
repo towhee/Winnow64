@@ -201,6 +201,7 @@ status information, such as number of items picked or current item selected.
     ok->setData(ok->index(PositionRow, 0, statusInfoIdx), "Position");
     ok->setData(ok->index(ZoomRow, 0, statusInfoIdx), "Zoom");
     ok->setData(ok->index(PickedRow, 0, statusInfoIdx), "Picked");
+    ok->setData(ok->index(MonitorRow, 0, statusInfoIdx), "Monitor");
 
     // set default to show all rows - overridden in preferences
     // set all items not editable
