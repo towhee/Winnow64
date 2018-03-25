@@ -1,3 +1,18 @@
+auto modes = CGDisplayCopyAllDisplayModes(mainDisplayId, nullptr);
+auto count = CFArrayGetCount(modes);
+CGDisplayModeRef mode;
+int wMax, hMax = 0;
+for(auto c=count;c--;){
+    mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(modes, c);
+    auto w = CGDisplayModeGetWidth(mode);
+    auto h = CGDisplayModeGetHeight(mode);
+    if (w > wMax) wMax = (int)w;
+    if (h > hMax) hMax = (int)h;
+}
+displayHorizontalPixels = wMax;
+displayVerticalPixels = hMax;
+
+
 // iterate a list
 QListWidget *list = new QListidget;
 for (const auto& i : list) {
