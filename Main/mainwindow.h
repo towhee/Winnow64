@@ -242,7 +242,7 @@ private slots:
     void refine();
     void uncheckAllFilters();
     void sortThumbnails();
-    void monitorPreference();
+//    void monitorPreference();
     void preferences(int page = -1);
     void openWithProgramManagement();
     void oldPreferences();
@@ -296,7 +296,7 @@ private slots:
     void setMouseClickScroll(bool prefMouseClickScroll);
     void setIncludeSubFolders();
     void setTrackpadScroll(bool trackpadScroll);
-    void setDisplayResolution(int horizontalPixels, int verticalPixels);
+    void setDisplayResolution();
     void setIngestRootFolder(QString rootFolder, bool isAuto);
     void setSlideShowParameters(int delay, bool isRandom);
     void setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
@@ -714,7 +714,7 @@ private:
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
     void setCentralMessage(QString message);
 
-    QSize screen();
+//    QSize screen();
 
     void addRecentFolder(QString fPath);
 

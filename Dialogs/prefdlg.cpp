@@ -21,8 +21,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->trackpadIterateRadio->setChecked(!mw->imageView->useWheelToScroll);
     ui->trackpadScrollRadio->setChecked(mw->imageView->useWheelToScroll);
     ui->mouseClickScrollChk->setChecked((mw->mouseClickScroll));
-    ui->displayHorizontalPixelsSB->setValue(mw->displayHorizontalPixels);
-    ui->displayVerticalPixelsSB->setValue(mw->displayVerticalPixels);
+//    ui->displayHorizontalPixelsSB->setValue(mw->displayHorizontalPixels);
+//    ui->displayVerticalPixelsSB->setValue(mw->displayVerticalPixels);
 
     // thumbs
     ui->iconWidthSlider->setValue(mw->thumbView->thumbWidth);
@@ -485,21 +485,21 @@ void Prefdlg::on_trackpadScrollRadio_clicked()
     }
 }
 
-void Prefdlg::on_displayHorizontalPixelsSB_valueChanged(int /* not used */)
-{
-    if(okToUpdate) {
-        emit updateDisplayResolution(ui->displayHorizontalPixelsSB->value(),
-                                     ui->displayVerticalPixelsSB->value());
-    }
-}
+//void Prefdlg::on_displayHorizontalPixelsSB_valueChanged(int /* not used */)
+//{
+//    if(okToUpdate) {
+//        emit updateDisplayResolution(ui->displayHorizontalPixelsSB->value(),
+//                                     ui->displayVerticalPixelsSB->value());
+//    }
+//}
 
-void Prefdlg::on_displayVerticalPixelsSB_valueChanged(int /* not used */)
-{
-    if(okToUpdate) {
-        emit updateDisplayResolution(ui->displayHorizontalPixelsSB->value(),
-                                     ui->displayVerticalPixelsSB->value());
-    }
-}
+//void Prefdlg::on_displayVerticalPixelsSB_valueChanged(int /* not used */)
+//{
+//    if(okToUpdate) {
+//        emit updateDisplayResolution(ui->displayHorizontalPixelsSB->value(),
+//                                     ui->displayVerticalPixelsSB->value());
+//    }
+//}
 
 // grid preferences
 void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
