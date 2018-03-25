@@ -12,6 +12,25 @@ for(auto c=count;c--;){
 displayHorizontalPixels = wMax;
 displayVerticalPixels = hMax;
 
+// return the displayID from a global screen coordinate
+CGPoint point;
+
+CGDirectDisplayID getDisplay()
+{
+const int maxDisplays = 64;                     // 64 should be enough for any system
+CGDisplayErr displayStatus;
+CGDisplayCount displayCount;                    // Total number of display IDs
+CGDirectDisplayID displayIDs[maxDisplays];	// Array of display IDs
+
+displayStatus = CGGetDisplaysWithPoint (point, maxDisplays, displayIDs, &displayCount);
+if (displayStatus != kCGErrorSuccess || displayCount!= 1)
+{
+printf("CGGetDisplaysWithPoint returned error or the wrong number of displays\n");
+return NULL;
+}
+else
+return displayIDs[0];
+}
 
 // iterate a list
 QListWidget *list = new QListidget;

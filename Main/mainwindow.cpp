@@ -4095,24 +4095,38 @@ void MW::setTrackpadScroll(bool trackpadScroll)
 
 void MW::setDisplayResolution()
 {
+    QPoint loc = centralWidget->window()->geometry().center();
+
 #ifdef Q_OS_WIN
 //    G::devicePixelRatio = 1;
-    QPoint loc = centralWidget->window()->geometry().center();
     displayHorizontalPixels = qApp->screenAt(loc)->geometry().width();
     displayVerticalPixels = qApp->screenAt(loc)->geometry().height();
 #endif
+
 #ifdef Q_OS_MAC
-//    G::devicePixelRatio = 2;
-    auto modes = CGDisplayCopyAllDisplayModes(mainDisplayId, nullptr);
+    CGPoint point = loc.toCGPoint();
+    const int maxDisplays = 64;                     // 64 should be enough for any system
+    CGDisplayCount displayCount;                    // Total number of display IDs
+    CGDirectDisplayID displayIDs[maxDisplays];      // Array of display IDs
+    CGGetDisplaysWithPoint (point, maxDisplays, displayIDs, &displayCount);
+    auto displayID = displayIDs[0];
+
+    auto mainDisplayId = CGMainDisplayID();
+    qDebug() << "MW::setDisplayResolution    mainDisplayId =" << mainDisplayId
+             << "displayID =" << displayID
+             << "Point =" << point.x << point.y;
+    auto modes = CGDisplayCopyAllDisplayModes(displayID, nullptr);
+//    auto modes = CGDisplayCopyAllDisplayModes(mainDisplayId, nullptr);
     auto count = CFArrayGetCount(modes);
     CGDisplayModeRef mode;
-    int displayHorizontalPixels, displayVerticalPixels = 0;
+    displayHorizontalPixels, displayVerticalPixels = 0;
     for(auto c = count; c--;) {
         mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(modes, c);
         auto w = CGDisplayModeGetWidth(mode);
         auto h = CGDisplayModeGetHeight(mode);
         if (w > displayHorizontalPixels) displayHorizontalPixels = (int)w;
         if (h > displayVerticalPixels) displayVerticalPixels = (int)h;
+        qDebug() << mode << w << h;
     }
 #endif
 
@@ -6794,7 +6808,9 @@ void MW::test()
 {
     QPoint loc = centralWidget->window()->geometry().center();
     int w = qApp->screenAt(loc)->geometry().width();
-    qDebug() << "MW::test  Screen width =" << w;
+    QScreen *screen = qApp->screenAt(loc);
+    CGPoint pt = loc.toCGPoint();
+    qDebug() << "MW::test  Screen width =" << w << screen->handle();
 
 //    // this does not work on mac
 //    QWindow *win = new QWindow;
