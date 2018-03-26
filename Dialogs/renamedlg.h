@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include "Utilities/popup.h"
+#include "Main/global.h"
 
 /*****************************************************************************/
 class RenameEdit : public QLineEdit

@@ -6,7 +6,7 @@ Metadata::Metadata(QObject *parent) : QObject(parent)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::Metadata";
+    qDebug() << G::t.restart() << "\t" << "Metadata::Metadata";
     #endif
     }
     // some initialization
@@ -77,7 +77,7 @@ void Metadata::initSupportedFiles()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::initSupportedFiles";
+    qDebug() << G::t.restart() << "\t" << "Metadata::initSupportedFiles";
     #endif
     }
     // add raw file types here as they are supported
@@ -163,7 +163,7 @@ void Metadata::initExifHash()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::initExifHash";
+    qDebug() << G::t.restart() << "\t" << "Metadata::initExifHash";
     #endif
     }
 //    exifHash[293] = "ExposureTime";
@@ -732,7 +732,7 @@ void Metadata::initIfdHash()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::initIfdHash";
+    qDebug() << G::t.restart() << "\t" << "Metadata::initIfdHash";
     #endif
     }
     ifdHash[254] = "NewSubfileType";
@@ -1865,10 +1865,10 @@ void Metadata::reportMetadata()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::reportMetadata";
+    qDebug() << G::t.restart() << "\t" << "Metadata::reportMetadata";
     #endif
     }
-    qDebug() << "Metadata::reportMetadata";
+    qDebug() << G::t.restart() << "\t" << "Metadata::reportMetadata";
     QString createdExif = createdDate.toString("yyyy-MM-dd hh:mm:ss");
     rpt << "\n";
     rpt.reset();
@@ -1998,7 +1998,7 @@ Not used
 
 void Metadata::track(QString fPath, QString msg)
 {
-    if (G::isThreadTrackingOn) qDebug() << "• Metadata Caching" << fPath << msg;
+    if (G::isThreadTrackingOn) qDebug() << G::t.restart() << "\t" << "• Metadata Caching" << fPath << msg;
 }
 
 
@@ -2060,7 +2060,7 @@ In IFD type 5, 10, 11, 12 = rational = real/float
     file.seek(offset);
     ulong a = get4(file.read(4));
     ulong b = get4(file.read(4));
-//    qDebug() << "a =" << a << "b =" << b << "a/b =" << (float)a/b;
+//    qDebug() << G::t.restart() << "\t" << "a =" << a << "b =" << b << "a/b =" << (float)a/b;
     if (b == 0) return 0;
     float x = (float)a / b;
     return x;
@@ -2206,7 +2206,7 @@ bool Metadata::readXMP(ulong offset)
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::readXMP(ulong offset)";
+    qDebug() << G::t.restart() << "\t" << "Metadata::readXMP(ulong offset)";
     #endif
     }
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
@@ -2218,7 +2218,7 @@ bool Metadata::readXMP(ulong offset)
     bool xmpFound = false;
     QByteArray xmpByteArray;
 
-//    qDebug() << "Starting readXMP";
+//    qDebug() << G::t.restart() << "\t" << "Starting readXMP";
     // look for the start of XMP block = "<?xpacket begin" ...
     for(ulong i = 0; i < 200; i++) {
         uint byte = get1(file.read(1));
@@ -2232,7 +2232,7 @@ bool Metadata::readXMP(ulong offset)
             file.seek(xmpOffsetStart);
             xmpByteArray = file.read(xmpLength);
 //            QString x = QString::QString(xmpByteArray);
-//            qDebug() << "xmpByteArray as a string:\n" << x;
+//            qDebug() << G::t.restart() << "\t" << "xmpByteArray as a string:\n" << x;
             xmpFound = true;
             break;
         }
@@ -2255,7 +2255,7 @@ bool Metadata::readXMP(ulong offset)
 //                      << "isWhitespace" << xmpBa.isWhitespace()
 //                      << "Text:" << xmpBa.text();
 //        for(int i = 0; i < xmpBa.attributes().size(); i++) {
-//            qDebug() << "qualifiedName:" << xmpBa.qualifiedName()
+//            qDebug() << G::t.restart() << "\t" << "qualifiedName:" << xmpBa.qualifiedName()
 //                     << "Text:" << xmpBa.text()
 //                     << xmpBa.attributes().at(i).prefix()
 //                     << xmpBa.attributes().at(i).name()
@@ -2305,7 +2305,7 @@ bool Metadata::readXMP(ulong offset)
                 count++;
                 xmpBa.readNext();
                 if(xmpBa.qualifiedName() == "" && !xmpBa.isWhitespace()) {
-//                    qDebug() << xmpBa.qualifiedName() << xmpBa.text();
+//                    qDebug() << G::t.restart() << "\t" << xmpBa.qualifiedName() << xmpBa.text();
                     creator = xmpBa.text().toString();
                     notFound = false;
                 }
@@ -2320,7 +2320,7 @@ bool Metadata::readXMP(ulong offset)
                 count++;
                 xmpBa.readNext();
                 if(xmpBa.qualifiedName() == "" && !xmpBa.isWhitespace()) {
-//                    qDebug() << xmpBa.qualifiedName() << xmpBa.text();
+//                    qDebug() << G::t.restart() << "\t" << xmpBa.qualifiedName() << xmpBa.text();
                     xmpTitle = xmpBa.text().toString();
                     notFound = false;
                 }
@@ -2335,7 +2335,7 @@ bool Metadata::readXMP(ulong offset)
                 count++;
                 xmpBa.readNext();
                 if(xmpBa.qualifiedName() == "" && !xmpBa.isWhitespace()) {
-//                    qDebug() << xmpBa.qualifiedName() << xmpBa.text();
+//                    qDebug() << G::t.restart() << "\t" << xmpBa.qualifiedName() << xmpBa.text();
                     copyright = xmpBa.text().toString();
                     notFound = false;
                 }
@@ -2352,12 +2352,12 @@ bool Metadata::readXMP(ulong offset)
             }
         }
     }
-//    qDebug() << "Lens:" << lens;
-//    qDebug() << "Creator" << creator;
-//    qDebug() << "Copyright" << copyright;
-//    qDebug() << "xmpTitle" << xmpTitle;
-//    qDebug() << "email" << email;
-//    qDebug() << "url" << url;
+//    qDebug() << G::t.restart() << "\t" << "Lens:" << lens;
+//    qDebug() << G::t.restart() << "\t" << "Creator" << creator;
+//    qDebug() << G::t.restart() << "\t" << "Copyright" << copyright;
+//    qDebug() << G::t.restart() << "\t" << "xmpTitle" << xmpTitle;
+//    qDebug() << G::t.restart() << "\t" << "email" << email;
+//    qDebug() << G::t.restart() << "\t" << "url" << url;
 
     return false;
 }
@@ -2415,7 +2415,7 @@ to the first IPTC data block so we can skip the search req'd if it was JPG.
         uint dataLength = get2(file.read(2));
         if (recordNumber == 2 && tag == 5) {
             title = file.read(dataLength);
-//            qDebug() << "IPTC title length =" << dataLength
+//            qDebug() << G::t.restart() << "\t" << "IPTC title length =" << dataLength
 //                     << "title =" << title;
             foundTitle = true;
         }
@@ -2433,7 +2433,7 @@ the embedded jpg preview is found (irbID == 1036)
 */
     {
 //    #ifdef ISDEBUG
-//    qDebug() << "Metadata::readIRB";
+//    qDebug() << G::t.restart() << "\t" << "Metadata::readIRB";
 //    #endif
     }
 
@@ -2486,7 +2486,7 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
 {
     {
 //    #ifdef ISDEBUG
-//    qDebug() << "Metadata::readIFD";
+//    qDebug() << G::t.restart() << "\t" << "Metadata::readIFD";
 //    #endif
     }
     uint tagId, tagType = 0;
@@ -2595,7 +2595,7 @@ QList<ulong> Metadata::getSubIfdOffsets(ulong subIFDaddr, int count)
 {
     {
         #ifdef ISDEBUG
-        qDebug() << "Metadata::getSubIfdOffsets";
+        qDebug() << G::t.restart() << "\t" << "Metadata::getSubIfdOffsets";
         #endif
     }
     QList<ulong> offsets;
@@ -2663,7 +2663,7 @@ bool Metadata::getDimensions(ulong jpgOffset)
 {
     {
 //    #ifdef ISDEBUG
-//    qDebug() << "Metadata::getDimensions";
+//    qDebug() << G::t.restart() << "\t" << "Metadata::getDimensions";
 //    #endif
     }
     long order1 = order;
@@ -2698,7 +2698,7 @@ checked to make sure there is valid data.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::verifyEmbeddedJpg";
+    qDebug() << G::t.restart() << "\t" << "Metadata::verifyEmbeddedJpg";
     #endif
     }
     file.seek(offset);
@@ -2718,7 +2718,7 @@ void Metadata::formatNikon()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::nikon";
+    qDebug() << G::t.restart() << "\t" << "Metadata::nikon";
     #endif
     }
     // moved file.open to readMetadata
@@ -2940,7 +2940,7 @@ void Metadata::formatCanon()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::canon";
+    qDebug() << G::t.restart() << "\t" << "Metadata::canon";
     #endif
     }
     //file.open in readMetadata
@@ -3114,7 +3114,7 @@ void Metadata::formatOlympus()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::olympus";
+    qDebug() << G::t.restart() << "\t" << "Metadata::olympus";
     #endif
     }
     //file.open in readMetadata
@@ -3243,7 +3243,7 @@ void Metadata::formatSony()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::formatSony";
+    qDebug() << G::t.restart() << "\t" << "Metadata::formatSony";
     #endif
     }
     //file.open in readMetadata
@@ -3388,7 +3388,7 @@ bool Metadata::formatFuji()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::fuji";
+    qDebug() << G::t.restart() << "\t" << "Metadata::fuji";
     #endif
     }
     //file.open in readMetadata
@@ -3742,7 +3742,7 @@ bool Metadata::formatJPG()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::formatJPG";
+    qDebug() << G::t.restart() << "\t" << "Metadata::formatJPG";
     #endif
     }
     //file.open happens in readMetadata
@@ -3914,7 +3914,7 @@ bool Metadata::formatJPG()
         _label = label;
 
         if (report) xmpString = xmp.metaAsString();
-//        qDebug() << "Metadata::formatJPG  " << xmpString;
+//        qDebug() << G::t.restart() << "\t" << "Metadata::formatJPG  " << xmpString;
     }
 
     if (report) reportMetadata();
@@ -3925,7 +3925,7 @@ void Metadata::clearMetadata()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::clearMetadata";
+    qDebug() << G::t.restart() << "\t" << "Metadata::clearMetadata";
     #endif
     }
     offsetFullJPG = 0;
@@ -3970,10 +3970,10 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::readMetadata";
+    qDebug() << G::t.restart() << "\t" << "Metadata::readMetadata";
     #endif
     #ifdef ISPROFILE
-    qDebug() << "=> Metadata::readMetadata: Start" << G::t.restart();
+    qDebug() << G::t.restart() << "\t" << "=> Metadata::readMetadata: Start" << G::t.restart();
     #endif
     }
     report = isReport;
@@ -3982,7 +3982,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         rpt.flush();
         reportString = "";
         rpt.setString(&reportString);
-        qDebug() << "report = true";
+        qDebug() << G::t.restart() << "\t" << "report = true";
     }
     clearMetadata();
     file.setFileName(path);
@@ -3998,7 +3998,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     int msDelay = 0;
     int msInc = 1;
     bool fileOpened = false;
-//    qDebug() << "Metadata::readMetadata  fPath =" << fPath;
+//    qDebug() << G::t.restart() << "\t" << "Metadata::readMetadata  fPath =" << fPath;
     do {
         if (file.open(QIODevice::ReadOnly)) {
             if (ext == "arw") formatSony();
@@ -4014,7 +4014,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         }
         else {
             err = "Could not open file to read metadata";    // try again
-            qDebug() << msDelay << "ms delay" << err << fPath;
+            qDebug() << G::t.restart() << "\t" << msDelay << "ms delay" << err << fPath;
             QThread::msleep(msInc);
             msDelay += msInc;
 //            if (G::isThreadTrackingOn) track(fPath, err);
@@ -4025,7 +4025,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     // not all files have thumb or small jpg embedded
     if (offsetFullJPG == 0 && ext != "jpg" && fileOpened) {
         err = "No embedded JPG found";
-//        qDebug() << "No embedded JPG found for" << fPath;
+//        qDebug() << G::t.restart() << "\t" << "No embedded JPG found for" << fPath;
 //        if (G::isThreadTrackingOn) track(fPath, err);
     }
 
@@ -4038,7 +4038,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         lengthSmallJPG = lengthFullJPG;
     }
     if (lengthThumbJPG == 0) {
-        qDebug() << "No embedded thumbnail JPG found for" << fPath;
+        qDebug() << G::t.restart() << "\t" << "No embedded thumbnail JPG found for" << fPath;
         offsetThumbJPG = offsetSmallJPG;
         lengthThumbJPG = lengthSmallJPG;
     }
@@ -4060,11 +4060,11 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     if (success) track(fPath, "Success");
     else {
         track(fPath, "FAILED TO LOAD METADATA");
-        qDebug() << "FAILED TO LOAD METADATA" << fPath;
+        qDebug() << G::t.restart() << "\t" << "FAILED TO LOAD METADATA" << fPath;
     }
 
     #ifdef ISPROFILE
-    qDebug() << "=> Metadata::readMetadata: End" << G::t.nsecsElapsed() << "\t\t\t" << fPath;  G::t.start();
+    qDebug() << G::t.restart() << "\t" << "=> Metadata::readMetadata: End" << G::t.nsecsElapsed() << "\t\t\t" << fPath;  G::t.start();
     #endif
     return success;
 }
@@ -4073,7 +4073,7 @@ void Metadata::removeImage(QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::removeImage" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::removeImage" << imageFileName;
     #endif
     }
     metaCache.remove(imageFileName);
@@ -4083,7 +4083,7 @@ bool Metadata::isLoaded(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::isLoaded" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::isLoaded" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].metadataLoaded;
@@ -4093,7 +4093,7 @@ bool Metadata::isThumbLoaded(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::isThumbLoaded" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::isThumbLoaded" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].isThumbLoaded;
@@ -4103,7 +4103,7 @@ ulong Metadata::getOffsetFullJPG(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getOffsetFullJPG" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getOffsetFullJPG" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].offsetFullJPG;
@@ -4113,7 +4113,7 @@ ulong Metadata::getLengthFullJPG(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getLengthFullJPG" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getLengthFullJPG" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].lengthFullJPG;
@@ -4123,7 +4123,7 @@ ulong Metadata::getOffsetThumbJPG(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getOffsetThumbJPG" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getOffsetThumbJPG" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].offsetThumbJPG;
@@ -4133,7 +4133,7 @@ ulong Metadata::getLengthThumbJPG(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getLengthThumbJPG" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getLengthThumbJPG" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].lengthThumbJPG;
@@ -4143,7 +4143,7 @@ ulong Metadata::getOffsetSmallJPG(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getOffsetSmallJPG" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getOffsetSmallJPG" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].offsetSmallJPG;
@@ -4153,7 +4153,7 @@ ulong Metadata::getLengthSmallJPG(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getLengthSmallJPG" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getLengthSmallJPG" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].lengthSmallJPG;
@@ -4163,7 +4163,7 @@ ulong Metadata::getWidth(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getWidth" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getWidth" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].width;
@@ -4173,7 +4173,7 @@ ulong Metadata::getHeight(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getHeight" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getHeight" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].height;
@@ -4183,7 +4183,7 @@ QString Metadata::getDimensions(const QString &imageFileName)
 {
     {
 #ifdef ISDEBUG
-        qDebug() << "Metadata::getHeight" << imageFileName;
+        qDebug() << G::t.restart() << "\t" << "Metadata::getHeight" << imageFileName;
 #endif
     }
     return metaCache[imageFileName].dimensions;
@@ -4193,7 +4193,7 @@ QDateTime Metadata::getCreatedDate(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getCreated" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getCreated" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].createdDate;
@@ -4203,7 +4203,7 @@ QDateTime Metadata::getCreatedDate(const QString &imageFileName)
 //{
 //    {
 //    #ifdef ISDEBUG
-//    qDebug() << "Metadata::getCreated" << imageFileName;
+//    qDebug() << G::t.restart() << "\t" << "Metadata::getCreated" << imageFileName;
 //    #endif
 //    }
 //    return "";
@@ -4214,7 +4214,7 @@ int Metadata::getYear(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getYear" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getYear" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].year;
@@ -4224,7 +4224,7 @@ int Metadata::getMonth(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getMonth" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getMonth" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].month;
@@ -4234,7 +4234,7 @@ int Metadata::getDay(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getDay" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getDay" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].day;
@@ -4244,7 +4244,7 @@ QString Metadata::getCopyFileNamePrefix(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getCopyFileNamePrefix" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getCopyFileNamePrefix" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].copyFileNamePrefix;
@@ -4254,7 +4254,7 @@ QString Metadata::getMake(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getModel" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getModel" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].make;
@@ -4264,7 +4264,7 @@ QString Metadata::getModel(const QString &imageFileName)
 {
     {
 #ifdef ISDEBUG
-        qDebug() << "Metadata::getModel" << imageFileName;
+        qDebug() << G::t.restart() << "\t" << "Metadata::getModel" << imageFileName;
 #endif
     }
     return metaCache[imageFileName].model;
@@ -4274,7 +4274,7 @@ QString Metadata::getExposureTime(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getExposureTime" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getExposureTime" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].exposureTime;
@@ -4284,7 +4284,7 @@ float Metadata::getExposureTimeNum(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getExposureTime" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getExposureTime" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].exposureTimeNum;
@@ -4294,7 +4294,7 @@ QString Metadata::getAperture(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getAperture" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getAperture" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].aperture;
@@ -4304,7 +4304,7 @@ qreal Metadata::getApertureNum(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getApertureNum" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getApertureNum" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].apertureNum;
@@ -4314,7 +4314,7 @@ QString Metadata::getISO(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getISO" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getISO" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].ISO;
@@ -4324,7 +4324,7 @@ int Metadata::getISONum(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getISONum" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getISONum" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].ISONum;
@@ -4334,7 +4334,7 @@ QString Metadata::getFocalLength(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getFocalLength" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getFocalLength" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].focalLength;
@@ -4344,7 +4344,7 @@ int Metadata::getFocalLengthNum(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getFocalLength" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getFocalLength" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].focalLengthNum;
@@ -4354,7 +4354,7 @@ QString Metadata::getTitle(const QString &imageFileName)
 {
     {
 #ifdef ISDEBUG
-        qDebug() << "Metadata::getTitle" << imageFileName;
+        qDebug() << G::t.restart() << "\t" << "Metadata::getTitle" << imageFileName;
 #endif
     }
     return metaCache[imageFileName].title;
@@ -4374,7 +4374,7 @@ QString Metadata::getLens(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getLens" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getLens" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].lens;
@@ -4384,7 +4384,7 @@ QString Metadata::getCreator(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getCreator" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getCreator" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].creator;
@@ -4394,7 +4394,7 @@ QString Metadata::getCopyright(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getCopyright" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getCopyright" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].copyright;
@@ -4404,7 +4404,7 @@ QString Metadata::getEmail(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getEmail" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getEmail" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].email;
@@ -4414,7 +4414,7 @@ QString Metadata::getUrl(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getUrl" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getUrl" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].url;
@@ -4424,7 +4424,7 @@ QString Metadata::getShootingInfo(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getShootingInfo" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getShootingInfo" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].shootingInfo;
@@ -4479,7 +4479,7 @@ QString Metadata::getErr(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getErr" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getErr" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].err;
@@ -4489,7 +4489,7 @@ void Metadata::setErr(const QString &imageFileName, const QString &err)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getErr" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getErr" << imageFileName;
     #endif
     }
     metaCache[imageFileName].err = err;
@@ -4499,7 +4499,7 @@ int Metadata::getOrientation(QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getOrientation" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getOrientation" << imageFileName;
     #endif
     }
     if (metaCache.contains(imageFileName)) {
@@ -4512,7 +4512,7 @@ int Metadata::getRotation(QString &imageFileName)
 {
     {
 #ifdef ISDEBUG
-        qDebug() << "Metadata::getRotation" << imageFileName;
+        qDebug() << G::t.restart() << "\t" << "Metadata::getRotation" << imageFileName;
 #endif
     }
     if (metaCache.contains(imageFileName)) {
@@ -4530,7 +4530,7 @@ bool Metadata::getPick(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::getPick" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::getPick" << imageFileName;
     #endif
     }
     return metaCache[imageFileName].isPicked;
@@ -4540,7 +4540,7 @@ void Metadata::setPick(const QString &imageFileName, bool choice)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::setPick" << imageFileName;
+    qDebug() << G::t.restart() << "\t" << "Metadata::setPick" << imageFileName;
     #endif
     }
     metaCache[imageFileName].isPicked = choice;
@@ -4550,7 +4550,7 @@ void Metadata::clear()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "Metadata::clear";
+    qDebug() << G::t.restart() << "\t" << "Metadata::clear";
     #endif
     }
     metaCache.clear();
@@ -4558,7 +4558,7 @@ void Metadata::clear()
 
 void Metadata::loadFromThread(QFileInfo &fileInfo)
 {
-    qDebug() << "Metadata::loadFromThread";
+    qDebug() << G::t.restart() << "\t" << "Metadata::loadFromThread";
     loadImageMetadata(fileInfo, true, true, false, true);
 }
 
@@ -4568,10 +4568,10 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 {
     {
     #ifdef ISDEBUG
-        qDebug() <<  "Metadata::loadImageMetadata";
+        qDebug() << G::t.restart() << "\t" <<  "Metadata::loadImageMetadata";
     #endif
     }
-//    qDebug() << "Metadata::loadImageMetadata  fileInfo.filePath() ="
+//    qDebug() << G::t.restart() << "\t" << "Metadata::loadImageMetadata  fileInfo.filePath() ="
 //             << fileInfo.filePath();
     // check if already loaded
     fPath = fileInfo.filePath();
@@ -4587,7 +4587,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     bool result = readMetadata(isReport, fileInfo.filePath());
 
 //    if (fPath == "D:/Pictures/_ThumbTest/FujiXT2.RAF")
-//        qDebug() << "Lets break here";
+//        qDebug() << G::t.restart() << "\t" << "Lets break here";
 
     imageMetadata.isPicked = false;
     imageMetadata.offsetFullJPG = offsetFullJPG;

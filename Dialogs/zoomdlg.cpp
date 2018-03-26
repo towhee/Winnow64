@@ -66,10 +66,10 @@ controls are updated to the current scale.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ZoomDlg::zoomChange" << zoom;
+    qDebug() << G::t.restart() << "\t" << "ZoomDlg::zoomChange" << zoom;
     #endif
     }
-    qDebug() << "ZoomDlg::zoomChange" << zoom << G::actualDevicePixelRatio;
+    qDebug() << G::t.restart() << "\t" << "ZoomDlg::zoomChange" << zoom << G::actualDevicePixelRatio;
     // convert to percentage for persentation
     zoom *= (100 * G::actualDevicePixelRatio);
 
@@ -90,7 +90,7 @@ to only changes made lacally via the isActiveWindow flag.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ZoomDlg::on_zoomSB_valueChanged" << value;
+    qDebug() << G::t.restart() << "\t" << "ZoomDlg::on_zoomSB_valueChanged" << value;
     #endif
     }
     if (isActiveWindow()) emit zoom((qreal)value / 100 / G::actualDevicePixelRatio);
@@ -144,10 +144,10 @@ For convenience, set window focus on mouseover
 */
     {
     #ifdef ISDEBUG
-//    qDebug() << "ZoomDlg::enterEvent" << currentImagePath;
+//    qDebug() << G::t.restart() << "\t" << "ZoomDlg::enterEvent" << currentImagePath;
     #endif
     }
-    qDebug() << "ZoomDlg enter event";
+    qDebug() << G::t.restart() << "\t" << "ZoomDlg enter event";
     this->activateWindow();
     this->setFocus();
     this->ui->zoomSlider->setFocus();
@@ -169,7 +169,7 @@ Set some formatting to make it clear when the ZoomDlg has focus
         else
         {
             // widget is now inactive
-            qDebug() << "ZoomDlg lost focus";
+            qDebug() << G::t.restart() << "\t" << "ZoomDlg lost focus";
             ui->border->setStyleSheet("QFrame {border: 2px solid rgb(85,85,85); border-radius: 4px;}");
             setWindowOpacity(0.50);
         }

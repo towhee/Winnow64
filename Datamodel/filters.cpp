@@ -13,7 +13,7 @@ executed in SortFilter subclass of QSortFilterProxy (sf) in datamodel.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "Filters::Filters";
+    qDebug() << G::t.restart() << "\t" << "Filters::Filters";
     #endif
     }
     setRootIsDecorated(true);
@@ -44,7 +44,7 @@ void Filters::createPredefinedFilters()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "Filters::createPredefinedFilters";
+    qDebug() << G::t.restart() << "\t" << "Filters::createPredefinedFilters";
     #endif
     }
     refine = new QTreeWidgetItem(this);
@@ -151,7 +151,7 @@ by addCategoryFromData.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "Filters::createDynamicFilters";
+    qDebug() << G::t.restart() << "\t" << "Filters::createDynamicFilters";
     #endif
     }
     types = new QTreeWidgetItem(this);
@@ -219,7 +219,7 @@ prevent duplication and orphans.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "Filters::removeChildrenDynamicFilters";
+    qDebug() << G::t.restart() << "\t" << "Filters::removeChildrenDynamicFilters";
     #endif
     }
     types->takeChildren();
@@ -248,7 +248,7 @@ void Filters::uncheckAllFilters()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "Filters::uncheckFilters";
+    qDebug() << G::t.restart() << "\t" << "Filters::uncheckFilters";
     #endif
     }
     QTreeWidgetItemIterator it(this);
@@ -282,14 +282,14 @@ createDynamicFilters;
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "Filters::addCategoryFromData";
+    qDebug() << G::t.restart() << "\t" << "Filters::addCategoryFromData";
     #endif
     }
     static QTreeWidgetItem *item;
     QMap<QVariant, QString> uniqueItems;
     for (auto key : itemMap.keys())
     {
-//      qDebug() << "itemMap" << key << "," << itemMap.value(key);
+//      qDebug() << G::t.restart() << "\t" << "itemMap" << key << "," << itemMap.value(key);
       if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
     }
     for (auto key : uniqueItems.keys()) {

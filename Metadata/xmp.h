@@ -5,6 +5,7 @@
 #include <QtCore>
 #include <QtWidgets>
 #include <QtXmlPatterns>
+#include "Main/global.h"
 
 class Xmp : public QObject
 {

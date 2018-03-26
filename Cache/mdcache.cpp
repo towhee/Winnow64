@@ -6,7 +6,7 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MetadataCache::MetadataCache";
+    qDebug() << G::t.restart() << "\t" << "MetadataCache::MetadataCache";
     #endif
     }
     this->dm = dm;
@@ -31,7 +31,7 @@ void MetadataCache::stopMetadateCache()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MetadataCache::stopMetadateCache";
+    qDebug() << G::t.restart() << "\t" << "MetadataCache::stopMetadateCache";
     #endif
     }
     if (isRunning()) {
@@ -49,7 +49,7 @@ void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "MetadataCache::loadMetadataCache";
+    qDebug() << G::t.restart() << "\t" << "MetadataCache::loadMetadataCache";
     #endif
     }
     if (isRunning()) {
@@ -76,7 +76,7 @@ used to confirm all the metadata is loaded before ending the metadata cache.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "MetadataCache::checkIfNewFolder";
+    qDebug() << G::t.restart() << "\t" << "MetadataCache::checkIfNewFolder";
     #endif
     }
     if (dm->currentFolderPath != folderPath) {
@@ -93,7 +93,7 @@ void MetadataCache::createCacheStatus()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::cacheStatus";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::cacheStatus";
     #endif
     }
     /* Displays a statusbar showing the cache status.
@@ -167,7 +167,7 @@ void MetadataCache::updateCacheStatus(int row)
 
 void MetadataCache::track(QString fPath, QString msg)
 {
-    if (G::isThreadTrackingOn) qDebug() << "• Metadata Caching" << fPath << msg;
+    if (G::isThreadTrackingOn) qDebug() << G::t.restart() << "\t" << "• Metadata Caching" << fPath << msg;
 }
 
 void MetadataCache::loadMetadata()
@@ -177,13 +177,13 @@ Load the metadata and thumb (icon) for all the image files in a folder.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "MetadataCache::loadMetadata";
+    qDebug() << G::t.restart() << "\t" << "MetadataCache::loadMetadata";
     #endif
     }
     int totRows = dm->rowCount();
     for (int row = startRow; row < totRows; ++row) {
         if (abort) {
-            qDebug() << "Aborting at row =" << row;
+            qDebug() << G::t.restart() << "\t" << "Aborting at row =" << row;
             emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false);
             return;
@@ -205,7 +205,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         // update status
         QString s = "Loading metadata " + QString::number(row + 1) + " of " + QString::number(totRows);
         emit updateStatus(false, s);
-//        qDebug() << "Attempting to load metadata for row" << row << fPath;
+//        qDebug() << G::t.restart() << "\t" << "Attempting to load metadata for row" << row << fPath;
 
         // load metadata
         if (!metadataLoaded) {
@@ -264,7 +264,7 @@ that have been missed.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "\nMetadataCache::run";
+    qDebug() << G::t.restart() << "\t" << "\nMetadataCache::run";
     #endif
     }
     t.start();
@@ -272,7 +272,7 @@ that have been missed.
 
     do {
         if (abort) {
-            qDebug() << "Aborting from MetadataCache::run";
+            qDebug() << G::t.restart() << "\t" << "Aborting from MetadataCache::run";
             emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false);
             return;
@@ -291,7 +291,7 @@ that have been missed.
     while (!allMetadataLoaded && t.elapsed() < 30000);
     emit updateAllMetadataLoaded(allMetadataLoaded);
 
-//    qDebug() << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
+//    qDebug() << G::t.restart() << "\t" << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
 
     /* after loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the

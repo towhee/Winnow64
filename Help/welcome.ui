@@ -30,8 +30,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>793</width>
-     <height>1015</height>
+     <width>799</width>
+     <height>707</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -96,7 +96,7 @@
             <enum>QFrame::Box</enum>
            </property>
            <property name="text">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:24pt; color:#ffffff;&quot;&gt;Welcome to Winnow&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#cccccc;&quot;&gt;To get started select a folder with images from the Folders panel or from the menu: &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-style:italic; color:#cccccc;&quot;&gt;File &amp;gt; Open Folder&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#cccccc;&quot;&gt; (Shortcut &amp;quot;O&amp;quot;)&lt;/span&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:24pt; color:#ffffff;&quot;&gt;Welcome to Winnow&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#cccccc;&quot;&gt;To get started select a folder with images from the Folders panel &lt;br/&gt;or from the menu: &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-style:italic; color:#cccccc;&quot;&gt;File &amp;gt; Open Folder&lt;/span&gt;&lt;span style=&quot; font-size:12pt; color:#cccccc;&quot;&gt; (Shortcut &amp;quot;O&amp;quot;)&lt;/span&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignCenter</set>

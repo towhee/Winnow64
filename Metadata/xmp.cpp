@@ -134,7 +134,7 @@ bool Xmp::writeSidecar(QByteArray &buffer)
 {
     buffer = xmpBa;
 
-//    qDebug() << "Xmp::writeSidecar: " << buffer;
+//    qDebug() << G::t.restart() << "\t" << "Xmp::writeSidecar: " << buffer;
 
     return true;
 }
@@ -235,7 +235,7 @@ dc schema for title:
     // make sure schema exists in xmp
     insertSchemas(item);
 
-//    qDebug() << "Xmp::setItem  item =" << item
+//    qDebug() << G::t.restart() << "\t" << "Xmp::setItem  item =" << item
 //             << "schema =" << schema
 //             << "tag =" << tag;
 
@@ -259,11 +259,11 @@ dc schema for title:
                 newItem.append(tag);
                 newItem.append(">");
 
-//                qDebug() << "Xmp::setItem  newItem =" << newItem;
+//                qDebug() << G::t.restart() << "\t" << "Xmp::setItem  newItem =" << newItem;
 
                 xmpBa.insert(startPos, newItem);
 
-                qDebug() << "Xmp::setItem xmpBa: " << xmpBa;
+                qDebug() << G::t.restart() << "\t" << "Xmp::setItem xmpBa: " << xmpBa;
             }
             if (assignmentMethod == "equals") {
                 // ie xmp:Rating="3"
@@ -292,10 +292,10 @@ dc schema for title:
             newItem.append("</rdf:li></rdf:Alt></");
             newItem.append(tag);
             newItem.append(">");
-//            qDebug() << "\nBefore set title:\n"
+//            qDebug() << G::t.restart() << "\t" << "\nBefore set title:\n"
 //                     << metaAsString();
             xmpBa.insert(startPos, newItem);
-//            qDebug() << "\nAfter set title:\n"
+//            qDebug() << G::t.restart() << "\t" << "\nAfter set title:\n"
 //                     << metaAsString();
         }
         if (item == "creator") {

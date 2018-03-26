@@ -65,7 +65,7 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "InfoView::InfoView";
+    qDebug() << G::t.restart() << "\t" << "InfoView::InfoView";
     #endif
     }
     this->metadata = metadata;
@@ -111,7 +111,7 @@ void InfoView::showInfoViewMenu(QPoint pt)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "InfoView::showInfoViewMenu";
+    qDebug() << G::t.restart() << "\t" << "InfoView::showInfoViewMenu";
     #endif
     }
     selectedEntry = indexAt(pt);
@@ -123,7 +123,7 @@ void InfoView::tweakHeaders()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "InfoView::tweakHeaders";
+    qDebug() << G::t.restart() << "\t" << "InfoView::tweakHeaders";
     #endif
     }
 //    horizontalHeader()->setFixedHeight(1);
@@ -145,7 +145,7 @@ status information, such as number of items picked or current item selected.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "InfoView::createOkToShow";
+    qDebug() << G::t.restart() << "\t" << "InfoView::createOkToShow";
     #endif
     }
     ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
@@ -238,23 +238,23 @@ show flag.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "InfoView::showOrHide()";
+    qDebug() << G::t.restart() << "\t" << "InfoView::showOrHide()";
     #endif
     }
-//    qDebug() << "ShorOrHide List:";
+//    qDebug() << G::t.restart() << "\t" << "ShorOrHide List:";
     bool okToShow;
     for(int row = 0; row < ok->rowCount(); row++) {
         QModelIndex parentIdx = ok->index(row, 0);
         okToShow = ok->index(row, 2).data().toBool();
-//        qDebug() << parentIdx.data().toString() << okToShow;
+//        qDebug() << G::t.restart() << "\t" << parentIdx.data().toString() << okToShow;
         setRowHidden(row, QModelIndex(), !okToShow);
         for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
             okToShow = ok->index(childRow, 2, parentIdx).data().toBool();
-//            qDebug() << ok->index(childRow, 0, parentIdx).data().toString() << okToShow;
+//            qDebug() << G::t.restart() << "\t" << ok->index(childRow, 0, parentIdx).data().toString() << okToShow;
             setRowHidden(childRow, parentIdx, !okToShow);
         }
     }
-//    qDebug() << "ShorOrHide completed\n";
+//    qDebug() << G::t.restart() << "\t" << "ShorOrHide completed\n";
 }
 
 void InfoView::clearInfo()
@@ -264,7 +264,7 @@ Clear all the values but leave the keys and flags alone
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "InfoView::clearInfo";
+    qDebug() << G::t.restart() << "\t" << "InfoView::clearInfo";
     #endif
     }
     for(int row = 0; row < ok->rowCount(); row++) {
@@ -279,7 +279,7 @@ void InfoView::copyEntry()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "InfoView::copyEntry";
+    qDebug() << G::t.restart() << "\t" << "InfoView::copyEntry";
     #endif
     }
 	if (selectedEntry.isValid())
@@ -290,7 +290,7 @@ void InfoView::updateInfo(const QString &fPath)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "InfoView::updateInfo";
+    qDebug() << G::t.restart() << "\t" << "InfoView::updateInfo";
     #endif
     }
 
