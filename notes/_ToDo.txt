@@ -17,23 +17,22 @@ CODE IMPROVEMENTS
 ENHANCEMENTS
 - Combine raw+jpg option
 - add metadata performance options to preferences
-- Add current folder to bookmarks
 - Get Sony image count, camera SN
-- Get actual monitor resolution for actualDevicePixelRatio calculation
-- Recent copy to folders in ingest dialog
 - Add zoom increment amount to preferences
 - Remember column order in tableView and workspace
 - Add more raw file formats - DNG, Panasonic ...
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Disable menu "add bookmark" when folders not selected??
 - Tweak context menus
-- Add filters activated status (red text on image?)
 - Eject card
 - Run droplet
-- Deleteop, removeBookmarkAction cleanup
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Show cache status in thumbnails
+- Done: Add filters activated status (red text on image?)
+- Done: Change hard coded min/max thumbnail size
+- Done: Get actual monitor resolution for actualDevicePixelRatio calculation
 - Done: Add complete for ingest description
 - Done: Refresh folder panel
 - Done: Not showing all folders in folders panel on Linix

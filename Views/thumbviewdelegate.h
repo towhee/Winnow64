@@ -6,7 +6,6 @@
 #include <QStyleOptionViewItem>
 #include <QFont>
 #include "Main/global.h"
-//#include "Views/thumbview.h"
 
 class ThumbViewDelegate : public QStyledItemDelegate
 {
@@ -47,8 +46,6 @@ private:
     int itemBorderThickness;
     int thumbBorderThickness;
     int thumbBorderPadding;
-//    int maxThumbNailWidth = 160;
-//    int maxThumbNailHeight = 120;
     int fontHt;
 };
 

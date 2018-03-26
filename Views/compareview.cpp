@@ -94,14 +94,16 @@ CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
     setScene(scene);
 
     pickLabel = new QLabel(this);
-    pickLabel->setFixedSize(40,48);
+    pickLabel->setFixedSize(64,64);
     pickLabel->setAttribute(Qt::WA_TranslucentBackground);
-    pickPixmap = new QPixmap(":/images/ThumbsUp48.png");
+    pickPixmap = new QPixmap(":/images/checkmark.png");
     // setPixmap during resize event
     pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
     pickLabel->setVisible(false);
 
     classificationLabel = new CircleLabel(this);
+    classificationLabel->setVisible(false);
+    classificationLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
     classificationLabel->setVisible(false);
 
     isMouseDrag = false;

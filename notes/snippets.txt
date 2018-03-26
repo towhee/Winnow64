@@ -1,3 +1,9 @@
+// memory stuff
+struct sysinfo sys_info;
+totalmem=(qint32)(sys_info.totalram/1048576);
+freemem=(qint32)(sys_info.freeram/1048576); // divide by 1024*1024 = 1048576
+
+// macos screen resolution
 auto modes = CGDisplayCopyAllDisplayModes(mainDisplayId, nullptr);
 auto count = CFArrayGetCount(modes);
 CGDisplayModeRef mode;

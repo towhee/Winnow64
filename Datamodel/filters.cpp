@@ -242,6 +242,23 @@ void Filters::checkPicks(bool check)
     }
 }
 
+bool Filters::isAnyFilter()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << G::t.restart() << "\t" << "Filters::isAnyFilter";
+    #endif
+    }
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        if ((*it)->parent()) {
+            if ((*it)->checkState(0) == Qt::Checked) return true;
+        }
+        ++it;
+    }
+    return false;
+}
+
 void Filters::uncheckAllFilters()
 {
 /* Uncheck all the filter items

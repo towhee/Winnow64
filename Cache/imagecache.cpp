@@ -901,7 +901,9 @@ void ImageCache::run()
             while (room < roomRqd) {
                 // make some room by removing lowest priority cached image
                 if(nextToDecache()) {
-                    imCache.remove(cacheItemList[cache.toDecacheKey].fName);
+                    QString s = cacheItemList[cache.toDecacheKey].fName;
+                    imCache.remove(s);
+                    emit updateCacheOnThumbs(s, false);
                     if (!toDecache.isEmpty()) toDecache.removeFirst();
                     cacheItemList[cache.toDecacheKey].isCached = false;
                     cache.currMB -= cacheItemList[cache.toDecacheKey].sizeMB;
@@ -910,6 +912,7 @@ void ImageCache::run()
                 else break;
             }
             imCache.insert(fPath, im);
+            emit updateCacheOnThumbs(fPath, true);
             if (cache.usePreview) {
                 imCache.insert(fPath + "_Preview", im.scaled(cache.previewSize,
                    Qt::KeepAspectRatio, Qt::FastTransformation));

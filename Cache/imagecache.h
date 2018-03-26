@@ -38,6 +38,7 @@ public:
 signals:
     void showCacheStatus(QImage imCacheStatus);
     void updateIsRunning(bool);
+    void updateCacheOnThumbs(QString fPath, bool isCached);
 
 protected:
     void run() Q_DECL_OVERRIDE;

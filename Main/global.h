@@ -1,15 +1,17 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
-#define ISDEBUG        // Uncomment this line to show debugging output
+//#define ISDEBUG        // Uncomment this line to show debugging output
 //#define ISPROFILE      // Uncomment this line to show profiling output
 
 #include <QtWidgets>
 #include <QColor>
 #include <QModelIndexList>
 #include <QStringList>
-//#include <QtGlobal>
 #include <QElapsedTimer>
+
+#define THUMB_MIN	40
+#define THUMB_MAX	240
 
 namespace G
 {
@@ -26,6 +28,7 @@ namespace G
         ModifiedRole,
         LabelRole,
         RatingRole,
+        CachedRole,
         ColumnRole
     };
 
