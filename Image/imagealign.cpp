@@ -23,7 +23,7 @@ QPointF ImageAlign::alignImage(QImage *baseImage, QImage *image, QPointF &basePo
     QRect targetRect(basePosPct.x() * baseThumb->width() - targetSize / 2,
                      basePosPct.y() * baseThumb->height() - targetSize / 2,
                      targetSize, targetSize);
-    qDebug() << targetSize << basePosPct.x() << basePosPct.y() << targetRect
+    qDebug() << G::t.restart() << "\t" << targetSize << basePosPct.x() << basePosPct.y() << targetRect
              << alignThumb->width() << alignThumb->height();
     *target = baseThumb->copy(targetRect);
 
@@ -41,7 +41,7 @@ QPointF ImageAlign::alignImage(QImage *baseImage, QImage *image, QPointF &basePo
     int t = targetSize;
     uint count = 0;
 
-//    qDebug() << "w, h, t" << w << h << t;
+//    qDebug() << G::t.restart() << "\t" << "w, h, t" << w << h << t;
 
 //    QTime tmr;
 //    tmr.start();
@@ -76,15 +76,15 @@ QPointF ImageAlign::alignImage(QImage *baseImage, QImage *image, QPointF &basePo
                 bestAlignPt = QPoint(x + t / 2, y + t / 2);
             }
 //            if (x == 74 || x == 84 || x == 94)
-//                qDebug() << "x =" << x << "y =" << y << "diff" << diff
+//                qDebug() << G::t.restart() << "\t" << "x =" << x << "y =" << y << "diff" << diff
 //                         << "lowestDiff" << lowestDiff
 //                         << "bestAlignPt" <<bestAlignPt;
         }
     }
-//    qDebug() << "bestAlignPt.x()" << bestAlignPt.x() << "alignThumb->width()" << alignThumb->width();
+//    qDebug() << G::t.restart() << "\t" << "bestAlignPt.x()" << bestAlignPt.x() << "alignThumb->width()" << alignThumb->width();
     qreal alignX = (qreal)(bestAlignPt.x()) / alignThumb->width();
     qreal alignY = (qreal)(bestAlignPt.y()) / alignThumb->height();
-//    qDebug() << "ALIGN:" << count << lowestDiff << bestAlignPt << alignX << alignY;
+//    qDebug() << G::t.restart() << "\t" << "ALIGN:" << count << lowestDiff << bestAlignPt << alignX << alignY;
     return QPointF(alignX, alignY);
 }
 

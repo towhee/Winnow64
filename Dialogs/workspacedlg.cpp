@@ -18,7 +18,7 @@ WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList, QWidget *parent) :
         ui->workspaceCB->addItem(wsList->at(i));
         // set height for each row (setStylesheet approach did not work)
         ui->workspaceCB->model()->setData( ui->workspaceCB->model()->index(i, 0), QSize(h, h), Qt::SizeHintRole);
-//        qDebug() << "ui->workspaceCB i" << i
+//        qDebug() << G::t.restart() << "\t" << "ui->workspaceCB i" << i
 //                 << ui->workspaceCB->currentIndex();
     }
     editMode = true;
@@ -33,7 +33,7 @@ void WorkspaceDlg::on_deleteBtn_clicked()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "WorkspaceDlg::on_deleteBtn_clicked";
+    qDebug() << G::t.restart() << "\t" << "WorkspaceDlg::on_deleteBtn_clicked";
     #endif
     }
     //    QString name = ui->workspaceCB->itemText(n);
@@ -50,7 +50,7 @@ void WorkspaceDlg::on_reassignBtn_clicked()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "WorkspaceDlg::on_reassignBtn_clicked";
+    qDebug() << G::t.restart() << "\t" << "WorkspaceDlg::on_reassignBtn_clicked";
     #endif
     }
     int n = ui->workspaceCB->currentIndex();
@@ -68,7 +68,7 @@ void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "WorkspaceDlg::on_workspaceCB_editTextChanged";
+    qDebug() << G::t.restart() << "\t" << "WorkspaceDlg::on_workspaceCB_editTextChanged";
     #endif
     }
     if (editMode) {
@@ -95,7 +95,7 @@ void WorkspaceDlg::on_workspaceCB_highlighted(int /*index*/)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "WorkspaceDlg::on_workspaceCB_highlighted";
+    qDebug() << G::t.restart() << "\t" << "WorkspaceDlg::on_workspaceCB_highlighted";
     #endif
     }
     editMode = false;
@@ -105,7 +105,7 @@ void WorkspaceDlg::report(QString signalName)
 {
     int n = ui->workspaceCB->currentIndex();
     QString text = ui->workspaceCB->currentText();
-    qDebug() << signalName
+    qDebug() << G::t.restart() << "\t" << signalName
              << "currentIndex =" << n
              << "editMode =" << editMode
              << "text =" << text;

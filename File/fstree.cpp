@@ -33,7 +33,7 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
     QString fPath = sourceParent.child(sourceRow, 0).data(QFileSystemModel::FilePathRole).toString();
     QFileInfo info(fPath);
     /*
-    qDebug() << "fPath" << fPath
+    qDebug() << G::t.restart() << "\t" << "fPath" << fPath
              << "fParentPath" << fParentPath
              << "absolutePath" << info.absolutePath()
              << "absoluteFilePath" << info.absoluteFilePath()
@@ -107,7 +107,7 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
 QVariant FSModel::data(const QModelIndex &index, int role) const
 {
 //    QString path = qvariant_cast<QString>(QFileSystemModel::data(index, QFileSystemModel::FilePathRole));
-//    qDebug() << "FSModel::data -" << path;
+//    qDebug() << G::t.restart() << "\t" << "FSModel::data -" << path;
 //    bool mounted = mountedDrives.contains(path);
 ////    if (path == "O:/") {
 //        bool okay = index.isValid();
@@ -155,7 +155,7 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "FSTree::FSTree";
+    qDebug() << G::t.restart() << "\t" << "FSTree::FSTree";
     #endif
     }
     this->metadata = metadata;
@@ -199,7 +199,7 @@ the folders by deleting the model and re-creating it.
 #ifdef Q_OS_WIN
     // get mounted drives only
     foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
-/*        qDebug() << "FSTree::createModel  " << storage.rootPath()
+/*        qDebug() << G::t.restart() << "\t" << "FSTree::createModel  " << storage.rootPath()
                  << "storage.isValid()" << storage.isValid()
                  << "storage.isReady()" << storage.isReady()
                  << "storage.isReadOnly()" << storage.isReadOnly();
@@ -254,7 +254,7 @@ void FSTree::scrollToCurrent()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "FSTree::scrollToCurrent()";
+    qDebug() << G::t.restart() << "\t" << "FSTree::scrollToCurrent()";
     #endif
     }
     QModelIndex idx = getCurrentIndex();
@@ -263,7 +263,7 @@ void FSTree::scrollToCurrent()
 
 void FSTree::select(QString dirPath)
 {
-    qDebug() << "FSTree::select " << dirPath;
+    qDebug() << G::t.restart() << "\t" << "FSTree::select " << dirPath;
     setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
 }
 
@@ -271,7 +271,7 @@ QModelIndex FSTree::getCurrentIndex()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "FSTree::getCurrentIndex";
+    qDebug() << G::t.restart() << "\t" << "FSTree::getCurrentIndex";
     #endif
     }
     QModelIndex idx;
@@ -305,7 +305,7 @@ void FSTree::dragEnterEvent(QDragEnterEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "FSTree::dragEnterEvent";
+    qDebug() << G::t.restart() << "\t" << "FSTree::dragEnterEvent";
     #endif
     }
 	QModelIndexList selectedDirs = selectionModel()->selectedRows();
@@ -324,7 +324,7 @@ void FSTree::dropEvent(QDropEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "FSTree::dropEvent";
+    qDebug() << G::t.restart() << "\t" << "FSTree::dropEvent";
     #endif
     }
 	if (event->source())
@@ -364,7 +364,7 @@ void FSTree::walkTree(const QModelIndex &row)
             QModelIndex idx2 = fsModel->index(i, 4, row);
             fsModel->setData(idx2, dir->entryInfoList().size(), Qt::DisplayRole);
             fsModel->setData(idx2, dir->entryInfoList().size(), Qt::EditRole);
-            qDebug() << fPath << dir->entryInfoList().size();
+            qDebug() << G::t.restart() << "\t" << fPath << dir->entryInfoList().size();
             walkTree(idx);
         }
     }

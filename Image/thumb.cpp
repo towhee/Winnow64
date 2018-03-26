@@ -9,11 +9,16 @@ Thumb::Thumb(QObject *parent, Metadata *metadata) : QObject(parent)
 
 void Thumb::track(QString fPath, QString msg)
 {
-    if (G::isThreadTrackingOn) qDebug() << "• Metadata Caching" << fPath << msg;
+    if (G::isThreadTrackingOn) qDebug() << G::t.restart() << "\t" << "• Metadata Caching" << fPath << msg;
 }
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << G::t.restart() << "\t" << "Thumb::checkOrienttion" << fPath;
+    #endif
+    }
     // check orientation and rotate if portrait
     QTransform trans;
     int orientation = metadata->getOrientation(fPath);
@@ -31,6 +36,11 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
 
 bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << G::t.restart() << "\t" << "Thumb::loadFromEntireFile" << fPath;
+    #endif
+    }
     bool success;
     QFile imFile(fPath);
     QImageReader thumbReader;
@@ -56,6 +66,11 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
 
 bool Thumb::loadFromData(QString &fPath, QImage &image)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << G::t.restart() << "\t" << "Thumb::loadFromData" << fPath;
+    #endif
+    }
     bool success = false;
     QFile imFile(fPath);
 
@@ -69,7 +84,7 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
                 imFile.close();
                 if (image.isNull() && G::isThreadTrackingOn )
                     track(fPath, "Empty thumb");
-                  if (G::isThreadTrackingOn) qDebug() << fPath << "Scaling:" << image.size();
+                  if (G::isThreadTrackingOn) qDebug() << G::t.restart() << "\t" << fPath << "Scaling:" << image.size();
 
                 image.scaled(thumbMax, Qt::KeepAspectRatio);
                 success = true;
@@ -99,6 +114,11 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
 
 bool Thumb::loadThumb(QString &fPath, QImage &image)
 {
+    {
+    #ifdef ISDEBUG
+    qDebug() << G::t.restart() << "\t" << "Thumb::loadThumb" << fPath;
+    #endif
+    }
     if (G::isThreadTrackingOn) track(fPath, "Reading");
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();

@@ -619,7 +619,7 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
     // setup TokenDlg
     QString title = "Token Editor - Path from Root to Destination Folder";
     int index = ui->pathTemplatesCB->currentIndex();
-    qDebug() << "on_pathTemplatesBtn_clicked  row =" << index;
+    qDebug() << G::t.restart() << "\t" << "on_pathTemplatesBtn_clicked  row =" << index;
     QString currentKey = ui->pathTemplatesCB->currentText();
     TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, pathTemplatesMap, index,
                                       currentKey, title, this);

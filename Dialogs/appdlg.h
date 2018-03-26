@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QtWidgets>
+#include "Main/global.h"
 
 namespace Ui {
 class Appdlg;

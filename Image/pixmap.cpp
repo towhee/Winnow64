@@ -17,14 +17,14 @@ bool Pixmap::load(QString &fPath, QPixmap &pm)
 bool Pixmap::load(QString &fPath, QImage &image)
 {
 /*  Reads the embedded jpg (known offset and length) and converts it into a
-    pixmap.
+    QImage.
 
     This function is dependent on metadata being updated first.  Metadata is
     updated by the mdCache thread that runs every time a new folder is
     selected. This function is used in the imageCache thread that stores
     pixmaps in the heap.
 
-    Most of the time the pixmap will be obtained from the imageCache, but when
+    Most of the time the image will be obtained from the imageCache, but when
     the image has yet to be cached this function is called from imageView and
     compareView. This often happens when a new folder is selected and the
     program is trying to load the metadata, thumbnail and image caches plus
@@ -35,13 +35,13 @@ bool Pixmap::load(QString &fPath, QImage &image)
     as the image file may be locked by one of the cache builders.
 
     If it succeeds in opening the file it still has to read the embedded jpg and
-    convert it to a pixmap.  If this fails then either the file format is not
+    convert it to a QImage.  If this fails then either the file format is not
     being properly read or the file is corrupted.  In this case the metadata
     will be updated to show file not readable.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "Pixmap::load";
+    qDebug() << G::t.restart() << "\t" << "Pixmap::load";
     #endif
     }
 
@@ -54,7 +54,6 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     ulong offsetFullJpg = 0;
     ulong lengthFullJpg = 0;
-//    QImage image;
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
     QFile imFile(fPath);
@@ -100,7 +99,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
             err = "Illegal offset to image or no length available";
             break;
             /*
-            qDebug() << "Pixmap::loadPixmap Success =" << success
+            qDebug() << G::t.restart() << "\t" << "Pixmap::loadPixmap Success =" << success
                      << "msDelay =" << msDelay
                      << "offsetFullJpg =" << offsetFullJpg
                      << "Attempting to load " << imageFullPath;
@@ -128,7 +127,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 msDelay += msInc;
             }
               /*
-              qDebug() << "Pixmap::loadPixmap Success =" << success
+              qDebug() << G::t.restart() << "\t" << "Pixmap::loadPixmap Success =" << success
                        << "msDelay =" << msDelay
                        << "offsetFullJpg =" << offsetFullJpg
                        << "Attempting to load " << imageFullPath;
@@ -162,11 +161,6 @@ bool Pixmap::load(QString &fPath, QImage &image)
         trans.rotate(rotationDegrees);
         image = image.transformed(trans, Qt::SmoothTransformation);
     }
-
-//    pm = QPixmap::fromImage(image);
-
-    // must adjust pixmap dpi in case retinal display macs
-//    pm.setDevicePixelRatio(GData::devicePixelRatio);
 
     // record any errors
     if (!success) metadata->setErr(fPath, err);

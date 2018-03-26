@@ -76,7 +76,7 @@ Code examples for model:
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "DataModel::DataModel";
+    qDebug() << G::t.restart() << "\t" << "DataModel::DataModel";
     #endif
     }
     mw = parent;
@@ -133,7 +133,7 @@ heirarchy is loaded.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::load";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::load";
     #endif
     }
     currentFolderPath = folderPath;
@@ -157,13 +157,13 @@ heirarchy is loaded.
     if (!addFiles() && !includeSubfolders) return false;
 
     if (includeSubfolders) {
-        qDebug() << "DataModel::load including subfolders";
+        qDebug() << G::t.restart() << "\t" << "DataModel::load including subfolders";
         QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
         while (it.hasNext()) {
             it.next();
             if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
                 dir->setPath(it.filePath());
-                qDebug() << "ITERATING FOLDER" << it.filePath();
+                qDebug() << G::t.restart() << "\t" << "ITERATING FOLDER" << it.filePath();
                 addFiles();
             }
         }
@@ -178,10 +178,10 @@ bool DataModel::addFiles()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "DataModel::addFiles";
+    qDebug() << G::t.restart() << "\t" << "DataModel::addFiles";
     #endif
     }
-//    qDebug() << "DataModel::addFiles    Started";
+//    qDebug() << G::t.restart() << "\t" << "DataModel::addFiles    Started";
     QElapsedTimer t;
     t.start();
 
@@ -261,10 +261,10 @@ which is created in MW, and in InfoView.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "DataModel::addMetadataToModel";
+    qDebug() << G::t.restart() << "\t" << "DataModel::addMetadataToModel";
     #endif
     }
-//    qDebug() << "DataModel::addMetadataToModel    Started";
+//    qDebug() << G::t.restart() << "\t" << "DataModel::addMetadataToModel    Started";
 
     QElapsedTimer t;
     t.start();
@@ -353,7 +353,7 @@ which is created in MW, and in InfoView.
     filters->addCategoryFromData(yearMap, filters->years);
     filters->addCategoryFromData(dayMap, filters->days);
 
-//    qDebug() << "DataModel::addMetadataToModel    Completed"
+//    qDebug() << G::t.restart() << "\t" << "DataModel::addMetadataToModel    Completed"
 //             << " elapsed time =" << t.restart() << "ms";
 
 }
@@ -376,15 +376,15 @@ changes the sort or filter.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::updateImageList";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::updateImageList";
     #endif
     }
-//    qDebug() << "ThumbView::updateImageList";
+//    qDebug() << G::t.restart() << "\t" << "ThumbView::updateImageList";
     imageFilePathList.clear();
     for(int row = 0; row < sf->rowCount(); row++) {
         QString fPath = sf->index(row, 0).data(G::FilePathRole).toString();
         imageFilePathList.append(fPath);
-//        qDebug() << "&&&&&&&&&&&&&&&&&& updateImageList:" << fPath;
+//        qDebug() << G::t.restart() << "\t" << "&&&&&&&&&&&&&&&&&& updateImageList:" << fPath;
     }
 }
 
@@ -396,10 +396,10 @@ for all rows.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::refine";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::refine";
     #endif
     }
-    qDebug() << "ThumbView::refine";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::refine";
     // Are there any picks to refine?
     bool isPick = false;
     for (int row = 0; row < rowCount(); ++row) {
@@ -448,14 +448,14 @@ map to columns in the data model ie Picked, Rating, Label ...
 */
     {
 //    #ifdef ISDEBUG
-//    qDebug() << "SortFilter::filterAcceptsRow";
+//    qDebug() << G::t.restart() << "\t" << "SortFilter::filterAcceptsRow";
 //    #endif
     }
     if (!G::isNewFolderLoaded) return true;
 
     static int counter = 0;
     counter++;
-//    qDebug() << "Filtering" << counter;
+//    qDebug() << G::t.restart() << "\t" << "Filtering" << counter;
     int dataModelColumn;
     bool isMatch = true;                   // overall match
     bool isCategoryUnchecked = true;
@@ -479,7 +479,7 @@ map to columns in the data model ie Picked, Rating, Label ...
                 QVariant filterValue = (*filter)->data(1, Qt::EditRole);
 
 /*                QString itemName = (*filter)->text(0);      // for debugging
-                qDebug() << itemCategory << itemName
+                qDebug() << G::t.restart() << "\t" << itemCategory << itemName
                          << "Comparing" << dataValue << filterValue << (dataValue == filterValue);
 */
                 if (dataValue == filterValue) isMatch = true;
@@ -489,7 +489,7 @@ map to columns in the data model ie Picked, Rating, Label ...
             // top level item = category
             // check results of category items filter match
             if (isCategoryUnchecked) isMatch = true;
-//            qDebug() << "Category" << itemCategory << isMatch;
+//            qDebug() << G::t.restart() << "\t" << "Category" << itemCategory << isMatch;
             if (!isMatch) return false;   // no match in category
 
             /* prepare for category items filter match.  If no item is checked
@@ -506,7 +506,7 @@ map to columns in the data model ie Picked, Rating, Label ...
     // check results of category items filter match for the last group
     if (isCategoryUnchecked) isMatch = true;
 
-//    qDebug() << "SortFilter::filterAcceptsRow After iteration  isMatch =" << isMatch;
+//    qDebug() << G::t.restart() << "\t" << "SortFilter::filterAcceptsRow After iteration  isMatch =" << isMatch;
 
     return isMatch;
 }
@@ -524,11 +524,11 @@ filtration then the image cache needs to be reloaded to match the new proxy (sf)
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "SortFilter::filterChanged";
+    qDebug() << G::t.restart() << "\t" << "SortFilter::filterChanged";
     #endif
     }
     this->invalidateFilter();
-//    qDebug() << "filterChanged" << x << "column" << col << "isFinished" << G::isNewFolderLoaded;
+//    qDebug() << G::t.restart() << "\t" << "filterChanged" << x << "column" << col << "isFinished" << G::isNewFolderLoaded;
     if (G::isNewFolderLoaded) emit reloadImageCache();
 }
 

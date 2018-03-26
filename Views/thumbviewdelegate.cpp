@@ -56,7 +56,7 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
 {
     {
     #ifdef ISDEBUG
-//    qDebug() << "ThumbViewDelegate::setThumbDimensions";
+//    qDebug() << G::t.restart() << "\t" << "ThumbViewDelegate::setThumbDimensions";
     #endif
     }
     delegateShowThumbLabels = showThumbLabels;
@@ -92,7 +92,7 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
 
 void ThumbViewDelegate::reportThumbAttributes()
 {
-   qDebug() << "thumbSize    =" << thumbSize
+   qDebug() << G::t.restart() << "\t" << "thumbSize    =" << thumbSize
             << "thumbSpace   =" << thumbSpace
             << "thumbPadding =" << itemPadding
             << "Font height =" << fontHt;
@@ -114,7 +114,7 @@ int ThumbViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
 void ThumbViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex /*previous*/)
 {
     currentRow = current.row();     // this slot not being used
-    qDebug() << "TestTestTest";
+    qDebug() << G::t.restart() << "\t" << "TestTestTest";
 //    currentIndex = current;
 }
 
@@ -123,7 +123,7 @@ QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
 {
     {
     #ifdef ISDEBUG
-//    qDebug() << "ThumbViewDelegate::sizeHint" << index.data(Qt::DisplayRole);
+//    qDebug() << G::t.restart() << "\t" << "ThumbViewDelegate::sizeHint" << index.data(Qt::DisplayRole);
     #endif
     }
 //    option.HasCheckIndicator;           // suppress compiler warning
@@ -151,10 +151,10 @@ textRect         = a rectangle below itemRect
 */
     {
     #ifdef ISDEBUG
-//    qDebug() << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
+//    qDebug() << G::t.restart() << "\t" << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
     #endif
     }
-//    qDebug() << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
+//    qDebug() << G::t.restart() << "\t" << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
     painter->save();
 
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
@@ -170,7 +170,7 @@ textRect         = a rectangle below itemRect
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     bool isPicked = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toBool();
 
-//    qDebug() << "ThumbViewDelegate::paint" << fName
+//    qDebug() << G::t.restart() << "\t" << "ThumbViewDelegate::paint" << fName
 //             << "current index" << currentIndex
 //             << "index" << index;
 
@@ -251,7 +251,7 @@ textRect         = a rectangle below itemRect
     gray if not selected
     */
     QColor selectedColor  = selectedNotCurrentItemColor;
-//    qDebug() << "thumbViewDelegate   row =" << row
+//    qDebug() << G::t.restart() << "\t" << "thumbViewDelegate   row =" << row
 //             << "currentRow =" <<  currentRow
 //             << "option.state.testFlag(QStyle::State_Selected)"
 //             << option.state.testFlag(QStyle::State_Selected);

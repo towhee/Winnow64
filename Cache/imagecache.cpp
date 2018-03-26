@@ -4,7 +4,7 @@ ImageCache::ImageCache(QObject *parent, Metadata *metadata) : QThread(parent)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::ImageCache";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::ImageCache";
     #endif
     }
     this->metadata = metadata;
@@ -16,6 +16,7 @@ ImageCache::ImageCache(QObject *parent, Metadata *metadata) : QThread(parent)
 
 ImageCache::~ImageCache()
 {
+    qDebug() << G::t.restart() << "\t" << "ImageCache::~ImageCache() Closing ...";
     mutex.lock();
     abort = true;
     condition.wakeOne();
@@ -94,7 +95,7 @@ cacheItem: the cache status parameters for an image
 
 cacheMgr:  the list of all the cacheItems
 
-imCache: a hash structure indexed by image file path holding each QPixmap
+imCache: a hash structure indexed by image file path holding each QImage
 
 */
 
@@ -105,7 +106,7 @@ terminate a running thread before starting again.  Use this function to stop
 the image caching thread without a new one starting.*/
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::stopImageCache";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::stopImageCache";
     #endif
     }
     if (isRunning()) {
@@ -121,7 +122,7 @@ the image caching thread without a new one starting.*/
 
 void ImageCache::track(QString fPath, QString msg)
 {
-    qDebug() << "••• Image Caching  " << fPath << msg;
+    qDebug() << G::t.restart() << "\t" << "••• Image Caching  " << fPath << msg;
 }
 
 
@@ -129,7 +130,7 @@ void ImageCache::cacheStatus()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::cacheStatus";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::cacheStatus";
     #endif
     }
     /* Displays a statusbar showing the cache status.
@@ -220,7 +221,7 @@ void ImageCache::cacheStatus()
             + " of "
             + QString::number(cache.maxMB)
             + " MB";
-//    qDebug() << "cache size " + mbCacheSize;
+//    qDebug() << G::t.restart() << "\t" << "cache size " + mbCacheSize;
 
     // ping mainwindow to show cache update in the status bar
     if (cache.isShowCacheStatus) emit showCacheStatus(pmCacheStatus);
@@ -230,7 +231,7 @@ QSize ImageCache::scalePreview(ulong w, ulong h)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::scalePreview";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::scalePreview";
     #endif
     }
     QSize preview(w, h);
@@ -243,7 +244,7 @@ QSize ImageCache::getPreviewSize()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::getPreviewSize";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::getPreviewSize";
     #endif
     }
     return cache.previewSize;
@@ -254,7 +255,7 @@ ulong ImageCache::getImCacheSize()
     // return the current size of the cache
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::getImCacheSize";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::getImCacheSize";
     #endif
     }
     ulong cacheMB = 0;
@@ -269,7 +270,7 @@ bool ImageCache::prioritySort(const CacheItem &p1, const CacheItem &p2)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::prioritySort";
+    //XX qDebug() << G::t.restart() << "\t" << "ImageCache::prioritySort";
     #endif
     }
     return p1.priority < p2.priority;       // sort by priority
@@ -279,7 +280,7 @@ bool ImageCache::keySort(const CacheItem &k1, const CacheItem &k2)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::keySort";
+    //XX qDebug() << G::t.restart() << "\t" << "ImageCache::keySort";
     #endif
     }
     return k1.key < k2.key;       // sort by key to return to thumbnail order
@@ -291,7 +292,7 @@ void ImageCache::setTargetRange()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::setTargetRange";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::setTargetRange";
     #endif
     }
     toCache.clear();
@@ -340,7 +341,7 @@ bool ImageCache::nextToCache()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::nextToCache";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::nextToCache";
     #endif
     }
     if (toCache.length() > 0) {
@@ -354,7 +355,7 @@ bool ImageCache::nextToDecache()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::nextToDecache";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::nextToDecache";
     #endif
     }
     if (toDecache.length() > 0) {
@@ -368,7 +369,7 @@ void ImageCache::setPriorities(int key)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::setPriorities";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::setPriorities";
     #endif
     }
     // key = current position = current selected thumbnail
@@ -456,7 +457,7 @@ void ImageCache::checkForOrphans()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::checkForOrphans";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::checkForOrphans";
     #endif
     }
 /* If the user jumps around rapidly in a large folder, where the target cache
@@ -468,7 +469,7 @@ void ImageCache::checkForOrphans()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::removeOrphans";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::removeOrphans";
     #endif
     }
     for (int i = 0; i < cache.totFiles; ++i) {
@@ -476,7 +477,7 @@ void ImageCache::checkForOrphans()
             if (!cacheItemList.at(i).isTarget) {
                 imCache.remove(cacheItemList.at(i).fName);
                 cacheItemList[i].isCached = false;
-/*              qDebug() << "\n***********************************************************************"
+/*              qDebug() << G::t.restart() << "\t" << "\n***********************************************************************"
                          << "\nREMOVED FROM IMAGE BUFFER:"
                          << cacheMgr.at(i).fName
                          << "\n***********************************************************************";
@@ -490,7 +491,7 @@ void ImageCache::reportCache(QString title)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::reportCacheManager";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::reportCacheManager";
     #endif
     }
     QString reportString;
@@ -499,7 +500,7 @@ void ImageCache::reportCache(QString title)
     reportString = "";
     rpt.setString(&reportString);
 
-    qDebug() << "\n" << title << "Key:" << cache.key
+    qDebug() << G::t.restart() << "\t" << "\n" << title << "Key:" << cache.key
              <<  "cacheMB:" << cache.currMB
              << "Wt ahead:" << cache.wtAhead
              << "Direction ahead:" << cache.isForward
@@ -571,7 +572,7 @@ void ImageCache::reportCacheProgress(QString action)
         rpt.setFieldWidth(8); rpt << "eTarget";
         rpt.setFieldWidth(7); rpt << "nCache";
         rpt.setFieldWidth(9); rpt << "nDecache\n";
-        qDebug() << reportString;
+        qDebug() << G::t.restart() << "\t" << reportString;
         return;
     }
 
@@ -594,7 +595,7 @@ returns the cache status bar x coordinate for the midpoint of the item key
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::pxMid";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::pxMid";
     #endif
     }
     return qRound((float)cache.pxUnitWidth * (key+1)
@@ -608,7 +609,7 @@ returns the cache status bar x coordinate for the start of the item key
 */
     {
     #ifdef ISDEBUG
-//    qDebug() << "ImageCache::pxStart" << cacheMgr.at(key).fName;
+//    qDebug() << G::t.restart() << "\t" << "ImageCache::pxStart" << cacheMgr.at(key).fName;
     #endif
     }
     return qRound((float)cache.pxUnitWidth * key);
@@ -621,7 +622,7 @@ returns the cache status bar x coordinate for the end of the item key
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::pxEnd";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::pxEnd";
     #endif
     }
     return qRound((float)cache.pxUnitWidth * (key+1));
@@ -633,7 +634,7 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::initImageCache";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::initImageCache";
     #endif
     }
     // cancel if no images to cache
@@ -649,7 +650,7 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
     from the folder(s) */
 
 //    if (imageList.at(0) == cache.dir) {
-////        qDebug() << "cacheMgr.size" << cacheMgr.size() << "folder now size" << imageList.size();
+////        qDebug() << G::t.restart() << "\t" << "cacheMgr.size" << cacheMgr.size() << "folder now size" << imageList.size();
 //        if (cacheMgr.size() == imageList.size()) return;
 //    }
 
@@ -681,7 +682,7 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
     // get some intel on the new folder image list
     for (int i=0; i < imageList.size(); ++i) {
         QString fPath = imageList.at(i);
-//        qDebug() << "Image Cache row =" << i << fPath;
+//        qDebug() << G::t.restart() << "\t" << "Image Cache row =" << i << fPath;
         /* cacheManager is a list of cacheItem used to track the current
            cache status and make future caching decisions for each image  */
         cacheItem.key = i;              // need to be able to sync with imageList
@@ -729,6 +730,11 @@ the current image in the cache status on the statusbar.  Normally this would be
 called from updateImageCache (below) but it is triggered from a QTimer when
 cycling through images to improve performance.
 */
+    {
+    #ifdef ISDEBUG
+    qDebug() << G::t.restart() << "\t" << "ImageView::updateCacheStatusCurrentImagePosition";
+    #endif
+    }
     for (int i = 0; i < cacheItemList.count(); i++) {
         if (cacheItemList.at(i).fName == fPath) {
             cache.key = i;
@@ -748,10 +754,10 @@ updated.  Image caching is reactivated.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageView::updateImageCache";
+    qDebug() << G::t.restart() << "\t" << "ImageView::updateImageCache";
     #endif
     }
-//    qDebug() << "\nImageView::updateImageCache";
+//    qDebug() << G::t.restart() << "\t" << "\nImageView::updateImageCache";
 
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
@@ -793,10 +799,10 @@ If there is filtering then the entire cache is reloaded.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageView::reindexImageCache";
+    qDebug() << G::t.restart() << "\t" << "ImageView::reindexImageCache";
     #endif
     }
-    qDebug() << "ImageView::reindexImageCache" << currentImageFullPath;
+    qDebug() << G::t.restart() << "\t" << "ImageView::reindexImageCache" << currentImageFullPath;
 //    return;
     if (isRunning()) stopImageCache();
 
@@ -805,14 +811,14 @@ If there is filtering then the entire cache is reloaded.
 
     int filterRowCount = filterFilePathList.count();
 
-//    qDebug() << "reindexImageCache - filterFilePathList" << filterFilePathList;
-//    qDebug() << "cache.totFiles" << cache.totFiles;
+//    qDebug() << G::t.restart() << "\t" << "reindexImageCache - filterFilePathList" << filterFilePathList;
+//    qDebug() << G::t.restart() << "\t" << "cache.totFiles" << cache.totFiles;
     int i;
     for(int row = 0; row < filterRowCount; ++row) {
-//        qDebug() << "row" << row;
+//        qDebug() << G::t.restart() << "\t" << "row" << row;
         if(filterFilePathList[row] == currentImageFullPath) cache.key = row;
         for (i = 0; i < cache.totFiles; ++i) {
-/*            qDebug() << "i" << i
+/*            qDebug() << G::t.restart() << "\t" << "i" << i
                      << cacheMgrCopy.at(i).fName
                      << filterFilePathList[row]
                      << currentImageFullPath;
@@ -830,17 +836,17 @@ If there is filtering then the entire cache is reloaded.
         cacheItemList.append(cacheItem);
     }
 
-/*    qDebug() << "\nIndex      Key     OrigKey     Priority         Target     Cached          SizeMB    Width      Height        FName";
+/*    qDebug() << G::t.restart() << "\t" << "\nIndex      Key     OrigKey     Priority         Target     Cached          SizeMB    Width      Height        FName";
     for (int i=0; i<cache.totFiles; ++i) {
-        qDebug() << i << "\t"
-                 << cacheMgrCopy.at(i).key << "\t"
-                 << cacheMgrCopy.at(i).origKey << "\t"
-                 << cacheMgrCopy.at(i).priority << "\t"
-                 << cacheMgrCopy.at(i).isTarget << "\t"
-                 << cacheMgrCopy.at(i).isCached << "\t"
-                 << cacheMgrCopy.at(i).sizeMB << "\t"
-                 << metadata->getWidth(cacheMgrCopy.at(i).fName) << "\t"
-                 << metadata->getHeight(cacheMgrCopy.at(i).fName) << "\t"
+        qDebug() << G::t.restart() << "\t" << i << "\t" <<
+                 << cacheMgrCopy.at(i).key << "\t" <<
+                 << cacheMgrCopy.at(i).origKey << "\t" <<
+                 << cacheMgrCopy.at(i).priority << "\t" <<
+                 << cacheMgrCopy.at(i).isTarget << "\t" <<
+                 << cacheMgrCopy.at(i).isCached << "\t" <<
+                 << cacheMgrCopy.at(i).sizeMB << "\t" <<
+                 << metadata->getWidth(cacheMgrCopy.at(i).fName) << "\t" <<
+                 << metadata->getHeight(cacheMgrCopy.at(i).fName) << "\t" <<
                  << cacheMgrCopy.at(i).fName;
     }
     */
@@ -863,7 +869,7 @@ void ImageCache::run()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ImageCache::run";
+    qDebug() << G::t.restart() << "\t" << "ImageCache::run";
     #endif
     }
 
@@ -912,11 +918,11 @@ void ImageCache::run()
         cacheItemList[cache.toCacheKey].isCached = true;
         if (!toCache.isEmpty()) toCache.removeFirst();
         cache.currMB = getImCacheSize();
-        cacheStatus();
+        if (cache.isShowCacheStatus) cacheStatus();
         prevFileName = fPath;
     }
     checkForOrphans();
-    cacheStatus();
+    if (cache.isShowCacheStatus) cacheStatus();
     emit updateIsRunning(false);
 //    reportCacheManager("Image cache updated for " + cache.dir);
 }

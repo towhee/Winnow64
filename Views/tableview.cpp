@@ -7,7 +7,7 @@ TableView::TableView(DataModel *dm)
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "TableView::TableView";
+    qDebug() << G::t.restart() << "\t" << "TableView::TableView";
     #endif
     }
 
@@ -58,12 +58,12 @@ void TableView::scrollToCurrent()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "TableView::scrollToCurrent";
+    qDebug() << G::t.restart() << "\t" << "TableView::scrollToCurrent";
     #endif
     }
     QModelIndex idx = dm->sf->index(currentIndex().row(), 1);
     scrollTo(idx, ScrollHint::PositionAtCenter);
-//    qDebug() << "TableView::scrollToCurrent" << idx;
+//    qDebug() << G::t.restart() << "\t" << "TableView::scrollToCurrent" << idx;
 }
 
 bool TableView::eventFilter(QObject *obj, QEvent *event)
@@ -71,7 +71,7 @@ bool TableView::eventFilter(QObject *obj, QEvent *event)
 /*
 
 */
-//    qDebug() << "TableView events" << obj << event;
+//    qDebug() << G::t.restart() << "\t" << "TableView events" << obj << event;
     if((event->type() == QEvent::Paint || event->type() == QEvent::Timer)
             && readyToScroll
             && obj->objectName() == "QScrollBar")
@@ -91,7 +91,7 @@ void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "TableView::mouseDoubleClickEvent";
+    qDebug() << G::t.restart() << "\t" << "TableView::mouseDoubleClickEvent";
     #endif
     }
     emit displayLoupe();
@@ -111,7 +111,7 @@ QSettings has been loaded.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "TableView::createOkToShow()";
+    qDebug() << G::t.restart() << "\t" << "TableView::createOkToShow()";
     #endif
     }
     ok = new QStandardItemModel;

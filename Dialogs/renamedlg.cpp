@@ -19,7 +19,7 @@ RenameEdit::RenameEdit(QDialog *parent) : QLineEdit(parent)
 
 void RenameEdit::keyPressEvent(QKeyEvent *event)
 {
-    qDebug() << "RenameDlg::keyPressEvent" << event;
+    qDebug() << G::t.restart() << "\t" << "RenameDlg::keyPressEvent" << event;
     switch (event->key()) {
     case Qt::Key_Slash:
     case Qt::Key_Backslash:

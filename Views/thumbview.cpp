@@ -103,7 +103,7 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::ThumbView";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::ThumbView";
     #endif
     }
     this->dm = dm;
@@ -155,10 +155,10 @@ void ThumbView::reportThumbs()
 {
     /*
     QModelIndex idx;
-    qDebug() << "List all thumbs";
+    qDebug() << G::t.restart() << "\t" << "List all thumbs";
     for (int i=0; i<dm->sf->rowCount(); i++) {
         idx = dm->sf->index(i, 0, QModelIndex());
-        qDebug() << i << idx.data(FileNameRole).toString();
+        qDebug() << G::t.restart() << "\t" << i << idx.data(FileNameRole).toString();
     }
     */
 }
@@ -166,7 +166,7 @@ void ThumbView::reportThumbs()
 void ThumbView::refreshThumbs() {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::refreshThumbs";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::refreshThumbs";
     #endif
     }
     dataChanged(dm->sf->index(0, 0), dm->sf->index(getLastRow(), 0));
@@ -197,7 +197,7 @@ possibly altered thumbnail dimensions.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::setThumbParameters";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::setThumbParameters";
     #endif
     }
     setSpacing(thumbSpacing);
@@ -215,7 +215,7 @@ void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::setThumbParameters with args";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::setThumbParameters with args";
     #endif
     }
     thumbWidth = _thumbWidth;
@@ -232,7 +232,7 @@ int ThumbView::getThumbSpaceMin()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getThumbSpaceMin";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getThumbSpaceMin";
     #endif
     }
     return 40 + thumbSpacing * 2 + thumbPadding *2 + 8;
@@ -242,7 +242,7 @@ int ThumbView::getThumbSpaceMax()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getThumbSpaceMax";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getThumbSpaceMax";
     #endif
     }
     return 160 + thumbSpacing * 2 + thumbPadding *2 + 8;
@@ -252,7 +252,7 @@ QSize ThumbView::getThumbCellSize()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getThumbCellSize";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getThumbCellSize";
     #endif
     }
 //    setThumbParameters(false);    // reqd?  rgh
@@ -272,11 +272,11 @@ changes height to determine whether a scrollbar is required.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getThumbSpaceWidth";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getThumbSpaceWidth";
     #endif
     }
     float aspect = thumbWidth / thumbHeight;
-    qDebug() << "aspect =" << aspect;
+    qDebug() << G::t.restart() << "\t" << "aspect =" << aspect;
     // Difference between thumbSpace and thumbHeight
     int margin = thumbViewDelegate->getThumbCell().height() - thumbHeight;
     int newThumbHeight = thumbSpaceHeight - margin;
@@ -286,7 +286,7 @@ changes height to determine whether a scrollbar is required.
 
 int ThumbView::getScrollThreshold(int thumbSpaceHeight)
 {
-    qDebug() << "getScrollThreshold  viewport()->width()"
+    qDebug() << G::t.restart() << "\t" << "getScrollThreshold  viewport()->width()"
              << viewport()->width()
              << "getThumbSpaceWidth"
              << getThumbSpaceWidth(thumbSpaceHeight);
@@ -298,30 +298,30 @@ void ThumbView::reportThumb()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::reportThumb";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::reportThumb";
     #endif
     }
     // rgh convert all from roles to columns
     int currThumb = currentIndex().row();
-    qDebug() << "\n ***** THUMB INFO *****";
-    qDebug() << "Row =" << currThumb;
-    qDebug() << "LoadedRole " << G::LoadedRole << dm->item(currThumb)->data(G::LoadedRole).toBool();
-    qDebug() << "FileNameRole " << G::FilePathRole << dm->item(currThumb)->data(G::FilePathRole).toString();
-    qDebug() << "SortRole " << G::SortRole << dm->item(currThumb)->data(G::SortRole).toInt();
-    qDebug() << "PickedRole " << G::PickedRole << dm->item(currThumb)->data(G::PickedRole).toString();
-    qDebug() << "FileTypeRole " << G::FileTypeRole << dm->item(currThumb)->data(G::FileTypeRole).toString();
-    qDebug() << "FileSizeRole " << G::FileSizeRole << dm->item(currThumb)->data(G::FileSizeRole).toInt();
-    qDebug() << "CreatedRole " << G::CreatedRole << dm->item(currThumb)->data(G::CreatedRole).toDateTime();
-    qDebug() << "ModifiedRole " << G::ModifiedRole << dm->item(currThumb)->data(G::ModifiedRole).toDateTime();
+    qDebug() << G::t.restart() << "\t" << "\n ***** THUMB INFO *****";
+    qDebug() << G::t.restart() << "\t" << "Row =" << currThumb;
+    qDebug() << G::t.restart() << "\t" << "LoadedRole " << G::LoadedRole << dm->item(currThumb)->data(G::LoadedRole).toBool();
+    qDebug() << G::t.restart() << "\t" << "FileNameRole " << G::FilePathRole << dm->item(currThumb)->data(G::FilePathRole).toString();
+    qDebug() << G::t.restart() << "\t" << "SortRole " << G::SortRole << dm->item(currThumb)->data(G::SortRole).toInt();
+    qDebug() << G::t.restart() << "\t" << "PickedRole " << G::PickedRole << dm->item(currThumb)->data(G::PickedRole).toString();
+    qDebug() << G::t.restart() << "\t" << "FileTypeRole " << G::FileTypeRole << dm->item(currThumb)->data(G::FileTypeRole).toString();
+    qDebug() << G::t.restart() << "\t" << "FileSizeRole " << G::FileSizeRole << dm->item(currThumb)->data(G::FileSizeRole).toInt();
+    qDebug() << G::t.restart() << "\t" << "CreatedRole " << G::CreatedRole << dm->item(currThumb)->data(G::CreatedRole).toDateTime();
+    qDebug() << G::t.restart() << "\t" << "ModifiedRole " << G::ModifiedRole << dm->item(currThumb)->data(G::ModifiedRole).toDateTime();
 
     // following crashes when columns not added
 //    QModelIndex idx1 = dm->sf->index(currThumb, 1, QModelIndex());
-//    qDebug() << "Column 1 Type:" << idx1.data(Qt::DisplayRole);
+//    qDebug() << G::t.restart() << "\t" << "Column 1 Type:" << idx1.data(Qt::DisplayRole);
 
-//    qDebug() << thumbViewModel->item(currThumb)->data(DisplayRole).toString();
-//    qDebug() << "\nAll roles:";
+//    qDebug() << G::t.restart() << "\t" << thumbViewModel->item(currThumb)->data(DisplayRole).toString();
+//    qDebug() << G::t.restart() << "\t" << "\nAll roles:";
 //    for (int i=0; i<15; ++i) {
-//        qDebug() << i << ":  " << thumbViewModel->item(currThumb)->data(i);
+//        qDebug() << G::t.restart() << "\t" << i << ":  " << thumbViewModel->item(currThumb)->data(i);
 //    }
 }
 
@@ -329,7 +329,7 @@ int ThumbView::getCurrentRow()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getCurrentRow";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getCurrentRow";
     #endif
     }
     return currentIndex().row();
@@ -339,7 +339,7 @@ int ThumbView::getNextRow()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getNextRow";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getNextRow";
     #endif
     }
     int row = currentIndex().row();
@@ -352,7 +352,7 @@ int ThumbView::getPrevRow()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getPrevRow";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getPrevRow";
     #endif
     }
     int row = currentIndex().row();
@@ -365,7 +365,7 @@ int ThumbView::getLastRow()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getLastRow";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getLastRow";
     #endif
     }
     return dm->sf->rowCount() - 1;
@@ -375,7 +375,7 @@ int ThumbView::getRandomRow()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getRandomRow";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getRandomRow";
     #endif
     }
     return qrand() % (dm->sf->rowCount());
@@ -386,11 +386,11 @@ bool ThumbView::isSelectedItem()
     // call before getting current row or index
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::isSelectedItem";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::isSelectedItem";
     #endif
     }
     return true;
-    qDebug() << "selectionModel()->selectedRows().size()" << selectionModel()->selectedRows().size();
+    qDebug() << G::t.restart() << "\t" << "selectionModel()->selectedRows().size()" << selectionModel()->selectedRows().size();
     if (selectionModel()->selectedRows().size() > 0)
         return true;
     else
@@ -408,14 +408,14 @@ of images in the selected folder.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getFirstVisible";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getFirstVisible";
     #endif
     }
     QRect thumbViewRect = viewport()->rect();
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
 //            QRect thumbRect = visualRect(dm->sf->index(row, 0));
-//            qDebug() << "ThumbView::getFirstVisible  row =" << row
+//            qDebug() << G::t.restart() << "\t" << "ThumbView::getFirstVisible  row =" << row
 //                     << "thumbRect =" << thumbRect
 //                     << "thumbViewRect =" << thumbViewRect;
             return row;
@@ -435,7 +435,7 @@ of images in the selected folder.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getLastVisible";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getLastVisible";
     #endif
     }
     QRect thumbViewRect = viewport()->rect();
@@ -452,7 +452,7 @@ QString ThumbView::getCurrentFilename()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getCurrentFilename";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getCurrentFilename";
     #endif
     }
     return currentIndex().data(G::FilePathRole).toString();
@@ -465,7 +465,7 @@ bool ThumbView::isPick()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::isPick";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::isPick";
     #endif
     }
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
@@ -483,7 +483,7 @@ folder.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getPicks";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getPicks";
     #endif
     }
     QFileInfoList fileInfoList;
@@ -493,7 +493,7 @@ folder.
             QModelIndex pathIdx = dm->sf->index(row, 0);
             QString fPath = pathIdx.data(G::FilePathRole).toString();
             QFileInfo fileInfo(fPath);
-            qDebug() << fPath;
+            qDebug() << G::t.restart() << "\t" << fPath;
             fileInfoList.append(fileInfo);
         }
     }
@@ -504,7 +504,7 @@ int ThumbView::getNextPick()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getNextPick";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getNextPick";
     #endif
     }
     int frwd = currentIndex().row() + 1;
@@ -522,7 +522,7 @@ int ThumbView::getPrevPick()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getPrevPick";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getPrevPick";
     #endif
     }
     int back = currentIndex().row() - 1;
@@ -541,7 +541,7 @@ int ThumbView::getNearestPick()
 /* Returns the model row of the nearest pick, used in toggleFilterPick */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getNearestPick";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getNearestPick";
     #endif
     }
     int frwd = currentIndex().row();
@@ -563,7 +563,7 @@ void ThumbView::toggleFilterPick(bool isFilter)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::toggleFilterPick";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::toggleFilterPick";
     #endif
     }
     pickFilter = isFilter;
@@ -581,7 +581,7 @@ void ThumbView::sortThumbs(int sortColumn, bool isReverse)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::sortThumbs";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::sortThumbs";
     #endif
     }
     if (isReverse) dm->sf->sort(sortColumn, Qt::DescendingOrder);
@@ -597,12 +597,12 @@ useful.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getSelectedThumbsList";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getSelectedThumbsList";
     #endif
     }
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getSelectedThumbList";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getSelectedThumbList";
     #endif
     }
     QModelIndexList indexesList = selectionModel()->selectedIndexes();
@@ -631,7 +631,7 @@ crash.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::setIcon" << row;
+    qDebug() << G::t.restart() << "\t" << "ThumbView::setIcon" << row;
     #endif
     }
     QStandardItem *item = new QStandardItem;
@@ -646,7 +646,7 @@ void ThumbView::selectThumb(QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectThumb(index)" << idx;
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectThumb(index)" << idx;
     #endif
     }
     if (idx.isValid()) {
@@ -660,7 +660,7 @@ void ThumbView::selectThumb(int row)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectThumb(row)" << row;
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectThumb(row)" << row;
     #endif
     }
     // some operations assign row = -1 if not found
@@ -674,12 +674,12 @@ void ThumbView::selectThumb(QString &fName)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectThumb(filename)";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectThumb(filename)";
     #endif
     }
     QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::FilePathRole, fName);
     QModelIndex idx = idxList[0];
-    qDebug() << "selectThumb  idx.row()" << idx.row();
+    qDebug() << G::t.restart() << "\t" << "selectThumb  idx.row()" << idx.row();
     if(idx.isValid()) selectThumb(idx);
 }
 
@@ -687,7 +687,7 @@ void ThumbView::selectNext()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectNext";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectNext";
     #endif
     }
     if(G::mode == "Compare") return;
@@ -698,7 +698,7 @@ void ThumbView::selectPrev()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectPrev";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectPrev";
     #endif
     }
     if(G::mode == "Compare") return;
@@ -711,7 +711,7 @@ void ThumbView::selectUp()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectUp";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectUp";
     #endif
     }
     if (G::mode == "Table" || !isWrapping()) selectPrev();
@@ -722,7 +722,7 @@ void ThumbView::selectDown()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectDown";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectDown";
     #endif
     }
     if (G::mode == "Table" || !isWrapping()) selectNext();
@@ -733,7 +733,7 @@ void ThumbView::selectFirst()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectFirst";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectFirst";
     #endif
     }
     selectThumb(0);
@@ -743,7 +743,7 @@ void ThumbView::selectLast()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectLast";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectLast";
     #endif
     }
     selectThumb(getLastRow());
@@ -753,7 +753,7 @@ void ThumbView::selectRandom()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectRandom";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectRandom";
     #endif
     }
     selectThumb(getRandomRow());
@@ -763,7 +763,7 @@ void ThumbView::selectNextPick()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectNextPick";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectNextPick";
     #endif
     }
     selectThumb(getNextPick());
@@ -774,7 +774,7 @@ void ThumbView::selectPrevPick()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::selectPrevPick";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::selectPrevPick";
     #endif
     }
     selectThumb(getPrevPick());
@@ -785,7 +785,7 @@ void ThumbView::thumbsEnlarge()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::thumbsEnlarge";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::thumbsEnlarge";
     #endif
     }
     if (thumbWidth < 40) thumbWidth = 40;
@@ -797,8 +797,8 @@ void ThumbView::thumbsEnlarge()
         if (thumbWidth > 160) thumbWidth = 160;
         if (thumbHeight > 160) thumbHeight = 160;
     }
-    qDebug() << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsEnlarge  thumbHeight =" << thumbHeight;
-//    qDebug() << "Calling setThumbParameters from ThumbView::thumbsEnlarge thumbWidth" << thumbWidth ;
+    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsEnlarge  thumbHeight =" << thumbHeight;
+//    qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsEnlarge thumbWidth" << thumbWidth ;
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -807,7 +807,7 @@ void ThumbView::thumbsShrink()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::thumbsShrink";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::thumbsShrink";
     #endif
     }
     if (thumbWidth > 40  && thumbHeight > 40) {
@@ -816,8 +816,8 @@ void ThumbView::thumbsShrink()
         if (thumbWidth < 40) thumbWidth = 40;
         if (thumbHeight < 40) thumbHeight = 40;
     }
-    qDebug() << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsShring  thumbHeight =" << thumbHeight;
-//    qDebug() << "Calling setThumbParameters from ThumbView::thumbsShrink thumbWidth" << thumbWidth ;
+    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsShring  thumbHeight =" << thumbHeight;
+//    qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsShrink thumbWidth" << thumbWidth ;
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -829,7 +829,7 @@ click position that is then sent to imageView to zoom to the same spot
 */
     {
     #ifdef ISDEBUG
-//    qDebug() << "ThumbView::updateThumbRectRole";
+//    qDebug() << G::t.restart() << "\t" << "ThumbView::updateThumbRectRole";
     #endif
     }
     dm->sf->setData(index, iconRect, G::ThumbRectRole);
@@ -839,10 +839,10 @@ void ThumbView::resizeEvent(QResizeEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::resizeEvent";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::resizeEvent";
     #endif
     }
-//    qDebug() << "ThumbView::resizeEvent";
+//    qDebug() << G::t.restart() << "\t" << "ThumbView::resizeEvent";
 
     QListView::resizeEvent(event);
 }
@@ -851,10 +851,10 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::thumbsFit";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::thumbsFit";
     #endif
     }
-    qDebug() << "🔎🔎🔎 Entering ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
+    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Entering ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
     if (G::mode == "Grid") {
         return;
 
@@ -886,7 +886,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
             }
             padding++;
         } while (improving);
-//        qDebug() << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
+//        qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
         setThumbParameters(thumbWidth, thumbHeight, thumbSpacing,
                            thumbPadding, labelFontSize, showThumbLabels, wrapThumbs);
         return;
@@ -894,7 +894,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     // all wrapping is row wrapping
     if (isWrapping()) {
         return;
-        qDebug() << "ThumbView::thumbsFit isWrapping = true";
+        qDebug() << G::t.restart() << "\t" << "ThumbView::thumbsFit isWrapping = true";
         // adjust thumb width
         int scrollWidth = 12;
 //        int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
@@ -916,7 +916,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
             }
             padding++;
         } while (improving);
-//        qDebug() << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
+//        qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
 //        setThumbParameters();
     }
     // no wrapping - must be bottom or top dock area
@@ -939,10 +939,10 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         thumbHeight = thumbSpaceHeight - margin;
         thumbWidth = thumbHeight * aspect;
 
-        qDebug() << "🔎🔎🔎 ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
+        qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
 
         // change the thumbnail size in thumbViewDelegate
-//        qDebug() << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
+//        qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
         setSpacing(thumbSpacing);
         thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
             thumbPadding, labelFontSize, showThumbLabels);
@@ -963,7 +963,7 @@ For thumbSpace anatomy (see ThumbViewDelegate)
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::thumbsFitTopOrBottom";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::thumbsFitTopOrBottom";
     #endif
     }
     float aspect = (float)thumbWidth / thumbHeight;
@@ -1014,7 +1014,7 @@ triggered by a mouse click and MW::mouseClickScroll == true.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::scrollToCurrent";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::scrollToCurrent";
     #endif
     }
 
@@ -1046,7 +1046,7 @@ int ThumbView::getHorizontalScrollBarOffset(int row)
     if (scrollOffset < 0) scrollOffset = 0;
     if (scrollOffset > hMax) scrollOffset = hMax;
     /*
-    qDebug() << objectName()
+    qDebug() << G::t.restart() << "\t" << objectName()
              << "Row =" << mw->currentRow
              << "horizontalScrollBarMax Qt vs Me"
              << horizontalScrollBar()->maximum()
@@ -1075,7 +1075,7 @@ int ThumbView::getVerticalScrollBarOffset(int row)
     float thumbsPerPage = pageWidth / thumbCellWidth * (float)pageHeight / thumbCellHeight;
     float thumbRowsPerPage = (float)pageHeight / thumbCellHeight;
     int n = dm->sf->rowCount();
-//    qDebug() << "thumbsPerPage" << thumbsPerPage;
+//    qDebug() << G::t.restart() << "\t" << "thumbsPerPage" << thumbsPerPage;
     float pages = (float(n) / thumbsPerPage) - 1;
     int vMax = pages * pageWidth;
 
@@ -1087,7 +1087,7 @@ int ThumbView::getVerticalScrollBarOffset(int row)
     if (scrollOffset < 0) scrollOffset = 0;
     if (scrollOffset > vMax) scrollOffset = vMax;
     /*
-    qDebug() << objectName()
+    qDebug() << G::t.restart() << "\t" << objectName()
              << "Row =" << mw->currentRow
              << "thumbRow" << thumbRow
              << "verticalScrollBarMax Qt vs Me"
@@ -1110,7 +1110,7 @@ int ThumbView::getHorizontalScrollBarMax()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "humbView::getHorizontalScrollBarMax()";
+    qDebug() << G::t.restart() << "\t" << "humbView::getHorizontalScrollBarMax()";
     #endif
     }
     int pageWidth = viewport()->width();
@@ -1129,7 +1129,7 @@ int ThumbView::getVerticalScrollBarMax()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::getVerticalScrollBarMax()";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::getVerticalScrollBarMax()";
     #endif
     }
     int pageWidth = viewport()->width();
@@ -1141,7 +1141,7 @@ int ThumbView::getVerticalScrollBarMax()
     float pages = float(n) / thumbsPerPage - 1;
     int vMax = pages * pageHeight;
     /*
-    qDebug() << objectName()
+    qDebug() << G::t.restart() << "\t" << objectName()
              << "Row =" << mw->currentRow
              << "verticalScrollBarMax Qt vs Me"
              << verticalScrollBar()->maximum()
@@ -1154,7 +1154,7 @@ void ThumbView::wheelEvent(QWheelEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::wheelEvent";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::wheelEvent";
     #endif
     }
     QListView::wheelEvent(event);
@@ -1170,10 +1170,10 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::mousePressEvent";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::mousePressEvent";
     #endif
     }
-//    qDebug() << "🔎🔎🔎 ThumbView::mousePressEvent ";
+//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::mousePressEvent ";
     G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
     QListView::mousePressEvent(event);
 
@@ -1188,7 +1188,7 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
         QPoint iconPt = mousePt - iconRect.topLeft();
         float xPct = (float)iconPt.x() / iconRect.width();
         float yPct = (float)iconPt.y() / iconRect.height();
-        /*qDebug() << "ThumbView::mousePressEvent"
+        /*qDebug() << G::t.restart() << "\t" << "ThumbView::mousePressEvent"
                  << "xPct =" << xPct
                  << "yPct =" << yPct
                  << "iconRect =" << iconRect
@@ -1204,14 +1204,14 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
 
 void ThumbView::mouseMoveEvent(QMouseEvent *event)
 {
-//    qDebug() << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event;
+//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event;
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }
 
 void ThumbView::mouseReleaseEvent(QMouseEvent *event)
 {
-//    qDebug() << "🔎🔎🔎 ThumbView::mouseReleaseEvent ";
+//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::mouseReleaseEvent ";
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
     QListView::mouseReleaseEvent(event);
@@ -1233,7 +1233,7 @@ center.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::mouseDoubleClickEvent";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::mouseDoubleClickEvent";
     #endif
     }
     QListView::mouseDoubleClickEvent(event);
@@ -1251,7 +1251,7 @@ center.
 //*/
 //    {
 //    #ifdef ISDEBUG
-//    qDebug() << "ThumbView::delaySelectCurrentThumb";
+//    qDebug() << G::t.restart() << "\t" << "ThumbView::delaySelectCurrentThumb";
 //    #endif
 //    }
 //    selectThumb(currentIndex());
@@ -1264,7 +1264,7 @@ Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::invertSelection";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::invertSelection";
     #endif
     }
     QItemSelection toggleSelection;
@@ -1282,7 +1282,7 @@ void ThumbView::copyThumbs()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::copyThumbs";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::copyThumbs";
     #endif
     }
     QModelIndexList indexesList = selectionModel()->selectedIndexes();
@@ -1310,7 +1310,7 @@ Drag and drop thumbs to another program.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "ThumbView::startDrag";
+    qDebug() << G::t.restart() << "\t" << "ThumbView::startDrag";
     #endif
     }
 
@@ -1327,7 +1327,7 @@ Drag and drop thumbs to another program.
         QString fPath = selection.at(i).data(G::FilePathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
     }
-    qDebug() << urls;
+    qDebug() << G::t.restart() << "\t" << urls;
 
     mimeData->setUrls(urls);
     drag->setMimeData(mimeData);
@@ -1377,10 +1377,10 @@ Drag and drop thumbs to another program.
 ///*
 
 //*/
-//    qDebug() << event;
+//    qDebug() << G::t.restart() << "\t" << event;
 //    if (event->type() == QEvent::Show) {
 //        if (!event->spontaneous()) {
-//            qDebug() << "Scrollbar::eventFilter  event->type() == QEvent::Show";
+//            qDebug() << G::t.restart() << "\t" << "Scrollbar::eventFilter  event->type() == QEvent::Show";
 //            emit updateScrollTo();
 //        }
 //    }
@@ -1388,6 +1388,6 @@ Drag and drop thumbs to another program.
 
 //void Scrollbar::test()
 //{
-//    qDebug() << "Scrollbar::setFont";
+//    qDebug() << G::t.restart() << "\t" << "Scrollbar::setFont";
 //}
 

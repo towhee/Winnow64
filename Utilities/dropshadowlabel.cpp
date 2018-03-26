@@ -17,7 +17,7 @@ void DropShadowLabel::paintEvent(QPaintEvent* /*event*/)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "DropShadowLabel::paintEvent";
+    qDebug() << G::t.restart() << "\t" << "DropShadowLabel::paintEvent";
     #endif
     }
 

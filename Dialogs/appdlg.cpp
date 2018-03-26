@@ -18,7 +18,7 @@ Appdlg::Appdlg(QMap<QString, QString>& externalApps, QWidget *parent)
         QTableWidgetItem *item0 = new QTableWidgetItem(it.key());
         QTableWidgetItem *item1 = new QTableWidgetItem(it.value());
         item1->setFlags(item1->flags() & ~Qt::ItemIsEditable); // non editable
-        qDebug() << "Appdlg::Appdlg"
+        qDebug() << G::t.restart() << "\t" << "Appdlg::Appdlg"
                  << "  it.key() =" << it.key()
                  << "  it.value() =" << it.value();
         ui->apps->insertRow(rowCount);
@@ -35,13 +35,13 @@ Appdlg::~Appdlg()
 
 void Appdlg::reject()
 {
-    qDebug() << "Leaving...";
+    qDebug() << G::t.restart() << "\t" << "Leaving...";
     xApps.clear();
     for (int i = 0; i < ui->apps->rowCount(); ++i) {
         QString key = ui->apps->model()->index(i,0).data().toString();
         QString val = ui->apps->model()->index(i,1).data().toString();
         xApps[key] = val;
-        qDebug() << xApps;
+        qDebug() << G::t.restart() << "\t" << xApps;
     }
     QDialog::reject();
 }
@@ -58,7 +58,7 @@ void Appdlg::on_addBtn_clicked()
     QFileInfo fileInfo(appPath);
     QString appName = fileInfo.baseName();
     appName[0].toUpper();
-    qDebug() << appName;
+    qDebug() << G::t.restart() << "\t" << appName;
     QTableWidgetItem *item0 = new QTableWidgetItem(appName);
     QTableWidgetItem *item1 = new QTableWidgetItem(fileInfo.absoluteFilePath());
     ui->apps->insertRow(rowCount);
@@ -71,7 +71,7 @@ void Appdlg::on_addBtn_clicked()
 void Appdlg::on_removeBtn_clicked()
 {
     QModelIndex idx;
-    qDebug() << "on_removeBtn_clicked   current row =" << ui->apps->currentRow();
+    qDebug() << G::t.restart() << "\t" << "on_removeBtn_clicked   current row =" << ui->apps->currentRow();
     ui->apps->removeRow(ui->apps->currentRow());
 }
 

@@ -66,7 +66,7 @@ CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::CompareView";
+    qDebug() << G::t.restart() << "\t" << "CompareView::CompareView";
     #endif
     }
 
@@ -124,7 +124,7 @@ or loads the file otherwise.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::loadImage"  << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::loadImage"  << currentImagePath;
     #endif
     }
 
@@ -178,7 +178,7 @@ size or aspect ratios.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomToPct" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::zoomToPct" << currentImagePath;
     #endif
     }
     this->isZoom = isZoom;
@@ -206,7 +206,7 @@ occur.
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::scrollEvent " << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::scrollEvent " << currentImagePath;
     #endif
     }
     // is this the focus instance?
@@ -227,7 +227,7 @@ QPointF CompareView::getSceneCoordFromPct(QPointF scrollPct)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getSceneCoordFromPct" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::getSceneCoordFromPct" << currentImagePath;
     #endif
     }
     return QPointF(scrollPct.x() * scene->width(),
@@ -242,7 +242,7 @@ each slave instance to make the same pan from its previous position by delta.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::panToDeltaPct" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::panToDeltaPct" << currentImagePath;
     #endif
     }
     // update scrl struct
@@ -262,7 +262,7 @@ locked to pan together.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::setScrollBars" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::setScrollBars" << currentImagePath;
     #endif
     }
     // update the scrl struct with scrollbar parameters
@@ -310,7 +310,7 @@ current value information in a more compact form for subsequent panning.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getScrollBarStatus" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::getScrollBarStatus" << currentImagePath;
     #endif
     }
     scrl.hMin = horizontalScrollBar()->minimum();
@@ -327,17 +327,17 @@ void CompareView::reportScrollBarStatus(QString info)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::reportScrollBarStatus" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::reportScrollBarStatus" << currentImagePath;
     #endif
     }
-//    qDebug() << "ScrollBarStatus:" << currentImagePath// << "\n"
+//    qDebug() << G::t.restart() << "\t" << "ScrollBarStatus:" << currentImagePath// << "\n"
 //             << "hMin" << scrl.hMin << "hMax" << scrl.hMax << "hVal" << scrl.hVal
 //             << "vMin" << scrl.vMin << "vMax" << scrl.vMax << "vVal" << scrl.vVal
 //             << "hPct" << scrl.hPct << "vPct" << scrl.vPct
 //             << "\n";
     getScrollBarStatus();
     int row = imageIndex.row();
-    qDebug() << row << info << "Zoom" << zoom << "hPct" << scrl.hPct << "vPct" << scrl.vPct;
+    qDebug() << G::t.restart() << "\t" << row << info << "Zoom" << zoom << "hPct" << scrl.hPct << "vPct" << scrl.vPct;
 }
 
 QPointF CompareView::getScrollDeltaPct()
@@ -348,7 +348,7 @@ last scroll point and the current one.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getScrollDeltaPct" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::getScrollDeltaPct" << currentImagePath;
     #endif
     }
     getScrollBarStatus();
@@ -367,7 +367,7 @@ Returns coordinates in percent for the current scroll position.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getScrollPct" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::getScrollPct" << currentImagePath;
     #endif
     }
     // update scrl struct with current scrollbar parameters
@@ -400,7 +400,7 @@ pixels. In other words, how many viewport pixels = one image pixel. A zoom of
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getZoom" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::getZoom" << currentImagePath;
     #endif
     }
     // use view center to make sure inside scene item
@@ -417,7 +417,7 @@ Return the scale factor (or zoom) to fit the image inside the viewport.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::getFitScaleFactor" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::getFitScaleFactor" << currentImagePath;
     #endif
     }
     qreal hScale = ((qreal)container.width() - 2) / content.width();
@@ -444,7 +444,7 @@ local zoomTo.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::scale" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::scale" << currentImagePath;
     #endif
     }
     // rescale to new zoom factor
@@ -481,7 +481,7 @@ The classification label (ratings / color class) is also positioned.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::movePickIcon" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::movePickIcon" << currentImagePath;
     #endif
     }
     QPoint sceneBottomRight;            // bottom right corner of scene in view coord
@@ -534,7 +534,7 @@ void CompareView::resizeEvent(QResizeEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::resizeEvent" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::resizeEvent" << currentImagePath;
     #endif
     }
     QGraphicsView::resizeEvent(event);
@@ -559,10 +559,10 @@ void CompareView::zoomIn()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomIn" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::zoomIn" << currentImagePath;
     #endif
     }
-    qDebug() << "CompareView::zoomIn" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::zoomIn" << currentImagePath;
     zoom *= (1.0 + zoomInc);
     zoom = zoom > zoomMax ? zoomMax: zoom;
     scale(false);
@@ -572,10 +572,10 @@ void CompareView::zoomOut()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomOut" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::zoomOut" << currentImagePath;
     #endif
     }
-    qDebug() << "CompareView::zoomOut" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::zoomOut" << currentImagePath;
     zoom *= (1.0 - zoomInc);
     zoom = zoom < zoomMin ? zoomMin : zoom;
     scale(false);
@@ -588,7 +588,7 @@ Called from MW menu action to CompareImages and then to each compare instance
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomToFit" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::zoomToFit" << currentImagePath;
     #endif
     }
     zoom = zoomFit;
@@ -605,7 +605,7 @@ signal back to ZoomDlg (which is reqd when scale changes occur locally).
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomTo" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::zoomTo" << currentImagePath;
     #endif
     }
     zoom = zoomTo;
@@ -619,7 +619,7 @@ Called from MW menu action to CompareImages and then to each compare instance
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::zoomToggle" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::zoomToggle" << currentImagePath;
     #endif
     }
     if (!isZoom) zoom = toggleZoom;
@@ -636,7 +636,7 @@ the shift modifier key is pressed.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::wheelEvent" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::wheelEvent" << currentImagePath;
     #endif
     }
     propagate = true;
@@ -650,7 +650,7 @@ void CompareView::mousePressEvent(QMouseEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::mousePressEvent" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::mousePressEvent" << currentImagePath;
     #endif
     }
     // bad things happen if no image when click
@@ -683,7 +683,7 @@ focus instance will pan.  The modifier key test is in the scroll event.
 */
     {
     #ifdef ISDEBUG
-//    qDebug() << "CompareView::mouseMoveEvent";
+//    qDebug() << G::t.restart() << "\t" << "CompareView::mouseMoveEvent";
     #endif
     }
     if (isLeftMouseBtnPressed) {
@@ -709,7 +709,7 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::mouseReleaseEvent" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::mouseReleaseEvent" << currentImagePath;
     #endif
     }
     // prevent zooming when right click for context menu
@@ -724,8 +724,8 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
 
             // only propagate if shift modifier was not engaged during pan
             if (propagate) emit cleanupAfterPan(deltaPanPct, imageIndex);
-//            qDebug() << "Propagating instance end of pan:   propagate =" << propagate;
-//            qDebug() << "startOfPanPct" << startOfPanPct
+//            qDebug() << G::t.restart() << "\t" << "Propagating instance end of pan:   propagate =" << propagate;
+//            qDebug() << G::t.restart() << "\t" << "startOfPanPct" << startOfPanPct
 //                     << "endOfPanPct" << endOfPanPct
 //                     << "deltaPanPct" << deltaPanPct;
         }
@@ -750,7 +750,7 @@ void CompareView::enterEvent(QEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::enterEvent" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::enterEvent" << currentImagePath;
     #endif
     }
     select();
@@ -763,7 +763,7 @@ void CompareView::leaveEvent(QEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::enterEvent" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::enterEvent" << currentImagePath;
     #endif
     }
     deselect();
@@ -774,7 +774,7 @@ void CompareView::select()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::select" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::select" << currentImagePath;
     #endif
     }
     this->setFocus();
@@ -792,7 +792,7 @@ void CompareView::deselect()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << "CompareView::deselect" << currentImagePath;
+    qDebug() << G::t.restart() << "\t" << "CompareView::deselect" << currentImagePath;
     #endif
     }
     this->setStyleSheet("QGraphicsView  {"
