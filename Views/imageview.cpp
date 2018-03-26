@@ -951,8 +951,8 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     qDebug() << G::t.restart() << "\t" << "ImageView::mousePressEvent";
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "mousePressEvent" << event << "isMouseDrag" << isMouseDrag
-             << "button =" << event->button();
+//    qDebug() << G::t.restart() << "\t" << "mousePressEvent" << event << "isMouseDrag" << isMouseDrag
+//             << "button =" << event->button();
 
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
@@ -974,7 +974,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
     isMouseDoubleClick = false;
     if (event->button() == Qt::LeftButton) {
-        qDebug() << G::t.restart() << "\t" << "Left mouse click";
+//        qDebug() << G::t.restart() << "\t" << "Left mouse click";
         isLeftMouseBtnPressed = true;
         scrollCount = 0;                // still used?
         mousePressPt.setX(event->x());

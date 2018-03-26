@@ -233,6 +233,7 @@ private slots:
     void setShowImageCount();
     void about();
     void ingests();
+    void setCachedStatus(QString fPath, bool iscached);
     void setRating();
     void setColorClass();
     void setRotation(int degrees);
@@ -266,6 +267,7 @@ private slots:
     void zoomToggle();
     void updateStatus(bool showFileCount, QString s = "");
     void clearStatus();
+    void updateFilterStatus();
     void updateMetadataThreadRunStatus(bool isRun);
     void updateImageThreadRunStatus(bool isRun);
     void updateAllMetadataLoaded(bool isLoaded);
@@ -576,6 +578,7 @@ private:
     Ui::message msg;
     QLineEdit *filterBar;
     QLabel *stateLabel;
+    QLabel *filterLabel;
     QLabel *cacheLabel;
     QLabel *centralLabel;
     QLabel *metadataThreadRunningLabel;
@@ -687,6 +690,7 @@ private:
     void createMessageView();
     void createAppStyle();
     void setupCentralWidget();
+    void initialize();
     void setupPlatform();
     void setfsModelFlags();
     void writeSettings();

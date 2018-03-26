@@ -64,6 +64,11 @@ Code examples for model:
     // to edit a value in the model
     dm->sf->setData(index(row, G::RotationColumn), value);
 
+    // edit a isCached role in model based on file path
+    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::FilePathRole, fPath);
+    QModelIndex idx = idxList[0];
+    dm->sf->setData(idx, iscached, G::CachedRole);
+
     // file path for current index (primary selection)
     fPath = thumbView->currentIndex().data(G::FilePathRole).toString();
 
@@ -197,7 +202,7 @@ bool DataModel::addFiles()
     imageFilePathList.clear();
 
     // rgh not working
-    emptyPixMap = QPixmap::fromImage(emptyImg).scaled(160, 160);
+    emptyPixMap = QPixmap::fromImage(emptyImg).scaled(THUMB_MAX, THUMB_MAX);
 
     for (fileIndex = 0; fileIndex < dir->entryInfoList().size(); ++fileIndex) {
 
@@ -226,6 +231,7 @@ bool DataModel::addFiles()
         item->setData(fileInfo.absoluteFilePath(), Qt::ToolTipRole);
         item->setData(QRect(), G::ThumbRectRole);     // define later when read
         item->setData(fileInfo.path(), G::PathRole);
+        item->setData(false, G::CachedRole);
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         appendRow(item);
 

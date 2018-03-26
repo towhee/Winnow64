@@ -254,7 +254,7 @@ void FSTree::scrollToCurrent()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "FSTree::scrollToCurrent()";
+    qDebug() << G::t.restart() << "\t" << "FSTree::scrollToCurrent";
     #endif
     }
     QModelIndex idx = getCurrentIndex();
@@ -263,7 +263,11 @@ void FSTree::scrollToCurrent()
 
 void FSTree::select(QString dirPath)
 {
-    qDebug() << G::t.restart() << "\t" << "FSTree::select " << dirPath;
+    {
+    #ifdef ISDEBUG
+    qDebug() << G::t.restart() << "\t" << "FSTree::select";
+    #endif
+    }
     setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
 }
 

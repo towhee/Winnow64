@@ -20,7 +20,6 @@ namespace G
     bool isThreadTrackingOn;
     bool isNewFolderLoaded;
     int scrollBarThickness = 12;        // Also set in winnowstyle.css
-//    qreal devicePixelRatio;
     QModelIndexList copyCutIdxList;
     QStringList copyCutFileList;
     QElapsedTimer t;

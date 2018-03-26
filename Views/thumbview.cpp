@@ -235,7 +235,7 @@ int ThumbView::getThumbSpaceMin()
     qDebug() << G::t.restart() << "\t" << "ThumbView::getThumbSpaceMin";
     #endif
     }
-    return 40 + thumbSpacing * 2 + thumbPadding *2 + 8;
+    return THUMB_MIN + thumbSpacing * 2 + thumbPadding *2 + 8;
 }
 
 int ThumbView::getThumbSpaceMax()
@@ -245,7 +245,7 @@ int ThumbView::getThumbSpaceMax()
     qDebug() << G::t.restart() << "\t" << "ThumbView::getThumbSpaceMax";
     #endif
     }
-    return 160 + thumbSpacing * 2 + thumbPadding *2 + 8;
+    return THUMB_MAX + thumbSpacing * 2 + thumbPadding *2 + 8;
 }
 
 QSize ThumbView::getThumbCellSize()
@@ -788,17 +788,16 @@ void ThumbView::thumbsEnlarge()
     qDebug() << G::t.restart() << "\t" << "ThumbView::thumbsEnlarge";
     #endif
     }
-    if (thumbWidth < 40) thumbWidth = 40;
-    if (thumbHeight < 40) thumbHeight = 40;
-    if (thumbWidth < 160 && thumbHeight < 160)
+    if (thumbWidth < THUMB_MIN) thumbWidth = THUMB_MIN;
+    if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
+    if (thumbWidth < THUMB_MAX && thumbHeight < THUMB_MAX)
     {
         thumbWidth *= 1.1;
         thumbHeight *= 1.1;
-        if (thumbWidth > 160) thumbWidth = 160;
-        if (thumbHeight > 160) thumbHeight = 160;
+        if (thumbWidth > THUMB_MAX) thumbWidth = THUMB_MAX;
+        if (thumbHeight > THUMB_MAX) thumbHeight = THUMB_MAX;
     }
-    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsEnlarge  thumbHeight =" << thumbHeight;
-//    qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsEnlarge thumbWidth" << thumbWidth ;
+//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsEnlarge  thumbHeight =" << thumbHeight;
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -810,14 +809,13 @@ void ThumbView::thumbsShrink()
     qDebug() << G::t.restart() << "\t" << "ThumbView::thumbsShrink";
     #endif
     }
-    if (thumbWidth > 40  && thumbHeight > 40) {
+    if (thumbWidth > THUMB_MIN  && thumbHeight > THUMB_MIN) {
         thumbWidth *= 0.9;
         thumbHeight *= 0.9;
-        if (thumbWidth < 40) thumbWidth = 40;
-        if (thumbHeight < 40) thumbHeight = 40;
+        if (thumbWidth < THUMB_MIN) thumbWidth = THUMB_MIN;
+        if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
     }
-    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsShring  thumbHeight =" << thumbHeight;
-//    qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsShrink thumbWidth" << thumbWidth ;
+//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsShring  thumbHeight =" << thumbHeight;
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -859,11 +857,11 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         return;
 
         // adjust thumb width
-        if (thumbWidth < 40 || thumbHeight < 0) {
-            thumbWidth = 100;
+        if (thumbWidth < THUMB_MIN || thumbHeight < 0) {
+            thumbWidth = 100;           // rgh 100?
             thumbHeight = 100;
         }
-        int scrollWidth = 12;
+        int scrollWidth = 12;           // rgh make CONSTANT
 //        int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
         int width = viewport()->width() - scrollWidth - 2;
         // get the thumb cell width with no padding
@@ -977,13 +975,13 @@ For thumbSpace anatomy (see ThumbViewDelegate)
     // derive new thumbsize from new thumbSpace
     thumbHeight = thumbViewDelegate->getThumbHeightFromAvailHeight(newThumbSpaceHt);
     // make sure within range (should be from thumbSpace check but just to be sure)
-    thumbHeight = thumbHeight > 160 ? 160 : thumbHeight;
-    thumbHeight = thumbHeight < 40 ? 40 : thumbHeight;
+    thumbHeight = thumbHeight > THUMB_MAX ? THUMB_MAX : thumbHeight;
+    thumbHeight = thumbHeight < THUMB_MIN ? THUMB_MIN : thumbHeight;
     thumbWidth = thumbHeight * aspect;
     // check thumbWidth within range
-    if(thumbWidth > 160) {
-        thumbWidth = 160;
-        thumbHeight = 160 / aspect;
+    if(thumbWidth > THUMB_MAX) {
+        thumbWidth = THUMB_MAX;
+        thumbHeight = THUMB_MAX / aspect;
     }
     setSpacing(thumbSpacing);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
@@ -1031,7 +1029,7 @@ int ThumbView::getHorizontalScrollBarOffset(int row)
     int pageWidth = viewport()->width();
     int thumbWidth = getThumbCellSize().width();
 
-    if (pageWidth < 40 || thumbWidth < 40)
+    if (pageWidth < THUMB_MIN || thumbWidth < THUMB_MIN)
         return 0;
 
     float thumbsPerPage = (double)pageWidth / thumbWidth;
@@ -1069,7 +1067,7 @@ int ThumbView::getVerticalScrollBarOffset(int row)
     int thumbCellWidth = getThumbCellSize().width();
     int thumbCellHeight = getThumbCellSize().height();
 
-    if (pageWidth < 40 ||pageHeight < 40 || thumbCellWidth < 40 || thumbCellHeight < 40)
+    if (pageWidth < THUMB_MIN ||pageHeight < THUMB_MIN || thumbCellWidth < THUMB_MIN || thumbCellHeight < THUMB_MIN)
         return 0;
 
     float thumbsPerPage = pageWidth / thumbCellWidth * (float)pageHeight / thumbCellHeight;
@@ -1363,31 +1361,3 @@ Drag and drop thumbs to another program.
     drag->exec(Qt::CopyAction | Qt::LinkAction, Qt::IgnoreAction);
 //    drag->exec(Qt::CopyAction | Qt::MoveAction | Qt::LinkAction, Qt::IgnoreAction);
 }
-
-// -----------------------------------------------------------------------------
-// Scrollbar Class used to capture scrollbar show event
-// -----------------------------------------------------------------------------
-
-//Scrollbar::Scrollbar(QWidget *parent)
-//{
-//}
-
-//bool Scrollbar::eventFilter(QObject *obj, QEvent *event)
-//{
-///*
-
-//*/
-//    qDebug() << G::t.restart() << "\t" << event;
-//    if (event->type() == QEvent::Show) {
-//        if (!event->spontaneous()) {
-//            qDebug() << G::t.restart() << "\t" << "Scrollbar::eventFilter  event->type() == QEvent::Show";
-//            emit updateScrollTo();
-//        }
-//    }
-//}
-
-//void Scrollbar::test()
-//{
-//    qDebug() << G::t.restart() << "\t" << "Scrollbar::setFont";
-//}
-

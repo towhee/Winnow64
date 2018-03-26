@@ -65,8 +65,8 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     font.setPixelSize(labelFontSize);
     QFontMetrics fm(font);
     fontHt = fm.height();
-    if (thumbWidth < 40) thumbWidth = 40;
-    if (thumbHeight < 40) thumbHeight = 40;
+    if (thumbWidth < THUMB_MIN) thumbWidth = THUMB_MIN;
+    if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
 
     thumbSize.setWidth(thumbWidth);
     thumbSize.setHeight(thumbHeight);
@@ -108,7 +108,7 @@ int ThumbViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
     int thumbHeight = availHeight - itemPadding*2 - itemBorderThickness*2
                   - thumbBorderPadding*2 - thumbBorderThickness*2;
     if(delegateShowThumbLabels) thumbHeight -= fontHt;
-    return thumbHeight <= 160 ? thumbHeight : 160;
+    return thumbHeight <= THUMB_MAX ? thumbHeight : THUMB_MAX;
 }
 
 void ThumbViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex /*previous*/)
@@ -134,10 +134,9 @@ QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
     return thumbSpace;
 }
 
-void ThumbViewDelegate::paint(
-        QPainter *painter,
-        const QStyleOptionViewItem &option,
-        const QModelIndex &index) const
+void ThumbViewDelegate::paint(QPainter *painter,
+                              const QStyleOptionViewItem &option,
+                              const QModelIndex &index) const
 {
 /* The delegate cell size is defined in setThumbDimensions and assigned in sizeHint.
 The thumbSize cell contains a number of cells or rectangles:
@@ -165,10 +164,11 @@ textRect         = a rectangle below itemRect
     // get data from model
     int row = index.row();
     QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
-//    QString fName = index.model()->index(row, G::PathColumn).data(G::FilePathRole).toString();
+//    QString fPath = index.model()->index(row, G::PathColumn).data(G::FilePathRole).toString();
     QString labelColor = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     bool isPicked = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toBool();
+    bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
 
 //    qDebug() << G::t.restart() << "\t" << "ThumbViewDelegate::paint" << fName
 //             << "current index" << currentIndex
@@ -200,6 +200,14 @@ textRect         = a rectangle below itemRect
     QPoint ratingBottomRight(option.rect.right(), option.rect.top() + ratingDiam);
     QRect ratingRect(ratingTopLeft, ratingBottomRight);
 
+    // cached rect located bottom right as containment for circle
+    int cacheDiam = 6;
+    int cacheOffset = 3;
+    QPoint cacheTopLeft(thumbRect.right() - cacheDiam - cacheOffset,
+                        thumbRect.bottom() - cacheDiam - cacheOffset);
+    QPoint cacheBottomRight(thumbRect.right() - cacheOffset, thumbRect.bottom() - cacheOffset);
+    QRect cacheRect(cacheTopLeft, cacheBottomRight);
+
     QPainterPath iconPath;
     iconPath.addRoundRect(iconRect, 12, 12);
 
@@ -230,6 +238,7 @@ textRect         = a rectangle below itemRect
     QColor currentItemColor(Qt::yellow);
     QColor selectedNotCurrentItemColor(Qt::lightGray);
     QColor pickColor(Qt::green);
+    QColor cacheColor(Qt::blue);
     QPen notPick(defaultBorderColor);
 
     // draw rect around icon (thumb) and make it green if picked
@@ -247,7 +256,7 @@ textRect         = a rectangle below itemRect
     painter->drawRoundedRect(itemRect, 8, 8);
 
     /* draw the item rect around the icon and label (if shown) and make it
-    white if current item, light gray if selected but not the current item, or
+    yellow if current item, light gray if selected but not the current item, or
     gray if not selected
     */
     QColor selectedColor  = selectedNotCurrentItemColor;
@@ -293,6 +302,13 @@ textRect         = a rectangle below itemRect
         font.setBold(true);
         painter->setFont(font);
         painter->drawText(ratingRect, Qt::AlignCenter, rating);
+    }
+
+    // draw the cache circle
+    if (!isCached) {
+        painter->setPen(Qt::lightGray);
+        painter->setBrush(Qt::red);
+        painter->drawEllipse(cacheRect);
     }
 
     emit update(index, iconRect);

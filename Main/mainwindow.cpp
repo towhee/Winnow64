@@ -1,11 +1,4 @@
-
-//#include "dircompleter.h"
 #include "Main/mainwindow.h"
-#include "Main/global.h"
-//#include "sys/sysinfo"
-
-#define THUMB_SIZE_MIN	40
-#define THUMB_SIZE_MAX	160
 
 MW::MW(QWidget *parent) : QMainWindow(parent)
 {
@@ -14,8 +7,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     qDebug() << G::t.restart() << "\t" << "MW::MW";
     #endif
     }
-//    hide();
 
+    {
     /* Note ISDEBUG is in globals.h
        Deactivate debug reporting by commenting ISDEBUG  */
 
@@ -35,75 +28,58 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     G::t.start();
     #endif
 
-    this->setWindowTitle("Winnow");
+    }
 
-    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    /* Initialization process
+    *******************************************************************************
+    Persistant settings are saved between sessions using QSettings. Persistant
+    settings form two categories at runtime: action settings and preference
+    settings. Action settings are boolean and maintained by the action item
+    setChecked value.  Preferences can be anything and are maintained as public
+    variables in MW (this class) and managed in the prefDlg class.
 
-    isInitializing = true;
-    isSlideShowActive = false;
-    maxThumbSpaceHeight = 160 + 12 + 1;     // rgh not being used
-//    maxThumbSpaceHeight = 160 + qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
-    workspaces = new QList<workspaceData>;
-    recentFolders = new QStringList;
-    popUp = new PopUp;
-    hasGridBeenActivated = true;
-    isDragDrop = false;
-    setAcceptDrops(true);
+    • Load QSettings
+    • Set default values if no settings available (first time run)
+    • Set preference settings including
+        • General (previous folder etc)
+        • Slideshow
+        • Cache
+        • Full screen docks visible
+        • List of external apps
+        • Bookmarks
+        • Recent folders
+        • Workspaces
+    • Create actions and set checked based on persistant values from QSetting
+    • Create bookmarks with persistant values from QSettings
+    • Update external apps with persistant values from QSettings
+    • Load shortcuts (based on being able to edit shortcuts)
+    • Execute updateState function to implement all persistant state settings
 
-    G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
-    G::ratings << "1" << "2" << "3" << "4" << "5";
+    • Select a folder
+      • Load datamodel with QDir info on each image file
+      • Add the rest of the metadata to datamodel (incl thumbs as icons)
+      • Build the image cache
+
+    */
+
+    // Initialize some variables etc
+    initialize();
 
     // platform specific settings
     setupPlatform();
-
-    // enable touchpad
-//    QCoreApplication::setAttribute(Qt::Window | Qt::AA_SynthesizeTouchForUnhandledMouseEvents);
-//    setWindowFlags( );
-
-/* Initialization process
-*******************************************************************************
-Persistant settings are saved between sessions using QSettings. Persistant
-settings form two categories at runtime: action settings and preference
-settings. Action settings are boolean and maintained by the action item
-setChecked value.  Preferences can be anything and are maintained as public
-variables in MW (this class) and managed in the prefDlg class.
-
-• Load QSettings
-• Set default values if no settings available (first time run)
-• Set preference settings including
-    • General (previous folder etc)
-    • Slideshow
-    • Cache
-    • Full screen docks visible
-    • List of external apps
-    • Bookmarks
-    • Recent folders
-    • Workspaces
-• Create actions and set checked based on persistant values from QSetting
-• Create bookmarks with persistant values from QSettings
-• Update external apps with persistant values from QSettings
-• Load shortcuts (based on being able to edit shortcuts)
-• Execute updateState function to implement all persistant state settings
-
-• Select a folder
-  • Load datamodel with QDir info on each image file
-  • Add the rest of the metadata to datamodel (incl thumbs as icons)
-  • Build the image cache
-
-*/
 
     // structure to hold persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
 
     createCentralWidget();      // req'd by ImageView, CompareView
-    createFilterView();         // req'd by DataModel
+    createFilterView();         // req'd by DataModel (dm)
     createDataModel();          // dependent on FilterView, creates Metadata, Thumb
     createThumbView();          // dependent on QSetting, filterView
-    createGridView();
+    createGridView();           // dependent on QSetting, filterView
     createTableView();          // dependent on centralWidget
     createSelectionModel();     // dependent on ThumbView, ImageView
-    createInfoView();           // dependent on metadata
-    createCaching();            // dependent on dm, metadata, thumbView
+    createInfoView();           // dependent on Metadata
+    createCaching();            // dependent on dm, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
@@ -114,7 +90,7 @@ variables in MW (this class) and managed in the prefDlg class.
 
     loadWorkspaces();           // req'd by actions and menu
     createActions();            // dependent on above
-    createMenus();              // dependent on creatActions and loadSettings
+    createMenus();              // dependent on createActions and loadSettings
 
 //    updateExternalApps();       // dependent on createActions
     handleStartupArgs();
@@ -156,16 +132,26 @@ variables in MW (this class) and managed in the prefDlg class.
 
     if (!isSettings) centralLayout->setCurrentIndex(StartTab);
     isSettings = true;
+}
 
-    #ifdef ISPROFILE
-    qDebug() << G::t.restart() << "\t" << "=> MW constructor:" << G::t.restart();
-    #endif
+void MW::initialize()
+{
+    this->setWindowTitle("Winnow");
+    qDebug() << "THUMB_MAX =" << THUMB_MAX;
 
-//struct sysinfo sys_info;
-//totalmem=(qint32)(sys_info.totalram/1048576);
-//freemem=(qint32)(sys_info.freeram/1048576); // divide by 1024*1024 = 1048576
+    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
-//qDebug() << G::t.restart() << "\t" << "total mem:" << totalmem << " free mem:" << freemem;
+    isInitializing = true;
+    isSlideShowActive = false;
+    workspaces = new QList<workspaceData>;
+    recentFolders = new QStringList;
+    popUp = new PopUp;
+    hasGridBeenActivated = true;
+    isDragDrop = false;
+    setAcceptDrops(true);
+
+    G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
+    G::ratings << "1" << "2" << "3" << "4" << "5";
 }
 
 void MW::setupPlatform()
@@ -2382,6 +2368,9 @@ void MW::createCaching()
 
     connect(imageCacheThread, SIGNAL(showCacheStatus(const QImage)),
             this, SLOT(showCacheStatus(const QImage)));
+
+    connect(imageCacheThread, SIGNAL(updateCacheOnThumbs(QString,bool)),
+            this, SLOT(setCachedStatus(QString,bool)));
     }
 
 void MW::createThumbView()
@@ -2637,6 +2626,9 @@ void MW::createFilterView()
     }
     filters = new Filters(this);
     filters->setMaximumWidth(folderMaxWidth);
+
+    connect(filters, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
+            this, SLOT(updateFilterStatus()));
 }
 
 void MW::createBookmarks()
@@ -2684,12 +2676,12 @@ void MW::createStatusBar()
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
 
     cacheLabel = new QLabel();
-    QString cacheStatus = "Image cache status for current folder:\n";
-    cacheStatus += "  • LightGray:\tbackground for all images in folder\n";
-    cacheStatus += "  • DarkGray: \tto be cached\n";
-    cacheStatus += "  • Green:    \tcached\n";
-    cacheStatus += "  • Red:      \tcurrent image";
-    cacheLabel->setToolTip(cacheStatus);
+    QString cacheStatusToolTip = "Image cache status for current folder:\n";
+    cacheStatusToolTip += "  • LightGray:\tbackground for all images in folder\n";
+    cacheStatusToolTip += "  • DarkGray: \tto be cached\n";
+    cacheStatusToolTip += "  • Green:    \tcached\n";
+    cacheStatusToolTip += "  • Red:      \tcurrent image";
+    cacheLabel->setToolTip(cacheStatusToolTip);
     cacheLabel->setToolTipDuration(100000);
     statusBar()->addPermanentWidget(cacheLabel);
 
@@ -2705,19 +2697,16 @@ void MW::createStatusBar()
     updateMetadataThreadRunStatus(false);
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
 
-//    thumbThreadRunningLabel = new QLabel;
-//    QString ttrl = "Thumb cache thread running status";
-//    thumbThreadRunningLabel->setToolTip(ttrl);
-//    thumbThreadRunningLabel->setFixedWidth(runLabelWidth);
-//    updateThumbThreadRunStatus(false);
-//    statusBar()->addPermanentWidget(thumbThreadRunningLabel);
-
     imageThreadRunningLabel = new QLabel;
     statusBar()->addPermanentWidget(imageThreadRunningLabel);
     QString itrl = "Image cache thread running status";
     imageThreadRunningLabel->setToolTip(itrl);
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateImageThreadRunStatus(false);
+
+    filterLabel = new QLabel;
+    filterLabel->setStyleSheet("QLabel{color:red;}");
+    statusBar()->addWidget(filterLabel);
 
     stateLabel = new QLabel;
     statusBar()->addWidget(stateLabel);
@@ -2890,6 +2879,19 @@ QString fileSym = "📷";
 void MW::clearStatus()
 {
     stateLabel->setText("");
+}
+
+void MW::updateFilterStatus()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << G::t.restart() << "\t" << "MW::updateFilterStatus";
+    #endif
+    }
+    if (filters->isAnyFilter())
+        filterLabel->setText("Filters On");
+    else
+        filterLabel->setText("");
 }
 
 void MW::updateMetadataThreadRunStatus(bool isRunning)
@@ -4470,7 +4472,7 @@ Also, the orientation metadata must be updated for any images ingested.
         QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
         QStandardItem *item = new QStandardItem;
         item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
-        QPixmap pm = item->icon().pixmap(160, 160);
+        QPixmap pm = item->icon().pixmap(THUMB_MAX, THUMB_MAX);
         pm = pm.transformed(trans, Qt::SmoothTransformation);
         item->setIcon(pm);
         thumbView->refreshThumbs();
@@ -6076,6 +6078,20 @@ void MW::ingests()
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
+}
+
+void MW::setCachedStatus(QString fPath, bool iscached)
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << G::t.restart() << "\t" << "MW::setCachedStatus" << fPath;
+    #endif
+    }
+    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::FilePathRole, fPath);
+    QModelIndex idx = idxList[0];
+    dm->sf->setData(idx, iscached, G::CachedRole);
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
 }
 
 void MW::setRating()

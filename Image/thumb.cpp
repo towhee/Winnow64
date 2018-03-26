@@ -3,8 +3,8 @@
 Thumb::Thumb(QObject *parent, Metadata *metadata) : QObject(parent)
 {
     this->metadata = metadata;
-    thumbMax.setWidth(160);       // rgh review hard coding thumb size
-    thumbMax.setHeight(160);      // rgh review hard coding thumb size
+    thumbMax.setWidth(THUMB_MAX);
+    thumbMax.setHeight(THUMB_MAX);
 }
 
 void Thumb::track(QString fPath, QString msg)
@@ -44,7 +44,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
     bool success;
     QFile imFile(fPath);
     QImageReader thumbReader;
-    QSize thumbMax(160, 160);       // rgh review hard coding thumb size
+    QSize thumbMax(THUMB_MAX, THUMB_MAX);       // rgh review hard coding thumb size
     if (imFile.open(QIODevice::ReadOnly)) {
         // close file to allow qt thumbReader to work
         imFile.close();

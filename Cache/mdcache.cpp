@@ -14,8 +14,8 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
     thumb = new Thumb(this, metadata);
     restart = false;
     abort = false;
-    thumbMax.setWidth(160);       // rgh review hard coding thumb size
-    thumbMax.setHeight(160);      // rgh review hard coding thumb size
+    thumbMax.setWidth(THUMB_MAX);
+    thumbMax.setHeight(THUMB_MAX);
 }
 
 MetadataCache::~MetadataCache()
