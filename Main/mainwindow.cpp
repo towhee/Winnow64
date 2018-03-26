@@ -4105,28 +4105,28 @@ void MW::setDisplayResolution()
 
 #ifdef Q_OS_MAC
     CGPoint point = loc.toCGPoint();
+
+    // get displayID for monitor at point
     const int maxDisplays = 64;                     // 64 should be enough for any system
     CGDisplayCount displayCount;                    // Total number of display IDs
     CGDirectDisplayID displayIDs[maxDisplays];      // Array of display IDs
     CGGetDisplaysWithPoint (point, maxDisplays, displayIDs, &displayCount);
-    auto displayID = displayIDs[0];
+    if (displayCount == 1) auto displayID = displayIDs[0];
+    else auto displayID = CGMainDisplayID();
 
-    auto mainDisplayId = CGMainDisplayID();
-    qDebug() << "MW::setDisplayResolution    mainDisplayId =" << mainDisplayId
-             << "displayID =" << displayID
-             << "Point =" << point.x << point.y;
+    // get list of all display modes for the monitor
     auto modes = CGDisplayCopyAllDisplayModes(displayID, nullptr);
-//    auto modes = CGDisplayCopyAllDisplayModes(mainDisplayId, nullptr);
     auto count = CFArrayGetCount(modes);
     CGDisplayModeRef mode;
     displayHorizontalPixels, displayVerticalPixels = 0;
+
+    // the native resolution is the largest display mode
     for(auto c = count; c--;) {
         mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(modes, c);
         auto w = CGDisplayModeGetWidth(mode);
         auto h = CGDisplayModeGetHeight(mode);
         if (w > displayHorizontalPixels) displayHorizontalPixels = (int)w;
         if (h > displayVerticalPixels) displayVerticalPixels = (int)h;
-        qDebug() << mode << w << h;
     }
 #endif
 
@@ -6806,30 +6806,6 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    QPoint loc = centralWidget->window()->geometry().center();
-    int w = qApp->screenAt(loc)->geometry().width();
-    QScreen *screen = qApp->screenAt(loc);
-    CGPoint pt = loc.toCGPoint();
-    qDebug() << "MW::test  Screen width =" << w << screen->handle();
-
-//    // this does not work on mac
-//    QWindow *win = new QWindow;
-//    QPoint loc = centralWidget->window()->geometry().center();
-//    win->setScreen(qApp->screenAt(loc));
-//    win->showFullScreen();
-//    qDebug() << "MW::Test  Width =" << win->width() << "Height =" << win->height()
-//             << qApp->screenAt(loc)->name();
-//    win->close();
-
-//    qDebug() << "MW::Test Screen qApp->screenAt(loc)->name()" << qApp->screenAt(loc)->name();
-
-//    qDebug() << "MW::Test  loc =" << loc;
-
-//    QScreen *screen = qApp->screenAt(loc);
-////    QScreen *screen = QGuiApplication::primaryScreen();
-//    QPixmap pm = screen->grabWindow(0);
-//    qDebug() << "screen->grabWindow(0)" << pm.width() << pm.height();
-
 }
 
 // End MW
