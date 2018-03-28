@@ -16,18 +16,8 @@
 namespace G
 {
     enum UserRoles {
-        FilePathRole = Qt::UserRole + 1,
-        SortRole,
-        LoadedRole,
-        PickedRole,
+        PathRole = Qt::UserRole + 1,
         ThumbRectRole,
-        PathRole,
-        FileTypeRole,
-        FileSizeRole,
-        CreatedRole,
-        ModifiedRole,
-        LabelRole,
-        RatingRole,
         CachedRole,
         ColumnRole
     };

@@ -38,10 +38,14 @@ QStandardItemModel roles used:
 
    User defined roles include:
 
-        LoadedRole - is loaded bool
-        FileNameRole - file path qstring
-        SortRole - int
-        PickRole - bool is picked
+        PathRole - the file path
+        FileNameRole - the file name xxxxxx.ext
+
+   Datamodel columns:
+
+        PickColumn - bool is picked
+        RatingColumn
+        LabelColumn
 
 Note that a "row" in this class refers to the row in the model, which has one
 thumb per row, not the view in the dock, where there can be many thumbs per row
@@ -312,24 +316,8 @@ void ThumbView::reportThumb()
     int currThumb = currentIndex().row();
     qDebug() << G::t.restart() << "\t" << "\n ***** THUMB INFO *****";
     qDebug() << G::t.restart() << "\t" << "Row =" << currThumb;
-    qDebug() << G::t.restart() << "\t" << "LoadedRole " << G::LoadedRole << dm->item(currThumb)->data(G::LoadedRole).toBool();
-    qDebug() << G::t.restart() << "\t" << "FileNameRole " << G::FilePathRole << dm->item(currThumb)->data(G::FilePathRole).toString();
-    qDebug() << G::t.restart() << "\t" << "SortRole " << G::SortRole << dm->item(currThumb)->data(G::SortRole).toInt();
-    qDebug() << G::t.restart() << "\t" << "PickedRole " << G::PickedRole << dm->item(currThumb)->data(G::PickedRole).toString();
-    qDebug() << G::t.restart() << "\t" << "FileTypeRole " << G::FileTypeRole << dm->item(currThumb)->data(G::FileTypeRole).toString();
-    qDebug() << G::t.restart() << "\t" << "FileSizeRole " << G::FileSizeRole << dm->item(currThumb)->data(G::FileSizeRole).toInt();
-    qDebug() << G::t.restart() << "\t" << "CreatedRole " << G::CreatedRole << dm->item(currThumb)->data(G::CreatedRole).toDateTime();
-    qDebug() << G::t.restart() << "\t" << "ModifiedRole " << G::ModifiedRole << dm->item(currThumb)->data(G::ModifiedRole).toDateTime();
+    qDebug() << G::t.restart() << "\t" << "FileNameRole " << G::PathRole << dm->item(currThumb)->data(G::PathRole).toString();
 
-    // following crashes when columns not added
-//    QModelIndex idx1 = dm->sf->index(currThumb, 1, QModelIndex());
-//    qDebug() << G::t.restart() << "\t" << "Column 1 Type:" << idx1.data(Qt::DisplayRole);
-
-//    qDebug() << G::t.restart() << "\t" << thumbViewModel->item(currThumb)->data(DisplayRole).toString();
-//    qDebug() << G::t.restart() << "\t" << "\nAll roles:";
-//    for (int i=0; i<15; ++i) {
-//        qDebug() << G::t.restart() << "\t" << i << ":  " << thumbViewModel->item(currThumb)->data(i);
-//    }
 }
 
 int ThumbView::getCurrentRow()
@@ -462,7 +450,7 @@ QString ThumbView::getCurrentFilename()
     qDebug() << G::t.restart() << "\t" << "ThumbView::getCurrentFilename";
     #endif
     }
-    return currentIndex().data(G::FilePathRole).toString();
+    return currentIndex().data(G::PathRole).toString();
 }
 
 // PICKS: Items that have been picked
@@ -498,7 +486,7 @@ folder.
         QModelIndex idx = dm->sf->index(row, G::PickColumn);
         if (idx.data(Qt::EditRole).toString() == "true") {
             QModelIndex pathIdx = dm->sf->index(row, 0);
-            QString fPath = pathIdx.data(G::FilePathRole).toString();
+            QString fPath = pathIdx.data(G::PathRole).toString();
             QFileInfo fileInfo(fPath);
             qDebug() << G::t.restart() << "\t" << fPath;
             fileInfoList.append(fileInfo);
@@ -616,7 +604,7 @@ useful.
     QStringList SelectedThumbsPaths;
 
     for (int tn = indexesList.size() - 1; tn >= 0 ; --tn) {
-        SelectedThumbsPaths << indexesList[tn].data(G::FilePathRole).toString();
+        SelectedThumbsPaths << indexesList[tn].data(G::PathRole).toString();
     }
     return SelectedThumbsPaths;
 }
@@ -684,7 +672,7 @@ void ThumbView::selectThumb(QString &fName)
     qDebug() << G::t.restart() << "\t" << "ThumbView::selectThumb(filename)";
     #endif
     }
-    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::FilePathRole, fName);
+    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fName);
     QModelIndex idx = idxList[0];
     qDebug() << G::t.restart() << "\t" << "selectThumb  idx.row()" << idx.row();
     if(idx.isValid()) selectThumb(idx);
@@ -1302,7 +1290,7 @@ void ThumbView::copyThumbs()
          end = indexesList.constEnd();
          it != end; ++it)
     {
-        urls << QUrl(it->data(G::FilePathRole).toString());
+        urls << QUrl(it->data(G::PathRole).toString());
     }
     mimeData->setUrls(urls);
     clipboard->setMimeData(mimeData);
@@ -1329,7 +1317,7 @@ Drag and drop thumbs to another program.
     QList<QUrl> urls;
 
     for(int i = 0; i < selection.count(); ++i) {
-        QString fPath = selection.at(i).data(G::FilePathRole).toString();
+        QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
     }
     qDebug() << G::t.restart() << "\t" << urls;
