@@ -140,7 +140,7 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
 
     setModel(this->dm->sf);
 
-    thumbViewDelegate = new ThumbViewDelegate(this);
+    thumbViewDelegate = new ThumbViewDelegate(this, mw->isRatingBadgeVisible);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels);
     setItemDelegate(thumbViewDelegate);
@@ -161,6 +161,13 @@ void ThumbView::reportThumbs()
         qDebug() << G::t.restart() << "\t" << i << idx.data(FileNameRole).toString();
     }
     */
+}
+
+void ThumbView::refreshThumb(QModelIndex idx, int role)
+{
+    QVector<int> roles;
+    roles.append(role);
+    dataChanged(idx, idx, roles);
 }
 
 void ThumbView::refreshThumbs() {

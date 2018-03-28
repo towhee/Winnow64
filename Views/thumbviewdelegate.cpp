@@ -43,7 +43,8 @@ thumbMargin = thumbSpace - thumb (all the space between the thumb and thumbSpace
 
 */
 
-ThumbViewDelegate::ThumbViewDelegate(QObject *parent)
+ThumbViewDelegate::ThumbViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
+        : isRatingBadgeVisible(isRatingBadgeVisible)
 {
     parent->isWidgetType();     // suppress compiler warning
     itemBorderThickness = 2;
@@ -200,6 +201,10 @@ textRect         = a rectangle below itemRect
     QPoint ratingBottomRight(option.rect.right(), option.rect.top() + ratingDiam);
     QRect ratingRect(ratingTopLeft, ratingBottomRight);
 
+    QPoint ratingTextTopLeft(ratingRect.left(), ratingRect.top() - 1);
+    QPoint ratingTextBottomRight(ratingRect.right(), ratingRect.bottom() - 1);
+    QRect ratingTextRect(ratingTextTopLeft, ratingTextBottomRight);
+
     // cached rect located bottom right as containment for circle
     int cacheDiam = 6;
     int cacheOffset = 3;
@@ -278,30 +283,31 @@ textRect         = a rectangle below itemRect
     }
     painter->drawRoundedRect(itemRect, 8, 8);
 
-    QColor labelColorToUse;
-
-    if (G::labelColors.contains(labelColor) || G::ratings.contains(rating)) {
-        if (G::labelColors.contains(labelColor)) {
-            if (labelColor == "Red") labelColorToUse = G::labelRedColor;
-            if (labelColor == "Yellow") labelColorToUse = G::labelYellowColor;
-            if (labelColor == "Green") labelColorToUse = G::labelGreenColor;
-            if (labelColor == "Blue") labelColorToUse = G::labelBlueColor;
-            if (labelColor == "Purple") labelColorToUse = G::labelPurpleColor;
+    if (isRatingBadgeVisible) {
+        QColor labelColorToUse;
+        if (G::labelColors.contains(labelColor) || G::ratings.contains(rating)) {
+            if (G::labelColors.contains(labelColor)) {
+                if (labelColor == "Red") labelColorToUse = G::labelRedColor;
+                if (labelColor == "Yellow") labelColorToUse = G::labelYellowColor;
+                if (labelColor == "Green") labelColorToUse = G::labelGreenColor;
+                if (labelColor == "Blue") labelColorToUse = G::labelBlueColor;
+                if (labelColor == "Purple") labelColorToUse = G::labelPurpleColor;
+            }
+            else labelColorToUse = G::labelNoneColor;
+            painter->setBrush(labelColorToUse);
+            QPen ratingPen(labelColorToUse);
+            ratingPen.setWidth(0);
+            painter->setPen(ratingPen);
+            painter->drawEllipse(ratingRect);
+            QPen ratingTextPen(Qt::white);
+            ratingTextPen.setWidth(2);
+            painter->setPen(ratingTextPen);
+            QFont font = painter->font();
+            font.setPixelSize(16);
+            font.setBold(true);
+            painter->setFont(font);
+            painter->drawText(ratingTextRect, Qt::AlignCenter, rating);
         }
-        else labelColorToUse = G::labelNoneColor;
-        painter->setBrush(labelColorToUse);
-        QPen ratingPen(labelColorToUse);
-        ratingPen.setWidth(0);
-        painter->setPen(ratingPen);
-        painter->drawEllipse(ratingRect);
-        QPen ratingTextPen(Qt::white);
-        ratingTextPen.setWidth(2);
-        painter->setPen(ratingTextPen);
-        QFont font = painter->font();
-        font.setPixelSize(12);
-        font.setBold(true);
-        painter->setFont(font);
-        painter->drawText(ratingRect, Qt::AlignCenter, rating);
     }
 
     // draw the cache circle

@@ -140,6 +140,8 @@ public:
     int displayVerticalPixels;
     bool autoIngestFolderPath;
 
+    bool isRatingBadgeVisible;
+
     // preferences: files
     bool rememberLastDir;
     QString lastDir;
@@ -233,7 +235,7 @@ private slots:
     void setShowImageCount();
     void about();
     void ingests();
-    void setCachedStatus(QString fPath, bool iscached);
+    void setCachedStatus(QString fPath, bool isCached);
     void setRating();
     void setColorClass();
     void setRotation(int degrees);
@@ -284,6 +286,7 @@ private slots:
     void bookmarkClicked(QTreeWidgetItem *item, int col);
     void setThumbsFilter();
     void clearThumbsFilter();
+    void setRatingBadgeVisibility();
     void setShootingInfoVisibility();
     void selectShootingInfo();
     void setCacheStatusVisibility();
@@ -499,6 +502,7 @@ private:
     QAction *randomImageAction; // req'd by slideshow
     QAction *fullScreenAction;
     QAction *escapeFullScreenAction;
+    QAction *ratingBadgeVisibleAction;
     QAction *infoVisibleAction;
     QAction *infoSelectAction;
     QActionGroup *centralGroupAction;
