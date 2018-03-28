@@ -1,64 +1,14 @@
-13:30:26: Running steps for project winnow64...
-13:30:26: Starting: "C:\Qt\5.10.0\msvc2017_64\bin\qmake.exe" "D:\My Projects\Winnow Project\Winnow64\winnow64.pro" -spec win32-msvc "CONFIG+=debug" "CONFIG+=qml_debug"
-Project MESSAGE: This project is using private headers and will therefore be tied to this specific Qt module build version.
-Project MESSAGE: Running this project against other versions of the Qt modules may crash at any arbitrary point.
-Project MESSAGE: This is not a bug, but a result of using Qt internals. You have been warned!
-13:30:28: The process "C:\Qt\5.10.0\msvc2017_64\bin\qmake.exe" exited normally.
-13:30:28: Starting: "C:\Qt\Tools\QtCreator\bin\jom.exe" qmake_all
+    FilePathRole = Qt::UserRole + 1,
+    ThumbRectRole,
 
-jom 1.1.2 - empower your cores
+    FileTypeRole,
+    FileSizeRole,
+    CreatedRole,
+    ModifiedRole,
+    LabelRole,
+    RatingRole,
+X       CachedRole,
+    ColumnRole
 
-13:30:28: The process "C:\Qt\Tools\QtCreator\bin\jom.exe" exited normally.
-13:30:28: Elapsed time: 00:02.
 
-30 32 30 34 05 37 70 C4 7F BD 38 BF 5E 5F 49 76 9E 45 4F 7C A4 89 E6 BE CC 85 27 AD 11 5C 8D 9E 92
-
-encryptedLensInfo:  "30323034053770c47fbd38bf5e5f49769e454f7ca489e6becc8527ad115c8d9e92"
-lensInfo:           "30323034152489061140577b a2 48 5c 80 24 24 a4 24 0c5217540a0000010503000000"
-                                              a2 48 5c 80 24 24 a4 24
-
-{YYYY}/{YYYY}{MM}/{YYYY}-{MM}-{DD}
-
-    QString app = "\"/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app\"";
-    QStringList arguments;
-    arguments << "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg";
-    QProcess *process = new QProcess();
-    process->start(app);
-
-color: rgb(190, 190, 190);\nbackground-color: rgb(85,85,85);
-
-helpIngest.html
-------------------------------------------
-
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
-<html><head><meta name="qrichtext" content="1" /><style type="text/css">
-p, li { white-space: pre-wrap; }
-</style></head><body style=" font-family:'MS Shell Dlg 2'; font-size:8pt; font-weight:400; font-style:normal;" bgcolor="#404040">
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:14pt; color:#ffffff;">Creating a path to the destination folder</span><span style=" font-size:10pt; color:#bebebe;"> </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">Example:         Windows:    e:\2018\2018-02\2018-02-23_Spring in Paris<br />                        Mac:            /users/pictures/Feb/23 Paris </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#c8c804;">Root</span><span style=" font-size:10pt; color:#bebebe;">: </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">This is the base location where your images are stored.  The root is entered in the “Ingest Picks” dialog. </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">            = </span><span style=" font-size:10pt; color:#c8c804;">e:\</span><span style=" font-size:10pt; color:#bebebe;">2018\2018-02\2018-02-23_Spring in Paris<br />            = </span><span style=" font-size:10pt; color:#c8c804;">/users/pictures/</span><span style=" font-size:10pt; color:#bebebe;">Feb/23 Paris </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#c8c804;">Template path</span><span style=" font-size:10pt; color:#bebebe;">: </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">The path from the root to the destination folder that can be defined by metadata from an image.  It is based on a template in “Edit Template(s)” accessed from the “Ingest Picks” dialog. </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">            = e:\</span><span style=" font-size:10pt; color:#c8c804;">2018\2018-02\2018-02-23</span><span style=" font-size:10pt; color:#bebebe;">_Spring in Paris<br />            = /users/pictures/</span><span style=" font-size:10pt; color:#c8c804;">Feb/23</span><span style=" font-size:10pt; color:#bebebe;"> Paris </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#c8c804;">Description</span><span style=" font-size:10pt; color:#bebebe;">: </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">An optional description appended to the template path, entered in the “Ingest Picks” dialog. </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">            = e:\2018\2018-02\2018-02-23</span><span style=" font-size:10pt; color:#c8c804;">_Spring in Paris</span><span style=" font-size:10pt; color:#bebebe;"><br />            = /users/pictures/Feb/23</span><span style=" font-size:10pt; color:#c8c804;"> Paris<br /></span><span style=" font-size:10pt; color:#bebebe;"><br /></span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">The path = Root + Template path + Description<br /><br /></span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:14pt; color:#ffffff;">Creating the file names</span><span style=" font-size:10pt; color:#bebebe;"> </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">File names are created in the template editor, based on tokens, including sequence tokens that append digits. </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">For example, if the image was taken with a Canon camera on Feb 23, 2018 and was the 36th image picked: </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">Template = {YYYY}-{MM}-{DD}_{XXX} will become 2018-02-23_036.CR2<br /><br /></span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:14pt; color:#ffffff;">What is a template and what are tokens </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">A template is a structure to use to build a file path or a file name.  You can create templates using any descriptive name and create the template using tokens.  Tokens are place holders and the values for the tokens are inserted from the metadata in the images.  For example: </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">Template name = “Rory template”<br />Template = {YYYY}/{YYYY}-{MM}-{DD} </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">{YYYY} = a token (dragged from token list in token editor)<br /><br /></span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:14pt; color:#ffffff;">Where does the metadata come from</span><span style=" font-size:10pt; color:#bebebe;"> </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">The metadata is sourced from the first image picked and all the picked images will be copied to one destination folder. <br /></span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:14pt; color:#ffffff;">Slashes and back slashes</span><span style=" font-size:10pt; font-weight:600; color:#bebebe;"> </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">Do not use “/” or “\” in the template name.  The template name is used as a key to save the templates between sessions.  Slashes do terrible things to the windows registry. </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">In the template itself, Windows uses the “\” in file paths while MacOS and Linux use “/”.  Since the “\” is also used for escape sequences I suggest you use the “/”.  Winnow will automatically convert this to a “\” when creating the path to the destination folder in windows.  </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">For example, if the image was taken on Feb 23, 2018: </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">            Template = {YYYY}/{YYYY}-{MM}-{DD} will become “2018\2018-02\2018-02-23” in windows. </span></p>
-<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:10pt; color:#bebebe;">  </span></p></body></html>
+    ToolTipRole

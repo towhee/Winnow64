@@ -65,12 +65,12 @@ Code examples for model:
     dm->sf->setData(index(row, G::RotationColumn), value);
 
     // edit a isCached role in model based on file path
-    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::FilePathRole, fPath);
+    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath);
     QModelIndex idx = idxList[0];
     dm->sf->setData(idx, iscached, G::CachedRole);
 
     // file path for current index (primary selection)
-    fPath = thumbView->currentIndex().data(G::FilePathRole).toString();
+    fPath = thumbView->currentIndex().data(G::PathRole).toString();
 
     // to get a QItem from a filtered or sorted datamodel selection
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
@@ -135,6 +135,11 @@ When a new folder is selected load it into the data model.  This clears the
 model and populates the data model with all the cached thumbnail pixmaps from
 metadataCache.  If load subfolders has been chosen then the entire subfolder
 heirarchy is loaded.
+
+Steps:
+- filter to only show supported image formats
+- add each image file to the jpgRawList (path + name + extension + isJpgRaw)
+- if file duplicated set
 */
     {
     #ifdef ISDEBUG
@@ -212,30 +217,30 @@ bool DataModel::addFiles()
 
         /* add icon as first column in new row
 
-        // this approach is slower than adding setData(index(row, column), x)
-        // for the first item that is req'd to append a new item to the datamodel
+        This can be done two ways:
+
+        // this way is slow
         item = new QStandardItem();
         appendRow(item);
         int row = item->index().row();
-        setData(index(row, G::PathColumn), fileInfo.fileName(), Qt::DisplayRole);
-        setData(index(row, G::PathColumn), fileInfo.filePath(), G::FilePathRole);
-        setData(index(row, G::PathColumn), fileInfo.absoluteFilePath(), Qt::ToolTipRole);
-        setData(index(row, G::PathColumn), fileInfo.path(), G::PathRole);   // can we combine and eliminate
-        setData(index(row, G::PathColumn), QRect(), G::ThumbRectRole);
-        setData(index(row, G::PathColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        setData(index(row, G::PathColumn), fileInfo.filePath(), G::PathRole);
+
+        // this way is faster
+        item = new QStandardItem();
+        item->setData("", Qt::DisplayRole);
+        appendRow(item);
 */
 
         item = new QStandardItem();
         item->setData("", Qt::DisplayRole);     // column 0 just displays icon
-        item->setData(fileInfo.filePath(), G::FilePathRole);
+        item->setData(fileInfo.filePath(), G::PathRole);
         item->setData(fileInfo.absoluteFilePath(), Qt::ToolTipRole);
         item->setData(QRect(), G::ThumbRectRole);     // define later when read
-        item->setData(fileInfo.path(), G::PathRole);
         item->setData(false, G::CachedRole);
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         appendRow(item);
 
-        // add columns that do not require metadata read form files
+        // add columns that do not require metadata read from image files
         int row = item->index().row();
 
         setData(index(row, G::NameColumn), fileInfo.fileName());
@@ -288,7 +293,7 @@ which is created in MW, and in InfoView.
 
     for(int row = 0; row < rowCount(); row++) {
         QModelIndex idx = index(row, G::PathColumn);
-        QString fPath = idx.data(G::FilePathRole).toString();
+        QString fPath = idx.data(G::PathRole).toString();
 
         QString label = metadata->getLabel(fPath);
         QString rating = metadata->getRating(fPath);
@@ -366,7 +371,7 @@ which is created in MW, and in InfoView.
 
 QModelIndex DataModel::find(QString fPath)
 {
-    QModelIndexList idxList = sf->match(sf->index(0, 0), G::FilePathRole, fPath);
+    QModelIndexList idxList = sf->match(sf->index(0, 0), G::PathRole, fPath);
     if (idxList.size() > 0 && idxList[0].isValid()) {
         return idxList[0];
     }
@@ -388,7 +393,7 @@ changes the sort or filter.
 //    qDebug() << G::t.restart() << "\t" << "ThumbView::updateImageList";
     imageFilePathList.clear();
     for(int row = 0; row < sf->rowCount(); row++) {
-        QString fPath = sf->index(row, 0).data(G::FilePathRole).toString();
+        QString fPath = sf->index(row, 0).data(G::PathRole).toString();
         imageFilePathList.append(fPath);
 //        qDebug() << G::t.restart() << "\t" << "&&&&&&&&&&&&&&&&&& updateImageList:" << fPath;
     }

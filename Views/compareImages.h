@@ -6,6 +6,7 @@
 #include "Views/thumbview.h"
 #include "compareview.h"
 #include "Image/imagealign.h"
+#include "Datamodel/datamodel.h"
 
 class CompareImages : public QWidget
 {

@@ -16,10 +16,11 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Fix pick and rating badge for compareImages::load lines 82+
 - Combine raw+jpg option
 - Add completer for title in metadata
 - Show image count in filters by filter
-- add metadata performance options to preferences
+- add metadata perfogitrmance options to preferences
 - Get Sony image count, camera SN
 - Add zoom increment amount to preferences
 - Add more raw file formats - DNG, Panasonic ...
@@ -31,6 +32,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Cleanup Roles
 - Done: Show cache status in thumbnails
 - Done: Add filters activated status (red text on image?)
 - Done: Change hard coded min/max thumbnail size
