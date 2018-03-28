@@ -25,7 +25,9 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
 //    ui->displayVerticalPixelsSB->setValue(mw->displayVerticalPixels);
 
     // thumbs
+    ui->iconWidthSlider->setMaximum(THUMB_MAX);
     ui->iconWidthSlider->setValue(mw->thumbView->thumbWidth);
+    ui->iconHeightSlider->setMaximum(THUMB_MAX);
     ui->iconHeightSlider->setValue(mw->thumbView->thumbHeight);
     ui->iconPaddingSlider->setValue(mw->thumbView->thumbPadding);
     ui->thumbSpacingSlider->setValue(mw->thumbView->thumbSpacing);
@@ -35,7 +37,9 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->lockDimChk->setChecked(true);
 
     // thumbsGrid
+    ui->iconWidthSlider_2->setMaximum(THUMB_MAX);
     ui->iconWidthSlider_2->setValue(mw->gridView->thumbWidth);
+    ui->iconHeightSlider_2->setMaximum(THUMB_MAX);
     ui->iconHeightSlider_2->setValue(mw->gridView->thumbHeight);
     ui->iconPaddingSlider_2->setValue(mw->gridView->thumbPadding);
     ui->thumbSpacingSlider_2->setValue(mw->gridView->thumbSpacing);

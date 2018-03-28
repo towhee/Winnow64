@@ -77,6 +77,7 @@ public slots:
     int getFirstVisible();
     int getLastVisible();
 
+    void refreshThumb(QModelIndex idx, int role);
     void refreshThumbs();
     void setIcon(int row, QImage thumb);
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,

@@ -1559,7 +1559,13 @@ void MW::createActions()
     addAction(escapeFullScreenAction);
     connect(escapeFullScreenAction, SIGNAL(triggered()), this, SLOT(escapeFullScreen()));
 
-    infoVisibleAction = new QAction(tr("Shooting Info"), this);
+    ratingBadgeVisibleAction = new QAction(tr("Show Rating Badge"), this);
+    ratingBadgeVisibleAction->setObjectName("toggleRatingBadge");
+    ratingBadgeVisibleAction->setCheckable(true);
+    addAction(ratingBadgeVisibleAction);
+    connect(ratingBadgeVisibleAction, SIGNAL(triggered()), this, SLOT(setRatingBadgeVisibility()));
+
+    infoVisibleAction = new QAction(tr("Show Shooting Info"), this);
     infoVisibleAction->setObjectName("toggleInfo");
     infoVisibleAction->setCheckable(true);
     addAction(infoVisibleAction);
@@ -1998,6 +2004,7 @@ void MW::createMenus()
     viewMenu->addAction(fullScreenAction);
     viewMenu->addAction(escapeFullScreenAction);
     viewMenu->addSeparator();
+    viewMenu->addAction(ratingBadgeVisibleAction);
     viewMenu->addAction(infoVisibleAction);
     viewMenu->addAction(infoSelectAction);
     viewMenu->addSeparator();
@@ -2253,8 +2260,6 @@ void MW::setupCentralWidget()
     welcome = new QScrollArea;
     Ui::welcomeScrollArea ui;
     ui.setupUi(welcome);
-//    welcome->setVisible(false);   //nada
-//    connect(ui.monitorSizeBtn, SIGNAL(clicked(bool)), this, SLOT(monitorPreference()));
 
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
@@ -2262,7 +2267,6 @@ void MW::setupCentralWidget()
     centralLayout->addWidget(gridView);
     centralLayout->addWidget(welcome);     // first time open program tips
     centralLayout->addWidget(messageView);
-//    centralLayout->setCurrentIndex(0);
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
 }
@@ -2971,13 +2975,13 @@ void MW::reindexImageCache()
     qDebug() << G::t.restart() << "\t" << "ThumbView::reindexImageCache";
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "ThumbView::reindexImageCache";
+//    qDebug() << G::t.restart() << "\t" << "ThumbView::reindexImageCache";
     int sfRowCount = dm->sf->rowCount();
     if (!sfRowCount) return;
     dm->updateImageList();
     QModelIndex idx = thumbView->currentIndex();
     QString currentFilePath = idx.data(G::FilePathRole).toString();
-    qDebug() << G::t.restart() << "\t" << "reindexImageCache current" << currentFilePath;
+//    qDebug() << G::t.restart() << "\t" << "reindexImageCache current" << currentFilePath;
     if(!dm->imageFilePathList.contains(currentFilePath)) {
         idx = dm->sf->index(0, 0);
         currentFilePath = idx.data(G::FilePathRole).toString();
@@ -4622,6 +4626,7 @@ re-established when the application is re-opened.
     setting->setValue("isFullScreen", (bool)isFullScreen());
 //    setting->setValue("isFullScreen", (bool)fullScreenAction->isChecked());
 
+    setting->setValue("isRatingBadgeVisible", (bool)ratingBadgeVisibleAction->isChecked());
     setting->setValue("isImageInfoVisible", (bool)infoVisibleAction->isChecked());
     setting->setValue("isLoupeDisplay", (bool)asLoupeAction->isChecked());
     setting->setValue("isGridDisplay", (bool)asGridAction->isChecked());
@@ -4898,7 +4903,9 @@ Preferences are located in the prefdlg class and updated here.
 
     // load state (action->setChecked in action creation)
     fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
-    infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());  // from QSettings
+    ratingBadgeVisibleAction->setChecked(setting->value("isRatingBadgeVisible").toBool());
+    isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
+    infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());
     asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool() ||
                               setting->value("isCompareDisplay").toBool());
     asGridAction->setChecked(setting->value("isGridDisplay").toBool());
@@ -5142,6 +5149,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
 //    actionKeys[copyToAction->objectName()] = copyToAction;
 //    actionKeys[moveToAction->objectName()] = moveToAction;
 //    actionKeys[keepTransformAct->objectName()] = keepTransformAct;
+    actionKeys[ratingBadgeVisibleAction->objectName()] = ratingBadgeVisibleAction;
     actionKeys[infoVisibleAction->objectName()] = infoVisibleAction;
 //    actionKeys[toggleAllDocksAct->objectName()] = toggleAllDocksAct;
     actionKeys[folderDockVisibleAction->objectName()] = folderDockVisibleAction;
@@ -5260,6 +5268,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         zoomToAction->setShortcut(QKeySequence("Z"));
         rotateLeftAction->setShortcut(QKeySequence("Ctrl+["));
         rotateRightAction->setShortcut(QKeySequence("Ctrl+]"));
+        ratingBadgeVisibleAction->setShortcut(QKeySequence("Ctrl+I"));
         infoVisibleAction->setShortcut(QKeySequence("I"));
         newWorkspaceAction->setShortcut(QKeySequence("W"));
         manageWorkspaceAction->setShortcut(QKeySequence("Ctrl+W"));
@@ -5703,11 +5712,22 @@ void MW::selectShootingInfo()
     imageView->moveShootingInfo(info);
 }
 
-void MW::setShootingInfoVisibility() {
+void MW::setRatingBadgeVisibility() {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setShootingInfoVisibility";
+    qDebug() << G::t.restart() << "\t" << "MW::setRatingBadgeVisibility";
     #endif
+    }
+    isRatingBadgeVisible = ratingBadgeVisibleAction->isChecked();
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+}
+
+void MW::setShootingInfoVisibility() {
+    {
+#ifdef ISDEBUG
+        qDebug() << G::t.restart() << "\t" << "MW::setShootingInfoVisibility";
+#endif
     }
     imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
 }
@@ -6080,18 +6100,34 @@ void MW::ingests()
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
 }
 
-void MW::setCachedStatus(QString fPath, bool iscached)
+void MW::setCachedStatus(QString fPath, bool isCached)
 {
+/*
+When an image is cached in ImageCache a signal triggers this slot to update the
+datamodel cache status role.  After the datamodel update the thumbView and
+gridView thumbnail is refreshed to update the cache badge.
+
+Note that the datamodel is used (dm), not the proxy (dm->sf). If the proxy is
+used and the user then sorts or filters the index could go out of range and the
+app will crash.
+
+Make sure the file path exists in the datamodel.  The most likely failure will
+be if a new folder has been selected but the image cache has not yet redirected.
+*/
     {
     #ifdef ISDEBUG
     qDebug() << G::t.restart() << "\t" << "MW::setCachedStatus" << fPath;
     #endif
     }
-    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::FilePathRole, fPath);
-    QModelIndex idx = idxList[0];
-    dm->sf->setData(idx, iscached, G::CachedRole);
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    QModelIndexList idxList = dm->match(dm->index(0, 0), G::FilePathRole, fPath);
+    if (idxList.length()) {
+        QModelIndex idx = idxList[0];
+        if (idx.isValid()) {
+            dm->setData(idx, isCached, G::CachedRole);
+            thumbView->refreshThumb(idx, G::CachedRole);
+            gridView->refreshThumb(idx, G::CachedRole);
+        }
+    }
 }
 
 void MW::setRating()

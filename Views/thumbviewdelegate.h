@@ -12,7 +12,7 @@ class ThumbViewDelegate : public QStyledItemDelegate
     Q_OBJECT
 
 public:
-    ThumbViewDelegate(QObject *parent);
+    ThumbViewDelegate(QObject *parent, bool &isRatingBadgeVisible);
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
                const QModelIndex &index) const;
@@ -38,6 +38,7 @@ public slots:
 
 private:
     QObject parent;
+    bool &isRatingBadgeVisible;
     bool delegateShowThumbLabels;
     QFont font;
     QSize thumbSize;

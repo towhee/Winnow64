@@ -11,7 +11,7 @@
 #include <QElapsedTimer>
 
 #define THUMB_MIN	40
-#define THUMB_MAX	240
+#define THUMB_MAX	480
 
 namespace G
 {
