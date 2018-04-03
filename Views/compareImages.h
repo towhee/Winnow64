@@ -13,7 +13,7 @@ class CompareImages : public QWidget
     Q_OBJECT
 
 public:
-    CompareImages(QWidget *parent, QWidget *centralWidget, Metadata *metadata,
+    CompareImages(QWidget *parent, QWidget *centralWidget, Metadata *metadata, DataModel *dm,
                   ThumbView *thumbView, ImageCache *imageCacheThread);
 
     qreal toggleZoom;
@@ -46,9 +46,11 @@ private slots:
 
 private:
     Metadata *metadata;
+    DataModel *dm;
     ThumbView *thumbView;
     ImageCache *imageCacheThread;
     QWidget *centralWidget;
+//    bool &isRatingBadgeVisible;
 
     QGridLayout *gridLayout;
 

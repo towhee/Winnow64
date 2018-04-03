@@ -4,6 +4,7 @@
 CompareImages::CompareImages(QWidget *parent,
                          QWidget *centralWidget,
                          Metadata *metadata,
+                         DataModel *dm,
                          ThumbView *thumbView,
                          ImageCache *imageCacheThread)
 {
@@ -14,6 +15,7 @@ CompareImages::CompareImages(QWidget *parent,
     }
     parent = 0;        // suppress compiler warning
     this->metadata = metadata;
+    this->dm = dm;
     this->thumbView = thumbView;
     this->imageCacheThread = imageCacheThread;
     this->centralWidget = centralWidget;
@@ -79,12 +81,12 @@ bool CompareImages::load(const QSize &centralWidgetSize)
     // iterate selected thumbs - load images, append and connect
     for (int i = 0; i < count; ++i) {
         QModelIndex idxPath = selection.at(i);
-//        QModel idxPick = dm->
+        QModelIndex idxPick = dm->sf->index(idxPath.row(), G::PickColumn);
         QString fPath = selection.at(i).data(G::PathRole).toString();
-        // creae new compareView and append to list
+        // create new compareView and append to list
         imList->append(new CompareView(this, gridCell, metadata, imageCacheThread, thumbView));
-//        bool isPick = qvariant_cast<bool>(selection.at(i).data(G::PickedRole));
-//        imList->at(i)->pickLabel->setVisible(isPick);
+        bool isPick = idxPick.data().toBool();
+        imList->at(i)->pickLabel->setVisible(isPick);
         imList->at(i)->loadImage(selection.at(i), fPath);
         // set toggleZoom value (from QSettings)
         imList->at(i)->toggleZoom = toggleZoom;

@@ -22,7 +22,7 @@ public:
               ImageCache *imageCacheThread,
               ThumbView *thumbView,
               InfoString *infoString,
-              bool isShootingInfoVisible);
+              bool isShootingInfoVisible, bool isRatingBadgeVisible);
 
     qreal zoom;
     qreal refZoom;                      // adjusted to real screen pixels
@@ -105,6 +105,7 @@ private:
     Metadata *metadata;
     ImageCache *imageCacheThread;
     ThumbView *thumbView;
+//    bool &isRatingBadgeVisible;
     InfoString *infoString;
     Pixmap *pixmap;
     QImageReader imageReader;

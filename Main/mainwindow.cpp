@@ -2279,7 +2279,7 @@ void MW::createDataModel()
     #endif
     }
     metadata = new Metadata;
-    dm = new DataModel(this, metadata, filters);
+    dm = new DataModel(this, metadata, filters, combineRawJpg);
     thumb = new Thumb(this, metadata);
 
     connect(dm->sf, SIGNAL(reloadImageCache()),
@@ -2496,7 +2496,9 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
                               imageCacheThread,
                               thumbView,
                               infoString,
-                              setting->value("isImageInfoVisible").toBool());
+                              setting->value("isImageInfoVisible").toBool(),
+                              setting->value("isRatingBadgeVisible").toBool()
+                              );
 
     connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
 
@@ -2517,7 +2519,7 @@ void MW::createCompareView()
     qDebug() << G::t.restart() << "\t" << "MW::createCompareView";
     #endif
     }
-    compareImages = new CompareImages(this, centralWidget, metadata, thumbView, imageCacheThread);
+    compareImages = new CompareImages(this, centralWidget, metadata, dm, thumbView, imageCacheThread);
 
     connect(compareImages, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
@@ -5721,6 +5723,7 @@ void MW::setRatingBadgeVisibility() {
     isRatingBadgeVisible = ratingBadgeVisibleAction->isChecked();
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
+    imageView->classificationLabel->setVisible(isRatingBadgeVisible);
 }
 
 void MW::setShootingInfoVisibility() {
