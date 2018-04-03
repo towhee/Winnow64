@@ -1,6 +1,8 @@
 #include "Datamodel/datamodel.h"
 
-DataModel::DataModel(QWidget *parent, Metadata *metadata, Filters *filters) : QStandardItemModel(parent)
+DataModel::DataModel(QWidget *parent, Metadata *metadata, Filters *filters, bool &combineRawJpg) :
+    QStandardItemModel(parent),
+    combineRawJpg(combineRawJpg)
 {
 /*
 The datamodel (dm thoughout app) contains information about each eligible image
@@ -115,7 +117,7 @@ Code examples for model:
     setHorizontalHeaderItem(G::FocalLengthColumn, new QStandardItem("Focal length"));
     setHorizontalHeaderItem(G::TitleColumn, new QStandardItem("Title"));
 
-    sf = new SortFilter(this, filters);
+    sf = new SortFilter(this, filters, combineRawJpg);
     sf->setSourceModel(this);
 
     // root folder containing images to be added to the data model
@@ -126,6 +128,17 @@ Code examples for model:
     // changing filters triggers a refiltering
     connect(filters, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
             sf, SLOT(filterChanged(QTreeWidgetItem*,int)));
+}
+
+bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
+{
+    QString s1 = i1.absoluteFilePath().toLower();
+    QString s2 = i2.absoluteFilePath().toLower();
+    if(i1.baseName() == i2.baseName()) {
+        if (i1.suffix().toLower() == "jpg") s1.replace(".jpg", ".zzz");
+        if (i2.suffix().toLower() == "jpg")  s2.replace(".jpg", ".zzz");
+    }
+    return s1 < s2;
 }
 
 bool DataModel::load(QString &folderPath, bool includeSubfolders)
@@ -195,7 +208,15 @@ bool DataModel::addFiles()
     QElapsedTimer t;
     t.start();
 
-    if (dir->entryInfoList().size() == 0) return false;
+    int imageCount = dir->entryInfoList().size();
+    if (!imageCount) return false;
+
+    for (int i = 0; i <imageCount; ++i)
+        fileInfoList.append(dir->entryInfoList().at(i));
+    std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
+
+    for (int i = 0; i < fileInfoList.size(); i++)
+        qDebug() << "DataModel::addFiles --" << fileInfoList.at(i).absoluteFilePath();
 
     static QStandardItem *item;
     static int fileIndex;
@@ -209,10 +230,12 @@ bool DataModel::addFiles()
     // rgh not working
     emptyPixMap = QPixmap::fromImage(emptyImg).scaled(THUMB_MAX, THUMB_MAX);
 
-    for (fileIndex = 0; fileIndex < dir->entryInfoList().size(); ++fileIndex) {
+    for (fileIndex = 0; fileIndex < imageCount; ++fileIndex) {
 
         // get file info
-        fileInfo = dir->entryInfoList().at(fileIndex);
+        fileInfo = fileInfoList.at(fileIndex);
+
+        // list used by imageCacheThread
         imageFilePathList.append(fileInfo.absoluteFilePath());
 
         /* add icon as first column in new row
@@ -254,6 +277,19 @@ bool DataModel::addFiles()
         setData(index(row, G::ModifiedColumn), fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss"));
         setData(index(row, G::RefineColumn), false);
         setData(index(row, G::PickColumn), "false");
+
+        if (combineRawJpg && fileIndex > 0) {
+            QString s1 = fileInfoList.at(fileIndex - 1).baseName();
+            QString s2 = fileInfoList.at(fileIndex).baseName();
+            if (s1 == s2) {
+                if (fileInfoList.at(fileIndex).suffix().toLower() == "jpg") {
+                    setData(index(row - 1, 0), true, G::DupHideRawRole);
+                    setData(index(row, 0), item->index(), G::DupRawIdxRole);
+                    QString prevType = fileInfoList.at(fileIndex - 1).suffix().toUpper();
+                    setData(index(row, G::TypeColumn), s + "+" + prevType);
+                }
+            }
+        }
 
         /* the rest of the data model columns are added after the metadata
         has been loaded, when the image caching is called.  See
@@ -399,6 +435,15 @@ changes the sort or filter.
     }
 }
 
+//void DataModel::combineRawJpg()
+//{
+///*
+//    - index
+//    - name
+//    - filter
+//*/
+//}
+
 void DataModel::refine()
 {
 /*
@@ -444,7 +489,9 @@ for all rows.
 // SortFilter Class used to filter by row
 // -----------------------------------------------------------------------------
 
-SortFilter::SortFilter(QObject *parent, Filters *filters) : QSortFilterProxyModel(parent)
+SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
+    combineRawJpg(combineRawJpg),
+    QSortFilterProxyModel(parent)
 {
     this->filters = filters;
 }
@@ -463,6 +510,12 @@ map to columns in the data model ie Picked, Rating, Label ...
 //    #endif
     }
     if (!G::isNewFolderLoaded) return true;
+
+    // Check Raw + Jpg
+    if (combineRawJpg) {
+        QModelIndex rawIdx = sourceModel()->index(sourceRow, 0, sourceParent);
+        if (rawIdx.data(G::DupHideRawRole).toBool()) return false;
+    }
 
     static int counter = 0;
     counter++;

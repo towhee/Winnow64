@@ -16,7 +16,6 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Fix pick and rating badge for compareImages::load lines 82+
 - Combine raw+jpg option
 - Add completer for title in metadata
 - Show image count in filters by filter
@@ -32,6 +31,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Fix pick and rating badge for compareImages::load lines 82+
 - Done: Cleanup Roles
 - Done: Show cache status in thumbnails
 - Done: Add filters activated status (red text on image?)

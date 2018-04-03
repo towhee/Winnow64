@@ -26,7 +26,8 @@ ImageView::ImageView(QWidget *parent,
                      ImageCache *imageCacheThread,
                      ThumbView *thumbView,
                      InfoString *infoString,
-                     bool isShootingInfoVisible) :
+                     bool isShootingInfoVisible,
+                     bool isRatingBadgeVisible) :
 
                      QGraphicsView(centralWidget)
 {
@@ -87,7 +88,7 @@ ImageView::ImageView(QWidget *parent,
     classificationLabel = new CircleLabel(this);
     classificationLabel->setVisible(false);
     classificationLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
-    classificationLabel->setVisible(false);
+    classificationLabel->setVisible(isRatingBadgeVisible);
 
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
     infoEffect->setOpacity(0.8);

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>708</width>
-    <height>464</height>
+    <width>735</width>
+    <height>601</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -26,7 +26,7 @@
    <property name="geometry">
     <rect>
      <x>570</x>
-     <y>410</y>
+     <y>540</y>
      <width>121</width>
      <height>31</height>
     </rect>
@@ -44,10 +44,10 @@
   <widget class="QStackedWidget" name="stackedWidget">
    <property name="geometry">
     <rect>
-     <x>210</x>
+     <x>200</x>
      <y>20</y>
      <width>481</width>
-     <height>370</height>
+     <height>491</height>
     </rect>
    </property>
    <property name="font">
@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>3</number>
+    <number>6</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -170,6 +170,73 @@
       </property>
       <property name="text">
        <string>Scroll to position at center when mouse click</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBoxFolders_3">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>270</y>
+       <width>431</width>
+       <height>91</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Raw + JPG</string>
+     </property>
+     <widget class="QCheckBox" name="rawJpgChl">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>30</y>
+        <width>371</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Combine Raw + JPG</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="rawJpgChl_2">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>90</y>
+        <width>371</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Combine Raw + JPG</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="ingestJpgWithRawChk">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>60</y>
+        <width>371</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Ingest JPG along with RAW</string>
       </property>
      </widget>
     </widget>
@@ -1651,7 +1718,7 @@
        <x>10</x>
        <y>10</y>
        <width>460</width>
-       <height>351</height>
+       <height>481</height>
       </rect>
      </property>
      <property name="frameShape">
@@ -1666,7 +1733,7 @@
         <x>20</x>
         <y>0</y>
         <width>181</width>
-        <height>351</height>
+        <height>471</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -1684,7 +1751,7 @@
          <x>0</x>
          <y>0</y>
          <width>198</width>
-         <height>351</height>
+         <height>471</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -1741,7 +1808,7 @@
         <x>240</x>
         <y>0</y>
         <width>191</width>
-        <height>351</height>
+        <height>471</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -1759,7 +1826,7 @@
          <x>10</x>
          <y>0</y>
          <width>188</width>
-         <height>351</height>
+         <height>471</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -1774,7 +1841,7 @@
          <widget class="QTableView" name="tableFieldsTable">
           <property name="maximumSize">
            <size>
-            <width>160</width>
+            <width>200</width>
             <height>16777215</height>
            </size>
           </property>
@@ -1801,7 +1868,7 @@
      <x>10</x>
      <y>20</y>
      <width>191</width>
-     <height>371</height>
+     <height>491</height>
     </rect>
    </property>
    <property name="frameShape">
@@ -1817,7 +1884,7 @@
        <x>0</x>
        <y>9</y>
        <width>191</width>
-       <height>361</height>
+       <height>481</height>
       </rect>
      </property>
      <property name="styleSheet">

@@ -55,8 +55,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.920";
-    QString versionDetail = "Added XMP support";
+    QString version = "0.930";
+    QString versionDetail = "Show caching status in thumbnails";
 
     bool isShift;               // used when opening if shift key pressed
 
@@ -148,6 +148,7 @@ public:
     bool inclSubfolders;
     int maxRecentFolders = 20;
     QString ingestRootFolder;
+    bool combineRawJpg = false;
 
     // preferences: slideshow
     int slideShowDelay;

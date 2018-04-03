@@ -5,14 +5,14 @@
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
 #include "Main/global.h"
-
+#include <algorithm>                // req'd for sorting fileInfoList
 
 class SortFilter : public QSortFilterProxyModel
 {
     Q_OBJECT
 
 public:
-    SortFilter(QObject *parent, Filters *filters);
+    SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg);
 
 public slots:
     void filterChanged(QTreeWidgetItem* x, int col);
@@ -27,6 +27,7 @@ signals:
 
 private:
     Filters *filters;
+    bool &combineRawJpg;
     bool isFinished;
 };
 
@@ -34,7 +35,7 @@ class DataModel : public QStandardItemModel
 {
     Q_OBJECT
 public:
-    DataModel(QWidget *parent, Metadata *metadata, Filters *filters);
+    DataModel(QWidget *parent, Metadata *metadata, Filters *filters, bool &combineRawJpg);
 
     bool load(QString &dir, bool includeSubfolders);
     void addMetadata();
@@ -43,9 +44,7 @@ public:
     QModelIndex find(QString fPath);
 
     SortFilter *sf;
-    QFileInfoList fileInfoList;
     QStringList imageFilePathList;
-//    QFileInfoList dirFileInfoList;
     QDir::SortFlags thumbsSortFlags;
     QString currentFolderPath;
 
@@ -59,6 +58,9 @@ private:
     QWidget *mw;
     Metadata *metadata;
     Filters *filters;
+    bool &combineRawJpg;
+    QList<QFileInfo> fileInfoList;
+    static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
 
     QDir *dir;
     QStringList *fileFilters;
@@ -67,7 +69,7 @@ private:
     QImage emptyImg;
 
     bool addFiles();
-
+    void rawPlusJpg();
 };
 
 #endif // DATAMODEL_H

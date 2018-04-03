@@ -4607,7 +4607,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.rotationDegrees = rotationDegrees;
 //    imageMetadata.created = created;
     imageMetadata.createdDate = createdDate;
-    imageMetadata.model = model;
+    imageMetadata.model = model.trimmed();
     imageMetadata.exposureTime = exposureTime;
     imageMetadata.exposureTimeNum = exposureTimeNum;
     imageMetadata.aperture = aperture;
