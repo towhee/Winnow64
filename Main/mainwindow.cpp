@@ -498,7 +498,6 @@ void MW::folderSelectionChange()
                     "\n*************************************************************************";
     #endif
     }
-
     // Check if same folder
     QString dirPath;
     if (!isInitializing || !rememberLastDir) {
@@ -655,7 +654,7 @@ void MW::folderSelectionChange()
      metadataCacheThread->loadMetadataCache(0, isShowCacheStatus, cacheStatusWidth);
 
      // format pickMemSize as bytes, KB, MB or GB
-     pickMemSize = formatMemoryReqd(memoryReqdForPicks());
+     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
      updateStatus(true);
 }
 
@@ -938,7 +937,6 @@ void MW::loadFilteredImageCache()
     qDebug() << G::t.restart() << "\t" << "MW::loadFilteredImageCache";
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "MW::loadFilteredImageCache";
     QModelIndex idx = thumbView->currentIndex();
     QString fPath = idx.data(G::PathRole).toString();
     thumbView->selectThumb(idx);
@@ -1141,6 +1139,13 @@ void MW::createActions()
     ingestAction->setObjectName("ingest");
     addAction(ingestAction);
     connect(ingestAction, SIGNAL(triggered()), this, SLOT(ingests()));
+
+    combineRawJpgAction = new QAction(tr("Combine Raw+Jpg"), this);
+    combineRawJpgAction->setObjectName("combineRawJpg");
+    combineRawJpgAction->setCheckable(true);
+    combineRawJpgAction->setChecked(true);
+    addAction(combineRawJpgAction);
+    connect(combineRawJpgAction, SIGNAL(triggered()), this, SLOT(setCombineRawJpg()));
 
     // Place keeper for now
     renameAction = new QAction(tr("Rename selected images"), this);
@@ -1899,6 +1904,7 @@ void MW::createMenus()
     fileMenu->addAction(refreshFoldersAction);
     fileMenu->addSeparator();
     fileMenu->addAction(ingestAction);
+    fileMenu->addAction(combineRawJpgAction);
     fileMenu->addSeparator();
     fileMenu->addAction(revealFileAction);
     fileMenu->addAction(subFoldersAction);
@@ -2279,6 +2285,8 @@ void MW::createDataModel()
     #endif
     }
     metadata = new Metadata;
+    // loadSettings not run yet
+    combineRawJpg = setting->value("combineRawJpg").toBool();
     dm = new DataModel(this, metadata, filters, combineRawJpg);
     thumb = new Thumb(this, metadata);
 
@@ -3059,7 +3067,7 @@ void MW::quickFilter()
 void MW::invertFilters()
 {
 /*
-Currently this is just clearing filters ...
+Currently this is just clearing filters ...  rgh what to do?
 */
     if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Unchecked);
     if (filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Unchecked);
@@ -4577,15 +4585,18 @@ re-established when the application is re-opened.
 //    setting->setValue("displayHorizontalPixels", displayHorizontalPixels);
 //    setting->setValue("displayVerticalPixels", displayVerticalPixels);
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
+
     // files
 //    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("showImageCount", showImageCountAction->isChecked());
+    setting->setValue("combineRawJpg", combineRawJpg);
 //    setting->setValue("maxRecentFolders", maxRecentFolders);
     setting->setValue("useWheelToScroll", imageView->useWheelToScroll);
     setting->setValue("ingestRootFolder", ingestRootFolder);
+
     // thumbs
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
     setting->setValue("thumbPadding", thumbView->thumbPadding);
@@ -4840,6 +4851,7 @@ Preferences are located in the prefdlg class and updated here.
         imageView->toggleZoom = 1.0;
         compareImages->toggleZoom = 1.0;
         autoIngestFolderPath = false;
+        combineRawJpg = true;
 
       // slideshow
         slideShowDelay = 5;
@@ -4877,7 +4889,8 @@ Preferences are located in the prefdlg class and updated here.
     rememberLastDir = setting->value("rememberLastDir").toBool();
     lastDir = setting->value("lastDir").toString();
     showImageCountAction->setChecked(setting->value("showImageCount").toBool());
-//    maxRecentFolders = setting->value("maxRecentFolders").toInt();
+    combineRawJpgAction->setChecked(setting->value("combineRawJpg").toBool());
+//    combineRawJpg = setting->value("combineRawJpg").toBool();
     ingestRootFolder = setting->value("ingestRootFolder").toString();
     // trackpad
     imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
@@ -5209,6 +5222,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         //        pasteImageAction->setShortcut(QKeySequence("Ctrl+Shift+V"));
         //        refreshAction->setShortcut(QKeySequence("Ctrl+F5"));
         //        pasteAction->setShortcut(QKeySequence("Ctrl+V"));
+        refreshFoldersAction->setShortcut(QKeySequence("Alt+R"));
         subFoldersAction->setShortcut(QKeySequence("B"));
         showImageCountAction->setShortcut(QKeySequence("\\"));
         fullScreenAction->setShortcut(QKeySequence("F"));
@@ -5221,6 +5235,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         pickAction->setShortcut(QKeySequence("`"));
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
         ingestAction->setShortcut(QKeySequence("Q"));
+        combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
 //        rate0Action->setShortcut(QKeySequence("!"));
         uncheckAllFiltersAction->setShortcut(QKeySequence("Shift+Ctrl+0"));
         rate1Action->setShortcut(QKeySequence("1"));
@@ -6023,7 +6038,7 @@ void MW::togglePick()
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
-    pickMemSize = formatMemoryReqd(memoryReqdForPicks());
+    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
     updateStatus(true, "");
 }
 
@@ -6060,21 +6075,6 @@ qulonglong MW::memoryReqdForPicks()
     return memTot;
 }
 
-QString MW::formatMemoryReqd(qulonglong bytes)
-{
-    qulonglong x = 1024;
-    if(bytes == 0) return "0";
-    if(bytes < x) return QString::number(bytes) + " bytes";
-    if(bytes < x * 1024) return QString::number(bytes / x) + " KB";
-    x *= 1024;
-    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + " MB";
-    x *= 1024;
-    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + " GB";
-    x *= 1024;
-    if(bytes < (x * 1024)) return QString::number((float)bytes / x, 'f', 1) + " TB";
-    return "More than TB";
-}
-
 void MW::ingests()
 {
     {
@@ -6086,11 +6086,19 @@ void MW::ingests()
         qDebug() << G::t.restart() << "\t" << "MW::ingests"
                  << "pathTemplateSelected =" << pathTemplateSelected
                  << "filenameTemplateSelected =" << filenameTemplateSelected;
-        QFileInfoList imageList = thumbView->getPicks();
-        ingestDlg = new IngestDlg(this, imageList, metadata,
-             ingestRootFolder, pathTemplates, filenameTemplates,
-             pathTemplateSelected, filenameTemplateSelected,
-             ingestDescriptionCompleter, autoIngestFolderPath);
+//        QFileInfoList imageList = thumbView->getPicks();
+        ingestDlg = new IngestDlg(this,
+                                  combineRawJpg,
+//                                  imageList,
+                                  metadata,
+                                  dm,
+                                  ingestRootFolder,
+                                  pathTemplates,
+                                  filenameTemplates,
+                                  pathTemplateSelected,
+                                  filenameTemplateSelected,
+                                  ingestDescriptionCompleter,
+                                  autoIngestFolderPath);
         connect(ingestDlg, SIGNAL(updateIngestParameters(QString,bool)),
                 this, SLOT(setIngestRootFolder(QString,bool)));
         ingestDlg->exec();
@@ -6101,6 +6109,19 @@ void MW::ingests()
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
+}
+
+void MW::setCombineRawJpg()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << G::t.restart() << "\t" << "MW::setCombineRawJpg";
+    #endif
+    }
+    // flag used in MW, dm and sf
+    combineRawJpg = combineRawJpgAction->isChecked();
+    // update the proxy filter
+    dm->sf->filterChanged(nullptr, 0);
 }
 
 void MW::setCachedStatus(QString fPath, bool isCached)

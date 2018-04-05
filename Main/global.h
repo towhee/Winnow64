@@ -19,6 +19,7 @@ namespace G
         PathRole = Qt::UserRole + 1,
         ThumbRectRole,
         CachedRole,
+        DupIsJpg,
         DupRawIdxRole,
         DupHideRawRole,
         ColumnRole

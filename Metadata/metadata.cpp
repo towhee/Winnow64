@@ -2160,10 +2160,11 @@ metadata is written to buffer and the original image file is copied unchanged.
         XMP, for known formats. Writing subsequent xmp could change file length
         and make the orientationOffset incorrect.
         */
-        if (orientationChanged) {
+        if (orientationChanged && orientationOffset > 0) {
             QChar c = newOrientation & 0xFF;
             QByteArray ba;
             ba.append(c);
+            qDebug() << "Metadata::writeMetadata orientationOffset =" << orientationOffset;
             buffer.replace(orientationOffset, 1, ba);
         }
         xmp.writeJPG(buffer);

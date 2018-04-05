@@ -161,10 +161,21 @@
        </item>
        <item>
         <property name="text">
-         <string>Information</string>
+         <string>Show Information</string>
         </property>
         <property name="text">
          <string>I</string>
+        </property>
+        <property name="text">
+         <string>Toggles</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Show Rating Badge</string>
+        </property>
+        <property name="text">
+         <string>⌘I</string>
         </property>
         <property name="text">
          <string>Toggles</string>
@@ -191,10 +202,29 @@
        </item>
        <item>
         <property name="text">
+         <string>Refresh Folders</string>
+        </property>
+        <property name="text">
+         <string>⌥ R</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Ingest Images</string>
         </property>
         <property name="text">
          <string>Q</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Combine Raw+Jpg</string>
+        </property>
+        <property name="text">
+         <string>⌘J</string>
+        </property>
+        <property name="text">
+         <string>Toggles</string>
         </property>
        </item>
        <item>
@@ -627,6 +657,14 @@
         </property>
         <property name="text">
          <string>⌘`</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Refine</string>
+        </property>
+        <property name="text">
+         <string>R</string>
         </property>
        </item>
        <item>

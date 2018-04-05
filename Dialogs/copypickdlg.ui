@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>704</width>
-    <height>735</height>
+    <height>796</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -468,7 +468,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>650</y>
+     <y>700</y>
      <width>661</width>
      <height>20</height>
     </rect>
@@ -1040,7 +1040,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>690</y>
+     <y>750</y>
      <width>241</width>
      <height>16</height>
     </rect>
@@ -1061,7 +1061,7 @@
    <property name="geometry">
     <rect>
      <x>470</x>
-     <y>690</y>
+     <y>740</y>
      <width>211</width>
      <height>32</height>
     </rect>
@@ -1103,6 +1103,24 @@
      </widget>
     </item>
    </layout>
+  </widget>
+  <widget class="QCheckBox" name="combinedIncludeJpgChk">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>650</y>
+     <width>661</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>If Raw + JPG are combined also copy the JPG files</string>
+   </property>
   </widget>
  </widget>
  <resources/>

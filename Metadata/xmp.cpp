@@ -259,11 +259,7 @@ dc schema for title:
                 newItem.append(tag);
                 newItem.append(">");
 
-//                qDebug() << G::t.restart() << "\t" << "Xmp::setItem  newItem =" << newItem;
-
                 xmpBa.insert(startPos, newItem);
-
-                qDebug() << G::t.restart() << "\t" << "Xmp::setItem xmpBa: " << xmpBa;
             }
             if (assignmentMethod == "equals") {
                 // ie xmp:Rating="3"

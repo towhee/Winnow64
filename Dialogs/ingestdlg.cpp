@@ -28,8 +28,10 @@ Files are copied to a destination based on building a file path consisting of:
 */
 
 IngestDlg::IngestDlg(QWidget *parent,
-                     QFileInfoList &imageList,
+                     bool &combineRawJpg,
+//                     QFileInfoList &imageList,
                      Metadata *metadata,
+                     DataModel *dm,
                      QString ingestRootFolder,
                      QMap<QString, QString>& pathTemplates,
                      QMap<QString, QString>& filenameTemplates,
@@ -42,29 +44,28 @@ IngestDlg::IngestDlg(QWidget *parent,
                      ui(new Ui::IngestDlg),
                      isAuto(isAuto),
                      ingestDescriptionCompleter(ingestDescriptionCompleter),
-                     pickList(imageList),
+//                     pickList(imageList),
                      metadata(metadata),
                      pathTemplatesMap(pathTemplates),
                      filenameTemplatesMap(filenameTemplates),
                      pathTemplateSelected(pathTemplateSelected),
                      filenameTemplateSelected(filenameTemplateSelected),
+                     combineRawJpg(combineRawJpg),
                      rootFolderPath(ingestRootFolder)
 {
+    this->dm = dm;
+
     ui->setupUi(this);
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
 
     isInitializing = true;
+    getPicks();
 
-    // stats
-    fileCount = pickList.count();
-    fileMB = 0;
-    foreach(QFileInfo info, pickList) fileMB += (float)info.size()/1000000;
-    QString s1 = QString::number(fileCount);
-    QString s2 = fileCount == 1 ? " file using " : " files using ";
-    QString s3 = QString::number(fileMB, 'f', 1);
-    ui->statsLabel->setText(s1 + s2 + s3 + " MB");
-
+    if (!combineRawJpg) {
+        Utilities::setOpacity(ui->combinedIncludeJpgChk, 0.5);
+        ui->combinedIncludeJpgChk->setDisabled(true);
+    }
     ui->rootFolderLabel->setText(rootFolderPath);
     ui->rootFolderLabel->setToolTip(ui->rootFolderLabel->text());
 
@@ -128,13 +129,72 @@ void IngestDlg::renameIfExists(QString &destination,
     } while (fileAlreadyExists);
 }
 
+void IngestDlg::getPicks()
+{
+/*
+The datamodel is sorted by file path. Raw files with the same path precede jpg
+files with duplicate names. Two roles track duplicates: G::DupHideRawRole flags
+jpg files with duplicate raws and G::DupRawIdxRole points to the duplicate raw
+file from the jpg data row.  For example:
+
+Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
+Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(0,0))
+Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
+Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(2,0)
+*/
+    bool inclDupJpg = ui->combinedIncludeJpgChk->isChecked();
+    QString fPath;
+    pickList.clear();
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        QModelIndex pickIdx = dm->index(row, G::PickColumn);
+        // only picks
+        if (pickIdx.data(Qt::EditRole).toString() == "true") {
+            QModelIndex idx = dm->index(row, 0);
+
+            // if raw+jpg files have been combined
+            if (combineRawJpg) {
+                // append if combined jpg and include combined jpgs
+                if (inclDupJpg && idx.data(G::DupIsJpg).toBool()) {
+                    fPath = idx.data(G::PathRole).toString();
+                    QFileInfo fileInfo(fPath);
+                    pickList.append(fileInfo);
+                    qDebug() << "IngestDlg::getPicks -" << combineRawJpg << fPath << idx;
+                }
+                // append combined raw file
+                if (idx.data(G::DupIsJpg).toBool()) {
+                    idx = qvariant_cast<QModelIndex>(dm->index(row, 0).data(G::DupRawIdxRole));
+                }
+            }
+            fPath = idx.data(G::PathRole).toString();
+            QFileInfo fileInfo(fPath);
+            pickList.append(fileInfo);
+
+            qDebug() << "IngestDlg::getPicks -" << row << combineRawJpg << fPath << idx;
+        }
+    }
+
+    // stats
+    fileCount = pickList.count();
+    fileMB = 0;
+
+    qulonglong bytes = 0;
+    foreach(QFileInfo info, pickList) bytes += (float)info.size();
+    QString s1 = QString::number(fileCount);
+    QString s2 = fileCount == 1 ? " file using " : " files using ";
+    QString s3 = Utilities::formatMemory(bytes);
+//    QString s3 = QString::number(fileMB, 'f', 1);
+    QString s4 = "";
+    if (inclDupJpg) s4 = " including duplicate jpg";
+    ui->statsLabel->setText(s1 + s2 + s3 + s4);
+}
+
 void IngestDlg::accept()
 {
     QDir dir(folderPath);
     if (!dir.exists()) {
         if(!dir.mkpath(folderPath)) {
             QMessageBox::critical(this, tr("Error"),
-                 "The folder (" + folderPath + ") was not created.");
+                 "The folder \"" + folderPath + "\" was not created.");
             QDialog::accept();
             return;
         }
@@ -157,14 +217,19 @@ void IngestDlg::accept()
     }
 
     // copy picked images
-    for (int i=0; i < pickList.size(); ++i) {
-        int progress = (i+1)*100/(pickList.size()+1);
+    seqNum =  ui->spinBoxStartNumber->value();
+    for (int i = 0; i < pickList.size(); ++i) {
+        int progress = (i + 1) * 100 / (pickList.size() + 1);
         ui->progressBar->setValue(progress);
         qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
         QString source = fileInfo.absoluteFilePath();
+
         // seqNum is required by parseTokenString
-        seqNum =  ui->spinBoxStartNumber->value() + i;
+        // increase sequence unless dup (raw + jpg)
+        if (i > 0 && pickList.at(i).baseName() != pickList.at(i-1).baseName())
+            seqNum++;
+
         QString fileName =  parseTokenString(pickList.at(i), tokenString);
         QString suffix = fileInfo.completeSuffix().toLower();
         QString dotSuffix = "." + suffix;
@@ -229,7 +294,7 @@ void IngestDlg::on_selectFolderBtn_clicked()
         (this, tr("Choose Ingest Folder"), root,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (s.length() > 0) {
-        folderPath = s;
+        folderPath = s + "/";
         ui->manualFolderLabel->setText(folderPath);
         ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
     }
@@ -408,13 +473,17 @@ void IngestDlg::buildFileNameSequence()
     // seqNum is required by parseTokenString
     seqStart =  ui->spinBoxStartNumber->value();
     seqNum = seqStart;
-    QString fileName1 =  parseTokenString(pickList.at(0), tokenString);
+    QString ext1 = "." + pickList.at(0).suffix().toUpper();
+    QString fileName1 =  parseTokenString(pickList.at(0), tokenString) + ext1;
     seqNum++;
     QString fileName2;
-    if (fileCount > 1)
-        fileName2 = parseTokenString(pickList.at(1), tokenString);
+    if (fileCount > 1) {
+        QString ext2 = "." + pickList.at(1).suffix().toUpper();
+        fileName2 = parseTokenString(pickList.at(1), tokenString) + ext2;
+    }
     seqNum = seqStart + fileCount - 1;
-    QString fileNameN = parseTokenString(pickList.at(fileCount - 1), tokenString);
+    QString extN = "." + pickList.at(fileCount - 1).suffix().toUpper();
+    QString fileNameN = parseTokenString(pickList.at(fileCount - 1), tokenString) + extN;
     ui->folderPathLabel->setText(folderPath + fileName1);
     ui->folderPathLabel->setToolTip(folderPath + fileName1);
     if(fileCount > 1) {
@@ -679,3 +748,7 @@ void IngestDlg::on_okBtn_clicked()
     accept();
 }
 
+void IngestDlg::on_combinedIncludeJpgChk_clicked()
+{
+    getPicks();
+}

@@ -181,7 +181,6 @@ void ThumbView::refreshThumbs() {
     #endif
     }
     dataChanged(dm->sf->index(0, 0), dm->sf->index(getLastRow(), 0));
-//    emit updateThumbDockHeight();
 }
 
 void ThumbView::setThumbParameters()
@@ -473,7 +472,7 @@ bool ThumbView::isPick()
 QFileInfoList ThumbView::getPicks()
 {
 /* Returns a list of all the files that have been picked.  It is used in
-MW, passing the list on to the ingestsDlg for ingestion/copying to another
+MW, passing the list on to the ingestDlg for ingestion/copying to another
 folder.
 */
     {
