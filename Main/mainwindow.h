@@ -37,6 +37,7 @@
 #include "prefdlg.h"
 #include "workspacedlg.h"
 #include "zoomdlg.h"
+#include "Utilities/utilities.h"
 
 #include "ui_helpform.h"
 #include "ui_shortcutsform.h"
@@ -148,7 +149,7 @@ public:
     bool inclSubfolders;
     int maxRecentFolders = 20;
     QString ingestRootFolder;
-    bool combineRawJpg = false;
+    bool combineRawJpg;
 
     // preferences: slideshow
     int slideShowDelay;
@@ -304,6 +305,7 @@ private slots:
     void setTrackpadScroll(bool trackpadScroll);
     void setDisplayResolution();
     void setIngestRootFolder(QString rootFolder, bool isAuto);
+    void setCombineRawJpg();
     void setSlideShowParameters(int delay, bool isRandom);
     void setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
                             bool isMetadata, bool isThumbs, bool isStatusBar);
@@ -417,6 +419,7 @@ private:
     QAction *addBookmarkAction;
     QAction *removeBookmarkAction;
     QAction *ingestAction;
+    QAction *combineRawJpgAction;
     QAction *refreshFoldersAction;
     QAction *renameAction;
     QAction *showImageCountAction;
@@ -728,7 +731,6 @@ private:
     void addRecentFolder(QString fPath);
 
     qulonglong memoryReqdForPicks();
-    QString formatMemoryReqd(qulonglong bytes);
     QString enquote(QString &s);
 
     void stressTest();

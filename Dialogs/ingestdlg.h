@@ -3,9 +3,11 @@
 
 #include <QtWidgets>
 #include "Views/thumbview.h"
+#include "Datamodel/datamodel.h"
 #include "tokendlg.h"
 
 #include "ui_helpingest.h"
+#include "Utilities/utilities.h"
 
 namespace Ui {
 class IngestDlg;
@@ -17,8 +19,10 @@ class IngestDlg : public QDialog
 
 public:
     explicit IngestDlg(QWidget *parent,
-                       QFileInfoList &imageList,
+                       bool &combineRawJpg,
+//                       QFileInfoList &imageList,
                        Metadata *metadata,
+                       DataModel *dm,
                        QString ingestRootFolder,
                        QMap<QString, QString>& pathTemplates,
                        QMap<QString, QString>& filenameTemplates,
@@ -43,6 +47,8 @@ private slots:
     void on_okBtn_clicked();
     void on_helpBtn_clicked();
 
+    void on_combinedIncludeJpgChk_clicked();
+
 signals:
     void updateIngestParameters(QString rootFolderPath, bool isAuto);
 
@@ -58,13 +64,16 @@ private:
     int getSequenceStart(const QString &path);
     void updateStyleOfFolderLabels();
     void renameIfExists(QString &destination, QString &fileName, QString &dotSuffix);
+    void getPicks();
 
     bool isInitializing;
     bool isAuto;
 
-    QFileInfoList pickList;
     QFileSystemModel fileSystemModel;
     Metadata *metadata;
+    DataModel *dm;
+    bool &combineRawJpg;
+    QFileInfoList pickList;
 
     QStringList tokens;
     QMap<QString, QString> exampleMap;

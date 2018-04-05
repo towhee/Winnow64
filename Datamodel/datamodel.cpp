@@ -215,8 +215,8 @@ bool DataModel::addFiles()
         fileInfoList.append(dir->entryInfoList().at(i));
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 
-    for (int i = 0; i < fileInfoList.size(); i++)
-        qDebug() << "DataModel::addFiles --" << fileInfoList.at(i).absoluteFilePath();
+//    for (int i = 0; i < fileInfoList.size(); i++)
+//        qDebug() << "DataModel::addFiles --" << fileInfoList.at(i).absoluteFilePath();
 
     static QStandardItem *item;
     static int fileIndex;
@@ -234,9 +234,6 @@ bool DataModel::addFiles()
 
         // get file info
         fileInfo = fileInfoList.at(fileIndex);
-
-        // list used by imageCacheThread
-        imageFilePathList.append(fileInfo.absoluteFilePath());
 
         /* add icon as first column in new row
 
@@ -278,13 +275,33 @@ bool DataModel::addFiles()
         setData(index(row, G::RefineColumn), false);
         setData(index(row, G::PickColumn), "false");
 
-        if (combineRawJpg && fileIndex > 0) {
+        /* Save info for duplicated raw and jpg files, which generally are the
+        result of setting raw+jpg in the camera. The datamodel is sorted by
+        file path, except raw files with the same path precede jpg files with
+        duplicate names. Two roles track duplicates: G::DupHideRawRole flags
+        jpg files with duplicate raws and G::DupRawIdxRole points to the
+        duplicate raw file from the jpg data row.   For example:
+
+        Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
+        Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(0,0))
+        Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
+        Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(2,0)
+        */
+
+        if (fileIndex > 0) {
+//            if (combineRawJpg && fileIndex > 0) {
             QString s1 = fileInfoList.at(fileIndex - 1).baseName();
             QString s2 = fileInfoList.at(fileIndex).baseName();
             if (s1 == s2) {
                 if (fileInfoList.at(fileIndex).suffix().toLower() == "jpg") {
-                    setData(index(row - 1, 0), true, G::DupHideRawRole);
-                    setData(index(row, 0), item->index(), G::DupRawIdxRole);
+                    QModelIndex prevIdx = index(row - 1, 0);
+                    // hide raw version
+                    setData(prevIdx, true, G::DupHideRawRole);
+                    // point to raw version
+                    setData(index(row, 0), prevIdx, G::DupRawIdxRole);
+                    // set flag to show combined JPG file for filtering when ingesting
+                    setData(index(row, 0), true, G::DupIsJpg);
+                    // build combined suffix to show in type column
                     QString prevType = fileInfoList.at(fileIndex - 1).suffix().toUpper();
                     setData(index(row, G::TypeColumn), s + "+" + prevType);
                 }
@@ -311,12 +328,9 @@ which is created in MW, and in InfoView.
     qDebug() << G::t.restart() << "\t" << "DataModel::addMetadataToModel";
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "DataModel::addMetadataToModel    Started";
 
     QElapsedTimer t;
     t.start();
-
-//    static QStandardItem *item;
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
@@ -328,6 +342,11 @@ which is created in MW, and in InfoView.
     QMap<QVariant, QString> dayMap;
 
     for(int row = 0; row < rowCount(); row++) {
+        /*
+        qDebug() << "DataModel::addMetadata " << index(row,0).data(G::PathRole).toString()
+                 << "\tDupHideRawRole =" << index(row,0).data(G::DupHideRawRole).toBool()
+                 << "\tDupRawIdxRole =" << index(row,0).data(G::DupRawIdxRole);
+        */
         QModelIndex idx = index(row, G::PathColumn);
         QString fPath = idx.data(G::PathRole).toString();
 
@@ -389,8 +408,8 @@ which is created in MW, and in InfoView.
         setData(index(row, G::CopyrightColumn), copyright);
         setData(index(row, G::EmailColumn), email);
         setData(index(row, G::UrlColumn), url);
-//        setData(index(row, G::MetadataLoadedColumn), true);
     }
+
     // build filter items
     filters->addCategoryFromData(modelMap, filters->models);
     filters->addCategoryFromData(lensMap, filters->lenses);
@@ -399,6 +418,11 @@ which is created in MW, and in InfoView.
     filters->addCategoryFromData(creatorMap, filters->creators);
     filters->addCategoryFromData(yearMap, filters->years);
     filters->addCategoryFromData(dayMap, filters->days);
+
+    // list used by imageCacheThread, filtered by row+jpg if combined
+    for (int i = 0; i < sf->rowCount(); ++i)
+        if (!sf->index(i,0).data(G::DupHideRawRole).toBool())
+            imageFilePathList.append(sf->index(i,0).data(G::PathRole).toString());
 
 //    qDebug() << G::t.restart() << "\t" << "DataModel::addMetadataToModel    Completed"
 //             << " elapsed time =" << t.restart() << "ms";
@@ -416,33 +440,22 @@ QModelIndex DataModel::find(QString fPath)
 
 void DataModel::updateImageList()
 {
-/* The image list of file paths replicates the current sort order and filtration
-of SortFilter (sf).  It is used to keep the image cache in sync with the
-current state of SortFilter.  This function is called when the user
-changes the sort or filter.
+/* The image list of file paths replicates the current sort order and
+filtration of SortFilter (sf). It is used to keep the image cache in sync with
+the current state of SortFilter. This function is called when the user changes
+the sort or filter.
 */
     {
     #ifdef ISDEBUG
     qDebug() << G::t.restart() << "\t" << "ThumbView::updateImageList";
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "ThumbView::updateImageList";
     imageFilePathList.clear();
     for(int row = 0; row < sf->rowCount(); row++) {
         QString fPath = sf->index(row, 0).data(G::PathRole).toString();
         imageFilePathList.append(fPath);
-//        qDebug() << G::t.restart() << "\t" << "&&&&&&&&&&&&&&&&&& updateImageList:" << fPath;
     }
 }
-
-//void DataModel::combineRawJpg()
-//{
-///*
-//    - index
-//    - name
-//    - filter
-//*/
-//}
 
 void DataModel::refine()
 {
@@ -509,13 +522,14 @@ map to columns in the data model ie Picked, Rating, Label ...
 //    qDebug() << G::t.restart() << "\t" << "SortFilter::filterAcceptsRow";
 //    #endif
     }
-    if (!G::isNewFolderLoaded) return true;
 
     // Check Raw + Jpg
     if (combineRawJpg) {
         QModelIndex rawIdx = sourceModel()->index(sourceRow, 0, sourceParent);
         if (rawIdx.data(G::DupHideRawRole).toBool()) return false;
     }
+
+    if (!G::isNewFolderLoaded) return true;
 
     static int counter = 0;
     counter++;
@@ -591,7 +605,7 @@ filtration then the image cache needs to be reloaded to match the new proxy (sf)
     qDebug() << G::t.restart() << "\t" << "SortFilter::filterChanged";
     #endif
     }
-    this->invalidateFilter();
+    invalidateFilter();
 //    qDebug() << G::t.restart() << "\t" << "filterChanged" << x << "column" << col << "isFinished" << G::isNewFolderLoaded;
     if (G::isNewFolderLoaded) emit reloadImageCache();
 }

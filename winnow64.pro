@@ -8,21 +8,28 @@ QT += widgets
 QT += xmlpatterns
 
 HEADERS += \
+    Cache/imagecache.h \
+    Cache/mdcache.h \
+    Dialogs/appdlg.h \
     Dialogs/prefdlg.h \
+    Dialogs/renamedlg.h \
+    Dialogs/testaligndlg.h \
     Dialogs/workspacedlg.h \
-    Utilities/popup.h \
     Dialogs/tokendlg.h \
     Dialogs/zoomdlg.h \
+    Image/imagealign.h \
+    Image/pixmap.h \
+    Image/thumb.h \
+    Datamodel/datamodel.h \
+    Datamodel/filters.h \
+    File/bookmarks.h \
+    File/fstree.h \
 #    MacOS/macscale.h \
 #    MacOS/macScale_p.h \
-    Dialogs/appdlg.h \
-    Dialogs/renamedlg.h \
+    Main/global.h \
+    Main/mainwindow.h \
     Metadata/metadata.h \
     Metadata/xmp.h \
-    Utilities/circlelabel.h \
-    Utilities/dropshadowlabel.h \
-    Dialogs/testaligndlg.h \
-    Utilities/progressbar.h \
     Views/compareImages.h \
     Views/compareview.h \
     Views/imageview.h \
@@ -30,34 +37,37 @@ HEADERS += \
     Views/tableview.h \
     Views/thumbview.h \
     Views/thumbviewdelegate.h \
-    Image/pixmap.h \
-    Image/thumb.h \
-    Image/imagealign.h \
-    Datamodel/datamodel.h \
-    Datamodel/filters.h \
-    File/bookmarks.h \
-    File/fstree.h \
-    Cache/imagecache.h \
-    Cache/mdcache.h \
     Views/infostring.h \
-    Main/global.h \
-    Main/mainwindow.h \
-    Dialogs/ingestdlg.h
+    Dialogs/ingestdlg.h \
+    Utilities/circlelabel.h \
+    Utilities/dropshadowlabel.h \
+    Utilities/popup.h \
+    Utilities/progressbar.h \
+    Utilities/utilities.h
 
 SOURCES += \
-    Utilities/popup.cpp \
+    Cache/imagecache.cpp \
+    Cache/mdcache.cpp \
+    Datamodel/datamodel.cpp \
+    Datamodel/filters.cpp \
+    Dialogs/appdlg.cpp \
+    Dialogs/ingestdlg.cpp \
     Dialogs/prefdlg.cpp \
+    Dialogs/renamedlg.cpp \
+    Dialogs/testaligndlg.cpp \
     Dialogs/tokendlg.cpp \
     Dialogs/workspacedlg.cpp \
     Dialogs/zoomdlg.cpp \
-    Dialogs/appdlg.cpp \
-    Dialogs/renamedlg.cpp \
+    File/bookmarks.cpp \
+    File/fstree.cpp \
+    Image/imagealign.cpp \
+    Image/pixmap.cpp \
+    Image/thumb.cpp \
+    Main/global.cpp \
+    Main/main.cpp \
+    Main/mainwindow.cpp \
     Metadata/metadata.cpp \
     Metadata/xmp.cpp \
-    Utilities/dropshadowlabel.cpp \
-    Utilities/circlelabel.cpp \
-    Dialogs/testaligndlg.cpp \
-    Utilities/progressbar.cpp \
     Views/compareImages.cpp \
     Views/compareview.cpp \
     Views/imageview.cpp \
@@ -65,20 +75,12 @@ SOURCES += \
     Views/tableview.cpp \
     Views/thumbview.cpp \
     Views/thumbviewdelegate.cpp \
-    Image/pixmap.cpp \
-    Image/thumb.cpp \
-    Image/imagealign.cpp \
-    Datamodel/datamodel.cpp \
-    Datamodel/filters.cpp \
-    File/bookmarks.cpp \
-    File/fstree.cpp \
-    Cache/imagecache.cpp \
-    Cache/mdcache.cpp \
     Views/infostring.cpp \
-    Main/main.cpp \
-    Main/global.cpp \
-    Main/mainwindow.cpp \
-    Dialogs/ingestdlg.cpp
+    Utilities/circlelabel.cpp \
+    Utilities/dropshadowlabel.cpp \
+    Utilities/popup.cpp \
+    Utilities/progressbar.cpp \
+    Utilities/utilities.cpp
 
 # OBJECTIVE_SOURCES += MacOS/macscale.mm
 
