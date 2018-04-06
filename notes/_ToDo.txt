@@ -1,4 +1,5 @@
 BUGS
+- Drag and drop nt working for whole selections
 - Jpg orientationOffset = 0 when metadata orientation changed
 - Update image count in Fav (refresh) when changes
 - When ingesting confirm all files copied correctly
@@ -21,7 +22,6 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
 - Add completer for title in metadata
-- Show image count in filters by filter
 - Eject card
 - add metadata performance options to preferences
 - Get Sony image count, camera SN
@@ -34,6 +34,7 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: Show image count in filters by filter
 - Done: Jpg corrupted during ingest if metadata orientation changed
 - Done: Combine raw+jpg option
 - Done: Fix pick and rating badge for compareImages::load lines 82+

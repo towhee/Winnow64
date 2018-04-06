@@ -300,4 +300,7 @@ that have been missed.
 
     // update status in statusbar
     emit updateIsRunning(false);
+
+    // update the item counts in Filters
+    emit updateFilterCount();
 }

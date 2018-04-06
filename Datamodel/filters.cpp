@@ -18,12 +18,16 @@ executed in SortFilter subclass of QSortFilterProxy (sf) in datamodel.
     }
     setRootIsDecorated(true);
     setSelectionMode(QAbstractItemView::NoSelection);
-    setColumnCount(2);
+    setColumnCount(3);
     setHeaderHidden(true);
-    setColumnWidth(0, 200);
+    setColumnWidth(0, 250);
     setColumnWidth(1, 50);
+    setColumnWidth(2, 50);
+    setHeaderLabels({"Filter", "Value", "Count"});
     hideColumn(1);
-//    setIndentation(10);
+
+
+    setIndentation(10);
 
     categoryBackground.setStart(0, 0);
     categoryBackground.setFinalStop(0, 18);
@@ -36,6 +40,19 @@ executed in SortFilter subclass of QSortFilterProxy (sf) in datamodel.
     createDynamicFilters();
 
     setStyleSheet("QTreeView::item { height: 20px;}");
+
+    filterCategoryToDmColumn["Refine"] = G::RefineColumn;
+    filterCategoryToDmColumn["Picks"] = G::PickColumn;
+    filterCategoryToDmColumn["Ratings"] = G::RatingColumn;
+    filterCategoryToDmColumn["Color class"] = G::LabelColumn;
+    filterCategoryToDmColumn["File type"] = G::TypeColumn;
+    filterCategoryToDmColumn["Years"] = G::YearColumn;
+    filterCategoryToDmColumn["Days"] = G::DayColumn;
+    filterCategoryToDmColumn["Camera model"] = G::CameraModelColumn;
+    filterCategoryToDmColumn["Lenses"] = G::LensColumn;
+    filterCategoryToDmColumn["FocalLengths"] = G::FocalLengthColumn;
+    filterCategoryToDmColumn["Title"] = G::TitleColumn;
+    filterCategoryToDmColumn["Creators"] = G::CreatorColumn;
 }
 
 void Filters::createPredefinedFilters()
@@ -51,7 +68,7 @@ void Filters::createPredefinedFilters()
     refine->setText(0, "Refine");
     refine->setFont(0, categoryFont);
     refine->setBackground(0, categoryBackground);
-    refine->setBackground(1, categoryBackground);
+    refine->setBackground(2, categoryBackground);
     refine->setData(0, G::ColumnRole, G::RefineColumn);
     refineFalse = new QTreeWidgetItem(refine);
     refineFalse->setText(0, "");
@@ -66,7 +83,7 @@ void Filters::createPredefinedFilters()
     picks->setText(0, "Picks");
     picks->setFont(0, categoryFont);
     picks->setBackground(0, categoryBackground);
-    picks->setBackground(1, categoryBackground);
+    picks->setBackground(2, categoryBackground);
     picks->setData(0, G::ColumnRole, G::PickColumn);
     picksFalse = new QTreeWidgetItem(picks);
     picksFalse->setText(0, "");
@@ -81,7 +98,7 @@ void Filters::createPredefinedFilters()
     ratings->setText(0, "Ratings");
     ratings->setFont(0, categoryFont);
     ratings->setBackground(0, categoryBackground);
-    ratings->setBackground(1, categoryBackground);
+    ratings->setBackground(2, categoryBackground);
     ratings->setData(0, G::ColumnRole, G::RatingColumn);
 
     ratingsNone = new QTreeWidgetItem(ratings);
@@ -113,7 +130,7 @@ void Filters::createPredefinedFilters()
     labels->setText(0, "Color class");
     labels->setFont(0, categoryFont);
     labels->setBackground(0, categoryBackground);
-    labels->setBackground(1, categoryBackground);
+    labels->setBackground(2, categoryBackground);
     labels->setData(0, G::ColumnRole, G::LabelColumn);
 
     labelsNone = new QTreeWidgetItem(labels);
@@ -158,56 +175,56 @@ by addCategoryFromData.
     types->setText(0, "File type");
     types->setFont(0, categoryFont);
     types->setBackground(0, categoryBackground);
-    types->setBackground(1, categoryBackground);
+    types->setBackground(2, categoryBackground);
     types->setData(0, G::ColumnRole, G::TypeColumn);
 
     years = new QTreeWidgetItem(this);
     years->setText(0, "Years");
     years->setFont(0, categoryFont);
     years->setBackground(0, categoryBackground);
-    years->setBackground(1, categoryBackground);
+    years->setBackground(2, categoryBackground);
     years->setData(0, G::ColumnRole, G::YearColumn);
 
     days = new QTreeWidgetItem(this);
     days->setText(0, "Days");
     days->setFont(0, categoryFont);
     days->setBackground(0, categoryBackground);
-    days->setBackground(1, categoryBackground);
+    days->setBackground(2, categoryBackground);
     days->setData(0, G::ColumnRole, G::DayColumn);
 
     models = new QTreeWidgetItem(this);
     models->setText(0, "Camera model");
     models->setFont(0, categoryFont);
     models->setBackground(0, categoryBackground);
-    models->setBackground(1, categoryBackground);
+    models->setBackground(2, categoryBackground);
     models->setData(0, G::ColumnRole, G::CameraModelColumn);
 
     lenses = new QTreeWidgetItem(this);
     lenses->setText(0, "Lenses");
     lenses->setFont(0, categoryFont);
     lenses->setBackground(0, categoryBackground);
-    lenses->setBackground(1, categoryBackground);
+    lenses->setBackground(2, categoryBackground);
     lenses->setData(0, G::ColumnRole, G::LensColumn);
 
     focalLengths = new QTreeWidgetItem(this);
     focalLengths->setText(0, "FocalLengths");
     focalLengths->setFont(0, categoryFont);
     focalLengths->setBackground(0, categoryBackground);
-    focalLengths->setBackground(1, categoryBackground);
+    focalLengths->setBackground(2, categoryBackground);
     focalLengths->setData(0, G::ColumnRole, G::FocalLengthColumn);
 
     titles = new QTreeWidgetItem(this);
     titles->setText(0, "Title");
     titles->setFont(0, categoryFont);
     titles->setBackground(0, categoryBackground);
-    titles->setBackground(1, categoryBackground);
+    titles->setBackground(2, categoryBackground);
     titles->setData(0, G::ColumnRole, G::TitleColumn);
 
     creators = new QTreeWidgetItem(this);
     creators->setText(0, "Creators");
     creators->setFont(0, categoryFont);
     creators->setBackground(0, categoryBackground);
-    creators->setBackground(1, categoryBackground);
+    creators->setBackground(2, categoryBackground);
     creators->setData(0, G::ColumnRole, G::CreatorColumn);
 }
 
@@ -269,9 +286,15 @@ void Filters::uncheckAllFilters()
     #endif
     }
     QTreeWidgetItemIterator it(this);
+    qDebug() << "Filters::uncheckAllFilters";
     while (*it) {
-        if ((*it)->parent()) {
+        if ((*it)->parent()) {            
             (*it)->setCheckState(0, Qt::Unchecked);
+            qDebug() << (*it)->parent()->text(0)
+                     << (*it)->text(0)
+                     << (*it)->text(1);
+            (*it)->setData(2, Qt::EditRole, "test");
+            (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         }
         ++it;
     }
@@ -304,9 +327,7 @@ createDynamicFilters;
     }
     static QTreeWidgetItem *item;
     QMap<QVariant, QString> uniqueItems;
-    for (auto key : itemMap.keys())
-    {
-//      qDebug() << G::t.restart() << "\t" << "itemMap" << key << "," << itemMap.value(key);
+    for (auto key : itemMap.keys()) {
       if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
     }
     for (auto key : uniqueItems.keys()) {
@@ -315,4 +336,11 @@ createDynamicFilters;
         item->setCheckState(0, Qt::Unchecked);
         item->setData(1, Qt::EditRole, key);
     }
+}
+
+void Filters::resizeEvent(QResizeEvent *event)
+{
+    setColumnWidth(2, 45);
+    setColumnWidth(0, width() - G::scrollBarThickness - 45);
+    QTreeWidget::resizeEvent(event);
 }

@@ -1,14 +1,22 @@
-    FilePathRole = Qt::UserRole + 1,
-    ThumbRectRole,
+// Filters check rating 2 worked
+0 	 SortFilter::filterChanged
+0 	 MW::loadFilteredImageCache
+0 	 ThumbView::selectThumb(index) QModelIndex(0,0,0x24c88472130,SortFilter(0x24c88472280))
+0 	 ThumbView::updateImageList
+0 	 ImageCache::initImageCache
+0 	 Metadata::getWidth "D:/Pictures/Coaster/2006-04-27_0127.jpg"
+0 	 Metadata::getHeight "D:/Pictures/Coaster/2006-04-27_0127.jpg"
+0 	 ImageView::updateImageCache
+0 	 ImageCache::cacheStatus
+0 	 ImageCache::pxEnd
+0 	 MW::showCacheStatus
+0 	 ImageCache::getImCacheSize
+0 	 ImageCache::setPriorities
+0 	 ImageCache::setTargetRange
+0 	 ImageCache::run
+0 	 ImageCache::nextToCache
+5 	 MW::updateImageThreadRunStatus
+1 	 ThumbView::resizeEvent
 
-    FileTypeRole,
-    FileSizeRole,
-    CreatedRole,
-    ModifiedRole,
-    LabelRole,
-    RatingRole,
-X       CachedRole,
-    ColumnRole
-
-
-    ToolTipRole
+// menu undo rating 2
+32442 	 MW::quickFilter
