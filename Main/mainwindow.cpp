@@ -2348,8 +2348,8 @@ void MW::createCaching()
     connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
             SLOT(delayProcessLoadMetadataCacheScrollEvent()));
 
-//    connect(metadataCacheThread, SIGNAL(loadImageMetadata(QFileInfo)),
-//            metadata, SLOT(loadFromThread(QFileInfo)));
+    connect(metadataCacheThread, SIGNAL(updateFilterCount()),
+            dm, SLOT(filterItemCount()));
 
     connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
             this, SLOT(updateAllMetadataLoaded(bool)));
@@ -2641,8 +2641,11 @@ void MW::createFilterView()
     filters = new Filters(this);
     filters->setMaximumWidth(folderMaxWidth);
 
-    connect(filters, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
+    connect(filters, SIGNAL(itemClicked(QTreeWidgetItem*,int)),
             this, SLOT(updateFilterStatus()));
+
+//    connect(filters, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
+//            this, SLOT(updateFilterStatus()));
 }
 
 void MW::createBookmarks()
@@ -3062,6 +3065,12 @@ void MW::quickFilter()
     if (filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Checked);
     if (filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Checked);
     if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Checked);
+
+    // refresh the filter
+    dm->sf->filterChanged();
+
+    // update filter counts
+    dm->filterItemCount();
 }
 
 void MW::invertFilters()
@@ -3101,6 +3110,9 @@ void MW::refine()
 {
     uncheckAllFilters();
     dm->refine();
+
+    // update filter counts
+    dm->filterItemCount();
 }
 
 void MW::sortThumbnails()
@@ -6040,6 +6052,9 @@ void MW::togglePick()
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
     updateStatus(true, "");
+
+    // update filter counts
+    dm->filterItemCount();
 }
 
 void MW::updatePick()
@@ -6121,7 +6136,7 @@ void MW::setCombineRawJpg()
     // flag used in MW, dm and sf
     combineRawJpg = combineRawJpgAction->isChecked();
     // update the proxy filter
-    dm->sf->filterChanged(nullptr, 0);
+    dm->sf->filterChanged();
 }
 
 void MW::setCachedStatus(QString fPath, bool isCached)
@@ -6203,6 +6218,12 @@ the rating for all the selected thumbs.
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
     updateRating();
+
+    // refresh the filter
+    dm->sf->filterChanged();
+
+    // update filter counts
+    dm->filterItemCount();
 }
 
 void MW::updateRating()
@@ -6286,6 +6307,12 @@ set the color class for all the selected thumbs.
     gridView->refreshThumbs();
     tableView->resizeColumnToContents(G::LabelColumn);
     updateColorClass();
+
+    // refresh the filter
+    dm->sf->filterChanged();
+
+    // update filter counts
+    dm->filterItemCount();
 }
 
 void MW::updateColorClass()
@@ -6882,6 +6909,7 @@ void MW::helpWelcome()
 
 void MW::test()
 {
+    dm->filterItemCount();
 }
 
 // End MW

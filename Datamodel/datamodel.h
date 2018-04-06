@@ -15,7 +15,8 @@ public:
     SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg);
 
 public slots:
-    void filterChanged(QTreeWidgetItem* x, int col);
+    void filterChanged();
+//    void filterChanged(QTreeWidgetItem* x, int col);
 
 private slots:
 
@@ -53,6 +54,7 @@ signals:
 
 public slots:
     void refine();
+    void filterItemCount();
 
 private:
     QWidget *mw;

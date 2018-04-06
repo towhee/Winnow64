@@ -38,6 +38,7 @@ signals:
     void showCacheStatus(QImage imCacheStatus);
     void updateStatus(bool, QString);
     void updateAllMetadataLoaded(bool);
+    void updateFilterCount();
 
 private:
     QMutex mutex;

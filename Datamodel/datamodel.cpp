@@ -80,6 +80,8 @@ Code examples for model:
     QStandardItem *item = new QStandardItem;
     item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
 
+    // to force the model to refresh
+    dm->sf->filterChanged();        // executes invalidateFilter() in proxy
 */
     {
     #ifdef ISDEBUG
@@ -126,8 +128,13 @@ Code examples for model:
     emptyImg.load(":/images/no_image.png");
 
     // changing filters triggers a refiltering
-    connect(filters, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
-            sf, SLOT(filterChanged(QTreeWidgetItem*,int)));
+    connect(filters, SIGNAL(itemClicked(QTreeWidgetItem*,int)),
+            sf, SLOT(filterChanged()));
+
+    // changing filters triggers a recount
+    connect(filters, SIGNAL(itemClicked(QTreeWidgetItem*,int)),
+            this, SLOT(filterItemCount()));
+
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -390,6 +397,7 @@ which is created in MW, and in InfoView.
         setData(index(row, G::YearColumn), year);
         setData(index(row, G::DayColumn), day);
         setData(index(row, G::MegaPixelsColumn), mp);
+        setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::DimensionsColumn), dim);
         setData(index(row, G::RotationColumn), 0);
         setData(index(row, G::RotationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -498,6 +506,31 @@ for all rows.
     filters->refineTrue->setCheckState(0, Qt::Checked);
 }
 
+void DataModel::filterItemCount()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << G::t.restart() << "\t" << "DataModel::filterItemCount";
+    #endif
+    }
+    QTreeWidgetItemIterator it(filters);
+    while (*it) {
+        if ((*it)->parent()) {
+            int col = filters->filterCategoryToDmColumn[(*it)->parent()->text(0)];
+            QString searchValue = (*it)->text(1);
+            int tot = 0;
+            for (int row = 0; row < sf->rowCount(); ++row) {
+                QString value = sf->index(row, col).data().toString();
+                if (value == searchValue) tot++;
+            }
+            (*it)->setData(2, Qt::EditRole, QString::number(tot));
+            (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        }
+        ++it;
+    }
+
+}
+
 // -----------------------------------------------------------------------------
 // SortFilter Class used to filter by row
 // -----------------------------------------------------------------------------
@@ -589,7 +622,8 @@ map to columns in the data model ie Picked, Rating, Label ...
     return isMatch;
 }
 
-void SortFilter::filterChanged(QTreeWidgetItem* /* not used */, int /* not used */)
+//void SortFilter::filterChanged(QTreeWidgetItem* /* not used */, int /* not used */)
+void SortFilter::filterChanged()
 {
 /*
 This slot is called when data changes in the filters widget.  The proxy (this)
