@@ -2693,11 +2693,11 @@ void MW::createStatusBar()
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
 
     cacheLabel = new QLabel();
-    QString cacheStatusToolTip = "Image cache status for current folder:\n";
+    QString cacheStatusToolTip = "Image cache status for current folder:\n\n";
     cacheStatusToolTip += "  • LightGray:\tbackground for all images in folder\n";
-    cacheStatusToolTip += "  • DarkGray: \tto be cached\n";
-    cacheStatusToolTip += "  • Green:    \tcached\n";
-    cacheStatusToolTip += "  • Red:      \tcurrent image";
+    cacheStatusToolTip += "  • DarkGray:\tto be cached\n";
+    cacheStatusToolTip += "  • Green:\t\tcached\n";
+    cacheStatusToolTip += "  • LightGreen: \tcurrent image";
     cacheLabel->setToolTip(cacheStatusToolTip);
     cacheLabel->setToolTipDuration(100000);
     statusBar()->addPermanentWidget(cacheLabel);
@@ -2708,7 +2708,7 @@ void MW::createStatusBar()
 
     int runLabelWidth = 13;
     metadataThreadRunningLabel = new QLabel;
-    QString mtrl = "Metadata cache thread running status";
+    QString mtrl = "Metadata caching in progress";
     metadataThreadRunningLabel->setToolTip(mtrl);
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateMetadataThreadRunStatus(false);
@@ -2716,7 +2716,7 @@ void MW::createStatusBar()
 
     imageThreadRunningLabel = new QLabel;
     statusBar()->addPermanentWidget(imageThreadRunningLabel);
-    QString itrl = "Image cache thread running status";
+    QString itrl = "Image caching in progress";
     imageThreadRunningLabel->setToolTip(itrl);
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateImageThreadRunStatus(false);
@@ -6033,7 +6033,7 @@ void MW::togglePick()
     foreach (idx, idxList) {
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
-        pickStatus = pickStatus == "true" ? "false" : "true";
+        pickStatus = (pickStatus == "true" ? "false" : "true");
         dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
     }
 
@@ -6070,10 +6070,9 @@ of the "thumbs up" icon that highlights if the image has been picked.
     }
     int row = thumbView->currentIndex().row();
     QModelIndex idx = dm->index(row, G::PickColumn);
-    bool isPick = qvariant_cast<bool>(idx.data(Qt::EditRole));
+    bool isPick = (idx.data(Qt::EditRole).toString() == "true");
     if (asLoupeAction->isChecked())
-        (isPick) ? imageView->pickLabel->setVisible(true)
-                 : imageView->pickLabel->setVisible(false);
+        imageView->pickLabel->setVisible(isPick);
     if (asCompareAction->isChecked()) compareImages->pick(isPick, idx);
 }
 
@@ -6135,6 +6134,22 @@ void MW::setCombineRawJpg()
     }
     // flag used in MW, dm and sf
     combineRawJpg = combineRawJpgAction->isChecked();
+
+    // update the datamodel type column
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        QModelIndex idx = dm->index(row, 0);
+        if (idx.data(G::DupIsJpg).toBool()) {
+            QString rawType = idx.data(G::DupRawTypeRole).toString();
+            QModelIndex typeIdx = dm->index(row, G::TypeColumn);
+            if (combineRawJpg) dm->setData(typeIdx, "JPG+" + rawType);
+            else dm->setData(typeIdx, "JPG");
+        }
+    }
+
+    // resize TableView columns to accomodate new types
+    tableView->resizeColumnToContents(G::TypeColumn);  // does this work when filter columns?
+//    tableView->resizeColumnsToContents();
+
     // update the proxy filter
     dm->sf->filterChanged();
 }
@@ -6207,9 +6222,19 @@ the rating for all the selected thumbs.
     else imageView->classificationLabel->setVisible(true);
 
     // set the rating
-    for (int i = 0; i < selection.count(); ++i) {        
-        QModelIndex idx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
-        dm->sf->setData(idx, rating, Qt::EditRole);
+    for (int i = 0; i < selection.count(); ++i) {
+        QModelIndex ratingIdx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
+        dm->sf->setData(ratingIdx, rating, Qt::EditRole);
+        // check if combined raw+jpg and also set the rating for the hidden raw file
+        if (combineRawJpg) {
+            QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
+            // is this part of a raw+jpg pair
+            if(idx.data(G::DupIsJpg).toBool()) {
+                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
+                ratingIdx = dm->index(rawIdx.row(), G::RatingColumn);
+                dm->setData(ratingIdx, rating, Qt::EditRole);
+            }
+        }
     }
 
     // update metadata
@@ -6297,9 +6322,21 @@ set the color class for all the selected thumbs.
 
     // update the data model
     for (int i = 0; i < selection.count(); ++i) {
-        QModelIndex idx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
-        dm->sf->setData(idx, labelColor, Qt::EditRole);
+        QModelIndex labelIdx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
+        dm->sf->setData(labelIdx, labelColor, Qt::EditRole);
+        // check if combined raw+jpg and also set the rating for the hidden raw file
+        if (combineRawJpg) {
+            QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
+            // is this part of a raw+jpg pair
+            if(idx.data(G::DupIsJpg).toBool()) {
+                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
+                labelIdx = dm->index(rawIdx.row(), G::LabelColumn);
+                dm->setData(labelIdx, labelColor, Qt::EditRole);
+            }
+        }
     }
+
+
     // update metadata
     metadata->setLabel(thumbView->getCurrentFilename(), labelColor);
 
