@@ -63,15 +63,10 @@ void TableView::scrollToCurrent()
     }
     QModelIndex idx = dm->sf->index(currentIndex().row(), 1);
     scrollTo(idx, ScrollHint::PositionAtCenter);
-//    qDebug() << G::t.restart() << "\t" << "TableView::scrollToCurrent" << idx;
 }
 
 bool TableView::eventFilter(QObject *obj, QEvent *event)
 {
-/*
-
-*/
-//    qDebug() << G::t.restart() << "\t" << "TableView events" << obj << event;
     if((event->type() == QEvent::Paint || event->type() == QEvent::Timer)
             && readyToScroll
             && obj->objectName() == "QScrollBar")
@@ -126,8 +121,6 @@ QSettings has been loaded.
         ok->setData(ok->index(i - 1, 0), columnName);
         ok->setData(ok->index(i - 1, 1), true);
     }
-
-//    ok->setData(ok->index(2, 1), false);    // test
 
     connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
             this, SLOT(showOrHide()));

@@ -276,6 +276,7 @@ bool DataModel::addFiles()
         // build list for filters->addCategoryFromData
         typesMap[s] = s;
         setData(index(row, G::TypeColumn), s);
+        setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
         setData(index(row, G::SizeColumn), fileInfo.size());
         setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::ModifiedColumn), fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss"));
@@ -310,7 +311,10 @@ bool DataModel::addFiles()
                     setData(index(row, 0), true, G::DupIsJpg);
                     // build combined suffix to show in type column
                     QString prevType = fileInfoList.at(fileIndex - 1).suffix().toUpper();
-                    setData(index(row, G::TypeColumn), s + "+" + prevType);
+                    setData(index(row, 0), prevType, G::DupRawTypeRole);
+                    if (combineRawJpg) {
+                        setData(index(row, G::TypeColumn), s + "+" + prevType);
+                    }
                 }
             }
         }

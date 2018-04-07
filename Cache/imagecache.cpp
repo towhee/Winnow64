@@ -193,8 +193,12 @@ void ImageCache::cacheStatus()
 
     // color for the current image within the total images
     QLinearGradient cachePosColor(0, htOffset, 0, ht+htOffset);
-    cachePosColor.setColorAt(0, QColor(125,0,0));
-    cachePosColor.setColorAt(1, QColor(75,0,0));
+    // red
+//    cachePosColor.setColorAt(0, QColor(125,0,0));
+//    cachePosColor.setColorAt(1, QColor(75,0,0));
+    // light green
+    cachePosColor.setColorAt(0, QColor(158,200,158));
+    cachePosColor.setColorAt(1, QColor(58,100,58));
 
     // show the rectangle for entire bar, representing all the files available
     pnt.fillRect(QRect(0, htOffset, cache.pxTotWidth, ht), cacheAllColor);

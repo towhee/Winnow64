@@ -1,8 +1,11 @@
 BUGS
+- Set zoom % blank if not loupe mode in matadata panel
+- Days are repeated in Filters (Lillian images for example)
+- Can edit metadata headers in metadata panel
 - Drag and drop nt working for whole selections
 - Jpg orientationOffset = 0 when metadata orientation changed
 - Update image count in Fav (refresh) when changes
-- When ingesting confirm all files copied correctly
+- When ingesting confirm all files copied correctly (option)
 - Confirm use subfolders is working
 - Not finding thumbnail in D850 NEFs
 - Sometimes thumbs do not paint until select
@@ -16,7 +19,6 @@ BUGS
 - Gets stuck in F mode where cannot resize
 - Pick thumb not always showing one main image in loupe mode
 PERFORMANCE
-- Can be slow when usb card images cached
 CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
@@ -34,6 +36,9 @@ ENHANCEMENTS
 - Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: If raw+jpg ratings and labels not included when ingest
+- Done: Can be slow when usb card images cached
+- Done: Pick badge stays visible when image not picked
 - Done: Show image count in filters by filter
 - Done: Jpg corrupted during ingest if metadata orientation changed
 - Done: Combine raw+jpg option

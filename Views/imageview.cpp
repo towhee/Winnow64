@@ -197,14 +197,7 @@ to prevent jarring changes in perceived scale by the user.
 //        qDebug() << G::t.restart() << "\t" << "set pixmap elapsed time =" << fPath << t.nsecsElapsed();
     }
     else {
-        // load the image from the image file, may need to wait a bit if another thread
-        // reading file
-        int attempts;
-//        for (attempts = 0; attempts < 100000; attempts++) {
-            isLoaded = pixmap->load(fPath, displayPixmap);
-//            if (isLoaded) break;
-//        }
-//        qDebug() << G::t.restart() << "\t" << ">>>Attempts to load:" << attempts << "isLoaded:" << isLoaded;
+        isLoaded = pixmap->load(fPath, displayPixmap);
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
             isPreview = false;
@@ -233,8 +226,6 @@ to prevent jarring changes in perceived scale by the user.
             scale();
         }
     }
-//    qDebug() << G::t.restart() << "\t" << "elapsed:" << t.nsecsElapsed();
-//    qDebug() << G::t.restart() << "\t" << "Device Pixel Ratio" << devicePixelRatio() << devicePixelRatioF() << devicePixelRatioFScale();
     return isLoaded;
 }
 
