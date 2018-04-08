@@ -57,7 +57,7 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
 {
     {
     #ifdef ISDEBUG
-//    qDebug() << G::t.restart() << "\t" << "ThumbViewDelegate::setThumbDimensions";
+//  G::track(__FUNCTION__);
     #endif
     }
     delegateShowThumbLabels = showThumbLabels;
@@ -124,7 +124,7 @@ QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
 {
     {
     #ifdef ISDEBUG
-//    qDebug() << G::t.restart() << "\t" << "ThumbViewDelegate::sizeHint" << index.data(Qt::DisplayRole);
+//  G::track(__FUNCTION__);
     #endif
     }
 //    option.HasCheckIndicator;           // suppress compiler warning
@@ -151,16 +151,13 @@ textRect         = a rectangle below itemRect
 */
     {
     #ifdef ISDEBUG
-//    qDebug() << G::t.restart() << "\t" << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
+//  G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "ThumbViewDelegate::paint" << index.data(Qt::DisplayRole);
     painter->save();
 
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     QSize iconsize = icon.actualSize(thumbSize);
-
-//    int currentRow = currentIndex.row();
 
     // get data from model
     int row = index.row();
@@ -170,10 +167,6 @@ textRect         = a rectangle below itemRect
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     bool isPicked = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
-
-//    qDebug() << G::t.restart() << "\t" << "ThumbViewDelegate::paint" << fName
-//             << "current index" << currentIndex
-//             << "index" << index;
 
     // define some offsets
     QPoint itemBorderOffset(itemBorderThickness, itemBorderThickness);
@@ -196,7 +189,8 @@ textRect         = a rectangle below itemRect
                    iconsize.width(), iconsize.height());
 
     // label/rating rect located top-right as containment for circle
-    int ratingDiam = 18;
+    int ratingDiam = 12;
+    int ratingTextSize = 12;
     QPoint ratingTopLeft(option.rect.right() - ratingDiam, option.rect.top());
     QPoint ratingBottomRight(option.rect.right(), option.rect.top() + ratingDiam);
     QRect ratingRect(ratingTopLeft, ratingBottomRight);
@@ -303,7 +297,7 @@ textRect         = a rectangle below itemRect
             ratingTextPen.setWidth(2);
             painter->setPen(ratingTextPen);
             QFont font = painter->font();
-            font.setPixelSize(16);
+            font.setPixelSize(ratingTextSize);
             font.setBold(true);
             painter->setFont(font);
             painter->drawText(ratingTextRect, Qt::AlignCenter, rating);

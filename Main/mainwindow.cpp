@@ -4,7 +4,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::MW";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -158,7 +158,7 @@ void MW::setupPlatform()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setupPlatform";
+    G::track(__FUNCTION__);
     #endif
     }
     #ifdef Q_OS_LINIX
@@ -178,7 +178,7 @@ void MW::closeEvent(QCloseEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::closeEvent";
+    G::track(__FUNCTION__);
     #endif
     }
     imageCacheThread->exit();
@@ -451,7 +451,7 @@ void MW::handleStartupArgs()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::handleStartupArgs";
+    G::track(__FUNCTION__);
     #endif
     }
 }
@@ -494,8 +494,7 @@ void MW::folderSelectionChange()
 {
     {
     #ifdef ISDEBUG
-        qDebug() << G::t.restart() << "\t" << "\n\nMW::folderSelectionChange"
-                    "\n*************************************************************************";
+    G::track(__FUNCTION__, getSelectedPath());
     #endif
     }
     // Check if same folder
@@ -563,7 +562,7 @@ void MW::folderSelectionChange()
         dirPath = getSelectedPath();
     }
 
-    // ignore if present folder is rechosen
+    // ignore if present folder is rechosen unless subfolder recursion
     if (dirPath == currentViewDir) {
         if (!subFoldersAction->isChecked()) {
             popUp->close();
@@ -592,13 +591,13 @@ void MW::folderSelectionChange()
     // show image count in Folders (fsTree) if showImageCountAction isChecked
     if (showImageCountAction->isChecked()) {
         fsTree->setShowImageCount(true);
-//        fsTree->fsModel->showImageCount = true;
-        fsTree->fsModel->fetchMore(fsTree->rootIndex());
+//        fsTree->fsModel->fetchMore(fsTree->rootIndex());
     }
 
     /* We do not want to update the imageCache while metadata is still being
-    loaded.  The imageCache update is triggered in fileSelectionChange,
-    which is also executed when the change file event is fired. */
+    loaded. The imageCache update is triggered in metadataCache, which is also
+    executed when the change file event is fired.
+    */
     metadataLoaded = false;
     /* Need to gather directory file info first (except icon/thumb) which is
     loaded by metadataCache.  If no images in new folder then cleanup and exit.
@@ -640,7 +639,7 @@ void MW::folderSelectionChange()
     thumbView->sortThumbs(1, false);
 
     // no ratings or label color classes set yet so hide classificationLabel
-    imageView->classificationLabel->setVisible(false);
+//    imageView->classificationLabel->setVisible(false);
 
     popUp->close();
     updateStatus(false, "Collecting metadata for all images in folder(s)");
@@ -687,7 +686,7 @@ so scrollTo and delegate use of the current index must check the row.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "\n**********************************MW::fileSelectionChange**********************************";
+    G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
     // if starting program, set first image to display
@@ -813,7 +812,7 @@ been cached (including the thumbs).
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::updateAllMetadataLoaded";
+    G::track(__FUNCTION__);
     #endif
     }
     allMetadataLoaded = isLoaded;
@@ -831,7 +830,7 @@ horizontal and vertical scrollbars.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::loadMetadataCacheThumbScrollEvent";
+    G::track(__FUNCTION__);
     #endif
     }
     if (allMetadataLoaded)  return;
@@ -851,7 +850,7 @@ vertical scrollbar (does not have a horizontal scrollbar).
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::loadMetadataCacheGridScrollEvent";
+    G::track(__FUNCTION__);
     #endif
     }
     if (allMetadataLoaded)  return;
@@ -868,7 +867,7 @@ the scrolling.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::delayProcessLoadMetadataCacheScrollEvent";
+    G::track(__FUNCTION__);
     #endif
     }
     if (!allMetadataLoaded && metadataCacheThread->isRunning()) {
@@ -882,7 +881,7 @@ void MW::loadMetadataCache(int startRow)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::loadMetadataCache";
+    G::track(__FUNCTION__);
     #endif
     }
     qDebug() << G::t.restart() << "\t" << "MW::loadMetadataCache    startRow =" << startRow;
@@ -896,7 +895,7 @@ void MW::updateImageCache()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::updateImageCache";
+    G::track(__FUNCTION__);
     #endif
     }
     imageCacheThread->updateImageCache(imageCacheFilePath);
@@ -911,7 +910,7 @@ been consumed or all the images are cached.
  */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::loadImageCache";
+    G::track(__FUNCTION__);
     #endif
     }
     metadataLoaded = true;
@@ -934,7 +933,7 @@ void MW::loadFilteredImageCache()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::loadFilteredImageCache";
+    G::track(__FUNCTION__);
     #endif
     }
     QModelIndex idx = thumbView->currentIndex();
@@ -955,7 +954,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::bookmarkClicked";
+    G::track(__FUNCTION__);
     #endif
     }
 //    QString fPath = item->text(0);
@@ -976,7 +975,7 @@ void MW::checkDirState(const QModelIndex &, int, int)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::checkDirState";
+    G::track(__FUNCTION__);
     #endif
     }
     if (isInitializing) return;
@@ -990,7 +989,7 @@ QString MW::getSelectedPath()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::getSelectedPath";
+    G::track(__FUNCTION__);
     #endif
     }
     if (isDragDrop)  return dragDropFolderPath;
@@ -1009,7 +1008,7 @@ void MW::createActions()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createActions";
+    G::track(__FUNCTION__);
     #endif
     }
     int n;          // used to populate action lists
@@ -1117,6 +1116,11 @@ void MW::createActions()
     refreshFoldersAction->setObjectName("refreshFolders");
     addAction(refreshFoldersAction);
     connect(refreshFoldersAction, SIGNAL(triggered()), this, SLOT(refreshFolders()));
+
+    collapseFoldersAction = new QAction(tr("Collapse all folders"), this);
+    collapseFoldersAction->setObjectName("collapseFolders");
+    addAction(collapseFoldersAction);
+    connect(collapseFoldersAction, SIGNAL(triggered()), this, SLOT(collapseAllFolders()));
 
     showImageCountAction = new QAction(tr("Show image count"), this);
     showImageCountAction->setObjectName("showImageCount");
@@ -1875,7 +1879,7 @@ void MW::createMenus()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createMenus";
+    G::track(__FUNCTION__);
     #endif
     }
     // Main Menu
@@ -2090,14 +2094,16 @@ void MW::createMenus()
     fsTreeActions = new QList<QAction *>;
 //    QList<QAction *> *fsTreeActions = new QList<QAction *>;
     fsTreeActions->append(refreshFoldersAction);
+    fsTreeActions->append(collapseFoldersAction);
+    fsTreeActions->append(separatorAction);
     fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileAction);
-    fsTreeActions->append(separatorAction);
-    fsTreeActions->append(pasteAction);
     fsTreeActions->append(separatorAction1);
+    fsTreeActions->append(pasteAction);
+    fsTreeActions->append(separatorAction2);
     fsTreeActions->append(openWithMenuAction);
     fsTreeActions->append(addBookmarkAction);
-    fsTreeActions->append(separatorAction2);
+    fsTreeActions->append(separatorAction3);
     fsTreeActions->append(folderDockLockAction);
 
     // filters context menu
@@ -2245,7 +2251,7 @@ void MW::createCentralWidget()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createCentralWidget";
+    G::track(__FUNCTION__);
     #endif
     }
     // centralWidget required by ImageView/CompareView constructors
@@ -2260,7 +2266,7 @@ void MW::setupCentralWidget()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setupCentralWidget";
+    G::track(__FUNCTION__);
     #endif
     }
     welcome = new QScrollArea;
@@ -2281,7 +2287,7 @@ void MW::createDataModel()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createDataModel";
+    G::track(__FUNCTION__);
     #endif
     }
     metadata = new Metadata;
@@ -2292,6 +2298,9 @@ void MW::createDataModel()
 
     connect(dm->sf, SIGNAL(reloadImageCache()),
             this, SLOT(loadFilteredImageCache()));
+
+    connect(dm, SIGNAL(updateClassification()),
+            this, SLOT(updateClassification()));
 
     connect(dm, SIGNAL(popup(QString,int,float)),
             this, SLOT(popup(QString,int,float)));
@@ -2305,7 +2314,7 @@ GridView and TableView, insuring that each view is in sync.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createSelectionModel";
+    G::track(__FUNCTION__);
     #endif
     }
     // set a common selection model for all views
@@ -2328,7 +2337,7 @@ void MW::createCaching()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createDataModel";
+    G::track(__FUNCTION__);
     #endif
     }
     metadataCacheThread = new MetadataCache(this, dm, metadata);
@@ -2389,7 +2398,7 @@ void MW::createThumbView()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createThumbView";
+    G::track(__FUNCTION__);
     #endif
     }
     thumbView = new ThumbView(this, dm, "Thumbnails");
@@ -2425,7 +2434,7 @@ void MW::createGridView()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createGridView";
+    G::track(__FUNCTION__);
     #endif
     }
     gridView = new ThumbView(this, dm, "Grid");
@@ -2456,7 +2465,7 @@ dependent on datamodel and thumbView.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createTableView";
+    G::track(__FUNCTION__);
     #endif
     }
     tableView = new TableView(dm);
@@ -2479,7 +2488,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createImageView";
+    G::track(__FUNCTION__);
     #endif
     }
      /* This is the info displayed on top of the image in loupe view. It is
@@ -2505,8 +2514,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
                               thumbView,
                               infoString,
                               setting->value("isImageInfoVisible").toBool(),
-                              setting->value("isRatingBadgeVisible").toBool()
-                              );
+                              setting->value("isRatingBadgeVisible").toBool());
 
     connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
 
@@ -2524,7 +2532,7 @@ void MW::createCompareView()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createCompareView";
+    G::track(__FUNCTION__);
     #endif
     }
     compareImages = new CompareImages(this, centralWidget, metadata, dm, thumbView, imageCacheThread);
@@ -2540,7 +2548,7 @@ InfoView shows basic metadata in a dock widget.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createInfoView";
+    G::track(__FUNCTION__);
     #endif
     }
     infoView = new InfoView(this, metadata);
@@ -2555,7 +2563,7 @@ void MW::createDocks()
 {
     {
     #ifdef ISDEBUG
-        qDebug() << G::t.restart() << "\t" << "MW::setupDocks";
+    G::track(__FUNCTION__);
     #endif
     }
     folderDock = new QDockWidget(tr("  Folders  "), this);
@@ -2613,7 +2621,7 @@ void MW::createFSTree()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createFSTree";
+    G::track(__FUNCTION__);
     #endif
     }
     // loadSettings has not run yet (dependencies, but QSettings has been opened
@@ -2635,7 +2643,7 @@ void MW::createFilterView()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createFilterView";
+    G::track(__FUNCTION__);
     #endif
     }
     filters = new Filters(this);
@@ -2652,7 +2660,7 @@ void MW::createBookmarks()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createBookmarks";
+    G::track(__FUNCTION__);
     #endif
     }
     bookmarks = new BookMarks(this, metadata, setting->value("showImageCount").toBool());
@@ -2673,7 +2681,7 @@ void MW::createAppStyle()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createAppStyle";
+    G::track(__FUNCTION__);
     #endif
     }
     // add error trapping for file io  rgh todo
@@ -2686,7 +2694,7 @@ void MW::createStatusBar()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::createStatusBar";
+    G::track(__FUNCTION__);
     #endif
     }
     statusBar()->setObjectName("WinnowStatusBar");
@@ -2738,10 +2746,10 @@ parameters.  Any visibility changes are executed.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setCacheParameters";
+    G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "MW::setCacheParameters   delay =" << delay;
+    G::track(__FUNCTION__);
     cacheSizeMB = size * 1000;      // Entered as GB in pref dlg
     isShowCacheStatus = show;
     cacheDelay = delay;
@@ -2773,7 +2781,7 @@ It is displayed on the status bar and in the infoView.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::getPosition()";
+    G::track(__FUNCTION__);
     #endif
     }
     QString fileCount = "";
@@ -2797,14 +2805,14 @@ QString MW::getZoom()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::getZoom()";
+    G::track(__FUNCTION__);
     #endif
     }
     qreal zoom;
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
+    if (zoom < 0 || zoom > 4) return "";
     zoom *= G::actualDevicePixelRatio;
-
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
 
@@ -2815,7 +2823,7 @@ QString MW::getPicked()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::getPicked()";
+    G::track(__FUNCTION__);
     #endif
     }
     QModelIndex idx;
@@ -2836,7 +2844,7 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::updateStatus";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -2902,7 +2910,7 @@ void MW::updateFilterStatus()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::updateFilterStatus";
+    G::track(__FUNCTION__);
     #endif
     }
     if (filters->isAnyFilter())
@@ -2915,7 +2923,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::updataMetadataThreadRunStatus";
+    G::track(__FUNCTION__);
     #endif
     }
     if (isRunning) {
@@ -2937,7 +2945,7 @@ void MW::updateImageThreadRunStatus(bool isRunning)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::updateImageThreadRunStatus";
+    G::track(__FUNCTION__);
     #endif
     }
     if (isRunning) {
@@ -2964,11 +2972,15 @@ progress.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::showCacheStatus";
+    G::track(__FUNCTION__);
     #endif
     }
     cacheLabel->setVisible(true);
     cacheLabel->setPixmap(QPixmap::fromImage(imCacheStatus));
+// following crashes app
+//#ifdef ISDEBUG
+//G::track(__FUNCTION__, "END");
+//#endif
 }
 
 void MW::popup(QString msg, int ms, float opacity)
@@ -2985,7 +2997,7 @@ void MW::reindexImageCache()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ThumbView::reindexImageCache";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "ThumbView::reindexImageCache";
@@ -3018,7 +3030,7 @@ tableView.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ThumbView::sortIndicatorChanged" << column << sortOrder;
+    G::track(__FUNCTION__);
     #endif
     }
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
@@ -3052,7 +3064,7 @@ void MW::quickFilter()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::quickFilter";
+    G::track(__FUNCTION__);
     #endif
     }
     if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Checked);
@@ -3119,7 +3131,7 @@ void MW::sortThumbnails()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::sortThumbnails";
+    G::track(__FUNCTION__);
     #endif
     }
     if(sortMenuUpdateToMatchTable) return;
@@ -3151,7 +3163,7 @@ void MW::showHiddenFiles()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::showHiddenFiles";
+    G::track(__FUNCTION__);
     #endif
     }
 //    fsTree->setModelFlags();
@@ -3161,7 +3173,7 @@ void MW::delayScroll()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::delayScroll";
+    G::track(__FUNCTION__);
     #endif
     }
     // scroll views to center on currentIndex
@@ -3175,7 +3187,7 @@ void MW::setDockFitThumbs()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setThumbsFit";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "Calling setThumbDockFeatures from MW::setThumbsFit";
@@ -3186,7 +3198,7 @@ void MW::thumbsEnlarge()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::thumbsEnlarge";
+    G::track(__FUNCTION__);
     #endif
     }
     if (G::mode == "Grid") gridView->thumbsEnlarge();
@@ -3197,7 +3209,7 @@ void MW::thumbsShrink()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::thumbsShrink";
+    G::track(__FUNCTION__);
     #endif
     }
     if (G::mode == "Grid") gridView->thumbsShrink();
@@ -3208,7 +3220,7 @@ void MW::setThumbLabels()   // move to thumbView
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::showLabels";
+    G::track(__FUNCTION__);
     #endif
     }
 //    G::showThumbLabels = showThumbLabelsAction->isChecked();
@@ -3222,7 +3234,7 @@ void MW::addRecentFolder(QString fPath)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::addRecentFolder";
+    G::track(__FUNCTION__);
     #endif
     }
     if (!recentFolders->contains(fPath)) recentFolders->prepend(fPath);
@@ -3248,7 +3260,7 @@ void MW::invokeRecentFolder(QAction *recentFolderActions)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::invokeRecentFolder";
+    G::track(__FUNCTION__);
     #endif
     }
     qDebug() << G::t.restart() << "\t" << recentFolderActions->text();
@@ -3286,7 +3298,7 @@ void MW::newWorkspace()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::newWorkspace";
+    G::track(__FUNCTION__);
     #endif
     }
     int n = workspaces->count();
@@ -3324,12 +3336,12 @@ with "_1" appended also might exist.
  */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::fixDupWorkspaceName";
+    G::track(__FUNCTION__);
     #endif
     }
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::fixDupWorkspaceName";
+    G::track(__FUNCTION__);
     #endif
     }
     for (int i=0; i<workspaces->count(); i++) {
@@ -3345,7 +3357,7 @@ void MW::invokeWorkspaceFromAction(QAction *workAction)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::invokeWorkspaceFromAction";
+    G::track(__FUNCTION__);
     #endif
     }
     for (int i=0; i<workspaces->count(); i++) {
@@ -3366,7 +3378,7 @@ workspace with a matching name to the action is used.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::invokeWorkspace";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << "\n======================================= Invoke Workspace ============================================";
@@ -3422,7 +3434,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::snapshotWorkspace";
+    G::track(__FUNCTION__);
     #endif
     }
     wsd.geometry = saveGeometry();
@@ -3473,12 +3485,12 @@ Delete, rename and reassign workspaces.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::manageWorkspaces";
+    G::track(__FUNCTION__);
     #endif
     }
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::manageWorkspace";
+    G::track(__FUNCTION__);
     #endif
     }
     // rgh remove after debugging
@@ -3506,7 +3518,7 @@ void MW::deleteWorkspace(int n)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::deleteWorkspace";
+    G::track(__FUNCTION__);
     #endif
     }
     if (workspaces->count() < 1) return;
@@ -3523,7 +3535,7 @@ void MW::syncWorkspaceMenu()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::syncWorkspaceMenu";
+    G::track(__FUNCTION__);
     #endif
     }
     int count = workspaces->count();
@@ -3545,7 +3557,7 @@ void MW::reassignWorkspace(int n)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::reassignWorkspace";
+    G::track(__FUNCTION__);
     #endif
     }
     QString name = workspaces->at(n).name;
@@ -3562,7 +3574,7 @@ app is "stranded" on secondary monitors that are not attached.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::defaultWorkspace";
+    G::track(__FUNCTION__);
     #endif
     }
     QRect desktop = qApp->desktop()->availableGeometry();
@@ -3649,7 +3661,7 @@ void MW::renameWorkspace(int n, QString name)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::renameWorkspace";
+    G::track(__FUNCTION__);
     #endif
     }
     qDebug() << G::t.restart() << "\t" << "MW::renameWorkspace" << n << name;
@@ -3667,7 +3679,7 @@ void MW::populateWorkspace(int n, QString name)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::populateWorkspace";
+    G::track(__FUNCTION__);
     #endif
     }
     snapshotWorkspace((*workspaces)[n]);
@@ -3679,7 +3691,7 @@ void MW::reportWorkspace(int n)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::reportWorkspace";
+    G::track(__FUNCTION__);
     #endif
     }
     ws = workspaces->at(n);
@@ -3771,7 +3783,7 @@ void MW::reportState()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::reportState";
+    G::track(__FUNCTION__);
     #endif
     }
     workspaceData w;
@@ -3814,7 +3826,7 @@ void MW::reportMetadata()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::reportMetadata";
+    G::track(__FUNCTION__);
     #endif
     }
 //    metadata->writeMetadata(thumbView->getCurrentFilename());
@@ -3841,7 +3853,7 @@ void MW::about()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::about";
+    G::track(__FUNCTION__);
     #endif
     }
     QString aboutString = "<h2>Winnow version " + version + "</h2>"
@@ -3866,7 +3878,7 @@ void MW::cleanupSender()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::cleanupSender";
+    G::track(__FUNCTION__);
     #endif
     }
     delete QObject::sender();
@@ -3876,7 +3888,7 @@ void MW::externalAppError(QProcess::ProcessError err)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::externalAppError";
+    G::track(__FUNCTION__);
     #endif
     }
     QMessageBox msgBox;
@@ -3893,7 +3905,7 @@ void MW::runExternalApp()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::runExternalApp";
+    G::track(__FUNCTION__);
     #endif
     }
     // this works:
@@ -3959,7 +3971,7 @@ in the MW constructor and then edited here based on changes made in processdlg.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::updateExternalApps";
+    G::track(__FUNCTION__);
     #endif
     }
     QMapIterator<QString, QString> eaIter(externalApps);
@@ -3983,7 +3995,7 @@ void MW::chooseExternalApp()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::chooseExternalApp";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -4027,7 +4039,7 @@ void MW::preferences(int page)
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::preferences";
+    G::track(__FUNCTION__);
     #endif
     }
     if (page == -1) page = lastPrefPage;
@@ -4062,10 +4074,10 @@ void MW::setIncludeSubFolders()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setIncludeSubFolders";
+    G::track(__FUNCTION__);
     #endif
     }
-    inclSubfolders = subFoldersAction->isChecked();
+//    inclSubfolders = subFoldersAction->isChecked();
     folderSelectionChange();
 }
 
@@ -4073,7 +4085,7 @@ void MW::setShowImageCount()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setShowImageCount";
+    G::track(__FUNCTION__);
     #endif
     }
     if (!fsTree->isVisible()) {
@@ -4090,7 +4102,7 @@ void MW::setPrefPage(int page)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setPrefPage";
+    G::track(__FUNCTION__);
     #endif
     }
     lastPrefPage = page;
@@ -4105,7 +4117,7 @@ void MW::setMouseClickScroll(bool prefMouseClickScroll)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setMouseClickScroll";
+    G::track(__FUNCTION__);
     #endif
     }
     mouseClickScroll = prefMouseClickScroll;
@@ -4115,7 +4127,7 @@ void MW::setTrackpadScroll(bool trackpadScroll)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setTrackpadScroll";
+    G::track(__FUNCTION__);
     #endif
     }
     imageView->useWheelToScroll = trackpadScroll;
@@ -4209,7 +4221,7 @@ void MW::setIngestRootFolder(QString rootFolder, bool isAuto)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setMaxRecentFolders";
+    G::track(__FUNCTION__);
     #endif
     }
     ingestRootFolder = rootFolder;
@@ -4221,7 +4233,7 @@ void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setFullScreenDocks";
+    G::track(__FUNCTION__);
     #endif
     }
     fullScreenDocks.isFolders = isFolders;
@@ -4231,14 +4243,6 @@ void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
     fullScreenDocks.isThumbs = isThumbs;
     fullScreenDocks.isStatusBar = isStatusBar;
 }
-
-//void MW::setGeneralParameters(bool prefRememberFolder, bool prefInclSubfolders,
-//                              int prefMaxRecentFolders)
-//{
-//    rememberLastDir = prefRememberFolder;
-//    inclSubfolders = prefInclSubfolders;
-//    maxRecentFolders = prefMaxRecentFolders;
-//}
 
 void MW::oldPreferences()
 {
@@ -4251,10 +4255,9 @@ void MW::escapeFullScreen()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::escapeFullScreen";
+    G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "MW::escapeFullScreen";
     if(fullScreenAction->isChecked()) {
         fullScreenAction->setChecked(false);
         toggleFullScreen();
@@ -4269,7 +4272,7 @@ void MW::toggleFullScreen()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::toggleFullScreen";
+    G::track(__FUNCTION__);
     #endif
     }
     if (fullScreenAction->isChecked())
@@ -4305,7 +4308,7 @@ void MW::selectAllThumbs()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::selectAllThumbs";
+    G::track(__FUNCTION__);
     #endif
     }
     thumbView->selectAll();
@@ -4337,7 +4340,7 @@ are not applicable.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::preferences";
+    G::track(__FUNCTION__);
     #endif
     }
     // only makes sense to zoom when in loupe or compare view
@@ -4388,7 +4391,7 @@ void MW::zoomIn()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::zoomIn";
+    G::track(__FUNCTION__);
     #endif
     }
     if (asLoupeAction) imageView->zoomIn();
@@ -4399,7 +4402,7 @@ void MW::zoomOut()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::zoomOut";
+    G::track(__FUNCTION__);
     #endif
     }
     if (asLoupeAction) imageView->zoomOut();
@@ -4410,7 +4413,7 @@ void MW::zoomToFit()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::zoomToFit";
+    G::track(__FUNCTION__);
     #endif
     }
     if (asLoupeAction) imageView->zoomToFit();
@@ -4421,7 +4424,7 @@ void MW::zoomToggle()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::zoomToggle";
+    G::track(__FUNCTION__);
     #endif
     }
     if (asLoupeAction) imageView->zoomToggle();
@@ -4432,7 +4435,7 @@ void MW::rotateLeft()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::rotateLeft";
+    G::track(__FUNCTION__);
     #endif
     }
     setRotation(270);
@@ -4443,7 +4446,7 @@ void MW::rotateRight()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::rotateRight";
+    G::track(__FUNCTION__);
     #endif
     }
     setRotation(90);
@@ -4516,7 +4519,7 @@ bool MW::isValidPath(QString &path)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::isValidPath";
+    G::track(__FUNCTION__);
     #endif
     }
     QDir checkPath(path);
@@ -4531,7 +4534,7 @@ void MW::removeBookmark()
 
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::removeBookmark";
+    G::track(__FUNCTION__);
     #endif
     }
 //    if (QApplication::focusWidget() == thumbView->imageTags->tagsTree) {
@@ -4550,7 +4553,7 @@ void MW::setThumbsFilter()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setThumbsFilter";
+    G::track(__FUNCTION__);
     #endif
     }
     thumbView->filterStr = filterBar->text();
@@ -4562,7 +4565,7 @@ void MW::clearThumbsFilter()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::clearThumbsFilter";
+    G::track(__FUNCTION__);
     #endif
     }
     if (filterBar->text() == "")
@@ -4587,7 +4590,7 @@ re-established when the application is re-opened.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::writeSettings";
+    G::track(__FUNCTION__);
     #endif
     }
     // general
@@ -4845,7 +4848,7 @@ Preferences are located in the prefdlg class and updated here.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::loadSettings";
+    G::track(__FUNCTION__);
     #endif
     }
     needThumbsRefresh = false;
@@ -5135,7 +5138,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::loadShortcuts";
+    G::track(__FUNCTION__);
     #endif
     }
     // Add customizable key shortcut actions
@@ -5335,7 +5338,7 @@ Called when program starting or when a workspace is invoked.  Based on the
 condition of actions sets the visibility of all window components. */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::updateState";
+    G::track(__FUNCTION__);
     #endif
     }
     // set flag so
@@ -5378,7 +5381,7 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setThumbDockFloatFeatures";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "Floating";
@@ -5403,7 +5406,7 @@ thumbnails have been resized.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setThumbDockHeight";
+    G::track(__FUNCTION__);
     #endif
     }
     setThumbDockFeatures(dockWidgetArea(thumbDock));
@@ -5421,7 +5424,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________";
@@ -5509,7 +5512,7 @@ notification when the QListView has finished painting itself.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::loupeDisplay";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "\n======================================= Loupe ===========================================";
@@ -5576,7 +5579,7 @@ lack of notification when the QListView has finished painting itself.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::gridDisplay";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "\n======================================= Grid ============================================";
@@ -5606,7 +5609,7 @@ void MW::tableDisplay()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::tableDisplay";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "\n======================================= Table===========================================";
@@ -5635,7 +5638,7 @@ void MW::compareDisplay()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::compareDisplay";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "\n======================================= Compare =========================================";
@@ -5672,7 +5675,7 @@ void MW::saveSelection()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::saveSelection";
+    G::track(__FUNCTION__);
     #endif
     }
     selectedImages = thumbView->selectionModel()->selectedIndexes();
@@ -5683,7 +5686,7 @@ void MW::recoverSelection()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::recoverSelection";
+    G::track(__FUNCTION__);
     #endif
     }
     QItemSelection *selection = new QItemSelection();
@@ -5708,7 +5711,7 @@ void MW::setFullNormal()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setFullNormal";
+    G::track(__FUNCTION__);
     #endif
     }
     if (fullScreenAction->isChecked()) showFullScreen();
@@ -5719,7 +5722,7 @@ void MW::setCentralView()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setCentralView";
+    G::track(__FUNCTION__);
     #endif
     }
     if (!isSettings) return;
@@ -5744,7 +5747,7 @@ void MW::selectShootingInfo()
 void MW::setRatingBadgeVisibility() {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setRatingBadgeVisibility";
+    G::track(__FUNCTION__);
     #endif
     }
     isRatingBadgeVisible = ratingBadgeVisibleAction->isChecked();
@@ -5756,7 +5759,7 @@ void MW::setRatingBadgeVisibility() {
 void MW::setShootingInfoVisibility() {
     {
 #ifdef ISDEBUG
-        qDebug() << G::t.restart() << "\t" << "MW::setShootingInfoVisibility";
+        G::track(__FUNCTION__);
 #endif
     }
     imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
@@ -5765,7 +5768,7 @@ void MW::setShootingInfoVisibility() {
 void MW::setFolderDockVisibility() {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setFolderDockVisibility";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "folderDockVisibleAction->isChecked()" << folderDockVisibleAction->isChecked();
@@ -5775,7 +5778,7 @@ void MW::setFolderDockVisibility() {
 void MW::setFavDockVisibility() {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setFavDockVisibility";
+    G::track(__FUNCTION__);
     #endif
     }
     favDock->setVisible(favDockVisibleAction->isChecked());
@@ -5784,7 +5787,7 @@ void MW::setFavDockVisibility() {
 void MW::setFilterDockVisibility() {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setFilterDockVisibility";
+    G::track(__FUNCTION__);
     #endif
     }
     filterDock->setVisible(filterDockVisibleAction->isChecked());
@@ -5793,7 +5796,7 @@ void MW::setFilterDockVisibility() {
 void MW::setMetadataDockVisibility() {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setMetadataDockVisibility";
+    G::track(__FUNCTION__);
     #endif
     }
     metadataDock->setVisible(metadataDockVisibleAction->isChecked());
@@ -5803,7 +5806,7 @@ void MW::setThumbDockVisibity()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setThumbDockVisibity";
+    G::track(__FUNCTION__);
     #endif
     }
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
@@ -5816,7 +5819,7 @@ void MW::setMenuBarVisibility() {
 
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setMenuBarVisibility";
+    G::track(__FUNCTION__);
     #endif
     }
     menuBar()->setVisible(menuBarVisibleAction->isChecked());
@@ -5826,7 +5829,7 @@ void MW::setStatusBarVisibility() {
 
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setStatusBarVisibility";
+    G::track(__FUNCTION__);
     #endif
     }
     statusBar()->setVisible(statusBarVisibleAction->isChecked());
@@ -5837,7 +5840,7 @@ void MW::setWindowsTitleBarVisibility() {
 
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setWindowsTitleBarVisibility";
+    G::track(__FUNCTION__);
     #endif
     }
     if(windowTitleBarVisibleAction->isChecked()) {
@@ -5880,7 +5883,7 @@ void MW::setFolderDockLockMode()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setFolderDockLockMode";
+    G::track(__FUNCTION__);
     #endif
     }
     if (folderDockLockAction->isChecked()) {
@@ -5895,7 +5898,7 @@ void MW::setFavDockLockMode()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setFavDockLockMode";
+    G::track(__FUNCTION__);
     #endif
     }
     if (favDockLockAction->isChecked()) {
@@ -5910,7 +5913,7 @@ void MW::setFilterDockLockMode()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setfilterDockLockMode";
+    G::track(__FUNCTION__);
     #endif
     }
     if (filterDockLockAction->isChecked()) {
@@ -5925,7 +5928,7 @@ void MW::setMetadataDockLockMode()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setMetadataDockLockMode";
+    G::track(__FUNCTION__);
     #endif
     }
     if (metadataDockLockAction->isChecked()) {
@@ -5940,7 +5943,7 @@ void MW::setThumbDockLockMode()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setThumbDockLockMode";
+    G::track(__FUNCTION__);
     #endif
     }
     if (thumbDockLockAction->isChecked()) {
@@ -5955,7 +5958,7 @@ void MW::setAllDocksLockMode()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::lockDocks";
+    G::track(__FUNCTION__);
     #endif
     }
 //    if (initComplete)
@@ -5992,7 +5995,7 @@ void MW::setCacheStatusVisibility()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setCacheStatusVisibility";
+    G::track(__FUNCTION__);
     #endif
     }
     cacheLabel->setVisible(isShowCacheStatus);
@@ -6005,7 +6008,7 @@ void MW::setStatus(QString state)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setStatus";
+    G::track(__FUNCTION__);
     #endif
     }
     stateLabel->setText("    " + state + "    ");
@@ -6022,7 +6025,7 @@ void MW::togglePick()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::togglepick";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -6065,7 +6068,7 @@ of the "thumbs up" icon that highlights if the image has been picked.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::updatePick";
+    G::track(__FUNCTION__);
     #endif
     }
     int row = thumbView->currentIndex().row();
@@ -6093,7 +6096,7 @@ void MW::ingests()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::ingests";
+    G::track(__FUNCTION__);
     #endif
     }
     if (thumbView->isPick()) {
@@ -6129,7 +6132,7 @@ void MW::setCombineRawJpg()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setCombineRawJpg";
+    G::track(__FUNCTION__);
     #endif
     }
     // flag used in MW, dm and sf
@@ -6170,7 +6173,7 @@ be if a new folder has been selected but the image cache has not yet redirected.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setCachedStatus" << fPath;
+    G::track(__FUNCTION__);
     #endif
     }
     QModelIndexList idxList = dm->match(dm->index(0, 0), G::PathRole, fPath);
@@ -6184,6 +6187,17 @@ be if a new folder has been selected but the image cache has not yet redirected.
     }
 }
 
+void MW::updateClassification()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    updateRating();
+    updateColorClass();
+}
+
 void MW::setRating()
 {
 /*
@@ -6192,7 +6206,7 @@ the rating for all the selected thumbs.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setRating";
+    G::track(__FUNCTION__);
     #endif
     }
     QObject* obj = sender();
@@ -6259,17 +6273,20 @@ imageView and visibility (true if either rating or color class set).
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::updateRating";
+    G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__); // temp
     int row = thumbView->currentIndex().row();
     QModelIndex idx = dm->sf->index(row, G::RatingColumn);
+//    rating = dm->sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     rating = idx.data(Qt::EditRole).toString();
+    labelColor = dm->sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     if (rating == "0") rating = "";
     imageView->classificationLabel->setText(rating);
 
     if (G::labelColors.contains(labelColor) || G::ratings.contains(rating))
-        imageView->classificationLabel->setVisible(true);
+        imageView->classificationLabel->setVisible(isRatingBadgeVisible);
     else
         imageView->classificationLabel->setVisible(false);
 
@@ -6285,7 +6302,7 @@ set the color class for all the selected thumbs.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setLabelColor";
+    G::track(__FUNCTION__);
     #endif
     }
     QObject* obj = sender();
@@ -6362,13 +6379,17 @@ color class is called label.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::updateColorClass";
+    G::track(__FUNCTION__);
     #endif
     }
-
+G::track(__FUNCTION__); // temp
     int row = thumbView->currentIndex().row();
     QModelIndex idx = dm->sf->index(row, G::LabelColumn);
     labelColor = idx.data(Qt::EditRole).toString();
+    rating = dm->sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
+
+    qDebug() << __FUNCTION__ << rating << labelColor;
+//    labelColor = dm->sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
 
     imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
     if (labelColor == "Red") imageView->classificationLabel->setBackgroundColor(G::labelRedColor);
@@ -6378,7 +6399,7 @@ color class is called label.
     if (labelColor == "Purple") imageView->classificationLabel->setBackgroundColor(G::labelPurpleColor);
 
     if (G::labelColors.contains(labelColor) || G::ratings.contains(rating))
-        imageView->classificationLabel->setVisible(true);
+        imageView->classificationLabel->setVisible(isRatingBadgeVisible);
     else
         imageView->classificationLabel->setVisible(false);
 
@@ -6397,7 +6418,7 @@ ingesting.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::metadataChanged";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -6437,7 +6458,7 @@ void MW::getSubfolders(QString fPath)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::getSubfolders";
+    G::track(__FUNCTION__);
     #endif
     }
     subfolders = new QStringList;
@@ -6461,7 +6482,7 @@ void MW::keyRight()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::keyRight";
+    G::track(__FUNCTION__);
     #endif
     }
     if (G::mode == "Compare") compareImages->go("Right");
@@ -6475,7 +6496,7 @@ void MW::keyLeft()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::keyLeft";
+    G::track(__FUNCTION__);
     #endif
     }
     if (G::mode == "Compare") compareImages->go("Left");
@@ -6489,7 +6510,7 @@ void MW::keyUp()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::keyUp";
+    G::track(__FUNCTION__);
     #endif
     }
     if (G::mode == "Loupe") thumbView->selectUp();
@@ -6504,7 +6525,7 @@ void MW::keyDown()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::keyDown";
+    G::track(__FUNCTION__);
     #endif
     }
     if (G::mode == "Loupe") thumbView->selectDown();
@@ -6519,7 +6540,7 @@ void MW::keyHome()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::keyHome";
+    G::track(__FUNCTION__);
     #endif
     }
     if (G::mode == "Compare") compareImages->go("Home");
@@ -6533,7 +6554,7 @@ void MW::keyEnd()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::keyEnd";
+    G::track(__FUNCTION__);
     #endif
     }
     if (G::mode == "Compare") compareImages->go("End");
@@ -6548,7 +6569,7 @@ void MW::stressTest()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::stressTest";
+    G::track(__FUNCTION__);
     #endif
     }
     getSubfolders("/users/roryhill/pictures");
@@ -6560,7 +6581,7 @@ void MW::setSlideShowParameters(int delay, bool isRandom)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::setSlideShowParameters";
+    G::track(__FUNCTION__);
     #endif
     }
     slideShowDelay = delay;
@@ -6571,7 +6592,7 @@ void MW::slideShow()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::slideShow";
+    G::track(__FUNCTION__);
     #endif
     }
     if (isSlideShowActive) {
@@ -6606,7 +6627,7 @@ void MW::nextSlide()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::nextSlide";
+    G::track(__FUNCTION__);
     #endif
     }
     static int counter = 0;
@@ -6635,7 +6656,7 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::dropOp";
+    G::track(__FUNCTION__);
     #endif
     }
     QApplication::restoreOverrideCursor();
@@ -6716,7 +6737,7 @@ void MW::selectCurrentViewDir()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::selectCurrentViewDir";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -6731,7 +6752,7 @@ void MW::wheelEvent(QWheelEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::wheelEvent";
+    G::track(__FUNCTION__);
     #endif
     }
 //        if (event->modifiers() == Qt::ControlModifier)
@@ -6757,7 +6778,7 @@ void MW::showNewImageWarning(QWidget *parent)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::showNewImageWarning";
+    G::track(__FUNCTION__);
     #endif
     }
     QMessageBox msgBox;
@@ -6768,7 +6789,7 @@ void MW::addNewBookmark()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::addNewBookmark";
+    G::track(__FUNCTION__);
     #endif
     }
     addBookmark(getSelectedPath());
@@ -6778,7 +6799,7 @@ void MW::addBookmark(QString path)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::addBookmark";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -6790,7 +6811,7 @@ void MW::openFolder()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::openOp";
+    G::track(__FUNCTION__);
     #endif
     }
     QString dirPath = QFileDialog::getExistingDirectory(this, tr("Open Folder"),
@@ -6809,7 +6830,7 @@ for details
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MW::revealFile";
+    G::track(__FUNCTION__);
     #endif
     }
     QString path = thumbView->getCurrentFilename();
@@ -6835,6 +6856,12 @@ for details
         return;
 #endif
     QDesktopServices::openUrl(QUrl::fromLocalFile(info.isDir()? path : info.path()));
+}
+
+void MW::collapseAllFolders()
+{
+    qDebug() << "MW::collapseAllFolders";
+    fsTree->collapseAll();
 }
 
 void MW::openInFinder()
@@ -6946,7 +6973,8 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    dm->filterItemCount();
+    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, "Testing ...");
 }
 
 // End MW

@@ -66,7 +66,7 @@ controls are updated to the current scale.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ZoomDlg::zoomChange" << zoom;
+    G::track(__FUNCTION__);
     #endif
     }
     qDebug() << G::t.restart() << "\t" << "ZoomDlg::zoomChange" << zoom << G::actualDevicePixelRatio;
@@ -90,7 +90,7 @@ to only changes made lacally via the isActiveWindow flag.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ZoomDlg::on_zoomSB_valueChanged" << value;
+    G::track(__FUNCTION__);
     #endif
     }
     if (isActiveWindow()) emit zoom((qreal)value / 100 / G::actualDevicePixelRatio);
@@ -144,7 +144,7 @@ For convenience, set window focus on mouseover
 */
     {
     #ifdef ISDEBUG
-//    qDebug() << G::t.restart() << "\t" << "ZoomDlg::enterEvent" << currentImagePath;
+//    G::track(__FUNCTION__,currentImagePath);
     #endif
     }
     qDebug() << G::t.restart() << "\t" << "ZoomDlg enter event";

@@ -44,6 +44,7 @@ public:
     void setShowImageCount(bool showImageCount);
     bool getShowImageCount();
 
+
     FSModel *fsModel;
 //    QFileSystemModel *fsModel;
 

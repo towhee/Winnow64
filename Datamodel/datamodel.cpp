@@ -85,7 +85,7 @@ Code examples for model:
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "DataModel::DataModel";
+    G::track(__FUNCTION__);
     #endif
     }
     mw = parent;
@@ -139,11 +139,17 @@ Code examples for model:
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
 {
+/*
+The datamodel is sorted by absolute path, except jpg extensions follow all
+other image extensions. This makes it easier to determine duplicate images
+when combined raw+jpg is activated.
+*/
     QString s1 = i1.absoluteFilePath().toLower();
     QString s2 = i2.absoluteFilePath().toLower();
+    // check if combined raw+jpg duplicates
     if(i1.baseName() == i2.baseName()) {
         if (i1.suffix().toLower() == "jpg") s1.replace(".jpg", ".zzz");
-        if (i2.suffix().toLower() == "jpg")  s2.replace(".jpg", ".zzz");
+        if (i2.suffix().toLower() == "jpg") s2.replace(".jpg", ".zzz");
     }
     return s1 < s2;
 }
@@ -163,7 +169,7 @@ Steps:
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ThumbView::load";
+    G::track(__FUNCTION__);
     #endif
     }
     currentFolderPath = folderPath;
@@ -208,7 +214,7 @@ bool DataModel::addFiles()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "DataModel::addFiles";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "DataModel::addFiles    Started";
@@ -336,7 +342,7 @@ which is created in MW, and in InfoView.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "DataModel::addMetadataToModel";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -436,6 +442,9 @@ which is created in MW, and in InfoView.
         if (!sf->index(i,0).data(G::DupHideRawRole).toBool())
             imageFilePathList.append(sf->index(i,0).data(G::PathRole).toString());
 
+    // req'd for 1st image, probably loaded before metadata cached
+    emit updateClassification();
+
 //    qDebug() << G::t.restart() << "\t" << "DataModel::addMetadataToModel    Completed"
 //             << " elapsed time =" << t.restart() << "ms";
 
@@ -459,7 +468,7 @@ the sort or filter.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ThumbView::updateImageList";
+    G::track(__FUNCTION__);
     #endif
     }
     imageFilePathList.clear();
@@ -477,7 +486,7 @@ for all rows.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ThumbView::refine";
+    G::track(__FUNCTION__);
     #endif
     }
     qDebug() << G::t.restart() << "\t" << "ThumbView::refine";
@@ -514,7 +523,7 @@ void DataModel::filterItemCount()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "DataModel::filterItemCount";
+    G::track(__FUNCTION__);
     #endif
     }
     QTreeWidgetItemIterator it(filters);
@@ -556,7 +565,7 @@ map to columns in the data model ie Picked, Rating, Label ...
 */
     {
 //    #ifdef ISDEBUG
-//    qDebug() << G::t.restart() << "\t" << "SortFilter::filterAcceptsRow";
+//    G::track(__FUNCTION__);
 //    #endif
     }
 
@@ -640,7 +649,7 @@ filtration then the image cache needs to be reloaded to match the new proxy (sf)
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "SortFilter::filterChanged";
+    G::track(__FUNCTION__);
     #endif
     }
     invalidateFilter();

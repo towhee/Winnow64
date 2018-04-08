@@ -10,7 +10,7 @@ CompareImages::CompareImages(QWidget *parent,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::CompareImages";
+    G::track(__FUNCTION__);
     #endif
     }
     parent = 0;        // suppress compiler warning
@@ -37,7 +37,7 @@ bool CompareImages::load(const QSize &centralWidgetSize)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::load";
+    G::track(__FUNCTION__);
     #endif
     }
     cw = centralWidgetSize;
@@ -127,7 +127,7 @@ void CompareImages::loadGrid()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::loadGrid";
+    G::track(__FUNCTION__);
     #endif
     }
     int i = 0;
@@ -149,7 +149,7 @@ void CompareImages::configureGrid()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::configureGrid";
+    G::track(__FUNCTION__);
     #endif
     }
     long area1, area2, area3;
@@ -244,7 +244,7 @@ long CompareImages::area(int rows, int cols)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::area";
+    G::track(__FUNCTION__);
     #endif
     }
     // cw = central widget
@@ -269,7 +269,7 @@ int CompareImages::current()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::current";
+    G::track(__FUNCTION__);
     #endif
     }
     QModelIndex idx = thumbView->currentIndex();
@@ -316,7 +316,7 @@ void CompareImages::pick(bool isPick, QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::pick";
+    G::track(__FUNCTION__);
     #endif
     }
     for (int i = 0; i < imList->count(); ++i) {
@@ -330,7 +330,7 @@ void CompareImages::ratingColorClass(QString rating, QString colorClass, QModelI
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::pick";
+    G::track(__FUNCTION__);
     #endif
     }
     for (int i = 0; i < imList->count(); ++i) {
@@ -353,7 +353,7 @@ void CompareImages::zoom(QPointF scrollPct, QModelIndex idx, bool isZoom)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::zoom";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "CompareImages::zoom  scrollPct" << scrollPct << "isZoom" << isZoom;
@@ -370,7 +370,7 @@ void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::pan";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "CompareImages::pan";
@@ -385,7 +385,7 @@ void CompareImages::startPan(QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::pan";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "CompareImages::pan";
@@ -400,7 +400,7 @@ void CompareImages::cleanupAfterPan(QPointF deltaPct, QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::pan";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "CompareImages::pan";
@@ -416,7 +416,7 @@ void CompareImages::align(QPointF basePos, QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::align";
+    G::track(__FUNCTION__);
     #endif
     }
     qDebug() << G::t.restart() << "\t" << "CompareImages::align";
@@ -449,7 +449,7 @@ clicks on the unzoomed image.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::updateToggleZoom" << toggleZoomValue;
+    G::track(__FUNCTION__);
     #endif
     }
     qDebug() << G::t.restart() << "\t" << "CompareImages::updateToggleZoom" << toggleZoomValue;
@@ -467,7 +467,7 @@ CompareView instances.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareImages::zoomChangeFromView";
+    G::track(__FUNCTION__);
     #endif
     }
     this->zoomValue = zoomValue;       // used by MW::updateStatus
@@ -507,7 +507,7 @@ each instance of CompareView, which in turn makes the proper scale change.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "CompareView::zoomTo" << zoomValue;
+    G::track(__FUNCTION__);
     #endif
     }
     for (int i = 0; i < imList->count(); ++i) {

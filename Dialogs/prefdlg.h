@@ -20,7 +20,6 @@ signals:
     void updatePage(int page);
     void updateRememberFolder(bool rememberFolder);
     void updateMouseClickScroll(bool mouseClickScroll);
-    void updateInclSubfolders(bool inclSubfolders);
     void updateTrackpadScroll(bool trackpadScroll);
 //    void updateDisplayResolution(int horizontalPixels, int verticalPixels);
     void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,

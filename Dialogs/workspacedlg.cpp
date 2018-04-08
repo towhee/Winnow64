@@ -33,14 +33,9 @@ void WorkspaceDlg::on_deleteBtn_clicked()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "WorkspaceDlg::on_deleteBtn_clicked";
+    G::track(__FUNCTION__);
     #endif
     }
-    //    QString name = ui->workspaceCB->itemText(n);
-
-//    int n = ui->workspaceCB->currentIndex();
-//    emit reportWorkspace(n);
-
     int n = ui->workspaceCB->currentIndex();
     emit deleteWorkspace(n);
     ui->workspaceCB->removeItem(n);
@@ -50,7 +45,7 @@ void WorkspaceDlg::on_reassignBtn_clicked()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "WorkspaceDlg::on_reassignBtn_clicked";
+    G::track(__FUNCTION__);
     #endif
     }
     int n = ui->workspaceCB->currentIndex();
@@ -68,7 +63,7 @@ void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "WorkspaceDlg::on_workspaceCB_editTextChanged";
+    G::track(__FUNCTION__);
     #endif
     }
     if (editMode) {
@@ -95,7 +90,7 @@ void WorkspaceDlg::on_workspaceCB_highlighted(int /*index*/)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "WorkspaceDlg::on_workspaceCB_highlighted";
+    G::track(__FUNCTION__);
     #endif
     }
     editMode = false;

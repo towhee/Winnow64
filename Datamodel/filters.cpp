@@ -13,7 +13,7 @@ executed in SortFilter subclass of QSortFilterProxy (sf) in datamodel.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Filters::Filters";
+    G::track(__FUNCTION__);
     #endif
     }
     setRootIsDecorated(true);
@@ -61,7 +61,7 @@ void Filters::createPredefinedFilters()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Filters::createPredefinedFilters";
+    G::track(__FUNCTION__);
     #endif
     }
     refine = new QTreeWidgetItem(this);
@@ -168,7 +168,7 @@ by addCategoryFromData.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Filters::createDynamicFilters";
+    G::track(__FUNCTION__);
     #endif
     }
     types = new QTreeWidgetItem(this);
@@ -236,7 +236,7 @@ prevent duplication and orphans.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Filters::removeChildrenDynamicFilters";
+    G::track(__FUNCTION__);
     #endif
     }
     types->takeChildren();
@@ -263,7 +263,7 @@ bool Filters::isAnyFilter()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Filters::isAnyFilter";
+    G::track(__FUNCTION__);
     #endif
     }
     QTreeWidgetItemIterator it(this);
@@ -282,7 +282,7 @@ void Filters::uncheckAllFilters()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Filters::uncheckFilters";
+    G::track(__FUNCTION__);
     #endif
     }
     QTreeWidgetItemIterator it(this);
@@ -322,7 +322,7 @@ createDynamicFilters;
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Filters::addCategoryFromData";
+    G::track(__FUNCTION__);
     #endif
     }
     static QTreeWidgetItem *item;

@@ -33,7 +33,7 @@ ImageView::ImageView(QWidget *parent,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "ImageView::ImageView";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -86,8 +86,8 @@ ImageView::ImageView(QWidget *parent,
     pickLabel->setVisible(false);
 
     classificationLabel = new CircleLabel(this);
-    classificationLabel->setVisible(false);
     classificationLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
+//    classificationLabel->setVisible(true);
     classificationLabel->setVisible(isRatingBadgeVisible);
 
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
@@ -141,9 +141,10 @@ to prevent jarring changes in perceived scale by the user.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::loadImage";
+    G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__); // temp
     // No folder selected yet
     if (fPath == "") return false;
 
@@ -238,7 +239,7 @@ are matched:
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::upgradeToFullSize";
+    G::track(__FUNCTION__);
     #endif
     }
     loadFullSizeTimer->stop();
@@ -259,7 +260,7 @@ void ImageView::emptyFolder()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::emptyFolder";
+    G::track(__FUNCTION__);
     #endif
     }
 //    QString noImages = ":/images/NoImagesInFolder.png";
@@ -293,7 +294,7 @@ because setTransformationAnchor(QGraphicsView::AnchorUnderMouse).
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::scale";
+    G::track(__FUNCTION__);
     #endif
     }
 /*
@@ -327,7 +328,7 @@ void ImageView::setFullDim()
 /* Sets QSize full from metadata.  Req'd by setPreviewDim */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::setFullDim";
+    G::track(__FUNCTION__);
     #endif
     }
     full.setWidth(metadata->getWidth(currentImagePath));
@@ -342,7 +343,7 @@ which is defined in setFullDim.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::setPreviewDim";
+    G::track(__FUNCTION__);
     #endif
     }
     preview = imageCacheThread->getPreviewSize();
@@ -359,7 +360,7 @@ bool ImageView::sceneBiggerThanView()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::sceneBiggerThanView" << currentImagePath;
+    G::track(__FUNCTION__);
     #endif
     }
     QPoint pTL = mapFromScene(0, 0);
@@ -376,7 +377,7 @@ qreal ImageView::getFitScaleFactor(QRectF container, QRectF content)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::getFitScaleFactor" << currentImagePath;
+    G::track(__FUNCTION__);
     #endif
     }
     qreal hScale = ((qreal)container.width() - 2) / content.width();
@@ -388,7 +389,7 @@ void ImageView::setScrollBars(QPointF scrollPct)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::setScrollBars" << currentImagePath;
+    G::track(__FUNCTION__);
     #endif
     }
     getScrollBarStatus();
@@ -402,7 +403,7 @@ void ImageView::getScrollBarStatus()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::getScrollBarStatus" << currentImagePath;
+    G::track(__FUNCTION__);
     #endif
     }
     scrl.hMin = horizontalScrollBar()->minimum();
@@ -422,7 +423,7 @@ to a percentage to be used to match position in the next image if zoomed.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::getScrollPct" << currentImagePath;
+    G::track(__FUNCTION__);
     #endif
     }
     getScrollBarStatus();
@@ -439,7 +440,7 @@ size.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::movePickIcon";
+    G::track(__FUNCTION__);
     #endif
     }
     QPoint sceneBottomRight;            // bottom right corner of scene in view coord
@@ -471,7 +472,7 @@ size.
     }
 
     // resize if necessary
-    qreal f = 0.1;
+    qreal f = 0.05;
     w *= f;
     h *= f;
     int d;                          // dimension of pick image
@@ -483,8 +484,8 @@ size.
 
     // size labels in relation to image size
     pickLabel->setPixmap(pickPixmap->scaled(d, d, Qt::KeepAspectRatio));
-    d /= 2;
-    if (d < 18) d = 18;
+    d /= 3;
+    if (d < 12) d = 12;
     classificationLabel->setDiameter(d);
 
     intSize p, c;
@@ -511,7 +512,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::resizeEvent";
+    G::track(__FUNCTION__);
     #endif
     }
     QGraphicsView::resizeEvent(event);
@@ -566,7 +567,7 @@ images.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::thumbClick";
+    G::track(__FUNCTION__);
     #endif
     }
     if (zoom > zoomFit) {
@@ -594,7 +595,7 @@ clicks on the unzoomed image.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::updateToggleZoom";
+    G::track(__FUNCTION__);
     #endif
     }
     toggleZoom = toggleZoomValue;
@@ -604,7 +605,7 @@ void ImageView::zoomIn()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::zoomIn";
+    G::track(__FUNCTION__);
     #endif
     }
     zoom *= (1.0 + zoomInc);
@@ -617,7 +618,7 @@ void ImageView::zoomOut()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::zoomOut";
+    G::track(__FUNCTION__);
     #endif
     }
     zoom *= (1.0 - zoomInc);
@@ -629,7 +630,7 @@ void ImageView::zoomToFit()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::zoomToFit";
+    G::track(__FUNCTION__);
     #endif
     }
     zoom = zoomFit;
@@ -644,7 +645,7 @@ on to ImageView::scale(), which in turn makes the proper scale change.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::zoomTo" << zoomTo;
+    G::track(__FUNCTION__);
     #endif
     }
     zoom = zoomTo;
@@ -660,7 +661,7 @@ defaults to 1.0
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::zoomToggle";
+    G::track(__FUNCTION__);
     #endif
     }
     if (zoom < zoomFit) zoom = zoomFit;
@@ -702,7 +703,7 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::rotateByExifRotation";
+    G::track(__FUNCTION__);
     #endif
     }
     QTransform trans;
@@ -744,7 +745,7 @@ void ImageView::transform()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::transform";
+    G::track(__FUNCTION__);
     #endif
     }
     rotateByExifRotation(displayImage, currentImagePath);
@@ -757,7 +758,7 @@ information in the top left corner of the image.  The text has a drop shadow
 to help make it visible against different coloured backgrounds. */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::moveShootingInfo";
+    G::track(__FUNCTION__);
     #endif
     }
     // window (w) and view (v) sizes are updated during resize
@@ -782,7 +783,7 @@ to help make it visible against different coloured backgrounds. */
     font.setKerning(true);
 
     infoDropShadow->setFont(font);      // not working
-    int fontSize = 14;
+    int fontSize = 13;
 
     infoDropShadow->setStyleSheet("font: " + QString::number(fontSize) + "pt;");
     infoDropShadow->setText(infoString);
@@ -796,7 +797,7 @@ void ImageView::monitorCursorState()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::monitorCursorState";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "ImageView::monitorCursorState";
@@ -821,7 +822,7 @@ void ImageView::setCursorHiding(bool hide)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::setCursorHiding";
+    G::track(__FUNCTION__);
     #endif
     }
     if (hide) {
@@ -896,7 +897,7 @@ void ImageView::wheelEvent(QWheelEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::wheelEvent";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -928,7 +929,7 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::mouseDoubleClickEvent";
+    G::track(__FUNCTION__);
     #endif
     }
     // placeholder function pending use
@@ -940,7 +941,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::mousePressEvent";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "mousePressEvent" << event << "isMouseDrag" << isMouseDrag
@@ -1008,7 +1009,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::mouseReleaseEvent";
+    G::track(__FUNCTION__);
     #endif
     }
     // prevent zooming when right click for context menu
@@ -1048,7 +1049,7 @@ void ImageView::enterEvent(QEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::enterEvent";
+    G::track(__FUNCTION__);
     #endif
     }
     QVariant x = event->type();     // suppress compiler warning
@@ -1077,7 +1078,7 @@ void ImageView::copyImage()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::copyImage";
+    G::track(__FUNCTION__);
     #endif
     }
     //    QApplication::clipboard()->setImage(displayImage);
@@ -1089,7 +1090,7 @@ static inline int bound0To255(int val)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::bound0To255";
+    G::track(__FUNCTION__);
     #endif
     }
     return ((val > 255)? 255 : (val < 0)? 0 : val);
@@ -1099,7 +1100,7 @@ static inline int hslValue(double n1, double n2, double hue)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::hslValue";
+    G::track(__FUNCTION__);
     #endif
     }
     double value;
@@ -1127,7 +1128,7 @@ void rgbToHsl(int r, int g, int b, unsigned char *hue, unsigned char *sat, unsig
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::rgbToHsl";
+    G::track(__FUNCTION__);
     #endif
     }
     double h, s, l;
@@ -1182,7 +1183,7 @@ void hslToRgb(double h, double s, double l,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageView::hslToRgb";
+    G::track(__FUNCTION__);
     #endif
     }
     if (s == 0) {

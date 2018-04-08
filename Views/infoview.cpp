@@ -65,7 +65,7 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "InfoView::InfoView";
+    G::track(__FUNCTION__);
     #endif
     }
     this->metadata = metadata;
@@ -111,7 +111,7 @@ void InfoView::showInfoViewMenu(QPoint pt)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "InfoView::showInfoViewMenu";
+    G::track(__FUNCTION__);
     #endif
     }
     selectedEntry = indexAt(pt);
@@ -123,7 +123,7 @@ void InfoView::tweakHeaders()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "InfoView::tweakHeaders";
+    G::track(__FUNCTION__);
     #endif
     }
 //    horizontalHeader()->setFixedHeight(1);
@@ -145,7 +145,7 @@ status information, such as number of items picked or current item selected.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "InfoView::createOkToShow";
+    G::track(__FUNCTION__);
     #endif
     }
     ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
@@ -207,6 +207,8 @@ status information, such as number of items picked or current item selected.
     // set all items not editable
     for(int row = 0; row < ok->rowCount(); row++) {
         ok->setData(ok->index(row, 2), true);
+        ok->itemFromIndex(ok->index(row, 0))->setEditable(false);
+        ok->itemFromIndex(ok->index(row, 1))->setEditable(false);
         for (int childRow = 0; childRow < ok->rowCount(ok->index(row, 0)); childRow++) {
             ok->setData(ok->index(childRow, 2, ok->index(row, 0)), true);
             ok->itemFromIndex(ok->index(childRow, 0, ok->index(row, 0)))->setEditable(false);
@@ -238,7 +240,7 @@ show flag.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "InfoView::showOrHide()";
+    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "ShorOrHide List:";
@@ -264,7 +266,7 @@ Clear all the values but leave the keys and flags alone
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "InfoView::clearInfo";
+    G::track(__FUNCTION__);
     #endif
     }
     for(int row = 0; row < ok->rowCount(); row++) {
@@ -279,7 +281,7 @@ void InfoView::copyEntry()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "InfoView::copyEntry";
+    G::track(__FUNCTION__);
     #endif
     }
 	if (selectedEntry.isValid())
@@ -290,7 +292,7 @@ void InfoView::updateInfo(const QString &fPath)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "InfoView::updateInfo";
+    G::track(__FUNCTION__);
     #endif
     }
 

@@ -6,7 +6,7 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MetadataCache::MetadataCache";
+    G::track(__FUNCTION__);
     #endif
     }
     this->dm = dm;
@@ -31,7 +31,7 @@ void MetadataCache::stopMetadateCache()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MetadataCache::stopMetadateCache";
+    G::track(__FUNCTION__);
     #endif
     }
     if (isRunning()) {
@@ -49,7 +49,7 @@ void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus,
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MetadataCache::loadMetadataCache";
+    G::track(__FUNCTION__);
     #endif
     }
     if (isRunning()) {
@@ -76,7 +76,7 @@ used to confirm all the metadata is loaded before ending the metadata cache.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MetadataCache::checkIfNewFolder";
+    G::track(__FUNCTION__);
     #endif
     }
     if (dm->currentFolderPath != folderPath) {
@@ -93,7 +93,7 @@ void MetadataCache::createCacheStatus()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "ImageCache::cacheStatus";
+    G::track(__FUNCTION__);
     #endif
     }
     /* Displays a statusbar showing the cache status.
@@ -177,7 +177,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "MetadataCache::loadMetadata";
+    G::track(__FUNCTION__);
     #endif
     }
     int totRows = dm->rowCount();
@@ -264,7 +264,7 @@ that have been missed.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "\nMetadataCache::run";
+    G::track(__FUNCTION__);
     #endif
     }
     t.start();
@@ -286,6 +286,8 @@ that have been missed.
                 allMetadataLoaded = false;
                 break;
             }
+//            // req'd for 1st image, probably loaded before metadata cached
+//            if (i = 0) emit updateClassification();
         }
     }
     while (!allMetadataLoaded && t.elapsed() < 30000);

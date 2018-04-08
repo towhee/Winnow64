@@ -5,7 +5,7 @@ BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "BookMarks::BookMarks";
+    G::track(__FUNCTION__);
     #endif
     }
     this->metadata = metadata;
@@ -34,7 +34,7 @@ void BookMarks::reloadBookmarks()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "BookMarks::reloadBookmarks";
+    G::track(__FUNCTION__);
     #endif
     }
 	clear();
@@ -85,7 +85,7 @@ void BookMarks::removeBookmark()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "BookMarks::removeBookmark";
+    G::track(__FUNCTION__);
     #endif
     }
 	if (selectedItems().size() == 1) {
@@ -98,7 +98,7 @@ void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "BookMarks::dragEnterEvent";
+    G::track(__FUNCTION__);
     #endif
     }
 	QModelIndexList selectedDirs = selectionModel()->selectedRows();
@@ -113,7 +113,7 @@ void BookMarks::dragMoveEvent(QDragMoveEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Bookmarks::dragMoveEvent";
+    G::track(__FUNCTION__);
     #endif
     }
     setCurrentIndex(indexAt(event->pos()));
@@ -123,7 +123,7 @@ void BookMarks::dropEvent(QDropEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "BookMarks::dropEvent";
+    G::track(__FUNCTION__);
     #endif
     }
 	if (event->source()) {
