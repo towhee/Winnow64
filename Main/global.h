@@ -2,13 +2,14 @@
 #define GLOBAL_H
 
 //#define ISDEBUG        // Uncomment this line to show debugging output
-//#define ISPROFILE      // Uncomment this line to show profiling output
 
 #include <QtWidgets>
 #include <QColor>
 #include <QModelIndexList>
 #include <QStringList>
 #include <QElapsedTimer>
+#include <iostream>
+#include <iomanip>
 
 #define THUMB_MIN	40
 #define THUMB_MAX	480
@@ -83,6 +84,8 @@ namespace G
     extern QStringList copyCutFileList;     // req'd?
     extern QElapsedTimer t;
     extern bool isTimer;
+
+    extern void track(QString functionName, QString comment = "");
 }
 
 #endif // GLOBAL_H

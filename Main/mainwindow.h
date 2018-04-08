@@ -146,7 +146,7 @@ public:
     // preferences: files
     bool rememberLastDir;
     QString lastDir;
-    bool inclSubfolders;
+//    bool inclSubfolders;
     int maxRecentFolders = 20;
     QString ingestRootFolder;
     bool combineRawJpg;
@@ -297,6 +297,7 @@ private slots:
     void updatePick();
     void updateRating();
     void updateColorClass();
+    void updateClassification();
     void refreshFolders();
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
@@ -357,6 +358,7 @@ private slots:
     void revealFile();
     void openInFinder();
     void openInExplorer();
+    void collapseAllFolders();
 
     void newWorkspace();
     QString fixDupWorkspaceName(QString name);
@@ -416,6 +418,7 @@ private:
     QAction *recentFoldersAction;
         QList<QAction *> recentFolderActions;
     QAction *subFoldersAction;
+    QAction *collapseFoldersAction;
     QAction *addBookmarkAction;
     QAction *removeBookmarkAction;
     QAction *ingestAction;

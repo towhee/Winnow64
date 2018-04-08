@@ -41,7 +41,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Pixmap::load";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -165,5 +165,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
     // record any errors
     if (!success) metadata->setErr(fPath, err);
 
+#ifdef ISDEBUG
+G::track(__FUNCTION__, "END");
+#endif
     return success;
 }

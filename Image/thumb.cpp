@@ -16,7 +16,7 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Thumb::checkOrienttion" << fPath;
+    G::track(__FUNCTION__);
     #endif
     }
     // check orientation and rotate if portrait
@@ -38,7 +38,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Thumb::loadFromEntireFile" << fPath;
+    G::track(__FUNCTION__);
     #endif
     }
     bool success;
@@ -68,7 +68,7 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Thumb::loadFromData" << fPath;
+    G::track(__FUNCTION__);
     #endif
     }
     bool success = false;
@@ -116,7 +116,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "Thumb::loadThumb" << fPath;
+    G::track(__FUNCTION__);
     #endif
     }
     if (G::isThreadTrackingOn) track(fPath, "Reading");

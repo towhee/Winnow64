@@ -7,7 +7,7 @@ TableView::TableView(DataModel *dm)
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "TableView::TableView";
+    G::track(__FUNCTION__);
     #endif
     }
 
@@ -58,7 +58,7 @@ void TableView::scrollToCurrent()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "TableView::scrollToCurrent";
+    G::track(__FUNCTION__);
     #endif
     }
     QModelIndex idx = dm->sf->index(currentIndex().row(), 1);
@@ -86,7 +86,7 @@ void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "TableView::mouseDoubleClickEvent";
+    G::track(__FUNCTION__);
     #endif
     }
     emit displayLoupe();
@@ -106,7 +106,7 @@ QSettings has been loaded.
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "TableView::createOkToShow()";
+    G::track(__FUNCTION__);
     #endif
     }
     ok = new QStandardItemModel;

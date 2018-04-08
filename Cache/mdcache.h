@@ -39,6 +39,7 @@ signals:
     void updateStatus(bool, QString);
     void updateAllMetadataLoaded(bool);
     void updateFilterCount();
+//    void updateClassification();        // req'd for 1st image, loaded before metadata cached
 
 private:
     QMutex mutex;

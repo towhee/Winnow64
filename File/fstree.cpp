@@ -155,7 +155,7 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "FSTree::FSTree";
+    G::track(__FUNCTION__);
     #endif
     }
     this->metadata = metadata;
@@ -254,7 +254,7 @@ void FSTree::scrollToCurrent()
 */
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "FSTree::scrollToCurrent";
+    G::track(__FUNCTION__);
     #endif
     }
     QModelIndex idx = getCurrentIndex();
@@ -265,7 +265,7 @@ void FSTree::select(QString dirPath)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "FSTree::select";
+    G::track(__FUNCTION__);
     #endif
     }
     setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
@@ -275,7 +275,7 @@ QModelIndex FSTree::getCurrentIndex()
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "FSTree::getCurrentIndex";
+    G::track(__FUNCTION__);
     #endif
     }
     QModelIndex idx;
@@ -309,7 +309,7 @@ void FSTree::dragEnterEvent(QDragEnterEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "FSTree::dragEnterEvent";
+    G::track(__FUNCTION__);
     #endif
     }
 	QModelIndexList selectedDirs = selectionModel()->selectedRows();
@@ -328,7 +328,7 @@ void FSTree::dropEvent(QDropEvent *event)
 {
     {
     #ifdef ISDEBUG
-    qDebug() << G::t.restart() << "\t" << "FSTree::dropEvent";
+    G::track(__FUNCTION__);
     #endif
     }
 	if (event->source())

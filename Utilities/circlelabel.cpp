@@ -6,7 +6,6 @@ CircleLabel::CircleLabel(QWidget *parent)
     : QLabel(parent)
 {
     setFixedSize(64, 64);
-//    setFixedSize(18, 18);
     setScaledContents(true);
     setAttribute(Qt::WA_TranslucentBackground);
     setAlignment(Qt::AlignRight | Qt::AlignBottom);
@@ -60,7 +59,8 @@ void CircleLabel::paintEvent(QPaintEvent *event)
     ratingTextPen.setWidth(2);
     painter.setPen(ratingTextPen);
     QFont font = painter.font();
-    int fontHeight = (int)diameter * 0.66;
+    int fontHeight = (int)diameter;
+//    int fontHeight = (int)diameter * 0.66;
     font.setPixelSize(fontHeight);
     font.setBold(true);
     painter.setFont(font);
