@@ -1165,7 +1165,6 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::mousePressEvent ";
     G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
     QListView::mousePressEvent(event);
 
@@ -1190,6 +1189,7 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
             thumbClick(xPct, yPct);    //signal used in ThumbView::mousePressEvent
         }
     }
+
     // 2nd call to QListView to capture cmd clicks (not sure why req'd)
     QListView::mousePressEvent(event);
 }

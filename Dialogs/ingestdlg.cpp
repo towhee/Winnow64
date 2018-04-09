@@ -158,7 +158,6 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
                     fPath = idx.data(G::PathRole).toString();
                     QFileInfo fileInfo(fPath);
                     pickList.append(fileInfo);
-                    qDebug() << "IngestDlg::getPicks -" << combineRawJpg << fPath << idx;
                 }
                 // append combined raw file
                 if (idx.data(G::DupIsJpg).toBool()) {
@@ -168,8 +167,6 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
             fPath = idx.data(G::PathRole).toString();
             QFileInfo fileInfo(fPath);
             pickList.append(fileInfo);
-
-            qDebug() << "IngestDlg::getPicks -" << row << combineRawJpg << fPath << idx;
         }
     }
 
@@ -182,7 +179,6 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
     QString s1 = QString::number(fileCount);
     QString s2 = fileCount == 1 ? " file using " : " files using ";
     QString s3 = Utilities::formatMemory(bytes);
-//    QString s3 = QString::number(fileMB, 'f', 1);
     QString s4 = "";
     if (inclDupJpg) s4 = " including duplicate jpg";
     ui->statsLabel->setText(s1 + s2 + s3 + s4);

@@ -53,12 +53,13 @@ ImageView::ImageView(QWidget *parent,
     setAcceptDrops(true);
     pmItem->setAcceptDrops(true);
 
-//    setOptimizationFlags(QGraphicsView::DontSavePainterState);
-//    setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);
-//    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
-//    setTransformationAnchor(QGraphicsView::AnchorViewCenter);
-//    setAlignment(Qt::AlignCenter);
-//    setDragMode(QGraphicsView::ScrollHandDrag);
+    /* setOptimizationFlags(QGraphicsView::DontSavePainterState);
+    setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);
+    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
+    setTransformationAnchor(QGraphicsView::AnchorViewCenter);
+    setAlignment(Qt::AlignCenter);
+    setDragMode(QGraphicsView::ScrollHandDrag);
+    */
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -87,7 +88,6 @@ ImageView::ImageView(QWidget *parent,
 
     classificationLabel = new CircleLabel(this);
     classificationLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
-//    classificationLabel->setVisible(true);
     classificationLabel->setVisible(isRatingBadgeVisible);
 
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
@@ -144,7 +144,6 @@ to prevent jarring changes in perceived scale by the user.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__); // temp
     // No folder selected yet
     if (fPath == "") return false;
 

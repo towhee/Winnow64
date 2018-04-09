@@ -39,7 +39,6 @@ signals:
     void updateStatus(bool, QString);
     void updateAllMetadataLoaded(bool);
     void updateFilterCount();
-//    void updateClassification();        // req'd for 1st image, loaded before metadata cached
 
 private:
     QMutex mutex;
@@ -59,7 +58,7 @@ private:
 
     void createCacheStatus();
     void updateCacheStatus(int row);
-    void checkIfNewFolder();
+    void createLoadMap();
     void loadMetadata();
     void track(QString fPath, QString msg);
 

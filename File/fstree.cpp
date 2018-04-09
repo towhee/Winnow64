@@ -17,7 +17,7 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
 #ifdef Q_OS_WIN
     if (!sourceParent.isValid()) {      // if is a drive
         QModelIndex idx = sourceModel()->index(sourceRow, 0, sourceParent);
-        bool okay = idx.isValid();
+//        bool okay = idx.isValid();
         QString path = idx.data(QFileSystemModel::FilePathRole).toString();
         bool mounted = mountedDrives.contains(path);
         if (!mounted) return false;     // do not accept unmounted drives

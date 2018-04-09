@@ -2,14 +2,18 @@
 
 Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 {
-/* This tree widget is loaded in a QDockWidget. It contains top level items
-(Categories ie Ratings, Color Classes, File types ...). For each top level item
-the children are the filter choices to filter DataModel->Proxy (dm->sf). The
-categories are divided into predefined (Picks, Ratings and Color Classes) and
-dynamic categories based on existing metadata (File types, Camera Models, Focal
-Lengths and Titles). The dynamic filter options are populated by DataModel when
-folder data is loaded by addFiles and addMetadata. The actual filtering is
-executed in SortFilter subclass of QSortFilterProxy (sf) in datamodel.
+/* Used to filter the datamodel, based on which items are checked in the tree.
+
+It contains top level items (Categories ie Ratings, Color Classes, File types
+...). For each top level item the children are the filter choices to filter
+DataModel->Proxy (dm->sf). The categories are divided into predefined (Picks,
+Ratings and Color Classes) and dynamic categories based on existing metadata
+(File types, Camera Models, Focal Lengths and Titles). The dynamic filter
+options are populated by DataModel when folder data is loaded by addFiles and
+addMetadata. The actual filtering is executed in SortFilter subclass of
+QSortFilterProxy (sf) in datamodel.
+
+
 */
     {
     #ifdef ISDEBUG
@@ -261,6 +265,9 @@ void Filters::checkPicks(bool check)
 
 bool Filters::isAnyFilter()
 {
+/*
+This is used to determine the filter status in MW::updateFilterStatus
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -286,18 +293,15 @@ void Filters::uncheckAllFilters()
     #endif
     }
     QTreeWidgetItemIterator it(this);
-    qDebug() << "Filters::uncheckAllFilters";
     while (*it) {
         if ((*it)->parent()) {            
             (*it)->setCheckState(0, Qt::Unchecked);
-            qDebug() << (*it)->parent()->text(0)
-                     << (*it)->text(0)
-                     << (*it)->text(1);
             (*it)->setData(2, Qt::EditRole, "test");
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         }
         ++it;
     }
+    emit filterChange(false);
 }
 
 void Filters::expandAllFilters()
