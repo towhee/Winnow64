@@ -1,6 +1,6 @@
 #include "utilities.h"
 
-Utilities::Utilities(QObject *parent)
+Utilities::Utilities()
 {
 
 }

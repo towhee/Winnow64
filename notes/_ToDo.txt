@@ -1,9 +1,10 @@
 BUGS
-- Shift click select needs some TLC
-- Use subfolders not working
+- Pick badge stays visible when image not picked
+- Filtered to nothing but ImageView still shows last image
 - Bookmarks names and count not aligned vertically
 - Jpg orientationOffset = 0 when metadata orientation changed
 - Update image count in Fav (refresh) when changes
+- Copy image to clipboard not working
 - Copy metadata item not working (was working before)
 - When ingesting confirm all files copied correctly (option)
 - Not finding thumbnail in D850 NEFs
@@ -31,9 +32,11 @@ ENHANCEMENTS
 - Disable menu "add bookmark" when folders not selected??
 - Tweak context menus
 - Run droplet
-- Clip black area on canon thumbs
+- Clip black areea on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
+- Done: RememberLastDir not being saved in preferences
+- Done: Use subfolders not working
 - Done: First ImageView not showing rating badge
 - Done: Collapse all folders
 - Done: Drag and drop nt working for whole selections
@@ -41,7 +44,6 @@ ENHANCEMENTS
 - Done: Set zoom % blank if not loupe mode in matadata panel
 - Done: If raw+jpg ratings and labels not included when ingest
 - Done: Can be slow when usb card images cached
-- Done: Pick badge stays visible when image not picked
 - Done: Show image count in filters by filter
 - Done: Jpg corrupted during ingest if metadata orientation changed
 - Done: Combine raw+jpg option

@@ -64,11 +64,11 @@ void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus,
     this->startRow = startRow;
     this->isShowCacheStatus = isShowCacheStatus;
     this->cacheStatusWidth = cacheStatusWidth;
-    checkIfNewFolder();
+    createLoadMap();
     start(TimeCriticalPriority);
 }
 
-void MetadataCache::checkIfNewFolder()
+void MetadataCache::createLoadMap()
 {
 /*
 Create a map for every row in the datamodel to track metadata caching.  This is
@@ -79,14 +79,12 @@ used to confirm all the metadata is loaded before ending the metadata cache.
     G::track(__FUNCTION__);
     #endif
     }
-    if (dm->currentFolderPath != folderPath) {
-        loadMap.clear();
-        for(int i = 0; i < dm->rowCount(); ++i) loadMap[i] = false;
-        folderPath = dm->currentFolderPath;
-        allMetadataLoaded = false;
-        createCacheStatus();
-        if (isShowCacheStatus) emit showCacheStatus(*cacheStatusImage);
-    }
+    loadMap.clear();
+    for(int i = 0; i < dm->rowCount(); ++i) loadMap[i] = false;
+    folderPath = dm->currentFolderPath;
+    allMetadataLoaded = false;
+    createCacheStatus();
+    if (isShowCacheStatus) emit showCacheStatus(*cacheStatusImage);
 }
 
 void MetadataCache::createCacheStatus()
@@ -188,12 +186,13 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             emit updateIsRunning(false);
             return;
         }
+
         // is metadata already cached
         if (loadMap[row]) continue;
 
         // maybe metadata loaded by user picking image while cache is still building
         idx = dm->index(row, 0);
-        QString fPath = idx.data(Qt::ToolTipRole).toString();
+        QString fPath = idx.data(G::PathRole).toString();
         bool thumbLoaded = idx.data(Qt::DecorationRole).isValid();
         bool metadataLoaded = metadata->isLoaded(fPath);
         if (metadataLoaded && thumbLoaded) {
@@ -218,10 +217,6 @@ Load the metadata and thumb (icon) for all the image files in a folder.
                 metadataLoaded = true;
             }
             mutex.unlock();
-
-//            if (row % thumbCacheThreshold == 0) {
-//                emit refreshThumbs();
-//            }
         }
 
         if (!thumbLoaded) {
@@ -230,6 +225,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
 //            QImage *imagePtr = &image;
             if (thumbLoaded) emit setIcon(row, image);
         }
+        else qDebug() << "Thumb icon not loaded for" << fPath;
 
         if (metadataLoaded && thumbLoaded) {
             loadMap[row] = true;
@@ -286,8 +282,6 @@ that have been missed.
                 allMetadataLoaded = false;
                 break;
             }
-//            // req'd for 1st image, probably loaded before metadata cached
-//            if (i = 0) emit updateClassification();
         }
     }
     while (!allMetadataLoaded && t.elapsed() < 30000);
@@ -295,7 +289,7 @@ that have been missed.
 
 //    qDebug() << G::t.restart() << "\t" << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
 
-    /* after loading metadata it is okay to cache full size images, where the
+    /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */
     emit loadImageCache();

@@ -126,15 +126,6 @@ Code examples for model:
     dir = new QDir();
     fileFilters = new QStringList;          // eligible image file types
     emptyImg.load(":/images/no_image.png");
-
-    // changing filters triggers a refiltering
-    connect(filters, SIGNAL(itemClicked(QTreeWidgetItem*,int)),
-            sf, SLOT(filterChanged()));
-
-    // changing filters triggers a recount
-    connect(filters, SIGNAL(itemClicked(QTreeWidgetItem*,int)),
-            this, SLOT(filterItemCount()));
-
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -193,49 +184,71 @@ Steps:
     if (!addFiles() && !includeSubfolders) return false;
 
     if (includeSubfolders) {
-        qDebug() << G::t.restart() << "\t" << "DataModel::load including subfolders";
+        int folderCount = 1;
         QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
         while (it.hasNext()) {
             it.next();
+
             if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
+                folderCount++;
+                qDebug() << "DataModel::load  folderCount =" << folderCount << it.filePath();
+                // option to bail if many subfolders
+                if (folderCount == 10) {
+                    QString question = tr("There are at least 10 sub-folders.  Do you want to continue?");
+                    int ret = QMessageBox::warning(mw, "Many sub-folders", question,
+                                 QMessageBox::Cancel | QMessageBox::Ok, QMessageBox::Ok);
+                    if (ret == QMessageBox::Cancel) return false;
+                }
                 dir->setPath(it.filePath());
-                qDebug() << G::t.restart() << "\t" << "ITERATING FOLDER" << it.filePath();
-                addFiles();
+                //  qDebug() << G::t.restart() << "\t" << "ITERATING FOLDER" << it.filePath();
+                if (!addFiles()) return false;
             }
         }
     }
 
     // if images were found and added to data model
-    if (rowCount()) return true;
-    else return false;
+    return addFileData();
 }
 
 bool DataModel::addFiles()
+{
+    static int imageCount;
+    int folderImageCount = dir->entryInfoList().size();
+    if (!folderImageCount) return false;
+
+    int imagesSoFar = imageCount + folderImageCount;
+
+    for (int i = 0; i <folderImageCount; ++i) {
+        fileInfoList.append(dir->entryInfoList().at(i));
+        imageCount++;
+        // option to bail if too many images
+        if (imageCount == 2000) {
+            QString question = tr("There are at least %1 images.  Do you want to continue?").arg(imagesSoFar);
+            int ret = QMessageBox::warning(mw, "Many images", question,
+                         QMessageBox::Cancel | QMessageBox::Ok, QMessageBox::Ok);
+            if (ret == QMessageBox::Cancel) return false;
+        }
+    }
+    return true;
+}
+
+bool DataModel::addFileData()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "DataModel::addFiles    Started";
     QElapsedTimer t;
     t.start();
 
-    int imageCount = dir->entryInfoList().size();
-    if (!imageCount) return false;
-
-    for (int i = 0; i <imageCount; ++i)
-        fileInfoList.append(dir->entryInfoList().at(i));
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
-
-//    for (int i = 0; i < fileInfoList.size(); i++)
-//        qDebug() << "DataModel::addFiles --" << fileInfoList.at(i).absoluteFilePath();
 
     static QStandardItem *item;
     static int fileIndex;
     static QPixmap emptyPixMap;
 
-    // collect all unique instances for filtration (use QMap to maintain order)
+    // collect all unique instances of file type for filtration (use QMap to maintain order)
     QMap<QVariant, QString> typesMap;
 
     imageFilePathList.clear();
@@ -243,7 +256,7 @@ bool DataModel::addFiles()
     // rgh not working
     emptyPixMap = QPixmap::fromImage(emptyImg).scaled(THUMB_MAX, THUMB_MAX);
 
-    for (fileIndex = 0; fileIndex < imageCount; ++fileIndex) {
+    for (fileIndex = 0; fileIndex < fileInfoList.count(); ++fileIndex) {
 
         // get file info
         fileInfo = fileInfoList.at(fileIndex);

@@ -466,6 +466,7 @@ void Prefdlg::on_cachePreviewsChk_clicked()
 
 void Prefdlg::on_rememberFolderChk_clicked()
 {
+    emit updateRememberFolder(ui->rememberFolderChk->isChecked());
 }
 
 void Prefdlg::on_mouseClickScrollChk_clicked()

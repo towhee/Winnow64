@@ -16,7 +16,11 @@ ImageCache::ImageCache(QObject *parent, Metadata *metadata) : QThread(parent)
 
 ImageCache::~ImageCache()
 {
-    qDebug() << G::t.restart() << "\t" << "ImageCache::~ImageCache() Closing ...";
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     mutex.lock();
     abort = true;
     condition.wakeOne();

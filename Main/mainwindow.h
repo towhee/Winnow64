@@ -242,6 +242,7 @@ private slots:
     void setColorClass();
     void setRotation(int degrees);
     void metadataChanged(QStandardItem* item);
+    void filterChange(bool isFilter = true);
     void quickFilter();
     void invertFilters();
     void refine();
@@ -271,7 +272,8 @@ private slots:
     void zoomToggle();
     void updateStatus(bool showFileCount, QString s = "");
     void clearStatus();
-    void updateFilterStatus();
+    void updateFilterStatus(bool isFilter = true);
+    void updateSubfolderStatus();
     void updateMetadataThreadRunStatus(bool isRun);
     void updateImageThreadRunStatus(bool isRun);
     void updateAllMetadataLoaded(bool isLoaded);
@@ -302,7 +304,6 @@ private slots:
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
     void setMouseClickScroll(bool prefMouseClickScroll);
-    void setIncludeSubFolders();
     void setTrackpadScroll(bool trackpadScroll);
     void setDisplayResolution();
     void setIngestRootFolder(QString rootFolder, bool isAuto);
@@ -589,7 +590,8 @@ private:
     Ui::message msg;
     QLineEdit *filterBar;
     QLabel *stateLabel;
-    QLabel *filterLabel;
+    QLabel *filterStatusLabel;
+    QLabel *subfolderStatusLabel;
     QLabel *cacheLabel;
     QLabel *centralLabel;
     QLabel *metadataThreadRunningLabel;

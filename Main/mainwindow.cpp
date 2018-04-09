@@ -137,10 +137,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 void MW::initialize()
 {
     this->setWindowTitle("Winnow");
-    qDebug() << "THUMB_MAX =" << THUMB_MAX;
-
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-
     isInitializing = true;
     isSlideShowActive = false;
     workspaces = new QList<workspaceData>;
@@ -149,7 +146,8 @@ void MW::initialize()
     hasGridBeenActivated = true;
     isDragDrop = false;
     setAcceptDrops(true);
-
+    filterStatusLabel = new QLabel;
+    subfolderStatusLabel = new QLabel;
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
     G::ratings << "1" << "2" << "3" << "4" << "5";
 }
@@ -477,10 +475,7 @@ void MW::handleStartupArgs()
      speedy for the user.
 
  -   The metadata caching thread collects information required by the
-     thumb and image cache threads.
-
- -   The thumb cache thread needs the file offset and length of the
-     embedded thumb jpg that is used to create the icons in thumbview.
+     image cache thread.
 
  -   The image caching thread requires the offset and length for the
      full size embedded jpg, the image width and height in order to
@@ -499,8 +494,9 @@ void MW::folderSelectionChange()
     }
     // Check if same folder
     QString dirPath;
-    if (!isInitializing || !rememberLastDir) {
-        if (currentViewDir == getSelectedPath()) return;
+    if (isInitializing && !rememberLastDir) {
+//        centralLayout->setCurrentIndex(StartTab);
+//        return;
      }
 
     // Stop any threads that might be running.
@@ -509,13 +505,13 @@ void MW::folderSelectionChange()
     allMetadataLoaded = false;
 
     if (!isInitializing) {
-        dm->removeRows(0, dm->rowCount());
+//        dm->removeRows(0, dm->rowCount());
         popUp->showPopup(this, "Collecting file information", 0, 0.5);
         updateStatus(false, "Collecting file information for all images in folder(s)");
         qApp->processEvents();
     }
 
-    // used by SortFilter, set true when ImageCacheTread starts
+    // used by SortFilter, set true when ImageCacheThread starts
     G::isNewFolderLoaded = false;
 
     // used by updateStatus
@@ -557,23 +553,24 @@ void MW::folderSelectionChange()
             }
         }
     }
+
     // folder selected from Folders or Bookmarks(Favs)
     if (!isInitializing || !rememberLastDir) {
         dirPath = getSelectedPath();
     }
 
     // ignore if present folder is rechosen unless subfolder recursion
-    if (dirPath == currentViewDir) {
-        if (!subFoldersAction->isChecked()) {
-            popUp->close();
-            return;
-        }
-    }
-    else {
-        currentViewDir = dirPath;
-        // cannot accidentally see all subfolders - must set after selecting folder
-        subFoldersAction->setChecked(false);
-    }
+//    if (dirPath == currentViewDir) {
+//        if (!subFoldersAction->isChecked()) {
+//            popUp->close();
+//            return;
+//        }
+//    }
+//    else {
+//        currentViewDir = dirPath;
+//    }
+
+    currentViewDir = dirPath;
 
     // sync the favs / bookmarks with the folders view fsTree
     bookmarks->select(dirPath);
@@ -599,11 +596,14 @@ void MW::folderSelectionChange()
     executed when the change file event is fired.
     */
     metadataLoaded = false;
-    /* Need to gather directory file info first (except icon/thumb) which is
-    loaded by metadataCache.  If no images in new folder then cleanup and exit.
-    MW::fileSelectionChange triggered by DataModel->load         */
+
+    /*  The first time a folder is selected the datamodel is loaded with all the
+    supported images.  If there are no supported images then do some cleanup. If
+    this function has been executed by the load subfolders command then all the
+    subfolders will be recursively loaded into the datamodel.
+    */
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
-        updateStatus(false, "No images in this folder");
+        updateStatus(false, "No supported images in this folder");
         setCentralMessage("The folder \"" + currentViewDir + "\" does not have any eligible images");
         popUp->close();
         infoView->clearInfo();
@@ -614,6 +614,11 @@ void MW::folderSelectionChange()
         isDragDrop = false;
         return;
     }
+
+    gridView->refreshThumbs();
+
+    // cannot accidentally see all subfolders - must set after selecting folder
+//    subFoldersAction->setChecked(false);
 
     // made it this far, folder must have eligible images and is good-to-go
     isCurrentFolderOkay = true;
@@ -1110,7 +1115,7 @@ void MW::createActions()
     subFoldersAction->setCheckable(true);
     subFoldersAction->setChecked(false);
     addAction(subFoldersAction);
-    connect(subFoldersAction, SIGNAL(triggered()), this, SLOT(setIncludeSubFolders()));
+    connect(subFoldersAction, SIGNAL(triggered()), this, SLOT(updateSubfolderStatus()));
 
     refreshFoldersAction = new QAction(tr("Refresh folders"), this);
     refreshFoldersAction->setObjectName("refreshFolders");
@@ -2238,6 +2243,16 @@ void MW::createMenus()
     thumbView->addActions(*thumbViewActions);
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
+    QLabel *label = new QLabel;
+    label->setText(" TEST ");
+    label->setStyleSheet("QLabel{color:yellow;}");
+
+//    menuBar()->setCornerWidget(label, Qt::TopRightCorner);
+//    menuBar()->setCornerWidget(filterLabel, Qt::TopRightCorner);
+
+    QToolBar *toolBar = new QToolBar;
+    toolBar->addWidget(label);
+    menuBar()->setCornerWidget(toolBar);
 }
 
 void MW::addMenuSeparator(QWidget *widget)
@@ -2627,7 +2642,6 @@ void MW::createFSTree()
     // loadSettings has not run yet (dependencies, but QSettings has been opened
     fsTree = new FSTree(this, metadata);
     fsTree->setMaximumWidth(folderMaxWidth);
-//    fsTree->fsModel->showImageCount = setting->value("showImageCount").toBool();
     fsTree->setShowImageCount(setting->value("showImageCount").toBool());
 
     connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
@@ -2649,11 +2663,11 @@ void MW::createFilterView()
     filters = new Filters(this);
     filters->setMaximumWidth(folderMaxWidth);
 
-    connect(filters, SIGNAL(itemClicked(QTreeWidgetItem*,int)),
-            this, SLOT(updateFilterStatus()));
+    /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
+       for every item in Filters */
 
-//    connect(filters, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
-//            this, SLOT(updateFilterStatus()));
+    connect(filters, &Filters::itemClicked, this, &MW::filterChange);
+    connect(filters, &Filters::filterChange, this, &MW::filterChange);
 }
 
 void MW::createBookmarks()
@@ -2729,9 +2743,11 @@ void MW::createStatusBar()
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateImageThreadRunStatus(false);
 
-    filterLabel = new QLabel;
-    filterLabel->setStyleSheet("QLabel{color:red;}");
-    statusBar()->addWidget(filterLabel);
+//    filterLabel = new QLabel;
+    filterStatusLabel->setStyleSheet("QLabel{color:red;}");
+    statusBar()->addWidget(filterStatusLabel);
+    subfolderStatusLabel->setStyleSheet("QLabel{color:red;}");
+    statusBar()->addWidget(subfolderStatusLabel);
 
     stateLabel = new QLabel;
     statusBar()->addWidget(stateLabel);
@@ -2749,7 +2765,6 @@ parameters.  Any visibility changes are executed.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     cacheSizeMB = size * 1000;      // Entered as GB in pref dlg
     isShowCacheStatus = show;
     cacheDelay = delay;
@@ -2787,10 +2802,8 @@ It is displayed on the status bar and in the infoView.
     QString fileCount = "";
     QModelIndex idx = thumbView->currentIndex();
     if (!idx.isValid()) return "";
-//    qDebug() << G::t.restart() << "\t" << "MW::getPosition  idx =" << idx;
     long rowCount = dm->sf->rowCount();
     if (rowCount <= 0) return "";
-//    qDebug() << G::t.restart() << "\t" << "MW::getPosition  rowCount =" << rowCount;
     int row = idx.row() + 1;
     fileCount = QString::number(row) + " of "
         + QString::number(rowCount);
@@ -2906,17 +2919,40 @@ void MW::clearStatus()
     stateLabel->setText("");
 }
 
-void MW::updateFilterStatus()
+void MW::updateFilterStatus(bool isFilter)
 {
+    /*
+    The filter status is shown in the status bar.
+    */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    if (!isFilter) {
+        filterStatusLabel->setText("");
+        return;
+    }
     if (filters->isAnyFilter())
-        filterLabel->setText("Filters On");
+        filterStatusLabel->setText("Filters");
     else
-        filterLabel->setText("");
+        filterStatusLabel->setText("");
+}
+
+void MW::updateSubfolderStatus()
+{
+/*
+The include subfolder status is shown in the status bar.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (subFoldersAction->isChecked())
+        subfolderStatusLabel->setText("Subfolders");
+    else
+        subfolderStatusLabel->setText("");
 }
 
 void MW::updateMetadataThreadRunStatus(bool isRunning)
@@ -3060,6 +3096,19 @@ tableView.
     reindexImageCache();
 }
 
+void MW::filterChange(bool isFilter)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    dm->sf->filterChanged();
+    dm->filterItemCount();
+    updateFilterStatus(isFilter);
+    updateStatus(true);
+}
+
 void MW::quickFilter()
 {
     {
@@ -3078,11 +3127,7 @@ void MW::quickFilter()
     if (filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Checked);
     if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Checked);
 
-    // refresh the filter
-    dm->sf->filterChanged();
-
-    // update filter counts
-    dm->filterItemCount();
+    filterChange();
 }
 
 void MW::invertFilters()
@@ -3100,6 +3145,8 @@ Currently this is just clearing filters ...  rgh what to do?
     if (filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Unchecked);
     if (filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Unchecked);
     if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Unchecked);
+
+    filterChange();
 }
 
 void MW::uncheckAllFilters()
@@ -3116,15 +3163,15 @@ void MW::uncheckAllFilters()
     filterGreenAction->setChecked(false);
     filterBlueAction->setChecked(false);
     filterPurpleAction->setChecked(false);
+
+    filterChange(false);
 }
 
 void MW::refine()
 {
     uncheckAllFilters();
     dm->refine();
-
-    // update filter counts
-    dm->filterItemCount();
+    filterChange(false);
 }
 
 void MW::sortThumbnails()
@@ -4070,17 +4117,6 @@ void MW::preferences(int page)
 //    setActualDevicePixelRation();
 }
 
-void MW::setIncludeSubFolders()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    inclSubfolders = subFoldersAction->isChecked();
-    folderSelectionChange();
-}
-
 void MW::setShowImageCount()
 {
     {
@@ -4110,7 +4146,7 @@ void MW::setPrefPage(int page)
 
 void MW::setRememberLastDir(bool prefRememberFolder)
 {
-    // rgh is this req'd
+    rememberLastDir = prefRememberFolder;
 }
 
 void MW::setMouseClickScroll(bool prefMouseClickScroll)
@@ -5084,8 +5120,6 @@ Preferences are located in the prefdlg class and updated here.
     setting->beginGroup("IngestDescriptionCompleter");
     ingestDescriptionCompleter = setting->childKeys();
     setting->endGroup();
-
-    qDebug() << G::t.restart() << "\t" << ingestDescriptionCompleter;
 
     // moved read workspaces to separate function as req'd by actions while the
     // rest of QSettings are dependent on actions being defined first.
@@ -6276,10 +6310,8 @@ imageView and visibility (true if either rating or color class set).
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__); // temp
     int row = thumbView->currentIndex().row();
     QModelIndex idx = dm->sf->index(row, G::RatingColumn);
-//    rating = dm->sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     rating = idx.data(Qt::EditRole).toString();
     labelColor = dm->sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     if (rating == "0") rating = "";
@@ -6382,14 +6414,10 @@ color class is called label.
     G::track(__FUNCTION__);
     #endif
     }
-G::track(__FUNCTION__); // temp
     int row = thumbView->currentIndex().row();
     QModelIndex idx = dm->sf->index(row, G::LabelColumn);
     labelColor = idx.data(Qt::EditRole).toString();
     rating = dm->sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
-
-    qDebug() << __FUNCTION__ << rating << labelColor;
-//    labelColor = dm->sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
 
     imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
     if (labelColor == "Red") imageView->classificationLabel->setBackgroundColor(G::labelRedColor);
@@ -6973,8 +7001,10 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    G::track(__FUNCTION__);
-    G::track(__FUNCTION__, "Testing ...");
+    QLabel *label = new QLabel;
+    label->setText(" TEST ");
+    label->setStyleSheet("QLabel{color:yellow;}");
+    menuBar()->setCornerWidget(label, Qt::TopRightCorner);
 }
 
 // End MW
