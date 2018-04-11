@@ -15,8 +15,7 @@ public:
     SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg);
 
 public slots:
-    void filterChanged();
-//    void filterChanged(QTreeWidgetItem* x, int col);
+    void filterChange();
 
 private slots:
 
@@ -25,6 +24,7 @@ protected:
 
 signals:
     void reloadImageCache();
+//    void nullFilter();
 
 private:
     Filters *filters;
@@ -50,9 +50,14 @@ public:
     QDir::SortFlags thumbsSortFlags;
     QString currentFolderPath;
 
+    // can be set from keyPressEvent in MW to terminate if recursive folder scan too long
+    bool timeToQuit;
+
 signals:
     void popup(QString msg, int ms, float opacity);
+    void closePopup();
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
+    void msg(QString message);
 
 public slots:
     void refine();
@@ -72,7 +77,7 @@ private:
     QFileInfo fileInfo;
     QImage emptyImg;
 
-    bool addFiles();
+    bool addFolderFilesToList();
     bool addFileData();
     void rawPlusJpg();
 };

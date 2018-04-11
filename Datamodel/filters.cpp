@@ -253,6 +253,12 @@ prevent duplication and orphans.
 
 void Filters::checkPicks(bool check)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    G::track(__FUNCTION__);
     if (check) {
         picksFalse->setCheckState(0, Qt::Unchecked);
         picksTrue->setCheckState(0, Qt::Checked);
@@ -261,6 +267,7 @@ void Filters::checkPicks(bool check)
         picksFalse->setCheckState(0, Qt::Unchecked);
         picksTrue->setCheckState(0, Qt::Unchecked);
     }
+    emit filterChange(true);
 }
 
 bool Filters::isAnyFilter()

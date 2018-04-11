@@ -11,8 +11,14 @@ image files, defined in the metadata class, are files Winnow knows how to decode
 
 The data is structured in columns:
 
-    ● Path:             from QFileInfoList  FilePathRole + ToolTipRole + G::ThumbRectRole (icon)
-    ● File name:        from QFileInfoList
+    ● Path:             from QFileInfoList  FilePathRole (absolutePath)
+                        from QFileInfoList  ToolTipRole
+                                            G::ThumbRectRole (icon)
+                                            G::DupIsJpgRole
+                                            G::DupRawIdxRole
+                                            G::DupHideRawRole
+                                            G::DupRawTypeRole
+    ● File name:        from QFileInfoList  EditRole
     ● File type:        from QFileInfoList  EditRole
     ● File size:        from QFileInfoList  EditRole
     ● File created:     from QFileInfoList  EditRole
@@ -81,7 +87,7 @@ Code examples for model:
     item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
 
     // to force the model to refresh
-    dm->sf->filterChanged();        // executes invalidateFilter() in proxy
+    dm->sf->filterChange();        // executes invalidateFilter() in proxy
 */
     {
     #ifdef ISDEBUG
@@ -150,13 +156,19 @@ bool DataModel::load(QString &folderPath, bool includeSubfolders)
 /*
 When a new folder is selected load it into the data model.  This clears the
 model and populates the data model with all the cached thumbnail pixmaps from
-metadataCache.  If load subfolders has been chosen then the entire subfolder
+metadataCache.  If include subfolders has been chosen then the entire subfolder
 heirarchy is loaded.
 
 Steps:
-- filter to only show supported image formats
-- add each image file to the jpgRawList (path + name + extension + isJpgRaw)
-- if file duplicated set
+- filter to only show supported image formats, iterating subfolders if include
+  subfolders is set
+- add each image file to the datamodel with QFileInfo related data such as file
+  name, path, file size, creation date
+- also determine if there are duplicate raw+jpg files, and if so, populate all
+  the Dup...Role values to manage the raw+jpg files
+- after the metadataCacheThread has read all the metadata and thumbnails add
+  the rest of the metadata to the datamodel.  Build QMaps of unique field values
+  for the filters
 */
     {
     #ifdef ISDEBUG
@@ -164,6 +176,8 @@ Steps:
     #endif
     }
     currentFolderPath = folderPath;
+
+    // clear the model
     removeRows(0, rowCount());
 
     // do some initializing
@@ -173,62 +187,100 @@ Steps:
     dir->setNameFilters(*fileFilters);
     dir->setFilter(QDir::Files);
     dir->setPath(currentFolderPath);
-    dir->setSorting(QDir::Name);
+//    dir->setSorting(QDir::Name);
 
     fileInfoList.clear();
 
     // clear all items for filters based on data content ie file types, camera model
     filters->removeChildrenDynamicFilters();
 
-    // exit if no images, otherwise get file info and add to model
-    if (!addFiles() && !includeSubfolders) return false;
+    timeToQuit = false;
+    int imageCount = 0;
+    QString escapeClause = "Press \"Esc\" to stop.\n\n";
 
-    if (includeSubfolders) {
-        int folderCount = 1;
-        QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
-        while (it.hasNext()) {
-            it.next();
-
-            if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
-                folderCount++;
-                qDebug() << "DataModel::load  folderCount =" << folderCount << it.filePath();
-                // option to bail if many subfolders
-                if (folderCount == 10) {
-                    QString question = tr("There are at least 10 sub-folders.  Do you want to continue?");
-                    int ret = QMessageBox::warning(mw, "Many sub-folders", question,
-                                 QMessageBox::Cancel | QMessageBox::Ok, QMessageBox::Ok);
-                    if (ret == QMessageBox::Cancel) return false;
-                }
-                dir->setPath(it.filePath());
-                //  qDebug() << G::t.restart() << "\t" << "ITERATING FOLDER" << it.filePath();
-                if (!addFiles()) return false;
-            }
-        }
-    }
-
-    // if images were found and added to data model
-    return addFileData();
-}
-
-bool DataModel::addFiles()
-{
-    static int imageCount;
+    // load file list for the current folder
     int folderImageCount = dir->entryInfoList().size();
-    if (!folderImageCount) return false;
-
-    int imagesSoFar = imageCount + folderImageCount;
-
-    for (int i = 0; i <folderImageCount; ++i) {
+    // bail if no images and not including subfolders
+    if (!folderImageCount && !includeSubfolders) return false;
+    // add supported images in folder to image list
+    for (int i = 0; i < folderImageCount; ++i) {
         fileInfoList.append(dir->entryInfoList().at(i));
         imageCount++;
-        // option to bail if too many images
-        if (imageCount == 2000) {
-            QString question = tr("There are at least %1 images.  Do you want to continue?").arg(imagesSoFar);
-            int ret = QMessageBox::warning(mw, "Many images", question,
-                         QMessageBox::Cancel | QMessageBox::Ok, QMessageBox::Ok);
-            if (ret == QMessageBox::Cancel) return false;
+        if (i % 100 == 0 && i > 0) {
+            QString s = escapeClause + "Scanning image " +
+                        QString::number(i) + " of " +
+                        QString::number(folderImageCount) +
+                        " in " + currentFolderPath;
+            emit msg(s);
+//            qApp->processEvents();
+        }
+        if (timeToQuit) return false;
+    }
+    if (!includeSubfolders) return addFileData();
+
+    // if include subfolders
+    int folderCount = 1;
+    QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+//        qApp->processEvents();
+        if (timeToQuit) return false;
+        it.next();
+        if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
+            folderCount++;
+            qDebug() << "DataModel::load  folderCount =" << folderCount << it.filePath();
+            dir->setPath(it.filePath());
+            int folderImageCount = dir->entryInfoList().size();
+            // try next subfolder if no images in this folder
+            if (!folderImageCount) continue;
+            // add supported images in folder to image list
+            for (int i = 0; i < folderImageCount; ++i) {
+                fileInfoList.append(dir->entryInfoList().at(i));
+                imageCount++;
+                // report file progress within folder
+                if (i % 100 == 0 && i > 0) {
+                    QString s = escapeClause + "Scanning image " +
+                                QString::number(i) + " of " +
+                                QString::number(folderImageCount) +
+                                " in " + currentFolderPath;
+                    emit msg(s);
+//                    qApp->processEvents();
+                }
+            }
+        }
+        // report folder progress
+        if (folderCount % 100 == 0 && folderCount > 0) {
+            QString s = escapeClause + "Scanning folder " +
+                        QString::number(folderCount) +
+                        " " + currentFolderPath;
+            emit msg(s);
+            qApp->processEvents();
+            if (timeToQuit) return false;
         }
     }
+    // if images were found and added to data model
+    if (imageCount) return addFileData();
+    else return false;
+}
+
+bool DataModel::addFolderFilesToList()
+{
+/*
+Build a list of the QFileInfo for each supported image file in the folder(s).
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+//    int folderImageCount = dir->entryInfoList().size();
+//    if (!folderImageCount) return false;
+//    for (int i = 0; i < folderImageCount; ++i) {
+//        qApp->processEvents();
+//        if (timeToQuit) return false;
+//        fileInfoList.append(dir->entryInfoList().at(i));
+//        qDebug() <<  "DataModel::addFiles " << dir->entryInfoList().at(i).absoluteFilePath();
+//        imageCount++;
+//    }
     return true;
 }
 
@@ -286,6 +338,8 @@ bool DataModel::addFileData()
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         appendRow(item);
 
+//        qDebug() << "DataModel::addFileData" << fileIndex << fileInfoList.at(fileIndex).absoluteFilePath();
+
         // add columns that do not require metadata read from image files
         int row = item->index().row();
 
@@ -327,7 +381,7 @@ bool DataModel::addFileData()
                     // point to raw version
                     setData(index(row, 0), prevIdx, G::DupRawIdxRole);
                     // set flag to show combined JPG file for filtering when ingesting
-                    setData(index(row, 0), true, G::DupIsJpg);
+                    setData(index(row, 0), true, G::DupIsJpgRole);
                     // build combined suffix to show in type column
                     QString prevType = fileInfoList.at(fileIndex - 1).suffix().toUpper();
                     setData(index(row, 0), prevType, G::DupRawTypeRole);
@@ -502,7 +556,6 @@ for all rows.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "ThumbView::refine";
     // Are there any picks to refine?
     bool isPick = false;
     for (int row = 0; row < rowCount(); ++row) {
@@ -648,10 +701,12 @@ map to columns in the data model ie Picked, Rating, Label ...
     return isMatch;
 }
 
-//void SortFilter::filterChanged(QTreeWidgetItem* /* not used */, int /* not used */)
-void SortFilter::filterChanged()
+void SortFilter::filterChange()
 {
 /*
+Note: required because invalidateFilter is private and cannot be called from
+another class.
+
 This slot is called when data changes in the filters widget.  The proxy (this)
 is invalidated, which forces an update.  This happens with every change in the
 filters widget including when the filters are being created in the filter
@@ -666,7 +721,5 @@ filtration then the image cache needs to be reloaded to match the new proxy (sf)
     #endif
     }
     invalidateFilter();
-//    qDebug() << G::t.restart() << "\t" << "filterChanged" << x << "column" << col << "isFinished" << G::isNewFolderLoaded;
-    if (G::isNewFolderLoaded) emit reloadImageCache();
 }
 

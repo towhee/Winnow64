@@ -33,7 +33,7 @@ public:
     QModelIndex imageIndex;
 
     bool loadImage(QModelIndex idx, QString imageFileName);
-    void emptyFolder();
+    void noImagesAvailable();
     void setCursorHiding(bool hide);
     bool isBusy;
     bool useWheelToScroll;

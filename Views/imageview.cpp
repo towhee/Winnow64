@@ -144,15 +144,16 @@ to prevent jarring changes in perceived scale by the user.
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << "ImageView::loadImage" << idx << fPath;
     // No folder selected yet
-    if (fPath == "") return false;
 
     /* important to keep currentImagePath.  It is used to check if there isn't
     an image (when currentImagePath.isEmpty() == true) - for example when
     no folder has been chosen. */
-   currentImagePath = fPath;
-   imageIndex = idx;
-   bool isLoaded = false;
+    currentImagePath = fPath;
+    imageIndex = idx;
+    bool isLoaded = false;
+    pmItem->setVisible(true);
 
    // Embedded jpg not found
    if (metadata->getLengthFullJPG(fPath) == 0) {
@@ -255,17 +256,13 @@ are matched:
     }
 }
 
-void ImageView::emptyFolder()
+void ImageView::noImagesAvailable()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-//    QString noImages = ":/images/NoImagesInFolder.png";
-//    QString blankImage = ":/images/no_image.png";
-//    pixmap->load(blankImage, displayPixmap);
-//    pmItem->setPixmap(displayPixmap);
     pmItem->setVisible(false);
     infoDropShadow->setText("");
 }
