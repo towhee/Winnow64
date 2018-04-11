@@ -154,13 +154,13 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
             // if raw+jpg files have been combined
             if (combineRawJpg) {
                 // append if combined jpg and include combined jpgs
-                if (inclDupJpg && idx.data(G::DupIsJpg).toBool()) {
+                if (inclDupJpg && idx.data(G::DupIsJpgRole).toBool()) {
                     fPath = idx.data(G::PathRole).toString();
                     QFileInfo fileInfo(fPath);
                     pickList.append(fileInfo);
                 }
                 // append combined raw file
-                if (idx.data(G::DupIsJpg).toBool()) {
+                if (idx.data(G::DupIsJpgRole).toBool()) {
                     idx = qvariant_cast<QModelIndex>(dm->index(row, 0).data(G::DupRawIdxRole));
                 }
             }

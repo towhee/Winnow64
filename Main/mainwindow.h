@@ -219,6 +219,7 @@ protected:
 public slots:
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex previous);
+    void nullSelection();
     void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setStatus(QString state);
@@ -228,6 +229,7 @@ public slots:
     void setThumbDockFeatures(Qt::DockWidgetArea area);
     void setThumbDockFloatFeatures(bool isFloat);
     void reindexImageCache();
+    void setCentralMessage(QString message);
 
 signals:
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
@@ -380,6 +382,7 @@ private slots:
     void helpWelcome();
 
     void popup(QString msg, int ms, float opacity);
+    void closePopup();
     void delayScroll();
     void test();    // for debugging
 
@@ -660,6 +663,11 @@ private:
     bool isLeftMouseBtnPressed = false;
     bool isMouseDrag = false;
 
+    // loadImageList
+    bool timeToQuit;
+    QList<QFileInfo> fileInfoList;
+    bool loadImageList(QString &folderPath, bool includeSubfolders);
+
     bool sortMenuUpdateToMatchTable = false;
 
     QString imageCacheFilePath;
@@ -668,6 +676,8 @@ private:
     bool newScrollSignal;           // used for scroll signal delay in case many/sec
     QTimer *metadataCacheScrollTimer;
     int metadataCacheStartRow;
+
+    int prevCentralView;
 
     bool needThumbsRefresh;         // req'd?
     bool thumbViewBusy;             // req'd?
@@ -729,7 +739,6 @@ private:
     QString getPicked();
     void setActualDevicePixelRatio();
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
-    void setCentralMessage(QString message);
 
 //    QSize screen();
 
