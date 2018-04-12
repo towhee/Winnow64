@@ -1099,12 +1099,16 @@ void MW::createActions()
     G::track(__FUNCTION__);
     #endif
     }
+
+//    QAction::setShortcutVisibleInContextMenu(true);
+
     int n;          // used to populate action lists
 
     // File menu
 
     openAction = new QAction(tr("Open Folder"), this);
     openAction->setObjectName("openFolder");
+    openAction->setShortcutVisibleInContextMenu(true);
     addAction(openAction);
     connect(openAction, &QAction::triggered, this, &MW::openFolder);
 
@@ -1112,11 +1116,13 @@ void MW::createActions()
 
     openWithMenuAction = new QAction(tr("Open With..."), this);
     openWithMenuAction->setObjectName("openWithMenu");
+    openWithMenuAction->setShortcutVisibleInContextMenu(true);
     addAction(openWithMenuAction);
     openWithMenuAction->setMenu(openWithMenu);
 
     manageAppAction = new QAction(tr("Manage External Applications"), this);
     manageAppAction->setObjectName("chooseApp");
+    manageAppAction->setShortcutVisibleInContextMenu(true);
     addAction(manageAppAction);
     connect(manageAppAction, &QAction::triggered, this, &MW::openWithProgramManagement);
 
@@ -1152,6 +1158,7 @@ void MW::createActions()
     recentFoldersMenu = new QMenu(tr("Recent folders..."));
     recentFoldersAction = new QAction(tr("Recent folders..."), this);
     recentFoldersAction->setObjectName("recentFoldersAction");
+    recentFoldersAction->setShortcutVisibleInContextMenu(true);
     addAction(recentFoldersAction);
     recentFoldersAction->setMenu(recentFoldersMenu);
 
@@ -1189,11 +1196,13 @@ void MW::createActions()
 
     revealFileAction = new QAction(reveal, this);
     revealFileAction->setObjectName("openInFinder");
+    revealFileAction->setShortcutVisibleInContextMenu(true);
     addAction(revealFileAction);
     connect(revealFileAction, &QAction::triggered, this, &MW::revealFile);
 
     subFoldersAction = new QAction(tr("Include Sub-folders"), this);
     subFoldersAction->setObjectName("subFolders");
+    subFoldersAction->setShortcutVisibleInContextMenu(true);
     subFoldersAction->setCheckable(true);
     subFoldersAction->setChecked(false);
     addAction(subFoldersAction);
@@ -1201,38 +1210,45 @@ void MW::createActions()
 
     refreshFoldersAction = new QAction(tr("Refresh folders"), this);
     refreshFoldersAction->setObjectName("refreshFolders");
+    refreshFoldersAction->setShortcutVisibleInContextMenu(true);
     addAction(refreshFoldersAction);
     connect(refreshFoldersAction, &QAction::triggered, this, &MW::refreshFolders);
 
     collapseFoldersAction = new QAction(tr("Collapse all folders"), this);
     collapseFoldersAction->setObjectName("collapseFolders");
+    collapseFoldersAction->setShortcutVisibleInContextMenu(true);
     addAction(collapseFoldersAction);
     connect(collapseFoldersAction, &QAction::triggered, this, &MW::collapseAllFolders);
 
     showImageCountAction = new QAction(tr("Show image count"), this);
     showImageCountAction->setObjectName("showImageCount");
+    showImageCountAction->setShortcutVisibleInContextMenu(true);
     showImageCountAction->setCheckable(true);
     addAction(showImageCountAction);
     connect(showImageCountAction, &QAction::triggered, this, &MW::setShowImageCount);
 
     addBookmarkAction = new QAction(tr("Add Bookmark"), this);
     addBookmarkAction->setObjectName("addBookmark");
+    addBookmarkAction->setShortcutVisibleInContextMenu(true);
     addAction(addBookmarkAction);
     connect(addBookmarkAction, &QAction::triggered, this, &MW::addNewBookmark);
 
     removeBookmarkAction = new QAction(tr("Remove Bookmark"), this);
     removeBookmarkAction->setObjectName("removeBookmark");
+    removeBookmarkAction->setShortcutVisibleInContextMenu(true);
     // rgh where did removeBookmark slot function go?
     addAction(removeBookmarkAction);
     connect(removeBookmarkAction, &QAction::triggered, this, &MW::removeBookmark);
 
     ingestAction = new QAction(tr("Ingest picks"), this);
     ingestAction->setObjectName("ingest");
+    ingestAction->setShortcutVisibleInContextMenu(true);
     addAction(ingestAction);
     connect(ingestAction, &QAction::triggered, this, &MW::ingests);
 
     combineRawJpgAction = new QAction(tr("Combine Raw+Jpg"), this);
     combineRawJpgAction->setObjectName("combineRawJpg");
+    combineRawJpgAction->setShortcutVisibleInContextMenu(true);
     combineRawJpgAction->setCheckable(true);
     combineRawJpgAction->setChecked(true);
     addAction(combineRawJpgAction);
@@ -1241,6 +1257,7 @@ void MW::createActions()
     // Place keeper for now
     renameAction = new QAction(tr("Rename selected images"), this);
     renameAction->setObjectName("renameImages");
+    renameAction->setShortcutVisibleInContextMenu(true);
     renameAction->setShortcut(Qt::Key_F2);
     addAction(renameAction);
 //    connect(renameAction, &QAction::triggered, this, &MW::renameImages);
@@ -1248,17 +1265,20 @@ void MW::createActions()
     // Place keeper for now
     runDropletAction = new QAction(tr("Run Droplet"), this);
     runDropletAction->setObjectName("runDroplet");
+    runDropletAction->setShortcutVisibleInContextMenu(true);
     runDropletAction->setShortcut(QKeySequence("A"));
     addAction(runDropletAction);
 
     reportMetadataAction = new QAction(tr("Report Metadata"), this);
     reportMetadataAction->setObjectName("reportMetadata");
+    reportMetadataAction->setShortcutVisibleInContextMenu(true);
     addAction(reportMetadataAction);
     connect(reportMetadataAction, &QAction::triggered, this, &MW::reportMetadata);
 
     // Appears in Winnow menu in OSX
     exitAction = new QAction(tr("Exit"), this);
     exitAction->setObjectName("exit");
+    exitAction->setShortcutVisibleInContextMenu(true);
     addAction(exitAction);
     connect(exitAction, &QAction::triggered, this, &MW::close);
 
@@ -1266,27 +1286,32 @@ void MW::createActions()
 
     selectAllAction = new QAction(tr("Select All"), this);
     selectAllAction->setObjectName("selectAll");
+    selectAllAction->setShortcutVisibleInContextMenu(true);
     addAction(selectAllAction);
     connect(selectAllAction, &QAction::triggered, this, &MW::selectAllThumbs);
 
     invertSelectionAction = new QAction(tr("Invert Selection"), this);
     invertSelectionAction->setObjectName("invertSelection");
+    invertSelectionAction->setShortcutVisibleInContextMenu(true);
     addAction(invertSelectionAction);
     connect(invertSelectionAction, &QAction::triggered,
             thumbView, &ThumbView::invertSelection);
 
     refineAction = new QAction(tr("Refine"), this);
     refineAction->setObjectName("Refine");
+    refineAction->setShortcutVisibleInContextMenu(true);
     addAction(refineAction);
     connect(refineAction, &QAction::triggered, this, &MW::refine);
 
     pickAction = new QAction(tr("Pick"), this);
     pickAction->setObjectName("togglePick");
+    pickAction->setShortcutVisibleInContextMenu(true);
     addAction(pickAction);
     connect(pickAction, &QAction::triggered, this, &MW::togglePick);
 
     filterPickAction = new QAction(tr("Filter picks only"), this);
     filterPickAction->setObjectName("toggleFilterPick");
+    filterPickAction->setShortcutVisibleInContextMenu(true);
     filterPickAction->setCheckable(true);
     filterPickAction->setChecked(false);
     addAction(filterPickAction);
@@ -1295,72 +1320,86 @@ void MW::createActions()
     // Place keeper for now
     copyImagesAction = new QAction(tr("Copy to clipboard"), this);
     copyImagesAction->setObjectName("copyImages");
+    copyImagesAction->setShortcutVisibleInContextMenu(true);
     copyImagesAction->setShortcut(QKeySequence("Ctrl+C"));
     addAction(copyImagesAction);
     connect(copyImagesAction, &QAction::triggered, thumbView, &ThumbView::copyThumbs);
 
     rate0Action = new QAction(tr("Clear rating"), this);
     rate0Action->setObjectName("Rate0");
+    rate0Action->setShortcutVisibleInContextMenu(true);
     addAction(rate0Action);
     connect(rate0Action, &QAction::triggered, this, &MW::setRating);
 
     rate1Action = new QAction(tr("Set rating to 1"), this);
     rate1Action->setObjectName("Rate1");
+    rate1Action->setShortcutVisibleInContextMenu(true);
     addAction(rate1Action);
     connect(rate1Action, &QAction::triggered, this, &MW::setRating);
 
     rate2Action = new QAction(tr("Set rating to 2"), this);
     rate2Action->setObjectName("Rate2");
+    rate2Action->setShortcutVisibleInContextMenu(true);
     addAction(rate2Action);
     connect(rate2Action, &QAction::triggered, this, &MW::setRating);
 
     rate3Action = new QAction(tr("Set rating to 3"), this);
     rate3Action->setObjectName("Rate3");
+    rate3Action->setShortcutVisibleInContextMenu(true);
     addAction(rate3Action);
     connect(rate3Action, &QAction::triggered, this, &MW::setRating);
 
     rate4Action = new QAction(tr("Set rating to 4"), this);
     rate4Action->setObjectName("Rate4");
+    rate4Action->setShortcutVisibleInContextMenu(true);
     addAction(rate4Action);
     connect(rate4Action, &QAction::triggered, this, &MW::setRating);
 
     rate5Action = new QAction(tr("Set rating to 5"), this);
     rate5Action->setObjectName("Rate5");
+    rate5Action->setShortcutVisibleInContextMenu(true);
     addAction(rate5Action);
     connect(rate5Action, &QAction::triggered, this, &MW::setRating);
 
     label0Action = new QAction(tr("Clear colour"), this);
     label0Action->setObjectName("Label0");
+    label0Action->setShortcutVisibleInContextMenu(true);
     addAction(label0Action);
     connect(label0Action, &QAction::triggered, this, &MW::setColorClass);
 
     label1Action = new QAction(tr("Set to Red"), this);
     label1Action->setObjectName("Label1");
+    label1Action->setShortcutVisibleInContextMenu(true);
     addAction(label1Action);
     connect(label1Action, &QAction::triggered, this, &MW::setColorClass);
 
     label2Action = new QAction(tr("Set to Yellow"), this);
     label2Action->setObjectName("Label2");
+    label2Action->setShortcutVisibleInContextMenu(true);
     addAction(label2Action);
     connect(label2Action, &QAction::triggered, this, &MW::setColorClass);
 
     label3Action = new QAction(tr("Set to Green"), this);
     label3Action->setObjectName("Label3");
+    label3Action->setShortcutVisibleInContextMenu(true);
     addAction(label3Action);
     connect(label3Action, &QAction::triggered, this, &MW::setColorClass);
 
     label4Action = new QAction(tr("Set to Blue"), this);
     label4Action->setObjectName("Label4");
+    label4Action->setShortcutVisibleInContextMenu(true);
     addAction(label4Action);
     connect(label4Action, &QAction::triggered, this, &MW::setColorClass);
 
     label5Action = new QAction(tr("Set to Purple"), this);
     label5Action->setObjectName("Label5");
+    label5Action->setShortcutVisibleInContextMenu(true);
     addAction(label5Action);
     connect(label5Action, &QAction::triggered, this, &MW::setColorClass);
 
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
+    rotateRightAction->setShortcutVisibleInContextMenu(true);
     addAction(rotateRightAction);
     connect(rotateRightAction, &QAction::triggered, this, &MW::rotateRight);
 
@@ -1371,11 +1410,13 @@ void MW::createActions()
 
     prefAction = new QAction(tr("Preferences"), this);
     prefAction->setObjectName("settings");
+    prefAction->setShortcutVisibleInContextMenu(true);
     addAction(prefAction);
     connect(prefAction, &QAction::triggered, this, &MW::preferences);
 
     oldPrefAction = new QAction(tr("Old Preferences"), this);
     oldPrefAction->setObjectName("settings");
+    oldPrefAction->setShortcutVisibleInContextMenu(true);
     addAction(oldPrefAction);
     connect(oldPrefAction, &QAction::triggered, this, &MW::oldPreferences);
 
@@ -1383,48 +1424,57 @@ void MW::createActions()
 
     keyRightAction = new QAction(tr("Next Image"), this);
     keyRightAction->setObjectName("nextImage");
+    keyRightAction->setShortcutVisibleInContextMenu(true);
     keyRightAction->setEnabled(true);
     addAction(keyRightAction);
     connect(keyRightAction, &QAction::triggered, this, &MW::keyRight);
 
     keyLeftAction = new QAction(tr("Previous"), this);
     keyLeftAction->setObjectName("prevImage");
+    keyLeftAction->setShortcutVisibleInContextMenu(true);
     addAction(keyLeftAction);
     connect(keyLeftAction, &QAction::triggered, this, &MW::keyLeft);
 
     keyUpAction = new QAction(tr("Move Up"), this);
     keyUpAction->setObjectName("moveUp");
+    keyUpAction->setShortcutVisibleInContextMenu(true);
     addAction(keyUpAction);
     connect(keyUpAction, &QAction::triggered, this, &MW::keyUp);
 
     keyDownAction = new QAction(tr("Move Down"), this);
     keyDownAction->setObjectName("moveDown");
+    keyDownAction->setShortcutVisibleInContextMenu(true);
     addAction(keyDownAction);
     connect(keyDownAction, &QAction::triggered, this, &MW::keyDown);
 
     keyHomeAction = new QAction(tr("First"), this);
     keyHomeAction->setObjectName("firstImage");
+    keyHomeAction->setShortcutVisibleInContextMenu(true);
     addAction(keyHomeAction);
     connect(keyHomeAction, &QAction::triggered, this, &MW::keyHome);
 
     keyEndAction = new QAction(tr("Last"), this);
     keyEndAction->setObjectName("lastImage");
+    keyEndAction->setShortcutVisibleInContextMenu(true);
     addAction(keyEndAction);
     connect(keyEndAction, &QAction::triggered, this, &MW::keyEnd);
 
     // Not a menu item - used by slide show
     randomImageAction = new QAction(tr("Random"), this);
     randomImageAction->setObjectName("randomImage");
+    randomImageAction->setShortcutVisibleInContextMenu(true);
     addAction(randomImageAction);
     connect(randomImageAction, &QAction::triggered, thumbView, &ThumbView::selectRandom);
 
     nextPickAction = new QAction(tr("Next Pick"), this);
     nextPickAction->setObjectName("nextPick");
+    nextPickAction->setShortcutVisibleInContextMenu(true);
     addAction(nextPickAction);
     connect(nextPickAction, &QAction::triggered, thumbView, &ThumbView::selectNextPick);
 
     prevPickAction = new QAction(tr("Previous Pick"), this);
     prevPickAction->setObjectName("prevPick");
+    prevPickAction->setShortcutVisibleInContextMenu(true);
     addAction(prevPickAction);
     connect(prevPickAction, &QAction::triggered, thumbView, &ThumbView::selectPrevPick);
 
@@ -1432,70 +1482,84 @@ void MW::createActions()
 
     uncheckAllFiltersAction = new QAction(tr("Uncheck all filters"), this);
     uncheckAllFiltersAction->setObjectName("uncheckAllFilters");
+    uncheckAllFiltersAction->setShortcutVisibleInContextMenu(true);
     addAction(uncheckAllFiltersAction);
     connect(uncheckAllFiltersAction, &QAction::triggered, this, &MW::uncheckAllFilters);
 
     expandAllAction = new QAction(tr("Expand all filters"), this);
     expandAllAction->setObjectName("expandAll");
+    expandAllAction->setShortcutVisibleInContextMenu(true);
     addAction(expandAllAction);
     connect(expandAllAction, &QAction::triggered, filters, &Filters::expandAllFilters);
 
     collapseAllAction = new QAction(tr("Collapse all filters"), this);
     collapseAllAction->setObjectName("collapseAll");
+    collapseAllAction->setShortcutVisibleInContextMenu(true);
     addAction(collapseAllAction);
     connect(collapseAllAction, &QAction::triggered, filters, &Filters::collapseAllFilters);
 
     filterRating1Action = new QAction(tr("Filter by rating 1"), this);
     filterRating1Action->setCheckable(true);
+    filterRating1Action->setShortcutVisibleInContextMenu(true);
     addAction(filterRating1Action);
     connect(filterRating1Action, &QAction::triggered, this, &MW::quickFilter);
 
     filterRating2Action = new QAction(tr("Filter by rating 2"), this);
     filterRating2Action->setCheckable(true);
+    filterRating2Action->setShortcutVisibleInContextMenu(true);
     addAction(filterRating2Action);
     connect(filterRating2Action,  &QAction::triggered, this, &MW::quickFilter);
 
     filterRating3Action = new QAction(tr("Filter by rating 3"), this);
     filterRating3Action->setCheckable(true);
+    filterRating3Action->setShortcutVisibleInContextMenu(true);
     addAction(filterRating3Action);
     connect(filterRating3Action,  &QAction::triggered, this, &MW::quickFilter);
 
     filterRating4Action = new QAction(tr("Filter by rating 4"), this);
     filterRating4Action->setCheckable(true);
+    filterRating4Action->setShortcutVisibleInContextMenu(true);
     addAction(filterRating4Action);
     connect(filterRating4Action,  &QAction::triggered, this, &MW::quickFilter);
 
     filterRating5Action = new QAction(tr("Filter by rating 5"), this);
     filterRating5Action->setCheckable(true);
+    filterRating5Action->setShortcutVisibleInContextMenu(true);
     addAction(filterRating5Action);
     connect(filterRating5Action,  &QAction::triggered, this, &MW::quickFilter);
 
     filterRedAction = new QAction(tr("Filter by Red"), this);
+    filterRedAction->setShortcutVisibleInContextMenu(true);
     filterRedAction->setCheckable(true);
     addAction(filterRedAction);
     connect(filterRedAction,  &QAction::triggered, this, &MW::quickFilter);
 
     filterYellowAction = new QAction(tr("Filter by Yellow"), this);
+    filterYellowAction->setShortcutVisibleInContextMenu(true);
     filterYellowAction->setCheckable(true);
     addAction(filterYellowAction);
     connect(filterYellowAction,  &QAction::triggered, this, &MW::quickFilter);
 
     filterGreenAction = new QAction(tr("Filter by Green"), this);
+    filterGreenAction->setShortcutVisibleInContextMenu(true);
     filterGreenAction->setCheckable(true);
     addAction(filterGreenAction);
     connect(filterGreenAction,  &QAction::triggered, this, &MW::quickFilter);
 
     filterBlueAction = new QAction(tr("Filter by Blue"), this);
+    filterBlueAction->setShortcutVisibleInContextMenu(true);
     filterBlueAction->setCheckable(true);
     addAction(filterBlueAction);
     connect(filterBlueAction,  &QAction::triggered, this, &MW::quickFilter);
 
     filterPurpleAction = new QAction(tr("Filter by Purple"), this);
+    filterPurpleAction->setShortcutVisibleInContextMenu(true);
     filterPurpleAction->setCheckable(true);
     addAction(filterPurpleAction);
     connect(filterPurpleAction,  &QAction::triggered, this, &MW::quickFilter);
 
     filterInvertAction = new QAction(tr("Invert Filter"), this);
+    filterInvertAction->setShortcutVisibleInContextMenu(true);
     filterInvertAction->setCheckable(true);
     addAction(filterInvertAction);
     connect(filterInvertAction,  &QAction::triggered, this, &MW::invertFilters);
@@ -1503,92 +1567,110 @@ void MW::createActions()
     // Sort Menu
 
     sortFileNameAction = new QAction(tr("Sort by file name"), this);
+    sortFileNameAction->setShortcutVisibleInContextMenu(true);
     sortFileNameAction->setCheckable(true);
     addAction(sortFileNameAction);
     connect(sortFileNameAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortFileTypeAction = new QAction(tr("Sort by file type"), this);
+    sortFileTypeAction->setShortcutVisibleInContextMenu(true);
     sortFileTypeAction->setCheckable(true);
     addAction(sortFileTypeAction);
     connect(sortFileTypeAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortFileSizeAction = new QAction(tr("Sort by file size"), this);
+    sortFileSizeAction->setShortcutVisibleInContextMenu(true);
     sortFileSizeAction->setCheckable(true);
     addAction(sortFileSizeAction);
     connect(sortFileSizeAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortCreateAction = new QAction(tr("Sort by created time"), this);
+    sortCreateAction->setShortcutVisibleInContextMenu(true);
     sortCreateAction->setCheckable(true);
     addAction(sortCreateAction);
     connect(sortCreateAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortModifyAction = new QAction(tr("Sort by last modified time"), this);
+    sortModifyAction->setShortcutVisibleInContextMenu(true);
     sortModifyAction->setCheckable(true);
     addAction(sortModifyAction);
     connect(sortModifyAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortPickAction = new QAction(tr("Sort by picked status"), this);
+    sortPickAction->setShortcutVisibleInContextMenu(true);
     sortPickAction->setCheckable(true);
     addAction(sortPickAction);
     connect(sortPickAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortLabelAction = new QAction(tr("Sort by label"), this);
+    sortLabelAction->setShortcutVisibleInContextMenu(true);
     sortLabelAction->setCheckable(true);
     addAction(sortLabelAction);
     connect(sortLabelAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortRatingAction = new QAction(tr("Sort by rating"), this);
+    sortRatingAction->setShortcutVisibleInContextMenu(true);
     sortRatingAction->setCheckable(true);
     addAction(sortRatingAction);
     connect(sortRatingAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortMegaPixelsAction = new QAction(tr("Sort by megapixels"), this);
+    sortMegaPixelsAction->setShortcutVisibleInContextMenu(true);
     sortMegaPixelsAction->setCheckable(true);
     addAction(sortMegaPixelsAction);
     connect(sortMegaPixelsAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortDimensionsAction = new QAction(tr("Sort by dimensions"), this);
+    sortDimensionsAction->setShortcutVisibleInContextMenu(true);
     sortDimensionsAction->setCheckable(true);
     addAction(sortDimensionsAction);
     connect(sortDimensionsAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortApertureAction = new QAction(tr("Sort by aperture"), this);
 //    sortApertureAction->setObjectName("SortAperture");
+    sortApertureAction->setShortcutVisibleInContextMenu(true);
     sortApertureAction->setCheckable(true);
     addAction(sortApertureAction);
     connect(sortApertureAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortShutterSpeedAction = new QAction(tr("Sort by shutter speed"), this);
+    sortShutterSpeedAction->setShortcutVisibleInContextMenu(true);
     sortShutterSpeedAction->setCheckable(true);
     addAction(sortShutterSpeedAction);
     connect(sortShutterSpeedAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortISOAction = new QAction(tr("Sort by ISO"), this);
+    sortISOAction->setShortcutVisibleInContextMenu(true);
     sortISOAction->setCheckable(true);
     addAction(sortISOAction);
     connect(sortISOAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortModelAction = new QAction(tr("Sort by camera model"), this);
+    sortModelAction->setShortcutVisibleInContextMenu(true);
     sortModelAction->setCheckable(true);
     addAction(sortModelAction);
     connect(sortModelAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortFocalLengthAction = new QAction(tr("Sort by focal length"), this);
+    sortFocalLengthAction->setShortcutVisibleInContextMenu(true);
     sortFocalLengthAction->setCheckable(true);
     addAction(sortFocalLengthAction);
     connect(sortFocalLengthAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortTitleAction = new QAction(tr("Sort by title"), this);
+    sortTitleAction->setShortcutVisibleInContextMenu(true);
     sortTitleAction->setCheckable(true);
     addAction(sortTitleAction);
     connect(sortTitleAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortLensAction = new QAction(tr("Sort by lens"), this);
+    sortLensAction->setShortcutVisibleInContextMenu(true);
     sortLensAction->setCheckable(true);
     addAction(sortLensAction);
     connect(sortLensAction, &QAction::triggered, this, &MW::sortThumbnails);
 
     sortCreatorAction = new QAction(tr("Sort by creator"), this);
+    sortCreatorAction->setShortcutVisibleInContextMenu(true);
     sortCreatorAction->setCheckable(true);
     addAction(sortCreatorAction);
     connect(sortCreatorAction, &QAction::triggered, this, &MW::sortThumbnails);
@@ -1619,6 +1701,7 @@ void MW::createActions()
 
     sortReverseAction = new QAction(tr("Reverse sort order"), this);
     sortReverseAction->setObjectName("reverse");
+    sortReverseAction->setShortcutVisibleInContextMenu(true);
     sortReverseAction->setCheckable(true);
 //    sortReverseAction->setChecked(false);
     addAction(sortReverseAction);
@@ -1627,11 +1710,13 @@ void MW::createActions()
     // View menu
     slideShowAction = new QAction(tr("Slide Show"), this);
     slideShowAction->setObjectName("slideShow");
+    slideShowAction->setShortcutVisibleInContextMenu(true);
     addAction(slideShowAction);
     connect(slideShowAction, &QAction::triggered, this, &MW::slideShow);
 
     fullScreenAction = new QAction(tr("Full Screen"), this);
     fullScreenAction->setObjectName("fullScreenAct");
+    fullScreenAction->setShortcutVisibleInContextMenu(true);
     fullScreenAction->setCheckable(true);
 //    fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
     addAction(fullScreenAction);
@@ -1639,43 +1724,51 @@ void MW::createActions()
 
     escapeFullScreenAction = new QAction(tr("Escape Full Screen"), this);
     escapeFullScreenAction->setObjectName("escapeFullScreenAct");
+    escapeFullScreenAction->setShortcutVisibleInContextMenu(true);
     addAction(escapeFullScreenAction);
     connect(escapeFullScreenAction, &QAction::triggered, this, &MW::escapeFullScreen);
 
     ratingBadgeVisibleAction = new QAction(tr("Show Rating Badge"), this);
     ratingBadgeVisibleAction->setObjectName("toggleRatingBadge");
+    ratingBadgeVisibleAction->setShortcutVisibleInContextMenu(true);
     ratingBadgeVisibleAction->setCheckable(true);
     addAction(ratingBadgeVisibleAction);
     connect(ratingBadgeVisibleAction, &QAction::triggered, this, &MW::setRatingBadgeVisibility);
 
     infoVisibleAction = new QAction(tr("Show Shooting Info"), this);
     infoVisibleAction->setObjectName("toggleInfo");
+    infoVisibleAction->setShortcutVisibleInContextMenu(true);
     infoVisibleAction->setCheckable(true);
     addAction(infoVisibleAction);
     connect(infoVisibleAction, &QAction::triggered, this, &MW::setShootingInfoVisibility);
 
     infoSelectAction = new QAction(tr("Select or edit Shooting Info"), this);
+    infoSelectAction->setShortcutVisibleInContextMenu(true);
     infoSelectAction->setObjectName("selectInfo");
     addAction(infoSelectAction);
     connect(infoSelectAction, &QAction::triggered, this, &MW::selectShootingInfo);
 
     asLoupeAction = new QAction(tr("Loupe"), this);
+    asLoupeAction->setShortcutVisibleInContextMenu(true);
     asLoupeAction->setCheckable(true);
     addAction(asLoupeAction);
     connect(asLoupeAction, &QAction::triggered, this, &MW::loupeDisplay);
 
     asGridAction = new QAction(tr("Grid"), this);
+    asGridAction->setShortcutVisibleInContextMenu(true);
     asGridAction->setCheckable(true);
 //    asGridAction->setChecked(setting->value("isGridDisplay").toBool());
     addAction(asGridAction);
     connect(asGridAction, &QAction::triggered, this, &MW::gridDisplay);
 
     asTableAction = new QAction(tr("Table"), this);
+    asTableAction->setShortcutVisibleInContextMenu(true);
     asTableAction->setCheckable(true);
     addAction(asTableAction);
     connect(asTableAction, &QAction::triggered, this, &MW::tableDisplay);
 
     asCompareAction = new QAction(tr("Compare"), this);
+    asCompareAction->setShortcutVisibleInContextMenu(true);
     asCompareAction->setCheckable(true);
 //    asCompareAction->setChecked(false); // never start with compare set true
     addAction(asCompareAction);
@@ -1690,42 +1783,50 @@ void MW::createActions()
 
     zoomToAction = new QAction(tr("Zoom To"), this);
     zoomToAction->setObjectName("zoomTo");
+    zoomToAction->setShortcutVisibleInContextMenu(true);
     addAction(zoomToAction);
     connect(zoomToAction, &QAction::triggered, this, &MW::updateZoom);
 
     zoomOutAction = new QAction(tr("Zoom Out"), this);
     zoomOutAction->setObjectName("zoomOut");
+    zoomOutAction->setShortcutVisibleInContextMenu(true);
     addAction(zoomOutAction);
     connect(zoomOutAction, &QAction::triggered, this, &MW::zoomOut);
 
     zoomInAction = new QAction(tr("Zoom In"), this);
     zoomInAction->setObjectName("zoomIn");
+    zoomInAction->setShortcutVisibleInContextMenu(true);
     addAction(zoomInAction);
     connect(zoomInAction, &QAction::triggered, this, &MW::zoomIn);
 
     zoomToggleAction = new QAction(tr("Zoom fit <-> 100%"), this);
     zoomToggleAction->setObjectName("resetZoom");
+    zoomToggleAction->setShortcutVisibleInContextMenu(true);
     addAction(zoomToggleAction);
     connect(zoomToggleAction, &QAction::triggered, this, &MW::zoomToggle);
 
     thumbsWrapAction = new QAction(tr("Wrap thumbs"), this);
     thumbsWrapAction->setObjectName("wrapThumbs");
+    thumbsWrapAction->setShortcutVisibleInContextMenu(true);
     thumbsWrapAction->setCheckable(true);
     addAction(thumbsWrapAction);
     connect(thumbsWrapAction, &QAction::triggered, this, &MW::toggleThumbWrap);
 
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
+    thumbsEnlargeAction->setShortcutVisibleInContextMenu(true);
     addAction(thumbsEnlargeAction);
     connect(thumbsEnlargeAction, &QAction::triggered, this, &MW::thumbsEnlarge);
 
     thumbsShrinkAction = new QAction(tr("Shrink thumbs"), this);
     thumbsShrinkAction->setObjectName("shrinkThumbs");
+    thumbsShrinkAction->setShortcutVisibleInContextMenu(true);
     addAction(thumbsShrinkAction);
     connect(thumbsShrinkAction, &QAction::triggered, this, &MW::thumbsShrink);
 
     thumbsFitAction = new QAction(tr("Fit thumbs"), this);
     thumbsFitAction->setObjectName("thumbsZoomOut");
+    thumbsFitAction->setShortcutVisibleInContextMenu(true);
     addAction(thumbsFitAction);
     connect(thumbsFitAction, &QAction::triggered, this, &MW::setDockFitThumbs);
 
@@ -1740,48 +1841,56 @@ void MW::createActions()
 
     windowTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
     windowTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
+    windowTitleBarVisibleAction->setShortcutVisibleInContextMenu(true);
     windowTitleBarVisibleAction->setCheckable(true);
     addAction(windowTitleBarVisibleAction);
     connect(windowTitleBarVisibleAction, &QAction::triggered, this, &MW::setWindowsTitleBarVisibility);
 
     menuBarVisibleAction = new QAction(tr("Menubar"), this);
     menuBarVisibleAction->setObjectName("toggleMenuBar");
+    menuBarVisibleAction->setShortcutVisibleInContextMenu(true);
     menuBarVisibleAction->setCheckable(true);
     addAction(menuBarVisibleAction);
     connect(menuBarVisibleAction, &QAction::triggered, this, &MW::setMenuBarVisibility);
 
     statusBarVisibleAction = new QAction(tr("Statusbar"), this);
     statusBarVisibleAction->setObjectName("toggleStatusBar");
+    statusBarVisibleAction->setShortcutVisibleInContextMenu(true);
     statusBarVisibleAction->setCheckable(true);
     addAction(statusBarVisibleAction);
     connect(statusBarVisibleAction, &QAction::triggered, this, &MW::setStatusBarVisibility);
 
     folderDockVisibleAction = new QAction(tr("Folder"), this);
     folderDockVisibleAction->setObjectName("toggleFiless");
+    folderDockVisibleAction->setShortcutVisibleInContextMenu(true);
     folderDockVisibleAction->setCheckable(true);
     addAction(folderDockVisibleAction);
     connect(folderDockVisibleAction, &QAction::triggered, this, &MW::setFolderDockVisibility);
 
     favDockVisibleAction = new QAction(tr("Favourites"), this);
     favDockVisibleAction->setObjectName("toggleFavs");
+    favDockVisibleAction->setShortcutVisibleInContextMenu(true);
     favDockVisibleAction->setCheckable(true);
     addAction(favDockVisibleAction);
     connect(favDockVisibleAction, &QAction::triggered, this, &MW::setFavDockVisibility);
 
     filterDockVisibleAction = new QAction(tr("Filters"), this);
     filterDockVisibleAction->setObjectName("toggleFilters");
+    filterDockVisibleAction->setShortcutVisibleInContextMenu(true);
     filterDockVisibleAction->setCheckable(true);
     addAction(filterDockVisibleAction);
     connect(filterDockVisibleAction, &QAction::triggered, this, &MW::setFilterDockVisibility);
 
     metadataDockVisibleAction = new QAction(tr("Metadata"), this);
     metadataDockVisibleAction->setObjectName("toggleMetadata");
+    metadataDockVisibleAction->setShortcutVisibleInContextMenu(true);
     metadataDockVisibleAction->setCheckable(true);
     addAction(metadataDockVisibleAction);
     connect(metadataDockVisibleAction, &QAction::triggered, this, &MW::setMetadataDockVisibility);
 
     thumbDockVisibleAction = new QAction(tr("Thumbnails"), this);
     thumbDockVisibleAction->setObjectName("toggleThumbs");
+    thumbDockVisibleAction->setShortcutVisibleInContextMenu(true);
     thumbDockVisibleAction->setCheckable(true);
     addAction(thumbDockVisibleAction);
     connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::setThumbDockVisibity);
@@ -1790,62 +1899,73 @@ void MW::createActions()
 
     folderDockFocusAction = new QAction(tr("Focus on Folders"), this);
     folderDockFocusAction->setObjectName("FocusFolders");
+    folderDockFocusAction->setShortcutVisibleInContextMenu(true);
     addAction(folderDockFocusAction);
     connect(folderDockFocusAction, &QAction::triggered, this, &MW::setFolderDockFocus);
 
     favDockFocusAction = new QAction(tr("Focus on Favourites"), this);
     favDockFocusAction->setObjectName("FocusFavourites");
+    favDockFocusAction->setShortcutVisibleInContextMenu(true);
     addAction(favDockFocusAction);
     connect(favDockFocusAction, &QAction::triggered, this, &MW::setFavDockFocus);
 
     filterDockFocusAction = new QAction(tr("Focus on Filters"), this);
     filterDockFocusAction->setObjectName("FocusFilters");
+    filterDockFocusAction->setShortcutVisibleInContextMenu(true);
     addAction(filterDockFocusAction);
     connect(filterDockFocusAction, &QAction::triggered, this, &MW::setFilterDockFocus);
 
     metadataDockFocusAction = new QAction(tr("Focus on Metadata"), this);
     metadataDockFocusAction->setObjectName("FocusMetadata");
+    metadataDockFocusAction->setShortcutVisibleInContextMenu(true);
     addAction(metadataDockFocusAction);
     connect(metadataDockFocusAction, &QAction::triggered, this, &MW::setMetadataDockFocus);
 
     thumbDockFocusAction = new QAction(tr("Focus on Thumbs"), this);
     thumbDockFocusAction->setObjectName("FocusThumbs");
+    thumbDockFocusAction->setShortcutVisibleInContextMenu(true);
     addAction(thumbDockFocusAction);
     connect(thumbDockFocusAction, &QAction::triggered, this, &MW::setThumbDockFocus);
 
     // Lock docks (hide titlebar) actions
     folderDockLockAction = new QAction(tr("Hide Folder Titlebar"), this);
     folderDockLockAction->setObjectName("lockDockFiles");
+    folderDockLockAction->setShortcutVisibleInContextMenu(true);
     folderDockLockAction->setCheckable(true);
     addAction(folderDockLockAction);
     connect(folderDockLockAction, &QAction::triggered, this, &MW::setFolderDockLockMode);
 
     favDockLockAction = new QAction(tr("Hide Favourite titlebar"), this);
     favDockLockAction->setObjectName("lockDockFavs");
+    favDockLockAction->setShortcutVisibleInContextMenu(true);
     favDockLockAction->setCheckable(true);
     addAction(favDockLockAction);
     connect(favDockLockAction, &QAction::triggered, this, &MW::setFavDockLockMode);
 
     filterDockLockAction = new QAction(tr("Hide Filter titlebars"), this);
     filterDockLockAction->setObjectName("lockDockFilters");
+    filterDockLockAction->setShortcutVisibleInContextMenu(true);
     filterDockLockAction->setCheckable(true);
     addAction(filterDockLockAction);
     connect(filterDockLockAction, &QAction::triggered, this, &MW::setFilterDockLockMode);
 
     metadataDockLockAction = new QAction(tr("Hide Metadata Titlebar"), this);
     metadataDockLockAction->setObjectName("lockDockMetadata");
+    metadataDockLockAction->setShortcutVisibleInContextMenu(true);
     metadataDockLockAction->setCheckable(true);
     addAction(metadataDockLockAction);
     connect(metadataDockLockAction, &QAction::triggered, this, &MW::setMetadataDockLockMode);
 
     thumbDockLockAction = new QAction(tr("Hide Thumbs Titlebar"), this);
     thumbDockLockAction->setObjectName("lockDockThumbs");
+    thumbDockLockAction->setShortcutVisibleInContextMenu(true);
     thumbDockLockAction->setCheckable(true);
     addAction(thumbDockLockAction);
     connect(thumbDockLockAction, &QAction::triggered, this, &MW::setThumbDockLockMode);
 
     allDocksLockAction = new QAction(tr("Hide All Titlebars"), this);
     allDocksLockAction->setObjectName("lockDocks");
+    allDocksLockAction->setShortcutVisibleInContextMenu(true);
     allDocksLockAction->setCheckable(true);
     addAction(allDocksLockAction);
     connect(allDocksLockAction, &QAction::triggered, this, &MW::setAllDocksLockMode);
@@ -1853,16 +1973,19 @@ void MW::createActions()
     // Workspace submenu of Window menu
     defaultWorkspaceAction = new QAction(tr("Default Workspace"), this);
     defaultWorkspaceAction->setObjectName("defaultWorkspace");
+    defaultWorkspaceAction->setShortcutVisibleInContextMenu(true);
     addAction(defaultWorkspaceAction);
     connect(defaultWorkspaceAction, &QAction::triggered, this, &MW::defaultWorkspace);
 
     newWorkspaceAction = new QAction(tr("New Workspace"), this);
     newWorkspaceAction->setObjectName("newWorkspace");
+    newWorkspaceAction->setShortcutVisibleInContextMenu(true);
     addAction(newWorkspaceAction);
     connect(newWorkspaceAction, &QAction::triggered, this, &MW::newWorkspace);
 
     manageWorkspaceAction = new QAction(tr("Manage Workspaces ..."), this);
     manageWorkspaceAction->setObjectName("manageWorkspaces");
+    manageWorkspaceAction->setShortcutVisibleInContextMenu(true);
     addAction(manageWorkspaceAction);
     connect(manageWorkspaceAction, &QAction::triggered, this, &MW::manageWorkspaces);
 
@@ -1883,6 +2006,7 @@ void MW::createActions()
         if (i < n) {
             workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
             workspaceActions.at(i)->setObjectName(objName);
+            workspaceActions.at(i)->setShortcutVisibleInContextMenu(true);
             workspaceActions.at(i)->setText(name);
             workspaceActions.at(i)->setVisible(true);
             addAction(workspaceActions.at(i));
@@ -1900,21 +2024,25 @@ void MW::createActions()
 
     aboutAction = new QAction(tr("About"), this);
     aboutAction->setObjectName("about");
+    aboutAction->setShortcutVisibleInContextMenu(true);
     addAction(aboutAction);
     connect(aboutAction, &QAction::triggered, this, &MW::about);
 
     helpAction = new QAction(tr("Winnow Help"), this);
     helpAction->setObjectName("help");
+    helpAction->setShortcutVisibleInContextMenu(true);
     addAction(helpAction);
     connect(helpAction, &QAction::triggered, this, &MW::help);
 
     helpShortcutsAction = new QAction(tr("Winnow Shortcuts"), this);
     helpShortcutsAction->setObjectName("helpShortcuts");
+    helpShortcutsAction->setShortcutVisibleInContextMenu(true);
     addAction(helpShortcutsAction);
     connect(helpShortcutsAction, &QAction::triggered, this, &MW::helpShortcuts);
 
     helpWelcomeAction = new QAction(tr("Show welcome screen"), this);
     helpWelcomeAction->setObjectName("helpWelcome");
+    helpWelcomeAction->setShortcutVisibleInContextMenu(true);
     addAction(helpWelcomeAction);
     connect(helpWelcomeAction, &QAction::triggered, this, &MW::helpWelcome);
 
@@ -1922,6 +2050,7 @@ void MW::createActions()
 
     testAction = new QAction(tr("Test Metadata"), this);
     testAction->setObjectName("test");
+    testAction->setShortcutVisibleInContextMenu(true);
     addAction(testAction);
     testAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+T"));
     connect(testAction, &QAction::triggered, this, &MW::test);
@@ -1936,6 +2065,7 @@ void MW::createActions()
     // used in fsTree and bookmarks
     pasteAction = new QAction(tr("Paste files"), this);
     pasteAction->setObjectName("paste");
+    pasteAction->setShortcutVisibleInContextMenu(true);
     addAction(pasteAction);
 //        connect(pasteAction, SIGNAL(triggered()), this, SLOT(about()));
 }
