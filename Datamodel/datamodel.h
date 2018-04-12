@@ -39,7 +39,6 @@ public:
     DataModel(QWidget *parent, Metadata *metadata, Filters *filters, bool &combineRawJpg);
 
     bool load(QString &dir, bool includeSubfolders);
-    bool loadSubFolders(QString folderPath);
     void addMetadata();
     void updateImageList();
     void sortThumbs(int sortColumn, bool isReverse);
@@ -77,7 +76,6 @@ private:
     QFileInfo fileInfo;
     QImage emptyImg;
 
-    bool addFolderFilesToList();
     bool addFileData();
     void rawPlusJpg();
 };
