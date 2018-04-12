@@ -15,19 +15,18 @@ BUGS
 - Confirm tif metadata for focus stacks (app out msg)
 - Toggle zoom wrong place when using preview size cached image
 - Gets stuck in F mode where cannot resize
-- Days are repeated in Filters (Lillian images for example)
 PERFORMANCE
 CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Add more raw file formats - DNG, Panasonic ...
 - Add preferences for badge and shooting info size
 - Add completer for title in metadata
 - Eject card
 - add metadata performance options to preferences
 - Get Sony image count, camera SN
 - Add zoom increment amount to preferences
-- Add more raw file formats - DNG, Panasonic ...
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Disable menu "add bookmark" when folders not selected??
 - Tweak context menus
@@ -36,6 +35,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE
+- Days are repeated in Filters (Lillian images for example)
 - Shortcuts not showing in context menus
 - Add esc interrupt when loading datamodel
 - Filtered to nothing but ImageView still shows last image

@@ -262,28 +262,6 @@ Steps:
     else return false;
 }
 
-bool DataModel::addFolderFilesToList()
-{
-/*
-Build a list of the QFileInfo for each supported image file in the folder(s).
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    int folderImageCount = dir->entryInfoList().size();
-//    if (!folderImageCount) return false;
-//    for (int i = 0; i < folderImageCount; ++i) {
-//        qApp->processEvents();
-//        if (timeToQuit) return false;
-//        fileInfoList.append(dir->entryInfoList().at(i));
-//        qDebug() <<  "DataModel::addFiles " << dir->entryInfoList().at(i).absoluteFilePath();
-//        imageCount++;
-//    }
-    return true;
-}
-
 bool DataModel::addFileData()
 {
     {
@@ -458,13 +436,13 @@ which is created in MW, and in InfoView.
         QString email = metadata->getEmail(fPath);
         QString url = metadata->getUrl(fPath);
 
-        creatorMap[creator] = creator;
-        yearMap[year] = year;
-        dayMap[day] = day;
-        modelMap[model] = model;
-        lensMap[lens] = lens;
-        flMap[flNum] = fl;
-        titleMap[title] = title;
+        if (!creatorMap.contains(creator)) creatorMap[creator] = creator;
+        if (!yearMap.contains(year)) yearMap[year] = year;
+        if (!dayMap.contains(day)) dayMap[day] = day;
+        if (!modelMap.contains(model)) modelMap[model] = model;
+        if (!lensMap.contains(lens)) lensMap[lens] = lens;
+        if (!flMap.contains(fl)) flMap[flNum] = fl;
+        if (!titleMap.contains(title)) titleMap[title] = title;
 
         setData(index(row, G::LabelColumn), label);
         setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
