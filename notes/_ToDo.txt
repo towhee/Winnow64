@@ -1,5 +1,4 @@
 BUGS
-- Add timeout check loading datamodel
 - Stress test rapidly selecting folders causes crash
 - Title not included in ingest
 - Bookmarks names and count not aligned vertically
@@ -37,6 +36,8 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE
+- Shortcuts not showing in context menus
+- Add esc interrupt when loading datamodel
 - Filtered to nothing but ImageView still shows last image
 - Pick badge stays visible when image not picked
 - G Drive and include subfolders not working
