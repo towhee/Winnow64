@@ -8,7 +8,7 @@
 #include "Views/thumbview.h"
 #include "Views/infostring.h"
 #include "Utilities/dropshadowlabel.h"
-#include "Utilities/circlelabel.h"
+#include "Utilities/classificationlabel.h"
 #include "Image/pixmap.h"
 
 class ImageView : public QGraphicsView
@@ -41,8 +41,7 @@ public:
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void rotate(int degrees);
     void moveShootingInfo(QString infoString);
-    QLabel *pickLabel;      // visibility controlled in MW
-    CircleLabel *classificationLabel;
+    ClassificationLabel *classificationLabel;
     QPixmap *pickPixmap;
 
 public slots:
@@ -97,7 +96,7 @@ private:
 
     bool sceneBiggerThanView();
     bool resizeIsSmaller();
-    void movePickIcon();
+    void placeClassificationBadge();
     void transform();
 
     QWidget *mainWindow;

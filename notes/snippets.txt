@@ -1,3 +1,12 @@
+// Create a label with a png file image
+pickLabel = new QLabel(this);
+pickLabel->setFixedSize(64,64);
+pickLabel->setAttribute(Qt::WA_TranslucentBackground);
+pickPixmap = new QPixmap(":/images/checkmark.png");
+pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
+pickLabel->setVisible(false);
+
+
 // memory stuff
 struct sysinfo sys_info;
 totalmem=(qint32)(sys_info.totalram/1048576);

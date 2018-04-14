@@ -1,4 +1,6 @@
 BUGS
+- CompareImages not calc layout correctly
+- After CompareImages cannot change app width
 - Stress test rapidly selecting folders causes crash
 - Title not included in ingest
 - Bookmarks names and count not aligned vertically
@@ -31,10 +33,11 @@ ENHANCEMENTS
 - Disable menu "add bookmark" when folders not selected??
 - Tweak context menus
 - Run droplet
-- Clip black areea on canon thumbs
+- Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE
+- Completely redid classification badges
 - Days are repeated in Filters (Lillian images for example)
 - Shortcuts not showing in context menus
 - Add esc interrupt when loading datamodel

@@ -617,8 +617,15 @@ void MW::folderSelectionChange()
     subfolders will be recursively loaded into the datamodel.
     */
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
-        updateStatus(false, "No supported images in this folder");
-        setCentralMessage("The folder \"" + currentViewDir + "\" does not have any eligible images");
+        QDir dir(currentViewDir);
+        if (dir.isRoot()) {
+            updateStatus(false, "No supported images in this drive");
+            setCentralMessage("The drive \"" + currentViewDir + "\" does not have any eligible images");
+        }
+        else {
+            updateStatus(false, "No supported images in this folder");
+            setCentralMessage("The folder \"" + currentViewDir + "\" does not have any eligible images");
+        }
         popUp->close();
         infoView->clearInfo();
         metadata->clear();
@@ -710,8 +717,8 @@ so scrollTo and delegate use of the current index must check the row.
         return;
     }
 
-    qDebug() << "MW::fileSelectionChange  dm->sf->rowCount() =" << dm->sf->rowCount()
-             << "selectionModel->selectedIndexes().size() =" << selectionModel->selectedIndexes().size();
+//    qDebug() << "MW::fileSelectionChange  dm->sf->rowCount() =" << dm->sf->rowCount()
+//             << "selectionModel->selectedIndexes().size() =" << selectionModel->selectedIndexes().size();
 
 //    if (isDragDrop && dragDropFilePath.length() > 0) {
 //        thumbView->selectThumb(dragDropFilePath);
@@ -783,9 +790,10 @@ so scrollTo and delegate use of the current index must check the row.
         if (imageView->loadImage(current, fPath)) {
             if (G::isThreadTrackingOn) qDebug()
                 << "MW::fileSelectionChange - loaded image file " << fPath;
-            updatePick();
-            updateRating();
-            updateColorClass();
+            updateClassification();
+//            updatePick();
+//            updateRating();
+//            updateColorClass();
         }
     }
 
@@ -832,64 +840,6 @@ void MW::nullSelection()
     cacheLabel->setVisible(false);
 //    isInitializing = false;
     isDragDrop = false;
-}
-
-bool MW::loadImageList(QString &folderPath, bool includeSubfolders)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    QDir dir;
-    QStringList fileFilters;
-    QString currentFolderPath = folderPath;
-
-    // do some initializing
-    foreach (const QString &str, metadata->supportedFormats)
-        fileFilters.append("*." + str);
-    dir.setNameFilters(fileFilters);
-    dir.setFilter(QDir::Files);
-    dir.setPath(currentFolderPath);
-//    dir->setSorting(QDir::Name);
-
-    int imageCount = 0;
-    int folderCount = 1;
-    fileInfoList.clear();
-
-    // load the top folder
-    int folderImageCount = dir.entryInfoList().size();
-    if (!folderImageCount && !includeSubfolders) return false;
-    for (int i = 0; i < folderImageCount; ++i) {
-        if (timeToQuit) return false;
-        fileInfoList.append(dir.entryInfoList().at(i));
-        qDebug() <<  "MW::loadImageList  adding file" << dir.entryInfoList().at(i).absoluteFilePath();
-        imageCount++;
-    }
-    if (!includeSubfolders) return true;
-
-    // load subfolders recursively
-    QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        qApp->processEvents();
-        if (timeToQuit) return false;
-        it.next();
-        if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
-            folderCount++;
-            qDebug() << "MW::loadImageList  folderCount =" << folderCount << it.filePath();
-            dir.setPath(it.filePath());
-            int folderImageCount = dir.entryInfoList().size();
-            if (!folderImageCount) continue;
-            for (int i = 0; i < folderImageCount; ++i) {
-                if (timeToQuit) return false;
-                fileInfoList.append(dir.entryInfoList().at(i));
-                qDebug() <<  "MW::loadImageList  adding file" << dir.entryInfoList().at(i).absoluteFilePath();
-                imageCount++;
-            }
-        }
-    }
-    if (imageCount) return true;
-    else return false;
 }
 
 void MW::updateAllMetadataLoaded(bool isLoaded)
@@ -5817,9 +5767,10 @@ notification when the QListView has finished painting itself.
         if (imageView->loadImage(idx, fPath)) {
             if (G::isThreadTrackingOn) qDebug()
                 << "MW::fileSelectionChange - loaded image file " << fPath;
-            updatePick();
-            updateRating();
-            updateColorClass();
+            updateClassification();
+//            updatePick();
+//            updateRating();
+//            updateColorClass();
         }
     }
 
@@ -5934,7 +5885,7 @@ void MW::compareDisplay()
     G::mode = "Compare";
     centralLayout->setCurrentIndex(CompareTab);
     prevCentralView = CompareTab;
-    compareImages->load(centralWidget->size());
+    compareImages->load(centralWidget->size(), isRatingBadgeVisible);
 
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
 //    thumbView->selectionModel()->clear();
@@ -6022,7 +5973,7 @@ void MW::setRatingBadgeVisibility() {
     isRatingBadgeVisible = ratingBadgeVisibleAction->isChecked();
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
-    imageView->classificationLabel->setVisible(isRatingBadgeVisible);
+    updateClassification();
 }
 
 void MW::setShootingInfoVisibility() {
@@ -6309,16 +6260,7 @@ void MW::togglePick()
         dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
     }
 
-    idx = thumbView->currentIndex();
-    QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
-    pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
-    bool isPick = (pickStatus == "true");
-
-    imageView->pickLabel->setVisible(isPick);
-    if (asCompareAction->isChecked()) {
-        compareImages->pick(isPick, idx);
-
-    }
+    updateClassification();
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
@@ -6327,25 +6269,6 @@ void MW::togglePick()
 
     // update filter counts
     dm->filterItemCount();
-}
-
-void MW::updatePick()
-{
-/*
-When a new image is selected and shown in imageView update the visibility
-of the "thumbs up" icon that highlights if the image has been picked.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    int row = thumbView->currentIndex().row();
-    QModelIndex idx = dm->index(row, G::PickColumn);
-    bool isPick = (idx.data(Qt::EditRole).toString() == "true");
-    if (asLoupeAction->isChecked())
-        imageView->pickLabel->setVisible(isPick);
-    if (asCompareAction->isChecked()) compareImages->pick(isPick, idx);
 }
 
 qulonglong MW::memoryReqdForPicks()
@@ -6463,8 +6386,21 @@ void MW::updateClassification()
     G::track(__FUNCTION__);
     #endif
     }
-    updateRating();
-    updateColorClass();
+    int row = thumbView->currentIndex().row();
+    isPick = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
+    rating = dm->sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
+    colorClass = dm->sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
+    if (rating == "0") rating = "";
+    imageView->classificationLabel->setPick(isPick);
+    imageView->classificationLabel->setColorClass(colorClass);
+    imageView->classificationLabel->setRating(rating);
+    imageView->classificationLabel->setRatingColorVisibility(isRatingBadgeVisible);
+    imageView->classificationLabel->refresh();
+
+    if (G::mode == "Compare")
+        compareImages->updateClassification(isPick, rating, colorClass,
+                                            isRatingBadgeVisible,
+                                            thumbView->currentIndex());
 }
 
 void MW::setRating()
@@ -6498,13 +6434,7 @@ the rating for all the selected thumbs.
     }
     if(isAlreadyRating) rating = "";     // invert the label(s)
 
-    // set the image edits label
-    imageView->classificationLabel->setText(rating);
-    if (labelColor == "" && rating == "")
-        imageView->classificationLabel->setVisible(false);
-    else imageView->classificationLabel->setVisible(true);
-
-    // set the rating
+    // set the rating in the datamodel
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex ratingIdx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
         dm->sf->setData(ratingIdx, rating, Qt::EditRole);
@@ -6525,40 +6455,15 @@ the rating for all the selected thumbs.
 
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
-    updateRating();
+
+    // update ImageView classification badge
+    updateClassification();
 
     // refresh the filter
     dm->sf->filterChange();
 
     // update filter counts
     dm->filterItemCount();
-}
-
-void MW::updateRating()
-{
-/*
-When a new image is selected and shown in imageView update the rating on
-imageView and visibility (true if either rating or color class set).
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    int row = thumbView->currentIndex().row();
-    QModelIndex idx = dm->sf->index(row, G::RatingColumn);
-    rating = idx.data(Qt::EditRole).toString();
-    labelColor = dm->sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
-    if (rating == "0") rating = "";
-    imageView->classificationLabel->setText(rating);
-
-    if (G::labelColors.contains(labelColor) || G::ratings.contains(rating))
-        imageView->classificationLabel->setVisible(isRatingBadgeVisible);
-    else
-        imageView->classificationLabel->setVisible(false);
-
-    if (G::mode == "Compare")
-        compareImages->ratingColorClass(rating, labelColor, idx);
 }
 
 void MW::setColorClass()
@@ -6574,40 +6479,28 @@ set the color class for all the selected thumbs.
     }
     QObject* obj = sender();
     QString s = obj->objectName();
-    if (s == "Label0") labelColor = "";
-    if (s == "Label1") labelColor = "Red";
-    if (s == "Label2") labelColor = "Yellow";
-    if (s == "Label3") labelColor = "Green";
-    if (s == "Label4") labelColor = "Blue";
-    if (s == "Label5") labelColor = "Purple";
+    if (s == "Label0") colorClass = "";
+    if (s == "Label1") colorClass = "Red";
+    if (s == "Label2") colorClass = "Yellow";
+    if (s == "Label3") colorClass = "Green";
+    if (s == "Label4") colorClass = "Blue";
+    if (s == "Label5") colorClass = "Purple";
 
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     // check if selection is entirely label color already - if so set no label
     bool isAlreadyLabel = true;
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex idx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
-        if(idx.data(Qt::EditRole) != labelColor) {
+        if(idx.data(Qt::EditRole) != colorClass) {
             isAlreadyLabel = false;
         }
     }
-    if(isAlreadyLabel) labelColor = "";     // invert the label
-
-    // set the image classificationLabel
-    if (labelColor == "") imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
-    if (labelColor == "Red") imageView->classificationLabel->setBackgroundColor(G::labelRedColor);
-    if (labelColor == "Yellow") imageView->classificationLabel->setBackgroundColor(G::labelYellowColor);
-    if (labelColor == "Green") imageView->classificationLabel->setBackgroundColor(G::labelGreenColor);
-    if (labelColor == "Blue") imageView->classificationLabel->setBackgroundColor(G::labelBlueColor);
-    if (labelColor == "Purple") imageView->classificationLabel->setBackgroundColor(G::labelPurpleColor);
-
-    if (labelColor == ""  && (rating == "" || rating == "0"))
-        imageView->classificationLabel->setVisible(false);
-    else imageView->classificationLabel->setVisible(true);
+    if(isAlreadyLabel) colorClass = "";     // invert the label
 
     // update the data model
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex labelIdx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
-        dm->sf->setData(labelIdx, labelColor, Qt::EditRole);
+        dm->sf->setData(labelIdx, colorClass, Qt::EditRole);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
@@ -6615,59 +6508,26 @@ set the color class for all the selected thumbs.
             if(idx.data(G::DupIsJpgRole).toBool()) {
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
                 labelIdx = dm->index(rawIdx.row(), G::LabelColumn);
-                dm->setData(labelIdx, labelColor, Qt::EditRole);
+                dm->setData(labelIdx, colorClass, Qt::EditRole);
             }
         }
     }
 
-
     // update metadata
-    metadata->setLabel(thumbView->getCurrentFilename(), labelColor);
+    metadata->setLabel(thumbView->getCurrentFilename(), colorClass);
 
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
     tableView->resizeColumnToContents(G::LabelColumn);
-    updateColorClass();
+
+    // update ImageView classification badge
+    updateClassification();
 
     // refresh the filter
     dm->sf->filterChange();
 
     // update filter counts
     dm->filterItemCount();
-}
-
-void MW::updateColorClass()
-{
-/*
-When a new image is selected and shown in imageView update the color class on
-imageView and visibility (true if either rating or color class set). Note that
-label and color class are the same thing in this program. In lightroom the
-color class is called label.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    int row = thumbView->currentIndex().row();
-    QModelIndex idx = dm->sf->index(row, G::LabelColumn);
-    labelColor = idx.data(Qt::EditRole).toString();
-    rating = dm->sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
-
-    imageView->classificationLabel->setBackgroundColor(G::labelNoneColor);
-    if (labelColor == "Red") imageView->classificationLabel->setBackgroundColor(G::labelRedColor);
-    if (labelColor == "Yellow") imageView->classificationLabel->setBackgroundColor(G::labelYellowColor);
-    if (labelColor == "Green") imageView->classificationLabel->setBackgroundColor(G::labelGreenColor);
-    if (labelColor == "Blue") imageView->classificationLabel->setBackgroundColor(G::labelBlueColor);
-    if (labelColor == "Purple") imageView->classificationLabel->setBackgroundColor(G::labelPurpleColor);
-
-    if (G::labelColors.contains(labelColor) || G::ratings.contains(rating))
-        imageView->classificationLabel->setVisible(isRatingBadgeVisible);
-    else
-        imageView->classificationLabel->setVisible(false);
-
-    if (G::mode == "Compare")
-        compareImages->ratingColorClass(rating, labelColor, idx);
 }
 
 void MW::metadataChanged(QStandardItem* item)
@@ -7236,12 +7096,6 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    bool ret;
-    QString folderPath = getSelectedPath();
-    ret = loadImageList(folderPath, true);
-    qDebug() << "MW::test  " << "ret =" << ret;
-    return;
-
     QLabel *label = new QLabel;
     label->setText(" TEST ");
     label->setStyleSheet("QLabel{color:yellow;}");

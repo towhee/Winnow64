@@ -298,9 +298,9 @@ private slots:
     void setCacheStatusVisibility();
     void toggleThumbWrap();
     void togglePick();
-    void updatePick();
-    void updateRating();
-    void updateColorClass();
+//    void updatePick();
+//    void updateRating();
+//    void updateColorClass();
     void updateClassification();
     void refreshFolders();
     void setPrefPage(int page);
@@ -666,7 +666,6 @@ private:
     // loadImageList
     bool timeToQuit;
     QList<QFileInfo> fileInfoList;
-    bool loadImageList(QString &folderPath, bool includeSubfolders);
 
     bool sortMenuUpdateToMatchTable = false;
 
@@ -686,7 +685,8 @@ private:
     QLabel *busyLabel;              // req'd?
 
     QString rating = "";
-    QString labelColor = "";
+    QString colorClass = "";
+    bool isPick;
 
     void createDocks();
     void updateState();

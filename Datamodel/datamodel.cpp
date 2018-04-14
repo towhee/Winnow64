@@ -187,7 +187,6 @@ Steps:
     dir->setNameFilters(*fileFilters);
     dir->setFilter(QDir::Files);
     dir->setPath(currentFolderPath);
-//    dir->setSorting(QDir::Name);
 
     fileInfoList.clear();
 
@@ -197,6 +196,9 @@ Steps:
     timeToQuit = false;
     int imageCount = 0;
     QString escapeClause = "Press \"Esc\" to stop.\n\n";
+    QString root;
+    if (dir->isRoot()) root = "Drive ";
+    else root = "Folder ";
 
     // load file list for the current folder
     int folderImageCount = dir->entryInfoList().size();
@@ -210,7 +212,7 @@ Steps:
             QString s = escapeClause + "Scanning image " +
                         QString::number(i) + " of " +
                         QString::number(folderImageCount) +
-                        " in " + currentFolderPath;
+                        " in " + root + currentFolderPath;
             emit msg(s);
 //            qApp->processEvents();
         }
@@ -251,7 +253,7 @@ Steps:
         if (folderCount % 100 == 0 && folderCount > 0) {
             QString s = escapeClause + "Scanning folder " +
                         QString::number(folderCount) +
-                        " " + currentFolderPath;
+                        " of parent " + root + currentFolderPath;
             emit msg(s);
             qApp->processEvents();
             if (timeToQuit) return false;

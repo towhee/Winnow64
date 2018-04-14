@@ -127,10 +127,7 @@ QSize ThumbViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
 //  G::track(__FUNCTION__);
     #endif
     }
-//    option.HasCheckIndicator;           // suppress compiler warning
-//    index.isValid();                    // suppress compiler warning
     QFont font = QApplication::font();
-//    font.setPixelSize(9);
     QFontMetrics fm(font);
     return thumbSpace;
 }
@@ -163,7 +160,7 @@ textRect         = a rectangle below itemRect
     int row = index.row();
     QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
 //    QString fPath = index.model()->index(row, G::PathColumn).data(G::PathRole).toString();
-    QString labelColor = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
+    QString colorClass = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     bool isPicked = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
@@ -279,13 +276,15 @@ textRect         = a rectangle below itemRect
 
     if (isRatingBadgeVisible) {
         QColor labelColorToUse;
-        if (G::labelColors.contains(labelColor) || G::ratings.contains(rating)) {
-            if (G::labelColors.contains(labelColor)) {
-                if (labelColor == "Red") labelColorToUse = G::labelRedColor;
-                if (labelColor == "Yellow") labelColorToUse = G::labelYellowColor;
-                if (labelColor == "Green") labelColorToUse = G::labelGreenColor;
-                if (labelColor == "Blue") labelColorToUse = G::labelBlueColor;
-                if (labelColor == "Purple") labelColorToUse = G::labelPurpleColor;
+        QColor textColor(Qt::white);
+        if (G::labelColors.contains(colorClass) || G::ratings.contains(rating)) {
+            if (G::labelColors.contains(colorClass)) {
+                if (colorClass == "Red") labelColorToUse = G::labelRedColor;
+                if (colorClass == "Yellow") labelColorToUse = G::labelYellowColor;
+                if (colorClass == "Yellow") textColor = Qt::black;
+                if (colorClass == "Green") labelColorToUse = G::labelGreenColor;
+                if (colorClass == "Blue") labelColorToUse = G::labelBlueColor;
+                if (colorClass == "Purple") labelColorToUse = G::labelPurpleColor;
             }
             else labelColorToUse = G::labelNoneColor;
             painter->setBrush(labelColorToUse);
@@ -293,7 +292,7 @@ textRect         = a rectangle below itemRect
             ratingPen.setWidth(0);
             painter->setPen(ratingPen);
             painter->drawEllipse(ratingRect);
-            QPen ratingTextPen(Qt::white);
+            QPen ratingTextPen(textColor);
             ratingTextPen.setWidth(2);
             painter->setPen(ratingTextPen);
             QFont font = painter->font();
