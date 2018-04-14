@@ -78,16 +78,8 @@ ImageView::ImageView(QWidget *parent,
     titleDropShadow->setVisible(isShootingInfoVisible);
     titleDropShadow->setAttribute(Qt::WA_TranslucentBackground);
 
-    pickLabel = new QLabel(this);
-    pickLabel->setFixedSize(64,64);
-    pickLabel->setAttribute(Qt::WA_TranslucentBackground);
-    pickPixmap = new QPixmap(":/images/checkmark.png");
-    // setPixmap during resize event
-    pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
-    pickLabel->setVisible(false);
-
-    classificationLabel = new CircleLabel(this);
-    classificationLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
+    classificationLabel = new ClassificationLabel(this);
+    classificationLabel->setAlignment(Qt::AlignCenter);
     classificationLabel->setVisible(isRatingBadgeVisible);
 
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
@@ -144,7 +136,6 @@ to prevent jarring changes in perceived scale by the user.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "ImageView::loadImage" << idx << fPath;
     // No folder selected yet
 
     /* important to keep currentImagePath.  It is used to check if there isn't
@@ -314,7 +305,7 @@ because setTransformationAnchor(QGraphicsView::AnchorUnderMouse).
     if (isZoom) setCursor(Qt::OpenHandCursor);
     else setCursor(Qt::ArrowCursor);
 
-    movePickIcon();
+    placeClassificationBadge();
     moveShootingInfo(shootingInfo);
     emit updateStatus(true, "");
 }
@@ -426,7 +417,7 @@ to a percentage to be used to match position in the next image if zoomed.
     return QPointF(scrl.hPct, scrl.vPct);
 }
 
-void ImageView::movePickIcon()
+void ImageView::placeClassificationBadge()
 {
 /*
 The bright green thumbsUp pixmap shows the pick status for the current image.
@@ -439,59 +430,37 @@ size.
     G::track(__FUNCTION__);
     #endif
     }
-    QPoint sceneBottomRight;            // bottom right corner of scene in view coord
-    sceneBottomRight = mapFromScene(sceneRect().bottomRight());
+    QPoint sceneBottomRight = mapFromScene(sceneRect().bottomRight());
 
     int x, y = 0;                       // bottom right coordinates of visible image
 
-    int w;                              // width of window or image, whichever is smaller in view coord
-    int h;                              // height of window or image, whichever is smaller in view coord
-
     // if the image view is not as wide as the window
-    if (sceneBottomRight.x() < rect().width()) {
-        x = sceneBottomRight.x(); // - p.w - offset;
-        w = mapFromScene(sceneRect().bottomRight()).x() - mapFromScene(sceneRect().bottomLeft()).x();
-    }
-    else {
-        x = rect().width(); // - p.w - offset;
-        w = rect().width();
-    }
+    if (sceneBottomRight.x() < rect().width())
+        x = sceneBottomRight.x();
+    else
+        x = rect().width();
 \
     // if the image view is not as high as the window
-    if (sceneBottomRight.y() < rect().height()) {
-        y = sceneBottomRight.y(); // - p.h - offset;
-        h = mapFromScene(sceneRect().bottomRight()).y() - mapFromScene(sceneRect().topRight()).y();
-    }
-    else {
-        y = rect().height(); // - p.h - offset;
-        h = rect().height();
-    }
+    if (sceneBottomRight.y() < rect().height())
+        y = sceneBottomRight.y();
+    else
+        y = rect().height();
 
     // resize if necessary
-    qreal f = 0.05;
+/*    qreal f = 0.05;
     w *= f;
     h *= f;
     int d;                          // dimension of pick image
     w > h ? d = w : d = h;
     if (d < 20) d = 18;
-    if (d > 64) d = 64;
+    if (d > 40) d = 40;
+    */
 
-    int o = 10;         // offset margin from edge
-
-    // size labels in relation to image size
-    pickLabel->setPixmap(pickPixmap->scaled(d, d, Qt::KeepAspectRatio));
-    d /= 3;
-    if (d < 12) d = 12;
+    int o = 5;                          // offset margin from edge
+    int d = 20;                         // diameter of the classification label
     classificationLabel->setDiameter(d);
-
-    intSize p, c;
-    p.w = pickLabel->width();
-    p.h = pickLabel->height();
-    c.w = classificationLabel->width();
-    c.h = classificationLabel->height();
-
-    pickLabel->move(x - p.w - o, y - p.h - o);
-    classificationLabel->move(x - d - o/2, y - d - o/2);
+    classificationLabel->move(x - d - o, y - d - o);
+//    classificationLabel->move(100,100);
 }
 
 void ImageView::resizeEvent(QResizeEvent *event)
@@ -512,15 +481,6 @@ void ImageView::resizeEvent(QResizeEvent *event)
     #endif
     }
     QGraphicsView::resizeEvent(event);
-    /* Resize scenarios
-
-     If the view is zoomFit then keep zoomFit after resize
-
-     If the view zoom is less than zoomFit no scaling unless resize to
-     smaller than zoom amount - then zoomFit further resizing.
-
-     If the view zoom is greater than zoomFit then no change
-     */
 
     zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
     static QRect prevRect;
@@ -549,7 +509,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
         wasSceneClipped = sceneClipped;
         prevRect = rect();
     }
-    movePickIcon();
+    placeClassificationBadge();
     moveShootingInfo(shootingInfo);
 }
 

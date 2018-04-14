@@ -5,7 +5,7 @@
 #include "Metadata/metadata.h"
 #include "Cache/imagecache.h"
 #include "Views/thumbview.h"
-#include "Utilities/circlelabel.h"
+#include "Utilities/classificationlabel.h"
 #include "Image/pixmap.h"
 
 class CompareView : public QGraphicsView
@@ -32,8 +32,7 @@ public:
     void select();
     void deselect();
 
-    QLabel *pickLabel;          // visibility controlled in MW
-    CircleLabel *classificationLabel;
+    ClassificationLabel *classificationLabel;
 
 public slots:
     void slaveZoomToPct(QPointF coord, bool isZoom);
@@ -134,7 +133,7 @@ private:
     QPointF getScrollPct(QPoint p);
     QPointF getSceneCoordFromPct(QPointF scrollPct);    // not used
 
-    void movePickIcon();
+    void placeClassificationBadge();
     bool previewFitsZoom();
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);

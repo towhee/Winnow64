@@ -39,7 +39,7 @@ HEADERS += \
     Views/thumbviewdelegate.h \
     Views/infostring.h \
     Dialogs/ingestdlg.h \
-    Utilities/circlelabel.h \
+    Utilities/classificationlabel.h \
     Utilities/dropshadowlabel.h \
     Utilities/popup.h \
     Utilities/progressbar.h \
@@ -76,7 +76,7 @@ SOURCES += \
     Views/thumbview.cpp \
     Views/thumbviewdelegate.cpp \
     Views/infostring.cpp \
-    Utilities/circlelabel.cpp \
+    Utilities/classificationlabel.cpp \
     Utilities/dropshadowlabel.cpp \
     Utilities/popup.cpp \
     Utilities/progressbar.cpp \

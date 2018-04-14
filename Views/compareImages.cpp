@@ -33,7 +33,7 @@ CompareImages::CompareImages(QWidget *parent,
     imageAlign = new ImageAlign(120, 0.2);
 }
 
-bool CompareImages::load(const QSize &centralWidgetSize)
+bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisible)
 {
     {
     #ifdef ISDEBUG
@@ -85,11 +85,16 @@ bool CompareImages::load(const QSize &centralWidgetSize)
         QString fPath = selection.at(i).data(G::PathRole).toString();
         // create new compareView and append to list
         imList->append(new CompareView(this, gridCell, metadata, imageCacheThread, thumbView));
-        bool isPick = idxPick.data().toBool();
-        imList->at(i)->pickLabel->setVisible(isPick);
         imList->at(i)->loadImage(selection.at(i), fPath);
         // set toggleZoom value (from QSettings)
         imList->at(i)->toggleZoom = toggleZoom;
+
+        // classification badge
+        int row = idxPath.row();
+        bool isPick = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
+        QString rating = dm->sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
+        QString colorClass = dm->sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
+        updateClassification(isPick, rating, colorClass, isRatingBadgeVisible, idxPath);
 
         // pass mouse click zoom to other images as a pct of width and height
         connect(imList->at(i), SIGNAL(zoomFromPct(QPointF, QModelIndex, bool)),
@@ -312,21 +317,8 @@ void CompareImages::go(QString key)
     }
 }
 
-void CompareImages::pick(bool isPick, QModelIndex idx)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    for (int i = 0; i < imList->count(); ++i) {
-        if (imList->at(i)->imageIndex == idx) {
-            imList->at(i)->pickLabel->setVisible(isPick);
-        }
-    }
-}
-
-void CompareImages::ratingColorClass(QString rating, QString colorClass, QModelIndex idx)
+void CompareImages::updateClassification(bool isPick, QString rating, QString colorClass,
+                                         bool isRatingBadgeVisible, QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
@@ -335,16 +327,11 @@ void CompareImages::ratingColorClass(QString rating, QString colorClass, QModelI
     }
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex.row() == idx.row()) {
-            imList->at(i)->classificationLabel->setText(rating);
-            if (colorClass == "") imList->at(i)->classificationLabel->setBackgroundColor(G::labelNoneColor);
-            if (colorClass == "Red") imList->at(i)->classificationLabel->setBackgroundColor(G::labelRedColor);
-            if (colorClass == "Yellow") imList->at(i)->classificationLabel->setBackgroundColor(G::labelYellowColor);
-            if (colorClass == "Green") imList->at(i)->classificationLabel->setBackgroundColor(G::labelGreenColor);
-            if (colorClass == "Blue") imList->at(i)->classificationLabel->setBackgroundColor(G::labelBlueColor);
-            if (colorClass == "Purple") imList->at(i)->classificationLabel->setBackgroundColor(G::labelPurpleColor);
-
-            if (colorClass == "" && rating == "") imList->at(i)->classificationLabel->setVisible(false);
-            else imList->at(i)->classificationLabel->setVisible(true);
+            imList->at(i)->classificationLabel->setRating(rating);
+            imList->at(i)->classificationLabel->setColorClass(colorClass);
+            imList->at(i)->classificationLabel->setPick(isPick);
+            imList->at(i)->classificationLabel->setRatingColorVisibility(isRatingBadgeVisible);
+            imList->at(i)->classificationLabel->refresh();
         }
     }
 }

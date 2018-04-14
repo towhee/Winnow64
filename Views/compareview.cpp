@@ -61,8 +61,11 @@ Synced panning:
 
 */
 
-CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
-                     ImageCache *imageCacheThread, ThumbView *thumbView)
+CompareView::CompareView(QWidget *parent,
+                         QSize gridCell,
+                         Metadata *metadata,
+                         ImageCache *imageCacheThread,
+                         ThumbView *thumbView)
 {
     {
     #ifdef ISDEBUG
@@ -93,18 +96,9 @@ CompareView::CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setScene(scene);
 
-    pickLabel = new QLabel(this);
-    pickLabel->setFixedSize(64,64);
-    pickLabel->setAttribute(Qt::WA_TranslucentBackground);
-    pickPixmap = new QPixmap(":/images/checkmark.png");
-    // setPixmap during resize event
-    pickLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
-    pickLabel->setVisible(false);
-
-    classificationLabel = new CircleLabel(this);
+    classificationLabel = new ClassificationLabel(this);
     classificationLabel->setVisible(false);
-    classificationLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
-    classificationLabel->setVisible(false);
+    classificationLabel->setAlignment(Qt::AlignCenter);
 
     isMouseDrag = false;
     isMouseDoubleClick = false;
@@ -469,67 +463,50 @@ local zoomTo.
     else setCursor(Qt::ArrowCursor);
 
     // reposition classification icons ("thumbs up", ratings and color class)
-    movePickIcon();
+    placeClassificationBadge();
 }
 
-void CompareView::movePickIcon()
+void CompareView::placeClassificationBadge()
 {
 /*
-The bright green thumbsUp pixmap shows the pick status for the current image.
-This function locates the pixmap in the bottom corner of the image label as the
-image is resized and zoomed, adjusting for the aspect ratio of the image.
-
-The classification label (ratings / color class) is also positioned.
+The classification label (ratings / color class / pick status) is positioned in
+the bottom right corner of the image.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QPoint sceneBottomRight;            // bottom right corner of scene in view coord
-    sceneBottomRight = mapFromScene(sceneRect().bottomRight());
+    QPoint sceneBottomRight = mapFromScene(sceneRect().bottomRight());
 
-    intSize p;
-    p.w = pickLabel->width();           // width of the pick symbol
-    p.h = pickLabel->height();          // height of the pick symbol
-    int offset = 10;                    // offset pixels from the edge of image
-    int x, y = 0;                       // top left coordinates of pick symbol
-
-    int w;                              // width of window or image, whichever is smaller in view coord
-    int h;                              // height of window or image, whichever is smaller in view coord
+    int x, y = 0;                       // bottom right coordinates of visible image
 
     // if the image view is not as wide as the window
-    if (sceneBottomRight.x() < rect().width()) {
-        x = sceneBottomRight.x() - p.w - offset;
-        w = mapFromScene(sceneRect().bottomRight()).x() - mapFromScene(sceneRect().bottomLeft()).x();
-    }
-    else {
-        x = rect().width() - p.w - offset;
-        w = rect().width();
-    }
+    if (sceneBottomRight.x() < rect().width())
+        x = sceneBottomRight.x();
+    else
+        x = rect().width();
 \
     // if the image view is not as high as the window
-    if (sceneBottomRight.y() < rect().height()) {
-        y = sceneBottomRight.y() - p.h - offset;
-        h = mapFromScene(sceneRect().bottomRight()).y() - mapFromScene(sceneRect().topRight()).y();
-    }
-    else {
-        y = rect().height() - p.h - offset;
-        h = rect().height();
-    }
+    if (sceneBottomRight.y() < rect().height())
+        y = sceneBottomRight.y();
+    else
+        y = rect().height();
 
-    // make pick label 3% of image scale within range of 20 - 40 pixels
-    qreal f = 0.03;
+    // resize if necessary
+/*    qreal f = 0.05;
     w *= f;
     h *= f;
     int d;                          // dimension of pick image
     w > h ? d = w : d = h;
-    if (d < 20) d = 20;
+    if (d < 20) d = 18;
     if (d > 40) d = 40;
-    pickLabel->setPixmap(pickPixmap->scaled(d, d, Qt::KeepAspectRatio));
+    */
 
-    pickLabel->move(x, y);
-    classificationLabel->move(x + p.w - offset, y + p.h - offset);
+    int o = 5;                          // offset margin from edge
+    int d = 20;                         // diameter of the classification label
+    classificationLabel->setDiameter(d);
+    classificationLabel->move(x - d - o, y - d - o);
 }
 
 void CompareView::resizeEvent(QResizeEvent *event)
@@ -545,16 +522,7 @@ void CompareView::resizeEvent(QResizeEvent *event)
         zoom = zoomFit;
         scale(false);
     }
-    // make pick label 3% of image scale within range of 20 - 40 pixels
-    qreal f = 0.03;
-    int w = width() * f;
-    int h = height() * f;
-    int d;
-    w > h ? d = w : d = h;
-    if (d < 20) d = 20;
-    if (d > 40) d = 40;
-    pickLabel->setPixmap(pickPixmap->scaled(d, d, Qt::KeepAspectRatio));
-    movePickIcon();
+    placeClassificationBadge();
 }
 
 void CompareView::zoomIn()

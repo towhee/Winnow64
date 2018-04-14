@@ -18,9 +18,10 @@ public:
 
     qreal toggleZoom;
     qreal zoomValue;
-    bool load(const QSize &central);
-    void pick(bool isPick, QModelIndex idx);
-    void ratingColorClass(QString rating, QString colorClass, QModelIndex idx);
+    bool load(const QSize &central, bool isRatingBadgeVisible);
+//    void pick(bool isPick, QModelIndex idx);
+    void updateClassification(bool isPick, QString rating, QString colorClass,
+                              bool isRatingBadgeVisible, QModelIndex idx);
 
 public slots:
     void zoomChangeFromView(qreal zoomValue);
