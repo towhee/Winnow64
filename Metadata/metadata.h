@@ -80,10 +80,10 @@ public:
     int month;
     int day;
     QString copyFileNamePrefix;
-    bool metadataLoaded = false;    // all metadata except thumb
-    bool isThumbLoaded;             // refers to thumb only
-    bool thumbUnavailable = false;  // no embedded thumb
-    bool imageUnavailable = false;  // no embedded preview
+    bool metadataLoaded = false;        // all metadata except thumb
+    bool isThumbLoaded;                 // refers to thumb only
+    bool thumbUnavailable = false;      // no embedded thumb
+    bool imageUnavailable = false;      // no embedded preview
     QString err = "";
 };
 
@@ -95,6 +95,7 @@ public:
     bool readMetadata(bool report, const QString &path);
     void reportMetadataAllFiles();
     void reportMetadata();
+    void reportMetadataCache(const QString &imageFileName);
 
     // variables used to hold data before insertion into QMap metaCache
     bool isPicked;

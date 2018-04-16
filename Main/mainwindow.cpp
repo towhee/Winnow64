@@ -6292,13 +6292,8 @@ void MW::ingests()
     #endif
     }
     if (thumbView->isPick()) {
-        qDebug() << G::t.restart() << "\t" << "MW::ingests"
-                 << "pathTemplateSelected =" << pathTemplateSelected
-                 << "filenameTemplateSelected =" << filenameTemplateSelected;
-//        QFileInfoList imageList = thumbView->getPicks();
         ingestDlg = new IngestDlg(this,
                                   combineRawJpg,
-//                                  imageList,
                                   metadata,
                                   dm,
                                   ingestRootFolder,
@@ -6312,9 +6307,6 @@ void MW::ingests()
                 this, SLOT(setIngestRootFolder(QString,bool)));
         ingestDlg->exec();
         delete ingestDlg;
-        qDebug() << G::t.restart() << "\t" << "MW::ingests"
-                 << "pathTemplateSelected =" << pathTemplateSelected
-                 << "filenameTemplateSelected =" << filenameTemplateSelected;
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
@@ -7096,10 +7088,14 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    QLabel *label = new QLabel;
-    label->setText(" TEST ");
-    label->setStyleSheet("QLabel{color:yellow;}");
-    menuBar()->setCornerWidget(label, Qt::TopRightCorner);
+    QString s = thumbView->getCurrentFilename();
+    qDebug() << "MW::test thumbView->getCurrentFilename() =" << s;
+    metadata->reportMetadataCache(thumbView->getCurrentFilename());
+
+//    QLabel *label = new QLabel;
+//    label->setText(" TEST ");
+//    label->setStyleSheet("QLabel{color:yellow;}");
+//    menuBar()->setCornerWidget(label, Qt::TopRightCorner);
 }
 
 // End MW

@@ -247,18 +247,16 @@ dc schema for title:
         QByteArray newItem;
         newItem.clear();
         startPos = schemaInsertPos(schema);     // determines assignmentMethod
-        if (schema == "xmp" || schema == "tiff" || "Iptc4xmpCore" || "aux") {
+        if (schema == "xmp" || schema == "tiff" || schema == "Iptc4xmpCore" || schema == "aux") {
             if (assignmentMethod == "brackets") {
                 // ie <xmp:Rating>3</xmp:Rating>
                 newItem = "\n\t\t\t<";
-//                newItem.append("\n\t\t\t<");
                 newItem.append(tag);
                 newItem.append(">");
                 newItem.append(value);
                 newItem.append("</");
                 newItem.append(tag);
                 newItem.append(">");
-
                 xmpBa.insert(startPos, newItem);
             }
             if (assignmentMethod == "equals") {
@@ -280,7 +278,7 @@ dc schema for title:
             }
         }
         if (item == "title" || item == "rights") {
-            // ie <dc:title><rdf:Alt><rdf:li xml:lang="x-default">title</rdf:li></rdf:Alt></dc:title>
+            // ie <dc:title><rdf:Alt><rdf:li xml:lang="x-default">This is the title</rdf:li></rdf:Alt></dc:title>
             newItem.append("\n\t\t\t<");
             newItem.append(tag);
             newItem.append("><rdf:Alt><rdf:li xml:lang=\"x-default\">");
@@ -295,7 +293,7 @@ dc schema for title:
 //                     << metaAsString();
         }
         if (item == "creator") {
-            // ie <dc:title><rdf:Seq><rdf:li>creator</rdf:li></rdf:Seq></dc:title>
+            // ie <dc:creator><rdf:Seq><rdf:li>Rory Hill</rdf:li></rdf:Seq></dc:creator>
             newItem.append("\n\t\t\t<");
             newItem.append(tag);
             newItem.append("><rdf:Seq><rdf:li>");
