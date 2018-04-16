@@ -122,8 +122,10 @@ void IngestDlg::renameIfExists(QString &destination,
     do {
         QFile testFile(destination);
         if (testFile.exists()) {
-            QString s = "_" + QString::number(++count);
-            destination = folderPath + fileName + s + dotSuffix;
+            fileName += "_" + QString::number(++count);
+//            QString s = "_" + QString::number(++count);
+            destination = folderPath + fileName + dotSuffix;
+//            destination = folderPath + fileName + s + dotSuffix;
         }
         else fileAlreadyExists = false;
     } while (fileAlreadyExists);
@@ -233,21 +235,26 @@ void IngestDlg::accept()
         // buffer to hold file with edited xmp data
         QByteArray buffer;
 
+        // check if image already exists at destination folder
+        QString destination = folderPath + fileName + dotSuffix;
+        // rename destination and fileName if already exists
+        renameIfExists(destination, fileName, dotSuffix);
+
         // if there is edited xmp data in an eligible file format
         if (metadata->writeMetadata(source, buffer)) {
             // write a sidecar
             if (metadata->sidecarFormats.contains(suffix)) {
+                // copy image file
+//                QString destination = folderPath + fileName + dotSuffix;
+//                renameIfExists(destination, fileName, dotSuffix);
+                QFile::copy(source, destination);            }
+                // write the sidecar xmp file
                 QString sidecar = folderPath + fileName + ".xmp";
                 QFile sidecarFile(sidecar);
                 sidecarFile.open(QIODevice::WriteOnly);
                 sidecarFile.write(buffer);
-                // copy image file
-                QString destination = folderPath + fileName + dotSuffix;
-                renameIfExists(destination, fileName, dotSuffix);
-                QFile::copy(source, destination);            }
             // write inside the source file
             if (metadata->internalXmpFormats.contains(suffix)) {
-                QString destination = folderPath + fileName + dotSuffix;
                 QFile newFile(destination);
                 newFile.open(QIODevice::WriteOnly);
                 newFile.write(buffer);
@@ -255,8 +262,8 @@ void IngestDlg::accept()
         }
         // no xmp data, just copy source to destination
         else {
-            QString destination = folderPath + fileName + dotSuffix;
-            renameIfExists(destination, fileName, dotSuffix);
+//            QString destination = folderPath + fileName + dotSuffix;
+//            renameIfExists(destination, fileName, dotSuffix);
             QFile::copy(source, destination);
         }
     }
@@ -290,7 +297,7 @@ void IngestDlg::on_selectFolderBtn_clicked()
         (this, tr("Choose Ingest Folder"), root,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (s.length() > 0) {
-        folderPath = s + "/";
+        folderPath = s;  // + "/";
         ui->manualFolderLabel->setText(folderPath);
         ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
     }

@@ -1,7 +1,6 @@
 BUGS
 - CompareImages not calc layout correctly
 - After CompareImages cannot change app width
-- Stress test rapidly selecting folders causes crash
 - Title not included in ingest
 - Bookmarks names and count not aligned vertically
 - Jpg orientationOffset = 0 when metadata orientation changed
@@ -37,6 +36,8 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE
+- Metadata repeated in xmp
+- xmp not renamed when file exists
 - Completely redid classification badges
 - Days are repeated in Filters (Lillian images for example)
 - Shortcuts not showing in context menus

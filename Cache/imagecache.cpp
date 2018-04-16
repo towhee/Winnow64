@@ -814,8 +814,6 @@ If there is filtering then the entire cache is reloaded.
     G::track(__FUNCTION__);;
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "ImageView::reindexImageCache" << currentImageFullPath;
-//    return;
     if (isRunning()) stopImageCache();
 
     cacheItemListCopy = cacheItemList;

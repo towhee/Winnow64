@@ -1868,7 +1868,6 @@ void Metadata::reportMetadata()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "Metadata::reportMetadata";
     QString createdExif = createdDate.toString("yyyy-MM-dd hh:mm:ss");
     rpt << "\n";
     rpt.reset();
@@ -1897,6 +1896,8 @@ void Metadata::reportMetadata()
     rpt.setFieldWidth(20); rpt << "copyright"           << copyright;           rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "email"               << email;               rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "url"                 << url;                 rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "rating"              << rating;              rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(20); rpt << "label"               << label;               rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "cameraSN"            << cameraSN;            rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "lensSN"              << lensSN;              rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(20); rpt << "shutterCount"        << shutterCount;        rpt.setFieldWidth(0); rpt << "\n";
@@ -1994,6 +1995,32 @@ Not used
         std::cout << "FILE: " << i.key().toStdString()<< "\n";
         reportMetadata();
     }
+}
+
+void Metadata::reportMetadataCache(const QString &imageFileName)
+{
+/*
+Reports the ImageMetadata for imageFileName (the image absolute path), which is
+used as the key for the QMap of ImageMetadata.  The metadata items are updated
+in setMetadata to make them more convenient to use.  For example, returning the
+rating value from metaCache
+
+    metaCache[imageFileName].rating;
+
+is reduced to
+
+    rating
+
+in setMetadata.
+
+
+*/
+    setMetadata(imageFileName);
+    rpt.flush();
+    reportString = "";
+    rpt.setString(&reportString);
+    rpt << "\nFile name = " << imageFileName << "\n";
+    reportMetadata();
 }
 
 void Metadata::track(QString fPath, QString msg)
@@ -2102,8 +2129,10 @@ metadata is written to buffer and the original image file is copied unchanged.
     QString suffix = info.suffix().toLower();
     if (!xmpWriteFormats.contains(suffix)) return false;
 
+    qDebug() << "Metadata::writeMetadata fPath =" << fPath;
     // set locals to image data  ie title = metaCache[fPath].title
     setMetadata(fPath);
+    reportMetadataCache(fPath);
 
     bool useSidecar = sidecarFormats.contains(suffix);
 
@@ -2111,10 +2140,10 @@ metadata is written to buffer and the original image file is copied unchanged.
     int newOrientation = getNewOrientation(orientation, rotationDegrees);
 
     // has metadata been edited? ( _ is original data)
-    bool ratingChanged = rating != _rating;
-    bool labelChanged = label != _label;
+    bool ratingChanged = rating != ""; //_rating;
+    bool labelChanged = label != "";  //_label;
     bool titleChanged = title != _title;
-    bool creatorChanged = title != _title;
+    bool creatorChanged = creator != _creator;
     bool copyrightChanged = copyright != _copyright;
     bool emailChanged = email != _email;
     bool urlChanged = url != _url;
@@ -2146,7 +2175,7 @@ metadata is written to buffer and the original image file is copied unchanged.
     if (creatorChanged) xmp.setItem("creator", creator.toLatin1());
     if (copyrightChanged) xmp.setItem("rights", copyright.toLatin1());
     if (emailChanged) xmp.setItem("CiEmailWork", email.toLatin1());
-    if (titleChanged) xmp.setItem("CiUrlWork", title.toLatin1());
+    if (titleChanged) xmp.setItem("CiUrlWork", url.toLatin1());
 
     QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
@@ -4039,7 +4068,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         lengthSmallJPG = lengthFullJPG;
     }
     if (lengthThumbJPG == 0) {
-        qDebug() << G::t.restart() << "\t" << "No embedded thumbnail JPG found for" << fPath;
         offsetThumbJPG = offsetSmallJPG;
         lengthThumbJPG = lengthSmallJPG;
     }
