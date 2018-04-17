@@ -2169,13 +2169,13 @@ metadata is written to buffer and the original image file is copied unchanged.
         QString s = QString::number(newOrientation);
         xmp.setItem("Orientation", s.toLatin1());
     }
-    if (ratingChanged) xmp.setItem("Rating", rating.toLatin1());
-    if (labelChanged) xmp.setItem("Label", label.toLatin1());
-    if (titleChanged) xmp.setItem("title", title.toLatin1());
-    if (creatorChanged) xmp.setItem("creator", creator.toLatin1());
-    if (copyrightChanged) xmp.setItem("rights", copyright.toLatin1());
+    if (urlChanged) xmp.setItem("CiUrlWork", url.toLatin1());
     if (emailChanged) xmp.setItem("CiEmailWork", email.toLatin1());
-    if (titleChanged) xmp.setItem("CiUrlWork", url.toLatin1());
+    if (copyrightChanged) xmp.setItem("rights", copyright.toLatin1());
+    if (creatorChanged) xmp.setItem("creator", creator.toLatin1());
+    if (titleChanged) xmp.setItem("title", title.toLatin1());
+    if (labelChanged) xmp.setItem("Label", label.toLatin1());
+    if (ratingChanged) xmp.setItem("Rating", rating.toLatin1());
 
     QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
