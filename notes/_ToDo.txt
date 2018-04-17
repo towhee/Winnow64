@@ -36,6 +36,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE
+- XMP email and url not being written correctly
 - Metadata repeated in xmp
 - xmp not renamed when file exists
 - Completely redid classification badges

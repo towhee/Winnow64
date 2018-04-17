@@ -1,2 +1,5 @@
 Use Exiftool example:
-D:\Pictures\_Exiftool>exiftool -title="This is a test title" D:\Pictures\_xmptest\Canon xmptest_exiftool.JPG
+D:\Pictures\_Exiftool\exiftool -title="This is a test title" D:\Pictures\_xmptest\Canon xmptest_exiftool.JPG
+
+Write email and send metadata to sidecar:
+D:\Pictures\_Exiftool\exiftool -o "D:\Pictures\_xmptest\Canon1.xmp" -XMP-iptcCore:CreatorWorkEmail="hillrg@hotmail.com" D:\Pictures\_xmptest\Canon1.cr2

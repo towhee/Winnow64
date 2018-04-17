@@ -5,6 +5,29 @@ Xmp reads and writes xmp tags to a QByteArray buffer.  The buffer is read from
 the image file, based on supplied ofsets.  If there is no xmp data in the image
 file or the file format is not documented then the xmp tags are written to a
 sidecar buffer.
+
+Example sidecar file that lightroom successfully reads:
+
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+        <rdf:Description
+            xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+            xmlns:dc="http://purl.org/dc/elements/1.1/"
+            xmlns:Iptc4xmpCore="http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/"
+            rdf:about="">
+            <xmp:ModifyDate>2018-04-16T17:31:55-07:00</xmp:ModifyDate>
+            <xmp:Rating>5</xmp:Rating>
+            <xmp:Label>Red</xmp:Label>
+            <dc:title><rdf:Alt><rdf:li xml:lang="x-default">Test title</rdf:li></rdf:Alt></dc:title>
+            <dc:creator><rdf:Seq><rdf:li>rory</rdf:li></rdf:Seq></dc:creator>
+            <dc:rights><rdf:Alt><rdf:li xml:lang="x-default">2019 rory</rdf:li></rdf:Alt></dc:rights>
+            <Iptc4xmpCore:CreatorContactInfo rdf:parseType='Resource'>
+                <Iptc4xmpCore:CiEmailWork>rory@mail.com</Iptc4xmpCore:CiEmailWork>
+                <Iptc4xmpCore:CiUrlWork>rory.com</Iptc4xmpCore:CiUrlWork>
+            </Iptc4xmpCore:CreatorContactInfo>
+        </rdf:Description>
+    </rdf:RDF>
+</x:xmpmeta>
 */
 
 Xmp::Xmp(QFile &file, ulong &offset, ulong &nextOffset, bool useSidecar,
@@ -67,6 +90,7 @@ void Xmp::insertSchemas(QByteArray &item)
     if (schema == "xmp") xmpBa.insert(pos, xmpSchema);
     if (schema == "dc") xmpBa.insert(pos, dcSchema);
     if (schema == "tiff") xmpBa.insert(pos, tifSchema);
+    if (schema == "Iptc4xmpCore") xmpBa.insert(pos, iptc4xmpCoreSchema);
     if (item == "Orientation") xmpBa.insert(pos, psSchema);
 }
 
@@ -89,6 +113,8 @@ int Xmp::schemaInsertPos(QByteArray schema)
         schemaStart = xmpBa.indexOf("xmlns:dc", xmpmetaStart);
     if (schema == "tiff")
         schemaStart = xmpBa.indexOf("xmlns:tiff", xmpmetaStart);
+    if (schema == "Iptc4xmpCore")
+        schemaStart = xmpBa.indexOf("xmlns:Iptc4xmpCore", xmpmetaStart);
 
     // if already some schema data return pos of first one
     pos = xmpBa.indexOf(s1, schemaStart);
@@ -247,7 +273,7 @@ dc schema for title:
         QByteArray newItem;
         newItem.clear();
         startPos = schemaInsertPos(schema);     // determines assignmentMethod
-        if (schema == "xmp" || schema == "tiff" || schema == "Iptc4xmpCore" || schema == "aux") {
+        if (schema == "xmp" || schema == "tiff" || schema == "aux") {
             if (assignmentMethod == "brackets") {
                 // ie <xmp:Rating>3</xmp:Rating>
                 newItem = "\n\t\t\t<";
@@ -301,6 +327,39 @@ dc schema for title:
             newItem.append("</rdf:li></rdf:Seq></");
             newItem.append(tag);
             newItem.append(">");
+            xmpBa.insert(startPos, newItem);
+        }
+        if (item == "CiEmailWork" || item == "CiUrlWork") {
+            /* ie <Iptc4xmpCore:CreatorContactInfo rdf:parseType='Resource'>
+                      <Iptc4xmpCore:CiEmailWork>hillrg@mail.com</Iptc4xmpCore:CiEmailWork>  // 1st item
+                      <Iptc4xmpCore:CiUrlWork>hill.com</Iptc4xmpCore:CiEmailWork>           // 2nd item
+                  </Iptc4xmpCore:CreatorContactInfo> */
+
+            // does a Iptc4xmpCore:CreatorContactInfo item already exist?
+            int pos = xmpBa.indexOf("<Iptc4xmpCore:Ci", startPos);
+            // 1st item, build header and add item
+            if (pos == -1) {
+                newItem.append("\n\t\t\t<Iptc4xmpCore:CreatorContactInfo rdf:parseType='Resource'>");
+                newItem.append("\n\t\t\t\t<");
+                newItem.append(tag);
+                newItem.append(">");
+                newItem.append(value);
+                newItem.append("</");
+                newItem.append(tag);
+                newItem.append(">");
+                newItem.append("\n\t\t\t<Iptc4xmpCore:CreatorContactInfo>");
+            }
+            // 2nd item, already header, just insert 2nd item above 1st item
+            else {
+                startPos = pos;
+                newItem.append("<");
+                newItem.append(tag);
+                newItem.append(">");
+                newItem.append(value);
+                newItem.append("</");
+                newItem.append(tag);
+                newItem.append(">\n\t\t\t\t");
+            }
             xmpBa.insert(startPos, newItem);
         }
         // item created
