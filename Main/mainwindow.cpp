@@ -6253,10 +6253,25 @@ void MW::togglePick()
     QModelIndexList idxList = thumbView->selectionModel()->selectedRows();
     QString pickStatus;
 
+    /* If the selection has any images that are not picked then pick them all.
+       if the entire selection was already picked then unpick them all.  If
+       the entire selection is unpicked then pick them all.
+    */
+    bool foundTrue, foundFalse;
+    // check if some, but not all, are set to true
     foreach (idx, idxList) {
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
-        pickStatus = (pickStatus == "true" ? "false" : "true");
+        foundTrue = (pickStatus == "true");
+        foundFalse = (pickStatus == "false");
+    }
+
+    if (foundTrue && foundFalse) pickStatus = "true";
+    if (!foundFalse) pickStatus = "false";
+    if (!foundTrue) pickStatus = "true";
+
+    foreach (idx, idxList) {
+        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
     }
 
@@ -6416,7 +6431,7 @@ the rating for all the selected thumbs.
     if (s == "Rate5") rating = "5";
 
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
-    // check if selection is entirely set to rating already - if so set to no rating
+    // check if selection is entirely rating already - if so set no rating
     bool isAlreadyRating = true;
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex idx = dm->sf->index(selection.at(i).row(), G::RatingColumn);

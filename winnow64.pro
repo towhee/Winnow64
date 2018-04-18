@@ -110,10 +110,10 @@ DISTFILES += \
     notes/_Notes \
     notes/_ToDo.txt \
     notes/Deploy.txt \
+    notes/ExiftoolCommands.txt \
     notes/git.txt \
     notes/HelpDocCreation.txt \
     notes/Menu.txt \
-    notes/metadata.txt \
     notes/Scratch.txt \
     notes/Shortcuts.txt \
     notes/snippets.txt \
