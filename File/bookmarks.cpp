@@ -49,13 +49,12 @@ void BookMarks::reloadBookmarks()
         dir->setPath(itemPath);
         int count = dir->entryInfoList().size();
         item->setText(1, QString::number(count));
-        item->setTextAlignment(1, Qt::AlignRight);
+        item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
     }
 }
 
 void BookMarks::select(QString fPath)
 {
-//    QString folderName = QFileInfo(fPath).fileName();
     if (bookmarkPaths.contains(fPath)) {
         QList <QTreeWidgetItem *> items;
         items = findItems(QFileInfo(fPath).fileName(), Qt::MatchExactly);
