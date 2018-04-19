@@ -6254,22 +6254,19 @@ void MW::togglePick()
     QString pickStatus;
 
     /* If the selection has any images that are not picked then pick them all.
-       if the entire selection was already picked then unpick them all.  If
+       If the entire selection was already picked then unpick them all.  If
        the entire selection is unpicked then pick them all.
     */
-    bool foundTrue, foundFalse;
-    // check if some, but not all, are set to true
+    bool foundFalse = false;
+    // check if any images are not picked in the selection
     foreach (idx, idxList) {
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
-        foundTrue = (pickStatus == "true");
         foundFalse = (pickStatus == "false");
+        if (foundFalse) break;
     }
-
-    if (foundTrue && foundFalse) pickStatus = "true";
-    if (!foundFalse) pickStatus = "false";
-    if (!foundTrue) pickStatus = "true";
-
+    foundFalse ? pickStatus = "true" : pickStatus = "false";
+    // set pick status for selection
     foreach (idx, idxList) {
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
