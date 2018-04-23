@@ -109,7 +109,6 @@ RC_ICONS = images/winnow.ico
 DISTFILES += \
     notes/_Notes \
     notes/_ToDo.txt \
-    notes/Deploy.txt \
     notes/ExiftoolCommands.txt \
     notes/git.txt \
     notes/HelpDocCreation.txt \
@@ -117,7 +116,8 @@ DISTFILES += \
     notes/Scratch.txt \
     notes/Shortcuts.txt \
     notes/snippets.txt \
-    notes/xmp.txt
+    notes/xmp.txt \
+    notes/DeployInstall.txt
 
 #macx {
 #    QMAKE_MAC_SDK = macosx10.12

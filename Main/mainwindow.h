@@ -56,8 +56,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.930";
-    QString versionDetail = "Show caching status in thumbnails";
+    QString version = "0.9.5";
+    QString versionDetail = "";
 
     bool isShift;               // used when opening if shift key pressed
 

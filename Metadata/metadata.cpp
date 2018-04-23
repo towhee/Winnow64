@@ -2132,7 +2132,7 @@ metadata is written to buffer and the original image file is copied unchanged.
     qDebug() << "Metadata::writeMetadata fPath =" << fPath;
     // set locals to image data  ie title = metaCache[fPath].title
     setMetadata(fPath);
-    reportMetadataCache(fPath);
+//    reportMetadataCache(fPath);
 
     bool useSidecar = sidecarFormats.contains(suffix);
 

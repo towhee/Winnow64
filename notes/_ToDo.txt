@@ -59,7 +59,7 @@ DONE
 - If raw+jpg ratings and labels not included when ingest
 - Can be slow when usb card images cached
 - Show image count in filters by filter
-- Jpg corrupted during ingest if metadata orientation changed
+- Jpg corrupted during ingest if metadata orientation changedg
 - Combine raw+jpg option
 - Fix pick and rating badge for compareImages::load lines 82+
 - Cleanup Roles
