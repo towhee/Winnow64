@@ -115,7 +115,7 @@ int ThumbViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
 void ThumbViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex /*previous*/)
 {
     currentRow = current.row();     // this slot not being used
-    qDebug() << G::t.restart() << "\t" << "TestTestTest";
+//    qDebug() << G::t.restart() << "\t" << "TestTestTest";
 //    currentIndex = current;
 }
 

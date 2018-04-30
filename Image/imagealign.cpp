@@ -23,8 +23,8 @@ QPointF ImageAlign::alignImage(QImage *baseImage, QImage *image, QPointF &basePo
     QRect targetRect(basePosPct.x() * baseThumb->width() - targetSize / 2,
                      basePosPct.y() * baseThumb->height() - targetSize / 2,
                      targetSize, targetSize);
-    qDebug() << G::t.restart() << "\t" << targetSize << basePosPct.x() << basePosPct.y() << targetRect
-             << alignThumb->width() << alignThumb->height();
+//    qDebug() << G::t.restart() << "\t" << targetSize << basePosPct.x() << basePosPct.y() << targetRect
+//             << alignThumb->width() << alignThumb->height();
     *target = baseThumb->copy(targetRect);
 
 //    TestAlignDlg *dlg = new TestAlignDlg(target, alignThumb);

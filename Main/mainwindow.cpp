@@ -458,6 +458,46 @@ void MW::handleDrop(const QMimeData *mimeData)
 
 }
 
+bool MW::checkForUpdate()
+{
+    QProcess process;
+    process.start("maintenancetool --checkupdates");
+
+    // Wait until the update tool is finished
+    process.waitForFinished();
+
+    if(process.error() != QProcess::UnknownError)
+    {
+        QString msg = "Error checking for updates";
+        popUp->showPopup(this, msg, 1500, .5);
+        qDebug() << "Error checking for updates";
+        return false;
+    }
+
+    // Read the output
+    QByteArray data = process.readAllStandardOutput();
+
+    // No output means no updates available
+    // Note that the exit code will also be 1, but we don't use that
+    // Also note that we should parse the output instead of just checking if it is empty if we want specific update info
+    if(data.isEmpty())
+    {
+        QString msg = "No updates available";
+        popUp->showPopup(this, msg, 1500, .5);
+        qDebug() << "No updates available";
+        return false;
+    }
+
+    // Call the maintenance tool binary
+    // Note: we start it detached because this application need to close for the update
+    QStringList args("--updater");
+    bool startMaintenanceTool = QProcess::startDetached("maintenancetool", args);
+
+    // Close the application
+    if (startMaintenanceTool) qApp->closeAllWindows();
+    else popUp->showPopup(this, "The maintenance tool failed to open", 2000, .75);
+}
+
 // Do we need this?  rgh
 void MW::handleStartupArgs()
 {
@@ -503,6 +543,7 @@ void MW::folderSelectionChange()
 {
     {
     #ifdef ISDEBUG
+    G::track("\n=============================================================================");
     G::track(__FUNCTION__, getSelectedPath());
     #endif
     }
@@ -708,6 +749,7 @@ so scrollTo and delegate use of the current index must check the row.
 */
     {
     #ifdef ISDEBUG
+    G::track("\n-----------------------------------------------------------------------------");
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
@@ -791,9 +833,6 @@ so scrollTo and delegate use of the current index must check the row.
             if (G::isThreadTrackingOn) qDebug()
                 << "MW::fileSelectionChange - loaded image file " << fPath;
             updateClassification();
-//            updatePick();
-//            updateRating();
-//            updateColorClass();
         }
     }
 
@@ -803,9 +842,9 @@ so scrollTo and delegate use of the current index must check the row.
     through images (ie with arrow key held down) */
 
     if (metadataLoaded) {
-        imageCacheFilePath = fPath;
-        imageCacheThread->updateCacheStatusCurrentImagePosition(imageCacheFilePath);
-        imageCacheTimer->start(250);
+//        imageCacheFilePath = fPath;
+//        imageCacheThread->updateCacheStatusCurrentImagePosition(imageCacheFilePath);
+//        imageCacheTimer->start(250);
     }
 
     // terminate initializing flag (set when new folder selected)
@@ -824,6 +863,13 @@ so scrollTo and delegate use of the current index must check the row.
 
     // load thumbnail if not done yet
     if (thumbView->isThumb(currentRow)) {
+        {
+        #ifdef ISDEBUG
+        QString s = "Loading thumb for row " + QString::number((currentRow))
+                + " " + fPath;
+        G::track(__FUNCTION__, s);
+        #endif
+        }
         QImage image;
         thumb->loadThumb(fPath, image);
         thumbView->setIcon(currentRow, image);
@@ -919,10 +965,10 @@ void MW::loadMetadataCache(int startRow)
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    QString s = "startRow = " + QString::number(startRow);
+    G::track(__FUNCTION__, s);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "MW::loadMetadataCache    startRow =" << startRow;
     metadataCacheThread->stopMetadateCache();
 
     // startRow in case user scrolls ahead and thumbs not yet loaded
@@ -1972,6 +2018,12 @@ void MW::createActions()
 
     //Help menu
 
+    checkForUpdateAction = new QAction(tr("Check for updates"), this);
+    checkForUpdateAction->setObjectName("CheckForUpdate");
+    checkForUpdateAction->setShortcutVisibleInContextMenu(true);
+    addAction(checkForUpdateAction);
+    connect(checkForUpdateAction, &QAction::triggered, this, &MW::checkForUpdate);
+
     aboutAction = new QAction(tr("About"), this);
     aboutAction->setObjectName("about");
     aboutAction->setShortcutVisibleInContextMenu(true);
@@ -2220,6 +2272,8 @@ void MW::createMenus()
     QMenu *helpMenu = new QMenu(this);
     QAction *helpGroupAct = new QAction("Help", this);
     helpGroupAct->setMenu(helpMenu);
+    helpMenu->addAction(checkForUpdateAction);
+    helpMenu->addSeparator();
     helpMenu->addAction(aboutAction);
     helpMenu->addAction(helpAction);
     helpMenu->addAction(helpShortcutsAction);
@@ -2526,7 +2580,7 @@ void MW::createCaching()
             thumbView, SLOT(refreshThumbs()));
 
     connect(metadataCacheThread, SIGNAL(showCacheStatus(const QImage)),
-            this, SLOT(showCacheStatus(const QImage)));
+            this, SLOT(showMetadataCacheStatus(const QImage)));
 
     imageCacheTimer = new QTimer(this);
     imageCacheTimer->setSingleShot(true);
@@ -3148,7 +3202,7 @@ void MW::updateImageThreadRunStatus(bool isRunning)
 void MW::showCacheStatus(const QImage &imCacheStatus)
 {
 /*
-Used by MetadataCache and ImageCache threads to show image cache building
+Used by ImageCache thread to show image cache building
 progress.
 */
     {
@@ -3158,10 +3212,29 @@ progress.
     }
     cacheLabel->setVisible(true);
     cacheLabel->setPixmap(QPixmap::fromImage(imCacheStatus));
-// following crashes app
-//#ifdef ISDEBUG
-//G::track(__FUNCTION__, "END");
-//#endif
+//  following crashes app
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__, "Completed");
+    #endif
+}
+
+void MW::showMetadataCacheStatus(const QImage &imCacheStatus)
+{
+/*
+Used by MetadataCache thread to show image cache building
+progress.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    cacheLabel->setVisible(true);
+    cacheLabel->setPixmap(QPixmap::fromImage(imCacheStatus));
+//  following crashes app
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__, "Completed");
+    #endif
 }
 
 void MW::popup(QString msg, int ms, float opacity)
@@ -4227,7 +4300,7 @@ void MW::chooseExternalApp()
     #endif
     }
 
-    qDebug() << G::t.restart() << "\t" << "MW::chooseExternalApp";
+//    qDebug() << G::t.restart() << "\t" << "MW::chooseExternalApp";
 
     // in terminal this works:
     //open -a 'Adobe Photoshop CC 2015.5.app' /Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg
@@ -6537,15 +6610,21 @@ set the color class for all the selected thumbs.
 void MW::metadataChanged(QStandardItem* item)
 {
 /*
-This slot is called when there is a data change in InfoView. If the title has been
-edited in InfoView then all selected image titles are updated to the new title.
-Both the data model and metadata are updated.  If xmp edits are enabled the new
-title is embedded in the image metadata, either internally or as a sidecar when
-ingesting.
+This slot is called when there is a data change in InfoView.
+
+If the change was a result of a new image selection then ignore.
+
+If the metadata in the tags section of the InfoView panel has been editied
+(title, creator, copyright, email or url) then all selected image tag(s) are
+updated to the new value(s). Both the data model and metadata are updated. If
+xmp edits are enabled the new tag(s) are embedded in the image metadata, either
+internally or as a sidecar when ingesting.
 */
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    QString s = "infoView->isNewImageDataChange = ";
+    s += infoView->isNewImageDataChange ? "true" : "false";
+    G::track(__FUNCTION__, s);
     #endif
     }
 
@@ -7016,7 +7095,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
 
     if (fPath.length() == 0) {
         if (report) {
-            qDebug() << G::t.restart() << "\t" << "MW::isFolderValid  fPath.length() == 0" << fPath;
+//            qDebug() << G::t.restart() << "\t" << "MW::isFolderValid  fPath.length() == 0" << fPath;
 //            QMessageBox::critical(this, tr("Error"), tr("The assigned folder name is blank"));
             msg = "The selected folder \"" + fPath + "\" does not have any images that can be shown in Winnow.";
             updateStatus(false, msg);
@@ -7100,9 +7179,13 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    QString s = thumbView->getCurrentFilename();
-    qDebug() << "MW::test thumbView->getCurrentFilename() =" << s;
+    qDebug() << QImageReader::supportedImageFormats();
+//    helpShortcuts();
+
     metadata->reportMetadataCache(thumbView->getCurrentFilename());
+
+    //    QString s = thumbView->getCurrentFilename();
+//    qDebug() << "MW::test thumbView->getCurrentFilename() =" << s;
 
 //    QLabel *label = new QLabel;
 //    label->setText(" TEST ");

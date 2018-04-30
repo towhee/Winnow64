@@ -1,7 +1,7 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
-//#define ISDEBUG        // Uncomment this line to show debugging output
+#define ISDEBUG        // Uncomment this line to show debugging output
 
 #include <QtWidgets>
 #include <QColor>
@@ -10,6 +10,7 @@
 #include <QElapsedTimer>
 #include <iostream>
 #include <iomanip>
+#include <QMutex>
 
 #define THUMB_MIN	40
 #define THUMB_MAX	480
@@ -85,8 +86,15 @@ namespace G
     extern QElapsedTimer t;
     extern bool isTimer;
 
-    extern void track(QString functionName, QString comment = "");
-}
+    extern void track(QString functionName = "", QString comment = "");
 
+//    class Profile
+//    {
+//    private:
+//        static void print(QString functionName, QString comment);
+//        QMutex m;
+//    }
+
+}
 #endif // GLOBAL_H
 

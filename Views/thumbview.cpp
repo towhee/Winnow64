@@ -384,7 +384,7 @@ bool ThumbView::isSelectedItem()
     #endif
     }
     return true;
-    qDebug() << G::t.restart() << "\t" << "selectionModel()->selectedRows().size()" << selectionModel()->selectedRows().size();
+//    qDebug() << G::t.restart() << "\t" << "selectionModel()->selectedRows().size()" << selectionModel()->selectedRows().size();
     if (selectionModel()->selectedRows().size() > 0)
         return true;
     else
@@ -487,7 +487,7 @@ folder.
             QModelIndex pathIdx = dm->sf->index(row, 0);
             QString fPath = pathIdx.data(G::PathRole).toString();
             QFileInfo fileInfo(fPath);
-            qDebug() << G::t.restart() << "\t" << fPath;
+//            qDebug() << G::t.restart() << "\t" << fPath;
             fileInfoList.append(fileInfo);
         }
     }
@@ -630,7 +630,9 @@ crash.
     }
     QStandardItem *item = new QStandardItem;
     QModelIndex idx = dm->index(row, 0, QModelIndex());
-    if (!idx.isValid()) return;
+    if (!idx.isValid()) {
+        return;
+    }
     item = dm->itemFromIndex(idx);
     item->setIcon(QPixmap::fromImage(thumb));
 }
@@ -673,7 +675,7 @@ void ThumbView::selectThumb(QString &fName)
     }
     QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fName);
     QModelIndex idx = idxList[0];
-    qDebug() << G::t.restart() << "\t" << "selectThumb  idx.row()" << idx.row();
+//    qDebug() << G::t.restart() << "\t" << "selectThumb  idx.row()" << idx.row();
     if(idx.isValid()) selectThumb(idx);
 }
 
@@ -846,7 +848,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Entering ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
+//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Entering ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
     if (G::mode == "Grid") {
         return;
 
@@ -886,7 +888,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     // all wrapping is row wrapping
     if (isWrapping()) {
         return;
-        qDebug() << G::t.restart() << "\t" << "ThumbView::thumbsFit isWrapping = true";
+//        qDebug() << G::t.restart() << "\t" << "ThumbView::thumbsFit isWrapping = true";
         // adjust thumb width
         int scrollWidth = 12;
 //        int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
@@ -931,7 +933,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         thumbHeight = thumbSpaceHeight - margin;
         thumbWidth = thumbHeight * aspect;
 
-        qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
+//        qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
 
         // change the thumbnail size in thumbViewDelegate
 //        qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
@@ -1319,7 +1321,7 @@ Drag and drop thumbs to another program.
         QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
     }
-    qDebug() << G::t.restart() << "\t" << urls;
+//    qDebug() << G::t.restart() << "\t" << urls;
 
     mimeData->setUrls(urls);
     drag->setMimeData(mimeData);
