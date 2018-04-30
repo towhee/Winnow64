@@ -842,9 +842,12 @@ so scrollTo and delegate use of the current index must check the row.
     through images (ie with arrow key held down) */
 
     if (metadataLoaded) {
-//        imageCacheFilePath = fPath;
+        imageCacheFilePath = fPath;
+
+        // appears to impact performance on slower media
 //        imageCacheThread->updateCacheStatusCurrentImagePosition(imageCacheFilePath);
-//        imageCacheTimer->start(250);
+
+        imageCacheTimer->start(250);
     }
 
     // terminate initializing flag (set when new folder selected)
@@ -2621,6 +2624,10 @@ void MW::createThumbView()
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
+    // back and forward mouse buttons toggle pick
+    connect(thumbView, SIGNAL(togglePick()), this, SLOT(togglePick()));
+//    connect(thumbView, &ThumbView::togglePick, this, &MW::togglePick);
+
     connect(thumbView, SIGNAL(updateThumbDockHeight()),
             this, SLOT(setThumbDockHeight()));
 
@@ -3162,15 +3169,15 @@ void MW::updateMetadataThreadRunStatus(bool isRunning)
     #endif
     }
     if (isRunning) {
-        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
+        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
         #ifdef Q_OS_WIN
-        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Green;font-size: 24px;}");
+        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Red;font-size: 24px;}");
         #endif
     }
     else {
-        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Gray;}");
+        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
         #ifdef Q_OS_WIN
-        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Gray;font-size: 24px;}");
+        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Green;font-size: 24px;}");
         #endif
     }
     metadataThreadRunningLabel->setText("◉");
@@ -3184,15 +3191,15 @@ void MW::updateImageThreadRunStatus(bool isRunning)
     #endif
     }
     if (isRunning) {
-        imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
         #ifdef Q_OS_WIN
-        imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;font-size: 24px;}");
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Red;font-size: 24px;}");
         #endif
     }
     else {
-        imageThreadRunningLabel->setStyleSheet("QLabel {color:Gray;}");
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
         #ifdef Q_OS_WIN
-        imageThreadRunningLabel->setStyleSheet("QLabel {color:Gray;font-size: 24px;}");
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;font-size: 24px;}");
         #endif
     }
     imageThreadRunningLabel->setText("◉");
@@ -6321,7 +6328,7 @@ void MW::togglePick()
     G::track(__FUNCTION__);
     #endif
     }
-
+    qDebug() << "MW::togglePick()";
     QModelIndex idx;
     QModelIndexList idxList = thumbView->selectionModel()->selectedRows();
     QString pickStatus;
@@ -6478,6 +6485,11 @@ void MW::updateClassification()
         compareImages->updateClassification(isPick, rating, colorClass,
                                             isRatingBadgeVisible,
                                             thumbView->currentIndex());
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__, "Completed");
+    #endif
+    }
 }
 
 void MW::setRating()
