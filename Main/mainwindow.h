@@ -56,7 +56,7 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.5";
+    QString version = "0.9.5.1.3.5";
     QString versionDetail = "";
 
     bool isShift;               // used when opening if shift key pressed
@@ -225,6 +225,7 @@ public slots:
     void setStatus(QString state);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void showCacheStatus(const QImage &imCacheStatus);
+    void showMetadataCacheStatus(const QImage &imCacheStatus);
     void setThumbDockHeight();  // signal from thumbView
     void setThumbDockFeatures(Qt::DockWidgetArea area);
     void setThumbDockFloatFeatures(bool isFloat);
@@ -565,6 +566,7 @@ private:
     // Workspace Menu
 
     // Help Menu
+    QAction *checkForUpdateAction;
     QAction *aboutAction;
     QAction *helpAction;
     QAction *helpShortcutsAction;
@@ -692,6 +694,7 @@ private:
     void updateState();
     void deleteViewerImage();
     void selectCurrentViewDir();
+    bool checkForUpdate();
     void handleStartupArgs();
     void addMenuSeparator(QWidget *widget);
     void createActions();

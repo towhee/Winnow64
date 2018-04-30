@@ -755,6 +755,11 @@ cycling through images to improve performance.
     }
 
     if (cache.isShowCacheStatus) cacheStatus();
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__, "Completed");
+    #endif
+    }
 }
 
 void ImageCache::updateImageCache(QString &fPath)

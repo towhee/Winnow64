@@ -155,11 +155,21 @@ void MetadataCache::createCacheStatus()
 
 void MetadataCache::updateCacheStatus(int row)
 {
+    {
+    #ifdef ISDEBUG
+    QString s = "row = " + QString::number(row);
+    mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
+    #endif
+    }
     // show the rectangle for the current cache by painting each item that has been cached
     int pxStart = ((float)row / dm->rowCount()) * pxTotWidth;
     pnt->fillRect(QRect(pxStart, htOffset, pxUnitWidth+1, ht), loadedGradient);
 
     // ping mainwindow to show cache update in the status bar
+    #ifdef ISDEBUG
+    QString s = "Emitting row = " + QString::number(row);
+    mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
+    #endif
     if (isShowCacheStatus) emit showCacheStatus(*cacheStatusImage);
 }
 
@@ -175,13 +185,18 @@ Load the metadata and thumb (icon) for all the image files in a folder.
 */
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
     int totRows = dm->rowCount();
     for (int row = startRow; row < totRows; ++row) {
         if (abort) {
-            qDebug() << G::t.restart() << "\t" << "Aborting at row =" << row;
+            {
+            #ifdef ISDEBUG
+            QString s = "Aborting at row = " + QString::number(row);
+            mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
+            #endif
+            }
             emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false);
             return;
@@ -191,10 +206,12 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         if (loadMap[row]) continue;
 
         // maybe metadata loaded by user picking image while cache is still building
+        mutex.lock();
         idx = dm->index(row, 0);
         QString fPath = idx.data(G::PathRole).toString();
         bool thumbLoaded = idx.data(Qt::DecorationRole).isValid();
         bool metadataLoaded = metadata->isLoaded(fPath);
+        mutex.unlock();
         if (metadataLoaded && thumbLoaded) {
             loadMap[row] = true;
             updateCacheStatus(row);
@@ -204,28 +221,53 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         // update status
         QString s = "Loading metadata " + QString::number(row + 1) + " of " + QString::number(totRows);
         emit updateStatus(false, s);
-//        qDebug() << G::t.restart() << "\t" << "Attempting to load metadata for row" << row << fPath;
+
+        {
+        #ifdef ISDEBUG
+        s = "Attempting to load metadata for row " + QString::number(row + 1) + " " + fPath;
+        mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
+        #endif
+        }
 
         // load metadata
         if (!metadataLoaded) {
-          QFileInfo fileInfo(fPath);
+            QFileInfo fileInfo(fPath);
             metadataLoaded = true;
-            // tried emit signal to meatdata but really slow
+            // tried emit signal to metadata but really slow
             // emit loadImageMetadata(fileInfo, true, true, false);
             mutex.lock();
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
                 metadataLoaded = true;
+                {
+                #ifdef ISDEBUG
+                s = "Loaded metadata for row " + QString::number(row + 1) + " " + fPath;
+                G::track(__FUNCTION__, s);
+                #endif
+                }
             }
             mutex.unlock();
         }
 
         if (!thumbLoaded) {
             QImage image;
+            mutex.lock();
             thumbLoaded = thumb->loadThumb(fPath, image);
+            mutex.unlock();
 //            QImage *imagePtr = &image;
-            if (thumbLoaded) emit setIcon(row, image);
+            if (thumbLoaded) {
+                {
+                #ifdef ISDEBUG
+                s = "Thumb obtained for row " + QString::number(row + 1) + " " + fPath + " Next emit setIcon";
+                mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
+                #endif
+                }
+                emit setIcon(row, image);
+            }
         }
-        else qDebug() << "Thumb icon not loaded for" << fPath;
+        else {
+            QString s = "Thumb icon not obtained for row " + QString::number(row + 1) + " " + fPath;
+            mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
+        }
 
         if (metadataLoaded && thumbLoaded) {
             loadMap[row] = true;
@@ -260,31 +302,48 @@ that have been missed.
 */
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
     t.start();
     emit updateIsRunning(true);
 
+    mutex.lock();
+    int rowCount = dm->rowCount();
+    mutex.unlock();
+
     do {
         if (abort) {
-            qDebug() << G::t.restart() << "\t" << "Aborting from MetadataCache::run";
+            mutex.lock(); G::track(__FUNCTION__, "Aborting ..."); mutex.unlock();
+
             emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false);
             return;
         }
+        {
+        #ifdef ISDEBUG
+        mutex.lock(); G::track(__FUNCTION__, "try loadMetadata"); mutex.unlock();
+        #endif
+        }
+
         loadMetadata();
         // check if all metadata and thumbs have been loaded
         allMetadataLoaded = true;
-        for(int i = 0; i < dm->rowCount(); ++i) {
+        for(int i = 0; i < rowCount; ++i) {
             if (!loadMap[i]) {
                 startRow = i;
                 allMetadataLoaded = false;
                 break;
             }
         }
+        {
+        #ifdef ISDEBUG
+        QString s = "allMetadataLoaded = " + allMetadataLoaded ? "true" : "false";
+        mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
+        #endif
+        }
     }
-    while (!allMetadataLoaded && t.elapsed() < 30000);
+    while (!allMetadataLoaded);  // && t.elapsed() < 30000);
     emit updateAllMetadataLoaded(allMetadataLoaded);
 
 //    qDebug() << G::t.restart() << "\t" << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";

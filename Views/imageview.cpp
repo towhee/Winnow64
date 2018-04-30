@@ -147,10 +147,10 @@ to prevent jarring changes in perceived scale by the user.
     pmItem->setVisible(true);
 
    // Embedded jpg not found
-   if (metadata->getLengthFullJPG(fPath) == 0) {
-       noJpgAvailable();
-       return false;
-   }
+//   if (metadata->getLengthFullJPG(fPath) == 0) {
+//       noJpgAvailable();
+//       return false;
+//   }
 
     // load the image from the image cache if available
     if (imageCacheThread->imCache.contains(fPath)) {

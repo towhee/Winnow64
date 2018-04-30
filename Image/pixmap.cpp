@@ -114,6 +114,16 @@ bool Pixmap::load(QString &fPath, QImage &image)
             if (imFile.open(QIODevice::ReadOnly)) {
                 // close it to allow qt load to work
                 imFile.close();
+
+                QImageReader reader(fPath);
+                reader.setAutoTransform(true);
+                image = reader.read();
+                success = true;
+                qDebug() << "fPath =" << fPath
+                         << "image.width =" << image.width()
+                         << "image.size =" << image.size();
+                break;
+
                 // directly load the image using qt library
                 success = image.load(fPath);
                 if (!success) {

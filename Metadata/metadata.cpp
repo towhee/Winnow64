@@ -2250,54 +2250,18 @@ bool Metadata::readXMP(ulong offset)
 
 //    qDebug() << G::t.restart() << "\t" << "Starting readXMP";
     // look for the start of XMP block = "<?xpacket begin" ...
-    for(ulong i = 0; i < 200; i++) {
-        uint byte = get1(file.read(1));
-        // check for "<" = 0x3C = 60
-        if (byte == 0x3C) {
-            xmpOffsetStart = file.pos() - 1;
-            QString s = "<?xpacket end";
-            ulong xmpOffsetEnd = findInFile(s, xmpOffsetStart, 64555);
-            xmpOffsetEnd = findInFile(">", xmpOffsetEnd, 100) + 2;  // 38306
-            ulong xmpLength = xmpOffsetEnd - xmpOffsetStart;
-            file.seek(xmpOffsetStart);
-            xmpByteArray = file.read(xmpLength);
-//            QString x = QString::QString(xmpByteArray);
-//            qDebug() << G::t.restart() << "\t" << "xmpByteArray as a string:\n" << x;
-            xmpFound = true;
-            break;
-        }
-    }
-
-    // report
-//    QXmlStreamReader xmp(xmpByteArray);
-//    while(!xmpBa.atEnd() && !xmpBa.hasError()) {
-//        QXmlStreamReader::TokenType token = xmpBa.readNext();
-////        if (token != QXmlStreamReader::StartElement &&
-////            token != QXmlStreamReader::QXmlStreamReader::Characters) continue;
-////        if (xmpBa.isWhitespace()) continue;
-////        if (xmpBa.qualifiedName() == "rdf:li") continue;
-////        if (xmpBa.qualifiedName() == "rdf:Seq") continue;
-////        if (xmpBa.qualifiedName() == "rdf:Alt") continue;
-////        if (xmpBa.text() == "" && xmpBa.qualifiedName() == "") continue;
-
-//        if (xmpBa.attributes().count() == 0)
-//            qDebug()  << "qualifiedName:" << xmpBa.qualifiedName()
-//                      << "isWhitespace" << xmpBa.isWhitespace()
-//                      << "Text:" << xmpBa.text();
-//        for(int i = 0; i < xmpBa.attributes().size(); i++) {
-//            qDebug() << G::t.restart() << "\t" << "qualifiedName:" << xmpBa.qualifiedName()
-//                     << "Text:" << xmpBa.text()
-//                     << xmpBa.attributes().at(i).prefix()
-//                     << xmpBa.attributes().at(i).name()
-//                     << xmpBa.attributes().at(i).value();
-//        }
-//    }
-
-//    QString lens;
-//    QString creator;
-//    QString copyright;
-//    QString email;
-//    QString url;
+    QString s = "<?xpacket begin";
+    xmpOffsetStart = findInFile(s, offset, 200);
+    if (xmpOffsetStart == -1) return false;
+    s = "<?xpacket end";
+    ulong xmpOffsetEnd = findInFile(s, xmpOffsetStart, 64555);
+    if (xmpOffsetEnd == -1) return false;
+    xmpOffsetEnd = findInFile(">", xmpOffsetEnd, 100) + 2;  // 38306
+    ulong xmpLength = xmpOffsetEnd - xmpOffsetStart;
+    if (xmpLength > 64555) return false;
+    file.seek(xmpOffsetStart);
+    xmpByteArray = file.read(xmpLength);
+    xmpFound = true;
 
     QString xmpTitle;
     if (!xmpFound) return false;
@@ -3113,7 +3077,9 @@ void Metadata::formatCanon()
     if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
 
     // read XMP
-    if (segmentHash.contains("XMP")) readXMP(segmentHash["XMP"]);
+    if (segmentHash.contains("XMP")) {
+        readXMP(segmentHash["XMP"]);
+    }
 
     // read XMP
     if (isXmp && okToReadXmp) {
@@ -3595,8 +3561,8 @@ bool Metadata::formatTIF()
     if (get2(file.read(2)) != 42) return false;
 
     // read offset to first IFD
-//    ulong ifdOffset = get4(file.read(4));
-//    ulong nextIFDOffset = readIFD("IFD0", ifdOffset);
+    ulong ifdOffset = get4(file.read(4));
+    ulong nextIFDOffset = readIFD("IFD0", ifdOffset);
 
     // IFD0: *******************************************************************
 

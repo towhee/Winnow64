@@ -28,16 +28,26 @@ namespace G
 
     void track(QString functionName, QString comment)
     {
-//        if (functionName == "MW::folderSelectionChange") qDebug() << "\n";
-//        qDebug() << G::t.restart() << "\t" << functionName << "\t" << comment;
-
-        if (functionName == "MW::folderSelectionChange") std::cout << "\n";
         std::cout << std::setw(7) << std::setfill(' ') << std::right << G::t.restart()
                   << "   "
                   << std::setw(50) << std::setfill(' ') << std::left << functionName.toStdString()
                   << "   "
                   << comment.toStdString()
                   << "\n" << std::flush;
+//        Profile::print(functionName, comment);
     }
+
+//    void Profile::print(QString functionName, QString comment)
+//    {
+//        m.lock();
+//        std::cout << std::setw(7) << std::setfill(' ') << std::right << G::t.restart()
+//                  << "   "
+//                  << std::setw(50) << std::setfill(' ') << std::left << functionName.toStdString()
+//                  << "   "
+//                  << comment.toStdString()
+//                  << "\n" << std::flush;
+//        m.unlock();
+//    }
 }
+
 

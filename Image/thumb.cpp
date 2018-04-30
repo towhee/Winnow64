@@ -68,14 +68,24 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, fPath);
     #endif
     }
     bool success = false;
     QFile imFile(fPath);
 
-    ulong offsetThumb = metadata->getOffsetThumbJPG(fPath);
-    ulong lengthThumb = metadata->getLengthThumbJPG(fPath);  // new
+    qint64 offsetThumb = metadata->getOffsetThumbJPG(fPath);
+    qint64 lengthThumb = metadata->getLengthThumbJPG(fPath);  // new
+//    ulong lengthThumb = metadata->getLengthThumbJPG(fPath);  // new
+
+    {
+    #ifdef ISDEBUG
+    QString s = "File size = " + QString::number(imFile.size());
+    s += " Offset embedded thumb = " + QString::number(offsetThumb);
+    s += " Length embedded thumb = " + QString::number(lengthThumb);
+    G::track(__FUNCTION__, s);
+    #endif
+    }
 
     if (imFile.open(QIODevice::ReadOnly)) {
         if (imFile.seek(offsetThumb)) {

@@ -1,4 +1,5 @@
 BUGS
+- Not showing Tif in ImageView
 - Jpg orientationOffset = 0 when metadata orientation changed
 - Update image count in Fav (refresh) when changes
 - CompareImages not calc layout correctly
@@ -53,7 +54,7 @@ DONE
 - Use subfolders not working
 - First ImageView not showing rating badge
 - Collapse all folders
-- Drag and drop nt working for whole selections
+- Drag and drop not working for whole selections
 - Can edit metadata headers in metadata panel
 - Set zoom % blank if not loupe mode in matadata panel
 - If raw+jpg ratings and labels not included when ingest
