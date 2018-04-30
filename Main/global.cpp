@@ -28,12 +28,23 @@ namespace G
 
     void track(QString functionName, QString comment)
     {
-        std::cout << std::setw(7) << std::setfill(' ') << std::right << G::t.restart()
-                  << "   "
-                  << std::setw(50) << std::setfill(' ') << std::left << functionName.toStdString()
-                  << "   "
-                  << comment.toStdString()
-                  << "\n" << std::flush;
+//        std::cout << std::setw(7) << std::setfill(' ') << std::right << G::t.restart()
+//                  << "   "
+//                  << std::setw(50) << std::setfill(' ') << std::left << functionName.toStdString()
+//                  << "   "
+//                  << comment.toStdString()
+//                  << "\n" << std::flush;
+
+        const QByteArray b = " ";
+        const char *str = b.data();
+
+        QString time = QString::number(G::t.restart());
+
+        qDebug() << time.rightJustified(10, ' ') << " "
+                 << functionName.leftJustified(50, '.') << " "
+                 << comment;
+
+//        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 //        Profile::print(functionName, comment);
     }
 

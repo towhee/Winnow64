@@ -1,5 +1,5 @@
 BUGS
-- Not showing Tif in ImageView
+- Changing the image cache amount when no folder selected crashes
 - Jpg orientationOffset = 0 when metadata orientation changed
 - Update image count in Fav (refresh) when changes
 - CompareImages not calc layout correctly
@@ -8,7 +8,6 @@ BUGS
 - Copy metadata item not working (was working before)
 - When ingesting confirm all files copied correctly (option)
 - Not finding thumbnail in D850 NEFs
-- Sometimes thumbs do not paint until select
 - Sometimes metadata caching is slow
 - Image caching not always updating
 - Open with ... (doesn't work on macOS)
@@ -36,6 +35,10 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE
+- forward and back mouse buttons toggle pick status
+- version 0.9.5.2
+- Not showing Tif in ImageView
+- Performance improvements without cache status
 - Made pick logic same as lightroom
 - Bookmarks names and count not aligned vertically
 - XMP email and url not being written correctly

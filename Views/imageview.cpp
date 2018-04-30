@@ -137,6 +137,7 @@ to prevent jarring changes in perceived scale by the user.
     #endif
     }
     // No folder selected yet
+    if (!fPath.length()) return false;
 
     /* important to keep currentImagePath.  It is used to check if there isn't
     an image (when currentImagePath.isEmpty() == true) - for example when
@@ -146,6 +147,7 @@ to prevent jarring changes in perceived scale by the user.
     bool isLoaded = false;
     pmItem->setVisible(true);
 
+    // not a good idea - what about tif, png ...?
    // Embedded jpg not found
 //   if (metadata->getLengthFullJPG(fPath) == 0) {
 //       noJpgAvailable();
@@ -913,11 +915,13 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
     // forward and back buttons
     if (event->button() == Qt::BackButton) {
-        thumbView->selectPrev();
+//        thumbView->selectPrev();
+        emit togglePick();
         return;
     }
     if (event->button() == Qt::ForwardButton) {
-        thumbView->selectNext();
+//        thumbView->selectNext();
+        emit togglePick();
         return;
     }
 

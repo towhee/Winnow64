@@ -133,7 +133,8 @@ private:
     bool isMouseDrag;
 
 signals:
-    void thumbClick(float xPct, float yPct);        //used in ThumbView::mousePressEvent
+    void togglePick();
+    void thumbClick(float xPct, float yPct);        // used in ThumbView::mousePressEvent
     void displayLoupe();
     void updateStatus(bool, QString);
     void updateThumbDockHeight();

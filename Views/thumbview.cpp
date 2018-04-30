@@ -1168,6 +1168,19 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     #endif
     }
     G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
+
+    // forward and back buttons
+    if (event->button() == Qt::BackButton) {
+//        thumbView->selectPrev();
+        mw->togglePick();
+        return;
+    }
+    if (event->button() == Qt::ForwardButton) {
+//        thumbView->selectNext();
+        mw->togglePick();
+        return;
+    }
+
     QListView::mousePressEvent(event);
 
     // capture mouse click position for imageView zoom/pan
@@ -1232,7 +1245,7 @@ center.
     }
     QListView::mouseDoubleClickEvent(event);
     // do not displayLoupe if already displayed
-    if (G::mode != "Loupe") {
+    if (G::mode != "Loupe" && event->button() == Qt::LeftButton) {
         emit displayLoupe();
     }
     scrollToCurrent(currentIndex().row());
