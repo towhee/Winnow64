@@ -7,18 +7,24 @@ CompareImages::CompareImages(QWidget *parent,
                          DataModel *dm,
                          ThumbView *thumbView,
                          ImageCache *imageCacheThread)
+    : QWidget(parent)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    parent = 0;        // suppress compiler warning
+//    parent = 0;        // suppress compiler warning
     this->metadata = metadata;
     this->dm = dm;
     this->thumbView = thumbView;
     this->imageCacheThread = imageCacheThread;
     this->centralWidget = centralWidget;
+
+    /* this works because CompareImages is a friend class of MW.  It is used to
+    connect the signals from CompareViews forward and back buttongs to MW toggle
+    pick status*/
+//    MW *mw = qobject_cast<MW*>(parent);
 
     gridLayout = new QGridLayout;
     gridLayout->setContentsMargins(0, 0, 0, 0);
@@ -96,6 +102,9 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
         QString colorClass = dm->sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
         updateClassification(isPick, rating, colorClass, isRatingBadgeVisible, idxPath);
 
+        // relay back and forward mouse btns toggle picks from a compareView
+        connect(imList->at(i), SIGNAL(togglePick()), this, SLOT(togglePickSignalRelay()));
+
         // pass mouse click zoom to other images as a pct of width and height
         connect(imList->at(i), SIGNAL(zoomFromPct(QPointF, QModelIndex, bool)),
                 this, SLOT(zoom(QPointF, QModelIndex, bool)));
@@ -123,8 +132,8 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 
     loadGrid();
 
-    thumbView->setCurrentIndex(imList->at(0)->imageIndex);
-    go("Home");
+//    thumbView->setCurrentIndex(imList->at(0)->imageIndex);
+//    go("Home");
     return true;
 }
 
@@ -507,5 +516,22 @@ void CompareImages::zoomToggle()
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomToggle();
     }
+}
+
+void CompareImages::togglePickSignalRelay()
+{
+/*
+Clicking the forward or back mouse buttons in a CompareView emits a togglePick
+signal.  However, MW does not know about CompareViews created in CompareImages,
+so the signal is relayed on to MW, which does know about CompareImages.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug();
+    qDebug() << "CompareImages::togglePickSignalRelay";
+    emit togglePick();
 }
 

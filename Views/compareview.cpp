@@ -629,6 +629,19 @@ void CompareView::mousePressEvent(QMouseEvent *event)
     // prevent zooming when right click for context menu
     if (event->button() == Qt::RightButton) return;
 
+    // forward and back buttons
+    if (event->button() == Qt::BackButton) {
+//        thumbView->selectPrev();
+        qDebug() << "CompareView::mousePressEvent event->button() == Qt::BackButton";
+        emit togglePick();
+        return;
+    }
+    if (event->button() == Qt::ForwardButton) {
+//        thumbView->selectNext();
+        emit togglePick();
+        return;
+    }
+
     isMouseDoubleClick = false;
     if (event->button() == Qt::LeftButton) {
         propagate = true;
@@ -682,8 +695,11 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    // prevent zooming when right click for context menu
-    if (event->button() == Qt::RightButton) return;
+    // prevent zooming when right click for context menu, or forward and back
+    // buttons to toggle pick status
+    if (event->button() == Qt::RightButton ||
+        event->button() == Qt::BackButton ||
+        event->button() == Qt::ForwardButton) return;
 
     isLeftMouseBtnPressed = false;
     if (isMouseDrag) {

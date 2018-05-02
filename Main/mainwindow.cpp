@@ -132,6 +132,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     if (!isSettings) centralLayout->setCurrentIndex(StartTab);
     isSettings = true;
+    isInitializing = false;
 }
 
 void MW::initialize()
@@ -1896,35 +1897,35 @@ void MW::createActions()
 
     // Window menu focus actions
 
-    folderDockFocusAction = new QAction(tr("Focus on Folders"), this);
-    folderDockFocusAction->setObjectName("FocusFolders");
-    folderDockFocusAction->setShortcutVisibleInContextMenu(true);
-    addAction(folderDockFocusAction);
-    connect(folderDockFocusAction, &QAction::triggered, this, &MW::setFolderDockFocus);
+//    folderDockFocusAction = new QAction(tr("Focus on Folders"), this);
+//    folderDockFocusAction->setObjectName("FocusFolders");
+//    folderDockFocusAction->setShortcutVisibleInContextMenu(true);
+//    addAction(folderDockFocusAction);
+//    connect(folderDockFocusAction, &QAction::triggered, this, &MW::setFolderDockFocus);
 
-    favDockFocusAction = new QAction(tr("Focus on Favourites"), this);
-    favDockFocusAction->setObjectName("FocusFavourites");
-    favDockFocusAction->setShortcutVisibleInContextMenu(true);
-    addAction(favDockFocusAction);
-    connect(favDockFocusAction, &QAction::triggered, this, &MW::setFavDockFocus);
+//    favDockFocusAction = new QAction(tr("Focus on Favourites"), this);
+//    favDockFocusAction->setObjectName("FocusFavourites");
+//    favDockFocusAction->setShortcutVisibleInContextMenu(true);
+//    addAction(favDockFocusAction);
+//    connect(favDockFocusAction, &QAction::triggered, this, &MW::setFavDockFocus);
 
-    filterDockFocusAction = new QAction(tr("Focus on Filters"), this);
-    filterDockFocusAction->setObjectName("FocusFilters");
-    filterDockFocusAction->setShortcutVisibleInContextMenu(true);
-    addAction(filterDockFocusAction);
-    connect(filterDockFocusAction, &QAction::triggered, this, &MW::setFilterDockFocus);
+//    filterDockFocusAction = new QAction(tr("Focus on Filters"), this);
+//    filterDockFocusAction->setObjectName("FocusFilters");
+//    filterDockFocusAction->setShortcutVisibleInContextMenu(true);
+//    addAction(filterDockFocusAction);
+//    connect(filterDockFocusAction, &QAction::triggered, this, &MW::setFilterDockFocus);
 
-    metadataDockFocusAction = new QAction(tr("Focus on Metadata"), this);
-    metadataDockFocusAction->setObjectName("FocusMetadata");
-    metadataDockFocusAction->setShortcutVisibleInContextMenu(true);
-    addAction(metadataDockFocusAction);
-    connect(metadataDockFocusAction, &QAction::triggered, this, &MW::setMetadataDockFocus);
+//    metadataDockFocusAction = new QAction(tr("Focus on Metadata"), this);
+//    metadataDockFocusAction->setObjectName("FocusMetadata");
+//    metadataDockFocusAction->setShortcutVisibleInContextMenu(true);
+//    addAction(metadataDockFocusAction);
+//    connect(metadataDockFocusAction, &QAction::triggered, this, &MW::setMetadataDockFocus);
 
-    thumbDockFocusAction = new QAction(tr("Focus on Thumbs"), this);
-    thumbDockFocusAction->setObjectName("FocusThumbs");
-    thumbDockFocusAction->setShortcutVisibleInContextMenu(true);
-    addAction(thumbDockFocusAction);
-    connect(thumbDockFocusAction, &QAction::triggered, this, &MW::setThumbDockFocus);
+//    thumbDockFocusAction = new QAction(tr("Focus on Thumbs"), this);
+//    thumbDockFocusAction->setObjectName("FocusThumbs");
+//    thumbDockFocusAction->setShortcutVisibleInContextMenu(true);
+//    addAction(thumbDockFocusAction);
+//    connect(thumbDockFocusAction, &QAction::triggered, this, &MW::setThumbDockFocus);
 
     // Lock docks (hide titlebar) actions
     folderDockLockAction = new QAction(tr("Hide Folder Titlebar"), this);
@@ -2255,12 +2256,12 @@ void MW::createMenus()
     windowMenu->addAction(windowTitleBarVisibleAction);
     windowMenu->addAction(menuBarVisibleAction);
     windowMenu->addAction(statusBarVisibleAction);
-    windowMenu->addSeparator();
-    windowMenu->addAction(folderDockFocusAction);
-    windowMenu->addAction(favDockFocusAction);
-    windowMenu->addAction(filterDockFocusAction);
-    windowMenu->addAction(metadataDockFocusAction);
-    windowMenu->addAction(thumbDockFocusAction);
+//    windowMenu->addSeparator();
+//    windowMenu->addAction(folderDockFocusAction);
+//    windowMenu->addAction(favDockFocusAction);
+//    windowMenu->addAction(filterDockFocusAction);
+//    windowMenu->addAction(metadataDockFocusAction);
+//    windowMenu->addAction(thumbDockFocusAction);
     windowMenu->addSeparator();
     windowMenu->addAction(folderDockLockAction);
     windowMenu->addAction(favDockLockAction);
@@ -2750,6 +2751,8 @@ void MW::createCompareView()
 
     connect(compareImages, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
+
+    connect(compareImages, &CompareImages::togglePick, this, &MW::togglePick);
 }
 
 void MW::createInfoView()
@@ -2974,7 +2977,9 @@ parameters.  Any visibility changes are executed.
     imageCacheThread->updateImageCacheParam(size, show, width, wtAhead,
              usePreview, displayHorizontalPixels, displayVerticalPixels);
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
-    imageCacheThread->updateImageCache(fPath);
+
+    if (fPath.length())
+        imageCacheThread->updateImageCache(fPath);
 
     // update visibility if preferences have been changed
     cacheLabel->setVisible(isShowCacheStatus);
@@ -4327,19 +4332,6 @@ void MW::chooseExternalApp()
     process->start(program, args);
 }
 
-//void MW::monitorPreference()
-//{
-///*
-//Called from welcome screen.  Opens preferences on monitor resolution page.
-//*/
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << G::t.restart() << "\t" << "MW::monitorPreference()";
-//    #endif
-//    }
-//    preferences(0);
-//}
-
 void MW::preferences(int page)
 {
 /*
@@ -4353,21 +4345,17 @@ void MW::preferences(int page)
     if (page == -1) page = lastPrefPage;
     Prefdlg *prefdlg = new Prefdlg(this, page);
     connect(prefdlg, SIGNAL(updatePage(int)),
-        this, SLOT(setPrefPage(int)));
+            this, SLOT(setPrefPage(int)));
     connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
             this, SLOT(setRememberLastDir(bool)));
     connect(prefdlg, SIGNAL(updateMouseClickScroll(bool)),
             this, SLOT(setMouseClickScroll(bool)));
     connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
             this, SLOT(setTrackpadScroll(bool)));
-//    connect(prefdlg, SIGNAL(updateDisplayResolution(int,int)),
-//            this, SLOT(setDisplayResolution(int,int)));
     connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool,bool)),
             thumbView, SLOT(setThumbParameters(int,int,int,int,int,bool,bool)));
     connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool,bool)),
             gridView, SLOT(setThumbParameters(int, int, int, int, int, bool, bool)));
-//    connect(prefdlg, SIGNAL(updateThumbDockParameters(bool, bool, bool)),
-//            this, SLOT(setThumbDockParameters(bool, bool, bool)));
     connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
             this, SLOT(setSlideShowParameters(int, bool)));
     connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, int, bool, bool)),
@@ -4375,7 +4363,6 @@ void MW::preferences(int page)
     connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool,bool)),
             this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool,bool)));
     prefdlg->exec();
-//    setActualDevicePixelRation();
 }
 
 void MW::setShowImageCount()
@@ -5608,11 +5595,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
         windowTitleBarVisibleAction->setShortcut(QKeySequence("F8"));
         menuBarVisibleAction->setShortcut(QKeySequence("F9"));
         statusBarVisibleAction->setShortcut(QKeySequence("F10"));
-        folderDockFocusAction->setShortcut(QKeySequence("Ctrl+F3"));
-        favDockFocusAction->setShortcut(QKeySequence("Ctrl+F4"));
-        filterDockFocusAction->setShortcut(QKeySequence("Ctrl+F5"));
-        metadataDockFocusAction->setShortcut(QKeySequence("Ctrl+F6"));
-        thumbDockFocusAction->setShortcut(QKeySequence("Ctrl+F7"));
         folderDockLockAction->setShortcut(QKeySequence("Shift+F3"));
         favDockLockAction->setShortcut(QKeySequence("Shift+F4"));
         filterDockLockAction->setShortcut(QKeySequence("Shift+F5"));
@@ -6071,8 +6053,26 @@ void MW::setFolderDockVisibility() {
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "folderDockVisibleAction->isChecked()" << folderDockVisibleAction->isChecked();
-    folderDock->setVisible(folderDockVisibleAction->isChecked());
+    if (isInitializing) return;
+
+    if (folderDock->isVisible() && folderDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
+    if (folderDock->isVisible() && !folderDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
+    if (!folderDock->isVisible()) dockToggle = SetVisible;
+
+    switch (dockToggle) {
+    case SetFocus:
+        folderDock->raise();
+        folderDockVisibleAction->setChecked(true);
+        break;
+    case SetInvisible:
+        folderDock->setVisible(false);
+        folderDockVisibleAction->setChecked(false);
+        break;
+    case SetVisible:
+        folderDock->setVisible(true);
+        folderDock->raise();
+        folderDockVisibleAction->setChecked(true);
+    }
 }
 
 void MW::setFavDockVisibility() {
@@ -6081,7 +6081,26 @@ void MW::setFavDockVisibility() {
     G::track(__FUNCTION__);
     #endif
     }
-    favDock->setVisible(favDockVisibleAction->isChecked());
+    if (isInitializing) return;
+
+    if (favDock->isVisible() && favDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
+    if (favDock->isVisible() && !favDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
+    if (!favDock->isVisible()) dockToggle = SetVisible;
+
+    switch (dockToggle) {
+    case SetFocus:
+        favDock->raise();
+        favDockVisibleAction->setChecked(true);
+        break;
+    case SetInvisible:
+        favDock->setVisible(false);
+        favDockVisibleAction->setChecked(false);
+        break;
+    case SetVisible:
+        favDock->setVisible(true);
+        favDock->raise();
+        favDockVisibleAction->setChecked(true);
+    }
 }
 
 void MW::setFilterDockVisibility() {
@@ -6090,7 +6109,26 @@ void MW::setFilterDockVisibility() {
     G::track(__FUNCTION__);
     #endif
     }
-    filterDock->setVisible(filterDockVisibleAction->isChecked());
+    if (isInitializing) return;
+
+    if (filterDock->isVisible() && filterDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
+    if (filterDock->isVisible() && !filterDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
+    if (!filterDock->isVisible()) dockToggle = SetVisible;
+
+    switch (dockToggle) {
+    case SetFocus:
+        filterDock->raise();
+        filterDockVisibleAction->setChecked(true);
+        break;
+    case SetInvisible:
+        filterDock->setVisible(false);
+        filterDockVisibleAction->setChecked(false);
+        break;
+    case SetVisible:
+        filterDock->setVisible(true);
+        filterDock->raise();
+        filterDockVisibleAction->setChecked(true);
+    }
 }
 
 void MW::setMetadataDockVisibility() {
@@ -6099,7 +6137,26 @@ void MW::setMetadataDockVisibility() {
     G::track(__FUNCTION__);
     #endif
     }
-    metadataDock->setVisible(metadataDockVisibleAction->isChecked());
+    if (isInitializing) return;
+
+    if (metadataDock->isVisible() && metadataDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
+    if (metadataDock->isVisible() && !metadataDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
+    if (!metadataDock->isVisible()) dockToggle = SetVisible;
+
+    switch (dockToggle) {
+    case SetFocus:
+        metadataDock->raise();
+        metadataDockVisibleAction->setChecked(true);
+        break;
+    case SetInvisible:
+        metadataDock->setVisible(false);
+        metadataDockVisibleAction->setChecked(false);
+        break;
+    case SetVisible:
+        metadataDock->setVisible(true);
+        metadataDock->raise();
+        metadataDockVisibleAction->setChecked(true);
+    }
 }
 
 void MW::setThumbDockVisibity()
@@ -6109,8 +6166,27 @@ void MW::setThumbDockVisibity()
     G::track(__FUNCTION__);
     #endif
     }
-    thumbDock->setVisible(thumbDockVisibleAction->isChecked());
-//    thumbView->setWrapping(thumbView->wrapThumbs);    // nada
+    if (isInitializing) return;
+
+    if (thumbDock->isVisible() && thumbDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
+    if (thumbDock->isVisible() && !thumbDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
+    if (!thumbDock->isVisible()) dockToggle = SetVisible;
+
+    switch (dockToggle) {
+    case SetFocus:
+        thumbDock->raise();
+        thumbDockVisibleAction->setChecked(true);
+        break;
+    case SetInvisible:
+        thumbDock->setVisible(false);
+        thumbDockVisibleAction->setChecked(false);
+        break;
+    case SetVisible:
+        thumbDock->setVisible(true);
+        thumbDock->raise();
+        thumbDockVisibleAction->setChecked(true);
+    }
+
     if (G::mode != "Grid")
         wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
 }
@@ -6152,31 +6228,6 @@ void MW::setWindowsTitleBarVisibility() {
         setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
         show();
     }
-}
-
-void MW::setFolderDockFocus()
-{
-    folderDock->raise();
-}
-
-void MW::setFavDockFocus()
-{
-    favDock->raise();
-}
-
-void MW::setFilterDockFocus()
-{
-    filterDock->raise();
-}
-
-void MW::setMetadataDockFocus()
-{
-    metadataDock->raise();
-}
-
-void MW::setThumbDockFocus()
-{
-    thumbDock->raise();
 }
 
 void MW::setFolderDockLockMode()
