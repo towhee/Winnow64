@@ -314,7 +314,11 @@ that have been missed.
 
     do {
         if (abort) {
+            {
+            #ifdef ISDEBUG
             mutex.lock(); G::track(__FUNCTION__, "Aborting ..."); mutex.unlock();
+            #endif
+            }
 
             emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false);

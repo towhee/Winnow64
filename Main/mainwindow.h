@@ -48,6 +48,7 @@ class MW : public QMainWindow
 {
     Q_OBJECT
 
+    friend class CompareImages;
     friend class Prefdlg;
     friend class ThumbView;
     friend class InfoView;
@@ -56,7 +57,7 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.5.2";
+    QString version = "0.9.5.3";
     QString versionDetail = "";
 
     bool isShift;               // used when opening if shift key pressed
@@ -344,11 +345,11 @@ private slots:
     void setStatusBarVisibility();
     void setWindowsTitleBarVisibility();
 
-    void setFolderDockFocus();
-    void setFavDockFocus();
-    void setFilterDockFocus();
-    void setMetadataDockFocus();
-    void setThumbDockFocus();
+//    void setFolderDockFocus();
+//    void setFavDockFocus();
+//    void setFilterDockFocus();
+//    void setMetadataDockFocus();
+//    void setThumbDockFocus();
 
     void setFolderDockLockMode();
     void setFavDockLockMode();
@@ -550,12 +551,6 @@ private:
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
 
-    QAction *folderDockFocusAction;
-    QAction *favDockFocusAction;
-    QAction *filterDockFocusAction;
-    QAction *metadataDockFocusAction;
-    QAction *thumbDockFocusAction;
-
     QAction *folderDockLockAction;
     QAction *favDockLockAction;
     QAction *filterDockLockAction;
@@ -649,6 +644,9 @@ private:
     QModelIndexList selectedImages;
     QModelIndex currentIdx;
     QStandardItemModel *imageModel;
+
+    // used in visibility and focus setting for docks
+    enum {SetFocus, SetVisible, SetInvisible} dockToggle;
 
     bool metadataLoaded;
     bool ignoreDockResize;

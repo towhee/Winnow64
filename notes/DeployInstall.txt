@@ -18,9 +18,9 @@ Win Installation Update:
 1.  Update deploy if new dlls required
 2.  Update version in mainwindow.h
 3.  Update winnow.exe by compiling in release mode
-4.  Update the version in D:\My Projects\Winnow Project\WinnowInstallOnline\Config\config.xml
-5.  Update the version in D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.vendor.product\meta\package.xml
-6.  Update the releaseDate in D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.vendor.product\meta\package.xml
+4.  Update the version in D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
+5.  Update the version in D:\My Projects\Winnow Project\WinnowInstall\packages\com.rh.bin\meta\package.xml
+6.  Update the releaseDate in D:\My Projects\Winnow Project\WinnowInstall\packages\com.rh.prod\meta\package.xml
 7.  Open cmd prompt to run batch files.
 8.  Run: D:\My Projects\Winnow Project\WinnowInstall\updateinstallation.bat
     - changes drive to D:

@@ -4,7 +4,7 @@
 #include <QtWidgets>
 #include "Metadata/metadata.h"
 #include "Views/thumbview.h"
-#include "compareview.h"
+#include "Views/compareview.h"
 #include "Image/imagealign.h"
 #include "Datamodel/datamodel.h"
 
@@ -37,6 +37,7 @@ public slots:
 signals:
     void updateStatus(bool, QString);
     void zoomChange(qreal zoomValue);
+    void togglePick();
 
 private slots:
     void zoom(QPointF coord, QModelIndex idx, bool isZoom);
@@ -44,6 +45,7 @@ private slots:
     void startPan(QModelIndex idx);
     void cleanupAfterPan(QPointF deltaPct, QModelIndex idx);
     void align(QPointF basePos, QModelIndex idx);
+    void togglePickSignalRelay();
 
 private:
     Metadata *metadata;
