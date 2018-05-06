@@ -51,6 +51,7 @@ signals:
     void cleanupAfterPan(QPointF deltaPct, QModelIndex idx);
     void align(QPointF scrollPct, QModelIndex idx); // not used
     void zoomChange(qreal zoomValue);
+    void deselectAll();
 
 private slots:
     void scrollEvent();

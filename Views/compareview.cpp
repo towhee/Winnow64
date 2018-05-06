@@ -763,6 +763,7 @@ void CompareView::select()
     G::track(__FUNCTION__);
     #endif
     }
+    emit deselectAll();
     this->setFocus();
     thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
     thumbView->setCurrentIndex(imageIndex);

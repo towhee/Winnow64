@@ -1,5 +1,4 @@
 BUGS
-- Cache status btns gray if not cached, red if caching, green if cached
 - Sometimes metadata caching is slow
 - Jpg orientationOffset = 0 when metadata orientation changed
 - Update image count in Fav (refresh) when changes
@@ -34,6 +33,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE
+- Cache status btns gray if not cached, red if caching, green if cached
 - Focus outline in CompareView stays on 1st item if mouse to 2nd without mousing 1st
 - Forward and Back btns in compare mode not changing pick status
 - version 0.9.5.3

@@ -125,6 +125,9 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
         connect(imList->at(i), SIGNAL(zoomChange(qreal)),
                 this, SLOT(zoomChangeFromView(qreal)));
 
+        // when select a compareView make sure all others hav been deselected
+        connect(imList->at(i), SIGNAL(deselectAll()), this, SLOT(deselectAll()));
+
         //        // align
         //        connect(imList->at(i), SIGNAL(align(QPointF, QModelIndex)),
         //                this, SLOT(align(QPointF, QModelIndex)));
@@ -132,8 +135,8 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 
     loadGrid();
 
-//    thumbView->setCurrentIndex(imList->at(0)->imageIndex);
-//    go("Home");
+    thumbView->setCurrentIndex(imList->at(0)->imageIndex);
+    go("Home");
     return true;
 }
 
@@ -515,6 +518,18 @@ void CompareImages::zoomToggle()
 {
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomToggle();
+    }
+}
+
+void CompareImages::deselectAll()
+{
+/*
+This slot is called when a compareView is entered, either via mouse passover or
+a left/right/home/end keystroke.  All compareViews are deselected to make sure
+there are no selected "orphans".
+*/
+    for (int i = 0; i < imList->count(); ++i) {
+        imList->at(i)->deselect();
     }
 }
 
