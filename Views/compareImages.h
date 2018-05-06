@@ -46,6 +46,7 @@ private slots:
     void cleanupAfterPan(QPointF deltaPct, QModelIndex idx);
     void align(QPointF basePos, QModelIndex idx);
     void togglePickSignalRelay();
+    void deselectAll();
 
 private:
     Metadata *metadata;

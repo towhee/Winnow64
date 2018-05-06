@@ -574,6 +574,9 @@ void MW::folderSelectionChange()
     isCurrentFolderOkay = false;
     pickMemSize = "";
 
+    // in case no eligible images, therefore no caching
+    inactiveThreadRunStatus();
+
     // stop slideshow if a new folder is selected
     if (isSlideShowActive && !isStressTest) slideShow();
 
@@ -2948,6 +2951,7 @@ void MW::createStatusBar()
     subfolderStatusLabel->setStyleSheet("QLabel{color:red;}");
     statusBar()->addWidget(subfolderStatusLabel);
 
+    inactiveThreadRunStatus();
     stateLabel = new QLabel;
     statusBar()->addWidget(stateLabel);
 }
@@ -3210,7 +3214,23 @@ void MW::updateImageThreadRunStatus(bool isRunning)
     imageThreadRunningLabel->setText("◉");
 }
 
-//
+void MW::inactiveThreadRunStatus()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    metadataThreadRunningLabel->setStyleSheet("QLabel {color:Gray;}");
+    imageThreadRunningLabel->setStyleSheet("QLabel {color:Gray;}");
+    #ifdef Q_OS_WIN
+    metadataThreadRunningLabel->setStyleSheet("QLabel {color:Gray;font-size: 24px;}");
+    imageThreadRunningLabel->setStyleSheet("QLabel {color:Gray;font-size: 24px;}");
+    #endif
+    metadataThreadRunningLabel->setText("◉");
+    imageThreadRunningLabel->setText("◉");
+}
+
 void MW::showCacheStatus(const QImage &imCacheStatus)
 {
 /*

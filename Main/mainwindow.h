@@ -57,8 +57,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.5.3";
-    QString versionDetail = "";
+    QString version = "0.9.5.4";
+    QString versionDetail = "CompareImages bug fixes";
 
     bool isShift;               // used when opening if shift key pressed
 
@@ -279,6 +279,7 @@ private slots:
     void updateFilterStatus(bool isFilter = true);
     void updateSubfolderStatus();
     void updateMetadataThreadRunStatus(bool isRun);
+    void inactiveThreadRunStatus();
     void updateImageThreadRunStatus(bool isRun);
     void updateAllMetadataLoaded(bool isLoaded);
     void delayProcessLoadMetadataCacheScrollEvent();
