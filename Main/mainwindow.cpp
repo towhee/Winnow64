@@ -152,6 +152,7 @@ void MW::initialize()
     prevCentralView = 0;
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
     G::ratings << "1" << "2" << "3" << "4" << "5";
+    pickStack = new QStack<Pick>;
 }
 
 void MW::setupPlatform()
@@ -1320,6 +1321,12 @@ void MW::createActions()
     addAction(filterPickAction);
     connect(filterPickAction, &QAction::triggered, filters, &Filters::checkPicks);
 
+    popPickHistoryAction = new QAction(tr("Pick"), this);
+    popPickHistoryAction->setObjectName("togglePick");
+    popPickHistoryAction->setShortcutVisibleInContextMenu(true);
+    addAction(popPickHistoryAction);
+    connect(popPickHistoryAction, &QAction::triggered, this, &MW::popPick);
+
     // Place keeper for now
     copyImagesAction = new QAction(tr("Copy to clipboard"), this);
     copyImagesAction->setObjectName("copyImages");
@@ -1416,12 +1423,6 @@ void MW::createActions()
     prefAction->setShortcutVisibleInContextMenu(true);
     addAction(prefAction);
     connect(prefAction, &QAction::triggered, this, &MW::preferences);
-
-    oldPrefAction = new QAction(tr("Old Preferences"), this);
-    oldPrefAction->setObjectName("settings");
-    oldPrefAction->setShortcutVisibleInContextMenu(true);
-    addAction(oldPrefAction);
-    connect(oldPrefAction, &QAction::triggered, this, &MW::oldPreferences);
 
     // Go menu
 
@@ -4548,13 +4549,6 @@ void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
     fullScreenDocks.isStatusBar = isStatusBar;
 }
 
-void MW::oldPreferences()
-{
-//    SettingsDialog *dialog = new SettingsDialog(this);
-//    dialog->exec();
-//    delete dialog;
-}
-
 void MW::escapeFullScreen()
 {
     {
@@ -4586,15 +4580,15 @@ void MW::toggleFullScreen()
         showFullScreen();
         imageView->setCursorHiding(true);
         folderDockVisibleAction->setChecked(fullScreenDocks.isFolders);
-        setFolderDockVisibility();
+        folderDockVisibleAction->setVisible(fullScreenDocks.isFolders);
         favDockVisibleAction->setChecked(fullScreenDocks.isFavs);
-        setFavDockVisibility();
+        favDockVisibleAction->setVisible(fullScreenDocks.isFavs);
         filterDockVisibleAction->setChecked(fullScreenDocks.isFilters);
-        setFilterDockVisibility();
+        filterDockVisibleAction->setVisible(fullScreenDocks.isFilters);
         metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
-        setMetadataDockVisibility();
+        metadataDockVisibleAction->setVisible(fullScreenDocks.isMetadata);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
-        setThumbDockVisibity();
+        thumbDockVisibleAction->setVisible(fullScreenDocks.isThumbs);
         menuBarVisibleAction->setChecked(false);
         setMenuBarVisibility();
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
@@ -5551,6 +5545,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         refineAction->setShortcut(QKeySequence("R"));
         pickAction->setShortcut(QKeySequence("`"));
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
+        popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
         ingestAction->setShortcut(QKeySequence("Q"));
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
 //        rate0Action->setShortcut(QKeySequence("!"));
@@ -6417,11 +6412,19 @@ void MW::togglePick()
         if (foundFalse) break;
     }
     foundFalse ? pickStatus = "true" : pickStatus = "false";
+
+    // add multiple selection flag to pick history
+    if (idxList.length() > 1) pushPick("Begin multiple select");
+
     // set pick status for selection
     foreach (idx, idxList) {
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
+        // save pick history
+        QString fPath = dm->sf->index(idx.row(), G::PathColumn).data(G::PathRole).toString();
+        pushPick(fPath, pickStatus);
     }
+    if (idxList.length() > 1) pushPick("End multiple select");
 
     updateClassification();
     thumbView->refreshThumbs();
@@ -6434,8 +6437,73 @@ void MW::togglePick()
     dm->filterItemCount();
 }
 
+void MW::pushPick(QString fPath, QString status)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__, fPath + ": " + status);
+    #endif
+    }
+    pick.path = fPath;
+    pick.status = status;
+    pickStack->push(pick);
+    qDebug() << "Pushed: " << pickStack;
+}
+
+void MW::popPick()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << pickStack;
+    if (pickStack->isEmpty()) return;
+    pick = pickStack->top();
+    if (pick.path != "Begin multiple select") {
+        updatePickFromHistory(pick.path, pick.status);
+    }
+    else {
+        do {
+            pick = pickStack->pop();
+            updatePickFromHistory(pick.path, pick.status);
+        } while (pick.path != "End multiple select");
+    }
+}
+
+void MW::updatePickFromHistory(QString fPath, QString status)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__, fPath + ": " + status);
+    #endif
+    }
+    QString pickStatus;
+    status == "true" ? pickStatus = "false" : pickStatus = "true";
+    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath);
+    QModelIndex idx = idxList[0];
+    if(idx.isValid()) {
+        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+        dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
+//        dm->sf->filterChange();
+        thumbView->refreshThumbs();
+        gridView->refreshThumbs();
+
+        pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+        updateStatus(true, "");
+
+        // update filter counts
+        dm->filterItemCount();
+    }
+}
+
 qulonglong MW::memoryReqdForPicks()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     qulonglong memTot = 0;
     for(int row = 0; row < dm->sf->rowCount(); row++) {
         QModelIndex idx = dm->sf->index(row, G::PickColumn);
