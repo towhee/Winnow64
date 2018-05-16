@@ -48,7 +48,7 @@ class MW : public QMainWindow
 {
     Q_OBJECT
 
-    friend class CompareImages;
+//    friend class CompareImages;
     friend class Prefdlg;
     friend class ThumbView;
     friend class InfoView;
@@ -255,7 +255,6 @@ private slots:
 //    void monitorPreference();
     void preferences(int page = -1);
     void openWithProgramManagement();
-    void oldPreferences();
     void toggleFullScreen();
     void escapeFullScreen();
     void loupeDisplay();
@@ -301,7 +300,9 @@ private slots:
     void setCacheStatusVisibility();
     void toggleThumbWrap();
     void togglePick();
-//    void updatePick();
+    void pushPick(QString fPath, QString status = "true");
+    void popPick();
+    void updatePickFromHistory(QString fPath, QString status);
 //    void updateRating();
 //    void updateColorClass();
     void updateClassification();
@@ -445,6 +446,7 @@ private:
     QAction *copyImagesAction;
     QAction *refineAction;
     QAction *pickAction;
+    QAction *popPickHistoryAction;
     QAction *filterPickAction;
     QAction *rotateLeftAction;
     QAction *rotateRightAction;
@@ -645,6 +647,13 @@ private:
     QModelIndexList selectedImages;
     QModelIndex currentIdx;
     QStandardItemModel *imageModel;
+
+    // pick history
+    struct Pick {
+        QString path;
+        QString status;
+    } pick;
+    QStack<Pick> *pickStack;
 
     // used in visibility and focus setting for docks
     enum {SetFocus, SetVisible, SetInvisible} dockToggle;
