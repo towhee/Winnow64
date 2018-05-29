@@ -498,6 +498,9 @@ bool MW::checkForUpdate()
     // Close the application
     if (startMaintenanceTool) qApp->closeAllWindows();
     else popUp->showPopup(this, "The maintenance tool failed to open", 2000, .75);
+
+    // prevent compiler warning
+    return false;
 }
 
 // Do we need this?  rgh
@@ -1321,7 +1324,7 @@ void MW::createActions()
     addAction(filterPickAction);
     connect(filterPickAction, &QAction::triggered, filters, &Filters::checkPicks);
 
-    popPickHistoryAction = new QAction(tr("Pick"), this);
+    popPickHistoryAction = new QAction(tr("Undo pick history"), this);
     popPickHistoryAction->setObjectName("togglePick");
     popPickHistoryAction->setShortcutVisibleInContextMenu(true);
     addAction(popPickHistoryAction);
@@ -2138,6 +2141,7 @@ void MW::createMenus()
     editMenu->addAction(refineAction);
     editMenu->addAction(pickAction);
     editMenu->addAction(filterPickAction);
+    editMenu->addAction(popPickHistoryAction);
     editMenu->addSeparator();
     editMenu->addAction(copyImagesAction);
     editMenu->addSeparator();
@@ -3456,8 +3460,53 @@ void MW::uncheckAllFilters()
 
 void MW::refine()
 {
+    /*
+    Clears refine for all rows, sets refine = true if pick = true, and clears pick
+    for all rows.
+    */
+        {
+        #ifdef ISDEBUG
+        G::track(__FUNCTION__);
+        #endif
+        }
     uncheckAllFilters();
-    dm->refine();
+
+    // Are there any picks to refine?
+    bool isPick = false;
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        if (dm->index(row, G::PickColumn).data() == "true") {
+            isPick = true;
+            break;
+        }
+    }
+
+    if (!isPick) {
+        popup("There are no picks to refine", 2000, 0.75);
+        return;
+    }
+
+    // clear refine = pick
+    pushPick("Begin multiple select");
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        if (dm->index(row, G::PickColumn).data() == "true") {
+            dm->setData(dm->index(row, G::RefineColumn), true);
+            dm->setData(dm->index(row, G::PickColumn), "false");
+            // save pick history
+            QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+            pushPick(fPath, "false");
+        }
+        else dm->setData(dm->index(row, G::RefineColumn), false);
+    }
+    pushPick("End multiple select");
+
+//    // clear all picks
+//    for (int row = 0; row < dm->rowCount(); ++row)
+//        dm->setData(dm->index(row, G::PickColumn), "false");
+
+    // reset filters
+    filters->uncheckAllFilters();
+    filters->refineTrue->setCheckState(0, Qt::Checked);
+
     filterChange(false);
 }
 
@@ -6439,6 +6488,11 @@ void MW::togglePick()
 
 void MW::pushPick(QString fPath, QString status)
 {
+/*
+Adds a pick action (either to pick or unpick) to the pickStack history.  This is
+used to recover a prior pick history state if the picks have been lost due to an
+accidental erasure.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__, fPath + ": " + status);
@@ -6459,15 +6513,16 @@ void MW::popPick()
     }
     qDebug() << pickStack;
     if (pickStack->isEmpty()) return;
-    pick = pickStack->top();
-    if (pick.path != "Begin multiple select") {
+    pick = pickStack->pop();
+    if (pick.path != "End multiple select") {
         updatePickFromHistory(pick.path, pick.status);
     }
     else {
-        do {
+        while (!pickStack->isEmpty()) {
             pick = pickStack->pop();
+            if (pick.path == "Begin multiple select") break;
             updatePickFromHistory(pick.path, pick.status);
-        } while (pick.path != "End multiple select");
+        }
     }
 }
 
@@ -6481,6 +6536,7 @@ void MW::updatePickFromHistory(QString fPath, QString status)
     QString pickStatus;
     status == "true" ? pickStatus = "false" : pickStatus = "true";
     QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath);
+    if (idxList.length() == 0) return;
     QModelIndex idx = idxList[0];
     if(idx.isValid()) {
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
@@ -6496,6 +6552,46 @@ void MW::updatePickFromHistory(QString fPath, QString status)
         dm->filterItemCount();
     }
 }
+
+//void MW::refine()
+//{
+//    /*
+//    Clears refine for all rows, sets refine = true if pick = true, and clears pick
+//    for all rows.
+//    */
+//        {
+//        #ifdef ISDEBUG
+//        G::track(__FUNCTION__);
+//        #endif
+//        }
+//    // Are there any picks to refine?
+//    bool isPick = false;
+//    for (int row = 0; row < dm->rowCount(); ++row) {
+//        if (dm->index(row, G::PickColumn).data() == "true") {
+//            isPick = true;
+//            break;
+//        }
+//    }
+
+//    if (!isPick) {
+//        popup("There are no picks to refine", 2000, 0.75);
+//        return;
+//    }
+
+//    // clear refine = pick
+//    for (int row = 0; row < dm->rowCount(); ++row)
+//        if (dm->index(row, G::PickColumn).data() == "true")
+//            dm->setData(dm->index(row, G::RefineColumn), true);
+//    else dm->setData(dm->index(row, G::RefineColumn), false);
+
+//    // clear all picks
+//    for (int row = 0; row < dm->rowCount(); ++row)
+//        dm->setData(dm->index(row, G::PickColumn), "false");
+
+//    // reset filters
+//    filters->uncheckAllFilters();
+//    filters->refineTrue->setCheckState(0, Qt::Checked);
+//}
 
 qulonglong MW::memoryReqdForPicks()
 {

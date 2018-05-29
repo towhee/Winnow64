@@ -525,45 +525,6 @@ the sort or filter.
     }
 }
 
-void DataModel::refine()
-{
-/*
-Clears refine for all rows, sets refine = true if pick = true, and clears pick
-for all rows.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    // Are there any picks to refine?
-    bool isPick = false;
-    for (int row = 0; row < rowCount(); ++row) {
-        if (index(row, G::PickColumn).data() == "true") {
-            isPick = true;
-            break;
-        }
-    }
-
-    if (!isPick) {
-        emit popup("There are no picks to refine", 2000, 0.75);
-        return;
-    }
-
-    // clear refine = pick
-    for (int row = 0; row < rowCount(); ++row)
-        if (index(row, G::PickColumn).data() == "true")
-            setData(index(row, G::RefineColumn), true);
-    else setData(index(row, G::RefineColumn), false);
-
-    // clear all picks
-    for (int row = 0; row < rowCount(); ++row)
-        setData(index(row, G::PickColumn), "false");
-
-    // reset filters
-    filters->uncheckAllFilters();
-    filters->refineTrue->setCheckState(0, Qt::Checked);
-}
 
 void DataModel::filterItemCount()
 {
