@@ -57,8 +57,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.5.4";
-    QString versionDetail = "CompareImages bug fixes";
+    QString version = "0.9.5.6";
+    QString versionDetail = "Pick history undo feature added";
 
     bool isShift;               // used when opening if shift key pressed
 

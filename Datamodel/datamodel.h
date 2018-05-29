@@ -59,7 +59,6 @@ signals:
     void msg(QString message);
 
 public slots:
-    void refine();
     void filterItemCount();
 
 private:

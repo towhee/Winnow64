@@ -34,6 +34,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE
+- Undo pick history
 - Cache status btns gray if not cached, red if caching, green if cached
 - Focus outline in CompareView stays on 1st item if mouse to 2nd without mousing 1st
 - Forward and Back btns in compare mode not changing pick status
