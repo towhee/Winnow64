@@ -98,6 +98,7 @@ IngestDlg::IngestDlg(QWidget *parent,
         ui->selectFolderBtn->setFocus();
         ui->manualRadio->setChecked(true);
     }
+    updateStyleOfFolderLabels();
 
     // assign completer to description
     QCompleter *completer = new QCompleter(this->ingestDescriptionCompleter, this);
@@ -106,6 +107,7 @@ IngestDlg::IngestDlg(QWidget *parent,
 
     isInitializing = false;
     buildFileNameSequence();
+    ui->progressBar->setVisible(false);
 }
 
 IngestDlg::~IngestDlg()
@@ -215,6 +217,7 @@ void IngestDlg::accept()
     }
 
     // copy picked images
+    ui->progressBar->setVisible(true);
     seqNum =  ui->spinBoxStartNumber->value();
     for (int i = 0; i < pickList.size(); ++i) {
         int progress = (i + 1) * 100 / (pickList.size() + 1);
@@ -275,7 +278,8 @@ void IngestDlg::updateExistingSequence()
     QDir dir(folderPath);
     if(dir.exists()) {
         int sequenceNum = getSequenceStart(folderPath);
-        ui->spinBoxStartNumber->setValue(sequenceNum + 1);
+        if(ui->spinBoxStartNumber->value() < sequenceNum + 1)
+            ui->spinBoxStartNumber->setValue(sequenceNum + 1);
         if (sequenceNum > 0)
             ui->existingSequenceLabel->setText("Folder exists and last image sequence found = "
                                                + QString::number(sequenceNum));
@@ -297,7 +301,7 @@ void IngestDlg::on_selectFolderBtn_clicked()
         (this, tr("Choose Ingest Folder"), root,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (s.length() > 0) {
-        folderPath = s;  // + "/";
+        folderPath = s + "/";
         ui->manualFolderLabel->setText(folderPath);
         ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
     }
@@ -512,7 +516,10 @@ void IngestDlg::on_descriptionLineEdit_textChanged(const QString& /*arg1*/)
 
 void IngestDlg::on_spinBoxStartNumber_valueChanged(const QString /* &arg1 */)
 {
-    updateFolderPath();
+    // updateFolderPath();
+    int sequenceNum = getSequenceStart(folderPath);
+    if(ui->spinBoxStartNumber->value() < sequenceNum)
+        ui->spinBoxStartNumber->setValue(sequenceNum + 1);
 }
 
 int IngestDlg::getSequenceStart(const QString &path)
@@ -558,29 +565,64 @@ int IngestDlg::getSequenceStart(const QString &path)
 
 void IngestDlg::updateStyleOfFolderLabels()
 {
-    if (ui->autoRadio->isChecked()) {
+    if (isAuto) {
+        qDebug() << "updateStyleOfFolderLabels: Auto";
         ui->folderLabel->setStyleSheet("QLabel{color:rgb(180,180,120);}");
         ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
+        ui->selectRootFolderBtn->setEnabled(true);
+        ui->selectRootFolderBtn->setStyleSheet("QPushButton{color:rgb(229,229,229);}");
+        ui->rootFolderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
+        ui->templateLabel1->setStyleSheet("QLabel{color:rgb(229,229,229);}");
+        ui->pathTemplatesCB->setEnabled(true);
+        ui->pathTemplatesCB->setStyleSheet("QcomboBox{color:rgb(229,229,229);}");
+        ui->pathTemplatesBtn->setEnabled(true);
+        ui->pathTemplatesBtn->setStyleSheet("QPushButton{color:rgb(229,229,229);}");
+        ui->folderDescription->setStyleSheet("QLabel{color:rgb(229,229,229);}");
+        ui->descriptionLineEdit->setEnabled(true);
+        ui->descriptionLineEdit->setStyleSheet("QLineEdit{color:rgb(229,229,229);}");
+        ui->destinationFolderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
+        ui->folderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
+
+        ui->selectFolderBtn->setEnabled(false);
+        ui->selectFolderBtn->setStyleSheet("QPushButton{color:rgb(111,111,111);}");
+        ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(111,111,111);}");
     }
     else {
+        qDebug() << "updateStyleOfFolderLabels: Manual";
         ui->folderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
         ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(180,180,120);}");
+        ui->selectRootFolderBtn->setEnabled(false);
+        ui->selectRootFolderBtn->setStyleSheet("QPushButton{color:rgb(111,111,111);}");
+        ui->rootFolderLabel->setStyleSheet("QLabel{color:rgb(111,111,111);}");
+        ui->templateLabel1->setStyleSheet("QLabel{color:rgb(111,111,111);}");
+        ui->pathTemplatesCB->setEnabled(false);
+        ui->pathTemplatesCB->setStyleSheet("QComboBox:!editable{color:rgb(111,111,111);}");
+        ui->pathTemplatesBtn->setEnabled(false);
+        ui->pathTemplatesBtn->setStyleSheet("QPushButton{color:rgb(111,111,111);}");
+        ui->folderDescription->setStyleSheet("QLabel{color:rgb(111,111,111);}");
+        ui->descriptionLineEdit->setEnabled(false);
+        ui->descriptionLineEdit->setStyleSheet("QLineEdit{color:rgb(111,111,111);}");
+        ui->destinationFolderLabel->setStyleSheet("QLabel{color:rgb(111,111,111);}");
+        ui->folderLabel->setStyleSheet("QLabel{color:rgb(111,111,111);}");
+
+        ui->selectFolderBtn->setEnabled(true);
+        ui->selectFolderBtn->setStyleSheet("QPushButton{color:rgb(229,229,229);}");
+        ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
     }
 }
 
 void IngestDlg::on_autoRadio_toggled(bool checked)
 {
-    if (checked) {      // auto
-        isAuto = true;
+    isAuto = checked;
+    updateStyleOfFolderLabels();
+    if (isAuto) {
         if (ui->folderLabel->text().length() > 0) {
             updateFolderPath();
-            updateStyleOfFolderLabels();
             getSequenceStart(folderPath);
             updateExistingSequence();
         }
     }
-    else {              // manual
-        isAuto = false;
+    else {
         if (ui->manualFolderLabel->text().length() > 0) {
             folderPath = ui->manualFolderLabel->text();
             buildFileNameSequence();
@@ -590,6 +632,20 @@ void IngestDlg::on_autoRadio_toggled(bool checked)
     }
     emit updateIngestParameters(rootFolderPath, isAuto);
 }
+
+void IngestDlg::on_manualRadio_toggled(bool checked)
+{
+    isAuto = false;
+    if (ui->manualFolderLabel->text().length() > 0) {
+        folderPath = ui->manualFolderLabel->text();
+        updateStyleOfFolderLabels();
+        buildFileNameSequence();
+        updateExistingSequence();
+        updateStyleOfFolderLabels();
+    }
+    emit updateIngestParameters(rootFolderPath, isAuto);
+}
+
 
 void IngestDlg::initTokenList()
 {
@@ -755,3 +811,4 @@ void IngestDlg::on_combinedIncludeJpgChk_clicked()
 {
     getPicks();
 }
+

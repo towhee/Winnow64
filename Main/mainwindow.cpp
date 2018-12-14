@@ -6762,6 +6762,12 @@ the rating for all the selected thumbs.
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex ratingIdx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
         dm->sf->setData(ratingIdx, rating, Qt::EditRole);
+
+        // update metadata
+        QModelIndex fPathIdx = dm->sf->index(selection.at(i).row(), G::PathColumn);
+        QString fPath = fPathIdx.data(G::PathRole).toString();
+        metadata->setRating(fPath, rating);
+
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
@@ -6770,6 +6776,11 @@ the rating for all the selected thumbs.
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
                 ratingIdx = dm->index(rawIdx.row(), G::RatingColumn);
                 dm->setData(ratingIdx, rating, Qt::EditRole);
+
+                // update metadata
+                fPathIdx = dm->index(rawIdx.row(), G::PathColumn);
+                fPath = fPathIdx.data(G::PathRole).toString();
+                metadata->setRating(fPath, rating);
             }
         }
     }
@@ -6825,6 +6836,14 @@ set the color class for all the selected thumbs.
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex labelIdx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
         dm->sf->setData(labelIdx, colorClass, Qt::EditRole);
+
+        // update metadata
+        QModelIndex fPathIdx = dm->sf->index(selection.at(i).row(), G::PathColumn);
+        QString fPath = fPathIdx.data(G::PathRole).toString();
+        metadata->setLabel(fPath, colorClass);
+
+        qDebug() << "setColorClass Filename =" << fPath;
+
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
@@ -6833,12 +6852,16 @@ set the color class for all the selected thumbs.
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
                 labelIdx = dm->index(rawIdx.row(), G::LabelColumn);
                 dm->setData(labelIdx, colorClass, Qt::EditRole);
+
+                // update metadata
+                fPathIdx = dm->index(rawIdx.row(), G::PathColumn);
+                fPath = fPathIdx.data(G::PathRole).toString();
+                metadata->setLabel(fPath, colorClass);
+
+                qDebug() << "Raw Filename =" << fPath;
             }
         }
     }
-
-    // update metadata
-    metadata->setLabel(thumbView->getCurrentFilename(), colorClass);
 
     thumbView->refreshThumbs();
     gridView->refreshThumbs();

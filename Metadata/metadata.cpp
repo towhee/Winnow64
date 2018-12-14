@@ -82,7 +82,7 @@ void Metadata::initSupportedFiles()
     }
     // add raw file types here as they are supported
     rawFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2";
-    sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2";
+    sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "jpg";
     internalXmpFormats << "jpg";
     xmpWriteFormats << "jpg" << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2";
 
@@ -4452,6 +4452,7 @@ void Metadata::setUrl(const QString &imageFileName, const QString &url)
 
 void Metadata::setLabel(const QString &imageFileName, const QString &label)
 {
+    qDebug() << "fName / label:" << imageFileName << label;
     metaCache[imageFileName].label = label;
 }
 
