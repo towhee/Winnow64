@@ -72,7 +72,8 @@ QFrame[frameShape="5"]
 
 QGroupBox {
     /*border: 1px solid gray;*/
-    border: 1px solid rgb(99,99,99);
+    /*border: 1px solid rgb(99,99,99);*/
+    border: 1px solid rgb(199,199,199);
     border-radius: 5px;
     margin-top: 6px; /* leave space at the top for the title */
 }

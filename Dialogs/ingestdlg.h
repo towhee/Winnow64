@@ -49,6 +49,8 @@ private slots:
 
     void on_combinedIncludeJpgChk_clicked();
 
+    void on_manualRadio_toggled(bool checked);
+
 signals:
     void updateIngestParameters(QString rootFolderPath, bool isAuto);
 

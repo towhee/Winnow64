@@ -6842,8 +6842,6 @@ set the color class for all the selected thumbs.
         QString fPath = fPathIdx.data(G::PathRole).toString();
         metadata->setLabel(fPath, colorClass);
 
-        qDebug() << "setColorClass Filename =" << fPath;
-
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
@@ -6857,8 +6855,6 @@ set the color class for all the selected thumbs.
                 fPathIdx = dm->index(rawIdx.row(), G::PathColumn);
                 fPath = fPathIdx.data(G::PathRole).toString();
                 metadata->setLabel(fPath, colorClass);
-
-                qDebug() << "Raw Filename =" << fPath;
             }
         }
     }

@@ -1,4 +1,7 @@
 BUGS
+- If switch from raw+jpg cache needs to be refreshed
+- Does not remember Folders panel sometimes when reopen
+- Show in status if JPG+RAW combined
 - Full screen panel flags not working
 - Sometimes metadata caching is slow
 - Jpg orientationOffset = 0 when metadata orientation changed
@@ -34,6 +37,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE
+- Label/Rating not added to RAW when JPG+RAW enabled
+- Tweak ingest ui for clarity
+- Ingest start number edit not working
 - Undo pick history
 - Cache status btns gray if not cached, red if caching, green if cached
 - Focus outline in CompareView stays on 1st item if mouse to 2nd without mousing 1st
