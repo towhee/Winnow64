@@ -21,14 +21,14 @@ Win Installation Update:
 4.  Update and save the version in D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
 5.  Update and save the version and release date in D:\My Projects\Winnow Project\WinnowInstall\packages\com.rh.bin\meta\package.xml
 6.  If changes update and save the releaseDate in D:\My Projects\Winnow Project\WinnowInstall\packages\com.rh.prod\meta\package.xml
-7.  Run: D:\My Projects\Winnow Project\WinnowInstall\updateinstallation.bat
+7.  Run: D:\My Projects\Winnow Project\WinnowInstall\onlineinstallation.bat
     - changes drive to D:
     - changes dir to D:\My Projects\Winnow Project\WinnowInstallOnline
     - copies winnow.exe from release to package
     - recreates the repository in D:\My Projects\Winnow Project\WinnowInstallOnline
     - creates a new binary installer winnowinstalleronline.exe
     - runs WinSCP script (installscript.txt) to copy repository and winnowinstalleronline.exe to http://165.227.46.158/winnow_win/
-8a. Open C:\Program Files\Winnow\Winnow.exe and "Help > Check for updates" to text that the update works.
+8a. Open C:\Program Files\Winnow\Winnow.exe and "Help > Check for updates" to confirm that the update works.
 8b. Or run C:\Program Files\Winnow\maintenancetool.exe to update Winnow on local machine.
 9.  Run 165.227.46.158/winnow_win/winnowinstalleronline.exe for new installation of Winnow.
 

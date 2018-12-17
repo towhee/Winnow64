@@ -193,7 +193,6 @@ public:
     int currentRow;             // the current row in fileSelection
     bool allMetadataLoaded;
     bool modeChangeJustHappened;
-//    bool windowJustMoved;
 
     bool isCurrentFolderOkay;
     bool isSlideShowActive;
