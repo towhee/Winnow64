@@ -48,6 +48,14 @@ void ZoomDlg::close()
 
 void ZoomDlg::positionWindow(QRect a, QRect c)
 {
+/*
+This function positions the zoom dialog in the lower center of the central widget
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // a = mainWindow->geometry()
     // c = centralWidget->geometry();
     int w = width();        // width of this dialog

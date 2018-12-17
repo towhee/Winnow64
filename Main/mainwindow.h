@@ -57,7 +57,7 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.5.6";
+    QString version = "0.9.5.7";
     QString versionDetail = "Pick history undo feature added";
 
     bool isShift;               // used when opening if shift key pressed
@@ -193,6 +193,7 @@ public:
     int currentRow;             // the current row in fileSelection
     bool allMetadataLoaded;
     bool modeChangeJustHappened;
+//    bool windowJustMoved;
 
     bool isCurrentFolderOkay;
     bool isSlideShowActive;
@@ -212,7 +213,7 @@ protected:
     void keyReleaseEvent(QKeyEvent *event);
 //    void mouseMoveEvent(QMouseEvent *event);
 //    void mousePressEvent(QMouseEvent *event);
-//    void mouseReleaseEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
 //    void mouseDoubleClickEvent(QMouseEvent *event);
     void dropEvent(QDropEvent *event);
     void dragEnterEvent(QDragEnterEvent *event);
@@ -277,6 +278,7 @@ private slots:
     void clearStatus();
     void updateFilterStatus(bool isFilter = true);
     void updateSubfolderStatus();
+    void updateRawJpgStatus();
     void updateMetadataThreadRunStatus(bool isRun);
     void inactiveThreadRunStatus();
     void updateImageThreadRunStatus(bool isRun);
@@ -595,6 +597,7 @@ private:
     QLabel *stateLabel;
     QLabel *filterStatusLabel;
     QLabel *subfolderStatusLabel;
+    QLabel *rawJpgStatusLabel;
     QLabel *cacheLabel;
     QLabel *centralLabel;
     QLabel *metadataThreadRunningLabel;

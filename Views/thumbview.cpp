@@ -449,9 +449,6 @@ QString ThumbView::getCurrentFilename()
     G::track(__FUNCTION__);
     #endif
     }
-    QString s = currentIndex().data(G::PathRole).toString();
-    QVariant x = currentIndex();
-    qDebug() << "Current filename =" << s;
     return currentIndex().data(G::PathRole).toString();
 }
 
