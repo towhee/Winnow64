@@ -193,7 +193,6 @@ public:
     int currentRow;             // the current row in fileSelection
     bool allMetadataLoaded;
     bool modeChangeJustHappened;
-//    bool windowJustMoved;
 
     bool isCurrentFolderOkay;
     bool isSlideShowActive;
@@ -340,11 +339,11 @@ private slots:
 
     void setFullNormal();
     void setCentralView();
-    void setThumbDockVisibity();
-    void setFolderDockVisibility();
-    void setFavDockVisibility();
-    void setFilterDockVisibility();
-    void setMetadataDockVisibility();
+    void toggleThumbDockVisibity();
+    void toggleFolderDockVisibility();
+    void toggleFavDockVisibility();
+    void toggleFilterDockVisibility();
+    void toggleMetadataDockVisibility();
     void setMenuBarVisibility();
     void setStatusBarVisibility();
     void setWindowsTitleBarVisibility();
@@ -663,7 +662,7 @@ private:
 
     bool metadataLoaded;
     bool ignoreDockResize;
-    bool wasThumbDockVisibleBeforeGridInvoked;
+    bool wasThumbDockVisible;
     bool isUpdatingState;
 
     bool isLoadSettings;

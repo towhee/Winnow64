@@ -117,7 +117,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     setActualDevicePixelRatio();       // dependent on Settings
 
     // recall previous thumbDock state in case last closed in Grid mode
-    thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
+    thumbDockVisibleAction->setChecked(wasThumbDockVisible);
 
     if (isSettings)
         updateState();
@@ -195,8 +195,6 @@ void MW::closeEvent(QCloseEvent *event)
 void MW::moveEvent(QMoveEvent *event)
 {
     QMainWindow::moveEvent(event);
-//    qDebug() << "MW::moveEvent: windowJustMoved =" << windowJustMoved;
-//    windowJustMoved = true;
     emit resizeMW(this->geometry(), centralWidget->geometry());
     setDisplayResolution();
     QString dimensions = QString::number(displayHorizontalPixels) + "x"
@@ -1873,35 +1871,35 @@ void MW::createActions()
     folderDockVisibleAction->setShortcutVisibleInContextMenu(true);
     folderDockVisibleAction->setCheckable(true);
     addAction(folderDockVisibleAction);
-    connect(folderDockVisibleAction, &QAction::triggered, this, &MW::setFolderDockVisibility);
+    connect(folderDockVisibleAction, &QAction::triggered, this, &MW::toggleFolderDockVisibility);
 
     favDockVisibleAction = new QAction(tr("Favourites"), this);
     favDockVisibleAction->setObjectName("toggleFavs");
     favDockVisibleAction->setShortcutVisibleInContextMenu(true);
     favDockVisibleAction->setCheckable(true);
     addAction(favDockVisibleAction);
-    connect(favDockVisibleAction, &QAction::triggered, this, &MW::setFavDockVisibility);
+    connect(favDockVisibleAction, &QAction::triggered, this, &MW::toggleFavDockVisibility);
 
     filterDockVisibleAction = new QAction(tr("Filters"), this);
     filterDockVisibleAction->setObjectName("toggleFilters");
     filterDockVisibleAction->setShortcutVisibleInContextMenu(true);
     filterDockVisibleAction->setCheckable(true);
     addAction(filterDockVisibleAction);
-    connect(filterDockVisibleAction, &QAction::triggered, this, &MW::setFilterDockVisibility);
+    connect(filterDockVisibleAction, &QAction::triggered, this, &MW::toggleFilterDockVisibility);
 
     metadataDockVisibleAction = new QAction(tr("Metadata"), this);
     metadataDockVisibleAction->setObjectName("toggleMetadata");
     metadataDockVisibleAction->setShortcutVisibleInContextMenu(true);
     metadataDockVisibleAction->setCheckable(true);
     addAction(metadataDockVisibleAction);
-    connect(metadataDockVisibleAction, &QAction::triggered, this, &MW::setMetadataDockVisibility);
+    connect(metadataDockVisibleAction, &QAction::triggered, this, &MW::toggleMetadataDockVisibility);
 
     thumbDockVisibleAction = new QAction(tr("Thumbnails"), this);
     thumbDockVisibleAction->setObjectName("toggleThumbs");
     thumbDockVisibleAction->setShortcutVisibleInContextMenu(true);
     thumbDockVisibleAction->setCheckable(true);
     addAction(thumbDockVisibleAction);
-    connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::setThumbDockVisibity);
+    connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::toggleThumbDockVisibity);
 
     // Window menu focus actions
 
@@ -3828,7 +3826,7 @@ workspace with a matching name to the action is used.
     thumbView->setThumbParameters();
     gridView->setThumbParameters();
     // if in grid view override normal behavior if workspace invoked
-    wasThumbDockVisibleBeforeGridInvoked = w.isThumbDockVisible;
+    wasThumbDockVisible = w.isThumbDockVisible;
     updateState();
 }
 
@@ -4231,24 +4229,7 @@ void MW::reportMetadata()
     G::track(__FUNCTION__);
     #endif
     }
-//    metadata->writeMetadata(thumbView->getCurrentFilename());
     metadata->readMetadata(true, thumbView->getCurrentFilename());
-
-//    metadata->setXmpTitle(thumbView->getCurrentFilename(), "a new title");
-
-    qDebug() << G::t.restart() << "\t" << "metadata->getRating() =" << metadata->getRating(thumbView->getCurrentFilename());
-//    qDebug() << G::t.restart() << "\t" << "metadata->getLabel() =" << metadata->getLabel(thumbView->getCurrentFilename());
-//    qDebug() << G::t.restart() << "\t" << "metadata->getXmpTitle() =" << metadata->getXmpTitle(thumbView->getCurrentFilename());
-//    metadata->setXmpTitle(thumbView->getCurrentFilename(), "Brand new title");
-//    metadata->readMetadata(true, thumbView->getCurrentFilename());
-
-
-    //    QByteArray xmp = metadata->getXmp(thumbView->getCurrentFilename());
-//    std::cout << xmp.toStdString() << std::endl;
-    //    updateExternalApps();
-    //    setCentralMessage("A message to central");
-//    qDebug() << G::t.restart() << "\t" << "thumbView->getCurrentFilename()" << thumbView->getCurrentFilename();
-//    metadata->reportMetadataAllFiles();
 }
 
 void MW::about()
@@ -5040,7 +5021,7 @@ re-established when the application is re-opened.
     setting->setValue("isFilterDockLocked", (bool)filterDockLockAction->isChecked());
     setting->setValue("isMetadataDockLocked", (bool)metadataDockLockAction->isChecked());
     setting->setValue("isThumbDockLocked", (bool)thumbDockLockAction->isChecked());
-    setting->setValue("wasThumbDockVisibleBeforeGridInvoked", wasThumbDockVisibleBeforeGridInvoked);
+    setting->setValue("wasThumbDockVisible", wasThumbDockVisible);
 
     // not req'd
 //    setting->setValue("thumbsSortFlags", (int)thumbView->thumbsSortFlags);
@@ -5328,7 +5309,7 @@ Preferences are located in the prefdlg class and updated here.
         metadataDockLockAction->isChecked() &&
         thumbDockLockAction->isChecked())
         allDocksLockAction->setChecked(true);
-    wasThumbDockVisibleBeforeGridInvoked = setting->value("wasThumbDockVisibleBeforeGridInvoked").toBool();
+    wasThumbDockVisible = setting->value("wasThumbDockVisible").toBool();
 
     /* read InfoView okToShow fields */
 //    qDebug() << G::t.restart() << "\t" << "\nread InfoView okToShow fields\n";
@@ -5707,11 +5688,11 @@ condition of actions sets the visibility of all window components. */
     setMenuBarVisibility();
     setStatusBarVisibility();
     setCacheStatusVisibility();
-    setFolderDockVisibility();
-    setFavDockVisibility();
-    setFilterDockVisibility();
-    setMetadataDockVisibility();
-    setThumbDockVisibity();
+    toggleFolderDockVisibility();
+    toggleFavDockVisibility();
+    toggleFilterDockVisibility();
+    toggleMetadataDockVisibility();
+    toggleThumbDockVisibity();
     setFolderDockLockMode();
     setFavDockLockMode();
     setFilterDockLockMode();
@@ -5900,9 +5881,10 @@ notification when the QListView has finished painting itself.
     currentRow = previousRow;       // used by eventFilter in ThumbView
 
     // if was in grid mode then restore thumbdock to previous state
-    if (hasGridBeenActivated)
-        thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
-    setThumbDockVisibity();
+    if (hasGridBeenActivated) {
+        if(!thumbDock->isVisible() && wasThumbDockVisible) toggleThumbDockVisibity();
+        hasGridBeenActivated = false;
+    }
 
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
@@ -5950,10 +5932,9 @@ lack of notification when the QListView has finished painting itself.
     updateStatus(true);
     hasGridBeenActivated = true;
     // remember previous state of thumbDock so can recover if change mode
-    wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
+    wasThumbDockVisible = thumbDockVisibleAction->isChecked();
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
-    thumbDockVisibleAction->setChecked(false);
-    setThumbDockVisibity();
+    if(thumbDock->isVisible()) toggleThumbDockVisibity();
     // show tableView in central widget
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
@@ -5985,9 +5966,10 @@ void MW::tableDisplay()
     prevCentralView = TableTab;
 
     // if was in grid mode then restore thumbdock to previous state
-    if (hasGridBeenActivated)
-        thumbDockVisibleAction->setChecked(wasThumbDockVisibleBeforeGridInvoked);
-    setThumbDockVisibity();
+    if (hasGridBeenActivated) {
+        if(!thumbDock->isVisible() && wasThumbDockVisible) toggleThumbDockVisibity();
+        hasGridBeenActivated = false;
+    }
 
     thumbView->setThumbParameters();
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -6023,8 +6005,7 @@ void MW::compareDisplay()
     if (G::mode == "Grid") {
 //        qDebug() << G::t.restart() << "\t" << "Calling setThumbDockFeatures from MW::MW::compareDisplay";
         setThumbDockFeatures(dockWidgetArea(thumbDock));
-        thumbDockVisibleAction->setChecked(true);
-        setThumbDockVisibity();
+        if(!thumbDock->isVisible() && wasThumbDockVisible) toggleThumbDockVisibity();
         thumbView->setThumbParameters();  // reqd?
     }
 
@@ -6131,7 +6112,7 @@ void MW::setShootingInfoVisibility() {
     imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
 }
 
-void MW::setFolderDockVisibility() {
+void MW::toggleFolderDockVisibility() {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -6159,7 +6140,7 @@ void MW::setFolderDockVisibility() {
     }
 }
 
-void MW::setFavDockVisibility() {
+void MW::toggleFavDockVisibility() {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -6187,7 +6168,7 @@ void MW::setFavDockVisibility() {
     }
 }
 
-void MW::setFilterDockVisibility() {
+void MW::toggleFilterDockVisibility() {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -6215,7 +6196,7 @@ void MW::setFilterDockVisibility() {
     }
 }
 
-void MW::setMetadataDockVisibility() {
+void MW::toggleMetadataDockVisibility() {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -6243,7 +6224,7 @@ void MW::setMetadataDockVisibility() {
     }
 }
 
-void MW::setThumbDockVisibity()
+void MW::toggleThumbDockVisibity()
 {
     {
     #ifdef ISDEBUG
@@ -6272,7 +6253,7 @@ void MW::setThumbDockVisibity()
     }
 
     if (G::mode != "Grid")
-        wasThumbDockVisibleBeforeGridInvoked = thumbDockVisibleAction->isChecked();
+        wasThumbDockVisible = thumbDockVisibleAction->isChecked();
 }
 
 void MW::setMenuBarVisibility() {
@@ -7468,10 +7449,17 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    qDebug() << QImageReader::supportedImageFormats();
+    // shortcut = "Shift+Ctrl+Alt+T"
+
+    thumbDockVisibleAction->setChecked(true);
+    toggleThumbDockVisibity();
+
+
+
+//    qDebug() << QImageReader::supportedImageFormats();
 //    helpShortcuts();
 
-    metadata->reportMetadataCache(thumbView->getCurrentFilename());
+//    metadata->reportMetadataCache(thumbView->getCurrentFilename());
 
     //    QString s = thumbView->getCurrentFilename();
 //    qDebug() << "MW::test thumbView->getCurrentFilename() =" << s;

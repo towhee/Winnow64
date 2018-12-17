@@ -3564,6 +3564,9 @@ bool Metadata::formatTIF()
     ulong ifdOffset = get4(file.read(4));
     ulong nextIFDOffset = readIFD("IFD0", ifdOffset);
 
+    lengthFullJPG = 1;  // set arbitrary length to avoid error msg as tif do not
+                         // have full size embedded jpg
+
     // IFD0: *******************************************************************
 
     // IFD0: Model
