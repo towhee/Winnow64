@@ -633,6 +633,7 @@ void MW::folderSelectionChange()
 //    }
 
     currentViewDir = dirPath;
+    qDebug() << "currentViewDir =" << currentViewDir;
 
     // sync the favs / bookmarks with the folders view fsTree
     bookmarks->select(dirPath);
@@ -1250,7 +1251,7 @@ void MW::createActions()
     ingestAction->setObjectName("ingest");
     ingestAction->setShortcutVisibleInContextMenu(true);
     addAction(ingestAction);
-    connect(ingestAction, &QAction::triggered, this, &MW::ingests);
+    connect(ingestAction, &QAction::triggered, this, &MW::ingest);
 
     combineRawJpgAction = new QAction(tr("Combine Raw+Jpg"), this);
     combineRawJpgAction->setObjectName("combineRawJpg");
@@ -4947,6 +4948,7 @@ re-established when the application is re-opened.
 //    setting->setValue("displayHorizontalPixels", displayHorizontalPixels);
 //    setting->setValue("displayVerticalPixels", displayVerticalPixels);
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
+    setting->setValue("autoEjectUSB", autoEjectUsb);
 
     // files
 //    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
@@ -5213,6 +5215,7 @@ Preferences are located in the prefdlg class and updated here.
         imageView->toggleZoom = 1.0;
         compareImages->toggleZoom = 1.0;
         autoIngestFolderPath = false;
+        autoEjectUsb = false;
         combineRawJpg = true;
 
       // slideshow
@@ -5245,6 +5248,7 @@ Preferences are located in the prefdlg class and updated here.
 //    displayHorizontalPixels = setting->value("displayHorizontalPixels").toInt();
 //    displayVerticalPixels = setting->value("displayVerticalPixels").toInt();
     autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
+    autoEjectUsb = setting->value("autoEjectUSB").toBool();
 
     // files
 //    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();
@@ -5708,11 +5712,14 @@ condition of actions sets the visibility of all window components. */
 
 void MW::refreshFolders()
 {
-//    bool showImageCount = fsTree->fsModel->showImageCount;
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     bool showImageCount = fsTree->getShowImageCount();
     fsTree->refreshModel();
     fsTree->setShowImageCount(showImageCount);
-//    fsTree->fsModel->showImageCount = showImageCount;
 }
 
 /*****************************************************************************************
@@ -6612,7 +6619,7 @@ qulonglong MW::memoryReqdForPicks()
     return memTot;
 }
 
-void MW::ingests()
+void MW::ingest()
 {
     {
     #ifdef ISDEBUG
@@ -6622,6 +6629,7 @@ void MW::ingests()
     if (thumbView->isPick()) {
         ingestDlg = new IngestDlg(this,
                                   combineRawJpg,
+                                  autoEjectUsb,
                                   metadata,
                                   dm,
                                   ingestRootFolder,
@@ -6633,11 +6641,36 @@ void MW::ingests()
                                   autoIngestFolderPath);
         connect(ingestDlg, SIGNAL(updateIngestParameters(QString,bool)),
                 this, SLOT(setIngestRootFolder(QString,bool)));
-        ingestDlg->exec();
+        if(ingestDlg->exec()) ejectUsb();;
         delete ingestDlg;
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
+}
+
+void MW::ejectUsb()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    char driveLetter = currentViewDir[0].unicode();
+    if(Usb::isUsb(driveLetter)) {
+        QString driveRoot = currentViewDir.left(3);
+        dm->load(driveRoot, false);
+        refreshFolders();
+        bool result = Usb::eject(driveLetter);
+        if(result < 2)
+            popUp->showPopup(this, "Ejecting drive " + driveRoot, 2000, 0.75);
+        else
+            popUp->showPopup(this, "Failed to eject drive " + driveRoot, 2000, 0.75);
+    }
+    else {
+        popUp->showPopup(this, "Drive " + currentViewDir[0]
+                + "is not removable and cannot be ejected", 2000, 0.75);
+//        qDebug() << "Drive " << currentViewDir[0] << "is not removable and cannot be ejected";
+    }
 }
 
 void MW::setCombineRawJpg()
@@ -7451,16 +7484,20 @@ void MW::test()
 {
     // shortcut = "Shift+Ctrl+Alt+T"
 
-    qDebug() << "Ejecting drive " << currentViewDir[0] << "currentViewDir =" << currentViewDir
+    qDebug() << "Attempting to eject drive " << currentViewDir[0] << "currentViewDir =" << currentViewDir
              << "Unicode =" << currentViewDir[0].unicode();;
-//    char driveLetter = currentViewDir[0];
     char driveLetter = currentViewDir[0].unicode();
+    if(Usb::isUsb(driveLetter)) {
+        QString driveRoot = currentViewDir.left(3);
+        dm->load(driveRoot, false);
+        refreshFolders();
+        bool result = Usb::eject(driveLetter);
+        qDebug() << "eject result =" << result;
 
-//    Usb::isUsb('P');
-//    Usb::isUsb('C');
-    bool result = Usb::eject('P');
-//    bool result = Usb::eject(driveLetter);
-    qDebug() << "eject result =" << result;
+    }
+    else {
+        qDebug() << "Drive " << currentViewDir[0] << "is not removable and cannot be ejected";
+    }
     return;
 
 

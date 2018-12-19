@@ -142,6 +142,7 @@ public:
     int displayHorizontalPixels;
     int displayVerticalPixels;
     bool autoIngestFolderPath;
+    bool autoEjectUsb;
 
     bool isRatingBadgeVisible;
 
@@ -241,7 +242,8 @@ signals:
 private slots:
     void setShowImageCount();
     void about();
-    void ingests();
+    void ingest();
+    void ejectUsb();
     void setCachedStatus(QString fPath, bool isCached);
     void setRating();
     void setColorClass();
