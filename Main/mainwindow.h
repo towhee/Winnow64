@@ -38,6 +38,7 @@
 #include "workspacedlg.h"
 #include "zoomdlg.h"
 #include "Utilities/utilities.h"
+#include "Utilities/usb.h"
 
 #include "ui_helpform.h"
 #include "ui_shortcutsform.h"

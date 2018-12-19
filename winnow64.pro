@@ -43,6 +43,7 @@ HEADERS += \
     Utilities/dropshadowlabel.h \
     Utilities/popup.h \
     Utilities/progressbar.h \
+    Utilities/usb.h \
     Utilities/utilities.h
 
 SOURCES += \
@@ -80,6 +81,7 @@ SOURCES += \
     Utilities/dropshadowlabel.cpp \
     Utilities/popup.cpp \
     Utilities/progressbar.cpp \
+    Utilities/usb.cpp \
     Utilities/utilities.cpp
 
 # OBJECTIVE_SOURCES += MacOS/macscale.mm

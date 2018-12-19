@@ -7451,10 +7451,37 @@ void MW::test()
 {
     // shortcut = "Shift+Ctrl+Alt+T"
 
-    thumbDockVisibleAction->setChecked(true);
-    toggleThumbDockVisibity();
+    qDebug() << "Ejecting drive " << currentViewDir[0] << "currentViewDir =" << currentViewDir
+             << "Unicode =" << currentViewDir[0].unicode();;
+//    char driveLetter = currentViewDir[0];
+    char driveLetter = currentViewDir[0].unicode();
+
+//    Usb::isUsb('P');
+//    Usb::isUsb('C');
+    bool result = Usb::eject('P');
+//    bool result = Usb::eject(driveLetter);
+    qDebug() << "eject result =" << result;
+    return;
 
 
+//    char driveLetter = 'P';
+//    char devicepath[7];
+//    char format[] = "\\\\.\\?:";
+//    strcpy_s(devicepath, format);
+//    devicepath[4] = driveLetter;
+//    DWORD dwRet = 0;
+//    wchar_t wtext[7];
+//    size_t textlen = 7;
+//    mbstowcs_s(&textlen, wtext, devicepath,strlen(devicepath)+1);
+
+//    HANDLE handle = CreateFile(wtext, GENERIC_READ, FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
+//    DWORD bytes = 0;
+//    DeviceIoControl(handle, FSCTL_LOCK_VOLUME, 0, 0, 0, 0, &bytes, 0);
+//    DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, 0, 0, 0, 0, &bytes, 0);
+//    DeviceIoControl(handle, IOCTL_STORAGE_EJECT_MEDIA, 0, 0, 0, 0, &bytes, 0);
+//    CloseHandle(handle);
+
+//    qDebug() << "Ejected ";
 
 //    qDebug() << QImageReader::supportedImageFormats();
 //    helpShortcuts();

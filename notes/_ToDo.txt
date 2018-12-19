@@ -1,6 +1,5 @@
 BUGS
-- If switch from raw+jpg cache needs  to be refreshed
-- Does not remember Folders panel sometimes when reopen
+- If switch from raw+jpg cache needs to be refreshed
 - Full screen panel flags not working
 - Sometimes metadata caching is slow
 - Jpg orientationOffset = 0 when metadata orientation changed
@@ -36,6 +35,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Does not remember Folders panel sometimes when reopen
 - Folder panel was not always visible ater changing mode (wasThumbDockVisible)
 - No embedded preview error but still working: D:/Pictures/Test/2015-10-20_0182-Edit.tif
 - Drag window to different monitor closing app (related to monitor size reporting function?)
