@@ -20,7 +20,7 @@ class IngestDlg : public QDialog
 public:
     explicit IngestDlg(QWidget *parent,
                        bool &combineRawJpg,
-//                       QFileInfoList &imageList,
+                       bool &autoEjectUsb,
                        Metadata *metadata,
                        DataModel *dm,
                        QString ingestRootFolder,
@@ -51,6 +51,8 @@ private slots:
 
     void on_manualRadio_toggled(bool checked);
 
+    void on_ejectChk_stateChanged(int arg1);
+
 signals:
     void updateIngestParameters(QString rootFolderPath, bool isAuto);
 
@@ -75,6 +77,7 @@ private:
     Metadata *metadata;
     DataModel *dm;
     bool &combineRawJpg;
+    bool &autoEjectUsb;
     QFileInfoList pickList;
 
     QStringList tokens;

@@ -29,7 +29,7 @@ Files are copied to a destination based on building a file path consisting of:
 
 IngestDlg::IngestDlg(QWidget *parent,
                      bool &combineRawJpg,
-//                     QFileInfoList &imageList,
+                     bool &autoEjectUsb,
                      Metadata *metadata,
                      DataModel *dm,
                      QString ingestRootFolder,
@@ -44,12 +44,12 @@ IngestDlg::IngestDlg(QWidget *parent,
                      ui(new Ui::IngestDlg),
                      isAuto(isAuto),
                      ingestDescriptionCompleter(ingestDescriptionCompleter),
-//                     pickList(imageList),
                      metadata(metadata),
                      pathTemplatesMap(pathTemplates),
                      filenameTemplatesMap(filenameTemplates),
                      pathTemplateSelected(pathTemplateSelected),
                      filenameTemplateSelected(filenameTemplateSelected),
+                     autoEjectUsb(autoEjectUsb),
                      combineRawJpg(combineRawJpg),
                      rootFolderPath(ingestRootFolder)
 {
@@ -104,6 +104,9 @@ IngestDlg::IngestDlg(QWidget *parent,
     QCompleter *completer = new QCompleter(this->ingestDescriptionCompleter, this);
     completer->setCaseSensitivity(Qt::CaseInsensitive);
     ui->descriptionLineEdit->setCompleter(completer);
+
+    // initialize autoEjectUsb
+    ui->ejectChk->setChecked(autoEjectUsb);
 
     isInitializing = false;
     buildFileNameSequence();
@@ -812,3 +815,8 @@ void IngestDlg::on_combinedIncludeJpgChk_clicked()
     getPicks();
 }
 
+
+void IngestDlg::on_ejectChk_stateChanged(int arg1)
+{
+    autoEjectUsb = ui->ejectChk->isChecked();
+}
