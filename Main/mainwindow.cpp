@@ -373,6 +373,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     if (event->type() == QEvent::MouseMove) {
         if (isLeftMouseBtnPressed) isMouseDrag = true;
+        QMouseEvent *e = (QMouseEvent *)event;
+        if(obj == fsTree->viewport()) {
+            QModelIndex idx = fsTree->indexAt(e->pos());
+            mouseOverFolder = idx.data(QFileSystemModel::FilePathRole).toString();
+//            qDebug() << obj << e->pos()
+//                     << "Path =" << path;
+        }
     }
 
     if (event->type() == QEvent::MouseButtonDblClick) {
@@ -1252,6 +1259,12 @@ void MW::createActions()
     ingestAction->setShortcutVisibleInContextMenu(true);
     addAction(ingestAction);
     connect(ingestAction, &QAction::triggered, this, &MW::ingest);
+
+    ejectAction = new QAction(tr("Eject Usb Drive"), this);
+    ejectAction->setObjectName("ingest");
+    ejectAction->setShortcutVisibleInContextMenu(true);
+    addAction(ejectAction);
+    connect(ejectAction, &QAction::triggered, this, &MW::ejectUsbFromContextMenu);
 
     combineRawJpgAction = new QAction(tr("Combine Raw+Jpg"), this);
     combineRawJpgAction->setObjectName("combineRawJpg");
@@ -2306,6 +2319,7 @@ void MW::createMenus()
 //    QList<QAction *> *fsTreeActions = new QList<QAction *>;
     fsTreeActions->append(refreshFoldersAction);
     fsTreeActions->append(collapseFoldersAction);
+    fsTreeActions->append(ejectAction);
     fsTreeActions->append(separatorAction);
     fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileAction);
@@ -6641,23 +6655,23 @@ void MW::ingest()
                                   autoIngestFolderPath);
         connect(ingestDlg, SIGNAL(updateIngestParameters(QString,bool)),
                 this, SLOT(setIngestRootFolder(QString,bool)));
-        if(ingestDlg->exec()) ejectUsb();;
+        if(ingestDlg->exec()) ejectUsb(currentViewDir);;
         delete ingestDlg;
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
 }
 
-void MW::ejectUsb()
+void MW::ejectUsb(QString path)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    char driveLetter = currentViewDir[0].unicode();
+    char driveLetter = path[0].unicode();
     if(Usb::isUsb(driveLetter)) {
-        QString driveRoot = currentViewDir.left(3);
+        QString driveRoot = path.left(3);
         dm->load(driveRoot, false);
         refreshFolders();
         bool result = Usb::eject(driveLetter);
@@ -6669,8 +6683,12 @@ void MW::ejectUsb()
     else {
         popUp->showPopup(this, "Drive " + currentViewDir[0]
                 + "is not removable and cannot be ejected", 2000, 0.75);
-//        qDebug() << "Drive " << currentViewDir[0] << "is not removable and cannot be ejected";
     }
+}
+
+void MW::ejectUsbFromContextMenu()
+{
+    ejectUsb(mouseOverFolder);
 }
 
 void MW::setCombineRawJpg()

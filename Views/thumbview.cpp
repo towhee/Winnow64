@@ -1211,7 +1211,7 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
 
 void ThumbView::mouseMoveEvent(QMouseEvent *event)
 {
-//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event;
+//    qDebug() << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event << event->pos();
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }

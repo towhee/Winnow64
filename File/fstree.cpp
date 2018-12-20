@@ -161,6 +161,8 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     this->metadata = metadata;
     fileFilters = new QStringList;
     dir = new QDir();
+    viewport()->setObjectName("fsTreeViewPort");
+    setObjectName("fsTree");
 
     // create model and filter
     createModel();
@@ -305,6 +307,14 @@ void FSTree::paintEvent(QPaintEvent *event)
     QTreeView::paintEvent(event);
 }
 
+void FSTree::mouseMoveEvent(QMouseEvent *event)
+{
+    QTreeView::mouseMoveEvent(event);
+    QModelIndex idx = indexAt(event->pos());
+//    qDebug() << "fsTree " << event << idx << idx.data().toString();
+//    event->ignore();
+}
+
 void FSTree::dragEnterEvent(QDragEnterEvent *event)
 {
     {
@@ -312,6 +322,7 @@ void FSTree::dragEnterEvent(QDragEnterEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
 	QModelIndexList selectedDirs = selectionModel()->selectedRows();
 	if (selectedDirs.size() > 0) {
 		dndOrigSelection = selectedDirs[0];
