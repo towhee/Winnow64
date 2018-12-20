@@ -944,7 +944,7 @@ Pan the image during a mouse drag operation
 */
     {
     #ifdef ISDEBUG
-//    qDebug() << G::t.restart() << "\t" << "ImageView::mouseMoveEvent";
+//    G::track(__FUNCTION__);
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "ImageView::mouseMoveEvent" << isMouseDrag;

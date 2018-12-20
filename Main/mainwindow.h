@@ -243,7 +243,8 @@ private slots:
     void setShowImageCount();
     void about();
     void ingest();
-    void ejectUsb();
+    void ejectUsb(QString path);
+    void ejectUsbFromContextMenu();
     void setCachedStatus(QString fPath, bool isCached);
     void setRating();
     void setColorClass();
@@ -434,6 +435,7 @@ private:
     QAction *addBookmarkAction;
     QAction *removeBookmarkAction;
     QAction *ingestAction;
+    QAction *ejectAction;
     QAction *combineRawJpgAction;
     QAction *refreshFoldersAction;
     QAction *renameAction;
@@ -692,6 +694,8 @@ private:
     int metadataCacheStartRow;
 
     int prevCentralView;
+    QString mouseOverFolder;        // current mouseover folder in folder dock used
+                                    // in context menu to eject usb drives
 
     bool needThumbsRefresh;         // req'd?
     bool thumbViewBusy;             // req'd?

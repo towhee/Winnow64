@@ -20,19 +20,11 @@ bool Usb::eject(char driveLetter)
     HANDLE handle = CreateFile(wtext, GENERIC_READ, FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
     if (handle == INVALID_HANDLE_VALUE)
     {
-//        FormatErrorMsg("CreateFile: ", errmsg);
         return false;
     }
 
     DWORD bytes = 0;
     long result;
-
-//    result = DeviceIoControl(handle, FSCTL_LOCK_VOLUME, 0, 0, 0, 0, &bytes, 0);
-//    if(result) {
-////        FormatErrorMsg("Lock Volume: ", errmsg);
-//        qDebug() << "Lock err msg:" << errmsg << result;
-//        return false;
-//    }
 
     result = DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, 0, 0, 0, 0, &bytes, 0);
     qDebug() << "Dismount result:" << result;
