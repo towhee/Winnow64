@@ -17,7 +17,6 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Eject card
 - Create installer
 - Remove Windows Registry settings during uninstall
 - When ingesting confirm all files copied correctly (option)
@@ -35,6 +34,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Eject card from MacOs
 - Does not remember Folders panel sometimes when reopen
 - Folder panel was not always visible ater changing mode (wasThumbDockVisible)
 - No embedded preview error but still working: D:/Pictures/Test/2015-10-20_0182-Edit.tif
