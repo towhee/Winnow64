@@ -212,7 +212,6 @@ the folders by deleting the model and re-creating it.
             }
         }
     }
-//    fsModel->setRootPath("D:/");
     fsModel->setRootPath(fsModel->myComputer().toString());
 #endif
 

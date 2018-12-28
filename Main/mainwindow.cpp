@@ -206,7 +206,6 @@ void MW::moveEvent(QMoveEvent *event)
 void MW::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
-//    if (!isInitializing)  qDebug() << G::t.restart() << "\t" << "MW::resizeEvent" << screen();
     emit resizeMW(this->geometry(), centralWidget->geometry());
 }
 
@@ -3778,7 +3777,7 @@ void MW::invokeWorkspaceFromAction(QAction *workAction)
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == workAction->text()) {
             invokeWorkspace(workspaces->at(i));
-            reportWorkspace(i);         // rgh remove after debugging
+//            reportWorkspace(i);         // rgh remove after debugging
             return;
         }
     }
@@ -3797,9 +3796,12 @@ workspace with a matching name to the action is used.
     #endif
     }
 //    qDebug() << "\n======================================= Invoke Workspace ============================================";
-    if (fullScreenAction->isChecked() != w.isFullScreen)
-        fullScreenAction->setChecked(w.isFullScreen);
-    setFullNormal();
+//    if (fullScreenAction->isChecked() != w.isFullScreen)
+//        fullScreenAction->setChecked(w.isFullScreen);
+//    setFullNormal();
+//    if(w.isFullScreen) showFullScreen();
+//    else showNormal();
+    showNormal();
     restoreGeometry(w.geometry);
     restoreState(w.state);
     // two restoreState req'd for going from docked to floating docks
@@ -3823,20 +3825,20 @@ workspace with a matching name to the action is used.
     asGridAction->setChecked(w.isGridDisplay);
     asTableAction->setChecked(w.isTableDisplay);
     asCompareAction->setChecked(w.isCompareDisplay);
-    thumbView->thumbWidth = w.thumbWidth,
-    thumbView->thumbHeight = w.thumbHeight,
-    thumbView->thumbSpacing = w.thumbSpacing,
-    thumbView->thumbPadding = w.thumbPadding,
-    thumbView->labelFontSize = w.labelFontSize,
+    thumbView->thumbWidth = w.thumbWidth;
+    thumbView->thumbHeight = w.thumbHeight;
+    thumbView->thumbSpacing = w.thumbSpacing;
+    thumbView->thumbPadding = w.thumbPadding;
+    thumbView->labelFontSize = w.labelFontSize;
     thumbView->showThumbLabels = w.showThumbLabels;
     thumbsWrapAction->setChecked(w.wrapThumbs);
     thumbView->wrapThumbs = w.wrapThumbs;
     thumbView->setWrapping(w.wrapThumbs);
-    gridView->thumbWidth = w.thumbWidthGrid,
-    gridView->thumbHeight = w.thumbHeightGrid,
-    gridView->thumbSpacing = w.thumbSpacingGrid,
-    gridView->thumbPadding = w.thumbPaddingGrid,
-    gridView->labelFontSize = w.labelFontSizeGrid,
+    gridView->thumbWidth = w.thumbWidthGrid;
+    gridView->thumbHeight = w.thumbHeightGrid;
+    gridView->thumbSpacing = w.thumbSpacingGrid;
+    gridView->thumbPadding = w.thumbPaddingGrid;
+    gridView->labelFontSize = w.labelFontSizeGrid;
     gridView->showThumbLabels = w.showThumbLabelsGrid;
     thumbView->setThumbParameters();
     gridView->setThumbParameters();
@@ -4637,24 +4639,31 @@ void MW::toggleFullScreen()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << "fullScreenAction->isChecked()" << fullScreenAction->isChecked();
     if (fullScreenAction->isChecked())
     {
-//        qDebug() << G::t.restart() << "\t" << "fullScreenDocks.isThumbs" << fullScreenDocks.isThumbs;
+//        qDebug() << "fullScreenDocks.isFolders" << fullScreenDocks.isFolders;
+//        qDebug() << "fullScreenDocks.isFavs" << fullScreenDocks.isFavs;
+//        qDebug() << "fullScreenDocks.isFilters" << fullScreenDocks.isFilters;
+//        qDebug() << "fullScreenDocks.isMetadata" << fullScreenDocks.isMetadata;
+//        qDebug() << "fullScreenDocks.isThumbs" << fullScreenDocks.isThumbs;
+//        qDebug() << "fullScreenDocks.isStatusBar" << fullScreenDocks.isStatusBar;
         snapshotWorkspace(ws);
         showFullScreen();
-        imageView->setCursorHiding(true);
+//        return;
+//        imageView->setCursorHiding(true);
         folderDockVisibleAction->setChecked(fullScreenDocks.isFolders);
-        folderDockVisibleAction->setVisible(fullScreenDocks.isFolders);
+        folderDock->setVisible(fullScreenDocks.isFolders);
         favDockVisibleAction->setChecked(fullScreenDocks.isFavs);
-        favDockVisibleAction->setVisible(fullScreenDocks.isFavs);
+        favDock->setVisible(fullScreenDocks.isFavs);
         filterDockVisibleAction->setChecked(fullScreenDocks.isFilters);
-        filterDockVisibleAction->setVisible(fullScreenDocks.isFilters);
+        filterDock->setVisible(fullScreenDocks.isFilters);
         metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
-        metadataDockVisibleAction->setVisible(fullScreenDocks.isMetadata);
+        metadataDock->setVisible(fullScreenDocks.isMetadata);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
-        thumbDockVisibleAction->setVisible(fullScreenDocks.isThumbs);
-        menuBarVisibleAction->setChecked(false);
-        setMenuBarVisibility();
+        thumbDock->setVisible(fullScreenDocks.isThumbs);
+//        menuBarVisibleAction->setChecked(false);
+//        setMenuBarVisibility();
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
         setStatusBarVisibility();
     }
@@ -5702,15 +5711,15 @@ condition of actions sets the visibility of all window components. */
     }
     // set flag so
     isUpdatingState = true;
-    setWindowsTitleBarVisibility();
+//    setWindowsTitleBarVisibility();   // problem with full screen toggling
     setMenuBarVisibility();
     setStatusBarVisibility();
     setCacheStatusVisibility();
-    toggleFolderDockVisibility();
-    toggleFavDockVisibility();
-    toggleFilterDockVisibility();
-    toggleMetadataDockVisibility();
-    toggleThumbDockVisibity();
+    setFolderDockVisibility();
+    setFavDockVisibility();
+    setFilterDockVisibility();
+    setMetadataDockVisibility();
+    setThumbDockVisibity();
     setFolderDockLockMode();
     setFavDockLockMode();
     setFilterDockLockMode();
@@ -6133,6 +6142,31 @@ void MW::setShootingInfoVisibility() {
     imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
 }
 
+void MW::setFolderDockVisibility()
+{
+    folderDock->setVisible(folderDockVisibleAction->isChecked());
+}
+
+void MW::setFavDockVisibility()
+{
+    favDock->setVisible(favDockVisibleAction->isChecked());
+}
+
+void MW::setFilterDockVisibility()
+{
+    filterDock->setVisible(filterDockVisibleAction->isChecked());
+}
+
+void MW::setMetadataDockVisibility()
+{
+    metadataDock->setVisible(metadataDockVisibleAction->isChecked());
+}
+
+void MW::setThumbDockVisibity()
+{
+    thumbDock->setVisible(thumbDockVisibleAction->isChecked());
+}
+
 void MW::toggleFolderDockVisibility() {
     {
     #ifdef ISDEBUG
@@ -6167,6 +6201,7 @@ void MW::toggleFavDockVisibility() {
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     if (isInitializing) return;
 
     if (favDock->isVisible() && favDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
@@ -6187,6 +6222,7 @@ void MW::toggleFavDockVisibility() {
         favDock->raise();
         favDockVisibleAction->setChecked(true);
     }
+    qDebug() << "favDockVisibleAction->isChecked()" << favDockVisibleAction->isChecked();
 }
 
 void MW::toggleFilterDockVisibility() {
@@ -6305,6 +6341,7 @@ void MW::setWindowsTitleBarVisibility() {
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     if(windowTitleBarVisibleAction->isChecked()) {
         hide();
         setWindowFlags(windowFlags() & ~Qt::FramelessWindowHint);
@@ -6669,12 +6706,22 @@ void MW::ejectUsb(QString path)
     G::track(__FUNCTION__);
     #endif
     }
-    char driveLetter = path[0].unicode();
-    if(Usb::isUsb(driveLetter)) {
-        QString driveRoot = path.left(3);
+    QString driveRoot;      // ie WIN "D:\" or MAC "Untitled"
+#if defined(Q_OS_WIN)
+    driveRoot = path.left(3);
+#elif defined(Q_OS_MAC)
+    // ie extract "Untitled" from "/Volumes/Untitled/DCIM"
+    int start = path.indexOf("/Volumes/", 0);
+    if(start != 0) return;                   // should start with "/Volumes/"
+    int pos = path.indexOf("/", start + 9);
+    if(pos == -1) pos = path.length();
+    driveRoot = path.mid(9, pos - 9);
+#endif
+    if(Usb::isUsb(path)) {
+        driveRoot = "Untitled";
         dm->load(driveRoot, false);
         refreshFolders();
-        bool result = Usb::eject(driveLetter);
+        int result = Usb::eject(driveRoot);
         if(result < 2)
             popUp->showPopup(this, "Ejecting drive " + driveRoot, 2000, 0.75);
         else
@@ -7502,21 +7549,21 @@ void MW::test()
 {
     // shortcut = "Shift+Ctrl+Alt+T"
 
-    qDebug() << "Attempting to eject drive " << currentViewDir[0] << "currentViewDir =" << currentViewDir
-             << "Unicode =" << currentViewDir[0].unicode();;
-    char driveLetter = currentViewDir[0].unicode();
-    if(Usb::isUsb(driveLetter)) {
-        QString driveRoot = currentViewDir.left(3);
-        dm->load(driveRoot, false);
-        refreshFolders();
-        bool result = Usb::eject(driveLetter);
-        qDebug() << "eject result =" << result;
+//    qDebug() << "Attempting to eject drive " << currentViewDir[0] << "currentViewDir =" << currentViewDir
+//             << "Unicode =" << currentViewDir[0].unicode();;
+//    char driveLetter = currentViewDir[0].unicode();
+//    if(Usb::isUsb(driveLetter)) {
+//        QString driveRoot = currentViewDir.left(3);
+//        dm->load(driveRoot, false);
+//        refreshFolders();
+//        bool result = Usb::eject(driveLetter);
+//        qDebug() << "eject result =" << result;
 
-    }
-    else {
-        qDebug() << "Drive " << currentViewDir[0] << "is not removable and cannot be ejected";
-    }
-    return;
+//    }
+//    else {
+//        qDebug() << "Drive " << currentViewDir[0] << "is not removable and cannot be ejected";
+//    }
+//    return;
 
 
 //    char driveLetter = 'P';
