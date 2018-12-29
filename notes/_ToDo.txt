@@ -17,6 +17,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- dm->timeToQuit ??
 - Create installer for Mac
 - Remove Windows Registry settings during uninstall
 - When ingesting confirm all files copied correctly (option)

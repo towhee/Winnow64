@@ -358,7 +358,7 @@ private slots:
 
     void setMenuBarVisibility();
     void setStatusBarVisibility();
-    void setWindowsTitleBarVisibility();
+//    void setWindowsTitleBarVisibility();
 
 //    void setFolderDockFocus();
 //    void setFavDockFocus();
@@ -564,7 +564,7 @@ private:
     QAction *filterDockVisibleAction;
     QAction *metadataDockVisibleAction;
     QAction *thumbDockVisibleAction;
-    QAction *windowTitleBarVisibleAction;
+//    QAction *windowTitleBarVisibleAction;
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
 

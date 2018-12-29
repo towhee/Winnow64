@@ -260,7 +260,11 @@ void MW::keyPressEvent(QKeyEvent *event)
         loupeDisplay();
     }
     if (event->key() == Qt::Key_Escape) {
-        dm->timeToQuit = true;
+        if(fullScreenAction->isChecked()) {
+            escapeFullScreen();
+        }
+        else dm->timeToQuit = true;
+
     }
 }
 
@@ -1858,19 +1862,21 @@ void MW::createActions()
 
     // Window menu Visibility actions
 
-    windowTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
-    windowTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
-    windowTitleBarVisibleAction->setShortcutVisibleInContextMenu(true);
-    windowTitleBarVisibleAction->setCheckable(true);
-    addAction(windowTitleBarVisibleAction);
-    connect(windowTitleBarVisibleAction, &QAction::triggered, this, &MW::setWindowsTitleBarVisibility);
+//    windowTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
+//    windowTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
+//    windowTitleBarVisibleAction->setShortcutVisibleInContextMenu(true);
+//    windowTitleBarVisibleAction->setCheckable(true);
+//    addAction(windowTitleBarVisibleAction);
+//    connect(windowTitleBarVisibleAction, &QAction::triggered, this, &MW::setWindowsTitleBarVisibility);
 
+//#ifdef Q_OS_WIN
     menuBarVisibleAction = new QAction(tr("Menubar"), this);
     menuBarVisibleAction->setObjectName("toggleMenuBar");
     menuBarVisibleAction->setShortcutVisibleInContextMenu(true);
     menuBarVisibleAction->setCheckable(true);
     addAction(menuBarVisibleAction);
     connect(menuBarVisibleAction, &QAction::triggered, this, &MW::setMenuBarVisibility);
+//#endif
 
     statusBarVisibleAction = new QAction(tr("Statusbar"), this);
     statusBarVisibleAction->setObjectName("toggleStatusBar");
@@ -2273,8 +2279,10 @@ void MW::createMenus()
     windowMenu->addAction(metadataDockVisibleAction);
     windowMenu->addAction(thumbDockVisibleAction);
     windowMenu->addSeparator();
-    windowMenu->addAction(windowTitleBarVisibleAction);
+//    windowMenu->addAction(windowTitleBarVisibleAction);
+#ifdef Q_OS_WIN
     windowMenu->addAction(menuBarVisibleAction);
+#endif
     windowMenu->addAction(statusBarVisibleAction);
 //    windowMenu->addSeparator();
 //    windowMenu->addAction(folderDockFocusAction);
@@ -3801,12 +3809,12 @@ workspace with a matching name to the action is used.
 //    setFullNormal();
 //    if(w.isFullScreen) showFullScreen();
 //    else showNormal();
-    showNormal();
+//    showNormal();
     restoreGeometry(w.geometry);
     restoreState(w.state);
     // two restoreState req'd for going from docked to floating docks
     restoreState(w.state);
-    windowTitleBarVisibleAction->setChecked(w.isWindowTitleBarVisible);
+//    windowTitleBarVisibleAction->setChecked(w.isWindowTitleBarVisible);
 //    menuBarVisibleAction->setChecked(true);
     menuBarVisibleAction->setChecked(w.isMenuBarVisible);
     statusBarVisibleAction->setChecked(w.isStatusBarVisible);
@@ -3857,7 +3865,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
     wsd.isFullScreen = isFullScreen();
-    wsd.isWindowTitleBarVisible = windowTitleBarVisibleAction->isChecked();
+//    wsd.isWindowTitleBarVisible = windowTitleBarVisibleAction->isChecked();
     wsd.isMenuBarVisible = menuBarVisibleAction->isChecked();
     wsd.isStatusBarVisible = statusBarVisibleAction->isChecked();
     wsd.isFolderDockVisible = folderDockVisibleAction->isChecked();
@@ -3998,7 +4006,7 @@ app is "stranded" on secondary monitors that are not attached.
     resize(0.75 * desktop.width(), 0.75 * desktop.height());
     setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
         size(), desktop));
-    windowTitleBarVisibleAction->setChecked(true);
+//    windowTitleBarVisibleAction->setChecked(true);
     menuBarVisibleAction->setChecked(true);
     statusBarVisibleAction->setChecked(true);
 
@@ -4622,10 +4630,8 @@ void MW::escapeFullScreen()
     G::track(__FUNCTION__);
     #endif
     }
-    if(fullScreenAction->isChecked()) {
-        fullScreenAction->setChecked(false);
-        toggleFullScreen();
-    }
+    fullScreenAction->setChecked(false);
+    toggleFullScreen();
 }
 
 // rgh maybe separate this into two functions:
@@ -5033,7 +5039,7 @@ re-established when the application is re-opened.
     setting->setValue("isTableDisplay", (bool)asTableAction->isChecked());
     setting->setValue("isCompareDisplay", (bool)asCompareAction->isChecked());
 
-    setting->setValue("isWindowTitleBarVisible", (bool)windowTitleBarVisibleAction->isChecked());
+//    setting->setValue("isWindowTitleBarVisible", (bool)windowTitleBarVisibleAction->isChecked());
     setting->setValue("isMenuBarVisible", (bool)menuBarVisibleAction->isChecked());
     setting->setValue("isStatusBarVisible", (bool)statusBarVisibleAction->isChecked());
     setting->setValue("isFolderDockVisible", (bool)folderDockVisibleAction->isChecked());
@@ -5317,7 +5323,7 @@ Preferences are located in the prefdlg class and updated here.
     asCompareAction->setChecked(false); // never start with compare set true
 //    showThumbLabelsAction->setChecked(thumbView->showThumbLabels);
 
-    windowTitleBarVisibleAction->setChecked(setting->value("isWindowTitleBarVisible").toBool());
+//    windowTitleBarVisibleAction->setChecked(setting->value("isWindowTitleBarVisible").toBool());
     menuBarVisibleAction->setChecked(setting->value("isMenuBarVisible").toBool());
     statusBarVisibleAction->setChecked(setting->value("isStatusBarVisible").toBool());
     folderDockVisibleAction->setChecked(setting->value("isFolderDockVisible").toBool());
@@ -5559,7 +5565,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[filterDockVisibleAction->objectName()] = filterDockVisibleAction;
     actionKeys[metadataDockVisibleAction->objectName()] = metadataDockVisibleAction;
     actionKeys[thumbDockVisibleAction->objectName()] = thumbDockVisibleAction;
-    actionKeys[windowTitleBarVisibleAction->objectName()] = windowTitleBarVisibleAction;
+//    actionKeys[windowTitleBarVisibleAction->objectName()] = windowTitleBarVisibleAction;
     actionKeys[menuBarVisibleAction->objectName()] = menuBarVisibleAction;
     actionKeys[statusBarVisibleAction->objectName()] = statusBarVisibleAction;
 //    actionKeys[toggleIconsListAction->objectName()] = toggleIconsListAction;
@@ -5683,7 +5689,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         filterDockVisibleAction->setShortcut(QKeySequence("F5"));
         metadataDockVisibleAction->setShortcut(QKeySequence("F6"));
         thumbDockVisibleAction->setShortcut(QKeySequence("F7"));
-        windowTitleBarVisibleAction->setShortcut(QKeySequence("F8"));
+//        windowTitleBarVisibleAction->setShortcut(QKeySequence("F8"));
         menuBarVisibleAction->setShortcut(QKeySequence("F9"));
         statusBarVisibleAction->setShortcut(QKeySequence("F10"));
         folderDockLockAction->setShortcut(QKeySequence("Shift+F3"));
@@ -6334,24 +6340,24 @@ void MW::setStatusBarVisibility() {
 //    G::isStatusBarVisible = statusBarVisibleAction->isChecked();
 }
 
-void MW::setWindowsTitleBarVisibility() {
+//void MW::setWindowsTitleBarVisibility() {
 
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    G::track(__FUNCTION__);
-    if(windowTitleBarVisibleAction->isChecked()) {
-        hide();
-        setWindowFlags(windowFlags() & ~Qt::FramelessWindowHint);
-        show();    }
-    else {
-        hide();
-        setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
-        show();
-    }
-}
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    G::track(__FUNCTION__);
+//    if(windowTitleBarVisibleAction->isChecked()) {
+//        hide();
+//        setWindowFlags(windowFlags() & ~Qt::FramelessWindowHint);
+//        show();    }
+//    else {
+//        hide();
+//        setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
+//        show();
+//    }
+//}
 
 void MW::setFolderDockLockMode()
 {
