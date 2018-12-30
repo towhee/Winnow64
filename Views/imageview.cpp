@@ -69,9 +69,9 @@ ImageView::ImageView(QWidget *parent,
     cursorIsHidden = false;
     moveImageLocked = false;
 
-    infoDropShadow = new DropShadowLabel(this);
-    infoDropShadow->setVisible(isShootingInfoVisible);
-    infoDropShadow->setAttribute(Qt::WA_TranslucentBackground);
+    infoOverlay = new DropShadowLabel(this);
+    infoOverlay->setVisible(isShootingInfoVisible);
+    infoOverlay->setAttribute(Qt::WA_TranslucentBackground);
 
     // title included in infoLabel, but might want to separate
     titleDropShadow = new DropShadowLabel(this);
@@ -86,7 +86,7 @@ ImageView::ImageView(QWidget *parent,
     infoEffect->setOpacity(0.8);
 //    infoLabel->setGraphicsEffect(infoEffect);
 //    infoLabelShadow->setGraphicsEffect(infoEffect);
-    infoDropShadow->setGraphicsEffect(infoEffect);
+    infoOverlay->setGraphicsEffect(infoEffect);
 
     // rgh is this needed or holdover from prev program
     mouseMovementTimer = new QTimer(this);
@@ -249,7 +249,7 @@ are matched:
     }
 }
 
-void ImageView::noImagesAvailable()
+void ImageView::clear()
 {
     {
     #ifdef ISDEBUG
@@ -257,13 +257,14 @@ void ImageView::noImagesAvailable()
     #endif
     }
     pmItem->setVisible(false);
-    infoDropShadow->setText("");
+    shootingInfo = "";
+    infoOverlay->setText("");
 }
 
 void ImageView::noJpgAvailable()
 {
     pmItem->setVisible(false);
-    infoDropShadow->setText("");
+    infoOverlay->setText("");
 }
 
 void ImageView::scale()
@@ -740,15 +741,15 @@ to help make it visible against different coloured backgrounds. */
     QFont font( "Tahoma", 20);
     font.setKerning(true);
 
-    infoDropShadow->setFont(font);      // not working
+    infoOverlay->setFont(font);      // not working
     int fontSize = 13;
 
-    infoDropShadow->setStyleSheet("font: " + QString::number(fontSize) + "pt;");
-    infoDropShadow->setText(infoString);
-    infoDropShadow->adjustSize();
+    infoOverlay->setStyleSheet("font: " + QString::number(fontSize) + "pt;");
+    infoOverlay->setText(infoString);
+    infoOverlay->adjustSize();
     // make a little wider to account for the drop shadow
-    infoDropShadow->resize(infoDropShadow->width()+10, infoDropShadow->height()+10);
-    infoDropShadow->move(x, y);
+    infoOverlay->resize(infoOverlay->width()+10, infoOverlay->height()+10);
+    infoOverlay->move(x, y);
 }
 
 void ImageView::monitorCursorState()
