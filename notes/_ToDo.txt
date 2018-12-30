@@ -17,9 +17,8 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Eject card on Mac
 - Add preferences for badge and shooting info size
-- Create installer
+- Create installer for mac
 - Remove Windows Registry settings during uninstall
 - When ingesting confirm all files copied correctly (option)
 - Add more raw file formats - DNG, Panasonic ...
@@ -31,10 +30,10 @@ ENHANCEMENTS
 - Disable menu "add bookmark" when folders not selected??
 - Tweak context menus
 - Run droplet
-- Clip black area on canon thumbs
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Eject card on Mac
 - Eject card on Windows
 - Does not remember Folders panel sometimes when reopen
 - Folder panel was not always visible ater changing mode (wasThumbDockVisible)

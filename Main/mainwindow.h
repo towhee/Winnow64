@@ -49,11 +49,9 @@ class MW : public QMainWindow
 {
     Q_OBJECT
 
-//    friend class CompareImages;
     friend class Prefdlg;
     friend class ThumbView;
     friend class InfoView;
-//    friend class ZoomDlg;
 
 public:
     MW(QWidget *parent = 0);
@@ -62,8 +60,6 @@ public:
     QString versionDetail = "Eject USB for Windows";
 
     bool isShift;               // used when opening if shift key pressed
-
-    int debugThumbHt;
 
     int copyCutCount;   // req'd?
 
@@ -223,6 +219,7 @@ public slots:
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex previous);
     void nullSelection();
+    void noFolderSelected();
     void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setStatus(QString state);
