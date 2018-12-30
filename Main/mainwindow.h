@@ -343,14 +343,22 @@ private slots:
 
     void setFullNormal();
     void setCentralView();
+
+    void setThumbDockVisibity();
+    void setFolderDockVisibility();
+    void setFavDockVisibility();
+    void setFilterDockVisibility();
+    void setMetadataDockVisibility();
+
     void toggleThumbDockVisibity();
     void toggleFolderDockVisibility();
     void toggleFavDockVisibility();
     void toggleFilterDockVisibility();
     void toggleMetadataDockVisibility();
+
     void setMenuBarVisibility();
     void setStatusBarVisibility();
-    void setWindowsTitleBarVisibility();
+//    void setWindowsTitleBarVisibility();
 
 //    void setFolderDockFocus();
 //    void setFavDockFocus();
@@ -556,7 +564,7 @@ private:
     QAction *filterDockVisibleAction;
     QAction *metadataDockVisibleAction;
     QAction *thumbDockVisibleAction;
-    QAction *windowTitleBarVisibleAction;
+//    QAction *windowTitleBarVisibleAction;
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
 
