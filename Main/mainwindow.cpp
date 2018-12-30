@@ -519,6 +519,8 @@ void MW::handleStartupArgs()
     }
 }
 
+
+
 /**************************************************************************
  PROGRAM FLOW EVENT DISPATCH
 
@@ -650,7 +652,6 @@ void MW::folderSelectionChange()
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(dirPath, true, false)) {
-        qDebug() << G::t.restart() << "\t" << "invalid folder - popUp->isVisible =" << popUp->isVisible();
         if (popUp->isVisible()) popUp->close();
         return;
     }
@@ -906,6 +907,16 @@ void MW::nullSelection()
     imageView->noImagesAvailable();
     cacheLabel->setVisible(false);
 //    isInitializing = false;
+    isDragDrop = false;
+}
+
+void MW::noFolderSelected()
+{
+    updateStatus(false, "");
+    infoView->clearInfo();
+    metadata->clear();
+    imageView->noImagesAvailable();
+    cacheLabel->setVisible(false);
     isDragDrop = false;
 }
 
@@ -1441,7 +1452,9 @@ void MW::createActions()
     prefAction->setObjectName("settings");
     prefAction->setShortcutVisibleInContextMenu(true);
     addAction(prefAction);
-    connect(prefAction, &QAction::triggered, this, &MW::preferences);
+//    connect(prefAction, &QAction::triggered, this, &MW::preferences);
+    // use lambda to send default -1 which loads previous open page in pref dialog
+    connect(prefAction, &QAction::triggered, [this]() {preferences(-1);} );
 
     // Go menu
 
@@ -2943,10 +2956,10 @@ void MW::createStatusBar()
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
 
     cacheLabel = new QLabel();
-    QString cacheStatusToolTip = "Image cache status for current folder:\n\n";
-    cacheStatusToolTip += "  • LightGray:\tbackground for all images in folder\n";
-    cacheStatusToolTip += "  • DarkGray:\tto be cached\n";
-    cacheStatusToolTip += "  • Green:\t\tcached\n";
+    QString cacheStatusToolTip = "Image cache status for current folder:\n";
+    cacheStatusToolTip += "  • LightGray:  \tbackground for all images in folder\n";
+    cacheStatusToolTip += "  • DarkGray:   \tto be cached\n";
+    cacheStatusToolTip += "  • Green:      \tcached\n";
     cacheStatusToolTip += "  • LightGreen: \tcurrent image";
     cacheLabel->setToolTip(cacheStatusToolTip);
     cacheLabel->setToolTipDuration(100000);
@@ -2958,7 +2971,7 @@ void MW::createStatusBar()
 
     int runLabelWidth = 13;
     metadataThreadRunningLabel = new QLabel;
-    QString mtrl = "Metadata caching in progress";
+    QString mtrl = "Turns red when metadata caching in progress";
     metadataThreadRunningLabel->setToolTip(mtrl);
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateMetadataThreadRunStatus(false);
@@ -2966,7 +2979,7 @@ void MW::createStatusBar()
 
     imageThreadRunningLabel = new QLabel;
     statusBar()->addPermanentWidget(imageThreadRunningLabel);
-    QString itrl = "Image caching in progress";
+    QString itrl = "Turns red when image caching in progress";
     imageThreadRunningLabel->setToolTip(itrl);
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateImageThreadRunStatus(false);
@@ -4437,7 +4450,7 @@ void MW::preferences(int page)
     G::track(__FUNCTION__);
     #endif
     }
-    if (page == -1) page = lastPrefPage;
+    if(page == -1) page = lastPrefPage;
     Prefdlg *prefdlg = new Prefdlg(this, page);
     connect(prefdlg, SIGNAL(updatePage(int)),
             this, SLOT(setPrefPage(int)));
@@ -6618,46 +6631,6 @@ void MW::updatePickFromHistory(QString fPath, QString status)
     }
 }
 
-//void MW::refine()
-//{
-//    /*
-//    Clears refine for all rows, sets refine = true if pick = true, and clears pick
-//    for all rows.
-//    */
-//        {
-//        #ifdef ISDEBUG
-//        G::track(__FUNCTION__);
-//        #endif
-//        }
-//    // Are there any picks to refine?
-//    bool isPick = false;
-//    for (int row = 0; row < dm->rowCount(); ++row) {
-//        if (dm->index(row, G::PickColumn).data() == "true") {
-//            isPick = true;
-//            break;
-//        }
-//    }
-
-//    if (!isPick) {
-//        popup("There are no picks to refine", 2000, 0.75);
-//        return;
-//    }
-
-//    // clear refine = pick
-//    for (int row = 0; row < dm->rowCount(); ++row)
-//        if (dm->index(row, G::PickColumn).data() == "true")
-//            dm->setData(dm->index(row, G::RefineColumn), true);
-//    else dm->setData(dm->index(row, G::RefineColumn), false);
-
-//    // clear all picks
-//    for (int row = 0; row < dm->rowCount(); ++row)
-//        dm->setData(dm->index(row, G::PickColumn), "false");
-
-//    // reset filters
-//    filters->uncheckAllFilters();
-//    filters->refineTrue->setCheckState(0, Qt::Checked);
-//}
-
 qulonglong MW::memoryReqdForPicks()
 {
     {
@@ -6737,6 +6710,7 @@ void MW::ejectUsb(QString path)
         popUp->showPopup(this, "Drive " + currentViewDir[0]
                 + "is not removable and cannot be ejected", 2000, 0.75);
     }
+    noFolderSelected();
 }
 
 void MW::ejectUsbFromContextMenu()
