@@ -5,9 +5,10 @@ Usb::Usb()
 
 }
 
-bool Usb::eject(char driveLetter)
+bool Usb::eject(QString driveName)
 {
 #if defined(Q_OS_WIN)
+    char driveLetter = path[0].unicode();
     char devicepath[7];
     char format[] = "\\\\.\\?:";
     strcpy_s(devicepath, format);
@@ -44,18 +45,32 @@ bool Usb::eject(char driveLetter)
     return true;
 #elif defined(Q_OS_MAC)
     // ADD MAC CODE HERE
+    // ie tell application "Finder" to eject disk "Untitled"
+    // where driveName is "Untitled"
+    QStringList args;
+    args << "-e";
+    args << "tell application \"Finder\"";
+    args << "-e";
+    args << "eject disk \"" + driveName + "\"";
+    args << "-e";
+    args << "end tell";
+    if (!QProcess::execute("/usr/bin/osascript", args))
+        return true;
 #endif
+    return false;
 }
 
-bool Usb::isUsb(char driveLetter)
+bool Usb::isUsb(QString path)
 {
 #if defined(Q_OS_WIN)
     int type = 0;
+    char driveLetter = path[0].unicode();
     WCHAR wDrive[] = L"?:\\"; // use as a drive letter template
     wDrive[0] = driveLetter;
     type = GetDriveType(wDrive);
     return (type == DRIVE_REMOVABLE);
 #elif defined(Q_OS_MAC)
     // ADD MAC CODE HERE
+    return true;
 #endif
 }

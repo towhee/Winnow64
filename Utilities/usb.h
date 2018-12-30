@@ -3,15 +3,17 @@
 
 #include <QtWidgets>
 
+#if defined(Q_OS_WIN)
 #include <ioapiset.h>
 #include <tchar.h>
+#endif
 
 class Usb
 {
 public:
     Usb();
-    static bool eject(char driveLetter);
-    static bool isUsb(char driveLetter);
+    static bool eject(QString driveName);
+    static bool isUsb(QString path);
 };
 
 #endif // USB_H
