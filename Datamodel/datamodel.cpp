@@ -134,6 +134,12 @@ Code examples for model:
     emptyImg.load(":/images/no_image.png");
 }
 
+void DataModel::clear()
+{
+    // clear the model
+    removeRows(0, rowCount());
+}
+
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
 {
 /*
@@ -177,8 +183,8 @@ Steps:
     }
     currentFolderPath = folderPath;
 
-    // clear the model
-    removeRows(0, rowCount());
+    //  clear the model
+    clear();
 
     // do some initializing
     fileFilters->clear();
@@ -321,7 +327,7 @@ bool DataModel::addFileData()
 //        qDebug() << "DataModel::addFileData" << fileIndex << fileInfoList.at(fileIndex).absoluteFilePath();
 
         // add columns that do not require metadata read from image files
-        int row = item->index().row();
+         int row = item->index().row();
 
         setData(index(row, G::NameColumn), fileInfo.fileName());
         setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());

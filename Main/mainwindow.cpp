@@ -633,17 +633,6 @@ void MW::folderSelectionChange()
         dirPath = getSelectedPath();
     }
 
-    // ignore if present folder is rechosen unless subfolder recursion
-//    if (dirPath == currentViewDir) {
-//        if (!subFoldersAction->isChecked()) {
-//            popUp->close();
-//            return;
-//        }
-//    }
-//    else {
-//        currentViewDir = dirPath;
-//    }
-
     currentViewDir = dirPath;
     qDebug() << "currentViewDir =" << currentViewDir;
 
@@ -689,7 +678,7 @@ void MW::folderSelectionChange()
         popUp->close();
         infoView->clearInfo();
         metadata->clear();
-        imageView->noImagesAvailable();
+        imageView->clear();
         cacheLabel->setVisible(false);
         isInitializing = false;
         isDragDrop = false;
@@ -898,13 +887,13 @@ so scrollTo and delegate use of the current index must check the row.
     }
 }
 
-void MW::nullSelection()
+void MW::nullFiltration()
 {
     updateStatus(false, "No images match the filtration");
     setCentralMessage("No images match the filtration");
     infoView->clearInfo();
     metadata->clear();
-    imageView->noImagesAvailable();
+    imageView->clear();
     cacheLabel->setVisible(false);
 //    isInitializing = false;
     isDragDrop = false;
@@ -912,10 +901,15 @@ void MW::nullSelection()
 
 void MW::noFolderSelected()
 {
+    // Stop any threads that might be running.
+    imageCacheThread->stopImageCache();
+    metadataCacheThread->stopMetadateCache();
+    allMetadataLoaded = false;
     updateStatus(false, "");
+    dm->clear();
     infoView->clearInfo();
     metadata->clear();
-    imageView->noImagesAvailable();
+    imageView->clear();
     cacheLabel->setVisible(false);
     isDragDrop = false;
 }
@@ -3449,7 +3443,7 @@ All filter changes should be routed to here as a central clearing house.
         updateStatus(true);
     }
     // if filter has eliminated all rows so nothing to show
-    else nullSelection();
+    else nullFiltration();
 }
 
 void MW::quickFilter()
@@ -4647,10 +4641,6 @@ void MW::escapeFullScreen()
     toggleFullScreen();
 }
 
-// rgh maybe separate this into two functions:
-// 1. toggle show only imageview
-// 2. toggle full screen
-// or just use workspaces and toggle full screen
 void MW::toggleFullScreen()
 {
     {
@@ -4658,19 +4648,10 @@ void MW::toggleFullScreen()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "fullScreenAction->isChecked()" << fullScreenAction->isChecked();
     if (fullScreenAction->isChecked())
     {
-//        qDebug() << "fullScreenDocks.isFolders" << fullScreenDocks.isFolders;
-//        qDebug() << "fullScreenDocks.isFavs" << fullScreenDocks.isFavs;
-//        qDebug() << "fullScreenDocks.isFilters" << fullScreenDocks.isFilters;
-//        qDebug() << "fullScreenDocks.isMetadata" << fullScreenDocks.isMetadata;
-//        qDebug() << "fullScreenDocks.isThumbs" << fullScreenDocks.isThumbs;
-//        qDebug() << "fullScreenDocks.isStatusBar" << fullScreenDocks.isStatusBar;
         snapshotWorkspace(ws);
         showFullScreen();
-//        return;
-//        imageView->setCursorHiding(true);
         folderDockVisibleAction->setChecked(fullScreenDocks.isFolders);
         folderDock->setVisible(fullScreenDocks.isFolders);
         favDockVisibleAction->setChecked(fullScreenDocks.isFavs);
@@ -4681,8 +4662,8 @@ void MW::toggleFullScreen()
         metadataDock->setVisible(fullScreenDocks.isMetadata);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
         thumbDock->setVisible(fullScreenDocks.isThumbs);
-//        menuBarVisibleAction->setChecked(false);
-//        setMenuBarVisibility();
+        menuBarVisibleAction->setChecked(false);
+        setMenuBarVisibility();
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
         setStatusBarVisibility();
     }
@@ -6158,7 +6139,7 @@ void MW::setShootingInfoVisibility() {
         G::track(__FUNCTION__);
 #endif
     }
-    imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
+    imageView->infoOverlay->setVisible(infoVisibleAction->isChecked());
 }
 
 void MW::setFolderDockVisibility()

@@ -1,17 +1,13 @@
 BUGS
 - If switch from raw+jpg cache needs to be refreshed
-- Full screen panel flags not working
-- Sometimes metadata caching is slow
 - Jpg orientationOffset = 0 when metadata orientation changed
 - Update image count in Fav (refresh) when changes
 - CompareImages not calc layout optimally
-- After CompareImages cannot change app width
 - Copy image to clipboard not working
 - Copy metadata item not working (was working before)
 - Open with ... (doesn't work on macOS)
 - Confirm tif metadata for focus stacks (app out msg)
 - Toggle zoom wrong place when using preview size cached image
-- Gets stuck in F mode where cannot resize
 PERFORMANCE
 CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
@@ -33,6 +29,8 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Full screen panel flags not working
+- Sometimes metadata caching is slow (trying to read xmp when none)
 - Eject card on Mac
 - Eject card on Windows
 - Does not remember Folders panel sometimes when reopen

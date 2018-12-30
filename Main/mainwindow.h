@@ -218,7 +218,7 @@ protected:
 public slots:
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex previous);
-    void nullSelection();
+    void nullFiltration();
     void noFolderSelected();
     void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);

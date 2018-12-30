@@ -39,6 +39,7 @@ public:
     DataModel(QWidget *parent, Metadata *metadata, Filters *filters, bool &combineRawJpg);
 
     bool load(QString &dir, bool includeSubfolders);
+    void clear();
     void addMetadata();
     void updateImageList();
     void sortThumbs(int sortColumn, bool isReverse);

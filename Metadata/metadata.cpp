@@ -3211,6 +3211,13 @@ void Metadata::formatOlympus()
 
     // Olympus does not embed xmp in raw files
     // read XMP
+//    if (segmentHash.contains("XMP")) {
+//        readXMP(segmentHash["XMP"]);
+//    }
+
+    isXmp = false;
+
+    // read XMP
     if (isXmp && okToReadXmp) {
         Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
         rating = xmp.getItem("Rating");     // case is important "Rating"
