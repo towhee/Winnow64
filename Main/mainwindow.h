@@ -58,8 +58,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.5.7";
-    QString versionDetail = "Pick history undo feature added";
+    QString version = "0.9.5.8";
+    QString versionDetail = "Eject USB for Windows";
 
     bool isShift;               // used when opening if shift key pressed
 
