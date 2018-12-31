@@ -30,7 +30,6 @@ protected:
 
 signals:
     void setIcon(int, QImage);
-//    void setIcon(QModelIndex*, QImage*, QString);
     void refreshThumbs();
     void loadImageMetadata(QFileInfo);
     void loadImageCache();
@@ -65,7 +64,6 @@ private:
     // cache status
     QImage *cacheStatusImage;
     QLinearGradient loadedGradient;
-//    QLinearGradient *loadedGradient;
     QPainter *pnt;
     int pxTotWidth;
     int pxUnitWidth;

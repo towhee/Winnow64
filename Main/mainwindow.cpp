@@ -1008,7 +1008,7 @@ void MW::updateImageCache()
     G::track(__FUNCTION__);
     #endif
     }
-    imageCacheThread->updateImageCache(imageCacheFilePath);
+    imageCacheThread->updateImageCachePosition(imageCacheFilePath);
 }
 
 void MW::loadImageCache()
@@ -1036,7 +1036,7 @@ been consumed or all the images are cached.
     imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
-    imageCacheThread->updateImageCache(fPath);
+    imageCacheThread->updateImageCachePosition(fPath);
 }
 
 void MW::loadFilteredImageCache()
@@ -1056,7 +1056,7 @@ void MW::loadFilteredImageCache()
     imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
-    imageCacheThread->updateImageCache(fPath);
+    imageCacheThread->updateImageCachePosition(fPath);
 }
 
 // called by signal itemClicked in bookmark
@@ -3018,7 +3018,7 @@ parameters.  Any visibility changes are executed.
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
 
     if (fPath.length())
-        imageCacheThread->updateImageCache(fPath);
+        imageCacheThread->updateImageCachePosition(fPath);
 
     // update visibility if preferences have been changed
     cacheLabel->setVisible(isShowCacheStatus);
@@ -3350,7 +3350,7 @@ void MW::closePopup()
     popUp->close();
 }
 
-void MW::reindexImageCache()
+void MW::resortImageCache()
 {
     {
     #ifdef ISDEBUG
@@ -3371,7 +3371,7 @@ void MW::reindexImageCache()
     }
 //    QString currentFileName = dm->sf->index(0, 1).data(Qt::EditRole).toString();
     thumbView->selectThumb(idx);
-    imageCacheThread->reindexImageCache(dm->imageFilePathList, currentFilePath);
+    imageCacheThread->resortImageCache(dm->imageFilePathList, currentFilePath);
 }
 
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
@@ -3414,7 +3414,7 @@ tableView.
     if(sortOrder == Qt::DescendingOrder) sortReverseAction->setChecked(true);
     else sortReverseAction->setChecked(false);
     sortMenuUpdateToMatchTable = false;
-    reindexImageCache();
+    resortImageCache();
 }
 
 void MW::filterChange(bool isFilter)
@@ -3433,6 +3433,13 @@ All filter changes should be routed to here as a central clearing house.
     dm->filterItemCount();
     // update the status panel filtration status
     updateFilterStatus(isFilter);
+    // update the image list to match dm->sf filration
+    dm->updateImageList();
+    // get the current selected item
+    QModelIndex idx = thumbView->currentIndex();
+    QString currentFilePath = idx.data(G::PathRole).toString();
+    // filter the image cache
+    imageCacheThread->filterImageCache(dm->imageFilePathList, currentFilePath);
 
     if (dm->sf->rowCount()) {
         // if filtered but no selection
@@ -3585,7 +3592,7 @@ void MW::sortThumbnails()
     if (sortTitleAction->isChecked()) sortColumn = G::TitleColumn;
 
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
-    reindexImageCache();
+    resortImageCache();
 }
 
 void MW::showHiddenFiles()
@@ -6721,14 +6728,13 @@ void MW::setCombineRawJpg()
     }
 
     // resize TableView columns to accomodate new types
-    tableView->resizeColumnToContents(G::TypeColumn);  // does this work when filter columns?
-//    tableView->resizeColumnsToContents();
-
-    // update the proxy filter
-    dm->sf->filterChange();
+    tableView->resizeColumnToContents(G::TypeColumn);
 
     // update status bar
     updateRawJpgStatus();
+
+    // trigger update to image list and update image cache
+    filterChange();
 }
 
 void MW::setCachedStatus(QString fPath, bool isCached)

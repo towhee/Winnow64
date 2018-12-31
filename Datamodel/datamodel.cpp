@@ -324,10 +324,8 @@ bool DataModel::addFileData()
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         appendRow(item);
 
-//        qDebug() << "DataModel::addFileData" << fileIndex << fileInfoList.at(fileIndex).absoluteFilePath();
-
         // add columns that do not require metadata read from image files
-         int row = item->index().row();
+        int row = item->index().row();
 
         setData(index(row, G::NameColumn), fileInfo.fileName());
         setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
@@ -349,14 +347,13 @@ bool DataModel::addFileData()
         jpg files with duplicate raws and G::DupRawIdxRole points to the
         duplicate raw file from the jpg data row.   For example:
 
-        Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
-        Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(0,0))
-        Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
-        Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(2,0)
+        Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF"  DupHideRawRole = true 	 DupRawIdxRole = (Invalid)
+        Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG"  DupHideRawRole = false  DupRawIdxRole = QModelIndex(0,0)) DupRawTypeRole = "ORF"
+        Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF"  DupHideRawRole = true 	 DupRawIdxRole = (Invalid)
+        Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG"  DupHideRawRole = false  DupRawIdxRole = QModelIndex(2,0)  DupRawTypeRole = "ORF"
         */
 
         if (fileIndex > 0) {
-//            if (combineRawJpg && fileIndex > 0) {
             QString s1 = fileInfoList.at(fileIndex - 1).baseName();
             QString s2 = fileInfoList.at(fileIndex).baseName();
             if (s1 == s2) {
@@ -371,9 +368,10 @@ bool DataModel::addFileData()
                     // build combined suffix to show in type column
                     QString prevType = fileInfoList.at(fileIndex - 1).suffix().toUpper();
                     setData(index(row, 0), prevType, G::DupRawTypeRole);
-                    if (combineRawJpg) {
+                    if (combineRawJpg)
                         setData(index(row, G::TypeColumn), s + "+" + prevType);
-                    }
+                    else
+                        setData(index(row, G::TypeColumn), "JPG");
                 }
             }
         }
@@ -401,6 +399,8 @@ which is created in MW, and in InfoView.
 
     QElapsedTimer t;
     t.start();
+
+    hasDupRawJpg = false;
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
@@ -492,15 +492,12 @@ which is created in MW, and in InfoView.
 
     // list used by imageCacheThread, filtered by row+jpg if combined
     for (int i = 0; i < sf->rowCount(); ++i)
-        if (!sf->index(i,0).data(G::DupHideRawRole).toBool())
+//        if(sf->index(i,0).data(G::DupHideRawRole).toBool()) hasDupRawJpg = true;
+//        if (!sf->index(i,0).data(G::DupHideRawRole).toBool())
             imageFilePathList.append(sf->index(i,0).data(G::PathRole).toString());
 
     // req'd for 1st image, probably loaded before metadata cached
     emit updateClassification();
-
-//    qDebug() << G::t.restart() << "\t" << "DataModel::addMetadataToModel    Completed"
-//             << " elapsed time =" << t.restart() << "ms";
-
 }
 
 QModelIndex DataModel::find(QString fPath)
@@ -517,7 +514,7 @@ void DataModel::updateImageList()
 /* The image list of file paths replicates the current sort order and
 filtration of SortFilter (sf). It is used to keep the image cache in sync with
 the current state of SortFilter. This function is called when the user changes
-the sort or filter.
+the sort or filter or toggles raw+jpg.
 */
     {
     #ifdef ISDEBUG
@@ -530,7 +527,6 @@ the sort or filter.
         imageFilePathList.append(fPath);
     }
 }
-
 
 void DataModel::filterItemCount()
 {
@@ -554,7 +550,6 @@ void DataModel::filterItemCount()
         }
         ++it;
     }
-
 }
 
 // -----------------------------------------------------------------------------

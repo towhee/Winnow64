@@ -49,6 +49,7 @@ public:
     QStringList imageFilePathList;
     QDir::SortFlags thumbsSortFlags;
     QString currentFolderPath;
+    bool hasDupRawJpg;
 
     // can be set from keyPressEvent in MW to terminate if recursive folder scan too long
     bool timeToQuit;
