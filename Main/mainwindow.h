@@ -229,7 +229,7 @@ public slots:
     void setThumbDockHeight();  // signal from thumbView
     void setThumbDockFeatures(Qt::DockWidgetArea area);
     void setThumbDockFloatFeatures(bool isFloat);
-    void reindexImageCache();
+    void resortImageCache();
     void setCentralMessage(QString message);
 
 signals:

@@ -465,6 +465,64 @@ bool ImageCache::cacheUpToDate()
     return true;
 }
 
+void ImageCache::checkForSurplus()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+/*
+If the user filters and the cache is being rebuilt check for images that are already
+cached and no longer needed (not in the target range).  Make sure to call setTargetRange
+first.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QStringList cachedList;
+    QHashIterator<QString, QImage> i(imCache);
+    while (i.hasNext()) {
+        i.next();
+        cachedList << i.key();
+//        cout << i.key() << ": " << i.value() << endl;
+    }
+
+    for(int i=0; i < cachedList.length(); i++) {
+        QString fPath = cachedList.at(i);
+        for (int i = 0; i < cache.totFiles; ++i) {
+            if(cacheItemList.at(i).fName == fPath && cacheItemList.at(i).isTarget) break;
+            imCache.remove(fPath);
+        }
+    }
+}
+
+void ImageCache::checkAlreadyCached()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+/* If the user filters and the cache is being rebuilt check for images that are already
+cached and update cacheItemList statis.  Make sure to call setTargetRange first.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    for (int i = 0; i < cache.totFiles; ++i) {
+        if (imCache.contains(cacheItemList.at(i).fName)) {
+            if (cacheItemList.at(i).isTarget) {
+                cacheItemList[i].isCached = true;
+            }
+        }
+    }
+}
+
 void ImageCache::checkForOrphans()
 {
     {
@@ -472,12 +530,13 @@ void ImageCache::checkForOrphans()
     G::track(__FUNCTION__);
     #endif
     }
-/* If the user jumps around rapidly in a large folder, where the target cache
- is smaller than the entire folder, it is possible for the nextToCache and
- nextToDecache collections to get out of sync and leave orphans in the image
- cache buffer.  This function iterates through the image cache, checking that
- all cached images are in the target.  If not, they are removed from the
- cache buffer.
+/*
+If the user jumps around rapidly in a large folder, where the target cache
+is smaller than the entire folder, it is possible for the nextToCache and
+nextToDecache collections to get out of sync and leave orphans in the image
+cache buffer.  This function iterates through the image cache, checking that
+all cached images are in the target.  If not, they are removed from the
+cache buffer.
 */
     {
     #ifdef ISDEBUG
@@ -489,11 +548,6 @@ void ImageCache::checkForOrphans()
             if (!cacheItemList.at(i).isTarget) {
                 imCache.remove(cacheItemList.at(i).fName);
                 cacheItemList[i].isCached = false;
-/*              qDebug() << G::t.restart() << "\t" << "\n***********************************************************************"
-                         << "\nREMOVED FROM IMAGE BUFFER:"
-                         << cacheMgr.at(i).fName
-                         << "\n***********************************************************************";
-*/
             }
         }
     }
@@ -512,11 +566,12 @@ void ImageCache::reportCache(QString title)
     reportString = "";
     rpt.setString(&reportString);
 
-    qDebug() << G::t.restart() << "\t" << "\n" << title << "Key:" << cache.key
-             <<  "cacheMB:" << cache.currMB
-             << "Wt ahead:" << cache.wtAhead
-             << "Direction ahead:" << cache.isForward
-             << "Total files:" << cache.totFiles << "\n";
+    rpt  << "\n Title:" << title
+         << "  Key:" << cache.key
+         << "  cacheMB:" << cache.currMB
+         << "  Wt ahead:" << cache.wtAhead
+         << "  Direction ahead:" << cache.isForward
+         << "  Total files:" << cache.totFiles << "\n";
 
     rpt.reset();
     rpt.setFieldAlignment(QTextStream::AlignRight);
@@ -640,6 +695,53 @@ returns the cache status bar x coordinate for the end of the item key
     return qRound((float)cache.pxUnitWidth * (key+1));
 }
 
+void ImageCache::buildImageCacheList(QStringList &imageList)
+{
+/* The imageCacheList must match dm->sf and contains the information required
+to maintain the image cache.  It takes the form:
+
+Index      Key  OrigKey Priority   Target   Cached   SizeMB    Width   Height   File Name
+    0        0        0        0        1        0  65.7923     5472     3078   D:/Pictures/_xmptest/2017-01-25_0911.tif
+    1        1        1        1        1        0   77.976     5472     3648   D:/Pictures/_xmptest/Canon.JPG
+    2        2        2        2        1        0   77.976     5472     3648   D:/Pictures/_xmptest/Canon1.cr2
+    3        3        3        3        1        0   77.976     5472     3648   D:/Pictures/_xmptest/CanonPs.jpg
+
+It is built from the imageList, which is sent from MW.
+*/
+    cacheItemList.clear();
+
+    // the total memory size of all the images in the folder currently selected
+    float folderMB = 0;
+    cache.totFiles = imageList.size();
+
+    for (int i=0; i < cache.totFiles; ++i) {
+        QString fPath = imageList.at(i);
+//        qDebug() << G::t.restart() << "\t" << "Image Cache row =" << i << fPath;
+        /* cacheManager is a list of cacheItem used to track the current
+           cache status and make future caching decisions for each image  */
+        cacheItem.key = i;              // need to be able to sync with imageList
+        cacheItem.origKey = i;          // req'd while setting target range
+        cacheItem.fName = fPath;
+        cacheItem.isCached = false;
+        cacheItem.isTarget = false;
+        cacheItem.priority = i;
+        // assume 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024000
+        ulong w = metadata->getWidth(fPath);
+        ulong h = metadata->getHeight(fPath);
+        cacheItem.sizeMB = (float)w * h / 256000;
+        if (cache.usePreview) {
+            QSize p = scalePreview(w, h);
+            w = p.width();
+            h = p.height();
+            cacheItem.sizeMB += (float)w * h / 256000;
+        }
+        cacheItemList.append(cacheItem);
+
+        folderMB += cacheItem.sizeMB;
+    }
+    cache.folderMB = qRound(folderMB);
+}
+
 void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
      bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead,
      bool &usePreview, int &previewWidth, int &previewHeight)
@@ -667,7 +769,7 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
 //    }
 
     imCache.clear();
-    cacheItemList.clear();
+//    cacheItemList.clear();
 
     // cache is a structure to hold cache management parameters
     cache.key = 0;
@@ -689,37 +791,9 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
     cache.dir = imageList.at(0);
     cache.previewSize = QSize(previewWidth, previewHeight);
     cache.usePreview = usePreview;
-    // the total memory size of all the images in the folder currently selected
-    float folderMB = 0;
-    // get some intel on the new folder image list
-    for (int i=0; i < imageList.size(); ++i) {
-        QString fPath = imageList.at(i);
-//        qDebug() << G::t.restart() << "\t" << "Image Cache row =" << i << fPath;
-        /* cacheManager is a list of cacheItem used to track the current
-           cache status and make future caching decisions for each image  */
-        cacheItem.key = i;              // need to be able to sync with imageList
-        cacheItem.origKey = i;          // req'd while setting target range
-        cacheItem.fName = fPath;
-        cacheItem.isCached = false;
-        cacheItem.isTarget = false;
-        cacheItem.priority = i;
-        // assume 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024000
-        ulong w = metadata->getWidth(fPath);
-        ulong h = metadata->getHeight(fPath);
-        cacheItem.sizeMB = (float)w * h / 256000;
-        if (cache.usePreview) {
-            QSize p = scalePreview(w, h);
-            w = p.width();
-            h = p.height();
-            cacheItem.sizeMB += (float)w * h / 256000;
-        }
-        cacheItemList.append(cacheItem);
 
-        folderMB += cacheItem.sizeMB;
-    }
-    cache.folderMB = qRound(folderMB);
-
-//    reportCache("Initialize test");
+    // populate the new folder image list
+    buildImageCacheList(imageList);
 }
 
 void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
@@ -762,7 +836,7 @@ cycling through images to improve performance.
     }
 }
 
-void ImageCache::updateImageCache(QString &fPath)
+void ImageCache::updateImageCachePosition(QString &fPath)
 {
 /*
 Updates the cache for the current image in the data model.  The cache key is
@@ -807,7 +881,54 @@ updated.  Image caching is reactivated.
     start(IdlePriority);
 }
 
-void ImageCache::reindexImageCache(QStringList filterFilePathList,
+void ImageCache::filterImageCache(QStringList &filteredFilePathList,
+                                   QString &currentImageFullPath)
+{
+/*
+When the image list is filtered the image cache needs to be updated.  The
+imageCacheList is rebuilt, the current image is set, the priorities are
+recalculated, the target range is redone, the imCache is checked and surplus
+items are removed and isCached in imageCacheList is updated for any images
+already cached and retargeted.  The cache status is updated.  Finally the image
+caching thread is restarted.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if(filteredFilePathList.length() == 0) return;
+
+    // just in case stopImageCache not called before this
+    if (isRunning()) stopImageCache();
+
+    buildImageCacheList(filteredFilePathList);
+    cache.key = 0;
+    for(int row = 0; row < cache.totFiles; ++row) {
+        if(cacheItemList.at(row).fName == currentImageFullPath)
+            cache.key = row;
+    }
+    cache.pxUnitWidth = (float)cache.pxTotWidth/cache.totFiles;
+
+
+    cache.prevKey = cache.key;
+    cache.currMB = getImCacheSize();
+
+    reportCache("filterImageCache before setPriorities and setTargetRange");
+
+    setPriorities(cache.key);
+    setTargetRange();
+    checkAlreadyCached();
+    checkForSurplus();
+
+//    reportCache("filterImageCache after setPriorities and setTargetRange");
+
+    if (cache.isShowCacheStatus) cacheStatus();
+
+    start(IdlePriority);
+}
+
+void ImageCache::resortImageCache(QStringList &resortedFilePathList,
                                    QString &currentImageFullPath)
 {
 /*
@@ -824,23 +945,23 @@ If there is filtering then the entire cache is reloaded.
     cacheItemListCopy = cacheItemList;
     cacheItemList.clear();
 
-    int filterRowCount = filterFilePathList.count();
+    int filterRowCount = resortedFilePathList.count();
 
-//    qDebug() << G::t.restart() << "\t" << "reindexImageCache - filterFilePathList" << filterFilePathList;
+//    qDebug() << G::t.restart() << "\t" << "reindexImageCache - filterFilePathList" << resortedFilePathList;
 //    qDebug() << G::t.restart() << "\t" << "cache.totFiles" << cache.totFiles;
     int i;
     for(int row = 0; row < filterRowCount; ++row) {
 //        qDebug() << G::t.restart() << "\t" << "row" << row;
-        if(filterFilePathList[row] == currentImageFullPath) cache.key = row;
+        if(resortedFilePathList[row] == currentImageFullPath) cache.key = row;
         for (i = 0; i < cache.totFiles; ++i) {
 /*            qDebug() << G::t.restart() << "\t" << "i" << i
                      << cacheMgrCopy.at(i).fName
                      << filterFilePathList[row]
                      << currentImageFullPath;
                      */
-            if(cacheItemListCopy.at(i).fName == filterFilePathList[row]) break;
+            if(cacheItemListCopy.at(i).fName == resortedFilePathList[row]) break;
         }
-        cacheItem.fName = filterFilePathList[row];
+        cacheItem.fName = resortedFilePathList[row];
         cacheItem.isCached = cacheItemListCopy.at(i).isCached;
         cacheItem.isTarget = cacheItemListCopy.at(i).isTarget;
         cacheItem.key = row;
@@ -894,7 +1015,6 @@ void ImageCache::run()
    make sure the target range is cached, decaching anything outside the target
    range to make room as necessary as image selection changes.
 */
-
     emit updateIsRunning(true);
     static QString prevFileName ="";
     while (nextToCache()) {
@@ -942,5 +1062,6 @@ void ImageCache::run()
     checkForOrphans();
     if (cache.isShowCacheStatus) cacheStatus();
     emit updateIsRunning(false);
+    reportCache("Completed image cache");
 //    reportCacheManager("Image cache updated for " + cache.dir);
 }
