@@ -3211,6 +3211,13 @@ void Metadata::formatOlympus()
 
     // Olympus does not embed xmp in raw files
     // read XMP
+//    if (segmentHash.contains("XMP")) {
+//        readXMP(segmentHash["XMP"]);
+//    }
+
+    isXmp = false;
+
+    // read XMP
     if (isXmp && okToReadXmp) {
         Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
         rating = xmp.getItem("Rating");     // case is important "Rating"
@@ -3355,26 +3362,26 @@ void Metadata::formatSony()
 
     // Sony does not embed xmp in raw files
     // read XMP
-    if (isXmp && okToReadXmp) {
-        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
-        rating = xmp.getItem("Rating");     // case is important "Rating"
-        label = xmp.getItem("Label");       // case is important "Label"
-        if (title.isEmpty()) title = xmp.getItem("title");       // case is important "title"
-        if (cameraSN.isEmpty()) cameraSN = xmp.getItem("SerialNumber");
-        if (lens.isEmpty()) lens = xmp.getItem("Lens");
-        if (lensSN.isEmpty()) lensSN = xmp.getItem("LensSerialNumber");
-        if (creator.isEmpty()) creator = xmp.getItem("creator");
-        if (copyright.isEmpty()) copyright = xmp.getItem("rights");
-        if (email.isEmpty()) email = xmp.getItem("CiEmailWork");
-        if (url.isEmpty()) url = xmp.getItem("CiUrlWork");
+//    if (isXmp && okToReadXmp) {
+//        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+//        rating = xmp.getItem("Rating");     // case is important "Rating"
+//        label = xmp.getItem("Label");       // case is important "Label"
+//        if (title.isEmpty()) title = xmp.getItem("title");       // case is important "title"
+//        if (cameraSN.isEmpty()) cameraSN = xmp.getItem("SerialNumber");
+//        if (lens.isEmpty()) lens = xmp.getItem("Lens");
+//        if (lensSN.isEmpty()) lensSN = xmp.getItem("LensSerialNumber");
+//        if (creator.isEmpty()) creator = xmp.getItem("creator");
+//        if (copyright.isEmpty()) copyright = xmp.getItem("rights");
+//        if (email.isEmpty()) email = xmp.getItem("CiEmailWork");
+//        if (url.isEmpty()) url = xmp.getItem("CiUrlWork");
 
-        // save original values so can determine if edited when writing changes
-        _title = title;
-        _rating = rating;
-        _label = label;
+//        // save original values so can determine if edited when writing changes
+//        _title = title;
+//        _rating = rating;
+//        _label = label;
 
-        if (report) xmpString = xmp.metaAsString();
-    }
+//        if (report) xmpString = xmp.metaAsString();
+//    }
 
     if (report) reportMetadata();
 

@@ -39,6 +39,7 @@ public:
     DataModel(QWidget *parent, Metadata *metadata, Filters *filters, bool &combineRawJpg);
 
     bool load(QString &dir, bool includeSubfolders);
+    void clear();
     void addMetadata();
     void updateImageList();
     void sortThumbs(int sortColumn, bool isReverse);
@@ -48,6 +49,7 @@ public:
     QStringList imageFilePathList;
     QDir::SortFlags thumbsSortFlags;
     QString currentFolderPath;
+    bool hasDupRawJpg;
 
     // can be set from keyPressEvent in MW to terminate if recursive folder scan too long
     bool timeToQuit;

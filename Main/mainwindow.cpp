@@ -519,6 +519,8 @@ void MW::handleStartupArgs()
     }
 }
 
+
+
 /**************************************************************************
  PROGRAM FLOW EVENT DISPATCH
 
@@ -631,26 +633,13 @@ void MW::folderSelectionChange()
         dirPath = getSelectedPath();
     }
 
-    // ignore if present folder is rechosen unless subfolder recursion
-//    if (dirPath == currentViewDir) {
-//        if (!subFoldersAction->isChecked()) {
-//            popUp->close();
-//            return;
-//        }
-//    }
-//    else {
-//        currentViewDir = dirPath;
-//    }
-
     currentViewDir = dirPath;
-    qDebug() << "currentViewDir =" << currentViewDir;
 
     // sync the favs / bookmarks with the folders view fsTree
     bookmarks->select(dirPath);
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(dirPath, true, false)) {
-        qDebug() << G::t.restart() << "\t" << "invalid folder - popUp->isVisible =" << popUp->isVisible();
         if (popUp->isVisible()) popUp->close();
         return;
     }
@@ -688,7 +677,7 @@ void MW::folderSelectionChange()
         popUp->close();
         infoView->clearInfo();
         metadata->clear();
-        imageView->noImagesAvailable();
+        imageView->clear();
         cacheLabel->setVisible(false);
         isInitializing = false;
         isDragDrop = false;
@@ -897,15 +886,39 @@ so scrollTo and delegate use of the current index must check the row.
     }
 }
 
-void MW::nullSelection()
+void MW::nullFiltration()
 {
     updateStatus(false, "No images match the filtration");
     setCentralMessage("No images match the filtration");
     infoView->clearInfo();
     metadata->clear();
-    imageView->noImagesAvailable();
+    imageView->clear();
     cacheLabel->setVisible(false);
 //    isInitializing = false;
+    isDragDrop = false;
+}
+
+void MW::noFolderSelected()
+{
+/*
+Called when current drive has been ejected.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    G::track(__FUNCTION__);
+    // Stop any threads that might be running.
+    imageCacheThread->stopImageCache();
+    metadataCacheThread->stopMetadateCache();
+    allMetadataLoaded = false;
+    updateStatus(false, "");
+    dm->clear();
+    infoView->clearInfo();
+    metadata->clear();
+    imageView->clear();
+    cacheLabel->setVisible(false);
     isDragDrop = false;
 }
 
@@ -1003,7 +1016,7 @@ void MW::updateImageCache()
     G::track(__FUNCTION__);
     #endif
     }
-    imageCacheThread->updateImageCache(imageCacheFilePath);
+    imageCacheThread->updateImageCachePosition(imageCacheFilePath);
 }
 
 void MW::loadImageCache()
@@ -1031,7 +1044,7 @@ been consumed or all the images are cached.
     imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
-    imageCacheThread->updateImageCache(fPath);
+    imageCacheThread->updateImageCachePosition(fPath);
 }
 
 void MW::loadFilteredImageCache()
@@ -1051,7 +1064,7 @@ void MW::loadFilteredImageCache()
     imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
-    imageCacheThread->updateImageCache(fPath);
+    imageCacheThread->updateImageCachePosition(fPath);
 }
 
 // called by signal itemClicked in bookmark
@@ -1441,7 +1454,9 @@ void MW::createActions()
     prefAction->setObjectName("settings");
     prefAction->setShortcutVisibleInContextMenu(true);
     addAction(prefAction);
-    connect(prefAction, &QAction::triggered, this, &MW::preferences);
+//    connect(prefAction, &QAction::triggered, this, &MW::preferences);
+    // use lambda to send default -1 which loads previous open page in pref dialog
+    connect(prefAction, &QAction::triggered, [this]() {preferences(-1);} );
 
     // Go menu
 
@@ -2943,10 +2958,10 @@ void MW::createStatusBar()
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
 
     cacheLabel = new QLabel();
-    QString cacheStatusToolTip = "Image cache status for current folder:\n\n";
-    cacheStatusToolTip += "  • LightGray:\tbackground for all images in folder\n";
-    cacheStatusToolTip += "  • DarkGray:\tto be cached\n";
-    cacheStatusToolTip += "  • Green:\t\tcached\n";
+    QString cacheStatusToolTip = "Image cache status for current folder:\n";
+    cacheStatusToolTip += "  • LightGray:  \tbackground for all images in folder\n";
+    cacheStatusToolTip += "  • DarkGray:   \tto be cached\n";
+    cacheStatusToolTip += "  • Green:      \tcached\n";
     cacheStatusToolTip += "  • LightGreen: \tcurrent image";
     cacheLabel->setToolTip(cacheStatusToolTip);
     cacheLabel->setToolTipDuration(100000);
@@ -2958,7 +2973,7 @@ void MW::createStatusBar()
 
     int runLabelWidth = 13;
     metadataThreadRunningLabel = new QLabel;
-    QString mtrl = "Metadata caching in progress";
+    QString mtrl = "Turns red when metadata caching in progress";
     metadataThreadRunningLabel->setToolTip(mtrl);
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateMetadataThreadRunStatus(false);
@@ -2966,7 +2981,7 @@ void MW::createStatusBar()
 
     imageThreadRunningLabel = new QLabel;
     statusBar()->addPermanentWidget(imageThreadRunningLabel);
-    QString itrl = "Image caching in progress";
+    QString itrl = "Turns red when image caching in progress";
     imageThreadRunningLabel->setToolTip(itrl);
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateImageThreadRunStatus(false);
@@ -3011,7 +3026,7 @@ parameters.  Any visibility changes are executed.
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
 
     if (fPath.length())
-        imageCacheThread->updateImageCache(fPath);
+        imageCacheThread->updateImageCachePosition(fPath);
 
     // update visibility if preferences have been changed
     cacheLabel->setVisible(isShowCacheStatus);
@@ -3343,7 +3358,7 @@ void MW::closePopup()
     popUp->close();
 }
 
-void MW::reindexImageCache()
+void MW::resortImageCache()
 {
     {
     #ifdef ISDEBUG
@@ -3364,7 +3379,7 @@ void MW::reindexImageCache()
     }
 //    QString currentFileName = dm->sf->index(0, 1).data(Qt::EditRole).toString();
     thumbView->selectThumb(idx);
-    imageCacheThread->reindexImageCache(dm->imageFilePathList, currentFilePath);
+    imageCacheThread->resortImageCache(dm->imageFilePathList, currentFilePath);
 }
 
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
@@ -3407,7 +3422,7 @@ tableView.
     if(sortOrder == Qt::DescendingOrder) sortReverseAction->setChecked(true);
     else sortReverseAction->setChecked(false);
     sortMenuUpdateToMatchTable = false;
-    reindexImageCache();
+    resortImageCache();
 }
 
 void MW::filterChange(bool isFilter)
@@ -3426,6 +3441,13 @@ All filter changes should be routed to here as a central clearing house.
     dm->filterItemCount();
     // update the status panel filtration status
     updateFilterStatus(isFilter);
+    // update the image list to match dm->sf filration
+    dm->updateImageList();
+    // get the current selected item
+    QModelIndex idx = thumbView->currentIndex();
+    QString currentFilePath = idx.data(G::PathRole).toString();
+    // filter the image cache
+    imageCacheThread->filterImageCache(dm->imageFilePathList, currentFilePath);
 
     if (dm->sf->rowCount()) {
         // if filtered but no selection
@@ -3436,7 +3458,7 @@ All filter changes should be routed to here as a central clearing house.
         updateStatus(true);
     }
     // if filter has eliminated all rows so nothing to show
-    else nullSelection();
+    else nullFiltration();
 }
 
 void MW::quickFilter()
@@ -3578,7 +3600,7 @@ void MW::sortThumbnails()
     if (sortTitleAction->isChecked()) sortColumn = G::TitleColumn;
 
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
-    reindexImageCache();
+    resortImageCache();
 }
 
 void MW::showHiddenFiles()
@@ -4437,7 +4459,7 @@ void MW::preferences(int page)
     G::track(__FUNCTION__);
     #endif
     }
-    if (page == -1) page = lastPrefPage;
+    if(page == -1) page = lastPrefPage;
     Prefdlg *prefdlg = new Prefdlg(this, page);
     connect(prefdlg, SIGNAL(updatePage(int)),
             this, SLOT(setPrefPage(int)));
@@ -4634,10 +4656,6 @@ void MW::escapeFullScreen()
     toggleFullScreen();
 }
 
-// rgh maybe separate this into two functions:
-// 1. toggle show only imageview
-// 2. toggle full screen
-// or just use workspaces and toggle full screen
 void MW::toggleFullScreen()
 {
     {
@@ -4645,19 +4663,10 @@ void MW::toggleFullScreen()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "fullScreenAction->isChecked()" << fullScreenAction->isChecked();
     if (fullScreenAction->isChecked())
     {
-//        qDebug() << "fullScreenDocks.isFolders" << fullScreenDocks.isFolders;
-//        qDebug() << "fullScreenDocks.isFavs" << fullScreenDocks.isFavs;
-//        qDebug() << "fullScreenDocks.isFilters" << fullScreenDocks.isFilters;
-//        qDebug() << "fullScreenDocks.isMetadata" << fullScreenDocks.isMetadata;
-//        qDebug() << "fullScreenDocks.isThumbs" << fullScreenDocks.isThumbs;
-//        qDebug() << "fullScreenDocks.isStatusBar" << fullScreenDocks.isStatusBar;
         snapshotWorkspace(ws);
         showFullScreen();
-//        return;
-//        imageView->setCursorHiding(true);
         folderDockVisibleAction->setChecked(fullScreenDocks.isFolders);
         folderDock->setVisible(fullScreenDocks.isFolders);
         favDockVisibleAction->setChecked(fullScreenDocks.isFavs);
@@ -4668,8 +4677,8 @@ void MW::toggleFullScreen()
         metadataDock->setVisible(fullScreenDocks.isMetadata);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
         thumbDock->setVisible(fullScreenDocks.isThumbs);
-//        menuBarVisibleAction->setChecked(false);
-//        setMenuBarVisibility();
+        menuBarVisibleAction->setChecked(false);
+        setMenuBarVisibility();
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
         setStatusBarVisibility();
     }
@@ -6145,7 +6154,7 @@ void MW::setShootingInfoVisibility() {
         G::track(__FUNCTION__);
 #endif
     }
-    imageView->infoDropShadow->setVisible(infoVisibleAction->isChecked());
+    imageView->infoOverlay->setVisible(infoVisibleAction->isChecked());
 }
 
 void MW::setFolderDockVisibility()
@@ -6618,46 +6627,6 @@ void MW::updatePickFromHistory(QString fPath, QString status)
     }
 }
 
-//void MW::refine()
-//{
-//    /*
-//    Clears refine for all rows, sets refine = true if pick = true, and clears pick
-//    for all rows.
-//    */
-//        {
-//        #ifdef ISDEBUG
-//        G::track(__FUNCTION__);
-//        #endif
-//        }
-//    // Are there any picks to refine?
-//    bool isPick = false;
-//    for (int row = 0; row < dm->rowCount(); ++row) {
-//        if (dm->index(row, G::PickColumn).data() == "true") {
-//            isPick = true;
-//            break;
-//        }
-//    }
-
-//    if (!isPick) {
-//        popup("There are no picks to refine", 2000, 0.75);
-//        return;
-//    }
-
-//    // clear refine = pick
-//    for (int row = 0; row < dm->rowCount(); ++row)
-//        if (dm->index(row, G::PickColumn).data() == "true")
-//            dm->setData(dm->index(row, G::RefineColumn), true);
-//    else dm->setData(dm->index(row, G::RefineColumn), false);
-
-//    // clear all picks
-//    for (int row = 0; row < dm->rowCount(); ++row)
-//        dm->setData(dm->index(row, G::PickColumn), "false");
-
-//    // reset filters
-//    filters->uncheckAllFilters();
-//    filters->refineTrue->setCheckState(0, Qt::Checked);
-//}
-
 qulonglong MW::memoryReqdForPicks()
 {
     {
@@ -6724,7 +6693,7 @@ void MW::ejectUsb(QString path)
     driveRoot = path.mid(9, pos - 9);
 #endif
     if(Usb::isUsb(path)) {
-        driveRoot = "Untitled";
+//        driveRoot = "Untitled";
         dm->load(driveRoot, false);
         refreshFolders();
         int result = Usb::eject(driveRoot);
@@ -6737,6 +6706,7 @@ void MW::ejectUsb(QString path)
         popUp->showPopup(this, "Drive " + currentViewDir[0]
                 + "is not removable and cannot be ejected", 2000, 0.75);
     }
+    noFolderSelected();
 }
 
 void MW::ejectUsbFromContextMenu()
@@ -6766,14 +6736,13 @@ void MW::setCombineRawJpg()
     }
 
     // resize TableView columns to accomodate new types
-    tableView->resizeColumnToContents(G::TypeColumn);  // does this work when filter columns?
-//    tableView->resizeColumnsToContents();
-
-    // update the proxy filter
-    dm->sf->filterChange();
+    tableView->resizeColumnToContents(G::TypeColumn);
 
     // update status bar
     updateRawJpgStatus();
+
+    // trigger update to image list and update image cache
+    filterChange();
 }
 
 void MW::setCachedStatus(QString fPath, bool isCached)
@@ -7495,7 +7464,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     // check if unmounted USB drive
     if (!testDir.isReadable()) {
         if (report) {
-            msg = "The folder (" + fPath + ") is not readable.  Perhaps it was a USB drive that is not currently mounted.";
+            msg = "The folder (" + fPath + ") is not readable.  Perhaps it was a USB drive that is not currently mounted or that has been ejected.";
             updateStatus(false, msg);
             setCentralMessage(msg);
         }
