@@ -634,7 +634,6 @@ void MW::folderSelectionChange()
     }
 
     currentViewDir = dirPath;
-    qDebug() << "currentViewDir =" << currentViewDir;
 
     // sync the favs / bookmarks with the folders view fsTree
     bookmarks->select(dirPath);
@@ -901,6 +900,15 @@ void MW::nullFiltration()
 
 void MW::noFolderSelected()
 {
+/*
+Called when current drive has been ejected.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    G::track(__FUNCTION__);
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
@@ -6685,7 +6693,7 @@ void MW::ejectUsb(QString path)
     driveRoot = path.mid(9, pos - 9);
 #endif
     if(Usb::isUsb(path)) {
-        driveRoot = "Untitled";
+//        driveRoot = "Untitled";
         dm->load(driveRoot, false);
         refreshFolders();
         int result = Usb::eject(driveRoot);
@@ -7456,7 +7464,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     // check if unmounted USB drive
     if (!testDir.isReadable()) {
         if (report) {
-            msg = "The folder (" + fPath + ") is not readable.  Perhaps it was a USB drive that is not currently mounted.";
+            msg = "The folder (" + fPath + ") is not readable.  Perhaps it was a USB drive that is not currently mounted or that has been ejected.";
             updateStatus(false, msg);
             setCentralMessage(msg);
         }

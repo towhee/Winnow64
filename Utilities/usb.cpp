@@ -8,6 +8,7 @@ Usb::Usb()
 bool Usb::eject(QString driveName)
 {
 #if defined(Q_OS_WIN)
+    qDebug() << "driveName =" << driveName;
     char driveLetter = driveName[0].unicode();
     char devicepath[7];
     char format[] = "\\\\.\\?:";
