@@ -914,8 +914,6 @@ caching thread is restarted.
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();
 
-    reportCache("filterImageCache before setPriorities and setTargetRange");
-
     setPriorities(cache.key);
     setTargetRange();
     checkAlreadyCached();
@@ -1062,6 +1060,6 @@ void ImageCache::run()
     checkForOrphans();
     if (cache.isShowCacheStatus) cacheStatus();
     emit updateIsRunning(false);
-    reportCache("Completed image cache");
+//    reportCache("Image cache updated for " + cache.dir);
 //    reportCacheManager("Image cache updated for " + cache.dir);
 }

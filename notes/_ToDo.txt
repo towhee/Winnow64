@@ -1,5 +1,4 @@
 BUGS
-- If switch from raw+jpg cache needs to be refreshed
 - Jpg orientationOffset = 0 when metadata orientation changed
 - Update image count in Fav (refresh) when changes
 - CompareImages not calc layout optimally
@@ -13,13 +12,14 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Invert filter
 - Add preferences for badge and shooting info size
 - Create installer for mac
 - Remove Windows Registry settings during uninstall
 - When ingesting confirm all files copied correctly (option)
 - Add more raw file formats - DNG, Panasonic ...
 - Add completer for title in metadata
-- add metadata performance options to preferences
+- Add metadata performance options to preferences
 - Get Sony image count, camera SN
 - Add zoom increment amount to preferences
 - Zoom rect in thumbnail to show zoom and pan in imageView
@@ -29,6 +29,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- If switch from raw+jpg cache needs to be refreshed
 - Full screen panel flags not working
 - Sometimes metadata caching is slow (trying to read xmp when none)
 - Eject card on Mac
