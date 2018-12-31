@@ -1,3 +1,14 @@
+// applescript open in photoshop
+
+on openInPhotoshop(filename, isbn)
+    tell application "Adobe Photoshop CC 2017"
+        activate
+        set thisFile to filename as string
+        open alias thisFile
+        set a to 1
+    end tell
+end openInPhotoshop
+
 // Create a label with a png file image
 pickLabel = new QLabel(this);
 pickLabel->setFixedSize(64,64);
