@@ -24,12 +24,14 @@ public:
     void initImageCache(QStringList &imageList, int &cacheSizeMB,
              bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead,
              bool &usePreview, int &previewWidth, int &previewHeight);
-    void updateImageCache(QString  &fPath);
+    void updateImageCachePosition(QString  &fPath);
     void updateCacheStatusCurrentImagePosition(QString &fPath);
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
              int &cacheStatusWidth, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
-    void reindexImageCache(QStringList filterFilePathList,
+    void resortImageCache(QStringList &resortedFilePathList,
              QString &currentImageFullPath);
+    void filterImageCache(QStringList &filteredFilePathList,
+                           QString &currentImageFullPath);
     void stopImageCache();
     QSize getPreviewSize();
 
@@ -98,12 +100,15 @@ private:
     bool nextToCache();             // find highest priority not cached
     bool nextToDecache();           // find lowest priority cached - return -1 if none cached
     void checkForOrphans();         // check no strays in imageCache from jumping around
+    void checkAlreadyCached();      // after filtration check if image targeted and already cached
+    void checkForSurplus();         // after filtration get rid of cached images not needed
     static bool prioritySort(const CacheItem &p1, const CacheItem &p2);
     static bool keySort(const CacheItem &k1, const CacheItem &k2);
     void cacheStatus();             // update the cache status visual bar
     int pxMid(int key);             // center current position on statusbar
     int pxStart(int key);           // start current position on statusbar
     int pxEnd(int key);             // end current position on statusbar
+    void buildImageCacheList(QStringList &imageList); //
     QSize scalePreview(ulong w, ulong h);
     void reportCache(QString title = "");
     void reportCacheProgress(QString action);

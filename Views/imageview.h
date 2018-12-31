@@ -28,12 +28,12 @@ public:
     qreal refZoom;                      // adjusted to real screen pixels
     qreal toggleZoom;
 
-    DropShadowLabel *infoDropShadow;
+    DropShadowLabel *infoOverlay;
     DropShadowLabel *titleDropShadow;
     QModelIndex imageIndex;
 
     bool loadImage(QModelIndex idx, QString imageFileName);
-    void noImagesAvailable();
+    void clear();
     void setCursorHiding(bool hide);
     bool isBusy;
     bool useWheelToScroll;

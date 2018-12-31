@@ -49,21 +49,17 @@ class MW : public QMainWindow
 {
     Q_OBJECT
 
-//    friend class CompareImages;
     friend class Prefdlg;
     friend class ThumbView;
     friend class InfoView;
-//    friend class ZoomDlg;
 
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.5.7";
-    QString versionDetail = "Pick history undo feature added";
+    QString version = "0.9.5.8";
+    QString versionDetail = "Eject USB for Windows";
 
     bool isShift;               // used when opening if shift key pressed
-
-    int debugThumbHt;
 
     int copyCutCount;   // req'd?
 
@@ -222,7 +218,8 @@ protected:
 public slots:
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex previous);
-    void nullSelection();
+    void nullFiltration();
+    void noFolderSelected();
     void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setStatus(QString state);
@@ -232,7 +229,7 @@ public slots:
     void setThumbDockHeight();  // signal from thumbView
     void setThumbDockFeatures(Qt::DockWidgetArea area);
     void setThumbDockFloatFeatures(bool isFloat);
-    void reindexImageCache();
+    void resortImageCache();
     void setCentralMessage(QString message);
 
 signals:

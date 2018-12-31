@@ -98,7 +98,6 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 
     connect(copyInfoAction, SIGNAL(triggered()), this, SLOT(copyEntry()));
 //	infoMenu->addAction(copyAction);
-//	setContextMenuPolicy(Qt::CustomContextMenu);
 
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),
             SLOT(showInfoViewMenu(QPoint)));

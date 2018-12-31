@@ -8,7 +8,8 @@ Usb::Usb()
 bool Usb::eject(QString driveName)
 {
 #if defined(Q_OS_WIN)
-    char driveLetter = path[0].unicode();
+    qDebug() << "driveName =" << driveName;
+    char driveLetter = driveName[0].unicode();
     char devicepath[7];
     char format[] = "\\\\.\\?:";
     strcpy_s(devicepath, format);
@@ -44,7 +45,6 @@ bool Usb::eject(QString driveName)
     CloseHandle(handle);
     return true;
 #elif defined(Q_OS_MAC)
-    // ADD MAC CODE HERE
     // ie tell application "Finder" to eject disk "Untitled"
     // where driveName is "Untitled"
     QStringList args;
