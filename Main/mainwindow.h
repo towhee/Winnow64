@@ -240,6 +240,7 @@ private slots:
     void setShowImageCount();
     void about();
     void ingest();
+    void enableEjectUsbMenu(QString path);
     void ejectUsb(QString path);
     void ejectUsbFromContextMenu();
     void setCachedStatus(QString fPath, bool isCached);

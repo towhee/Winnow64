@@ -79,7 +79,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     createTableView();          // dependent on centralWidget
     createSelectionModel();     // dependent on ThumbView, ImageView
     createInfoView();           // dependent on Metadata
-    createCaching();            // dependent on dm, Metadata, ThumbView
+    createCaching();            // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
@@ -297,13 +297,34 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     ThumbView is finished hence this cludge.
     */
 
-//    if (event->type() == QEvent::KeyPress) {
+    // use to show all events being filtered - handy to figure out which to intercept
+//    if (event->type() == QEvent::Paint
+//            && event->type() != QEvent::UpdateRequest
+//            && event->type() != QEvent::ZeroTimerEvent
+//            && event->type() != QEvent::Timer)
+//        qDebug() << event << event->type();
+
+
+    //    if (event->type() == QEvent::KeyPress) {
 //        QKeyEvent *event = static_cast<QKeyEvent *>(event);
 //        qDebug() << "\nMW::eventFilter  keyPressEvent" << event;
 //        if (event->key() == Qt::Key_Escape) {
 //            dm->timeToQuit = true;
 //        }
 //    }
+
+    // Intercept context menu to enable/disable eject usb drive menu item
+    if (event->type() == QEvent::ContextMenu) {
+        if(obj == fsTree->viewport()) {
+            QContextMenuEvent *e = (QContextMenuEvent *)event;
+            QModelIndex idx = fsTree->indexAt(e->pos());
+            mouseOverFolder = idx.data(QFileSystemModel::FilePathRole).toString();
+            enableEjectUsbMenu(mouseOverFolder);
+        }
+        else {
+            enableEjectUsbMenu(currentViewDir);
+        }
+    }
 
     if(event->type() == QEvent::Paint
             && thumbView->readyToScroll
@@ -376,13 +397,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     if (event->type() == QEvent::MouseMove) {
         if (isLeftMouseBtnPressed) isMouseDrag = true;
-        QMouseEvent *e = (QMouseEvent *)event;
-        if(obj == fsTree->viewport()) {
-            QModelIndex idx = fsTree->indexAt(e->pos());
-            mouseOverFolder = idx.data(QFileSystemModel::FilePathRole).toString();
-//            qDebug() << obj << e->pos()
-//                     << "Path =" << path;
-        }
     }
 
     if (event->type() == QEvent::MouseButtonDblClick) {
@@ -652,6 +666,9 @@ void MW::folderSelectionChange()
         fsTree->setShowImageCount(true);
 //        fsTree->fsModel->fetchMore(fsTree->rootIndex());
     }
+
+    // update menu
+    enableEjectUsbMenu(currentViewDir);
 
     /* We do not want to update the imageCache while metadata is still being
     loaded. The imageCache update is triggered in metadataCache, which is also
@@ -2147,6 +2164,7 @@ void MW::createMenus()
             SLOT(invokeRecentFolder(QAction*)));
     fileMenu->addSeparator();
     fileMenu->addAction(refreshFoldersAction);
+    fileMenu->addAction(ejectAction);
     fileMenu->addSeparator();
     fileMenu->addAction(ingestAction);
     fileMenu->addAction(combineRawJpgAction);
@@ -5610,14 +5628,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
     }
     else    // default shortcuts
     {
-//        qDebug() << G::t.restart() << "\t" << "Default shortcuts";
         //    formats to set shortcut
         //    keyRightAction->setShortcut(QKeySequence("Right"));
         //    keyRightAction->setShortcut((Qt::Key_Right);
 
-//        thumbsGoTopAct->setShortcut(QKeySequence("Ctrl+Home"));
-//        thumbsGoBottomAct->setShortcut(QKeySequence("Ctrl+End"));
-//        closeImageAct->setShortcut(Qt::Key_Escape);
         //        cutAction->setShortcut(QKeySequence("Ctrl+X"));
         //        copyAction->setShortcut(QKeySequence("Ctrl+C"));
         //        copyImageAction->setShortcut(QKeySequence("Ctrl+Shift+C"));
@@ -5628,7 +5642,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         subFoldersAction->setShortcut(QKeySequence("B"));
         showImageCountAction->setShortcut(QKeySequence("\\"));
         fullScreenAction->setShortcut(QKeySequence("F"));
-//        escapeFullScreenAction->setShortcut(QKeySequence("Esc"));
+//        escapeFullScreenAction->setShortcut(QKeySequence("Esc")); // see MW::eventFilter
         prefAction->setShortcut(QKeySequence("Ctrl+,"));
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
         selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
@@ -5639,8 +5653,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
         ingestAction->setShortcut(QKeySequence("Q"));
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
-//        rate0Action->setShortcut(QKeySequence("!"));
-        uncheckAllFiltersAction->setShortcut(QKeySequence("Shift+Ctrl+0"));
+        uncheckAllFiltersAction->setShortcut(QKeySequence("Shift+Ctrl+C"));
         rate1Action->setShortcut(QKeySequence("1"));
         rate2Action->setShortcut(QKeySequence("2"));
         rate3Action->setShortcut(QKeySequence("3"));
@@ -5972,14 +5985,15 @@ lack of notification when the QListView has finished painting itself.
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "\n======================================= Grid ============================================";
     G::mode = "Grid";
     updateStatus(true);
     hasGridBeenActivated = true;
     // remember previous state of thumbDock so can recover if change mode
     wasThumbDockVisible = thumbDockVisibleAction->isChecked();
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
-    if(thumbDock->isVisible()) toggleThumbDockVisibity();
+    thumbDock->setVisible(false);
+    thumbDockVisibleAction->setChecked(false);
+//    if(thumbDock->isVisible()) toggleThumbDockVisibity();
     // show tableView in central widget
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
@@ -6667,7 +6681,7 @@ void MW::ingest()
                                   autoIngestFolderPath);
         connect(ingestDlg, SIGNAL(updateIngestParameters(QString,bool)),
                 this, SLOT(setIngestRootFolder(QString,bool)));
-        if(ingestDlg->exec()) ejectUsb(currentViewDir);;
+        if(ingestDlg->exec() && autoEjectUsb) ejectUsb(currentViewDir);;
         delete ingestDlg;
     }
     else QMessageBox::information(this,
@@ -6693,20 +6707,26 @@ void MW::ejectUsb(QString path)
     driveRoot = path.mid(9, pos - 9);
 #endif
     if(Usb::isUsb(path)) {
-//        driveRoot = "Untitled";
         dm->load(driveRoot, false);
         refreshFolders();
         int result = Usb::eject(driveRoot);
-        if(result < 2)
+        if(result < 2) {
             popUp->showPopup(this, "Ejecting drive " + driveRoot, 2000, 0.75);
+            noFolderSelected();
+        }
         else
             popUp->showPopup(this, "Failed to eject drive " + driveRoot, 2000, 0.75);
     }
     else {
         popUp->showPopup(this, "Drive " + currentViewDir[0]
-                + "is not removable and cannot be ejected", 2000, 0.75);
+                + " is not removable and cannot be ejected", 2000, 0.75);
     }
-    noFolderSelected();
+}
+
+void MW::enableEjectUsbMenu(QString path)
+{
+    if(Usb::isUsb(path)) ejectAction->setEnabled(true);
+    else ejectAction->setEnabled(false);
 }
 
 void MW::ejectUsbFromContextMenu()
@@ -7522,6 +7542,8 @@ void MW::helpWelcome()
 
 void MW::test()
 {
+    qDebug() << "context";
+
     // shortcut = "Shift+Ctrl+Alt+T"
 
 //    qDebug() << "Attempting to eject drive " << currentViewDir[0] << "currentViewDir =" << currentViewDir
