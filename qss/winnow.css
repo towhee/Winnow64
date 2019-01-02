@@ -22,6 +22,7 @@ QMenuBar::item {
 }
 
 QMenu::item {
+    color: white;
     background-color: transparent;
 }
 
@@ -38,6 +39,10 @@ QMenuBar {
 
 QMenu::item:selected {
     background-color: gray;
+}
+
+QMenu::item:disabled {
+    color: gray;
 }
 
 QMenuBar::item:selected {

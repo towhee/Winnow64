@@ -1,11 +1,9 @@
 BUGS
-- Jpg orientationOffset = 0 when metadata orientation changed
 - Update image count in Fav (refresh) when changes
 - CompareImages not calc layout optimally
 - Copy image to clipboard not working
 - Copy metadata item not working (was working before)
 - Open with ... (doesn't work on macOS)
-- Confirm tif metadata for focus stacks (app out msg)
 - Toggle zoom wrong place when using preview size cached image
 PERFORMANCE
 CODE IMPROVEMENTS
@@ -29,6 +27,11 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Enable/disable eject menu
+- Jpg orientationOffset = 0 when metadata orientation changed
+- Confirm tif metadata for focus stacks (app out msg)
+- ThumbDock visibility not remembered if close app in grid mode
+- Clear all filters shortcut not working (cannot use Shift+Ctrl+0)
 - If switch from raw+jpg cache needs to be refreshed
 - Full screen panel flags not working
 - Sometimes metadata caching is slow (trying to read xmp when none)
