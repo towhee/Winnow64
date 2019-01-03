@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'helpingest.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.10.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,7 +10,10 @@
 #define UI_HELPINGEST_H
 
 #include <QtCore/QVariant>
+#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QButtonGroup>
+#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QTextBrowser>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
@@ -26,21 +29,21 @@ public:
     void setupUi(QWidget *helpIngest)
     {
         if (helpIngest->objectName().isEmpty())
-            helpIngest->setObjectName(QString::fromUtf8("helpIngest"));
+            helpIngest->setObjectName(QStringLiteral("helpIngest"));
         helpIngest->setWindowModality(Qt::ApplicationModal);
         helpIngest->resize(900, 777);
         verticalLayout_2 = new QVBoxLayout(helpIngest);
         verticalLayout_2->setSpacing(0);
-        verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
+        verticalLayout_2->setObjectName(QStringLiteral("verticalLayout_2"));
         verticalLayout_2->setContentsMargins(0, 0, 0, 0);
         textBrowser = new QTextBrowser(helpIngest);
-        textBrowser->setObjectName(QString::fromUtf8("textBrowser"));
+        textBrowser->setObjectName(QStringLiteral("textBrowser"));
         QFont font;
         font.setPointSize(10);
         textBrowser->setFont(font);
         textBrowser->setFrameShape(QFrame::NoFrame);
         textBrowser->setLineWidth(0);
-        textBrowser->setSource(QUrl(QString::fromUtf8("file:///D:/My Projects/Winnow Project/Winnow64/Docs/ingesthelp.htm")));
+        textBrowser->setSource(QUrl(QStringLiteral("file:///D:/My Projects/Winnow Project/Winnow64/Docs/ingesthelp.htm")));
 
         verticalLayout_2->addWidget(textBrowser);
 

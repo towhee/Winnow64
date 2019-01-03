@@ -96,7 +96,7 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 	infoMenu = new QMenu("");
     copyInfoAction = new QAction(tr("Copy item"), this);
 
-    connect(copyInfoAction, SIGNAL(triggered()), this, SLOT(copyEntry()));
+//    connect(copyInfoAction, SIGNAL(triggered()), this, SLOT(copyEntry()));
 //	infoMenu->addAction(copyAction);
 
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),

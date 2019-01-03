@@ -141,6 +141,7 @@ public:
     bool autoEjectUsb;
 
     bool isRatingBadgeVisible;
+    QString fontSize;
 
     // preferences: files
     bool rememberLastDir;
@@ -200,6 +201,7 @@ public:
     QString dragDropFolderPath;
     int maxThumbSpaceHeight;
     QString pickMemSize;
+    QString css;                // stylesheet text
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
@@ -313,6 +315,7 @@ private slots:
 //    void updateColorClass();
     void updateClassification();
     void refreshFolders();
+    void setFontSize(QString pixels);
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
     void setMouseClickScroll(bool prefMouseClickScroll);
@@ -471,6 +474,7 @@ private:
     QAction *rotateLeftAction;
     QAction *rotateRightAction;
     QAction *prefAction;
+    QAction *prefInfoAction;
     QAction *oldPrefAction;
 
     // Go Menu
