@@ -38,7 +38,8 @@ QMenuBar {
 }
 
 QMenu::item:selected {
-    background-color: gray;
+/*    background-color: gray;*/
+    background-color: rgb(68,95,118);
 }
 
 QMenu::item:disabled {

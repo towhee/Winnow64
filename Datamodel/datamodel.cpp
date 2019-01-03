@@ -136,6 +136,11 @@ Code examples for model:
 
 void DataModel::clear()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // clear the model
     removeRows(0, rowCount());
 }

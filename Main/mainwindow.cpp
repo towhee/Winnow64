@@ -298,11 +298,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
 
     // use to show all events being filtered - handy to figure out which to intercept
-//    if (event->type() == QEvent::Paint
+//    if (event->type() != QEvent::Paint
 //            && event->type() != QEvent::UpdateRequest
 //            && event->type() != QEvent::ZeroTimerEvent
 //            && event->type() != QEvent::Timer)
-//        qDebug() << event << event->type();
+//        qDebug() << event << event->type()
+//                 << "currentViewDir:" << currentViewDir
+//                 << "mouseOverFolder:" << mouseOverFolder;
 
 
     //    if (event->type() == QEvent::KeyPress) {
@@ -313,16 +315,28 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 //        }
 //    }
 
-    // Intercept context menu to enable/disable eject usb drive menu item
+    // Intercept context menu to enable/disable:
+    // - eject usb drive menu item
+    // - add bookmarks menu item
     if (event->type() == QEvent::ContextMenu) {
+        addBookmarkAction->setEnabled(true);
+        revealFileAction->setEnabled(true);
         if(obj == fsTree->viewport()) {
             QContextMenuEvent *e = (QContextMenuEvent *)event;
             QModelIndex idx = fsTree->indexAt(e->pos());
             mouseOverFolder = idx.data(QFileSystemModel::FilePathRole).toString();
             enableEjectUsbMenu(mouseOverFolder);
+            if(mouseOverFolder == "") {
+                addBookmarkAction->setEnabled(false);
+                revealFileAction->setEnabled(false);
+            }
         }
         else {
             enableEjectUsbMenu(currentViewDir);
+            if(currentViewDir == "") {
+                addBookmarkAction->setEnabled(false);
+                revealFileAction->setEnabled(false);
+            }
         }
     }
 
@@ -571,7 +585,7 @@ void MW::folderSelectionChange()
     {
     #ifdef ISDEBUG
     G::track("\n=============================================================================");
-    G::track(__FUNCTION__, getSelectedPath());
+    G::track(__FUNCTION__);
     #endif
     }
     // Check if same folder
@@ -585,6 +599,11 @@ void MW::folderSelectionChange()
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
     allMetadataLoaded = false;
+
+    // Clear any previous selection
+//    thumbView->selectionModel()->clearSelection();
+//    dm->clear();
+//    qDebug() << "Clear selection in folderSelectionChange:" << thumbView->selectionModel()->selectedRows().count();
 
     if (!isInitializing) {
 //        dm->removeRows(0, dm->rowCount());
@@ -654,7 +673,8 @@ void MW::folderSelectionChange()
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(dirPath, true, false)) {
-        if (popUp->isVisible()) popUp->close();
+//        if (popUp->isVisible()) popUp->close();
+        clearAll();
         return;
     }
 
@@ -669,6 +689,14 @@ void MW::folderSelectionChange()
 
     // update menu
     enableEjectUsbMenu(currentViewDir);
+    if(currentViewDir == "") {
+        addBookmarkAction->setEnabled(false);
+        revealFileAction->setEnabled(false);
+    }
+    else {
+        addBookmarkAction->setEnabled(true);
+        revealFileAction->setEnabled(true);
+    }
 
     /* We do not want to update the imageCache while metadata is still being
     loaded. The imageCache update is triggered in metadataCache, which is also
@@ -681,7 +709,15 @@ void MW::folderSelectionChange()
     this function has been executed by the load subfolders command then all the
     subfolders will be recursively loaded into the datamodel.
     */
+    clearAll();
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
+//        popUp->close();
+//        infoView->clearInfo();
+//        metadata->clear();
+//        imageView->clear();
+//        cacheLabel->setVisible(false);
+//        isInitializing = false;
+//        isDragDrop = false;
         QDir dir(currentViewDir);
         if (dir.isRoot()) {
             updateStatus(false, "No supported images in this drive");
@@ -691,13 +727,6 @@ void MW::folderSelectionChange()
             updateStatus(false, "No supported images in this folder");
             setCentralMessage("The folder \"" + currentViewDir + "\" does not have any eligible images");
         }
-        popUp->close();
-        infoView->clearInfo();
-        metadata->clear();
-        imageView->clear();
-        cacheLabel->setVisible(false);
-        isInitializing = false;
-        isDragDrop = false;
         return;
     }
     centralLayout->setCurrentIndex(prevCentralView);
@@ -777,11 +806,28 @@ so scrollTo and delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
+    bool isStart = false;
+
+    if(!isCurrentFolderOkay) return;
+
     // if starting program, set first image to display
     if (current.row() == -1) {
+        isStart = true;
         thumbView->selectThumb(0);
-        return;
+//        return;
     }
+
+    // Check if anything selected.  If not disable menu items dependent on selection
+    int n = thumbView->selectionModel()->selectedRows().count();
+    qDebug() << "selected =" << n;
+    if(n == 0) {
+        qDebug() << "Nothing selected";
+    }
+    else {
+        qDebug() << "Something selected";
+    }
+
+    if(isStart) return;
 
 //    qDebug() << "MW::fileSelectionChange  dm->sf->rowCount() =" << dm->sf->rowCount()
 //             << "selectionModel->selectedIndexes().size() =" << selectionModel->selectedIndexes().size();
@@ -901,6 +947,28 @@ so scrollTo and delegate use of the current index must check the row.
         thumb->loadThumb(fPath, image);
         thumbView->setIcon(currentRow, image);
     }
+}
+
+void MW::clearAll()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // Stop any threads that might be running.
+    imageCacheThread->stopImageCache();
+    metadataCacheThread->stopMetadateCache();
+    allMetadataLoaded = false;
+    dm->clear();
+    popUp->close();
+    infoView->clearInfo();
+    metadata->clear();
+    imageView->clear();
+    cacheLabel->setVisible(false);
+    inactiveThreadRunStatus();                      // turn thread activity buttons gray
+    isInitializing = false;
+    isDragDrop = false;
 }
 
 void MW::nullFiltration()
@@ -1094,13 +1162,15 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     }
 //    QString fPath = item->text(0);
     const QString fPath =  item->toolTip(col);
-    if (isFolderValid(fPath, true, false)) {
+    isCurrentFolderOkay = isFolderValid(fPath, true, false);
+    if (isCurrentFolderOkay) {
         QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
     }
+    else clearAll();
 }
 
 // called when signal rowsRemoved from FSTree
@@ -2599,8 +2669,6 @@ GridView and TableView, insuring that each view is in sync.
     // whenever currentIndex changes do a file selection change
     connect(selectionModel, &QItemSelectionModel::currentChanged,
             this, &MW::fileSelectionChange);
-//    connect(selectionModel, SIGNAL(currentChanged(QModelIndex, QModelIndex)),
-//            this, SLOT(fileSelectionChange(QModelIndex, QModelIndex)));
 }
 
 void MW::createCaching()
@@ -4381,12 +4449,22 @@ void MW::runExternalApp()
     }
 
     QStringList arguments;
+    for (int tn = 0; tn < selectedIdxList.size() ; ++tn) {
+        QString s = selectedIdxList[tn].data(G::PathRole).toString();
+        arguments << s;
+//        arguments << enquote(s);
+    }
+
+    //    QStringList arguments;
 //    for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn) {
 //        QString s = selectedIdxList[tn].data(G::PathRole).toString();
 //        arguments << s;
-////        arguments << enquote(s);
+//        arguments << enquote(s);
 //    }
-    arguments << "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg";
+
+    qDebug() << "arguments:" << arguments;
+
+//    arguments << "D:\Pictures\Coaster/2005-10-11_0082.jpg";
 //    arguments << "/Users/roryhill/Pictures/Eva/2016-06-21_0002.jpg";
 
 //    std::cout << "MW::runExternalApp()  " << app.toStdString()
@@ -6713,6 +6791,7 @@ void MW::ejectUsb(QString path)
         if(result < 2) {
             popUp->showPopup(this, "Ejecting drive " + driveRoot, 2000, 0.75);
             noFolderSelected();
+            currentViewDir = "";
         }
         else
             popUp->showPopup(this, "Failed to eject drive " + driveRoot, 2000, 0.75);
@@ -6985,12 +7064,16 @@ internally or as a sidecar when ingesting.
 */
     {
     #ifdef ISDEBUG
-    QString s = "infoView->isNewImageDataChange = ";
-    s += infoView->isNewImageDataChange ? "true" : "false";
+//    QString s = "infoView->isNewImageDataChange = ";
+//    s += infoView->isNewImageDataChange ? "true" : "false";
+    QString s = "isCurrentFolderOkay = ";
+    s += isCurrentFolderOkay ? "true" : "false";
     G::track(__FUNCTION__, s);
     #endif
     }
-
+    // if new folder is invalid no relevent data has changed
+    if(!isCurrentFolderOkay) return;
+    qDebug() << "Should not see this";
     if (infoView->isNewImageDataChange) return;
     QModelIndex par = item->index().parent();
     if (par != infoView->tagInfoIdx) return;
@@ -7453,6 +7536,11 @@ void MW::openInExplorer()
 
 bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QDir testDir(fPath);
     QString msg;
 
@@ -7461,7 +7549,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
 //            qDebug() << G::t.restart() << "\t" << "MW::isFolderValid  fPath.length() == 0" << fPath;
 //            QMessageBox::critical(this, tr("Error"), tr("The assigned folder name is blank"));
             msg = "The selected folder \"" + fPath + "\" does not have any images that can be shown in Winnow.";
-            updateStatus(false, msg);
+            stateLabel->setText("");
             setCentralMessage(msg);
         }
         return false;
@@ -7475,7 +7563,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
             else
                 msg = "The folder (" + fPath + ") does not exist or is not available";
 
-            updateStatus(false, msg);
+            stateLabel->setText("");
             setCentralMessage(msg);
         }
         return false;
@@ -7485,7 +7573,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     if (!testDir.isReadable()) {
         if (report) {
             msg = "The folder (" + fPath + ") is not readable.  Perhaps it was a USB drive that is not currently mounted or that has been ejected.";
-            updateStatus(false, msg);
+            stateLabel->setText("");
             setCentralMessage(msg);
         }
         return false;
@@ -7496,6 +7584,11 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
 
 void MW::createMessageView()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     messageView = new QWidget;
     msg.setupUi(messageView);
 //    Ui::message ui;
@@ -7504,6 +7597,11 @@ void MW::createMessageView()
 
 void MW::setCentralMessage(QString message)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     msg.msgLabel->setText(message);
     centralLayout->setCurrentIndex(MessageTab);
 }
@@ -7542,7 +7640,16 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    qDebug() << "context";
+//    qDebug() << "selection clear from test";
+//    thumbView->selectionModel()->clearSelection();
+
+    QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedRows();
+    for (int tn = 0; tn < selectedIdxList.size() ; ++tn) {
+        QString s = selectedIdxList[tn].data(G::PathRole).toString();
+        qDebug() << "Selected image:" << s;
+    }
+
+    dm->clear();
 
     // shortcut = "Shift+Ctrl+Alt+T"
 
