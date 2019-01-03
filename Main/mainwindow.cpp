@@ -689,14 +689,14 @@ void MW::folderSelectionChange()
 
     // update menu
     enableEjectUsbMenu(currentViewDir);
-    if(currentViewDir == "") {
-        addBookmarkAction->setEnabled(false);
-        revealFileAction->setEnabled(false);
-    }
-    else {
-        addBookmarkAction->setEnabled(true);
-        revealFileAction->setEnabled(true);
-    }
+//    if(currentViewDir == "") {
+//        addBookmarkAction->setEnabled(false);
+//        revealFileAction->setEnabled(false);
+//    }
+//    else {
+//        addBookmarkAction->setEnabled(true);
+//        revealFileAction->setEnabled(true);
+//    }
 
     /* We do not want to update the imageCache while metadata is still being
     loaded. The imageCache update is triggered in metadataCache, which is also
@@ -711,13 +711,7 @@ void MW::folderSelectionChange()
     */
     clearAll();
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
-//        popUp->close();
-//        infoView->clearInfo();
-//        metadata->clear();
-//        imageView->clear();
-//        cacheLabel->setVisible(false);
-//        isInitializing = false;
-//        isDragDrop = false;
+        enableSelectionDependentMenus();
         QDir dir(currentViewDir);
         if (dir.isRoot()) {
             updateStatus(false, "No supported images in this drive");
@@ -818,6 +812,7 @@ so scrollTo and delegate use of the current index must check the row.
     }
 
     // Check if anything selected.  If not disable menu items dependent on selection
+    enableSelectionDependentMenus();
     int n = thumbView->selectionModel()->selectedRows().count();
     qDebug() << "selected =" << n;
     if(n == 0) {
@@ -1170,7 +1165,10 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
     }
-    else clearAll();
+    else {
+        clearAll();
+        enableSelectionDependentMenus();
+    }
 }
 
 // called when signal rowsRemoved from FSTree
@@ -2590,6 +2588,139 @@ void MW::addMenuSeparator(QWidget *widget)
     QAction *separator = new QAction(this);
     separator->setSeparator(true);
     widget->addAction(separator);
+}
+
+void MW::enableEjectUsbMenu(QString path)
+{
+    if(Usb::isUsb(path)) ejectAction->setEnabled(true);
+    else ejectAction->setEnabled(false);
+}
+
+void MW::enableSelectionDependentMenus()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if(selectionModel->selectedRows().count() > 0) {
+        openWithMenu->setEnabled(true);
+        ingestAction->setEnabled(true);
+        revealFileAction->setEnabled(true);
+        subFoldersAction->setEnabled(true);
+        addBookmarkAction->setEnabled(true);
+        reportMetadataAction->setEnabled(true);
+        selectAllAction->setEnabled(true);
+        invertSelectionAction->setEnabled(true);
+        refineAction->setEnabled(true);
+        pickAction->setEnabled(true);
+        filterPickAction->setEnabled(true);
+        popPickHistoryAction->setEnabled(true);
+        copyImagesAction->setEnabled(true);
+        rate0Action->setEnabled(true);
+        rate1Action->setEnabled(true);
+        rate2Action->setEnabled(true);
+        rate3Action->setEnabled(true);
+        rate4Action->setEnabled(true);
+        rate5Action->setEnabled(true);
+        label0Action->setEnabled(true);
+        label1Action->setEnabled(true);
+        label2Action->setEnabled(true);
+        label3Action->setEnabled(true);
+        label4Action->setEnabled(true);
+        label5Action->setEnabled(true);
+        rotateRightAction->setEnabled(true);
+        rotateLeftAction->setEnabled(true);
+        keyRightAction->setEnabled(true);
+        keyLeftAction->setEnabled(true);
+        keyUpAction->setEnabled(true);
+        keyDownAction->setEnabled(true);
+        keyHomeAction->setEnabled(true);
+        keyEndAction->setEnabled(true);
+        nextPickAction->setEnabled(true);
+        prevPickAction->setEnabled(true);
+        uncheckAllFiltersAction->setEnabled(true);
+        filterPickAction->setEnabled(true);
+        filterRating1Action->setEnabled(true);
+        filterRating2Action->setEnabled(true);
+        filterRating3Action->setEnabled(true);
+        filterRating4Action->setEnabled(true);
+        filterRating5Action->setEnabled(true);
+        filterRedAction->setEnabled(true);
+        filterYellowAction->setEnabled(true);
+        filterGreenAction->setEnabled(true);
+        filterBlueAction->setEnabled(true);
+        filterPurpleAction->setEnabled(true);
+        filterInvertAction->setEnabled(true);
+        sortGroupAction->setEnabled(true);
+        sortReverseAction->setEnabled(true);
+        zoomToAction->setEnabled(true);
+        zoomInAction->setEnabled(true);
+        zoomOutAction->setEnabled(true);
+        zoomToggleAction->setEnabled(true);
+        thumbsWrapAction->setEnabled(true);
+        thumbsEnlargeAction->setEnabled(true);
+        thumbsShrinkAction->setEnabled(true);
+    }
+    else {
+        openWithMenu->setEnabled(false);
+        ingestAction->setEnabled(false);
+        revealFileAction->setEnabled(false);
+        subFoldersAction->setEnabled(false);
+        addBookmarkAction->setEnabled(false);
+        reportMetadataAction->setEnabled(false);
+        selectAllAction->setEnabled(false);
+        invertSelectionAction->setEnabled(false);
+        refineAction->setEnabled(false);
+        pickAction->setEnabled(false);
+        filterPickAction->setEnabled(false);
+        popPickHistoryAction->setEnabled(false);
+        copyImagesAction->setEnabled(false);
+        rate0Action->setEnabled(false);
+        rate1Action->setEnabled(false);
+        rate2Action->setEnabled(false);
+        rate3Action->setEnabled(false);
+        rate4Action->setEnabled(false);
+        rate5Action->setEnabled(false);
+        label0Action->setEnabled(false);
+        label1Action->setEnabled(false);
+        label2Action->setEnabled(false);
+        label3Action->setEnabled(false);
+        label4Action->setEnabled(false);
+        label5Action->setEnabled(false);
+        rotateRightAction->setEnabled(false);
+        rotateLeftAction->setEnabled(false);
+        keyRightAction->setEnabled(false);
+        keyLeftAction->setEnabled(false);
+        keyUpAction->setEnabled(false);
+        keyDownAction->setEnabled(false);
+        keyHomeAction->setEnabled(false);
+        keyEndAction->setEnabled(false);
+        nextPickAction->setEnabled(false);
+        prevPickAction->setEnabled(false);
+        uncheckAllFiltersAction->setEnabled(false);
+        filterPickAction->setEnabled(false);
+        filterRating1Action->setEnabled(false);
+        filterRating2Action->setEnabled(false);
+        filterRating3Action->setEnabled(false);
+        filterRating4Action->setEnabled(false);
+        filterRating5Action->setEnabled(false);
+        filterRedAction->setEnabled(false);
+        filterYellowAction->setEnabled(false);
+        filterGreenAction->setEnabled(false);
+        filterBlueAction->setEnabled(false);
+        filterPurpleAction->setEnabled(false);
+        filterInvertAction->setEnabled(false);
+        sortGroupAction->setEnabled(false);
+        sortReverseAction->setEnabled(false);
+        zoomToAction->setEnabled(false);
+        zoomInAction->setEnabled(false);
+        zoomOutAction->setEnabled(false);
+        zoomToggleAction->setEnabled(false);
+        thumbsWrapAction->setEnabled(false);
+        thumbsEnlargeAction->setEnabled(false);
+        thumbsShrinkAction->setEnabled(false);
+    }
 }
 
 void MW::createCentralWidget()
@@ -6800,12 +6931,6 @@ void MW::ejectUsb(QString path)
         popUp->showPopup(this, "Drive " + currentViewDir[0]
                 + " is not removable and cannot be ejected", 2000, 0.75);
     }
-}
-
-void MW::enableEjectUsbMenu(QString path)
-{
-    if(Usb::isUsb(path)) ejectAction->setEnabled(true);
-    else ejectAction->setEnabled(false);
 }
 
 void MW::ejectUsbFromContextMenu()

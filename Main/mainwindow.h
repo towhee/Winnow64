@@ -241,6 +241,7 @@ private slots:
     void setShowImageCount();
     void about();
     void ingest();
+    void enableSelectionDependentMenus();
     void enableEjectUsbMenu(QString path);
     void ejectUsb(QString path);
     void ejectUsbFromContextMenu();
