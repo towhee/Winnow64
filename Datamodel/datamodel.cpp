@@ -143,6 +143,8 @@ void DataModel::clear()
     }
     // clear the model
     removeRows(0, rowCount());
+    QMap<QVariant, QString> modelMap;
+    filters->addCategoryFromData(modelMap, filters->models);
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
