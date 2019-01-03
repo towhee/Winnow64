@@ -143,8 +143,8 @@ void DataModel::clear()
     }
     // clear the model
     removeRows(0, rowCount());
-    QMap<QVariant, QString> modelMap;
-    filters->addCategoryFromData(modelMap, filters->models);
+    // clear all items for filters based on data content ie file types, camera model
+    filters->removeChildrenDynamicFilters();
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -203,8 +203,8 @@ Steps:
 
     fileInfoList.clear();
 
-    // clear all items for filters based on data content ie file types, camera model
-    filters->removeChildrenDynamicFilters();
+//    // clear all items for filters based on data content ie file types, camera model
+//    filters->removeChildrenDynamicFilters();
 
     timeToQuit = false;
     int imageCount = 0;

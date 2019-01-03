@@ -4613,9 +4613,6 @@ void MW::runExternalApp()
         msgBox.setIcon(QMessageBox::Warning);
         QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
                     "QPushButton:default {background-color: rgb(68,95,118);}";
-//        QString s = "QLabel{min-width: 300px;}"
-//                    "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-//                    "QPushButton:default {background-color: rgb(68,95,118);}";
         msgBox.setStyleSheet(s);
         QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         QGridLayout* layout = (QGridLayout*)msgBox.layout();
@@ -4623,7 +4620,6 @@ void MW::runExternalApp()
         int ret = msgBox.exec();
         if (ret == QMessageBox::Cancel) return;
     }
-
 
     QStringList arguments;
     for (int tn = 0; tn < nFiles ; ++tn) {

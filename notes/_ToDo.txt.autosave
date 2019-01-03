@@ -11,6 +11,7 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
 - Invert filter
+- Make all message boxes consistent (see runExternalApp)
 - Add preferences for badge and shooting info size
 - Create installer for mac
 - Remove Windows Registry settings during uninstall

@@ -294,6 +294,7 @@ private slots:
     void updateImageCache();
     void loadFilteredImageCache();
     void addNewBookmark();
+    void addNewBookmarkFromContext();
     void reportMetadata();
     void checkDirState(const QModelIndex &, int, int);
     void bookmarkClicked(QTreeWidgetItem *item, int col);
@@ -328,6 +329,7 @@ private slots:
                             bool isCachePreview, bool activity);
     void selectAllThumbs();
     void removeBookmark();
+    void refreshBookmarks();
     void rotateLeft();
     void rotateRight();
     void showHiddenFiles();
@@ -376,6 +378,8 @@ private slots:
 
     void openFolder();
     void revealFile();
+    void revealFileFromContext();
+    void revealInFileBrowser(QString path);
     void openInFinder();
     void openInExplorer();
     void collapseAllFolders();
@@ -432,6 +436,7 @@ private:
     // File menu
     QAction *openAction;
     QAction *revealFileAction;
+    QAction *revealFileActionFromContext;
     QAction *openWithMenuAction;
         QAction *manageAppAction;
         QList<QAction *> appActions;
@@ -440,7 +445,9 @@ private:
     QAction *subFoldersAction;
     QAction *collapseFoldersAction;
     QAction *addBookmarkAction;
+    QAction *addBookmarkActionFromContext;
     QAction *removeBookmarkAction;
+    QAction *refreshBookmarkAction;
     QAction *ingestAction;
     QAction *ejectAction;
     QAction *combineRawJpgAction;
