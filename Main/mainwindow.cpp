@@ -1560,9 +1560,13 @@ void MW::createActions()
     prefAction->setObjectName("settings");
     prefAction->setShortcutVisibleInContextMenu(true);
     addAction(prefAction);
-//    connect(prefAction, &QAction::triggered, this, &MW::preferences);
-    // use lambda to send default -1 which loads previous open page in pref dialog
     connect(prefAction, &QAction::triggered, [this]() {preferences(-1);} );
+
+    prefInfoAction = new QAction(tr("Hide or show info fields"), this);
+    prefInfoAction->setObjectName("infosettings");
+    prefInfoAction->setShortcutVisibleInContextMenu(true);
+    addAction(prefInfoAction);
+    connect(prefInfoAction, &QAction::triggered, [this]() {preferences(6);} );
 
     // Go menu
 
@@ -2283,8 +2287,8 @@ void MW::createMenus()
     editMenu->addAction(filterPickAction);
     editMenu->addAction(popPickHistoryAction);
     editMenu->addSeparator();
-    editMenu->addAction(copyImagesAction);
-    editMenu->addSeparator();
+//    editMenu->addAction(copyImagesAction);
+//    editMenu->addSeparator();
     editMenu->addAction(rate0Action);
     editMenu->addAction(rate1Action);
     editMenu->addAction(rate2Action);
@@ -2463,7 +2467,7 @@ void MW::createMenus()
     QList<QAction *> *favActions = new QList<QAction *>;
     favActions->append(refreshBookmarkAction);
     favActions->append(revealFileActionFromContext);
-    favActions->append(pasteAction);
+//    favActions->append(pasteAction);
     favActions->append(separatorAction);
     favActions->append(removeBookmarkAction);
     favActions->append(separatorAction1);
@@ -2481,9 +2485,9 @@ void MW::createMenus()
 
     // metadata context menu
     QList<QAction *> *metadataActions = new QList<QAction *>;
-    metadataActions->append(infoView->copyInfoAction);
+//    metadataActions->append(infoView->copyInfoAction);
     metadataActions->append(reportMetadataAction);
-    metadataActions->append(prefAction);
+    metadataActions->append(prefInfoAction);
     metadataActions->append(separatorAction);
     metadataActions->append(metadataDockLockAction);
 
@@ -3184,7 +3188,11 @@ void MW::createAppStyle()
     // add error trapping for file io  rgh todo
     QFile fStyle(":/qss/winnow.css");
     fStyle.open(QIODevice::ReadOnly);
-    this->setStyleSheet(fStyle.readAll());
+    css += fStyle.readAll();
+
+    fontSize = "16";
+    QString s = "QWidget {font-size: " + fontSize + "px;}";
+    this->setStyleSheet(s + css);
 }
 
 void MW::createStatusBar()
@@ -4613,9 +4621,6 @@ void MW::runExternalApp()
         msgBox.setIcon(QMessageBox::Warning);
         QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
                     "QPushButton:default {background-color: rgb(68,95,118);}";
-//        QString s = "QLabel{min-width: 300px;}"
-//                    "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-//                    "QPushButton:default {background-color: rgb(68,95,118);}";
         msgBox.setStyleSheet(s);
         QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         QGridLayout* layout = (QGridLayout*)msgBox.layout();
@@ -4623,7 +4628,6 @@ void MW::runExternalApp()
         int ret = msgBox.exec();
         if (ret == QMessageBox::Cancel) return;
     }
-
 
     QStringList arguments;
     for (int tn = 0; tn < nFiles ; ++tn) {
@@ -4734,6 +4738,8 @@ void MW::preferences(int page)
     }
     if(page == -1) page = lastPrefPage;
     Prefdlg *prefdlg = new Prefdlg(this, page);
+    connect(prefdlg, SIGNAL(updateFontSize(QString)),
+            this, SLOT(setFontSize(QString)));
     connect(prefdlg, SIGNAL(updatePage(int)),
             this, SLOT(setPrefPage(int)));
     connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
@@ -4770,6 +4776,13 @@ void MW::setShowImageCount()
     fsTree->resizeColumns();
     fsTree->repaint();
     if (isShow) fsTree->fsModel->fetchMore(fsTree->rootIndex());
+}
+
+void MW::setFontSize(QString pixels)
+{
+    fontSize = pixels;
+    QString s = "QWidget {font-size: " + fontSize + "px;}";
+    this->setStyleSheet(s + css);
 }
 
 void MW::setPrefPage(int page)
@@ -5269,6 +5282,7 @@ re-established when the application is re-opened.
 //    setting->setValue("displayVerticalPixels", displayVerticalPixels);
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
     setting->setValue("autoEjectUSB", autoEjectUsb);
+    setting->setValue("fontSize", fontSize);
 
     // files
 //    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
@@ -5537,6 +5551,7 @@ Preferences are located in the prefdlg class and updated here.
         autoIngestFolderPath = false;
         autoEjectUsb = false;
         combineRawJpg = true;
+        fontSize = 14;
 
       // slideshow
         slideShowDelay = 5;
@@ -5569,6 +5584,7 @@ Preferences are located in the prefdlg class and updated here.
 //    displayVerticalPixels = setting->value("displayVerticalPixels").toInt();
     autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
     autoEjectUsb = setting->value("autoEjectUSB").toBool();
+    fontSize = setting->value("fontSize").toString();
 
     // files
 //    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();
@@ -7842,16 +7858,21 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-//    qDebug() << "selection clear from test";
+    QString fontSize = "8";
+    QString s = "QWidget {font-size: " + fontSize + "px;}";
+    this->setStyleSheet(s + css);
+
+
+    //    qDebug() << "selection clear from test";
 //    thumbView->selectionModel()->clearSelection();
 
-    QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedRows();
-    for (int tn = 0; tn < selectedIdxList.size() ; ++tn) {
-        QString s = selectedIdxList[tn].data(G::PathRole).toString();
-        qDebug() << "Selected image:" << s;
-    }
+//    QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedRows();
+//    for (int tn = 0; tn < selectedIdxList.size() ; ++tn) {
+//        QString s = selectedIdxList[tn].data(G::PathRole).toString();
+//        qDebug() << "Selected image:" << s;
+//    }
 
-    dm->clear();
+//    dm->clear();
 
     // shortcut = "Shift+Ctrl+Alt+T"
 
