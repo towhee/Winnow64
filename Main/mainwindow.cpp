@@ -306,7 +306,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 //                 << "currentViewDir:" << currentViewDir
 //                 << "mouseOverFolder:" << mouseOverFolder;
 
-
     //    if (event->type() == QEvent::KeyPress) {
 //        QKeyEvent *event = static_cast<QKeyEvent *>(event);
 //        qDebug() << "\nMW::eventFilter  keyPressEvent" << event;
@@ -315,73 +314,49 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 //        }
 //    }
 
-    // Intercept context menu to enable/disable:
-    // - eject usb drive menu item
-    // - add bookmarks menu item
+    /*  Intercept context menu
+     Intercept context menu to enable/disable:
+     - eject usb drive menu item
+     - add bookmarks menu item
+     mouseOverFolder is used in folder related context menu actions instead of
+     currentViewDir
+     */
+
     if (event->type() == QEvent::ContextMenu) {
         addBookmarkAction->setEnabled(true);
-        revealFileAction->setEnabled(true);
+        revealFileActionFromContext->setEnabled(true);
         if(obj == fsTree->viewport()) {
             QContextMenuEvent *e = (QContextMenuEvent *)event;
             QModelIndex idx = fsTree->indexAt(e->pos());
             mouseOverFolder = idx.data(QFileSystemModel::FilePathRole).toString();
             enableEjectUsbMenu(mouseOverFolder);
+            // in folders or bookmarks but not on folder item
             if(mouseOverFolder == "") {
                 addBookmarkAction->setEnabled(false);
-                revealFileAction->setEnabled(false);
+//                revealFileAction->setEnabled(false);
+                revealFileActionFromContext->setEnabled(false);
+            }
+        }
+        else if(obj == bookmarks->viewport()) {
+            QContextMenuEvent *e = (QContextMenuEvent *)event;
+            QModelIndex idx = bookmarks->indexAt(e->pos());
+            mouseOverFolder = idx.data(Qt::ToolTipRole).toString();
+            enableEjectUsbMenu(mouseOverFolder);
+            // in folders or bookmarks but not on folder item
+            if(mouseOverFolder == "") {
+                addBookmarkAction->setEnabled(false);
+//                revealFileAction->setEnabled(false);
+                revealFileActionFromContext->setEnabled(false);
             }
         }
         else {
             enableEjectUsbMenu(currentViewDir);
             if(currentViewDir == "") {
                 addBookmarkAction->setEnabled(false);
-                revealFileAction->setEnabled(false);
+//                revealFileAction->setEnabled(false);
+                revealFileActionFromContext->setEnabled(false);
             }
         }
-    }
-
-    if(event->type() == QEvent::Paint
-            && thumbView->readyToScroll
-            && (obj->objectName() == "ThumbViewVerticalScrollBar"
-            || obj->objectName() == "ThumbViewHorizontalScrollBar"))
-    {
-
-//        qDebug() << G::t.restart() << "\t" << "\nThumbView event filter" << objectName() << obj << event;
-
-        if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
-            /*
-            qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
-                     << horizontalScrollBar()->maximum()
-                     << getHorizontalScrollBarMax();
-                     */
-            if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
-                /*
-                 qDebug() << G::t.restart() << "\t" << objectName()
-                     << ": Event Filter sending row =" << currentRow
-                     << "horizontalScrollBarMax Qt vs Me"
-                     << thumbView->horizontalScrollBar()->maximum()
-                     << thumbView->getHorizontalScrollBarMax();     */
-
-                thumbView->scrollToCurrent(currentRow);
-            }
-        }
-        if (obj->objectName() == "ThumbViewVerticalScrollBar") {
-             /*
-             qDebug() << G::t.restart() << "\t" << objectName() << "VerScrollCurrentMax / FinalMax:"
-                      << thumbView->verticalScrollBar()->maximum()
-                      << thumbView->getVerticalScrollBarMax();*/
-
-             if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
-                /*
-                 qDebug() << G::t.restart() << "\t" << objectName()
-                          << ": Event Filter sending row =" << currentRow
-                          << "verticalScrollBarMax Qt vs Me"
-                          << thumbView->verticalScrollBar()->maximum()
-                          << thumbView->getVerticalScrollBarMax();*/
-
-                 thumbView->scrollToCurrent(currentRow);
-             }
-         }
     }
 
     /* A splitter resize of top/bottom thumbDock is happening:
@@ -395,6 +370,44 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     The thumbDock is referenced from the parent because thumbView is a friend
     class to MW.
     */
+
+    if(event->type() == QEvent::Paint
+            && thumbView->readyToScroll
+            && (obj->objectName() == "ThumbViewVerticalScrollBar"
+            || obj->objectName() == "ThumbViewHorizontalScrollBar"))
+    {
+        if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
+            /*
+            qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
+                     << horizontalScrollBar()->maximum()
+                     << getHorizontalScrollBarMax();
+                     */
+            if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
+                /*
+                 qDebug() << G::t.restart() << "\t" << objectName()
+                     << ": Event Filter sending row =" << currentRow
+                     << "horizontalScrollBarMax Qt vs Me"
+                     << thumbView->horizontalScrollBar()->maximum()
+                     << thumbView->getHorizontalScrollBarMax();     */
+                thumbView->scrollToCurrent(currentRow);
+            }
+        }
+        if (obj->objectName() == "ThumbViewVerticalScrollBar") {
+             /*
+             qDebug() << G::t.restart() << "\t" << objectName() << "VerScrollCurrentMax / FinalMax:"
+                      << thumbView->verticalScrollBar()->maximum()
+                      << thumbView->getVerticalScrollBarMax();*/
+             if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
+                /*
+                 qDebug() << G::t.restart() << "\t" << objectName()
+                          << ": Event Filter sending row =" << currentRow
+                          << "verticalScrollBarMax Qt vs Me"
+                          << thumbView->verticalScrollBar()->maximum()
+                          << thumbView->getVerticalScrollBarMax();*/
+                 thumbView->scrollToCurrent(currentRow);
+             }
+         }
+    }
 
     if (event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *e = (QMouseEvent *)event;
@@ -808,19 +821,10 @@ so scrollTo and delegate use of the current index must check the row.
     if (current.row() == -1) {
         isStart = true;
         thumbView->selectThumb(0);
-//        return;
     }
 
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
-    int n = thumbView->selectionModel()->selectedRows().count();
-    qDebug() << "selected =" << n;
-    if(n == 0) {
-        qDebug() << "Nothing selected";
-    }
-    else {
-        qDebug() << "Something selected";
-    }
 
     if(isStart) return;
 
@@ -1301,19 +1305,25 @@ void MW::createActions()
     }
     addActions(recentFolderActions);
 
-    QString reveal = "Reveal";
+    QString revealText = "Reveal";
     #ifdef Q_OS_WIN
-        reveal = "Open in Explorer";
+        revealText = "Open in Explorer";
     #endif
     #ifdef Q_OS_MAC
-        reveal = "Reveal in Finder";
+        revealText = "Reveal in Finder";
     #endif
 
-    revealFileAction = new QAction(reveal, this);
+    revealFileAction = new QAction(revealText, this);
     revealFileAction->setObjectName("openInFinder");
     revealFileAction->setShortcutVisibleInContextMenu(true);
     addAction(revealFileAction);
     connect(revealFileAction, &QAction::triggered, this, &MW::revealFile);
+
+    revealFileActionFromContext = new QAction(revealText, this);
+    revealFileActionFromContext->setObjectName("openInFinderFromContext");
+    revealFileActionFromContext->setShortcutVisibleInContextMenu(true);
+    addAction(revealFileActionFromContext);
+    connect(revealFileActionFromContext, &QAction::triggered, this, &MW::revealFileFromContext);
 
     subFoldersAction = new QAction(tr("Include Sub-folders"), this);
     subFoldersAction->setObjectName("subFolders");
@@ -1348,12 +1358,23 @@ void MW::createActions()
     addAction(addBookmarkAction);
     connect(addBookmarkAction, &QAction::triggered, this, &MW::addNewBookmark);
 
+    addBookmarkActionFromContext = new QAction(tr("Add Bookmark"), this);
+    addBookmarkActionFromContext->setObjectName("addBookmark");
+    addBookmarkActionFromContext->setShortcutVisibleInContextMenu(true);
+    addAction(addBookmarkActionFromContext);
+    connect(addBookmarkActionFromContext, &QAction::triggered, this, &MW::addNewBookmarkFromContext);
+
     removeBookmarkAction = new QAction(tr("Remove Bookmark"), this);
     removeBookmarkAction->setObjectName("removeBookmark");
     removeBookmarkAction->setShortcutVisibleInContextMenu(true);
-    // rgh where did removeBookmark slot function go?
     addAction(removeBookmarkAction);
     connect(removeBookmarkAction, &QAction::triggered, this, &MW::removeBookmark);
+
+    refreshBookmarkAction = new QAction(tr("Refresh Bookmarks"), this);
+    refreshBookmarkAction->setObjectName("refreshBookmarks");
+    refreshBookmarkAction->setShortcutVisibleInContextMenu(true);
+    addAction(refreshBookmarkAction);
+    connect(refreshBookmarkAction, &QAction::triggered, this, &MW::refreshBookmarks);
 
     ingestAction = new QAction(tr("Ingest picks"), this);
     ingestAction->setObjectName("ingest");
@@ -2430,14 +2451,23 @@ void MW::createMenus()
     fsTreeActions->append(ejectAction);
     fsTreeActions->append(separatorAction);
     fsTreeActions->append(showImageCountAction);
-    fsTreeActions->append(revealFileAction);
+    fsTreeActions->append(revealFileActionFromContext);
     fsTreeActions->append(separatorAction1);
     fsTreeActions->append(pasteAction);
     fsTreeActions->append(separatorAction2);
-    fsTreeActions->append(openWithMenuAction);
-    fsTreeActions->append(addBookmarkAction);
+    fsTreeActions->append(addBookmarkActionFromContext);
     fsTreeActions->append(separatorAction3);
     fsTreeActions->append(folderDockLockAction);
+
+    // bookmarks context menu
+    QList<QAction *> *favActions = new QList<QAction *>;
+    favActions->append(refreshBookmarkAction);
+    favActions->append(revealFileActionFromContext);
+    favActions->append(pasteAction);
+    favActions->append(separatorAction);
+    favActions->append(removeBookmarkAction);
+    favActions->append(separatorAction1);
+    favActions->append(favDockLockAction);
 
     // filters context menu
     filterActions = new QList<QAction *>;
@@ -2448,13 +2478,6 @@ void MW::createMenus()
     filterActions->append(collapseAllAction);
     filterActions->append(separatorAction1);
     filterActions->append(filterDockLockAction);
-
-    // bookmarks context menu
-    QList<QAction *> *favActions = new QList<QAction *>;
-    favActions->append(pasteAction);
-    favActions->append(removeBookmarkAction);
-    favActions->append(separatorAction);
-    favActions->append(favDockLockAction);
 
     // metadata context menu
     QList<QAction *> *metadataActions = new QList<QAction *>;
@@ -4573,14 +4596,37 @@ void MW::runExternalApp()
 //    app = "/Applications/Preview.app";
 //    std::cout << app.toStdString() << std::endl << std::flush;
 
-    if (selectedIdxList.size() < 1)
-    {
+    int nFiles = selectedIdxList.size();
+
+    if (nFiles < 1) {
         popup("No images have been selected", 2000, 0.75);
         return;
     }
 
+    if (nFiles > 5) {
+        QMessageBox msgBox;
+        int msgBoxWidth = 300;
+        msgBox.setText(QString::number(nFiles) + " files have been selected.");
+        msgBox.setInformativeText("Do you want continue?");
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        msgBox.setDefaultButton(QMessageBox::Yes);
+        msgBox.setIcon(QMessageBox::Warning);
+        QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
+                    "QPushButton:default {background-color: rgb(68,95,118);}";
+//        QString s = "QLabel{min-width: 300px;}"
+//                    "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
+//                    "QPushButton:default {background-color: rgb(68,95,118);}";
+        msgBox.setStyleSheet(s);
+        QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        QGridLayout* layout = (QGridLayout*)msgBox.layout();
+        layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+        int ret = msgBox.exec();
+        if (ret == QMessageBox::Cancel) return;
+    }
+
+
     QStringList arguments;
-    for (int tn = 0; tn < selectedIdxList.size() ; ++tn) {
+    for (int tn = 0; tn < nFiles ; ++tn) {
         QString s = selectedIdxList[tn].data(G::PathRole).toString();
         arguments << s;
 //        arguments << enquote(s);
@@ -5150,15 +5196,24 @@ void MW::removeBookmark()
     G::track(__FUNCTION__);
     #endif
     }
-//    if (QApplication::focusWidget() == thumbView->imageTags->tagsTree) {
-//        thumbView->imageTags->removeTag();
-//        return;
-//    }
-
     if (QApplication::focusWidget() == bookmarks) {
         bookmarks->removeBookmark();
         return;
     }
+}
+
+void MW::refreshBookmarks()
+{
+/*
+This is run from the bookmarks (fav) panel conext menu to update the image count
+for each bookmark folder.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    bookmarks->reloadBookmarks();
 }
 
 // rgh used?
@@ -7198,8 +7253,8 @@ internally or as a sidecar when ingesting.
     }
     // if new folder is invalid no relevent data has changed
     if(!isCurrentFolderOkay) return;
-    qDebug() << "Should not see this";
     if (infoView->isNewImageDataChange) return;
+
     QModelIndex par = item->index().parent();
     if (par != infoView->tagInfoIdx) return;
 
@@ -7569,7 +7624,18 @@ void MW::addNewBookmark()
     G::track(__FUNCTION__);
     #endif
     }
-    addBookmark(getSelectedPath());
+    addBookmark(currentViewDir);
+//    addBookmark(getSelectedPath());
+}
+
+void MW::addNewBookmarkFromContext()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    addBookmark(mouseOverFolder);
 }
 
 void MW::addBookmark(QString path)
@@ -7601,6 +7667,16 @@ void MW::openFolder()
 
 void MW::revealFile()
 {
+    revealInFileBrowser(currentViewDir);
+}
+
+void MW::revealFileFromContext()
+{
+    revealInFileBrowser(mouseOverFolder);
+}
+
+void MW::revealInFileBrowser(QString path)
+{
 /*
 See http://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
 for details
@@ -7610,7 +7686,8 @@ for details
     G::track(__FUNCTION__);
     #endif
     }
-    QString path = thumbView->getCurrentFilename();
+//    QString path = thumbView->getCurrentFilename();
+//    QString path = (mouseOverFolder == "") ? currentViewDir : mouseOverFolder;
     QFileInfo info(path);
 #if defined(Q_OS_WIN)
     QStringList args;

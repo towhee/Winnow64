@@ -10,6 +10,8 @@ BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount)
     }
     this->metadata = metadata;
     this->showImageCount = showImageCount;
+    viewport()->setObjectName("bookmarksViewPort");
+    setObjectName("bookmarks");
 
     fileFilters = new QStringList;
     fileFilters->clear();
