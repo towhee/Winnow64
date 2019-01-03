@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'workspacedlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.10.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,10 +10,13 @@
 #define UI_WORKSPACEDLG_H
 
 #include <QtCore/QVariant>
+#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QWidget>
@@ -35,7 +38,7 @@ public:
     void setupUi(QDialog *Workspacedlg)
     {
         if (Workspacedlg->objectName().isEmpty())
-            Workspacedlg->setObjectName(QString::fromUtf8("Workspacedlg"));
+            Workspacedlg->setObjectName(QStringLiteral("Workspacedlg"));
         Workspacedlg->resize(489, 197);
         QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
         sizePolicy.setHorizontalStretch(0);
@@ -43,7 +46,7 @@ public:
         sizePolicy.setHeightForWidth(Workspacedlg->sizePolicy().hasHeightForWidth());
         Workspacedlg->setSizePolicy(sizePolicy);
         workspaceCB = new QComboBox(Workspacedlg);
-        workspaceCB->setObjectName(QString::fromUtf8("workspaceCB"));
+        workspaceCB->setObjectName(QStringLiteral("workspaceCB"));
         workspaceCB->setGeometry(QRect(27, 50, 431, 28));
         QSizePolicy sizePolicy1(QSizePolicy::Minimum, QSizePolicy::Fixed);
         sizePolicy1.setHorizontalStretch(0);
@@ -54,31 +57,31 @@ public:
         workspaceCB->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
         workspaceCB->setIconSize(QSize(16, 24));
         workspaceLbl = new QLabel(Workspacedlg);
-        workspaceLbl->setObjectName(QString::fromUtf8("workspaceLbl"));
+        workspaceLbl->setObjectName(QStringLiteral("workspaceLbl"));
         workspaceLbl->setGeometry(QRect(32, 30, 91, 16));
         layoutWidget = new QWidget(Workspacedlg);
-        layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
+        layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
         layoutWidget->setGeometry(QRect(24, 120, 431, 32));
         horizontalLayout = new QHBoxLayout(layoutWidget);
-        horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
+        horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
         deleteBtn = new QPushButton(layoutWidget);
-        deleteBtn->setObjectName(QString::fromUtf8("deleteBtn"));
+        deleteBtn->setObjectName(QStringLiteral("deleteBtn"));
 
         horizontalLayout->addWidget(deleteBtn);
 
         reassignBtn = new QPushButton(layoutWidget);
-        reassignBtn->setObjectName(QString::fromUtf8("reassignBtn"));
+        reassignBtn->setObjectName(QStringLiteral("reassignBtn"));
 
         horizontalLayout->addWidget(reassignBtn);
 
         doneBtn = new QPushButton(layoutWidget);
-        doneBtn->setObjectName(QString::fromUtf8("doneBtn"));
+        doneBtn->setObjectName(QStringLiteral("doneBtn"));
 
         horizontalLayout->addWidget(doneBtn);
 
         status = new QLabel(Workspacedlg);
-        status->setObjectName(QString::fromUtf8("status"));
+        status->setObjectName(QStringLiteral("status"));
         status->setGeometry(QRect(20, 160, 441, 20));
         status->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
