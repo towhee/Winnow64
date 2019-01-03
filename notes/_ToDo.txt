@@ -1,8 +1,5 @@
 BUGS
-- Context menu should apply to right click folder, not current folder
 - CompareImages not calc layout optimally
-- Copy image to clipboard not working
-- Copy metadata item not working (was working before)
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
 PERFORMANCE
@@ -10,7 +7,9 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Change font size
 - Invert filter
+- Make all message boxes consistent (see runExternalApp)
 - Add preferences for badge and shooting info size
 - Create installer for mac
 - Remove Windows Registry settings during uninstall
@@ -21,11 +20,13 @@ ENHANCEMENTS
 - Get Sony image count, camera SN
 - Add zoom increment amount to preferences
 - Zoom rect in thumbnail to show zoom and pan in imageView
-- Tweak context menus
 - Run droplet
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Right click on thumbs overriding selection
+- Tweak context menus
+- Context menu should apply to right click folder, not current folder
 - Update image count in Fav (refresh) when changes
 - Reset dynamic filters when invalid folder selected
 - Enable/disable selection dependent menu items

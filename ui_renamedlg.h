@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'renamedlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.10.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,9 +10,12 @@
 #define UI_RENAMEDLG_H
 
 #include <QtCore/QVariant>
+#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QWidget>
@@ -34,30 +37,30 @@ public:
     void setupUi(QDialog *RenameDlg)
     {
         if (RenameDlg->objectName().isEmpty())
-            RenameDlg->setObjectName(QString::fromUtf8("RenameDlg"));
+            RenameDlg->setObjectName(QStringLiteral("RenameDlg"));
         RenameDlg->resize(440, 222);
         nameLbl = new QLabel(RenameDlg);
-        nameLbl->setObjectName(QString::fromUtf8("nameLbl"));
+        nameLbl->setObjectName(QStringLiteral("nameLbl"));
         nameLbl->setGeometry(QRect(30, 30, 371, 16));
         name = new RenameEdit(RenameDlg);
-        name->setObjectName(QString::fromUtf8("name"));
+        name->setObjectName(QStringLiteral("name"));
         name->setGeometry(QRect(30, 50, 381, 22));
         statusLbl = new QLabel(RenameDlg);
-        statusLbl->setObjectName(QString::fromUtf8("statusLbl"));
+        statusLbl->setObjectName(QStringLiteral("statusLbl"));
         statusLbl->setGeometry(QRect(30, 100, 381, 16));
         layoutWidget = new QWidget(RenameDlg);
-        layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
+        layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
         layoutWidget->setGeometry(QRect(210, 170, 195, 30));
         horizontalLayout = new QHBoxLayout(layoutWidget);
-        horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
+        horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
         cancelBtn = new QPushButton(layoutWidget);
-        cancelBtn->setObjectName(QString::fromUtf8("cancelBtn"));
+        cancelBtn->setObjectName(QStringLiteral("cancelBtn"));
 
         horizontalLayout->addWidget(cancelBtn);
 
         okBtn = new QPushButton(layoutWidget);
-        okBtn->setObjectName(QString::fromUtf8("okBtn"));
+        okBtn->setObjectName(QStringLiteral("okBtn"));
 
         horizontalLayout->addWidget(okBtn);
 

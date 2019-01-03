@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'welcome.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.10.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,9 +10,12 @@
 #define UI_WELCOME_H
 
 #include <QtCore/QVariant>
+#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QScrollArea>
 #include <QtWidgets/QSpacerItem>
@@ -41,36 +44,36 @@ public:
     void setupUi(QScrollArea *welcomeScrollArea)
     {
         if (welcomeScrollArea->objectName().isEmpty())
-            welcomeScrollArea->setObjectName(QString::fromUtf8("welcomeScrollArea"));
+            welcomeScrollArea->setObjectName(QStringLiteral("welcomeScrollArea"));
         welcomeScrollArea->resize(814, 508);
         welcomeScrollArea->setFrameShape(QFrame::NoFrame);
         welcomeScrollArea->setFrameShadow(QFrame::Plain);
         welcomeScrollArea->setLineWidth(5);
         welcomeScrollArea->setWidgetResizable(true);
         scrollAreaWidgetContents = new QWidget();
-        scrollAreaWidgetContents->setObjectName(QString::fromUtf8("scrollAreaWidgetContents"));
+        scrollAreaWidgetContents->setObjectName(QStringLiteral("scrollAreaWidgetContents"));
         scrollAreaWidgetContents->setGeometry(QRect(0, 0, 793, 832));
         horizontalLayout = new QHBoxLayout(scrollAreaWidgetContents);
-        horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
+        horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         horizontalSpacer = new QSpacerItem(56, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
         horizontalLayout->addItem(horizontalSpacer);
 
         verticalLayout = new QVBoxLayout();
-        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+        verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
         verticalSpacer_2 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
         verticalLayout->addItem(verticalSpacer_2);
 
         frame_2 = new QFrame(scrollAreaWidgetContents);
-        frame_2->setObjectName(QString::fromUtf8("frame_2"));
+        frame_2->setObjectName(QStringLiteral("frame_2"));
         frame_2->setMaximumSize(QSize(500, 16777215));
         frame_2->setFrameShape(QFrame::NoFrame);
         frame_2->setFrameShadow(QFrame::Raised);
         horizontalLayout_3 = new QHBoxLayout(frame_2);
-        horizontalLayout_3->setObjectName(QString::fromUtf8("horizontalLayout_3"));
+        horizontalLayout_3->setObjectName(QStringLiteral("horizontalLayout_3"));
         welcomeLabel = new QLabel(frame_2);
-        welcomeLabel->setObjectName(QString::fromUtf8("welcomeLabel"));
+        welcomeLabel->setObjectName(QStringLiteral("welcomeLabel"));
         welcomeLabel->setMinimumSize(QSize(500, 0));
         welcomeLabel->setMaximumSize(QSize(600, 16777215));
         welcomeLabel->setFrameShape(QFrame::Box);
@@ -83,13 +86,13 @@ public:
         verticalLayout->addWidget(frame_2);
 
         frame = new QFrame(scrollAreaWidgetContents);
-        frame->setObjectName(QString::fromUtf8("frame"));
+        frame->setObjectName(QStringLiteral("frame"));
         frame->setFrameShape(QFrame::NoFrame);
         frame->setFrameShadow(QFrame::Raised);
         horizontalLayout_2 = new QHBoxLayout(frame);
-        horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
+        horizontalLayout_2->setObjectName(QStringLiteral("horizontalLayout_2"));
         tipsLabel = new QLabel(frame);
-        tipsLabel->setObjectName(QString::fromUtf8("tipsLabel"));
+        tipsLabel->setObjectName(QStringLiteral("tipsLabel"));
         tipsLabel->setMaximumSize(QSize(500, 16777215));
         tipsLabel->setFrameShape(QFrame::Box);
         tipsLabel->setLineWidth(1);

@@ -1168,6 +1168,7 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
     #endif
     }
     G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
+    if (event->button() == Qt::RightButton) return;
 
     // forward and back buttons
     if (event->button() == Qt::BackButton) {
@@ -1250,19 +1251,6 @@ center.
     }
     scrollToCurrent(currentIndex().row());
 }
-
-//void ThumbView::delaySelectCurrentThumb()
-//{
-///*
-//Called by mouseDoubleClickEvent.
-//*/
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << G::t.restart() << "\t" << "ThumbView::delaySelectCurrentThumb";
-//    #endif
-//    }
-//    selectThumb(currentIndex());
-//}
 
 void ThumbView::invertSelection()
 {

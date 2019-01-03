@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'shortcutsform.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.10.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,7 +10,9 @@
 #define UI_SHORTCUTSFORM_H
 
 #include <QtCore/QVariant>
+#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QScrollArea>
@@ -31,17 +33,17 @@ public:
     void setupUi(QScrollArea *shortcutsForm)
     {
         if (shortcutsForm->objectName().isEmpty())
-            shortcutsForm->setObjectName(QString::fromUtf8("shortcutsForm"));
+            shortcutsForm->setObjectName(QStringLiteral("shortcutsForm"));
         shortcutsForm->setWindowModality(Qt::NonModal);
         shortcutsForm->resize(640, 480);
         shortcutsForm->setWidgetResizable(true);
         scrollAreaWidgetContents = new QWidget();
-        scrollAreaWidgetContents->setObjectName(QString::fromUtf8("scrollAreaWidgetContents"));
+        scrollAreaWidgetContents->setObjectName(QStringLiteral("scrollAreaWidgetContents"));
         scrollAreaWidgetContents->setGeometry(QRect(0, 0, 638, 478));
         verticalLayout = new QVBoxLayout(scrollAreaWidgetContents);
-        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+        verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
         label = new QLabel(scrollAreaWidgetContents);
-        label->setObjectName(QString::fromUtf8("label"));
+        label->setObjectName(QStringLiteral("label"));
         label->setAlignment(Qt::AlignCenter);
 
         verticalLayout->addWidget(label);
@@ -136,7 +138,7 @@ public:
         new QTreeWidgetItem(__qtreewidgetitem9);
         new QTreeWidgetItem(__qtreewidgetitem9);
         new QTreeWidgetItem(__qtreewidgetitem9);
-        treeWidget->setObjectName(QString::fromUtf8("treeWidget"));
+        treeWidget->setObjectName(QStringLiteral("treeWidget"));
         treeWidget->setFocusPolicy(Qt::NoFocus);
         treeWidget->setAlternatingRowColors(true);
         treeWidget->setIconSize(QSize(24, 24));
