@@ -10,6 +10,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Enable/disable menu items
 - Invert filter
 - Add preferences for badge and shooting info size
 - Create installer for mac
@@ -21,12 +22,12 @@ ENHANCEMENTS
 - Get Sony image count, camera SN
 - Add zoom increment amount to preferences
 - Zoom rect in thumbnail to show zoom and pan in imageView
-- Disable menu "add bookmark" when folders not selected??
 - Tweak context menus
 - Run droplet
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Disable menu "add bookmark" when folders not selected??
 - Enable/disable eject menu
 - Jpg orientationOffset = 0 when metadata orientation changed
 - Confirm tif metadata for focus stacks (app out msg)

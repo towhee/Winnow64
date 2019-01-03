@@ -55,6 +55,11 @@ void BookMarks::reloadBookmarks()
 
 void BookMarks::select(QString fPath)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (bookmarkPaths.contains(fPath)) {
         QList <QTreeWidgetItem *> items;
         items = findItems(QFileInfo(fPath).fileName(), Qt::MatchExactly);
@@ -67,6 +72,11 @@ void BookMarks::select(QString fPath)
 
 void BookMarks::resizeEvent(QResizeEvent *event)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (showImageCount) {
         imageCountColumnWidth = 45;
         showColumn(1);

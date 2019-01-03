@@ -231,6 +231,7 @@ public slots:
     void setThumbDockFloatFeatures(bool isFloat);
     void resortImageCache();
     void setCentralMessage(QString message);
+    void test();    // for debugging
 
 signals:
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
@@ -399,7 +400,6 @@ private slots:
     void popup(QString msg, int ms, float opacity);
     void closePopup();
     void delayScroll();
-    void test();    // for debugging
 
     //    void cutThumbs();
 //    void copyThumbs();
@@ -715,6 +715,7 @@ private:
 
     void createDocks();
     void updateState();
+    void clearAll();
     void deleteViewerImage();
     void selectCurrentViewDir();
     bool checkForUpdate();
