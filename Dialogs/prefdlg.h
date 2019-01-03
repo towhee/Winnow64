@@ -17,6 +17,7 @@ public:
     ~Prefdlg();
 
 signals:
+    void updateFontSize(QString pixels);
     void updatePage(int page);
     void updateRememberFolder(bool rememberFolder);
     void updateMouseClickScroll(bool mouseClickScroll);
@@ -82,8 +83,8 @@ private slots:
 //    void on_displayHorizontalPixelsSB_valueChanged(int arg1);
 //    void on_displayVerticalPixelsSB_valueChanged(int arg1);
     void on_wrapChk_clicked();
-
     void on_mouseClickScrollChk_clicked();
+    void on_globalFontSizeSlider_valueChanged(int value);
 
 private:
     Ui::Prefdlg *ui;
