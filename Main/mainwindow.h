@@ -260,7 +260,7 @@ private slots:
     void sortThumbnails();
 //    void monitorPreference();
     void preferences(int page = -1);
-    void openWithProgramManagement();
+    void externalAppManager();
     void toggleFullScreen();
     void escapeFullScreen();
     void loupeDisplay();
