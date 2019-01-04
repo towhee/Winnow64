@@ -23,10 +23,12 @@ private slots:
 
     void on_okBtn_clicked();
 
+    void on_cancelBtn_clicked();
+
 private:
     Ui::Appdlg *ui;
     QMap<QString, QString>& xApps;
-    void reject();
+//    void reject();
 };
 
 #endif // PROCESSDLG_H
