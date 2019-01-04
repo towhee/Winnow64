@@ -46,7 +46,7 @@ public:
     int getScrollThreshold(int thumbSpaceHeight);
     QStringList getSelectedThumbsList();        //used by tags, might be useful
     int getCurrentRow();
-    QString getCurrentFilename();       //not used, but might be handy
+    QString getCurrentFilePath();       //not used, but might be handy
     void setThumbParameters();
 
     int getHorizontalScrollBarOffset(int row);

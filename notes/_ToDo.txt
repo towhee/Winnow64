@@ -1,5 +1,7 @@
 BUGS
 - CompareImages not calc layout optimally
+- toggleFilterPick??
+- ThumbView::copyThumbs??
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
 PERFORMANCE
@@ -7,7 +9,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Change font size
+- Track downloads by ip address
 - Invert filter
 - Make all message boxes consistent (see runExternalApp)
 - Add preferences for badge and shooting info size
@@ -24,6 +26,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Change font size
 - Right click on thumbs overriding selection
 - Tweak context menus
 - Context menu should apply to right click folder, not current folder

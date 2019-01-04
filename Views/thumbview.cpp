@@ -169,6 +169,11 @@ void ThumbView::reportThumbs()
 
 void ThumbView::refreshThumb(QModelIndex idx, int role)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QVector<int> roles;
     roles.append(role);
     dataChanged(idx, idx, roles);
@@ -311,7 +316,6 @@ void ThumbView::reportThumb()
     G::track(__FUNCTION__);
     #endif
     }
-    // rgh convert all from roles to columns
     int currThumb = currentIndex().row();
     qDebug() << G::t.restart() << "\t" << "\n ***** THUMB INFO *****";
     qDebug() << G::t.restart() << "\t" << "Row =" << currThumb;
@@ -441,8 +445,7 @@ of images in the selected folder.
     return -1;
 }
 
-// not used but might be useful
-QString ThumbView::getCurrentFilename()
+QString ThumbView::getCurrentFilePath()
 {
     {
     #ifdef ISDEBUG
@@ -487,7 +490,6 @@ folder.
             QModelIndex pathIdx = dm->sf->index(row, 0);
             QString fPath = pathIdx.data(G::PathRole).toString();
             QFileInfo fileInfo(fPath);
-//            qDebug() << G::t.restart() << "\t" << fPath;
             fileInfoList.append(fileInfo);
         }
     }
@@ -520,7 +522,6 @@ int ThumbView::getPrevPick()
     #endif
     }
     int back = currentIndex().row() - 1;
-//    int rowCount = dm->sf->rowCount();
     QModelIndex idx;
     while (back >= 0) {
         idx = dm->sf->index(back, G::PickColumn);
@@ -562,7 +563,7 @@ void ThumbView::toggleFilterPick(bool isFilter)
     }
     pickFilter = isFilter;
     if (pickFilter) {
-
+// rgh this doesn't look right??
 //        int row = getNearestPick();
 //        selectThumb(row);
 //        dm->sf->setFilterRegExp("true");   // show only picked items
@@ -594,11 +595,6 @@ useful.
     G::track(__FUNCTION__);
     #endif
     }
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
     QModelIndexList indexesList = selectionModel()->selectedIndexes();
     QStringList SelectedThumbsPaths;
 
@@ -610,6 +606,11 @@ useful.
 
 bool ThumbView::isThumb(int row)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return dm->sf->index(row, 0).data(Qt::DecorationRole).isNull();
 }
 
@@ -699,8 +700,6 @@ void ThumbView::selectPrev()
     }
     if(G::mode == "Compare") return;
     selectThumb(getPrevRow());
-//    if (isSelectedItem()) selectThumb(getPrevRow());
-//    setCurrentIndex(moveCursor(MovePrevious, Qt::NoModifier));
 }
 
 void ThumbView::selectUp()
@@ -763,7 +762,6 @@ void ThumbView::selectNextPick()
     #endif
     }
     selectThumb(getNextPick());
-//    if (isSelectedItem()) selectThumb(getNextPick());
 }
 
 void ThumbView::selectPrevPick()
@@ -774,7 +772,6 @@ void ThumbView::selectPrevPick()
     #endif
     }
     selectThumb(getPrevPick());
-//    if (isSelectedItem()) selectThumb(getPrevPick());
 }
 
 void ThumbView::thumbsEnlarge()
@@ -836,8 +833,6 @@ void ThumbView::resizeEvent(QResizeEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "ThumbView::resizeEvent";
-
     QListView::resizeEvent(event);
 }
 
@@ -946,7 +941,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
 void ThumbView::thumbsFitTopOrBottom()
 {
 /*
-Called by eventFilter when a thumbDock resize event occurs triggered by the
+Called by MW::eventFilter when a thumbDock resize event occurs triggered by the
 user resizing the thumbDock. Adjust the size of the thumbs to fit the new
 thumbDock height.
 
@@ -986,6 +981,11 @@ For thumbSpace anatomy (see ThumbViewDelegate)
 
 void ThumbView::updateLayout()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QEvent event{QEvent::LayoutRequest};
     QListView::updateGeometries();
     QListView::event(&event);
@@ -1022,6 +1022,11 @@ triggered by a mouse click and MW::mouseClickScroll == true.
 
 int ThumbView::getHorizontalScrollBarOffset(int row)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int pageWidth = viewport()->width();
     int thumbWidth = getThumbCellSize().width();
 
@@ -1058,6 +1063,11 @@ int ThumbView::getHorizontalScrollBarOffset(int row)
 
 int ThumbView::getVerticalScrollBarOffset(int row)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int pageWidth = viewport()->width();
     int pageHeight = viewport()->height();
     int thumbCellWidth = getThumbCellSize().width();
@@ -1156,12 +1166,12 @@ void ThumbView::wheelEvent(QWheelEvent *event)
 
 void ThumbView::mousePressEvent(QMouseEvent *event)
 {
-    /*
-    Captures the position of the mouse click within the thumbnail. This is sent
-    to imageView, which pans to the same center in zoom view. This is handy
-    when the user wants to view a specific part of another image that is in a
-    different position than the current image.
-    */
+/*
+Captures the position of the mouse click within the thumbnail. This is sent
+to imageView, which pans to the same center in zoom view. This is handy
+when the user wants to view a specific part of another image that is in a
+different position than the current image.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -1212,14 +1222,24 @@ void ThumbView::mousePressEvent(QMouseEvent *event)
 
 void ThumbView::mouseMoveEvent(QMouseEvent *event)
 {
-//    qDebug() << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event << event->pos();
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event << event->pos();
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }
 
 void ThumbView::mouseReleaseEvent(QMouseEvent *event)
 {
-//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::mouseReleaseEvent ";
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::mouseReleaseEvent ";
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
     QListView::mouseReleaseEvent(event);
@@ -1267,13 +1287,9 @@ Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct
     QModelIndex lastIndex = dm->sf->index(dm->sf->rowCount() - 1, 0);
     toggleSelection.select(firstIndex, lastIndex);
     selectionModel()->select(toggleSelection, QItemSelectionModel::Toggle);
-//    if(selectedIndexes().count() > 0) {
-//        QModelIndex idx = selectedIndexes().at(0);
-//        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::Select);
-//    }
 }
 
-void ThumbView::copyThumbs()
+void ThumbView::copyThumbs()        // rgh is this working?
 {
     {
     #ifdef ISDEBUG
@@ -1356,5 +1372,4 @@ Drag and drop thumbs to another program.
     }
     drag->setHotSpot(QPoint(pix.width() / 2, pix.height() / 2));
     drag->exec(Qt::CopyAction | Qt::LinkAction, Qt::IgnoreAction);
-//    drag->exec(Qt::CopyAction | Qt::MoveAction | Qt::LinkAction, Qt::IgnoreAction);
 }
