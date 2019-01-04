@@ -1,9 +1,9 @@
 BUGS
-- CompareImages not calc layout optimally
 - toggleFilterPick??
 - ThumbView::copyThumbs??
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
+- Sometimes slow loading metadata
 PERFORMANCE
 CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
@@ -26,6 +26,8 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Manage external programs not remembering changes
+- CompareImages not calc layout optimally
 - Change font size
 - Right click on thumbs overriding selection
 - Tweak context menus
