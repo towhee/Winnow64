@@ -1243,7 +1243,7 @@ void MW::createActions()
     manageAppAction->setObjectName("chooseApp");
     manageAppAction->setShortcutVisibleInContextMenu(true);
     addAction(manageAppAction);
-    connect(manageAppAction, &QAction::triggered, this, &MW::openWithProgramManagement);
+    connect(manageAppAction, &QAction::triggered, this, &MW::externalAppManager);
 
     /* read external apps from QStettings */
     setting->beginGroup("ExternalApps");
@@ -2492,10 +2492,14 @@ void MW::createMenus()
     metadataActions->append(separatorAction);
     metadataActions->append(metadataDockLockAction);
 
+    // Open with Menu (used in thumbview context menu)
+    QAction *openWithGroupAct = new QAction(tr("Open with..."), this);
+    openWithGroupAct->setMenu(openWithMenu);
+
     // thumbview context menu
     QList<QAction *> *thumbViewActions = new QList<QAction *>;
     thumbViewActions->append(revealFileAction);
-    thumbViewActions->append(openWithMenuAction);
+    thumbViewActions->append(openWithGroupAct);
     thumbViewActions->append(separatorAction);
     thumbViewActions->append(selectAllAction);
     thumbViewActions->append(invertSelectionAction);
@@ -4546,10 +4550,12 @@ void MW::about()
     QMessageBox::about(this, tr("About") + " Winnow", aboutString);
 }
 
-void MW::openWithProgramManagement()
+void MW::externalAppManager()
 {
+    qDebug() << "externalAppManager before externalApps" << externalApps;
     Appdlg *appdlg = new Appdlg(externalApps, this);
     appdlg->exec();
+    qDebug() << "externalAppManager after externalApps" << externalApps;
     updateExternalApps();
 }
 
@@ -7702,7 +7708,8 @@ void MW::openFolder()
 
 void MW::revealFile()
 {
-    revealInFileBrowser(currentViewDir);
+    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+    revealInFileBrowser(fPath);
 }
 
 void MW::revealFileFromContext()
