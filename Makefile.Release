@@ -1209,6 +1209,13 @@ release\moc_imagecache.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QThread \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QWaitCondition \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\QGradient \
@@ -1769,6 +1776,13 @@ release\moc_mdcache.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel\filters.h \
 		Image\thumb.h \
 		Cache\mdcache.h \
@@ -2795,6 +2809,12 @@ release\moc_prefdlg.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel\filters.h \
 		File\bookmarks.h \
 		File\fstree.h \
@@ -2837,7 +2857,12 @@ release\moc_prefdlg.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
 		Utilities\usb.h \
 		ui_helpform.h \
 		ui_shortcutsform.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
 		ui_welcome.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
 		ui_message.h \
 		Dialogs\prefdlg.h \
 		release\moc_predefs.h \
@@ -5144,6 +5169,13 @@ release\moc_pixmap.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtCore\QObject \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel\datamodel.h \
 		Datamodel\filters.h \
 		Image\pixmap.h \
@@ -5697,6 +5729,13 @@ release\moc_thumb.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtCore\QObject \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Image\thumb.h \
 		release\moc_predefs.h \
 		C:\Qt\5.10.0\msvc2017_64\bin\moc.exe
@@ -6248,6 +6287,13 @@ release\moc_datamodel.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel\filters.h \
 		Datamodel\datamodel.h \
 		release\moc_predefs.h \
@@ -7267,6 +7313,13 @@ release\moc_bookmarks.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		File\bookmarks.h \
 		release\moc_predefs.h \
 		C:\Qt\5.10.0\msvc2017_64\bin\moc.exe
@@ -7818,6 +7871,13 @@ release\moc_fstree.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		File\fstree.h \
 		release\moc_predefs.h \
 		C:\Qt\5.10.0\msvc2017_64\bin\moc.exe
@@ -8373,6 +8433,12 @@ release\moc_mainwindow.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel\filters.h \
 		File\bookmarks.h \
 		File\fstree.h \
@@ -8416,7 +8482,12 @@ release\moc_mainwindow.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets
 		Utilities\usb.h \
 		ui_helpform.h \
 		ui_shortcutsform.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
 		ui_welcome.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
 		ui_message.h \
 		Main\mainwindow.h \
 		release\moc_predefs.h \
@@ -8968,6 +9039,13 @@ release\moc_metadata.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Metadata\metadata.h \
 		release\moc_predefs.h \
 		C:\Qt\5.10.0\msvc2017_64\bin\moc.exe
@@ -10067,6 +10145,13 @@ release\moc_compareImages.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidg
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Views\thumbview.h \
 		File\fstree.h \
 		Datamodel\datamodel.h \
@@ -10083,7 +10168,6 @@ release\moc_compareImages.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidg
 		Utilities\classificationlabel.h \
 		Image\imagealign.h \
 		Dialogs\testaligndlg.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
 		Views\compareImages.h \
 		release\moc_predefs.h \
 		C:\Qt\5.10.0\msvc2017_64\bin\moc.exe
@@ -10635,6 +10719,13 @@ release\moc_compareview.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidget
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Cache\imagecache.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QThread \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QWaitCondition \
@@ -11199,6 +11290,13 @@ release\moc_imageview.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Cache\imagecache.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QThread \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QWaitCondition \
@@ -11772,6 +11870,13 @@ release\moc_infoview.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel\datamodel.h \
 		Datamodel\filters.h \
 		Views\infoview.h \
@@ -12326,6 +12431,13 @@ release\moc_tableview.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel\filters.h \
 		Views\thumbview.h \
 		File\fstree.h \
@@ -12885,6 +12997,13 @@ release\moc_thumbview.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel\datamodel.h \
 		Datamodel\filters.h \
 		Views\thumbviewdelegate.h \
@@ -13910,6 +14029,13 @@ release\moc_infostring.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel\datamodel.h \
 		Datamodel\filters.h \
 		Dialogs\tokendlg.h \
@@ -14472,6 +14598,13 @@ release\moc_ingestdlg.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel\datamodel.h \
 		Datamodel\filters.h \
 		Views\thumbviewdelegate.h \
@@ -17338,6 +17471,13 @@ release\imagecache.obj: Cache\imagecache.cpp Cache/imagecache.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QThread \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QWaitCondition \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\QGradient \
@@ -17895,6 +18035,13 @@ release\mdcache.obj: Cache\mdcache.cpp Main/global.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel/filters.h \
 		Image/thumb.h
 
@@ -18445,6 +18592,13 @@ release\datamodel.obj: Datamodel\datamodel.cpp Datamodel/datamodel.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel/filters.h
 
 release\filters.obj: Datamodel\filters.cpp Datamodel/filters.h \
@@ -19375,7 +19529,14 @@ release\appdlg.obj: Dialogs\appdlg.cpp Dialogs/appdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QModelIndexList \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
-		ui_appdlg.h
+		ui_appdlg.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTableWidget
 
 release\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs/ingestdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
@@ -19926,6 +20087,13 @@ release\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs/ingestdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel/datamodel.h \
 		Datamodel/filters.h \
 		Views/thumbviewdelegate.h \
@@ -19941,6 +20109,16 @@ release\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs/ingestdlg.h \
 		ui_helpingest.h \
 		Utilities/utilities.h \
 		ui_copypickdlg.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QCheckBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QLineEdit \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QProgressBar \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QRadioButton \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpinBox \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QDebug
 
 release\prefdlg.obj: Dialogs\prefdlg.cpp Dialogs/prefdlg.h \
@@ -20495,6 +20673,12 @@ release\prefdlg.obj: Dialogs\prefdlg.cpp Dialogs/prefdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel/filters.h \
 		File/bookmarks.h \
 		File/fstree.h \
@@ -20536,9 +20720,24 @@ release\prefdlg.obj: Dialogs\prefdlg.cpp Dialogs/prefdlg.h \
 		Utilities/usb.h \
 		ui_helpform.h \
 		ui_shortcutsform.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
 		ui_welcome.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
 		ui_message.h \
 		ui_prefdlg.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QCheckBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QListWidget \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QRadioButton \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSlider \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpinBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QStackedWidget \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTableView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeView \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QDebug
 
 release\renamedlg.obj: Dialogs\renamedlg.cpp Dialogs/renamedlg.h \
@@ -21009,7 +21208,14 @@ release\renamedlg.obj: Dialogs\renamedlg.cpp Dialogs/renamedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QModelIndexList \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
-		ui_renamedlg.h
+		ui_renamedlg.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QPushButton
 
 release\testaligndlg.obj: Dialogs\testaligndlg.cpp Dialogs/testaligndlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
@@ -21116,7 +21322,43 @@ release\testaligndlg.obj: Dialogs\testaligndlg.cpp Dialogs/testaligndlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qfiledevice.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qvector2d.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qtouchdevice.h \
-		ui_testaligndlg.h
+		ui_testaligndlg.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QVariant \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qaction.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qicon.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qactiongroup.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qapplication.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qcoreapplication.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qeventloop.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qdesktopwidget.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qguiapplication.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qinputmethod.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qbuttongroup.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialogButtonBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qdialogbuttonbox.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qheaderview.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractitemview.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractscrollarea.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qframe.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qabstractitemmodel.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qitemselectionmodel.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractitemdelegate.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qstyleoption.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractspinbox.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qvalidator.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qregularexpression.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qslider.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractslider.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qstyle.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qtabbar.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qtabwidget.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qrubberband.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QLabel \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qlabel.h
 
 release\tokendlg.obj: Dialogs\tokendlg.cpp Dialogs/tokendlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
@@ -21588,6 +21830,16 @@ release\tokendlg.obj: Dialogs\tokendlg.cpp Dialogs/tokendlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		ui_tokendlg.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QDebug
 
 release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
@@ -21701,6 +21953,48 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qaction.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qactiongroup.h \
 		ui_workspacedlg.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QVariant \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qapplication.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qcoreapplication.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qeventloop.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qdesktopwidget.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qguiapplication.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qinputmethod.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qbuttongroup.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qcombobox.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractitemdelegate.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qstyleoption.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractspinbox.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qvalidator.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qregularexpression.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qslider.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractslider.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qstyle.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qtabbar.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qtabwidget.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qrubberband.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qframe.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qabstractitemmodel.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qboxlayout.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qlayout.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qlayoutitem.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qgridlayout.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qheaderview.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractitemview.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractscrollarea.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qitemselectionmodel.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QLabel \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qlabel.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qpushbutton.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QWidget \
 		Main/global.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgetsDepends \
@@ -21708,8 +22002,6 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QtCoreDepends \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qabstractanimation.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qabstracteventdispatcher.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qeventloop.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qabstractitemmodel.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qabstractnativeeventfilter.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qabstractproxymodel.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qabstractstate.h \
@@ -21725,7 +22017,6 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qcollator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qcommandlineoption.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qcommandlineparser.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qcoreapplication.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qcryptographichash.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qdatetime.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qdeadlinetimer.h \
@@ -21752,7 +22043,6 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qhistorystate.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qidentityproxymodel.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qisenum.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qitemselectionmodel.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qjsonarray.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qjsonvalue.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qjsondocument.h \
@@ -21782,7 +22072,6 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qqueue.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qrandom.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qreadwritelock.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qregularexpression.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qresource.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qsavefile.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qscopedvaluerollback.h \
@@ -21849,8 +22138,6 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qgenericmatrix.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qgenericplugin.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qgenericpluginfactory.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qguiapplication.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qinputmethod.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qiconengine.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qiconengineplugin.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qimageiohandler.h \
@@ -21921,37 +22208,14 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qtextdocumentwriter.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qtextlist.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qtexttable.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qvalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qtguiversion.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractbutton.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractitemdelegate.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qstyleoption.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractspinbox.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qslider.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractslider.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qstyle.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qtabbar.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qtabwidget.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qrubberband.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qframe.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractitemview.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qabstractscrollarea.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qaccessiblewidget.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qapplication.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qdesktopwidget.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qboxlayout.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qlayout.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qlayoutitem.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qgridlayout.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qbuttongroup.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qcalendarwidget.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qcolordialog.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qcolormap.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qcolumnview.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qcombobox.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qcommandlinkbutton.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qpushbutton.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qcommonstyle.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qcompleter.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qdatawidgetmapper.h \
@@ -21989,14 +22253,12 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qgraphicsview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qscrollarea.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qgroupbox.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qheaderview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qinputdialog.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qlineedit.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qitemdelegate.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qitemeditorfactory.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qkeyeventtransition.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qkeysequenceedit.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qlabel.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qlcdnumber.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qlistview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qlistwidget.h \
@@ -22007,7 +22269,6 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qmessagebox.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qmouseeventtransition.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qopenglwidget.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QWidget \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qplaintextedit.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qtextedit.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qprogressbar.h \
@@ -22021,7 +22282,6 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollerProperties \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qscrollerproperties.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMetaType \
-		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QVariant \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qshortcut.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qsizegrip.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qspinbox.h \
@@ -22529,6 +22789,18 @@ release\zoomdlg.obj: Dialogs\zoomdlg.cpp Dialogs/zoomdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		ui_zoomdlg.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QRadioButton \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSlider \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpinBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QDebug
 
 release\bookmarks.obj: File\bookmarks.cpp File/bookmarks.h \
@@ -23077,7 +23349,14 @@ release\bookmarks.obj: File\bookmarks.cpp File/bookmarks.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		ui_metadatareport.h
+		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout
 
 release\fstree.obj: File\fstree.cpp File/fstree.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
@@ -23625,7 +23904,14 @@ release\fstree.obj: File\fstree.cpp File/fstree.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		ui_metadatareport.h
+		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout
 
 release\imagealign.obj: Image\imagealign.cpp Image/imagealign.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QObject \
@@ -24641,6 +24927,13 @@ release\pixmap.obj: Image\pixmap.cpp Image/pixmap.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel/datamodel.h \
 		Datamodel/filters.h
 
@@ -25190,7 +25483,14 @@ release\thumb.obj: Image\thumb.cpp Image/thumb.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
-		ui_metadatareport.h
+		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout
 
 release\global.obj: Main\global.cpp Main/global.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
@@ -26206,6 +26506,12 @@ release\main.obj: Main\main.cpp Main/mainwindow.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel/filters.h \
 		File/bookmarks.h \
 		File/fstree.h \
@@ -26248,9 +26554,13 @@ release\main.obj: Main\main.cpp Main/mainwindow.h \
 		Utilities/usb.h \
 		ui_helpform.h \
 		ui_shortcutsform.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
 		ui_welcome.h \
-		ui_message.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
+		ui_message.h
 
 release\mainwindow.obj: Main\mainwindow.cpp Main/mainwindow.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
@@ -26803,6 +27113,12 @@ release\mainwindow.obj: Main\mainwindow.cpp Main/mainwindow.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel/filters.h \
 		File/bookmarks.h \
 		File/fstree.h \
@@ -26845,7 +27161,12 @@ release\mainwindow.obj: Main\mainwindow.cpp Main/mainwindow.h \
 		Utilities/usb.h \
 		ui_helpform.h \
 		ui_shortcutsform.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
 		ui_welcome.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
 		ui_message.h
 
 release\metadata.obj: Metadata\metadata.cpp Metadata/metadata.h \
@@ -27394,6 +27715,13 @@ release\metadata.obj: Metadata\metadata.cpp Metadata/metadata.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QDebug
 
 release\xmp.obj: Metadata\xmp.cpp Metadata/xmp.h \
@@ -28488,6 +28816,13 @@ release\compareImages.obj: Views\compareImages.cpp Views/compareImages.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Views/thumbview.h \
 		File/fstree.h \
 		Datamodel/datamodel.h \
@@ -28503,8 +28838,7 @@ release\compareImages.obj: Views\compareImages.cpp Views/compareImages.h \
 		Image/pixmap.h \
 		Utilities/classificationlabel.h \
 		Image/imagealign.h \
-		Dialogs/testaligndlg.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog
+		Dialogs/testaligndlg.h
 
 release\compareview.obj: Views\compareview.cpp Views/compareview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
@@ -29053,6 +29387,13 @@ release\compareview.obj: Views\compareview.cpp Views/compareview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Cache/imagecache.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QThread \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QWaitCondition \
@@ -29615,6 +29956,13 @@ release\imageview.obj: Views\imageview.cpp C:\Qt\5.10.0\msvc2017_64\include\QtWi
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Cache/imagecache.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QThread \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QWaitCondition \
@@ -29636,8 +29984,7 @@ release\imageview.obj: Views\imageview.cpp C:\Qt\5.10.0\msvc2017_64\include\QtWi
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QTimer \
 		Utilities/dropshadowlabel.h \
-		Utilities/classificationlabel.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication
+		Utilities/classificationlabel.h
 
 release\infoview.obj: Views\infoview.cpp Views/infoview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
@@ -30186,6 +30533,13 @@ release\infoview.obj: Views\infoview.cpp Views/infoview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel/datamodel.h \
 		Datamodel/filters.h
 
@@ -30737,6 +31091,13 @@ release\tableview.obj: Views\tableview.cpp Views/tableview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel/filters.h \
 		Views/thumbview.h \
 		File/fstree.h \
@@ -31293,6 +31654,13 @@ release\thumbview.obj: Views\thumbview.cpp Views/thumbview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel/datamodel.h \
 		Datamodel/filters.h \
 		Views/thumbviewdelegate.h \
@@ -31301,7 +31669,6 @@ release\thumbview.obj: Views\thumbview.cpp Views/thumbview.h \
 		Main/mainwindow.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDesktopWidget \
 		Dialogs/appdlg.h \
-		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
 		File/bookmarks.h \
 		Views/compareImages.h \
 		Views/compareview.h \
@@ -31338,7 +31705,12 @@ release\thumbview.obj: Views\thumbview.cpp Views/thumbview.h \
 		Utilities/usb.h \
 		ui_helpform.h \
 		ui_shortcutsform.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
 		ui_welcome.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
 		ui_message.h
 
 release\thumbviewdelegate.obj: Views\thumbviewdelegate.cpp Views/thumbviewdelegate.h \
@@ -32354,6 +32726,13 @@ release\infostring.obj: Views\infostring.cpp Views/infostring.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
 		ui_metadatareport.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Datamodel/datamodel.h \
 		Datamodel/filters.h \
 		Dialogs/tokendlg.h \
