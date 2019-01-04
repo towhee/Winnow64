@@ -91,7 +91,7 @@
            <string>Shortcut = 1</string>
           </property>
           <property name="text">
-           <string>25% (1)</string>
+           <string>25%</string>
           </property>
           <property name="shortcut">
            <string>1</string>
@@ -109,7 +109,7 @@
            <string>Shortcut = 2</string>
           </property>
           <property name="text">
-           <string>50% (2)</string>
+           <string>50%</string>
           </property>
           <property name="shortcut">
            <string>2</string>
@@ -127,7 +127,7 @@
            <string>Shortcut = 3</string>
           </property>
           <property name="text">
-           <string>67% (3)</string>
+           <string>67%</string>
           </property>
           <property name="shortcut">
            <string>3</string>
@@ -138,14 +138,14 @@
          <widget class="QRadioButton" name="radio100Button">
           <property name="font">
            <font>
-            <pointsize>11</pointsize>
+            <pointsize>8</pointsize>
            </font>
           </property>
           <property name="toolTip">
            <string>Shortcut = 4</string>
           </property>
           <property name="text">
-           <string>100% (4)</string>
+           <string>100%</string>
           </property>
           <property name="shortcut">
            <string>4</string>
@@ -163,7 +163,7 @@
            <string>Shortcut = 5</string>
           </property>
           <property name="text">
-           <string>133% (5)</string>
+           <string>133%</string>
           </property>
           <property name="shortcut">
            <string>5</string>
@@ -181,7 +181,7 @@
            <string>Shortcut = 6</string>
           </property>
           <property name="text">
-           <string>200% (6)</string>
+           <string>200%</string>
           </property>
           <property name="shortcut">
            <string>6</string>

@@ -658,6 +658,5 @@ void Prefdlg::on_statusBarChk_clicked()
 
 void Prefdlg::on_globalFontSizeSlider_valueChanged(int value)
 {
-//    QString s = QString::number(ui->globalFontSizeSlider->value());
-    emit updateFontSize(QString::number(ui->globalFontSizeSlider->value()));
+    emit updateFontSize(QString::number(value));
 }
