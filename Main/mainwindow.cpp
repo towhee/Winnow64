@@ -280,7 +280,24 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 //bool MW::event(QObject *obj, QEvent *event)
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
-     /* ThumbView is ready-to-go and can scroll to wherever we want:
+    // use to show all events being filtered - handy to figure out which to intercept
+//    if (event->type() != QEvent::Paint
+//            && event->type() != QEvent::UpdateRequest
+//            && event->type() != QEvent::ZeroTimerEvent
+//            && event->type() != QEvent::Timer)
+//        qDebug() << event << event->type()
+//                 << "currentViewDir:" << currentViewDir
+//                 << "mouseOverFolder:" << mouseOverFolder;
+
+//    if (event->type() == QEvent::KeyPress) {
+//        QKeyEvent *event = static_cast<QKeyEvent *>(event);
+//        qDebug() << "\nMW::eventFilter  keyPressEvent" << event;
+//        if (event->key() == Qt::Key_Escape) {
+//            dm->timeToQuit = true;
+//        }
+//    }
+
+    /* ThumbView is ready-to-go and can scroll to wherever we want:
 
     When the user changes modes in MW (ie from Grid to Loupe) a ThumbView
     instance (either thumbView or gridView) can change state from hidden to
@@ -297,22 +314,43 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     ThumbView is finished hence this cludge.
     */
 
-    // use to show all events being filtered - handy to figure out which to intercept
-//    if (event->type() != QEvent::Paint
-//            && event->type() != QEvent::UpdateRequest
-//            && event->type() != QEvent::ZeroTimerEvent
-//            && event->type() != QEvent::Timer)
-//        qDebug() << event << event->type()
-//                 << "currentViewDir:" << currentViewDir
-//                 << "mouseOverFolder:" << mouseOverFolder;
-
-    //    if (event->type() == QEvent::KeyPress) {
-//        QKeyEvent *event = static_cast<QKeyEvent *>(event);
-//        qDebug() << "\nMW::eventFilter  keyPressEvent" << event;
-//        if (event->key() == Qt::Key_Escape) {
-//            dm->timeToQuit = true;
-//        }
-//    }
+    if(event->type() == QEvent::Paint
+            && thumbView->readyToScroll
+            && (obj->objectName() == "ThumbViewVerticalScrollBar"
+            || obj->objectName() == "ThumbViewHorizontalScrollBar"))
+    {
+        if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
+            /*
+            qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
+                     << horizontalScrollBar()->maximum()
+                     << getHorizontalScrollBarMax();
+                     */
+            if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
+                /*
+                 qDebug() << G::t.restart() << "\t" << objectName()
+                     << ": Event Filter sending row =" << currentRow
+                     << "horizontalScrollBarMax Qt vs Me"
+                     << thumbView->horizontalScrollBar()->maximum()
+                     << thumbView->getHorizontalScrollBarMax();     */
+                thumbView->scrollToCurrent(currentRow);
+            }
+        }
+        if (obj->objectName() == "ThumbViewVerticalScrollBar") {
+             /*
+             qDebug() << G::t.restart() << "\t" << objectName() << "VerScrollCurrentMax / FinalMax:"
+                      << thumbView->verticalScrollBar()->maximum()
+                      << thumbView->getVerticalScrollBarMax();*/
+             if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
+                /*
+                 qDebug() << G::t.restart() << "\t" << objectName()
+                          << ": Event Filter sending row =" << currentRow
+                          << "verticalScrollBarMax Qt vs Me"
+                          << thumbView->verticalScrollBar()->maximum()
+                          << thumbView->getVerticalScrollBarMax();*/
+                 thumbView->scrollToCurrent(currentRow);
+             }
+         }
+    }
 
     /*  Intercept context menu
      Intercept context menu to enable/disable:
@@ -370,44 +408,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     The thumbDock is referenced from the parent because thumbView is a friend
     class to MW.
     */
-
-    if(event->type() == QEvent::Paint
-            && thumbView->readyToScroll
-            && (obj->objectName() == "ThumbViewVerticalScrollBar"
-            || obj->objectName() == "ThumbViewHorizontalScrollBar"))
-    {
-        if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
-            /*
-            qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
-                     << horizontalScrollBar()->maximum()
-                     << getHorizontalScrollBarMax();
-                     */
-            if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
-                /*
-                 qDebug() << G::t.restart() << "\t" << objectName()
-                     << ": Event Filter sending row =" << currentRow
-                     << "horizontalScrollBarMax Qt vs Me"
-                     << thumbView->horizontalScrollBar()->maximum()
-                     << thumbView->getHorizontalScrollBarMax();     */
-                thumbView->scrollToCurrent(currentRow);
-            }
-        }
-        if (obj->objectName() == "ThumbViewVerticalScrollBar") {
-             /*
-             qDebug() << G::t.restart() << "\t" << objectName() << "VerScrollCurrentMax / FinalMax:"
-                      << thumbView->verticalScrollBar()->maximum()
-                      << thumbView->getVerticalScrollBarMax();*/
-             if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
-                /*
-                 qDebug() << G::t.restart() << "\t" << objectName()
-                          << ": Event Filter sending row =" << currentRow
-                          << "verticalScrollBarMax Qt vs Me"
-                          << thumbView->verticalScrollBar()->maximum()
-                          << thumbView->getVerticalScrollBarMax();*/
-                 thumbView->scrollToCurrent(currentRow);
-             }
-         }
-    }
 
     if (event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *e = (QMouseEvent *)event;
@@ -2045,37 +2045,38 @@ void MW::createActions()
     addAction(thumbDockVisibleAction);
     connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::toggleThumbDockVisibity);
 
-    // Window menu focus actions
+/*    Window menu focus actions replaced by three way toggle focus/visibility
 
-//    folderDockFocusAction = new QAction(tr("Focus on Folders"), this);
-//    folderDockFocusAction->setObjectName("FocusFolders");
-//    folderDockFocusAction->setShortcutVisibleInContextMenu(true);
-//    addAction(folderDockFocusAction);
-//    connect(folderDockFocusAction, &QAction::triggered, this, &MW::setFolderDockFocus);
+    folderDockFocusAction = new QAction(tr("Focus on Folders"), this);
+    folderDockFocusAction->setObjectName("FocusFolders");
+    folderDockFocusAction->setShortcutVisibleInContextMenu(true);
+    addAction(folderDockFocusAction);
+    connect(folderDockFocusAction, &QAction::triggered, this, &MW::setFolderDockFocus);
 
-//    favDockFocusAction = new QAction(tr("Focus on Favourites"), this);
-//    favDockFocusAction->setObjectName("FocusFavourites");
-//    favDockFocusAction->setShortcutVisibleInContextMenu(true);
-//    addAction(favDockFocusAction);
-//    connect(favDockFocusAction, &QAction::triggered, this, &MW::setFavDockFocus);
+    favDockFocusAction = new QAction(tr("Focus on Favourites"), this);
+    favDockFocusAction->setObjectName("FocusFavourites");
+    favDockFocusAction->setShortcutVisibleInContextMenu(true);
+    addAction(favDockFocusAction);
+    connect(favDockFocusAction, &QAction::triggered, this, &MW::setFavDockFocus);
 
-//    filterDockFocusAction = new QAction(tr("Focus on Filters"), this);
-//    filterDockFocusAction->setObjectName("FocusFilters");
-//    filterDockFocusAction->setShortcutVisibleInContextMenu(true);
-//    addAction(filterDockFocusAction);
-//    connect(filterDockFocusAction, &QAction::triggered, this, &MW::setFilterDockFocus);
+    filterDockFocusAction = new QAction(tr("Focus on Filters"), this);
+    filterDockFocusAction->setObjectName("FocusFilters");
+    filterDockFocusAction->setShortcutVisibleInContextMenu(true);
+    addAction(filterDockFocusAction);
+    connect(filterDockFocusAction, &QAction::triggered, this, &MW::setFilterDockFocus);
 
-//    metadataDockFocusAction = new QAction(tr("Focus on Metadata"), this);
-//    metadataDockFocusAction->setObjectName("FocusMetadata");
-//    metadataDockFocusAction->setShortcutVisibleInContextMenu(true);
-//    addAction(metadataDockFocusAction);
-//    connect(metadataDockFocusAction, &QAction::triggered, this, &MW::setMetadataDockFocus);
+    metadataDockFocusAction = new QAction(tr("Focus on Metadata"), this);
+    metadataDockFocusAction->setObjectName("FocusMetadata");
+    metadataDockFocusAction->setShortcutVisibleInContextMenu(true);
+    addAction(metadataDockFocusAction);
+    connect(metadataDockFocusAction, &QAction::triggered, this, &MW::setMetadataDockFocus);
 
-//    thumbDockFocusAction = new QAction(tr("Focus on Thumbs"), this);
-//    thumbDockFocusAction->setObjectName("FocusThumbs");
-//    thumbDockFocusAction->setShortcutVisibleInContextMenu(true);
-//    addAction(thumbDockFocusAction);
-//    connect(thumbDockFocusAction, &QAction::triggered, this, &MW::setThumbDockFocus);
+    thumbDockFocusAction = new QAction(tr("Focus on Thumbs"), this);
+    thumbDockFocusAction->setObjectName("FocusThumbs");
+    thumbDockFocusAction->setShortcutVisibleInContextMenu(true);
+    addAction(thumbDockFocusAction);
+    connect(thumbDockFocusAction, &QAction::triggered, this, &MW::setThumbDockFocus);
+*/
 
     // Lock docks (hide titlebar) actions
     folderDockLockAction = new QAction(tr("Hide Folder Titlebar"), this);
@@ -3368,7 +3369,7 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
     }
 
     // check for file error first
-    QString fPath = thumbView->getCurrentFilename();
+    QString fPath = thumbView->getCurrentFilePath();
     if (metadata->getThumbUnavailable(fPath) || metadata->getImageUnavailable(fPath)) {
         stateLabel->setText(metadata->getErr(fPath));
         return;
@@ -4524,7 +4525,7 @@ void MW::reportMetadata()
     G::track(__FUNCTION__);
     #endif
     }
-    metadata->readMetadata(true, thumbView->getCurrentFilename());
+    metadata->readMetadata(true, thumbView->getCurrentFilePath());
 }
 
 void MW::about()
@@ -6329,7 +6330,7 @@ void MW::compareDisplay()
     }
 //    qDebug() << G::t.restart() << "\t" << "\n======================================= Compare =========================================";
     updateStatus(true);
-    int n = thumbView->selectionModel()->selectedRows().count();
+    int n = selectionModel->selectedRows().count();
     if (n < 2) {
         popUp->showPopup(this, "Select more than one image to compare.", 1000, 0.75);
         return;
@@ -6340,21 +6341,39 @@ void MW::compareDisplay()
         popUp->showPopup(this, msg, 2000, 0.75);
     }
 
-    // if was in grid mode make sure thumbDock is visible in compare mode
-    if (G::mode == "Grid") {
-//        qDebug() << G::t.restart() << "\t" << "Calling setThumbDockFeatures from MW::MW::compareDisplay";
-        setThumbDockFeatures(dockWidgetArea(thumbDock));
-        if(!thumbDock->isVisible() && wasThumbDockVisible) toggleThumbDockVisibity();
-        thumbView->setThumbParameters();  // reqd?
-    }
+//    // if was in grid mode make sure thumbDock is visible in compare mode
+//    if (G::mode == "Grid") {
+////        qDebug() << G::t.restart() << "\t" << "Calling setThumbDockFeatures from MW::MW::compareDisplay";
+//        setThumbDockFeatures(dockWidgetArea(thumbDock));
+////        if(!thumbDock->isVisible() && wasThumbDockVisible) toggleThumbDockVisibity();
+//        if(!thumbDock->isVisible() && wasThumbDockVisible) {
+//            thumbDock->setVisible(true);
+//            thumbDock->raise();
+//            thumbDockVisibleAction->setChecked(true);
+//        }
+////        thumbView->setThumbParameters();  // reqd?
+//    }
+
+    /* If thumbdock was visible, then enter grid mode, make selection, and then
+       compare the thumbdock gets frozen (cannot use splitter) at about 1/2 ht.
+       Not sure what causes this, but by making the thumbdock visible before
+       entered compare mode avoids this.  After enter compare mode revert
+       thumbdoc to prior visibility (wasThumbDockVisible).
+    */
+    thumbDock->setVisible(true);
+    thumbDock->raise();
 
     G::mode = "Compare";
     centralLayout->setCurrentIndex(CompareTab);
     prevCentralView = CompareTab;
+
     compareImages->load(centralWidget->size(), isRatingBadgeVisible);
 
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
-//    thumbView->selectionModel()->clear();
+
+    // restore thumbdock to previous state
+    if(!wasThumbDockVisible) toggleThumbDockVisibity();
+    hasGridBeenActivated = false;
 }
 
 void MW::saveSelection()
@@ -6423,7 +6442,7 @@ void MW::selectShootingInfo()
     infoString->editTemplates();
     // display new info
     QModelIndex idx = thumbView->currentIndex();
-    QString fPath = thumbView->getCurrentFilename();
+    QString fPath = thumbView->getCurrentFilePath();
     QString sel = infoString->getCurrentInfoTemplate();
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
@@ -7158,7 +7177,7 @@ the rating for all the selected thumbs.
     }
 
     // update metadata
-    metadata->setRating(thumbView->getCurrentFilename(), rating);
+    metadata->setRating(thumbView->getCurrentFilePath(), rating);
 
     thumbView->refreshThumbs();
     gridView->refreshThumbs();

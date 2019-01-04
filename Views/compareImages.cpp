@@ -1,6 +1,11 @@
 #include "Views/compareImages.h"
 #include "Main/global.h"
 
+/*
+This class manages a group of imageviews that are each shown in a grid in the
+central diget.
+*/
+
 CompareImages::CompareImages(QWidget *parent,
                          QWidget *centralWidget,
                          Metadata *metadata,
@@ -26,6 +31,7 @@ CompareImages::CompareImages(QWidget *parent,
     pick status*/
 //    MW *mw = qobject_cast<MW*>(parent);
 
+    // set up a grid to contain the imageviews
     gridLayout = new QGridLayout;
     gridLayout->setContentsMargins(0, 0, 0, 0);
     gridLayout->setMargin(0);
@@ -77,12 +83,17 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 //        qDebug() << G::t.restart() << "\t" << "compareImages loading" << i << fPath;
     }
 
+    // determine the optimum grid to maximize the size of each image
     configureGrid();
+
     QSize gridCell(cw.width() / cols, cw.height() / rows);
-    for (int col = 0; col < cols; ++col)
-        gridLayout->setColumnMinimumWidth(col, cw.width() / cols - 1);
-    for (int row = 0; row < rows; ++row)
-        gridLayout->setRowMinimumHeight(row, cw.height() / rows - 1);
+//    qDebug() << "Central widget width =" << cw.width() << "height =" << cw.height();
+//    qDebug() << "Images =" << count << "Grid rows =" << rows << "cols =" << cols;
+//    qDebug() << "Compare grid cell width =" << gridCell.width() << "height =" << gridCell.height();
+//    for (int col = 0; col < cols; ++col)
+//        gridLayout->setColumnMinimumWidth(col, gridCell.width() - 200);
+//    for (int row = 0; row < rows; ++row)
+//        gridLayout->setRowMinimumHeight(row, gridCell.height() - 200);
 
     // iterate selected thumbs - load images, append and connect
     for (int i = 0; i < count; ++i) {
@@ -137,6 +148,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 
     thumbView->setCurrentIndex(imList->at(0)->imageIndex);
     go("Home");
+
     return true;
 }
 
@@ -182,13 +194,23 @@ void CompareImages::configureGrid()
         }
         break;
     case 3:
-        if (area(1, 3) > area(3, 1)) {
+        area1 = area(2, 2);
+        area2 = area(1, 3);
+        area3 = area(3, 1);
+        if (area1 >= area2 && area1 >= area3) {
+            rows = 2;
+            cols = 2;
+            break;
+        }
+        if (area2 >= area1 && area2 >= area3) {
             rows = 1;
             cols = 3;
+            break;
         }
-        else {
+        if (area3 >= area1 && area3 >= area2) {
             rows = 3;
             cols = 1;
+            break;
         }
         break;
     case 4:
@@ -213,15 +235,6 @@ void CompareImages::configureGrid()
         }
         break;
     case 5:
-        if (area(2, 3) > area(3, 2)) {
-            rows = 2;
-            cols = 3;
-        }
-        else {
-            rows = 3;
-            cols = 2;
-        }
-        break;
     case 6:
         if (area(2, 3) > area(3, 2)) {
             rows = 2;
@@ -232,7 +245,7 @@ void CompareImages::configureGrid()
             cols = 2;
         }
         break;
-    case 7: rows = 3;   cols = 3;   break;
+    case 7:
     case 8:
         area1 = area(3, 3);
         area2 = area(2, 4);
