@@ -3195,7 +3195,7 @@ void MW::createAppStyle()
     fStyle.open(QIODevice::ReadOnly);
     css += fStyle.readAll();
 
-    fontSize = "16";
+    fontSize = setting->value("fontSize").toString();
     QString s = "QWidget {font-size: " + fontSize + "px;}";
     this->setStyleSheet(s + css);
 }
