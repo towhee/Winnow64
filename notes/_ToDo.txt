@@ -1,4 +1,7 @@
 BUGS
+- Make boxes in edit shooting info a little bigger
+- After compare another compare does not include selection
+- Disable Ingest menu when no picks
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
 - Sometimes slow loading metadata
