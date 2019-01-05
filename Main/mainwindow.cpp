@@ -79,7 +79,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     createTableView();          // dependent on centralWidget
     createSelectionModel();     // dependent on ThumbView, ImageView
     createInfoView();           // dependent on Metadata
-    createCaching();            // dependent on dm, Metadata, ThumbView
+    createCaching();            // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
@@ -280,7 +280,24 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 //bool MW::event(QObject *obj, QEvent *event)
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
-     /* ThumbView is ready-to-go and can scroll to wherever we want:
+    // use to show all events being filtered - handy to figure out which to intercept
+//    if (event->type() != QEvent::Paint
+//            && event->type() != QEvent::UpdateRequest
+//            && event->type() != QEvent::ZeroTimerEvent
+//            && event->type() != QEvent::Timer)
+//        qDebug() << event << event->type()
+//                 << "currentViewDir:" << currentViewDir
+//                 << "mouseOverFolder:" << mouseOverFolder;
+
+//    if (event->type() == QEvent::KeyPress) {
+//        QKeyEvent *event = static_cast<QKeyEvent *>(event);
+//        qDebug() << "\nMW::eventFilter  keyPressEvent" << event;
+//        if (event->key() == Qt::Key_Escape) {
+//            dm->timeToQuit = true;
+//        }
+//    }
+
+    /* ThumbView is ready-to-go and can scroll to wherever we want:
 
     When the user changes modes in MW (ie from Grid to Loupe) a ThumbView
     instance (either thumbView or gridView) can change state from hidden to
@@ -297,22 +314,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     ThumbView is finished hence this cludge.
     */
 
-//    if (event->type() == QEvent::KeyPress) {
-//        QKeyEvent *event = static_cast<QKeyEvent *>(event);
-//        qDebug() << "\nMW::eventFilter  keyPressEvent" << event;
-//        if (event->key() == Qt::Key_Escape) {
-//            dm->timeToQuit = true;
-//        }
-//    }
-
     if(event->type() == QEvent::Paint
             && thumbView->readyToScroll
             && (obj->objectName() == "ThumbViewVerticalScrollBar"
             || obj->objectName() == "ThumbViewHorizontalScrollBar"))
     {
-
-//        qDebug() << G::t.restart() << "\t" << "\nThumbView event filter" << objectName() << obj << event;
-
         if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
             /*
             qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
@@ -326,7 +332,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                      << "horizontalScrollBarMax Qt vs Me"
                      << thumbView->horizontalScrollBar()->maximum()
                      << thumbView->getHorizontalScrollBarMax();     */
-
                 thumbView->scrollToCurrent(currentRow);
             }
         }
@@ -335,7 +340,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
              qDebug() << G::t.restart() << "\t" << objectName() << "VerScrollCurrentMax / FinalMax:"
                       << thumbView->verticalScrollBar()->maximum()
                       << thumbView->getVerticalScrollBarMax();*/
-
              if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
                 /*
                  qDebug() << G::t.restart() << "\t" << objectName()
@@ -343,10 +347,54 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                           << "verticalScrollBarMax Qt vs Me"
                           << thumbView->verticalScrollBar()->maximum()
                           << thumbView->getVerticalScrollBarMax();*/
-
                  thumbView->scrollToCurrent(currentRow);
              }
          }
+    }
+
+    /*  Intercept context menu
+     Intercept context menu to enable/disable:
+     - eject usb drive menu item
+     - add bookmarks menu item
+     mouseOverFolder is used in folder related context menu actions instead of
+     currentViewDir
+     */
+
+    if (event->type() == QEvent::ContextMenu) {
+        addBookmarkAction->setEnabled(true);
+        revealFileActionFromContext->setEnabled(true);
+        if(obj == fsTree->viewport()) {
+            QContextMenuEvent *e = (QContextMenuEvent *)event;
+            QModelIndex idx = fsTree->indexAt(e->pos());
+            mouseOverFolder = idx.data(QFileSystemModel::FilePathRole).toString();
+            enableEjectUsbMenu(mouseOverFolder);
+            // in folders or bookmarks but not on folder item
+            if(mouseOverFolder == "") {
+                addBookmarkAction->setEnabled(false);
+//                revealFileAction->setEnabled(false);
+                revealFileActionFromContext->setEnabled(false);
+            }
+        }
+        else if(obj == bookmarks->viewport()) {
+            QContextMenuEvent *e = (QContextMenuEvent *)event;
+            QModelIndex idx = bookmarks->indexAt(e->pos());
+            mouseOverFolder = idx.data(Qt::ToolTipRole).toString();
+            enableEjectUsbMenu(mouseOverFolder);
+            // in folders or bookmarks but not on folder item
+            if(mouseOverFolder == "") {
+                addBookmarkAction->setEnabled(false);
+//                revealFileAction->setEnabled(false);
+                revealFileActionFromContext->setEnabled(false);
+            }
+        }
+        else {
+            enableEjectUsbMenu(currentViewDir);
+            if(currentViewDir == "") {
+                addBookmarkAction->setEnabled(false);
+//                revealFileAction->setEnabled(false);
+                revealFileActionFromContext->setEnabled(false);
+            }
+        }
     }
 
     /* A splitter resize of top/bottom thumbDock is happening:
@@ -376,13 +424,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     if (event->type() == QEvent::MouseMove) {
         if (isLeftMouseBtnPressed) isMouseDrag = true;
-        QMouseEvent *e = (QMouseEvent *)event;
-        if(obj == fsTree->viewport()) {
-            QModelIndex idx = fsTree->indexAt(e->pos());
-            mouseOverFolder = idx.data(QFileSystemModel::FilePathRole).toString();
-//            qDebug() << obj << e->pos()
-//                     << "Path =" << path;
-        }
     }
 
     if (event->type() == QEvent::MouseButtonDblClick) {
@@ -557,7 +598,7 @@ void MW::folderSelectionChange()
     {
     #ifdef ISDEBUG
     G::track("\n=============================================================================");
-    G::track(__FUNCTION__, getSelectedPath());
+    G::track(__FUNCTION__);
     #endif
     }
     // Check if same folder
@@ -571,6 +612,11 @@ void MW::folderSelectionChange()
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
     allMetadataLoaded = false;
+
+    // Clear any previous selection
+//    thumbView->selectionModel()->clearSelection();
+//    dm->clear();
+//    qDebug() << "Clear selection in folderSelectionChange:" << thumbView->selectionModel()->selectedRows().count();
 
     if (!isInitializing) {
 //        dm->removeRows(0, dm->rowCount());
@@ -640,7 +686,8 @@ void MW::folderSelectionChange()
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(dirPath, true, false)) {
-        if (popUp->isVisible()) popUp->close();
+//        if (popUp->isVisible()) popUp->close();
+        clearAll();
         return;
     }
 
@@ -653,6 +700,17 @@ void MW::folderSelectionChange()
 //        fsTree->fsModel->fetchMore(fsTree->rootIndex());
     }
 
+    // update menu
+    enableEjectUsbMenu(currentViewDir);
+//    if(currentViewDir == "") {
+//        addBookmarkAction->setEnabled(false);
+//        revealFileAction->setEnabled(false);
+//    }
+//    else {
+//        addBookmarkAction->setEnabled(true);
+//        revealFileAction->setEnabled(true);
+//    }
+
     /* We do not want to update the imageCache while metadata is still being
     loaded. The imageCache update is triggered in metadataCache, which is also
     executed when the change file event is fired.
@@ -664,7 +722,9 @@ void MW::folderSelectionChange()
     this function has been executed by the load subfolders command then all the
     subfolders will be recursively loaded into the datamodel.
     */
+    clearAll();
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
+        enableSelectionDependentMenus();
         QDir dir(currentViewDir);
         if (dir.isRoot()) {
             updateStatus(false, "No supported images in this drive");
@@ -674,13 +734,6 @@ void MW::folderSelectionChange()
             updateStatus(false, "No supported images in this folder");
             setCentralMessage("The folder \"" + currentViewDir + "\" does not have any eligible images");
         }
-        popUp->close();
-        infoView->clearInfo();
-        metadata->clear();
-        imageView->clear();
-        cacheLabel->setVisible(false);
-        isInitializing = false;
-        isDragDrop = false;
         return;
     }
     centralLayout->setCurrentIndex(prevCentralView);
@@ -760,11 +813,20 @@ so scrollTo and delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
+    bool isStart = false;
+
+    if(!isCurrentFolderOkay) return;
+
     // if starting program, set first image to display
     if (current.row() == -1) {
+        isStart = true;
         thumbView->selectThumb(0);
-        return;
     }
+
+    // Check if anything selected.  If not disable menu items dependent on selection
+    enableSelectionDependentMenus();
+
+    if(isStart) return;
 
 //    qDebug() << "MW::fileSelectionChange  dm->sf->rowCount() =" << dm->sf->rowCount()
 //             << "selectionModel->selectedIndexes().size() =" << selectionModel->selectedIndexes().size();
@@ -884,6 +946,28 @@ so scrollTo and delegate use of the current index must check the row.
         thumb->loadThumb(fPath, image);
         thumbView->setIcon(currentRow, image);
     }
+}
+
+void MW::clearAll()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // Stop any threads that might be running.
+    imageCacheThread->stopImageCache();
+    metadataCacheThread->stopMetadateCache();
+    allMetadataLoaded = false;
+    dm->clear();
+    popUp->close();
+    infoView->clearInfo();
+    metadata->clear();
+    imageView->clear();
+    cacheLabel->setVisible(false);
+    inactiveThreadRunStatus();                      // turn thread activity buttons gray
+    isInitializing = false;
+    isDragDrop = false;
 }
 
 void MW::nullFiltration()
@@ -1077,12 +1161,17 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     }
 //    QString fPath = item->text(0);
     const QString fPath =  item->toolTip(col);
-    if (isFolderValid(fPath, true, false)) {
+    isCurrentFolderOkay = isFolderValid(fPath, true, false);
+    if (isCurrentFolderOkay) {
         QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
+    }
+    else {
+        clearAll();
+        enableSelectionDependentMenus();
     }
 }
 
@@ -1154,7 +1243,7 @@ void MW::createActions()
     manageAppAction->setObjectName("chooseApp");
     manageAppAction->setShortcutVisibleInContextMenu(true);
     addAction(manageAppAction);
-    connect(manageAppAction, &QAction::triggered, this, &MW::openWithProgramManagement);
+    connect(manageAppAction, &QAction::triggered, this, &MW::externalAppManager);
 
     /* read external apps from QStettings */
     setting->beginGroup("ExternalApps");
@@ -1216,19 +1305,25 @@ void MW::createActions()
     }
     addActions(recentFolderActions);
 
-    QString reveal = "Reveal";
+    QString revealText = "Reveal";
     #ifdef Q_OS_WIN
-        reveal = "Open in Explorer";
+        revealText = "Open in Explorer";
     #endif
     #ifdef Q_OS_MAC
-        reveal = "Reveal in Finder";
+        revealText = "Reveal in Finder";
     #endif
 
-    revealFileAction = new QAction(reveal, this);
+    revealFileAction = new QAction(revealText, this);
     revealFileAction->setObjectName("openInFinder");
     revealFileAction->setShortcutVisibleInContextMenu(true);
     addAction(revealFileAction);
     connect(revealFileAction, &QAction::triggered, this, &MW::revealFile);
+
+    revealFileActionFromContext = new QAction(revealText, this);
+    revealFileActionFromContext->setObjectName("openInFinderFromContext");
+    revealFileActionFromContext->setShortcutVisibleInContextMenu(true);
+    addAction(revealFileActionFromContext);
+    connect(revealFileActionFromContext, &QAction::triggered, this, &MW::revealFileFromContext);
 
     subFoldersAction = new QAction(tr("Include Sub-folders"), this);
     subFoldersAction->setObjectName("subFolders");
@@ -1263,12 +1358,23 @@ void MW::createActions()
     addAction(addBookmarkAction);
     connect(addBookmarkAction, &QAction::triggered, this, &MW::addNewBookmark);
 
+    addBookmarkActionFromContext = new QAction(tr("Add Bookmark"), this);
+    addBookmarkActionFromContext->setObjectName("addBookmark");
+    addBookmarkActionFromContext->setShortcutVisibleInContextMenu(true);
+    addAction(addBookmarkActionFromContext);
+    connect(addBookmarkActionFromContext, &QAction::triggered, this, &MW::addNewBookmarkFromContext);
+
     removeBookmarkAction = new QAction(tr("Remove Bookmark"), this);
     removeBookmarkAction->setObjectName("removeBookmark");
     removeBookmarkAction->setShortcutVisibleInContextMenu(true);
-    // rgh where did removeBookmark slot function go?
     addAction(removeBookmarkAction);
     connect(removeBookmarkAction, &QAction::triggered, this, &MW::removeBookmark);
+
+    refreshBookmarkAction = new QAction(tr("Refresh Bookmarks"), this);
+    refreshBookmarkAction->setObjectName("refreshBookmarks");
+    refreshBookmarkAction->setShortcutVisibleInContextMenu(true);
+    addAction(refreshBookmarkAction);
+    connect(refreshBookmarkAction, &QAction::triggered, this, &MW::refreshBookmarks);
 
     ingestAction = new QAction(tr("Ingest picks"), this);
     ingestAction->setObjectName("ingest");
@@ -1454,9 +1560,13 @@ void MW::createActions()
     prefAction->setObjectName("settings");
     prefAction->setShortcutVisibleInContextMenu(true);
     addAction(prefAction);
-//    connect(prefAction, &QAction::triggered, this, &MW::preferences);
-    // use lambda to send default -1 which loads previous open page in pref dialog
     connect(prefAction, &QAction::triggered, [this]() {preferences(-1);} );
+
+    prefInfoAction = new QAction(tr("Hide or show info fields"), this);
+    prefInfoAction->setObjectName("infosettings");
+    prefInfoAction->setShortcutVisibleInContextMenu(true);
+    addAction(prefInfoAction);
+    connect(prefInfoAction, &QAction::triggered, [this]() {preferences(6);} );
 
     // Go menu
 
@@ -1935,37 +2045,38 @@ void MW::createActions()
     addAction(thumbDockVisibleAction);
     connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::toggleThumbDockVisibity);
 
-    // Window menu focus actions
+/*    Window menu focus actions replaced by three way toggle focus/visibility
 
-//    folderDockFocusAction = new QAction(tr("Focus on Folders"), this);
-//    folderDockFocusAction->setObjectName("FocusFolders");
-//    folderDockFocusAction->setShortcutVisibleInContextMenu(true);
-//    addAction(folderDockFocusAction);
-//    connect(folderDockFocusAction, &QAction::triggered, this, &MW::setFolderDockFocus);
+    folderDockFocusAction = new QAction(tr("Focus on Folders"), this);
+    folderDockFocusAction->setObjectName("FocusFolders");
+    folderDockFocusAction->setShortcutVisibleInContextMenu(true);
+    addAction(folderDockFocusAction);
+    connect(folderDockFocusAction, &QAction::triggered, this, &MW::setFolderDockFocus);
 
-//    favDockFocusAction = new QAction(tr("Focus on Favourites"), this);
-//    favDockFocusAction->setObjectName("FocusFavourites");
-//    favDockFocusAction->setShortcutVisibleInContextMenu(true);
-//    addAction(favDockFocusAction);
-//    connect(favDockFocusAction, &QAction::triggered, this, &MW::setFavDockFocus);
+    favDockFocusAction = new QAction(tr("Focus on Favourites"), this);
+    favDockFocusAction->setObjectName("FocusFavourites");
+    favDockFocusAction->setShortcutVisibleInContextMenu(true);
+    addAction(favDockFocusAction);
+    connect(favDockFocusAction, &QAction::triggered, this, &MW::setFavDockFocus);
 
-//    filterDockFocusAction = new QAction(tr("Focus on Filters"), this);
-//    filterDockFocusAction->setObjectName("FocusFilters");
-//    filterDockFocusAction->setShortcutVisibleInContextMenu(true);
-//    addAction(filterDockFocusAction);
-//    connect(filterDockFocusAction, &QAction::triggered, this, &MW::setFilterDockFocus);
+    filterDockFocusAction = new QAction(tr("Focus on Filters"), this);
+    filterDockFocusAction->setObjectName("FocusFilters");
+    filterDockFocusAction->setShortcutVisibleInContextMenu(true);
+    addAction(filterDockFocusAction);
+    connect(filterDockFocusAction, &QAction::triggered, this, &MW::setFilterDockFocus);
 
-//    metadataDockFocusAction = new QAction(tr("Focus on Metadata"), this);
-//    metadataDockFocusAction->setObjectName("FocusMetadata");
-//    metadataDockFocusAction->setShortcutVisibleInContextMenu(true);
-//    addAction(metadataDockFocusAction);
-//    connect(metadataDockFocusAction, &QAction::triggered, this, &MW::setMetadataDockFocus);
+    metadataDockFocusAction = new QAction(tr("Focus on Metadata"), this);
+    metadataDockFocusAction->setObjectName("FocusMetadata");
+    metadataDockFocusAction->setShortcutVisibleInContextMenu(true);
+    addAction(metadataDockFocusAction);
+    connect(metadataDockFocusAction, &QAction::triggered, this, &MW::setMetadataDockFocus);
 
-//    thumbDockFocusAction = new QAction(tr("Focus on Thumbs"), this);
-//    thumbDockFocusAction->setObjectName("FocusThumbs");
-//    thumbDockFocusAction->setShortcutVisibleInContextMenu(true);
-//    addAction(thumbDockFocusAction);
-//    connect(thumbDockFocusAction, &QAction::triggered, this, &MW::setThumbDockFocus);
+    thumbDockFocusAction = new QAction(tr("Focus on Thumbs"), this);
+    thumbDockFocusAction->setObjectName("FocusThumbs");
+    thumbDockFocusAction->setShortcutVisibleInContextMenu(true);
+    addAction(thumbDockFocusAction);
+    connect(thumbDockFocusAction, &QAction::triggered, this, &MW::setThumbDockFocus);
+*/
 
     // Lock docks (hide titlebar) actions
     folderDockLockAction = new QAction(tr("Hide Folder Titlebar"), this);
@@ -2147,6 +2258,7 @@ void MW::createMenus()
             SLOT(invokeRecentFolder(QAction*)));
     fileMenu->addSeparator();
     fileMenu->addAction(refreshFoldersAction);
+    fileMenu->addAction(ejectAction);
     fileMenu->addSeparator();
     fileMenu->addAction(ingestAction);
     fileMenu->addAction(combineRawJpgAction);
@@ -2176,8 +2288,8 @@ void MW::createMenus()
     editMenu->addAction(filterPickAction);
     editMenu->addAction(popPickHistoryAction);
     editMenu->addSeparator();
-    editMenu->addAction(copyImagesAction);
-    editMenu->addSeparator();
+//    editMenu->addAction(copyImagesAction);
+//    editMenu->addSeparator();
     editMenu->addAction(rate0Action);
     editMenu->addAction(rate1Action);
     editMenu->addAction(rate2Action);
@@ -2344,14 +2456,23 @@ void MW::createMenus()
     fsTreeActions->append(ejectAction);
     fsTreeActions->append(separatorAction);
     fsTreeActions->append(showImageCountAction);
-    fsTreeActions->append(revealFileAction);
+    fsTreeActions->append(revealFileActionFromContext);
     fsTreeActions->append(separatorAction1);
     fsTreeActions->append(pasteAction);
     fsTreeActions->append(separatorAction2);
-    fsTreeActions->append(openWithMenuAction);
-    fsTreeActions->append(addBookmarkAction);
+    fsTreeActions->append(addBookmarkActionFromContext);
     fsTreeActions->append(separatorAction3);
     fsTreeActions->append(folderDockLockAction);
+
+    // bookmarks context menu
+    QList<QAction *> *favActions = new QList<QAction *>;
+    favActions->append(refreshBookmarkAction);
+    favActions->append(revealFileActionFromContext);
+//    favActions->append(pasteAction);
+    favActions->append(separatorAction);
+    favActions->append(removeBookmarkAction);
+    favActions->append(separatorAction1);
+    favActions->append(favDockLockAction);
 
     // filters context menu
     filterActions = new QList<QAction *>;
@@ -2363,25 +2484,22 @@ void MW::createMenus()
     filterActions->append(separatorAction1);
     filterActions->append(filterDockLockAction);
 
-    // bookmarks context menu
-    QList<QAction *> *favActions = new QList<QAction *>;
-    favActions->append(pasteAction);
-    favActions->append(removeBookmarkAction);
-    favActions->append(separatorAction);
-    favActions->append(favDockLockAction);
-
     // metadata context menu
     QList<QAction *> *metadataActions = new QList<QAction *>;
-    metadataActions->append(infoView->copyInfoAction);
+//    metadataActions->append(infoView->copyInfoAction);
     metadataActions->append(reportMetadataAction);
-    metadataActions->append(prefAction);
+    metadataActions->append(prefInfoAction);
     metadataActions->append(separatorAction);
     metadataActions->append(metadataDockLockAction);
+
+    // Open with Menu (used in thumbview context menu)
+    QAction *openWithGroupAct = new QAction(tr("Open with..."), this);
+    openWithGroupAct->setMenu(openWithMenu);
 
     // thumbview context menu
     QList<QAction *> *thumbViewActions = new QList<QAction *>;
     thumbViewActions->append(revealFileAction);
-    thumbViewActions->append(openWithMenuAction);
+    thumbViewActions->append(openWithGroupAct);
     thumbViewActions->append(separatorAction);
     thumbViewActions->append(selectAllAction);
     thumbViewActions->append(invertSelectionAction);
@@ -2504,6 +2622,139 @@ void MW::addMenuSeparator(QWidget *widget)
     widget->addAction(separator);
 }
 
+void MW::enableEjectUsbMenu(QString path)
+{
+    if(Usb::isUsb(path)) ejectAction->setEnabled(true);
+    else ejectAction->setEnabled(false);
+}
+
+void MW::enableSelectionDependentMenus()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if(selectionModel->selectedRows().count() > 0) {
+        openWithMenu->setEnabled(true);
+        ingestAction->setEnabled(true);
+        revealFileAction->setEnabled(true);
+        subFoldersAction->setEnabled(true);
+        addBookmarkAction->setEnabled(true);
+        reportMetadataAction->setEnabled(true);
+        selectAllAction->setEnabled(true);
+        invertSelectionAction->setEnabled(true);
+        refineAction->setEnabled(true);
+        pickAction->setEnabled(true);
+        filterPickAction->setEnabled(true);
+        popPickHistoryAction->setEnabled(true);
+        copyImagesAction->setEnabled(true);
+        rate0Action->setEnabled(true);
+        rate1Action->setEnabled(true);
+        rate2Action->setEnabled(true);
+        rate3Action->setEnabled(true);
+        rate4Action->setEnabled(true);
+        rate5Action->setEnabled(true);
+        label0Action->setEnabled(true);
+        label1Action->setEnabled(true);
+        label2Action->setEnabled(true);
+        label3Action->setEnabled(true);
+        label4Action->setEnabled(true);
+        label5Action->setEnabled(true);
+        rotateRightAction->setEnabled(true);
+        rotateLeftAction->setEnabled(true);
+        keyRightAction->setEnabled(true);
+        keyLeftAction->setEnabled(true);
+        keyUpAction->setEnabled(true);
+        keyDownAction->setEnabled(true);
+        keyHomeAction->setEnabled(true);
+        keyEndAction->setEnabled(true);
+        nextPickAction->setEnabled(true);
+        prevPickAction->setEnabled(true);
+        uncheckAllFiltersAction->setEnabled(true);
+        filterPickAction->setEnabled(true);
+        filterRating1Action->setEnabled(true);
+        filterRating2Action->setEnabled(true);
+        filterRating3Action->setEnabled(true);
+        filterRating4Action->setEnabled(true);
+        filterRating5Action->setEnabled(true);
+        filterRedAction->setEnabled(true);
+        filterYellowAction->setEnabled(true);
+        filterGreenAction->setEnabled(true);
+        filterBlueAction->setEnabled(true);
+        filterPurpleAction->setEnabled(true);
+        filterInvertAction->setEnabled(true);
+        sortGroupAction->setEnabled(true);
+        sortReverseAction->setEnabled(true);
+        zoomToAction->setEnabled(true);
+        zoomInAction->setEnabled(true);
+        zoomOutAction->setEnabled(true);
+        zoomToggleAction->setEnabled(true);
+        thumbsWrapAction->setEnabled(true);
+        thumbsEnlargeAction->setEnabled(true);
+        thumbsShrinkAction->setEnabled(true);
+    }
+    else {
+        openWithMenu->setEnabled(false);
+        ingestAction->setEnabled(false);
+        revealFileAction->setEnabled(false);
+        subFoldersAction->setEnabled(false);
+        addBookmarkAction->setEnabled(false);
+        reportMetadataAction->setEnabled(false);
+        selectAllAction->setEnabled(false);
+        invertSelectionAction->setEnabled(false);
+        refineAction->setEnabled(false);
+        pickAction->setEnabled(false);
+        filterPickAction->setEnabled(false);
+        popPickHistoryAction->setEnabled(false);
+        copyImagesAction->setEnabled(false);
+        rate0Action->setEnabled(false);
+        rate1Action->setEnabled(false);
+        rate2Action->setEnabled(false);
+        rate3Action->setEnabled(false);
+        rate4Action->setEnabled(false);
+        rate5Action->setEnabled(false);
+        label0Action->setEnabled(false);
+        label1Action->setEnabled(false);
+        label2Action->setEnabled(false);
+        label3Action->setEnabled(false);
+        label4Action->setEnabled(false);
+        label5Action->setEnabled(false);
+        rotateRightAction->setEnabled(false);
+        rotateLeftAction->setEnabled(false);
+        keyRightAction->setEnabled(false);
+        keyLeftAction->setEnabled(false);
+        keyUpAction->setEnabled(false);
+        keyDownAction->setEnabled(false);
+        keyHomeAction->setEnabled(false);
+        keyEndAction->setEnabled(false);
+        nextPickAction->setEnabled(false);
+        prevPickAction->setEnabled(false);
+        uncheckAllFiltersAction->setEnabled(false);
+        filterPickAction->setEnabled(false);
+        filterRating1Action->setEnabled(false);
+        filterRating2Action->setEnabled(false);
+        filterRating3Action->setEnabled(false);
+        filterRating4Action->setEnabled(false);
+        filterRating5Action->setEnabled(false);
+        filterRedAction->setEnabled(false);
+        filterYellowAction->setEnabled(false);
+        filterGreenAction->setEnabled(false);
+        filterBlueAction->setEnabled(false);
+        filterPurpleAction->setEnabled(false);
+        filterInvertAction->setEnabled(false);
+        sortGroupAction->setEnabled(false);
+        sortReverseAction->setEnabled(false);
+        zoomToAction->setEnabled(false);
+        zoomInAction->setEnabled(false);
+        zoomOutAction->setEnabled(false);
+        zoomToggleAction->setEnabled(false);
+        thumbsWrapAction->setEnabled(false);
+        thumbsEnlargeAction->setEnabled(false);
+        thumbsShrinkAction->setEnabled(false);
+    }
+}
+
 void MW::createCentralWidget()
 {
     {
@@ -2581,8 +2832,6 @@ GridView and TableView, insuring that each view is in sync.
     // whenever currentIndex changes do a file selection change
     connect(selectionModel, &QItemSelectionModel::currentChanged,
             this, &MW::fileSelectionChange);
-//    connect(selectionModel, SIGNAL(currentChanged(QModelIndex, QModelIndex)),
-//            this, SLOT(fileSelectionChange(QModelIndex, QModelIndex)));
 }
 
 void MW::createCaching()
@@ -2944,7 +3193,11 @@ void MW::createAppStyle()
     // add error trapping for file io  rgh todo
     QFile fStyle(":/qss/winnow.css");
     fStyle.open(QIODevice::ReadOnly);
-    this->setStyleSheet(fStyle.readAll());
+    css += fStyle.readAll();
+
+    fontSize = "16";
+    QString s = "QWidget {font-size: " + fontSize + "px;}";
+    this->setStyleSheet(s + css);
 }
 
 void MW::createStatusBar()
@@ -3120,7 +3373,7 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
     }
 
     // check for file error first
-    QString fPath = thumbView->getCurrentFilename();
+    QString fPath = thumbView->getCurrentFilePath();
     if (metadata->getThumbUnavailable(fPath) || metadata->getImageUnavailable(fPath)) {
         stateLabel->setText(metadata->getErr(fPath));
         return;
@@ -4276,7 +4529,7 @@ void MW::reportMetadata()
     G::track(__FUNCTION__);
     #endif
     }
-    metadata->readMetadata(true, thumbView->getCurrentFilename());
+    metadata->readMetadata(true, thumbView->getCurrentFilePath());
 }
 
 void MW::about()
@@ -4297,10 +4550,12 @@ void MW::about()
     QMessageBox::about(this, tr("About") + " Winnow", aboutString);
 }
 
-void MW::openWithProgramManagement()
+void MW::externalAppManager()
 {
+    qDebug() << "externalAppManager before externalApps" << externalApps;
     Appdlg *appdlg = new Appdlg(externalApps, this);
     appdlg->exec();
+    qDebug() << "externalAppManager after externalApps" << externalApps;
     updateExternalApps();
 }
 
@@ -4356,19 +4611,48 @@ void MW::runExternalApp()
 //    app = "/Applications/Preview.app";
 //    std::cout << app.toStdString() << std::endl << std::flush;
 
-    if (selectedIdxList.size() < 1)
-    {
+    int nFiles = selectedIdxList.size();
+
+    if (nFiles < 1) {
         popup("No images have been selected", 2000, 0.75);
         return;
     }
 
+    if (nFiles > 5) {
+        QMessageBox msgBox;
+        int msgBoxWidth = 300;
+        msgBox.setText(QString::number(nFiles) + " files have been selected.");
+        msgBox.setInformativeText("Do you want continue?");
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        msgBox.setDefaultButton(QMessageBox::Yes);
+        msgBox.setIcon(QMessageBox::Warning);
+        QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
+                    "QPushButton:default {background-color: rgb(68,95,118);}";
+        msgBox.setStyleSheet(s);
+        QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        QGridLayout* layout = (QGridLayout*)msgBox.layout();
+        layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+        int ret = msgBox.exec();
+        if (ret == QMessageBox::Cancel) return;
+    }
+
     QStringList arguments;
+    for (int tn = 0; tn < nFiles ; ++tn) {
+        QString s = selectedIdxList[tn].data(G::PathRole).toString();
+        arguments << s;
+//        arguments << enquote(s);
+    }
+
+    //    QStringList arguments;
 //    for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn) {
 //        QString s = selectedIdxList[tn].data(G::PathRole).toString();
 //        arguments << s;
-////        arguments << enquote(s);
+//        arguments << enquote(s);
 //    }
-    arguments << "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg";
+
+    qDebug() << "arguments:" << arguments;
+
+//    arguments << "D:\Pictures\Coaster/2005-10-11_0082.jpg";
 //    arguments << "/Users/roryhill/Pictures/Eva/2016-06-21_0002.jpg";
 
 //    std::cout << "MW::runExternalApp()  " << app.toStdString()
@@ -4461,6 +4745,8 @@ void MW::preferences(int page)
     }
     if(page == -1) page = lastPrefPage;
     Prefdlg *prefdlg = new Prefdlg(this, page);
+    connect(prefdlg, SIGNAL(updateFontSize(QString)),
+            this, SLOT(setFontSize(QString)));
     connect(prefdlg, SIGNAL(updatePage(int)),
             this, SLOT(setPrefPage(int)));
     connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
@@ -4497,6 +4783,13 @@ void MW::setShowImageCount()
     fsTree->resizeColumns();
     fsTree->repaint();
     if (isShow) fsTree->fsModel->fetchMore(fsTree->rootIndex());
+}
+
+void MW::setFontSize(QString pixels)
+{
+    fontSize = pixels;
+    QString s = "QWidget {font-size: " + fontSize + "px;}";
+    this->setStyleSheet(s + css);
 }
 
 void MW::setPrefPage(int page)
@@ -4923,15 +5216,24 @@ void MW::removeBookmark()
     G::track(__FUNCTION__);
     #endif
     }
-//    if (QApplication::focusWidget() == thumbView->imageTags->tagsTree) {
-//        thumbView->imageTags->removeTag();
-//        return;
-//    }
-
     if (QApplication::focusWidget() == bookmarks) {
         bookmarks->removeBookmark();
         return;
     }
+}
+
+void MW::refreshBookmarks()
+{
+/*
+This is run from the bookmarks (fav) panel conext menu to update the image count
+for each bookmark folder.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    bookmarks->reloadBookmarks();
 }
 
 // rgh used?
@@ -4987,6 +5289,7 @@ re-established when the application is re-opened.
 //    setting->setValue("displayVerticalPixels", displayVerticalPixels);
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
     setting->setValue("autoEjectUSB", autoEjectUsb);
+    setting->setValue("fontSize", fontSize);
 
     // files
 //    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
@@ -5255,6 +5558,7 @@ Preferences are located in the prefdlg class and updated here.
         autoIngestFolderPath = false;
         autoEjectUsb = false;
         combineRawJpg = true;
+        fontSize = 14;
 
       // slideshow
         slideShowDelay = 5;
@@ -5287,6 +5591,7 @@ Preferences are located in the prefdlg class and updated here.
 //    displayVerticalPixels = setting->value("displayVerticalPixels").toInt();
     autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
     autoEjectUsb = setting->value("autoEjectUSB").toBool();
+    fontSize = setting->value("fontSize").toString();
 
     // files
 //    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();
@@ -5610,14 +5915,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
     }
     else    // default shortcuts
     {
-//        qDebug() << G::t.restart() << "\t" << "Default shortcuts";
         //    formats to set shortcut
         //    keyRightAction->setShortcut(QKeySequence("Right"));
         //    keyRightAction->setShortcut((Qt::Key_Right);
 
-//        thumbsGoTopAct->setShortcut(QKeySequence("Ctrl+Home"));
-//        thumbsGoBottomAct->setShortcut(QKeySequence("Ctrl+End"));
-//        closeImageAct->setShortcut(Qt::Key_Escape);
         //        cutAction->setShortcut(QKeySequence("Ctrl+X"));
         //        copyAction->setShortcut(QKeySequence("Ctrl+C"));
         //        copyImageAction->setShortcut(QKeySequence("Ctrl+Shift+C"));
@@ -5628,7 +5929,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         subFoldersAction->setShortcut(QKeySequence("B"));
         showImageCountAction->setShortcut(QKeySequence("\\"));
         fullScreenAction->setShortcut(QKeySequence("F"));
-//        escapeFullScreenAction->setShortcut(QKeySequence("Esc"));
+//        escapeFullScreenAction->setShortcut(QKeySequence("Esc")); // see MW::eventFilter
         prefAction->setShortcut(QKeySequence("Ctrl+,"));
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
         selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
@@ -5639,8 +5940,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
         ingestAction->setShortcut(QKeySequence("Q"));
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
-//        rate0Action->setShortcut(QKeySequence("!"));
-        uncheckAllFiltersAction->setShortcut(QKeySequence("Shift+Ctrl+0"));
+        uncheckAllFiltersAction->setShortcut(QKeySequence("Shift+Ctrl+C"));
         rate1Action->setShortcut(QKeySequence("1"));
         rate2Action->setShortcut(QKeySequence("2"));
         rate3Action->setShortcut(QKeySequence("3"));
@@ -5972,14 +6272,15 @@ lack of notification when the QListView has finished painting itself.
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "\n======================================= Grid ============================================";
     G::mode = "Grid";
     updateStatus(true);
     hasGridBeenActivated = true;
     // remember previous state of thumbDock so can recover if change mode
     wasThumbDockVisible = thumbDockVisibleAction->isChecked();
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
-    if(thumbDock->isVisible()) toggleThumbDockVisibity();
+    thumbDock->setVisible(false);
+    thumbDockVisibleAction->setChecked(false);
+//    if(thumbDock->isVisible()) toggleThumbDockVisibity();
     // show tableView in central widget
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
@@ -6035,7 +6336,7 @@ void MW::compareDisplay()
     }
 //    qDebug() << G::t.restart() << "\t" << "\n======================================= Compare =========================================";
     updateStatus(true);
-    int n = thumbView->selectionModel()->selectedRows().count();
+    int n = selectionModel->selectedRows().count();
     if (n < 2) {
         popUp->showPopup(this, "Select more than one image to compare.", 1000, 0.75);
         return;
@@ -6046,21 +6347,39 @@ void MW::compareDisplay()
         popUp->showPopup(this, msg, 2000, 0.75);
     }
 
-    // if was in grid mode make sure thumbDock is visible in compare mode
-    if (G::mode == "Grid") {
-//        qDebug() << G::t.restart() << "\t" << "Calling setThumbDockFeatures from MW::MW::compareDisplay";
-        setThumbDockFeatures(dockWidgetArea(thumbDock));
-        if(!thumbDock->isVisible() && wasThumbDockVisible) toggleThumbDockVisibity();
-        thumbView->setThumbParameters();  // reqd?
-    }
+//    // if was in grid mode make sure thumbDock is visible in compare mode
+//    if (G::mode == "Grid") {
+////        qDebug() << G::t.restart() << "\t" << "Calling setThumbDockFeatures from MW::MW::compareDisplay";
+//        setThumbDockFeatures(dockWidgetArea(thumbDock));
+////        if(!thumbDock->isVisible() && wasThumbDockVisible) toggleThumbDockVisibity();
+//        if(!thumbDock->isVisible() && wasThumbDockVisible) {
+//            thumbDock->setVisible(true);
+//            thumbDock->raise();
+//            thumbDockVisibleAction->setChecked(true);
+//        }
+////        thumbView->setThumbParameters();  // reqd?
+//    }
+
+    /* If thumbdock was visible, then enter grid mode, make selection, and then
+       compare the thumbdock gets frozen (cannot use splitter) at about 1/2 ht.
+       Not sure what causes this, but by making the thumbdock visible before
+       entered compare mode avoids this.  After enter compare mode revert
+       thumbdoc to prior visibility (wasThumbDockVisible).
+    */
+    thumbDock->setVisible(true);
+    thumbDock->raise();
 
     G::mode = "Compare";
     centralLayout->setCurrentIndex(CompareTab);
     prevCentralView = CompareTab;
+
     compareImages->load(centralWidget->size(), isRatingBadgeVisible);
 
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
-//    thumbView->selectionModel()->clear();
+
+    // restore thumbdock to previous state
+    if(!wasThumbDockVisible) toggleThumbDockVisibity();
+    hasGridBeenActivated = false;
 }
 
 void MW::saveSelection()
@@ -6129,7 +6448,7 @@ void MW::selectShootingInfo()
     infoString->editTemplates();
     // display new info
     QModelIndex idx = thumbView->currentIndex();
-    QString fPath = thumbView->getCurrentFilename();
+    QString fPath = thumbView->getCurrentFilePath();
     QString sel = infoString->getCurrentInfoTemplate();
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
@@ -6667,7 +6986,7 @@ void MW::ingest()
                                   autoIngestFolderPath);
         connect(ingestDlg, SIGNAL(updateIngestParameters(QString,bool)),
                 this, SLOT(setIngestRootFolder(QString,bool)));
-        if(ingestDlg->exec()) ejectUsb(currentViewDir);;
+        if(ingestDlg->exec() && autoEjectUsb) ejectUsb(currentViewDir);;
         delete ingestDlg;
     }
     else QMessageBox::information(this,
@@ -6693,20 +7012,21 @@ void MW::ejectUsb(QString path)
     driveRoot = path.mid(9, pos - 9);
 #endif
     if(Usb::isUsb(path)) {
-//        driveRoot = "Untitled";
         dm->load(driveRoot, false);
         refreshFolders();
         int result = Usb::eject(driveRoot);
-        if(result < 2)
+        if(result < 2) {
             popUp->showPopup(this, "Ejecting drive " + driveRoot, 2000, 0.75);
+            noFolderSelected();
+            currentViewDir = "";
+        }
         else
             popUp->showPopup(this, "Failed to eject drive " + driveRoot, 2000, 0.75);
     }
     else {
         popUp->showPopup(this, "Drive " + currentViewDir[0]
-                + "is not removable and cannot be ejected", 2000, 0.75);
+                + " is not removable and cannot be ejected", 2000, 0.75);
     }
-    noFolderSelected();
 }
 
 void MW::ejectUsbFromContextMenu()
@@ -6863,7 +7183,7 @@ the rating for all the selected thumbs.
     }
 
     // update metadata
-    metadata->setRating(thumbView->getCurrentFilename(), rating);
+    metadata->setRating(thumbView->getCurrentFilePath(), rating);
 
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
@@ -6965,13 +7285,17 @@ internally or as a sidecar when ingesting.
 */
     {
     #ifdef ISDEBUG
-    QString s = "infoView->isNewImageDataChange = ";
-    s += infoView->isNewImageDataChange ? "true" : "false";
+//    QString s = "infoView->isNewImageDataChange = ";
+//    s += infoView->isNewImageDataChange ? "true" : "false";
+    QString s = "isCurrentFolderOkay = ";
+    s += isCurrentFolderOkay ? "true" : "false";
     G::track(__FUNCTION__, s);
     #endif
     }
-
+    // if new folder is invalid no relevent data has changed
+    if(!isCurrentFolderOkay) return;
     if (infoView->isNewImageDataChange) return;
+
     QModelIndex par = item->index().parent();
     if (par != infoView->tagInfoIdx) return;
 
@@ -7341,7 +7665,18 @@ void MW::addNewBookmark()
     G::track(__FUNCTION__);
     #endif
     }
-    addBookmark(getSelectedPath());
+    addBookmark(currentViewDir);
+//    addBookmark(getSelectedPath());
+}
+
+void MW::addNewBookmarkFromContext()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    addBookmark(mouseOverFolder);
 }
 
 void MW::addBookmark(QString path)
@@ -7373,6 +7708,17 @@ void MW::openFolder()
 
 void MW::revealFile()
 {
+    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+    revealInFileBrowser(fPath);
+}
+
+void MW::revealFileFromContext()
+{
+    revealInFileBrowser(mouseOverFolder);
+}
+
+void MW::revealInFileBrowser(QString path)
+{
 /*
 See http://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
 for details
@@ -7382,7 +7728,8 @@ for details
     G::track(__FUNCTION__);
     #endif
     }
-    QString path = thumbView->getCurrentFilename();
+//    QString path = thumbView->getCurrentFilename();
+//    QString path = (mouseOverFolder == "") ? currentViewDir : mouseOverFolder;
     QFileInfo info(path);
 #if defined(Q_OS_WIN)
     QStringList args;
@@ -7433,6 +7780,11 @@ void MW::openInExplorer()
 
 bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QDir testDir(fPath);
     QString msg;
 
@@ -7441,7 +7793,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
 //            qDebug() << G::t.restart() << "\t" << "MW::isFolderValid  fPath.length() == 0" << fPath;
 //            QMessageBox::critical(this, tr("Error"), tr("The assigned folder name is blank"));
             msg = "The selected folder \"" + fPath + "\" does not have any images that can be shown in Winnow.";
-            updateStatus(false, msg);
+            stateLabel->setText("");
             setCentralMessage(msg);
         }
         return false;
@@ -7455,7 +7807,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
             else
                 msg = "The folder (" + fPath + ") does not exist or is not available";
 
-            updateStatus(false, msg);
+            stateLabel->setText("");
             setCentralMessage(msg);
         }
         return false;
@@ -7465,7 +7817,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     if (!testDir.isReadable()) {
         if (report) {
             msg = "The folder (" + fPath + ") is not readable.  Perhaps it was a USB drive that is not currently mounted or that has been ejected.";
-            updateStatus(false, msg);
+            stateLabel->setText("");
             setCentralMessage(msg);
         }
         return false;
@@ -7476,6 +7828,11 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
 
 void MW::createMessageView()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     messageView = new QWidget;
     msg.setupUi(messageView);
 //    Ui::message ui;
@@ -7484,6 +7841,11 @@ void MW::createMessageView()
 
 void MW::setCentralMessage(QString message)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     msg.msgLabel->setText(message);
     centralLayout->setCurrentIndex(MessageTab);
 }
@@ -7522,6 +7884,22 @@ void MW::helpWelcome()
 
 void MW::test()
 {
+    QString fontSize = "8";
+    QString s = "QWidget {font-size: " + fontSize + "px;}";
+    this->setStyleSheet(s + css);
+
+
+    //    qDebug() << "selection clear from test";
+//    thumbView->selectionModel()->clearSelection();
+
+//    QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedRows();
+//    for (int tn = 0; tn < selectedIdxList.size() ; ++tn) {
+//        QString s = selectedIdxList[tn].data(G::PathRole).toString();
+//        qDebug() << "Selected image:" << s;
+//    }
+
+//    dm->clear();
+
     // shortcut = "Shift+Ctrl+Alt+T"
 
 //    qDebug() << "Attempting to eject drive " << currentViewDir[0] << "currentViewDir =" << currentViewDir

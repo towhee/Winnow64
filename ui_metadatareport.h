@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'metadatareport.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.10.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,8 +10,11 @@
 #define UI_METADATAREPORT_H
 
 #include <QtCore/QVariant>
+#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QDialog>
+#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QTextBrowser>
 #include <QtWidgets/QVBoxLayout>
 
@@ -26,14 +29,14 @@ public:
     void setupUi(QDialog *metadataReporttDlg)
     {
         if (metadataReporttDlg->objectName().isEmpty())
-            metadataReporttDlg->setObjectName(QString::fromUtf8("metadataReporttDlg"));
+            metadataReporttDlg->setObjectName(QStringLiteral("metadataReporttDlg"));
         metadataReporttDlg->resize(1385, 769);
         verticalLayout = new QVBoxLayout(metadataReporttDlg);
-        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+        verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
         textBrowser = new QTextBrowser(metadataReporttDlg);
-        textBrowser->setObjectName(QString::fromUtf8("textBrowser"));
+        textBrowser->setObjectName(QStringLiteral("textBrowser"));
         QFont font;
-        font.setFamily(QString::fromUtf8("Courier New"));
+        font.setFamily(QStringLiteral("Courier New"));
         font.setPointSize(12);
         textBrowser->setFont(font);
 

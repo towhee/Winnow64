@@ -141,6 +141,7 @@ public:
     bool autoEjectUsb;
 
     bool isRatingBadgeVisible;
+    QString fontSize;
 
     // preferences: files
     bool rememberLastDir;
@@ -200,6 +201,7 @@ public:
     QString dragDropFolderPath;
     int maxThumbSpaceHeight;
     QString pickMemSize;
+    QString css;                // stylesheet text
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
@@ -231,6 +233,7 @@ public slots:
     void setThumbDockFloatFeatures(bool isFloat);
     void resortImageCache();
     void setCentralMessage(QString message);
+    void test();    // for debugging
 
 signals:
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
@@ -240,6 +243,8 @@ private slots:
     void setShowImageCount();
     void about();
     void ingest();
+    void enableSelectionDependentMenus();
+    void enableEjectUsbMenu(QString path);
     void ejectUsb(QString path);
     void ejectUsbFromContextMenu();
     void setCachedStatus(QString fPath, bool isCached);
@@ -255,7 +260,7 @@ private slots:
     void sortThumbnails();
 //    void monitorPreference();
     void preferences(int page = -1);
-    void openWithProgramManagement();
+    void externalAppManager();
     void toggleFullScreen();
     void escapeFullScreen();
     void loupeDisplay();
@@ -291,6 +296,7 @@ private slots:
     void updateImageCache();
     void loadFilteredImageCache();
     void addNewBookmark();
+    void addNewBookmarkFromContext();
     void reportMetadata();
     void checkDirState(const QModelIndex &, int, int);
     void bookmarkClicked(QTreeWidgetItem *item, int col);
@@ -309,6 +315,7 @@ private slots:
 //    void updateColorClass();
     void updateClassification();
     void refreshFolders();
+    void setFontSize(QString pixels);
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
     void setMouseClickScroll(bool prefMouseClickScroll);
@@ -325,6 +332,7 @@ private slots:
                             bool isCachePreview, bool activity);
     void selectAllThumbs();
     void removeBookmark();
+    void refreshBookmarks();
     void rotateLeft();
     void rotateRight();
     void showHiddenFiles();
@@ -373,6 +381,8 @@ private slots:
 
     void openFolder();
     void revealFile();
+    void revealFileFromContext();
+    void revealInFileBrowser(QString path);
     void openInFinder();
     void openInExplorer();
     void collapseAllFolders();
@@ -398,7 +408,6 @@ private slots:
     void popup(QString msg, int ms, float opacity);
     void closePopup();
     void delayScroll();
-    void test();    // for debugging
 
     //    void cutThumbs();
 //    void copyThumbs();
@@ -430,6 +439,7 @@ private:
     // File menu
     QAction *openAction;
     QAction *revealFileAction;
+    QAction *revealFileActionFromContext;
     QAction *openWithMenuAction;
         QAction *manageAppAction;
         QList<QAction *> appActions;
@@ -438,7 +448,9 @@ private:
     QAction *subFoldersAction;
     QAction *collapseFoldersAction;
     QAction *addBookmarkAction;
+    QAction *addBookmarkActionFromContext;
     QAction *removeBookmarkAction;
+    QAction *refreshBookmarkAction;
     QAction *ingestAction;
     QAction *ejectAction;
     QAction *combineRawJpgAction;
@@ -462,6 +474,7 @@ private:
     QAction *rotateLeftAction;
     QAction *rotateRightAction;
     QAction *prefAction;
+    QAction *prefInfoAction;
     QAction *oldPrefAction;
 
     // Go Menu
@@ -714,6 +727,7 @@ private:
 
     void createDocks();
     void updateState();
+    void clearAll();
     void deleteViewerImage();
     void selectCurrentViewDir();
     bool checkForUpdate();

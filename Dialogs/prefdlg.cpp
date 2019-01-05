@@ -16,6 +16,9 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     MW *mw = qobject_cast<MW*>(parent);
 
     // general
+    ui->globalFontSizeSlider->setMinimum(8);
+    ui->globalFontSizeSlider->setMaximum(20);
+    ui->globalFontSizeSlider->setValue(mw->fontSize.toInt());
     ui->rememberFolderChk->setChecked(mw->rememberLastDir);
     ui->trackpadIterateRadio->setChecked(!mw->imageView->useWheelToScroll);
     ui->trackpadScrollRadio->setChecked(mw->imageView->useWheelToScroll);
@@ -652,3 +655,8 @@ void Prefdlg::on_statusBarChk_clicked()
                                ui->statusBarChk->isChecked());
 }
 
+
+void Prefdlg::on_globalFontSizeSlider_valueChanged(int value)
+{
+    emit updateFontSize(QString::number(value));
+}

@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'appdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.10.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,10 +10,13 @@
 #define UI_APPDLG_H
 
 #include <QtCore/QVariant>
+#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
+#include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTableWidget>
 #include <QtWidgets/QWidget>
@@ -25,55 +28,67 @@ class Ui_Appdlg
 public:
     QWidget *horizontalLayoutWidget;
     QHBoxLayout *horizontalLayout;
-    QTableWidget *apps;
+    QTableWidget *appsTable;
     QWidget *horizontalLayoutWidget_2;
     QHBoxLayout *horizontalLayout_2;
     QPushButton *addBtn;
     QPushButton *removeBtn;
     QPushButton *okBtn;
+    QPushButton *cancelBtn;
+    QLabel *label;
 
     void setupUi(QDialog *Appdlg)
     {
         if (Appdlg->objectName().isEmpty())
-            Appdlg->setObjectName(QString::fromUtf8("Appdlg"));
-        Appdlg->resize(703, 585);
+            Appdlg->setObjectName(QStringLiteral("Appdlg"));
+        Appdlg->resize(886, 683);
         horizontalLayoutWidget = new QWidget(Appdlg);
-        horizontalLayoutWidget->setObjectName(QString::fromUtf8("horizontalLayoutWidget"));
-        horizontalLayoutWidget->setGeometry(QRect(19, 19, 661, 441));
+        horizontalLayoutWidget->setObjectName(QStringLiteral("horizontalLayoutWidget"));
+        horizontalLayoutWidget->setGeometry(QRect(20, 20, 831, 441));
         horizontalLayout = new QHBoxLayout(horizontalLayoutWidget);
-        horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
+        horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
-        apps = new QTableWidget(horizontalLayoutWidget);
-        if (apps->columnCount() < 2)
-            apps->setColumnCount(2);
-        apps->setObjectName(QString::fromUtf8("apps"));
-        apps->setColumnCount(2);
-        apps->horizontalHeader()->setDefaultSectionSize(300);
-        apps->verticalHeader()->setVisible(false);
+        appsTable = new QTableWidget(horizontalLayoutWidget);
+        if (appsTable->columnCount() < 2)
+            appsTable->setColumnCount(2);
+        appsTable->setObjectName(QStringLiteral("appsTable"));
+        appsTable->setFrameShape(QFrame::Box);
+        appsTable->setEditTriggers(QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked);
+        appsTable->setColumnCount(2);
+        appsTable->horizontalHeader()->setDefaultSectionSize(300);
+        appsTable->verticalHeader()->setVisible(false);
 
-        horizontalLayout->addWidget(apps);
+        horizontalLayout->addWidget(appsTable);
 
         horizontalLayoutWidget_2 = new QWidget(Appdlg);
-        horizontalLayoutWidget_2->setObjectName(QString::fromUtf8("horizontalLayoutWidget_2"));
-        horizontalLayoutWidget_2->setGeometry(QRect(220, 519, 441, 51));
+        horizontalLayoutWidget_2->setObjectName(QStringLiteral("horizontalLayoutWidget_2"));
+        horizontalLayoutWidget_2->setGeometry(QRect(210, 600, 641, 51));
         horizontalLayout_2 = new QHBoxLayout(horizontalLayoutWidget_2);
-        horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
+        horizontalLayout_2->setObjectName(QStringLiteral("horizontalLayout_2"));
         horizontalLayout_2->setContentsMargins(0, 0, 0, 0);
         addBtn = new QPushButton(horizontalLayoutWidget_2);
-        addBtn->setObjectName(QString::fromUtf8("addBtn"));
+        addBtn->setObjectName(QStringLiteral("addBtn"));
 
         horizontalLayout_2->addWidget(addBtn);
 
         removeBtn = new QPushButton(horizontalLayoutWidget_2);
-        removeBtn->setObjectName(QString::fromUtf8("removeBtn"));
+        removeBtn->setObjectName(QStringLiteral("removeBtn"));
 
         horizontalLayout_2->addWidget(removeBtn);
 
         okBtn = new QPushButton(horizontalLayoutWidget_2);
-        okBtn->setObjectName(QString::fromUtf8("okBtn"));
+        okBtn->setObjectName(QStringLiteral("okBtn"));
 
         horizontalLayout_2->addWidget(okBtn);
 
+        cancelBtn = new QPushButton(horizontalLayoutWidget_2);
+        cancelBtn->setObjectName(QStringLiteral("cancelBtn"));
+
+        horizontalLayout_2->addWidget(cancelBtn);
+
+        label = new QLabel(Appdlg);
+        label->setObjectName(QStringLiteral("label"));
+        label->setGeometry(QRect(20, 480, 821, 101));
 
         retranslateUi(Appdlg);
 
@@ -82,10 +97,12 @@ public:
 
     void retranslateUi(QDialog *Appdlg)
     {
-        Appdlg->setWindowTitle(QApplication::translate("Appdlg", "Open with Program List", nullptr));
+        Appdlg->setWindowTitle(QApplication::translate("Appdlg", "External Program List", nullptr));
         addBtn->setText(QApplication::translate("Appdlg", "Add Program", nullptr));
         removeBtn->setText(QApplication::translate("Appdlg", "Remove Program", nullptr));
-        okBtn->setText(QApplication::translate("Appdlg", "OK", nullptr));
+        okBtn->setText(QApplication::translate("Appdlg", "Save changes", nullptr));
+        cancelBtn->setText(QApplication::translate("Appdlg", "Cancel", nullptr));
+        label->setText(QApplication::translate("Appdlg", "<html><head/><body><p><span style=\" color:#ffff00;\">Add</span> external programs using the &quot;Add Program&quot; button. The program will be added to the table. </p><p>To <span style=\" color:#ffff00;\">remove</span> a program select the program in the table and click &quot;Remove Program&quot; </p><p>To <span style=\" color:#ffff00;\">change</span> the displayed program name edit the table cell.</p></body></html>", nullptr));
     } // retranslateUi
 
 };
