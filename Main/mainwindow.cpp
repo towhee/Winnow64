@@ -1566,7 +1566,7 @@ void MW::createActions()
     prefInfoAction->setObjectName("infosettings");
     prefInfoAction->setShortcutVisibleInContextMenu(true);
     addAction(prefInfoAction);
-    connect(prefInfoAction, &QAction::triggered, [this]() {preferences(6);} );
+    connect(prefInfoAction, &QAction::triggered, [this]() {preferences(7);} );
 
     // Go menu
 
@@ -2285,7 +2285,7 @@ void MW::createMenus()
     editMenu->addSeparator();
     editMenu->addAction(refineAction);
     editMenu->addAction(pickAction);
-    editMenu->addAction(filterPickAction);
+//    editMenu->addAction(filterPickAction);
     editMenu->addAction(popPickHistoryAction);
     editMenu->addSeparator();
 //    editMenu->addAction(copyImagesAction);
@@ -2914,6 +2914,7 @@ void MW::createThumbView()
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
     thumbView->wrapThumbs = setting->value("wrapThumbs").toBool();
+    thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
 
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -2953,6 +2954,8 @@ void MW::createGridView()
     gridView->thumbHeight = setting->value("thumbHeightGrid").toInt();
     gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
     gridView->showThumbLabels = setting->value("showThumbLabelsGrid").toBool();
+    gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
+    qDebug() << "createGridView gridView->badgeSize =" << gridView->badgeSize;
 
     // double mouse click fires displayLoupe
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -3019,7 +3022,8 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
                               thumbView,
                               infoString,
                               setting->value("isImageInfoVisible").toBool(),
-                              setting->value("isRatingBadgeVisible").toBool());
+                              setting->value("isRatingBadgeVisible").toBool(),
+                              setting->value("classificationBadgeInImageDiameter").toInt());
 
     connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
 
@@ -4747,6 +4751,10 @@ void MW::preferences(int page)
     Prefdlg *prefdlg = new Prefdlg(this, page);
     connect(prefdlg, SIGNAL(updateFontSize(QString)),
             this, SLOT(setFontSize(QString)));
+    connect(prefdlg, SIGNAL(updateClassificationBadgeImageDiam(int)),
+            this, SLOT(setClassificationBadgeImageDiam(int)));
+//    connect(prefdlg, SIGNAL(updateClassificationBadgeThumbDiam(int)),
+//            this, SLOT(setClassificationBadgeThumbDiam(int)));
     connect(prefdlg, SIGNAL(updatePage(int)),
             this, SLOT(setPrefPage(int)));
     connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
@@ -4755,10 +4763,10 @@ void MW::preferences(int page)
             this, SLOT(setMouseClickScroll(bool)));
     connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
             this, SLOT(setTrackpadScroll(bool)));
-    connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool,bool)),
-            thumbView, SLOT(setThumbParameters(int,int,int,int,int,bool,bool)));
-    connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool,bool)),
-            gridView, SLOT(setThumbParameters(int, int, int, int, int, bool, bool)));
+    connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool,bool,int)),
+            thumbView, SLOT(setThumbParameters(int,int,int,int,int,bool,bool,int)));
+    connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool,bool,int)),
+            gridView, SLOT(setThumbParameters(int, int, int, int, int, bool, bool,int)));
     connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
             this, SLOT(setSlideShowParameters(int, bool)));
     connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, int, bool, bool)),
@@ -4791,6 +4799,23 @@ void MW::setFontSize(QString pixels)
     QString s = "QWidget {font-size: " + fontSize + "px;}";
     this->setStyleSheet(s + css);
 }
+
+void MW::setClassificationBadgeImageDiam(int d)
+{
+    classificationBadgeInImageDiameter = d;
+    imageView->setClassificationBadgeImageDiam(d);
+//    placeClassificationBadge();
+//    qDebug() << "ImageView::setClassificationBadgeImageDiam =" << classificationBadgeDiam;
+}
+
+void MW::setClassificationBadgeThumbDiam(int d)
+{
+    classificationBadgeInThumbDiameter = d;
+//    placeClassificationBadge();
+//    qDebug() << "ImageView::setClassificationBadgeImageDiam =" << classificationBadgeInThumbDiameter;
+}
+
+
 
 void MW::setPrefPage(int page)
 {
@@ -5289,7 +5314,11 @@ re-established when the application is re-opened.
 //    setting->setValue("displayVerticalPixels", displayVerticalPixels);
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
     setting->setValue("autoEjectUSB", autoEjectUsb);
+
+    // appearance
     setting->setValue("fontSize", fontSize);
+    setting->setValue("classificationBadgeInImageDiameter", classificationBadgeInImageDiameter);
+    setting->setValue("classificationBadgeInThumbDiameter", thumbView->badgeSize);
 
     // files
 //    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
@@ -5558,9 +5587,13 @@ Preferences are located in the prefdlg class and updated here.
         autoIngestFolderPath = false;
         autoEjectUsb = false;
         combineRawJpg = true;
-        fontSize = 14;
 
-      // slideshow
+        // appearance
+        fontSize = 14;
+        classificationBadgeInImageDiameter = 20;
+        classificationBadgeInThumbDiameter = 12;
+
+        // slideshow
         slideShowDelay = 5;
         slideShowRandom = false;
         slideShowWrap = true;
@@ -5591,7 +5624,11 @@ Preferences are located in the prefdlg class and updated here.
 //    displayVerticalPixels = setting->value("displayVerticalPixels").toInt();
     autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
     autoEjectUsb = setting->value("autoEjectUSB").toBool();
+
+    // appearance
     fontSize = setting->value("fontSize").toString();
+    classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
+    classificationBadgeInThumbDiameter = setting->value("classificationBadgeInThumbDiameter").toInt();
 
     // files
 //    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();

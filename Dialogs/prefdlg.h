@@ -18,15 +18,18 @@ public:
 
 signals:
     void updateFontSize(QString pixels);
+    void updateClassificationBadgeImageDiam(int d);
+//    void updateClassificationBadgeThumbDiam(int d);
     void updatePage(int page);
     void updateRememberFolder(bool rememberFolder);
     void updateMouseClickScroll(bool mouseClickScroll);
     void updateTrackpadScroll(bool trackpadScroll);
 //    void updateDisplayResolution(int horizontalPixels, int verticalPixels);
-    void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing,
-            int thumbPadding, int labelFontSize, bool showThumbLabels, bool wrapThumbs);
+    void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing, int thumbPadding,
+            int labelFontSize, bool showThumbLabels, bool wrapThumbs, int thumbBadgeSize);
     void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
-            int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid, bool wrapThumbs);
+            int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid, bool wrapThumbs,
+            int thumbBadgeSize);
     void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
 
     void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus, int cacheDelay,
@@ -35,11 +38,17 @@ signals:
     void updateFullScreenDocks(bool isFolders, bool isFavs, bool isFilters, bool isMetadata,
                                bool isThumbs, bool isStatusBar);
 
+protected:
+//    void mousePressEvent(QMouseEvent *event);
+//    void mouseReleaseEvent(QMouseEvent *event);
+
 private slots:
     // general
     void on_rememberFolderChk_clicked();
     void on_trackpadIterateRadio_clicked();
     void on_trackpadScrollRadio_clicked();
+    void on_slider_pressed();
+    void on_slider_released();
     // thumbs
     void on_iconWidthSlider_valueChanged(int value);
     void on_iconHeightSlider_valueChanged(int value);
@@ -70,7 +79,6 @@ private slots:
     void on_cache90AheadRadio_clicked();
     void on_cache100AheadRadio_clicked();
     void on_cachePreviewsChk_clicked();
-
     void on_listWidget_currentItemChanged(QListWidgetItem *current);
     void on_foldersChk_clicked();
     void on_favsChk_clicked();
@@ -85,6 +93,11 @@ private slots:
     void on_wrapChk_clicked();
     void on_mouseClickScrollChk_clicked();
     void on_globalFontSizeSlider_valueChanged(int value);
+    void on_globalFontSizeSlider_sliderReleased();
+
+    void on_classificationBadgeImageDiamSlider_valueChanged(int value);
+
+    void on_classificationBadgeThumbDiamSlider_valueChanged(int);
 
 private:
     Ui::Prefdlg *ui;
@@ -92,9 +105,10 @@ private:
     QStandardItemModel *okTable;
     void reject();
     bool okToUpdate;
+    bool isSliderPressed;
 
    int cacheWtAhead;
-    QString source;     // "thumbView" or "gridView"
+   QString source;     // "thumbView" or "gridView"
 
 };
 
