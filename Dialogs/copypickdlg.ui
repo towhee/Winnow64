@@ -877,6 +877,9 @@
     <property name="text">
      <string>How this works</string>
     </property>
+    <property name="autoDefault">
+     <bool>false</bool>
+    </property>
    </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_4">
@@ -1060,9 +1063,9 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>470</x>
+     <x>430</x>
      <y>740</y>
-     <width>211</width>
+     <width>251</width>
      <height>32</height>
     </rect>
    </property>
@@ -1084,6 +1087,9 @@
       <property name="text">
        <string>Cancel</string>
       </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
      </widget>
     </item>
     <item>
@@ -1099,6 +1105,9 @@
       </property>
       <property name="text">
        <string>Ingest</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
       </property>
      </widget>
     </item>

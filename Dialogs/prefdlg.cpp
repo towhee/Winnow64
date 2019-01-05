@@ -16,9 +16,12 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     MW *mw = qobject_cast<MW*>(parent);
 
     // general
+    ui->globalFontSizeSlider->setTickInterval(1);
     ui->globalFontSizeSlider->setMinimum(8);
     ui->globalFontSizeSlider->setMaximum(20);
     ui->globalFontSizeSlider->setValue(mw->fontSize.toInt());
+    ui->classificationBadgeImageDiamSlider->setValue(mw->classificationBadgeInImageDiameter);
+    ui->classificationBadgeThumbDiamSlider->setValue(mw->classificationBadgeInThumbDiameter);
     ui->rememberFolderChk->setChecked(mw->rememberLastDir);
     ui->trackpadIterateRadio->setChecked(!mw->imageView->useWheelToScroll);
     ui->trackpadScrollRadio->setChecked(mw->imageView->useWheelToScroll);
@@ -27,24 +30,54 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
 //    ui->displayVerticalPixelsSB->setValue(mw->displayVerticalPixels);
 
     // thumbs
+    ui->iconWidthSlider->setSingleStep(1);
+    ui->iconWidthSlider->setTickInterval(50);
+    ui->iconWidthSlider->setTickPosition(QSlider::TicksAbove);
     ui->iconWidthSlider->setMaximum(THUMB_MAX);
     ui->iconWidthSlider->setValue(mw->thumbView->thumbWidth);
+    ui->iconHeightSlider->setSingleStep(1);
+    ui->iconHeightSlider->setTickInterval(50);
+    ui->iconHeightSlider->setTickPosition(QSlider::TicksAbove);
     ui->iconHeightSlider->setMaximum(THUMB_MAX);
     ui->iconHeightSlider->setValue(mw->thumbView->thumbHeight);
-    ui->iconPaddingSlider->setValue(mw->thumbView->thumbPadding);
+    ui->thumbSpacingSlider->setSingleStep(1);
+    ui->thumbSpacingSlider->setTickInterval(3);
+    ui->thumbSpacingSlider->setTickPosition(QSlider::TicksAbove);
     ui->thumbSpacingSlider->setValue(mw->thumbView->thumbSpacing);
+    ui->iconPaddingSlider->setSingleStep(1);
+    ui->iconPaddingSlider->setTickInterval(1);
+    ui->iconPaddingSlider->setTickPosition(QSlider::TicksAbove);
+    ui->iconPaddingSlider->setValue(mw->thumbView->thumbPadding);
+    ui->fontSizeSlider->setSingleStep(1);
+    ui->fontSizeSlider->setTickInterval(1);
+    ui->fontSizeSlider->setTickPosition(QSlider::TicksAbove);
     ui->fontSizeSlider->setValue(mw->thumbView->labelFontSize);
     ui->showThumbLabelChk->setChecked(mw->thumbView->showThumbLabels);
     ui->wrapChk->setChecked(mw->thumbView->wrapThumbs);
     ui->lockDimChk->setChecked(true);
 
     // thumbsGrid
+    ui->iconWidthSlider_2->setSingleStep(1);
+    ui->iconWidthSlider_2->setTickInterval(50);
+    ui->iconWidthSlider_2->setTickPosition(QSlider::TicksAbove);
     ui->iconWidthSlider_2->setMaximum(THUMB_MAX);
     ui->iconWidthSlider_2->setValue(mw->gridView->thumbWidth);
+    ui->iconHeightSlider_2->setSingleStep(1);
+    ui->iconHeightSlider_2->setTickInterval(50);
+    ui->iconHeightSlider_2->setTickPosition(QSlider::TicksAbove);
     ui->iconHeightSlider_2->setMaximum(THUMB_MAX);
     ui->iconHeightSlider_2->setValue(mw->gridView->thumbHeight);
-    ui->iconPaddingSlider_2->setValue(mw->gridView->thumbPadding);
+    ui->thumbSpacingSlider_2->setSingleStep(1);
+    ui->thumbSpacingSlider_2->setTickInterval(3);
+    ui->thumbSpacingSlider_2->setTickPosition(QSlider::TicksAbove);
     ui->thumbSpacingSlider_2->setValue(mw->gridView->thumbSpacing);
+    ui->iconPaddingSlider_2->setSingleStep(1);
+    ui->iconPaddingSlider_2->setTickInterval(1);
+    ui->iconPaddingSlider_2->setTickPosition(QSlider::TicksAbove);
+    ui->iconPaddingSlider_2->setValue(mw->gridView->thumbPadding);
+    ui->fontSizeSlider_2->setTickInterval(1);
+    ui->fontSizeSlider_2->setTickPosition(QSlider::TicksAbove);
+    ui->fontSizeSlider_2->setValue(mw->thumbView->labelFontSize);
     ui->fontSizeSlider_2->setValue(mw->gridView->labelFontSize);
     ui->showThumbLabelChk_2->setChecked(mw->gridView->showThumbLabels);
     ui->lockDimChk_2->setChecked(true);
@@ -130,6 +163,9 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->tableFieldsTable->setStyleSheet("QTableView {border:none; gridline-color:rgb(85,85,85)}");
 
     okToUpdate = true;
+
+    connect(ui->globalFontSizeSlider, SIGNAL(sliderPressed()), this, SLOT(on_slider_pressed()));
+    connect(ui->globalFontSizeSlider, SIGNAL(sliderReleased()), this, SLOT(on_slider_released()));
 }
 
 Prefdlg::~Prefdlg()
@@ -140,6 +176,18 @@ Prefdlg::~Prefdlg()
 void Prefdlg::reject()
 {
     QDialog::reject();
+}
+
+void Prefdlg::on_slider_pressed()
+{
+    // used to prevent font size updates while slider is pressed to prevent slider latency
+    isSliderPressed = true;
+}
+
+void Prefdlg::on_slider_released()
+{
+    // used to prevent font size updates while slider is pressed to prevent slider latency
+    isSliderPressed = false;
 }
 
 void Prefdlg::on_infoField_changed()
@@ -202,7 +250,8 @@ void Prefdlg::on_iconWidthSlider_valueChanged(int value)
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
                                    ui->showThumbLabelChk->isChecked(),
-                                   ui->wrapChk->isChecked());
+                                   ui->wrapChk->isChecked(),
+                                   ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -218,7 +267,8 @@ void Prefdlg::on_iconHeightSlider_valueChanged(int value)
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
                                    ui->showThumbLabelChk->isChecked(),
-                                   ui->wrapChk->isChecked());
+                                   ui->wrapChk->isChecked(),
+                                   ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -231,7 +281,8 @@ void Prefdlg::on_thumbSpacingSlider_valueChanged(int /* not used */)
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
                                    ui->showThumbLabelChk->isChecked(),
-                                   ui->wrapChk->isChecked());
+                                   ui->wrapChk->isChecked(),
+                                   ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -244,7 +295,8 @@ void Prefdlg::on_iconPaddingSlider_valueChanged(int /* not used */)
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
                                    ui->showThumbLabelChk->isChecked(),
-                                   ui->wrapChk->isChecked());
+                                   ui->wrapChk->isChecked(),
+                                   ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -258,7 +310,8 @@ void Prefdlg::on_showThumbLabelChk_clicked()
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
                                    ui->showThumbLabelChk->isChecked(),
-                                   ui->wrapChk->isChecked());
+                                   ui->wrapChk->isChecked(),
+                                   ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -271,7 +324,8 @@ void Prefdlg::on_wrapChk_clicked()
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
                                    ui->showThumbLabelChk->isChecked(),
-                                   ui->wrapChk->isChecked());
+                                   ui->wrapChk->isChecked(),
+                                   ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -284,7 +338,30 @@ void Prefdlg::on_fontSizeSlider_valueChanged(int /* not used */)
                                    ui->iconPaddingSlider->value(),
                                    ui->fontSizeSlider->value(),
                                    ui->showThumbLabelChk->isChecked(),
-                                   ui->wrapChk->isChecked());
+                                   ui->wrapChk->isChecked(),
+                                   ui->classificationBadgeThumbDiamSlider->value());
+    }
+}
+
+void Prefdlg::on_classificationBadgeThumbDiamSlider_valueChanged(int /* not used */)
+{
+    if (okToUpdate) {
+        emit updateThumbParameters(ui->iconWidthSlider->value(),
+                                   ui->iconHeightSlider->value(),
+                                   ui->thumbSpacingSlider->value(),
+                                   ui->iconPaddingSlider->value(),
+                                   ui->fontSizeSlider->value(),
+                                   ui->showThumbLabelChk->isChecked(),
+                                   ui->wrapChk->isChecked(),
+                                   ui->classificationBadgeThumbDiamSlider->value());
+        emit updateThumbGridParameters(ui->iconWidthSlider_2->value(),
+                                       ui->iconHeightSlider_2->value(),
+                                       ui->iconPaddingSlider_2->value(),
+                                       ui->thumbSpacingSlider_2->value(),
+                                       ui->fontSizeSlider_2->value(),
+                                       ui->showThumbLabelChk_2->isChecked(),
+                                       true,
+                                       ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -521,7 +598,8 @@ void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
                                        ui->showThumbLabelChk_2->isChecked(),
-                                       true);
+                                       true,
+                                       ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -537,7 +615,8 @@ void Prefdlg::on_iconHeightSlider_2_valueChanged(int /* not used */)
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
                                        ui->showThumbLabelChk_2->isChecked(),
-                                       true);
+                                       true,
+                                       ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -550,7 +629,8 @@ void Prefdlg::on_thumbSpacingSlider_2_valueChanged(int /* not used */)
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
                                        ui->showThumbLabelChk_2->isChecked(),
-                                       true);
+                                       true,
+                                       ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -563,7 +643,8 @@ void Prefdlg::on_iconPaddingSlider_2_valueChanged(int /* not used */)
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
                                        ui->showThumbLabelChk_2->isChecked(),
-                                       true);
+                                       true,
+                                       ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -576,7 +657,8 @@ void Prefdlg::on_showThumbLabelChk_2_clicked()
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
                                        ui->showThumbLabelChk_2->isChecked(),
-                                       true);
+                                       true,
+                                       ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -589,7 +671,8 @@ void Prefdlg::on_fontSizeSlider_2_valueChanged(int /* not used */)
                                        ui->thumbSpacingSlider_2->value(),
                                        ui->fontSizeSlider_2->value(),
                                        ui->showThumbLabelChk_2->isChecked(),
-                                       true);
+                                       true,
+                                       ui->classificationBadgeThumbDiamSlider->value());
     }
 }
 
@@ -658,5 +741,21 @@ void Prefdlg::on_statusBarChk_clicked()
 
 void Prefdlg::on_globalFontSizeSlider_valueChanged(int value)
 {
+    // used to prevent font size updates while slider is pressed to prevent slider latency
+    // if user just clicks on slider then updateFontSize is emitted
+    if(isSliderPressed) return;
     emit updateFontSize(QString::number(value));
 }
+
+void Prefdlg::on_globalFontSizeSlider_sliderReleased()
+{
+    int value = ui->globalFontSizeSlider->value();
+    emit updateFontSize(QString::number(value));
+}
+
+void Prefdlg::on_classificationBadgeImageDiamSlider_valueChanged(int value)
+{
+    qDebug() << "on_classificationBadgeImageDiamSlider_valueChanged =" << value;
+    emit updateClassificationBadgeImageDiam(value);
+}
+
