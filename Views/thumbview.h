@@ -24,6 +24,7 @@ public:
     int labelFontSize;
     bool showThumbLabels;
     bool wrapThumbs;
+    int badgeSize;
 
     bool isTopOrBottomDock;
     bool isFloat;       // set by MW ...
@@ -69,7 +70,7 @@ public slots:
     void thumbsShrink();
     void thumbsFit(Qt::DockWidgetArea area);
     void thumbsFitTopOrBottom();
-    void toggleFilterPick(bool isFilter);
+//    void toggleFilterPick(bool isFilter);
     void invertSelection();                         //in use
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
 
@@ -81,7 +82,7 @@ public slots:
     void setIcon(int row, QImage thumb);
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
              int _thumbPadding, int _labelFontSize, bool _showThumbLabels,
-             bool _wrapThumbs);
+             bool _wrapThumbs, int _badgeSize);
     void reportThumbs();
     void selectThumb(QModelIndex idx);
     void selectNext();

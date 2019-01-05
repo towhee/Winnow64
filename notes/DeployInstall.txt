@@ -1,4 +1,5 @@
-The installer is located on DigitalOcean at http://165.227.46.158/winnow_win/ and http://165.227.46.158/winnow_mac/
+The installer is located on DigitalOcean at http://165.227.46.158/winnow_win/
+and http://165.227.46.158/winnow_mac/
 
 For windows PuTTY Key generator and winscp for file transfers.
 
@@ -63,5 +64,7 @@ exit
 
 End WinSCP script
 
-http://165.227.46.158/var/www/html
+
+winnow main page
+http://165.227.46.158/winnow/winnow.html
 

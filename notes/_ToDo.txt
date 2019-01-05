@@ -1,6 +1,4 @@
 BUGS
-- toggleFilterPick??
-- ThumbView::copyThumbs??
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
 - Sometimes slow loading metadata
@@ -26,6 +24,8 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Change badge size in preferences
+- Reveal in file path instead of folder path
 - Manage external programs not remembering changes
 - CompareImages not calc layout optimally
 - Change font size

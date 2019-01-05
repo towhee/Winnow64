@@ -322,9 +322,10 @@ QProgressBar {
     border-radius: 2px;
 }
 
+/*  Customizing slider prevents tick markse
 QSlider::groove:horizontal {
     border: 1px solid gray;
-    height: 1px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size*/
+    height: 1px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size
     margin: 0px 0;
 }
 
@@ -337,6 +338,7 @@ QSlider::handle:horizontal {
 QSlider::handle:focus {
     background: red;
 }
+*/
 
 /*QLineEdit {
     background-color: rgb(111,111,111);
@@ -364,6 +366,7 @@ QPushButton {
 
 QPushButton:default {
     border-color: rgb(225,225,0); /* make the default button prominent */
+    background-color: rgb(68,95,118);
 }
 
 QPushButton:pressed {
@@ -375,6 +378,7 @@ QPushButton:pressed {
 QPushButton:hover {
     /*background-color: gray;*/
     border-color: silver;
+    background-color: rgb(68,95,118);
     }
 
 QPushButton:flat {

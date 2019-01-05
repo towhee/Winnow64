@@ -146,7 +146,7 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
 
     thumbViewDelegate = new ThumbViewDelegate(this, mw->isRatingBadgeVisible);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-        thumbPadding, labelFontSize, showThumbLabels);
+        thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     setItemDelegate(thumbViewDelegate);
 
     // used to provide iconRect info to zoom to point clicked on thumb
@@ -217,7 +217,7 @@ possibly altered thumbnail dimensions.
     }
     setSpacing(thumbSpacing);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-        thumbPadding, labelFontSize, showThumbLabels);
+        thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     if(objectName() == "Thumbnails") {
         if (!mw->thumbDock->isFloating())
             emit updateThumbDockHeight();
@@ -226,7 +226,7 @@ possibly altered thumbnail dimensions.
 
 void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
         int _thumbSpacing, int _thumbPadding, int _labelFontSize,
-        bool _showThumbLabels, bool _wrapThumbs)
+        bool _showThumbLabels, bool _wrapThumbs, int _badgeSize)
 {
     {
     #ifdef ISDEBUG
@@ -240,6 +240,7 @@ void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
     labelFontSize = _labelFontSize;
     showThumbLabels = _showThumbLabels;
     wrapThumbs = _wrapThumbs;
+    badgeSize = _badgeSize;
     setThumbParameters();
 }
 
@@ -554,23 +555,23 @@ int ThumbView::getNearestPick()
     return 0;
 }
 
-void ThumbView::toggleFilterPick(bool isFilter)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    pickFilter = isFilter;
-    if (pickFilter) {
-// rgh this doesn't look right??
-//        int row = getNearestPick();
-//        selectThumb(row);
-//        dm->sf->setFilterRegExp("true");   // show only picked items
-    }
-    else
-        dm->sf->setFilterRegExp("");       // no filter - show all
-}
+//void ThumbView::toggleFilterPick(bool isFilter)
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    pickFilter = isFilter;
+//    if (pickFilter) {
+//// rgh this doesn't look right??
+////        int row = getNearestPick();
+////        selectThumb(row);
+////        dm->sf->setFilterRegExp("true");   // show only picked items
+//    }
+//    else
+//        dm->sf->setFilterRegExp("");       // no filter - show all
+//}
 
 void ThumbView::sortThumbs(int sortColumn, bool isReverse)
 {
@@ -876,8 +877,8 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
             padding++;
         } while (improving);
 //        qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
-        setThumbParameters(thumbWidth, thumbHeight, thumbSpacing,
-                           thumbPadding, labelFontSize, showThumbLabels, wrapThumbs);
+        setThumbParameters(thumbWidth, thumbHeight, thumbSpacing, thumbPadding,
+                           labelFontSize, showThumbLabels, wrapThumbs, thumbSize);
         return;
     }
     // all wrapping is row wrapping
@@ -934,7 +935,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
 //        qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
         setSpacing(thumbSpacing);
         thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-            thumbPadding, labelFontSize, showThumbLabels);
+            thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     }
 }
 
@@ -976,7 +977,7 @@ For thumbSpace anatomy (see ThumbViewDelegate)
     }
     setSpacing(thumbSpacing);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-        thumbPadding, labelFontSize, showThumbLabels);
+        thumbPadding, labelFontSize, showThumbLabels, badgeSize);
 }
 
 void ThumbView::updateLayout()
