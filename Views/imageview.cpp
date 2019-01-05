@@ -27,7 +27,8 @@ ImageView::ImageView(QWidget *parent,
                      ThumbView *thumbView,
                      InfoString *infoString,
                      bool isShootingInfoVisible,
-                     bool isRatingBadgeVisible) :
+                     bool isRatingBadgeVisible,
+                     int classificationBadgeDiam) :
 
                      QGraphicsView(centralWidget)
 {
@@ -43,6 +44,7 @@ ImageView::ImageView(QWidget *parent,
     this->imageCacheThread = imageCacheThread;
     this->thumbView = thumbView;
     this->infoString = infoString;
+    this->classificationBadgeDiam = classificationBadgeDiam;
     pixmap = new Pixmap(this, metadata);
 
     scene = new QGraphicsScene();
@@ -420,6 +422,13 @@ to a percentage to be used to match position in the next image if zoomed.
     return QPointF(scrl.hPct, scrl.vPct);
 }
 
+void ImageView::setClassificationBadgeImageDiam(int d)
+{
+    classificationBadgeDiam = d;
+    placeClassificationBadge();
+    qDebug() << "ImageView::setClassificationBadgeImageDiam =" << classificationBadgeDiam;
+}
+
 void ImageView::placeClassificationBadge()
 {
 /*
@@ -459,11 +468,12 @@ size.
     if (d > 40) d = 40;
     */
 
+    qDebug() << "classificationBadgeDiam =" << classificationBadgeDiam;
+
     int o = 5;                          // offset margin from edge
-    int d = 20;                         // diameter of the classification label
+    int d = classificationBadgeDiam;    // diameter of the classification label
     classificationLabel->setDiameter(d);
     classificationLabel->move(x - d - o, y - d - o);
-//    classificationLabel->move(100,100);
 }
 
 void ImageView::resizeEvent(QResizeEvent *event)
