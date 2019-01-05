@@ -30,7 +30,6 @@ QSortFilterProxy (sf) in datamodel.
     setHeaderLabels({"Filter", "Value", "Count"});
     hideColumn(1);
 
-
     setIndentation(10);
 
     categoryBackground.setStart(0, 0);
@@ -75,7 +74,7 @@ void Filters::createPredefinedFilters()
     refine->setBackground(2, categoryBackground);
     refine->setData(0, G::ColumnRole, G::RefineColumn);
     refineFalse = new QTreeWidgetItem(refine);
-    refineFalse->setText(0, "");
+    refineFalse->setText(0, "False");
     refineFalse->setCheckState(0, Qt::Unchecked);
     refineFalse->setData(1, Qt::EditRole, false);
     refineTrue = new QTreeWidgetItem(refine);
@@ -90,11 +89,12 @@ void Filters::createPredefinedFilters()
     picks->setBackground(2, categoryBackground);
     picks->setData(0, G::ColumnRole, G::PickColumn);
     picksFalse = new QTreeWidgetItem(picks);
-    picksFalse->setText(0, "");
+    picksFalse->setText(0, "Not Picked");
     picksFalse->setCheckState(0, Qt::Unchecked);
     picksFalse->setData(1, Qt::EditRole, "false");
     picksTrue = new QTreeWidgetItem(picks);
-    picksTrue->setText(0, "✓");
+    picksTrue->setText(0, "Picked");
+//    picksTrue->setText(0, "✓");
     picksTrue->setCheckState(0, Qt::Unchecked);
     picksTrue->setData(1, Qt::EditRole, "true");
 
@@ -106,7 +106,7 @@ void Filters::createPredefinedFilters()
     ratings->setData(0, G::ColumnRole, G::RatingColumn);
 
     ratingsNone = new QTreeWidgetItem(ratings);
-    ratingsNone->setText(0, "");
+    ratingsNone->setText(0, "No Rating");
     ratingsNone->setCheckState(0, Qt::Unchecked);
     ratingsNone->setData(1, Qt::EditRole, "");
     ratings1 = new QTreeWidgetItem(ratings);
@@ -138,7 +138,7 @@ void Filters::createPredefinedFilters()
     labels->setData(0, G::ColumnRole, G::LabelColumn);
 
     labelsNone = new QTreeWidgetItem(labels);
-    labelsNone->setText(0, "");
+    labelsNone->setText(0, "No Color Class");
     labelsNone->setCheckState(0, Qt::Unchecked);
     labelsNone->setData(1, Qt::EditRole, "");
     labelsRed = new QTreeWidgetItem(labels);
@@ -244,6 +244,8 @@ prevent duplication and orphans.
     #endif
     }
     types->takeChildren();
+    years->takeChildren();
+    days->takeChildren();
     models->takeChildren();
     lenses->takeChildren();
     focalLengths->takeChildren();
