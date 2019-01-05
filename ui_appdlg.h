@@ -68,21 +68,25 @@ public:
         horizontalLayout_2->setContentsMargins(0, 0, 0, 0);
         addBtn = new QPushButton(horizontalLayoutWidget_2);
         addBtn->setObjectName(QStringLiteral("addBtn"));
+        addBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(addBtn);
 
         removeBtn = new QPushButton(horizontalLayoutWidget_2);
         removeBtn->setObjectName(QStringLiteral("removeBtn"));
+        removeBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(removeBtn);
 
         okBtn = new QPushButton(horizontalLayoutWidget_2);
         okBtn->setObjectName(QStringLiteral("okBtn"));
+        okBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(okBtn);
 
         cancelBtn = new QPushButton(horizontalLayoutWidget_2);
         cancelBtn->setObjectName(QStringLiteral("cancelBtn"));
+        cancelBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(cancelBtn);
 

@@ -20,8 +20,8 @@ public:
     QSize sizeHint(const QStyleOptionViewItem &option,
                    const QModelIndex &index ) const;
 
-    void setThumbDimensions(int thumbWidth, int thumbHeight,
-          int thumbPadding, int labelFontSize, bool showThumbLabels);
+    void setThumbDimensions(int thumbWidth, int thumbHeight, int thumbPadding,
+          int labelFontSize, bool showThumbLabels, int badgeSize);
 
     QSize getThumbCell();
     int getThumbHeightFromAvailHeight(int availHeight);
@@ -48,6 +48,7 @@ private:
     int thumbBorderThickness;
     int thumbBorderPadding;
     int fontHt;
+    int badgeSize;
 };
 
 #endif // THUMBVIEWDELEGATE_H

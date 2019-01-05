@@ -59,14 +59,14 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>1</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>210</y>
+       <y>100</y>
        <width>431</width>
        <height>101</height>
       </rect>
@@ -115,7 +115,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>120</y>
+       <y>10</y>
        <width>431</width>
        <height>71</height>
       </rect>
@@ -146,7 +146,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>330</y>
+       <y>220</y>
        <width>431</width>
        <height>71</height>
       </rect>
@@ -173,26 +173,31 @@
       </property>
      </widget>
     </widget>
+   </widget>
+   <widget class="QWidget" name="page_4">
     <widget class="QGroupBox" name="groupBoxFolders_3">
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>10</y>
+       <y>20</y>
        <width>431</width>
        <height>91</height>
       </rect>
      </property>
      <property name="title">
-      <string>Font size</string>
+      <string>Application font size</string>
      </property>
      <widget class="QSlider" name="globalFontSizeSlider">
       <property name="geometry">
        <rect>
         <x>40</x>
         <y>40</y>
-        <width>301</width>
+        <width>311</width>
         <height>22</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Changes the global font. The font size in the thumbnails for the file name is controlled independently in &amp;quot;Thumbs in Dock&amp;quot; and &amp;quot;Thumbs in Grid View&amp;quot;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="minimum">
        <number>8</number>
@@ -214,6 +219,152 @@
       </property>
       <property name="tickInterval">
        <number>1</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="globalFontSizeLbl">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>30</y>
+        <width>55</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBoxFolders_4">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>130</y>
+       <width>431</width>
+       <height>121</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Classification badge diameter</string>
+     </property>
+     <widget class="QSlider" name="classificationBadgeImageDiamSlider">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>40</y>
+        <width>251</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Changes the global font. The font size in the thumbnails for the file name is controlled independently in &amp;quot;Thumbs in Dock&amp;quot; and &amp;quot;Thumbs in Grid View&amp;quot;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="minimum">
+       <number>0</number>
+      </property>
+      <property name="maximum">
+       <number>100</number>
+      </property>
+      <property name="pageStep">
+       <number>10</number>
+      </property>
+      <property name="value">
+       <number>20</number>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="tickPosition">
+       <enum>QSlider::TicksAbove</enum>
+      </property>
+      <property name="tickInterval">
+       <number>10</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="classificationBadgeImageDiamLbl">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>30</y>
+        <width>55</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_13">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>81</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Loupe</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_20">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>80</y>
+        <width>81</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Thumb</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="classificationBadgeThumbDiamLbl">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>70</y>
+        <width>55</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QSlider" name="classificationBadgeThumbDiamSlider">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>80</y>
+        <width>251</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Changes the global font. The font size in the thumbnails for the file name is controlled independently in &amp;quot;Thumbs in Dock&amp;quot; and &amp;quot;Thumbs in Grid View&amp;quot;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="minimum">
+       <number>0</number>
+      </property>
+      <property name="maximum">
+       <number>50</number>
+      </property>
+      <property name="pageStep">
+       <number>5</number>
+      </property>
+      <property name="value">
+       <number>12</number>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="tickPosition">
+       <enum>QSlider::TicksAbove</enum>
+      </property>
+      <property name="tickInterval">
+       <number>5</number>
       </property>
      </widget>
     </widget>
@@ -936,7 +1087,7 @@
       <number>0</number>
      </property>
      <property name="maximum">
-      <number>25</number>
+      <number>30</number>
      </property>
      <property name="singleStep">
       <number>1</number>
@@ -1422,7 +1573,7 @@
       <number>0</number>
      </property>
      <property name="maximum">
-      <number>25</number>
+      <number>30</number>
      </property>
      <property name="singleStep">
       <number>1</number>
@@ -1901,6 +2052,11 @@
      </item>
      <item>
       <property name="text">
+       <string>Appearance</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
        <string>Cache</string>
       </property>
      </item>
@@ -2109,6 +2265,54 @@
     <hint type="destinationlabel">
      <x>625</x>
      <y>224</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>classificationBadgeImageDiamSlider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>classificationBadgeImageDiamLbl</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>466</x>
+     <y>201</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>608</x>
+     <y>196</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>classificationBadgeThumbDiamSlider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>classificationBadgeThumbDiamLbl</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>466</x>
+     <y>241</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>608</x>
+     <y>236</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>globalFontSizeSlider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>globalFontSizeLbl</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>416</x>
+     <y>91</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>608</x>
+     <y>86</y>
     </hint>
    </hints>
   </connection>

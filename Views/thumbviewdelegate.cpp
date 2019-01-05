@@ -53,7 +53,7 @@ ThumbViewDelegate::ThumbViewDelegate(QObject *parent, bool &isRatingBadgeVisible
 }
 
 void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
-         int thumbPadding, int labelFontSize, bool showThumbLabels)
+         int thumbPadding, int labelFontSize, bool showThumbLabels, int badgeSize)
 {
     {
     #ifdef ISDEBUG
@@ -66,6 +66,7 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     font.setPixelSize(labelFontSize);
     QFontMetrics fm(font);
     fontHt = fm.height();
+    this->badgeSize = badgeSize;
     if (thumbWidth < THUMB_MIN) thumbWidth = THUMB_MIN;
     if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
 
@@ -186,8 +187,8 @@ textRect         = a rectangle below itemRect
                    iconsize.width(), iconsize.height());
 
     // label/rating rect located top-right as containment for circle
-    int ratingDiam = 12;
-    int ratingTextSize = 12;
+    int ratingDiam = badgeSize;
+    int ratingTextSize = badgeSize;
     QPoint ratingTopLeft(option.rect.right() - ratingDiam, option.rect.top());
     QPoint ratingBottomRight(option.rect.right(), option.rect.top() + ratingDiam);
     QRect ratingRect(ratingTopLeft, ratingBottomRight);

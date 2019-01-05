@@ -2,7 +2,7 @@
 
 namespace G
 {
-    int transparency = 255;
+    int transparency = 150;
     QColor labelNoneColor(85,85,85,transparency);                // Background Gray
     QColor labelRedColor(QColor(128,0,0,transparency));          // Dark red
     QColor labelYellowColor(QColor(255,255,0,transparency));     // Dark yellow
