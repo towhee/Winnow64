@@ -245,6 +245,7 @@ public:
         helpBtn = new QPushButton(groupBox_2);
         helpBtn->setObjectName(QStringLiteral("helpBtn"));
         helpBtn->setGeometry(QRect(530, 30, 101, 25));
+        helpBtn->setAutoDefault(false);
         groupBox_4 = new QGroupBox(IngestDlg);
         groupBox_4->setObjectName(QStringLiteral("groupBox_4"));
         groupBox_4->setGeometry(QRect(20, 380, 660, 121));
@@ -284,19 +285,21 @@ public:
         statsLabel->setFont(font);
         layoutWidget = new QWidget(IngestDlg);
         layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
-        layoutWidget->setGeometry(QRect(470, 740, 211, 32));
+        layoutWidget->setGeometry(QRect(430, 740, 251, 32));
         horizontalLayout = new QHBoxLayout(layoutWidget);
         horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
         cancelBtn = new QPushButton(layoutWidget);
         cancelBtn->setObjectName(QStringLiteral("cancelBtn"));
         cancelBtn->setMinimumSize(QSize(93, 0));
+        cancelBtn->setAutoDefault(false);
 
         horizontalLayout->addWidget(cancelBtn);
 
         okBtn = new QPushButton(layoutWidget);
         okBtn->setObjectName(QStringLiteral("okBtn"));
         okBtn->setMinimumSize(QSize(93, 0));
+        okBtn->setAutoDefault(false);
 
         horizontalLayout->addWidget(okBtn);
 

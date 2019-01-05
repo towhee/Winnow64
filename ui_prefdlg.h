@@ -47,8 +47,17 @@ public:
     QCheckBox *rememberFolderChk;
     QGroupBox *groupBoxFolders_2;
     QCheckBox *mouseClickScrollChk;
+    QWidget *page_4;
     QGroupBox *groupBoxFolders_3;
     QSlider *globalFontSizeSlider;
+    QLabel *globalFontSizeLbl;
+    QGroupBox *groupBoxFolders_4;
+    QSlider *classificationBadgeImageDiamSlider;
+    QLabel *classificationBadgeImageDiamLbl;
+    QLabel *label_13;
+    QLabel *label_20;
+    QLabel *classificationBadgeThumbDiamLbl;
+    QSlider *classificationBadgeThumbDiamSlider;
     QWidget *pageCache;
     QSpinBox *cacheSizeSpinbox;
     QLabel *label_10;
@@ -166,7 +175,7 @@ public:
         pageGeneral->setObjectName(QStringLiteral("pageGeneral"));
         groupBoxTrackpadAction = new QGroupBox(pageGeneral);
         groupBoxTrackpadAction->setObjectName(QStringLiteral("groupBoxTrackpadAction"));
-        groupBoxTrackpadAction->setGeometry(QRect(20, 210, 431, 101));
+        groupBoxTrackpadAction->setGeometry(QRect(20, 100, 431, 101));
         layoutWidget = new QWidget(groupBoxTrackpadAction);
         layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
         layoutWidget->setGeometry(QRect(20, 27, 337, 65));
@@ -187,24 +196,27 @@ public:
 
         groupBoxFolders = new QGroupBox(pageGeneral);
         groupBoxFolders->setObjectName(QStringLiteral("groupBoxFolders"));
-        groupBoxFolders->setGeometry(QRect(20, 120, 431, 71));
+        groupBoxFolders->setGeometry(QRect(20, 10, 431, 71));
         rememberFolderChk = new QCheckBox(groupBoxFolders);
         rememberFolderChk->setObjectName(QStringLiteral("rememberFolderChk"));
         rememberFolderChk->setGeometry(QRect(20, 30, 261, 20));
         rememberFolderChk->setFont(font);
         groupBoxFolders_2 = new QGroupBox(pageGeneral);
         groupBoxFolders_2->setObjectName(QStringLiteral("groupBoxFolders_2"));
-        groupBoxFolders_2->setGeometry(QRect(20, 330, 431, 71));
+        groupBoxFolders_2->setGeometry(QRect(20, 220, 431, 71));
         mouseClickScrollChk = new QCheckBox(groupBoxFolders_2);
         mouseClickScrollChk->setObjectName(QStringLiteral("mouseClickScrollChk"));
         mouseClickScrollChk->setGeometry(QRect(20, 30, 371, 20));
         mouseClickScrollChk->setFont(font);
-        groupBoxFolders_3 = new QGroupBox(pageGeneral);
+        stackedWidget->addWidget(pageGeneral);
+        page_4 = new QWidget();
+        page_4->setObjectName(QStringLiteral("page_4"));
+        groupBoxFolders_3 = new QGroupBox(page_4);
         groupBoxFolders_3->setObjectName(QStringLiteral("groupBoxFolders_3"));
-        groupBoxFolders_3->setGeometry(QRect(20, 10, 431, 91));
+        groupBoxFolders_3->setGeometry(QRect(20, 20, 431, 91));
         globalFontSizeSlider = new QSlider(groupBoxFolders_3);
         globalFontSizeSlider->setObjectName(QStringLiteral("globalFontSizeSlider"));
-        globalFontSizeSlider->setGeometry(QRect(40, 40, 301, 22));
+        globalFontSizeSlider->setGeometry(QRect(40, 40, 311, 22));
         globalFontSizeSlider->setMinimum(8);
         globalFontSizeSlider->setMaximum(20);
         globalFontSizeSlider->setPageStep(1);
@@ -212,7 +224,45 @@ public:
         globalFontSizeSlider->setOrientation(Qt::Horizontal);
         globalFontSizeSlider->setTickPosition(QSlider::TicksAbove);
         globalFontSizeSlider->setTickInterval(1);
-        stackedWidget->addWidget(pageGeneral);
+        globalFontSizeLbl = new QLabel(groupBoxFolders_3);
+        globalFontSizeLbl->setObjectName(QStringLiteral("globalFontSizeLbl"));
+        globalFontSizeLbl->setGeometry(QRect(360, 30, 55, 31));
+        groupBoxFolders_4 = new QGroupBox(page_4);
+        groupBoxFolders_4->setObjectName(QStringLiteral("groupBoxFolders_4"));
+        groupBoxFolders_4->setGeometry(QRect(20, 130, 431, 121));
+        classificationBadgeImageDiamSlider = new QSlider(groupBoxFolders_4);
+        classificationBadgeImageDiamSlider->setObjectName(QStringLiteral("classificationBadgeImageDiamSlider"));
+        classificationBadgeImageDiamSlider->setGeometry(QRect(100, 40, 251, 22));
+        classificationBadgeImageDiamSlider->setMinimum(0);
+        classificationBadgeImageDiamSlider->setMaximum(100);
+        classificationBadgeImageDiamSlider->setPageStep(10);
+        classificationBadgeImageDiamSlider->setValue(20);
+        classificationBadgeImageDiamSlider->setOrientation(Qt::Horizontal);
+        classificationBadgeImageDiamSlider->setTickPosition(QSlider::TicksAbove);
+        classificationBadgeImageDiamSlider->setTickInterval(10);
+        classificationBadgeImageDiamLbl = new QLabel(groupBoxFolders_4);
+        classificationBadgeImageDiamLbl->setObjectName(QStringLiteral("classificationBadgeImageDiamLbl"));
+        classificationBadgeImageDiamLbl->setGeometry(QRect(360, 30, 55, 31));
+        label_13 = new QLabel(groupBoxFolders_4);
+        label_13->setObjectName(QStringLiteral("label_13"));
+        label_13->setGeometry(QRect(10, 40, 81, 20));
+        label_20 = new QLabel(groupBoxFolders_4);
+        label_20->setObjectName(QStringLiteral("label_20"));
+        label_20->setGeometry(QRect(10, 80, 81, 20));
+        classificationBadgeThumbDiamLbl = new QLabel(groupBoxFolders_4);
+        classificationBadgeThumbDiamLbl->setObjectName(QStringLiteral("classificationBadgeThumbDiamLbl"));
+        classificationBadgeThumbDiamLbl->setGeometry(QRect(360, 70, 55, 31));
+        classificationBadgeThumbDiamSlider = new QSlider(groupBoxFolders_4);
+        classificationBadgeThumbDiamSlider->setObjectName(QStringLiteral("classificationBadgeThumbDiamSlider"));
+        classificationBadgeThumbDiamSlider->setGeometry(QRect(100, 80, 251, 22));
+        classificationBadgeThumbDiamSlider->setMinimum(0);
+        classificationBadgeThumbDiamSlider->setMaximum(50);
+        classificationBadgeThumbDiamSlider->setPageStep(5);
+        classificationBadgeThumbDiamSlider->setValue(12);
+        classificationBadgeThumbDiamSlider->setOrientation(Qt::Horizontal);
+        classificationBadgeThumbDiamSlider->setTickPosition(QSlider::TicksAbove);
+        classificationBadgeThumbDiamSlider->setTickInterval(5);
+        stackedWidget->addWidget(page_4);
         pageCache = new QWidget();
         pageCache->setObjectName(QStringLiteral("pageCache"));
         cacheSizeSpinbox = new QSpinBox(pageCache);
@@ -413,7 +463,7 @@ public:
         thumbSpacingSlider->setGeometry(QRect(200, 115, 160, 22));
         thumbSpacingSlider->setFont(font);
         thumbSpacingSlider->setMinimum(0);
-        thumbSpacingSlider->setMaximum(25);
+        thumbSpacingSlider->setMaximum(30);
         thumbSpacingSlider->setSingleStep(1);
         thumbSpacingSlider->setPageStep(5);
         thumbSpacingSlider->setValue(24);
@@ -547,7 +597,7 @@ public:
         thumbSpacingSlider_2->setGeometry(QRect(200, 115, 160, 22));
         thumbSpacingSlider_2->setFont(font);
         thumbSpacingSlider_2->setMinimum(0);
-        thumbSpacingSlider_2->setMaximum(25);
+        thumbSpacingSlider_2->setMaximum(30);
         thumbSpacingSlider_2->setSingleStep(1);
         thumbSpacingSlider_2->setPageStep(5);
         thumbSpacingSlider_2->setValue(24);
@@ -720,6 +770,7 @@ public:
         new QListWidgetItem(listWidget);
         new QListWidgetItem(listWidget);
         new QListWidgetItem(listWidget);
+        new QListWidgetItem(listWidget);
         listWidget->setObjectName(QStringLiteral("listWidget"));
         listWidget->setGeometry(QRect(0, 9, 191, 481));
         listWidget->setStyleSheet(QStringLiteral("border: none;"));
@@ -743,8 +794,11 @@ public:
         QObject::connect(iconPaddingSlider_2, SIGNAL(valueChanged(int)), iconPaddingLbl_2, SLOT(setNum(int)));
         QObject::connect(thumbSpacingSlider_2, SIGNAL(valueChanged(int)), thumbSpacingLbl_2, SLOT(setNum(int)));
         QObject::connect(fontSizeSlider_2, SIGNAL(valueChanged(int)), fontSizeLbl_2, SLOT(setNum(int)));
+        QObject::connect(classificationBadgeImageDiamSlider, SIGNAL(valueChanged(int)), classificationBadgeImageDiamLbl, SLOT(setNum(int)));
+        QObject::connect(classificationBadgeThumbDiamSlider, SIGNAL(valueChanged(int)), classificationBadgeThumbDiamLbl, SLOT(setNum(int)));
+        QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(0);
+        stackedWidget->setCurrentIndex(1);
         listContainer->setCurrentIndex(0);
 
 
@@ -765,7 +819,22 @@ public:
         rememberFolderChk->setText(QApplication::translate("Prefdlg", "Remember previous folder", nullptr));
         groupBoxFolders_2->setTitle(QApplication::translate("Prefdlg", "Mouse click selection", nullptr));
         mouseClickScrollChk->setText(QApplication::translate("Prefdlg", "Scroll to position at center when mouse click", nullptr));
-        groupBoxFolders_3->setTitle(QApplication::translate("Prefdlg", "Font size", nullptr));
+        groupBoxFolders_3->setTitle(QApplication::translate("Prefdlg", "Application font size", nullptr));
+#ifndef QT_NO_TOOLTIP
+        globalFontSizeSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        globalFontSizeLbl->setText(QString());
+        groupBoxFolders_4->setTitle(QApplication::translate("Prefdlg", "Classification badge diameter", nullptr));
+#ifndef QT_NO_TOOLTIP
+        classificationBadgeImageDiamSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        classificationBadgeImageDiamLbl->setText(QString());
+        label_13->setText(QApplication::translate("Prefdlg", "Loupe", nullptr));
+        label_20->setText(QApplication::translate("Prefdlg", "Thumb", nullptr));
+        classificationBadgeThumbDiamLbl->setText(QString());
+#ifndef QT_NO_TOOLTIP
+        classificationBadgeThumbDiamSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
 #ifndef QT_NO_TOOLTIP
         cacheSizeSpinbox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
@@ -882,17 +951,19 @@ public:
         QListWidgetItem *___qlistwidgetitem = listWidget->item(0);
         ___qlistwidgetitem->setText(QApplication::translate("Prefdlg", "General", nullptr));
         QListWidgetItem *___qlistwidgetitem1 = listWidget->item(1);
-        ___qlistwidgetitem1->setText(QApplication::translate("Prefdlg", "Cache", nullptr));
+        ___qlistwidgetitem1->setText(QApplication::translate("Prefdlg", "Appearance", nullptr));
         QListWidgetItem *___qlistwidgetitem2 = listWidget->item(2);
-        ___qlistwidgetitem2->setText(QApplication::translate("Prefdlg", "Slideshow", nullptr));
+        ___qlistwidgetitem2->setText(QApplication::translate("Prefdlg", "Cache", nullptr));
         QListWidgetItem *___qlistwidgetitem3 = listWidget->item(3);
-        ___qlistwidgetitem3->setText(QApplication::translate("Prefdlg", "Thumbs in Dock", nullptr));
+        ___qlistwidgetitem3->setText(QApplication::translate("Prefdlg", "Slideshow", nullptr));
         QListWidgetItem *___qlistwidgetitem4 = listWidget->item(4);
-        ___qlistwidgetitem4->setText(QApplication::translate("Prefdlg", "Thumbs in Grid View", nullptr));
+        ___qlistwidgetitem4->setText(QApplication::translate("Prefdlg", "Thumbs in Dock", nullptr));
         QListWidgetItem *___qlistwidgetitem5 = listWidget->item(5);
-        ___qlistwidgetitem5->setText(QApplication::translate("Prefdlg", "Full screen default docks", nullptr));
+        ___qlistwidgetitem5->setText(QApplication::translate("Prefdlg", "Thumbs in Grid View", nullptr));
         QListWidgetItem *___qlistwidgetitem6 = listWidget->item(6);
-        ___qlistwidgetitem6->setText(QApplication::translate("Prefdlg", "Show or hide fields", nullptr));
+        ___qlistwidgetitem6->setText(QApplication::translate("Prefdlg", "Full screen default docks", nullptr));
+        QListWidgetItem *___qlistwidgetitem7 = listWidget->item(7);
+        ___qlistwidgetitem7->setText(QApplication::translate("Prefdlg", "Show or hide fields", nullptr));
         listWidget->setSortingEnabled(__sortingEnabled);
 
     } // retranslateUi

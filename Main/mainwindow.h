@@ -140,8 +140,11 @@ public:
     bool autoIngestFolderPath;
     bool autoEjectUsb;
 
+    // appearance
     bool isRatingBadgeVisible;
     QString fontSize;
+    int classificationBadgeInImageDiameter;
+    int classificationBadgeInThumbDiameter;
 
     // preferences: files
     bool rememberLastDir;
@@ -316,6 +319,8 @@ private slots:
     void updateClassification();
     void refreshFolders();
     void setFontSize(QString pixels);
+    void setClassificationBadgeImageDiam(int d);
+    void setClassificationBadgeThumbDiam(int d);
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
     void setMouseClickScroll(bool prefMouseClickScroll);

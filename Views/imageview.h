@@ -22,7 +22,9 @@ public:
               ImageCache *imageCacheThread,
               ThumbView *thumbView,
               InfoString *infoString,
-              bool isShootingInfoVisible, bool isRatingBadgeVisible);
+              bool isShootingInfoVisible,
+              bool isRatingBadgeVisible,
+              int classificationBadgeDiam);
 
     qreal zoom;
     qreal refZoom;                      // adjusted to real screen pixels
@@ -54,6 +56,7 @@ public slots:
     void zoomToFit();
     void zoomTo(qreal zoomTo);
     void zoomToggle();
+    void setClassificationBadgeImageDiam(int d);
 
 signals:
     void togglePick();
@@ -169,6 +172,7 @@ private:
     QString currentImagePath;
     QString shootingInfo;
     bool firstImageLoaded;
+    int classificationBadgeDiam;
 
     bool cursorIsHidden;        // use for slideshow and full screen - review rgh
     bool moveImageLocked;       // control when con drag image around
