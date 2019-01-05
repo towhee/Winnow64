@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'zoomdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.10.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,10 +10,13 @@
 #define UI_ZOOMDLG_H
 
 #include <QtCore/QVariant>
+#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QRadioButton>
@@ -48,23 +51,23 @@ public:
     void setupUi(QDialog *ZoomDlg)
     {
         if (ZoomDlg->objectName().isEmpty())
-            ZoomDlg->setObjectName(QString::fromUtf8("ZoomDlg"));
+            ZoomDlg->setObjectName(QStringLiteral("ZoomDlg"));
         ZoomDlg->resize(705, 69);
-        ZoomDlg->setWindowOpacity(0.850000000000000);
+        ZoomDlg->setWindowOpacity(0.85);
         border = new QFrame(ZoomDlg);
-        border->setObjectName(QString::fromUtf8("border"));
+        border->setObjectName(QStringLiteral("border"));
         border->setGeometry(QRect(0, 0, 705, 69));
         border->setFrameShape(QFrame::Box);
         horizontalLayout_3 = new QHBoxLayout(border);
-        horizontalLayout_3->setObjectName(QString::fromUtf8("horizontalLayout_3"));
+        horizontalLayout_3->setObjectName(QStringLiteral("horizontalLayout_3"));
         verticalLayout = new QVBoxLayout();
-        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+        verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
         verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
         verticalLayout->addItem(verticalSpacer);
 
         zoomSlider = new QSlider(border);
-        zoomSlider->setObjectName(QString::fromUtf8("zoomSlider"));
+        zoomSlider->setObjectName(QStringLiteral("zoomSlider"));
         zoomSlider->setMaximumSize(QSize(16777215, 10));
         zoomSlider->setFocusPolicy(Qt::StrongFocus);
         zoomSlider->setMinimum(1);
@@ -77,9 +80,9 @@ public:
         verticalLayout->addWidget(zoomSlider);
 
         horizontalLayout_2 = new QHBoxLayout();
-        horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
+        horizontalLayout_2->setObjectName(QStringLiteral("horizontalLayout_2"));
         radio25Button = new QRadioButton(border);
-        radio25Button->setObjectName(QString::fromUtf8("radio25Button"));
+        radio25Button->setObjectName(QStringLiteral("radio25Button"));
         QFont font;
         font.setPointSize(11);
         radio25Button->setFont(font);
@@ -87,31 +90,33 @@ public:
         horizontalLayout_2->addWidget(radio25Button);
 
         radio50Button = new QRadioButton(border);
-        radio50Button->setObjectName(QString::fromUtf8("radio50Button"));
+        radio50Button->setObjectName(QStringLiteral("radio50Button"));
         radio50Button->setFont(font);
 
         horizontalLayout_2->addWidget(radio50Button);
 
         radio66Button = new QRadioButton(border);
-        radio66Button->setObjectName(QString::fromUtf8("radio66Button"));
+        radio66Button->setObjectName(QStringLiteral("radio66Button"));
         radio66Button->setFont(font);
 
         horizontalLayout_2->addWidget(radio66Button);
 
         radio100Button = new QRadioButton(border);
-        radio100Button->setObjectName(QString::fromUtf8("radio100Button"));
-        radio100Button->setFont(font);
+        radio100Button->setObjectName(QStringLiteral("radio100Button"));
+        QFont font1;
+        font1.setPointSize(8);
+        radio100Button->setFont(font1);
 
         horizontalLayout_2->addWidget(radio100Button);
 
         radio133Button = new QRadioButton(border);
-        radio133Button->setObjectName(QString::fromUtf8("radio133Button"));
+        radio133Button->setObjectName(QStringLiteral("radio133Button"));
         radio133Button->setFont(font);
 
         horizontalLayout_2->addWidget(radio133Button);
 
         radio200Button = new QRadioButton(border);
-        radio200Button->setObjectName(QString::fromUtf8("radio200Button"));
+        radio200Button->setObjectName(QStringLiteral("radio200Button"));
         radio200Button->setFont(font);
 
         horizontalLayout_2->addWidget(radio200Button);
@@ -127,16 +132,16 @@ public:
         horizontalLayout_3->addLayout(verticalLayout);
 
         horizontalLayout = new QHBoxLayout();
-        horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
+        horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         zoomSB = new QSpinBox(border);
-        zoomSB->setObjectName(QString::fromUtf8("zoomSB"));
+        zoomSB->setObjectName(QStringLiteral("zoomSB"));
         zoomSB->setMinimumSize(QSize(0, 0));
         zoomSB->setMaximumSize(QSize(16777215, 40));
-        QFont font1;
-        font1.setPointSize(13);
-        font1.setBold(true);
-        font1.setWeight(75);
-        zoomSB->setFont(font1);
+        QFont font2;
+        font2.setPointSize(13);
+        font2.setBold(true);
+        font2.setWeight(75);
+        zoomSB->setFont(font2);
         zoomSB->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         zoomSB->setMinimum(1);
         zoomSB->setMaximum(400);
@@ -146,14 +151,14 @@ public:
         horizontalLayout->addWidget(zoomSB);
 
         pctLabel = new QLabel(border);
-        pctLabel->setObjectName(QString::fromUtf8("pctLabel"));
+        pctLabel->setObjectName(QStringLiteral("pctLabel"));
         pctLabel->setMaximumSize(QSize(16777215, 20));
         pctLabel->setLineWidth(0);
 
         horizontalLayout->addWidget(pctLabel);
 
         toggleZoomAmountBtn = new QPushButton(border);
-        toggleZoomAmountBtn->setObjectName(QString::fromUtf8("toggleZoomAmountBtn"));
+        toggleZoomAmountBtn->setObjectName(QStringLiteral("toggleZoomAmountBtn"));
         toggleZoomAmountBtn->setFocusPolicy(Qt::NoFocus);
 
         horizontalLayout->addWidget(toggleZoomAmountBtn);
@@ -177,42 +182,42 @@ public:
 #ifndef QT_NO_TOOLTIP
         radio25Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 1", nullptr));
 #endif // QT_NO_TOOLTIP
-        radio25Button->setText(QApplication::translate("ZoomDlg", "25% (1)", nullptr));
+        radio25Button->setText(QApplication::translate("ZoomDlg", "25%", nullptr));
 #ifndef QT_NO_SHORTCUT
         radio25Button->setShortcut(QApplication::translate("ZoomDlg", "1", nullptr));
 #endif // QT_NO_SHORTCUT
 #ifndef QT_NO_TOOLTIP
         radio50Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 2", nullptr));
 #endif // QT_NO_TOOLTIP
-        radio50Button->setText(QApplication::translate("ZoomDlg", "50% (2)", nullptr));
+        radio50Button->setText(QApplication::translate("ZoomDlg", "50%", nullptr));
 #ifndef QT_NO_SHORTCUT
         radio50Button->setShortcut(QApplication::translate("ZoomDlg", "2", nullptr));
 #endif // QT_NO_SHORTCUT
 #ifndef QT_NO_TOOLTIP
         radio66Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 3", nullptr));
 #endif // QT_NO_TOOLTIP
-        radio66Button->setText(QApplication::translate("ZoomDlg", "67% (3)", nullptr));
+        radio66Button->setText(QApplication::translate("ZoomDlg", "67%", nullptr));
 #ifndef QT_NO_SHORTCUT
         radio66Button->setShortcut(QApplication::translate("ZoomDlg", "3", nullptr));
 #endif // QT_NO_SHORTCUT
 #ifndef QT_NO_TOOLTIP
         radio100Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 4", nullptr));
 #endif // QT_NO_TOOLTIP
-        radio100Button->setText(QApplication::translate("ZoomDlg", "100% (4)", nullptr));
+        radio100Button->setText(QApplication::translate("ZoomDlg", "100%", nullptr));
 #ifndef QT_NO_SHORTCUT
         radio100Button->setShortcut(QApplication::translate("ZoomDlg", "4", nullptr));
 #endif // QT_NO_SHORTCUT
 #ifndef QT_NO_TOOLTIP
         radio133Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 5", nullptr));
 #endif // QT_NO_TOOLTIP
-        radio133Button->setText(QApplication::translate("ZoomDlg", "133% (5)", nullptr));
+        radio133Button->setText(QApplication::translate("ZoomDlg", "133%", nullptr));
 #ifndef QT_NO_SHORTCUT
         radio133Button->setShortcut(QApplication::translate("ZoomDlg", "5", nullptr));
 #endif // QT_NO_SHORTCUT
 #ifndef QT_NO_TOOLTIP
         radio200Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 6", nullptr));
 #endif // QT_NO_TOOLTIP
-        radio200Button->setText(QApplication::translate("ZoomDlg", "200% (6)", nullptr));
+        radio200Button->setText(QApplication::translate("ZoomDlg", "200%", nullptr));
 #ifndef QT_NO_SHORTCUT
         radio200Button->setShortcut(QApplication::translate("ZoomDlg", "6", nullptr));
 #endif // QT_NO_SHORTCUT

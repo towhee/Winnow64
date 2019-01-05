@@ -6,25 +6,31 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>703</width>
-    <height>585</height>
+    <width>886</width>
+    <height>683</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Open with Program List</string>
+   <string>External Program List</string>
   </property>
   <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>19</x>
-     <y>19</y>
-     <width>661</width>
+     <x>20</x>
+     <y>20</y>
+     <width>831</width>
      <height>441</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <widget class="QTableWidget" name="apps">
+     <widget class="QTableWidget" name="appsTable">
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <property name="editTriggers">
+       <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked</set>
+      </property>
       <property name="columnCount">
        <number>2</number>
       </property>
@@ -43,9 +49,9 @@
   <widget class="QWidget" name="horizontalLayoutWidget_2">
    <property name="geometry">
     <rect>
-     <x>220</x>
-     <y>519</y>
-     <width>441</width>
+     <x>210</x>
+     <y>600</y>
+     <width>641</width>
      <height>51</height>
     </rect>
    </property>
@@ -67,11 +73,31 @@
     <item>
      <widget class="QPushButton" name="okBtn">
       <property name="text">
-       <string>OK</string>
+       <string>Save changes</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="cancelBtn">
+      <property name="text">
+       <string>Cancel</string>
       </property>
      </widget>
     </item>
    </layout>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>480</y>
+     <width>821</width>
+     <height>101</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffff00;&quot;&gt;Add&lt;/span&gt; external programs using the &amp;quot;Add Program&amp;quot; button. The program will be added to the table. &lt;/p&gt;&lt;p&gt;To &lt;span style=&quot; color:#ffff00;&quot;&gt;remove&lt;/span&gt; a program select the program in the table and click &amp;quot;Remove Program&amp;quot; &lt;/p&gt;&lt;p&gt;To &lt;span style=&quot; color:#ffff00;&quot;&gt;change&lt;/span&gt; the displayed program name edit the table cell.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
   </widget>
  </widget>
  <resources/>
