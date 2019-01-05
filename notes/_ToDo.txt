@@ -1,18 +1,17 @@
 BUGS
-- Jpg orientationOffset = 0 when metadata orientation changed
-- Update image count in Fav (refresh) when changes
-- CompareImages not calc layout optimally
-- Copy image to clipboard not working
-- Copy metadata item not working (was working before)
+- toggleFilterPick??
+- ThumbView::copyThumbs??
 - Open with ... (doesn't work on macOS)
-- Confirm tif metadata for focus stacks (app out msg)
 - Toggle zoom wrong place when using preview size cached image
+- Sometimes slow loading metadata
 PERFORMANCE
 CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Track downloads by ip address
 - Invert filter
+- Make all message boxes consistent (see runExternalApp)
 - Add preferences for badge and shooting info size
 - Create installer for mac
 - Remove Windows Registry settings during uninstall
@@ -23,12 +22,26 @@ ENHANCEMENTS
 - Get Sony image count, camera SN
 - Add zoom increment amount to preferences
 - Zoom rect in thumbnail to show zoom and pan in imageView
-- Disable menu "add bookmark" when folders not selected??
-- Tweak context menus
 - Run droplet
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Manage external programs not remembering changes
+- CompareImages not calc layout optimally
+- Change font size
+- Right click on thumbs overriding selection
+- Tweak context menus
+- Context menu should apply to right click folder, not current folder
+- Update image count in Fav (refresh) when changes
+- Reset dynamic filters when invalid folder selected
+- Enable/disable selection dependent menu items
+- Fixed behavior when invalid folder selected
+- Disable menu "add bookmark" when folders not selected??
+- Enable/disable eject menu
+- Jpg orientationOffset = 0 when metadata orientation changed
+- Confirm tif metadata for focus stacks (app out msg)
+- ThumbDock visibility not remembered if close app in grid mode
+- Clear all filters shortcut not working (cannot use Shift+Ctrl+0)
 - If switch from raw+jpg cache needs to be refreshed
 - Full screen panel flags not working
 - Sometimes metadata caching is slow (trying to read xmp when none)
