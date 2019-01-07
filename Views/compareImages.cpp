@@ -72,6 +72,8 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     count = selection.count();
     if (count > 9) count = 9;
 
+//    qDebug() << "Compare selected image count:" << count;
+
     /* iterate selected thumbs to get image dimensions and configure grid.
     Req'd before load images as they need to know grid size to be able to scale
     to fit.
@@ -86,19 +88,13 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     // determine the optimum grid to maximize the size of each image
     configureGrid();
 
-    QSize gridCell(cw.width() / cols, cw.height() / rows);
-//    qDebug() << "Central widget width =" << cw.width() << "height =" << cw.height();
-//    qDebug() << "Images =" << count << "Grid rows =" << rows << "cols =" << cols;
-//    qDebug() << "Compare grid cell width =" << gridCell.width() << "height =" << gridCell.height();
-//    for (int col = 0; col < cols; ++col)
-//        gridLayout->setColumnMinimumWidth(col, gridCell.width() - 200);
-//    for (int row = 0; row < rows; ++row)
-//        gridLayout->setRowMinimumHeight(row, gridCell.height() - 200);
+    // gridCell is 4 pixels smaller to accomodate margins and selection border
+    QSize gridCell(cw.width() / cols - 4, cw.height() / rows - 4);
 
     // iterate selected thumbs - load images, append and connect
     for (int i = 0; i < count; ++i) {
         QModelIndex idxPath = selection.at(i);
-        QModelIndex idxPick = dm->sf->index(idxPath.row(), G::PickColumn);
+//        QModelIndex idxPick = dm->sf->index(idxPath.row(), G::PickColumn);
         QString fPath = selection.at(i).data(G::PathRole).toString();
         // create new compareView and append to list
         imList->append(new CompareView(this, gridCell, metadata, imageCacheThread, thumbView));
@@ -159,6 +155,10 @@ void CompareImages::loadGrid()
     G::track(__FUNCTION__);
     #endif
     }
+//    int n = gridLayout->count();
+//    int c = cols;
+//    int r = rows;
+//    qDebug() << "n, c, r:" << n << c << r;
     int i = 0;
     int row, col;
     for (row = 0; row < rows; ++row) {
@@ -217,7 +217,6 @@ void CompareImages::configureGrid()
         area1 = area(2, 2);
         area2 = area(1, 4);
         area3 = area(4, 1);
-//        qDebug() << G::t.restart() << "\t" << "case 4: area1, area2, area3" << area1 << area2 << area3;
         if (area1 >= area2 && area1 >= area3) {
             rows = 2;
             cols = 2;
@@ -278,19 +277,21 @@ long CompareImages::area(int rows, int cols)
     #endif
     }
     // cw = central widget
-    QSize cell(cw.height() / rows, cw.width() / cols);
+    // Define cell size each image must fit into
+    QSize cell(cw.width() / cols, cw.height() / rows);
     long area = 0;
 
+    // scale each image for the cell size and sum total area of each scaled image
     for (int i = 0; i < count; ++i) {
         QSize imSize = sizeList->at(i);
         imSize.scale(cell, Qt::KeepAspectRatio);
         area += imSize.width() * imSize.height();
-//        qDebug() << G::t.restart() << "\t" << "rows, cols" << rows << cols
-//                 << "central widget" << cw
-//                 << "cell size" << cell << "item"
-//                 << i << "imSize" << imSize
-//                 << "item area" << imSize.width() * imSize.height()
-//                 << "sum area" << area;
+/*        qDebug() << "rows, cols" << rows << cols
+                 << "central widget" << cw
+                 << "cell size" << cell << "item"
+                 << i << "imSize" << imSize
+                 << "item area" << imSize.width() * imSize.height()
+                 << "sum area" << area;*/
     }
     return area;
 }
@@ -368,7 +369,7 @@ void CompareImages::zoom(QPointF scrollPct, QModelIndex idx, bool isZoom)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "CompareImages::zoom  scrollPct" << scrollPct << "isZoom" << isZoom;
+//    qDebug() << "CompareImages::zoom  scrollPct" << scrollPct << "isZoom" << isZoom;
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slaveZoomToPct(scrollPct, isZoom);
@@ -385,7 +386,7 @@ void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "CompareImages::pan";
+//    qDebug() << "CompareImages::pan";
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slavePanToDeltaPct(scrollPct);
@@ -400,7 +401,7 @@ void CompareImages::startPan(QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "CompareImages::pan";
+//    qDebug() "CompareImages::startPan";
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slaveSetPanStartPct();
@@ -415,7 +416,7 @@ void CompareImages::cleanupAfterPan(QPointF deltaPct, QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "CompareImages::pan";
+//    qDebug() << "CompareImages::cleanupAfterPan";
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slaveCleanupAfterPan(deltaPct);

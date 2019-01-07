@@ -755,7 +755,6 @@ void Prefdlg::on_globalFontSizeSlider_sliderReleased()
 
 void Prefdlg::on_classificationBadgeImageDiamSlider_valueChanged(int value)
 {
-    qDebug() << "on_classificationBadgeImageDiamSlider_valueChanged =" << value;
     emit updateClassificationBadgeImageDiam(value);
 }
 
