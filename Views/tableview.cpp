@@ -79,6 +79,8 @@ bool TableView::eventFilter(QObject *obj, QEvent *event)
 void TableView::mousePressEvent(QMouseEvent *event)
 {
     G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
+    // ignore right mouse clicks (context menu)
+    if (event->button() == Qt::RightButton) return;
     QTableView::mousePressEvent(event);
 }
 
