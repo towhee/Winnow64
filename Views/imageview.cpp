@@ -458,18 +458,6 @@ size.
     else
         y = rect().height();
 
-    // resize if necessary
-/*    qreal f = 0.05;
-    w *= f;
-    h *= f;
-    int d;                          // dimension of pick image
-    w > h ? d = w : d = h;
-    if (d < 20) d = 18;
-    if (d > 40) d = 40;
-    */
-
-    qDebug() << "classificationBadgeDiam =" << classificationBadgeDiam;
-
     int o = 5;                          // offset margin from edge
     int d = classificationBadgeDiam;    // diameter of the classification label
     classificationLabel->setDiameter(d);
