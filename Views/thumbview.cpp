@@ -1228,7 +1228,7 @@ void ThumbView::mouseMoveEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event << event->pos();
+//    qDebug() << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event << event->pos();
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }
@@ -1240,7 +1240,7 @@ void ThumbView::mouseReleaseEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::mouseReleaseEvent ";
+//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::mouseReleaseEvent ";
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
     QListView::mouseReleaseEvent(event);
