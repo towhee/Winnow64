@@ -2955,7 +2955,6 @@ void MW::createGridView()
     gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
     gridView->showThumbLabels = setting->value("showThumbLabelsGrid").toBool();
     gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
-    qDebug() << "createGridView gridView->badgeSize =" << gridView->badgeSize;
 
     // double mouse click fires displayLoupe
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -3406,11 +3405,15 @@ QString fileSym = "📷";
         if (G::mode == "Loupe" || G::mode == "Compare")
             base += spacer + getZoom() + " zoom";
         base += spacer + getPicked() + " picked";
+//        QString s = QString::number(selectionModel->selectedRows().count());
+        QString s = QString::number(gridView->selectionModel()->selectedRows().count());
+        base += spacer + s + " selected";
         base += spacer;
     }
 
     status = " " + base + s;
     stateLabel->setText(status);
+    qDebug() << "Status:" << status;
 
     // update InfoView - flag updates so itemChanged be ignored in MW::metadataChanged
     infoView->isNewImageDataChange = true;
@@ -6239,9 +6242,6 @@ notification when the QListView has finished painting itself.
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "\n======================================= Loupe ===========================================";
-//    qDebug() << G::t.restart() << "\t" << "Loupe: thumbView->isVisible()" << thumbView->isVisible() << "currentRow" << currentRow;
-
     G::mode = "Loupe";
     updateStatus(true);
 
@@ -6278,9 +6278,6 @@ notification when the QListView has finished painting itself.
             if (G::isThreadTrackingOn) qDebug()
                 << "MW::fileSelectionChange - loaded image file " << fPath;
             updateClassification();
-//            updatePick();
-//            updateRating();
-//            updateColorClass();
         }
     }
 
@@ -6340,13 +6337,23 @@ void MW::tableDisplay()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "\n======================================= Table===========================================";
     G::mode = "Table";
     updateStatus(true);
+
+    // save the current row as it will be lost when ThumbView becomes visible
+    int previousRow = currentRow;  //n
+
+    // flag so can adjust index in fileSelectionChange as well
+    modeChangeJustHappened = true;  //n
 
     // show tableView in central widget
     centralLayout->setCurrentIndex(TableTab);
     prevCentralView = TableTab;
+    modeChangeJustHappened = false; //n
+
+    // recover the current index
+    thumbView->setCurrentIndex(dm->sf->index(previousRow, 0));  //n
+    currentRow = previousRow;   //n    // used by eventFilter in ThumbView
 
     // if was in grid mode then restore thumbdock to previous state
     if (hasGridBeenActivated) {
@@ -6354,8 +6361,11 @@ void MW::tableDisplay()
         hasGridBeenActivated = false;
     }
 
-    thumbView->setThumbParameters();
+ //   thumbView->setThumbParameters(); //n
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+    // req'd to show thumbs first time
+    thumbView->setThumbParameters();  //n
 
     tableView->scrollToCurrent();
     if (thumbView->isVisible()) thumbView->readyToScroll = true;
@@ -6371,7 +6381,6 @@ void MW::compareDisplay()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "\n======================================= Compare =========================================";
     updateStatus(true);
     int n = selectionModel->selectedRows().count();
     if (n < 2) {
@@ -6384,20 +6393,7 @@ void MW::compareDisplay()
         popUp->showPopup(this, msg, 2000, 0.75);
     }
 
-//    // if was in grid mode make sure thumbDock is visible in compare mode
-//    if (G::mode == "Grid") {
-////        qDebug() << G::t.restart() << "\t" << "Calling setThumbDockFeatures from MW::MW::compareDisplay";
-//        setThumbDockFeatures(dockWidgetArea(thumbDock));
-////        if(!thumbDock->isVisible() && wasThumbDockVisible) toggleThumbDockVisibity();
-//        if(!thumbDock->isVisible() && wasThumbDockVisible) {
-//            thumbDock->setVisible(true);
-//            thumbDock->raise();
-//            thumbDockVisibleAction->setChecked(true);
-//        }
-////        thumbView->setThumbParameters();  // reqd?
-//    }
-
-    /* If thumbdock was visible, then enter grid mode, make selection, and then
+    /* If thumbdock was visible and enter grid mode, make selection, and then
        compare the thumbdock gets frozen (cannot use splitter) at about 1/2 ht.
        Not sure what causes this, but by making the thumbdock visible before
        entered compare mode avoids this.  After enter compare mode revert
