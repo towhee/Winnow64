@@ -62,6 +62,7 @@ Code examples for model:
 
     // current selection:
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    QModelIndexList selection = selectionModel->selectedRows();
 
     // an index of Rating in the selection:
     QModelIndex idx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
@@ -82,6 +83,7 @@ Code examples for model:
 
     // to get a QItem from a filtered or sorted datamodel selection
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    QModelIndexList selection = selectionModel->selectedRows();
     QModelIndex idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
     QStandardItem *item = new QStandardItem;
     item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
