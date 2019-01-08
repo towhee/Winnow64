@@ -674,7 +674,8 @@ private:
     QStringList *subfolders;
     QStringList *recentFolders;
 
-    QModelIndexList selectedImages;
+//    QModelIndexList selectedImages;
+    QModelIndexList selectedRows;
     QModelIndex currentIdx;
     QStandardItemModel *imageModel;
 
@@ -763,6 +764,7 @@ private:
     void writeSettings();
     bool loadSettings();
     void loadShortcuts(bool defaultShortcuts);
+    void updateSelection();
     void saveSelection();
     void recoverSelection();
 
