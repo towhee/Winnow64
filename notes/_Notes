@@ -1,12 +1,3 @@
-Monitor res not always showing
-Mouse right click release in compare mode undoing selection
-Compare mode not working after loupe view and then switch to thumb or table views
-and back into Compare view
-
-- Compare mode fit size not quite right
-- Context right click changing selection in table view
-- Max area for compare images
-
 CLOC = Count Lines Of Code
 In terminal: cloc /Users/roryhill/Projects/Winnow64
 

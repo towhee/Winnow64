@@ -798,7 +798,7 @@ public:
         QObject::connect(classificationBadgeThumbDiamSlider, SIGNAL(valueChanged(int)), classificationBadgeThumbDiamLbl, SLOT(setNum(int)));
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(1);
+        stackedWidget->setCurrentIndex(0);
         listContainer->setCurrentIndex(0);
 
 

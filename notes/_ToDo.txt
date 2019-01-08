@@ -1,4 +1,8 @@
 BUGS
+- Monitor res not always showing
+- Mouse right click release in compare mode undoing selection
+- Compare mode not working after loupe view and then switch to thumb or table views
+and back into Compare view
 - Make boxes in edit shooting info a little bigger
 - After compare another compare does not include selection
 - Disable Ingest menu when no picks
@@ -27,6 +31,10 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Retain selection when change mode ie grid to loupe
+- Compare mode fit size not quite right
+- Context right click changing selection in table view
+- Max area for compare images
 - Change badge size in preferences
 - Reveal in file path instead of folder path
 - Manage external programs not remembering changes

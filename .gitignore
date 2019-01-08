@@ -248,3 +248,5 @@ debug/appdlg.obj
 *.obj
 *.exe
 *.res
+*.exe
+*.exe
