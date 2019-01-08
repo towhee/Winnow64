@@ -72,8 +72,6 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     count = selection.count();
     if (count > 9) count = 9;
 
-//    qDebug() << "Compare selected image count:" << count;
-
     /* iterate selected thumbs to get image dimensions and configure grid.
     Req'd before load images as they need to know grid size to be able to scale
     to fit.

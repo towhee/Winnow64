@@ -124,7 +124,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     else
         defaultWorkspace();
 
-    // send events to thumbView to monitor splitter resize of thumbDock
+    // intercept events to thumbView to monitor splitter resize of thumbDock
     qApp->installEventFilter(this);
 
     // process the persistant folder if available
@@ -828,9 +828,6 @@ so scrollTo and delegate use of the current index must check the row.
 
     if(isStart) return;
 
-//    qDebug() << "MW::fileSelectionChange  dm->sf->rowCount() =" << dm->sf->rowCount()
-//             << "selectionModel->selectedIndexes().size() =" << selectionModel->selectedIndexes().size();
-
 //    if (isDragDrop && dragDropFilePath.length() > 0) {
 //        thumbView->selectThumb(dragDropFilePath);
 //        isDragDrop = false;
@@ -853,27 +850,16 @@ so scrollTo and delegate use of the current index must check the row.
 
     // record current row as it is used to sync everything
     currentRow = current.row();
-    /*
-//    qDebug() << G::t.restart() << "\t" << "\nfileSelectionChange  mode =" << G::mode
-//             << "prevMode =" << prevMode
-//             << "currentRow = " << currentRow
-//             << "previousRow = " << previous.row()
-//             << "current" << current;
-//    qDebug() << G::t.restart() << "\t" << "thumbView: Visible" << thumbView->isVisible() << "Row =" << thumbView->currentIndex().row() << "Col =" << thumbView->currentIndex().column();
-//    qDebug() << G::t.restart() << "\t" << "gridView : Visible" << gridView->isVisible() << "Row =" << gridView->currentIndex().row() << "Col =" << gridView->currentIndex().column();
-//    qDebug() << G::t.restart() << "\t" << "tableView: Visible" << tableView->isVisible() << "Row =" << tableView->currentIndex().row() << "Col =" << tableView->currentIndex().column();
-//    if (!thumbView->isWrapping()) thumbView->getHorizontalScrollBarOffset(currentRow);
-//    gridView->scrollTo(current, QAbstractItemView::ScrollHint::PositionAtCenter);
-//    if (gridView->isVisible()) gridView->getVerticalScrollBarOffset(currentRow);
-//    thumbView->getVerticalScrollBarMax();
-*/
 
     // update delegates so they can highlight the current item
     thumbView->thumbViewDelegate->currentRow = currentRow;
     gridView->thumbViewDelegate->currentRow = currentRow;
 
-    /* Scroll all visible views to the current row. Qt has 100ms delay in
-    QAbstractItemView::mousePressEvent for double-clicks - aarg!
+    /* IMPORTANT
+    Scroll all visible views to the current row. Qt has 100ms delay in
+    QAbstractItemView::mousePressEvent for double-clicks - aarg! a singleshot
+    timer delays until the double-click delay has elapsed and the model has
+    finished updating.
     */
     if (G::lastThumbChangeEvent == "MouseClick") {
         if (mouseClickScroll)
@@ -890,7 +876,7 @@ so scrollTo and delegate use of the current index must check the row.
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
     setWindowTitle("Winnow - " + fPath);
 
-    // update the matadata panel
+    // update the metadata panel
     infoView->updateInfo(fPath);
 
     // update the status bar with ie "5 of 290   30% zoom   3.6GB picked"
@@ -931,17 +917,9 @@ so scrollTo and delegate use of the current index must check the row.
         thumbsWrapAction->setChecked(true);
         if(thumbDock->isFloating()) thumbView->setWrapping(true);
     }
-//    qDebug() << G::t.restart() << "\t" << "MW::fileSelectionChange   End of function";
 
     // load thumbnail if not done yet
     if (thumbView->isThumb(currentRow)) {
-        {
-        #ifdef ISDEBUG
-        QString s = "Loading thumb for row " + QString::number((currentRow))
-                + " " + fPath;
-        G::track(__FUNCTION__, s);
-        #endif
-        }
         QImage image;
         thumb->loadThumb(fPath, image);
         thumbView->setIcon(currentRow, image);
@@ -1121,7 +1099,8 @@ been consumed or all the images are cached.
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
-    QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
+    QModelIndexList indexesList = selectionModel->selectedIndexes();
+//    QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 
     QString fPath = indexesList.first().data(G::PathRole).toString();
     // imageCacheThread checks if already running and restarts
@@ -2832,6 +2811,12 @@ GridView and TableView, insuring that each view is in sync.
     // whenever currentIndex changes do a file selection change
     connect(selectionModel, &QItemSelectionModel::currentChanged,
             this, &MW::fileSelectionChange);
+
+    /* whenever the selection changes update the selection.  This is required
+       to recover the selection between mode changes, as the model selection
+       is lost when the view is hidden in the centralWidget stack layout */
+//    connect(selectionModel, &QItemSelectionModel::selectionChanged,
+//            this, &MW::saveSelection);
 }
 
 void MW::createCaching()
@@ -3413,7 +3398,7 @@ QString fileSym = "📷";
 
     status = " " + base + s;
     stateLabel->setText(status);
-    qDebug() << "Status:" << status;
+//    qDebug() << "Status:" << status;
 
     // update InfoView - flag updates so itemChanged be ignored in MW::metadataChanged
     infoView->isNewImageDataChange = true;
@@ -3711,7 +3696,8 @@ All filter changes should be routed to here as a central clearing house.
 
     if (dm->sf->rowCount()) {
         // if filtered but no selection
-        if (!thumbView->selectionModel()->selectedRows().count()) {
+        if (!selectionModel->selectedRows().count()) {
+//            if (!thumbView->selectionModel()->selectedRows().count()) {
             thumbView->selectFirst();
             centralLayout->setCurrentIndex(prevCentralView);
         }
@@ -4607,7 +4593,7 @@ void MW::runExternalApp()
     QString app;
     app = externalApps[((QAction*) sender())->text()];
 //    app = enquote(externalApps[((QAction*) sender())->text()]);
-    QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedRows();
+    QModelIndexList selectedIdxList = selectionModel->selectedRows();
 
 //    app = "/Applications/Adobe Photoshop CC 2018/Adobe Photoshop CC 2018.app/Contents/MacOS/Adobe Photoshop CC 2018";
 //    app = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app/Contents/MacOS/Adobe Photoshop CS6";
@@ -5185,7 +5171,7 @@ Also, the orientation metadata must be updated for any images ingested.
     imageView->rotate(degrees);
 
     // iterate selection
-    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    QModelIndexList selection = selectionModel->selectedRows();
     for (int i = 0; i < selection.count(); ++i) {
         // update rotation amount in the data model
         int row = selection.at(i).row();
@@ -6239,11 +6225,10 @@ notification when the QListView has finished painting itself.
 */
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
     }
     G::mode = "Loupe";
-    updateStatus(true);
 
     // save the current row as it will be lost when ThumbView becomes visible
     int previousRow = currentRow;
@@ -6256,19 +6241,21 @@ notification when the QListView has finished painting itself.
     fileSelectionChange  */
     centralLayout->setCurrentIndex(LoupeTab);
     prevCentralView = LoupeTab;
-    modeChangeJustHappened = false;
+//    modeChangeJustHappened = false;
 
-    // recover the current index
-    thumbView->setCurrentIndex(dm->sf->index(previousRow, 0));
     currentRow = previousRow;       // used by eventFilter in ThumbView
 
-    // if was in grid mode then restore thumbdock to previous state
-    if (hasGridBeenActivated) {
-        if(!thumbDock->isVisible() && wasThumbDockVisible) toggleThumbDockVisibity();
-        hasGridBeenActivated = false;
+    // if thumbdock was not visible need to "refresh" it as it loses its settings
+    if(!thumbDock->isVisible()) {
+//        thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+        // recover the current index
+//        thumbView->setCurrentIndex(dm->sf->index(previousRow, 0));
+        // if was in grid mode then restore thumbdock to previous state
+        if (hasGridBeenActivated) {
+            if(wasThumbDockVisible) toggleThumbDockVisibity();
+            hasGridBeenActivated = false;
+        }
     }
-
-    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // update imageView, use cache if image loaded, else read it from file
     QModelIndex idx = thumbView->currentIndex();
@@ -6297,13 +6284,13 @@ void MW::gridDisplay()
 Note: When the gridView is displayed it needs to be scrolled to the
 currentIndex since it has been "hidden". However, the scrollbars take a long
 time to paint after the view show event, so the ThumbView::scrollToCurrent
-function must be delayed. This is done by the eventFilter in ThumbView,
+function must be delayed. This is done by the eventFilter in MW (installEventFilter),
 intercepted the scrollbar paint events. This is a bit of a cludge to get around
 lack of notification when the QListView has finished painting itself.
 */
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+        G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
     }
     G::mode = "Grid";
@@ -6334,7 +6321,7 @@ void MW::tableDisplay()
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+        G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
     }
     G::mode = "Table";
@@ -6352,7 +6339,7 @@ void MW::tableDisplay()
     modeChangeJustHappened = false; //n
 
     // recover the current index
-    thumbView->setCurrentIndex(dm->sf->index(previousRow, 0));  //n
+//    thumbView->setCurrentIndex(dm->sf->index(previousRow, 0));  //n
     currentRow = previousRow;   //n    // used by eventFilter in ThumbView
 
     // if was in grid mode then restore thumbdock to previous state
@@ -6378,7 +6365,7 @@ void MW::compareDisplay()
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+        G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
     }
     updateStatus(true);
@@ -6408,11 +6395,19 @@ void MW::compareDisplay()
 
     compareImages->load(centralWidget->size(), isRatingBadgeVisible);
 
-    thumbView->setSelectionMode(QAbstractItemView::NoSelection);
+//    thumbView->setSelectionMode(QAbstractItemView::NoSelection);
 
     // restore thumbdock to previous state
     if(!wasThumbDockVisible) toggleThumbDockVisibity();
     hasGridBeenActivated = false;
+}
+
+void MW::updateSelection()
+{
+    qDebug() << "MW::updateSelection:"
+             << selectedRows.count()
+             << selectedRows;
+    selectedRows = selectionModel->selectedRows();
 }
 
 void MW::saveSelection()
@@ -6422,8 +6417,14 @@ void MW::saveSelection()
     G::track(__FUNCTION__);
     #endif
     }
-    selectedImages = thumbView->selectionModel()->selectedIndexes();
-    currentIdx = thumbView->selectionModel()->currentIndex();
+//    selectedRows = thumbView->selectionModel()->selectedRows();
+//    if(modeChangeJustHappened) return;
+    selectedRows = selectionModel->selectedRows();
+    currentIdx = selectionModel->currentIndex();
+//    qDebug() << "\nMW::saveSelection:  modeChangeJustHappened ="
+//             << modeChangeJustHappened
+//             << selectedRows.count()
+//             << selectedRows;
 }
 
 void MW::recoverSelection()
@@ -6441,13 +6442,16 @@ void MW::recoverSelection()
     // sync thumbView delegate current item
 //    thumbView->thumbViewDelegate->currentIndex = currentIdx;
 
-    thumbView->selectionModel()->setCurrentIndex(currentIdx, QItemSelectionModel::Select);
-    foreach (idx, selectedImages)
+    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+//    thumbView->setCurrentIndex(currentIdx);
+    selectionModel->setCurrentIndex(currentIdx, QItemSelectionModel::Select);
+    foreach (idx, selectedRows)
       if (idx != currentIdx) selection->select(idx, idx);
 
-    thumbView->selectionModel()->select(*selection, QItemSelectionModel::Select);
-    qDebug() << G::t.restart() << "\t" << "thumbView->selectionModel()->currentIndex()" << thumbView->selectionModel()->currentIndex();
-    qDebug() << G::t.restart() << "\t" << "thumbView->selectionModel()->selectedIndexes()" << thumbView->selectionModel()->selectedIndexes();
+    selectionModel->select(*selection, QItemSelectionModel::Select);
+//    qDebug() << "MW::recoverSelection  selectedRows:" << selectedRows;
+//    qDebug() << "thumbView->selectionModel()->currentIndex()" << thumbView->selectionModel()->currentIndex();
+//    qDebug() << "thumbView->selectionModel()->selectedIndexes()" << thumbView->selectionModel()->selectedIndexes();
 
 }
 
@@ -6862,7 +6866,7 @@ void MW::toggleThumbWrap()
     thumbView->setWrapping(thumbView->wrapThumbs);
 }
 
-void MW::togglePick()
+void MW::togglePick()   // not currently used
 {
     {
     #ifdef ISDEBUG
@@ -6871,7 +6875,7 @@ void MW::togglePick()
     }
     qDebug() << "MW::togglePick()";
     QModelIndex idx;
-    QModelIndexList idxList = thumbView->selectionModel()->selectedRows();
+    QModelIndexList idxList = selectionModel->selectedRows();
     QString pickStatus;
 
     /* If the selection has any images that are not picked then pick them all.
@@ -7177,7 +7181,7 @@ the rating for all the selected thumbs.
     if (s == "Rate4") rating = "4";
     if (s == "Rate5") rating = "5";
 
-    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    QModelIndexList selection = selectionModel->selectedRows();
     // check if selection is entirely rating already - if so set no rating
     bool isAlreadyRating = true;
     for (int i = 0; i < selection.count(); ++i) {
@@ -7251,7 +7255,7 @@ set the color class for all the selected thumbs.
     if (s == "Label4") colorClass = "Blue";
     if (s == "Label5") colorClass = "Purple";
 
-    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    QModelIndexList selection = selectionModel->selectedRows();
     // check if selection is entirely label color already - if so set no label
     bool isAlreadyLabel = true;
     for (int i = 0; i < selection.count(); ++i) {
@@ -7333,7 +7337,7 @@ internally or as a sidecar when ingesting.
     if (par != infoView->tagInfoIdx) return;
 
     QString tagValue = item->data(Qt::DisplayRole).toString();
-    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    QModelIndexList selection = selectionModel->selectedRows();
     int row = item->index().row();
     QModelIndex tagIdx = infoView->ok->index(row, 0, par);
     QString tagName = tagIdx.data().toString();
@@ -7917,9 +7921,21 @@ void MW::helpWelcome()
 
 void MW::test()
 {
-    QString fontSize = "8";
-    QString s = "QWidget {font-size: " + fontSize + "px;}";
-    this->setStyleSheet(s + css);
+    selectedRows = selectionModel->selectedRows();
+    QModelIndex idx = dm->sf->index(2, 0);
+    thumbView->setCurrentIndex(idx);
+
+//    selectedRows = thumbView->selectionModel()->selectedRows();
+//    qDebug() << "MW::test  selectedRows:"
+//             << selectedRows.count()
+//             << selectedRows;
+
+
+
+
+//    QString fontSize = "8";
+//    QString s = "QWidget {font-size: " + fontSize + "px;}";
+//    this->setStyleSheet(s + css);
 
 
     //    qDebug() << "selection clear from test";
