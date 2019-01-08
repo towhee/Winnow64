@@ -1014,9 +1014,9 @@ void ImageView::enterEvent(QEvent *event)
     QVariant x = event->type();     // suppress compiler warning
     this->setFocus();
 //    qDebug() << G::t.restart() << "\t" << qApp->focusWidget() << imageIndex << thumbView->currentIndex();
-    if (imageIndex != thumbView->currentIndex()) {
-        thumbView->setCurrentIndex(imageIndex);
-    }
+//    if (imageIndex != thumbView->currentIndex()) {
+//        thumbView->setCurrentIndex(imageIndex);
+//    }
 }
 
 // DRAG AND DROP
