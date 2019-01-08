@@ -701,6 +701,8 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
         event->button() == Qt::BackButton ||
         event->button() == Qt::ForwardButton) return;
 
+    qDebug() << event;
+
     isLeftMouseBtnPressed = false;
     if (isMouseDrag) {
         isMouseDrag = false;
