@@ -1,3 +1,12 @@
+Monitor res not always showing
+Mouse right click release in compare mode undoing selection
+Compare mode not working after loupe view and then switch to thumb or table views
+and back into Compare view
+
+- Compare mode fit size not quite right
+- Context right click changing selection in table view
+- Max area for compare images
+
 CLOC = Count Lines Of Code
 In terminal: cloc /Users/roryhill/Projects/Winnow64
 
@@ -6,21 +15,3 @@ producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
 - /Users/roryhill/Qt/5.9/Src/qtimageformats/src/3rdparty/jasper/src/libjasper/jpg_dec.c
 - /Users/roryhill/Projects/jpeg-9b/example.c
 
-ThumbView->thumbHeight and thumbWidth changes:
-
-ThumbView::thumbsFitTopOrBottom
-ThumbView::thumbsFit
-
-ThumbView::thumbsEnlarge
-ThumbView::thumbsShrink
-Prefdlg
-
-ThumbViewDelegate does not change thumbHeight
-
-ThumbView::setThumbParameters
-MW::defaultWorkspace
-MW::createThumbView
-MW::invokeWorkspace
-MW::snapshotWorkspace
-MW::writeSettings
-MW::loadSettings
