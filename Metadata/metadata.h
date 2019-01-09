@@ -96,6 +96,7 @@ public:
     void reportMetadataAllFiles();
     void reportMetadata();
     void reportMetadataCache(const QString &imageFileName);
+    void testNewFileFormat(const QString &path);
 
     // variables used to hold data before insertion into QMap metaCache
     bool isPicked;
@@ -248,7 +249,7 @@ private:
     QHash<uint, IFDData>::iterator ifdIter;
     QHash<ulong, QString> exifHash, ifdHash, gpsHash, segCodeHash,
         nikonMakerHash, sonyMakerHash, fujiMakerHash, canonMakerHash,
-        canonFileInfoHash;
+        panasonicMakerHash, canonFileInfoHash;
     QHash<QString, ulong> segmentHash;
 //    QHash<QByteArray, QString> nikonLensHash;
     QHash<QString, QString> nikonLensHash;
@@ -275,6 +276,7 @@ private:
     void initCanonMakerHash();
     void initSonyMakerHash();
     void initFujiMakerHash();
+    void initPanasonicMakerHash();
     void initNikonLensHash();
 
     uint get1(QByteArray c);
@@ -308,6 +310,7 @@ private:
     void formatOlympus();
     void formatSony();
     bool formatFuji();
+    bool formatPanasonic();
     bool formatJPG();
     bool formatTIF();
 

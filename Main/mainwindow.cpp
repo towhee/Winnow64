@@ -2184,12 +2184,19 @@ void MW::createActions()
 
     // Testing
 
-    testAction = new QAction(tr("Test Metadata"), this);
+    testAction = new QAction(tr("Test"), this);
     testAction->setObjectName("test");
     testAction->setShortcutVisibleInContextMenu(true);
     addAction(testAction);
-    testAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+T"));
-    connect(testAction, &QAction::triggered, this, &MW::test);
+    testAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+F"));
+    connect(testAction, &QAction::triggered, this, &MW::testNewFileFormat);
+
+    testNewFileFormatAction = new QAction(tr("Test Metadata"), this);
+    testNewFileFormatAction->setObjectName("testNewFileFormat");
+    testNewFileFormatAction->setShortcutVisibleInContextMenu(true);
+    addAction(testNewFileFormatAction);
+    testNewFileFormatAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+T"));
+    connect(testNewFileFormatAction, &QAction::triggered, this, &MW::test);
 
     // Possibly needed actions
 
@@ -7906,8 +7913,10 @@ void MW::helpWelcome()
     centralLayout->setCurrentIndex(StartTab);
 }
 
-void MW::test()
+void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+
+
     selectedRows = selectionModel->selectedRows();
     QModelIndex idx = dm->sf->index(2, 0);
     thumbView->setCurrentIndex(idx);
@@ -7935,8 +7944,6 @@ void MW::test()
 //    }
 
 //    dm->clear();
-
-    // shortcut = "Shift+Ctrl+Alt+T"
 
 //    qDebug() << "Attempting to eject drive " << currentViewDir[0] << "currentViewDir =" << currentViewDir
 //             << "Unicode =" << currentViewDir[0].unicode();;
@@ -7986,6 +7993,12 @@ void MW::test()
 //    label->setText(" TEST ");
 //    label->setStyleSheet("QLabel{color:yellow;}");
 //    menuBar()->setCornerWidget(label, Qt::TopRightCorner);
+}
+
+void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
+{
+    QString fPath = "D:/Pictures/_ThumbTest/PanasonicGX9.RW2";
+    metadata->testNewFileFormat(fPath);
 }
 
 // End MW
