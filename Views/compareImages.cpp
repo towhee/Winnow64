@@ -45,7 +45,8 @@ CompareImages::CompareImages(QWidget *parent,
     imageAlign = new ImageAlign(120, 0.2);
 }
 
-bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisible)
+bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisible,
+                         QItemSelectionModel *selectionModel)
 {
     {
     #ifdef ISDEBUG
@@ -68,19 +69,14 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     to fit.
     */
     count = 0;
-    selection = thumbView->selectionModel()->selectedRows();
+    selection = selectionModel->selectedRows();
     count = selection.count();
     if (count > 9) count = 9;
 
-    /* iterate selected thumbs to get image dimensions and configure grid.
-    Req'd before load images as they need to know grid size to be able to scale
-    to fit.
-    */
     for (int i = 0; i < count; ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
         QSize imSize(metadata->getWidth(fPath), metadata->getHeight(fPath));
         sizeList->append(imSize);
-//        qDebug() << G::t.restart() << "\t" << "compareImages loading" << i << fPath;
     }
 
     // determine the optimum grid to maximize the size of each image
@@ -562,3 +558,7 @@ so the signal is relayed on to MW, which does know about CompareImages.
     emit togglePick();
 }
 
+void CompareImages::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+}

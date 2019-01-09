@@ -1,10 +1,6 @@
 BUGS
+- Adjust compare mode cell size to fit when resize app
 - Monitor res not always showing
-- Mouse right click release in compare mode undoing selection
-- Compare mode not working after loupe view and then switch to thumb or table views
-and back into Compare view
-- Make boxes in edit shooting info a little bigger
-- After compare another compare does not include selection
 - Disable Ingest menu when no picks
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
@@ -31,6 +27,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Pick turns image badge backgound green
+- Compare mode not working after loupe view and then switch to thumb or table views and back into Compare view
+- After compare another compare does not include selection
 - Retain selection when change mode ie grid to loupe
 - Compare mode fit size not quite right
 - Context right click changing selection in table view
