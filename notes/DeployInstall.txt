@@ -18,7 +18,7 @@ C:\Qt\5.10.0\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\buil
 Win Installation Update:
 1.  Update deploy if new dlls required
 2.  Update version in mainwindow.h
-3.  Update winnow.exe by compiling in release mode
+3.  Update winnow.exe by compiling in release mode without shadow build
 4.  Update and save the version in D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
 5.  Update and save the version and release date in D:\My Projects\Winnow Project\WinnowInstall\packages\com.rh.bin\meta\package.xml
 6.  If changes other than binary update and save the releaseDate in D:\My Projects\Winnow Project\WinnowInstall\packages\com.rh.prod\meta\package.xml
