@@ -517,12 +517,9 @@ void CompareView::resizeEvent(QResizeEvent *event)
     #endif
     }
     QGraphicsView::resizeEvent(event);
-    zoomFit = getFitScaleFactor(gridCell, pmItem->boundingRect());
-    if (getZoom() <= zoomFit) {
-        zoom = zoomFit;
-        scale(false);
-    }
-    placeClassificationBadge();
+    zoomFit = getFitScaleFactor(event->size(), pmItem->boundingRect());
+    zoom = zoomFit;
+    scale(false);
 }
 
 void CompareView::zoomIn()
