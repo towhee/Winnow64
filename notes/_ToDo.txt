@@ -13,7 +13,6 @@ ENHANCEMENTS
 - Track downloads by ip address
 - Invert filter
 - Make all message boxes consistent (see runExternalApp)
-- Add preferences for badge and shooting info size
 - Create installer for mac
 - Remove Windows Registry settings during uninstall
 - When ingesting confirm all files copied correctly (option)
@@ -32,6 +31,7 @@ DONE/FIXED
 - After compare another compare does not include selection
 - Retain selection when change mode ie grid to loupe
 - Compare mode fit size not quite right
+- Add preferences for badge and shooting info size
 - Context right click changing selection in table view
 - Max area for compare images
 - Change badge size in preferences
