@@ -18,6 +18,7 @@ Metadata::Metadata(QObject *parent) : QObject(parent)
     initCanonMakerHash();
     initSonyMakerHash();
     initFujiMakerHash();
+    initPanasonicMakerHash();
     initNikonLensHash();
     initSupportedFiles();
     report = false;
@@ -81,15 +82,15 @@ void Metadata::initSupportedFiles()
     #endif
     }
     // add raw file types here as they are supported
-    rawFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2";
-    sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "jpg";
+    rawFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2";
+    sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2" << "jpg";
     internalXmpFormats << "jpg";
-    xmpWriteFormats << "jpg" << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2";
+    xmpWriteFormats << "jpg" << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2";
 
     supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
     "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
-    "orf" << "pbm" << "pgm" << "png" << "ppm" << "raf" << "sr2" << "svg" << "svgz" <<
-    "tga" << "tif" << "wbmp" << "webp" << "xbm" << "xpm";
+    "orf" << "pbm" << "pgm" << "png" << "ppm" << "raf" << "rw2" << "sr2" << "svg" <<
+    "svgz" << "tga" << "tif" << "wbmp" << "webp" << "xbm" << "xpm";
 }
 
 void Metadata::initSegCodeHash()
@@ -263,7 +264,6 @@ void Metadata::initExifHash()
 
     exifHash[1] = "InteropIndex";
     exifHash[2] = "InteropVersion";
-    exifHash[11] = "ProcessingSoftware";
     exifHash[254] = "SubfileType";
     exifHash[255] = "OldSubfileType";
     exifHash[256] = "ImageWidth";
@@ -735,6 +735,17 @@ void Metadata::initIfdHash()
     G::track(__FUNCTION__);
     #endif
     }
+    ifdHash[2] = "SensorWidth";
+    ifdHash[3] = "SensorHeight";
+    ifdHash[4] = "SensorTopBorder";
+    ifdHash[5] = "SensorLeftBorder";
+    ifdHash[6] = "SensorBottomBorder";
+    ifdHash[7] = "SensorRightBorder";
+    ifdHash[11] = "ProcessingSoftware";
+    ifdHash[23] = "ISO";
+    ifdHash[46] = "JpgOffset";
+    ifdHash[49] = "PanasonicImageHeight";
+    ifdHash[50] = "PanasonicImageWidth";
     ifdHash[254] = "NewSubfileType";
     ifdHash[255] = "SubfileType";
     ifdHash[256] = "ImageWidth";
@@ -1105,6 +1116,112 @@ void Metadata::initFujiMakerHash()
     fujiMakerHash[32770] = "OrderNumber";
     fujiMakerHash[32771] = "FrameNumber";
     fujiMakerHash[45585] = "Parallax";
+}
+
+void Metadata::initPanasonicMakerHash()
+{
+    panasonicMakerHash[1] = "ImageQuality";
+    panasonicMakerHash[2] = "FirmwareVersion";
+    panasonicMakerHash[3] = "WhiteBalance";
+    panasonicMakerHash[7] = "FocusMode";
+    panasonicMakerHash[15] = "AFAreaMode";
+    panasonicMakerHash[26] = "ImageStabilization";
+    panasonicMakerHash[28] = "MacroMode";
+    panasonicMakerHash[31] = "ShootingMode";
+    panasonicMakerHash[32] = "Audio";
+    panasonicMakerHash[33] = "DataDump";
+    panasonicMakerHash[35] = "WhiteBalanceBias";
+    panasonicMakerHash[36] = "FlashBias";
+    panasonicMakerHash[37] = "InternalSerialNumber";
+    panasonicMakerHash[38] = "PanasonicExifVersion";
+    panasonicMakerHash[40] = "ColorEffect";
+    panasonicMakerHash[41] = "TimeSincePowerOn";
+    panasonicMakerHash[42] = "BurstMode";
+    panasonicMakerHash[43] = "SequenceNumber";
+    panasonicMakerHash[44] = "ContrastMode";
+    panasonicMakerHash[45] = "NoiseReduction";
+    panasonicMakerHash[46] = "SelfTimer";
+    panasonicMakerHash[48] = "Rotation";
+    panasonicMakerHash[49] = "AFAssistLamp";
+    panasonicMakerHash[50] = "ColorMode";
+    panasonicMakerHash[51] = "BabyAge";
+    panasonicMakerHash[52] = "OpticalZoomMode";
+    panasonicMakerHash[53] = "ConversionLens";
+    panasonicMakerHash[54] = "TravelDay";
+    panasonicMakerHash[57] = "Contrast";
+    panasonicMakerHash[58] = "WorldTimeLocation";
+    panasonicMakerHash[59] = "TextStamp";
+    panasonicMakerHash[60] = "ProgramISO";
+    panasonicMakerHash[61] = "AdvancedSceneType";
+    panasonicMakerHash[62] = "TextStamp";
+    panasonicMakerHash[63] = "FacesDetected";
+    panasonicMakerHash[64] = "Saturation";
+    panasonicMakerHash[65] = "Sharpness";
+    panasonicMakerHash[66] = "FilmMode";
+    panasonicMakerHash[67] = "JPEGQuality";
+    panasonicMakerHash[68] = "ColorTempKelvin";
+    panasonicMakerHash[69] = "BracketSettings";
+    panasonicMakerHash[70] = "WBShiftAB";
+    panasonicMakerHash[71] = "WBShiftGM";
+    panasonicMakerHash[72] = "FlashCurtain";
+    panasonicMakerHash[73] = "LongExposureNoiseReduction";
+    panasonicMakerHash[75] = "PanasonicImageWidth";
+    panasonicMakerHash[76] = "PanasonicImageHeight";
+    panasonicMakerHash[77] = "AFPointPosition";
+    panasonicMakerHash[78] = "FaceDetInfo";
+    panasonicMakerHash[81] = "LensType";
+    panasonicMakerHash[82] = "LensSerialNumber";
+    panasonicMakerHash[83] = "AccessoryType";
+    panasonicMakerHash[84] = "AccessorySerialNumber";
+    panasonicMakerHash[89] = "Transform";
+    panasonicMakerHash[93] = "IntelligentExposure";
+    panasonicMakerHash[96] = "LensFirmwareVersion";
+    panasonicMakerHash[97] = "FaceRecInfo";
+    panasonicMakerHash[98] = "FlashWarning";
+    panasonicMakerHash[99] = "RecognizedFaceFlags?";
+    panasonicMakerHash[101] = "Title";
+    panasonicMakerHash[102] = "BabyName";
+    panasonicMakerHash[103] = "Location";
+    panasonicMakerHash[105] = "Country";
+    panasonicMakerHash[107] = "State";
+    panasonicMakerHash[109] = "City";
+    panasonicMakerHash[111] = "Landmark";
+    panasonicMakerHash[112] = "IntelligentResolution";
+    panasonicMakerHash[118] = "HDRShot";
+    panasonicMakerHash[119] = "BurstSpeed";
+    panasonicMakerHash[121] = "IntelligentD-Range";
+    panasonicMakerHash[124] = "ClearRetouch";
+    panasonicMakerHash[128] = "City2";
+    panasonicMakerHash[134] = "ManometerPressure";
+    panasonicMakerHash[137] = "PhotoStyle";
+    panasonicMakerHash[138] = "ShadingCompensation";
+    panasonicMakerHash[139] = "WBShiftIntelligentAuto";
+    panasonicMakerHash[140] = "AccelerometerZ";
+    panasonicMakerHash[141] = "AccelerometerX";
+    panasonicMakerHash[142] = "AccelerometerY";
+    panasonicMakerHash[143] = "CameraOrientation";
+    panasonicMakerHash[144] = "RollAngle";
+    panasonicMakerHash[145] = "PitchAngle";
+    panasonicMakerHash[146] = "WBShiftCreativeControl";
+    panasonicMakerHash[147] = "SweepPanoramaDirection";
+    panasonicMakerHash[148] = "SweepPanoramaFieldOfView";
+    panasonicMakerHash[150] = "TimerRecording";
+    panasonicMakerHash[157] = "InternalNDFilter";
+    panasonicMakerHash[158] = "HDR";
+    panasonicMakerHash[159] = "ShutterType";
+    panasonicMakerHash[163] = "ClearRetouchValue";
+    panasonicMakerHash[167] = "OutputLUT";
+    panasonicMakerHash[171] = "TouchAE";
+    panasonicMakerHash[173] = "HighlightShadow";
+    panasonicMakerHash[175] = "TimeStamp";
+    panasonicMakerHash[180] = "MultiExposure";
+    panasonicMakerHash[185] = "RedEyeRemoval";
+    panasonicMakerHash[187] = "VideoBurstMode";
+    panasonicMakerHash[188] = "DiffractionCorrection";
+    panasonicMakerHash[3584] = "PrintIM";
+    panasonicMakerHash[8195] = "TimeInfo";
+    panasonicMakerHash[32768] = "MakerNoteVersion";
+    panasonicMakerHash[32769] = "SceneMode";
 }
 
 void Metadata::initCanonMakerHash()
@@ -1873,35 +1990,36 @@ void Metadata::reportMetadata()
     rpt.reset();
     rpt.setFieldAlignment(QTextStream::AlignLeft);
 
-    rpt.setFieldWidth(20); rpt << "offsetFullJPG"       << offsetFullJPG;       rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "lengthFullJPG"       << lengthFullJPG;       rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "offsetThumbJPG"      << offsetThumbJPG;      rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "lengthThumbJPG"      << lengthThumbJPG;      rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "offsetSmallJPG"      << offsetSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "lengthSmallJPG"      << lengthSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "offsetXMPSeg"        << xmpSegmentOffset;    rpt.setFieldWidth(0); rpt << "\n";
-//    rpt.setFieldWidth(20); rpt << "offsetOrientation"   << orientationOffset;   rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "orientation"         << orientation;         rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "width"               << width;               rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "height"              << height;              rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "created"             << createdExif;         rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "model"               << model;               rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "exposureTime"        << exposureTime;        rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "aperture"            << aperture;            rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "ISO"                 << ISO;                 rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "focalLength"         << focalLength;         rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "title"               << title;               rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "lens"                << lens;                rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "creator"             << creator;             rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "copyright"           << copyright;           rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "email"               << email;               rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "url"                 << url;                 rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "rating"              << rating;              rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "label"               << label;               rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "cameraSN"            << cameraSN;            rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "lensSN"              << lensSN;              rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "shutterCount"        << shutterCount;        rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(20); rpt << "nikonLensCode"       << nikonLensCode;       rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "offsetFullJPG"       << offsetFullJPG;       rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "lengthFullJPG"       << lengthFullJPG;       rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "offsetThumbJPG"      << offsetThumbJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "lengthThumbJPG"      << lengthThumbJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "offsetSmallJPG"      << offsetSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "lengthSmallJPG"      << lengthSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "offsetXMPSeg"        << xmpSegmentOffset;    rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "offsetNextXMPSegment"<< xmpNextSegmentOffset;rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "orientation"         << orientation;         rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "width"               << width;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "height"              << height;              rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "created"             << createdExif;         rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "make"                << make;                rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "model"               << model;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "exposureTime"        << exposureTime;        rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "aperture"            << aperture;            rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "ISO"                 << ISO;                 rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "focalLength"         << focalLength;         rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "title"               << title;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "lens"                << lens;                rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "creator"             << creator;             rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "copyright"           << copyright;           rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "email"               << email;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "url"                 << url;                 rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "rating"              << rating;              rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "label"               << label;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "cameraSN"            << cameraSN;            rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "lensSN"              << lensSN;              rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "shutterCount"        << shutterCount;        rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "nikonLensCode"       << nikonLensCode;       rpt.setFieldWidth(0); rpt << "\n";
 
     if (isXmp && xmpString.length() > 0) {
         rpt << "\nXMP Extract:\n\n";
@@ -2497,7 +2615,7 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
         rpt << "IFDOffset  Hex: "
             << QString::number(offset, 16).toUpper()
             << "   Dec: " << offset << "\n"
-            << "  Offset     hex  tagId   hex  tagType  tagCount  tagValue   tagDescription\n";
+            << "Num  Offset     hex  tagId   hex  tagType  tagCount  tagValue   tagDescription\n";
     }
     ulong pos;
     QString tagDescription;
@@ -2537,15 +2655,21 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
             else if (hdr == "IFD Fuji Maker Note")
                 (fujiMakerHash.contains(tagId)) ? tagDescription = fujiMakerHash.value(tagId)
                     : tagDescription = "Undefined tag";
+            else if (hdr == "IFD Panasonic Maker Note")
+                (panasonicMakerHash.contains(tagId)) ? tagDescription = panasonicMakerHash.value(tagId)
+                    : tagDescription = "Undefined tag";
 
             else if (hdr.left(3) == "Sub" || hdr.left(3) == "IFD")
-                (exifHash.contains(tagId)) ? tagDescription = exifHash.value(tagId)
+                (ifdHash.contains(tagId)) ? tagDescription = ifdHash.value(tagId)
                     : tagDescription = "Undefined tag";
 
             //            else if (hdr.left(3) == "Sub" || hdr.left(3) == "IFD")
 //                (ifdHash.contains(tagId)) ? tagDescription = ifdHash.value(tagId)
 //                    : tagDescription = "Undefined tag";
 
+            rpt.setFieldWidth(3);
+            rpt.setFieldAlignment(QTextStream::AlignRight);
+            rpt << QString::number(i, 10).toUpper();
             rpt.setFieldWidth(8);
             rpt.setFieldAlignment(QTextStream::AlignRight);
             rpt << QString::number(pos, 10).toUpper();
@@ -3744,6 +3868,191 @@ bool Metadata::formatTIF()
     return true;
 }
 
+bool Metadata::formatPanasonic()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    /* Panasonic RW2 files
+
+      Note TIFF magic word is 0x55 instead of 0x2a.
+
+    Offset          Bytes   Description
+    0000 - 0004     4      Endian
+    0005 - 0008     4      Offset to IFD0   // 18 from start of file
+
+
+    */
+    //file.open in readMetadata
+    // get endian
+    order = get2(file.read(4));
+    // get offset to first IFD and read it
+    ulong offsetIfd0 = get4(file.read(4));
+
+    readIFD("IFD0", offsetIfd0);
+
+    // pull data reqd from IFD0
+    make = getString(ifdDataHash.value(271).tagValue, ifdDataHash.value(271).tagCount).trimmed();
+    model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount).trimmed();
+    orientation = ifdDataHash.value(274).tagValue;
+    creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount);
+    copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount);
+    offsetFullJPG = ifdDataHash.value(46).tagValue;
+    lengthFullJPG = ifdDataHash.value(46).tagCount;
+    xmpSegmentOffset = ifdDataHash.value(700).tagValue;
+    xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
+    height = ifdDataHash.value(49).tagValue;
+    width = ifdDataHash.value(50).tagValue;
+
+    //ISO
+    if (ifdDataHash.contains(23)) {
+        ulong x = ifdDataHash.value(23).tagValue;
+        ISONum = static_cast<int>(x);
+        ISO = QString::number(ISONum);
+    } else {
+        ISO = "";
+        ISONum = 0;
+    }
+
+    // get the offset for ExifIFD and read it
+    ulong offsetEXIF;
+    offsetEXIF = ifdDataHash.value(34665).tagValue;
+    readIFD("IFD Exif", offsetEXIF);
+
+    // EXIF: created datetime
+    QString createdExif;
+    createdExif = getString(ifdDataHash.value(36868).tagValue,
+        ifdDataHash.value(36868).tagCount);
+    if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+
+    // get shutter speed
+    if (ifdDataHash.contains(33434)) {
+        float x = getReal(ifdDataHash.value(33434).tagValue);
+        if (x <1 ) {
+            uint t = qRound(1/x);
+            exposureTime = "1/" + QString::number(t);
+            exposureTimeNum = x;
+        } else {
+            uint t = (uint)x;
+            exposureTime = QString::number(t);
+            exposureTimeNum = t;
+        }
+        exposureTime += " sec";
+    } else {
+        exposureTime = "";
+    }
+    // aperture
+    if (ifdDataHash.contains(33437)) {
+        float x = getReal(ifdDataHash.value(33437).tagValue);
+        aperture = "f/" + QString::number(x, 'f', 1);
+        apertureNum = qRound(x * 10) / 10.0;
+    } else {
+        aperture = "";
+        apertureNum = 0;
+    }
+    // focal length
+    if (ifdDataHash.contains(37386)) {
+        float x = getReal(ifdDataHash.value(37386).tagValue);
+        focalLengthNum = static_cast<int>(x);
+        focalLength = QString::number(x, 'f', 0) + "mm";
+    } else {
+        focalLength = "";
+        focalLengthNum = 0;
+    }
+
+    // check embedded JPG for more metadata
+    order = 0x4D4D;
+    ulong startOffset = offsetFullJPG;
+    file.seek(offsetFullJPG);
+
+    if (get2(file.read(2)) != 0xFFD8) return 0;
+
+    // build a hash of jpg segment offsets
+    getSegments(file.pos());
+
+    // read the embedded JPG EXIF data
+    if (segmentHash.contains("EXIF")) {
+        file.seek(segmentHash["EXIF"]);
+
+        bool foundEndian = false;
+        while (!foundEndian) {
+            ulong a = get2(file.read(2));
+            if (a == 0x4949 || a == 0x4D4D) {
+                order = a;
+                // offsets are from the endian position in JPEGs
+                // therefore must adjust all offsets found in tagValue
+                startOffset = file.pos() - 2;
+                foundEndian = true;
+            }
+            // add condition to check for EOF
+        }
+
+        if (report) rpt << "\n startOffset = " << startOffset;
+
+        uint a = get2(file.read(2));  // magic 42
+        a = get4(file.read(4));
+        ulong offsetIfd0 = a + startOffset;
+
+        // read JPG IFD0
+        ulong nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
+
+        offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset;
+
+        // read JPG IFD1
+        if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
+
+        offsetThumbJPG = ifdDataHash.value(513).tagValue + startOffset;
+        lengthThumbJPG = ifdDataHash.value(514).tagValue;
+
+        // read JPG Exif IFD
+        readIFD("IFD Exif", offsetEXIF);
+
+        // maker note
+        if (ifdDataHash.contains(37500)) {
+            // get offset from the IFD EXIF in embedded JPG
+//            ulong makerOffset = 5948;
+            ulong makerOffset = ifdDataHash.value(37500).tagValue;
+            readIFD("IFD Panasonic Maker Note", makerOffset + startOffset + 12);
+
+            // get lens
+            lens = getString(ifdDataHash.value(81).tagValue + startOffset, ifdDataHash.value(81).tagCount);
+            // get lens serial number
+            lensSN = getString(ifdDataHash.value(82).tagValue + startOffset, ifdDataHash.value(82).tagCount);
+            // get camera serial number
+            cameraSN = getString(ifdDataHash.value(37).tagValue + startOffset, ifdDataHash.value(37).tagCount);
+        }
+    }
+
+    isXmp = true;
+
+    // read XMP
+    if (isXmp && okToReadXmp) {
+        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+        rating = xmp.getItem("Rating");     // case is important "Rating"
+        label = xmp.getItem("Label");       // case is important "Label"
+        if (title.isEmpty()) title = xmp.getItem("title");       // case is important "title"
+        if (cameraSN.isEmpty()) cameraSN = xmp.getItem("SerialNumber");
+        if (lens.isEmpty()) lens = xmp.getItem("Lens");
+        if (lensSN.isEmpty()) lensSN = xmp.getItem("LensSerialNumber");
+        if (creator.isEmpty()) creator = xmp.getItem("creator");
+        if (copyright.isEmpty()) copyright = xmp.getItem("rights");
+        if (email.isEmpty()) email = xmp.getItem("CiEmailWork");
+        if (url.isEmpty()) url = xmp.getItem("CiUrlWork");
+
+        // save original values so can determine if edited when writing changes
+        _title = title;
+        _rating = rating;
+        _label = label;
+
+        if (report) xmpString = xmp.metaAsString();
+    }
+
+//    if (report) reportMetadata();
+    return true;
+}
+
 bool Metadata::formatJPG()
 {
     {
@@ -3752,7 +4061,7 @@ bool Metadata::formatJPG()
     #endif
     }
     //file.open happens in readMetadata
-    order = 0x4D4D;
+//    order = 0x4D4D;
     ulong startOffset = 0;
     if (get2(file.read(2)) != 0xFFD8) return 0;
 
@@ -3972,6 +4281,25 @@ void Metadata::clearMetadata()
     nikonLensCode = "";
 }
 
+void Metadata::testNewFileFormat(const QString &path)
+{
+    report = true;
+
+    if (report) {
+        rpt.flush();
+        reportString = "";
+        rpt.setString(&reportString);
+        rpt << "\nFile name = " << path << "\n";
+    }
+    clearMetadata();
+    file.setFileName(path);
+    file.open(QIODevice::ReadOnly);
+
+    // edit test format to use:
+    formatPanasonic();
+    reportMetadata();
+}
+
 bool Metadata::readMetadata(bool isReport, const QString &path)
 {
     {
@@ -4013,6 +4341,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
             if (ext == "nef") formatNikon();
             if (ext == "orf") formatOlympus();
             if (ext == "raf") formatFuji();
+            if (ext == "rw2") formatPanasonic();
             if (ext == "tif") formatTIF();
             fileOpened = true;
             file.close();

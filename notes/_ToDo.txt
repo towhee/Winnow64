@@ -26,6 +26,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Update status for selection
 - Pick turns image badge backgound green
 - Compare mode not working after loupe view and then switch to thumb or table views and back into Compare view
 - After compare another compare does not include selection
