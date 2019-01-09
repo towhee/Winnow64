@@ -56,8 +56,9 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.5.8";
-    QString versionDetail = "Eject USB for Windows";
+    QString version = "0.9.6";
+    QString versionDetail = "Improvements to status, compare cmages, change badge size, change font size, "
+            "manage external programs, context menus";
 
     bool isShift;               // used when opening if shift key pressed
 
@@ -236,7 +237,8 @@ public slots:
     void setThumbDockFloatFeatures(bool isFloat);
     void resortImageCache();
     void setCentralMessage(QString message);
-    void test();    // for debugging
+    void test();                    // for debugging
+    void testNewFileFormat();       // for debugging
 
 signals:
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
@@ -604,7 +606,8 @@ private:
     QList<QAction *> *filterActions;
 
     // General
-    QAction *testAction;    // only available via shortcut key
+    QAction *testAction;                 // only available via shortcut key "Shift+Ctrl+Alt+T"
+    QAction *testNewFileFormatAction;    // only available via shortcut key "Shift+Ctrl+Alt+F"
 
     // Might need
     QAction *pasteAction;
