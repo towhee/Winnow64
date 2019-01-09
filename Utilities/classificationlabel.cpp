@@ -11,6 +11,7 @@ ClassificationLabel::ClassificationLabel(QWidget *parent)
 
     // defaults
     pickColor = QColor(Qt::green);
+    pickBackgroundColor = QColor(Qt::green);
     textColor = QColor(Qt::white);
     diameter = 20;
     isPick = true;
@@ -80,7 +81,8 @@ void ClassificationLabel::paintEvent(QPaintEvent *event)
     // draw the pick circle
     if (isPick) {
         QRect pickRect(0, 0, diameter, diameter);
-        painter.setBrush(pickColor);
+        painter.setPen(pickColor);
+//        painter.setBrush(pickBackgroundColor);
         painter.drawEllipse(pickRect);
     }
 
@@ -98,8 +100,6 @@ void ClassificationLabel::paintEvent(QPaintEvent *event)
         QFont font = painter.font();
         if ((rating == "" && colorClass == "" && isPick) || isPick && !showRatingAndColor) {
             ratingTextPen.setColor(pickColor);
-//            font.setFamily("Webdings Regular");
-//            setText(QChar(0x2713));           // checkmark unicode
             setText("√");
         }
         painter.setPen(ratingTextPen);
