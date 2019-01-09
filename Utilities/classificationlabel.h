@@ -26,6 +26,7 @@ private:
     QString rating;
     QString colorClass;
     QColor pickColor;
+    QColor pickBackgroundColor;
     QColor textColor;
     QColor backgroundColor;
 };
