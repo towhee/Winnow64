@@ -6268,6 +6268,9 @@ notification when the QListView has finished painting itself.
         }
     }
 
+    // req'd after compare mode to re-enable extended selection
+    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
 
@@ -6306,7 +6309,9 @@ lack of notification when the QListView has finished painting itself.
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
 
+    // req'd to show thumbs first time
     gridView->setThumbParameters();
+    // req'd after compare mode to re-enable extended selection
     gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     // limit time spent intercepting paint events to call scrollToCurrent
     gridView->readyToScroll = true;
@@ -6348,7 +6353,7 @@ void MW::tableDisplay()
         hasGridBeenActivated = false;
     }
 
- //   thumbView->setThumbParameters(); //n
+    // req'd after compare mode to re-enable extended selection
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // req'd to show thumbs first time
@@ -6390,12 +6395,13 @@ void MW::compareDisplay()
     thumbDock->raise();
 
     G::mode = "Compare";
+    // centralLayout->setCurrentIndex clears selectionModel
+    saveSelection();
     centralLayout->setCurrentIndex(CompareTab);
+    recoverSelection();
     prevCentralView = CompareTab;
 
-    compareImages->load(centralWidget->size(), isRatingBadgeVisible);
-
-//    thumbView->setSelectionMode(QAbstractItemView::NoSelection);
+    compareImages->load(centralWidget->size(), isRatingBadgeVisible, selectionModel);
 
     // restore thumbdock to previous state
     if(!wasThumbDockVisible) toggleThumbDockVisibity();
@@ -6417,14 +6423,8 @@ void MW::saveSelection()
     G::track(__FUNCTION__);
     #endif
     }
-//    selectedRows = thumbView->selectionModel()->selectedRows();
-//    if(modeChangeJustHappened) return;
     selectedRows = selectionModel->selectedRows();
     currentIdx = selectionModel->currentIndex();
-//    qDebug() << "\nMW::saveSelection:  modeChangeJustHappened ="
-//             << modeChangeJustHappened
-//             << selectedRows.count()
-//             << selectedRows;
 }
 
 void MW::recoverSelection()
@@ -6434,25 +6434,11 @@ void MW::recoverSelection()
     G::track(__FUNCTION__);
     #endif
     }
-    QItemSelection *selection = new QItemSelection();
-    thumbView->selectionModel()->clear();
-
+    QItemSelection selection;
     QModelIndex idx;
-//    thumbView->setCurrentIndex(currentIdx);
-    // sync thumbView delegate current item
-//    thumbView->thumbViewDelegate->currentIndex = currentIdx;
-
-    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-//    thumbView->setCurrentIndex(currentIdx);
-    selectionModel->setCurrentIndex(currentIdx, QItemSelectionModel::Select);
     foreach (idx, selectedRows)
-      if (idx != currentIdx) selection->select(idx, idx);
-
-    selectionModel->select(*selection, QItemSelectionModel::Select);
-//    qDebug() << "MW::recoverSelection  selectedRows:" << selectedRows;
-//    qDebug() << "thumbView->selectionModel()->currentIndex()" << thumbView->selectionModel()->currentIndex();
-//    qDebug() << "thumbView->selectionModel()->selectedIndexes()" << thumbView->selectionModel()->selectedIndexes();
-
+        selection.select(idx, idx);
+    selectionModel->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 
 void MW::setFullNormal()
