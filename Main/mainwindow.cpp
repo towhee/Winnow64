@@ -2815,8 +2815,8 @@ GridView and TableView, insuring that each view is in sync.
     /* whenever the selection changes update the selection.  This is required
        to recover the selection between mode changes, as the model selection
        is lost when the view is hidden in the centralWidget stack layout */
-//    connect(selectionModel, &QItemSelectionModel::selectionChanged,
-//            this, &MW::saveSelection);
+    connect(selectionModel, &QItemSelectionModel::selectionChanged,
+            this, &MW::updateSelection);
 }
 
 void MW::createCaching()
@@ -3335,7 +3335,8 @@ QString MW::getPicked()
     QString image = count == 1 ? " image, " : " images, ";
 
     if (count == 0) return "Nothing";
-    return QString::number(count) + image  + pickMemSize;
+    return QString::number(count) + " ("  + pickMemSize + ")";
+//    return QString::number(count) + image  + pickMemSize;
 }
 
 void MW::updateStatus(bool keepBase, QString s)
@@ -3386,13 +3387,12 @@ QString fileSym = "📷";
 
     // image of total: fileCount
     if (keepBase && isCurrentFolderOkay) {
-        base = getPosition();
         if (G::mode == "Loupe" || G::mode == "Compare")
-            base += spacer + getZoom() + " zoom";
-        base += spacer + getPicked() + " picked";
-//        QString s = QString::number(selectionModel->selectedRows().count());
-        QString s = QString::number(gridView->selectionModel()->selectedRows().count());
-        base += spacer + s + " selected";
+            base += "Zoom: " + getZoom();
+        base += spacer + "Pos: " + getPosition();
+        QString s = QString::number(selectionModel->selectedRows().count());
+        base += spacer +"Selected: " + s;
+        base += spacer + "Picked: " + getPicked();
         base += spacer;
     }
 
@@ -6410,10 +6410,11 @@ void MW::compareDisplay()
 
 void MW::updateSelection()
 {
-    qDebug() << "MW::updateSelection:"
-             << selectedRows.count()
-             << selectedRows;
-    selectedRows = selectionModel->selectedRows();
+//    qDebug() << "MW::updateSelection:"
+//             << selectedRows.count()
+//             << selectedRows;
+//    selectedRows = selectionModel->selectedRows();
+    updateStatus(true);
 }
 
 void MW::saveSelection()
