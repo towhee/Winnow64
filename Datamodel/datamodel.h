@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
+#include "progressbar.h"
 #include "Main/global.h"
 #include <algorithm>                // req'd for sorting fileInfoList
 
@@ -40,7 +41,7 @@ public:
 
     bool load(QString &dir, bool includeSubfolders);
     void clear();
-    void addMetadata();
+    void addMetadata(ProgressBar *progressBar, bool isShowCacheStatus);
     void updateImageList();
     void sortThumbs(int sortColumn, bool isReverse);
     QModelIndex find(QString fPath);

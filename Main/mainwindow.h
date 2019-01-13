@@ -39,6 +39,7 @@
 #include "zoomdlg.h"
 #include "Utilities/utilities.h"
 #include "Utilities/usb.h"
+#include "progressbar.h"
 
 #include "ui_helpform.h"
 #include "ui_shortcutsform.h"
@@ -49,6 +50,7 @@ class MW : public QMainWindow
 {
     Q_OBJECT
 
+    friend class ProgressBar;
     friend class Prefdlg;
     friend class ThumbView;
     friend class InfoView;
@@ -56,9 +58,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.6";
-    QString versionDetail = "Improvements to status, compare cmages, change badge size, change font size, "
-            "manage external programs, context menus";
+    QString version = "0.9.6.1";
+    QString versionDetail = "Added support for Panasonic raw files (rw2)";
 
     bool isShift;               // used when opening if shift key pressed
 
@@ -207,6 +208,18 @@ public:
     QString pickMemSize;
     QString css;                // stylesheet text
 
+    // ********** colors *********
+    // app
+    QColor appBgColor = QColor(85,85,85);
+    // progress bar
+    QColor currentColor = QColor(158,200,158);
+    QColor progressBgColor = QColor(150,150,150);               // light green
+    QColor targetColor = QColor(125,125,125);           // dark gray
+    QColor metadataCacheColor = QColor(100,100,150);    // purple
+    QColor imageCacheColor = QColor(108,150,108);       // green
+    QColor addMetadataColor = QColor(100,150,150);      // torquois
+//    QColor addMetadataColor = QColor(220,165,60);       // yellow
+
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
     void moveEvent(QMoveEvent *event);
@@ -231,7 +244,6 @@ public slots:
     void setStatus(QString state);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void showCacheStatus(const QImage &imCacheStatus);
-    void showMetadataCacheStatus(const QImage &imCacheStatus);
     void setThumbDockHeight();  // signal from thumbView
     void setThumbDockFeatures(Qt::DockWidgetArea area);
     void setThumbDockFloatFeatures(bool isFloat);
@@ -289,16 +301,18 @@ private slots:
     void updateFilterStatus(bool isFilter = true);
     void updateSubfolderStatus();
     void updateRawJpgStatus();
-    void updateMetadataThreadRunStatus(bool isRun);
+    void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy);
     void inactiveThreadRunStatus();
-    void updateImageThreadRunStatus(bool isRun);
+    void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateAllMetadataLoaded(bool isLoaded);
     void delayProcessLoadMetadataCacheScrollEvent();
     void loadMetadataCacheThumbScrollEvent();
     void loadMetadataCacheGridScrollEvent();
     void loadMetadataCache(int startRow = 0);
     void loadImageCache();
-    void updateImageCache();
+    void updateMetadataCacheStatus(int row, bool clear = false);
+    void updateImageCacheStatus(QString instruction, int row);
+    void updateFilterCount();
     void loadFilteredImageCache();
     void addNewBookmark();
     void addNewBookmarkFromContext();
@@ -628,7 +642,9 @@ private:
     QLabel *filterStatusLabel;
     QLabel *subfolderStatusLabel;
     QLabel *rawJpgStatusLabel;
+    ProgressBar *progressBar;
     QLabel *cacheLabel;
+    QPixmap *cachePixmap;
     QLabel *centralLabel;
     QLabel *metadataThreadRunningLabel;
     QLabel *thumbThreadRunningLabel;

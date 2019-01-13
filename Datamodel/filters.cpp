@@ -337,6 +337,9 @@ createDynamicFilters;
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     static QTreeWidgetItem *item;
     QMap<QVariant, QString> uniqueItems;

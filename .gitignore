@@ -306,3 +306,9 @@ debug/Winnow.pdb
 debug/Winnow.pdb
 debug/Winnow.exe
 *.exe
+debug/Winnow.exe
+debug/Winnow.pdb
+*.Debug
+*.Release
+*.pdb
+*.exe

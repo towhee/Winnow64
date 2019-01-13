@@ -18,8 +18,14 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     // check orientation and rotate if portrait
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__, "About to QTransform trans");
+    #endif
     QTransform trans;
     int orientation = metadata->getOrientation(fPath);
     switch(orientation) {
@@ -69,6 +75,9 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__, fPath);
+    #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
     #endif
     }
     bool success = false;
@@ -128,6 +137,9 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     if (G::isThreadTrackingOn) track(fPath, "Reading");
     QFileInfo fileInfo(fPath);
@@ -178,6 +190,9 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
     }
 
 //    if (!success) emit updateLoadThumb(fPath, err);
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__, "About to checkOrientation");
+    #endif
     if (success) checkOrientation(fPath, image);
     return success;
 }

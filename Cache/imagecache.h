@@ -33,42 +33,12 @@ public:
     void filterImageCache(QStringList &filteredFilePathList,
                            QString &currentImageFullPath);
     void stopImageCache();
+    void pauseImageCache();
     QSize getPreviewSize();
 
     QHash<QString, QImage> imCache;
 
-signals:
-    void showCacheStatus(QImage imCacheStatus);
-    void updateIsRunning(bool);
-    void updateCacheOnThumbs(QString fPath, bool isCached);
-
-protected:
-    void run() Q_DECL_OVERRIDE;
-
-public slots:
-
-private:
-    QMutex mutex;
-    QWaitCondition condition;
-    bool restart;
-    bool abort;
-
-    Metadata *metadata;
-    Pixmap *pixmap;
-
-    // image cache
-    struct CacheItem {
-        int key;
-        int origKey;
-        QString fName;
-        bool isCached;
-        bool isTarget;
-        int priority;
-        float sizeMB;
-    } cacheItem;
-
-    QList<CacheItem> cacheItemList, cacheItemListCopy;
-
+    // used by MW::updateImageCacheStatus
     struct Cache {
         int key;                    // current image
         int prevKey;                // used to establish directionof travel
@@ -90,6 +60,43 @@ private:
         QSize previewSize;          // monitor display dimensions for scale of previews
     } cache;
 
+    // image cache
+    struct CacheItem {
+        int key;
+        int origKey;
+        QString fName;
+        bool isCached;
+        bool isTarget;
+        int priority;
+        float sizeMB;
+    } cacheItem;
+
+    QList<CacheItem> cacheItemList, cacheItemListCopy;
+
+    int pxMid(int key);             // center current position on statusbar
+    int pxStart(int key);           // start current position on statusbar
+    int pxEnd(int key);             // end current position on statusbar
+
+signals:
+    void showCacheStatus(QString instruction, int key = 0);
+//    void showCacheStatus(QImage imCacheStatus);
+    void updateIsRunning(bool, bool);
+    void updateCacheOnThumbs(QString fPath, bool isCached);
+
+protected:
+    void run() Q_DECL_OVERRIDE;
+
+public slots:
+
+private:
+    QMutex mutex;
+    QWaitCondition condition;
+    bool restart;
+    bool abort;
+
+    Metadata *metadata;
+    Pixmap *getImage;
+
     QList<uint>toCache;
     QList<uint>toDecache;
 
@@ -105,9 +112,9 @@ private:
     static bool prioritySort(const CacheItem &p1, const CacheItem &p2);
     static bool keySort(const CacheItem &k1, const CacheItem &k2);
     void cacheStatus();             // update the cache status visual bar
-    int pxMid(int key);             // center current position on statusbar
-    int pxStart(int key);           // start current position on statusbar
-    int pxEnd(int key);             // end current position on statusbar
+//    int pxMid(int key);             // center current position on statusbar
+//    int pxStart(int key);           // start current position on statusbar
+//    int pxEnd(int key);             // end current position on statusbar
     void buildImageCacheList(QStringList &imageList); //
     QSize scalePreview(ulong w, ulong h);
     void reportCache(QString title = "");

@@ -69,6 +69,7 @@ private slots:
 
 protected:
 //    bool eventFilter(QObject *obj, QEvent *event);
+//    void keyPressEvent(QKeyEvent *event) override;
     void resizeEvent(QResizeEvent *event);
     void scrollContentsBy(int dx, int dy);
 //    void dragMoveEvent(QDragMoveEvent *event);
