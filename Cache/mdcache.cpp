@@ -265,7 +265,6 @@ that have been missed.
     /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */
-    G::track(__FUNCTION__, "emit loadImageCache ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
     emit loadImageCache();
 
     // update status of metadataThreadRunningLabel in statusbar
