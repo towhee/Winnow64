@@ -149,21 +149,11 @@ to prevent jarring changes in perceived scale by the user.
     bool isLoaded = false;
     pmItem->setVisible(true);
 
-    // not a good idea - what about tif, png ...?
-   // Embedded jpg not found
-//   if (metadata->getLengthFullJPG(fPath) == 0) {
-//       noJpgAvailable();
-//       return false;
-//   }
-
     // load the image from the image cache if available
     if (imageCacheThread->imCache.contains(fPath)) {
         // load preview from cache
         bool tryPreview = true;     // for testing
         loadFullSizeTimer->stop();
-
-/*      QElapsedTimer t;
-        t.start();      */
 
         // get preview size from stored metadata to decide if load preview or full
         setFullDim();               // req'd by setPreviewDim()
@@ -186,11 +176,9 @@ to prevent jarring changes in perceived scale by the user.
         // otherwise load full size image from cache
         else {
             pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
-            //qApp->processEvents();    // faster but unstable and erratic
             isPreview = false;
             isLoaded = true;
         }
-//        qDebug() << G::t.restart() << "\t" << "set pixmap elapsed time =" << fPath << t.nsecsElapsed();
     }
     else {
         isLoaded = pixmap->load(fPath, displayPixmap);
@@ -663,6 +651,9 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
     G::track(__FUNCTION__);
     #endif
     }
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__, "About to QTransform trans");
+    #endif
     QTransform trans;
     int orientation = metadata->getOrientation(imageFullPath);
 

@@ -214,7 +214,6 @@ textRect         = a rectangle below itemRect
     textPath.addRoundedRect(textRect, 8, 8);
 
     // start painting
-
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->setRenderHint(QPainter::TextAntialiasing, true);
 
