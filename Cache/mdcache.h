@@ -25,6 +25,8 @@ public:
     void stopMetadateCache();
     bool restart;
 
+//    int cacheStatusWidth;
+
 protected:
     void run() Q_DECL_OVERRIDE;
 
@@ -33,11 +35,11 @@ signals:
     void refreshThumbs();
     void loadImageMetadata(QFileInfo);
     void loadImageCache();
-    void updateIsRunning(bool);
-    void showCacheStatus(QImage imCacheStatus);
-    void updateStatus(bool, QString);
+    void updateIsRunning(bool, bool, QString);
     void updateAllMetadataLoaded(bool);
     void updateFilterCount();
+    void updateStatus(bool, QString);
+    void showCacheStatus(int, bool);            // row, renew progress bar
 
 private:
     QMutex mutex;
@@ -57,21 +59,10 @@ private:
 
     void createCacheStatus();
     void updateCacheStatus(int row);
-    void createLoadMap();
     void loadMetadata();
     void track(QString fPath, QString msg);
 
-    // cache status
-    QImage *cacheStatusImage;
-    QLinearGradient loadedGradient;
-    QPainter *pnt;
-    int pxTotWidth;
-    int pxUnitWidth;
-    int htOffset;       // the offset from the top of pnt to the progress bar
-    int ht;             // the height of the progress bar
-
-    bool isShowCacheStatus;
-    int cacheStatusWidth;
+     bool isShowCacheStatus;
 
     QElapsedTimer t;
 };

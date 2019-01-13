@@ -7,8 +7,9 @@ ImageCache::ImageCache(QObject *parent, Metadata *metadata) : QThread(parent)
     G::track(__FUNCTION__);
     #endif
     }
+    // Pixmap is a class that loads either a QPixmap or QImage from a file
     this->metadata = metadata;
-    pixmap = new Pixmap(this, metadata);
+    getImage = new Pixmap(this, metadata);
 
     restart = false;
     abort = false;
@@ -106,8 +107,10 @@ imCache: a hash structure indexed by image file path holding each QImage
 void ImageCache::stopImageCache()
 {
 /* Note that initImageCache and updateImageCache both check if isRunning and
-terminate a running thread before starting again.  Use this function to stop
-the image caching thread without a new one starting.*/
+stop a running thread before starting again.  Use this function to stop
+the image caching thread without a new one starting when there has been a
+folder change.  The cache status label in the status bar will be hidden.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -120,7 +123,31 @@ the image caching thread without a new one starting.*/
         mutex.unlock();
         wait();
         abort = false;
-        emit updateIsRunning(false);
+//        G::track(__FUNCTION__, "tiger emitting updateIsRunning");
+        emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
+    }
+}
+
+void ImageCache::pauseImageCache()
+{
+/* Note that initImageCache and updateImageCache both check if isRunning and
+stop a running thread before starting again.  Use this function to pause
+the image caching thread without a new one starting when there is a change to
+the datamodel, such as filtration or sorting.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (isRunning()) {
+        mutex.lock();
+        abort = true;
+        condition.wakeOne();
+        mutex.unlock();
+        wait();
+        abort = false;
+        emit updateIsRunning(false, true);
     }
 }
 
@@ -137,102 +164,8 @@ void ImageCache::cacheStatus()
     G::track(__FUNCTION__);
     #endif
     }
-    /* Displays a statusbar showing the cache status.
-     * dependent on setTargetRange() being up-to-date  */
-
-    // trap instance where cache out of sync
-    if(cache.totFiles - 1 > cacheItemList.length()) return;
-
-    // The app status bar is 25 pixels high.  Create a bitmap the height of the
-    // status bar and cache.pxTotWidth wide the same color as the app status bar.
-    // Then paint in the cache status progress in the middle of the bitmap.
-
-    /* (where cache.pxTotWidth = 200, htOffset(9) + ht(8) = 17)
-       X = pnt background, P = Cache Progress Area
-
-    0,0  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX  0,200
-         XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-         XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    0,9  PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
-         PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
-    0,17 PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
-         XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-         XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    0,25 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX  200,25
-
-    for image n:
-        pxStart(n) returns the x coordinate for the startpoint of image n
-        pxMid(n) returns the x coordinate for the midpoint of image n
-        pxEnd(n) returns the x coordinate for the endpoint of image n
-        cache.pxUnitWidth = the width in pixels represented by an image
-
-*/
-
-    // Match the background color in the app status bar so blends in
-    QColor cacheBGColor = QColor(85,85,85);
-
-    // create a label bitmap to paint on
-    QImage pmCacheStatus(QSize(cache.pxTotWidth, 25), QImage::Format_RGB32);
-    pmCacheStatus.fill(cacheBGColor);
-    QPainter pnt(&pmCacheStatus);
-
-    int htOffset = 9;       // the offset from the top of pnt to the progress bar
-    int ht = 8;             // the heigth of the progress bar
-
-    // back color for the entire progress bar for all the files
-    QLinearGradient cacheAllColor(0, htOffset, 0, ht+htOffset);
-    cacheAllColor.setColorAt(0, QColor(150,150,150));
-    cacheAllColor.setColorAt(1, QColor(100,100,100));
-
-    // color for the portion of the total bar that is targeted to be cached
-    // this depends on cursor direction, cache size and current cache status
-    QLinearGradient cacheTargetColor(0, htOffset, 0, ht+htOffset);
-    cacheTargetColor.setColorAt(0, QColor(125,125,125));
-    cacheTargetColor.setColorAt(1, QColor(75,75,75));
-
-    // color for the portion that has been cached
-    QLinearGradient cacheCurrentColor(0, htOffset, 0, ht+htOffset);
-    cacheCurrentColor.setColorAt(0, QColor(108,150,108));
-    cacheCurrentColor.setColorAt(1, QColor(58,100,58));
-
-    // color for the current image within the total images
-    QLinearGradient cachePosColor(0, htOffset, 0, ht+htOffset);
-    // red
-//    cachePosColor.setColorAt(0, QColor(125,0,0));
-//    cachePosColor.setColorAt(1, QColor(75,0,0));
-    // light green
-    cachePosColor.setColorAt(0, QColor(158,200,158));
-    cachePosColor.setColorAt(1, QColor(58,100,58));
-
-    // show the rectangle for entire bar, representing all the files available
-    pnt.fillRect(QRect(0, htOffset, cache.pxTotWidth, ht), cacheAllColor);
-
-    // show the rectangle for target cache.  If the pos is close to
-    // the boundary there could be spillover, which is added to the
-    // target range in the other direction.
-    int pxTargetStart = pxStart(cache.targetFirst);
-    int pxTargetWidth = pxEnd(cache.targetLast) - pxTargetStart;
-    pnt.fillRect(QRect(pxTargetStart, htOffset, pxTargetWidth, ht), cacheTargetColor);
-
-    // show the rectangle for the current cache by painting each item that has been cached
-    for (int i=0; i < cache.totFiles; ++i) {
-        if (cacheItemList.at(i).isCached) {
-            pnt.fillRect(QRect(pxStart(i), htOffset, cache.pxUnitWidth+1, ht), cacheCurrentColor);
-        }
-    }
-
-    // show the current image position
-    pnt.fillRect(QRect(pxStart(cache.key), htOffset, cache.pxUnitWidth+1, ht), cachePosColor);
-
-    // build cache usage string
-    QString mbCacheSize = QString::number(cache.currMB)
-            + " of "
-            + QString::number(cache.maxMB)
-            + " MB";
-//    qDebug() << G::t.restart() << "\t" << "cache size " + mbCacheSize;
-
-    // ping mainwindow to show cache update in the status bar
-    if (cache.isShowCacheStatus) emit showCacheStatus(pmCacheStatus);
+ //    // ping mainwindow to show cache update in the status bar
+//    if (cache.isShowCacheStatus) emit showCacheStatus("", 0);
 
 #ifdef ISDEBUG
 G::track(__FUNCTION__, "END");
@@ -709,7 +642,6 @@ Index      Key  OrigKey Priority   Target   Cached   SizeMB    Width   Height   
 It is built from the imageList, which is sent from MW.
 */
     cacheItemList.clear();
-
     // the total memory size of all the images in the folder currently selected
     float folderMB = 0;
     cache.totFiles = imageList.size();
@@ -751,6 +683,7 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     // cancel if no images to cache
     if (!imageList.size()) return;
 
@@ -810,6 +743,7 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus
 
 void ImageCache::updateCacheStatusCurrentImagePosition(QString &fPath)
 {
+    // rgh - is this still req'd
 /*
 This function is called from MW::fileSelectionChange to update the position of
 the current image in the cache status on the statusbar.  Normally this would be
@@ -828,12 +762,8 @@ cycling through images to improve performance.
         }
     }
 
-    if (cache.isShowCacheStatus) cacheStatus();
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, "Completed");
-    #endif
-    }
+    if (cache.isShowCacheStatus) emit showCacheStatus("", 0);
+
 }
 
 void ImageCache::updateImageCachePosition(QString &fPath)
@@ -848,12 +778,8 @@ updated.  Image caching is reactivated.
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "\nImageView::updateImageCache";
-
     // just in case stopImageCache not called before this
-    if (isRunning()) stopImageCache();
-
-//    cache.key = imageList.indexOf(fPath);
+    if (isRunning()) pauseImageCache();
 
     // get cache item key
     for (int i = 0; i < cacheItemList.count(); i++) {
@@ -863,7 +789,7 @@ updated.  Image caching is reactivated.
         }
     }
 
-    if (cache.isShowCacheStatus) cacheStatus();
+    if (cache.isShowCacheStatus) emit showCacheStatus("Update row", i);
     cache.isForward = (cache.key >= cache.prevKey);
     // reverse if at end of list
     if (cache.key == cacheItemList.count() - 1) cache.isForward = false;
@@ -872,8 +798,6 @@ updated.  Image caching is reactivated.
 
     setPriorities(cache.key);
     setTargetRange();
-
-//    reportCache("Start of update: current image: " + currentImageFullPath);
 
     // if all images are cached then we're done
     if (cacheUpToDate()) return;
@@ -900,7 +824,7 @@ caching thread is restarted.
     if(filteredFilePathList.length() == 0) return;
 
     // just in case stopImageCache not called before this
-    if (isRunning()) stopImageCache();
+    if (isRunning()) pauseImageCache();
 
     buildImageCacheList(filteredFilePathList);
     cache.key = 0;
@@ -921,7 +845,7 @@ caching thread is restarted.
 
 //    reportCache("filterImageCache after setPriorities and setTargetRange");
 
-    if (cache.isShowCacheStatus) cacheStatus();
+    if (cache.isShowCacheStatus) emit showCacheStatus("Update target and rows", 0);
 
     start(IdlePriority);
 }
@@ -938,7 +862,7 @@ If there is filtering then the entire cache is reloaded.
     G::track(__FUNCTION__);;
     #endif
     }
-    if (isRunning()) stopImageCache();
+    if (isRunning()) pauseImageCache();
 
     cacheItemListCopy = cacheItemList;
     cacheItemList.clear();
@@ -990,7 +914,7 @@ If there is filtering then the entire cache is reloaded.
     cache.totFiles = filterRowCount;
     cache.pxUnitWidth = (float)cache.pxTotWidth/filterRowCount;
 
-    if (cache.isShowCacheStatus) cacheStatus();
+    if (cache.isShowCacheStatus) showCacheStatus("Update target and rows", 0);
 
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();
@@ -1013,11 +937,13 @@ void ImageCache::run()
    make sure the target range is cached, decaching anything outside the target
    range to make room as necessary as image selection changes.
 */
-    emit updateIsRunning(true);
+    emit updateIsRunning(true, true);
     static QString prevFileName ="";
+
+    int n = 0;  // temp
     while (nextToCache()) {
         if (abort) {
-            emit updateIsRunning(false);
+            emit updateIsRunning(false, false);
             return;
         }
 
@@ -1027,7 +953,7 @@ void ImageCache::run()
         if (G::isThreadTrackingOn) track(fPath, "Reading");
 
         QImage im;
-        if (pixmap->load(fPath, im)) {
+        if (getImage->load(fPath, im)) {
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
             uint roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
@@ -1054,12 +980,13 @@ void ImageCache::run()
         cacheItemList[cache.toCacheKey].isCached = true;
         if (!toCache.isEmpty()) toCache.removeFirst();
         cache.currMB = getImCacheSize();
-        if (cache.isShowCacheStatus) cacheStatus();
+//        G::track(__FUNCTION__, "tiger updating cache status");
+        if (cache.isShowCacheStatus) showCacheStatus("Update target and rows", 0);
         prevFileName = fPath;
     }
     checkForOrphans();
-    if (cache.isShowCacheStatus) cacheStatus();
-    emit updateIsRunning(false);
+    if (cache.isShowCacheStatus) showCacheStatus("Update target and rows", 0);
+    emit updateIsRunning(false, true);
 //    reportCache("Image cache updated for " + cache.dir);
 //    reportCacheManager("Image cache updated for " + cache.dir);
 }

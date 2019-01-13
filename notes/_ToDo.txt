@@ -1,5 +1,4 @@
 BUGS
-- Adjust compare mode cell size to fit when resize app
 - Monitor res not always showing
 - Disable Ingest menu when no picks
 - Open with ... (doesn't work on macOS)
@@ -16,7 +15,7 @@ ENHANCEMENTS
 - Create installer for mac
 - Remove Windows Registry settings during uninstall
 - When ingesting confirm all files copied correctly (option)
-- Add more raw file formats - DNG, Panasonic ...
+- Add more raw file formats - DNG, Pentax ...
 - Add completer for title in metadata
 - Add metadata performance options to preferences
 - Get Sony image count, camera SN
@@ -26,6 +25,8 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Panasonic support added
+- Adjust compare mode cell size to fit when resize app
 - Update status for selection
 - Pick turns image badge backgound green
 - Compare mode not working after loupe view and then switch to thumb or table views and back into Compare view

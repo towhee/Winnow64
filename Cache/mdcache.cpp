@@ -33,6 +33,9 @@ void MetadataCache::stopMetadateCache()
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     if (isRunning()) {
         mutex.lock();
@@ -40,7 +43,9 @@ void MetadataCache::stopMetadateCache()
         condition.wakeOne();
         mutex.unlock();
         wait();
-        emit updateIsRunning(false);
+        abort = false;
+//        do {} while(isRunning());
+        emit updateIsRunning(false, false, __FUNCTION__);
     }
 }
 
@@ -49,6 +54,9 @@ void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus,
 {
     {
     #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
     G::track(__FUNCTION__);
     #endif
     }
@@ -60,117 +68,23 @@ void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus,
         wait();
     }
     abort = false;
+
     allMetadataLoaded = false;
     this->startRow = startRow;
-    this->isShowCacheStatus = isShowCacheStatus;
-    this->cacheStatusWidth = cacheStatusWidth;
-    createLoadMap();
-    start(TimeCriticalPriority);
-}
 
-void MetadataCache::createLoadMap()
-{
-/*
-Create a map for every row in the datamodel to track metadata caching.  This is
-used to confirm all the metadata is loaded before ending the metadata cache.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    /* Create a map container for every row in the datamodel to track metadata caching.
+    This is used to confirm all the metadata is loaded before ending the metadata cache.
+    */
     loadMap.clear();
     for(int i = 0; i < dm->rowCount(); ++i) loadMap[i] = false;
+
     folderPath = dm->currentFolderPath;
     allMetadataLoaded = false;
-    createCacheStatus();
-    if (isShowCacheStatus) emit showCacheStatus(*cacheStatusImage);
-}
 
-void MetadataCache::createCacheStatus()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    /* Displays a statusbar showing the cache status.
-     * dependent on setTargetRange() being up-to-date
+    this->isShowCacheStatus = isShowCacheStatus;
+    if (isShowCacheStatus) emit showCacheStatus(0, true);
 
-     The app status bar is 25 pixels high.  Create a bitmap the height of the
-     status bar and cache.pxTotWidth wide the same color as the app status bar.
-     Then paint in the cache status progress in the middle of the bitmap.
-
-   (where cache.pxTotWidth = 200, htOffset(9) + ht(8) = 17)
-       X = pnt background, P = Cache Progress Area
-
-    0,0  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX  0,200
-         XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-         XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    0,9  PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
-         PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
-    0,17 PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
-         XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-         XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    0,25 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX  200,25
-
-    for image n:
-        pxStart(n) returns the x coordinate for the startpoint of image n
-        pxMid(n) returns the x coordinate for the midpoint of image n
-        pxEnd(n) returns the x coordinate for the endpoint of image n
-        cache.pxUnitWidth = the width in pixels represented by an image
-
-*/
-
-    // Match the background color in the app status bar so blends in
-    QColor cacheBGColor = QColor(85,85,85);
-
-    // create a label bitmap to paint on
-    cacheStatusImage = new QImage(QSize(pxTotWidth, 25), QImage::Format_RGB32);
-//    QImage cacheStatusImage(QSize(pxTotWidth, 25), QImage::Format_RGB32);
-    cacheStatusImage->fill(cacheBGColor);
-    pnt = new QPainter(cacheStatusImage);
-
-    pxTotWidth = cacheStatusWidth;
-    pxUnitWidth = qRound((float)pxTotWidth/dm->rowCount());
-    if (pxUnitWidth == 0) pxUnitWidth++;
-
-    htOffset = 9;       // the offset from the top of pnt to the progress bar
-    ht = 8;             // the height of the progress bar
-
-    // back color for the entire progress bar for all the files
-    QLinearGradient cacheAllColor(0, htOffset, 0, ht+htOffset);
-    cacheAllColor.setColorAt(0, QColor(150,150,150));
-    cacheAllColor.setColorAt(1, QColor(100,100,100));
-
-    // color for the portion that has been cached
-    loadedGradient.setStart(0, htOffset);
-    loadedGradient.setFinalStop(0, ht+htOffset);
-    // Blue
-    loadedGradient.setColorAt(0, QColor(100,100,150));
-    loadedGradient.setColorAt(1, QColor(50,50,100));    // show the rectangle for entire bar, representing all the files available
-
-    pnt->fillRect(QRect(0, htOffset, pxTotWidth, ht), cacheAllColor);
-}
-
-void MetadataCache::updateCacheStatus(int row)
-{
-    {
-    #ifdef ISDEBUG
-    QString s = "row = " + QString::number(row);
-    mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
-    #endif
-    }
-    // show the rectangle for the current cache by painting each item that has been cached
-    int pxStart = ((float)row / dm->rowCount()) * pxTotWidth;
-    pnt->fillRect(QRect(pxStart, htOffset, pxUnitWidth+1, ht), loadedGradient);
-
-    // ping mainwindow to show cache update in the status bar
-    #ifdef ISDEBUG
-    QString s = "Emitting row = " + QString::number(row);
-    mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
-    #endif
-    if (isShowCacheStatus) emit showCacheStatus(*cacheStatusImage);
+    start(TimeCriticalPriority);
 }
 
 void MetadataCache::track(QString fPath, QString msg)
@@ -198,7 +112,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             #endif
             }
             emit updateAllMetadataLoaded(allMetadataLoaded);
-            emit updateIsRunning(false);
+            emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
 
@@ -212,19 +126,21 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         bool thumbLoaded = idx.data(Qt::DecorationRole).isValid();
         bool metadataLoaded = metadata->isLoaded(fPath);
         mutex.unlock();
+
+        // update the cache status graphic in the status bar
         if (metadataLoaded && thumbLoaded) {
             loadMap[row] = true;
-            updateCacheStatus(row);
+            if (isShowCacheStatus) emit showCacheStatus(row, false);
             continue;
         }
 
         // update status
-        QString s = "Loading metadata " + QString::number(row + 1) + " of " + QString::number(totRows);
-        emit updateStatus(false, s);
+//        QString s = "Loading metadata " + QString::number(row + 1) + " of " + QString::number(totRows);
+//        emit updateStatus(false, s);
 
         {
         #ifdef ISDEBUG
-        s = "Attempting to load metadata for row " + QString::number(row + 1) + " " + fPath;
+        QString s = "Attempting to load metadata for row " + QString::number(row + 1) + " " + fPath;
         mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
         #endif
         }
@@ -240,7 +156,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
                 metadataLoaded = true;
                 {
                 #ifdef ISDEBUG
-                s = "Loaded metadata for row " + QString::number(row + 1) + " " + fPath;
+                QString s = "Loaded metadata for row " + QString::number(row + 1) + " " + fPath;
                 G::track(__FUNCTION__, s);
                 #endif
                 }
@@ -253,14 +169,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             mutex.lock();
             thumbLoaded = thumb->loadThumb(fPath, image);
             mutex.unlock();
-//            QImage *imagePtr = &image;
             if (thumbLoaded) {
-                {
-                #ifdef ISDEBUG
-                s = "Thumb obtained for row " + QString::number(row + 1) + " " + fPath + " Next emit setIcon";
-                mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
-                #endif
-                }
                 emit setIcon(row, image);
             }
         }
@@ -271,7 +180,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
 
         if (metadataLoaded && thumbLoaded) {
             loadMap[row] = true;
-            updateCacheStatus(row);
+            if (isShowCacheStatus) emit showCacheStatus(row, false);
         }
     }
 }
@@ -304,9 +213,12 @@ that have been missed.
     #ifdef ISDEBUG
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     t.start();
-    emit updateIsRunning(true);
+    emit updateIsRunning(true, true, __FUNCTION__);
 
     mutex.lock();
     int rowCount = dm->rowCount();
@@ -321,7 +233,7 @@ that have been missed.
             }
 
             emit updateAllMetadataLoaded(allMetadataLoaded);
-            emit updateIsRunning(false);
+            emit updateIsRunning(false, false, __FUNCTION__);
             return;
         }
         {
@@ -350,15 +262,14 @@ that have been missed.
     while (!allMetadataLoaded);  // && t.elapsed() < 30000);
     emit updateAllMetadataLoaded(allMetadataLoaded);
 
-//    qDebug() << G::t.restart() << "\t" << "Total elapsed time to cache metadata =" << t.elapsed() << "ms";
-
     /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */
+    G::track(__FUNCTION__, "emit loadImageCache ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
     emit loadImageCache();
 
-    // update status in statusbar
-    emit updateIsRunning(false);
+    // update status of metadataThreadRunningLabel in statusbar
+    emit updateIsRunning(false, true, __FUNCTION__);
 
     // update the item counts in Filters
     emit updateFilterCount();

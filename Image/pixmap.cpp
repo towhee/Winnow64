@@ -43,6 +43,9 @@ bool Pixmap::load(QString &fPath, QImage &image)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
 
     bool success = false;
@@ -98,13 +101,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
             }
             err = "Illegal offset to image or no length available";
             break;
-            /*
-            qDebug() << G::t.restart() << "\t" << "Pixmap::loadPixmap Success =" << success
-                     << "msDelay =" << msDelay
-                     << "offsetFullJpg =" << offsetFullJpg
-                     << "Attempting to load " << imageFullPath;
-                     */
-        }
+         }
         while (msDelay < totDelay && !success);
     }
     else {
@@ -126,17 +123,14 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 QThread::msleep(msInc);
                 msDelay += msInc;
             }
-              /*
-              qDebug() << G::t.restart() << "\t" << "Pixmap::loadPixmap Success =" << success
-                       << "msDelay =" << msDelay
-                       << "offsetFullJpg =" << offsetFullJpg
-                       << "Attempting to load " << imageFullPath;
-                       */
         }
         while (msDelay < totDelay && !success);
     }
 
     // rotate if portrait image
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__, "Loaded the image");
+    #endif
     QTransform trans;
     int orientation = metadata->getOrientation(fPath);
     int rotationDegrees = metadata->getRotation(fPath);
