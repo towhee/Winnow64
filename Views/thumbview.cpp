@@ -116,7 +116,6 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
     // this works because ThumbView is a friend class of MW.  It is used in the
     // event filter to access the thumbDock
     mw = qobject_cast<MW*>(parent);
-
     pickFilter = false;
 
     setViewMode(QListView::IconMode);
@@ -629,6 +628,9 @@ crash.
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+#ifdef ISPROFILE
+G::track(__FUNCTION__);
+#endif
     }
     QStandardItem *item = new QStandardItem;
     QModelIndex idx = dm->index(row, 0, QModelIndex());

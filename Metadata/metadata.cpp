@@ -2047,7 +2047,7 @@ void Metadata::reportMetadata()
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
     md.textBrowser->setText(reportString);
-//    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     dlg->show();
     std::cout << reportString.toStdString() << std::flush;
 }
@@ -3883,7 +3883,10 @@ bool Metadata::formatPanasonic()
     0000 - 0004     4      Endian
     0005 - 0008     4      Offset to IFD0   // 18 from start of file
 
-
+    Panasonic starts with an single unchained IFD, which included offsets for an Exif IFD
+    and an XMP segment.  It also has an offset to the embedded Jpg.  The Jpg has its own
+    IFD0 and IFD1.  The IFD0 has an offset to another Exit IFD which, in turn, has an offset
+    to the maker notes IFD.
     */
     //file.open in readMetadata
     // get endian
@@ -3893,7 +3896,7 @@ bool Metadata::formatPanasonic()
 
     readIFD("IFD0", offsetIfd0);
 
-    // pull data reqd from IFD0
+    // pull data reqd from main file IFD0
     make = getString(ifdDataHash.value(271).tagValue, ifdDataHash.value(271).tagCount).trimmed();
     model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount).trimmed();
     orientation = ifdDataHash.value(274).tagValue;
@@ -3905,8 +3908,6 @@ bool Metadata::formatPanasonic()
     xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
     height = ifdDataHash.value(49).tagValue;
     width = ifdDataHash.value(50).tagValue;
-
-    //ISO
     if (ifdDataHash.contains(23)) {
         ulong x = ifdDataHash.value(23).tagValue;
         ISONum = static_cast<int>(x);
@@ -3927,7 +3928,7 @@ bool Metadata::formatPanasonic()
         ifdDataHash.value(36868).tagCount);
     if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
-    // get shutter speed
+    // shutter speed
     if (ifdDataHash.contains(33434)) {
         float x = getReal(ifdDataHash.value(33434).tagValue);
         if (x <1 ) {
@@ -3962,7 +3963,7 @@ bool Metadata::formatPanasonic()
         focalLengthNum = 0;
     }
 
-    // check embedded JPG for more metadata
+    // check embedded JPG for more metadata (IFD0, IFD1, Exit IFD and Maker notes IFD)
     order = 0x4D4D;
     ulong startOffset = offsetFullJPG;
     file.seek(offsetFullJPG);
@@ -3975,8 +3976,8 @@ bool Metadata::formatPanasonic()
     // read the embedded JPG EXIF data
     if (segmentHash.contains("EXIF")) {
         file.seek(segmentHash["EXIF"]);
-
         bool foundEndian = false;
+        int counter = 0;
         while (!foundEndian) {
             ulong a = get2(file.read(2));
             if (a == 0x4949 || a == 0x4D4D) {
@@ -3986,7 +3987,8 @@ bool Metadata::formatPanasonic()
                 startOffset = file.pos() - 2;
                 foundEndian = true;
             }
-            // add condition to check for EOF
+            // break out if not finding endian
+            if(++counter > 30) break;
         }
 
         if (report) rpt << "\n startOffset = " << startOffset;
@@ -4015,7 +4017,6 @@ bool Metadata::formatPanasonic()
 //            ulong makerOffset = 5948;
             ulong makerOffset = ifdDataHash.value(37500).tagValue;
             readIFD("IFD Panasonic Maker Note", makerOffset + startOffset + 12);
-
             // get lens
             lens = getString(ifdDataHash.value(81).tagValue + startOffset, ifdDataHash.value(81).tagCount);
             // get lens serial number
@@ -4025,10 +4026,10 @@ bool Metadata::formatPanasonic()
         }
     }
 
-    isXmp = true;
+    isXmp = true;       // Panasonic has an xmp segment
 
     // read XMP
-    if (isXmp && okToReadXmp) {
+    if (isXmp && okToReadXmp && xmpSegmentOffset > 0 && xmpNextSegmentOffset > 0) {
         Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
         rating = xmp.getItem("Rating");     // case is important "Rating"
         label = xmp.getItem("Label");       // case is important "Label"
@@ -4049,7 +4050,7 @@ bool Metadata::formatPanasonic()
         if (report) xmpString = xmp.metaAsString();
     }
 
-//    if (report) reportMetadata();
+    if (report) reportMetadata();
     return true;
 }
 
@@ -4061,7 +4062,7 @@ bool Metadata::formatJPG()
     #endif
     }
     //file.open happens in readMetadata
-//    order = 0x4D4D;
+    order = 0x4D4D;
     ulong startOffset = 0;
     if (get2(file.read(2)) != 0xFFD8) return 0;
 
@@ -4229,7 +4230,6 @@ bool Metadata::formatJPG()
         _label = label;
 
         if (report) xmpString = xmp.metaAsString();
-//        qDebug() << G::t.restart() << "\t" << "Metadata::formatJPG  " << xmpString;
     }
 
     if (report) reportMetadata();
@@ -4241,6 +4241,9 @@ void Metadata::clearMetadata()
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     #endif
     }
     offsetFullJPG = 0;
@@ -4296,7 +4299,8 @@ void Metadata::testNewFileFormat(const QString &path)
     file.open(QIODevice::ReadOnly);
 
     // edit test format to use:
-    formatPanasonic();
+    formatJPG();
+//    formatPanasonic();
     reportMetadata();
 }
 
@@ -4307,7 +4311,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     G::track(__FUNCTION__);
     #endif
     #ifdef ISPROFILE
-    qDebug() << G::t.restart() << "\t" << "=> Metadata::readMetadata: Start" << G::t.restart();
+    G::track(__FUNCTION__);
     #endif
     }
     report = isReport;
@@ -4335,13 +4339,13 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
 //    qDebug() << G::t.restart() << "\t" << "Metadata::readMetadata  fPath =" << fPath;
     do {
         if (file.open(QIODevice::ReadOnly)) {
-            if (ext == "arw") formatSony();
             if (ext == "cr2") formatCanon();
+            if (ext == "raf") formatFuji();
             if (ext == "jpg") formatJPG();
             if (ext == "nef") formatNikon();
             if (ext == "orf") formatOlympus();
-            if (ext == "raf") formatFuji();
             if (ext == "rw2") formatPanasonic();
+            if (ext == "arw") formatSony();
             if (ext == "tif") formatTIF();
             fileOpened = true;
             file.close();
@@ -4458,6 +4462,9 @@ ulong Metadata::getOffsetThumbJPG(const QString &imageFileName)
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     #endif
     }
     return metaCache[imageFileName].offsetThumbJPG;
@@ -4467,6 +4474,9 @@ ulong Metadata::getLengthThumbJPG(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
     G::track(__FUNCTION__);
     #endif
     }
@@ -4499,6 +4509,9 @@ ulong Metadata::getWidth(const QString &imageFileName)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     return metaCache[imageFileName].width;
 }
@@ -4507,6 +4520,9 @@ ulong Metadata::getHeight(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
     G::track(__FUNCTION__);
     #endif
     }
@@ -4527,6 +4543,9 @@ QDateTime Metadata::getCreatedDate(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
     G::track(__FUNCTION__);
     #endif
     }
@@ -4597,9 +4616,12 @@ QString Metadata::getMake(const QString &imageFileName)
 QString Metadata::getModel(const QString &imageFileName)
 {
     {
-#ifdef ISDEBUG
-G::track(__FUNCTION__);
-#endif
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     return metaCache[imageFileName].model;
 }
@@ -4610,6 +4632,9 @@ QString Metadata::getExposureTime(const QString &imageFileName)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     return metaCache[imageFileName].exposureTime;
 }
@@ -4618,6 +4643,9 @@ float Metadata::getExposureTimeNum(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
     G::track(__FUNCTION__);
     #endif
     }
@@ -4640,6 +4668,9 @@ qreal Metadata::getApertureNum(const QString &imageFileName)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     return metaCache[imageFileName].apertureNum;
 }
@@ -4660,6 +4691,9 @@ int Metadata::getISONum(const QString &imageFileName)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     return metaCache[imageFileName].ISONum;
 }
@@ -4668,6 +4702,9 @@ QString Metadata::getFocalLength(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
     G::track(__FUNCTION__);
     #endif
     }
@@ -4680,6 +4717,9 @@ int Metadata::getFocalLengthNum(const QString &imageFileName)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     return metaCache[imageFileName].focalLengthNum;
 }
@@ -4687,9 +4727,12 @@ int Metadata::getFocalLengthNum(const QString &imageFileName)
 QString Metadata::getTitle(const QString &imageFileName)
 {
     {
-#ifdef ISDEBUG
-G::track(__FUNCTION__);
-#endif
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     return metaCache[imageFileName].title;
 }
@@ -4710,6 +4753,9 @@ QString Metadata::getLens(const QString &imageFileName)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     return metaCache[imageFileName].lens;
 }
@@ -4718,6 +4764,9 @@ QString Metadata::getCreator(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
     G::track(__FUNCTION__);
     #endif
     }
@@ -4730,6 +4779,9 @@ QString Metadata::getCopyright(const QString &imageFileName)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     return metaCache[imageFileName].copyright;
 }
@@ -4740,6 +4792,9 @@ QString Metadata::getEmail(const QString &imageFileName)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     return metaCache[imageFileName].email;
 }
@@ -4748,6 +4803,9 @@ QString Metadata::getUrl(const QString &imageFileName)
 {
     {
     #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
     G::track(__FUNCTION__);
     #endif
     }
@@ -4836,6 +4894,9 @@ int Metadata::getOrientation(QString &imageFileName)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     if (metaCache.contains(imageFileName)) {
         return metaCache[imageFileName].orientation;
@@ -4904,6 +4965,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     #endif
     }
 //    qDebug() << G::t.restart() << "\t" << "Metadata::loadImageMetadata  fileInfo.filePath() ="

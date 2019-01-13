@@ -30,7 +30,7 @@ public:
     {
         if (metadataReporttDlg->objectName().isEmpty())
             metadataReporttDlg->setObjectName(QStringLiteral("metadataReporttDlg"));
-        metadataReporttDlg->resize(1385, 769);
+        metadataReporttDlg->resize(1189, 769);
         verticalLayout = new QVBoxLayout(metadataReporttDlg);
         verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
         textBrowser = new QTextBrowser(metadataReporttDlg);

@@ -393,7 +393,7 @@ bool DataModel::addFileData()
     return true;
 }
 
-void DataModel::addMetadata()
+void DataModel::addMetadata(ProgressBar *progressBar, bool isShowCacheStatus)
 {
 /*
 This function is called after the metadata for all the eligible images in
@@ -408,6 +408,7 @@ which is created in MW, and in InfoView.
 
     QElapsedTimer t;
     t.start();
+    if(isShowCacheStatus) progressBar->clearProgress();
 
     hasDupRawJpg = false;
 
@@ -488,6 +489,8 @@ which is created in MW, and in InfoView.
         setData(index(row, G::CopyrightColumn), copyright);
         setData(index(row, G::EmailColumn), email);
         setData(index(row, G::UrlColumn), url);
+        if(isShowCacheStatus)
+            progressBar->updateProgress(row, 1, rowCount(), QColor(100,150,150));
     }
 
     // build filter items
@@ -501,12 +504,13 @@ which is created in MW, and in InfoView.
 
     // list used by imageCacheThread, filtered by row+jpg if combined
     for (int i = 0; i < sf->rowCount(); ++i)
-//        if(sf->index(i,0).data(G::DupHideRawRole).toBool()) hasDupRawJpg = true;
-//        if (!sf->index(i,0).data(G::DupHideRawRole).toBool())
             imageFilePathList.append(sf->index(i,0).data(G::PathRole).toString());
 
     // req'd for 1st image, probably loaded before metadata cached
     emit updateClassification();
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__, "Leaving...");
+    #endif
 }
 
 QModelIndex DataModel::find(QString fPath)
@@ -544,6 +548,7 @@ void DataModel::filterItemCount()
     G::track(__FUNCTION__);
     #endif
     }
+
     QTreeWidgetItemIterator it(filters);
     while (*it) {
         if ((*it)->parent()) {

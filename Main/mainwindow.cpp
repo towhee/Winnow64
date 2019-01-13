@@ -9,6 +9,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     }
 
     {
+    setObjectName("WinnowMainWindow");
+
     /* Note ISDEBUG is in globals.h
        Deactivate debug reporting by commenting ISDEBUG  */
 
@@ -251,7 +253,7 @@ void MW::keyPressEvent(QKeyEvent *event)
 
 //    if(event->modifiers() & Qt::ShiftModifier) isShift = true;
 //    else isShift = false;
-//    qDebug() << G::t.restart() << "\t" << "MW::keyPressEvent" << event << isShift;
+//    qDebug() << "MW::keyPressEvent" << event << isShift;
 
 //    dm->timeToQuit = true;
 
@@ -280,14 +282,20 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 //bool MW::event(QObject *obj, QEvent *event)
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
+    static int n = 0;
+
     // use to show all events being filtered - handy to figure out which to intercept
 //    if (event->type() != QEvent::Paint
 //            && event->type() != QEvent::UpdateRequest
 //            && event->type() != QEvent::ZeroTimerEvent
 //            && event->type() != QEvent::Timer)
 //        qDebug() << event << event->type()
-//                 << "currentViewDir:" << currentViewDir
-//                 << "mouseOverFolder:" << mouseOverFolder;
+//                 << "currentViewDir:" << currentViewDir;
+
+//    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
+//        G::track(__FUNCTION__, "Performance profiling");
+//        qDebug() << event <<  obj;
+//    };
 
 //    if (event->type() == QEvent::KeyPress) {
 //        QKeyEvent *event = static_cast<QKeyEvent *>(event);
@@ -597,7 +605,11 @@ void MW::folderSelectionChange()
 {
     {
     #ifdef ISDEBUG
-    G::track("\n=============================================================================");
+    G::track("\n======================================================================================================");
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
+    G::track("\n======================================================================================================");
     G::track(__FUNCTION__);
     #endif
     }
@@ -619,8 +631,6 @@ void MW::folderSelectionChange()
 //    qDebug() << "Clear selection in folderSelectionChange:" << thumbView->selectionModel()->selectedRows().count();
 
     if (!isInitializing) {
-//        dm->removeRows(0, dm->rowCount());
-//        popUp->showPopup(this, "Collecting file information", 0, 0.5);
         updateStatus(false, "Collecting file information for all images in folder(s)");
         qApp->processEvents();
     }
@@ -686,7 +696,7 @@ void MW::folderSelectionChange()
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(dirPath, true, false)) {
-//        if (popUp->isVisible()) popUp->close();
+//        G::track(__FUNCTION__, "tiger invalid folder, exiting folderSelectionChange");
         clearAll();
         return;
     }
@@ -717,13 +727,14 @@ void MW::folderSelectionChange()
     */
     metadataLoaded = false;
 
-    /*  The first time a folder is selected the datamodel is loaded with all the
+    /* The first time a folder is selected the datamodel is loaded with all the
     supported images.  If there are no supported images then do some cleanup. If
     this function has been executed by the load subfolders command then all the
     subfolders will be recursively loaded into the datamodel.
     */
-    clearAll();
+//    G::track(__FUNCTION__, "tiger calling clearAll");
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
+        clearAll();
         enableSelectionDependentMenus();
         QDir dir(currentViewDir);
         if (dir.isRoot()) {
@@ -892,17 +903,13 @@ so scrollTo and delegate use of the current index must check the row.
     }
 
     /* If the metadataCache is finished then update the imageCache, and keep it
-    up-to-date with the current image selection. The image caching is delayed
-    on a singleshot QTimer to avoid jamming the caching when rapidly proceeding
-    through images (ie with arrow key held down) */
+    up-to-date with the current image selection. */
 
     if (metadataLoaded) {
         imageCacheFilePath = fPath;
-
         // appears to impact performance on slower media
-//        imageCacheThread->updateCacheStatusCurrentImagePosition(imageCacheFilePath);
-
-        imageCacheTimer->start(250);
+        imageCacheThread->updateImageCachePosition(imageCacheFilePath);
+//        imageCacheTimer->start(250);
     }
 
     // terminate initializing flag (set when new folder selected)
@@ -994,6 +1001,9 @@ been cached (including the thumbs).
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
     }
     allMetadataLoaded = isLoaded;
 }
@@ -1071,14 +1081,193 @@ void MW::loadMetadataCache(int startRow)
     metadataCacheThread->loadMetadataCache(startRow, isShowCacheStatus, cacheStatusWidth);
 }
 
-void MW::updateImageCache()
+void MW::updateMetadataCacheStatus(int row, bool clear)
+{
+    /* Displays a statusbar showing the metadata cache status.
+
+    If clear = true then just repaint the progress bar gray and return.
+
+    If clear = false then update the progress for the row that has been cached.
+    */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+
+    if(!isShowCacheStatus) return;
+
+    if(clear) {
+        progressBar->clearProgress();
+        return;
+    }
+
+    // show the rectangle for the current cached
+    progressBar->updateProgress(row, 1, dm->rowCount(), metadataCacheColor);
+    return;
+
+    // show the rectangle for the current cache by painting each item that has been cached
+    for(int row = 0; row < dm->rowCount(); row++) {
+        QModelIndex idx = dm->index(row, 0);
+        QString fPath = idx.data(G::PathRole).toString();
+        if(metadata->isLoaded(fPath)) {
+            progressBar->updateProgress(row, 1, dm->rowCount(), metadataCacheColor);
+        }
+    }
+    return;
+}
+
+void MW::updateImageCacheStatus(QString instruction, int row)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    imageCacheThread->updateImageCachePosition(imageCacheFilePath);
+    /* Displays a statusbar showing the metadata cache status.
+
+    If clear = true then just repaint the progress bar gray and return.
+
+    If clear = false then update the progress bar for the target range and the
+    row that has been cached.
+    */
+
+    if(!isShowCacheStatus) return;
+
+    if(instruction == "Clear") {
+        progressBar->clearProgress();
+        return;
+    }
+
+    // create a short alias to keep code shorter
+    ImageCache *ic = imageCacheThread;
+    int rows = ic->cache.totFiles;
+//    int rows = dm->sf->rowCount();
+
+    if(instruction == "Update row") {
+        progressBar->updateProgress(i, 1, rows, imageCacheColor);
+        return;
+    }
+
+    if(instruction == "Current position") {
+        row = ic->cache.key;
+        progressBar->updateProgress(row, 1, rows, currentColor);
+        return;
+    }
+
+    return;
+
+    if(instruction == "Update target and rows") {
+        // target range
+        int a = ic->cache.targetFirst;
+        int b = ic->cache.targetLast - a + 1;
+        progressBar->updateProgress(a, b, rows, targetColor);
+
+        // paint each item that has been cached/decached
+        for (int row=0; row < rows; ++row) {
+            if (ic->cacheItemList.at(row).isCached)
+                progressBar->updateProgress(row, 1, rows, imageCacheColor);
+            else
+                progressBar->updateProgress(row, 1, rows, progressBgColor);
+        }
+        return;
+    }
+
+    // create a short alias to keep code shorter
+    ImageCache *ic = imageCacheThread;
+
+    int a = ic->cache.targetFirst;
+    int b = ic->cache.targetLast - a + 1;
+    progressBar->updateProgress(a, b, rows, targetColor);
+
+    // show the rectangle for the current cache by painting each item that has been cached
+    for (int row=0; row < ic->cache.totFiles; ++row) {
+        if (ic->cacheItemList.at(row).isCached) {
+            progressBar->updateProgress(row, 1, rows, imageCacheColor);
+        }
+    }
+
+    // current position
+    row = ic->cache.key;
+    progressBar->updateProgress(row, 1, rows, currentColor);
+
+    return;
+
+    // trap instance where cache out of sync
+    if(ic->cache.totFiles - 1 > ic->cacheItemList.length()) return;
+
+    // Match the background color in the app status bar so blends in
+    QColor cacheBGColor = QColor(85,85,85);
+
+    // create a label bitmap to paint on
+    QImage pmCacheStatus(QSize(ic->cache.pxTotWidth, 25), QImage::Format_RGB32);
+    pmCacheStatus.fill(cacheBGColor);
+    QPainter pnt(cachePixmap);
+//    QPainter pnt(&pmCacheStatus);
+
+    int htOffset = 9;       // the offset from the top of pnt to the progress bar
+    int ht = 8;             // the height of the progress bar
+
+    // back color for the entire progress bar for all the files
+    QLinearGradient cacheAllColor(0, htOffset, 0, ht+htOffset);
+    cacheAllColor.setColorAt(0, QColor(150,150,150));
+    cacheAllColor.setColorAt(1, QColor(100,100,100));
+
+    // color for the portion of the total bar that is targeted to be cached
+    // this depends on cursor direction, cache size and current cache status
+    QLinearGradient cacheTargetColor(0, htOffset, 0, ht+htOffset);
+    cacheTargetColor.setColorAt(0, QColor(125,125,125));
+    cacheTargetColor.setColorAt(1, QColor(75,75,75));
+
+    // color for the portion that has been cached
+    QLinearGradient cacheCurrentColor(0, htOffset, 0, ht+htOffset);
+    cacheCurrentColor.setColorAt(0, QColor(108,150,108));
+    cacheCurrentColor.setColorAt(1, QColor(58,100,58));
+
+    // color for the current image within the total images
+    QLinearGradient cachePosColor(0, htOffset, 0, ht+htOffset);
+    // red
+//    cachePosColor.setColorAt(0, QColor(125,0,0));
+//    cachePosColor.setColorAt(1, QColor(75,0,0));
+    // light green
+    cachePosColor.setColorAt(0, QColor(158,200,158));
+    cachePosColor.setColorAt(1, QColor(58,100,58));
+
+    // show the rectangle for entire bar, representing all the files available
+    pnt.fillRect(QRect(0, htOffset, ic->cache.pxTotWidth, ht), cacheAllColor);
+
+    // show the rectangle for target cache.  If the pos is close to
+    // the boundary there could be spillover, which is added to the
+    // target range in the other direction.
+    int pxTargetStart = ic->pxStart(ic->cache.targetFirst);
+    int pxTargetWidth = ic->pxEnd(ic->cache.targetLast) - pxTargetStart;
+    pnt.fillRect(QRect(pxTargetStart, htOffset, pxTargetWidth, ht), cacheTargetColor);
+
+    // show the rectangle for the current cache by painting each item that has been cached
+    for (int i=0; i < ic->cache.totFiles; ++i) {
+        if (ic->cacheItemList.at(i).isCached) {
+            pnt.fillRect(QRect(ic->pxStart(i), htOffset, ic->cache.pxUnitWidth+1, ht), cacheCurrentColor);
+        }
+    }
+
+    // show the current image position
+    pnt.fillRect(QRect(ic->pxStart(ic->cache.key), htOffset, ic->cache.pxUnitWidth+1, ht), cachePosColor);
+
+    // build cache usage string
+    QString mbCacheSize = QString::number(ic->cache.currMB)
+            + " of "
+            + QString::number(ic->cache.maxMB)
+            + " MB";
+//    qDebug() << G::t.restart() << "\t" << "ic->cache size " + mbCacheSize;
+
+//    G::track(__FUNCTION__, "tiger show cache status");
+    // ping mainwindow to show cache update in the status bar
+
+    cacheLabel->setPixmap(*cachePixmap);
+//    if (ic->cache.isShowCacheStatus) showCacheStatus(pmCacheStatus);
+
+//    if (ic->cache.isShowCacheStatus) emit showCacheStatus(pmCacheStatus);
+
 }
 
 void MW::loadImageCache()
@@ -1093,9 +1282,9 @@ been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
-    metadataLoaded = true;
     // now that metadata is loaded populate the data model
-    dm->addMetadata();
+    updateStatus(false, "Loading metadata into model");
+    dm->addMetadata(progressBar, isShowCacheStatus);
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
@@ -1103,10 +1292,12 @@ been consumed or all the images are cached.
 //    QModelIndexList indexesList = thumbView->selectionModel()->selectedIndexes();
 
     QString fPath = indexesList.first().data(G::PathRole).toString();
+    G::track(__FUNCTION__, "imageCacheThread->initImageCache");
     // imageCacheThread checks if already running and restarts
     imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
         isShowCacheStatus, cacheStatusWidth, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
+    metadataLoaded = true;
     imageCacheThread->updateImageCachePosition(fPath);
 }
 
@@ -2851,7 +3042,9 @@ void MW::createCaching()
             SLOT(delayProcessLoadMetadataCacheScrollEvent()));
 
     connect(metadataCacheThread, SIGNAL(updateFilterCount()),
-            dm, SLOT(filterItemCount()));
+            this, SLOT(updateFilterCount()));
+//    connect(metadataCacheThread, SIGNAL(updateFilterCount()),
+//            dm, SLOT(filterItemCount()));
 
     connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
             this, SLOT(updateAllMetadataLoaded(bool)));
@@ -2859,8 +3052,8 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));
 
-    connect(metadataCacheThread, SIGNAL(updateIsRunning(bool)),
-            this, SLOT(updateMetadataThreadRunStatus(bool)));
+    connect(metadataCacheThread, SIGNAL(updateIsRunning(bool,bool,QString)),
+            this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
 
     connect(metadataCacheThread, SIGNAL(setIcon(int, QImage)),
             thumbView, SLOT(setIcon(int, QImage)));
@@ -2868,20 +3061,22 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(refreshThumbs()),
             thumbView, SLOT(refreshThumbs()));
 
-    connect(metadataCacheThread, SIGNAL(showCacheStatus(const QImage)),
-            this, SLOT(showMetadataCacheStatus(const QImage)));
+    connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
+            this, SLOT(updateMetadataCacheStatus(int,bool)));
 
     imageCacheTimer = new QTimer(this);
     imageCacheTimer->setSingleShot(true);
 
-    connect(imageCacheTimer, SIGNAL(timeout()), this,
-            SLOT(updateImageCache()));
+//    connect(imageCacheTimer, SIGNAL(timeout()), this,
+//            SLOT(updateImageCachePosition()));
 
-    connect(imageCacheThread, SIGNAL(updateIsRunning(bool)),
-            this, SLOT(updateImageThreadRunStatus(bool)));
+//    connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
+//            this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
 
-    connect(imageCacheThread, SIGNAL(showCacheStatus(const QImage)),
-            this, SLOT(showCacheStatus(const QImage)));
+    connect(imageCacheThread, SIGNAL(showCacheStatus(QString,int)),
+            this, SLOT(updateImageCacheStatus(QString,int)));
+//    connect(imageCacheThread, SIGNAL(showCacheStatus(const QImage)),
+//            this, SLOT(showCacheStatus(const QImage)));
 
     connect(imageCacheThread, SIGNAL(updateCacheOnThumbs(QString,bool)),
             this, SLOT(setCachedStatus(QString,bool)));
@@ -3205,7 +3400,21 @@ void MW::createStatusBar()
     statusBar()->setObjectName("WinnowStatusBar");
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
 
+    // Label to hold QPixmap showing progress
     cacheLabel = new QLabel();
+
+    // created a ProgressBar class
+    progressBar = new ProgressBar(this);
+
+    // set up pixmap that shows progress in the cache
+    cacheStatusWidth = setting->value("cacheStatusWidth").toInt();
+    cachePixmap = new QPixmap(QSize(cacheStatusWidth, 25));
+    QColor cacheBGColor = QColor(85,85,85);
+//    QColor cacheBGColor = QColor(85,85,85);
+    cachePixmap->fill(cacheBGColor);
+    cacheLabel->setPixmap(*cachePixmap);
+
+    // tooltip
     QString cacheStatusToolTip = "Image cache status for current folder:\n";
     cacheStatusToolTip += "  • LightGray:  \tbackground for all images in folder\n";
     cacheStatusToolTip += "  • DarkGray:   \tto be cached\n";
@@ -3219,20 +3428,22 @@ void MW::createStatusBar()
     spacer->setText(" ");
     statusBar()->addPermanentWidget(spacer);
 
+    // label to show metadataThreadRunning status
     int runLabelWidth = 13;
     metadataThreadRunningLabel = new QLabel;
     QString mtrl = "Turns red when metadata caching in progress";
     metadataThreadRunningLabel->setToolTip(mtrl);
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
-    updateMetadataThreadRunStatus(false);
+    updateMetadataThreadRunStatus(false, true, __FUNCTION__);
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
 
+    // label to showimageThreadRunning status
     imageThreadRunningLabel = new QLabel;
     statusBar()->addPermanentWidget(imageThreadRunningLabel);
     QString itrl = "Turns red when image caching in progress";
     imageThreadRunningLabel->setToolTip(itrl);
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
-    updateImageThreadRunStatus(false);
+    updateImageCachingThreadRunStatus(false, true);
 
 //    filterLabel = new QLabel;
     filterStatusLabel->setStyleSheet("QLabel{color:red;}");
@@ -3259,6 +3470,7 @@ parameters.  Any visibility changes are executed.
     G::track(__FUNCTION__);
     #endif
     }
+//    G::track(__FUNCTION__, "tiger");
     cacheSizeMB = size * 1000;      // Entered as GB in pref dlg
     isShowCacheStatus = show;
     cacheDelay = delay;
@@ -3481,7 +3693,7 @@ The include subfolder status is shown in the status bar.
         rawJpgStatusLabel->setText("");
 }
 
-void MW::updateMetadataThreadRunStatus(bool isRunning)
+void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QString calledBy)
 {
     {
     #ifdef ISDEBUG
@@ -3501,9 +3713,10 @@ void MW::updateMetadataThreadRunStatus(bool isRunning)
         #endif
     }
     metadataThreadRunningLabel->setText("◉");
+    if (isShowCacheThreadActivity) cacheLabel->setVisible(showCacheLabel);
 }
 
-void MW::updateImageThreadRunStatus(bool isRunning)
+void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
 {
     {
     #ifdef ISDEBUG
@@ -3523,6 +3736,8 @@ void MW::updateImageThreadRunStatus(bool isRunning)
         #endif
     }
     imageThreadRunningLabel->setText("◉");
+//    G::track(__FUNCTION__, "tiger");
+    if (isShowCacheThreadActivity) cacheLabel->setVisible(showCacheLabel);
 }
 
 void MW::inactiveThreadRunStatus()
@@ -3553,26 +3768,8 @@ progress.
     G::track(__FUNCTION__);
     #endif
     }
-    cacheLabel->setVisible(true);
-    cacheLabel->setPixmap(QPixmap::fromImage(imCacheStatus));
-//  following crashes app
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, "Completed");
-    #endif
-}
-
-void MW::showMetadataCacheStatus(const QImage &imCacheStatus)
-{
-/*
-Used by MetadataCache thread to show image cache building
-progress.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    cacheLabel->setVisible(true);
+//    G::track(__FUNCTION__, "tiger sets cacheLabel.isVisible = true");
+    if (isShowCacheThreadActivity) cacheLabel->setVisible(true);
     cacheLabel->setPixmap(QPixmap::fromImage(imCacheStatus));
 //  following crashes app
     #ifdef ISDEBUG
@@ -3770,6 +3967,13 @@ void MW::uncheckAllFilters()
     filterPurpleAction->setChecked(false);
 
     filterChange(false);
+}
+
+void MW::updateFilterCount()
+{
+    updateStatus(false, "Filters are updating for all the metadata in the folder");
+    dm->filterItemCount();
+    updateStatus(false, "Filters are updated, loading image Cache");
 }
 
 void MW::refine()
@@ -4539,23 +4743,23 @@ void MW::about()
     G::track(__FUNCTION__);
     #endif
     }
-    QString aboutString = "<h2>Winnow version " + version + "</h2>"
+    QString aboutString = "<h1>Winnow version " + version + "</h1>"
+        + "<h3>"
         + tr("<p>Image viewer and ingester</p>")
         + "Qt v" + QT_VERSION_STR
         + "<p></p>"
         + "<p>Author: Rory Hill."
         + "<p>Latest change: " + versionDetail
-        + "<p>Winnow is licensed under the GNU General Public License version 3</p>";
+        + "<p>Winnow is licensed under the GNU General Public License version 3</p>"
+        + "<p></p></h3";
 
     QMessageBox::about(this, tr("About") + " Winnow", aboutString);
 }
 
 void MW::externalAppManager()
 {
-    qDebug() << "externalAppManager before externalApps" << externalApps;
     Appdlg *appdlg = new Appdlg(externalApps, this);
     appdlg->exec();
-    qDebug() << "externalAppManager after externalApps" << externalApps;
     updateExternalApps();
 }
 
@@ -6837,7 +7041,9 @@ void MW::setCacheStatusVisibility()
     G::track(__FUNCTION__);
     #endif
     }
-    cacheLabel->setVisible(isShowCacheStatus);
+//    if(isShowCacheStatus) G::track(__FUNCTION__, "tiger TRUE");
+//    else  G::track(__FUNCTION__, "tiger FALSE");
+    if (isShowCacheThreadActivity) cacheLabel->setVisible(isShowCacheStatus);
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
 }
@@ -7316,11 +7522,10 @@ internally or as a sidecar when ingesting.
 */
     {
     #ifdef ISDEBUG
-//    QString s = "infoView->isNewImageDataChange = ";
-//    s += infoView->isNewImageDataChange ? "true" : "false";
-    QString s = "isCurrentFolderOkay = ";
-    s += isCurrentFolderOkay ? "true" : "false";
-    G::track(__FUNCTION__, s);
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
     #endif
     }
     // if new folder is invalid no relevent data has changed
@@ -7915,11 +8120,11 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    progressBar->clearProgress();
 
-
-    selectedRows = selectionModel->selectedRows();
-    QModelIndex idx = dm->sf->index(2, 0);
-    thumbView->setCurrentIndex(idx);
+//    selectedRows = selectionModel->selectedRows();
+//    QModelIndex idx = dm->sf->index(2, 0);
+//    thumbView->setCurrentIndex(idx);
 
 //    selectedRows = thumbView->selectionModel()->selectedRows();
 //    qDebug() << "MW::test  selectedRows:"
@@ -7997,7 +8202,9 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    QString fPath = "D:/Pictures/_ThumbTest/PanasonicGX9.RW2";
+    progressBar->updateProgress(4, 20, 40, addMetadataColor);
+    return;
+    QString fPath = "D:/Pictures/_ThumbTest/2008-02-06_0966.jpg";
     metadata->testNewFileFormat(fPath);
 }
 
