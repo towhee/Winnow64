@@ -35,6 +35,7 @@ public:
     void stopImageCache();
     void pauseImageCache();
     QSize getPreviewSize();
+    void reportCache(QString title = "");
 
     QHash<QString, QImage> imCache;
 
@@ -78,7 +79,7 @@ public:
     int pxEnd(int key);             // end current position on statusbar
 
 signals:
-    void showCacheStatus(QString instruction, int key = 0);
+    void showCacheStatus(QString instruction, int key = 0, QString source = "");
 //    void showCacheStatus(QImage imCacheStatus);
     void updateIsRunning(bool, bool);
     void updateCacheOnThumbs(QString fPath, bool isCached);
@@ -111,13 +112,12 @@ private:
     void checkForSurplus();         // after filtration get rid of cached images not needed
     static bool prioritySort(const CacheItem &p1, const CacheItem &p2);
     static bool keySort(const CacheItem &k1, const CacheItem &k2);
-    void cacheStatus();             // update the cache status visual bar
 //    int pxMid(int key);             // center current position on statusbar
 //    int pxStart(int key);           // start current position on statusbar
 //    int pxEnd(int key);             // end current position on statusbar
     void buildImageCacheList(QStringList &imageList); //
     QSize scalePreview(ulong w, ulong h);
-    void reportCache(QString title = "");
+//    void reportCache(QString title = "");
     void reportCacheProgress(QString action);
     void track(QString fPath, QString msg);
 };

@@ -303,6 +303,7 @@ private slots:
     void updateRawJpgStatus();
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy);
     void inactiveThreadRunStatus();
+    void updateImageCachePosition();
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateAllMetadataLoaded(bool isLoaded);
     void delayProcessLoadMetadataCacheScrollEvent();
@@ -311,7 +312,7 @@ private slots:
     void loadMetadataCache(int startRow = 0);
     void loadImageCache();
     void updateMetadataCacheStatus(int row, bool clear = false);
-    void updateImageCacheStatus(QString instruction, int row);
+    void updateImageCacheStatus(QString instruction, int row, QString source);
     void updateFilterCount();
     void loadFilteredImageCache();
     void addNewBookmark();

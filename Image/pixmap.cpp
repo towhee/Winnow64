@@ -41,7 +41,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
 */
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, fPath);
     #endif
     #ifdef ISPROFILE
     G::track(__FUNCTION__);
@@ -128,8 +128,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
     }
 
     // rotate if portrait image
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__, "Loaded the image");
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__, "Loaded " + fPath);
     #endif
     QTransform trans;
     int orientation = metadata->getOrientation(fPath);
