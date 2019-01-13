@@ -2,6 +2,7 @@
 #define GLOBAL_H
 
 //#define ISDEBUG        // Uncomment this line to show debugging output
+//#define ISPROFILE       // Uncomment this line to show profiling output
 
 #include <QtWidgets>
 #include <QColor>

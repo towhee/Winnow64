@@ -2,6 +2,7 @@ TEMPLATE = app
 TARGET = Winnow
 INCLUDEPATH += .
 INCLUDEPATH += Dialogs
+INCLUDEPATH += Utilities
 INCLUDEPATH += MacOS
 
 QT += widgets
@@ -102,7 +103,8 @@ FORMS += \
     Help/introduction.ui \
     Help/welcome.ui \
     Metadata/metadatareport.ui \
-    Help/message.ui
+    Help/message.ui \
+    Metadata/metadatareport.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns
