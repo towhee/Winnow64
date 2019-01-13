@@ -157,21 +157,6 @@ void ImageCache::track(QString fPath, QString msg)
 }
 
 
-void ImageCache::cacheStatus()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
- //    // ping mainwindow to show cache update in the status bar
-//    if (cache.isShowCacheStatus) emit showCacheStatus("", 0);
-
-#ifdef ISDEBUG
-G::track(__FUNCTION__, "END");
-#endif
-}
-
 QSize ImageCache::scalePreview(ulong w, ulong h)
 {
     {
@@ -392,6 +377,11 @@ void ImageCache::setPriorities(int key)
 
 bool ImageCache::cacheUpToDate()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < cache.totFiles; ++i)
         if (cacheItemList[i].isTarget)
           if (cacheItemList[i].isCached == false) return false;
@@ -400,11 +390,6 @@ bool ImageCache::cacheUpToDate()
 
 void ImageCache::checkForSurplus()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
 /*
 If the user filters and the cache is being rebuilt check for images that are already
 cached and no longer needed (not in the target range).  Make sure to call setTargetRange
@@ -434,11 +419,6 @@ first.
 
 void ImageCache::checkAlreadyCached()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
 /* If the user filters and the cache is being rebuilt check for images that are already
 cached and update cacheItemList statis.  Make sure to call setTargetRange first.
 */
@@ -458,11 +438,6 @@ cached and update cacheItemList statis.  Make sure to call setTargetRange first.
 
 void ImageCache::checkForOrphans()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
 /*
 If the user jumps around rapidly in a large folder, where the target cache
 is smaller than the entire folder, it is possible for the nextToCache and
@@ -555,6 +530,11 @@ void ImageCache::reportCache(QString title)
 
 void ImageCache::reportCacheProgress(QString action)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString reportString;
     QTextStream rpt;
     rpt.flush();
@@ -641,6 +621,11 @@ Index      Key  OrigKey Priority   Target   Cached   SizeMB    Width   Height   
 
 It is built from the imageList, which is sent from MW.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     cacheItemList.clear();
     // the total memory size of all the images in the folder currently selected
     float folderMB = 0;
@@ -683,7 +668,6 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     // cancel if no images to cache
     if (!imageList.size()) return;
 
@@ -725,6 +709,8 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
     cache.previewSize = QSize(previewWidth, previewHeight);
     cache.usePreview = usePreview;
 
+    if (cache.isShowCacheStatus) emit showCacheStatus("Clear", 0, "ImageCache::initImageCache");
+
     // populate the new folder image list
     buildImageCacheList(imageList);
 }
@@ -733,6 +719,11 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus
          int &cacheStatusWidth, int &cacheWtAhead, bool &usePreview,
          int &previewWidth, int &previewHeight)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     cache.maxMB = cacheSizeMB;
     cache.isShowCacheStatus = isShowCacheStatus;
     cache.pxTotWidth = cacheStatusWidth;
@@ -755,14 +746,16 @@ cycling through images to improve performance.
     G::track(__FUNCTION__);
     #endif
     }
-    for (int i = 0; i < cacheItemList.count(); i++) {
+    int i;
+    for (i = 0; i < cacheItemList.count(); i++) {
         if (cacheItemList.at(i).fName == fPath) {
             cache.key = i;
             break;
         }
     }
 
-    if (cache.isShowCacheStatus) emit showCacheStatus("", 0);
+    if (cache.isShowCacheStatus)
+        emit showCacheStatus("Update all rows", i, "ImageCache::updateCacheStatusCurrentImagePosition");
 
 }
 
@@ -772,6 +765,9 @@ void ImageCache::updateImageCachePosition(QString &fPath)
 Updates the cache for the current image in the data model.  The cache key is
 set, forward or backward progress is determined and the target range is
 updated.  Image caching is reactivated.
+
+THERE IS A PERFORMANCE ISSUE IF THIS IS CALLED DIRECTLY FROM MW::fileSelectionchange.
+Apparently there needs to be a slight delay before calling.
 */
     {
     #ifdef ISDEBUG
@@ -782,14 +778,14 @@ updated.  Image caching is reactivated.
     if (isRunning()) pauseImageCache();
 
     // get cache item key
-    for (int i = 0; i < cacheItemList.count(); i++) {
+    int i;
+    for (i = 0; i < cacheItemList.count(); i++) {
         if (cacheItemList.at(i).fName == fPath) {
             cache.key = i;
             break;
         }
     }
 
-    if (cache.isShowCacheStatus) emit showCacheStatus("Update row", i);
     cache.isForward = (cache.key >= cache.prevKey);
     // reverse if at end of list
     if (cache.key == cacheItemList.count() - 1) cache.isForward = false;
@@ -799,10 +795,13 @@ updated.  Image caching is reactivated.
     setPriorities(cache.key);
     setTargetRange();
 
+    if (cache.isShowCacheStatus) emit showCacheStatus("Update all rows", i, "ImageCache::updateImageCachePosition");
+
     // if all images are cached then we're done
     if (cacheUpToDate()) return;
 
     start(IdlePriority);
+//    G::track(__FUNCTION__, "Finished");
 }
 
 void ImageCache::filterImageCache(QStringList &filteredFilePathList,
@@ -845,7 +844,7 @@ caching thread is restarted.
 
 //    reportCache("filterImageCache after setPriorities and setTargetRange");
 
-    if (cache.isShowCacheStatus) emit showCacheStatus("Update target and rows", 0);
+    if (cache.isShowCacheStatus) emit showCacheStatus("Update all rows", 0, "ImageCache::filterImageCache");
 
     start(IdlePriority);
 }
@@ -914,7 +913,7 @@ If there is filtering then the entire cache is reloaded.
     cache.totFiles = filterRowCount;
     cache.pxUnitWidth = (float)cache.pxTotWidth/filterRowCount;
 
-    if (cache.isShowCacheStatus) showCacheStatus("Update target and rows", 0);
+    if (cache.isShowCacheStatus) showCacheStatus("Update all rows", 0, "ImageCache::resortImageCache");
 
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();
@@ -925,22 +924,20 @@ If there is filtering then the entire cache is reloaded.
 
 void ImageCache::run()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-
 /*
    The target range is all the files that will fit into the available cache
    memory based on the cache priorities and direction of travel.  We want to
    make sure the target range is cached, decaching anything outside the target
    range to make room as necessary as image selection changes.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     emit updateIsRunning(true, true);
-    static QString prevFileName ="";
+    static QString prevFileName = "";
 
-    int n = 0;  // temp
     while (nextToCache()) {
         if (abort) {
             emit updateIsRunning(false, false);
@@ -950,7 +947,6 @@ void ImageCache::run()
         // check can read image from file
         QString fPath = cacheItemList.at(cache.toCacheKey).fName;
         if (fPath == prevFileName) return;
-        if (G::isThreadTrackingOn) track(fPath, "Reading");
 
         QImage im;
         if (getImage->load(fPath, im)) {
@@ -980,12 +976,17 @@ void ImageCache::run()
         cacheItemList[cache.toCacheKey].isCached = true;
         if (!toCache.isEmpty()) toCache.removeFirst();
         cache.currMB = getImCacheSize();
-//        G::track(__FUNCTION__, "tiger updating cache status");
-        if (cache.isShowCacheStatus) showCacheStatus("Update target and rows", 0);
+        #ifdef ISDEBUG
+        G::track(__FUNCTION__, "Emitting update cache status from loop");
+        #endif
+        if(cache.isShowCacheStatus)
+            emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
         prevFileName = fPath;
     }
     checkForOrphans();
-    if (cache.isShowCacheStatus) showCacheStatus("Update target and rows", 0);
+    if(cache.isShowCacheStatus)
+        emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
+
     emit updateIsRunning(false, true);
 //    reportCache("Image cache updated for " + cache.dir);
 //    reportCacheManager("Image cache updated for " + cache.dir);
