@@ -73,6 +73,7 @@ public:
         PositionRow,
         ZoomRow,
         PickedRow,
+        CacheRow,
         MonitorRow,
         statusInfoRowsEnd   // insert additional items before this
     };
