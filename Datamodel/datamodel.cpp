@@ -408,7 +408,7 @@ which is created in MW, and in InfoView.
 
     QElapsedTimer t;
     t.start();
-    if(isShowCacheStatus) progressBar->clearProgress();
+//    if(isShowCacheStatus) progressBar->clearProgress();
 
     hasDupRawJpg = false;
 
@@ -489,8 +489,14 @@ which is created in MW, and in InfoView.
         setData(index(row, G::CopyrightColumn), copyright);
         setData(index(row, G::EmailColumn), email);
         setData(index(row, G::UrlColumn), url);
-        if(isShowCacheStatus)
-            progressBar->updateProgress(row, 1, rowCount(), QColor(100,150,150));
+        if(isShowCacheStatus) {
+//            qDebug() << row << "adding metadata for " << fPath;
+//            emit updateProgress(row, row + 1, rowCount(), QColor(100,150,150),
+//                                "datamodel - adding metadata");
+            progressBar->updateProgress(row, row + 1, rowCount(), QColor(100,150,150),
+                                    "datamodel - adding metadata");
+            if(row % 100 == 0) qApp->processEvents();
+        }
     }
 
     // build filter items
