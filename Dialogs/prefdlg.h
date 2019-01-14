@@ -39,8 +39,6 @@ signals:
                                bool isThumbs, bool isStatusBar);
 
 protected:
-//    void mousePressEvent(QMouseEvent *event);
-//    void mouseReleaseEvent(QMouseEvent *event);
 
 private slots:
     // general
