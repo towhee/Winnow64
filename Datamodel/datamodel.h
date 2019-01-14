@@ -60,6 +60,7 @@ signals:
     void closePopup();
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void msg(QString message);
+    void updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString source);
 
 public slots:
     void filterItemCount();
