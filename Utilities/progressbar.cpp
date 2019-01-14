@@ -37,11 +37,11 @@ ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)
 void ProgressBar::clearProgress()
 {
     counter = 0;
-    QPainter pnt(mw1->cachePixmap);
+    QPainter pnt(mw1->progressPixmap);
     QLinearGradient bgGradient = getGradient(mw1->progressBgColor);
-    QRect bgRect(0, htOffset, mw1->cacheStatusWidth, ht);
+    QRect bgRect(0, htOffset, mw1->progressWidth, ht);
     pnt.fillRect(bgRect, bgGradient);
-    mw1->cacheLabel->setPixmap(*(mw1->cachePixmap));
+    mw1->progressLabel->setPixmap(*(mw1->progressPixmap));
 }
 
 void ProgressBar::updateProgress(int fromItem,
@@ -56,8 +56,8 @@ void ProgressBar::updateProgress(int fromItem,
 //    int iterations = items / 10;
 //    if(counter % n != 0 && counter > 1) return;
 
-    QPainter pnt(mw1->cachePixmap);
-    int barWidth = mw1->cacheStatusWidth;
+    QPainter pnt(mw1->progressPixmap);
+    int barWidth = mw1->progressWidth;
     float itemWidth = (float)barWidth/items;
     int pxStart, pxWidth;
 
@@ -86,7 +86,7 @@ void ProgressBar::updateProgress(int fromItem,
     QLinearGradient doneGradient = getGradient(doneColor);
     QRect doneRect(pxStart, htOffset, pxWidth, ht);
     pnt.fillRect(doneRect, doneGradient);
-    mw1->cacheLabel->setPixmap(*(mw1->cachePixmap));
+    mw1->progressLabel->setPixmap(*(mw1->progressPixmap));
 }
 
 QLinearGradient ProgressBar::getGradient(QColor c1)

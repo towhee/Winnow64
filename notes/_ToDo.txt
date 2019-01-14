@@ -1,18 +1,15 @@
 BUGS
-- Confirm cache target calc correctly
 - Select in grid sometimes misses thumbs in a column
 - Monitor res not always showing
 - Disable Ingest menu when no picks
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
-- Sometimes slow loading metadata
 PERFORMANCE
+- show image count in folders panel slows UI
 CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- add cache size to the metadata panel
-- Collapse folders shortcut
 - Horizontal scroll thumbs 1/2 window shortcut
 - Maintain log on ingests
 - Track downloads by ip address
@@ -31,6 +28,11 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- add cache size to the metadata panel
+- Collapse folders shortcut
+- Sometimes slow loading metadata
+- Moved cache progress to its own class and added adding metadata progress
+- Improved ui responsiveness while caching
 - Panasonic support added
 - Adjust compare mode cell size to fit when resize app
 - Update status for selection
