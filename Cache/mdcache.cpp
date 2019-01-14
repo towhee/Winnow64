@@ -262,6 +262,8 @@ that have been missed.
     while (!allMetadataLoaded);  // && t.elapsed() < 30000);
     emit updateAllMetadataLoaded(allMetadataLoaded);
 
+    qApp->processEvents();
+
     /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */

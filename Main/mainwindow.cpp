@@ -1106,15 +1106,19 @@ void MW::updateMetadataCacheStatus(int row, bool clear)
     }
 
     // show the rectangle for the current cached
-    progressBar->updateProgress(row, 1, dm->rowCount(), metadataCacheColor);
+    progressBar->updateProgress(row, row + 1, dm->rowCount(),
+                                metadataCacheColor,
+                                "metadata - currently cached");
     return;
 
     // show the rectangle for the current cache by painting each item that has been cached
-    for(int row = 0; row < dm->rowCount(); row++) {
+    for(int row = 0; row < dm->rowCount()+1; row++) {
         QModelIndex idx = dm->index(row, 0);
         QString fPath = idx.data(G::PathRole).toString();
         if(metadata->isLoaded(fPath)) {
-            progressBar->updateProgress(row, 1, dm->rowCount(), metadataCacheColor);
+            progressBar->updateProgress(row, row + 1, dm->rowCount(),
+                                        metadataCacheColor,
+                                        "not being used");
         }
     }
     return;
@@ -1154,7 +1158,8 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
 //    int rows = dm->sf->rowCount();
 
     if(instruction == "Update row") {
-        progressBar->updateProgress(row, 1, rows, imageCacheColor);
+        progressBar->updateProgress(row, row + 1, rows, imageCacheColor,
+                                    "image cache - current row cached");
         return;
     }
 
@@ -1164,24 +1169,18 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
         // target range
         int tFirst = ic->cache.targetFirst;
         int tLast = ic->cache.targetLast;
-        int tStart, tLength;
-        if(tLast > tFirst) {
-            tStart = tFirst;
-            tLength = tLast - tFirst + 1;
-        }
-        else {
-            tStart = tLast;
-            tLength = tFirst - tLast + 1;
-        }
-         progressBar->updateProgress(tStart, tLength, rows, targetColor);
+        progressBar->updateProgress(tFirst, tLast, rows, targetColor,
+                                    "image cache - target range");
         // cached
         for (int row = 0; row < rows; ++row) {
             if (ic->cacheItemList.at(row).isCached)
-                progressBar->updateProgress(row, 1, rows, imageCacheColor);
+                progressBar->updateProgress(row, row + 1, rows, imageCacheColor,
+                                            "image cache - all rows cached");
         }
         row = ic->cache.key;
         // current selected
-        progressBar->updateProgress(row, 1, rows, currentColor);
+        progressBar->updateProgress(row, row + 1, rows, currentColor,
+                                    "image cache - current selection");
         return;
     }
 
@@ -1192,18 +1191,18 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
 
     int a = ic->cache.targetFirst;
     int b = ic->cache.targetLast - a + 1;
-    progressBar->updateProgress(a, b, rows, targetColor);
+    progressBar->updateProgress(a, b, rows, targetColor, "");
 
     // show the rectangle for the current cache by painting each item that has been cached
     for (int row=0; row < ic->cache.totFiles; ++row) {
         if (ic->cacheItemList.at(row).isCached) {
-            progressBar->updateProgress(row, 1, rows, imageCacheColor);
+            progressBar->updateProgress(row, 1, rows, imageCacheColor, "");
         }
     }
 
     // current position
     row = ic->cache.key;
-    progressBar->updateProgress(row, 1, rows, currentColor);
+    progressBar->updateProgress(row, 1, rows, currentColor, "");
 
     return;
 
@@ -1298,6 +1297,8 @@ been consumed or all the images are cached.
     }
     // now that metadata is loaded populate the data model
     updateStatus(false, "Loading metadata into model");
+    if(isShowCacheStatus) clearProgress();
+    qApp->processEvents();
     dm->addMetadata(progressBar, isShowCacheStatus);
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
@@ -3001,6 +3002,8 @@ void MW::createDataModel()
     connect(dm, &DataModel::popup, this, &MW::popup);
     connect(dm, &DataModel::closePopup, this, &MW::closePopup);
     connect(dm, &DataModel::msg, this, &MW::setCentralMessage);
+    connect(dm, SIGNAL(updateProgress(int,int,int,QColor,QString)),
+            this, SLOT(updateProgress(int,int,int,QColor,QString)));
 }
 
 void MW::createSelectionModel()
@@ -3057,8 +3060,6 @@ void MW::createCaching()
 
     connect(metadataCacheThread, SIGNAL(updateFilterCount()),
             this, SLOT(updateFilterCount()));
-//    connect(metadataCacheThread, SIGNAL(updateFilterCount()),
-//            dm, SLOT(filterItemCount()));
 
     connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
             this, SLOT(updateAllMetadataLoaded(bool)));
@@ -3453,7 +3454,7 @@ void MW::createStatusBar()
     updateMetadataThreadRunStatus(false, true, __FUNCTION__);
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
 
-    // label to showimageThreadRunning status
+    // label to show imageThreadRunning status
     imageThreadRunningLabel = new QLabel;
     statusBar()->addPermanentWidget(imageThreadRunningLabel);
     QString itrl = "Turns red when image caching in progress";
@@ -3461,7 +3462,7 @@ void MW::createStatusBar()
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateImageCachingThreadRunStatus(false, true);
 
-//    filterLabel = new QLabel;
+    // label to show metadataThreadRunning status
     filterStatusLabel->setStyleSheet("QLabel{color:red;}");
     statusBar()->addWidget(filterStatusLabel);
     subfolderStatusLabel->setStyleSheet("QLabel{color:red;}");
@@ -3572,6 +3573,78 @@ QString MW::getPicked()
     if (count == 0) return "Nothing";
     return QString::number(count) + " ("  + pickMemSize + ")";
 //    return QString::number(count) + image  + pickMemSize;
+}
+
+QLinearGradient MW::getGradient(QColor c1)
+{
+    QLinearGradient grad;
+    grad.setStart(0, htOffset);
+    grad.setFinalStop(0, ht+htOffset);
+    int r, g, b;
+    c1.red() >= 50 ? r = c1.red() - 50 : r = 0;
+    c1.green() >= 50 ? g = c1.green() - 50 : g = 0;
+    c1.blue() >= 50 ? b = c1.blue() - 50 : b = 0;
+    QColor c2(r, g, b);
+    grad.setColorAt(0, c1);
+    grad.setColorAt(1, c2);
+    return grad;
+}
+void MW::clearProgress()
+{
+/*
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QPainter pnt(cachePixmap);
+    QLinearGradient bgGradient = getGradient(progressBgColor);
+    QRect bgRect(0, htOffset, cacheStatusWidth, ht);
+    pnt.fillRect(bgRect, bgGradient);
+    cacheLabel->setPixmap(*(cachePixmap));
+}
+
+void MW::updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString source)
+{
+/*
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QPainter pnt(cachePixmap);
+    int barWidth = cacheStatusWidth;
+    float itemWidth = (float)barWidth/items;
+    int pxStart, pxWidth;
+
+    // to and from can be mixed depending on direction of travel
+    if(fromItem < toItem) {
+        pxWidth = qRound((toItem - fromItem) * itemWidth) + 1;;
+        pxStart = qRound(fromItem * itemWidth);
+        if(pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
+    }
+    else {
+        pxWidth = qRound((fromItem - toItem) * itemWidth) + 1;
+        pxStart = qRound(toItem * itemWidth);
+    }
+    if(pxWidth < 2) pxWidth = 2;
+    if(pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
+
+    qDebug() << "Target range from =" << fromItem
+             << "to" << toItem
+             << "itemWidth" << itemWidth
+             << "pxStart" << pxStart
+             << "pxWidth" << pxWidth
+             << "source" << source;
+
+
+    // Done range
+    QLinearGradient doneGradient = getGradient(doneColor);
+    QRect doneRect(pxStart, htOffset, pxWidth, ht);
+    pnt.fillRect(doneRect, doneGradient);
+    cacheLabel->setPixmap(*cachePixmap);
 }
 
 void MW::updateStatus(bool keepBase, QString s)
@@ -8231,7 +8304,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    progressBar->updateProgress(4, 20, 40, addMetadataColor);
+    progressBar->updateProgress(4, 20, 40, addMetadataColor, "test");
     return;
     QString fPath = "D:/Pictures/_ThumbTest/2008-02-06_0966.jpg";
     metadata->testNewFileFormat(fPath);
