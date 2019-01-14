@@ -166,7 +166,7 @@ public:
     bool isShowCacheStatus;
     int cacheDelay;
     bool isShowCacheThreadActivity;
-    int cacheStatusWidth;
+    int progressWidth;
     int cacheWtAhead;
     bool isCachePreview;
     int cachePreviewWidth;
@@ -208,10 +208,6 @@ public:
     QString pickMemSize;
     QString css;                // stylesheet text
 
-    // progress bar
-    int ht = 8;
-    int htOffset = 9;
-
     // ********** colors *********
     // app
     QColor appBgColor = QColor(85,85,85);
@@ -247,7 +243,6 @@ public slots:
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setStatus(QString state);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
-    void showCacheStatus(const QImage &imCacheStatus);
     void setThumbDockHeight();  // signal from thumbView
     void setThumbDockFeatures(Qt::DockWidgetArea area);
     void setThumbDockFloatFeatures(bool isFloat);
@@ -300,25 +295,27 @@ private slots:
     void keyEnd();
 //    void zoomTo(float zoomTo);
     void zoomToggle();
-    void clearProgress();
-    void updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString source = "");
+    void updateSubfolderStatus();
+    void updateRawJpgStatus();
+    // status functions
     void updateStatus(bool showFileCount, QString s = "");
     void clearStatus();
     void updateFilterStatus(bool isFilter = true);
-    void updateSubfolderStatus();
-    void updateRawJpgStatus();
-    void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy);
-    void inactiveThreadRunStatus();
+    // caching status functions
+    void setThreadRunStatusInactive();
+    void setCacheStatusVisibility();
     void updateImageCachePosition();
+    void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy);
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateAllMetadataLoaded(bool isLoaded);
+    void updateMetadataCacheStatus(int row, bool clear = false);
+    void updateImageCacheStatus(QString instruction, int row, QString source);
+    // caching
     void delayProcessLoadMetadataCacheScrollEvent();
     void loadMetadataCacheThumbScrollEvent();
     void loadMetadataCacheGridScrollEvent();
     void loadMetadataCache(int startRow = 0);
     void loadImageCache();
-    void updateMetadataCacheStatus(int row, bool clear = false);
-    void updateImageCacheStatus(QString instruction, int row, QString source);
     void updateFilterCount();
     void loadFilteredImageCache();
     void addNewBookmark();
@@ -331,7 +328,6 @@ private slots:
     void setRatingBadgeVisibility();
     void setShootingInfoVisibility();
     void selectShootingInfo();
-    void setCacheStatusVisibility();
     void toggleThumbWrap();
     void togglePick();
     void pushPick(QString fPath, QString status = "true");
@@ -649,9 +645,10 @@ private:
     QLabel *filterStatusLabel;
     QLabel *subfolderStatusLabel;
     QLabel *rawJpgStatusLabel;
+    QLabel *cacheStatusLabel;
     ProgressBar *progressBar;
-    QLabel *cacheLabel;
-    QPixmap *cachePixmap;
+    QLabel *progressLabel;
+    QPixmap *progressPixmap;
     QLabel *centralLabel;
     QLabel *metadataThreadRunningLabel;
     QLabel *thumbThreadRunningLabel;
@@ -809,7 +806,6 @@ private:
     QString getPosition();
     QString getZoom();
     QString getPicked();
-    QLinearGradient getGradient(QColor c1);
     void setActualDevicePixelRatio();
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
 
