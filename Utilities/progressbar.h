@@ -19,7 +19,7 @@ public:
 
 
     void clearProgress();
-    void updateProgress(int fromItem, int toItem, int items, QColor doneColor);
+    void updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString source);
 //    void updateProgress(QVector<bool> isProgress, QColor doneColor);
 //    void updateTarget(int fromItem, int toItem, QColor targetColor);
 //    void updateTarget(QVector<bool> isProgress, QColor targetColor);
@@ -30,9 +30,7 @@ public slots:
 
 private:
     QLinearGradient getGradient(QColor c1);
-//    QLabel *progressLabel;
-//    QPixmap *pBar;
-//    QColor bgColor;
+    int counter = 0;
     int htOffset;       // the offset from the top of pnt to the progress bar
     int ht;             // the height of the progress bar
 };

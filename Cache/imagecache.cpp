@@ -236,6 +236,7 @@ void ImageCache::setTargetRange()
     uint sumMB = 0;
     for (int i=0; i<cache.totFiles; ++i) {
         sumMB += cacheItemList.at(i).sizeMB;
+//        qDebug() << i << "sumMB =" << sumMB << "cache.maxMB =" << cache.maxMB;
         if (sumMB < cache.maxMB) {
             cacheItemList[i].isTarget = true;
             if (!cacheItemList.at(i).isCached)
@@ -261,7 +262,7 @@ void ImageCache::setTargetRange()
     for (int j=i; j<cache.totFiles; ++j) {
         if (!cacheItemList.at(j).isTarget) {
             cache.targetLast = j-1;
-            break;
+            return;
         }
         cache.targetLast = cache.totFiles-1;
     }

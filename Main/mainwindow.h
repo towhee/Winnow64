@@ -208,6 +208,10 @@ public:
     QString pickMemSize;
     QString css;                // stylesheet text
 
+    // progress bar
+    int ht = 8;
+    int htOffset = 9;
+
     // ********** colors *********
     // app
     QColor appBgColor = QColor(85,85,85);
@@ -296,6 +300,8 @@ private slots:
     void keyEnd();
 //    void zoomTo(float zoomTo);
     void zoomToggle();
+    void clearProgress();
+    void updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString source = "");
     void updateStatus(bool showFileCount, QString s = "");
     void clearStatus();
     void updateFilterStatus(bool isFilter = true);
@@ -803,6 +809,7 @@ private:
     QString getPosition();
     QString getZoom();
     QString getPicked();
+    QLinearGradient getGradient(QColor c1);
     void setActualDevicePixelRatio();
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
 
