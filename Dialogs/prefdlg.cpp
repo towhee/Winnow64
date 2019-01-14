@@ -91,7 +91,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->showCacheStatusChk->setChecked(mw->isShowCacheStatus);
     ui->cacheDelaySpinbox->setValue(mw->cacheDelay);
     ui->showCacheThreadActivityChk->setChecked(mw->isShowCacheThreadActivity);
-    ui->cacheStatusWidthSpin->setValue(mw->cacheStatusWidth);
+    ui->cacheStatusWidthSpin->setValue(mw->progressWidth);
     cacheWtAhead = mw->cacheWtAhead;
     switch (cacheWtAhead) {
     case 5: ui->cache50AheadRadio->setChecked(true); break;
@@ -164,8 +164,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
 
     okToUpdate = true;
 
-    connect(ui->globalFontSizeSlider, SIGNAL(sliderPressed()), this, SLOT(on_slider_pressed()));
-    connect(ui->globalFontSizeSlider, SIGNAL(sliderReleased()), this, SLOT(on_slider_released()));
+//    connect(ui->globalFontSizeSlider, SIGNAL(sliderPressed()), this, SLOT(on_slider_pressed()));
+//    connect(ui->globalFontSizeSlider, SIGNAL(sliderReleased()), this, SLOT(on_slider_released()));
 }
 
 Prefdlg::~Prefdlg()
