@@ -36,6 +36,7 @@ ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)
 
 void ProgressBar::clearProgress()
 {
+    counter = 0;
     QPainter pnt(mw1->cachePixmap);
     QLinearGradient bgGradient = getGradient(mw1->progressBgColor);
     QRect bgRect(0, htOffset, mw1->cacheStatusWidth, ht);
@@ -43,16 +44,47 @@ void ProgressBar::clearProgress()
     mw1->cacheLabel->setPixmap(*(mw1->cachePixmap));
 }
 
-void ProgressBar::updateProgress(int fromItem, int toItem, int items, QColor doneColor)
+void ProgressBar::updateProgress(int fromItem,
+                                 int toItem,
+                                 int items,
+                                 QColor doneColor,
+                                 QString source)
 {
+    // only show 1 in n to speed things up
+    int n = 10;
+    counter++;
+//    int iterations = items / 10;
+//    if(counter % n != 0 && counter > 1) return;
+
     QPainter pnt(mw1->cachePixmap);
     int barWidth = mw1->cacheStatusWidth;
-    int itemWidth = qRound((float)barWidth/items);
-    if (itemWidth == 0) itemWidth++;
+    float itemWidth = (float)barWidth/items;
+    int pxStart, pxWidth;
+
+    // to and from can be mixed depending on direction of travel
+    if(fromItem < toItem) {
+        pxWidth = qRound((toItem - fromItem) * itemWidth) + 1;;
+        pxStart = qRound(fromItem * itemWidth);
+        if(pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
+    }
+    else {
+        pxWidth = qRound((fromItem - toItem) * itemWidth) + 1;
+        pxStart = qRound(toItem * itemWidth);
+    }
+//    pxWidth *= n;
+    if(pxWidth < 2) pxWidth = 2;
+    if(pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
+
+//    qDebug() << "Target range from =" << fromItem
+//             << "to" << toItem
+//             << "itemWidth" << itemWidth
+//             << "pxStart" << pxStart
+//             << "pxWidth" << pxWidth
+//             << "source" << source;
 
     // Done range
     QLinearGradient doneGradient = getGradient(doneColor);
-    QRect doneRect(fromItem * itemWidth, htOffset, toItem * itemWidth, ht);
+    QRect doneRect(pxStart, htOffset, pxWidth, ht);
     pnt.fillRect(doneRect, doneGradient);
     mw1->cacheLabel->setPixmap(*(mw1->cachePixmap));
 }
