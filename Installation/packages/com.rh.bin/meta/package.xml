@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package>
+    <DisplayName>Winnow Binary</DisplayName>
+    <Description>Install Winnow Binary.</Description>
+    <Version>0.9.6.3</Version>
+    <ReleaseDate>2019-01-16</ReleaseDate>
+    <Name>com.rh.bin</Name>
+    <Default>true</Default>
+<!--    <Script>installscript.qs</Script>-->
+    <UserInterfaces>
+        <UserInterface>page.ui</UserInterface>
+    </UserInterfaces>
+</Package>
