@@ -46,15 +46,13 @@ private slots:
     void on_cancelBtn_clicked();
     void on_okBtn_clicked();
     void on_helpBtn_clicked();
-
     void on_combinedIncludeJpgChk_clicked();
-
     void on_manualRadio_toggled(bool checked);
-
     void on_ejectChk_stateChanged(int arg1);
 
 signals:
     void updateIngestParameters(QString rootFolderPath, bool isAuto);
+    void updateIngestHistory(QString folderPath);
 
 private:
     Ui::IngestDlg *ui;

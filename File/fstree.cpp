@@ -55,7 +55,8 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
 /*------------------------------------------------------------------------------
 CLASS FSModel subclassing QFileSystemModel
 ------------------------------------------------------------------------------*/
-FSModel::FSModel(QWidget *parent, Metadata *metadata /*, bool showImageCount */) : QFileSystemModel(parent)
+FSModel::FSModel(QWidget *parent, Metadata *metadata /*, bool showImageCount */)
+    : QFileSystemModel(parent)
 {
     QStringList *fileFilters = new QStringList;
     dir = new QDir();
@@ -97,6 +98,7 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
     if (orientation == Qt::Horizontal && section == imageCountColumn)
     {
         if (role == Qt::DisplayRole) return QVariant("#");
+        if (role == Qt::EditRole) return QVariant("#");
         return QVariant();
      }
      else
@@ -105,18 +107,6 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
 {
-//    QString path = qvariant_cast<QString>(QFileSystemModel::data(index, QFileSystemModel::FilePathRole));
-//    qDebug() << G::t.restart() << "\t" << "FSModel::data -" << path;
-//    bool mounted = mountedDrives.contains(path);
-////    if (path == "O:/") {
-//        bool okay = index.isValid();
-//        QFileInfo info(path);
-//        bool readable = info.isReadable();
-////    }
-
-//    if (!index.isValid() || index.model() != this)
-//        return QVariant();
-
     // return image count for each folder
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
@@ -125,8 +115,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
             dir->setPath(fPath);
             int count = dir->entryInfoList().size();
             QString imageCount = "";
-            if (count > 0)
-                imageCount = QString::number(count, 'f', 0);
+            if (count > 0) imageCount = QString::number(count, 'f', 0);
             return imageCount;
         }
         if (role == Qt::TextAlignmentRole)
@@ -309,8 +298,6 @@ void FSTree::mouseMoveEvent(QMouseEvent *event)
 {
     QTreeView::mouseMoveEvent(event);
     QModelIndex idx = indexAt(event->pos());
-//    qDebug() << "fsTree " << event << idx << idx.data().toString();
-//    event->ignore();
 }
 
 void FSTree::dragEnterEvent(QDragEnterEvent *event)
@@ -320,7 +307,6 @@ void FSTree::dragEnterEvent(QDragEnterEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
 	QModelIndexList selectedDirs = selectionModel()->selectedRows();
 	if (selectedDirs.size() > 0) {
 		dndOrigSelection = selectedDirs[0];

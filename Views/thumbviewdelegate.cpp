@@ -46,7 +46,7 @@ thumbMargin = thumbSpace - thumb (all the space between the thumb and thumbSpace
 ThumbViewDelegate::ThumbViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
         : isRatingBadgeVisible(isRatingBadgeVisible)
 {
-    parent->isWidgetType();     // suppress compiler warning
+    parent->isWidgetType();         // suppress compiler warning
     itemBorderThickness = 2;
     thumbBorderThickness = 2;
     thumbBorderPadding = 1;         // allow small gap between thumb and outer border

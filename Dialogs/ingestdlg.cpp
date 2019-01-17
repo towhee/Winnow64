@@ -203,6 +203,10 @@ void IngestDlg::accept()
         }
     }
 
+    QString historyPath = folderPath.left(folderPath.length() - 1);
+    qDebug() << "IngestDlg::accept  historyPath =" << historyPath;
+    emit updateIngestHistory(historyPath);
+
     QString key = ui->filenameTemplatesCB->currentText();
     QString tokenString;
     if (filenameTemplatesMap.contains(key))
@@ -322,6 +326,7 @@ void IngestDlg::on_selectRootFolderBtn_clicked()
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
     if (rootFolderPath.length() > 0) {
+        if(rootFolderPath.right(1) != "/") rootFolderPath += "/";
         ui->rootFolderLabel->setText(rootFolderPath);
         ui->rootFolderLabel->setToolTip(ui->rootFolderLabel->text());
     }
