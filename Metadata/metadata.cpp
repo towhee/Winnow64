@@ -2247,7 +2247,7 @@ metadata is written to buffer and the original image file is copied unchanged.
     QString suffix = info.suffix().toLower();
     if (!xmpWriteFormats.contains(suffix)) return false;
 
-    qDebug() << "Metadata::writeMetadata fPath =" << fPath;
+//    qDebug() << "Metadata::writeMetadata fPath =" << fPath;
     // set locals to image data  ie title = metaCache[fPath].title
     setMetadata(fPath);
 //    reportMetadataCache(fPath);
