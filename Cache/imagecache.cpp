@@ -980,7 +980,6 @@ void ImageCache::run()
         #ifdef ISDEBUG
         G::track(__FUNCTION__, "Emitting update cache status from loop");
         #endif
-        qDebug() << "cache.currMB =" << cache.currMB;
         if(cache.isShowCacheStatus)
             emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
         prevFileName = fPath;

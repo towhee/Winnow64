@@ -690,6 +690,7 @@ void ThumbView::selectNext()
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     if(G::mode == "Compare") return;
     selectThumb(getNextRow());
 }
