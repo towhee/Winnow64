@@ -58,8 +58,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.6.1";
-    QString versionDetail = "Added support for Panasonic raw files (rw2)";
+    QString version = "0.9.6.3";
+    QString versionDetail = "Minor bug fixes";
 
     bool isShift;               // used when opening if shift key pressed
 
@@ -75,6 +75,9 @@ public:
     int pathTemplateSelected;
     int filenameTemplateSelected;
 
+    QStringList *subfolders;
+    QStringList *recentFolders;
+    QStringList *ingestHistoryFolders;
     QStringList ingestDescriptionCompleter;
 
     QDockWidget *thumbDock;
@@ -132,8 +135,8 @@ public:
      */
     workspaceData mwd;  // hold the persistent start values from QSettings
 
-//    bool isShowHiddenFiles;     // needed?
     int folderMaxWidth = 600;       // not in preferences or QSetting
+
     // general
     int lastPrefPage;
     bool mouseClickScroll;      // positionAtCenter scrolling when mouse click?
@@ -153,6 +156,7 @@ public:
     QString lastDir;
 //    bool inclSubfolders;
     int maxRecentFolders = 20;
+    int maxIngestHistoryFolders = 20;
     QString ingestRootFolder;
     bool combineRawJpg;
 
@@ -193,6 +197,7 @@ public:
         MessageTab
     };
 
+    // mode change
     QString prevMode;
     int currentRow;             // the current row in fileSelection
     bool allMetadataLoaded;
@@ -208,7 +213,7 @@ public:
     QString pickMemSize;
     QString css;                // stylesheet text
 
-    // ********** colors *********
+    // Colors
     // app
     QColor appBgColor = QColor(85,85,85);
     // progress bar
@@ -238,7 +243,6 @@ public slots:
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex previous);
     void nullFiltration();
-    void noFolderSelected();
     void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setStatus(QString state);
@@ -262,6 +266,7 @@ private slots:
     void enableSelectionDependentMenus();
     void enableEjectUsbMenu(QString path);
     void ejectUsb(QString path);
+    void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
     void setCachedStatus(QString fPath, bool isCached);
     void setRating();
@@ -274,7 +279,6 @@ private slots:
     void refine();
     void uncheckAllFilters();
     void sortThumbnails();
-//    void monitorPreference();
     void preferences(int page = -1);
     void externalAppManager();
     void toggleFullScreen();
@@ -293,7 +297,6 @@ private slots:
     void keyDown();
     void keyHome();
     void keyEnd();
-//    void zoomTo(float zoomTo);
     void zoomToggle();
     void updateSubfolderStatus();
     void updateRawJpgStatus();
@@ -333,8 +336,6 @@ private slots:
     void pushPick(QString fPath, QString status = "true");
     void popPick();
     void updatePickFromHistory(QString fPath, QString status);
-//    void updateRating();
-//    void updateColorClass();
     void updateClassification();
     void refreshFolders();
     void setFontSize(QString pixels);
@@ -369,6 +370,7 @@ private slots:
     void runExternalApp();
     void cleanupSender();
     void externalAppError(QProcess::ProcessError err);
+    void addIngestHistoryFolder(QString fPath);
 
     void setFullNormal();
     void setCentralView();
@@ -416,6 +418,7 @@ private slots:
     void invokeWorkspaceFromAction(QAction *workAction);
     void invokeWorkspace(const workspaceData &w);
     void invokeRecentFolder(QAction *recentFolderActions);
+    void invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions);
     void snapshotWorkspace(workspaceData &wsd);
     void manageWorkspaces();
     void deleteWorkspace(int n);
@@ -443,6 +446,7 @@ private:
     QMenu *fileMenu;
     QMenu *openWithMenu;
     QMenu *recentFoldersMenu;
+    QMenu *ingestHistoryFoldersMenu;
     QMenu *editMenu;
     QMenu *goMenu;
     QMenu *filterMenu;
@@ -469,6 +473,8 @@ private:
         QList<QAction *> appActions;
     QAction *recentFoldersAction;
         QList<QAction *> recentFolderActions;
+    QAction *ingestHistoryFoldersAction;
+        QList<QAction *> ingestHistoryFolderActions;
     QAction *subFoldersAction;
     QAction *collapseFoldersAction;
     QAction *addBookmarkAction;
@@ -477,6 +483,7 @@ private:
     QAction *refreshBookmarkAction;
     QAction *ingestAction;
     QAction *ejectAction;
+    QAction *ejectActionFromContextMenu;
     QAction *combineRawJpgAction;
     QAction *refreshFoldersAction;
     QAction *renameAction;
@@ -694,9 +701,6 @@ private:
     QWidget *thumbDockEmptyWidget;
     QVBoxLayout *imageViewContainer;
 
-    QStringList *subfolders;
-    QStringList *recentFolders;
-
 //    QModelIndexList selectedImages;
     QModelIndexList selectedRows;
     QModelIndex currentIdx;
@@ -743,12 +747,6 @@ private:
     int prevCentralView;
     QString mouseOverFolder;        // current mouseover folder in folder dock used
                                     // in context menu to eject usb drives
-
-    bool needThumbsRefresh;         // req'd?
-    bool thumbViewBusy;             // req'd?
-
-    QMovie *busyMovie;              // req'd?
-    QLabel *busyLabel;              // req'd?
 
     QString rating = "";
     QString colorClass = "";
@@ -808,9 +806,6 @@ private:
     QString getPicked();
     void setActualDevicePixelRatio();
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
-
-//    QSize screen();
-
     void addRecentFolder(QString fPath);
 
     qulonglong memoryReqdForPicks();

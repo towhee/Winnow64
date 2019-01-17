@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>Winnow</Name>
+    <Version>0.9.6.3</Version>
+    <Title>Winnow Installer</Title>
+    <Publisher>Rory Hill</Publisher>
+    <StartMenuDir>Winnow</StartMenuDir>
+    <TargetDir>C:/Program Files/Winnow</TargetDir>
+    <WizardDefaultWidth>975</WizardDefaultWidth>
+<!--    <TargetDir>@HomeDir@/Winnow</TargetDir>-->
+    <RunProgram>@TargetDir@/Winnow.exe</RunProgram>
+    <ControlScript>installscript.qs</ControlScript>
+    <RemoteRepositories>
+        <Repository>
+<!--             <Url>file:///D:/My Projects/Winnow Project/WinnowInstallOnline/repository</Url>-->
+             <Url>http://165.227.46.158/winnow_win/repository</Url>
+        </Repository>
+    </RemoteRepositories>
+</Installer>
