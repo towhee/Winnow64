@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package>
+    <DisplayName>Winnow Package</DisplayName>
+    <Description>Install Winnow Package.</Description>
+    <Version>0.9.5.8</Version>
+    <ReleaseDate>2019-01-01</ReleaseDate>
+    <Name>com.rh.prod</Name>
+    <Licenses>
+        <License name="Winnow License Agreement" file="license.txt" />
+    </Licenses>
+    <Default>script</Default>
+    <Script>installscript.qs</Script>
+    <UserInterfaces>
+        <UserInterface>page.ui</UserInterface>
+    </UserInterfaces>
+</Package>

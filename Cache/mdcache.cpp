@@ -170,7 +170,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             thumbLoaded = thumb->loadThumb(fPath, image);
             mutex.unlock();
             if (thumbLoaded) {
-                emit setIcon(row, image);
+                emit setIcon(row, image.scaled(THUMB_MAX, THUMB_MAX, Qt::KeepAspectRatio));
             }
         }
         else {

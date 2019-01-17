@@ -50,6 +50,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
         • List of external apps
         • Bookmarks
         • Recent folders
+        • Ingest history folders
         • Workspaces
     • Create actions and set checked based on persistant values from QSetting
     • Create bookmarks with persistant values from QSettings
@@ -72,6 +73,11 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     // structure to hold persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
+    isSettings = false;
+    // isLoadSettings used for debugging
+    if (isLoadSettings) {
+        isSettings = loadSettings();//dependent on bookmarks and actions, infoView
+    }
 
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel (dm)
@@ -97,17 +103,21 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 //    updateExternalApps();       // dependent on createActions
     handleStartupArgs();
 
-    isSettings = false;
-    // isLoadSettings used for debugging
-    if (isLoadSettings) {
-        isSettings = loadSettings();//dependent on bookmarks and actions
-    }
+//    isSettings = false;
+//    // isLoadSettings used for debugging
+//    if (isLoadSettings) {
+//        isSettings = loadSettings();//dependent on bookmarks and actions, infoView
+//    }
 
     if (isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
         isFirstTimeNoSettings = false;
+//        // update recent folder actions and menu from settings
+//        addRecentFolder("");
+//        // update ingest history actions and menu from settings
+//        addIngestHistoryFolder("");
     }
     else {
         isFirstTimeNoSettings = true;
@@ -145,6 +155,7 @@ void MW::initialize()
     isSlideShowActive = false;
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
+    ingestHistoryFolders = new QStringList;
     popUp = new PopUp;
     hasGridBeenActivated = true;
     isDragDrop = false;
@@ -940,6 +951,11 @@ so scrollTo and delegate use of the current index must check the row.
 
 void MW::clearAll()
 {
+/*
+Called when folderSelectionChange and invalid folder (no folder, no eligible images).
+Can be triggered when the user picks a folder in the folder panel or open menu, picks
+a bookmark or ejects a drive and the resulting folder does not have any eligible images.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -950,7 +966,7 @@ void MW::clearAll()
     metadataCacheThread->stopMetadateCache();
     allMetadataLoaded = false;
     dm->clear();
-    popUp->close();
+//    popUp->close();
     infoView->clearInfo();
     metadata->clear();
     imageView->clear();
@@ -958,6 +974,12 @@ void MW::clearAll()
     setThreadRunStatusInactive();                      // turn thread activity buttons gray
     isInitializing = false;
     isDragDrop = false;
+
+    updateStatus(false, "");
+    progressLabel->setVisible(false);
+//    currentViewDir = "";
+    updateClassification();
+
 }
 
 void MW::nullFiltration()
@@ -969,30 +991,6 @@ void MW::nullFiltration()
     imageView->clear();
     progressLabel->setVisible(false);
 //    isInitializing = false;
-    isDragDrop = false;
-}
-
-void MW::noFolderSelected()
-{
-/*
-Called when current drive has been ejected.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    G::track(__FUNCTION__);
-    // Stop any threads that might be running.
-    imageCacheThread->stopImageCache();
-    metadataCacheThread->stopMetadateCache();
-    allMetadataLoaded = false;
-    updateStatus(false, "");
-    dm->clear();
-    infoView->clearInfo();
-    metadata->clear();
-    imageView->clear();
-    progressLabel->setVisible(false);
     isDragDrop = false;
 }
 
@@ -1018,7 +1016,7 @@ void MW::loadMetadataCacheThumbScrollEvent()
 /*
 See MetadataCache::run comments in mdcache.cpp.  A 300ms singleshot timer
 insures that the metadata caching is not restarted until there is a pause in
-the scolling.
+the scrolling.
 
 This function is connected to the value change signal in both the thumbView
 horizontal and vertical scrollbars.
@@ -1178,7 +1176,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
         progressBar->clearProgress();
         // target range
         int tFirst = ic->cache.targetFirst;
-        int tLast = ic->cache.targetLast;
+        int tLast = ic->cache.targetLast + 1;
         progressBar->updateProgress(tFirst, tLast, rows, targetColor,
                                     "image cache - target range");
         // cached
@@ -1461,6 +1459,7 @@ void MW::createActions()
         if (i < n) {
             appActions.at(i)->setShortcut(QKeySequence("Alt+" + QString::number(i)));
             appActions.at(i)->setObjectName(objName);
+            appActions.at(i)->setShortcutVisibleInContextMenu(true);
             appActions.at(i)->setText(name);
             appActions.at(i)->setVisible(true);
             addAction(appActions.at(i));
@@ -1483,6 +1482,7 @@ void MW::createActions()
     // MacOS will not allow runtime menu insertions.  Cludge workaround
     // add 20 dummy menu items and then hide until use.
     n = recentFolders->count();
+    qDebug() << "create recent folder actions  n =" << n;
     for (int i = 0; i < maxRecentFolders; i++) {
         QString name;
         QString objName = "";
@@ -1547,6 +1547,7 @@ void MW::createActions()
     showImageCountAction->setObjectName("showImageCount");
     showImageCountAction->setShortcutVisibleInContextMenu(true);
     showImageCountAction->setCheckable(true);
+    showImageCountAction->setChecked(setting->value("showImageCount").toBool());
     addAction(showImageCountAction);
     connect(showImageCountAction, &QAction::triggered, this, &MW::setShowImageCount);
 
@@ -1580,17 +1581,54 @@ void MW::createActions()
     addAction(ingestAction);
     connect(ingestAction, &QAction::triggered, this, &MW::ingest);
 
+    ingestHistoryFoldersMenu = new QMenu(tr("Ingest History folders..."));
+    ingestHistoryFoldersAction = new QAction(tr("Ingest History..."), this);
+    ingestHistoryFoldersAction->setObjectName("ingestHistoryFoldersAction");
+    ingestHistoryFoldersAction->setShortcutVisibleInContextMenu(true);
+    addAction(ingestHistoryFoldersAction);
+    ingestHistoryFoldersAction->setMenu(ingestHistoryFoldersMenu);
+
+    // general connection to add ingest history list as menu items
+    // MacOS will not allow runtime menu insertions.  Cludge workaround
+    // add 20 dummy menu items and then hide until use.
+    n = ingestHistoryFolders->count();
+    qDebug() << "create ingest history actions  n =" << n;
+    for (int i = 0; i < maxIngestHistoryFolders; i++) {
+        QString name;
+        QString objName = "";
+        if (i < n) {
+            name = ingestHistoryFolders->at(i);
+            objName = "ingestHistoryFolder" + QString::number(i);
+        }
+        else name = "Future ingest history folder" + QString::number(i);
+        ingestHistoryFolderActions.append(new QAction(name, this));
+        if (i < n) {
+            ingestHistoryFolderActions.at(i)->setObjectName(objName);
+            ingestHistoryFolderActions.at(i)->setText(name);
+            ingestHistoryFolderActions.at(i)->setVisible(true);
+            addAction(ingestHistoryFolderActions.at(i));
+        }
+        if (i >= n) ingestHistoryFolderActions.at(i)->setVisible(false);
+    }
+    addActions(ingestHistoryFolderActions);
+
     ejectAction = new QAction(tr("Eject Usb Drive"), this);
     ejectAction->setObjectName("ingest");
     ejectAction->setShortcutVisibleInContextMenu(true);
     addAction(ejectAction);
-    connect(ejectAction, &QAction::triggered, this, &MW::ejectUsbFromContextMenu);
+    connect(ejectAction, &QAction::triggered, this, &MW::ejectUsbFromMainMenu);
+
+    ejectActionFromContextMenu = new QAction(tr("Eject Usb Drive"), this);
+    ejectActionFromContextMenu->setObjectName("ingest");
+    ejectActionFromContextMenu->setShortcutVisibleInContextMenu(true);
+    addAction(ejectActionFromContextMenu);
+    connect(ejectActionFromContextMenu, &QAction::triggered, this, &MW::ejectUsbFromContextMenu);
 
     combineRawJpgAction = new QAction(tr("Combine Raw+Jpg"), this);
     combineRawJpgAction->setObjectName("combineRawJpg");
     combineRawJpgAction->setShortcutVisibleInContextMenu(true);
     combineRawJpgAction->setCheckable(true);
-    combineRawJpgAction->setChecked(true);
+    combineRawJpgAction->setChecked(setting->value("combineRawJpg").toBool());
     addAction(combineRawJpgAction);
     connect(combineRawJpgAction, &QAction::triggered, this, &MW::setCombineRawJpg);
 
@@ -1751,6 +1789,7 @@ void MW::createActions()
 
     rotateLeftAction = new QAction(tr("Rotate CCW"), this);
     rotateLeftAction->setObjectName("rotateLeft");
+    rotateLeftAction->setShortcutVisibleInContextMenu(true);
     addAction(rotateLeftAction);
     connect(rotateLeftAction, &QAction::triggered, this, &MW::rotateLeft);
 
@@ -2064,7 +2103,7 @@ void MW::createActions()
     fullScreenAction->setObjectName("fullScreenAct");
     fullScreenAction->setShortcutVisibleInContextMenu(true);
     fullScreenAction->setCheckable(true);
-//    fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
+    fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
     addAction(fullScreenAction);
     connect(fullScreenAction, &QAction::triggered, this, &MW::toggleFullScreen);
 
@@ -2078,6 +2117,7 @@ void MW::createActions()
     ratingBadgeVisibleAction->setObjectName("toggleRatingBadge");
     ratingBadgeVisibleAction->setShortcutVisibleInContextMenu(true);
     ratingBadgeVisibleAction->setCheckable(true);
+    ratingBadgeVisibleAction->setChecked(setting->value("isRatingBadgeVisible").toBool());
     addAction(ratingBadgeVisibleAction);
     connect(ratingBadgeVisibleAction, &QAction::triggered, this, &MW::setRatingBadgeVisibility);
 
@@ -2091,32 +2131,36 @@ void MW::createActions()
     infoSelectAction = new QAction(tr("Select or edit Shooting Info"), this);
     infoSelectAction->setShortcutVisibleInContextMenu(true);
     infoSelectAction->setObjectName("selectInfo");
+    infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());
     addAction(infoSelectAction);
     connect(infoSelectAction, &QAction::triggered, this, &MW::selectShootingInfo);
 
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setShortcutVisibleInContextMenu(true);
     asLoupeAction->setCheckable(true);
+    asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool() ||
+                              setting->value("isCompareDisplay").toBool());
     addAction(asLoupeAction);
     connect(asLoupeAction, &QAction::triggered, this, &MW::loupeDisplay);
 
     asGridAction = new QAction(tr("Grid"), this);
     asGridAction->setShortcutVisibleInContextMenu(true);
     asGridAction->setCheckable(true);
-//    asGridAction->setChecked(setting->value("isGridDisplay").toBool());
+    asGridAction->setChecked(setting->value("isGridDisplay").toBool());
     addAction(asGridAction);
     connect(asGridAction, &QAction::triggered, this, &MW::gridDisplay);
 
     asTableAction = new QAction(tr("Table"), this);
     asTableAction->setShortcutVisibleInContextMenu(true);
     asTableAction->setCheckable(true);
+    asTableAction->setChecked(setting->value("isTableDisplay").toBool());
     addAction(asTableAction);
     connect(asTableAction, &QAction::triggered, this, &MW::tableDisplay);
 
     asCompareAction = new QAction(tr("Compare"), this);
     asCompareAction->setShortcutVisibleInContextMenu(true);
     asCompareAction->setCheckable(true);
-//    asCompareAction->setChecked(false); // never start with compare set true
+    asCompareAction->setChecked(false); // never start with compare set true
     addAction(asCompareAction);
     connect(asCompareAction, &QAction::triggered, this, &MW::compareDisplay);
 
@@ -2197,6 +2241,7 @@ void MW::createActions()
     menuBarVisibleAction->setObjectName("toggleMenuBar");
     menuBarVisibleAction->setShortcutVisibleInContextMenu(true);
     menuBarVisibleAction->setCheckable(true);
+    menuBarVisibleAction->setChecked(setting->value("isMenuBarVisible").toBool());
     addAction(menuBarVisibleAction);
     connect(menuBarVisibleAction, &QAction::triggered, this, &MW::setMenuBarVisibility);
 //#endif
@@ -2205,6 +2250,7 @@ void MW::createActions()
     statusBarVisibleAction->setObjectName("toggleStatusBar");
     statusBarVisibleAction->setShortcutVisibleInContextMenu(true);
     statusBarVisibleAction->setCheckable(true);
+    statusBarVisibleAction->setChecked(setting->value("isStatusBarVisible").toBool());
     addAction(statusBarVisibleAction);
     connect(statusBarVisibleAction, &QAction::triggered, this, &MW::setStatusBarVisibility);
 
@@ -2212,6 +2258,7 @@ void MW::createActions()
     folderDockVisibleAction->setObjectName("toggleFiless");
     folderDockVisibleAction->setShortcutVisibleInContextMenu(true);
     folderDockVisibleAction->setCheckable(true);
+    folderDockVisibleAction->setChecked(setting->value("isFolderDockVisible").toBool());
     addAction(folderDockVisibleAction);
     connect(folderDockVisibleAction, &QAction::triggered, this, &MW::toggleFolderDockVisibility);
 
@@ -2219,6 +2266,7 @@ void MW::createActions()
     favDockVisibleAction->setObjectName("toggleFavs");
     favDockVisibleAction->setShortcutVisibleInContextMenu(true);
     favDockVisibleAction->setCheckable(true);
+    favDockVisibleAction->setChecked(setting->value("isFavDockVisible").toBool());
     addAction(favDockVisibleAction);
     connect(favDockVisibleAction, &QAction::triggered, this, &MW::toggleFavDockVisibility);
 
@@ -2226,6 +2274,7 @@ void MW::createActions()
     filterDockVisibleAction->setObjectName("toggleFilters");
     filterDockVisibleAction->setShortcutVisibleInContextMenu(true);
     filterDockVisibleAction->setCheckable(true);
+    filterDockVisibleAction->setChecked(setting->value("isFilterDockVisible").toBool());
     addAction(filterDockVisibleAction);
     connect(filterDockVisibleAction, &QAction::triggered, this, &MW::toggleFilterDockVisibility);
 
@@ -2233,6 +2282,7 @@ void MW::createActions()
     metadataDockVisibleAction->setObjectName("toggleMetadata");
     metadataDockVisibleAction->setShortcutVisibleInContextMenu(true);
     metadataDockVisibleAction->setCheckable(true);
+    metadataDockVisibleAction->setChecked(setting->value("isMetadataDockVisible").toBool());
     addAction(metadataDockVisibleAction);
     connect(metadataDockVisibleAction, &QAction::triggered, this, &MW::toggleMetadataDockVisibility);
 
@@ -2240,6 +2290,7 @@ void MW::createActions()
     thumbDockVisibleAction->setObjectName("toggleThumbs");
     thumbDockVisibleAction->setShortcutVisibleInContextMenu(true);
     thumbDockVisibleAction->setCheckable(true);
+    thumbDockVisibleAction->setChecked(setting->value("isThumbDockVisible").toBool());
     addAction(thumbDockVisibleAction);
     connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::toggleThumbDockVisibity);
 
@@ -2281,6 +2332,7 @@ void MW::createActions()
     folderDockLockAction->setObjectName("lockDockFiles");
     folderDockLockAction->setShortcutVisibleInContextMenu(true);
     folderDockLockAction->setCheckable(true);
+    folderDockLockAction->setChecked(setting->value("isFolderDockLocked").toBool());
     addAction(folderDockLockAction);
     connect(folderDockLockAction, &QAction::triggered, this, &MW::setFolderDockLockMode);
 
@@ -2288,6 +2340,7 @@ void MW::createActions()
     favDockLockAction->setObjectName("lockDockFavs");
     favDockLockAction->setShortcutVisibleInContextMenu(true);
     favDockLockAction->setCheckable(true);
+    favDockLockAction->setChecked(setting->value("isFavDockLocked").toBool());
     addAction(favDockLockAction);
     connect(favDockLockAction, &QAction::triggered, this, &MW::setFavDockLockMode);
 
@@ -2295,6 +2348,7 @@ void MW::createActions()
     filterDockLockAction->setObjectName("lockDockFilters");
     filterDockLockAction->setShortcutVisibleInContextMenu(true);
     filterDockLockAction->setCheckable(true);
+    filterDockLockAction->setChecked(setting->value("isFilterDockLocked").toBool());
     addAction(filterDockLockAction);
     connect(filterDockLockAction, &QAction::triggered, this, &MW::setFilterDockLockMode);
 
@@ -2302,6 +2356,7 @@ void MW::createActions()
     metadataDockLockAction->setObjectName("lockDockMetadata");
     metadataDockLockAction->setShortcutVisibleInContextMenu(true);
     metadataDockLockAction->setCheckable(true);
+    metadataDockLockAction->setChecked(setting->value("isMetadataDockLocked").toBool());
     addAction(metadataDockLockAction);
     connect(metadataDockLockAction, &QAction::triggered, this, &MW::setMetadataDockLockMode);
 
@@ -2309,6 +2364,7 @@ void MW::createActions()
     thumbDockLockAction->setObjectName("lockDockThumbs");
     thumbDockLockAction->setShortcutVisibleInContextMenu(true);
     thumbDockLockAction->setCheckable(true);
+    thumbDockLockAction->setChecked(setting->value("isThumbDockLocked").toBool());
     addAction(thumbDockLockAction);
     connect(thumbDockLockAction, &QAction::triggered, this, &MW::setThumbDockLockMode);
 
@@ -2318,6 +2374,14 @@ void MW::createActions()
     allDocksLockAction->setCheckable(true);
     addAction(allDocksLockAction);
     connect(allDocksLockAction, &QAction::triggered, this, &MW::setAllDocksLockMode);
+
+    if (folderDockLockAction->isChecked() &&
+        favDockLockAction->isChecked() &&
+        filterDockLockAction->isChecked() &&
+        metadataDockLockAction->isChecked() &&
+        thumbDockLockAction->isChecked())
+        allDocksLockAction->setChecked(true);
+    wasThumbDockVisible = setting->value("wasThumbDockVisible").toBool();
 
     // Workspace submenu of Window menu
     defaultWorkspaceAction = new QAction(tr("Default Workspace"), this);
@@ -2462,16 +2526,21 @@ void MW::createMenus()
     connect(recentFoldersMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeRecentFolder(QAction*)));
     fileMenu->addSeparator();
-    fileMenu->addAction(refreshFoldersAction);
+    fileMenu->addAction(ingestAction);
+    ingestHistoryFoldersMenu = fileMenu->addMenu(tr("Ingest History"));
+    // add maxIngestHistoryFolders dummy menu items for custom workspaces
+    for (int i = 0; i < maxIngestHistoryFolders; i++) {
+        ingestHistoryFoldersMenu->addAction(ingestHistoryFolderActions.at(i));
+    }
     fileMenu->addAction(ejectAction);
     fileMenu->addSeparator();
-    fileMenu->addAction(ingestAction);
+    fileMenu->addAction(showImageCountAction);
     fileMenu->addAction(combineRawJpgAction);
+    fileMenu->addAction(subFoldersAction);
+     fileMenu->addAction(addBookmarkAction);
     fileMenu->addSeparator();
     fileMenu->addAction(revealFileAction);
-    fileMenu->addAction(subFoldersAction);
-    fileMenu->addAction(showImageCountAction);
-    fileMenu->addAction(addBookmarkAction);
+    fileMenu->addAction(refreshFoldersAction);
 //    fileMenu->addSeparator();
 //    fileMenu->addAction(renameAction);
 //    fileMenu->addAction(runDropletAction);
@@ -2658,7 +2727,7 @@ void MW::createMenus()
 //    QList<QAction *> *fsTreeActions = new QList<QAction *>;
     fsTreeActions->append(refreshFoldersAction);
     fsTreeActions->append(collapseFoldersAction);
-    fsTreeActions->append(ejectAction);
+    fsTreeActions->append(ejectActionFromContextMenu);
     fsTreeActions->append(separatorAction);
     fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileActionFromContext);
@@ -3193,6 +3262,24 @@ dependent on datamodel and thumbView.
     tableView = new TableView(dm);
     tableView->setAutoScroll(false);
 
+    /* read TableView okToShow fields */
+    setting->beginGroup("TableFields");
+    QStringList setFields = setting->childKeys();
+    QList<QStandardItem *> itemList;
+    setFields = setting->childKeys();
+//    QList<QStandardItem *> itemList;
+    for (int i = 0; i <setFields.size(); ++i) {
+        QString setField = setFields.at(i);
+        bool okToShow = setting->value(setField).toBool();
+        itemList = tableView->ok->findItems(setField);
+        if (itemList.length()) {
+            int row = itemList[0]->row();
+            QModelIndex idx = tableView->ok->index(row, 1);
+            tableView->ok->setData(idx, okToShow, Qt::EditRole);
+        }
+    }
+    setting->endGroup();
+
     // update menu "sort by" to match tableView sort change
     connect(tableView->horizontalHeader(),
             SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
@@ -3239,6 +3326,15 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
                               setting->value("isRatingBadgeVisible").toBool(),
                               setting->value("classificationBadgeInImageDiameter").toInt());
 
+    imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
+
+    lastPrefPage = setting->value("lastPrefPage").toInt();
+    mouseClickScroll = setting->value("mouseClickScroll").toBool();
+    qreal tempZoom = setting->value("toggleZoomValue").toReal();
+    if (tempZoom > 3) tempZoom = 1;
+    if (tempZoom < 0.25) tempZoom = 1;
+    imageView->toggleZoom = tempZoom;
+
     connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
 
     connect(imageView, SIGNAL(updateStatus(bool, QString)),
@@ -3260,6 +3356,13 @@ void MW::createCompareView()
     }
     compareImages = new CompareImages(this, centralWidget, metadata, dm, thumbView, imageCacheThread);
 
+    lastPrefPage = setting->value("lastPrefPage").toInt();
+    mouseClickScroll = setting->value("mouseClickScroll").toBool();
+    qreal tempZoom = setting->value("toggleZoomValue").toReal();
+    if (tempZoom > 3) tempZoom = 1;
+    if (tempZoom < 0.25) tempZoom = 1;
+    compareImages->toggleZoom = tempZoom;
+
     connect(compareImages, SIGNAL(updateStatus(bool, QString)),
             this, SLOT(updateStatus(bool, QString)));
 
@@ -3278,6 +3381,57 @@ InfoView shows basic metadata in a dock widget.
     }
     infoView = new InfoView(this, metadata);
     infoView->setMaximumWidth(folderMaxWidth);
+
+    /* read InfoView okToShow fields */
+//    qDebug() << G::t.restart() << "\t" << "\nread InfoView okToShow fields\n";
+    setting->beginGroup("InfoFields");
+    QStringList setFields = setting->childKeys();
+    QList<QStandardItem *> itemList;
+    QStandardItemModel *k = infoView->ok;
+    // go through every setting in QSettings
+    bool isFound;
+    for (int i = 0; i < setFields.size(); ++i) {
+        isFound = false;
+        // Get a field and boolean
+        QString setField = setFields.at(i);
+        bool okToShow = setting->value(setField).toBool();
+        int row;
+        // search for the matching item in infoView
+        for (row = 0; row < k->rowCount(); row++) {
+            isFound = false;
+            QModelIndex idParent = k->index(row, 0);
+            QString fieldName = qvariant_cast<QString>(idParent.data());
+            // find the match
+//            qDebug() << G::t.restart() << "\t" << "Comparing parent" << fieldName << "to"<< setField;
+            if (fieldName == setField) {
+                QModelIndex idParentChk = k->index(row, 2);
+                // set the flag whether to display or not
+                k->setData(idParentChk, okToShow, Qt::EditRole);
+//                qDebug() << G::t.restart() << "\t" << "Parent match so set to" << okToShow
+//                         << idParent.data().toString() << "\n";
+                isFound = true;
+                break;
+            }
+            for (int childRow = 0; childRow < k->rowCount(idParent); childRow++) {
+                QModelIndex idChild = k->index(childRow, 0, idParent);
+                QString fieldName = qvariant_cast<QString>(idChild.data());
+                // find the match
+//                qDebug() << G::t.restart() << "\t" << "Comparing child" << fieldName << "to"<< setField;
+                if (fieldName == setField) {
+                    QModelIndex idChildChk = k->index(childRow, 2, idParent);
+                    // set the flag whether to display or not
+                    k->setData(idChildChk, okToShow, Qt::EditRole);
+//                    qDebug() << G::t.restart() << "\t" << "Child match so set to" << okToShow
+//                             << idChild.data().toString() << "\n";
+                    isFound = true;
+                    break;
+                }
+                if (isFound) break;
+            }
+            if (isFound) break;
+        }
+    }
+    setting->endGroup();
 
     connect(infoView->ok, SIGNAL(itemChanged(QStandardItem*)),
             this, SLOT(metadataChanged(QStandardItem*)));
@@ -3389,6 +3543,13 @@ void MW::createBookmarks()
     }
     bookmarks = new BookMarks(this, metadata, setting->value("showImageCount").toBool());
 
+    setting->beginGroup("Bookmarks");
+    QStringList paths = setting->childKeys();
+    for (int i = 0; i < paths.size(); ++i) {
+        bookmarks->bookmarkPaths.insert(setting->value(paths.at(i)).toString());
+    }
+    bookmarks->reloadBookmarks();
+    setting->endGroup();
     bookmarks->setMaximumWidth(folderMaxWidth);
 
     connect(bookmarks, SIGNAL(itemClicked(QTreeWidgetItem *, int)),
@@ -4162,12 +4323,7 @@ void MW::addRecentFolder(QString fPath)
     G::track(__FUNCTION__);
     #endif
     }
-    if (!recentFolders->contains(fPath)) recentFolders->prepend(fPath);
-    // sync menu items
-    // trim excess items
-//    while (recentFolders->count() > maxRecentFolders) {
-//        recentFolders->removeAt(recentFolders->count() - 1);
-//    }
+    if (!recentFolders->contains(fPath) && fPath != "") recentFolders->prepend(fPath);
     int count = recentFolders->count();
     for (int i = 0; i < maxRecentFolders; i++) {
         if (i < count) {
@@ -4181,6 +4337,30 @@ void MW::addRecentFolder(QString fPath)
     }
 }
 
+void MW::addIngestHistoryFolder(QString fPath)
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    qDebug() << "MW::addIngestHistoryFolder  fPath =" << fPath;
+    if (!ingestHistoryFolders->contains(fPath) && fPath != "")
+        ingestHistoryFolders->prepend(fPath);
+    int count = ingestHistoryFolders->count();
+    for (int i = 0; i < maxIngestHistoryFolders; i++) {
+        if (i < count) {
+            ingestHistoryFolderActions.at(i)->setText(ingestHistoryFolders->at(i));
+            ingestHistoryFolderActions.at(i)->setVisible(true);
+        }
+        else {
+            ingestHistoryFolderActions.at(i)->setText("Future ingest history folder" + QString::number(i));
+            ingestHistoryFolderActions.at(i)->setVisible(false);
+        }
+    }
+    qDebug() << "MW::addIngestHistoryFolder ingestHistoryFolders =" << ingestHistoryFolders;
+}
+
 void MW::invokeRecentFolder(QAction *recentFolderActions)
 {
     {
@@ -4190,9 +4370,20 @@ void MW::invokeRecentFolder(QAction *recentFolderActions)
     }
     qDebug() << G::t.restart() << "\t" << recentFolderActions->text();
     QString dirPath = recentFolderActions->text();
-//    fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath)));
     fsTree->select(dirPath);
     folderSelectionChange();
+}
+
+void MW::invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions)
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    qDebug() << G::t.restart() << "\t" << ingestHistoryFolderActions->text();
+    QString dirPath = ingestHistoryFolderActions->text();
+    revealInFileBrowser(dirPath);
 }
 
 /* WORKSPACES
@@ -5534,8 +5725,6 @@ re-established when the application is re-opened.
     setting->setValue("lastPrefPage", (int)lastPrefPage);
     setting->setValue("mouseClickScroll", (bool)mouseClickScroll);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
-//    setting->setValue("displayHorizontalPixels", displayHorizontalPixels);
-//    setting->setValue("displayVerticalPixels", displayVerticalPixels);
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
     setting->setValue("autoEjectUSB", autoEjectUsb);
 
@@ -5545,13 +5734,11 @@ re-established when the application is re-opened.
     setting->setValue("classificationBadgeInThumbDiameter", thumbView->badgeSize);
 
     // files
-//    setting->setValue("showHiddenFiles", (bool)G::showHiddenFiles);
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("showImageCount", showImageCountAction->isChecked());
     setting->setValue("combineRawJpg", combineRawJpg);
-//    setting->setValue("maxRecentFolders", maxRecentFolders);
     setting->setValue("useWheelToScroll", imageView->useWheelToScroll);
     setting->setValue("ingestRootFolder", ingestRootFolder);
 
@@ -5564,16 +5751,19 @@ re-established when the application is re-opened.
     setting->setValue("showThumbLabels", (bool)thumbView->showThumbLabels);
     setting->setValue("wrapThumbs", (bool)thumbView->wrapThumbs);
 
+    // grid
     setting->setValue("thumbSpacingGrid", gridView->thumbSpacing);
     setting->setValue("thumbPaddingGrid", gridView->thumbPadding);
     setting->setValue("thumbWidthGrid", gridView->thumbWidth);
     setting->setValue("thumbHeightGrid", gridView->thumbHeight);
     setting->setValue("labelFontSizeGrid", gridView->labelFontSize);
     setting->setValue("showThumbLabelsGrid", (bool)gridView->showThumbLabels);
+
     // slideshow
     setting->setValue("slideShowDelay", (int)slideShowDelay);
     setting->setValue("slideShowRandom", (bool)slideShowRandom);
     setting->setValue("slideShowWrap", (bool)slideShowWrap);
+
     // cache
     setting->setValue("cacheSizeMB", (int)cacheSizeMB);
     setting->setValue("isShowCacheStatus", (bool)isShowCacheStatus);
@@ -5584,6 +5774,7 @@ re-established when the application is re-opened.
     setting->setValue("isCachePreview", (int)isCachePreview);
     setting->setValue("cachePreviewWidth", (int)cachePreviewWidth);
     setting->setValue("cachePreviewHeight", (int)cachePreviewHeight);
+
     // full screen
     setting->setValue("isFullScreenFolders", (bool)fullScreenDocks.isFolders);
     setting->setValue("isFullScreenFavs", (bool)fullScreenDocks.isFavs);
@@ -5591,11 +5782,11 @@ re-established when the application is re-opened.
     setting->setValue("isFullScreenMetadata", (bool)fullScreenDocks.isMetadata);
     setting->setValue("isFullScreenThumbs", (bool)fullScreenDocks.isThumbs);
     setting->setValue("isFullScreenStatusBar", (bool)fullScreenDocks.isStatusBar);
+
     // state
     setting->setValue("Geometry", saveGeometry());
     setting->setValue("WindowState", saveState());
     setting->setValue("isFullScreen", (bool)isFullScreen());
-//    setting->setValue("isFullScreen", (bool)fullScreenAction->isChecked());
 
     setting->setValue("isRatingBadgeVisible", (bool)ratingBadgeVisibleAction->isChecked());
     setting->setValue("isImageInfoVisible", (bool)infoVisibleAction->isChecked());
@@ -5604,7 +5795,6 @@ re-established when the application is re-opened.
     setting->setValue("isTableDisplay", (bool)asTableAction->isChecked());
     setting->setValue("isCompareDisplay", (bool)asCompareAction->isChecked());
 
-//    setting->setValue("isWindowTitleBarVisible", (bool)windowTitleBarVisibleAction->isChecked());
     setting->setValue("isMenuBarVisible", (bool)menuBarVisibleAction->isChecked());
     setting->setValue("isStatusBarVisible", (bool)statusBarVisibleAction->isChecked());
     setting->setValue("isFolderDockVisible", (bool)folderDockVisibleAction->isChecked());
@@ -5618,20 +5808,6 @@ re-established when the application is re-opened.
     setting->setValue("isMetadataDockLocked", (bool)metadataDockLockAction->isChecked());
     setting->setValue("isThumbDockLocked", (bool)thumbDockLockAction->isChecked());
     setting->setValue("wasThumbDockVisible", wasThumbDockVisible);
-
-    // not req'd
-//    setting->setValue("thumbsSortFlags", (int)thumbView->thumbsSortFlags);
-
-//    setting->setValue("thumbsZoomVal", (int)thumbView->thumbSize);
-
-    /* Action shortcuts */
-//    GData::appSettings->beginGroup("Shortcuts");
-//    QMapIterator<QString, QAction *> scIter(actionKeys);
-//    while (scIter.hasNext()) {
-//        scIter.next();
-//        GData::appSettings->setValue(scIter.key(), scIter.value()->shortcut().toString());
-//    }
-//    GData::appSettings->endGroup();
 
     /* InfoView okToShow fields */
     setting->beginGroup("InfoFields");
@@ -5648,11 +5824,6 @@ re-established when the application is re-opened.
             setting->setValue(field, showField);
         }
     }
-//    for(int row = 0; row < infoView->ok->rowCount(); row++) {
-//        QString field = infoView->ok->index(row, 1).data().toString();
-//        bool showField = infoView->ok->index(row, 0).data().toBool();
-//        setting->setValue(field, showField);
-//    }
     setting->endGroup();
 
     /* TableView okToShow fields */
@@ -5676,6 +5847,7 @@ re-established when the application is re-opened.
         setting->setValue(pathIter.key(), pathIter.value());
     }
     setting->endGroup();
+
     // save filename templates
     setting->setValue("filenameTemplateSelected", (int)filenameTemplateSelected);
     setting->beginGroup("FileNameTokens");
@@ -5724,6 +5896,15 @@ re-established when the application is re-opened.
     for (int i=0; i < recentFolders->count(); i++) {
         setting->setValue("recentFolder" + QString::number(i+1),
                           recentFolders->at(i));
+    }
+    setting->endGroup();
+
+    /* save ingest history folders */
+    setting->beginGroup("IngestHistoryFolders");
+    setting->remove("");
+    for (int i=0; i < ingestHistoryFolders->count(); i++) {
+        setting->setValue("ingestHistoryFolder" + QString::number(i+1),
+                          ingestHistoryFolders->at(i));
     }
     setting->endGroup();
 
@@ -5784,8 +5965,8 @@ bool MW::loadSettings()
 1.  Action settings
 2.  Preferences
 
-Action settings are maintained by the actions ie action->isChecked();
-They are updated on creation.
+Not all settings are loaded here in this function, since this function is called before the
+actions and many object, such as imageView, are created.
 
 Preferences are located in the prefdlg class and updated here.
 */
@@ -5794,16 +5975,13 @@ Preferences are located in the prefdlg class and updated here.
     G::track(__FUNCTION__);
     #endif
     }
-    needThumbsRefresh = false;
-
-    // default values for first time use
+    // default values for first time use (settings does not yet exist)
     if (!setting->contains("cacheSizeMB")) {
         // general
         lastPrefPage = 0;
         imageView->toggleZoom = 1.0;
         rememberLastDir = true;
         mouseClickScroll = false;
-//        maxRecentFolders = 10;
         bookmarks->bookmarkPaths.insert(QDir::homePath());
         imageView->useWheelToScroll = true;
         imageView->toggleZoom = 1.0;
@@ -5837,15 +6015,6 @@ Preferences are located in the prefdlg class and updated here.
     }
 
     // general
-    lastPrefPage = setting->value("lastPrefPage").toInt();
-    mouseClickScroll = setting->value("mouseClickScroll").toBool();
-    qreal tempZoom = setting->value("toggleZoomValue").toReal();
-    if (tempZoom > 3) tempZoom = 1;
-    if (tempZoom < 0.25) tempZoom = 1;
-    imageView->toggleZoom = tempZoom;
-    compareImages->toggleZoom = tempZoom;
-//    displayHorizontalPixels = setting->value("displayHorizontalPixels").toInt();
-//    displayVerticalPixels = setting->value("displayVerticalPixels").toInt();
     autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
     autoEjectUsb = setting->value("autoEjectUSB").toBool();
 
@@ -5853,21 +6022,18 @@ Preferences are located in the prefdlg class and updated here.
     fontSize = setting->value("fontSize").toString();
     classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
     classificationBadgeInThumbDiameter = setting->value("classificationBadgeInThumbDiameter").toInt();
+    isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
 
     // files
-//    G::showHiddenFiles = setting->value("showHiddenFiles").toBool();
     rememberLastDir = setting->value("rememberLastDir").toBool();
     lastDir = setting->value("lastDir").toString();
-    showImageCountAction->setChecked(setting->value("showImageCount").toBool());
-    combineRawJpgAction->setChecked(setting->value("combineRawJpg").toBool());
-//    combineRawJpg = setting->value("combineRawJpg").toBool();
     ingestRootFolder = setting->value("ingestRootFolder").toString();
-    // trackpad
-    imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
+
     // slideshow
     slideShowDelay = setting->value("slideShowDelay").toInt();
     slideShowRandom = setting->value("slideShowRandom").toBool();
     slideShowWrap = setting->value("slideShowWrap").toBool();
+
     // cache
     cacheSizeMB = setting->value("cacheSizeMB").toInt();
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
@@ -5878,6 +6044,7 @@ Preferences are located in the prefdlg class and updated here.
     isCachePreview = setting->value("isCachePreview").toBool();
     cachePreviewWidth = setting->value("cachePreviewWidth").toInt();
     cachePreviewHeight = setting->value("cachePreviewHeight").toInt();
+
     // full screen
     fullScreenDocks.isFolders = setting->value("isFullScreenFolders").toBool();
     fullScreenDocks.isFavs = setting->value("isFullScreenFavs").toBool();
@@ -5885,106 +6052,6 @@ Preferences are located in the prefdlg class and updated here.
     fullScreenDocks.isMetadata = setting->value("isFullScreenMetadata").toBool();
     fullScreenDocks.isThumbs = setting->value("isFullScreenThumbs").toBool();
     fullScreenDocks.isStatusBar = setting->value("isFullScreenStatusBar").toBool();
-
-    // load state (action->setChecked in action creation)
-    fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
-    ratingBadgeVisibleAction->setChecked(setting->value("isRatingBadgeVisible").toBool());
-    isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
-    infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());
-    asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool() ||
-                              setting->value("isCompareDisplay").toBool());
-    asGridAction->setChecked(setting->value("isGridDisplay").toBool());
-    asTableAction->setChecked(setting->value("isTableDisplay").toBool());
-    asCompareAction->setChecked(false); // never start with compare set true
-//    showThumbLabelsAction->setChecked(thumbView->showThumbLabels);
-
-//    windowTitleBarVisibleAction->setChecked(setting->value("isWindowTitleBarVisible").toBool());
-    menuBarVisibleAction->setChecked(setting->value("isMenuBarVisible").toBool());
-    statusBarVisibleAction->setChecked(setting->value("isStatusBarVisible").toBool());
-    folderDockVisibleAction->setChecked(setting->value("isFolderDockVisible").toBool());
-    favDockVisibleAction->setChecked(setting->value("isFavDockVisible").toBool());
-    filterDockVisibleAction->setChecked(setting->value("isFilterDockVisible").toBool());
-    metadataDockVisibleAction->setChecked(setting->value("isMetadataDockVisible").toBool());
-    thumbDockVisibleAction->setChecked(setting->value("isThumbDockVisible").toBool());
-    folderDockLockAction->setChecked(setting->value("isFolderDockLocked").toBool());
-    favDockLockAction->setChecked(setting->value("isFavDockLocked").toBool());
-    filterDockLockAction->setChecked(setting->value("isFilterDockLocked").toBool());
-    metadataDockLockAction->setChecked(setting->value("isMetadataDockLocked").toBool());
-    thumbDockLockAction->setChecked(setting->value("isThumbDockLocked").toBool());
-    if (folderDockLockAction->isChecked() &&
-        favDockLockAction->isChecked() &&
-        filterDockLockAction->isChecked() &&
-        metadataDockLockAction->isChecked() &&
-        thumbDockLockAction->isChecked())
-        allDocksLockAction->setChecked(true);
-    wasThumbDockVisible = setting->value("wasThumbDockVisible").toBool();
-
-    /* read InfoView okToShow fields */
-//    qDebug() << G::t.restart() << "\t" << "\nread InfoView okToShow fields\n";
-    setting->beginGroup("InfoFields");
-    QStringList setFields = setting->childKeys();
-    QList<QStandardItem *> itemList;
-    QStandardItemModel *k = infoView->ok;
-    // go through every setting in QSettings
-    bool isFound;
-    for (int i = 0; i < setFields.size(); ++i) {
-        isFound = false;
-        // Get a field and boolean
-        QString setField = setFields.at(i);
-        bool okToShow = setting->value(setField).toBool();
-        int row;
-        // search for the matching item in infoView
-        for (row = 0; row < k->rowCount(); row++) {
-            isFound = false;
-            QModelIndex idParent = k->index(row, 0);
-            QString fieldName = qvariant_cast<QString>(idParent.data());
-            // find the match
-//            qDebug() << G::t.restart() << "\t" << "Comparing parent" << fieldName << "to"<< setField;
-            if (fieldName == setField) {
-                QModelIndex idParentChk = k->index(row, 2);
-                // set the flag whether to display or not
-                k->setData(idParentChk, okToShow, Qt::EditRole);
-//                qDebug() << G::t.restart() << "\t" << "Parent match so set to" << okToShow
-//                         << idParent.data().toString() << "\n";
-                isFound = true;
-                break;
-            }
-            for (int childRow = 0; childRow < k->rowCount(idParent); childRow++) {
-                QModelIndex idChild = k->index(childRow, 0, idParent);
-                QString fieldName = qvariant_cast<QString>(idChild.data());
-                // find the match
-//                qDebug() << G::t.restart() << "\t" << "Comparing child" << fieldName << "to"<< setField;
-                if (fieldName == setField) {
-                    QModelIndex idChildChk = k->index(childRow, 2, idParent);
-                    // set the flag whether to display or not
-                    k->setData(idChildChk, okToShow, Qt::EditRole);
-//                    qDebug() << G::t.restart() << "\t" << "Child match so set to" << okToShow
-//                             << idChild.data().toString() << "\n";
-                    isFound = true;
-                    break;
-                }
-                if (isFound) break;
-            }
-            if (isFound) break;
-        }
-    }
-    setting->endGroup();
-
-    /* read TableView okToShow fields */
-    setting->beginGroup("TableFields");
-    setFields = setting->childKeys();
-//    QList<QStandardItem *> itemList;
-    for (int i = 0; i <setFields.size(); ++i) {
-        QString setField = setFields.at(i);
-        bool okToShow = setting->value(setField).toBool();
-        itemList = tableView->ok->findItems(setField);
-        if (itemList.length()) {
-            int row = itemList[0]->row();
-            QModelIndex idx = tableView->ok->index(row, 1);
-            tableView->ok->setData(idx, okToShow, Qt::EditRole);
-        }
-    }
-    setting->endGroup();
 
     /* read external apps */
     /* moved to createActions as required to populate open with ... menu */
@@ -6008,25 +6075,6 @@ Preferences are located in the prefdlg class and updated here.
     }
     setting->endGroup();
 
-    /* read info token templates moved to createImageView as is reqd early*/
-//    currentInfoTemplate = setting->value("currentInfoTemplate").toString();
-//    setting->beginGroup("InfoTokens");
-//    keys = setting->childKeys();
-//    for (int i = 0; i < keys.size(); ++i) {
-//        QString key = keys.at(i);
-//        infoTemplates[key] = setting->value(key).toString();
-//    }
-//    setting->endGroup();
-
-    /* read bookmarks */
-    setting->beginGroup("Bookmarks");
-    QStringList paths = setting->childKeys();
-    for (int i = 0; i < paths.size(); ++i) {
-        bookmarks->bookmarkPaths.insert(setting->value(paths.at(i)).toString());
-    }
-    bookmarks->reloadBookmarks();
-    setting->endGroup();
-
     /* read recent folders */
     setting->beginGroup("RecentFolders");
     QStringList recentList = setting->childKeys();
@@ -6035,54 +6083,30 @@ Preferences are located in the prefdlg class and updated here.
     }
     setting->endGroup();
 
-    /* read ingest description completer list */
+    /* read ingest history folders */
+    setting->beginGroup("IngestHistoryFolders");
+    QStringList ingestHistoryList = setting->childKeys();
+    qDebug() << "ingestHistoryList setting->childKeys() = " << ingestHistoryList;
+    for (int i = 0; i < ingestHistoryList.size(); ++i) {
+        ingestHistoryFolders->append(setting->value(ingestHistoryList.at(i)).toString());
+        qDebug() << i << "MW::loadSettings ingestHistoryFolders ="
+                 << ingestHistoryFolders
+                 << "settings = "
+                 << setting->value(ingestHistoryList.at(i)).toString();
+    }
+    setting->endGroup();
+
+    /* read ingest description completer list
+       Can use a simpler format to read the list (compared to read recent folders)
+       because there will not be any "/" or "\" characters which the windows registry
+       does not like.
+    */
     setting->beginGroup("IngestDescriptionCompleter");
     ingestDescriptionCompleter = setting->childKeys();
     setting->endGroup();
 
     // moved read workspaces to separate function as req'd by actions while the
     // rest of QSettings are dependent on actions being defined first.
-
-    /* read workspaces */
-//    int size = setting->beginReadArray("workspaces");
-//    for (int i = 0; i < size; ++i) {
-//        setting->setArrayIndex(i);
-//        ws.accelNum = setting->value("accelNum").toString();
-//        ws.name = setting->value("name").toString();
-//        ws.geometry = setting->value("geometry").toByteArray();
-//        ws.state = setting->value("state").toByteArray();
-//        ws.isFullScreen = setting->value("isFullScreen").toBool();
-//        ws.isWindowTitleBarVisible = setting->value("isWindowTitleBarVisible").toBool();
-//        ws.isMenuBarVisible = setting->value("isMenuBarVisible").toBool();
-//        ws.isStatusBarVisible = setting->value("isStatusBarVisible").toBool();
-//        ws.isFolderDockVisible = setting->value("isFolderDockVisible").toBool();
-//        ws.isFavDockVisible = setting->value("isFavDockVisible").toBool();
-//        ws.isMetadataDockVisible = setting->value("isMetadataDockVisible").toBool();
-//        ws.isThumbDockVisible = setting->value("isThumbDockVisible").toBool();
-//        ws.isFolderDockLocked = setting->value("isFolderDockLocked").toBool();
-//        ws.isFavDockLocked = setting->value("isFavDockLocked").toBool();
-//        ws.isMetadataDockLocked = setting->value("isMetadataDockLocked").toBool();
-//        ws.isThumbDockLocked = setting->value("isThumbDockLocked").toBool();
-//        ws.thumbSpacing = setting->value("thumbSpacing").toInt();
-//        ws.thumbPadding = setting->value("thumbPadding").toInt();
-//        ws.thumbWidth = setting->value("thumbWidth").toInt();
-//        ws.thumbHeight = setting->value("thumbHeight").toInt();
-//        ws.labelFontSize = setting->value("labelFontSize").toInt();
-//        ws.showThumbLabels = setting->value("showThumbLabels").toBool();
-//        ws.thumbSpacingGrid = setting->value("thumbSpacingGrid").toInt();
-//        ws.thumbPaddingGrid = setting->value("thumbPaddingGrid").toInt();
-//        ws.thumbWidthGrid = setting->value("thumbWidthGrid").toInt();
-//        ws.thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
-//        ws.labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
-//        ws.showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
-//        ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-//        ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
-//        ws.isGridDisplay = setting->value("isGridDisplay").toBool();
-//        ws.isTableDisplay = setting->value("isTableDisplay").toBool();
-//        ws.isCompareDisplay = setting->value("isCompareDisplay").toBool();
-//        workspaces->append(ws);
-//    }
-//    setting->endArray();
 
     return true;
 }
@@ -7248,6 +7272,8 @@ void MW::ingest()
                                   autoIngestFolderPath);
         connect(ingestDlg, SIGNAL(updateIngestParameters(QString,bool)),
                 this, SLOT(setIngestRootFolder(QString,bool)));
+        connect(ingestDlg, SIGNAL(updateIngestHistory(QString)),
+                this, SLOT(addIngestHistoryFolder(QString)));
         if(ingestDlg->exec() && autoEjectUsb) ejectUsb(currentViewDir);;
         delete ingestDlg;
     }
@@ -7262,6 +7288,7 @@ void MW::ejectUsb(QString path)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << path;
     QString driveRoot;      // ie WIN "D:\" or MAC "Untitled"
 #if defined(Q_OS_WIN)
     driveRoot = path.left(3);
@@ -7279,8 +7306,9 @@ void MW::ejectUsb(QString path)
         int result = Usb::eject(driveRoot);
         if(result < 2) {
             popUp->showPopup(this, "Ejecting drive " + driveRoot, 2000, 0.75);
-            noFolderSelected();
-            currentViewDir = "";
+            folderSelectionChange();
+//            noFolderSelected();
+//            currentViewDir = "";
         }
         else
             popUp->showPopup(this, "Failed to eject drive " + driveRoot, 2000, 0.75);
@@ -7289,6 +7317,11 @@ void MW::ejectUsb(QString path)
         popUp->showPopup(this, "Drive " + currentViewDir[0]
                 + " is not removable and cannot be ejected", 2000, 0.75);
     }
+}
+
+void MW::ejectUsbFromMainMenu()
+{
+    ejectUsb(currentViewDir);
 }
 
 void MW::ejectUsbFromContextMenu()
@@ -7359,10 +7392,28 @@ be if a new folder has been selected but the image cache has not yet redirected.
 
 void MW::updateClassification()
 {
+/*
+Each image in the datamodel can be assigned a variety of classifications:
+    - picked
+    - rating (1 - 5)
+    - color class (some programs like lightroom call this "label"
+
+The classifications are combined in a badge (a circle pixmap).  This function updates
+the badge based on the values in the datamodel.
+
+The function is called when the user changes a classification and when a new folder
+is selected.  If the previous folder active image had a visible classification badge
+and then the user switches to a folder with no images or ejects the drive then make
+sure the classification label is not visible.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    }
+    // check if still in a folder with images
+    if (dm->rowCount() < 1) {
+        imageView->classificationLabel->setVisible(false);
     }
     int row = thumbView->currentIndex().row();
     isPick = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
@@ -8046,19 +8097,18 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     G::track(__FUNCTION__);
     #endif
     }
-    QDir testDir(fPath);
     QString msg;
 
     if (fPath.length() == 0) {
         if (report) {
-//            qDebug() << G::t.restart() << "\t" << "MW::isFolderValid  fPath.length() == 0" << fPath;
-//            QMessageBox::critical(this, tr("Error"), tr("The assigned folder name is blank"));
-            msg = "The selected folder \"" + fPath + "\" does not have any images that can be shown in Winnow.";
+            msg = "No folder selected.";
             stateLabel->setText("");
             setCentralMessage(msg);
         }
         return false;
     }
+
+    QDir testDir(fPath);
 
     if (!testDir.exists()) {
         if (report) {
@@ -8145,84 +8195,85 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    progressBar->clearProgress();
 
-//    selectedRows = selectionModel->selectedRows();
-//    QModelIndex idx = dm->sf->index(2, 0);
-//    thumbView->setCurrentIndex(idx);
+    /*
 
-//    selectedRows = thumbView->selectionModel()->selectedRows();
-//    qDebug() << "MW::test  selectedRows:"
-//             << selectedRows.count()
-//             << selectedRows;
+    QAbstractItemModel *fs = fsTree->model();
+    QModelIndex id0 = fsTree->selectionModel()->selectedRows().at(0);
+    QModelIndex idx = fs->index(id0.row(), 4, id0.parent());
 
+    QVariant fPath = fs->data(id0, QFileSystemModel::FilePathRole);
+    QVariant imageCount = fs->data(idNum);
+    qDebug() << fPath;
 
+    fs->setData(idx, "99", Qt::DisplayRole);
 
-
-//    QString fontSize = "8";
-//    QString s = "QWidget {font-size: " + fontSize + "px;}";
-//    this->setStyleSheet(s + css);
-
-
-    //    qDebug() << "selection clear from test";
-//    thumbView->selectionModel()->clearSelection();
-
-//    QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedRows();
-//    for (int tn = 0; tn < selectedIdxList.size() ; ++tn) {
-//        QString s = selectedIdxList[tn].data(G::PathRole).toString();
-//        qDebug() << "Selected image:" << s;
-//    }
-
-//    dm->clear();
-
-//    qDebug() << "Attempting to eject drive " << currentViewDir[0] << "currentViewDir =" << currentViewDir
-//             << "Unicode =" << currentViewDir[0].unicode();;
-//    char driveLetter = currentViewDir[0].unicode();
-//    if(Usb::isUsb(driveLetter)) {
-//        QString driveRoot = currentViewDir.left(3);
-//        dm->load(driveRoot, false);
-//        refreshFolders();
-//        bool result = Usb::eject(driveLetter);
-//        qDebug() << "eject result =" << result;
-
-//    }
-//    else {
-//        qDebug() << "Drive " << currentViewDir[0] << "is not removable and cannot be ejected";
-//    }
-//    return;
+    QString fontSize = "8";
+    QString s = "QWidget {font-size: " + fontSize + "px;}";
+    this->setStyleSheet(s + css);
 
 
-//    char driveLetter = 'P';
-//    char devicepath[7];
-//    char format[] = "\\\\.\\?:";
-//    strcpy_s(devicepath, format);
-//    devicepath[4] = driveLetter;
-//    DWORD dwRet = 0;
-//    wchar_t wtext[7];
-//    size_t textlen = 7;
-//    mbstowcs_s(&textlen, wtext, devicepath,strlen(devicepath)+1);
+        qDebug() << "selection clear from test";
+    thumbView->selectionModel()->clearSelection();
 
-//    HANDLE handle = CreateFile(wtext, GENERIC_READ, FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
-//    DWORD bytes = 0;
-//    DeviceIoControl(handle, FSCTL_LOCK_VOLUME, 0, 0, 0, 0, &bytes, 0);
-//    DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, 0, 0, 0, 0, &bytes, 0);
-//    DeviceIoControl(handle, IOCTL_STORAGE_EJECT_MEDIA, 0, 0, 0, 0, &bytes, 0);
-//    CloseHandle(handle);
+    QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedRows();
+    for (int tn = 0; tn < selectedIdxList.size() ; ++tn) {
+        QString s = selectedIdxList[tn].data(G::PathRole).toString();
+        qDebug() << "Selected image:" << s;
+    }
 
-//    qDebug() << "Ejected ";
+    dm->clear();
 
-//    qDebug() << QImageReader::supportedImageFormats();
-//    helpShortcuts();
+    qDebug() << "Attempting to eject drive " << currentViewDir[0] << "currentViewDir =" << currentViewDir
+             << "Unicode =" << currentViewDir[0].unicode();;
+    char driveLetter = currentViewDir[0].unicode();
+    if(Usb::isUsb(driveLetter)) {
+        QString driveRoot = currentViewDir.left(3);
+        dm->load(driveRoot, false);
+        refreshFolders();
+        bool result = Usb::eject(driveLetter);
+        qDebug() << "eject result =" << result;
 
-//    metadata->reportMetadataCache(thumbView->getCurrentFilename());
+    }
+    else {
+        qDebug() << "Drive " << currentViewDir[0] << "is not removable and cannot be ejected";
+    }
+    return;
 
-    //    QString s = thumbView->getCurrentFilename();
-//    qDebug() << "MW::test thumbView->getCurrentFilename() =" << s;
 
-//    QLabel *label = new QLabel;
-//    label->setText(" TEST ");
-//    label->setStyleSheet("QLabel{color:yellow;}");
-//    menuBar()->setCornerWidget(label, Qt::TopRightCorner);
+    char driveLetter = 'P';
+    char devicepath[7];
+    char format[] = "\\\\.\\?:";
+    strcpy_s(devicepath, format);
+    devicepath[4] = driveLetter;
+    DWORD dwRet = 0;
+    wchar_t wtext[7];
+    size_t textlen = 7;
+    mbstowcs_s(&textlen, wtext, devicepath,strlen(devicepath)+1);
+
+    HANDLE handle = CreateFile(wtext, GENERIC_READ, FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
+    DWORD bytes = 0;
+    DeviceIoControl(handle, FSCTL_LOCK_VOLUME, 0, 0, 0, 0, &bytes, 0);
+    DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, 0, 0, 0, 0, &bytes, 0);
+    DeviceIoControl(handle, IOCTL_STORAGE_EJECT_MEDIA, 0, 0, 0, 0, &bytes, 0);
+    CloseHandle(handle);
+
+    qDebug() << "Ejected ";
+
+    qDebug() << QImageReader::supportedImageFormats();
+    helpShortcuts();
+
+    metadata->reportMetadataCache(thumbView->getCurrentFilename());
+
+        QString s = thumbView->getCurrentFilename();
+    qDebug() << "MW::test thumbView->getCurrentFilename() =" << s;
+
+    QLabel *label = new QLabel;
+    label->setText(" TEST ");
+    label->setStyleSheet("QLabel{color:yellow;}");
+    menuBar()->setCornerWidget(label, Qt::TopRightCorner);
+
+*/
 }
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"

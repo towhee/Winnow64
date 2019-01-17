@@ -1,5 +1,8 @@
 BUGS
+_ Sometimes when select new folder first image shows as selected but cannot change classification
+- Create sidecar file before open with in case other app can use metadata in sidecar
 - Select in grid sometimes misses thumbs in a column
+- check if cacheDelay is still important
 - Monitor res not always showing
 - Disable Ingest menu when no picks
 - Open with ... (doesn't work on macOS)
@@ -7,9 +10,11 @@ BUGS
 PERFORMANCE
 - show image count in folders panel slows UI
 CODE IMPROVEMENTS
+- Show cursor as separate label on top of cacheLabel to improve performance.
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Detect drive mounting
 - Horizontal scroll thumbs 1/2 window shortcut
 - Maintain log on ingests
 - Track downloads by ip address
@@ -28,6 +33,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- From main menu cannot eject drive the should be able to but works from folders context menu
+- Classification label still visible when eject drive
+- Rotate CCW menu missing shortcut in context menu
 - add cache size to the metadata panel
 - Collapse folders shortcut
 - Sometimes slow loading metadata
