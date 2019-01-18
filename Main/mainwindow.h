@@ -35,6 +35,7 @@
 #include "Image/thumb.h"
 //#include "dircompleter.h"
 #include "prefdlg.h"
+#include "updateapp.h"
 #include "workspacedlg.h"
 #include "zoomdlg.h"
 #include "Utilities/utilities.h"
@@ -60,6 +61,15 @@ public:
 
     QString version = "0.9.6.3";
     QString versionDetail = "Minor bug fixes";
+    QString updateNotes =
+        "<div style=' color: #666666; padding-top: 5px;'>"
+        "<ul>"
+        "<li>Added optional automatic check for updates.  This can be turned on in preferences.</li>"
+        "<li>Corrected problem where the USB drive would not be ejected when executed from the main menu.</li>"
+        "<li>Corrected issues when change modes and select invalid folders.</li></div>"
+        ""
+        ""
+        "";
 
     bool isShift;               // used when opening if shift key pressed
 
@@ -144,6 +154,7 @@ public:
     int displayVerticalPixels;
     bool autoIngestFolderPath;
     bool autoEjectUsb;
+    bool checkIfUpdate = true;
 
     // appearance
     bool isRatingBadgeVisible;
@@ -230,6 +241,7 @@ protected:
     void moveEvent(QMoveEvent *event);
     void resizeEvent(QResizeEvent *event);
     void closeEvent(QCloseEvent *event);
+    void showEvent(QShowEvent *event);
     void keyPressEvent(QKeyEvent *event);
     void keyReleaseEvent(QKeyEvent *event);
 //    void mouseMoveEvent(QMouseEvent *event);
@@ -260,6 +272,7 @@ signals:
     void closeZoomDlg();
 
 private slots:
+    bool checkForUpdate();
     void setShowImageCount();
     void about();
     void ingest();
@@ -686,6 +699,7 @@ private:
     InfoView *infoView;
     IngestDlg *ingestDlg;
     WorkspaceDlg *workspaceDlg;
+    UpdateApp *updateAppDlg;
     ZoomDlg *zoomDlg = 0;
     PopUp *popUp;
     QTimer *slideShowTimer;
@@ -757,7 +771,6 @@ private:
     void clearAll();
     void deleteViewerImage();
     void selectCurrentViewDir();
-    bool checkForUpdate();
     void handleStartupArgs();
     void addMenuSeparator(QWidget *widget);
     void createActions();
