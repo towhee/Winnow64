@@ -14,6 +14,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Check for updates
 - Detect drive mounting
 - Horizontal scroll thumbs 1/2 window shortcut
 - Maintain log on ingests
