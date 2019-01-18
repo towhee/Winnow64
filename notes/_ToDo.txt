@@ -1,4 +1,5 @@
 BUGS
+- Monitor resoltion function fails when window centroid moves off screen - app crashes
 _ Sometimes when select new folder first image shows as selected but cannot change classification
 - Create sidecar file before open with in case other app can use metadata in sidecar
 - Select in grid sometimes misses thumbs in a column
@@ -9,15 +10,15 @@ _ Sometimes when select new folder first image shows as selected but cannot chan
 - Toggle zoom wrong place when using preview size cached image
 PERFORMANCE
 - show image count in folders panel slows UI
-CODE IMPROVEMENTS
 - Show cursor as separate label on top of cacheLabel to improve performance.
+- try multiple caching threads
+CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Check for updates
+- Check for updates on Mac
 - Detect drive mounting
 - Horizontal scroll thumbs 1/2 window shortcut
-- Maintain log on ingests
 - Track downloads by ip address
 - Invert filter
 - Make all message boxes consistent (see runExternalApp)
@@ -34,7 +35,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Check for updates on Windows
 - From main menu cannot eject drive the should be able to but works from folders context menu
+- Maintain log on ingests
 - Classification label still visible when eject drive
 - Rotate CCW menu missing shortcut in context menu
 - add cache size to the metadata panel
