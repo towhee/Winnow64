@@ -500,6 +500,11 @@ bool MW::event(QEvent *event)
 
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     event->acceptProposedAction();
 }
 
@@ -510,6 +515,11 @@ void MW::dropEvent(QDropEvent *event)
 
 void MW::handleDrop(const QMimeData *mimeData)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (mimeData->hasUrls())
     {
         dragDropFilePath = mimeData->urls().at(0).toLocalFile();
@@ -530,6 +540,17 @@ void MW::handleDrop(const QMimeData *mimeData)
 
 bool MW::checkForUpdate()
 {
+/* Called from the help menu and from the main window show event if (ifCheckUpdate = true)
+   The Qt maintenancetool, an executable in the Winnow folder, checks to see if there is an
+   update on the Winnow server.  If there is then Winnow is closed and the maintenancetool
+   performs the install of the update.  When that is completed the maintenancetool opens
+   Winnow again.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
 #ifdef Q_OS_MAC
     return false;
 #endif
@@ -636,27 +657,14 @@ void MW::folderSelectionChange()
     G::track("\n======================================================================================================");
     G::track(__FUNCTION__);
     #endif
-    #ifdef ISPROFILE
-    G::track("\n======================================================================================================");
-    G::track(__FUNCTION__);
-    #endif
     }
-    // Check if same folder
-    QString dirPath;
-    if (isInitializing) {
-//        centralLayout->setCurrentIndex(StartTab);
-//        return;
-     }
-
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
     allMetadataLoaded = false;
 
-    if (!isInitializing) {
-        statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
-        qApp->processEvents();
-    }
+    statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
+    qApp->processEvents();
 
     // used by SortFilter, set true when ImageCacheThread starts
     G::isNewFolderLoaded = false;
@@ -693,13 +701,13 @@ void MW::folderSelectionChange()
         if (rememberLastDir) {
             // lastDir is from QSettings for persistent memory between sessions
             if (isFolderValid(lastDir, true, true)) {
-                dirPath = lastDir;
-//                fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath)));
-                fsTree->select(dirPath);
+                currentViewDir = lastDir;
+//                fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(currentViewDir)));
+                fsTree->select(currentViewDir);
             }
             else {
                isInitializing = false;
-               QModelIndex idx = fsTree->fsModel->index(dirPath);
+               QModelIndex idx = fsTree->fsModel->index(currentViewDir);
                if (fsTree->fsModel->hasIndex(idx.row(), idx.column(), idx.parent()))
                     fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(idx));
                return;
@@ -709,16 +717,14 @@ void MW::folderSelectionChange()
 
     // folder selected from Folders or Bookmarks(Favs)
     if (!isInitializing || !rememberLastDir) {
-        dirPath = getSelectedPath();
+        currentViewDir = getSelectedPath();
     }
 
-    currentViewDir = dirPath;
-
     // sync the favs / bookmarks with the folders view fsTree
-    bookmarks->select(dirPath);
+    bookmarks->select(currentViewDir);
 
     // confirm folder exists and is readable, report if not and do not process
-    if (!isFolderValid(dirPath, true, false)) {
+    if (!isFolderValid(currentViewDir, true, false)) {
 //        G::track(__FUNCTION__, "tiger invalid folder, exiting folderSelectionChange");
         clearAll();
         return;
@@ -1494,7 +1500,6 @@ void MW::createActions()
     // MacOS will not allow runtime menu insertions.  Cludge workaround
     // add 20 dummy menu items and then hide until use.
     n = recentFolders->count();
-    qDebug() << "create recent folder actions  n =" << n;
     for (int i = 0; i < maxRecentFolders; i++) {
         QString name;
         QString objName = "";
@@ -1604,7 +1609,6 @@ void MW::createActions()
     // MacOS will not allow runtime menu insertions.  Cludge workaround
     // add 20 dummy menu items and then hide until use.
     n = ingestHistoryFolders->count();
-    qDebug() << "create ingest history actions  n =" << n;
     for (int i = 0; i < maxIngestHistoryFolders; i++) {
         QString name;
         QString objName = "";
@@ -4352,11 +4356,10 @@ void MW::addRecentFolder(QString fPath)
 void MW::addIngestHistoryFolder(QString fPath)
 {
     {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
     }
-    qDebug() << "MW::addIngestHistoryFolder  fPath =" << fPath;
     if (!ingestHistoryFolders->contains(fPath) && fPath != "")
         ingestHistoryFolders->prepend(fPath);
     int count = ingestHistoryFolders->count();
@@ -4370,7 +4373,6 @@ void MW::addIngestHistoryFolder(QString fPath)
             ingestHistoryFolderActions.at(i)->setVisible(false);
         }
     }
-    qDebug() << "MW::addIngestHistoryFolder ingestHistoryFolders =" << ingestHistoryFolders;
 }
 
 void MW::invokeRecentFolder(QAction *recentFolderActions)
@@ -6108,14 +6110,9 @@ Preferences are located in the prefdlg class and updated here.
     /* read ingest history folders */
     setting->beginGroup("IngestHistoryFolders");
     QStringList ingestHistoryList = setting->childKeys();
-    qDebug() << "ingestHistoryList setting->childKeys() = " << ingestHistoryList;
     for (int i = 0; i < ingestHistoryList.size(); ++i) {
         ingestHistoryFolders->append(setting->value(ingestHistoryList.at(i)).toString());
-        qDebug() << i << "MW::loadSettings ingestHistoryFolders ="
-                 << ingestHistoryFolders
-                 << "settings = "
-                 << setting->value(ingestHistoryList.at(i)).toString();
-    }
+     }
     setting->endGroup();
 
     /* read ingest description completer list
