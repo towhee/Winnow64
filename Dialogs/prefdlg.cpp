@@ -23,6 +23,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->classificationBadgeImageDiamSlider->setValue(mw->classificationBadgeInImageDiameter);
     ui->classificationBadgeThumbDiamSlider->setValue(mw->classificationBadgeInThumbDiameter);
     ui->rememberFolderChk->setChecked(mw->rememberLastDir);
+    ui->updateAppChk->setChecked(mw->checkIfUpdate);
     ui->trackpadIterateRadio->setChecked(!mw->imageView->useWheelToScroll);
     ui->trackpadScrollRadio->setChecked(mw->imageView->useWheelToScroll);
     ui->mouseClickScrollChk->setChecked((mw->mouseClickScroll));
@@ -758,3 +759,8 @@ void Prefdlg::on_classificationBadgeImageDiamSlider_valueChanged(int value)
     emit updateClassificationBadgeImageDiam(value);
 }
 
+
+void Prefdlg::on_updateAppChk_stateChanged(int value)
+{
+    emit checkForUpdates(value);
+}
