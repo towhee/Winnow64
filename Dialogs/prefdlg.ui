@@ -66,7 +66,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>100</y>
+       <y>140</y>
        <width>431</width>
        <height>101</height>
       </rect>
@@ -117,11 +117,11 @@
        <x>20</x>
        <y>10</y>
        <width>431</width>
-       <height>71</height>
+       <height>111</height>
       </rect>
      </property>
      <property name="title">
-      <string>Folders preferences</string>
+      <string>When open program</string>
      </property>
      <widget class="QCheckBox" name="rememberFolderChk">
       <property name="geometry">
@@ -141,12 +141,30 @@
        <string>Remember previous folder</string>
       </property>
      </widget>
+     <widget class="QCheckBox" name="updateAppChk">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>60</y>
+        <width>261</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Check for program updates</string>
+      </property>
+     </widget>
     </widget>
     <widget class="QGroupBox" name="groupBoxFolders_2">
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>220</y>
+       <y>260</y>
        <width>431</width>
        <height>71</height>
       </rect>

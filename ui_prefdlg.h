@@ -45,6 +45,7 @@ public:
     QRadioButton *trackpadScrollRadio;
     QGroupBox *groupBoxFolders;
     QCheckBox *rememberFolderChk;
+    QCheckBox *updateAppChk;
     QGroupBox *groupBoxFolders_2;
     QCheckBox *mouseClickScrollChk;
     QWidget *page_4;
@@ -175,7 +176,7 @@ public:
         pageGeneral->setObjectName(QStringLiteral("pageGeneral"));
         groupBoxTrackpadAction = new QGroupBox(pageGeneral);
         groupBoxTrackpadAction->setObjectName(QStringLiteral("groupBoxTrackpadAction"));
-        groupBoxTrackpadAction->setGeometry(QRect(20, 100, 431, 101));
+        groupBoxTrackpadAction->setGeometry(QRect(20, 140, 431, 101));
         layoutWidget = new QWidget(groupBoxTrackpadAction);
         layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
         layoutWidget->setGeometry(QRect(20, 27, 337, 65));
@@ -196,14 +197,18 @@ public:
 
         groupBoxFolders = new QGroupBox(pageGeneral);
         groupBoxFolders->setObjectName(QStringLiteral("groupBoxFolders"));
-        groupBoxFolders->setGeometry(QRect(20, 10, 431, 71));
+        groupBoxFolders->setGeometry(QRect(20, 10, 431, 111));
         rememberFolderChk = new QCheckBox(groupBoxFolders);
         rememberFolderChk->setObjectName(QStringLiteral("rememberFolderChk"));
         rememberFolderChk->setGeometry(QRect(20, 30, 261, 20));
         rememberFolderChk->setFont(font);
+        updateAppChk = new QCheckBox(groupBoxFolders);
+        updateAppChk->setObjectName(QStringLiteral("updateAppChk"));
+        updateAppChk->setGeometry(QRect(20, 60, 261, 20));
+        updateAppChk->setFont(font);
         groupBoxFolders_2 = new QGroupBox(pageGeneral);
         groupBoxFolders_2->setObjectName(QStringLiteral("groupBoxFolders_2"));
-        groupBoxFolders_2->setGeometry(QRect(20, 220, 431, 71));
+        groupBoxFolders_2->setGeometry(QRect(20, 260, 431, 71));
         mouseClickScrollChk = new QCheckBox(groupBoxFolders_2);
         mouseClickScrollChk->setObjectName(QStringLiteral("mouseClickScrollChk"));
         mouseClickScrollChk->setGeometry(QRect(20, 30, 371, 20));
@@ -815,8 +820,9 @@ public:
         groupBoxTrackpadAction->setTitle(QApplication::translate("Prefdlg", "Trackpad Swipe Action", nullptr));
         trackpadIterateRadio->setText(QApplication::translate("Prefdlg", "Next / previous image", nullptr));
         trackpadScrollRadio->setText(QApplication::translate("Prefdlg", "Scroll current image when zoomed", nullptr));
-        groupBoxFolders->setTitle(QApplication::translate("Prefdlg", "Folders preferences", nullptr));
+        groupBoxFolders->setTitle(QApplication::translate("Prefdlg", "When open program", nullptr));
         rememberFolderChk->setText(QApplication::translate("Prefdlg", "Remember previous folder", nullptr));
+        updateAppChk->setText(QApplication::translate("Prefdlg", "Check for program updates", nullptr));
         groupBoxFolders_2->setTitle(QApplication::translate("Prefdlg", "Mouse click selection", nullptr));
         mouseClickScrollChk->setText(QApplication::translate("Prefdlg", "Scroll to position at center when mouse click", nullptr));
         groupBoxFolders_3->setTitle(QApplication::translate("Prefdlg", "Application font size", nullptr));

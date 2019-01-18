@@ -22,7 +22,8 @@ signals:
 //    void updateClassificationBadgeThumbDiam(int d);
     void updatePage(int page);
     void updateRememberFolder(bool rememberFolder);
-    void updateMouseClickScroll(bool mouseClickScroll);
+    void checkForUpdates(bool isCheck);
+    void updateMouseClickScroll(bool isUpdate);
     void updateTrackpadScroll(bool trackpadScroll);
 //    void updateDisplayResolution(int horizontalPixels, int verticalPixels);
     void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing, int thumbPadding,
@@ -92,10 +93,9 @@ private slots:
     void on_mouseClickScrollChk_clicked();
     void on_globalFontSizeSlider_valueChanged(int value);
     void on_globalFontSizeSlider_sliderReleased();
-
     void on_classificationBadgeImageDiamSlider_valueChanged(int value);
-
     void on_classificationBadgeThumbDiamSlider_valueChanged(int);
+    void on_updateAppChk_stateChanged(int value);
 
 private:
     Ui::Prefdlg *ui;
