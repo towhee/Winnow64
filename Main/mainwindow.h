@@ -356,6 +356,7 @@ private slots:
     void setClassificationBadgeThumbDiam(int d);
     void setPrefPage(int page);
     void setRememberLastDir(bool prefRememberFolder);
+    void setCheckForUpdatesApp(bool isCheck);
     void setMouseClickScroll(bool prefMouseClickScroll);
     void setTrackpadScroll(bool trackpadScroll);
     void setDisplayResolution();
