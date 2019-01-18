@@ -45,7 +45,8 @@ HEADERS += \
     Utilities/popup.h \
     Utilities/progressbar.h \
     Utilities/usb.h \
-    Utilities/utilities.h
+    Utilities/utilities.h \
+    Dialogs/updateapp.h
 
 SOURCES += \
     Cache/imagecache.cpp \
@@ -83,7 +84,8 @@ SOURCES += \
     Utilities/popup.cpp \
     Utilities/progressbar.cpp \
     Utilities/usb.cpp \
-    Utilities/utilities.cpp
+    Utilities/utilities.cpp \
+    Dialogs/updateapp.cpp
 
 # OBJECTIVE_SOURCES += MacOS/macscale.mm
 
@@ -104,7 +106,8 @@ FORMS += \
     Help/welcome.ui \
     Metadata/metadatareport.ui \
     Help/message.ui \
-    Metadata/metadatareport.ui
+    Metadata/metadatareport.ui \
+    Dialogs/updateapp.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns

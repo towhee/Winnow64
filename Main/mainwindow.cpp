@@ -103,21 +103,11 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 //    updateExternalApps();       // dependent on createActions
     handleStartupArgs();
 
-//    isSettings = false;
-//    // isLoadSettings used for debugging
-//    if (isLoadSettings) {
-//        isSettings = loadSettings();//dependent on bookmarks and actions, infoView
-//    }
-
     if (isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
         isFirstTimeNoSettings = false;
-//        // update recent folder actions and menu from settings
-//        addRecentFolder("");
-//        // update ingest history actions and menu from settings
-//        addIngestHistoryFolder("");
     }
     else {
         isFirstTimeNoSettings = true;
@@ -188,6 +178,18 @@ void MW::setupPlatform()
 }
 
 //   EVENT HANDLERS
+
+void MW::showEvent(QShowEvent *event)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QMainWindow::showEvent(event);
+    qApp->processEvents();
+    if(checkIfUpdate) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
+}
 
 void MW::closeEvent(QCloseEvent *event)
 {
@@ -528,6 +530,13 @@ void MW::handleDrop(const QMimeData *mimeData)
 
 bool MW::checkForUpdate()
 {
+#ifdef Q_OS_MAC
+    return false;
+#endif
+
+#ifdef Q_OS_LINIX
+    rerurn false;
+#endif
     QProcess process;
     process.start("maintenancetool --checkupdates");
 
@@ -545,9 +554,10 @@ bool MW::checkForUpdate()
     // Read the output
     QByteArray data = process.readAllStandardOutput();
 
-    // No output means no updates available
-    // Note that the exit code will also be 1, but we don't use that
-    // Also note that we should parse the output instead of just checking if it is empty if we want specific update info
+    /* No output means no updates available
+     Note that the exit code will also be 1, but we don't use that
+     Also note that we should parse the output instead of just checking if it is empty if we want specific update info
+    */
     if(data.isEmpty())
     {
         QString msg = "No updates available";
@@ -556,12 +566,19 @@ bool MW::checkForUpdate()
         return false;
     }
 
+    updateAppDlg = new UpdateApp(updateNotes);
+    int ret = updateAppDlg->exec();
+    if(ret == QDialog::Rejected) {
+        process.close();
+        return false;
+    }
+
     // Call the maintenance tool binary
-    // Note: we start it detached because this application need to close for the update
+    // Note: we start it detached because this application needs to close for the update
     QStringList args("--updater");
     bool startMaintenanceTool = QProcess::startDetached("maintenancetool", args);
 
-    // Close the application
+    // Close Winnow
     if (startMaintenanceTool) qApp->closeAllWindows();
     else popUp->showPopup(this, "The maintenance tool failed to open", 2000, .75);
 
@@ -626,7 +643,7 @@ void MW::folderSelectionChange()
     }
     // Check if same folder
     QString dirPath;
-    if (isInitializing && !rememberLastDir) {
+    if (isInitializing) {
 //        centralLayout->setCurrentIndex(StartTab);
 //        return;
      }
@@ -635,11 +652,6 @@ void MW::folderSelectionChange()
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
     allMetadataLoaded = false;
-
-    // Clear any previous selection
-//    thumbView->selectionModel()->clearSelection();
-//    dm->clear();
-//    qDebug() << "Clear selection in folderSelectionChange:" << thumbView->selectionModel()->selectedRows().count();
 
     if (!isInitializing) {
         statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
@@ -8195,6 +8207,10 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    updateAppDlg = new UpdateApp(updateNotes);
+    int ret = updateAppDlg->exec();
+    qDebug() << ret << QDialog::Accepted << QDialog::Rejected;
+
 
     /*
 
