@@ -59,12 +59,11 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.6.3";
-    QString versionDetail = "Minor bug fixes";
+    QString version = "0.9.6.4";
+    QString versionDetail = "Check for updates added";
     QString updateNotes =
-        "<div style=' color: #666666; padding-top: 5px;'>"
         "<ul>"
-        "<li>Added optional automatic check for updates.  This can be turned on in preferences.</li>"
+        "<li>Added optional automatic check for updates.  This can be turned on/off in preferences.</li>"
         "<li>Corrected problem where the USB drive would not be ejected when executed from the main menu.</li>"
         "<li>Corrected issues when change modes and select invalid folders.</li></div>"
         ""
