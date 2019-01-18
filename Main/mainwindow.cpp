@@ -5186,6 +5186,8 @@ void MW::preferences(int page)
             this, SLOT(setPrefPage(int)));
     connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
             this, SLOT(setRememberLastDir(bool)));
+    connect(prefdlg, SIGNAL(checkForUpdates(bool)),
+            this, SLOT(setCheckForUpdatesApp(bool)));
     connect(prefdlg, SIGNAL(updateMouseClickScroll(bool)),
             this, SLOT(setMouseClickScroll(bool)));
     connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
@@ -5257,6 +5259,11 @@ void MW::setPrefPage(int page)
 void MW::setRememberLastDir(bool prefRememberFolder)
 {
     rememberLastDir = prefRememberFolder;
+}
+
+void MW::setCheckForUpdatesApp(bool isCheck)
+{
+    checkIfUpdate = isCheck;
 }
 
 void MW::setMouseClickScroll(bool prefMouseClickScroll)
@@ -5747,6 +5754,7 @@ re-established when the application is re-opened.
 
     // files
     setting->setValue("rememberLastDir", rememberLastDir);
+    setting->setValue("checkIfUpdate", checkIfUpdate);
     setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("showImageCount", showImageCountAction->isChecked());
@@ -5993,6 +6001,7 @@ Preferences are located in the prefdlg class and updated here.
         lastPrefPage = 0;
         imageView->toggleZoom = 1.0;
         rememberLastDir = true;
+        checkIfUpdate = true;
         mouseClickScroll = false;
         bookmarks->bookmarkPaths.insert(QDir::homePath());
         imageView->useWheelToScroll = true;
@@ -6038,6 +6047,7 @@ Preferences are located in the prefdlg class and updated here.
 
     // files
     rememberLastDir = setting->value("rememberLastDir").toBool();
+    checkIfUpdate = setting->value("checkIfUpdate").toBool();
     lastDir = setting->value("lastDir").toString();
     ingestRootFolder = setting->value("ingestRootFolder").toString();
 
