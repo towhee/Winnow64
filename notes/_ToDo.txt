@@ -1,13 +1,18 @@
 BUGS
+- When repeat compare old carepare view is still visible below new one
 - Monitor resoltion function fails when window centroid moves off screen - app crashes
-_ Sometimes when select new folder first image shows as selected but cannot change classification
 - Create sidecar file before open with in case other app can use metadata in sidecar
-- Select in grid sometimes misses thumbs in a column
+- Fix editbox in some tableviews (infoview, external programs)
+- Show subfolders menu item disabled when it should not be
+- Image count not showing in bookmarks`
 - check if cacheDelay is still important
-- Monitor res not always showing
 - Disable Ingest menu when no picks
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
+OLD BUGS?
+_ Sometimes when select new folder first image shows as selected but cannot change classification
+- Monitor res not always showing
+- Select in grid sometimes misses thumbs in a column
 PERFORMANCE
 - show image count in folders panel slows UI
 - Show cursor as separate label on top of cacheLabel to improve performance.
@@ -31,10 +36,11 @@ ENHANCEMENTS
 - Get Sony image count, camera SN
 - Add zoom increment amount to preferences
 - Zoom rect in thumbnail to show zoom and pan in imageView
-- Run droplet
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Compareview grid problems when pick lass than before
+- Compareview grid not equal when mouse in grid area before changing to compare mode
 - Check for updates on Windows
 - From main menu cannot eject drive the should be able to but works from folders context menu
 - Maintain log on ingests

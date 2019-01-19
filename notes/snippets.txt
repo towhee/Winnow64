@@ -1,3 +1,18 @@
+// delete windows registry in installer
+"installscript.js"
+...
+Component.prototype.createOperations = function()
+{
+if (installer.value("os") == "win")
+{
+component.addElevatedOperation("Execute","echo do nothing","UNDOEXECUTE","cmd /C reg delete "HKEY_CURRENT_USER\Software\Company" /f")
+...
+
+The echo in the line is necessary, otherwise the installer crashes.
+This seems to be a bug in the installer.
+It works quite well, now all registry entries are deleted.
+
+
 // applescript open in photoshop
 
 on openInPhotoshop(filename, isbn)
