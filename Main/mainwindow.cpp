@@ -2929,7 +2929,7 @@ void MW::enableSelectionDependentMenus()
         openWithMenu->setEnabled(true);
         ingestAction->setEnabled(true);
         revealFileAction->setEnabled(true);
-        subFoldersAction->setEnabled(true);
+//        subFoldersAction->setEnabled(true);
         addBookmarkAction->setEnabled(true);
         reportMetadataAction->setEnabled(true);
         selectAllAction->setEnabled(true);
@@ -2988,7 +2988,7 @@ void MW::enableSelectionDependentMenus()
         openWithMenu->setEnabled(false);
         ingestAction->setEnabled(false);
         revealFileAction->setEnabled(false);
-        subFoldersAction->setEnabled(false);
+//        subFoldersAction->setEnabled(false);
         addBookmarkAction->setEnabled(false);
         reportMetadataAction->setEnabled(false);
         selectAllAction->setEnabled(false);
@@ -8214,12 +8214,14 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    compareImages->test();
+    centralLayout->setCurrentIndex(CompareTab);
+
+    /*
+
     updateAppDlg = new UpdateApp(updateNotes);
     int ret = updateAppDlg->exec();
     qDebug() << ret << QDialog::Accepted << QDialog::Rejected;
-
-
-    /*
 
     QAbstractItemModel *fs = fsTree->model();
     QModelIndex id0 = fsTree->selectionModel()->selectedRows().at(0);
