@@ -18,10 +18,12 @@ public:
 
     qreal toggleZoom;
     qreal zoomValue;
+
     bool load(const QSize &central, bool isRatingBadgeVisible, QItemSelectionModel *selectionModel);
 //    void pick(bool isPick, QModelIndex idx);
     void updateClassification(bool isPick, QString rating, QString colorClass,
                               bool isRatingBadgeVisible, QModelIndex idx);
+    void test();
 
 protected:
     void resizeEvent(QResizeEvent *event);

@@ -145,7 +145,6 @@ or loads the file otherwise.
         // reading file
         for (int i=0; i<100000; i++) {
             isLoaded = pixmap->load(fPath, displayPixmap);
-//            isLoaded = loadPixmap(fPath, displayPixmap);
             if (isLoaded) break;
         }
         if (isLoaded) {
@@ -738,6 +737,7 @@ void CompareView::enterEvent(QEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << "CompareView::enterEvent " << currentImagePath;
     select();
     // zoomToFit zoom factor can be different so do update
     emit zoomChange(zoom);
