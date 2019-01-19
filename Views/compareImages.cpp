@@ -19,17 +19,11 @@ CompareImages::CompareImages(QWidget *parent,
     G::track(__FUNCTION__);
     #endif
     }
-//    parent = 0;        // suppress compiler warning
     this->metadata = metadata;
     this->dm = dm;
     this->thumbView = thumbView;
     this->imageCacheThread = imageCacheThread;
     this->centralWidget = centralWidget;
-
-    /* this works because CompareImages is a friend class of MW.  It is used to
-    connect the signals from CompareViews forward and back buttongs to MW toggle
-    pick status*/
-//    MW *mw = qobject_cast<MW*>(parent);
 
     // set up a grid to contain the imageviews
     gridLayout = new QGridLayout;
@@ -56,13 +50,35 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     cw = centralWidgetSize;
 
     // clear old stuff
+    /* The way QGridLayout works, every time you add rows and columns it grows, but it
+       cannot shrink when you remove items.  The solution is to delete the existing
+       layout and start over.
+      */
+    // first get rid of any existing grid contents (except 1x1 option which causes crash)
+    bool okToClearGrid = !(gridLayout->rowCount() == 1 && gridLayout->columnCount() == 1);
+    if(okToClearGrid) {
+        for(int row = 0; row < gridLayout->rowCount(); ++row) {
+            for(int col = 0; col < gridLayout->columnCount(); ++col) {
+                QWidget *w = gridLayout->itemAtPosition(row, col)->widget();
+                if(w) {
+                    gridLayout->removeWidget(w);
+                    delete w;
+                }
+            }
+        }
+    }
+    // now delete the grid to get rid of excess rows and columns
+    delete gridLayout;
+    // new grid
+    gridLayout = new QGridLayout;
+    gridLayout->setContentsMargins(0, 0, 0, 0);
+    gridLayout->setMargin(0);
+    gridLayout->setSpacing(0);
+    setLayout(gridLayout);
+    setContentsMargins(0, 0, 0, 0);
+    // clear any old CompareViews
     imList->clear();
     sizeList->clear();
-    while (gridLayout->count() > 0) {
-        QWidget *w = gridLayout->itemAt(0)->widget();
-        gridLayout->removeWidget(w);
-        delete w;
-    }
 
     /* iterate selected thumbs to get image dimensions and configure grid.
     Req'd before load images as they need to know grid size to be able to scale
@@ -158,6 +174,12 @@ void CompareImages::loadGrid()
     for (row = 0; row < rows; ++row) {
         for (col = 0; col < cols; ++col) {
             gridLayout->addWidget(imList->at(i), row, col);
+            // set identical minimum size and stretch to force all cells to remain the same
+            // size relative to each other
+            gridLayout->setColumnMinimumWidth(col, 1);
+            gridLayout->setColumnStretch(col, 1);
+            gridLayout->setRowMinimumHeight(row, 1);
+            gridLayout->setRowStretch(row, 1);
             i++;
             if (i == count) break;
         }
@@ -299,7 +321,6 @@ int CompareImages::current()
     }
     QModelIndex idx = thumbView->currentIndex();
     for (int i = 0; i < imList->count(); ++i) {
-//        QModelIndex idxItem = imList->at(i)->imageIndex;
         if (imList->at(i)->imageIndex == idx) {
             return i;
         }
@@ -363,14 +384,11 @@ void CompareImages::zoom(QPointF scrollPct, QModelIndex idx, bool isZoom)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << "CompareImages::zoom  scrollPct" << scrollPct << "isZoom" << isZoom;
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slaveZoomToPct(scrollPct, isZoom);
         }
     }
-//    emit zoomChange();
-//    emit updateStatus(true, "");
 }
 
 void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
@@ -380,7 +398,6 @@ void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << "CompareImages::pan";
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slavePanToDeltaPct(scrollPct);
@@ -395,7 +412,6 @@ void CompareImages::startPan(QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() "CompareImages::startPan";
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slaveSetPanStartPct();
@@ -410,7 +426,6 @@ void CompareImages::cleanupAfterPan(QPointF deltaPct, QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << "CompareImages::cleanupAfterPan";
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slaveCleanupAfterPan(deltaPct);
@@ -524,6 +539,11 @@ each instance of CompareView, which in turn makes the proper scale change.
 
 void CompareImages::zoomToggle()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomToggle();
     }
@@ -536,6 +556,11 @@ This slot is called when a compareView is entered, either via mouse passover or
 a left/right/home/end keystroke.  All compareViews are deselected to make sure
 there are no selected "orphans".
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->deselect();
     }
@@ -553,7 +578,6 @@ so the signal is relayed on to MW, which does know about CompareImages.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug();
     qDebug() << "CompareImages::togglePickSignalRelay";
     emit togglePick();
 }
@@ -561,4 +585,27 @@ so the signal is relayed on to MW, which does know about CompareImages.
 void CompareImages::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
+}
+
+void CompareImages::test()
+{
+    bool okToClearGrid = !(gridLayout->rowCount() == 1 && gridLayout->columnCount() == 1);
+    qDebug() << "row and cols" << gridLayout->rowCount() << gridLayout->columnCount()
+             << "okToClearGrid" << okToClearGrid;
+    if(okToClearGrid) {
+        for(int row = 0; row < gridLayout->rowCount(); ++row) {
+            for(int col = 0; col < gridLayout->columnCount(); ++col) {
+                QWidget *w = gridLayout->itemAtPosition(row, col)->widget();
+                if(w) {
+                    gridLayout->removeWidget(w);
+                    delete w;
+                }
+            }
+        }
+    }
+    repaint();
+
+//    delete gridLayout;
+    imList->clear();
+    this->repaint();
 }
