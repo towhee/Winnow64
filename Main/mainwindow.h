@@ -533,10 +533,19 @@ private:
     QAction *keyDownAction;
     QAction *keyHomeAction;
     QAction *keyEndAction;
+
+    QAction *keyScrollLeftAction;
+    QAction *keyScrollRightAction;
+
     QAction *keyScrollDownAction;
     QAction *keyScrollUpAction;
+
+    QAction *keyScrollPageLeftAction;
+    QAction *keyScrollPageRightAction;
+
     QAction *keyScrollPageDownAction;
     QAction *keyScrollPageUpAction;
+
     QAction *nextPickAction;
     QAction *prevPickAction;
     QAction *rate0Action;
