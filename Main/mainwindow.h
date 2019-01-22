@@ -517,7 +517,8 @@ private:
     QAction *invertSelectionAction;
     QAction *copyImagesAction;
     QAction *refineAction;
-    QAction *pickAction;
+    QAction *pickAction;                // shortcut "`"
+    QAction *pick1Action;               // added for shortcut "P"
     QAction *popPickHistoryAction;
     QAction *filterPickAction;
     QAction *rotateLeftAction;
