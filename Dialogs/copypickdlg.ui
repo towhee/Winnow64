@@ -22,7 +22,7 @@
   <property name="modal">
    <bool>false</bool>
   </property>
-  <widget class="QGroupBox" name="groupBox">
+  <widget class="QGroupBox" name="seqGroupBox">
    <property name="geometry">
     <rect>
      <x>20</x>
@@ -531,7 +531,7 @@
      <string/>
     </property>
     <property name="text">
-     <string> Folder</string>
+     <string> Select Folder</string>
     </property>
     <property name="autoDefault">
      <bool>false</bool>
@@ -900,7 +900,7 @@
     <string/>
    </property>
    <property name="title">
-    <string>File name and sequencing</string>
+    <string>File naming and sequencing</string>
    </property>
    <widget class="QLabel" name="existingSequenceLabel">
     <property name="geometry">
@@ -924,7 +924,7 @@
      <string/>
     </property>
    </widget>
-   <widget class="QLabel" name="label_3">
+   <widget class="QLabel" name="startSeqLabel">
     <property name="geometry">
      <rect>
       <x>60</x>

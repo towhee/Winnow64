@@ -189,6 +189,7 @@ void MW::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
     qApp->processEvents();
     if(checkIfUpdate) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
+    qDebug() << "MW::showEvent   isInitializing =" << isInitializing;
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -567,8 +568,8 @@ bool MW::checkForUpdate()
     if(process.error() != QProcess::UnknownError)
     {
         QString msg = "Error checking for updates";
-        popUp->showPopup(this, msg, 1500, .5);
-        qDebug() << "Error checking for updates";
+        if(!isStartSilentCheckForUpdates) popUp->showPopup(this, msg, 1500, .5);
+        isStartSilentCheckForUpdates = false;
         return false;
     }
 
@@ -582,8 +583,8 @@ bool MW::checkForUpdate()
     if(data.isEmpty())
     {
         QString msg = "No updates available";
-        popUp->showPopup(this, msg, 1500, .5);
-        qDebug() << "No updates available";
+        if(!isStartSilentCheckForUpdates) popUp->showPopup(this, msg, 1500, .5);
+        isStartSilentCheckForUpdates = false;
         return false;
     }
 
@@ -601,7 +602,10 @@ bool MW::checkForUpdate()
 
     // Close Winnow
     if (startMaintenanceTool) qApp->closeAllWindows();
-    else popUp->showPopup(this, "The maintenance tool failed to open", 2000, .75);
+    else if(!isStartSilentCheckForUpdates)
+        popUp->showPopup(this, "The maintenance tool failed to open", 2000, .75);
+
+    isStartSilentCheckForUpdates = false;
 
     // prevent compiler warning
     return false;
@@ -1860,6 +1864,30 @@ void MW::createActions()
     addAction(keyEndAction);
     connect(keyEndAction, &QAction::triggered, this, &MW::keyEnd);
 
+    keyScrollDownAction = new QAction(tr("Scroll  down"), this);
+    keyScrollDownAction->setObjectName("scrollDown");
+    keyScrollDownAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollDownAction);
+    connect(keyScrollDownAction, &QAction::triggered, this, &MW::keyScrollDown);
+
+    keyScrollUpAction = new QAction(tr("Scroll  up"), this);
+    keyScrollUpAction->setObjectName("scrollUp");
+    keyScrollUpAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollUpAction);
+    connect(keyScrollUpAction, &QAction::triggered, this, &MW::keyScrollUp);
+
+    keyScrollPageDownAction = new QAction(tr("Scroll page down"), this);
+    keyScrollPageDownAction->setObjectName("scrollPageDown");
+    keyScrollPageDownAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollPageDownAction);
+    connect(keyScrollPageDownAction, &QAction::triggered, this, &MW::keyScrollPageDown);
+
+    keyScrollPageUpAction = new QAction(tr("Scroll page up"), this);
+    keyScrollPageUpAction->setObjectName("scrollPageUp");
+    keyScrollPageUpAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollPageUpAction);
+    connect(keyScrollPageUpAction, &QAction::triggered, this, &MW::keyScrollPageDown);
+
     // Not a menu item - used by slide show
     randomImageAction = new QAction(tr("Random"), this);
     randomImageAction->setObjectName("randomImage");
@@ -2456,6 +2484,7 @@ void MW::createActions()
     checkForUpdateAction->setShortcutVisibleInContextMenu(true);
     addAction(checkForUpdateAction);
     connect(checkForUpdateAction, &QAction::triggered, this, &MW::checkForUpdate);
+//    connect(checkForUpdateAction, SIGNAL(triggered(bool)), this, checkForUpdate(false));
 
     aboutAction = new QAction(tr("About"), this);
     aboutAction->setObjectName("about");
@@ -5294,8 +5323,11 @@ void MW::setDisplayResolution()
 
 #ifdef Q_OS_WIN
 //    G::devicePixelRatio = 1;
-    displayHorizontalPixels = qApp->screenAt(loc)->geometry().width();
-    displayVerticalPixels = qApp->screenAt(loc)->geometry().height();
+    // make sure the centroid is on a screen
+    if(qApp->screenAt(loc) != NULL) {
+        displayHorizontalPixels = qApp->screenAt(loc)->geometry().width();
+        displayVerticalPixels = qApp->screenAt(loc)->geometry().height();
+    }
 #endif
 
 #ifdef Q_OS_MAC
@@ -5372,7 +5404,7 @@ void MW::setActualDevicePixelRatio()
                  */
 }
 
-void MW::setIngestRootFolder(QString rootFolder, bool isAuto)
+void MW::setIngestRootFolder(QString rootFolder, QString manualFolder, bool isAuto)
 {
     {
     #ifdef ISDEBUG
@@ -5380,6 +5412,7 @@ void MW::setIngestRootFolder(QString rootFolder, bool isAuto)
     #endif
     }
     ingestRootFolder = rootFolder;
+    manualFolderPath = manualFolder;
     autoIngestFolderPath = isAuto;
 }
 
@@ -5763,6 +5796,7 @@ re-established when the application is re-opened.
     setting->setValue("combineRawJpg", combineRawJpg);
     setting->setValue("useWheelToScroll", imageView->useWheelToScroll);
     setting->setValue("ingestRootFolder", ingestRootFolder);
+    setting->setValue("manualFolderPath", manualFolderPath);
 
     // thumbs
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
@@ -6052,6 +6086,7 @@ Preferences are located in the prefdlg class and updated here.
     checkIfUpdate = setting->value("checkIfUpdate").toBool();
     lastDir = setting->value("lastDir").toString();
     ingestRootFolder = setting->value("ingestRootFolder").toString();
+    manualFolderPath = setting->value("manualFolderPath").toString();
 
     // slideshow
     slideShowDelay = setting->value("slideShowDelay").toInt();
@@ -6278,9 +6313,15 @@ void MW::loadShortcuts(bool defaultShortcuts)
         keyEndAction->setShortcut(QKeySequence("End"));
         keyDownAction->setShortcut(QKeySequence("Down"));
         keyUpAction->setShortcut(QKeySequence("Up"));
-        randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+Right"));
-        nextPickAction->setShortcut(QKeySequence("Alt+Right"));
-        prevPickAction->setShortcut(QKeySequence("Alt+Left"));
+
+        keyScrollDownAction->setShortcut(QKeySequence("Alt+Right"));
+        keyScrollUpAction->setShortcut(QKeySequence("Alt+Left"));
+        keyScrollPageDownAction->setShortcut(QKeySequence("Alt+Down"));
+        keyScrollPageUpAction->setShortcut(QKeySequence("Alt+Down"));
+
+        randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+R"));
+        nextPickAction->setShortcut(QKeySequence("Alt+Ctl+Right"));
+        prevPickAction->setShortcut(QKeySequence("Alt+Ctl+Left"));
         openAction->setShortcut(QKeySequence("O"));
         asLoupeAction->setShortcut(QKeySequence("E"));
         asGridAction->setShortcut(QKeySequence("G"));
@@ -7283,14 +7324,15 @@ void MW::ingest()
                                   metadata,
                                   dm,
                                   ingestRootFolder,
+                                  manualFolderPath,
                                   pathTemplates,
                                   filenameTemplates,
                                   pathTemplateSelected,
                                   filenameTemplateSelected,
                                   ingestDescriptionCompleter,
                                   autoIngestFolderPath);
-        connect(ingestDlg, SIGNAL(updateIngestParameters(QString,bool)),
-                this, SLOT(setIngestRootFolder(QString,bool)));
+        connect(ingestDlg, SIGNAL(updateIngestParameters(QString,QString,bool)),
+                this, SLOT(setIngestRootFolder(QString,QString,bool)));
         connect(ingestDlg, SIGNAL(updateIngestHistory(QString)),
                 this, SLOT(addIngestHistoryFolder(QString)));
         if(ingestDlg->exec() && autoEjectUsb) ejectUsb(currentViewDir);;
@@ -7769,6 +7811,30 @@ void MW::keyEnd()
     }
 }
 
+void MW::keyScrollDown()
+{
+    if(G::mode == "Grid") gridView->scrollPageDown(0);
+    if(thumbView->isVisible()) thumbView->scrollPageDown(0);
+}
+
+void MW::keyScrollUp()
+{
+    if(G::mode == "Grid") gridView->scrollPageUp(0);
+    if(thumbView->isVisible()) thumbView->scrollPageUp(0);
+}
+
+void MW::keyScrollPageDown()
+{
+    if(G::mode == "Grid") gridView->scrollPageDown(0);
+    if(thumbView->isVisible()) thumbView->scrollPageDown(0);
+}
+
+void MW::keyScrollPageUp()
+{
+    if(G::mode == "Grid") gridView->scrollPageUp(0);
+    if(thumbView->isVisible()) thumbView->scrollPageUp(0);
+}
+
 void MW::stressTest()
 {
     {
@@ -8214,10 +8280,16 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    compareImages->test();
-    centralLayout->setCurrentIndex(CompareTab);
+    qDebug() << gridView->verticalScrollBar()->pageStep()
+             << gridView->verticalScrollBar()->maximum()
+             << gridView->verticalScrollBar()->value();
+
+    gridView->verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
 
     /*
+
+    compareImages->test();
+    centralLayout->setCurrentIndex(CompareTab);
 
     updateAppDlg = new UpdateApp(updateNotes);
     int ret = updateAppDlg->exec();

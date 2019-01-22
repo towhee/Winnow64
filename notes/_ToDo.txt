@@ -1,9 +1,7 @@
 BUGS
-- When repeat compare old carepare view is still visible below new one
-- Monitor resoltion function fails when window centroid moves off screen - app crashes
+- In grid mode pick a thumb and grid scrolls and picks another thumb instead
 - Create sidecar file before open with in case other app can use metadata in sidecar
 - Fix editbox in some tableviews (infoview, external programs)
-- Show subfolders menu item disabled when it should not be
 - Image count not showing in bookmarks`
 - check if cacheDelay is still important
 - Disable Ingest menu when no picks
@@ -21,6 +19,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- When repeat compare, old compare view is still visible below new one
 - Check for updates on Mac
 - Detect drive mounting
 - Horizontal scroll thumbs 1/2 window shortcut
@@ -39,6 +38,8 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Monitor resoltion function fails when window centroid moves off screen - app crashes
+- Show subfolders menu item disabled when it should not be
 - Compareview grid problems when pick lass than before
 - Compareview grid not equal when mouse in grid area before changing to compare mode
 - Check for updates on Windows
