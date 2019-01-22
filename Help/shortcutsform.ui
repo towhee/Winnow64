@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>480</height>
+    <width>963</width>
+    <height>870</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -24,15 +24,20 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>638</width>
-     <height>478</height>
+     <width>961</width>
+     <height>868</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
      <widget class="QLabel" name="label">
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+       </font>
+      </property>
       <property name="text">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Shortcut Modifier Symbols: &amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&lt;span style=&quot; font-weight:600; color:#fc0107;&quot;&gt;⌘&lt;/span&gt; = Cmd/Ctrl &amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&lt;span style=&quot; font-weight:600; color:#fc0107;&quot;&gt;⇧&lt;/span&gt; = Shift &amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&lt;span style=&quot; font-weight:600; color:#fc0107;&quot;&gt;⌥&lt;/span&gt; = Option/Alt&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Winnow Shortcuts&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
@@ -60,7 +65,10 @@
        <number>3</number>
       </property>
       <attribute name="headerDefaultSectionSize">
-       <number>250</number>
+       <number>300</number>
+      </attribute>
+      <attribute name="headerMinimumSectionSize">
+       <number>150</number>
       </attribute>
       <column>
        <property name="text">
@@ -77,6 +85,452 @@
         <string>Comment</string>
        </property>
       </column>
+      <item>
+       <property name="text">
+        <string>File Operations</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <item>
+        <property name="text">
+         <string>Open Folder</string>
+        </property>
+        <property name="text">
+         <string>O</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Open with external program</string>
+        </property>
+        <property name="text">
+         <string>Opt/Alt + 0 - 9</string>
+        </property>
+        <property name="text">
+         <string>Open selected images in photoshop for example</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Ingest Picked Images</string>
+        </property>
+        <property name="text">
+         <string>Q</string>
+        </property>
+        <property name="text">
+         <string>Copy images to another folder</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Count images in folder</string>
+        </property>
+        <property name="text">
+         <string>\</string>
+        </property>
+        <property name="text">
+         <string>Show image count in Folders and Fav panels</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Combine Raw+Jpg</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl +  J</string>
+        </property>
+        <property name="text">
+         <string>Toggles</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Include subfolders</string>
+        </property>
+        <property name="text">
+         <string>B</string>
+        </property>
+        <property name="text">
+         <string>Show images in all subfolders as well</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Open in Explorer or Finder</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + R</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Refresh Folders</string>
+        </property>
+        <property name="text">
+         <string>Opt/Alt + R</string>
+        </property>
+        <property name="text">
+         <string>Use to update folders, for example when insert USB drive</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Collapse Folders</string>
+        </property>
+        <property name="text">
+         <string>Opt/Alt + C</string>
+        </property>
+        <property name="text">
+         <string>Show only drives in Folders panel</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Report metadata</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Shift + R</string>
+        </property>
+        <property name="text">
+         <string>Show geeky extract of metadata from file (error reporting)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Quit Winnow</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Q</string>
+        </property>
+       </item>
+      </item>
+      <item>
+       <property name="text">
+        <string>Select, Pick and Classify</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <item>
+        <property name="text">
+         <string>Select All</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + A</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Invert Selection</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Shift +A</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Refine</string>
+        </property>
+        <property name="text">
+         <string>R</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Pick Image</string>
+        </property>
+        <property name="text">
+         <string>`</string>
+        </property>
+        <property name="text">
+         <string>Toggles (grave accent)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Pick Image</string>
+        </property>
+        <property name="text">
+         <string>P</string>
+        </property>
+        <property name="text">
+         <string>Toggles alternate shortcut</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Pick Image</string>
+        </property>
+        <property name="text">
+         <string>Mouse side button</string>
+        </property>
+        <property name="text">
+         <string>Toggles alternate shortcut</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Undo pick</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Opt/Alt + Z</string>
+        </property>
+        <property name="text">
+         <string>Undo each pick in reverse order to picking</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Filter Picks</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + `</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Rate Image</string>
+        </property>
+        <property name="text">
+         <string>1 to 5</string>
+        </property>
+        <property name="text">
+         <string>Toggles</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Filter on Rating</string>
+        </property>
+        <property name="text">
+         <string>Shift 1 to 5</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Color Class</string>
+        </property>
+        <property name="text">
+         <string>6 to 0</string>
+        </property>
+        <property name="text">
+         <string>Toggles</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Filter on Color Class</string>
+        </property>
+        <property name="text">
+         <string>Shift 6 to 0</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Uncheck all Filters</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Shift + 0</string>
+        </property>
+       </item>
+      </item>
+      <item>
+       <property name="text">
+        <string>Navigation</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <item>
+        <property name="text">
+         <string>Next Image</string>
+        </property>
+        <property name="text">
+         <string>Right</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Next Image</string>
+        </property>
+        <property name="text">
+         <string>Mouse scroll wheel</string>
+        </property>
+        <property name="text">
+         <string>When in Loupe view</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Previous Image</string>
+        </property>
+        <property name="text">
+         <string>Left</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Previous Image</string>
+        </property>
+        <property name="text">
+         <string>Mouse scroll whell</string>
+        </property>
+        <property name="text">
+         <string>When in Loupe view</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Image Above</string>
+        </property>
+        <property name="text">
+         <string>Up</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Image Below</string>
+        </property>
+        <property name="text">
+         <string>Down</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>First Image</string>
+        </property>
+        <property name="text">
+         <string>Home</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Last Image</string>
+        </property>
+        <property name="text">
+         <string>End</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Next Page of Thumbnails</string>
+        </property>
+        <property name="text">
+         <string>Page Down</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Previous Page of Thumbnails</string>
+        </property>
+        <property name="text">
+         <string>Page Up</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Scrolling</string>
+        </property>
+        <item>
+         <property name="text">
+          <string>Scroll Left</string>
+         </property>
+         <property name="text">
+          <string>Opt/Alt + Left</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Scroll Right</string>
+         </property>
+         <property name="text">
+          <string>Opt/Alt + Right</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Scroll Up</string>
+         </property>
+         <property name="text">
+          <string>Opt/Alt + Up</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Scroll Down</string>
+         </property>
+         <property name="text">
+          <string>Opt/Alt + Down</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Scroll Page Left</string>
+         </property>
+         <property name="text">
+          <string>Cmd/Ctrl + Opt/Alt + Left</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Scroll Page Right</string>
+         </property>
+         <property name="text">
+          <string>Cmd/Ctrl + Opt/Alt + Right</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Scroll Page Up</string>
+         </property>
+         <property name="text">
+          <string>Cmd/Ctrl + Opt/Alt + Up</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Scroll Page Down</string>
+         </property>
+         <property name="text">
+          <string>Cmd/Ctrl + Opt/Alt + Down</string>
+         </property>
+        </item>
+       </item>
+       <item>
+        <property name="text">
+         <string>Previous Pick</string>
+        </property>
+        <property name="text">
+         <string>⌥ Left</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Next Pick</string>
+        </property>
+        <property name="text">
+         <string>⌥ Right</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Random Image</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Shift + Right</string>
+        </property>
+       </item>
+      </item>
       <item>
        <property name="text">
         <string>Views</string>
@@ -184,7 +638,7 @@
       </item>
       <item>
        <property name="text">
-        <string>File Operations</string>
+        <string>Zoom, Resize and Rotate</string>
        </property>
        <property name="font">
         <font>
@@ -194,53 +648,61 @@
        </property>
        <item>
         <property name="text">
-         <string>Open Folder</string>
+         <string>Zoom In/Out</string>
         </property>
         <property name="text">
-         <string>O</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Refresh Folders</string>
+         <string>Z</string>
         </property>
         <property name="text">
-         <string>⌥ R</string>
+         <string>Opens zoom heads up display control </string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Ingest Images</string>
+         <string>Incremental Zoom In</string>
         </property>
         <property name="text">
-         <string>Q</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Combine Raw+Jpg</string>
-        </property>
-        <property name="text">
-         <string>⌘J</string>
-        </property>
-        <property name="text">
-         <string>Toggles</string>
+         <string>+</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Count images in folder</string>
+         <string>Incremental Zoom Out</string>
         </property>
         <property name="text">
-         <string>\</string>
+         <string>-</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Quit Winnow</string>
+         <string>Enlarge Thumbnails</string>
         </property>
         <property name="text">
-         <string>⌘Q</string>
+         <string>]</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Shrink Thumbnails</string>
+        </property>
+        <property name="text">
+         <string>[</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Rotate Image Clockwise</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + ]</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Rotate Image Counter Clockwise</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + [</string>
         </property>
        </item>
       </item>
@@ -268,7 +730,7 @@
          <string>F3</string>
         </property>
         <property name="text">
-         <string>Toggles</string>
+         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
         </property>
        </item>
        <item>
@@ -279,7 +741,7 @@
          <string>F4</string>
         </property>
         <property name="text">
-         <string>Toggles</string>
+         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
         </property>
        </item>
        <item>
@@ -290,7 +752,7 @@
          <string>F5</string>
         </property>
         <property name="text">
-         <string>Toggles</string>
+         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
         </property>
        </item>
        <item>
@@ -301,7 +763,7 @@
          <string>F6</string>
         </property>
         <property name="text">
-         <string>Toggles</string>
+         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
         </property>
        </item>
        <item>
@@ -312,18 +774,7 @@
          <string>F7</string>
         </property>
         <property name="text">
-         <string>Toggles</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Application Titlebar</string>
-        </property>
-        <property name="text">
-         <string>F8</string>
-        </property>
-        <property name="text">
-         <string>Toggles</string>
+         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
         </property>
        </item>
        <item>
@@ -334,7 +785,7 @@
          <string>F9</string>
         </property>
         <property name="text">
-         <string>Toggles</string>
+         <string>Toggles visibility</string>
         </property>
        </item>
        <item>
@@ -345,7 +796,7 @@
          <string>F10</string>
         </property>
         <property name="text">
-         <string>Toggles</string>
+         <string>Toggles visibility</string>
         </property>
        </item>
        <item>
@@ -362,6 +813,9 @@
          <property name="text">
           <string>⇧F3</string>
          </property>
+         <property name="text">
+          <string>Toggles</string>
+         </property>
         </item>
         <item>
          <property name="text">
@@ -369,6 +823,9 @@
          </property>
          <property name="text">
           <string>⇧F4</string>
+         </property>
+         <property name="text">
+          <string>Toggles</string>
          </property>
         </item>
         <item>
@@ -378,6 +835,9 @@
          <property name="text">
           <string>⇧F5</string>
          </property>
+         <property name="text">
+          <string>Toggles</string>
+         </property>
         </item>
         <item>
          <property name="text">
@@ -385,6 +845,9 @@
          </property>
          <property name="text">
           <string>⇧F6</string>
+         </property>
+         <property name="text">
+          <string>Toggles</string>
          </property>
         </item>
         <item>
@@ -394,6 +857,9 @@
          <property name="text">
           <string>⇧F7</string>
          </property>
+         <property name="text">
+          <string>Toggles</string>
+         </property>
         </item>
         <item>
          <property name="text">
@@ -402,316 +868,10 @@
          <property name="text">
           <string>⌘L</string>
          </property>
-        </item>
-       </item>
-       <item>
-        <property name="text">
-         <string>Move Focus to Panel</string>
-        </property>
-        <item>
          <property name="text">
-          <string>Files Panel</string>
-         </property>
-         <property name="text">
-          <string>⌘F3</string>
+          <string>Toggles</string>
          </property>
         </item>
-        <item>
-         <property name="text">
-          <string>Favourites Panel</string>
-         </property>
-         <property name="text">
-          <string>⌘F4</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Filters Panel</string>
-         </property>
-         <property name="text">
-          <string>⌘F5</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Metadata Panel</string>
-         </property>
-         <property name="text">
-          <string>⌘F6</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>thumbnails Panel</string>
-         </property>
-         <property name="text">
-          <string>⌘F7</string>
-         </property>
-        </item>
-       </item>
-      </item>
-      <item>
-       <property name="text">
-        <string>Navigation</string>
-       </property>
-       <property name="font">
-        <font>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
-       <item>
-        <property name="text">
-         <string>Next Image</string>
-        </property>
-        <property name="text">
-         <string>Right</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Previous Image</string>
-        </property>
-        <property name="text">
-         <string>Left</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Image Above</string>
-        </property>
-        <property name="text">
-         <string>Up</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Image Below</string>
-        </property>
-        <property name="text">
-         <string>Down</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>First Image</string>
-        </property>
-        <property name="text">
-         <string>Home</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Last Image</string>
-        </property>
-        <property name="text">
-         <string>End</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Random Image</string>
-        </property>
-        <property name="text">
-         <string>⇧⌘ Right</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Previous Pick</string>
-        </property>
-        <property name="text">
-         <string>⌥ Left</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Next Pick</string>
-        </property>
-        <property name="text">
-         <string>⌥ Right</string>
-        </property>
-       </item>
-      </item>
-      <item>
-       <property name="text">
-        <string>Zoom, Resize and Rotate</string>
-       </property>
-       <property name="font">
-        <font>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
-       <item>
-        <property name="text">
-         <string>Zoom In/Out</string>
-        </property>
-        <property name="text">
-         <string>Z</string>
-        </property>
-        <property name="text">
-         <string>Toggles (also mouse click on image)</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Zoom In Amount</string>
-        </property>
-        <property name="text">
-         <string>⇧Z</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Incremental Zoom In</string>
-        </property>
-        <property name="text">
-         <string>+</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Incremental Zoom Out</string>
-        </property>
-        <property name="text">
-         <string>-</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Enlarge Thumbnails</string>
-        </property>
-        <property name="text">
-         <string>}</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Shrink Thumbnails</string>
-        </property>
-        <property name="text">
-         <string>{</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Rotate Image Clockwise</string>
-        </property>
-        <property name="text">
-         <string>⌘]</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Rotate Image Counter Clockwise</string>
-        </property>
-        <property name="text">
-         <string>⌘[</string>
-        </property>
-       </item>
-      </item>
-      <item>
-       <property name="text">
-        <string>Select, Pick and Rate</string>
-       </property>
-       <property name="font">
-        <font>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
-       <item>
-        <property name="text">
-         <string>Select All</string>
-        </property>
-        <property name="text">
-         <string>⌘A</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Invert Selection</string>
-        </property>
-        <property name="text">
-         <string>⇧⌘A</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Pick Image</string>
-        </property>
-        <property name="text">
-         <string>`</string>
-        </property>
-        <property name="text">
-         <string>Toggles (grave accent)</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Filter Picks</string>
-        </property>
-        <property name="text">
-         <string>⌘`</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Refine</string>
-        </property>
-        <property name="text">
-         <string>R</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Rate Image</string>
-        </property>
-        <property name="text">
-         <string>1 to 5</string>
-        </property>
-        <property name="text">
-         <string>Toggles</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Filter on Rating</string>
-        </property>
-        <property name="text">
-         <string>⇧1 to ⇧5</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Color Class</string>
-        </property>
-        <property name="text">
-         <string>6 to 0</string>
-        </property>
-        <property name="text">
-         <string>Toggles</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Filter on Color Class</string>
-        </property>
-        <property name="text">
-         <string>⇧6 to ⇧0</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Uncheck all Filters</string>
-        </property>
-        <property name="text">
-         <string>⇧⌘0</string>
-        </property>
        </item>
       </item>
       <item>
@@ -806,6 +966,19 @@
         </property>
         <property name="text">
          <string>Esc</string>
+        </property>
+       </item>
+      </item>
+      <item>
+       <property name="text">
+        <string>Help</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>Help document</string>
+        </property>
+        <property name="text">
+         <string>?</string>
         </property>
        </item>
       </item>
