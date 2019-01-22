@@ -1707,6 +1707,10 @@ void MW::createActions()
     addAction(pickAction);
     connect(pickAction, &QAction::triggered, this, &MW::togglePick);
 
+    pick1Action = new QAction(tr("Pick"), this);
+    addAction(pick1Action);
+    connect(pick1Action, &QAction::triggered, this, &MW::togglePick);
+
     filterPickAction = new QAction(tr("Filter picks only"), this);
     filterPickAction->setObjectName("toggleFilterPick");
     filterPickAction->setShortcutVisibleInContextMenu(true);
@@ -6318,6 +6322,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         invertSelectionAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
         refineAction->setShortcut(QKeySequence("R"));
         pickAction->setShortcut(QKeySequence("`"));
+        pick1Action->setShortcut(QKeySequence("P"));
         popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
 
         rate1Action->setShortcut(QKeySequence("1"));
