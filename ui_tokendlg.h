@@ -44,16 +44,18 @@ public:
     QSpacerItem *horizontalSpacer;
     QPushButton *okBtn;
     QTextBrowser *resultText;
+    QLabel *label_5;
+    QLabel *uniqueWarningLabel;
 
     void setupUi(QDialog *TokenDlg)
     {
         if (TokenDlg->objectName().isEmpty())
             TokenDlg->setObjectName(QStringLiteral("TokenDlg"));
-        TokenDlg->resize(766, 402);
+        TokenDlg->resize(766, 452);
         TokenDlg->setStyleSheet(QStringLiteral(""));
         tokenList = new TokenList(TokenDlg);
         tokenList->setObjectName(QStringLiteral("tokenList"));
-        tokenList->setGeometry(QRect(30, 50, 141, 321));
+        tokenList->setGeometry(QRect(30, 50, 141, 381));
         tokenEdit = new TokenEdit(TokenDlg);
         tokenEdit->setObjectName(QStringLiteral("tokenEdit"));
         tokenEdit->setGeometry(QRect(180, 130, 561, 61));
@@ -80,7 +82,7 @@ public:
         label_4->setGeometry(QRect(180, 30, 91, 16));
         layoutWidget = new QWidget(TokenDlg);
         layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
-        layoutWidget->setGeometry(QRect(260, 340, 481, 32));
+        layoutWidget->setGeometry(QRect(210, 400, 521, 32));
         horizontalLayout = new QHBoxLayout(layoutWidget);
         horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         horizontalLayout->setSizeConstraint(QLayout::SetDefaultConstraint);
@@ -132,6 +134,15 @@ public:
         resultText->setObjectName(QStringLiteral("resultText"));
         resultText->setGeometry(QRect(180, 240, 561, 61));
         resultText->setStyleSheet(QStringLiteral(""));
+        label_5 = new QLabel(TokenDlg);
+        label_5->setObjectName(QStringLiteral("label_5"));
+        label_5->setGeometry(QRect(180, 320, 551, 21));
+        label_5->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
+        uniqueWarningLabel = new QLabel(TokenDlg);
+        uniqueWarningLabel->setObjectName(QStringLiteral("uniqueWarningLabel"));
+        uniqueWarningLabel->setGeometry(QRect(180, 350, 551, 41));
+        uniqueWarningLabel->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
+        uniqueWarningLabel->setWordWrap(true);
 
         retranslateUi(TokenDlg);
 
@@ -149,6 +160,8 @@ public:
         newBtn->setText(QApplication::translate("TokenDlg", "New", nullptr));
         deleteBtn->setText(QApplication::translate("TokenDlg", "Delete", nullptr));
         okBtn->setText(QApplication::translate("TokenDlg", "Select", nullptr));
+        label_5->setText(QApplication::translate("TokenDlg", "<html><head/><body><p>Edits to the token string are automatically saved to the currently selected template.</p></body></html>", nullptr));
+        uniqueWarningLabel->setText(QApplication::translate("TokenDlg", "<html><head/><body><p><span style=\" font-weight:600; color:#ffff00;\">Warning:</span> The tokenized file name is unlikely to produce unique file names. Consider including the ORIGINAL FILENAME, time MINUTE and SECOND or a sequence XX... </p></body></html>", nullptr));
     } // retranslateUi
 
 };

@@ -65,6 +65,10 @@ public:
     bool scrollPaintFound;
 
 public slots:
+    void scrollDown(int step);
+    void scrollUp(int step);
+    void scrollPageDown(int step);
+    void scrollPageUp(int step);
     void scrollToCurrent(int row);
     void thumbsEnlarge();
     void thumbsShrink();

@@ -46,13 +46,17 @@ private slots:
 
 signals:
     void parseUpdated(QString s);
+    void isUnique(bool);
 
 private:
     QTextDocument *textDoc;
     QTextCharFormat tokenFormat;
+
     int lastPosition;
 
     bool isToken(int pos);
+    bool isLikelyUnique();
+
     int tokenStart;
     int tokenEnd;
     QString currentToken;
@@ -80,6 +84,7 @@ public:
 public slots:
     void updateExample(QString s);
     void updateTemplate();
+    void updateUniqueFileNameWarning(bool);
 
 private slots:
     void on_okBtn_clicked();
@@ -94,6 +99,7 @@ private:
     QMap<QString, QString>& templatesMap;
     int &index;
     QString &currentKey;
+    QString title;
     QStringList existingTemplates(int row = -1);
 };
 

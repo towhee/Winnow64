@@ -168,6 +168,7 @@ public:
     int maxRecentFolders = 20;
     int maxIngestHistoryFolders = 20;
     QString ingestRootFolder;
+    QString manualFolderPath;
     bool combineRawJpg;
 
     // preferences: slideshow
@@ -309,6 +310,10 @@ private slots:
     void keyDown();
     void keyHome();
     void keyEnd();
+    void keyScrollDown();
+    void keyScrollUp();
+    void keyScrollPageDown();
+    void keyScrollPageUp();
     void zoomToggle();
     void updateSubfolderStatus();
     void updateRawJpgStatus();
@@ -359,7 +364,7 @@ private slots:
     void setMouseClickScroll(bool prefMouseClickScroll);
     void setTrackpadScroll(bool trackpadScroll);
     void setDisplayResolution();
-    void setIngestRootFolder(QString rootFolder, bool isAuto);
+    void setIngestRootFolder(QString rootFolder, QString manualFolder, bool isAuto);
     void setCombineRawJpg();
     void setSlideShowParameters(int delay, bool isRandom);
     void setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
@@ -528,6 +533,10 @@ private:
     QAction *keyDownAction;
     QAction *keyHomeAction;
     QAction *keyEndAction;
+    QAction *keyScrollDownAction;
+    QAction *keyScrollUpAction;
+    QAction *keyScrollPageDownAction;
+    QAction *keyScrollPageUpAction;
     QAction *nextPickAction;
     QAction *prevPickAction;
     QAction *rate0Action;
@@ -739,6 +748,7 @@ private:
     bool isSettings;
     bool isFirstTimeNoSettings;
     bool isInitializing;
+    bool isStartSilentCheckForUpdates = true;    // flag true until startup check for updates has been completed
     bool isStressTest;
     bool hasGridBeenActivated;
 

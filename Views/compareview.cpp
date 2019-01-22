@@ -737,7 +737,6 @@ void CompareView::enterEvent(QEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "CompareView::enterEvent " << currentImagePath;
     select();
     // zoomToFit zoom factor can be different so do update
     emit zoomChange(zoom);

@@ -33,6 +33,7 @@ IngestDlg::IngestDlg(QWidget *parent,
                      Metadata *metadata,
                      DataModel *dm,
                      QString ingestRootFolder,
+                     QString manualFolderPath,
                      QMap<QString, QString>& pathTemplates,
                      QMap<QString, QString>& filenameTemplates,
                      int& pathTemplateSelected,
@@ -51,7 +52,8 @@ IngestDlg::IngestDlg(QWidget *parent,
                      filenameTemplateSelected(filenameTemplateSelected),
                      autoEjectUsb(autoEjectUsb),
                      combineRawJpg(combineRawJpg),
-                     rootFolderPath(ingestRootFolder)
+                     rootFolderPath(ingestRootFolder),
+                     manualFolderPath(manualFolderPath)
 {
     this->dm = dm;
 
@@ -68,6 +70,8 @@ IngestDlg::IngestDlg(QWidget *parent,
     }
     ui->rootFolderLabel->setText(rootFolderPath);
     ui->rootFolderLabel->setToolTip(ui->rootFolderLabel->text());
+    ui->manualFolderLabel->setText(manualFolderPath);
+    ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
 
     // initialize templates and tokens
     initTokenList();
@@ -109,6 +113,7 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->ejectChk->setChecked(autoEjectUsb);
 
     isInitializing = false;
+    updateExistingSequence();
     buildFileNameSequence();
     ui->progressBar->setVisible(false);
 }
@@ -119,18 +124,17 @@ IngestDlg::~IngestDlg()
 }
 
 void IngestDlg::renameIfExists(QString &destination,
-                                 QString &fileName,
-                                 QString &dotSuffix)
+                               QString &baseName,
+                               QString dotSuffix)
 {
     int count = 0;
     bool fileAlreadyExists = true;
+    QString newBaseName = baseName + "_";
     do {
         QFile testFile(destination);
         if (testFile.exists()) {
-            fileName += "_" + QString::number(++count);
-//            QString s = "_" + QString::number(++count);
-            destination = folderPath + fileName + dotSuffix;
-//            destination = folderPath + fileName + s + dotSuffix;
+            destination = folderPath + newBaseName + QString::number(++count) + dotSuffix;
+            baseName = newBaseName;
         }
         else fileAlreadyExists = false;
     } while (fileAlreadyExists);
@@ -193,6 +197,31 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
 
 void IngestDlg::accept()
 {
+/* The files in pickList are renamed and ingested (copied) from the source
+folder to the destination folder.
+
+The destination folder path is appended to the ingest folder history (in the
+file menu).
+
+The description, if not "" is appended to the description completer list to
+facilitate future ingests.
+
+Each picked image is copied from the source to the destination.
+
+    The destination file base name is based on the file name template selected.
+    ie YYYY-MM-DD_xxxx would rename the source file test.jpg to
+    2019-01-20_0001.jpg if the seqNum = 1.  The seqNum is incremented with each
+    image in the pickList.  This does not happen if the file name template does
+    not include the sequence numbering ie use original file.
+
+    If the destination folder already has a file with the same name then _# is
+    appended to the destination base file name.
+
+    If there is edited metadata it is written to a sidecar xmp file.
+
+    Finally the source file is copied to the renamed destination.
+*/
+    // make sure the destination folder exists
     QDir dir(folderPath);
     if (!dir.exists()) {
         if(!dir.mkpath(folderPath)) {
@@ -203,8 +232,8 @@ void IngestDlg::accept()
         }
     }
 
+    // get rid of "/" at end of path for history (in file menu)
     QString historyPath = folderPath.left(folderPath.length() - 1);
-    qDebug() << "IngestDlg::accept  historyPath =" << historyPath;
     emit updateIngestHistory(historyPath);
 
     QString key = ui->filenameTemplatesCB->currentText();
@@ -231,50 +260,51 @@ void IngestDlg::accept()
         ui->progressBar->setValue(progress);
         qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
-        QString source = fileInfo.absoluteFilePath();
+        QString sourcePath = fileInfo.absoluteFilePath();
 
         // seqNum is required by parseTokenString
         // increase sequence unless dup (raw + jpg)
         if (i > 0 && pickList.at(i).baseName() != pickList.at(i-1).baseName())
             seqNum++;
 
-        QString fileName =  parseTokenString(pickList.at(i), tokenString);
-        QString suffix = fileInfo.completeSuffix().toLower();
+        // rename destination file based on the file naming template
+        QString destBaseName =  parseTokenString(pickList.at(i), tokenString);
+        QString suffix = fileInfo.suffix().toLower();
         QString dotSuffix = "." + suffix;
+        QString destFileName = destBaseName + dotSuffix;
 
         // buffer to hold file with edited xmp data
         QByteArray buffer;
 
         // check if image already exists at destination folder
-        QString destination = folderPath + fileName + dotSuffix;
+        QString destinationPath = folderPath + destFileName;
         // rename destination and fileName if already exists
-        renameIfExists(destination, fileName, dotSuffix);
+        renameIfExists(destinationPath, destBaseName, dotSuffix);
 
-        // if there is edited xmp data in an eligible file format
-        if (metadata->writeMetadata(source, buffer)) {
-            // write a sidecar
-            if (metadata->sidecarFormats.contains(suffix)) {
-                // copy image file
-//                QString destination = folderPath + fileName + dotSuffix;
-//                renameIfExists(destination, fileName, dotSuffix);
-                QFile::copy(source, destination);            }
-                // write the sidecar xmp file
-                QString sidecar = folderPath + fileName + ".xmp";
-                QFile sidecarFile(sidecar);
-                sidecarFile.open(QIODevice::WriteOnly);
-                sidecarFile.write(buffer);
-            // write inside the source file
+        // if there is edited xmp data in an eligible file format copy it
+        // into a buffer
+        if (metadata->writeMetadata(sourcePath, buffer)
+        && metadata->sidecarFormats.contains(suffix)) {
+            // copy image file
+            QFile::copy(sourcePath, destinationPath);
             if (metadata->internalXmpFormats.contains(suffix)) {
-                QFile newFile(destination);
+                // write xmp data into image file
+                QFile newFile(destinationPath);
                 newFile.open(QIODevice::WriteOnly);
                 newFile.write(buffer);
+                newFile.close();
+            }
+            else {
+                // write the sidecar xmp file
+                QFile sidecarFile(folderPath + destBaseName + ".xmp");
+                sidecarFile.open(QIODevice::WriteOnly);
+                sidecarFile.write(buffer);
+                sidecarFile.close();
             }
         }
         // no xmp data, just copy source to destination
         else {
-//            QString destination = folderPath + fileName + dotSuffix;
-//            renameIfExists(destination, fileName, dotSuffix);
-            QFile::copy(source, destination);
+            QFile::copy(sourcePath, destinationPath);
         }
     }
     QDialog::accept();
@@ -282,6 +312,29 @@ void IngestDlg::accept()
 
 void IngestDlg::updateExistingSequence()
 {
+    if (isInitializing) return;
+
+    QString tokenKey = ui->filenameTemplatesCB->currentText();
+    if(tokenKey.length() == 0) return;
+
+    QString tokenString = filenameTemplatesMap[tokenKey];
+    qDebug() << "tokenString =" << tokenString << tokenString.contains("XX");
+
+    // if not a sequence in the token string then disable and return
+    if(!tokenString.contains("XX")) {
+        Utilities::setOpacity(ui->startSeqLabel, 0.5);
+        Utilities::setOpacity(ui->spinBoxStartNumber, 0.5);
+        ui->spinBoxStartNumber->setDisabled(true);
+        ui->existingSequenceLabel->setVisible(false);
+    }
+    else {
+        // enable sequencing
+        Utilities::setOpacity(ui->startSeqLabel, 1.0);
+        Utilities::setOpacity(ui->spinBoxStartNumber, 1.0);
+        ui->spinBoxStartNumber->setDisabled(false);
+        ui->existingSequenceLabel->setVisible(true);
+    }
+
     QDir dir(folderPath);
     if(dir.exists()) {
         int sequenceNum = getSequenceStart(folderPath);
@@ -309,13 +362,15 @@ void IngestDlg::on_selectFolderBtn_clicked()
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (s.length() > 0) {
         folderPath = s + "/";
+        manualFolderPath = folderPath;
         ui->manualFolderLabel->setText(folderPath);
         ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
+        buildFileNameSequence();
+        updateExistingSequence();
+        ui->manualRadio->setChecked(true);
+        updateStyleOfFolderLabels();
+        emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);
     }
-    buildFileNameSequence();
-    updateExistingSequence();
-    ui->manualRadio->setChecked(true);
-    updateStyleOfFolderLabels();
 }
 
 void IngestDlg::on_selectRootFolderBtn_clicked()
@@ -332,7 +387,7 @@ void IngestDlg::on_selectRootFolderBtn_clicked()
     }
 
     // send to MW where it will be saved in QSettings
-    emit updateIngestParameters(rootFolderPath, isAuto);
+    emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);
 
     updateFolderPath();
     updateExistingSequence();
@@ -485,33 +540,50 @@ void IngestDlg::buildFileNameSequence()
     QString tokenString;
     if (filenameTemplatesMap.contains(key))
         tokenString = filenameTemplatesMap[key];
+    else return;
+
     // seqNum is required by parseTokenString
     seqStart =  ui->spinBoxStartNumber->value();
     seqNum = seqStart;
     QString ext1 = "." + pickList.at(0).suffix().toUpper();
     QString fileName1 =  parseTokenString(pickList.at(0), tokenString) + ext1;
-    seqNum++;
-    QString fileName2;
-    if (fileCount > 1) {
-        QString ext2 = "." + pickList.at(1).suffix().toUpper();
-        fileName2 = parseTokenString(pickList.at(1), tokenString) + ext2;
+
+    if(fileCount == 1) {
+        ui->folderPathLabel->setText(folderPath + fileName1);
+        ui->folderPathLabel->setToolTip(folderPath + fileName1);
+        ui->folderPathLabel_2->setText("");
+        ui->folderPathLabel_2->setToolTip("");
+        ui->folderPathLabel_3->setText("");
+        ui->folderPathLabel_4->setText("");
+        ui->folderPathLabel_4->setToolTip("");
+        return;
     }
+
+    seqNum++;
+    QString ext2 = "." + pickList.at(1).suffix().toUpper();
+    QString fileName2 = parseTokenString(pickList.at(1), tokenString) + ext2;
+    if(fileCount == 2) {
+        ui->folderPathLabel->setText(folderPath + fileName1);
+        ui->folderPathLabel->setToolTip(folderPath + fileName1);
+        ui->folderPathLabel_2->setText(folderPath + fileName2);
+        ui->folderPathLabel_2->setToolTip(folderPath + fileName2);
+        ui->folderPathLabel_3->setText("");
+        ui->folderPathLabel_4->setText("");
+        ui->folderPathLabel_4->setToolTip("");
+        return;
+    }
+
     seqNum = seqStart + fileCount - 1;
     QString extN = "." + pickList.at(fileCount - 1).suffix().toUpper();
     QString fileNameN = parseTokenString(pickList.at(fileCount - 1), tokenString) + extN;
-    ui->folderPathLabel->setText(folderPath + fileName1);
-    ui->folderPathLabel->setToolTip(folderPath + fileName1);
-    if(fileCount > 1) {
+    if(fileCount > 2) {
+        ui->folderPathLabel->setText(folderPath + fileName1);
+        ui->folderPathLabel->setToolTip(folderPath + fileName1);
         ui->folderPathLabel_2->setText(folderPath + fileName2);
         ui->folderPathLabel_2->setToolTip(folderPath + fileName2);
+        ui->folderPathLabel_3->setText("...");
         ui->folderPathLabel_4->setText(folderPath + fileNameN);
         ui->folderPathLabel_4->setToolTip(folderPath + fileNameN);
-    }
-    else {
-        ui->folderPathLabel_2->setText("");
-        ui->folderPathLabel_2->setToolTip("");
-        ui->folderPathLabel_4->setText(folderPath + fileName1);
-        ui->folderPathLabel_4->setToolTip(folderPath + fileName1);
     }
 }
 
@@ -528,6 +600,7 @@ void IngestDlg::on_spinBoxStartNumber_valueChanged(const QString /* &arg1 */)
     int sequenceNum = getSequenceStart(folderPath);
     if(ui->spinBoxStartNumber->value() < sequenceNum)
         ui->spinBoxStartNumber->setValue(sequenceNum + 1);
+    buildFileNameSequence();
 }
 
 int IngestDlg::getSequenceStart(const QString &path)
@@ -638,7 +711,7 @@ void IngestDlg::on_autoRadio_toggled(bool checked)
             updateStyleOfFolderLabels();
         }
     }
-    emit updateIngestParameters(rootFolderPath, isAuto);
+    emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);
 }
 
 void IngestDlg::on_manualRadio_toggled(bool checked)
@@ -651,7 +724,7 @@ void IngestDlg::on_manualRadio_toggled(bool checked)
         updateExistingSequence();
         updateStyleOfFolderLabels();
     }
-    emit updateIngestParameters(rootFolderPath, isAuto);
+    emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);
 }
 
 
@@ -777,6 +850,8 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
 void IngestDlg::on_filenameTemplatesBtn_clicked()
 {
     // setup TokenDlg
+    // title is also used to filter warnings, so if you change it here also change
+    // it in TokenDlg::updateUniqueFileNameWarning
     QString title = "Token Editor - Destination File Name";
     int index = ui->filenameTemplatesCB->currentIndex();
     QString currentKey = ui->filenameTemplatesCB->currentText();
