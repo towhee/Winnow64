@@ -20,7 +20,7 @@ namespace G
     // not persistent
     bool isThreadTrackingOn;
     bool isNewFolderLoaded;
-    int scrollBarThickness = 12;        // Also set in winnowstyle.css
+    int scrollBarThickness = 14;        // Also set in winnowstyle.css for vertical and horizontal
     QModelIndexList copyCutIdxList;
     QStringList copyCutFileList;
     QElapsedTimer t;
