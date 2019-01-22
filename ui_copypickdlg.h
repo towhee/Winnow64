@@ -33,7 +33,7 @@ QT_BEGIN_NAMESPACE
 class Ui_IngestDlg
 {
 public:
-    QGroupBox *groupBox;
+    QGroupBox *seqGroupBox;
     QLabel *folderPathLabel;
     QLabel *folderPathLabel_2;
     QLabel *folderPathLabel_3;
@@ -57,7 +57,7 @@ public:
     QPushButton *helpBtn;
     QGroupBox *groupBox_4;
     QLabel *existingSequenceLabel;
-    QLabel *label_3;
+    QLabel *startSeqLabel;
     QSpinBox *spinBoxStartNumber;
     QLabel *label_5;
     QComboBox *filenameTemplatesCB;
@@ -81,14 +81,14 @@ public:
         sizePolicy.setHeightForWidth(IngestDlg->sizePolicy().hasHeightForWidth());
         IngestDlg->setSizePolicy(sizePolicy);
         IngestDlg->setModal(false);
-        groupBox = new QGroupBox(IngestDlg);
-        groupBox->setObjectName(QStringLiteral("groupBox"));
-        groupBox->setGeometry(QRect(20, 520, 661, 111));
-        groupBox->setMinimumSize(QSize(381, 0));
+        seqGroupBox = new QGroupBox(IngestDlg);
+        seqGroupBox->setObjectName(QStringLiteral("seqGroupBox"));
+        seqGroupBox->setGeometry(QRect(20, 520, 661, 111));
+        seqGroupBox->setMinimumSize(QSize(381, 0));
         QFont font;
         font.setPointSize(10);
-        groupBox->setFont(font);
-        folderPathLabel = new QLabel(groupBox);
+        seqGroupBox->setFont(font);
+        folderPathLabel = new QLabel(seqGroupBox);
         folderPathLabel->setObjectName(QStringLiteral("folderPathLabel"));
         folderPathLabel->setGeometry(QRect(20, 20, 640, 20));
         QPalette palette;
@@ -107,7 +107,7 @@ public:
         folderPathLabel->setFont(font);
         folderPathLabel->setStyleSheet(QStringLiteral("color:rgb(180,180,120)"));
         folderPathLabel->setFrameShape(QFrame::Box);
-        folderPathLabel_2 = new QLabel(groupBox);
+        folderPathLabel_2 = new QLabel(seqGroupBox);
         folderPathLabel_2->setObjectName(QStringLiteral("folderPathLabel_2"));
         folderPathLabel_2->setGeometry(QRect(20, 40, 640, 20));
         QPalette palette1;
@@ -124,7 +124,7 @@ public:
         folderPathLabel_2->setFont(font);
         folderPathLabel_2->setStyleSheet(QStringLiteral("color:rgb(180,180,120)"));
         folderPathLabel_2->setFrameShape(QFrame::Box);
-        folderPathLabel_3 = new QLabel(groupBox);
+        folderPathLabel_3 = new QLabel(seqGroupBox);
         folderPathLabel_3->setObjectName(QStringLiteral("folderPathLabel_3"));
         folderPathLabel_3->setGeometry(QRect(20, 60, 640, 20));
         QPalette palette2;
@@ -138,7 +138,7 @@ public:
         folderPathLabel_3->setPalette(palette2);
         folderPathLabel_3->setFont(font);
         folderPathLabel_3->setFrameShape(QFrame::Box);
-        folderPathLabel_4 = new QLabel(groupBox);
+        folderPathLabel_4 = new QLabel(seqGroupBox);
         folderPathLabel_4->setObjectName(QStringLiteral("folderPathLabel_4"));
         folderPathLabel_4->setGeometry(QRect(20, 80, 640, 20));
         QPalette palette3;
@@ -255,10 +255,10 @@ public:
         existingSequenceLabel->setGeometry(QRect(250, 80, 391, 20));
         existingSequenceLabel->setStyleSheet(QStringLiteral(""));
         existingSequenceLabel->setFrameShape(QFrame::Box);
-        label_3 = new QLabel(groupBox_4);
-        label_3->setObjectName(QStringLiteral("label_3"));
-        label_3->setGeometry(QRect(60, 81, 121, 16));
-        label_3->setFont(font);
+        startSeqLabel = new QLabel(groupBox_4);
+        startSeqLabel->setObjectName(QStringLiteral("startSeqLabel"));
+        startSeqLabel->setGeometry(QRect(60, 81, 121, 16));
+        startSeqLabel->setFont(font);
         spinBoxStartNumber = new QSpinBox(groupBox_4);
         spinBoxStartNumber->setObjectName(QStringLiteral("spinBoxStartNumber"));
         spinBoxStartNumber->setGeometry(QRect(190, 78, 51, 22));
@@ -327,9 +327,9 @@ public:
     {
         IngestDlg->setWindowTitle(QApplication::translate("IngestDlg", "Copy picked images to destination folder", nullptr));
 #ifndef QT_NO_TOOLTIP
-        groupBox->setToolTip(QString());
+        seqGroupBox->setToolTip(QString());
 #endif // QT_NO_TOOLTIP
-        groupBox->setTitle(QApplication::translate("IngestDlg", "Images will be copied and renamed to", nullptr));
+        seqGroupBox->setTitle(QApplication::translate("IngestDlg", "Images will be copied and renamed to", nullptr));
 #ifndef QT_NO_TOOLTIP
         folderPathLabel->setToolTip(QString());
 #endif // QT_NO_TOOLTIP
@@ -356,7 +356,7 @@ public:
 #ifndef QT_NO_TOOLTIP
         selectFolderBtn->setToolTip(QString());
 #endif // QT_NO_TOOLTIP
-        selectFolderBtn->setText(QApplication::translate("IngestDlg", " Folder", nullptr));
+        selectFolderBtn->setText(QApplication::translate("IngestDlg", " Select Folder", nullptr));
 #ifndef QT_NO_TOOLTIP
         destinationFolderLabel->setToolTip(QString());
 #endif // QT_NO_TOOLTIP
@@ -414,15 +414,15 @@ public:
 #ifndef QT_NO_TOOLTIP
         groupBox_4->setToolTip(QString());
 #endif // QT_NO_TOOLTIP
-        groupBox_4->setTitle(QApplication::translate("IngestDlg", "File name and sequencing", nullptr));
+        groupBox_4->setTitle(QApplication::translate("IngestDlg", "File naming and sequencing", nullptr));
 #ifndef QT_NO_TOOLTIP
         existingSequenceLabel->setToolTip(QString());
 #endif // QT_NO_TOOLTIP
         existingSequenceLabel->setText(QString());
 #ifndef QT_NO_TOOLTIP
-        label_3->setToolTip(QString());
+        startSeqLabel->setToolTip(QString());
 #endif // QT_NO_TOOLTIP
-        label_3->setText(QApplication::translate("IngestDlg", "Start sequence from:", nullptr));
+        startSeqLabel->setText(QApplication::translate("IngestDlg", "Start sequence from:", nullptr));
 #ifndef QT_NO_TOOLTIP
         spinBoxStartNumber->setToolTip(QString());
 #endif // QT_NO_TOOLTIP

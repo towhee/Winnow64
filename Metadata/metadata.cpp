@@ -84,7 +84,7 @@ void Metadata::initSupportedFiles()
     // add raw file types here as they are supported
     rawFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2";
     sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2" << "jpg";
-    internalXmpFormats << "jpg";
+    internalXmpFormats << "notyetjpg";
     xmpWriteFormats << "jpg" << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2";
 
     supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
