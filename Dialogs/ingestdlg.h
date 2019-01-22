@@ -24,6 +24,7 @@ public:
                        Metadata *metadata,
                        DataModel *dm,
                        QString ingestRootFolder,
+                       QString manualFolderPath,
                        QMap<QString, QString>& pathTemplates,
                        QMap<QString, QString>& filenameTemplates,
                        int& pathTemplateSelected,
@@ -51,7 +52,7 @@ private slots:
     void on_ejectChk_stateChanged(int arg1);
 
 signals:
-    void updateIngestParameters(QString rootFolderPath, bool isAuto);
+    void updateIngestParameters(QString rootFolderPath, QString manualFolderPath, bool isAuto);
     void updateIngestHistory(QString folderPath);
 
 private:
@@ -65,7 +66,7 @@ private:
     void updateExistingSequence();
     int getSequenceStart(const QString &path);
     void updateStyleOfFolderLabels();
-    void renameIfExists(QString &destination, QString &fileName, QString &dotSuffix);
+    void renameIfExists(QString &destination, QString &baseName, QString dotSuffix);
     void getPicks();
 
     bool isInitializing;
@@ -89,7 +90,7 @@ private:
 
     QString folderPath; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
     QString defaultRootFolderPath;
-
+    QString manualFolderPath;
     QString rootFolderPath;
     QString fromRootToBaseFolder;
     QString baseFolderDescription;

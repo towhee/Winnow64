@@ -995,6 +995,46 @@ void ThumbView::updateLayout()
     QListView::event(&event);
 }
 
+void ThumbView::scrollDown(int step)
+{
+    if(wrapThumbs) {
+        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
+    }
+    else {
+        verticalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
+    }
+}
+
+void ThumbView::scrollUp(int step)
+{
+    if(wrapThumbs) {
+        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
+    }
+    else {
+        verticalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
+    }
+}
+
+void ThumbView::scrollPageDown(int step)
+{
+    if(wrapThumbs) {
+        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
+    }
+    else {
+        verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
+    }
+}
+
+void ThumbView::scrollPageUp(int step)
+{
+    if(wrapThumbs) {
+        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
+    }
+    else {
+        verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
+    }
+}
+
 void ThumbView::scrollToCurrent(int row)
 {
 /*

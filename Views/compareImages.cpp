@@ -61,6 +61,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
             for(int col = 0; col < gridLayout->columnCount(); ++col) {
                 QWidget *w = gridLayout->itemAtPosition(row, col)->widget();
                 if(w) {
+                    qDebug() << "deleting row / col / w" << row << col << w;
                     gridLayout->removeWidget(w);
                     delete w;
                 }

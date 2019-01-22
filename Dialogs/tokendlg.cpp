@@ -113,6 +113,7 @@ the example values contained in exampleMap.
         }
     }
     parseUpdated(s);
+    if(textDoc->toPlainText().length() > 0) emit isUnique(isLikelyUnique());
     return s;
 }
 
@@ -235,6 +236,16 @@ void TokenEdit::insertFromMimeData(const QMimeData *source)
     parse();
 }
 
+bool TokenEdit::isLikelyUnique()
+{
+    QString tokenString = textDoc->toPlainText();
+    qDebug() << tokenString;
+    if(tokenString.contains("{ORIGINAL FILENAME}")) return true;
+    if(tokenString.contains("XX")) return true;
+    if(tokenString.contains("{SECOND}")) return true;
+    return false;
+}
+
 /*******************************************************************************
    TokenDlg Class
 *******************************************************************************/
@@ -255,6 +266,7 @@ TokenDlg::TokenDlg(QStringList &tokens,
                    currentKey(currentKey)
 {
     ui->setupUi(this);
+    this->title = title;
     setWindowTitle(title);
     setAcceptDrops(true);
     ui->templatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
@@ -286,9 +298,12 @@ TokenDlg::TokenDlg(QStringList &tokens,
     ui->tokenList->setSelectionMode(QAbstractItemView::SingleSelection);
 
     ui->tokenEdit->exampleMap = exampleMap;
+    ui->uniqueWarningLabel->setVisible(false);
 
     connect(ui->tokenEdit, SIGNAL(parseUpdated(QString)),
             this, SLOT(updateExample(QString)));
+    connect(ui->tokenEdit, SIGNAL(isUnique(bool)),
+            this, SLOT(updateUniqueFileNameWarning(bool)));
     connect(ui->tokenEdit, SIGNAL(textChanged()),
             this, SLOT(updateTemplate()));
 
@@ -297,6 +312,16 @@ TokenDlg::TokenDlg(QStringList &tokens,
 TokenDlg::~TokenDlg()
 {
     delete ui;
+}
+
+void TokenDlg::updateUniqueFileNameWarning(bool isProbablyUnique)
+{
+    if(title == "Token Editor - Destination File Name") {
+        if(isProbablyUnique)
+            ui->uniqueWarningLabel->setVisible(false);
+        else
+            ui->uniqueWarningLabel->setVisible(true);
+    }
 }
 
 void TokenDlg::updateExample(QString s)
