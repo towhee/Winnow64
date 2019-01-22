@@ -1715,7 +1715,7 @@ void MW::createActions()
     addAction(filterPickAction);
     connect(filterPickAction, &QAction::triggered, filters, &Filters::checkPicks);
 
-    popPickHistoryAction = new QAction(tr("Undo pick history"), this);
+    popPickHistoryAction = new QAction(tr("Undo Pick"), this);
     popPickHistoryAction->setObjectName("togglePick");
     popPickHistoryAction->setShortcutVisibleInContextMenu(true);
     addAction(popPickHistoryAction);
@@ -1864,11 +1864,17 @@ void MW::createActions()
     addAction(keyEndAction);
     connect(keyEndAction, &QAction::triggered, this, &MW::keyEnd);
 
-    keyScrollDownAction = new QAction(tr("Scroll  down"), this);
-    keyScrollDownAction->setObjectName("scrollDown");
-    keyScrollDownAction->setShortcutVisibleInContextMenu(true);
-    addAction(keyScrollDownAction);
-    connect(keyScrollDownAction, &QAction::triggered, this, &MW::keyScrollDown);
+    keyScrollLeftAction = new QAction(tr("Scroll  Left"), this);
+    keyScrollLeftAction->setObjectName("scrollLeft");
+    keyScrollLeftAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollLeftAction);
+    connect(keyScrollLeftAction, &QAction::triggered, this, &MW::keyScrollUp);
+
+    keyScrollRightAction = new QAction(tr("Scroll  Right"), this);
+    keyScrollRightAction->setObjectName("scrollRight");
+    keyScrollRightAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollRightAction);
+    connect(keyScrollRightAction, &QAction::triggered, this, &MW::keyScrollDown);
 
     keyScrollUpAction = new QAction(tr("Scroll  up"), this);
     keyScrollUpAction->setObjectName("scrollUp");
@@ -1876,17 +1882,35 @@ void MW::createActions()
     addAction(keyScrollUpAction);
     connect(keyScrollUpAction, &QAction::triggered, this, &MW::keyScrollUp);
 
-    keyScrollPageDownAction = new QAction(tr("Scroll page down"), this);
-    keyScrollPageDownAction->setObjectName("scrollPageDown");
-    keyScrollPageDownAction->setShortcutVisibleInContextMenu(true);
-    addAction(keyScrollPageDownAction);
-    connect(keyScrollPageDownAction, &QAction::triggered, this, &MW::keyScrollPageDown);
+    keyScrollDownAction = new QAction(tr("Scroll  Down"), this);
+    keyScrollDownAction->setObjectName("scrollDown");
+    keyScrollDownAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollDownAction);
+    connect(keyScrollDownAction, &QAction::triggered, this, &MW::keyScrollDown);
 
-    keyScrollPageUpAction = new QAction(tr("Scroll page up"), this);
+    keyScrollPageLeftAction = new QAction(tr("Scroll Page Left"), this);
+    keyScrollPageLeftAction->setObjectName("scrollPageLeft");
+    keyScrollPageLeftAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollPageLeftAction);
+    connect(keyScrollPageLeftAction, &QAction::triggered, this, &MW::keyScrollPageUp);
+
+    keyScrollPageRightAction = new QAction(tr("Scroll Page Right"), this);
+    keyScrollPageRightAction->setObjectName("scrollPageRight");
+    keyScrollPageRightAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollPageRightAction);
+    connect(keyScrollPageRightAction, &QAction::triggered, this, &MW::keyScrollPageDown);
+
+    keyScrollPageUpAction = new QAction(tr("Scroll Page up"), this);
     keyScrollPageUpAction->setObjectName("scrollPageUp");
     keyScrollPageUpAction->setShortcutVisibleInContextMenu(true);
     addAction(keyScrollPageUpAction);
     connect(keyScrollPageUpAction, &QAction::triggered, this, &MW::keyScrollPageDown);
+
+    keyScrollPageDownAction = new QAction(tr("Scroll Page down"), this);
+    keyScrollPageDownAction->setObjectName("scrollPageDown");
+    keyScrollPageDownAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollPageDownAction);
+    connect(keyScrollPageDownAction, &QAction::triggered, this, &MW::keyScrollPageDown);
 
     // Not a menu item - used by slide show
     randomImageAction = new QAction(tr("Random"), this);
@@ -2586,9 +2610,7 @@ void MW::createMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(revealFileAction);
     fileMenu->addAction(refreshFoldersAction);
-//    fileMenu->addSeparator();
-//    fileMenu->addAction(renameAction);
-//    fileMenu->addAction(runDropletAction);
+    fileMenu->addAction(collapseFoldersAction);
     fileMenu->addSeparator();
     fileMenu->addAction(reportMetadataAction);
     fileMenu->addSeparator();
@@ -2641,8 +2663,19 @@ void MW::createMenus()
     goMenu->addAction(keyHomeAction);
     goMenu->addAction(keyEndAction);
     goMenu->addSeparator();
+    goMenu->addAction(keyScrollLeftAction);
+    goMenu->addAction(keyScrollRightAction);
+    goMenu->addAction(keyScrollUpAction);
+    goMenu->addAction(keyScrollDownAction);
+    goMenu->addAction(keyScrollPageLeftAction);
+    goMenu->addAction(keyScrollPageRightAction);
+    goMenu->addAction(keyScrollPageUpAction);
+    goMenu->addAction(keyScrollPageDownAction);
+    goMenu->addSeparator();
     goMenu->addAction(nextPickAction);
     goMenu->addAction(prevPickAction);
+    goMenu->addSeparator();
+    goMenu->addAction(randomImageAction);
 
     // Filter Menu
 
@@ -6264,49 +6297,47 @@ void MW::loadShortcuts(bool defaultShortcuts)
         //        pasteImageAction->setShortcut(QKeySequence("Ctrl+Shift+V"));
         //        refreshAction->setShortcut(QKeySequence("Ctrl+F5"));
         //        pasteAction->setShortcut(QKeySequence("Ctrl+V"));
+
+        // File
+        openAction->setShortcut(QKeySequence("O"));
+        ingestAction->setShortcut(QKeySequence("Q"));
+        showImageCountAction->setShortcut(QKeySequence("\\"));
+        combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
+        subFoldersAction->setShortcut(QKeySequence("B"));
+        revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
         refreshFoldersAction->setShortcut(QKeySequence("Alt+R"));
         collapseFoldersAction->setShortcut(QKeySequence("Alt+C"));
-        subFoldersAction->setShortcut(QKeySequence("B"));
-        showImageCountAction->setShortcut(QKeySequence("\\"));
-        fullScreenAction->setShortcut(QKeySequence("F"));
-//        escapeFullScreenAction->setShortcut(QKeySequence("Esc")); // see MW::eventFilter
-        prefAction->setShortcut(QKeySequence("Ctrl+,"));
+        reportMetadataAction->setShortcut(QKeySequence("Ctrl+Shift+R"));
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
+
+
+
+
+        // Edit
         selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
         invertSelectionAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
         refineAction->setShortcut(QKeySequence("R"));
         pickAction->setShortcut(QKeySequence("`"));
-        filterPickAction->setShortcut(QKeySequence("Shift+`"));
         popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
-        ingestAction->setShortcut(QKeySequence("Q"));
-        combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
-        uncheckAllFiltersAction->setShortcut(QKeySequence("Shift+Ctrl+C"));
+
         rate1Action->setShortcut(QKeySequence("1"));
         rate2Action->setShortcut(QKeySequence("2"));
         rate3Action->setShortcut(QKeySequence("3"));
         rate4Action->setShortcut(QKeySequence("4"));
         rate5Action->setShortcut(QKeySequence("5"));
-        filterRating1Action->setShortcut(QKeySequence("Shift+1"));
-        filterRating2Action->setShortcut(QKeySequence("Shift+2"));
-        filterRating3Action->setShortcut(QKeySequence("Shift+3"));
-        filterRating4Action->setShortcut(QKeySequence("Shift+4"));
-        filterRating5Action->setShortcut(QKeySequence("Shift+5"));
-//        label0Action->setShortcut(QKeySequence("^"));
+
         label1Action->setShortcut(QKeySequence("6"));
         label2Action->setShortcut(QKeySequence("7"));
         label3Action->setShortcut(QKeySequence("8"));
         label4Action->setShortcut(QKeySequence("9"));
         label5Action->setShortcut(QKeySequence("0"));
-        filterRedAction->setShortcut(QKeySequence("Shift+6"));
-        filterYellowAction->setShortcut(QKeySequence("Shift+7"));
-        filterGreenAction->setShortcut(QKeySequence("Shift+8"));
-        filterBlueAction->setShortcut(QKeySequence("Shift+9"));
-        filterPurpleAction->setShortcut(QKeySequence("Shift+0"));
-        reportMetadataAction->setShortcut(QKeySequence("Shift+Ctrl+R"));
-        slideShowAction->setShortcut(QKeySequence("S"));
-        thumbsFitAction->setShortcut(QKeySequence("Alt+]"));
-        thumbsEnlargeAction->setShortcut(QKeySequence("]"));
-        thumbsShrinkAction->setShortcut(QKeySequence("["));
+
+        rotateLeftAction->setShortcut(QKeySequence("Ctrl+["));
+        rotateRightAction->setShortcut(QKeySequence("Ctrl+]"));
+
+        prefAction->setShortcut(QKeySequence("Ctrl+,"));
+
+        // Go
         keyRightAction->setShortcut(QKeySequence("Right"));
         keyLeftAction->setShortcut(QKeySequence("Left"));
         keyHomeAction->setShortcut(QKeySequence("Home"));
@@ -6314,45 +6345,80 @@ void MW::loadShortcuts(bool defaultShortcuts)
         keyDownAction->setShortcut(QKeySequence("Down"));
         keyUpAction->setShortcut(QKeySequence("Up"));
 
-        keyScrollDownAction->setShortcut(QKeySequence("Alt+Right"));
-        keyScrollUpAction->setShortcut(QKeySequence("Alt+Left"));
-        keyScrollPageDownAction->setShortcut(QKeySequence("Alt+Down"));
-        keyScrollPageUpAction->setShortcut(QKeySequence("Alt+Down"));
+        keyScrollLeftAction->setShortcut(QKeySequence("Alt+Left"));
+        keyScrollRightAction->setShortcut(QKeySequence("Alt+Right"));
+        keyScrollUpAction->setShortcut(QKeySequence("Alt+Up"));
+        keyScrollDownAction->setShortcut(QKeySequence("Alt+Down"));
 
+        keyScrollPageLeftAction->setShortcut(QKeySequence("Ctrl+Alt+Left"));
+        keyScrollPageRightAction->setShortcut(QKeySequence("Ctrl+Alt+Right"));
+        keyScrollPageUpAction->setShortcut(QKeySequence("Ctrl+Alt+Up"));
+        keyScrollPageDownAction->setShortcut(QKeySequence("Ctrl+Alt+Down"));
+
+        nextPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Right"));
+        prevPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Left"));
         randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+R"));
-        nextPickAction->setShortcut(QKeySequence("Alt+Ctl+Right"));
-        prevPickAction->setShortcut(QKeySequence("Alt+Ctl+Left"));
-        openAction->setShortcut(QKeySequence("O"));
+
+        // Filters
+        uncheckAllFiltersAction->setShortcut(QKeySequence("Shift+Ctrl+C"));
+        filterPickAction->setShortcut(QKeySequence("Shift+`"));
+
+        filterRating1Action->setShortcut(QKeySequence("Shift+1"));
+        filterRating2Action->setShortcut(QKeySequence("Shift+2"));
+        filterRating3Action->setShortcut(QKeySequence("Shift+3"));
+        filterRating4Action->setShortcut(QKeySequence("Shift+4"));
+        filterRating5Action->setShortcut(QKeySequence("Shift+5"));
+
+        filterRedAction->setShortcut(QKeySequence("Shift+6"));
+        filterYellowAction->setShortcut(QKeySequence("Shift+7"));
+        filterGreenAction->setShortcut(QKeySequence("Shift+8"));
+        filterBlueAction->setShortcut(QKeySequence("Shift+9"));
+        filterPurpleAction->setShortcut(QKeySequence("Shift+0"));
+
+        // View
         asLoupeAction->setShortcut(QKeySequence("E"));
         asGridAction->setShortcut(QKeySequence("G"));
         asTableAction->setShortcut(QKeySequence("T"));
         asCompareAction->setShortcut(QKeySequence("C"));
-        revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
-        zoomOutAction->setShortcut(QKeySequence("-"));
-        zoomInAction->setShortcut(QKeySequence("+"));
-        zoomToggleAction->setShortcut(QKeySequence("Space"));
-        zoomToAction->setShortcut(QKeySequence("Z"));
-        rotateLeftAction->setShortcut(QKeySequence("Ctrl+["));
-        rotateRightAction->setShortcut(QKeySequence("Ctrl+]"));
+
+        slideShowAction->setShortcut(QKeySequence("S"));
+        fullScreenAction->setShortcut(QKeySequence("F"));
+//        escapeFullScreenAction->setShortcut(QKeySequence("Esc")); // see MW::eventFilter
+
         ratingBadgeVisibleAction->setShortcut(QKeySequence("Ctrl+I"));
         infoVisibleAction->setShortcut(QKeySequence("I"));
+
+        zoomToAction->setShortcut(QKeySequence("Z"));
+        zoomInAction->setShortcut(QKeySequence("+"));
+        zoomOutAction->setShortcut(QKeySequence("-"));
+        zoomToggleAction->setShortcut(QKeySequence("Space"));
+
+//        thumbsFitAction->setShortcut(QKeySequence("Alt+]"));
+        thumbsEnlargeAction->setShortcut(QKeySequence("]"));
+        thumbsShrinkAction->setShortcut(QKeySequence("["));
+
+
+        // Window
         newWorkspaceAction->setShortcut(QKeySequence("W"));
         manageWorkspaceAction->setShortcut(QKeySequence("Ctrl+W"));
         defaultWorkspaceAction->setShortcut(QKeySequence("Ctrl+Shift+W"));
+
         folderDockVisibleAction->setShortcut(QKeySequence("F3"));
         favDockVisibleAction->setShortcut(QKeySequence("F4"));
         filterDockVisibleAction->setShortcut(QKeySequence("F5"));
         metadataDockVisibleAction->setShortcut(QKeySequence("F6"));
         thumbDockVisibleAction->setShortcut(QKeySequence("F7"));
-//        windowTitleBarVisibleAction->setShortcut(QKeySequence("F8"));
         menuBarVisibleAction->setShortcut(QKeySequence("F9"));
         statusBarVisibleAction->setShortcut(QKeySequence("F10"));
+
         folderDockLockAction->setShortcut(QKeySequence("Shift+F3"));
         favDockLockAction->setShortcut(QKeySequence("Shift+F4"));
         filterDockLockAction->setShortcut(QKeySequence("Shift+F5"));
         metadataDockLockAction->setShortcut(QKeySequence("Shift+F6"));
         thumbDockLockAction->setShortcut(QKeySequence("Shift+F7"));
         allDocksLockAction->setShortcut(QKeySequence("Ctrl+L"));
+
+        // Help
         helpAction->setShortcut(QKeySequence("?"));
 //        toggleIconsListAction->setShortcut(QKeySequence("Ctrl+T"));
     }
@@ -7813,14 +7879,14 @@ void MW::keyEnd()
 
 void MW::keyScrollDown()
 {
-    if(G::mode == "Grid") gridView->scrollPageDown(0);
-    if(thumbView->isVisible()) thumbView->scrollPageDown(0);
+    if(G::mode == "Grid") gridView->scrollDown(0);
+    if(thumbView->isVisible()) thumbView->scrollDown(0);
 }
 
 void MW::keyScrollUp()
 {
-    if(G::mode == "Grid") gridView->scrollPageUp(0);
-    if(thumbView->isVisible()) thumbView->scrollPageUp(0);
+    if(G::mode == "Grid") gridView->scrollUp(0);
+    if(thumbView->isVisible()) thumbView->scrollUp(0);
 }
 
 void MW::keyScrollPageDown()
