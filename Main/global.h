@@ -63,6 +63,11 @@ namespace G
         TotalColumns    // insert additional columns before this
     };
 
+    struct Pair {
+        QString name;
+        QString path;
+    };
+
     extern QColor labelNoneColor;
     extern QColor labelRedColor;
     extern QColor labelYellowColor;
@@ -86,6 +91,8 @@ namespace G
     extern QStringList copyCutFileList;     // req'd?
     extern QElapsedTimer t;
     extern bool isTimer;
+
+
 
     extern void track(QString functionName = "", QString comment = "");
 
