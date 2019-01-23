@@ -59,16 +59,9 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.6.4";
-    QString versionDetail = "Check for updates added";
-    QString updateNotes =
-        "<ul>"
-        "<li>Added optional automatic check for updates.  This can be turned on/off in preferences.</li>"
-        "<li>Corrected problem where the USB drive would not be ejected when executed from the main menu.</li>"
-        "<li>Corrected issues when change modes and select invalid folders.</li></div>"
-        ""
-        ""
-        "";
+    QString version = "0.9.6.5 released 2019-01-22";
+    QString versionDetail =
+            "<a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#0000ff;\">Version Information</span></a>.</p></body></html>";
 
     bool isShift;               // used when opening if shift key pressed
 
@@ -77,7 +70,7 @@ public:
     // QSettings
     QSettings *setting;
     QMap<QString, QAction *> actionKeys;
-    QMap<QString, QString> externalApps;
+//    QMap<QString, QString> externalApps;
 
     QMap<QString, QString> pathTemplates;
     QMap<QString, QString> filenameTemplates;
@@ -90,6 +83,13 @@ public:
     QStringList ingestDescriptionCompleter;
 
     QDockWidget *thumbDock;
+
+//    struct Pair {
+//        QString name;
+//        QString path;
+//    };
+    G::Pair externalApp;                  // external application name / executable path
+    QList<G::Pair> externalApps;          // list of external apps
 
     struct workspaceData {
         QString accelNum;       // for accelerator
@@ -383,11 +383,11 @@ private slots:
     void thumbsShrink();
     void setThumbLabels();
     void setDockFitThumbs();
-    void chooseExternalApp();
-    void updateExternalApps();
+
     void runExternalApp();
     void cleanupSender();
     void externalAppError(QProcess::ProcessError err);
+
     void addIngestHistoryFolder(QString fPath);
 
     void setFullNormal();

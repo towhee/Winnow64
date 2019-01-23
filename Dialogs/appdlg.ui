@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>886</width>
-    <height>683</height>
+    <width>880</width>
+    <height>400</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,8 +18,8 @@
     <rect>
      <x>20</x>
      <y>20</y>
-     <width>831</width>
-     <height>441</height>
+     <width>841</width>
+     <height>271</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -31,8 +31,11 @@
       <property name="editTriggers">
        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked</set>
       </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
       <property name="columnCount">
-       <number>2</number>
+       <number>3</number>
       </property>
       <attribute name="horizontalHeaderDefaultSectionSize">
        <number>300</number>
@@ -40,6 +43,13 @@
       <attribute name="verticalHeaderVisible">
        <bool>false</bool>
       </attribute>
+      <attribute name="verticalHeaderDefaultSectionSize">
+       <number>24</number>
+      </attribute>
+      <attribute name="verticalHeaderMinimumSectionSize">
+       <number>24</number>
+      </attribute>
+      <column/>
       <column/>
       <column/>
      </widget>
@@ -49,15 +59,44 @@
   <widget class="QWidget" name="horizontalLayoutWidget_2">
    <property name="geometry">
     <rect>
-     <x>210</x>
-     <y>600</y>
-     <width>641</width>
+     <x>20</x>
+     <y>320</y>
+     <width>840</width>
      <height>51</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout_2">
     <item>
+     <widget class="QPushButton" name="pushButton">
+      <property name="toolTip">
+       <string>Select a row and then click this button to move the row down</string>
+      </property>
+      <property name="text">
+       <string>Move Down</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_2">
+      <property name="toolTip">
+       <string>Select a row and then click this button to move the row up</string>
+      </property>
+      <property name="text">
+       <string>Move Up</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QPushButton" name="addBtn">
+      <property name="toolTip">
+       <string>Add a program to the table (up to 10 programs)</string>
+      </property>
       <property name="text">
        <string>Add Program</string>
       </property>
@@ -68,6 +107,9 @@
     </item>
     <item>
      <widget class="QPushButton" name="removeBtn">
+      <property name="toolTip">
+       <string>Remove the selected program form the table</string>
+      </property>
       <property name="text">
        <string>Remove Program</string>
       </property>
@@ -78,6 +120,9 @@
     </item>
     <item>
      <widget class="QPushButton" name="okBtn">
+      <property name="toolTip">
+       <string>Save the changes, which will be reflected in the external applications available in &quot;Open with...&quot;</string>
+      </property>
       <property name="text">
        <string>Save changes</string>
       </property>
@@ -88,6 +133,9 @@
     </item>
     <item>
      <widget class="QPushButton" name="cancelBtn">
+      <property name="toolTip">
+       <string>Exit without saving any changes</string>
+      </property>
       <property name="text">
        <string>Cancel</string>
       </property>
@@ -97,19 +145,6 @@
      </widget>
     </item>
    </layout>
-  </widget>
-  <widget class="QLabel" name="label">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>480</y>
-     <width>821</width>
-     <height>101</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffff00;&quot;&gt;Add&lt;/span&gt; external programs using the &amp;quot;Add Program&amp;quot; button. The program will be added to the table. &lt;/p&gt;&lt;p&gt;To &lt;span style=&quot; color:#ffff00;&quot;&gt;remove&lt;/span&gt; a program select the program in the table and click &amp;quot;Remove Program&amp;quot; &lt;/p&gt;&lt;p&gt;To &lt;span style=&quot; color:#ffff00;&quot;&gt;change&lt;/span&gt; the displayed program name edit the table cell.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
   </widget>
  </widget>
  <resources/>

@@ -105,6 +105,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Manage external programs</string>
+        </property>
+        <property name="text">
+         <string>Opt/Alt + O</string>
+        </property>
+        <property name="text">
+         <string>This is the letter &quot;O&quot;, not zero</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Open with external program</string>
         </property>
         <property name="text">
