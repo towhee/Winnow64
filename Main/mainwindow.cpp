@@ -100,7 +100,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     createActions();            // dependent on above
     createMenus();              // dependent on createActions and loadSettings
 
-//    updateExternalApps();       // dependent on createActions
     handleStartupArgs();
 
     if (isSettings) {
@@ -565,10 +564,11 @@ bool MW::checkForUpdate()
     // Wait until the update tool is finished
     process.waitForFinished();
 
+//    qDebug() << "process.error() =" << process.error();
     if(process.error() != QProcess::UnknownError)
     {
         QString msg = "Error checking for updates";
-        if(!isStartSilentCheckForUpdates) popUp->showPopup(this, msg, 1500, .5);
+        popUp->showPopup(this, msg, 1500, 1.0);
         isStartSilentCheckForUpdates = false;
         return false;
     }
@@ -583,12 +583,12 @@ bool MW::checkForUpdate()
     if(data.isEmpty())
     {
         QString msg = "No updates available";
-        if(!isStartSilentCheckForUpdates) popUp->showPopup(this, msg, 1500, .5);
+        if(!isStartSilentCheckForUpdates) popUp->showPopup(this, msg, 1500, 1.0);
         isStartSilentCheckForUpdates = false;
         return false;
     }
 
-    updateAppDlg = new UpdateApp(updateNotes);
+    updateAppDlg = new UpdateApp(version, css);
     int ret = updateAppDlg->exec();
     if(ret == QDialog::Rejected) {
         process.close();
@@ -1465,24 +1465,21 @@ void MW::createActions()
 
     /* read external apps from QStettings */
     setting->beginGroup("ExternalApps");
-    QStringList extApps = setting->childKeys();
-    n = extApps.size();
+    QStringList names = setting->childKeys();
+    n = names.size();
     for (int i = 0; i < 10; ++i) {
-        QString name;
-        QString objName = "";
         if (i < n) {
-            externalApps[extApps.at(i)] = setting->value(extApps.at(i)).toString();
-            name = extApps.at(i);
-            objName = "app" + QString::number(i);
+            externalApp.name = names.at(i);
+            externalApp.path = setting->value(names.at(i)).toString();
+            externalApps.append(externalApp);
         }
-        else name = "Future app" + QString::number(i);
+        else externalApp.name = "Future app" + QString::number(i);
 
-        appActions.append(new QAction(name, this));
+        appActions.append(new QAction(externalApp.name, this));
         if (i < n) {
             appActions.at(i)->setShortcut(QKeySequence("Alt+" + QString::number(i)));
-            appActions.at(i)->setObjectName(objName);
             appActions.at(i)->setShortcutVisibleInContextMenu(true);
-            appActions.at(i)->setText(name);
+            appActions.at(i)->setText(externalApp.name);
             appActions.at(i)->setVisible(true);
             addAction(appActions.at(i));
         }
@@ -5053,13 +5050,41 @@ void MW::about()
 
 void MW::externalAppManager()
 {
+/* This function opens a dialog that allows the user to add and delete external executables
+that can be passed image files.  externalApps is a QList that holds string pairs: the program
+name and the path to the external program executable.  This list is passed as a reference to
+the appdlg, which modifies it and then after the dialog is closed the appActions are rebuilt.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     Appdlg *appdlg = new Appdlg(externalApps, this);
-    appdlg->exec();
-    updateExternalApps();
+    if(appdlg->exec()) {
+        /*
+        Menus cannot be added/deleted at runtime in MacOS so 10 menu items are created
+        in the MW constructor and then edited here based on changes made in appDlg.
+        */
+        for(int i = 0; i <10; ++i) {
+            if(i < externalApps.length()) {
+                appActions.at(i)->setShortcut(QKeySequence("Alt+" + QString::number(i)));
+                appActions.at(i)->setText(externalApps.at(i).name);
+                appActions.at(i)->setVisible(true);
+            }
+            else {
+                appActions.at(i)->setVisible(false);
+                appActions.at(i)->setText("");
+            }
+        }
+    }
 }
 
 void MW::cleanupSender()
 {
+/* When the process responsible for running the external program is finished a signal
+is received here to delete the process.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -5096,9 +5121,17 @@ void MW::runExternalApp()
 //    QDesktopServices::openUrl(QUrl("file:///Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"));
 //    return;
 
-    QString app;
-    app = externalApps[((QAction*) sender())->text()];
-//    app = enquote(externalApps[((QAction*) sender())->text()]);
+    QString appPath = "";
+    QString appName = ((QAction*) sender())->text();
+    for(int i = 0; i < externalApps.length(); ++i) {
+        if(externalApps.at(i).name == appName) {
+            appPath = externalApps.at(i).path;
+            break;
+        }
+    }
+    if(appPath == "") return;       // add err handling
+
+//    app = externalApps[((QAction*) sender())->text()];
     QModelIndexList selectedIdxList = selectionModel->selectedRows();
 
 //    app = "/Applications/Adobe Photoshop CC 2018/Adobe Photoshop CC 2018.app/Contents/MacOS/Adobe Photoshop CC 2018";
@@ -5106,7 +5139,7 @@ void MW::runExternalApp()
 //    QString x = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app";
 //    app = "\"/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app\"";
 
-    std::cout << app.toStdString() << std::endl << std::flush;
+    std::cout << appPath.toStdString() << std::endl << std::flush;
 //    app = "/Applications/Preview.app";
 //    std::cout << app.toStdString() << std::endl << std::flush;
 
@@ -5154,82 +5187,28 @@ void MW::runExternalApp()
 //    arguments << "D:\Pictures\Coaster/2005-10-11_0082.jpg";
 //    arguments << "/Users/roryhill/Pictures/Eva/2016-06-21_0002.jpg";
 
-//    std::cout << "MW::runExternalApp()  " << app.toStdString()
+//    std::cout << "MW::runExternalApp()  " << appPath.toStdString()
 //              << " " << arguments.at(0).toStdString() << std::flush;
 
     QProcess *process = new QProcess();
-    connect(process, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(cleanupSender()));
-    connect(process, SIGNAL(error(QProcess::ProcessError)), this, SLOT(externalAppError(QProcess::ProcessError)));
+    connect(process, SIGNAL(finished(int, QProcess::ExitStatus)),
+            this, SLOT(cleanupSender()));
+    connect(process, SIGNAL(error(QProcess::ProcessError)),
+            this, SLOT(externalAppError(QProcess::ProcessError)));
 
     process->setArguments(arguments);
-    process->setProgram(app);
+    process->setProgram(appPath);
     process->start();
 
-//    process->start(app);
-//     process->start(app, arguments);
-//     process->start(app, {"/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"});
+//    process->start(appPath);
+//     process->start(appPath, arguments);
+//     process->start(appPath, {"/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"});
 
 //    if ( !process->waitForFinished(-1))
 //        qDebug() << G::t.restart() << "\t" << process->readAllStandardError();
 
     //this works in terminal"
     // open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
-}
-
-void MW::updateExternalApps()
-{
-/*
-Menus cannot be added/deleted at runtime in MacOS so 10 menu items are created
-in the MW constructor and then edited here based on changes made in processdlg.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    QMapIterator<QString, QString> eaIter(externalApps);
-    int i = 0;
-    while (eaIter.hasNext()) {
-        eaIter.next();
-        appActions.at(i)->setObjectName("app" + QString::number(i));
-        appActions.at(i)->setText(eaIter.key());
-        appActions.at(i)->setVisible(true);
-        i++;
-    }
-
-    int ii = i;
-    for (i = ii; i < 10; i++) {
-        appActions.at(i)->setVisible(false);
-        appActions.at(i)->setText("");
-    }
-}
-
-void MW::chooseExternalApp()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-
-//    qDebug() << G::t.restart() << "\t" << "MW::chooseExternalApp";
-
-    // in terminal this works:
-    //open -a 'Adobe Photoshop CC 2015.5.app' /Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg
-
-    // this launches photoshop but does not open jpg
-    QProcess *process = new QProcess(this);
-
-    QString a = "C:/Program Files/Adobe/Adobe Photoshop CC 2018/photoshop.exe";
-    a = QChar('\"') + a + QChar('\"');
-    QString c = "D:/Pictures/Business Card/2006-05-06_0005-Edit.psd";
-    c = QChar('\"') + c + QChar('\"');
-
-    QString program = a;
-    QStringList args;
-    args << c;
-
-    process->start(program, args);
 }
 
 void MW::preferences(int page)
@@ -5966,10 +5945,9 @@ re-established when the application is re-opened.
     /* External apps */
     setting->beginGroup("ExternalApps");
     setting->remove("");
-    QMapIterator<QString, QString> eaIter(externalApps);
-    while (eaIter.hasNext()) {
-        eaIter.next();
-        setting->setValue(eaIter.key(), eaIter.value());
+//    QMapIterator<QString, QString> eaIter(externalApps);
+    for(int i = 0; i < externalApps.length(); ++i) {
+        setting->setValue(externalApps.at(i).name, externalApps.at(i).path);
     }
     setting->endGroup();
 
@@ -6304,6 +6282,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
 
         // File
         openAction->setShortcut(QKeySequence("O"));
+        manageAppAction->setShortcut(QKeySequence("Alt+O"));
         ingestAction->setShortcut(QKeySequence("Q"));
         showImageCountAction->setShortcut(QKeySequence("\\"));
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
@@ -6313,9 +6292,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
         collapseFoldersAction->setShortcut(QKeySequence("Alt+C"));
         reportMetadataAction->setShortcut(QKeySequence("Ctrl+Shift+R"));
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
-
-
-
 
         // Edit
         selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
@@ -8351,13 +8327,16 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QVector<QString> shortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
+    qDebug() << shortcut[0];
+
+    /*
+
     qDebug() << gridView->verticalScrollBar()->pageStep()
              << gridView->verticalScrollBar()->maximum()
              << gridView->verticalScrollBar()->value();
 
     gridView->verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
-
-    /*
 
     compareImages->test();
     centralLayout->setCurrentIndex(CompareTab);
