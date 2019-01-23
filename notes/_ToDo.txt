@@ -26,7 +26,6 @@ ENHANCEMENTS
 - Add check for go to ingest folder after ingesting
 - Check for updates on Mac
 - Detect drive mounting
-- Horizontal scroll thumbs 1/2 window shortcut
 - Track downloads by ip address
 - Invert filter
 - Make all message boxes consistent (see runExternalApp)
@@ -42,6 +41,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Horizontal scroll thumbs 1/2 window shortcut
 - Wider separator bars
 - Wider scrollbars
 - Added another pick shortcut ("P")

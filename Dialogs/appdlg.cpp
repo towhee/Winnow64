@@ -1,5 +1,6 @@
 #include "appdlg.h"
 #include "ui_appdlg.h"
+#include <QDebug>
 
 /*
 This class maintains a list of external programs that Winnow can use to open
@@ -13,27 +14,75 @@ When the changes are saved xApps is cleared and then rebuilt by iterating the
 ui->appsTable table.
 */
 
-Appdlg::Appdlg(QMap<QString, QString>& externalApps, QWidget *parent)
+Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
     : QDialog(parent), ui(new Ui::Appdlg), xApps(externalApps)
 {
     ui->setupUi(this);
-    QStringList hdrs;
-    hdrs << "Program display name" << "Program path";
-    ui->appsTable->setHorizontalHeaderLabels(hdrs);
-    ui->appsTable->horizontalHeader()->resizeSection(0, 200);
-    ui->appsTable->horizontalHeader()->setStretchLastSection(true);
 
-    QMapIterator<QString, QString> it(xApps);
-    int rowCount = 0;
-    while (it.hasNext()) {
-        it.next();
-        QTableWidgetItem *item0 = new QTableWidgetItem(it.key());
-        QTableWidgetItem *item1 = new QTableWidgetItem(it.value());
+    {
+#ifdef Q_OS_LINIX
+//
+#endif
+#ifdef Q_OS_WIN
+    modifier = "Alt + ";
+#endif
+#ifdef Q_OS_MAC
+    modifier = "Opt + ";;
+#endif
+
+    }
+    QStringList hdrs;
+    hdrs << "Shortcut" << "Program display name" << "Program path";
+    ui->appsTable->setHorizontalHeaderLabels(hdrs);
+    ui->appsTable->horizontalHeader()->resizeSection(0, 100);
+    ui->appsTable->horizontalHeader()->resizeSection(1, 200);
+    ui->appsTable->horizontalHeader()->setStretchLastSection(true);
+    ui->appsTable->horizontalHeader()->setFixedHeight(24);
+    ui->appsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->appsTable->verticalHeader()->setSectionsClickable(false);
+
+    for(int row = 0; row < 10; ++ row) {
+        QTableWidgetItem *item0 = new QTableWidgetItem(modifier + shortcut[row]);
+        QTableWidgetItem *item1 = new QTableWidgetItem("");
+        QTableWidgetItem *item2 = new QTableWidgetItem("");
+
+        item0->setData(Qt::TextAlignmentRole,Qt::AlignCenter);
+
+        item0->setFlags(item0->flags() & ~Qt::ItemIsEnabled); // disabled
+        item0->setFlags(item0->flags() & ~Qt::ItemIsEditable); // non editable
+
+        item1->setFlags(item1->flags() & ~Qt::ItemIsEnabled); // disabled
         item1->setFlags(item1->flags() & ~Qt::ItemIsEditable); // non editable
-        ui->appsTable->insertRow(rowCount);
-        ui->appsTable->setItem(rowCount, 0, item0);
-        ui->appsTable->setItem(rowCount, 1, item1);
-        rowCount++;
+
+        item2->setFlags(item2->flags() & ~Qt::ItemIsEnabled); // disabled
+        item2->setFlags(item2->flags() & ~Qt::ItemIsEditable); // non editable
+
+        ui->appsTable->insertRow(row);
+        ui->appsTable->setItem(row, 0, item0);
+        ui->appsTable->setItem(row, 1, item1);
+        ui->appsTable->setItem(row, 2, item2);
+    }
+
+    int rows = xApps.length();
+    qDebug() << Qt::ItemIsEnabled << ~Qt::ItemIsEnabled;
+    for(int row = 0; row < rows; ++row) {
+        QTableWidgetItem *item0 = new QTableWidgetItem(modifier + shortcut[row]);
+        QTableWidgetItem *item1 = new QTableWidgetItem(xApps.at(row).name);
+        QTableWidgetItem *item2 = new QTableWidgetItem(xApps.at(row).path);
+        item0->setData(Qt::TextAlignmentRole,Qt::AlignCenter);
+
+//        item0->setFlags(item0->flags() & Qt::ItemIsEnabled); // disabled
+        item0->setFlags(item0->flags() & ~Qt::ItemIsEditable); // non editable
+
+//        item1->setFlags(item1->flags() & Qt::ItemIsEnabled); // enabled
+//        item1->setFlags(item1->flags() & Qt::ItemIsEditable); // editable
+
+//        item2->setFlags(item2->flags() & Qt::ItemIsEnabled); // enabled
+        item2->setFlags(item2->flags() & ~Qt::ItemIsEditable); // non editable
+
+        ui->appsTable->setItem(row, 0, item0);
+        ui->appsTable->setItem(row, 1, item1);
+        ui->appsTable->setItem(row, 2, item2);
     }
 }
 
@@ -45,8 +94,7 @@ Appdlg::~Appdlg()
 void Appdlg::on_addBtn_clicked()
 {
     int rowCount = ui->appsTable->rowCount();
-    if (rowCount >= 10) {
-//        qDebug() << "rowCount" << rowCount;
+    if (rowCount > 10) {
         return;
     }
     QString appPath = QFileDialog::getOpenFileName(this,
@@ -54,18 +102,17 @@ void Appdlg::on_addBtn_clicked()
     QFileInfo fileInfo(appPath);
     QString appName = fileInfo.baseName();
     appName[0].toUpper();
-//    qDebug() << G::t.restart() << "\t" << appName;
+    QTableWidgetItem *item = new QTableWidgetItem(modifier + shortcut[rowCount]);
     QTableWidgetItem *item0 = new QTableWidgetItem(appName);
     QTableWidgetItem *item1 = new QTableWidgetItem(fileInfo.absoluteFilePath());
     ui->appsTable->insertRow(rowCount);
-    ui->appsTable->setItem(rowCount, 0, item0);
-    ui->appsTable->setItem(rowCount, 1, item1);
+    ui->appsTable->setItem(rowCount, 0, item);
+    ui->appsTable->setItem(rowCount, 1, item0);
+    ui->appsTable->setItem(rowCount, 2, item1);
 }
 
 void Appdlg::on_removeBtn_clicked()
 {
-    QModelIndex idx;
-    qDebug() << G::t.restart() << "\t" << "on_removeBtn_clicked   current row =" << ui->appsTable->currentRow();
     ui->appsTable->removeRow(ui->appsTable->currentRow());
 }
 
@@ -73,14 +120,12 @@ void Appdlg::on_okBtn_clicked()
 {
     int rows = ui->appsTable->rowCount();
     xApps.clear();
-    qDebug() << "Accepted... rowCount =" << rows;
     for (int row = 0; row < rows; ++row) {
-        QString key = ui->appsTable->model()->index(row,0).data().toString();
-        QString val = ui->appsTable->model()->index(row,1).data().toString();
-        qDebug() << key << val;
-        xApps[key] = val;
+        app.name = ui->appsTable->model()->index(row,1).data().toString();
+        app.path = ui->appsTable->model()->index(row,2).data().toString();
+        qDebug() << "on_okBtn_clicked" << app.name << app.path;
+        xApps.append(app);
     }
-    qDebug() << "xApps =" << xApps;
     accept();
 }
 
