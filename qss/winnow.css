@@ -362,11 +362,12 @@ QPushButton {
     padding-right: 5px;
     padding-top: 3px;
     padding-bottom: 3px;
+    min-width: 100px;
 }
 
 QPushButton:default {
-    border-color: rgb(225,225,0); /* make the default button prominent */
-    background-color: rgb(68,95,118);
+    border-color: rgb(225,225,225);
+ /*   background-color: rgb(68,95,118);*/
 }
 
 QPushButton:pressed {
