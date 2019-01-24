@@ -77,7 +77,7 @@ controls are updated to the current scale.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "ZoomDlg::zoomChange" << zoom << G::actualDevicePixelRatio;
+//    qDebug() << "ZoomDlg::zoomChange" << zoom << G::actualDevicePixelRatio;
     // convert to percentage for persentation
     zoom *= (100 * G::actualDevicePixelRatio);
 
@@ -155,7 +155,6 @@ For convenience, set window focus on mouseover
 //    G::track(__FUNCTION__,currentImagePath);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "ZoomDlg enter event";
     this->activateWindow();
     this->setFocus();
     this->ui->zoomSlider->setFocus();
@@ -177,7 +176,6 @@ Set some formatting to make it clear when the ZoomDlg has focus
         else
         {
             // widget is now inactive
-            qDebug() << G::t.restart() << "\t" << "ZoomDlg lost focus";
             ui->border->setStyleSheet("QFrame {border: 2px solid rgb(85,85,85); border-radius: 4px;}");
             setWindowOpacity(0.50);
         }

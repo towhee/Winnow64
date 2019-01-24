@@ -239,7 +239,6 @@ void TokenEdit::insertFromMimeData(const QMimeData *source)
 bool TokenEdit::isLikelyUnique()
 {
     QString tokenString = textDoc->toPlainText();
-    qDebug() << tokenString;
     if(tokenString.contains("{ORIGINAL FILENAME}")) return true;
     if(tokenString.contains("XX")) return true;
     if(tokenString.contains("{SECOND}")) return true;

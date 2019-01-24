@@ -414,7 +414,6 @@ void ImageView::setClassificationBadgeImageDiam(int d)
 {
     classificationBadgeDiam = d;
     placeClassificationBadge();
-    qDebug() << "ImageView::setClassificationBadgeImageDiam =" << classificationBadgeDiam;
 }
 
 void ImageView::placeClassificationBadge()
@@ -554,7 +553,6 @@ void ImageView::zoomIn()
     #endif
     }
     zoom *= (1.0 + zoomInc);
-    qDebug() << G::t.restart() << "\t" << "zoomInc" << zoomInc;
     zoom = zoom > zoomMax ? zoomMax: zoom;
     scale();
 }

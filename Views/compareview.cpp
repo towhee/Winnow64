@@ -332,7 +332,7 @@ void CompareView::reportScrollBarStatus(QString info)
 //             << "\n";
     getScrollBarStatus();
     int row = imageIndex.row();
-    qDebug() << G::t.restart() << "\t" << row << info << "Zoom" << zoom << "hPct" << scrl.hPct << "vPct" << scrl.vPct;
+    qDebug() << row << info << "Zoom" << zoom << "hPct" << scrl.hPct << "vPct" << scrl.vPct;
 }
 
 QPointF CompareView::getScrollDeltaPct()
@@ -528,7 +528,6 @@ void CompareView::zoomIn()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "CompareView::zoomIn" << currentImagePath;
     zoom *= (1.0 + zoomInc);
     zoom = zoom > zoomMax ? zoomMax: zoom;
     scale(false);
@@ -541,7 +540,6 @@ void CompareView::zoomOut()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "CompareView::zoomOut" << currentImagePath;
     zoom *= (1.0 - zoomInc);
     zoom = zoom < zoomMin ? zoomMin : zoom;
     scale(false);
@@ -627,8 +625,6 @@ void CompareView::mousePressEvent(QMouseEvent *event)
 
     // forward and back buttons
     if (event->button() == Qt::BackButton) {
-//        thumbView->selectPrev();
-        qDebug() << "CompareView::mousePressEvent event->button() == Qt::BackButton";
         emit togglePick();
         return;
     }
@@ -696,8 +692,6 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     if (event->button() == Qt::RightButton ||
         event->button() == Qt::BackButton ||
         event->button() == Qt::ForwardButton) return;
-
-    qDebug() << event;
 
     isLeftMouseBtnPressed = false;
     if (isMouseDrag) {
