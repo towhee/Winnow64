@@ -59,7 +59,7 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.6.5 released 2019-01-22";
+    QString version = "0.9.6.6 released 2019-01-23";
     QString versionDetail =
             "<a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#0000ff;\">Version Information</span></a>.</p></body></html>";
 
@@ -84,12 +84,9 @@ public:
 
     QDockWidget *thumbDock;
 
-//    struct Pair {
-//        QString name;
-//        QString path;
-//    };
     G::Pair externalApp;                  // external application name / executable path
     QList<G::Pair> externalApps;          // list of external apps
+    QVector<QString> xAppShortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
 
     struct workspaceData {
         QString accelNum;       // for accelerator
