@@ -291,7 +291,6 @@ changes height to determine whether a scrollbar is required.
     #endif
     }
     float aspect = thumbWidth / thumbHeight;
-    qDebug() << G::t.restart() << "\t" << "aspect =" << aspect;
     // Difference between thumbSpace and thumbHeight
     int margin = thumbViewDelegate->getThumbCell().height() - thumbHeight;
     int newThumbHeight = thumbSpaceHeight - margin;
@@ -301,10 +300,6 @@ changes height to determine whether a scrollbar is required.
 
 int ThumbView::getScrollThreshold(int thumbSpaceHeight)
 {
-    qDebug() << G::t.restart() << "\t" << "getScrollThreshold  viewport()->width()"
-             << viewport()->width()
-             << "getThumbSpaceWidth"
-             << getThumbSpaceWidth(thumbSpaceHeight);
     return viewport()->width() / getThumbSpaceWidth(thumbSpaceHeight);
 }
 
