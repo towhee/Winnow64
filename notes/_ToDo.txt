@@ -1,5 +1,4 @@
 BUGS
-- Open with new app shortcuts only show when restart
 - Test for root folder in Ingest
 - Check updates not working at startup
 - Ingest history and recent folders does not select folder
@@ -41,6 +40,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Fixed resorting issue with external apps
+- Added ability to reorder external apps
+- Open with new app shortcuts only show when restart
 - Horizontal scroll thumbs 1/2 window shortcut
 - Wider separator bars
 - Wider scrollbars

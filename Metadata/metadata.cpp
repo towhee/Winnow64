@@ -2311,7 +2311,6 @@ metadata is written to buffer and the original image file is copied unchanged.
             QChar c = newOrientation & 0xFF;
             QByteArray ba;
             ba.append(c);
-            qDebug() << "Metadata::writeMetadata orientationOffset =" << orientationOffset;
             buffer.replace(orientationOffset, 1, ba);
         }
         xmp.writeJPG(buffer);
@@ -4320,7 +4319,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         rpt.flush();
         reportString = "";
         rpt.setString(&reportString);
-        qDebug() << G::t.restart() << "\t" << "report = true";
     }
     clearMetadata();
     file.setFileName(path);
@@ -4353,7 +4351,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         }
         else {
             err = "Could not open file to read metadata";    // try again
-            qDebug() << G::t.restart() << "\t" << msDelay << "ms delay" << err << fPath;
             QThread::msleep(msInc);
             msDelay += msInc;
 //            if (G::isThreadTrackingOn) track(fPath, err);
@@ -4849,7 +4846,6 @@ void Metadata::setUrl(const QString &imageFileName, const QString &url)
 
 void Metadata::setLabel(const QString &imageFileName, const QString &label)
 {
-    qDebug() << "fName / label:" << imageFileName << label;
     metaCache[imageFileName].label = label;
 }
 
@@ -4954,7 +4950,6 @@ void Metadata::clear()
 
 void Metadata::loadFromThread(QFileInfo &fileInfo)
 {
-    qDebug() << G::t.restart() << "\t" << "Metadata::loadFromThread";
     loadImageMetadata(fileInfo, true, true, false, true);
 }
 
