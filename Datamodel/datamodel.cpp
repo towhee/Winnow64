@@ -244,7 +244,6 @@ Steps:
         it.next();
         if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
             folderCount++;
-            qDebug() << "DataModel::load  folderCount =" << folderCount << it.filePath();
             dir->setPath(it.filePath());
             int folderImageCount = dir->entryInfoList().size();
             // try next subfolder if no images in this folder

@@ -40,9 +40,9 @@ namespace G
 
         QString time = QString::number(G::t.restart());
 
-        qDebug() << time.rightJustified(10, ' ') << " "
-                 << functionName.leftJustified(50, '.') << " "
-                 << comment;
+//        qDebug() << time.rightJustified(10, ' ') << " "
+//                 << functionName.leftJustified(50, '.') << " "
+//                 << comment;
 
 //        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 //        Profile::print(functionName, comment);

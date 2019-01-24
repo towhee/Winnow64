@@ -61,7 +61,6 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
             for(int col = 0; col < gridLayout->columnCount(); ++col) {
                 QWidget *w = gridLayout->itemAtPosition(row, col)->widget();
                 if(w) {
-                    qDebug() << "deleting row / col / w" << row << col << w;
                     gridLayout->removeWidget(w);
                     delete w;
                 }
@@ -442,7 +441,6 @@ void CompareImages::align(QPointF basePos, QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "CompareImages::align";
     int idxRow = 0;
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex == idx) {
@@ -458,7 +456,6 @@ void CompareImages::align(QPointF basePos, QModelIndex idx)
             QImage *image = new QImage;
             *image = imList->at(i)->pmItem->pixmap().toImage();
             QPointF scrollPct(imageAlign->alignImage(baseImage, image, basePosPct));
-            qDebug() << G::t.restart() << "\t" << "basePos" << basePos << "scrollPct" << scrollPct;
             imList->at(i)->setScrollBars(scrollPct);
         }
     }
@@ -475,7 +472,6 @@ clicks on the unzoomed image.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "CompareImages::updateToggleZoom" << toggleZoomValue;
     for (int i = 0; i < imList->count(); ++i)
         imList->at(i)->toggleZoom = toggleZoomValue;
 }
@@ -579,7 +575,6 @@ so the signal is relayed on to MW, which does know about CompareImages.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "CompareImages::togglePickSignalRelay";
     emit togglePick();
 }
 
@@ -591,8 +586,6 @@ void CompareImages::resizeEvent(QResizeEvent *event)
 void CompareImages::test()
 {
     bool okToClearGrid = !(gridLayout->rowCount() == 1 && gridLayout->columnCount() == 1);
-    qDebug() << "row and cols" << gridLayout->rowCount() << gridLayout->columnCount()
-             << "okToClearGrid" << okToClearGrid;
     if(okToClearGrid) {
         for(int row = 0; row < gridLayout->rowCount(); ++row) {
             for(int col = 0; col < gridLayout->columnCount(); ++col) {

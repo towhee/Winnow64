@@ -318,7 +318,6 @@ void IngestDlg::updateExistingSequence()
     if(tokenKey.length() == 0) return;
 
     QString tokenString = filenameTemplatesMap[tokenKey];
-    qDebug() << "tokenString =" << tokenString << tokenString.contains("XX");
 
     // if not a sequence in the token string then disable and return
     if(!tokenString.contains("XX")) {
@@ -647,7 +646,6 @@ int IngestDlg::getSequenceStart(const QString &path)
 void IngestDlg::updateStyleOfFolderLabels()
 {
     if (isAuto) {
-        qDebug() << "updateStyleOfFolderLabels: Auto";
         ui->folderLabel->setStyleSheet("QLabel{color:rgb(180,180,120);}");
         ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
         ui->selectRootFolderBtn->setEnabled(true);
@@ -669,7 +667,6 @@ void IngestDlg::updateStyleOfFolderLabels()
         ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(111,111,111);}");
     }
     else {
-        qDebug() << "updateStyleOfFolderLabels: Manual";
         ui->folderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
         ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(180,180,120);}");
         ui->selectRootFolderBtn->setEnabled(false);
@@ -828,7 +825,6 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
     // setup TokenDlg
     QString title = "Token Editor - Path from Root to Destination Folder";
     int index = ui->pathTemplatesCB->currentIndex();
-    qDebug() << G::t.restart() << "\t" << "on_pathTemplatesBtn_clicked  row =" << index;
     QString currentKey = ui->pathTemplatesCB->currentText();
     TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, pathTemplatesMap, index,
                                       currentKey, title, this);

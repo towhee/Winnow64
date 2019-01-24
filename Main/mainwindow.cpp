@@ -188,7 +188,6 @@ void MW::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
     qApp->processEvents();
     if(checkIfUpdate) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
-    qDebug() << "MW::showEvent   isInitializing =" << isInitializing;
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -305,10 +304,10 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 //        qDebug() << event << event->type()
 //                 << "currentViewDir:" << currentViewDir;
 
-    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
+//    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
 //        G::track(__FUNCTION__, "Performance profiling");
-        qDebug() << event <<  obj;
-    };
+//        qDebug() << event <<  obj;
+//    };
 
 //    if (event->type() == QEvent::KeyPress) {
 //        QKeyEvent *event = static_cast<QKeyEvent *>(event);
@@ -1524,6 +1523,8 @@ void MW::createActions()
             addAction(recentFolderActions.at(i));
         }
         if (i >= n) recentFolderActions.at(i)->setVisible(false);
+        // see invokeRecentFolder
+//        connect(recentFolderActions.at(i), &QAction::triggered, this, &MW::openFolderFromRecent);
     }
     addActions(recentFolderActions);
 
@@ -2608,6 +2609,8 @@ void MW::createMenus()
     for (int i = 0; i < maxIngestHistoryFolders; i++) {
         ingestHistoryFoldersMenu->addAction(ingestHistoryFolderActions.at(i));
     }
+    connect(ingestHistoryFoldersMenu, SIGNAL(triggered(QAction*)),
+            SLOT(invokeIngestHistoryFolder(QAction*)));
     fileMenu->addAction(ejectAction);
     fileMenu->addSeparator();
     fileMenu->addAction(showImageCountAction);
@@ -4085,19 +4088,15 @@ void MW::resortImageCache()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "ThumbView::reindexImageCache";
     int sfRowCount = dm->sf->rowCount();
     if (!sfRowCount) return;
     dm->updateImageList();
     QModelIndex idx = thumbView->currentIndex();
     QString currentFilePath = idx.data(G::PathRole).toString();
-//    qDebug() << G::t.restart() << "\t" << "reindexImageCache current" << currentFilePath;
     if(!dm->imageFilePathList.contains(currentFilePath)) {
         idx = dm->sf->index(0, 0);
         currentFilePath = idx.data(G::PathRole).toString();
-        qDebug() << G::t.restart() << "\t" << "reindexImageCache updated" << currentFilePath;
     }
-//    QString currentFileName = dm->sf->index(0, 1).data(Qt::EditRole).toString();
     thumbView->selectThumb(idx);
     imageCacheThread->resortImageCache(dm->imageFilePathList, currentFilePath);
 }
@@ -4451,7 +4450,6 @@ void MW::invokeRecentFolder(QAction *recentFolderActions)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << recentFolderActions->text();
     QString dirPath = recentFolderActions->text();
     fsTree->select(dirPath);
     folderSelectionChange();
@@ -4464,9 +4462,10 @@ void MW::invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions)
         G::track(__FUNCTION__);
 #endif
     }
-    qDebug() << G::t.restart() << "\t" << ingestHistoryFolderActions->text();
     QString dirPath = ingestHistoryFolderActions->text();
-    revealInFileBrowser(dirPath);
+    fsTree->select(dirPath);
+    folderSelectionChange();
+//    revealInFileBrowser(dirPath);
 }
 
 /* WORKSPACES
@@ -4695,10 +4694,6 @@ Delete, rename and reassign workspaces.
     G::track(__FUNCTION__);
     #endif
     }
-    // rgh remove after debugging
-    foreach(QAction *act, workspaceMenu->actions()) {
-        qDebug() << G::t.restart() << "\t" << act->objectName() << act;
-    }
     // build a list of workspace names for the manager dialog
     QList<QString> wsList;
     for (int i=0; i<workspaces->count(); i++)
@@ -4751,7 +4746,6 @@ void MW::syncWorkspaceMenu()
             workspaceActions.at(i)->setText("Future workspace"  + QString::number(i));
             workspaceActions.at(i)->setVisible(false);
         }
-        qDebug() << G::t.restart() << "\t" << "sync menu" << i << workspaceActions.at(i)->text();
     }
 }
 
@@ -4822,7 +4816,7 @@ app is "stranded" on secondary monitors that are not attached.
 //             << "thumbSpace Ht =" << thumbView->getThumbCellSize().height()
 //             << "thumbHeight =" << thumbView->thumbHeight << "\n";
 //    qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from MW::defaultWorkspace thumbView.thumbWidth" << thumbView->thumbWidth << "gridView.thumbWidth" << gridView->thumbWidth;
-    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Calling setThumbParameters from MW::defaultWorkspace     thumbHeight ="  << thumbView->thumbHeight;
+//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Calling setThumbParameters from MW::defaultWorkspace     thumbHeight ="  << thumbView->thumbHeight;
     thumbView->setThumbParameters();
     gridView->setThumbParameters();
 
@@ -4866,7 +4860,6 @@ void MW::renameWorkspace(int n, QString name)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << G::t.restart() << "\t" << "MW::renameWorkspace" << n << name;
     // do not rename if duplicate
     if (workspaces->count() > 0) {
         for (int i=1; i<workspaces->count(); i++) {
@@ -5108,7 +5101,6 @@ void MW::externalAppError(QProcess::ProcessError err)
     #endif
     }
     QMessageBox msgBox;
-    qDebug() << G::t.restart() << "\t" << "externalAppError  err =" << err;
     msgBox.critical(this, tr("Error"), tr("Failed to start external application."));
 }
 
@@ -5189,7 +5181,6 @@ void MW::runExternalApp()
 //        arguments << enquote(s);
 //    }
 
-    qDebug() << "arguments:" << arguments;
 
 //    arguments << "D:\Pictures\Coaster/2005-10-11_0082.jpg";
 //    arguments << "/Users/roryhill/Pictures/Eva/2016-06-21_0002.jpg";
@@ -5956,7 +5947,6 @@ re-established when the application is re-opened.
     for(int i = 0; i < externalApps.length(); ++i) {
         QString sortPrefix = xAppShortcut[i];
         if(sortPrefix == "0") sortPrefix = "X";
-        qDebug() << sortPrefix;
         setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).path);
     }
     setting->endGroup();
@@ -6957,7 +6947,6 @@ void MW::toggleFavDockVisibility() {
         favDock->raise();
         favDockVisibleAction->setChecked(true);
     }
-    qDebug() << "favDockVisibleAction->isChecked()" << favDockVisibleAction->isChecked();
 }
 
 void MW::toggleFilterDockVisibility() {
@@ -7239,7 +7228,6 @@ void MW::togglePick()   // not currently used
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "MW::togglePick()";
     QModelIndex idx;
     QModelIndexList idxList = selectionModel->selectedRows();
     QString pickStatus;
@@ -7297,7 +7285,6 @@ accidental erasure.
     pick.path = fPath;
     pick.status = status;
     pickStack->push(pick);
-    qDebug() << "Pushed: " << pickStack;
 }
 
 void MW::popPick()
@@ -7307,7 +7294,6 @@ void MW::popPick()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << pickStack;
     if (pickStack->isEmpty()) return;
     pick = pickStack->pop();
     if (pick.path != "End multiple select") {
@@ -7406,7 +7392,6 @@ void MW::ejectUsb(QString path)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << path;
     QString driveRoot;      // ie WIN "D:\" or MAC "Untitled"
 #if defined(Q_OS_WIN)
     driveRoot = path.left(3);
@@ -7766,14 +7751,12 @@ void MW::getSubfolders(QString fPath)
     }
     subfolders = new QStringList;
     subfolders->append(fPath);
-    qDebug() << G::t.restart() << "\t" << "Appending" << fPath;
     QDirIterator iterator(fPath, QDirIterator::Subdirectories);
     while (iterator.hasNext()) {
         iterator.next();
         fPath = iterator.filePath();
         if (iterator.fileInfo().isDir() && iterator.fileName() != "." && iterator.fileName() != "..") {
             subfolders->append(fPath);
-            qDebug() << G::t.restart() << "\t" << "Appending" << fPath;
         }
     }
 }
@@ -8154,7 +8137,6 @@ void MW::openFolder()
     }
     QString dirPath = QFileDialog::getExistingDirectory(this, tr("Open Folder"),
          "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-    qDebug() << G::t.restart() << "\t" << "New folder is" << dirPath;
 //    fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath)));
     fsTree->select(dirPath);
     folderSelectionChange();
@@ -8210,7 +8192,6 @@ for details
 
 void MW::collapseAllFolders()
 {
-    qDebug() << "MW::collapseAllFolders";
     fsTree->collapseAll();
 }
 

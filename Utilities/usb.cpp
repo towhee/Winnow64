@@ -8,7 +8,6 @@ Usb::Usb()
 bool Usb::eject(QString driveName)
 {
 #if defined(Q_OS_WIN)
-    qDebug() << "driveName =" << driveName;
     char driveLetter = driveName[0].unicode();
     char devicepath[7];
     char format[] = "\\\\.\\?:";
@@ -29,14 +28,12 @@ bool Usb::eject(QString driveName)
     long result;
 
     result = DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, 0, 0, 0, 0, &bytes, 0);
-    qDebug() << "Dismount result:" << result;
 //    if(result) {
 ////        FormatErrorMsg("Dismount Volume: ", errmsg);
 //        qDebug() << "Dismount err msg:" << errmsg << result;
 //        return false;
 //    }
     result = DeviceIoControl(handle, IOCTL_STORAGE_EJECT_MEDIA, 0, 0, 0, 0, &bytes, 0);
-    qDebug() << "Eject result:" << result;
 //    if(result) {
 ////        FormatErrorMsg("Eject Volume: ", errmsg);
 //        qDebug() << "Eject err msg:" << errmsg << result;
