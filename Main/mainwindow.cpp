@@ -1469,7 +1469,13 @@ void MW::createActions()
     n = names.size();
     for (int i = 0; i < 10; ++i) {
         if (i < n) {
-            externalApp.name = names.at(i);
+            /* The preferred sort order is prepended to the app names
+            in writeSettings as QSettings does not honor order.  When
+            loading the settings (here) we have to strip the sort char
+            which is defined in the vector xAppShortcut.
+            */
+            QString name = names.at(i);
+            externalApp.name = name.remove(0, 1);
             externalApp.path = setting->value(names.at(i)).toString();
             externalApps.append(externalApp);
         }
@@ -1477,14 +1483,14 @@ void MW::createActions()
 
         appActions.append(new QAction(externalApp.name, this));
         if (i < n) {
-            appActions.at(i)->setShortcut(QKeySequence("Alt+" + QString::number(i)));
+            appActions.at(i)->setShortcut(QKeySequence("Alt+" + xAppShortcut[i]));
             appActions.at(i)->setShortcutVisibleInContextMenu(true);
             appActions.at(i)->setText(externalApp.name);
             appActions.at(i)->setVisible(true);
             addAction(appActions.at(i));
         }
         if (i >= n) appActions.at(i)->setVisible(false);
-        appActions.at(i)->setShortcut(QKeySequence("Alt+" + QString::number(i)));
+        appActions.at(i)->setShortcut(QKeySequence("Alt+" + xAppShortcut[i]));
         connect(appActions.at(i), &QAction::triggered, this, &MW::runExternalApp);
     }
     addActions(appActions);
@@ -5068,7 +5074,8 @@ the appdlg, which modifies it and then after the dialog is closed the appActions
         */
         for(int i = 0; i <10; ++i) {
             if(i < externalApps.length()) {
-                appActions.at(i)->setShortcut(QKeySequence("Alt+" + QString::number(i)));
+                QString shortcut = "Alt+" + xAppShortcut[i];
+                appActions.at(i)->setShortcut(QKeySequence(shortcut));
                 appActions.at(i)->setText(externalApps.at(i).name);
                 appActions.at(i)->setVisible(true);
             }
@@ -5947,7 +5954,10 @@ re-established when the application is re-opened.
     setting->remove("");
 //    QMapIterator<QString, QString> eaIter(externalApps);
     for(int i = 0; i < externalApps.length(); ++i) {
-        setting->setValue(externalApps.at(i).name, externalApps.at(i).path);
+        QString sortPrefix = xAppShortcut[i];
+        if(sortPrefix == "0") sortPrefix = "X";
+        qDebug() << sortPrefix;
+        setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).path);
     }
     setting->endGroup();
 
