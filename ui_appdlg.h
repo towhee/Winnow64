@@ -30,8 +30,8 @@ public:
     QTableWidget *appsTable;
     QWidget *horizontalLayoutWidget_2;
     QHBoxLayout *horizontalLayout_2;
-    QPushButton *pushButton;
-    QPushButton *pushButton_2;
+    QPushButton *moveDown;
+    QPushButton *moveUp;
     QPushButton *addBtn;
     QPushButton *removeBtn;
     QPushButton *okBtn;
@@ -69,17 +69,17 @@ public:
         horizontalLayout_2 = new QHBoxLayout(horizontalLayoutWidget_2);
         horizontalLayout_2->setObjectName(QStringLiteral("horizontalLayout_2"));
         horizontalLayout_2->setContentsMargins(0, 0, 0, 0);
-        pushButton = new QPushButton(horizontalLayoutWidget_2);
-        pushButton->setObjectName(QStringLiteral("pushButton"));
-        pushButton->setAutoDefault(false);
+        moveDown = new QPushButton(horizontalLayoutWidget_2);
+        moveDown->setObjectName(QStringLiteral("moveDown"));
+        moveDown->setAutoDefault(false);
 
-        horizontalLayout_2->addWidget(pushButton);
+        horizontalLayout_2->addWidget(moveDown);
 
-        pushButton_2 = new QPushButton(horizontalLayoutWidget_2);
-        pushButton_2->setObjectName(QStringLiteral("pushButton_2"));
-        pushButton_2->setAutoDefault(false);
+        moveUp = new QPushButton(horizontalLayoutWidget_2);
+        moveUp->setObjectName(QStringLiteral("moveUp"));
+        moveUp->setAutoDefault(false);
 
-        horizontalLayout_2->addWidget(pushButton_2);
+        horizontalLayout_2->addWidget(moveUp);
 
         addBtn = new QPushButton(horizontalLayoutWidget_2);
         addBtn->setObjectName(QStringLiteral("addBtn"));
@@ -115,13 +115,16 @@ public:
     {
         Appdlg->setWindowTitle(QApplication::translate("Appdlg", "External Program List", nullptr));
 #ifndef QT_NO_TOOLTIP
-        pushButton->setToolTip(QApplication::translate("Appdlg", "Select a row and then click this button to move the row down", nullptr));
+        appsTable->setToolTip(QApplication::translate("Appdlg", "<html><head/><body><p>Select a row before moving or deleting.  Double click in the name field to edit the app name.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
-        pushButton->setText(QApplication::translate("Appdlg", "Move Down", nullptr));
 #ifndef QT_NO_TOOLTIP
-        pushButton_2->setToolTip(QApplication::translate("Appdlg", "Select a row and then click this button to move the row up", nullptr));
+        moveDown->setToolTip(QApplication::translate("Appdlg", "Select a row and then click this button to move the row down", nullptr));
 #endif // QT_NO_TOOLTIP
-        pushButton_2->setText(QApplication::translate("Appdlg", "Move Up", nullptr));
+        moveDown->setText(QApplication::translate("Appdlg", "Move Down", nullptr));
+#ifndef QT_NO_TOOLTIP
+        moveUp->setToolTip(QApplication::translate("Appdlg", "Select a row and then click this button to move the row up", nullptr));
+#endif // QT_NO_TOOLTIP
+        moveUp->setText(QApplication::translate("Appdlg", "Move Up", nullptr));
 #ifndef QT_NO_TOOLTIP
         addBtn->setToolTip(QApplication::translate("Appdlg", "Add a program to the table (up to 10 programs)", nullptr));
 #endif // QT_NO_TOOLTIP
