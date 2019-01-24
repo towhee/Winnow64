@@ -5,19 +5,26 @@
 /*
 This class maintains a list of external programs that Winnow can use to open
 with the current selection to files.  The external apps list is passed as
-the QMap externalApps, and is edited internally as xApps.
+the QList externalApps, and is edited internally as xApps.  The list elements
+are pairs of QString (name/path) for each app.  In order to pass this as an
+argument from MW to here it is necessary to put the definition for the struct
+"Pair" in global.h.
 
 The external app list is added to the table ui->appsTable for display in the
-dialog.  The user can add apps, delete apps and edit the app display name.
+dialog.  The user can add apps, delete apps, change the order and edit the app
+display name.
 
 When the changes are saved xApps is cleared and then rebuilt by iterating the
 ui->appsTable table.
+
+Cancel exits with no changes to the external app list.
 */
 
 Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
     : QDialog(parent), ui(new Ui::Appdlg), xApps(externalApps)
 {
     ui->setupUi(this);
+    popUp = new PopUp;
 
     {
 #ifdef Q_OS_LINIX
@@ -41,49 +48,35 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
     ui->appsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->appsTable->verticalHeader()->setSectionsClickable(false);
 
+    /* fill the table with the shortcuts and blanks for the name and path.
+    All table editing after this simply renames the name and path and no rows
+    are inserted or deleted.  Editing is turned of for all the items, as we
+    do not want the user trying to pick or edit blank rows. */
     for(int row = 0; row < 10; ++ row) {
         QTableWidgetItem *item0 = new QTableWidgetItem(modifier + shortcut[row]);
         QTableWidgetItem *item1 = new QTableWidgetItem("");
         QTableWidgetItem *item2 = new QTableWidgetItem("");
 
+        // center the shortcuts
         item0->setData(Qt::TextAlignmentRole,Qt::AlignCenter);
-
-        item0->setFlags(item0->flags() & ~Qt::ItemIsEnabled); // disabled
-        item0->setFlags(item0->flags() & ~Qt::ItemIsEditable); // non editable
-
-        item1->setFlags(item1->flags() & ~Qt::ItemIsEnabled); // disabled
-        item1->setFlags(item1->flags() & ~Qt::ItemIsEditable); // non editable
-
-        item2->setFlags(item2->flags() & ~Qt::ItemIsEnabled); // disabled
-        item2->setFlags(item2->flags() & ~Qt::ItemIsEditable); // non editable
 
         ui->appsTable->insertRow(row);
         ui->appsTable->setItem(row, 0, item0);
         ui->appsTable->setItem(row, 1, item1);
         ui->appsTable->setItem(row, 2, item2);
+
+        setFlags(row);
     }
 
+    // second pass to enter the existing external apps
     int rows = xApps.length();
-    qDebug() << Qt::ItemIsEnabled << ~Qt::ItemIsEnabled;
     for(int row = 0; row < rows; ++row) {
-        QTableWidgetItem *item0 = new QTableWidgetItem(modifier + shortcut[row]);
-        QTableWidgetItem *item1 = new QTableWidgetItem(xApps.at(row).name);
-        QTableWidgetItem *item2 = new QTableWidgetItem(xApps.at(row).path);
-        item0->setData(Qt::TextAlignmentRole,Qt::AlignCenter);
-
-//        item0->setFlags(item0->flags() & Qt::ItemIsEnabled); // disabled
-        item0->setFlags(item0->flags() & ~Qt::ItemIsEditable); // non editable
-
-//        item1->setFlags(item1->flags() & Qt::ItemIsEnabled); // enabled
-//        item1->setFlags(item1->flags() & Qt::ItemIsEditable); // editable
-
-//        item2->setFlags(item2->flags() & Qt::ItemIsEnabled); // enabled
-        item2->setFlags(item2->flags() & ~Qt::ItemIsEditable); // non editable
-
-        ui->appsTable->setItem(row, 0, item0);
-        ui->appsTable->setItem(row, 1, item1);
-        ui->appsTable->setItem(row, 2, item2);
+        ui->appsTable->item(row, 1)->setText(xApps.at(row).name);
+        ui->appsTable->item(row, 2)->setText(xApps.at(row).path);
+        setFlags(row);
     }
+
+    if(rows > 0) ui->appsTable->selectRow(0);
 }
 
 Appdlg::~Appdlg()
@@ -91,10 +84,47 @@ Appdlg::~Appdlg()
     delete ui;
 }
 
+void Appdlg::setFlags(int row)
+{
+    QTableWidgetItem *item0 = ui->appsTable->item(row, 0);
+    QTableWidgetItem *item1 = ui->appsTable->item(row, 1);
+    QTableWidgetItem *item2 = ui->appsTable->item(row, 2);
+
+    if(ui->appsTable->item(row, 1)->text() == "") {
+        item0->setFlags(Qt::NoItemFlags); // disabled
+        item1->setFlags(Qt::NoItemFlags); // disabled
+        item2->setFlags(Qt::NoItemFlags); // disabled
+    }
+    else {
+        item0->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // non editable
+        item1->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable); // editable
+        item2->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // non editable
+    }
+}
+
+void Appdlg::updateShortcuts()
+{
+    /*
+       */
+    for(int row = 0; row < 10; ++row) {
+        QTableWidgetItem *item0 = new QTableWidgetItem(modifier + shortcut[row]);
+        ui->appsTable->setItem(row, 0, item0);
+    }
+}
+
+int Appdlg::getAppCount()
+{
+    int row;
+    for(row = 0; row < 10; ++row) {
+        if(ui->appsTable->item(row, 1)->text() == "") break;
+    }
+    return row;
+}
+
 void Appdlg::on_addBtn_clicked()
 {
-    int rowCount = ui->appsTable->rowCount();
-    if (rowCount > 10) {
+    int row = getAppCount();
+    if (row > 9) {
         return;
     }
     QString appPath = QFileDialog::getOpenFileName(this,
@@ -102,28 +132,51 @@ void Appdlg::on_addBtn_clicked()
     QFileInfo fileInfo(appPath);
     QString appName = fileInfo.baseName();
     appName[0].toUpper();
-    QTableWidgetItem *item = new QTableWidgetItem(modifier + shortcut[rowCount]);
-    QTableWidgetItem *item0 = new QTableWidgetItem(appName);
-    QTableWidgetItem *item1 = new QTableWidgetItem(fileInfo.absoluteFilePath());
-    ui->appsTable->insertRow(rowCount);
-    ui->appsTable->setItem(rowCount, 0, item);
-    ui->appsTable->setItem(rowCount, 1, item0);
-    ui->appsTable->setItem(rowCount, 2, item1);
+    ui->appsTable->item(row, 1)->setText(appName);
+    ui->appsTable->item(row, 2)->setText(fileInfo.absoluteFilePath());
+    setFlags(row);
+    ui->appsTable->selectRow(row);
 }
 
 void Appdlg::on_removeBtn_clicked()
 {
-    ui->appsTable->removeRow(ui->appsTable->currentRow());
+    int row = ui->appsTable->currentRow();
+        if(row < 0 || ui->appsTable->currentRow() > 9) {
+        popUp->showPopup(this, "No row selected", 1500, 0.75);
+        return;
+    }
+
+    if(ui->appsTable->item(row, 1)->text() == "") return;
+
+    QString name;
+    QString path;
+    int rows = getAppCount() - 1;
+    for(row; row < rows; ++row) {
+        if(row == 9) {
+            name = "";
+            path = "";
+        }
+        else {
+            name = ui->appsTable->item(row + 1, 1)->text();
+            path = ui->appsTable->item(row + 1, 2)->text();
+        }
+        ui->appsTable->item(row, 1)->setText(name);
+        ui->appsTable->item(row, 2)->setText(path);
+    }
+    ui->appsTable->item(rows, 1)->setText("");
+    ui->appsTable->item(rows, 2)->setText("");
+
+    setFlags(rows);
+    ui->appsTable->selectRow(rows - 1);
 }
 
 void Appdlg::on_okBtn_clicked()
 {
-    int rows = ui->appsTable->rowCount();
+    int rows = getAppCount();
     xApps.clear();
     for (int row = 0; row < rows; ++row) {
         app.name = ui->appsTable->model()->index(row,1).data().toString();
         app.path = ui->appsTable->model()->index(row,2).data().toString();
-        qDebug() << "on_okBtn_clicked" << app.name << app.path;
         xApps.append(app);
     }
     accept();
@@ -132,4 +185,50 @@ void Appdlg::on_okBtn_clicked()
 void Appdlg::on_cancelBtn_clicked()
 {
     reject();
+}
+
+void Appdlg::on_moveDown_clicked()
+{
+    int row = ui->appsTable->currentRow();
+    if(row > 8) return;
+    if(ui->appsTable->item(row, 1)->text() == "") return;
+    if(ui->appsTable->item(row + 1, 1)->text() == "") return;
+    // count rows with app name - xApps not updated until save
+    int rows = xApps.length();
+    if(row > rows - 2) return;
+
+    QTableWidgetItem *srcName = ui->appsTable->takeItem(row, 1);
+    QTableWidgetItem *srcPath = ui->appsTable->takeItem(row, 2);
+    QTableWidgetItem *dstName = ui->appsTable->takeItem(row + 1, 1);
+    QTableWidgetItem *dstPath = ui->appsTable->takeItem(row + 1, 2);
+
+    ui->appsTable->setItem(row, 1, dstName);
+    ui->appsTable->setItem(row, 2, dstPath);
+    ui->appsTable->setItem(row + 1, 1, srcName);
+    ui->appsTable->setItem(row + 1, 2, srcPath);
+
+    ui->appsTable->selectRow(row + 1);
+}
+
+void Appdlg::on_moveUp_clicked()
+{
+    int row = ui->appsTable->currentRow();
+    if(row < 1) return;
+    if(ui->appsTable->item(row, 1)->text() == "") return;
+    if(ui->appsTable->item(row - 1, 1)->text() == "") return;
+    // count rows with app name - xApps not updated until save
+    int rows = xApps.length();
+    if(row < 1) return;
+
+    QTableWidgetItem *srcName = ui->appsTable->takeItem(row, 1);
+    QTableWidgetItem *srcPath = ui->appsTable->takeItem(row, 2);
+    QTableWidgetItem *dstName = ui->appsTable->takeItem(row - 1, 1);
+    QTableWidgetItem *dstPath = ui->appsTable->takeItem(row - 1, 2);
+
+    ui->appsTable->setItem(row, 1, dstName);
+    ui->appsTable->setItem(row, 2, dstPath);
+    ui->appsTable->setItem(row - 1, 1, srcName);
+    ui->appsTable->setItem(row - 1, 2, srcPath);
+
+    ui->appsTable->selectRow(row - 1);
 }
