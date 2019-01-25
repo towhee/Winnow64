@@ -74,7 +74,6 @@ public slots:
     void thumbsShrink();
     void thumbsFit(Qt::DockWidgetArea area);
     void thumbsFitTopOrBottom();
-//    void toggleFilterPick(bool isFilter);
     void invertSelection();                         //in use
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
 

@@ -53,22 +53,22 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     /* The way QGridLayout works, every time you add rows and columns it grows, but it
        cannot shrink when you remove items.  The solution is to delete the existing
        layout and start over.
-      */
+    */
+
     // first get rid of any existing grid contents (except 1x1 option which causes crash)
     bool okToClearGrid = !(gridLayout->rowCount() == 1 && gridLayout->columnCount() == 1);
     if(okToClearGrid) {
-        for(int row = 0; row < gridLayout->rowCount(); ++row) {
-            for(int col = 0; col < gridLayout->columnCount(); ++col) {
-                QWidget *w = gridLayout->itemAtPosition(row, col)->widget();
-                if(w) {
-                    gridLayout->removeWidget(w);
-                    delete w;
-                }
-            }
+        QLayoutItem *item;
+        while ((item = gridLayout->takeAt(0)) != 0) {
+            gridLayout->removeWidget(item->widget());
+            delete item->widget();
+            delete item;
         }
     }
+
     // now delete the grid to get rid of excess rows and columns
     delete gridLayout;
+
     // new grid
     gridLayout = new QGridLayout;
     gridLayout->setContentsMargins(0, 0, 0, 0);
@@ -165,10 +165,12 @@ void CompareImages::loadGrid()
     G::track(__FUNCTION__);
     #endif
     }
-//    int n = gridLayout->count();
-//    int c = cols;
-//    int r = rows;
-//    qDebug() << "n, c, r:" << n << c << r;
+    /*
+    int n = gridLayout->count();
+    int c = cols;
+    int r = rows;
+    qDebug() << "n, c, r:" << n << c << r;
+    */
     int i = 0;
     int row, col;
     for (row = 0; row < rows; ++row) {
@@ -330,6 +332,11 @@ int CompareImages::current()
 
 void CompareImages::go(QString key)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__, key);
+    #endif
+    }
     if (key == "Right") {
         int i = current();
         imList->at(i)->deselect();
@@ -499,6 +506,11 @@ CompareView instances.
 
 void CompareImages::zoomIn()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomIn();
     }
@@ -506,6 +518,11 @@ void CompareImages::zoomIn()
 
 void CompareImages::zoomOut()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomOut();
     }
@@ -513,6 +530,11 @@ void CompareImages::zoomOut()
 
 void CompareImages::zoomToFit()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomToFit();
     }

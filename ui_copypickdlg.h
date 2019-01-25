@@ -69,12 +69,13 @@ public:
     QPushButton *okBtn;
     QCheckBox *combinedIncludeJpgChk;
     QCheckBox *ejectChk;
+    QCheckBox *openIngestFolderChk;
 
     void setupUi(QDialog *IngestDlg)
     {
         if (IngestDlg->objectName().isEmpty())
             IngestDlg->setObjectName(QStringLiteral("IngestDlg"));
-        IngestDlg->resize(704, 797);
+        IngestDlg->resize(704, 823);
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
@@ -157,7 +158,7 @@ public:
         folderPathLabel_4->setFrameShape(QFrame::Box);
         progressBar = new QProgressBar(IngestDlg);
         progressBar->setObjectName(QStringLiteral("progressBar"));
-        progressBar->setGeometry(QRect(20, 710, 661, 20));
+        progressBar->setGeometry(QRect(20, 740, 661, 20));
         progressBar->setFont(font);
         progressBar->setValue(0);
         progressBar->setAlignment(Qt::AlignCenter);
@@ -281,11 +282,11 @@ public:
         filenameTemplatesBtn->setFlat(false);
         statsLabel = new QLabel(IngestDlg);
         statsLabel->setObjectName(QStringLiteral("statsLabel"));
-        statsLabel->setGeometry(QRect(20, 750, 241, 16));
+        statsLabel->setGeometry(QRect(20, 780, 241, 16));
         statsLabel->setFont(font);
         layoutWidget = new QWidget(IngestDlg);
         layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
-        layoutWidget->setGeometry(QRect(430, 740, 251, 32));
+        layoutWidget->setGeometry(QRect(430, 770, 251, 32));
         horizontalLayout = new QHBoxLayout(layoutWidget);
         horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
@@ -311,6 +312,10 @@ public:
         ejectChk->setObjectName(QStringLiteral("ejectChk"));
         ejectChk->setGeometry(QRect(20, 680, 661, 20));
         ejectChk->setFont(font);
+        openIngestFolderChk = new QCheckBox(IngestDlg);
+        openIngestFolderChk->setObjectName(QStringLiteral("openIngestFolderChk"));
+        openIngestFolderChk->setGeometry(QRect(20, 710, 661, 20));
+        openIngestFolderChk->setFont(font);
 
         retranslateUi(IngestDlg);
 
@@ -454,6 +459,7 @@ public:
         okBtn->setText(QApplication::translate("IngestDlg", "Ingest", nullptr));
         combinedIncludeJpgChk->setText(QApplication::translate("IngestDlg", "If Raw + JPG are combined also copy the JPG files", nullptr));
         ejectChk->setText(QApplication::translate("IngestDlg", "Eject drive after ingesting", nullptr));
+        openIngestFolderChk->setText(QApplication::translate("IngestDlg", "Open ingest folder after ingest", nullptr));
     } // retranslateUi
 
 };
