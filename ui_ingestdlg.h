@@ -1,13 +1,13 @@
 /********************************************************************************
-** Form generated from reading UI file 'copypickdlg.ui'
+** Form generated from reading UI file 'ingestdlg.ui'
 **
 ** Created by: Qt User Interface Compiler version 5.10.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
 
-#ifndef UI_COPYPICKDLG_H
-#define UI_COPYPICKDLG_H
+#ifndef UI_INGESTDLG_H
+#define UI_INGESTDLG_H
 
 #include <QtCore/QVariant>
 #include <QtWidgets/QAction>
@@ -470,4 +470,4 @@ namespace Ui {
 
 QT_END_NAMESPACE
 
-#endif // UI_COPYPICKDLG_H
+#endif // UI_INGESTDLG_H

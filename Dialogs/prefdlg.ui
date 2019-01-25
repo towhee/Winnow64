@@ -72,7 +72,7 @@
       </rect>
      </property>
      <property name="title">
-      <string>Trackpad Swipe Action</string>
+      <string>Trackpad Swipe / Mouse Wheel</string>
      </property>
      <widget class="QWidget" name="layoutWidget">
       <property name="geometry">
