@@ -17,6 +17,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 //    qDebug() << G::t.restart() << "\t" << "isShift =" << isShift;
     isShift = false;
 
+
     // use this to show thread activity
     G::isThreadTrackingOn = false;
 
@@ -430,6 +431,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
 
     if (event->type() == QEvent::MouseButtonPress) {
+        qDebug() << QTime::currentTime() << "MouseButtonPress" << __FUNCTION__;
         QMouseEvent *e = (QMouseEvent *)event;
         if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
     }
@@ -885,11 +887,11 @@ so scrollTo and delegate use of the current index must check the row.
        last time it was active.  Consequently we have to save the latest index
        and reapply here.
        */
-    if (modeChangeJustHappened) {
-        modeChangeJustHappened = false;
-        thumbView->setCurrentIndex(previous);
-    }
-    else thumbView->setCurrentIndex(current);
+//    if (modeChangeJustHappened) {
+//        modeChangeJustHappened = false;
+//        thumbView->setCurrentIndex(previous);
+//    }
+//    else thumbView->setCurrentIndex(current);
 
     // record current row as it is used to sync everything
     currentRow = current.row();
@@ -2997,6 +2999,8 @@ void MW::enableSelectionDependentMenus()
     G::track(__FUNCTION__);
     #endif
     }
+    filterInvertAction->setEnabled(false);      // temp until implement
+
     if(selectionModel->selectedRows().count() > 0) {
         openWithMenu->setEnabled(true);
         ingestAction->setEnabled(true);
@@ -3045,7 +3049,7 @@ void MW::enableSelectionDependentMenus()
         filterGreenAction->setEnabled(true);
         filterBlueAction->setEnabled(true);
         filterPurpleAction->setEnabled(true);
-        filterInvertAction->setEnabled(true);
+//        filterInvertAction->setEnabled(true);
         sortGroupAction->setEnabled(true);
         sortReverseAction->setEnabled(true);
         zoomToAction->setEnabled(true);
@@ -3180,7 +3184,8 @@ void MW::createSelectionModel()
 {
 /*
 The application only has one selection model which is shared by ThumbView,
-GridView and TableView, insuring that each view is in sync.
+GridView and TableView, insuring that each view is in sync, except when a
+view is hidden.
 */
     {
     #ifdef ISDEBUG
@@ -3199,9 +3204,13 @@ GridView and TableView, insuring that each view is in sync.
 
     /* whenever the selection changes update the selection.  This is required
        to recover the selection between mode changes, as the model selection
-       is lost when the view is hidden in the centralWidget stack layout */
-    connect(selectionModel, &QItemSelectionModel::selectionChanged,
-            this, &MW::updateSelection);
+       is lost when the view is hidden in the centralWidget stack layout
+
+       This does not work however, as it is called when a view is made visible
+       and does not have the up-to-date selection*/
+
+//    connect(selectionModel, &QItemSelectionModel::selectionChanged,
+//            this, &MW::saveSelection);
 }
 
 void MW::createCaching()
@@ -5129,6 +5138,8 @@ void MW::runExternalApp()
         }
     }
     if(appPath == "") return;       // add err handling
+    QFileInfo appInfo = appPath;
+    QString appExecutable = appInfo.fileName();
 
 //    app = externalApps[((QAction*) sender())->text()];
     QModelIndexList selectedIdxList = selectionModel->selectedRows();
@@ -5169,24 +5180,41 @@ void MW::runExternalApp()
 
     QStringList arguments;
     for (int tn = 0; tn < nFiles ; ++tn) {
-        QString s = selectedIdxList[tn].data(G::PathRole).toString();
-        arguments << s;
-//        arguments << enquote(s);
+        QString fPath = selectedIdxList[tn].data(G::PathRole).toString();
+        QFileInfo fInfo = fPath;
+        QString folderPath = fInfo.dir().absolutePath() + "/";
+
+        // build arguments
+        if(appExecutable == "Photo Mechanic.exe") arguments << folderPath;
+        else arguments << fPath;
+
+        // write sidecar in case external app can read the metadata
+        QString destBaseName = fInfo.baseName();
+        QString suffix = fInfo.suffix().toLower();
+        QString destinationPath = fPath;
+
+        // buffer to hold file with edited xmp data
+        QByteArray buffer;
+
+        if (metadata->writeMetadata(fPath, buffer)
+        && metadata->sidecarFormats.contains(suffix)) {
+
+            if (metadata->internalXmpFormats.contains(suffix)) {
+                // write xmp data into image file
+                QFile newFile(destinationPath);
+                newFile.open(QIODevice::WriteOnly);
+                newFile.write(buffer);
+                newFile.close();
+            }
+            else {
+                // write the sidecar xmp file
+                QFile sidecarFile(folderPath + destBaseName + ".xmp");
+                sidecarFile.open(QIODevice::WriteOnly);
+                sidecarFile.write(buffer);
+                sidecarFile.close();
+            }
+        }
     }
-
-    //    QStringList arguments;
-//    for (int tn = selectedIdxList.size() - 1; tn >= 0 ; --tn) {
-//        QString s = selectedIdxList[tn].data(G::PathRole).toString();
-//        arguments << s;
-//        arguments << enquote(s);
-//    }
-
-
-//    arguments << "D:\Pictures\Coaster/2005-10-11_0082.jpg";
-//    arguments << "/Users/roryhill/Pictures/Eva/2016-06-21_0002.jpg";
-
-//    std::cout << "MW::runExternalApp()  " << appPath.toStdString()
-//              << " " << arguments.at(0).toStdString() << std::flush;
 
     QProcess *process = new QProcess();
     connect(process, SIGNAL(finished(int, QProcess::ExitStatus)),
@@ -6597,11 +6625,14 @@ notification when the QListView has finished painting itself.
     }
     G::mode = "Loupe";
 
-    // save the current row as it will be lost when ThumbView becomes visible
-    int previousRow = currentRow;
+    // save selection as tableView is hidden and not synced
+    saveSelection();
 
-    // flag so can adjust index in fileSelectionChange as well
-    modeChangeJustHappened = true;
+//    // save the current row as it will be lost when ThumbView becomes visible
+//    int previousRow = currentRow;
+
+//    // flag so can adjust index in fileSelectionChange as well
+//    modeChangeJustHappened = true;
 
     /* show imageView in the central widget. This makes thumbView visible, and
     it updates the index to its previous state.  The index update triggers
@@ -6610,7 +6641,7 @@ notification when the QListView has finished painting itself.
     prevCentralView = LoupeTab;
 //    modeChangeJustHappened = false;
 
-    currentRow = previousRow;       // used by eventFilter in ThumbView
+//    currentRow = previousRow;       // used by eventFilter in ThumbView
 
     // if thumbdock was not visible need to "refresh" it as it loses its settings
     if(!thumbDock->isVisible()) {
@@ -6624,8 +6655,11 @@ notification when the QListView has finished painting itself.
         }
     }
 
+    QModelIndex idx = dm->sf->index(currentRow, 0);
+    thumbView->setCurrentIndex(idx);
+
     // update imageView, use cache if image loaded, else read it from file
-    QModelIndex idx = thumbView->currentIndex();
+//    QModelIndex idx = thumbView->currentIndex();
     QString fPath = idx.data(G::PathRole).toString();
     if (imageView->isVisible()) {
         if (imageView->loadImage(idx, fPath)) {
@@ -6637,6 +6671,9 @@ notification when the QListView has finished painting itself.
 
     // req'd after compare mode to re-enable extended selection
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+    // selection has been lost while tableView and possibly thumbView were hidden
+    recoverSelection();
 
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
@@ -6665,6 +6702,10 @@ lack of notification when the QListView has finished painting itself.
     }
     G::mode = "Grid";
     updateStatus(true);
+
+    // save selection as tableView is hidden and not synced
+    saveSelection();
+
     hasGridBeenActivated = true;
     // remember previous state of thumbDock so can recover if change mode
     wasThumbDockVisible = thumbDockVisibleAction->isChecked();
@@ -6676,10 +6717,20 @@ lack of notification when the QListView has finished painting itself.
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
 
+    QModelIndex idx = dm->sf->index(currentRow, 0);
+    gridView->setCurrentIndex(idx);
+    thumbView->setCurrentIndex(idx);
+
+
     // req'd to show thumbs first time
     gridView->setThumbParameters();
+
     // req'd after compare mode to re-enable extended selection
     gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+    // selection has been lost while tableView and possibly thumbView were hidden
+    recoverSelection();
+
     // limit time spent intercepting paint events to call scrollToCurrent
     gridView->readyToScroll = true;
 
@@ -6699,32 +6750,44 @@ void MW::tableDisplay()
     G::mode = "Table";
     updateStatus(true);
 
-    // save the current row as it will be lost when ThumbView becomes visible
-    int previousRow = currentRow;  //n
+    // save selection as tableView is hidden and not synced
+    saveSelection();
 
-    // flag so can adjust index in fileSelectionChange as well
-    modeChangeJustHappened = true;  //n
-
-    // show tableView in central widget
+    // change to the table view
     centralLayout->setCurrentIndex(TableTab);
     prevCentralView = TableTab;
-    modeChangeJustHappened = false; //n
 
-    // recover the current index
-//    thumbView->setCurrentIndex(dm->sf->index(previousRow, 0));  //n
-    currentRow = previousRow;   //n    // used by eventFilter in ThumbView
+    /* thumbView, gridView and tableView share the same datamodel and selection
+       model, so when one changes due to user interaction they all change, unless
+       they are not visible.  Therefore we must do a manual update of the current
+       index (currentRow) and selection every time there is a mode change between
+       Loupe, Grid, Table and Compare.
 
-    // if was in grid mode then restore thumbdock to previous state
+       Changes to the current index signal the slot fileSelectionChange, which in
+       turn updates currentRow to the current index.
+    */
+    // get the current index from currentRow
+    QModelIndex idx = dm->sf->index(currentRow, 0);
+    // set the current index for all views that could be visible
+    tableView->setCurrentIndex(idx);
+    thumbView->setCurrentIndex(idx);
+
+    /* if was in grid mode then restore thumbdock to previous state since
+       thumbView is hidden when in gridView */
     if (hasGridBeenActivated) {
         if(!thumbDock->isVisible() && wasThumbDockVisible) toggleThumbDockVisibity();
         hasGridBeenActivated = false;
     }
 
     // req'd after compare mode to re-enable extended selection
+    tableView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
+    // selection has been lost while tableView and possibly thumbView were hidden
+    recoverSelection();
+
     // req'd to show thumbs first time
-    thumbView->setThumbParameters();  //n
+    thumbView->setThumbParameters();
 
     tableView->scrollToCurrent();
     if (thumbView->isVisible()) thumbView->readyToScroll = true;
@@ -6775,17 +6838,13 @@ void MW::compareDisplay()
     hasGridBeenActivated = false;
 }
 
-void MW::updateSelection()
-{
-//    qDebug() << "MW::updateSelection:"
-//             << selectedRows.count()
-//             << selectedRows;
-//    selectedRows = selectionModel->selectedRows();
-    updateStatus(true);
-}
-
 void MW::saveSelection()
 {
+/* This function saves the current selection.  This is required, even though the three
+   views (thumbView, gridView and tableVies) share the same selection model, becasue
+   when a view is hidden it loses the current index and selection, which has to be
+   re-established each time it is made visible.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);

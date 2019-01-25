@@ -890,8 +890,11 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "mousePressEvent" << event << "isMouseDrag" << isMouseDrag
+    static int n = 0;
+    n++;
+//    qDebug() << "mousePressEvent" << n
 //             << "button =" << event->button();
+    qDebug() << QTime::currentTime() << "MouseButtonPress" << __FUNCTION__;
 
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
@@ -915,7 +918,6 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
     isMouseDoubleClick = false;
     if (event->button() == Qt::LeftButton) {
-//        qDebug() << G::t.restart() << "\t" << "Left mouse click";
         isLeftMouseBtnPressed = true;
         scrollCount = 0;                // still used?
         mousePressPt.setX(event->x());
@@ -960,6 +962,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__;
     // prevent zooming when right click for context menu
     if (event->button() == Qt::RightButton) {
         return;

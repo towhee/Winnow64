@@ -41,14 +41,58 @@ private:
     bool &isRatingBadgeVisible;
     bool delegateShowThumbLabels;
     QFont font;
-    QSize thumbSize;
-    QSize thumbSpace;
+
+    // define colors
+    QColor defaultBorderColor;
+    QColor currentItemColor;
+    QColor selectedColor;
+    QColor pickColor;
+    QColor cacheColor;
+    QColor cacheBorderColor;
+
+    QPen border;
+    QPen pick;
+    QPen notPick;
+    QPen backPen;
+    QPen currentPen;
+    QPen selectedPen;
+
     int itemPadding;
     int itemBorderThickness;
     int thumbBorderThickness;
     int thumbBorderPadding;
     int fontHt;
     int badgeSize;
+    int cacheDiam = 6;
+    int cacheOffset = 3;
+    int ratingDiam;
+    int ratingTextSize;
+    int alignVertPad;
+    int alignHorPad;
+
+    QPoint itemBorderOffset;
+    QPoint thumbPaddingOffset;
+    QPoint thumbBorderOffset;
+    QPoint paddingOffset;
+    QPoint ratingTopLeft;
+    QPoint ratingBottomRight;
+    QRect ratingRect;
+    QPoint ratingTextTopLeft;
+    QPoint ratingTextBottomRight;
+    QPoint cacheTopLeft;
+    QPoint cacheBottomRight;
+
+    QSize thumbSize;
+    QSize selectedSize;
+    QSize thumbSpace;
+
+    QRect thumbRect;
+    QRect itemRect;
+    QRect selectedRect;
+    QRect iconRect;
+    QRect ratingTextRect;
+    QRect cacheRect;
+    QRect textRect;
 };
 
 #endif // THUMBVIEWDELEGATE_H

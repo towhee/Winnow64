@@ -1,12 +1,11 @@
 BUGS
 - Test for root folder in Ingest
-- Check updates not working at startup
-- Ingest history and recent folders does not select folder
+- F5 to refresh ???
 - In grid mode pick a thumb and grid scrolls and picks another thumb instead
 - Create sidecar file before open with in case other app can use metadata in sidecar
 - Fix editbox in some tableviews (infoview, external programs)
 - Image count not showing in bookmarks`
-- check if cacheDelay is still important
+- Check if cacheDelay is still important
 - Disable Ingest menu when no picks
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
@@ -22,6 +21,8 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Write xmp into eligible files ???
+- Read xmp sidecars when open folder
 - Add check for go to ingest folder after ingesting
 - Check for updates on Mac
 - Detect drive mounting
@@ -40,6 +41,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Compare can crash
+- Ingest history and recent folders does not select folder
+- Check updates not working at startup
 - Fixed resorting issue with external apps
 - Added ability to reorder external apps
 - Open with new app shortcuts only show when restart
