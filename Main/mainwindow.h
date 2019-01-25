@@ -815,7 +815,6 @@ private:
     void writeSettings();
     bool loadSettings();
     void loadShortcuts(bool defaultShortcuts);
-    void updateSelection();
     void saveSelection();
     void recoverSelection();
 

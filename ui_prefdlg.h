@@ -817,7 +817,7 @@ public:
         closeBtn->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>When closing the preferences dialog all changes will by retained.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
         closeBtn->setText(QApplication::translate("Prefdlg", "Okay", nullptr));
-        groupBoxTrackpadAction->setTitle(QApplication::translate("Prefdlg", "Trackpad Swipe Action", nullptr));
+        groupBoxTrackpadAction->setTitle(QApplication::translate("Prefdlg", "Trackpad Swipe / Mouse Wheel", nullptr));
         trackpadIterateRadio->setText(QApplication::translate("Prefdlg", "Next / previous image", nullptr));
         trackpadScrollRadio->setText(QApplication::translate("Prefdlg", "Scroll current image when zoomed", nullptr));
         groupBoxFolders->setTitle(QApplication::translate("Prefdlg", "When open program", nullptr));
