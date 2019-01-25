@@ -82,7 +82,6 @@ void TableView::mousePressEvent(QMouseEvent *event)
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) return;
     QTableView::mousePressEvent(event);
-    QTableView::mousePressEvent(event);
 }
 
 void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)

@@ -12,11 +12,13 @@ HEADERS += \
     Cache/imagecache.h \
     Cache/mdcache.h \
     Dialogs/appdlg.h \
+    Dialogs/ingestdlg.h \
     Dialogs/prefdlg.h \
     Dialogs/renamedlg.h \
     Dialogs/testaligndlg.h \
     Dialogs/workspacedlg.h \
     Dialogs/tokendlg.h \
+    Dialogs/updateapp.h \
     Dialogs/zoomdlg.h \
     Image/imagealign.h \
     Image/pixmap.h \
@@ -39,14 +41,12 @@ HEADERS += \
     Views/thumbview.h \
     Views/thumbviewdelegate.h \
     Views/infostring.h \
-    Dialogs/ingestdlg.h \
     Utilities/classificationlabel.h \
     Utilities/dropshadowlabel.h \
     Utilities/popup.h \
     Utilities/progressbar.h \
     Utilities/usb.h \
-    Utilities/utilities.h \
-    Dialogs/updateapp.h
+    Utilities/utilities.h
 
 SOURCES += \
     Cache/imagecache.cpp \
@@ -59,6 +59,7 @@ SOURCES += \
     Dialogs/renamedlg.cpp \
     Dialogs/testaligndlg.cpp \
     Dialogs/tokendlg.cpp \
+    Dialogs/updateapp.cpp \
     Dialogs/workspacedlg.cpp \
     Dialogs/zoomdlg.cpp \
     File/bookmarks.cpp \
@@ -84,30 +85,28 @@ SOURCES += \
     Utilities/popup.cpp \
     Utilities/progressbar.cpp \
     Utilities/usb.cpp \
-    Utilities/utilities.cpp \
-    Dialogs/updateapp.cpp
+    Utilities/utilities.cpp
 
 # OBJECTIVE_SOURCES += MacOS/macscale.mm
 
 FORMS += \
-    Dialogs/renamedlg.ui \
     Dialogs/aligndlg.ui \
     Dialogs/appdlg.ui \
-    Dialogs/copypickdlg.ui \
-    Help/helpform.ui \
-    Help/helpingest.ui \
+    Dialogs/ingestdlg.ui \
     Dialogs/prefdlg.ui \
-    Help/shortcutsform.ui \
+    Dialogs/renamedlg.ui \
     Dialogs/testaligndlg.ui \
     Dialogs/tokendlg.ui \
+    Dialogs/updateapp.ui \
     Dialogs/workspacedlg.ui \
     Dialogs/zoomdlg.ui \
+    Help/helpform.ui \
+    Help/helpingest.ui \
     Help/introduction.ui \
-    Help/welcome.ui \
-    Metadata/metadatareport.ui \
     Help/message.ui \
-    Metadata/metadatareport.ui \
-    Dialogs/updateapp.ui
+    Help/shortcutsform.ui \
+    Help/welcome.ui \
+    Metadata/metadatareport.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns
@@ -116,6 +115,7 @@ RC_ICONS = images/winnow.ico
 DISTFILES += \
     notes/_Notes \
     notes/_ToDo.txt \
+    notes/DeployInstall.txt \
     notes/ExiftoolCommands.txt \
     notes/git.txt \
     notes/HelpDocCreation.txt \
@@ -123,8 +123,7 @@ DISTFILES += \
     notes/Scratch.txt \
     notes/Shortcuts.txt \
     notes/snippets.txt \
-    notes/xmp.txt \
-    notes/DeployInstall.txt
+    notes/xmp.txt
 
 #macx {
 #    QMAKE_MAC_SDK = macosx10.12

@@ -685,7 +685,6 @@ void ThumbView::selectNext()
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     if(G::mode == "Compare") return;
     selectThumb(getNextRow());
 }
@@ -1231,31 +1230,25 @@ different position than the current image.
         return;
     }
 
-    QListView::mousePressEvent(event);
-
     // capture mouse click position for imageView zoom/pan
     if (event->modifiers() == Qt::NoModifier) {
         // reqd for thumb resizing
         if (event->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
 
+        /* Capture the percent coordinates of the mouse click within the thumbnail
+           so that the full scale image can be zoomed to the same point.  */
         QModelIndex idx = currentIndex();
         QRect iconRect = idx.data(G::ThumbRectRole).toRect();
         QPoint mousePt = event->pos();
         QPoint iconPt = mousePt - iconRect.topLeft();
         float xPct = (float)iconPt.x() / iconRect.width();
         float yPct = (float)iconPt.y() / iconRect.height();
-        /*qDebug() << G::t.restart() << "\t" << "ThumbView::mousePressEvent"
-                 << "xPct =" << xPct
-                 << "yPct =" << yPct
-                 << "iconRect =" << iconRect
-                 << "idx =" << idx;
-                 */
         if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
-            thumbClick(xPct, yPct);    //signal used in ThumbView::mousePressEvent
+            //signal sent to ImageView
+            thumbClick(xPct, yPct);
         }
     }
 
-    // 2nd call to QListView to capture cmd clicks (not sure why req'd)
     QListView::mousePressEvent(event);
 }
 

@@ -1,5 +1,6 @@
 #include "ingestdlg.h"
-#include "ui_copypickdlg.h"
+#include "ui_ingestdlg.h"
+//#include "ui_copypickdlg.h"
 #include <QDebug>
 
 /*
@@ -281,14 +282,17 @@ Each picked image is copied from the source to the destination.
         // rename destination and fileName if already exists
         renameIfExists(destinationPath, destBaseName, dotSuffix);
 
-        // if there is edited xmp data in an eligible file format copy it
-        // into a buffer
+        /* If there is edited xmp data in an eligible file format copy it
+           into a buffer.
+
+           This routine is also used in MW::runExternalApp()
+        */
         if (metadata->writeMetadata(sourcePath, buffer)
         && metadata->sidecarFormats.contains(suffix)) {
             // copy image file
             QFile::copy(sourcePath, destinationPath);
             if (metadata->internalXmpFormats.contains(suffix)) {
-                // write xmp data into image file
+                // write xmp data into image file       rgh needs some work!!!
                 QFile newFile(destinationPath);
                 newFile.open(QIODevice::WriteOnly);
                 newFile.write(buffer);
