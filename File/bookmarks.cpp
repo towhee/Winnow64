@@ -105,6 +105,18 @@ void BookMarks::removeBookmark()
 	}
 }
 
+void BookMarks::mousePressEvent(QMouseEvent *event)
+{
+    qDebug() << QTime::currentTime() << "MouseButtonPress" << __FUNCTION__;
+    QTreeView::mousePressEvent(event);
+}
+
+void BookMarks::mouseReleaseEvent(QMouseEvent *event)
+{
+    qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__ << "\n";
+    QTreeView::mouseReleaseEvent(event);
+}
+
 void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 {
     {
