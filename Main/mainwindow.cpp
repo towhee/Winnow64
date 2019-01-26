@@ -437,6 +437,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 
     if (event->type() == QEvent::MouseButtonRelease) {
+        qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__;
         QMouseEvent *e = (QMouseEvent *)event;
         if (e->button() == Qt::LeftButton) {
             isLeftMouseBtnPressed = false;
@@ -906,8 +907,9 @@ so scrollTo and delegate use of the current index must check the row.
     timer delays until the double-click delay has elapsed and the model has
     finished updating.
     */
+    qDebug() << "G::lastThumbChangeEvent =" << G::lastThumbChangeEvent;
     if (G::lastThumbChangeEvent == "MouseClick") {
-        if (mouseClickScroll)
+//        if (mouseClickScroll)
             QTimer::singleShot(1, this, SLOT(delayScroll()));
     }
     else {
@@ -1381,6 +1383,8 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
 //    QString fPath = item->text(0);
     const QString fPath =  item->toolTip(col);
     isCurrentFolderOkay = isFolderValid(fPath, true, false);
+    qDebug() << QTime::currentTime() << "isCurrentFolderOkay" << isCurrentFolderOkay << __FUNCTION__;
+
     if (isCurrentFolderOkay) {
         QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
@@ -4355,6 +4359,7 @@ void MW::delayScroll()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << "enter delayScroll";
     // scroll views to center on currentIndex
     if (thumbView->isVisible()) thumbView->scrollToCurrent(currentRow);
     if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);

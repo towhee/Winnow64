@@ -59,6 +59,8 @@ public slots:
     void resizeColumns();
 
 protected:
+    void mousePressEvent(QMouseEvent *event);       // debugging
+    void mouseReleaseEvent(QMouseEvent *event);     // debugging
     void mouseMoveEvent(QMouseEvent *event);
     void dragEnterEvent(QDragEnterEvent *event);
 	void dragMoveEvent(QDragMoveEvent *event);
