@@ -1,4 +1,5 @@
 BUGS
+- Edit shooting info {HOUR} {MINUTE} {SECOND} not working
 - Test for root folder in Ingest
 - F5 to refresh ???
 - In grid mode pick a thumb and grid scrolls and picks another thumb instead
@@ -21,6 +22,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Speed up Tiffs
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 - Add check for go to ingest folder after ingesting

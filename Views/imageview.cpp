@@ -962,7 +962,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__;
+    qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__ << "\n";
     // prevent zooming when right click for context menu
     if (event->button() == Qt::RightButton) {
         return;
