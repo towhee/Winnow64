@@ -115,5 +115,7 @@
         <file>images/branch-open.png</file>
         <file>images/checkmark48.png</file>
         <file>images/checkmark.png</file>
+        <file>../WinnowInstall/Html/winnow.html</file>
+        <file>Docs/winnow.html</file>
     </qresource>
 </RCC>
