@@ -17,8 +17,6 @@
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
-#include <QtWidgets/QScrollArea>
-#include <QtWidgets/QWidget>
 
 QT_BEGIN_NAMESPACE
 
@@ -28,57 +26,48 @@ public:
     QDialogButtonBox *buttonBox;
     QLabel *proceedLabel;
     QLabel *titleLabel;
-    QScrollArea *scrollArea;
-    QWidget *scrollAreaWidgetContents;
-    QLabel *viewVersionLabel;
+    QLabel *currentVersionlabel_2;
     QLabel *versionLabel;
-    QLabel *currentVersionlabel;
+    QLabel *viewVersionLabel;
 
     void setupUi(QDialog *UpdateApp)
     {
         if (UpdateApp->objectName().isEmpty())
             UpdateApp->setObjectName(QStringLiteral("UpdateApp"));
-        UpdateApp->resize(649, 381);
+        UpdateApp->resize(544, 299);
         UpdateApp->setAutoFillBackground(false);
         UpdateApp->setStyleSheet(QStringLiteral("Background-color =rgb(190, 190, 190)"));
         buttonBox = new QDialogButtonBox(UpdateApp);
         buttonBox->setObjectName(QStringLiteral("buttonBox"));
-        buttonBox->setGeometry(QRect(10, 330, 621, 32));
+        buttonBox->setGeometry(QRect(280, 250, 241, 32));
+        QFont font;
+        font.setPointSize(9);
+        buttonBox->setFont(font);
         buttonBox->setOrientation(Qt::Horizontal);
         buttonBox->setStandardButtons(QDialogButtonBox::No|QDialogButtonBox::Yes);
         proceedLabel = new QLabel(UpdateApp);
         proceedLabel->setObjectName(QStringLiteral("proceedLabel"));
-        proceedLabel->setGeometry(QRect(10, 260, 561, 31));
-        QFont font;
-        font.setPointSize(12);
+        proceedLabel->setGeometry(QRect(30, 190, 391, 31));
         proceedLabel->setFont(font);
         titleLabel = new QLabel(UpdateApp);
         titleLabel->setObjectName(QStringLiteral("titleLabel"));
-        titleLabel->setGeometry(QRect(20, 20, 571, 31));
+        titleLabel->setGeometry(QRect(30, 20, 571, 31));
+        titleLabel->setFont(font);
+        titleLabel->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
+        currentVersionlabel_2 = new QLabel(UpdateApp);
+        currentVersionlabel_2->setObjectName(QStringLiteral("currentVersionlabel_2"));
+        currentVersionlabel_2->setGeometry(QRect(440, 670, 161, 31));
         QFont font1;
-        font1.setPointSize(14);
-        titleLabel->setFont(font1);
-        titleLabel->setAlignment(Qt::AlignCenter);
-        scrollArea = new QScrollArea(UpdateApp);
-        scrollArea->setObjectName(QStringLiteral("scrollArea"));
-        scrollArea->setGeometry(QRect(10, 100, 621, 111));
-        scrollArea->setWidgetResizable(true);
-        scrollAreaWidgetContents = new QWidget();
-        scrollAreaWidgetContents->setObjectName(QStringLiteral("scrollAreaWidgetContents"));
-        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 619, 109));
-        viewVersionLabel = new QLabel(scrollAreaWidgetContents);
-        viewVersionLabel->setObjectName(QStringLiteral("viewVersionLabel"));
-        viewVersionLabel->setGeometry(QRect(10, 50, 601, 31));
-        viewVersionLabel->setFont(font);
-        versionLabel = new QLabel(scrollAreaWidgetContents);
+        font1.setPointSize(12);
+        currentVersionlabel_2->setFont(font1);
+        versionLabel = new QLabel(UpdateApp);
         versionLabel->setObjectName(QStringLiteral("versionLabel"));
-        versionLabel->setGeometry(QRect(120, 15, 441, 31));
+        versionLabel->setGeometry(QRect(30, 80, 481, 31));
         versionLabel->setFont(font);
-        currentVersionlabel = new QLabel(scrollAreaWidgetContents);
-        currentVersionlabel->setObjectName(QStringLiteral("currentVersionlabel"));
-        currentVersionlabel->setGeometry(QRect(10, 15, 111, 31));
-        currentVersionlabel->setFont(font);
-        scrollArea->setWidget(scrollAreaWidgetContents);
+        viewVersionLabel = new QLabel(UpdateApp);
+        viewVersionLabel->setObjectName(QStringLiteral("viewVersionLabel"));
+        viewVersionLabel->setGeometry(QRect(30, 120, 601, 31));
+        viewVersionLabel->setFont(font);
 
         retranslateUi(UpdateApp);
         QObject::connect(buttonBox, SIGNAL(accepted()), UpdateApp, SLOT(accept()));
@@ -89,12 +78,12 @@ public:
 
     void retranslateUi(QDialog *UpdateApp)
     {
-        UpdateApp->setWindowTitle(QApplication::translate("UpdateApp", "Winnow", nullptr));
+        UpdateApp->setWindowTitle(QApplication::translate("UpdateApp", "Winnow Update", nullptr));
         proceedLabel->setText(QApplication::translate("UpdateApp", "Do you want to proceed with the update?", nullptr));
         titleLabel->setText(QApplication::translate("UpdateApp", "There is a Winnow update", nullptr));
+        currentVersionlabel_2->setText(QApplication::translate("UpdateApp", "You have version:", nullptr));
+        versionLabel->setText(QApplication::translate("UpdateApp", "You currently have version  0.9.5 released 2019-01-25", nullptr));
         viewVersionLabel->setText(QApplication::translate("UpdateApp", "<html><head/><body><p>You can view version update notes <a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#ffffff;\">here</span></a>.</p></body></html>", nullptr));
-        versionLabel->setText(QApplication::translate("UpdateApp", "Version 0.9.5", nullptr));
-        currentVersionlabel->setText(QApplication::translate("UpdateApp", "You have:", nullptr));
     } // retranslateUi
 
 };
