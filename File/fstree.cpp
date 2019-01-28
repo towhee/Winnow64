@@ -117,22 +117,35 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
             QString imageCount = "";
             if (count > 0) imageCount = QString::number(count, 'f', 0);
             return imageCount;
+            QVariant s = data(index, Qt::DisplayRole);
+//            QString s = qvariant_cast<QString>(data(index, Qt::DisplayRole));
+//            qDebug() << "imageCount: " << s;
+//            return qvariant_cast<QString>(data(index, Qt::DisplayRole));
+
         }
         if (role == Qt::TextAlignmentRole)
             return static_cast<QVariant>(Qt::AlignRight | Qt::AlignVCenter);
         else
             return QVariant();
     }
-    // return tooltip for folder path
-    if (index.column() == 0) {
-        if (role == Qt::ToolTipRole) {
-            return QFileSystemModel::data(index, QFileSystemModel::FilePathRole);
-        }
-        else
-            return QFileSystemModel::data(index, role);
-    }
     // return parent class data
     return QFileSystemModel::data(index, role);
+}
+
+bool FSModel::equal(QVector<QString>&a, QVector<QString>&b)
+{
+    if(a.size() != b.size()) return false;
+    for(int i = 0; i < a.size(); ++i) {
+        if(a.at(i) != b.at(i)) return false;
+    }
+    return true;
+}
+void FSModel::addImageCount(QString path)
+{
+    QModelIndex idx = index(path, imageCountColumn);
+    qDebug() << idx;
+    setData(idx, 99);
+    emit dataChanged(idx, idx, QVector<int>({Qt::DisplayRole}));
 }
 
 /*------------------------------------------------------------------------------
@@ -165,6 +178,7 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     sortByColumn(0, Qt::AscendingOrder);
     setIndentation(16);
     setSelectionMode(QAbstractItemView::SingleSelection);
+    setUniformRowHeights(true);
 
     setAcceptDrops(true);
     setDragEnabled(true);
