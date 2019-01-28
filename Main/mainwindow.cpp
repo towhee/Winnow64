@@ -8382,10 +8382,23 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QVector<QString> shortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
-    qDebug() << shortcut[0];
+//    emit fsTree->fsModel->dataChanged( QModelIndex{}, QModelIndex{} );
+//    return;
+
+//    QModelIndex idx = fsTree->fsModel->index(currentViewDir, 4);
+//    QRect r = fsTree->rect();
+//    QRect vr = fsTree->visualRect(idx);
+//    qDebug() << "Test: " << currentViewDir << idx << r << vr;
+//    return;
+
+//    int h = fsTree->rowHeight(idx);
+    fsTree->fsModel->addImageCount(currentViewDir);
+    fsTree->fsModel->imageCount = 77;
+    qDebug() << "MW::test " << fsTree->fsModel->imageCount;
 
     /*
+    QVector<QString> shortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
+    qDebug() << shortcut[0];
 
     qDebug() << gridView->verticalScrollBar()->pageStep()
              << gridView->verticalScrollBar()->maximum()

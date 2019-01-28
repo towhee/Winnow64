@@ -28,6 +28,12 @@ public:
     QVariant data(const QModelIndex &index, int role) const;
     bool showImageCount;
 
+    QVector<QString>folders;
+    bool equal(QVector<QString> &a, QVector<QString> &b);
+
+    int imageCount = 99;
+    void addImageCount(QString path);
+
 private:
     QDir *dir;
     int imageCountColumn = 4;
