@@ -11,7 +11,7 @@ MAKEFILE      = Makefile.Release
 
 CC            = cl
 CXX           = cl
-DEFINES       = -DUNICODE -D_UNICODE -DWIN32 -DWIN64 -DQT_QML_DEBUG -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_XMLPATTERNS_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DNDEBUG
+DEFINES       = -DUNICODE -D_UNICODE -DWIN32 -DWIN64 -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_XMLPATTERNS_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DNDEBUG
 CFLAGS        = -nologo -Zc:wchar_t -FS -Zc:strictStrings -O2 -MD -W3 -w44456 -w44457 -w44458 $(DEFINES)
 CXXFLAGS      = -nologo -Zc:wchar_t -FS -Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding -O2 -MD -W3 -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 -wd4577 -wd4467 -EHsc $(DEFINES)
 INCPATH       = -I. -I. -IDialogs -IUtilities -IMacOS -IC:\Qt\5.10.0\msvc2017_64\include -IC:\Qt\5.10.0\msvc2017_64\include\QtWidgets -IC:\Qt\5.10.0\msvc2017_64\include\QtGui -IC:\Qt\5.10.0\msvc2017_64\include\QtANGLE -IC:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns -IC:\Qt\5.10.0\msvc2017_64\include\QtNetwork -IC:\Qt\5.10.0\msvc2017_64\include\QtCore -Irelease -I. -I\include -IC:\Qt\5.10.0\msvc2017_64\mkspecs\win32-msvc 
@@ -514,12 +514,12 @@ release\Winnow_resource.res: Winnow_resource.rc
 	rc /NOLOGO $(DEFINES) -fo release\Winnow_resource.res Winnow_resource.rc
 
 qmake: FORCE
-	@$(QMAKE) -o Makefile.Release winnow64.pro -spec win32-msvc "CONFIG+=debug" "CONFIG+=qml_debug"
+	@$(QMAKE) -o Makefile.Release winnow64.pro -spec win32-msvc
 
 qmake_all: FORCE
 
 dist:
-	$(ZIP) Winnow.zip $(SOURCES) $(DIST) winnow64.pro C:\Qt\5.10.0\msvc2017_64\mkspecs\features\spec_pre.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\common\angle.conf C:\Qt\5.10.0\msvc2017_64\mkspecs\common\windows-vulkan.conf C:\Qt\5.10.0\msvc2017_64\mkspecs\common\msvc-desktop.conf C:\Qt\5.10.0\msvc2017_64\mkspecs\qconfig.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3danimation.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3danimation_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dcore.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dcore_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dextras.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dextras_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dinput.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dinput_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dlogic.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dlogic_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquick.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquick_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickanimation.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickanimation_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickextras.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickextras_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickinput.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickinput_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickrender.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickrender_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickscene2d.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickscene2d_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3drender.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3drender_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_accessibility_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_autoupdatercore.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_autoupdatercore_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_autoupdatergui.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_autoupdatergui_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axbase.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axbase_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axcontainer.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axcontainer_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axserver.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axserver_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_backgroundprocess.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_backgroundprocess_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_bluetooth.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_bluetooth_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_bootstrap_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_concurrent.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_concurrent_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_core.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_core_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_dbus.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_dbus_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_designer.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_designer_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_designercomponents_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_devicediscovery_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_edid_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_egl_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_eventdispatcher_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_fb_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_fontdatabase_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_gamepad.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_gamepad_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_gui.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_gui_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_help.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_help_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_location.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_location_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_multimedia.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_multimedia_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_multimediawidgets.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_multimediawidgets_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_network.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_network_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_nfc.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_nfc_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_opengl.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_opengl_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_openglextensions.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_openglextensions_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_packetprotocol_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_platformcompositor_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_positioning.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_positioning_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_printsupport.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_printsupport_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qml.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qml_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qmldebug_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qmldevtools_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qmltest.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qmltest_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qtmultimediaquicktools_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quick.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quick_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quickcontrols2.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quickcontrols2_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quickparticles_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quicktemplates2_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quickwidgets.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quickwidgets_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_scxml.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_scxml_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_sensors.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_sensors_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_serialbus.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_serialbus_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_serialport.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_serialport_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_sql.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_sql_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_svg.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_svg_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_testlib.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_testlib_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_texttospeech.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_texttospeech_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_theme_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_uiplugin.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_uitools.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_uitools_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_vulkan_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_webchannel.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_webchannel_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_websockets.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_websockets_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_webview.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_webview_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_widgets.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_widgets_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_winextras.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_winextras_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_xml.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_xml_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_xmlpatterns.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_xmlpatterns_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_zlib_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\features\qt_functions.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\qt_config.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\win32-msvc\qmake.conf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\spec_post.prf .qmake.stash C:\Qt\5.10.0\msvc2017_64\mkspecs\features\exclusive_builds.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\common\msvc-version.conf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\toolchain.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\default_pre.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\win32\default_pre.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\resolve_config.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\exclusive_builds_post.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\default_post.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\build_pass.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\qml_debug.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\precompile_header.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\warn_on.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\qt.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\resources.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\moc.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\win32\opengl.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\uic.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\qmake_use.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\file_copies.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\win32\windows.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\testcase_targets.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\exceptions.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\yacc.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\lex.prf winnow64.pro winnow.qrc C:\Qt\5.10.0\msvc2017_64\lib\qtmain.prl C:\Qt\5.10.0\msvc2017_64\lib\Qt5Widgets.prl C:\Qt\5.10.0\msvc2017_64\lib\Qt5Gui.prl C:\Qt\5.10.0\msvc2017_64\lib\Qt5XmlPatterns.prl C:\Qt\5.10.0\msvc2017_64\lib\Qt5Network.prl C:\Qt\5.10.0\msvc2017_64\lib\Qt5Core.prl   winnow.qrc C:\Qt\5.10.0\msvc2017_64\mkspecs\features\data\dummy.cpp Cache\imagecache.h Cache\mdcache.h Dialogs\appdlg.h Dialogs\ingestdlg.h Dialogs\prefdlg.h Dialogs\renamedlg.h Dialogs\testaligndlg.h Dialogs\workspacedlg.h Dialogs\tokendlg.h Dialogs\updateapp.h Dialogs\zoomdlg.h Image\imagealign.h Image\pixmap.h Image\thumb.h Datamodel\datamodel.h Datamodel\filters.h File\bookmarks.h File\fstree.h Main\global.h Main\mainwindow.h Metadata\metadata.h Metadata\xmp.h Views\compareImages.h Views\compareview.h Views\imageview.h Views\infoview.h Views\tableview.h Views\thumbview.h Views\thumbviewdelegate.h Views\infostring.h Utilities\classificationlabel.h Utilities\dropshadowlabel.h Utilities\popup.h Utilities\progressbar.h Utilities\usb.h Utilities\utilities.h  Cache\imagecache.cpp Cache\mdcache.cpp Datamodel\datamodel.cpp Datamodel\filters.cpp Dialogs\appdlg.cpp Dialogs\ingestdlg.cpp Dialogs\prefdlg.cpp Dialogs\renamedlg.cpp Dialogs\testaligndlg.cpp Dialogs\tokendlg.cpp Dialogs\updateapp.cpp Dialogs\workspacedlg.cpp Dialogs\zoomdlg.cpp File\bookmarks.cpp File\fstree.cpp Image\imagealign.cpp Image\pixmap.cpp Image\thumb.cpp Main\global.cpp Main\main.cpp Main\mainwindow.cpp Metadata\metadata.cpp Metadata\xmp.cpp Views\compareImages.cpp Views\compareview.cpp Views\imageview.cpp Views\infoview.cpp Views\tableview.cpp Views\thumbview.cpp Views\thumbviewdelegate.cpp Views\infostring.cpp Utilities\classificationlabel.cpp Utilities\dropshadowlabel.cpp Utilities\popup.cpp Utilities\progressbar.cpp Utilities\usb.cpp Utilities\utilities.cpp Dialogs\aligndlg.ui Dialogs\appdlg.ui Dialogs\ingestdlg.ui Dialogs\prefdlg.ui Dialogs\renamedlg.ui Dialogs\testaligndlg.ui Dialogs\tokendlg.ui Dialogs\updateapp.ui Dialogs\workspacedlg.ui Dialogs\zoomdlg.ui Help\helpform.ui Help\helpingest.ui Help\introduction.ui Help\message.ui Help\shortcutsform.ui Help\welcome.ui Metadata\metadatareport.ui    
+	$(ZIP) Winnow.zip $(SOURCES) $(DIST) winnow64.pro C:\Qt\5.10.0\msvc2017_64\mkspecs\features\spec_pre.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\common\angle.conf C:\Qt\5.10.0\msvc2017_64\mkspecs\common\windows-vulkan.conf C:\Qt\5.10.0\msvc2017_64\mkspecs\common\msvc-desktop.conf C:\Qt\5.10.0\msvc2017_64\mkspecs\qconfig.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3danimation.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3danimation_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dcore.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dcore_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dextras.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dextras_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dinput.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dinput_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dlogic.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dlogic_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquick.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquick_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickanimation.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickanimation_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickextras.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickextras_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickinput.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickinput_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickrender.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickrender_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickscene2d.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3dquickscene2d_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3drender.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_3drender_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_accessibility_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_autoupdatercore.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_autoupdatercore_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_autoupdatergui.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_autoupdatergui_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axbase.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axbase_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axcontainer.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axcontainer_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axserver.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_axserver_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_backgroundprocess.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_backgroundprocess_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_bluetooth.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_bluetooth_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_bootstrap_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_concurrent.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_concurrent_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_core.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_core_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_dbus.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_dbus_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_designer.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_designer_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_designercomponents_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_devicediscovery_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_edid_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_egl_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_eventdispatcher_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_fb_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_fontdatabase_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_gamepad.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_gamepad_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_gui.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_gui_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_help.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_help_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_location.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_location_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_multimedia.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_multimedia_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_multimediawidgets.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_multimediawidgets_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_network.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_network_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_nfc.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_nfc_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_opengl.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_opengl_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_openglextensions.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_openglextensions_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_packetprotocol_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_platformcompositor_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_positioning.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_positioning_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_printsupport.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_printsupport_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qml.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qml_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qmldebug_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qmldevtools_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qmltest.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qmltest_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_qtmultimediaquicktools_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quick.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quick_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quickcontrols2.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quickcontrols2_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quickparticles_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quicktemplates2_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quickwidgets.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_quickwidgets_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_scxml.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_scxml_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_sensors.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_sensors_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_serialbus.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_serialbus_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_serialport.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_serialport_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_sql.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_sql_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_svg.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_svg_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_testlib.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_testlib_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_texttospeech.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_texttospeech_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_theme_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_uiplugin.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_uitools.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_uitools_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_vulkan_support_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_webchannel.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_webchannel_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_websockets.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_websockets_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_webview.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_webview_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_widgets.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_widgets_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_winextras.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_winextras_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_xml.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_xml_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_xmlpatterns.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_xmlpatterns_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\modules\qt_lib_zlib_private.pri C:\Qt\5.10.0\msvc2017_64\mkspecs\features\qt_functions.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\qt_config.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\win32-msvc\qmake.conf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\spec_post.prf .qmake.stash C:\Qt\5.10.0\msvc2017_64\mkspecs\features\exclusive_builds.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\common\msvc-version.conf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\toolchain.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\default_pre.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\win32\default_pre.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\resolve_config.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\exclusive_builds_post.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\default_post.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\build_pass.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\precompile_header.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\warn_on.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\qt.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\resources.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\moc.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\win32\opengl.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\uic.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\qmake_use.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\file_copies.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\win32\windows.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\testcase_targets.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\exceptions.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\yacc.prf C:\Qt\5.10.0\msvc2017_64\mkspecs\features\lex.prf winnow64.pro winnow.qrc C:\Qt\5.10.0\msvc2017_64\lib\qtmain.prl C:\Qt\5.10.0\msvc2017_64\lib\Qt5Widgets.prl C:\Qt\5.10.0\msvc2017_64\lib\Qt5Gui.prl C:\Qt\5.10.0\msvc2017_64\lib\Qt5XmlPatterns.prl C:\Qt\5.10.0\msvc2017_64\lib\Qt5Network.prl C:\Qt\5.10.0\msvc2017_64\lib\Qt5Core.prl   winnow.qrc C:\Qt\5.10.0\msvc2017_64\mkspecs\features\data\dummy.cpp Cache\imagecache.h Cache\mdcache.h Dialogs\appdlg.h Dialogs\ingestdlg.h Dialogs\prefdlg.h Dialogs\renamedlg.h Dialogs\testaligndlg.h Dialogs\workspacedlg.h Dialogs\tokendlg.h Dialogs\updateapp.h Dialogs\zoomdlg.h Image\imagealign.h Image\pixmap.h Image\thumb.h Datamodel\datamodel.h Datamodel\filters.h File\bookmarks.h File\fstree.h Main\global.h Main\mainwindow.h Metadata\metadata.h Metadata\xmp.h Views\compareImages.h Views\compareview.h Views\imageview.h Views\infoview.h Views\tableview.h Views\thumbview.h Views\thumbviewdelegate.h Views\infostring.h Utilities\classificationlabel.h Utilities\dropshadowlabel.h Utilities\popup.h Utilities\progressbar.h Utilities\usb.h Utilities\utilities.h  Cache\imagecache.cpp Cache\mdcache.cpp Datamodel\datamodel.cpp Datamodel\filters.cpp Dialogs\appdlg.cpp Dialogs\ingestdlg.cpp Dialogs\prefdlg.cpp Dialogs\renamedlg.cpp Dialogs\testaligndlg.cpp Dialogs\tokendlg.cpp Dialogs\updateapp.cpp Dialogs\workspacedlg.cpp Dialogs\zoomdlg.cpp File\bookmarks.cpp File\fstree.cpp Image\imagealign.cpp Image\pixmap.cpp Image\thumb.cpp Main\global.cpp Main\main.cpp Main\mainwindow.cpp Metadata\metadata.cpp Metadata\xmp.cpp Views\compareImages.cpp Views\compareview.cpp Views\imageview.cpp Views\infoview.cpp Views\tableview.cpp Views\thumbview.cpp Views\thumbviewdelegate.cpp Views\infostring.cpp Utilities\classificationlabel.cpp Utilities\dropshadowlabel.cpp Utilities\popup.cpp Utilities\progressbar.cpp Utilities\usb.cpp Utilities\utilities.cpp Dialogs\aligndlg.ui Dialogs\appdlg.ui Dialogs\ingestdlg.ui Dialogs\prefdlg.ui Dialogs\renamedlg.ui Dialogs\testaligndlg.ui Dialogs\tokendlg.ui Dialogs\updateapp.ui Dialogs\workspacedlg.ui Dialogs\zoomdlg.ui Help\helpform.ui Help\helpingest.ui Help\introduction.ui Help\message.ui Help\shortcutsform.ui Help\welcome.ui Metadata\metadatareport.ui    
 
 clean: compiler_clean 
 	-$(DEL_FILE) release\imagecache.obj release\mdcache.obj release\datamodel.obj release\filters.obj release\appdlg.obj release\ingestdlg.obj release\prefdlg.obj release\renamedlg.obj release\testaligndlg.obj release\tokendlg.obj release\updateapp.obj release\workspacedlg.obj release\zoomdlg.obj release\bookmarks.obj release\fstree.obj release\imagealign.obj release\pixmap.obj release\thumb.obj release\global.obj release\main.obj release\mainwindow.obj release\metadata.obj release\xmp.obj release\compareImages.obj release\compareview.obj release\imageview.obj release\infoview.obj release\tableview.obj release\thumbview.obj release\thumbviewdelegate.obj release\infostring.obj release\classificationlabel.obj release\dropshadowlabel.obj release\popup.obj release\progressbar.obj release\usb.obj release\utilities.obj release\qrc_winnow.obj release\moc_imagecache.obj release\moc_mdcache.obj release\moc_appdlg.obj release\moc_ingestdlg.obj release\moc_prefdlg.obj release\moc_renamedlg.obj release\moc_testaligndlg.obj release\moc_workspacedlg.obj release\moc_tokendlg.obj release\moc_updateapp.obj release\moc_zoomdlg.obj release\moc_imagealign.obj release\moc_pixmap.obj release\moc_thumb.obj release\moc_datamodel.obj release\moc_filters.obj release\moc_bookmarks.obj release\moc_fstree.obj release\moc_mainwindow.obj release\moc_metadata.obj release\moc_xmp.obj release\moc_compareImages.obj release\moc_compareview.obj release\moc_imageview.obj release\moc_infoview.obj release\moc_tableview.obj release\moc_thumbview.obj release\moc_thumbviewdelegate.obj release\moc_infostring.obj release\moc_classificationlabel.obj release\moc_dropshadowlabel.obj release\moc_popup.obj release\moc_progressbar.obj
@@ -1214,7 +1214,7 @@ release\moc_imagecache.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -1785,7 +1785,7 @@ release\moc_mdcache.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QModelIndexList \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -2824,7 +2824,7 @@ release\moc_ingestdlg.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -2847,7 +2847,7 @@ release\moc_ingestdlg.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QTimer \
-		release\ui_helpingest.h \
+		ui_helpingest.h \
 		Utilities\utilities.h \
 		Dialogs\ingestdlg.h \
 		release\moc_predefs.h \
@@ -3409,7 +3409,7 @@ release\moc_prefdlg.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -3447,7 +3447,7 @@ release\moc_prefdlg.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
 		Cache\mdcache.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
-		release\ui_helpingest.h \
+		ui_helpingest.h \
 		Utilities\utilities.h \
 		Dialogs\prefdlg.h \
 		Dialogs\updateapp.h \
@@ -3455,15 +3455,15 @@ release\moc_prefdlg.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QMenu \
 		Dialogs\zoomdlg.h \
 		Utilities\usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
+		ui_welcome.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h \
+		ui_message.h \
 		Dialogs\prefdlg.h \
 		release\moc_predefs.h \
 		C:\Qt\5.10.0\msvc2017_64\bin\moc.exe
@@ -6231,7 +6231,7 @@ release\moc_pixmap.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtCore\QObject \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -6795,7 +6795,7 @@ release\moc_thumb.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtCore\QObject \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -7353,7 +7353,7 @@ release\moc_datamodel.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -8383,7 +8383,7 @@ release\moc_bookmarks.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -8941,7 +8941,7 @@ release\moc_fstree.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -9508,7 +9508,7 @@ release\moc_mainwindow.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -9546,7 +9546,7 @@ release\moc_mainwindow.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets
 		Cache\mdcache.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
-		release\ui_helpingest.h \
+		ui_helpingest.h \
 		Utilities\utilities.h \
 		Dialogs\prefdlg.h \
 		Main\mainwindow.h \
@@ -9555,15 +9555,15 @@ release\moc_mainwindow.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QMenu \
 		Dialogs\zoomdlg.h \
 		Utilities\usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
+		ui_welcome.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h \
+		ui_message.h \
 		Main\mainwindow.h \
 		release\moc_predefs.h \
 		C:\Qt\5.10.0\msvc2017_64\bin\moc.exe
@@ -10113,7 +10113,7 @@ release\moc_metadata.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -11219,7 +11219,7 @@ release\moc_compareImages.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidg
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -11797,7 +11797,7 @@ release\moc_compareview.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidget
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -12372,7 +12372,7 @@ release\moc_imageview.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -12955,7 +12955,7 @@ release\moc_infoview.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -13520,7 +13520,7 @@ release\moc_tableview.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -14090,7 +14090,7 @@ release\moc_thumbview.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -15126,7 +15126,7 @@ release\moc_infostring.cpp: C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -18012,7 +18012,7 @@ release\imagecache.obj: Cache\imagecache.cpp Cache/imagecache.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -18580,7 +18580,7 @@ release\mdcache.obj: Cache\mdcache.cpp Main/global.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -19141,7 +19141,7 @@ release\datamodel.obj: Datamodel\datamodel.cpp Datamodel/datamodel.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -20088,7 +20088,7 @@ release\appdlg.obj: Dialogs\appdlg.cpp Dialogs/appdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QTimer \
-		release\ui_appdlg.h \
+		ui_appdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -20646,7 +20646,7 @@ release\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs/ingestdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -20669,9 +20669,19 @@ release\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs/ingestdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QTimer \
-		release\ui_helpingest.h \
+		ui_helpingest.h \
 		Utilities/utilities.h \
 		ui_ingestdlg.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QCheckBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QLineEdit \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QProgressBar \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QRadioButton \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpinBox \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QDebug
 
 release\prefdlg.obj: Dialogs\prefdlg.cpp Dialogs/prefdlg.h \
@@ -21230,7 +21240,7 @@ release\prefdlg.obj: Dialogs\prefdlg.cpp Dialogs/prefdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -21268,23 +21278,23 @@ release\prefdlg.obj: Dialogs\prefdlg.cpp Dialogs/prefdlg.h \
 		Cache/mdcache.h \
 		Image/thumb.h \
 		Dialogs/ingestdlg.h \
-		release\ui_helpingest.h \
+		ui_helpingest.h \
 		Utilities/utilities.h \
 		Dialogs/updateapp.h \
 		Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QMenu \
 		Dialogs/zoomdlg.h \
 		Utilities/usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
+		ui_welcome.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h \
-		release\ui_prefdlg.h \
+		ui_message.h \
+		ui_prefdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QCheckBox \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QGroupBox \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QListWidget \
@@ -21765,7 +21775,7 @@ release\renamedlg.obj: Dialogs\renamedlg.cpp Dialogs/renamedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QModelIndexList \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
-		release\ui_renamedlg.h \
+		ui_renamedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -21879,7 +21889,7 @@ release\testaligndlg.obj: Dialogs\testaligndlg.cpp Dialogs/testaligndlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\qfiledevice.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qvector2d.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qtouchdevice.h \
-		release\ui_testaligndlg.h \
+		ui_testaligndlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QVariant \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qaction.h \
@@ -22386,7 +22396,7 @@ release\tokendlg.obj: Dialogs\tokendlg.cpp Dialogs/tokendlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QModelIndexList \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
-		release\ui_tokendlg.h \
+		ui_tokendlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -22858,7 +22868,14 @@ release\updateapp.obj: Dialogs\updateapp.cpp Dialogs/updateapp.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qtwidgetsversion.h \
-		ui_updateapp.h
+		ui_updateapp.h \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialogButtonBox \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QLabel \
+		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea
 
 release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QDialog \
@@ -22970,7 +22987,7 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs/workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\qicon.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qaction.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\qactiongroup.h \
-		release\ui_workspacedlg.h \
+		ui_workspacedlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QVariant \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
@@ -23806,7 +23823,7 @@ release\zoomdlg.obj: Dialogs\zoomdlg.cpp Dialogs/zoomdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QModelIndexList \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
-		release\ui_zoomdlg.h \
+		ui_zoomdlg.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -24367,7 +24384,7 @@ release\bookmarks.obj: File\bookmarks.cpp File/bookmarks.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -24922,7 +24939,7 @@ release\fstree.obj: File\fstree.cpp File/fstree.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -25944,7 +25961,7 @@ release\pixmap.obj: Image\pixmap.cpp Image/pixmap.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -26505,7 +26522,7 @@ release\thumb.obj: Image\thumb.cpp Image/thumb.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -27532,7 +27549,7 @@ release\main.obj: Main\main.cpp Main/mainwindow.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -27570,7 +27587,7 @@ release\main.obj: Main\main.cpp Main/mainwindow.h \
 		Cache/mdcache.h \
 		Image/thumb.h \
 		Dialogs/ingestdlg.h \
-		release\ui_helpingest.h \
+		ui_helpingest.h \
 		Utilities/utilities.h \
 		Dialogs/prefdlg.h \
 		Dialogs/updateapp.h \
@@ -27578,15 +27595,15 @@ release\main.obj: Main\main.cpp Main/mainwindow.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QMenu \
 		Dialogs/zoomdlg.h \
 		Utilities/usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
+		ui_welcome.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h
+		ui_message.h
 
 release\mainwindow.obj: Main\mainwindow.cpp Main/mainwindow.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
@@ -28143,7 +28160,7 @@ release\mainwindow.obj: Main\mainwindow.cpp Main/mainwindow.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -28181,7 +28198,7 @@ release\mainwindow.obj: Main\mainwindow.cpp Main/mainwindow.h \
 		Cache/mdcache.h \
 		Image/thumb.h \
 		Dialogs/ingestdlg.h \
-		release\ui_helpingest.h \
+		ui_helpingest.h \
 		Utilities/utilities.h \
 		Dialogs/prefdlg.h \
 		Dialogs/updateapp.h \
@@ -28189,15 +28206,15 @@ release\mainwindow.obj: Main\mainwindow.cpp Main/mainwindow.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QMenu \
 		Dialogs/zoomdlg.h \
 		Utilities/usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
+		ui_welcome.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h
+		ui_message.h
 
 release\metadata.obj: Metadata\metadata.cpp Metadata/metadata.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QtWidgets \
@@ -28744,7 +28761,7 @@ release\metadata.obj: Metadata\metadata.cpp Metadata/metadata.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -29845,7 +29862,7 @@ release\compareImages.obj: Views\compareImages.cpp Views/compareImages.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -30420,7 +30437,7 @@ release\compareview.obj: Views\compareview.cpp Views/compareview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -30993,7 +31010,7 @@ release\imageview.obj: Views\imageview.cpp C:\Qt\5.10.0\msvc2017_64\include\QtWi
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -31573,7 +31590,7 @@ release\infoview.obj: Views\infoview.cpp Views/infoview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -32135,7 +32152,7 @@ release\tableview.obj: Views\tableview.cpp Views/tableview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -32702,7 +32719,7 @@ release\thumbview.obj: Views\thumbview.cpp Views/thumbview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -32748,7 +32765,7 @@ release\thumbview.obj: Views\thumbview.cpp Views/thumbview.h \
 		Cache/mdcache.h \
 		Image/thumb.h \
 		Dialogs/ingestdlg.h \
-		release\ui_helpingest.h \
+		ui_helpingest.h \
 		Utilities/utilities.h \
 		Dialogs/prefdlg.h \
 		Dialogs/updateapp.h \
@@ -32756,15 +32773,15 @@ release\thumbview.obj: Views\thumbview.cpp Views/thumbview.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QMenu \
 		Dialogs/zoomdlg.h \
 		Utilities/usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
+		ui_welcome.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h
+		ui_message.h
 
 release\thumbviewdelegate.obj: Views\thumbviewdelegate.cpp Views/thumbviewdelegate.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtGui\QtGui \
@@ -33778,7 +33795,7 @@ release\infostring.obj: Views\infostring.cpp Views/infostring.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QMutex \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -35071,7 +35088,7 @@ release\progressbar.obj: Utilities\progressbar.cpp Utilities/progressbar.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		Metadata/xmp.h \
-		release\ui_metadatareport.h \
+		ui_metadatareport.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QAction \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QApplication \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QButtonGroup \
@@ -35106,7 +35123,7 @@ release\progressbar.obj: Utilities\progressbar.cpp Utilities/progressbar.h \
 		Cache/mdcache.h \
 		Image/thumb.h \
 		Dialogs/ingestdlg.h \
-		release\ui_helpingest.h \
+		ui_helpingest.h \
 		Utilities/utilities.h \
 		Dialogs/prefdlg.h \
 		Dialogs/updateapp.h \
@@ -35114,15 +35131,15 @@ release\progressbar.obj: Utilities\progressbar.cpp Utilities/progressbar.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QMenu \
 		Dialogs/zoomdlg.h \
 		Utilities/usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
+		ui_welcome.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QFrame \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.10.0\msvc2017_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h \
+		ui_message.h \
 		C:\Qt\5.10.0\msvc2017_64\include\QtCore\QDebug
 
 release\usb.obj: Utilities\usb.cpp Utilities/usb.h \
