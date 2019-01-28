@@ -8,7 +8,7 @@ UpdateApp::UpdateApp(QString &version, QString &css, QWidget *parent) :
 {
     ui->setupUi(this);
 
-    ui->versionLabel->setText(version);
+    ui->versionLabel->setText("You currently have version " + version);
 //    ui->buttonBox->button(QDialogButtonBox::Yes)->setDefault(false);
 
     // req'd for hyperlink to open browser

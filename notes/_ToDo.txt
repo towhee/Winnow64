@@ -3,7 +3,6 @@ BUGS
 - Test for root folder in Ingest
 - F5 to refresh ???
 - In grid mode pick a thumb and grid scrolls and picks another thumb instead
-- Create sidecar file before open with in case other app can use metadata in sidecar
 - Fix editbox in some tableviews (infoview, external programs)
 - Image count not showing in bookmarks`
 - Check if cacheDelay is still important
@@ -43,6 +42,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Create sidecar file before open with in case other app can use metadata in sidecar
 - Compare can crash
 - Ingest history and recent folders does not select folder
 - Check updates not working at startup
