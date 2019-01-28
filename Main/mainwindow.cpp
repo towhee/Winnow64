@@ -3670,14 +3670,18 @@ void MW::createAppStyle()
     G::track(__FUNCTION__);
     #endif
     }
+/* All the stylesheet text is saved in "/qss/winnow.css" except parameters we want
+   to change programmatically, which is formulated in css1.
+*/
     // add error trapping for file io  rgh todo
     QFile fStyle(":/qss/winnow.css");
     fStyle.open(QIODevice::ReadOnly);
-    css += fStyle.readAll();
+    css2 += fStyle.readAll();
 
     fontSize = setting->value("fontSize").toString();
-    QString s = "QWidget {font-size: " + fontSize + "px;}";
-    this->setStyleSheet(s + css);
+    css1 = "QWidget {font-size: " + fontSize + "px;}";
+    css = css1 + css2;
+    this->setStyleSheet(css);
 }
 
 void MW::createStatusBar()
@@ -5304,7 +5308,7 @@ void MW::setFontSize(QString pixels)
 {
     fontSize = pixels;
     QString s = "QWidget {font-size: " + fontSize + "px;}";
-    this->setStyleSheet(s + css);
+    this->setStyleSheet(s + css2);
 }
 
 void MW::setClassificationBadgeImageDiam(int d)
@@ -8382,10 +8386,12 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QVector<QString> shortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
-    qDebug() << shortcut[0];
+    updateAppDlg = new UpdateApp(version, css2);
+    int ret = updateAppDlg->exec();
 
     /*
+    QVector<QString> shortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
+    qDebug() << shortcut[0];
 
     qDebug() << gridView->verticalScrollBar()->pageStep()
              << gridView->verticalScrollBar()->maximum()

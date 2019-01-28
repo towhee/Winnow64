@@ -59,7 +59,7 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.6.6.1 released 2019-01-23";
+    QString version = "0.9.6.6.2 released 2019-01-25";
     QString versionDetail =
             "<a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#0000ff;\">Version Information</span></a>.</p></body></html>";
 
@@ -220,18 +220,20 @@ public:
     int maxThumbSpaceHeight;
     QString pickMemSize;
     QString css;                // stylesheet text
+    QString css1;               // stylesheet text
+    QString css2;               // stylesheet text
 
     // Colors
     // app
     QColor appBgColor = QColor(85,85,85);
     // progress bar
     QColor currentColor = QColor(158,200,158);
-    QColor progressBgColor = QColor(150,150,150);               // light green
+    QColor progressBgColor = QColor(150,150,150);       // light green
     QColor targetColor = QColor(125,125,125);           // dark gray
     QColor metadataCacheColor = QColor(100,100,150);    // purple
     QColor imageCacheColor = QColor(108,150,108);       // green
     QColor addMetadataColor = QColor(100,150,150);      // torquois
-//    QColor addMetadataColor = QColor(220,165,60);       // yellow
+//    QColor addMetadataColor = QColor(220,165,60);     // yellow
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event);

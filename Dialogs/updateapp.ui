@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>649</width>
-    <height>381</height>
+    <width>544</width>
+    <height>299</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Winnow</string>
+   <string>Winnow Update</string>
   </property>
   <property name="autoFillBackground">
    <bool>false</bool>
@@ -22,11 +22,16 @@
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>330</y>
-     <width>621</width>
+     <x>280</x>
+     <y>250</y>
+     <width>241</width>
      <height>32</height>
     </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+    </font>
    </property>
    <property name="orientation">
     <enum>Qt::Horizontal</enum>
@@ -38,15 +43,15 @@
   <widget class="QLabel" name="proceedLabel">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>260</y>
-     <width>561</width>
+     <x>30</x>
+     <y>190</y>
+     <width>391</width>
      <height>31</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>12</pointsize>
+     <pointsize>9</pointsize>
     </font>
    </property>
    <property name="text">
@@ -56,7 +61,7 @@
   <widget class="QLabel" name="titleLabel">
    <property name="geometry">
     <rect>
-     <x>20</x>
+     <x>30</x>
      <y>20</y>
      <width>571</width>
      <height>31</height>
@@ -64,92 +69,69 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>14</pointsize>
+     <pointsize>9</pointsize>
     </font>
    </property>
    <property name="text">
     <string>There is a Winnow update</string>
    </property>
    <property name="alignment">
-    <set>Qt::AlignCenter</set>
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
    </property>
   </widget>
-  <widget class="QScrollArea" name="scrollArea">
+  <widget class="QLabel" name="currentVersionlabel_2">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>100</y>
-     <width>621</width>
-     <height>111</height>
+     <x>440</x>
+     <y>670</y>
+     <width>161</width>
+     <height>31</height>
     </rect>
    </property>
-   <property name="widgetResizable">
-    <bool>true</bool>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+    </font>
    </property>
-   <widget class="QWidget" name="scrollAreaWidgetContents">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>0</y>
-      <width>619</width>
-      <height>109</height>
-     </rect>
-    </property>
-    <widget class="QLabel" name="viewVersionLabel">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>50</y>
-       <width>601</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can view version update notes &lt;a href=&quot;http://165.227.46.158/winnow/winnow.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;here&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="versionLabel">
-     <property name="geometry">
-      <rect>
-       <x>120</x>
-       <y>15</y>
-       <width>441</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Version 0.9.5</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="currentVersionlabel">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>15</y>
-       <width>111</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>You have:</string>
-     </property>
-    </widget>
-   </widget>
+   <property name="text">
+    <string>You have version:</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="versionLabel">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>80</y>
+     <width>481</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>You currently have version  0.9.5 released 2019-01-25</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="viewVersionLabel">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>120</y>
+     <width>601</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can view version update notes &lt;a href=&quot;http://165.227.46.158/winnow/winnow.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;here&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
   </widget>
  </widget>
  <resources/>
