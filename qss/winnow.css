@@ -1,7 +1,7 @@
 QWidget {
     /*font-size: 14px;*/
     background-color: rgb(85,85,85);
-    color: rgb(229,229,229);
+    color: lightgray;
     border-width: 0px;
 }
 
@@ -33,7 +33,7 @@ QMenu {
 
 QMenuBar {
     background-color: rgb(85,85,85);
-    color: rgb(229,229,229);
+    color: lightgray;
     border: 0px solid rgb(99,99,99);
 }
 
@@ -65,7 +65,7 @@ QMainWindow::separator {
 }
 
 QMainWindow::separator:hover {
-    background: rgb(111,111,111);
+    background: gray;
 }
 
 /*HLine and VLine*/
@@ -93,6 +93,11 @@ QGroupBox::title {
 
 QLabel {
     border: none;
+}
+
+QLabel:disabled {
+    color:gray;
+    /*color:gray;*/
 }
 
 QStatusbar::item {
@@ -134,7 +139,7 @@ QTabWidget::tab-bar {
 }
 
 QTabBar::tab {
-    color:rgb(120,120,120);
+    color: silver;
     background-color: rgb(85,85,85);
     border: 1px solid rgb(99,99,99);
     padding: 4px 4px;
@@ -148,6 +153,10 @@ QTabBar::tab:selected {
     color:white;
     /* border: 1px solid red;   this woks for tabl only as expected */
     background-color: rgb(80,80,80);
+}
+
+QTabBar::tab:disabled {
+    color: gray;
 }
 
 QListView {
@@ -171,7 +180,7 @@ QListWidget {
 QTreeWidget {
     alternate-background-color: rgb(90,90,90);
     border: 2px solid rgb(95,95,95);
-    color: rgb(229,229,229);
+    color: lightgray;
 }
 
 QTreeWidget::item {
@@ -317,7 +326,7 @@ QScrollBar::up-arrow:horizontal, QScrollBar::down-arrow:horizontal {
 }
 
 QProgressBar {
-    background-color: rgb(111,111,111);
+    background-color: gray;
     border: 1px solid gray;
     border-radius: 2px;
 }
@@ -340,8 +349,8 @@ QSlider::handle:focus {
 }
 */
 
-/*QLineEdit {
-    background-color: rgb(111,111,111);
+QLineEdit {
+    background-color: gray;
     border: 1px solid gray;
     selection-background-color: darkgray;
     padding: 0px;
@@ -351,10 +360,14 @@ QSlider::handle:focus {
 QLineEdit:hover, QLineEdit:focus {
     border-color: silver;
 }
-*/
+
+QLineEdit:disabled {
+    color:gray;
+}
+
+
 /*PushButton must be before ComboBox*/
 QPushButton {
-/*    color: green;*/
     background-color: rgb(77,77,77);
     border: 1px solid gray;
     border-radius: 2px;
@@ -386,6 +399,10 @@ QPushButton:flat {
     border: 1px; /* no border for a flat push button */
 }
 
+QPushButton:disabled {
+    color: gray;
+}
+
 /*QCheckBox:disabled {
     color: rgba(255,255,255,50);
 }*/
@@ -412,7 +429,7 @@ QComboBox:editable {
 }
 
 QComboBox:!editable, QComboBox::drop-down:editable {
-background-color: rgb(111,111,111);
+background-color: gray;
 }*/
 
 /* QComboBox gets the "on" state when the popup is open */
@@ -422,10 +439,9 @@ QComboBox:!editable:on, QComboBox::drop-down:editable:on {
                                 stop: 0.5 #DDDDDD, stop: 1.0 #E1E1E1);
 }
 
-QComboBox:on { /* shift the text when the popup opens */
-    padding-top: 3px;
-    padding-left: 4px;
-/*    background-color: yellow;   nada*/
+
+QComboBox:disabled {
+    color: gray;
 }
 
 QComboBox::drop-down {
@@ -492,6 +508,10 @@ QLineEdit {
 
 QLineEdit:hover, QLineEdit:focus {
     border-color: silver;
+}
+
+QLineEdit:disabled {
+    color: gray;
 }
 
 QRadioButton::indicator {
