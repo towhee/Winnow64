@@ -74,8 +74,6 @@ public:
 
     QMap<QString, QString> pathTemplates;
     QMap<QString, QString> filenameTemplates;
-    int pathTemplateSelected;
-    int filenameTemplateSelected;
 
     QStringList *subfolders;
     QStringList *recentFolders;
@@ -148,8 +146,6 @@ public:
     bool mouseClickScroll;      // positionAtCenter scrolling when mouse click?
     int displayHorizontalPixels;
     int displayVerticalPixels;
-    bool autoIngestFolderPath;
-    bool autoEjectUsb;
     bool checkIfUpdate = true;
 
     // appearance
@@ -164,9 +160,18 @@ public:
 //    bool inclSubfolders;
     int maxRecentFolders = 20;
     int maxIngestHistoryFolders = 20;
+
+    // ingest
     QString ingestRootFolder;
+    QString ingestRootFolder2;
+    int pathTemplateSelected;
+    int pathTemplateSelected2;
+    int filenameTemplateSelected;
     QString manualFolderPath;
     bool combineRawJpg;
+    bool autoIngestFolderPath;
+    bool autoEjectUsb;
+    bool backupIngest;
 
     // preferences: slideshow
     int slideShowDelay;
