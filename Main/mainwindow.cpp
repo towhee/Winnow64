@@ -5830,8 +5830,6 @@ re-established when the application is re-opened.
     setting->setValue("lastPrefPage", (int)lastPrefPage);
     setting->setValue("mouseClickScroll", (bool)mouseClickScroll);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
-    setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
-    setting->setValue("autoEjectUSB", autoEjectUsb);
 
     // appearance
     setting->setValue("fontSize", fontSize);
@@ -5846,8 +5844,17 @@ re-established when the application is re-opened.
     setting->setValue("showImageCount", showImageCountAction->isChecked());
     setting->setValue("combineRawJpg", combineRawJpg);
     setting->setValue("useWheelToScroll", imageView->useWheelToScroll);
+
+    // ingest
+    setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
+    setting->setValue("autoEjectUSB", autoEjectUsb);
+    setting->setValue("backupIngest", backupIngest);
     setting->setValue("ingestRootFolder", ingestRootFolder);
+    setting->setValue("ingestRootFolder2", ingestRootFolder2);
+    setting->setValue("pathTemplateSelected", (int)pathTemplateSelected);
+    setting->setValue("pathTemplateSelected2", (int)pathTemplateSelected2);
     setting->setValue("manualFolderPath", manualFolderPath);
+    setting->setValue("filenameTemplateSelected", (int)filenameTemplateSelected);
 
     // thumbs
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
@@ -5944,7 +5951,6 @@ re-established when the application is re-opened.
     setting->endGroup();
 
     /* Tokens used for ingest operations */
-    setting->setValue("pathTemplateSelected", (int)pathTemplateSelected);
     setting->beginGroup("PathTokens");
     setting->remove("");
     // save path templates
@@ -5956,7 +5962,6 @@ re-established when the application is re-opened.
     setting->endGroup();
 
     // save filename templates
-    setting->setValue("filenameTemplateSelected", (int)filenameTemplateSelected);
     setting->beginGroup("FileNameTokens");
     setting->remove("");
     QMapIterator<QString, QString> filenameIter(filenameTemplates);
@@ -6124,8 +6129,6 @@ Preferences are located in the prefdlg class and updated here.
     }
 
     // general
-    autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
-    autoEjectUsb = setting->value("autoEjectUSB").toBool();
 
     // appearance
     fontSize = setting->value("fontSize").toString();
@@ -6137,7 +6140,16 @@ Preferences are located in the prefdlg class and updated here.
     rememberLastDir = setting->value("rememberLastDir").toBool();
     checkIfUpdate = setting->value("checkIfUpdate").toBool();
     lastDir = setting->value("lastDir").toString();
+
+    // ingest
+    autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
+    autoEjectUsb = setting->value("autoEjectUSB").toBool();
+    backupIngest = setting->value("backupIngest").toBool();
     ingestRootFolder = setting->value("ingestRootFolder").toString();
+    ingestRootFolder2 = setting->value("ingestRootFolder2").toString();
+    pathTemplateSelected = setting->value("pathTemplateSelected").toInt();
+    pathTemplateSelected2 = setting->value("pathTemplateSelected2").toInt();
+    filenameTemplateSelected = setting->value("filenameTemplateSelected").toInt();
     manualFolderPath = setting->value("manualFolderPath").toString();
 
     // slideshow
@@ -6168,7 +6180,6 @@ Preferences are located in the prefdlg class and updated here.
     /* moved to createActions as required to populate open with ... menu */
 
     /* read ingest token templates */
-    pathTemplateSelected = setting->value("pathTemplateSelected").toInt();
     setting->beginGroup("PathTokens");
     QStringList keys = setting->childKeys();
     for (int i = 0; i < keys.size(); ++i) {
@@ -6177,7 +6188,6 @@ Preferences are located in the prefdlg class and updated here.
     }
     setting->endGroup();
 
-    filenameTemplateSelected = setting->value("filenameTemplateSelected").toInt();
     setting->beginGroup("FilenameTokens");
     keys = setting->childKeys();
     for (int i = 0; i < keys.size(); ++i) {
@@ -7432,16 +7442,20 @@ void MW::ingest()
         ingestDlg = new IngestDlg(this,
                                   combineRawJpg,
                                   autoEjectUsb,
+                                  backupIngest,
                                   metadata,
                                   dm,
                                   ingestRootFolder,
+                                  ingestRootFolder2,
                                   manualFolderPath,
                                   pathTemplates,
                                   filenameTemplates,
                                   pathTemplateSelected,
+                                  pathTemplateSelected2,
                                   filenameTemplateSelected,
                                   ingestDescriptionCompleter,
-                                  autoIngestFolderPath);
+                                  autoIngestFolderPath,
+                                  css);
         connect(ingestDlg, SIGNAL(updateIngestParameters(QString,QString,bool)),
                 this, SLOT(setIngestRootFolder(QString,QString,bool)));
         connect(ingestDlg, SIGNAL(updateIngestHistory(QString)),
@@ -8386,10 +8400,13 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qDebug() << ingestRootFolder << ingestRootFolder2
+             << pathTemplateSelected << pathTemplateSelected2;
+
+    /*
     updateAppDlg = new UpdateApp(version, css2);
     int ret = updateAppDlg->exec();
 
-    /*
     QVector<QString> shortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
     qDebug() << shortcut[0];
 
