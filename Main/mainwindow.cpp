@@ -431,7 +431,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
 
     if (event->type() == QEvent::MouseButtonPress) {
-        qDebug() << QTime::currentTime() << "MouseButtonPress" << __FUNCTION__;
+//        qDebug() << QTime::currentTime() << "MouseButtonPress" << __FUNCTION__;
         QMouseEvent *e = (QMouseEvent *)event;
         if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
     }
