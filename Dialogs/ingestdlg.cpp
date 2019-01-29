@@ -123,14 +123,16 @@ IngestDlg::IngestDlg(QWidget *parent,
     QCompleter *completer = new QCompleter(this->ingestDescriptionCompleter, this);
     completer->setCaseSensitivity(Qt::CaseInsensitive);
     ui->descriptionLineEdit->setCompleter(completer);
+    ui->descriptionLineEdit_2->setCompleter(completer);
 
     // initialize autoEjectUsb
     ui->ejectChk->setChecked(autoEjectUsb);
 
+    ui->progressBar->setVisible(false);
+    ui->autoIngestTab->tabBar()->setCurrentIndex(0);
     isInitializing = false;
     updateExistingSequence();
     buildFileNameSequence();
-    ui->progressBar->setVisible(false);
 }
 
 IngestDlg::~IngestDlg()
@@ -236,6 +238,11 @@ Each picked image is copied from the source to the destination.
 
     Finally the source file is copied to the renamed destination.
 */
+    // check parameters
+    if(!autoParametersOk()) return;
+
+    bool backup = ui->backupChk->isChecked();
+
     // make sure the destination folder exists
     QDir dir(folderPath);
     if (!dir.exists()) {
@@ -246,6 +253,18 @@ Each picked image is copied from the source to the destination.
             return;
         }
     }
+
+    // make sure the backup folder has been created
+    if(backup) {
+        QDir dir2(folderPath2);
+        if (!dir2.mkpath(folderPath2)) {
+            QMessageBox::warning(this, tr("Error"),
+                 "The folder \"" + folderPath2 + "\" was not created.");
+            QDialog::accept();
+            return;
+        }
+    }
+
 
     // get rid of "/" at end of path for history (in file menu)
     QString historyPath = folderPath.left(folderPath.length() - 1);
@@ -267,11 +286,15 @@ Each picked image is copied from the source to the destination.
             ingestDescriptionCompleter << desc;
     }
 
+    // copy cycles req'd: 1 if no backup, 2 if backup
+    int n;
+    backup ? n = 2 : n = 1;
+
     // copy picked images
     ui->progressBar->setVisible(true);
     seqNum =  ui->spinBoxStartNumber->value();
     for (int i = 0; i < pickList.size(); ++i) {
-        int progress = (i + 1) * 100 / (pickList.size() + 1);
+        int progress = (i + 1) * 100 * n / (pickList.size() + 1);
         ui->progressBar->setValue(progress);
         qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
@@ -293,6 +316,7 @@ Each picked image is copied from the source to the destination.
 
         // check if image already exists at destination folder
         QString destinationPath = folderPath + destFileName;
+        QString backupPath = folderPath2 + destFileName;
         // rename destination and fileName if already exists
         renameIfExists(destinationPath, destBaseName, dotSuffix);
 
@@ -305,6 +329,7 @@ Each picked image is copied from the source to the destination.
         && metadata->sidecarFormats.contains(suffix)) {
             // copy image file
             QFile::copy(sourcePath, destinationPath);
+            if(backup) QFile::copy(sourcePath, backupPath);
             if (metadata->internalXmpFormats.contains(suffix)) {
                 // write xmp data into image file       rgh needs some work!!!
                 QFile newFile(destinationPath);
@@ -318,14 +343,54 @@ Each picked image is copied from the source to the destination.
                 sidecarFile.open(QIODevice::WriteOnly);
                 sidecarFile.write(buffer);
                 sidecarFile.close();
+                if(backup) {
+                    QFile sidecarFile(folderPath2 + destBaseName + ".xmp");
+                    sidecarFile.open(QIODevice::WriteOnly);
+                    sidecarFile.write(buffer);
+                    sidecarFile.close();
+                }
             }
         }
         // no xmp data, just copy source to destination
         else {
             QFile::copy(sourcePath, destinationPath);
+            if(backup) QFile::copy(sourcePath, backupPath);
         }
     }
     QDialog::accept();
+}
+
+bool IngestDlg::autoParametersOk()
+{
+    QString errStr;
+    bool err = false;
+    if(rootFolderPath.length() == 0) {
+        err = true;
+        errStr = "The primary location root folder is undefined";
+    }
+
+    if(ui->backupChk->isChecked()) {
+        if(rootFolderPath2.length() == 0) {
+            err = true;
+            errStr += "\nThe backup location root folder is undefined";
+        }
+
+        QDir dir2(folderPath2);
+        if (dir2.exists()) {
+            err = true;
+            errStr += "\nThe folder \"" + folderPath2 + "\" already exists.  "
+                     "Backup locations cannot use an existing folder.  "
+                     "Try changing the description so it is unique.";
+        }
+    }
+
+    if(err) {
+        QMessageBox::warning(this, tr("Error"), errStr);
+        QDialog::accept();
+        return false;
+    }
+
+    return true;
 }
 
 void IngestDlg::updateExistingSequence()
@@ -580,6 +645,12 @@ void IngestDlg::updateFolderPath()
 
 void IngestDlg::buildFileNameSequence()
 {
+/*  This function displays what the ingested file paths will be for the 1st, 2nd and
+last file.  If the primary location tab is selected the paths to the primary location
+are shown.  If the backup location tab is chosen then the backup location paths are
+shown.
+
+*/
     if (isInitializing) return;
     // build filename from tokenString
     QString key = ui->filenameTemplatesCB->currentText();
@@ -594,9 +665,15 @@ void IngestDlg::buildFileNameSequence()
     QString ext1 = "." + pickList.at(0).suffix().toUpper();
     QString fileName1 =  parseTokenString(pickList.at(0), tokenString) + ext1;
 
+    QString dirPath;
+    // folderpath based on primary or backup tab selected
+    qDebug() << "tab index =" << ui->autoIngestTab->tabBar()->currentIndex();
+    if(ui->autoIngestTab->tabBar()->currentIndex() == 0) dirPath = folderPath;
+    else dirPath = folderPath2;
+
     if(fileCount == 1) {
-        ui->folderPathLabel->setText(folderPath + fileName1);
-        ui->folderPathLabel->setToolTip(folderPath + fileName1);
+        ui->folderPathLabel->setText(dirPath + fileName1);
+        ui->folderPathLabel->setToolTip(dirPath + fileName1);
         ui->folderPathLabel_2->setText("");
         ui->folderPathLabel_2->setToolTip("");
         ui->folderPathLabel_3->setText("");
@@ -609,10 +686,10 @@ void IngestDlg::buildFileNameSequence()
     QString ext2 = "." + pickList.at(1).suffix().toUpper();
     QString fileName2 = parseTokenString(pickList.at(1), tokenString) + ext2;
     if(fileCount == 2) {
-        ui->folderPathLabel->setText(folderPath + fileName1);
-        ui->folderPathLabel->setToolTip(folderPath + fileName1);
-        ui->folderPathLabel_2->setText(folderPath + fileName2);
-        ui->folderPathLabel_2->setToolTip(folderPath + fileName2);
+        ui->folderPathLabel->setText(dirPath + fileName1);
+        ui->folderPathLabel->setToolTip(dirPath + fileName1);
+        ui->folderPathLabel_2->setText(dirPath + fileName2);
+        ui->folderPathLabel_2->setToolTip(dirPath + fileName2);
         ui->folderPathLabel_3->setText("");
         ui->folderPathLabel_4->setText("");
         ui->folderPathLabel_4->setToolTip("");
@@ -623,21 +700,34 @@ void IngestDlg::buildFileNameSequence()
     QString extN = "." + pickList.at(fileCount - 1).suffix().toUpper();
     QString fileNameN = parseTokenString(pickList.at(fileCount - 1), tokenString) + extN;
     if(fileCount > 2) {
-        ui->folderPathLabel->setText(folderPath + fileName1);
-        ui->folderPathLabel->setToolTip(folderPath + fileName1);
-        ui->folderPathLabel_2->setText(folderPath + fileName2);
-        ui->folderPathLabel_2->setToolTip(folderPath + fileName2);
+        ui->folderPathLabel->setText(dirPath + fileName1);
+        ui->folderPathLabel->setToolTip(dirPath + fileName1);
+        ui->folderPathLabel_2->setText(dirPath + fileName2);
+        ui->folderPathLabel_2->setToolTip(dirPath + fileName2);
         ui->folderPathLabel_3->setText("...");
-        ui->folderPathLabel_4->setText(folderPath + fileNameN);
-        ui->folderPathLabel_4->setToolTip(folderPath + fileNameN);
+        ui->folderPathLabel_4->setText(dirPath + fileNameN);
+        ui->folderPathLabel_4->setToolTip(dirPath + fileNameN);
     }
 }
 
-void IngestDlg::on_descriptionLineEdit_textChanged(const QString& /*arg1*/)
+void IngestDlg::on_descriptionLineEdit_textChanged(const QString& arg1)
 {
+    static QString prevText = "";
     updateFolderPath();
+    // copy primary description to backup description unless it is already different
+    QString desc2 = ui->descriptionLineEdit_2->text();
+    qDebug() << "prevText / desc2" << prevText << desc2;
+    if (desc2  == prevText) ui->descriptionLineEdit_2->setText(arg1);
+
+    prevText = arg1;
     ui->autoRadio->setChecked(true);
     updateEnabledState();
+}
+
+void IngestDlg::on_descriptionLineEdit_2_textChanged(const QString &arg1)
+{
+    updateFolderPath();
+//    ui->folderLabel_2->setText(arg1);
 }
 
 void IngestDlg::on_spinBoxStartNumber_valueChanged(const QString /* &arg1 */)
@@ -974,3 +1064,9 @@ void IngestDlg::on_okBtn_clicked()
 {
     accept();
 }
+
+void IngestDlg::on_autoIngestTab_currentChanged(int index)
+{
+    buildFileNameSequence();
+}
+
