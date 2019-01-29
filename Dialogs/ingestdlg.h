@@ -64,6 +64,10 @@ private slots:
     void on_okBtn_clicked();
     void on_helpBtn_clicked();
 
+    void on_autoIngestTab_currentChanged(int index);
+
+    void on_descriptionLineEdit_2_textChanged(const QString &arg1);
+
 signals:
     void updateIngestParameters(QString rootFolderPath, QString manualFolderPath, bool isAuto);
     void updateIngestHistory(QString folderPath);
@@ -81,6 +85,7 @@ private:
     void updateEnabledState();
     void renameIfExists(QString &destination, QString &baseName, QString dotSuffix);
     void getPicks();
+    bool autoParametersOk();
 
     bool isInitializing;
     bool isAuto;
