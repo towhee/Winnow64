@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>704</width>
-    <height>823</height>
+    <width>733</width>
+    <height>730</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -26,8 +26,8 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>520</y>
-     <width>661</width>
+     <y>460</y>
+     <width>691</width>
      <height>111</height>
     </rect>
    </property>
@@ -53,7 +53,7 @@
      <rect>
       <x>20</x>
       <y>20</y>
-      <width>640</width>
+      <width>651</width>
       <height>20</height>
      </rect>
     </property>
@@ -81,6 +81,15 @@
        <colorrole role="ButtonText">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
+          <red>180</red>
+          <green>180</green>
+          <blue>120</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
           <red>180</red>
           <green>180</green>
           <blue>120</blue>
@@ -116,6 +125,15 @@
          </color>
         </brush>
        </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
+          <red>180</red>
+          <green>180</green>
+          <blue>120</blue>
+         </color>
+        </brush>
+       </colorrole>
       </inactive>
       <disabled>
        <colorrole role="WindowText">
@@ -139,6 +157,15 @@
        <colorrole role="ButtonText">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
+          <red>180</red>
+          <green>180</green>
+          <blue>120</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
           <red>180</red>
           <green>180</green>
           <blue>120</blue>
@@ -171,7 +198,7 @@
      <rect>
       <x>20</x>
       <y>40</y>
-      <width>640</width>
+      <width>651</width>
       <height>20</height>
      </rect>
     </property>
@@ -199,6 +226,15 @@
        <colorrole role="ButtonText">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
+          <red>180</red>
+          <green>180</green>
+          <blue>120</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
           <red>180</red>
           <green>180</green>
           <blue>120</blue>
@@ -234,6 +270,15 @@
          </color>
         </brush>
        </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
+          <red>180</red>
+          <green>180</green>
+          <blue>120</blue>
+         </color>
+        </brush>
+       </colorrole>
       </inactive>
       <disabled>
        <colorrole role="WindowText">
@@ -257,6 +302,15 @@
        <colorrole role="ButtonText">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
+          <red>180</red>
+          <green>180</green>
+          <blue>120</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
           <red>180</red>
           <green>180</green>
           <blue>120</blue>
@@ -289,7 +343,7 @@
      <rect>
       <x>20</x>
       <y>60</y>
-      <width>640</width>
+      <width>651</width>
       <height>20</height>
      </rect>
     </property>
@@ -299,6 +353,15 @@
        <colorrole role="Text">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
+          <red>0</red>
+          <green>0</green>
+          <blue>0</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
           <red>0</red>
           <green>0</green>
           <blue>0</blue>
@@ -316,6 +379,15 @@
          </color>
         </brush>
        </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
+          <red>0</red>
+          <green>0</green>
+          <blue>0</blue>
+         </color>
+        </brush>
+       </colorrole>
       </inactive>
       <disabled>
        <colorrole role="Text">
@@ -324,6 +396,15 @@
           <red>120</red>
           <green>120</green>
           <blue>120</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
+          <red>0</red>
+          <green>0</green>
+          <blue>0</blue>
          </color>
         </brush>
        </colorrole>
@@ -350,7 +431,7 @@
      <rect>
       <x>20</x>
       <y>80</y>
-      <width>640</width>
+      <width>651</width>
       <height>20</height>
      </rect>
     </property>
@@ -378,6 +459,15 @@
        <colorrole role="ButtonText">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
+          <red>180</red>
+          <green>180</green>
+          <blue>120</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
           <red>180</red>
           <green>180</green>
           <blue>120</blue>
@@ -413,6 +503,15 @@
          </color>
         </brush>
        </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
+          <red>180</red>
+          <green>180</green>
+          <blue>120</blue>
+         </color>
+        </brush>
+       </colorrole>
       </inactive>
       <disabled>
        <colorrole role="WindowText">
@@ -436,6 +535,15 @@
        <colorrole role="ButtonText">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
+          <red>180</red>
+          <green>180</green>
+          <blue>120</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
           <red>180</red>
           <green>180</green>
           <blue>120</blue>
@@ -468,8 +576,8 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>740</y>
-     <width>661</width>
+     <y>650</y>
+     <width>691</width>
      <height>20</height>
     </rect>
    </property>
@@ -493,8 +601,8 @@
     <rect>
      <x>20</x>
      <y>20</y>
-     <width>660</width>
-     <height>341</height>
+     <width>691</width>
+     <height>321</height>
     </rect>
    </property>
    <property name="font">
@@ -514,7 +622,7 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>65</x>
+      <x>90</x>
       <y>286</y>
       <width>101</width>
       <height>25</height>
@@ -543,30 +651,6 @@
      <bool>false</bool>
     </property>
    </widget>
-   <widget class="QLabel" name="destinationFolderLabel">
-    <property name="geometry">
-     <rect>
-      <x>25</x>
-      <y>170</y>
-      <width>140</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="text">
-     <string>Destination folder:</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-    </property>
-   </widget>
    <widget class="QRadioButton" name="autoRadio">
     <property name="geometry">
      <rect>
@@ -590,29 +674,11 @@
      <string>Automatically generate destination folder from root folder</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="descriptionLineEdit">
-    <property name="geometry">
-     <rect>
-      <x>187</x>
-      <y>140</y>
-      <width>271</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-   </widget>
    <widget class="QRadioButton" name="manualRadio">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>250</y>
+      <y>260</y>
       <width>511</width>
       <height>17</height>
      </rect>
@@ -634,9 +700,9 @@
    <widget class="QLabel" name="manualFolderLabel">
     <property name="geometry">
      <rect>
-      <x>190</x>
+      <x>210</x>
       <y>290</y>
-      <width>460</width>
+      <width>461</width>
       <height>20</height>
      </rect>
     </property>
@@ -658,216 +724,483 @@
      <string/>
     </property>
    </widget>
-   <widget class="QPushButton" name="selectRootFolderBtn">
+   <widget class="QTabWidget" name="autoIngestTab">
     <property name="geometry">
      <rect>
-      <x>65</x>
-      <y>66</y>
-      <width>101</width>
-      <height>25</height>
+      <x>50</x>
+      <y>60</y>
+      <width>631</width>
+      <height>181</height>
      </rect>
     </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-      <weight>50</weight>
-      <bold>false</bold>
-     </font>
+    <property name="currentIndex">
+     <number>1</number>
     </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="text">
-     <string>Root Folder</string>
-    </property>
-    <property name="autoDefault">
-     <bool>false</bool>
-    </property>
-    <property name="default">
-     <bool>false</bool>
-    </property>
-    <property name="flat">
-     <bool>false</bool>
-    </property>
-   </widget>
-   <widget class="QLabel" name="rootFolderLabel">
-    <property name="geometry">
-     <rect>
-      <x>190</x>
-      <y>70</y>
-      <width>460</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="frameShape">
-     <enum>QFrame::Box</enum>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-   </widget>
-   <widget class="QLabel" name="folderLabel">
-    <property name="geometry">
-     <rect>
-      <x>190</x>
-      <y>170</y>
-      <width>460</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="styleSheet">
-     <string notr="true"/>
-    </property>
-    <property name="frameShape">
-     <enum>QFrame::Box</enum>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-   </widget>
-   <widget class="QLabel" name="folderDescription">
-    <property name="geometry">
-     <rect>
-      <x>25</x>
-      <y>141</y>
-      <width>140</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="text">
-     <string>Append Description:</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-    </property>
-   </widget>
-   <widget class="Line" name="line">
-    <property name="geometry">
-     <rect>
-      <x>40</x>
-      <y>220</y>
-      <width>610</width>
-      <height>1</height>
-     </rect>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">background:rgb(150,150,150)</string>
-    </property>
-    <property name="frameShadow">
-     <enum>QFrame::Plain</enum>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
-   </widget>
-   <widget class="QLabel" name="templateLabel1">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>100</y>
-      <width>140</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="text">
-     <string>Template:</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-    </property>
-   </widget>
-   <widget class="QComboBox" name="pathTemplatesCB">
-    <property name="geometry">
-     <rect>
-      <x>190</x>
-      <y>100</y>
-      <width>321</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="currentText">
-     <string/>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pathTemplatesBtn">
-    <property name="geometry">
-     <rect>
-      <x>530</x>
-      <y>100</y>
-      <width>101</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-      <weight>50</weight>
-      <bold>false</bold>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="toolTipDuration">
-     <number>-3</number>
-    </property>
-    <property name="text">
-     <string>Edit template(s)</string>
-    </property>
-    <property name="autoDefault">
-     <bool>false</bool>
-    </property>
-    <property name="default">
-     <bool>false</bool>
-    </property>
-    <property name="flat">
-     <bool>false</bool>
-    </property>
+    <widget class="QWidget" name="primaryTab">
+     <attribute name="title">
+      <string>  Primary Location Parameters  </string>
+     </attribute>
+     <widget class="QLabel" name="destinationFolderLabel">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>120</y>
+        <width>140</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="text">
+       <string>Destination folder:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="folderLabel">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>120</y>
+        <width>460</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLabel" name="templateLabel1">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>50</y>
+        <width>140</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="text">
+       <string>Template:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="selectRootFolderBtn">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>16</y>
+        <width>120</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="text">
+       <string>Root Folder</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+      <property name="default">
+       <bool>false</bool>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="pathTemplatesCB">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>50</y>
+        <width>320</width>
+        <height>26</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="currentText">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="descriptionLineEdit">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>90</y>
+        <width>320</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLabel" name="folderDescription">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>91</y>
+        <width>140</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="text">
+       <string>Append Description:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="rootFolderLabel">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>20</y>
+        <width>460</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pathTemplatesBtn">
+      <property name="geometry">
+       <rect>
+        <x>500</x>
+        <y>50</y>
+        <width>120</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="toolTipDuration">
+       <number>-3</number>
+      </property>
+      <property name="text">
+       <string>Edit template(s)</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+      <property name="default">
+       <bool>false</bool>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="backupTab">
+     <attribute name="title">
+      <string>  Backup Location Parameters  </string>
+     </attribute>
+     <widget class="QLabel" name="folderLabel_2">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>120</y>
+        <width>461</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLabel" name="templateLabel1_2">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>50</y>
+        <width>140</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="text">
+       <string>Template:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="selectRootFolderBtn_2">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>16</y>
+        <width>120</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="text">
+       <string>Root Folder</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+      <property name="default">
+       <bool>false</bool>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="pathTemplatesCB_2">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>50</y>
+        <width>320</width>
+        <height>26</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="currentText">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="descriptionLineEdit_2">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>90</y>
+        <width>320</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLabel" name="folderDescription_2">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>91</y>
+        <width>140</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="text">
+       <string>Append Description:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="destinationFolderLabel_2">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>120</y>
+        <width>140</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="text">
+       <string>Destination folder:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="rootFolderLabel_2">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>20</y>
+        <width>461</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pathTemplatesBtn_2">
+      <property name="geometry">
+       <rect>
+        <x>500</x>
+        <y>50</y>
+        <width>120</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="toolTipDuration">
+       <number>-3</number>
+      </property>
+      <property name="text">
+       <string>Edit template(s)</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+      <property name="default">
+       <bool>false</bool>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </widget>
    </widget>
    <widget class="QPushButton" name="helpBtn">
     <property name="geometry">
      <rect>
-      <x>530</x>
+      <x>560</x>
       <y>30</y>
-      <width>101</width>
+      <width>111</width>
       <height>25</height>
      </rect>
     </property>
@@ -886,9 +1219,9 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>380</y>
-     <width>660</width>
-     <height>121</height>
+     <y>350</y>
+     <width>691</width>
+     <height>101</height>
     </rect>
    </property>
    <property name="font">
@@ -905,9 +1238,9 @@
    <widget class="QLabel" name="existingSequenceLabel">
     <property name="geometry">
      <rect>
-      <x>250</x>
-      <y>80</y>
-      <width>391</width>
+      <x>270</x>
+      <y>70</y>
+      <width>401</width>
       <height>20</height>
      </rect>
     </property>
@@ -927,8 +1260,8 @@
    <widget class="QLabel" name="startSeqLabel">
     <property name="geometry">
      <rect>
-      <x>60</x>
-      <y>81</y>
+      <x>80</x>
+      <y>71</y>
       <width>121</width>
       <height>16</height>
      </rect>
@@ -948,8 +1281,8 @@
    <widget class="QSpinBox" name="spinBoxStartNumber">
     <property name="geometry">
      <rect>
-      <x>190</x>
-      <y>78</y>
+      <x>210</x>
+      <y>70</y>
       <width>51</width>
       <height>22</height>
      </rect>
@@ -972,8 +1305,8 @@
    <widget class="QLabel" name="label_5">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>40</y>
+      <x>50</x>
+      <y>30</y>
       <width>140</width>
       <height>20</height>
      </rect>
@@ -996,8 +1329,8 @@
    <widget class="QComboBox" name="filenameTemplatesCB">
     <property name="geometry">
      <rect>
-      <x>190</x>
-      <y>40</y>
+      <x>210</x>
+      <y>30</y>
       <width>321</width>
       <height>26</height>
      </rect>
@@ -1009,9 +1342,9 @@
    <widget class="QPushButton" name="filenameTemplatesBtn">
     <property name="geometry">
      <rect>
-      <x>530</x>
-      <y>40</y>
-      <width>101</width>
+      <x>550</x>
+      <y>30</y>
+      <width>120</width>
       <height>25</height>
      </rect>
     </property>
@@ -1043,7 +1376,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>780</y>
+     <y>690</y>
      <width>241</width>
      <height>16</height>
     </rect>
@@ -1063,8 +1396,8 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>430</x>
-     <y>770</y>
+     <x>460</x>
+     <y>680</y>
      <width>251</width>
      <height>32</height>
     </rect>
@@ -1116,9 +1449,9 @@
   <widget class="QCheckBox" name="combinedIncludeJpgChk">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>650</y>
-     <width>661</width>
+     <x>380</x>
+     <y>590</y>
+     <width>330</width>
      <height>20</height>
     </rect>
    </property>
@@ -1128,15 +1461,15 @@
     </font>
    </property>
    <property name="text">
-    <string>If Raw + JPG are combined also copy the JPG files</string>
+    <string>If Raw+JPG also copy the JPG files</string>
    </property>
   </widget>
   <widget class="QCheckBox" name="ejectChk">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>680</y>
-     <width>661</width>
+     <x>380</x>
+     <y>610</y>
+     <width>330</width>
      <height>20</height>
     </rect>
    </property>
@@ -1153,8 +1486,8 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>710</y>
-     <width>661</width>
+     <y>610</y>
+     <width>330</width>
      <height>20</height>
     </rect>
    </property>
@@ -1165,6 +1498,24 @@
    </property>
    <property name="text">
     <string>Open ingest folder after ingest</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="backupChk">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>590</y>
+     <width>311</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Backup to second location while ingesting</string>
    </property>
   </widget>
  </widget>

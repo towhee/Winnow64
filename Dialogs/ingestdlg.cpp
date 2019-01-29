@@ -31,36 +31,44 @@ Files are copied to a destination based on building a file path consisting of:
 IngestDlg::IngestDlg(QWidget *parent,
                      bool &combineRawJpg,
                      bool &autoEjectUsb,
+                     bool &isBackup,
                      Metadata *metadata,
                      DataModel *dm,
-                     QString ingestRootFolder,
-                     QString manualFolderPath,
+                     QString &ingestRootFolder,
+                     QString &ingestRootFolder2,
+                     QString &manualFolderPath,
                      QMap<QString, QString>& pathTemplates,
                      QMap<QString, QString>& filenameTemplates,
                      int& pathTemplateSelected,
+                     int& pathTemplateSelected2,
                      int& filenameTemplateSelected,
                      QStringList& ingestDescriptionCompleter,
-                     bool isAuto) :
+                     bool &isAuto,
+                     QString css) :
 
                      QDialog(parent),
                      ui(new Ui::IngestDlg),
                      isAuto(isAuto),
-                     ingestDescriptionCompleter(ingestDescriptionCompleter),
+                     isBackup(isBackup),
                      metadata(metadata),
+                     combineRawJpg(combineRawJpg),
+                     autoEjectUsb(autoEjectUsb),
                      pathTemplatesMap(pathTemplates),
                      filenameTemplatesMap(filenameTemplates),
                      pathTemplateSelected(pathTemplateSelected),
-                     filenameTemplateSelected(filenameTemplateSelected),
-                     autoEjectUsb(autoEjectUsb),
-                     combineRawJpg(combineRawJpg),
+                     pathTemplateSelected2(pathTemplateSelected2),
                      rootFolderPath(ingestRootFolder),
-                     manualFolderPath(manualFolderPath)
+                     rootFolderPath2(ingestRootFolder2),
+                     ingestDescriptionCompleter(ingestDescriptionCompleter),
+                     manualFolderPath(manualFolderPath),
+                     filenameTemplateSelected(filenameTemplateSelected)
 {
     this->dm = dm;
 
     ui->setupUi(this);
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
+    setStyleSheet(css);
 
     isInitializing = true;
     getPicks();
@@ -69,8 +77,11 @@ IngestDlg::IngestDlg(QWidget *parent,
         Utilities::setOpacity(ui->combinedIncludeJpgChk, 0.5);
         ui->combinedIncludeJpgChk->setDisabled(true);
     }
+    qDebug() << rootFolderPath << rootFolderPath2;
     ui->rootFolderLabel->setText(rootFolderPath);
     ui->rootFolderLabel->setToolTip(ui->rootFolderLabel->text());
+    ui->rootFolderLabel_2->setText(rootFolderPath2);
+    ui->rootFolderLabel_2->setToolTip(ui->rootFolderLabel_2->text());
     ui->manualFolderLabel->setText(manualFolderPath);
     ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
 
@@ -82,9 +93,12 @@ IngestDlg::IngestDlg(QWidget *parent,
         pathTemplatesMap["YYYY̸YYMM̸YYYY-MM-DD"] = "{YYYY}/{YYYY}{MM}/{YYYY}-{MM}-{DD}";
         pathTemplatesMap["YYYY-MM-DD"] = "{YYYY}-{MM}-{DD}";
     }
-    for (i = pathTemplatesMap.begin(); i != pathTemplatesMap.end(); ++i)
+    for (i = pathTemplatesMap.begin(); i != pathTemplatesMap.end(); ++i) {
         ui->pathTemplatesCB->addItem(i.key());
+        ui->pathTemplatesCB_2->addItem(i.key());
+    }
      ui->pathTemplatesCB->setCurrentIndex(pathTemplateSelected);
+     ui->pathTemplatesCB_2->setCurrentIndex(pathTemplateSelected2);
 
     if (filenameTemplatesMap.count() == 0) {
         filenameTemplatesMap["YYYY-MM-DD_XXXX"] = "{YYYY}-{MM}-{DD}_{XXXX}";
@@ -103,7 +117,7 @@ IngestDlg::IngestDlg(QWidget *parent,
         ui->selectFolderBtn->setFocus();
         ui->manualRadio->setChecked(true);
     }
-    updateStyleOfFolderLabels();
+    updateEnabledState();
 
     // assign completer to description
     QCompleter *completer = new QCompleter(this->ingestDescriptionCompleter, this);
@@ -371,7 +385,7 @@ void IngestDlg::on_selectFolderBtn_clicked()
         buildFileNameSequence();
         updateExistingSequence();
         ui->manualRadio->setChecked(true);
-        updateStyleOfFolderLabels();
+        updateEnabledState();
         emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);
     }
 }
@@ -380,7 +394,7 @@ void IngestDlg::on_selectRootFolderBtn_clicked()
 {
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     rootFolderPath = QFileDialog::getExistingDirectory
-        (this, tr("Choose Root Folder"), root,
+        (this, tr("Choose Root Folder for Primary Ingest Location"), root,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
     if (rootFolderPath.length() > 0) {
@@ -395,7 +409,29 @@ void IngestDlg::on_selectRootFolderBtn_clicked()
     updateFolderPath();
     updateExistingSequence();
     ui->autoRadio->setChecked(true);
-    updateStyleOfFolderLabels();
+    updateEnabledState();
+}
+
+void IngestDlg::on_selectRootFolderBtn_2_clicked()
+{
+    QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
+    rootFolderPath2 = QFileDialog::getExistingDirectory
+        (this, tr("Choose Root Folder for Backup Location"), root,
+        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+    if (rootFolderPath2.length() > 0) {
+        if(rootFolderPath.right(1) != "/") rootFolderPath2 += "/";
+        ui->rootFolderLabel_2->setText(rootFolderPath2);
+        ui->rootFolderLabel_2->setToolTip(ui->rootFolderLabel_2->text());
+    }
+
+    // send to MW where it will be saved in QSettings
+//    emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);  // rgh not req'd now - fix
+
+    updateFolderPath();
+    updateExistingSequence();
+    ui->autoRadio->setChecked(true);
+    updateEnabledState();
 }
 
 bool IngestDlg::isToken(QString tokenString, int pos)
@@ -525,9 +561,16 @@ void IngestDlg::updateFolderPath()
     if (ui->autoRadio->isChecked() || isInitializing) {
         baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
                 ? ui->descriptionLineEdit->text() : "";
+        baseFolderDescription2 = (ui->descriptionLineEdit_2->text().length() > 0)
+                ? ui->descriptionLineEdit_2->text() : "";
+
         folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
         ui->folderLabel->setText(folderPath);
         ui->folderLabel->setToolTip(ui->folderLabel->text());
+
+        folderPath2 = rootFolderPath2 + fromRootToBaseFolder2 + baseFolderDescription2 + "/";
+        ui->folderLabel_2->setText(folderPath2);
+        ui->folderLabel_2->setToolTip(ui->folderLabel_2->text());
     }
     else {
         folderPath = ui->manualFolderLabel->text() + "/";
@@ -594,7 +637,7 @@ void IngestDlg::on_descriptionLineEdit_textChanged(const QString& /*arg1*/)
 {
     updateFolderPath();
     ui->autoRadio->setChecked(true);
-    updateStyleOfFolderLabels();
+    updateEnabledState();
 }
 
 void IngestDlg::on_spinBoxStartNumber_valueChanged(const QString /* &arg1 */)
@@ -647,56 +690,60 @@ int IngestDlg::getSequenceStart(const QString &path)
     return sequence;
 }
 
-void IngestDlg::updateStyleOfFolderLabels()
+void IngestDlg::updateEnabledState()
 {
     if (isAuto) {
-        ui->folderLabel->setStyleSheet("QLabel{color:rgb(180,180,120);}");
-        ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
-        ui->selectRootFolderBtn->setEnabled(true);
-        ui->selectRootFolderBtn->setStyleSheet("QPushButton{color:rgb(229,229,229);}");
-        ui->rootFolderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
-        ui->templateLabel1->setStyleSheet("QLabel{color:rgb(229,229,229);}");
-        ui->pathTemplatesCB->setEnabled(true);
-        ui->pathTemplatesCB->setStyleSheet("QcomboBox{color:rgb(229,229,229);}");
-        ui->pathTemplatesBtn->setEnabled(true);
-        ui->pathTemplatesBtn->setStyleSheet("QPushButton{color:rgb(229,229,229);}");
-        ui->folderDescription->setStyleSheet("QLabel{color:rgb(229,229,229);}");
-        ui->descriptionLineEdit->setEnabled(true);
-        ui->descriptionLineEdit->setStyleSheet("QLineEdit{color:rgb(229,229,229);}");
-        ui->destinationFolderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
-        ui->folderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
+        ui->autoIngestTab->tabBar()->setTabEnabled(0, true);
+        ui->autoIngestTab->tabBar()->setTabEnabled(1, true);
+        ui->selectRootFolderBtn->setEnabled(true);              //
+        ui->templateLabel1->setEnabled(true);
+        ui->pathTemplatesCB->setEnabled(true);                  //
+        ui->pathTemplatesBtn->setEnabled(true);                 //
+        ui->folderDescription->setEnabled(true);
+        ui->descriptionLineEdit->setEnabled(true);              //
+        ui->destinationFolderLabel->setEnabled(true);
+        ui->folderLabel->setEnabled(true);
+        ui->selectRootFolderBtn_2->setEnabled(true);
+        ui->templateLabel1_2->setEnabled(true);
+        ui->pathTemplatesCB_2->setEnabled(true);
+        ui->pathTemplatesBtn_2->setEnabled(true);
+        ui->folderDescription_2->setEnabled(true);
+        ui->descriptionLineEdit_2->setEnabled(true);
+        ui->destinationFolderLabel_2->setEnabled(true);
+        ui->folderLabel_2->setEnabled(true);
 
         ui->selectFolderBtn->setEnabled(false);
-        ui->selectFolderBtn->setStyleSheet("QPushButton{color:rgb(111,111,111);}");
-        ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(111,111,111);}");
+        ui->manualFolderLabel->setEnabled(false);
     }
     else {
-        ui->folderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
-        ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(180,180,120);}");
+        ui->autoIngestTab->tabBar()->setTabEnabled(0, false);
+        ui->autoIngestTab->tabBar()->setTabEnabled(1, false);
         ui->selectRootFolderBtn->setEnabled(false);
-        ui->selectRootFolderBtn->setStyleSheet("QPushButton{color:rgb(111,111,111);}");
-        ui->rootFolderLabel->setStyleSheet("QLabel{color:rgb(111,111,111);}");
-        ui->templateLabel1->setStyleSheet("QLabel{color:rgb(111,111,111);}");
+        ui->templateLabel1->setEnabled(false);
         ui->pathTemplatesCB->setEnabled(false);
-        ui->pathTemplatesCB->setStyleSheet("QComboBox:!editable{color:rgb(111,111,111);}");
         ui->pathTemplatesBtn->setEnabled(false);
-        ui->pathTemplatesBtn->setStyleSheet("QPushButton{color:rgb(111,111,111);}");
-        ui->folderDescription->setStyleSheet("QLabel{color:rgb(111,111,111);}");
+        ui->folderDescription->setEnabled(false);
         ui->descriptionLineEdit->setEnabled(false);
-        ui->descriptionLineEdit->setStyleSheet("QLineEdit{color:rgb(111,111,111);}");
-        ui->destinationFolderLabel->setStyleSheet("QLabel{color:rgb(111,111,111);}");
-        ui->folderLabel->setStyleSheet("QLabel{color:rgb(111,111,111);}");
+        ui->destinationFolderLabel->setEnabled(false);
+        ui->folderLabel->setEnabled(false);
+        ui->selectRootFolderBtn_2->setEnabled(false);
+        ui->templateLabel1_2->setEnabled(false);
+        ui->pathTemplatesCB_2->setEnabled(false);
+        ui->pathTemplatesBtn_2->setEnabled(false);
+        ui->folderDescription_2->setEnabled(false);
+        ui->descriptionLineEdit_2->setEnabled(false);
+        ui->destinationFolderLabel_2->setEnabled(false);
+        ui->folderLabel_2->setEnabled(false);
 
         ui->selectFolderBtn->setEnabled(true);
-        ui->selectFolderBtn->setStyleSheet("QPushButton{color:rgb(229,229,229);}");
-        ui->manualFolderLabel->setStyleSheet("QLabel{color:rgb(229,229,229);}");
+        ui->manualFolderLabel->setEnabled(true);
     }
 }
 
 void IngestDlg::on_autoRadio_toggled(bool checked)
 {
     isAuto = checked;
-    updateStyleOfFolderLabels();
+    updateEnabledState();
     if (isAuto) {
         if (ui->folderLabel->text().length() > 0) {
             updateFolderPath();
@@ -709,7 +756,7 @@ void IngestDlg::on_autoRadio_toggled(bool checked)
             folderPath = ui->manualFolderLabel->text();
             buildFileNameSequence();
             updateExistingSequence();
-            updateStyleOfFolderLabels();
+            updateEnabledState();
         }
     }
     emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);
@@ -720,10 +767,10 @@ void IngestDlg::on_manualRadio_toggled(bool checked)
     isAuto = false;
     if (ui->manualFolderLabel->text().length() > 0) {
         folderPath = ui->manualFolderLabel->text();
-        updateStyleOfFolderLabels();
+        updateEnabledState();
         buildFileNameSequence();
         updateExistingSequence();
-        updateStyleOfFolderLabels();
+        updateEnabledState();
     }
     emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);
 }
@@ -816,6 +863,17 @@ void IngestDlg::on_pathTemplatesCB_currentIndexChanged(const QString &arg1)
     updateExistingSequence();
 }
 
+void IngestDlg::on_pathTemplatesCB_2_currentIndexChanged(const QString &arg1)
+{
+    if (arg1 == "") return;
+    QString tokenString = pathTemplatesMap[arg1];
+    fromRootToBaseFolder2 = parseTokenString(pickList.at(0), tokenString);
+    if (!isInitializing) pathTemplateSelected2 = ui->pathTemplatesCB_2->currentIndex();
+    updateFolderPath();
+//    seqStart = getSequenceStart(folderPath);
+//    updateExistingSequence();
+}
+
 void IngestDlg::on_filenameTemplatesCB_currentIndexChanged(const QString &arg1)
 {
     if (arg1 == "") return;
@@ -826,6 +884,9 @@ void IngestDlg::on_filenameTemplatesCB_currentIndexChanged(const QString &arg1)
 
 void IngestDlg::on_pathTemplatesBtn_clicked()
 {
+/*
+
+*/
     // setup TokenDlg
     QString title = "Token Editor - Path from Root to Destination Folder";
     int index = ui->pathTemplatesCB->currentIndex();
@@ -845,6 +906,14 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
     }
     ui->pathTemplatesCB->setCurrentIndex(index);
     on_pathTemplatesCB_currentIndexChanged(currentKey);
+}
+
+void IngestDlg::on_pathTemplatesBtn_2_clicked()
+{
+/* Performs same function as button on primary tab - just here for convenience and to
+make the ui more intuitive
+*/
+    on_pathTemplatesBtn_clicked();
 }
 
 void IngestDlg::on_filenameTemplatesBtn_clicked()
@@ -872,6 +941,22 @@ void IngestDlg::on_filenameTemplatesBtn_clicked()
     on_filenameTemplatesCB_currentIndexChanged(currentKey);
 }
 
+void IngestDlg::on_combinedIncludeJpgChk_clicked()
+
+{
+    getPicks();
+}
+
+void IngestDlg::on_ejectChk_stateChanged(int arg1)
+{
+    autoEjectUsb = ui->ejectChk->isChecked();
+}
+
+void IngestDlg::on_backupChk_stateChanged(int arg1)
+{
+
+}
+
 void IngestDlg::on_helpBtn_clicked()
 {
     QWidget *helpDoc = new QWidget;
@@ -888,15 +973,4 @@ void IngestDlg::on_cancelBtn_clicked()
 void IngestDlg::on_okBtn_clicked()
 {
     accept();
-}
-
-void IngestDlg::on_combinedIncludeJpgChk_clicked()
-{
-    getPicks();
-}
-
-
-void IngestDlg::on_ejectChk_stateChanged(int arg1)
-{
-    autoEjectUsb = ui->ejectChk->isChecked();
 }
