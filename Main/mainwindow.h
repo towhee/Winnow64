@@ -168,6 +168,7 @@ public:
     int pathTemplateSelected2;
     int filenameTemplateSelected;
     QString manualFolderPath;
+    QString manualFolderPath2;
     bool combineRawJpg;
     bool autoIngestFolderPath;
     bool autoEjectUsb;
@@ -368,7 +369,6 @@ private slots:
     void setMouseClickScroll(bool prefMouseClickScroll);
     void setTrackpadScroll(bool trackpadScroll);
     void setDisplayResolution();
-    void setIngestRootFolder(QString rootFolder, QString manualFolder, bool isAuto);
     void setCombineRawJpg();
     void setSlideShowParameters(int delay, bool isRandom);
     void setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
