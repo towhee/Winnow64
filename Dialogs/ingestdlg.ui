@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>733</width>
-    <height>730</height>
+    <width>732</width>
+    <height>783</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -26,7 +26,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>460</y>
+     <y>510</y>
      <width>691</width>
      <height>111</height>
     </rect>
@@ -576,7 +576,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>650</y>
+     <y>700</y>
      <width>691</width>
      <height>20</height>
     </rect>
@@ -602,7 +602,7 @@
      <x>20</x>
      <y>20</y>
      <width>691</width>
-     <height>321</height>
+     <height>351</height>
     </rect>
    </property>
    <property name="font">
@@ -636,10 +636,10 @@
      </font>
     </property>
     <property name="toolTip">
-     <string/>
+     <string>Select and create the primary location for the files to be copied to</string>
     </property>
     <property name="text">
-     <string> Select Folder</string>
+     <string>Primary</string>
     </property>
     <property name="autoDefault">
      <bool>false</bool>
@@ -734,7 +734,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="primaryTab">
      <attribute name="title">
@@ -866,9 +866,9 @@
      <widget class="QLineEdit" name="descriptionLineEdit">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>155</x>
         <y>90</y>
-        <width>320</width>
+        <width>325</width>
         <height>20</height>
        </rect>
       </property>
@@ -1071,9 +1071,9 @@
      <widget class="QLineEdit" name="descriptionLineEdit_2">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>155</x>
         <y>90</y>
-        <width>320</width>
+        <width>325</width>
         <height>20</height>
        </rect>
       </property>
@@ -1214,12 +1214,74 @@
      <bool>false</bool>
     </property>
    </widget>
+   <widget class="QPushButton" name="selectFolderBtn_2">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>316</y>
+      <width>101</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
+     </font>
+    </property>
+    <property name="toolTip">
+     <string>Select and create the backup location for the files to be copied to</string>
+    </property>
+    <property name="text">
+     <string>Backup</string>
+    </property>
+    <property name="autoDefault">
+     <bool>false</bool>
+    </property>
+    <property name="default">
+     <bool>false</bool>
+    </property>
+    <property name="flat">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="manualFolderLabel_2">
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>320</y>
+      <width>461</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="toolTip">
+     <string/>
+    </property>
+    <property name="styleSheet">
+     <string notr="true"/>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Box</enum>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_4">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>350</y>
+     <y>390</y>
      <width>691</width>
      <height>101</height>
     </rect>
@@ -1260,10 +1322,10 @@
    <widget class="QLabel" name="startSeqLabel">
     <property name="geometry">
      <rect>
-      <x>80</x>
+      <x>20</x>
       <y>71</y>
-      <width>121</width>
-      <height>16</height>
+      <width>171</width>
+      <height>20</height>
      </rect>
     </property>
     <property name="font">
@@ -1276,6 +1338,9 @@
     </property>
     <property name="text">
      <string>Start sequence from:</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
     </property>
    </widget>
    <widget class="QSpinBox" name="spinBoxStartNumber">
@@ -1376,7 +1441,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>690</y>
+     <y>740</y>
      <width>241</width>
      <height>16</height>
     </rect>
@@ -1397,7 +1462,7 @@
    <property name="geometry">
     <rect>
      <x>460</x>
-     <y>680</y>
+     <y>730</y>
      <width>251</width>
      <height>32</height>
     </rect>
@@ -1450,7 +1515,7 @@
    <property name="geometry">
     <rect>
      <x>380</x>
-     <y>590</y>
+     <y>640</y>
      <width>330</width>
      <height>20</height>
     </rect>
@@ -1468,7 +1533,7 @@
    <property name="geometry">
     <rect>
      <x>380</x>
-     <y>610</y>
+     <y>660</y>
      <width>330</width>
      <height>20</height>
     </rect>
@@ -1486,7 +1551,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>610</y>
+     <y>660</y>
      <width>330</width>
      <height>20</height>
     </rect>
@@ -1504,7 +1569,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>590</y>
+     <y>640</y>
      <width>311</width>
      <height>20</height>
     </rect>
