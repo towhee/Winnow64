@@ -21,6 +21,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- undo / redo history
 - Speed up Tiffs
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder

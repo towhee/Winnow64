@@ -5455,18 +5455,6 @@ void MW::setActualDevicePixelRatio()
                  */
 }
 
-void MW::setIngestRootFolder(QString rootFolder, QString manualFolder, bool isAuto)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    ingestRootFolder = rootFolder;
-    manualFolderPath = manualFolder;
-    autoIngestFolderPath = isAuto;
-}
-
 void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
                             bool isMetadata, bool isThumbs, bool isStatusBar)
 {
@@ -5854,6 +5842,7 @@ re-established when the application is re-opened.
     setting->setValue("pathTemplateSelected", (int)pathTemplateSelected);
     setting->setValue("pathTemplateSelected2", (int)pathTemplateSelected2);
     setting->setValue("manualFolderPath", manualFolderPath);
+    setting->setValue("manualFolderPath2", manualFolderPath2);
     setting->setValue("filenameTemplateSelected", (int)filenameTemplateSelected);
 
     // thumbs
@@ -6151,6 +6140,7 @@ Preferences are located in the prefdlg class and updated here.
     pathTemplateSelected2 = setting->value("pathTemplateSelected2").toInt();
     filenameTemplateSelected = setting->value("filenameTemplateSelected").toInt();
     manualFolderPath = setting->value("manualFolderPath").toString();
+    manualFolderPath2 = setting->value("manualFolderPath2").toString();
 
     // slideshow
     slideShowDelay = setting->value("slideShowDelay").toInt();
@@ -7448,6 +7438,7 @@ void MW::ingest()
                                   ingestRootFolder,
                                   ingestRootFolder2,
                                   manualFolderPath,
+                                  manualFolderPath2,
                                   pathTemplates,
                                   filenameTemplates,
                                   pathTemplateSelected,
@@ -7456,8 +7447,6 @@ void MW::ingest()
                                   ingestDescriptionCompleter,
                                   autoIngestFolderPath,
                                   css);
-        connect(ingestDlg, SIGNAL(updateIngestParameters(QString,QString,bool)),
-                this, SLOT(setIngestRootFolder(QString,QString,bool)));
         connect(ingestDlg, SIGNAL(updateIngestHistory(QString)),
                 this, SLOT(addIngestHistoryFolder(QString)));
         if(ingestDlg->exec() && autoEjectUsb) ejectUsb(currentViewDir);;

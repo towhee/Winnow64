@@ -37,6 +37,7 @@ IngestDlg::IngestDlg(QWidget *parent,
                      QString &ingestRootFolder,
                      QString &ingestRootFolder2,
                      QString &manualFolderPath,
+                     QString &manualFolderPath2,
                      QMap<QString, QString>& pathTemplates,
                      QMap<QString, QString>& filenameTemplates,
                      int& pathTemplateSelected,
@@ -61,6 +62,7 @@ IngestDlg::IngestDlg(QWidget *parent,
                      rootFolderPath2(ingestRootFolder2),
                      ingestDescriptionCompleter(ingestDescriptionCompleter),
                      manualFolderPath(manualFolderPath),
+                     manualFolderPath2(manualFolderPath2),
                      filenameTemplateSelected(filenameTemplateSelected)
 {
     this->dm = dm;
@@ -84,6 +86,8 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->rootFolderLabel_2->setToolTip(ui->rootFolderLabel_2->text());
     ui->manualFolderLabel->setText(manualFolderPath);
     ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
+    ui->manualFolderLabel_2->setText(manualFolderPath2);
+    ui->manualFolderLabel_2->setToolTip( ui->manualFolderLabel_2->text());
 
     // initialize templates and tokens
     initTokenList();
@@ -127,6 +131,8 @@ IngestDlg::IngestDlg(QWidget *parent,
 
     // initialize autoEjectUsb
     ui->ejectChk->setChecked(autoEjectUsb);
+    // initialize use backup as well as primary ingest
+    ui->backupChk->setChecked(isBackup);
 
     ui->progressBar->setVisible(false);
     ui->autoIngestTab->tabBar()->setCurrentIndex(0);
@@ -212,7 +218,7 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
     ui->statsLabel->setText(s1 + s2 + s3 + s4);
 }
 
-void IngestDlg::accept()
+void IngestDlg::ingest()
 {
 /* The files in pickList are renamed and ingested (copied) from the source
 folder to the destination folder.
@@ -238,33 +244,7 @@ Each picked image is copied from the source to the destination.
 
     Finally the source file is copied to the renamed destination.
 */
-    // check parameters
-    if(!autoParametersOk()) return;
-
     bool backup = ui->backupChk->isChecked();
-
-    // make sure the destination folder exists
-    QDir dir(folderPath);
-    if (!dir.exists()) {
-        if(!dir.mkpath(folderPath)) {
-            QMessageBox::critical(this, tr("Error"),
-                 "The folder \"" + folderPath + "\" was not created.");
-            QDialog::accept();
-            return;
-        }
-    }
-
-    // make sure the backup folder has been created
-    if(backup) {
-        QDir dir2(folderPath2);
-        if (!dir2.mkpath(folderPath2)) {
-            QMessageBox::warning(this, tr("Error"),
-                 "The folder \"" + folderPath2 + "\" was not created.");
-            QDialog::accept();
-            return;
-        }
-    }
-
 
     // get rid of "/" at end of path for history (in file menu)
     QString historyPath = folderPath.left(folderPath.length() - 1);
@@ -330,7 +310,7 @@ Each picked image is copied from the source to the destination.
             // copy image file
             QFile::copy(sourcePath, destinationPath);
             if(backup) QFile::copy(sourcePath, backupPath);
-            if (metadata->internalXmpFormats.contains(suffix)) {
+             if (metadata->internalXmpFormats.contains(suffix)) {
                 // write xmp data into image file       rgh needs some work!!!
                 QFile newFile(destinationPath);
                 newFile.open(QIODevice::WriteOnly);
@@ -357,36 +337,63 @@ Each picked image is copied from the source to the destination.
             if(backup) QFile::copy(sourcePath, backupPath);
         }
     }
-    QDialog::accept();
+    QDialog::close();
 }
 
-bool IngestDlg::autoParametersOk()
+bool IngestDlg::parametersOk()
 {
     QString errStr;
     bool err = false;
-    if(rootFolderPath.length() == 0) {
-        err = true;
-        errStr = "The primary location root folder is undefined";
-    }
+    bool backup = ui->backupChk->isChecked();
 
-    if(ui->backupChk->isChecked()) {
-        if(rootFolderPath2.length() == 0) {
+    if(isAuto) {
+        if(rootFolderPath.length() == 0) {
             err = true;
-            errStr += "\nThe backup location root folder is undefined";
+            errStr = "The primary location root folder is undefined";
         }
 
-        QDir dir2(folderPath2);
-        if (dir2.exists()) {
+        if(backup) {
+            if(rootFolderPath2.length() == 0) {
+                err = true;
+                errStr += "\nThe backup location root folder is undefined";
+            }
+
+            QDir dir2(folderPath2);
+            dir2.setFilter(QDir::Files | QDir::NoDotAndDotDot);
+            if (dir2.entryInfoList().size() > 0) {
+                err = true;
+                qDebug() << dir2.entryInfoList().size() << "files";
+                errStr += "\nThe automatically selected folder \"" + folderPath2 + "\" already contains "
+                          "files.  Backup folders must be empty.";
+            }
+        }
+    }
+    else {
+        if(manualFolderPath.length() == 0) {
             err = true;
-            errStr += "\nThe folder \"" + folderPath2 + "\" already exists.  "
-                     "Backup locations cannot use an existing folder.  "
-                     "Try changing the description so it is unique.";
+            errStr = "The primary location folder is undefined";
+        }
+
+        if(backup) {
+            if(manualFolderPath2.length() == 0) {
+                err = true;
+                errStr += "\nThe backup location folder is undefined";
+            }
+
+            // check if already files in backup folder
+            QDir dir(manualFolderPath2);
+            dir.setFilter(QDir::Files | QDir::NoDotAndDotDot);
+            qDebug() << dir.entryInfoList().size() << "files";
+            if (dir.entryInfoList().size() > 0) {
+                err = true;
+                errStr += "\nThe manually selected folder \"" + manualFolderPath2 + "\" already contains "
+                         "files.  Backup folders must be empty.";
+            }
         }
     }
 
     if(err) {
         QMessageBox::warning(this, tr("Error"), errStr);
-        QDialog::accept();
         return false;
     }
 
@@ -440,7 +447,7 @@ void IngestDlg::on_selectFolderBtn_clicked()
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     QString s;
     s = QFileDialog::getExistingDirectory
-        (this, tr("Choose Ingest Folder"), root,
+        (this, tr("Choose Ingest Primary Folder"), root,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (s.length() > 0) {
         folderPath = s + "/";
@@ -451,7 +458,25 @@ void IngestDlg::on_selectFolderBtn_clicked()
         updateExistingSequence();
         ui->manualRadio->setChecked(true);
         updateEnabledState();
-        emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);
+    }
+}
+
+void IngestDlg::on_selectFolderBtn_2_clicked()
+{
+    QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
+    QString s;
+    s = QFileDialog::getExistingDirectory
+        (this, tr("Choose Ingest Backup Folder"), root,
+        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    if (s.length() > 0) {
+        folderPath2 = s + "/";
+        manualFolderPath2 = folderPath2;
+        ui->manualFolderLabel_2->setText(folderPath2);
+        ui->manualFolderLabel_2->setToolTip( ui->manualFolderLabel_2->text());
+//        buildFileNameSequence();
+//        updateExistingSequence();
+        ui->manualRadio->setChecked(true);
+        updateEnabledState();
     }
 }
 
@@ -467,9 +492,6 @@ void IngestDlg::on_selectRootFolderBtn_clicked()
         ui->rootFolderLabel->setText(rootFolderPath);
         ui->rootFolderLabel->setToolTip(ui->rootFolderLabel->text());
     }
-
-    // send to MW where it will be saved in QSettings
-    emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);
 
     updateFolderPath();
     updateExistingSequence();
@@ -489,9 +511,6 @@ void IngestDlg::on_selectRootFolderBtn_2_clicked()
         ui->rootFolderLabel_2->setText(rootFolderPath2);
         ui->rootFolderLabel_2->setToolTip(ui->rootFolderLabel_2->text());
     }
-
-    // send to MW where it will be saved in QSettings
-//    emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);  // rgh not req'd now - fix
 
     updateFolderPath();
     updateExistingSequence();
@@ -639,6 +658,8 @@ void IngestDlg::updateFolderPath()
     }
     else {
         folderPath = ui->manualFolderLabel->text() + "/";
+        folderPath2 = ui->manualFolderLabel_2->text() + "/";
+        qDebug() << "folderPath2" << folderPath2;
     }
     updateExistingSequence();
 }
@@ -787,6 +808,8 @@ void IngestDlg::updateEnabledState()
         ui->autoIngestTab->tabBar()->setTabEnabled(1, true);
         ui->selectRootFolderBtn->setEnabled(true);              //
         ui->templateLabel1->setEnabled(true);
+        ui->rootFolderLabel->setEnabled(true);
+        ui->rootFolderLabel_2->setEnabled(true);
         ui->pathTemplatesCB->setEnabled(true);                  //
         ui->pathTemplatesBtn->setEnabled(true);                 //
         ui->folderDescription->setEnabled(true);
@@ -803,13 +826,17 @@ void IngestDlg::updateEnabledState()
         ui->folderLabel_2->setEnabled(true);
 
         ui->selectFolderBtn->setEnabled(false);
+        ui->selectFolderBtn_2->setEnabled(false);
         ui->manualFolderLabel->setEnabled(false);
+        ui->manualFolderLabel_2->setEnabled(false);
     }
     else {
         ui->autoIngestTab->tabBar()->setTabEnabled(0, false);
         ui->autoIngestTab->tabBar()->setTabEnabled(1, false);
         ui->selectRootFolderBtn->setEnabled(false);
         ui->templateLabel1->setEnabled(false);
+        ui->rootFolderLabel->setEnabled(false);
+        ui->rootFolderLabel_2->setEnabled(false);
         ui->pathTemplatesCB->setEnabled(false);
         ui->pathTemplatesBtn->setEnabled(false);
         ui->folderDescription->setEnabled(false);
@@ -826,7 +853,9 @@ void IngestDlg::updateEnabledState()
         ui->folderLabel_2->setEnabled(false);
 
         ui->selectFolderBtn->setEnabled(true);
+        ui->selectFolderBtn_2->setEnabled(true);
         ui->manualFolderLabel->setEnabled(true);
+        ui->manualFolderLabel_2->setEnabled(true);
     }
 }
 
@@ -844,12 +873,12 @@ void IngestDlg::on_autoRadio_toggled(bool checked)
     else {
         if (ui->manualFolderLabel->text().length() > 0) {
             folderPath = ui->manualFolderLabel->text();
+            folderPath2 = ui->manualFolderLabel_2->text();
             buildFileNameSequence();
             updateExistingSequence();
             updateEnabledState();
         }
     }
-    emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);
 }
 
 void IngestDlg::on_manualRadio_toggled(bool checked)
@@ -857,12 +886,12 @@ void IngestDlg::on_manualRadio_toggled(bool checked)
     isAuto = false;
     if (ui->manualFolderLabel->text().length() > 0) {
         folderPath = ui->manualFolderLabel->text();
+        folderPath2 = ui->manualFolderLabel_2->text();
         updateEnabledState();
         buildFileNameSequence();
         updateExistingSequence();
         updateEnabledState();
     }
-    emit updateIngestParameters(rootFolderPath, manualFolderPath, isAuto);
 }
 
 
@@ -1044,7 +1073,7 @@ void IngestDlg::on_ejectChk_stateChanged(int arg1)
 
 void IngestDlg::on_backupChk_stateChanged(int arg1)
 {
-
+    isBackup = arg1;
 }
 
 void IngestDlg::on_helpBtn_clicked()
@@ -1062,11 +1091,35 @@ void IngestDlg::on_cancelBtn_clicked()
 
 void IngestDlg::on_okBtn_clicked()
 {
-    accept();
+    // check parameters
+    if(!parametersOk()) return;
+
+    bool backup = ui->backupChk->isChecked();
+
+    // make sure the destination folder exists
+    QDir dir(folderPath);
+    if (!dir.exists()) {
+        if(!dir.mkpath(folderPath)) {
+            QMessageBox::critical(this, tr("Error"),
+                 "The folder \"" + folderPath + "\" was not created.");
+            return;
+        }
+    }
+
+    // make sure the backup folder has been created
+    if(backup) {
+        QDir dir2(folderPath2);
+        if (!dir2.mkpath(folderPath2)) {
+            QMessageBox::warning(this, tr("Error"),
+                 "The folder \"" + folderPath2 + "\" was not created.");
+            return;
+        }
+    }
+
+    ingest();
 }
 
 void IngestDlg::on_autoIngestTab_currentChanged(int index)
 {
     buildFileNameSequence();
 }
-
