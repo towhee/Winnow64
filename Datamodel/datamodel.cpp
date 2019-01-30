@@ -239,7 +239,6 @@ Steps:
     int folderCount = 1;
     QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
     while (it.hasNext()) {
-//        qApp->processEvents();
         if (timeToQuit) return false;
         it.next();
         if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {

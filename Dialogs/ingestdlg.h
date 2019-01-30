@@ -27,6 +27,7 @@ public:
                        QString &ingestRootFolder,
                        QString &ingestRootFolder2,
                        QString &manualFolderPath,
+                       QString &manualFolderPath2,
                        QMap<QString, QString>&pathTemplates,
                        QMap<QString, QString>&filenameTemplates,
                        int &pathTemplateSelected,
@@ -43,7 +44,9 @@ private slots:
     void on_autoRadio_toggled(bool checked);
     void on_manualRadio_toggled(bool checked);
 
+    void on_autoIngestTab_currentChanged(int index);
     void on_selectFolderBtn_clicked();
+    void on_selectFolderBtn_2_clicked();
     void on_selectRootFolderBtn_2_clicked();
     void on_selectRootFolderBtn_clicked();
     void on_pathTemplatesCB_currentIndexChanged(const QString &arg1);
@@ -51,6 +54,7 @@ private slots:
     void on_pathTemplatesBtn_clicked();
     void on_pathTemplatesBtn_2_clicked();
     void on_descriptionLineEdit_textChanged(const QString &);
+    void on_descriptionLineEdit_2_textChanged(const QString &arg1);
 
     void on_filenameTemplatesBtn_clicked();
     void on_filenameTemplatesCB_currentIndexChanged(const QString &arg1);
@@ -64,12 +68,7 @@ private slots:
     void on_okBtn_clicked();
     void on_helpBtn_clicked();
 
-    void on_autoIngestTab_currentChanged(int index);
-
-    void on_descriptionLineEdit_2_textChanged(const QString &arg1);
-
 signals:
-    void updateIngestParameters(QString rootFolderPath, QString manualFolderPath, bool isAuto);
     void updateIngestHistory(QString folderPath);
 
 private:
@@ -78,24 +77,24 @@ private:
     void initExampleMap();
     bool isToken(QString tokenString, int pos);
     QString parseTokenString(QFileInfo info, QString tokenString);
-    void accept();
+    void ingest();
     void buildFileNameSequence();
     void updateExistingSequence();
     int getSequenceStart(const QString &path);
     void updateEnabledState();
     void renameIfExists(QString &destination, QString &baseName, QString dotSuffix);
     void getPicks();
-    bool autoParametersOk();
+    bool parametersOk();
 
     bool isInitializing;
     bool isAuto;
-    bool isBackup;
 
     QFileSystemModel fileSystemModel;
     Metadata *metadata;
     DataModel *dm;
     bool &combineRawJpg;
     bool &autoEjectUsb;
+    bool &isBackup;
     QFileInfoList pickList;
 
     QStringList tokens;
@@ -119,6 +118,7 @@ private:
 
     // manually create path to ingest
     QString &manualFolderPath;
+    QString &manualFolderPath2;
 
 
     // file name creation
