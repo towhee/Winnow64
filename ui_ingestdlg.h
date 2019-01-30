@@ -63,6 +63,8 @@ public:
     QLabel *rootFolderLabel_2;
     QPushButton *pathTemplatesBtn_2;
     QPushButton *helpBtn;
+    QPushButton *selectFolderBtn_2;
+    QLabel *manualFolderLabel_2;
     QGroupBox *groupBox_4;
     QLabel *existingSequenceLabel;
     QLabel *startSeqLabel;
@@ -84,7 +86,7 @@ public:
     {
         if (IngestDlg->objectName().isEmpty())
             IngestDlg->setObjectName(QString::fromUtf8("IngestDlg"));
-        IngestDlg->resize(733, 730);
+        IngestDlg->resize(732, 783);
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
@@ -93,7 +95,7 @@ public:
         IngestDlg->setModal(false);
         seqGroupBox = new QGroupBox(IngestDlg);
         seqGroupBox->setObjectName(QString::fromUtf8("seqGroupBox"));
-        seqGroupBox->setGeometry(QRect(20, 460, 691, 111));
+        seqGroupBox->setGeometry(QRect(20, 510, 691, 111));
         seqGroupBox->setMinimumSize(QSize(381, 0));
         QFont font;
         font.setPointSize(10);
@@ -203,13 +205,13 @@ public:
         folderPathLabel_4->setFrameShape(QFrame::Box);
         progressBar = new QProgressBar(IngestDlg);
         progressBar->setObjectName(QString::fromUtf8("progressBar"));
-        progressBar->setGeometry(QRect(20, 650, 691, 20));
+        progressBar->setGeometry(QRect(20, 700, 691, 20));
         progressBar->setFont(font);
         progressBar->setValue(0);
         progressBar->setAlignment(Qt::AlignCenter);
         groupBox_2 = new QGroupBox(IngestDlg);
         groupBox_2->setObjectName(QString::fromUtf8("groupBox_2"));
-        groupBox_2->setGeometry(QRect(20, 20, 691, 321));
+        groupBox_2->setGeometry(QRect(20, 20, 691, 351));
         groupBox_2->setFont(font);
         selectFolderBtn = new QPushButton(groupBox_2);
         selectFolderBtn->setObjectName(QString::fromUtf8("selectFolderBtn"));
@@ -268,7 +270,7 @@ public:
         pathTemplatesCB->setGeometry(QRect(160, 50, 320, 26));
         descriptionLineEdit = new QLineEdit(primaryTab);
         descriptionLineEdit->setObjectName(QString::fromUtf8("descriptionLineEdit"));
-        descriptionLineEdit->setGeometry(QRect(160, 90, 320, 20));
+        descriptionLineEdit->setGeometry(QRect(155, 90, 325, 20));
         descriptionLineEdit->setFont(font);
         folderDescription = new QLabel(primaryTab);
         folderDescription->setObjectName(QString::fromUtf8("folderDescription"));
@@ -312,7 +314,7 @@ public:
         pathTemplatesCB_2->setGeometry(QRect(160, 50, 320, 26));
         descriptionLineEdit_2 = new QLineEdit(backupTab);
         descriptionLineEdit_2->setObjectName(QString::fromUtf8("descriptionLineEdit_2"));
-        descriptionLineEdit_2->setGeometry(QRect(160, 90, 320, 20));
+        descriptionLineEdit_2->setGeometry(QRect(155, 90, 325, 20));
         descriptionLineEdit_2->setFont(font);
         folderDescription_2 = new QLabel(backupTab);
         folderDescription_2->setObjectName(QString::fromUtf8("folderDescription_2"));
@@ -341,9 +343,22 @@ public:
         helpBtn->setObjectName(QString::fromUtf8("helpBtn"));
         helpBtn->setGeometry(QRect(560, 30, 111, 25));
         helpBtn->setAutoDefault(false);
+        selectFolderBtn_2 = new QPushButton(groupBox_2);
+        selectFolderBtn_2->setObjectName(QString::fromUtf8("selectFolderBtn_2"));
+        selectFolderBtn_2->setEnabled(true);
+        selectFolderBtn_2->setGeometry(QRect(90, 316, 101, 25));
+        selectFolderBtn_2->setFont(font1);
+        selectFolderBtn_2->setAutoDefault(false);
+        selectFolderBtn_2->setFlat(false);
+        manualFolderLabel_2 = new QLabel(groupBox_2);
+        manualFolderLabel_2->setObjectName(QString::fromUtf8("manualFolderLabel_2"));
+        manualFolderLabel_2->setGeometry(QRect(210, 320, 461, 20));
+        manualFolderLabel_2->setFont(font);
+        manualFolderLabel_2->setStyleSheet(QString::fromUtf8(""));
+        manualFolderLabel_2->setFrameShape(QFrame::Box);
         groupBox_4 = new QGroupBox(IngestDlg);
         groupBox_4->setObjectName(QString::fromUtf8("groupBox_4"));
-        groupBox_4->setGeometry(QRect(20, 350, 691, 101));
+        groupBox_4->setGeometry(QRect(20, 390, 691, 101));
         groupBox_4->setFont(font);
         existingSequenceLabel = new QLabel(groupBox_4);
         existingSequenceLabel->setObjectName(QString::fromUtf8("existingSequenceLabel"));
@@ -352,8 +367,9 @@ public:
         existingSequenceLabel->setFrameShape(QFrame::Box);
         startSeqLabel = new QLabel(groupBox_4);
         startSeqLabel->setObjectName(QString::fromUtf8("startSeqLabel"));
-        startSeqLabel->setGeometry(QRect(80, 71, 121, 16));
+        startSeqLabel->setGeometry(QRect(20, 71, 171, 20));
         startSeqLabel->setFont(font);
+        startSeqLabel->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         spinBoxStartNumber = new QSpinBox(groupBox_4);
         spinBoxStartNumber->setObjectName(QString::fromUtf8("spinBoxStartNumber"));
         spinBoxStartNumber->setGeometry(QRect(210, 70, 51, 22));
@@ -376,11 +392,11 @@ public:
         filenameTemplatesBtn->setFlat(false);
         statsLabel = new QLabel(IngestDlg);
         statsLabel->setObjectName(QString::fromUtf8("statsLabel"));
-        statsLabel->setGeometry(QRect(20, 690, 241, 16));
+        statsLabel->setGeometry(QRect(20, 740, 241, 16));
         statsLabel->setFont(font);
         layoutWidget = new QWidget(IngestDlg);
         layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
-        layoutWidget->setGeometry(QRect(460, 680, 251, 32));
+        layoutWidget->setGeometry(QRect(460, 730, 251, 32));
         horizontalLayout = new QHBoxLayout(layoutWidget);
         horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
@@ -400,29 +416,30 @@ public:
 
         combinedIncludeJpgChk = new QCheckBox(IngestDlg);
         combinedIncludeJpgChk->setObjectName(QString::fromUtf8("combinedIncludeJpgChk"));
-        combinedIncludeJpgChk->setGeometry(QRect(380, 590, 330, 20));
+        combinedIncludeJpgChk->setGeometry(QRect(380, 640, 330, 20));
         combinedIncludeJpgChk->setFont(font);
         ejectChk = new QCheckBox(IngestDlg);
         ejectChk->setObjectName(QString::fromUtf8("ejectChk"));
-        ejectChk->setGeometry(QRect(380, 610, 330, 20));
+        ejectChk->setGeometry(QRect(380, 660, 330, 20));
         ejectChk->setFont(font);
         openIngestFolderChk = new QCheckBox(IngestDlg);
         openIngestFolderChk->setObjectName(QString::fromUtf8("openIngestFolderChk"));
-        openIngestFolderChk->setGeometry(QRect(20, 610, 330, 20));
+        openIngestFolderChk->setGeometry(QRect(20, 660, 330, 20));
         openIngestFolderChk->setFont(font);
         backupChk = new QCheckBox(IngestDlg);
         backupChk->setObjectName(QString::fromUtf8("backupChk"));
-        backupChk->setGeometry(QRect(20, 590, 311, 20));
+        backupChk->setGeometry(QRect(20, 640, 311, 20));
         backupChk->setFont(font);
 
         retranslateUi(IngestDlg);
 
         selectFolderBtn->setDefault(false);
-        autoIngestTab->setCurrentIndex(1);
+        autoIngestTab->setCurrentIndex(0);
         selectRootFolderBtn->setDefault(false);
         pathTemplatesBtn->setDefault(false);
         selectRootFolderBtn_2->setDefault(false);
         pathTemplatesBtn_2->setDefault(false);
+        selectFolderBtn_2->setDefault(false);
         filenameTemplatesBtn->setDefault(false);
 
 
@@ -460,9 +477,9 @@ public:
 #endif // QT_NO_TOOLTIP
         groupBox_2->setTitle(QApplication::translate("IngestDlg", "Select destination folder", nullptr));
 #ifndef QT_NO_TOOLTIP
-        selectFolderBtn->setToolTip(QString());
+        selectFolderBtn->setToolTip(QApplication::translate("IngestDlg", "Select and create the primary location for the files to be copied to", nullptr));
 #endif // QT_NO_TOOLTIP
-        selectFolderBtn->setText(QApplication::translate("IngestDlg", " Select Folder", nullptr));
+        selectFolderBtn->setText(QApplication::translate("IngestDlg", "Primary", nullptr));
 #ifndef QT_NO_TOOLTIP
         autoRadio->setToolTip(QString());
 #endif // QT_NO_TOOLTIP
@@ -551,6 +568,14 @@ public:
         helpBtn->setToolTip(QString());
 #endif // QT_NO_TOOLTIP
         helpBtn->setText(QApplication::translate("IngestDlg", "How this works", nullptr));
+#ifndef QT_NO_TOOLTIP
+        selectFolderBtn_2->setToolTip(QApplication::translate("IngestDlg", "Select and create the backup location for the files to be copied to", nullptr));
+#endif // QT_NO_TOOLTIP
+        selectFolderBtn_2->setText(QApplication::translate("IngestDlg", "Backup", nullptr));
+#ifndef QT_NO_TOOLTIP
+        manualFolderLabel_2->setToolTip(QString());
+#endif // QT_NO_TOOLTIP
+        manualFolderLabel_2->setText(QString());
 #ifndef QT_NO_TOOLTIP
         groupBox_4->setToolTip(QString());
 #endif // QT_NO_TOOLTIP
