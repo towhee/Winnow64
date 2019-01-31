@@ -51,15 +51,15 @@ class MW : public QMainWindow
 {
     Q_OBJECT
 
-    friend class ProgressBar;
-    friend class Prefdlg;
-    friend class ThumbView;
+    friend class ThumbView;     // mw
+    friend class ProgressBar;   // mw1
+    friend class Prefdlg;       // m
     friend class InfoView;
 
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.6.6.2 released 2019-01-25";
+    QString version = "0.9.7.0.0 released 2019-01-29";
     QString versionDetail =
             "<a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#0000ff;\">Version Information</span></a>.</p></body></html>";
 
@@ -173,6 +173,9 @@ public:
     bool autoIngestFolderPath;
     bool autoEjectUsb;
     bool backupIngest;
+    bool gotoIngestFolder;
+
+    QString lastIngestLocation;     // used when exit ingest to show is gotoIngestFolder == true
 
     // preferences: slideshow
     int slideShowDelay;
@@ -360,7 +363,7 @@ private slots:
     void updatePickFromHistory(QString fPath, QString status);
     void updateClassification();
     void refreshFolders();
-    void setFontSize(QString pixels);
+    void setFontSize(int pixels);
     void setClassificationBadgeImageDiam(int d);
     void setClassificationBadgeThumbDiam(int d);
     void setPrefPage(int page);

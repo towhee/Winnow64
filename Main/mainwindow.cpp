@@ -4446,6 +4446,9 @@ void MW::addIngestHistoryFolder(QString fPath)
     G::track(__FUNCTION__);
     #endif
     }
+    // keep track of ingest location if gotoIngestFolder == true
+    lastIngestLocation = fPath;
+
     if (!ingestHistoryFolders->contains(fPath) && fPath != "")
         ingestHistoryFolders->prepend(fPath);
     int count = ingestHistoryFolders->count();
@@ -5258,10 +5261,10 @@ void MW::preferences(int page)
     }
     if(page == -1) page = lastPrefPage;
     Prefdlg *prefdlg = new Prefdlg(this, page);
-    connect(prefdlg, SIGNAL(updateFontSize(QString)),
-            this, SLOT(setFontSize(QString)));
-    connect(prefdlg, SIGNAL(updateClassificationBadgeImageDiam(int)),
-            this, SLOT(setClassificationBadgeImageDiam(int)));
+    //    connect(prefdlg, SIGNAL(updateFontSize(QString)),
+    //            this, SLOT(setFontSize(QString)));
+//    connect(prefdlg, SIGNAL(updateClassificationBadgeImageDiam(int)),
+//            this, SLOT(setClassificationBadgeImageDiam(int)));
 //    connect(prefdlg, SIGNAL(updateClassificationBadgeThumbDiam(int)),
 //            this, SLOT(setClassificationBadgeThumbDiam(int)));
     connect(prefdlg, SIGNAL(updatePage(int)),
@@ -5274,12 +5277,12 @@ void MW::preferences(int page)
             this, SLOT(setMouseClickScroll(bool)));
     connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
             this, SLOT(setTrackpadScroll(bool)));
-    connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool,bool,int)),
-            thumbView, SLOT(setThumbParameters(int,int,int,int,int,bool,bool,int)));
+//    connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool,bool,int)),
+//            thumbView, SLOT(setThumbParameters(int,int,int,int,int,bool,bool,int)));
     connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool,bool,int)),
             gridView, SLOT(setThumbParameters(int, int, int, int, int, bool, bool,int)));
-    connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
-            this, SLOT(setSlideShowParameters(int, bool)));
+//    connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
+//            this, SLOT(setSlideShowParameters(int, bool)));
     connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, int, bool, bool)),
             this, SLOT(setCacheParameters(int, bool, int, int, int, bool, bool)));
     connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool,bool)),
@@ -5304,9 +5307,9 @@ void MW::setShowImageCount()
     if (isShow) fsTree->fsModel->fetchMore(fsTree->rootIndex());
 }
 
-void MW::setFontSize(QString pixels)
+void MW::setFontSize(int pixels)
 {
-    fontSize = pixels;
+    fontSize = QString::number(pixels);
     QString s = "QWidget {font-size: " + fontSize + "px;}";
     this->setStyleSheet(s + css2);
 }
@@ -5837,6 +5840,7 @@ re-established when the application is re-opened.
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
     setting->setValue("autoEjectUSB", autoEjectUsb);
     setting->setValue("backupIngest", backupIngest);
+    setting->setValue("gotoIngestFolder", gotoIngestFolder);
     setting->setValue("ingestRootFolder", ingestRootFolder);
     setting->setValue("ingestRootFolder2", ingestRootFolder2);
     setting->setValue("pathTemplateSelected", (int)pathTemplateSelected);
@@ -6134,6 +6138,7 @@ Preferences are located in the prefdlg class and updated here.
     autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
     autoEjectUsb = setting->value("autoEjectUSB").toBool();
     backupIngest = setting->value("backupIngest").toBool();
+    gotoIngestFolder = setting->value("gotoIngestFolder").toBool();
     ingestRootFolder = setting->value("ingestRootFolder").toString();
     ingestRootFolder2 = setting->value("ingestRootFolder2").toString();
     pathTemplateSelected = setting->value("pathTemplateSelected").toInt();
@@ -7433,6 +7438,7 @@ void MW::ingest()
                                   combineRawJpg,
                                   autoEjectUsb,
                                   backupIngest,
+                                  gotoIngestFolder,
                                   metadata,
                                   dm,
                                   ingestRootFolder,
@@ -7447,10 +7453,19 @@ void MW::ingest()
                                   ingestDescriptionCompleter,
                                   autoIngestFolderPath,
                                   css);
+
         connect(ingestDlg, SIGNAL(updateIngestHistory(QString)),
                 this, SLOT(addIngestHistoryFolder(QString)));
+
+        connect(ingestDlg, SIGNAL(revealIngestLocation(QString)),
+                this, SLOT(revealInFileBrowser(QString)));
         if(ingestDlg->exec() && autoEjectUsb) ejectUsb(currentViewDir);;
         delete ingestDlg;
+
+        if(gotoIngestFolder) {
+            fsTree->select(lastIngestLocation);
+            folderSelectionChange();
+        }
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
@@ -8389,8 +8404,12 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << ingestRootFolder << ingestRootFolder2
-             << pathTemplateSelected << pathTemplateSelected2;
+    QString path = "D:/Pictures";
+//    QModelIndex idx = fsTree->fsModel->index(path);
+//    qDebug() << idx.row();
+//    fsTree->setCurrentIndex(idx);
+    fsTree->select(path);
+    folderSelectionChange();
 
     /*
     updateAppDlg = new UpdateApp(version, css2);
