@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>2</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -410,9 +410,9 @@
     <widget class="QLabel" name="label_10">
      <property name="geometry">
       <rect>
-       <x>185</x>
-       <y>291</y>
-       <width>171</width>
+       <x>40</x>
+       <y>320</y>
+       <width>91</width>
        <height>18</height>
       </rect>
      </property>
@@ -425,40 +425,10 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This sets the width of the cache status shown on the application status bar.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
-      <string>Cache status width (px)</string>
+      <string>Bar width</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QSpinBox" name="cacheStatusWidthSpin">
-     <property name="geometry">
-      <rect>
-       <x>360</x>
-       <y>290</y>
-       <width>71</width>
-       <height>18</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This sets the width of the cache status shown on the application status bar.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="minimum">
-      <number>100</number>
-     </property>
-     <property name="maximum">
-      <number>1000</number>
-     </property>
-     <property name="singleStep">
-      <number>25</number>
-     </property>
-     <property name="value">
-      <number>200</number>
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
      </property>
     </widget>
     <widget class="QLabel" name="label_8">
@@ -514,7 +484,7 @@
       <rect>
        <x>20</x>
        <y>289</y>
-       <width>151</width>
+       <width>281</width>
        <height>21</height>
       </rect>
      </property>
@@ -527,7 +497,7 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This will show the cache status in the status bar at the bottom of the application.  If you do not see the status bar you can enable it in the Windows menu or by pressing F10.  If you hover over the cache status another tooltip will explain the colour codes for the current file, target cache, current cache and total images.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
-      <string>Show cache status</string>
+      <string>Show cache progress bar</string>
      </property>
     </widget>
     <widget class="QCheckBox" name="cachePreviewsChk">
@@ -555,7 +525,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>320</y>
+       <y>360</y>
        <width>351</width>
        <height>17</height>
       </rect>
@@ -722,6 +692,40 @@
        </widget>
       </item>
      </layout>
+    </widget>
+    <widget class="QSlider" name="progressWidthSlider">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>320</y>
+       <width>291</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>100</number>
+     </property>
+     <property name="maximum">
+      <number>1000</number>
+     </property>
+     <property name="singleStep">
+      <number>100</number>
+     </property>
+     <property name="pageStep">
+      <number>200</number>
+     </property>
+     <property name="value">
+      <number>200</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::TicksAbove</enum>
+     </property>
+     <property name="tickInterval">
+      <number>100</number>
+     </property>
     </widget>
    </widget>
    <widget class="QWidget" name="pageSlideshow">
@@ -2016,7 +2020,7 @@
            </size>
           </property>
           <attribute name="verticalHeaderDefaultSectionSize">
-           <number>23</number>
+           <number>34</number>
           </attribute>
          </widget>
         </item>
