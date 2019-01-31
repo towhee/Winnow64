@@ -12,9 +12,12 @@ cd /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_10_0_clang_64bit-Release
 For Win: 
 ---------------------------------------------------------------------
 Win Deployment:  IMPORTANT WHEN CHANGE VERSIONS OF QT!
-CD "D:\My Projects\Winnow Project\Deploy Winnow"
-C:\Qt\5.12.0\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\build-winnow64-Desktop_Qt_5_12_0_MSVC2017_64bit-Release\release\Winnow.exe" --dir "D:\My Projects\Winnow Project\Deploy Winnow"
-C:\Qt\5.12.0\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\build-winnow64-Desktop_Qt_5_12_0_MSVC2017_64bit-Release\release\Winnow.exe" --plugindir "D:\My Projects\Winnow Project\Deploy Winnow"
+
+CD "D:\My Projects\Winnow Project\Deploy Winnow"     (use as temp location as cannot write to folders in "c:\program files"
+C:\Qt\5.12.0\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --dir "D:\My Projects\Winnow Project\Deploy Winnow"
+C:\Qt\5.12.0\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --plugindir "D:\My Projects\Winnow Project\Deploy Winnow"
+then copy files and folders to D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\data
+and D:\My Projects\Winnow Project\WinnowInstallLocal\packages\com.rh.prod\data
 
 Win Installation Update:
 -  Update deploy if new dlls required
