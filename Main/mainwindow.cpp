@@ -3702,11 +3702,13 @@ void MW::createStatusBar()
 
     // set up pixmap that shows progress in the cache
     progressWidth = setting->value("cacheStatusWidth").toInt();
-    progressPixmap = new QPixmap(QSize(progressWidth, 25));
+    progressPixmap = new QPixmap(1000, 25);
+    progressPixmap->scaled(progressWidth, 25);
     QColor cacheBGColor = QColor(85,85,85);
 //    QColor cacheBGColor = QColor(85,85,85);
     progressPixmap->fill(cacheBGColor);
     progressLabel->setPixmap(*progressPixmap);
+    progressLabel->setFixedWidth(progressWidth);
 
     // tooltip
     QString progressToolTip = "Image cache status for current folder:\n";
@@ -3754,8 +3756,7 @@ void MW::createStatusBar()
     statusBar()->addWidget(stateLabel);
 }
 
-void MW::setCacheParameters(int size, bool show, int delay, int width, int wtAhead,
-           bool usePreview, bool activity)
+void MW::setCacheParameters()
 {
 /*
 This slot signalled from the preferences dialog with changes to the cache
@@ -3766,26 +3767,21 @@ parameters.  Any visibility changes are executed.
     G::track(__FUNCTION__);
     #endif
     }
-//    G::track(__FUNCTION__, "tiger");
-    cacheSizeMB = size * 1000;      // Entered as GB in pref dlg
-    isShowCacheStatus = show;
-    cacheDelay = delay;
-    progressWidth = width;
-    cacheWtAhead = wtAhead;
-    isCachePreview = usePreview;
-    // moved to MW::setDisplayresolution
-//    cachePreviewWidth = previewWidth;
-//    cachePreviewHeight = previewHeight;
-    isShowCacheThreadActivity = activity;
-    imageCacheThread->updateImageCacheParam(size, show, width, wtAhead,
-             usePreview, displayHorizontalPixels, displayVerticalPixels);
-    QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
 
+    imageCacheThread->updateImageCacheParam(cacheSizeMB, isShowCacheStatus,
+             progressWidth, cacheWtAhead, isCachePreview,
+             displayHorizontalPixels, displayVerticalPixels);
+
+    progressLabel->setFixedWidth(progressWidth);
+    progressPixmap->scaled(progressWidth, 25);
+
+    QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     if (fPath.length())
         imageCacheThread->updateImageCachePosition(fPath);
 
     // update visibility if preferences have been changed
     progressLabel->setVisible(isShowCacheStatus);
+
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
 }
@@ -5269,24 +5265,24 @@ void MW::preferences(int page)
 //            this, SLOT(setClassificationBadgeThumbDiam(int)));
     connect(prefdlg, SIGNAL(updatePage(int)),
             this, SLOT(setPrefPage(int)));
-    connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
-            this, SLOT(setRememberLastDir(bool)));
-    connect(prefdlg, SIGNAL(checkForUpdates(bool)),
-            this, SLOT(setCheckForUpdatesApp(bool)));
-    connect(prefdlg, SIGNAL(updateMouseClickScroll(bool)),
-            this, SLOT(setMouseClickScroll(bool)));
-    connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
-            this, SLOT(setTrackpadScroll(bool)));
+//    connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
+//            this, SLOT(setRememberLastDir(bool)));
+//    connect(prefdlg, SIGNAL(checkForUpdates(bool)),
+//            this, SLOT(setCheckForUpdatesApp(bool)));
+    //    connect(prefdlg, SIGNAL(updateMouseClickScroll(bool)),
+    //            this, SLOT(setMouseClickScroll(bool)));
+//    connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
+//            this, SLOT(setTrackpadScroll(bool)));
 //    connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool,bool,int)),
 //            thumbView, SLOT(setThumbParameters(int,int,int,int,int,bool,bool,int)));
-    connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool,bool,int)),
-            gridView, SLOT(setThumbParameters(int, int, int, int, int, bool, bool,int)));
+//    connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool,bool,int)),
+//            gridView, SLOT(setThumbParameters(int, int, int, int, int, bool, bool,int)));
 //    connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
 //            this, SLOT(setSlideShowParameters(int, bool)));
-    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, int, bool, bool)),
-            this, SLOT(setCacheParameters(int, bool, int, int, int, bool, bool)));
-    connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool,bool)),
-            this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool,bool)));
+//    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, int, bool, bool)),
+//            this, SLOT(setCacheParameters(int, bool, int, int, int, bool, bool)));
+//    connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool,bool)),
+//            this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool,bool)));
     prefdlg->exec();
 }
 
@@ -5341,34 +5337,9 @@ void MW::setPrefPage(int page)
     lastPrefPage = page;
 }
 
-void MW::setRememberLastDir(bool prefRememberFolder)
-{
-    rememberLastDir = prefRememberFolder;
-}
-
 void MW::setCheckForUpdatesApp(bool isCheck)
 {
     checkIfUpdate = isCheck;
-}
-
-void MW::setMouseClickScroll(bool prefMouseClickScroll)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    mouseClickScroll = prefMouseClickScroll;
-}
-
-void MW::setTrackpadScroll(bool trackpadScroll)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    imageView->useWheelToScroll = trackpadScroll;
 }
 
 void MW::setDisplayResolution()

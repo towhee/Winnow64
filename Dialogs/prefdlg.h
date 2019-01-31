@@ -17,27 +17,27 @@ public:
     ~Prefdlg();
 
 signals:
-    void updateFontSize(QString pixels);
-    void updateClassificationBadgeImageDiam(int d);
+//    void updateFontSize(QString pixels);
+//    void updateClassificationBadgeImageDiam(int d);
 //    void updateClassificationBadgeThumbDiam(int d);
     void updatePage(int page);
-    void updateRememberFolder(bool rememberFolder);
-    void checkForUpdates(bool isCheck);
-    void updateMouseClickScroll(bool isUpdate);
-    void updateTrackpadScroll(bool trackpadScroll);
-//    void updateDisplayResolution(int horizontalPixels, int verticalPixels);
-    void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing, int thumbPadding,
-            int labelFontSize, bool showThumbLabels, bool wrapThumbs, int thumbBadgeSize);
-    void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
-            int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid, bool wrapThumbs,
-            int thumbBadgeSize);
-    void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
+//    void updateRememberFolder(bool rememberFolder);
+//    void checkForUpdates(bool isCheck);
+//    void updateMouseClickScroll(bool isUpdate);
+//    void updateTrackpadScroll(bool trackpadScroll);
+////    void updateDisplayResolution(int horizontalPixels, int verticalPixels);
+//    void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing, int thumbPadding,
+//            int labelFontSize, bool showThumbLabels, bool wrapThumbs, int thumbBadgeSize);
+//    void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
+//            int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid, bool wrapThumbs,
+//            int thumbBadgeSize);
+//    void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
 
-    void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus, int cacheDelay,
-            int cacheStatusWidth, int wtAhead, bool usePreview, bool activity);
+//    void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus, int cacheDelay,
+//            int cacheStatusWidth, int wtAhead, bool usePreview, bool activity);
 
-    void updateFullScreenDocks(bool isFolders, bool isFavs, bool isFilters, bool isMetadata,
-                               bool isThumbs, bool isStatusBar);
+//    void updateFullScreenDocks(bool isFolders, bool isFavs, bool isFilters, bool isMetadata,
+//                               bool isThumbs, bool isStatusBar);
 
 protected:
 
@@ -70,7 +70,7 @@ private slots:
     void on_showCacheStatusChk_clicked();
     void on_cacheDelaySpinbox_valueChanged(int value);
     void on_showCacheThreadActivityChk_clicked();
-    void on_cacheStatusWidthSpin_valueChanged(int value);
+    void on_progressWidthSlider_valueChanged(int value);
     void on_cache50AheadRadio_clicked();
     void on_cache60AheadRadio_clicked();
     void on_cache70AheadRadio_clicked();
@@ -87,8 +87,6 @@ private slots:
     void on_statusBarChk_clicked();
     void on_infoField_changed();
     void on_tableField_changed();
-//    void on_displayHorizontalPixelsSB_valueChanged(int arg1);
-//    void on_displayVerticalPixelsSB_valueChanged(int arg1);
     void on_wrapChk_clicked();
     void on_mouseClickScrollChk_clicked();
     void on_globalFontSizeSlider_valueChanged(int value);
@@ -96,6 +94,7 @@ private slots:
     void on_classificationBadgeImageDiamSlider_valueChanged(int value);
     void on_classificationBadgeThumbDiamSlider_valueChanged(int);
     void on_updateAppChk_stateChanged(int value);
+
 
 private:
     Ui::Prefdlg *ui;

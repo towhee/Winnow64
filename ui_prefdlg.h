@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'prefdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.10.0
+** Created by: Qt User Interface Compiler version 5.12.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,7 +10,6 @@
 #define UI_PREFDLG_H
 
 #include <QtCore/QVariant>
-#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QCheckBox>
@@ -62,7 +61,6 @@ public:
     QWidget *pageCache;
     QSpinBox *cacheSizeSpinbox;
     QLabel *label_10;
-    QSpinBox *cacheStatusWidthSpin;
     QLabel *label_8;
     QLabel *label;
     QCheckBox *showCacheStatusChk;
@@ -78,6 +76,7 @@ public:
     QRadioButton *cache80AheadRadio;
     QRadioButton *cache90AheadRadio;
     QRadioButton *cache100AheadRadio;
+    QSlider *progressWidthSlider;
     QWidget *pageSlideshow;
     QCheckBox *slideshowRandomChk;
     QLabel *label_12;
@@ -151,7 +150,7 @@ public:
     void setupUi(QDialog *Prefdlg)
     {
         if (Prefdlg->objectName().isEmpty())
-            Prefdlg->setObjectName(QStringLiteral("Prefdlg"));
+            Prefdlg->setObjectName(QString::fromUtf8("Prefdlg"));
         Prefdlg->resize(735, 601);
         QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         sizePolicy.setHorizontalStretch(0);
@@ -161,66 +160,66 @@ public:
         Prefdlg->setModal(true);
         closeBtn = new QPushButton(Prefdlg);
         buttonGroup = new QButtonGroup(Prefdlg);
-        buttonGroup->setObjectName(QStringLiteral("buttonGroup"));
+        buttonGroup->setObjectName(QString::fromUtf8("buttonGroup"));
         buttonGroup->addButton(closeBtn);
-        closeBtn->setObjectName(QStringLiteral("closeBtn"));
+        closeBtn->setObjectName(QString::fromUtf8("closeBtn"));
         closeBtn->setGeometry(QRect(570, 540, 121, 31));
         stackedWidget = new QStackedWidget(Prefdlg);
-        stackedWidget->setObjectName(QStringLiteral("stackedWidget"));
+        stackedWidget->setObjectName(QString::fromUtf8("stackedWidget"));
         stackedWidget->setGeometry(QRect(200, 20, 481, 491));
         QFont font;
         font.setPointSize(12);
         stackedWidget->setFont(font);
         stackedWidget->setFrameShape(QFrame::Panel);
         pageGeneral = new QWidget();
-        pageGeneral->setObjectName(QStringLiteral("pageGeneral"));
+        pageGeneral->setObjectName(QString::fromUtf8("pageGeneral"));
         groupBoxTrackpadAction = new QGroupBox(pageGeneral);
-        groupBoxTrackpadAction->setObjectName(QStringLiteral("groupBoxTrackpadAction"));
+        groupBoxTrackpadAction->setObjectName(QString::fromUtf8("groupBoxTrackpadAction"));
         groupBoxTrackpadAction->setGeometry(QRect(20, 140, 431, 101));
         layoutWidget = new QWidget(groupBoxTrackpadAction);
-        layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
+        layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
         layoutWidget->setGeometry(QRect(20, 27, 337, 65));
         verticalLayout_3 = new QVBoxLayout(layoutWidget);
-        verticalLayout_3->setObjectName(QStringLiteral("verticalLayout_3"));
+        verticalLayout_3->setObjectName(QString::fromUtf8("verticalLayout_3"));
         verticalLayout_3->setContentsMargins(0, 0, 0, 0);
         trackpadIterateRadio = new QRadioButton(layoutWidget);
-        trackpadIterateRadio->setObjectName(QStringLiteral("trackpadIterateRadio"));
+        trackpadIterateRadio->setObjectName(QString::fromUtf8("trackpadIterateRadio"));
         trackpadIterateRadio->setFont(font);
 
         verticalLayout_3->addWidget(trackpadIterateRadio);
 
         trackpadScrollRadio = new QRadioButton(layoutWidget);
-        trackpadScrollRadio->setObjectName(QStringLiteral("trackpadScrollRadio"));
+        trackpadScrollRadio->setObjectName(QString::fromUtf8("trackpadScrollRadio"));
         trackpadScrollRadio->setFont(font);
 
         verticalLayout_3->addWidget(trackpadScrollRadio);
 
         groupBoxFolders = new QGroupBox(pageGeneral);
-        groupBoxFolders->setObjectName(QStringLiteral("groupBoxFolders"));
+        groupBoxFolders->setObjectName(QString::fromUtf8("groupBoxFolders"));
         groupBoxFolders->setGeometry(QRect(20, 10, 431, 111));
         rememberFolderChk = new QCheckBox(groupBoxFolders);
-        rememberFolderChk->setObjectName(QStringLiteral("rememberFolderChk"));
+        rememberFolderChk->setObjectName(QString::fromUtf8("rememberFolderChk"));
         rememberFolderChk->setGeometry(QRect(20, 30, 261, 20));
         rememberFolderChk->setFont(font);
         updateAppChk = new QCheckBox(groupBoxFolders);
-        updateAppChk->setObjectName(QStringLiteral("updateAppChk"));
+        updateAppChk->setObjectName(QString::fromUtf8("updateAppChk"));
         updateAppChk->setGeometry(QRect(20, 60, 261, 20));
         updateAppChk->setFont(font);
         groupBoxFolders_2 = new QGroupBox(pageGeneral);
-        groupBoxFolders_2->setObjectName(QStringLiteral("groupBoxFolders_2"));
+        groupBoxFolders_2->setObjectName(QString::fromUtf8("groupBoxFolders_2"));
         groupBoxFolders_2->setGeometry(QRect(20, 260, 431, 71));
         mouseClickScrollChk = new QCheckBox(groupBoxFolders_2);
-        mouseClickScrollChk->setObjectName(QStringLiteral("mouseClickScrollChk"));
+        mouseClickScrollChk->setObjectName(QString::fromUtf8("mouseClickScrollChk"));
         mouseClickScrollChk->setGeometry(QRect(20, 30, 371, 20));
         mouseClickScrollChk->setFont(font);
         stackedWidget->addWidget(pageGeneral);
         page_4 = new QWidget();
-        page_4->setObjectName(QStringLiteral("page_4"));
+        page_4->setObjectName(QString::fromUtf8("page_4"));
         groupBoxFolders_3 = new QGroupBox(page_4);
-        groupBoxFolders_3->setObjectName(QStringLiteral("groupBoxFolders_3"));
+        groupBoxFolders_3->setObjectName(QString::fromUtf8("groupBoxFolders_3"));
         groupBoxFolders_3->setGeometry(QRect(20, 20, 431, 91));
         globalFontSizeSlider = new QSlider(groupBoxFolders_3);
-        globalFontSizeSlider->setObjectName(QStringLiteral("globalFontSizeSlider"));
+        globalFontSizeSlider->setObjectName(QString::fromUtf8("globalFontSizeSlider"));
         globalFontSizeSlider->setGeometry(QRect(40, 40, 311, 22));
         globalFontSizeSlider->setMinimum(8);
         globalFontSizeSlider->setMaximum(20);
@@ -230,13 +229,13 @@ public:
         globalFontSizeSlider->setTickPosition(QSlider::TicksAbove);
         globalFontSizeSlider->setTickInterval(1);
         globalFontSizeLbl = new QLabel(groupBoxFolders_3);
-        globalFontSizeLbl->setObjectName(QStringLiteral("globalFontSizeLbl"));
+        globalFontSizeLbl->setObjectName(QString::fromUtf8("globalFontSizeLbl"));
         globalFontSizeLbl->setGeometry(QRect(360, 30, 55, 31));
         groupBoxFolders_4 = new QGroupBox(page_4);
-        groupBoxFolders_4->setObjectName(QStringLiteral("groupBoxFolders_4"));
+        groupBoxFolders_4->setObjectName(QString::fromUtf8("groupBoxFolders_4"));
         groupBoxFolders_4->setGeometry(QRect(20, 130, 431, 121));
         classificationBadgeImageDiamSlider = new QSlider(groupBoxFolders_4);
-        classificationBadgeImageDiamSlider->setObjectName(QStringLiteral("classificationBadgeImageDiamSlider"));
+        classificationBadgeImageDiamSlider->setObjectName(QString::fromUtf8("classificationBadgeImageDiamSlider"));
         classificationBadgeImageDiamSlider->setGeometry(QRect(100, 40, 251, 22));
         classificationBadgeImageDiamSlider->setMinimum(0);
         classificationBadgeImageDiamSlider->setMaximum(100);
@@ -246,19 +245,19 @@ public:
         classificationBadgeImageDiamSlider->setTickPosition(QSlider::TicksAbove);
         classificationBadgeImageDiamSlider->setTickInterval(10);
         classificationBadgeImageDiamLbl = new QLabel(groupBoxFolders_4);
-        classificationBadgeImageDiamLbl->setObjectName(QStringLiteral("classificationBadgeImageDiamLbl"));
+        classificationBadgeImageDiamLbl->setObjectName(QString::fromUtf8("classificationBadgeImageDiamLbl"));
         classificationBadgeImageDiamLbl->setGeometry(QRect(360, 30, 55, 31));
         label_13 = new QLabel(groupBoxFolders_4);
-        label_13->setObjectName(QStringLiteral("label_13"));
+        label_13->setObjectName(QString::fromUtf8("label_13"));
         label_13->setGeometry(QRect(10, 40, 81, 20));
         label_20 = new QLabel(groupBoxFolders_4);
-        label_20->setObjectName(QStringLiteral("label_20"));
+        label_20->setObjectName(QString::fromUtf8("label_20"));
         label_20->setGeometry(QRect(10, 80, 81, 20));
         classificationBadgeThumbDiamLbl = new QLabel(groupBoxFolders_4);
-        classificationBadgeThumbDiamLbl->setObjectName(QStringLiteral("classificationBadgeThumbDiamLbl"));
+        classificationBadgeThumbDiamLbl->setObjectName(QString::fromUtf8("classificationBadgeThumbDiamLbl"));
         classificationBadgeThumbDiamLbl->setGeometry(QRect(360, 70, 55, 31));
         classificationBadgeThumbDiamSlider = new QSlider(groupBoxFolders_4);
-        classificationBadgeThumbDiamSlider->setObjectName(QStringLiteral("classificationBadgeThumbDiamSlider"));
+        classificationBadgeThumbDiamSlider->setObjectName(QString::fromUtf8("classificationBadgeThumbDiamSlider"));
         classificationBadgeThumbDiamSlider->setGeometry(QRect(100, 80, 251, 22));
         classificationBadgeThumbDiamSlider->setMinimum(0);
         classificationBadgeThumbDiamSlider->setMaximum(50);
@@ -269,130 +268,133 @@ public:
         classificationBadgeThumbDiamSlider->setTickInterval(5);
         stackedWidget->addWidget(page_4);
         pageCache = new QWidget();
-        pageCache->setObjectName(QStringLiteral("pageCache"));
+        pageCache->setObjectName(QString::fromUtf8("pageCache"));
         cacheSizeSpinbox = new QSpinBox(pageCache);
-        cacheSizeSpinbox->setObjectName(QStringLiteral("cacheSizeSpinbox"));
+        cacheSizeSpinbox->setObjectName(QString::fromUtf8("cacheSizeSpinbox"));
         cacheSizeSpinbox->setGeometry(QRect(140, 23, 51, 18));
         cacheSizeSpinbox->setMinimum(1);
         cacheSizeSpinbox->setMaximum(64);
         label_10 = new QLabel(pageCache);
-        label_10->setObjectName(QStringLiteral("label_10"));
-        label_10->setGeometry(QRect(185, 291, 171, 18));
+        label_10->setObjectName(QString::fromUtf8("label_10"));
+        label_10->setGeometry(QRect(40, 320, 91, 18));
         label_10->setFont(font);
-        label_10->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
-        cacheStatusWidthSpin = new QSpinBox(pageCache);
-        cacheStatusWidthSpin->setObjectName(QStringLiteral("cacheStatusWidthSpin"));
-        cacheStatusWidthSpin->setGeometry(QRect(360, 290, 71, 18));
-        cacheStatusWidthSpin->setFont(font);
-        cacheStatusWidthSpin->setMinimum(100);
-        cacheStatusWidthSpin->setMaximum(1000);
-        cacheStatusWidthSpin->setSingleStep(25);
-        cacheStatusWidthSpin->setValue(200);
+        label_10->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
         label_8 = new QLabel(pageCache);
-        label_8->setObjectName(QStringLiteral("label_8"));
+        label_8->setObjectName(QString::fromUtf8("label_8"));
         label_8->setGeometry(QRect(30, 24, 91, 16));
         label_8->setFont(font);
         label_8->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
         label = new QLabel(pageCache);
-        label->setObjectName(QStringLiteral("label"));
+        label->setObjectName(QString::fromUtf8("label"));
         label->setGeometry(QRect(30, 60, 111, 16));
         label->setFont(font);
         label->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
         showCacheStatusChk = new QCheckBox(pageCache);
-        showCacheStatusChk->setObjectName(QStringLiteral("showCacheStatusChk"));
-        showCacheStatusChk->setGeometry(QRect(20, 289, 151, 21));
+        showCacheStatusChk->setObjectName(QString::fromUtf8("showCacheStatusChk"));
+        showCacheStatusChk->setGeometry(QRect(20, 289, 281, 21));
         showCacheStatusChk->setFont(font);
         cachePreviewsChk = new QCheckBox(pageCache);
-        cachePreviewsChk->setObjectName(QStringLiteral("cachePreviewsChk"));
+        cachePreviewsChk->setObjectName(QString::fromUtf8("cachePreviewsChk"));
         cachePreviewsChk->setGeometry(QRect(20, 240, 341, 20));
         cachePreviewsChk->setFont(font);
         showCacheThreadActivityChk = new QCheckBox(pageCache);
-        showCacheThreadActivityChk->setObjectName(QStringLiteral("showCacheThreadActivityChk"));
-        showCacheThreadActivityChk->setGeometry(QRect(20, 320, 351, 17));
+        showCacheThreadActivityChk->setObjectName(QString::fromUtf8("showCacheThreadActivityChk"));
+        showCacheThreadActivityChk->setGeometry(QRect(20, 360, 351, 17));
         showCacheThreadActivityChk->setFont(font);
         label_9 = new QLabel(pageCache);
-        label_9->setObjectName(QStringLiteral("label_9"));
+        label_9->setObjectName(QString::fromUtf8("label_9"));
         label_9->setGeometry(QRect(260, 24, 91, 16));
         label_9->setFont(font);
         label_9->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         cacheDelaySpinbox = new QSpinBox(pageCache);
-        cacheDelaySpinbox->setObjectName(QStringLiteral("cacheDelaySpinbox"));
+        cacheDelaySpinbox->setObjectName(QString::fromUtf8("cacheDelaySpinbox"));
         cacheDelaySpinbox->setGeometry(QRect(360, 23, 71, 18));
         cacheDelaySpinbox->setMinimum(0);
         cacheDelaySpinbox->setMaximum(500);
         cacheDelaySpinbox->setSingleStep(25);
         cacheDelaySpinbox->setValue(250);
         frame = new QFrame(pageCache);
-        frame->setObjectName(QStringLiteral("frame"));
+        frame->setObjectName(QString::fromUtf8("frame"));
         frame->setGeometry(QRect(132, 50, 151, 161));
         verticalLayout = new QVBoxLayout(frame);
-        verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
+        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
         cache50AheadRadio = new QRadioButton(frame);
-        cache50AheadRadio->setObjectName(QStringLiteral("cache50AheadRadio"));
+        cache50AheadRadio->setObjectName(QString::fromUtf8("cache50AheadRadio"));
         cache50AheadRadio->setFont(font);
 
         verticalLayout->addWidget(cache50AheadRadio);
 
         cache60AheadRadio = new QRadioButton(frame);
-        cache60AheadRadio->setObjectName(QStringLiteral("cache60AheadRadio"));
+        cache60AheadRadio->setObjectName(QString::fromUtf8("cache60AheadRadio"));
         cache60AheadRadio->setFont(font);
 
         verticalLayout->addWidget(cache60AheadRadio);
 
         cache70AheadRadio = new QRadioButton(frame);
-        cache70AheadRadio->setObjectName(QStringLiteral("cache70AheadRadio"));
+        cache70AheadRadio->setObjectName(QString::fromUtf8("cache70AheadRadio"));
         cache70AheadRadio->setFont(font);
 
         verticalLayout->addWidget(cache70AheadRadio);
 
         cache80AheadRadio = new QRadioButton(frame);
-        cache80AheadRadio->setObjectName(QStringLiteral("cache80AheadRadio"));
+        cache80AheadRadio->setObjectName(QString::fromUtf8("cache80AheadRadio"));
         cache80AheadRadio->setFont(font);
 
         verticalLayout->addWidget(cache80AheadRadio);
 
         cache90AheadRadio = new QRadioButton(frame);
-        cache90AheadRadio->setObjectName(QStringLiteral("cache90AheadRadio"));
+        cache90AheadRadio->setObjectName(QString::fromUtf8("cache90AheadRadio"));
         cache90AheadRadio->setFont(font);
 
         verticalLayout->addWidget(cache90AheadRadio);
 
         cache100AheadRadio = new QRadioButton(frame);
-        cache100AheadRadio->setObjectName(QStringLiteral("cache100AheadRadio"));
+        cache100AheadRadio->setObjectName(QString::fromUtf8("cache100AheadRadio"));
         cache100AheadRadio->setFont(font);
 
         verticalLayout->addWidget(cache100AheadRadio);
 
+        progressWidthSlider = new QSlider(pageCache);
+        progressWidthSlider->setObjectName(QString::fromUtf8("progressWidthSlider"));
+        progressWidthSlider->setGeometry(QRect(140, 320, 291, 22));
+        progressWidthSlider->setMinimum(100);
+        progressWidthSlider->setMaximum(1000);
+        progressWidthSlider->setSingleStep(100);
+        progressWidthSlider->setPageStep(200);
+        progressWidthSlider->setValue(200);
+        progressWidthSlider->setOrientation(Qt::Horizontal);
+        progressWidthSlider->setTickPosition(QSlider::TicksAbove);
+        progressWidthSlider->setTickInterval(100);
         stackedWidget->addWidget(pageCache);
         pageSlideshow = new QWidget();
-        pageSlideshow->setObjectName(QStringLiteral("pageSlideshow"));
+        pageSlideshow->setObjectName(QString::fromUtf8("pageSlideshow"));
         slideshowRandomChk = new QCheckBox(pageSlideshow);
-        slideshowRandomChk->setObjectName(QStringLiteral("slideshowRandomChk"));
+        slideshowRandomChk->setObjectName(QString::fromUtf8("slideshowRandomChk"));
         slideshowRandomChk->setGeometry(QRect(200, 80, 19, 18));
         slideshowRandomChk->setFont(font);
         label_12 = new QLabel(pageSlideshow);
-        label_12->setObjectName(QStringLiteral("label_12"));
+        label_12->setObjectName(QString::fromUtf8("label_12"));
         label_12->setGeometry(QRect(20, 80, 161, 16));
         label_12->setFont(font);
         slideshowDelaySpinbox = new QSpinBox(pageSlideshow);
-        slideshowDelaySpinbox->setObjectName(QStringLiteral("slideshowDelaySpinbox"));
+        slideshowDelaySpinbox->setObjectName(QString::fromUtf8("slideshowDelaySpinbox"));
         slideshowDelaySpinbox->setGeometry(QRect(200, 40, 48, 18));
         slideshowDelaySpinbox->setFont(font);
         label_11 = new QLabel(pageSlideshow);
-        label_11->setObjectName(QStringLiteral("label_11"));
+        label_11->setObjectName(QString::fromUtf8("label_11"));
         label_11->setGeometry(QRect(20, 40, 111, 18));
         label_11->setFont(font);
         stackedWidget->addWidget(pageSlideshow);
         pageThumbsDock = new QWidget();
-        pageThumbsDock->setObjectName(QStringLiteral("pageThumbsDock"));
+        pageThumbsDock->setObjectName(QString::fromUtf8("pageThumbsDock"));
         iconWidthLbl = new QLabel(pageThumbsDock);
-        iconWidthLbl->setObjectName(QStringLiteral("iconWidthLbl"));
+        iconWidthLbl->setObjectName(QString::fromUtf8("iconWidthLbl"));
         iconWidthLbl->setGeometry(QRect(380, 30, 30, 16));
         iconWidthLbl->setFont(font);
         iconWidthLbl->setFrameShape(QFrame::NoFrame);
         iconWidthLbl->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         fontSizeSlider = new QSlider(pageThumbsDock);
-        fontSizeSlider->setObjectName(QStringLiteral("fontSizeSlider"));
+        fontSizeSlider->setObjectName(QString::fromUtf8("fontSizeSlider"));
         fontSizeSlider->setGeometry(QRect(200, 200, 160, 22));
         fontSizeSlider->setFont(font);
         fontSizeSlider->setMinimum(6);
@@ -406,27 +408,27 @@ public:
         fontSizeSlider->setTickPosition(QSlider::NoTicks);
         fontSizeSlider->setTickInterval(5);
         iconPaddingLbl = new QLabel(pageThumbsDock);
-        iconPaddingLbl->setObjectName(QStringLiteral("iconPaddingLbl"));
+        iconPaddingLbl->setObjectName(QString::fromUtf8("iconPaddingLbl"));
         iconPaddingLbl->setGeometry(QRect(380, 135, 30, 16));
         iconPaddingLbl->setFont(font);
         iconPaddingLbl->setFrameShape(QFrame::NoFrame);
         iconPaddingLbl->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         thumbSpacingLbl = new QLabel(pageThumbsDock);
-        thumbSpacingLbl->setObjectName(QStringLiteral("thumbSpacingLbl"));
+        thumbSpacingLbl->setObjectName(QString::fromUtf8("thumbSpacingLbl"));
         thumbSpacingLbl->setGeometry(QRect(380, 115, 30, 16));
         thumbSpacingLbl->setFont(font);
         thumbSpacingLbl->setFrameShape(QFrame::NoFrame);
         thumbSpacingLbl->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         label_4 = new QLabel(pageThumbsDock);
-        label_4->setObjectName(QStringLiteral("label_4"));
+        label_4->setObjectName(QString::fromUtf8("label_4"));
         label_4->setGeometry(QRect(20, 115, 151, 16));
         label_4->setFont(font);
         label_5 = new QLabel(pageThumbsDock);
-        label_5->setObjectName(QStringLiteral("label_5"));
+        label_5->setObjectName(QString::fromUtf8("label_5"));
         label_5->setGeometry(QRect(20, 135, 141, 16));
         label_5->setFont(font);
         iconWidthSlider = new QSlider(pageThumbsDock);
-        iconWidthSlider->setObjectName(QStringLiteral("iconWidthSlider"));
+        iconWidthSlider->setObjectName(QString::fromUtf8("iconWidthSlider"));
         iconWidthSlider->setGeometry(QRect(200, 30, 160, 22));
         iconWidthSlider->setFont(font);
         iconWidthSlider->setMinimum(40);
@@ -440,17 +442,17 @@ public:
         iconWidthSlider->setTickPosition(QSlider::NoTicks);
         iconWidthSlider->setTickInterval(5);
         showThumbLabelChk = new QCheckBox(pageThumbsDock);
-        showThumbLabelChk->setObjectName(QStringLiteral("showThumbLabelChk"));
+        showThumbLabelChk->setObjectName(QString::fromUtf8("showThumbLabelChk"));
         showThumbLabelChk->setGeometry(QRect(20, 180, 221, 17));
         showThumbLabelChk->setFont(font);
         fontSizeLbl = new QLabel(pageThumbsDock);
-        fontSizeLbl->setObjectName(QStringLiteral("fontSizeLbl"));
+        fontSizeLbl->setObjectName(QString::fromUtf8("fontSizeLbl"));
         fontSizeLbl->setGeometry(QRect(380, 196, 30, 16));
         fontSizeLbl->setFont(font);
         fontSizeLbl->setFrameShape(QFrame::NoFrame);
         fontSizeLbl->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         iconPaddingSlider = new QSlider(pageThumbsDock);
-        iconPaddingSlider->setObjectName(QStringLiteral("iconPaddingSlider"));
+        iconPaddingSlider->setObjectName(QString::fromUtf8("iconPaddingSlider"));
         iconPaddingSlider->setGeometry(QRect(200, 135, 160, 22));
         iconPaddingSlider->setFont(font);
         iconPaddingSlider->setMinimum(0);
@@ -464,7 +466,7 @@ public:
         iconPaddingSlider->setTickPosition(QSlider::NoTicks);
         iconPaddingSlider->setTickInterval(5);
         thumbSpacingSlider = new QSlider(pageThumbsDock);
-        thumbSpacingSlider->setObjectName(QStringLiteral("thumbSpacingSlider"));
+        thumbSpacingSlider->setObjectName(QString::fromUtf8("thumbSpacingSlider"));
         thumbSpacingSlider->setGeometry(QRect(200, 115, 160, 22));
         thumbSpacingSlider->setFont(font);
         thumbSpacingSlider->setMinimum(0);
@@ -478,11 +480,11 @@ public:
         thumbSpacingSlider->setTickPosition(QSlider::NoTicks);
         thumbSpacingSlider->setTickInterval(5);
         label_2 = new QLabel(pageThumbsDock);
-        label_2->setObjectName(QStringLiteral("label_2"));
+        label_2->setObjectName(QString::fromUtf8("label_2"));
         label_2->setGeometry(QRect(20, 30, 121, 16));
         label_2->setFont(font);
         iconHeightSlider = new QSlider(pageThumbsDock);
-        iconHeightSlider->setObjectName(QStringLiteral("iconHeightSlider"));
+        iconHeightSlider->setObjectName(QString::fromUtf8("iconHeightSlider"));
         iconHeightSlider->setGeometry(QRect(200, 50, 160, 22));
         iconHeightSlider->setFont(font);
         iconHeightSlider->setMinimum(40);
@@ -496,37 +498,37 @@ public:
         iconHeightSlider->setTickPosition(QSlider::NoTicks);
         iconHeightSlider->setTickInterval(5);
         lockDimChk = new QCheckBox(pageThumbsDock);
-        lockDimChk->setObjectName(QStringLiteral("lockDimChk"));
+        lockDimChk->setObjectName(QString::fromUtf8("lockDimChk"));
         lockDimChk->setGeometry(QRect(20, 70, 181, 20));
         lockDimChk->setFont(font);
         label_3 = new QLabel(pageThumbsDock);
-        label_3->setObjectName(QStringLiteral("label_3"));
+        label_3->setObjectName(QString::fromUtf8("label_3"));
         label_3->setGeometry(QRect(20, 50, 131, 16));
         label_3->setFont(font);
         iconHeightLbl = new QLabel(pageThumbsDock);
-        iconHeightLbl->setObjectName(QStringLiteral("iconHeightLbl"));
+        iconHeightLbl->setObjectName(QString::fromUtf8("iconHeightLbl"));
         iconHeightLbl->setGeometry(QRect(380, 50, 30, 16));
         iconHeightLbl->setFont(font);
         iconHeightLbl->setFrameShape(QFrame::NoFrame);
         iconHeightLbl->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         label_7 = new QLabel(pageThumbsDock);
-        label_7->setObjectName(QStringLiteral("label_7"));
+        label_7->setObjectName(QString::fromUtf8("label_7"));
         label_7->setGeometry(QRect(20, 200, 121, 16));
         label_7->setFont(font);
         wrapChk = new QCheckBox(pageThumbsDock);
-        wrapChk->setObjectName(QStringLiteral("wrapChk"));
+        wrapChk->setObjectName(QString::fromUtf8("wrapChk"));
         wrapChk->setGeometry(QRect(20, 250, 431, 20));
         stackedWidget->addWidget(pageThumbsDock);
         pageThumbsGrid = new QWidget();
-        pageThumbsGrid->setObjectName(QStringLiteral("pageThumbsGrid"));
+        pageThumbsGrid->setObjectName(QString::fromUtf8("pageThumbsGrid"));
         iconWidthLbl_2 = new QLabel(pageThumbsGrid);
-        iconWidthLbl_2->setObjectName(QStringLiteral("iconWidthLbl_2"));
+        iconWidthLbl_2->setObjectName(QString::fromUtf8("iconWidthLbl_2"));
         iconWidthLbl_2->setGeometry(QRect(380, 30, 30, 16));
         iconWidthLbl_2->setFont(font);
         iconWidthLbl_2->setFrameShape(QFrame::NoFrame);
         iconWidthLbl_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         fontSizeSlider_2 = new QSlider(pageThumbsGrid);
-        fontSizeSlider_2->setObjectName(QStringLiteral("fontSizeSlider_2"));
+        fontSizeSlider_2->setObjectName(QString::fromUtf8("fontSizeSlider_2"));
         fontSizeSlider_2->setGeometry(QRect(200, 200, 160, 22));
         fontSizeSlider_2->setFont(font);
         fontSizeSlider_2->setMinimum(6);
@@ -540,27 +542,27 @@ public:
         fontSizeSlider_2->setTickPosition(QSlider::NoTicks);
         fontSizeSlider_2->setTickInterval(5);
         iconPaddingLbl_2 = new QLabel(pageThumbsGrid);
-        iconPaddingLbl_2->setObjectName(QStringLiteral("iconPaddingLbl_2"));
+        iconPaddingLbl_2->setObjectName(QString::fromUtf8("iconPaddingLbl_2"));
         iconPaddingLbl_2->setGeometry(QRect(380, 135, 30, 16));
         iconPaddingLbl_2->setFont(font);
         iconPaddingLbl_2->setFrameShape(QFrame::NoFrame);
         iconPaddingLbl_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         thumbSpacingLbl_2 = new QLabel(pageThumbsGrid);
-        thumbSpacingLbl_2->setObjectName(QStringLiteral("thumbSpacingLbl_2"));
+        thumbSpacingLbl_2->setObjectName(QString::fromUtf8("thumbSpacingLbl_2"));
         thumbSpacingLbl_2->setGeometry(QRect(380, 115, 30, 16));
         thumbSpacingLbl_2->setFont(font);
         thumbSpacingLbl_2->setFrameShape(QFrame::NoFrame);
         thumbSpacingLbl_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         label_14 = new QLabel(pageThumbsGrid);
-        label_14->setObjectName(QStringLiteral("label_14"));
+        label_14->setObjectName(QString::fromUtf8("label_14"));
         label_14->setGeometry(QRect(20, 115, 151, 16));
         label_14->setFont(font);
         label_15 = new QLabel(pageThumbsGrid);
-        label_15->setObjectName(QStringLiteral("label_15"));
+        label_15->setObjectName(QString::fromUtf8("label_15"));
         label_15->setGeometry(QRect(20, 135, 141, 16));
         label_15->setFont(font);
         iconWidthSlider_2 = new QSlider(pageThumbsGrid);
-        iconWidthSlider_2->setObjectName(QStringLiteral("iconWidthSlider_2"));
+        iconWidthSlider_2->setObjectName(QString::fromUtf8("iconWidthSlider_2"));
         iconWidthSlider_2->setGeometry(QRect(200, 30, 160, 22));
         iconWidthSlider_2->setFont(font);
         iconWidthSlider_2->setMinimum(40);
@@ -574,17 +576,17 @@ public:
         iconWidthSlider_2->setTickPosition(QSlider::NoTicks);
         iconWidthSlider_2->setTickInterval(5);
         showThumbLabelChk_2 = new QCheckBox(pageThumbsGrid);
-        showThumbLabelChk_2->setObjectName(QStringLiteral("showThumbLabelChk_2"));
+        showThumbLabelChk_2->setObjectName(QString::fromUtf8("showThumbLabelChk_2"));
         showThumbLabelChk_2->setGeometry(QRect(20, 180, 201, 17));
         showThumbLabelChk_2->setFont(font);
         fontSizeLbl_2 = new QLabel(pageThumbsGrid);
-        fontSizeLbl_2->setObjectName(QStringLiteral("fontSizeLbl_2"));
+        fontSizeLbl_2->setObjectName(QString::fromUtf8("fontSizeLbl_2"));
         fontSizeLbl_2->setGeometry(QRect(380, 196, 30, 16));
         fontSizeLbl_2->setFont(font);
         fontSizeLbl_2->setFrameShape(QFrame::NoFrame);
         fontSizeLbl_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         iconPaddingSlider_2 = new QSlider(pageThumbsGrid);
-        iconPaddingSlider_2->setObjectName(QStringLiteral("iconPaddingSlider_2"));
+        iconPaddingSlider_2->setObjectName(QString::fromUtf8("iconPaddingSlider_2"));
         iconPaddingSlider_2->setGeometry(QRect(200, 135, 160, 22));
         iconPaddingSlider_2->setFont(font);
         iconPaddingSlider_2->setMinimum(0);
@@ -598,7 +600,7 @@ public:
         iconPaddingSlider_2->setTickPosition(QSlider::NoTicks);
         iconPaddingSlider_2->setTickInterval(5);
         thumbSpacingSlider_2 = new QSlider(pageThumbsGrid);
-        thumbSpacingSlider_2->setObjectName(QStringLiteral("thumbSpacingSlider_2"));
+        thumbSpacingSlider_2->setObjectName(QString::fromUtf8("thumbSpacingSlider_2"));
         thumbSpacingSlider_2->setGeometry(QRect(200, 115, 160, 22));
         thumbSpacingSlider_2->setFont(font);
         thumbSpacingSlider_2->setMinimum(0);
@@ -612,11 +614,11 @@ public:
         thumbSpacingSlider_2->setTickPosition(QSlider::NoTicks);
         thumbSpacingSlider_2->setTickInterval(5);
         label_17 = new QLabel(pageThumbsGrid);
-        label_17->setObjectName(QStringLiteral("label_17"));
+        label_17->setObjectName(QString::fromUtf8("label_17"));
         label_17->setGeometry(QRect(20, 30, 131, 16));
         label_17->setFont(font);
         iconHeightSlider_2 = new QSlider(pageThumbsGrid);
-        iconHeightSlider_2->setObjectName(QStringLiteral("iconHeightSlider_2"));
+        iconHeightSlider_2->setObjectName(QString::fromUtf8("iconHeightSlider_2"));
         iconHeightSlider_2->setGeometry(QRect(200, 50, 160, 22));
         iconHeightSlider_2->setFont(font);
         iconHeightSlider_2->setMinimum(40);
@@ -630,104 +632,104 @@ public:
         iconHeightSlider_2->setTickPosition(QSlider::NoTicks);
         iconHeightSlider_2->setTickInterval(5);
         lockDimChk_2 = new QCheckBox(pageThumbsGrid);
-        lockDimChk_2->setObjectName(QStringLiteral("lockDimChk_2"));
+        lockDimChk_2->setObjectName(QString::fromUtf8("lockDimChk_2"));
         lockDimChk_2->setGeometry(QRect(20, 70, 181, 20));
         lockDimChk_2->setFont(font);
         label_18 = new QLabel(pageThumbsGrid);
-        label_18->setObjectName(QStringLiteral("label_18"));
+        label_18->setObjectName(QString::fromUtf8("label_18"));
         label_18->setGeometry(QRect(20, 50, 131, 16));
         label_18->setFont(font);
         iconHeightLbl_2 = new QLabel(pageThumbsGrid);
-        iconHeightLbl_2->setObjectName(QStringLiteral("iconHeightLbl_2"));
+        iconHeightLbl_2->setObjectName(QString::fromUtf8("iconHeightLbl_2"));
         iconHeightLbl_2->setGeometry(QRect(380, 50, 30, 16));
         iconHeightLbl_2->setFont(font);
         iconHeightLbl_2->setFrameShape(QFrame::NoFrame);
         iconHeightLbl_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         label_19 = new QLabel(pageThumbsGrid);
-        label_19->setObjectName(QStringLiteral("label_19"));
+        label_19->setObjectName(QString::fromUtf8("label_19"));
         label_19->setGeometry(QRect(20, 200, 121, 16));
         label_19->setFont(font);
         stackedWidget->addWidget(pageThumbsGrid);
         pageFullScreen = new QWidget();
-        pageFullScreen->setObjectName(QStringLiteral("pageFullScreen"));
+        pageFullScreen->setObjectName(QString::fromUtf8("pageFullScreen"));
         fullScreenExplanationLbl = new QLabel(pageFullScreen);
-        fullScreenExplanationLbl->setObjectName(QStringLiteral("fullScreenExplanationLbl"));
+        fullScreenExplanationLbl->setObjectName(QString::fromUtf8("fullScreenExplanationLbl"));
         fullScreenExplanationLbl->setGeometry(QRect(20, 30, 421, 61));
         fullScreenExplanationLbl->setFont(font);
         fullScreenExplanationLbl->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
         fullScreenExplanationLbl->setWordWrap(true);
         layoutWidget1 = new QWidget(pageFullScreen);
-        layoutWidget1->setObjectName(QStringLiteral("layoutWidget1"));
+        layoutWidget1->setObjectName(QString::fromUtf8("layoutWidget1"));
         layoutWidget1->setGeometry(QRect(20, 110, 221, 205));
         layoutWidget1->setFont(font);
         verticalLayout_2 = new QVBoxLayout(layoutWidget1);
-        verticalLayout_2->setObjectName(QStringLiteral("verticalLayout_2"));
+        verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
         verticalLayout_2->setContentsMargins(0, 0, 0, 0);
         foldersChk = new QCheckBox(layoutWidget1);
-        foldersChk->setObjectName(QStringLiteral("foldersChk"));
+        foldersChk->setObjectName(QString::fromUtf8("foldersChk"));
         foldersChk->setFont(font);
 
         verticalLayout_2->addWidget(foldersChk);
 
         favsChk = new QCheckBox(layoutWidget1);
-        favsChk->setObjectName(QStringLiteral("favsChk"));
+        favsChk->setObjectName(QString::fromUtf8("favsChk"));
         favsChk->setFont(font);
 
         verticalLayout_2->addWidget(favsChk);
 
         filtersChk = new QCheckBox(layoutWidget1);
-        filtersChk->setObjectName(QStringLiteral("filtersChk"));
+        filtersChk->setObjectName(QString::fromUtf8("filtersChk"));
         filtersChk->setFont(font);
 
         verticalLayout_2->addWidget(filtersChk);
 
         metadataChk = new QCheckBox(layoutWidget1);
-        metadataChk->setObjectName(QStringLiteral("metadataChk"));
+        metadataChk->setObjectName(QString::fromUtf8("metadataChk"));
         metadataChk->setFont(font);
 
         verticalLayout_2->addWidget(metadataChk);
 
         thumbsChk = new QCheckBox(layoutWidget1);
-        thumbsChk->setObjectName(QStringLiteral("thumbsChk"));
+        thumbsChk->setObjectName(QString::fromUtf8("thumbsChk"));
         thumbsChk->setFont(font);
 
         verticalLayout_2->addWidget(thumbsChk);
 
         statusBarChk = new QCheckBox(layoutWidget1);
-        statusBarChk->setObjectName(QStringLiteral("statusBarChk"));
+        statusBarChk->setObjectName(QString::fromUtf8("statusBarChk"));
         statusBarChk->setFont(font);
 
         verticalLayout_2->addWidget(statusBarChk);
 
         stackedWidget->addWidget(pageFullScreen);
         page_3 = new QWidget();
-        page_3->setObjectName(QStringLiteral("page_3"));
+        page_3->setObjectName(QString::fromUtf8("page_3"));
         frame_2 = new QFrame(page_3);
-        frame_2->setObjectName(QStringLiteral("frame_2"));
+        frame_2->setObjectName(QString::fromUtf8("frame_2"));
         frame_2->setGeometry(QRect(10, 10, 460, 481));
         frame_2->setFrameShape(QFrame::NoFrame);
         frame_2->setFrameShadow(QFrame::Raised);
         frame1 = new QFrame(frame_2);
-        frame1->setObjectName(QStringLiteral("frame1"));
+        frame1->setObjectName(QString::fromUtf8("frame1"));
         frame1->setGeometry(QRect(20, 0, 181, 471));
         frame1->setFrameShape(QFrame::NoFrame);
         frame1->setFrameShadow(QFrame::Raised);
         layoutWidget2 = new QWidget(frame1);
-        layoutWidget2->setObjectName(QStringLiteral("layoutWidget2"));
+        layoutWidget2->setObjectName(QString::fromUtf8("layoutWidget2"));
         layoutWidget2->setGeometry(QRect(0, 0, 198, 471));
         verticalLayout_4 = new QVBoxLayout(layoutWidget2);
-        verticalLayout_4->setObjectName(QStringLiteral("verticalLayout_4"));
+        verticalLayout_4->setObjectName(QString::fromUtf8("verticalLayout_4"));
         verticalLayout_4->setContentsMargins(0, 0, 0, 0);
         label_6 = new QLabel(layoutWidget2);
-        label_6->setObjectName(QStringLiteral("label_6"));
+        label_6->setObjectName(QString::fromUtf8("label_6"));
 
         verticalLayout_4->addWidget(label_6);
 
         infoFieldsTreeView = new QTreeView(layoutWidget2);
-        infoFieldsTreeView->setObjectName(QStringLiteral("infoFieldsTreeView"));
+        infoFieldsTreeView->setObjectName(QString::fromUtf8("infoFieldsTreeView"));
         infoFieldsTreeView->setMinimumSize(QSize(0, 0));
         infoFieldsTreeView->setMaximumSize(QSize(16777215, 16777215));
-        infoFieldsTreeView->setStyleSheet(QStringLiteral(""));
+        infoFieldsTreeView->setStyleSheet(QString::fromUtf8(""));
         infoFieldsTreeView->setFrameShape(QFrame::StyledPanel);
         infoFieldsTreeView->setFrameShadow(QFrame::Plain);
         infoFieldsTreeView->setLineWidth(0);
@@ -737,36 +739,36 @@ public:
         verticalLayout_4->addWidget(infoFieldsTreeView);
 
         frame_3 = new QFrame(frame_2);
-        frame_3->setObjectName(QStringLiteral("frame_3"));
+        frame_3->setObjectName(QString::fromUtf8("frame_3"));
         frame_3->setGeometry(QRect(240, 0, 191, 471));
         frame_3->setFrameShape(QFrame::NoFrame);
         frame_3->setFrameShadow(QFrame::Raised);
         layoutWidget3 = new QWidget(frame_3);
-        layoutWidget3->setObjectName(QStringLiteral("layoutWidget3"));
+        layoutWidget3->setObjectName(QString::fromUtf8("layoutWidget3"));
         layoutWidget3->setGeometry(QRect(10, 0, 188, 471));
         verticalLayout_5 = new QVBoxLayout(layoutWidget3);
-        verticalLayout_5->setObjectName(QStringLiteral("verticalLayout_5"));
+        verticalLayout_5->setObjectName(QString::fromUtf8("verticalLayout_5"));
         verticalLayout_5->setContentsMargins(0, 0, 0, 0);
         label_16 = new QLabel(layoutWidget3);
-        label_16->setObjectName(QStringLiteral("label_16"));
+        label_16->setObjectName(QString::fromUtf8("label_16"));
 
         verticalLayout_5->addWidget(label_16);
 
         tableFieldsTable = new QTableView(layoutWidget3);
-        tableFieldsTable->setObjectName(QStringLiteral("tableFieldsTable"));
+        tableFieldsTable->setObjectName(QString::fromUtf8("tableFieldsTable"));
         tableFieldsTable->setMaximumSize(QSize(200, 16777215));
         tableFieldsTable->setIconSize(QSize(0, 0));
-        tableFieldsTable->verticalHeader()->setDefaultSectionSize(23);
+        tableFieldsTable->verticalHeader()->setDefaultSectionSize(34);
 
         verticalLayout_5->addWidget(tableFieldsTable);
 
         stackedWidget->addWidget(page_3);
         listContainer = new QStackedWidget(Prefdlg);
-        listContainer->setObjectName(QStringLiteral("listContainer"));
+        listContainer->setObjectName(QString::fromUtf8("listContainer"));
         listContainer->setGeometry(QRect(10, 20, 191, 491));
         listContainer->setFrameShape(QFrame::Box);
         page = new QWidget();
-        page->setObjectName(QStringLiteral("page"));
+        page->setObjectName(QString::fromUtf8("page"));
         listWidget = new QListWidget(page);
         new QListWidgetItem(listWidget);
         new QListWidgetItem(listWidget);
@@ -776,15 +778,15 @@ public:
         new QListWidgetItem(listWidget);
         new QListWidgetItem(listWidget);
         new QListWidgetItem(listWidget);
-        listWidget->setObjectName(QStringLiteral("listWidget"));
+        listWidget->setObjectName(QString::fromUtf8("listWidget"));
         listWidget->setGeometry(QRect(0, 9, 191, 481));
-        listWidget->setStyleSheet(QStringLiteral("border: none;"));
+        listWidget->setStyleSheet(QString::fromUtf8("border: none;"));
         listWidget->setFrameShape(QFrame::NoFrame);
         listWidget->setFrameShadow(QFrame::Plain);
         listWidget->setSpacing(4);
         listContainer->addWidget(page);
         page_2 = new QWidget();
-        page_2->setObjectName(QStringLiteral("page_2"));
+        page_2->setObjectName(QString::fromUtf8("page_2"));
         listContainer->addWidget(page_2);
 
         retranslateUi(Prefdlg);
@@ -803,7 +805,7 @@ public:
         QObject::connect(classificationBadgeThumbDiamSlider, SIGNAL(valueChanged(int)), classificationBadgeThumbDiamLbl, SLOT(setNum(int)));
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(0);
+        stackedWidget->setCurrentIndex(2);
         listContainer->setCurrentIndex(0);
 
 
@@ -847,10 +849,7 @@ public:
 #ifndef QT_NO_TOOLTIP
         label_10->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This sets the width of the cache status shown on the application status bar.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
-        label_10->setText(QApplication::translate("Prefdlg", "Cache status width (px)", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cacheStatusWidthSpin->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This sets the width of the cache status shown on the application status bar.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
+        label_10->setText(QApplication::translate("Prefdlg", "Bar width", nullptr));
 #ifndef QT_NO_TOOLTIP
         label_8->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
@@ -862,7 +861,7 @@ public:
 #ifndef QT_NO_TOOLTIP
         showCacheStatusChk->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This will show the cache status in the status bar at the bottom of the application.  If you do not see the status bar you can enable it in the Windows menu or by pressing F10.  If you hover over the cache status another tooltip will explain the colour codes for the current file, target cache, current cache and total images.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
-        showCacheStatusChk->setText(QApplication::translate("Prefdlg", "Show cache status", nullptr));
+        showCacheStatusChk->setText(QApplication::translate("Prefdlg", "Show cache progress bar", nullptr));
 #ifndef QT_NO_TOOLTIP
         cachePreviewsChk->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>The largest preview embedded in the image file will be cached.  However, for large files this can take time.  This option tells the application to first create a smaller preview that will fit your monitor while the larger one is being built.  Try checking this option if you are experiencing some latency in loupe mode.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
