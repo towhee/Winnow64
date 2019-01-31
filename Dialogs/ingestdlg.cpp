@@ -32,6 +32,7 @@ IngestDlg::IngestDlg(QWidget *parent,
                      bool &combineRawJpg,
                      bool &autoEjectUsb,
                      bool &isBackup,
+                     bool &gotoIngestFolder,
                      Metadata *metadata,
                      DataModel *dm,
                      QString &ingestRootFolder,
@@ -50,10 +51,11 @@ IngestDlg::IngestDlg(QWidget *parent,
                      QDialog(parent),
                      ui(new Ui::IngestDlg),
                      isAuto(isAuto),
-                     isBackup(isBackup),
                      metadata(metadata),
                      combineRawJpg(combineRawJpg),
                      autoEjectUsb(autoEjectUsb),
+                     isBackup(isBackup),
+                     gotoIngestFolder(gotoIngestFolder),
                      pathTemplatesMap(pathTemplates),
                      filenameTemplatesMap(filenameTemplates),
                      pathTemplateSelected(pathTemplateSelected),
@@ -133,6 +135,8 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->ejectChk->setChecked(autoEjectUsb);
     // initialize use backup as well as primary ingest
     ui->backupChk->setChecked(isBackup);
+    // initialize open ingest folder after ingest
+    ui->openIngestFolderChk->setChecked(gotoIngestFolder);
 
     ui->progressBar->setVisible(false);
     ui->autoIngestTab->tabBar()->setCurrentIndex(0);
@@ -337,6 +341,7 @@ Each picked image is copied from the source to the destination.
             if(backup) QFile::copy(sourcePath, backupPath);
         }
     }
+//    emit revealIngestLocation(folderPath);
     QDialog::close();
 }
 
@@ -1122,4 +1127,9 @@ void IngestDlg::on_okBtn_clicked()
 void IngestDlg::on_autoIngestTab_currentChanged(int index)
 {
     buildFileNameSequence();
+}
+
+void IngestDlg::on_openIngestFolderChk_stateChanged(int arg1)
+{
+     gotoIngestFolder = arg1;
 }
