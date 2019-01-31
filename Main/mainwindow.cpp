@@ -437,7 +437,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 
     if (event->type() == QEvent::MouseButtonRelease) {
-        qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__;
+//        qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__;
         QMouseEvent *e = (QMouseEvent *)event;
         if (e->button() == Qt::LeftButton) {
             isLeftMouseBtnPressed = false;
@@ -874,25 +874,15 @@ so scrollTo and delegate use of the current index must check the row.
 
     if(isStart) return;
 
-//    if (isDragDrop && dragDropFilePath.length() > 0) {
-//        thumbView->selectThumb(dragDropFilePath);
-//        isDragDrop = false;
-//    }
+/*    if (isDragDrop && dragDropFilePath.length() > 0) {
+        thumbView->selectThumb(dragDropFilePath);
+        isDragDrop = false;
+    }
+    */
 
     // user clicks outside thumb but inside treeView dock
     QModelIndexList selected = selectionModel->selectedIndexes();
     if (selected.isEmpty() && !isInitializing) return;
-
-    /* When a mode change occurs, part of the activating process to make the new
-       view visible includes setting the currentIndex to what the view was at
-       last time it was active.  Consequently we have to save the latest index
-       and reapply here.
-       */
-//    if (modeChangeJustHappened) {
-//        modeChangeJustHappened = false;
-//        thumbView->setCurrentIndex(previous);
-//    }
-//    else thumbView->setCurrentIndex(current);
 
     // record current row as it is used to sync everything
     currentRow = current.row();
@@ -901,23 +891,32 @@ so scrollTo and delegate use of the current index must check the row.
     thumbView->thumbViewDelegate->currentRow = currentRow;
     gridView->thumbViewDelegate->currentRow = currentRow;
 
-    /* IMPORTANT
-    Scroll all visible views to the current row. Qt has 100ms delay in
-    QAbstractItemView::mousePressEvent for double-clicks - aarg! a singleshot
-    timer delays until the double-click delay has elapsed and the model has
-    finished updating.
-    */
-    qDebug() << "G::lastThumbChangeEvent =" << G::lastThumbChangeEvent;
-    if (G::lastThumbChangeEvent == "MouseClick") {
-//        if (mouseClickScroll)
-            QTimer::singleShot(1, this, SLOT(delayScroll()));
+    // don't scroll mouse click source (screws up double clicks and disorients users
+    if(G::source == "TableMouseClick") {
+        if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);
+        if (thumbView->isVisible()) thumbView->scrollToCurrent(currentRow);
     }
-    else {
+
+    else if(G::source == "ThumbMouseClick") {
         if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);
         if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
-                 QAbstractItemView::ScrollHint::PositionAtCenter);
+             QAbstractItemView::ScrollHint::PositionAtCenter);
     }
-    G::lastThumbChangeEvent = "";
+
+    else if(G::source == "GridMouseClick") {
+        if (thumbView->isVisible()) thumbView->scrollToCurrent(currentRow);
+        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
+             QAbstractItemView::ScrollHint::PositionAtCenter);
+    }
+
+    else {
+        if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);
+        if (thumbView->isVisible()) thumbView->scrollToCurrent(currentRow);
+        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
+             QAbstractItemView::ScrollHint::PositionAtCenter);
+    }
+
+    G::source = "";
 
     // the file path is used as an index in ImageView and Metadata
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
@@ -4352,20 +4351,20 @@ void MW::showHiddenFiles()
 //    fsTree->setModelFlags();
 }
 
-void MW::delayScroll()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    qDebug() << "enter delayScroll";
-    // scroll views to center on currentIndex
-    if (thumbView->isVisible()) thumbView->scrollToCurrent(currentRow);
-    if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);
-    if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
-             QAbstractItemView::ScrollHint::PositionAtCenter);
-}
+//void MW::delayScroll()
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    qDebug() << "enter delayScroll";
+//    // scroll views to center on currentIndex
+//    if (thumbView->isVisible()) thumbView->scrollToCurrent(currentRow);
+//    if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);
+//    if (tableView->isVisible())
+//        tableView->scrollTo(thumbView->currentIndex(), QAbstractItemView::EnsureVisible);
+//}
 
 void MW::setDockFitThumbs()
 {
@@ -4374,7 +4373,6 @@ void MW::setDockFitThumbs()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "Calling setThumbDockFeatures from MW::setThumbsFit";
     setThumbDockFeatures(dockWidgetArea(thumbDock));
 }
 
@@ -4398,16 +4396,6 @@ void MW::thumbsShrink()
     }
     if (G::mode == "Grid") gridView->thumbsShrink();
     else thumbView->thumbsShrink();
-}
-
-void MW::setThumbLabels()   // move to thumbView
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    G::showThumbLabels = showThumbLabelsAction->isChecked();
 }
 
 /* RECENT MENU
@@ -5257,32 +5245,8 @@ void MW::preferences(int page)
     }
     if(page == -1) page = lastPrefPage;
     Prefdlg *prefdlg = new Prefdlg(this, page);
-    //    connect(prefdlg, SIGNAL(updateFontSize(QString)),
-    //            this, SLOT(setFontSize(QString)));
-//    connect(prefdlg, SIGNAL(updateClassificationBadgeImageDiam(int)),
-//            this, SLOT(setClassificationBadgeImageDiam(int)));
-//    connect(prefdlg, SIGNAL(updateClassificationBadgeThumbDiam(int)),
-//            this, SLOT(setClassificationBadgeThumbDiam(int)));
     connect(prefdlg, SIGNAL(updatePage(int)),
             this, SLOT(setPrefPage(int)));
-//    connect(prefdlg, SIGNAL(updateRememberFolder(bool)),
-//            this, SLOT(setRememberLastDir(bool)));
-//    connect(prefdlg, SIGNAL(checkForUpdates(bool)),
-//            this, SLOT(setCheckForUpdatesApp(bool)));
-    //    connect(prefdlg, SIGNAL(updateMouseClickScroll(bool)),
-    //            this, SLOT(setMouseClickScroll(bool)));
-//    connect(prefdlg, SIGNAL(updateTrackpadScroll(bool)),
-//            this, SLOT(setTrackpadScroll(bool)));
-//    connect(prefdlg, SIGNAL(updateThumbParameters(int,int,int,int,int,bool,bool,int)),
-//            thumbView, SLOT(setThumbParameters(int,int,int,int,int,bool,bool,int)));
-//    connect(prefdlg, SIGNAL(updateThumbGridParameters(int,int,int,int,int,bool,bool,int)),
-//            gridView, SLOT(setThumbParameters(int, int, int, int, int, bool, bool,int)));
-//    connect(prefdlg, SIGNAL(updateSlideShowParameters(int, bool)),
-//            this, SLOT(setSlideShowParameters(int, bool)));
-//    connect(prefdlg, SIGNAL(updateCacheParameters(int, bool, int, int, int, bool, bool)),
-//            this, SLOT(setCacheParameters(int, bool, int, int, int, bool, bool)));
-//    connect(prefdlg, SIGNAL(updateFullScreenDocks(bool,bool,bool,bool,bool,bool)),
-//            this, SLOT(setFullScreenDocks(bool,bool,bool,bool,bool,bool)));
     prefdlg->exec();
 }
 
@@ -5335,11 +5299,6 @@ void MW::setPrefPage(int page)
     #endif
     }
     lastPrefPage = page;
-}
-
-void MW::setCheckForUpdatesApp(bool isCheck)
-{
-    checkIfUpdate = isCheck;
 }
 
 void MW::setDisplayResolution()
@@ -5427,22 +5386,6 @@ void MW::setActualDevicePixelRatio()
                  << "\nQApplication::desktop()->availableGeometry(this)"<< QApplication::desktop()->availableGeometry(this)
                  << "\n";
                  */
-}
-
-void MW::setFullScreenDocks(bool isFolders, bool isFavs, bool isFilters,
-                            bool isMetadata, bool isThumbs, bool isStatusBar)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    fullScreenDocks.isFolders = isFolders;
-    fullScreenDocks.isFavs = isFavs;
-    fullScreenDocks.isFilters = isFilters;
-    fullScreenDocks.isMetadata = isMetadata;
-    fullScreenDocks.isThumbs = isThumbs;
-    fullScreenDocks.isStatusBar = isStatusBar;
 }
 
 void MW::escapeFullScreen()
@@ -7240,8 +7183,6 @@ void MW::setCacheStatusVisibility()
     G::track(__FUNCTION__);
     #endif
     }
-//    if(isShowCacheStatus) G::track(__FUNCTION__, "tiger TRUE");
-//    else  G::track(__FUNCTION__, "tiger FALSE");
     if (isShowCacheThreadActivity) progressLabel->setVisible(isShowCacheStatus);
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
@@ -7942,17 +7883,6 @@ void MW::stressTest()
     getSubfolders("/users/roryhill/pictures");
     QString fPath;
     fPath = subfolders->at(qrand() % (subfolders->count()));
-}
-
-void MW::setSlideShowParameters(int delay, bool isRandom)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    slideShowDelay = delay;
-    slideShowRandom = isRandom;
 }
 
 void MW::slideShow()

@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tokendlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.10.0
+** Created by: Qt User Interface Compiler version 5.12.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,13 +10,10 @@
 #define UI_TOKENDLG_H
 
 #include <QtCore/QVariant>
-#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QHBoxLayout>
-#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSpacerItem>
@@ -50,45 +47,45 @@ public:
     void setupUi(QDialog *TokenDlg)
     {
         if (TokenDlg->objectName().isEmpty())
-            TokenDlg->setObjectName(QStringLiteral("TokenDlg"));
+            TokenDlg->setObjectName(QString::fromUtf8("TokenDlg"));
         TokenDlg->resize(766, 452);
-        TokenDlg->setStyleSheet(QStringLiteral(""));
+        TokenDlg->setStyleSheet(QString::fromUtf8(""));
         tokenList = new TokenList(TokenDlg);
-        tokenList->setObjectName(QStringLiteral("tokenList"));
+        tokenList->setObjectName(QString::fromUtf8("tokenList"));
         tokenList->setGeometry(QRect(30, 50, 141, 381));
         tokenEdit = new TokenEdit(TokenDlg);
-        tokenEdit->setObjectName(QStringLiteral("tokenEdit"));
+        tokenEdit->setObjectName(QString::fromUtf8("tokenEdit"));
         tokenEdit->setGeometry(QRect(180, 130, 561, 61));
         QFont font;
         font.setPointSize(16);
         tokenEdit->setFont(font);
-        tokenEdit->setStyleSheet(QStringLiteral(""));
+        tokenEdit->setStyleSheet(QString::fromUtf8(""));
         label = new QLabel(TokenDlg);
-        label->setObjectName(QStringLiteral("label"));
+        label->setObjectName(QString::fromUtf8("label"));
         label->setGeometry(QRect(30, 30, 91, 16));
         label_2 = new QLabel(TokenDlg);
-        label_2->setObjectName(QStringLiteral("label_2"));
+        label_2->setObjectName(QString::fromUtf8("label_2"));
         label_2->setGeometry(QRect(180, 110, 91, 16));
         label_3 = new QLabel(TokenDlg);
-        label_3->setObjectName(QStringLiteral("label_3"));
+        label_3->setObjectName(QString::fromUtf8("label_3"));
         label_3->setGeometry(QRect(180, 220, 141, 16));
         templatesCB = new QComboBox(TokenDlg);
-        templatesCB->setObjectName(QStringLiteral("templatesCB"));
+        templatesCB->setObjectName(QString::fromUtf8("templatesCB"));
         templatesCB->setGeometry(QRect(180, 50, 561, 26));
         templatesCB->setEditable(false);
         templatesCB->setInsertPolicy(QComboBox::InsertAtBottom);
         label_4 = new QLabel(TokenDlg);
-        label_4->setObjectName(QStringLiteral("label_4"));
+        label_4->setObjectName(QString::fromUtf8("label_4"));
         label_4->setGeometry(QRect(180, 30, 91, 16));
         layoutWidget = new QWidget(TokenDlg);
-        layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
+        layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
         layoutWidget->setGeometry(QRect(210, 400, 521, 32));
         horizontalLayout = new QHBoxLayout(layoutWidget);
-        horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
+        horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
         horizontalLayout->setSizeConstraint(QLayout::SetDefaultConstraint);
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
         renameBtn = new QPushButton(layoutWidget);
-        renameBtn->setObjectName(QStringLiteral("renameBtn"));
+        renameBtn->setObjectName(QString::fromUtf8("renameBtn"));
         QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
@@ -100,7 +97,7 @@ public:
         horizontalLayout->addWidget(renameBtn);
 
         newBtn = new QPushButton(layoutWidget);
-        newBtn->setObjectName(QStringLiteral("newBtn"));
+        newBtn->setObjectName(QString::fromUtf8("newBtn"));
         sizePolicy.setHeightForWidth(newBtn->sizePolicy().hasHeightForWidth());
         newBtn->setSizePolicy(sizePolicy);
         newBtn->setMinimumSize(QSize(93, 0));
@@ -109,7 +106,7 @@ public:
         horizontalLayout->addWidget(newBtn);
 
         deleteBtn = new QPushButton(layoutWidget);
-        deleteBtn->setObjectName(QStringLiteral("deleteBtn"));
+        deleteBtn->setObjectName(QString::fromUtf8("deleteBtn"));
         sizePolicy.setHeightForWidth(deleteBtn->sizePolicy().hasHeightForWidth());
         deleteBtn->setSizePolicy(sizePolicy);
         deleteBtn->setMinimumSize(QSize(93, 0));
@@ -122,7 +119,7 @@ public:
         horizontalLayout->addItem(horizontalSpacer);
 
         okBtn = new QPushButton(layoutWidget);
-        okBtn->setObjectName(QStringLiteral("okBtn"));
+        okBtn->setObjectName(QString::fromUtf8("okBtn"));
         sizePolicy.setHeightForWidth(okBtn->sizePolicy().hasHeightForWidth());
         okBtn->setSizePolicy(sizePolicy);
         okBtn->setMinimumSize(QSize(125, 0));
@@ -131,15 +128,15 @@ public:
         horizontalLayout->addWidget(okBtn);
 
         resultText = new QTextBrowser(TokenDlg);
-        resultText->setObjectName(QStringLiteral("resultText"));
+        resultText->setObjectName(QString::fromUtf8("resultText"));
         resultText->setGeometry(QRect(180, 240, 561, 61));
-        resultText->setStyleSheet(QStringLiteral(""));
+        resultText->setStyleSheet(QString::fromUtf8(""));
         label_5 = new QLabel(TokenDlg);
-        label_5->setObjectName(QStringLiteral("label_5"));
+        label_5->setObjectName(QString::fromUtf8("label_5"));
         label_5->setGeometry(QRect(180, 320, 551, 21));
         label_5->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
         uniqueWarningLabel = new QLabel(TokenDlg);
-        uniqueWarningLabel->setObjectName(QStringLiteral("uniqueWarningLabel"));
+        uniqueWarningLabel->setObjectName(QString::fromUtf8("uniqueWarningLabel"));
         uniqueWarningLabel->setGeometry(QRect(180, 350, 551, 41));
         uniqueWarningLabel->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
         uniqueWarningLabel->setWordWrap(true);
