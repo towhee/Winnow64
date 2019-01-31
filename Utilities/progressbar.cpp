@@ -58,7 +58,7 @@ void ProgressBar::updateProgress(int fromItem,
 
     QPainter pnt(mw1->progressPixmap);
     int barWidth = mw1->progressWidth;
-    float itemWidth = (float)barWidth/items;
+    float itemWidth = (float)barWidth / items;
     int pxStart, pxWidth;
 
     // to and from can be mixed depending on direction of travel
@@ -71,16 +71,16 @@ void ProgressBar::updateProgress(int fromItem,
         pxWidth = qRound((fromItem - toItem) * itemWidth) + 1;
         pxStart = qRound(toItem * itemWidth);
     }
-//    pxWidth *= n;
     if(pxWidth < 2) pxWidth = 2;
     if(pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
 
-//    qDebug() << "Target range from =" << fromItem
-//             << "to" << toItem
-//             << "itemWidth" << itemWidth
-//             << "pxStart" << pxStart
-//             << "pxWidth" << pxWidth
-//             << "source" << source;
+/*    qDebug() << "Target range from =" << fromItem
+             << "to" << toItem
+             << "itemWidth" << itemWidth
+             << "pxStart" << pxStart
+             << "pxWidth" << pxWidth
+             << "source" << source;
+             */
 
     // Done range
     QLinearGradient doneGradient = getGradient(doneColor);
