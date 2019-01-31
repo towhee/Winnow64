@@ -43,6 +43,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Added copy to backup in ingest
 - Create sidecar file before open with in case other app can use metadata in sidecar
 - Compare can crash
 - Ingest history and recent folders does not select folder

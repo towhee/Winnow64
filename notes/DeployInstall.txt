@@ -9,11 +9,12 @@ Mac Deployment:
 cd /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_10_0_clang_64bit-Release
 /Users/roryhill/Qt/5.10.0/clang_64/bin/macdeployqt Winnow.app
 
-For Win:
+For Win: 
 ---------------------------------------------------------------------
-Win Deployment:
-CD "C:\program files\winnow"
-C:\Qt\5.10.0\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\build-winnow64-Desktop_Qt_5_10_0_MSVC2017_64bit-Release\release\Winnow.exe" --dir "C:\Program Files\Winnow"
+Win Deployment:  IMPORTANT WHEN CHANGE VERSIONS OF QT!
+CD "D:\My Projects\Winnow Project\Deploy Winnow"
+C:\Qt\5.12.0\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\build-winnow64-Desktop_Qt_5_12_0_MSVC2017_64bit-Release\release\Winnow.exe" --dir "D:\My Projects\Winnow Project\Deploy Winnow"
+C:\Qt\5.12.0\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\build-winnow64-Desktop_Qt_5_12_0_MSVC2017_64bit-Release\release\Winnow.exe" --plugindir "D:\My Projects\Winnow Project\Deploy Winnow"
 
 Win Installation Update:
 -  Update deploy if new dlls required
@@ -42,6 +43,9 @@ Win Installation Update:
 
 Run 165.227.46.158/winnow_win/winnowinstalleronline.exe for new installation of Winnow.
 This is available on the Winnow Main Page at http://165.227.46.158/winnow/winnow.html
+
+Clean up orphaned entries in Apps and Features by deleting registry entries at
+Computer\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Uninstall\
 
 ---------------------------------------------------------------------
 

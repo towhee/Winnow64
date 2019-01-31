@@ -22,6 +22,7 @@ public:
                        bool &combineRawJpg,
                        bool &autoEjectUsb,
                        bool &isBackup,
+                       bool &gotoIngestFolder,
                        Metadata *metadata,
                        DataModel *dm,
                        QString &ingestRootFolder,
@@ -68,8 +69,11 @@ private slots:
     void on_okBtn_clicked();
     void on_helpBtn_clicked();
 
+    void on_openIngestFolderChk_stateChanged(int arg1);
+
 signals:
     void updateIngestHistory(QString folderPath);
+    void revealIngestLocation(QString fPath);
 
 private:
     Ui::IngestDlg *ui;
@@ -95,6 +99,7 @@ private:
     bool &combineRawJpg;
     bool &autoEjectUsb;
     bool &isBackup;
+    bool &gotoIngestFolder;
     QFileInfoList pickList;
 
     QStringList tokens;
