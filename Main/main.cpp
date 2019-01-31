@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
         qDebug() << QObject::tr("Usage: Winnow [FILE or DIRECTORY]...");
         return -1;
     }
-
+    QCoreApplication::addLibraryPath("./");
     MW MW;
     MW.show();
     return QApp.exec();
