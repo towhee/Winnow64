@@ -17,27 +17,7 @@ public:
     ~Prefdlg();
 
 signals:
-//    void updateFontSize(QString pixels);
-//    void updateClassificationBadgeImageDiam(int d);
-//    void updateClassificationBadgeThumbDiam(int d);
     void updatePage(int page);
-//    void updateRememberFolder(bool rememberFolder);
-//    void checkForUpdates(bool isCheck);
-//    void updateMouseClickScroll(bool isUpdate);
-//    void updateTrackpadScroll(bool trackpadScroll);
-////    void updateDisplayResolution(int horizontalPixels, int verticalPixels);
-//    void updateThumbParameters(int thumbWidth, int thumbHeight, int thumbSpacing, int thumbPadding,
-//            int labelFontSize, bool showThumbLabels, bool wrapThumbs, int thumbBadgeSize);
-//    void updateThumbGridParameters(int thumbWidthGrid, int thumbHeightGrid, int thumbSpacingGrid,
-//            int thumbPaddingGrid, int labelFontSizeGrid, bool showThumbLabelsGrid, bool wrapThumbs,
-//            int thumbBadgeSize);
-//    void updateSlideShowParameters(int slideShowDelay, bool slideShowRandom);
-
-//    void updateCacheParameters(int cacheSizeMB, bool isShowCacheStatus, int cacheDelay,
-//            int cacheStatusWidth, int wtAhead, bool usePreview, bool activity);
-
-//    void updateFullScreenDocks(bool isFolders, bool isFavs, bool isFilters, bool isMetadata,
-//                               bool isThumbs, bool isStatusBar);
 
 protected:
 

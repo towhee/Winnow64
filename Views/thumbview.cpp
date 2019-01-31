@@ -645,9 +645,9 @@ void ThumbView::selectThumb(QModelIndex idx)
     #endif
     }
     if (idx.isValid()) {
-        G::lastThumbChangeEvent = "KeyStroke";    // either KeyStroke or MouseClick
+//        G::isMouseClick = true;
         setCurrentIndex(idx);
-        scrollTo(idx, ScrollHint::PositionAtCenter);
+//        scrollTo(idx, ScrollHint::PositionAtCenter);
     }
 }
 
@@ -1215,8 +1215,12 @@ different position than the current image.
     G::track(__FUNCTION__);
     #endif
     }
-    G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
+
     if (event->button() == Qt::RightButton) return;
+
+    // is this a grid or a thumb view
+    if(G::mode == "Grid") G::source =  "GridMouseClick";
+    else G::source =  "ThumbMouseClick";
 
     // forward and back buttons
     if (event->button() == Qt::BackButton) {

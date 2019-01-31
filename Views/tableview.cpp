@@ -61,6 +61,7 @@ void TableView::scrollToCurrent()
     G::track(__FUNCTION__);
     #endif
     }
+    // G::scrollToCenter needed?
     QModelIndex idx = dm->sf->index(currentIndex().row(), 1);
     scrollTo(idx, ScrollHint::PositionAtCenter);
 }
@@ -80,7 +81,8 @@ void TableView::mousePressEvent(QMouseEvent *event)
 {
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) return;
-    G::lastThumbChangeEvent = "MouseClick";    // either KeyStroke or MouseClick
+    qDebug() << "TableView::mousePressEvent";
+    G::source = "TableMouseClick";
     QTableView::mousePressEvent(event);
 }
 
