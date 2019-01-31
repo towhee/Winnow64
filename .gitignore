@@ -313,3 +313,9 @@ debug/Winnow.pdb
 *.pdb
 *.exe
 *.exe
+*.exe
+*.pdb
+*.Debug
+*.Release
+release/Licenses/license.txt
+release/moc_updateapp.cpp
