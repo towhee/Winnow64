@@ -79,7 +79,7 @@ namespace G
     extern QStringList labelColors;
 
     extern QString mode;
-    extern QString lastThumbChangeEvent;
+    extern QString source;
 
     extern qreal actualDevicePixelRatio;
 

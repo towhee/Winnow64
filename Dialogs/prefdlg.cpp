@@ -236,14 +236,14 @@ Sync preference category list and preference items in stacked form
 */
     ui->stackedWidget->setCurrentIndex(ui->listWidget->row(current));
 
-    qDebug() << "on_listWidget_currentItemChanged" << ui->listWidget->currentRow();
-    int page = ui->listWidget->currentRow();
-    // for some bizarre reason this doesn't work
+//    qDebug() << "on_listWidget_currentItemChanged" << ui->listWidget->currentRow();
+//    int page = ui->listWidget->currentRow();
+    // for some bizarre reason this doesn't work and causes crash
 //    m->setPrefPage(page);
-    m->lastPrefPage = page;
+//    m->lastPrefPage = page;
 
     // hence send signal instead
-//    emit updatePage(ui->listWidget->currentRow());
+    emit updatePage(ui->listWidget->currentRow());
 }
 
 // general
@@ -484,7 +484,6 @@ void Prefdlg::on_showCacheThreadActivityChk_clicked()
 void Prefdlg::on_progressWidthSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        qDebug() << "on_progressWidthSlider_valueChanged" << value;
         m->progressWidth = value;
         m->setCacheParameters();
     }
