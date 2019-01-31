@@ -13,7 +13,7 @@ namespace G
     QStringList ratings, labelColors;
 
     QString mode;                       // In MW: Loupe, Grid, Table or Compare
-    QString lastThumbChangeEvent;
+    QString source;                     // GridMouseClick, ThumbMouseClick, TableMouseClick
 
     qreal actualDevicePixelRatio;
 
