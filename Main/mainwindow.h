@@ -367,10 +367,7 @@ private slots:
     void setClassificationBadgeImageDiam(int d);
     void setClassificationBadgeThumbDiam(int d);
     void setPrefPage(int page);
-    void setRememberLastDir(bool prefRememberFolder);
     void setCheckForUpdatesApp(bool isCheck);
-    void setMouseClickScroll(bool prefMouseClickScroll);
-    void setTrackpadScroll(bool trackpadScroll);
     void setDisplayResolution();
     void setCombineRawJpg();
     void setSlideShowParameters(int delay, bool isRandom);
@@ -378,8 +375,7 @@ private slots:
                             bool isMetadata, bool isThumbs, bool isStatusBar);
     void slideShow();
     void nextSlide();
-    void setCacheParameters(int size, bool show, int delay, int width, int wtAhead,
-                            bool isCachePreview, bool activity);
+    void setCacheParameters();
     void selectAllThumbs();
     void removeBookmark();
     void refreshBookmarks();
