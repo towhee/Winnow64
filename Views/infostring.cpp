@@ -1,5 +1,22 @@
 #include "Views/infostring.h"
 
+/* InfoString is called from MW to display or edit the info text displayed on top of an
+ImageView.
+
+InfoString provides the token information to build token strings in
+TokenDlg. TokenDlg requires two QStringLists: a token list and token examples list.
+
+InfoString includes a token parser, required to return the text string to MW.  For example,
+if the selected token string was:
+
+    {MODEL} | {ShutterSpeed} sec at f/{Aperture}
+
+the function parseTokenString would get the token information from the datamodel and/or
+metadata and return the string (example):
+
+    Nikon D5 | 1/250 sec at f/5.6
+*/
+
 InfoString::InfoString(QWidget *parent, Metadata *metadata, DataModel *dm) :
                        QWidget(parent)
 {
@@ -8,7 +25,6 @@ InfoString::InfoString(QWidget *parent, Metadata *metadata, DataModel *dm) :
     initTokenList();
     initExampleMap();
     infoTemplates[" Default"] = "{Model} {FocalLength}  {ShutterSpeed} at f/{Aperture}, ISO {ISO}\n{Title}";
-    // "{Model} {FocalLength}  {ShutterSpeed} sec at f/{Aperture}, ISO {ISO}\n{Title}"
 }
 
 void InfoString::editTemplates()
@@ -83,6 +99,7 @@ void InfoString::initTokenList()
             << "HOUR"
             << "MINUTE"
             << "SECOND"
+            << "MILLISECOND"
             << "ModifiedDate"
             << "Dimensions"
             << "Width"
@@ -130,6 +147,7 @@ void InfoString::initExampleMap()
     exampleMap["HOUR"] = "14";
     exampleMap["MINUTE"] = "24";
     exampleMap["SECOND"] = "36";
+    exampleMap["MILLISECOND"] = "167";
     exampleMap["ModifiedDate"] = "2018-03-14 07:55:12";
     exampleMap["Dimensions"] = "5472x3648";
     exampleMap["Width"] = "5472";
@@ -277,11 +295,13 @@ QString InfoString::tokenValue(QString &token,
     if (token == "DD")
         return m->createdDate.date().toString("dd");
     if (token == "HOUR")
-        return m->createdDate.date().toString("hh");
+        return m->createdDate.time().toString("hh");
     if (token == "MINUTE")
-        return m->createdDate.date().toString("mm");
+        return m->createdDate.time().toString("mm");
     if (token == "SECOND")
-        return m->createdDate.date().toString("ss");
+        return m->createdDate.time().toString("ss");
+    if (token == "MILLISECOND")
+        return m->createdDate.time().toString("zzz");
     if (token == "ModifiedDate")
         return info.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     if (token == "Dimensions")
