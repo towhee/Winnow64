@@ -1,5 +1,21 @@
 #include "File/bookmarks.h"
 
+/* A QStringList of paths to bookmarked folders is displayed as top level items
+in a QWidgetTree in column 0.  Column 1 holds a count of the readable image files
+in the folder.
+
+When the user mouse clicks on one of the folders the itemClicked signal is sent
+to the MW slot bookmarkClicked along with the tooltip, which holds the path
+string.  Since the user could also click in the count column, it's tooltip is
+also the path string.
+
+Bookmarks can be added via the context menu in FSTree or the folders can be
+dragged from the FSTree to Bookmarks.  Folders or files can also be dragged
+from the windows explorer or mac finder to be added as a bookmark.
+
+As an abbreviation in the program UI bookmarks are called favs.
+*/
+
 BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount)
     : QTreeWidget(parent)
 {
@@ -43,20 +59,39 @@ void BookMarks::reloadBookmarks()
     QSetIterator<QString> it(bookmarkPaths);
 	while (it.hasNext()) {
 		QString itemPath = it.next();
-	    QTreeWidgetItem *item = new QTreeWidgetItem(this);
-        item->setText(0, QFileInfo(itemPath).fileName());
-        item->setIcon(0, QIcon(":/images/bookmarks.png"));
-        item->setToolTip(0, itemPath);
-        insertTopLevelItem(0, item);
-        dir->setPath(itemPath);
-        int count = dir->entryInfoList().size();
-        item->setText(1, QString::number(count));
-        item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
+        addBookmark(itemPath);
+//	    QTreeWidgetItem *item = new QTreeWidgetItem(this);
+//        item->setText(0, QFileInfo(itemPath).fileName());
+//        item->setIcon(0, QIcon(":/images/bookmarks.png"));
+//        item->setToolTip(0, itemPath);
+//        insertTopLevelItem(0, item);
+//        dir->setPath(itemPath);
+//        int count = dir->entryInfoList().size();
+//        item->setText(1, QString::number(count));
+//        item->setToolTip(1, itemPath);
+//        item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
     }
+}
+
+void BookMarks::addBookmark(QString itemPath)
+{
+    QTreeWidgetItem *item = new QTreeWidgetItem(this);
+    item->setText(0, QFileInfo(itemPath).fileName());
+    item->setIcon(0, QIcon(":/images/bookmarks.png"));
+    item->setToolTip(0, itemPath);
+    insertTopLevelItem(0, item);
+    dir->setPath(itemPath);
+    int count = dir->entryInfoList().size();
+    item->setText(1, QString::number(count));
+    item->setToolTip(1, itemPath);
+    item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
 }
 
 void BookMarks::select(QString fPath)
 {
+/* This is called from MW::folderSelectionChange to attempt to sync bookmarks with
+the FSTree folders view.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -107,13 +142,11 @@ void BookMarks::removeBookmark()
 
 void BookMarks::mousePressEvent(QMouseEvent *event)
 {
-    qDebug() << QTime::currentTime() << "MouseButtonPress" << __FUNCTION__;
     QTreeView::mousePressEvent(event);
 }
 
 void BookMarks::mouseReleaseEvent(QMouseEvent *event)
 {
-    qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__ << "\n";
     QTreeView::mouseReleaseEvent(event);
 }
 
@@ -155,5 +188,14 @@ void BookMarks::dropEvent(QDropEvent *event)
         emit dropOp(event->keyboardModifiers(), dirOp,
                     event->mimeData()->urls().at(0).toLocalFile());
 	}
+    const QMimeData *mimeData = event->mimeData();
+    if (mimeData->hasUrls())
+    {
+        QString fPath;      // path to folder
+        QFileInfo fInfo = QFileInfo(mimeData->urls().at(0).toLocalFile());
+        if (fInfo.isDir()) fPath = fInfo.absoluteFilePath();
+        else fPath = fInfo.absoluteDir().absolutePath();
+        addBookmark(fPath);
+    }
 }
 

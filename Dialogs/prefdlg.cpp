@@ -22,7 +22,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->globalFontSizeSlider->setTickInterval(1);
     ui->globalFontSizeSlider->setMinimum(8);
     ui->globalFontSizeSlider->setMaximum(20);
-    ui->globalFontSizeSlider->setValue(m->fontSize.toInt());
+    ui->globalFontSizeSlider->setValue(G::fontSize.toInt());
     ui->classificationBadgeImageDiamSlider->setValue(m->classificationBadgeInImageDiameter);
     ui->classificationBadgeThumbDiamSlider->setValue(m->classificationBadgeInThumbDiameter);
     ui->rememberFolderChk->setChecked(m->rememberLastDir);

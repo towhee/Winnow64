@@ -9,7 +9,9 @@ public:
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const
     {
         index.isValid();          // suppress compiler warning
-        return QSize(option.rect.width(), 24);
+        int height = G::fontSize.toInt() + 10;
+        return QSize(option.rect.width(), height);  // rgh perhaps change 24 to function of font size + 10
+//        return QSize(option.rect.width(), 24);  // rgh perhaps change 24 to function of font size + 10
     }
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const
@@ -26,8 +28,9 @@ public:
         categoryBackground.setColorAt(0, QColor(88,88,88));
         categoryBackground.setColorAt(1, QColor(66,66,66));
 
-        int offset = 5;
-        QPoint topLeft(option.rect.left() + offset, option.rect.top());
+        int hOffset = 11;
+        int vOffset = -1;
+        QPoint topLeft(option.rect.left() + hOffset, option.rect.top() - vOffset);
         QPoint bottomRight(option.rect.bottomRight());
         QRect textRect(topLeft, bottomRight);
 
@@ -101,9 +104,6 @@ InfoView::InfoView(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),
             SLOT(showInfoViewMenu(QPoint)));
-
-//    connect(ok, SIGNAL(itemChanged(QStandardItem*)),
-//            this, SLOT(itemChanged(QStandardItem*)));
 }
 
 void InfoView::showInfoViewMenu(QPoint pt)

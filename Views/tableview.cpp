@@ -12,6 +12,7 @@ TableView::TableView(DataModel *dm)
     }
 
     this->dm = dm;
+    int ht = G::fontSize.toInt();
 
     setModel(dm->sf);
     setSortingEnabled(true);
@@ -26,7 +27,9 @@ TableView::TableView(DataModel *dm)
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setTabKeyNavigation(false);
-    setIconSize(QSize(24, 24 + 12));
+    setWordWrap(false);
+    setIconSize(QSize(ht + 10, ht + 22));
+//    setIconSize(QSize(24, 24 + 12));
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setDefaultSectionSize(24);
 
