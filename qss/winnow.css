@@ -1,3 +1,8 @@
+/*
+winnow.css contains the styling for Winnow, except for items that we desire
+to modify programmatically (font size).  Programmable items include:
+*/
+
 QWidget {
     /*font-size: 14px;*/
     background-color: rgb(85,85,85);
@@ -331,7 +336,7 @@ QProgressBar {
     border-radius: 2px;
 }
 
-/*  Customizing slider prevents tick markse
+/*  Customizing slider prevents tick marks
 QSlider::groove:horizontal {
     border: 1px solid gray;
     height: 1px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size

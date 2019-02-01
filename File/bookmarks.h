@@ -13,6 +13,7 @@ public:
     BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount);
     void reloadBookmarks();
     void select(QString fPath);
+
     QSet<QString> bookmarkPaths;
     bool showImageCount;
 
@@ -20,6 +21,8 @@ public slots:
 	void removeBookmark();
 
 private:
+    void addBookmark(QString itemPath);
+
 	QModelIndex dndOrigSelection;
     Metadata *metadata;
     QDir *dir;

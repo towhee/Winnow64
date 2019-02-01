@@ -3677,8 +3677,8 @@ void MW::createAppStyle()
     fStyle.open(QIODevice::ReadOnly);
     css2 += fStyle.readAll();
 
-    fontSize = setting->value("fontSize").toString();
-    css1 = "QWidget {font-size: " + fontSize + "px;}";
+    G::fontSize = setting->value("fontSize").toString();
+    css1 = "QWidget {font-size: " + G::fontSize + "px;}";
     css = css1 + css2;
     this->setStyleSheet(css);
 }
@@ -5269,8 +5269,8 @@ void MW::setShowImageCount()
 
 void MW::setFontSize(int pixels)
 {
-    fontSize = QString::number(pixels);
-    QString s = "QWidget {font-size: " + fontSize + "px;}";
+    G::fontSize = QString::number(pixels);
+    QString s = "QWidget {font-size: " + G::fontSize + "px;}";
     this->setStyleSheet(s + css2);
 }
 
@@ -5737,7 +5737,7 @@ re-established when the application is re-opened.
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
 
     // appearance
-    setting->setValue("fontSize", fontSize);
+    setting->setValue("fontSize", G::fontSize);
     setting->setValue("classificationBadgeInImageDiameter", classificationBadgeInImageDiameter);
     setting->setValue("classificationBadgeInThumbDiameter", thumbView->badgeSize);
 
@@ -6012,7 +6012,7 @@ Preferences are located in the prefdlg class and updated here.
         combineRawJpg = true;
 
         // appearance
-        fontSize = 14;
+        G::fontSize = 14;
         classificationBadgeInImageDiameter = 20;
         classificationBadgeInThumbDiameter = 12;
 
@@ -6038,7 +6038,7 @@ Preferences are located in the prefdlg class and updated here.
     // general
 
     // appearance
-    fontSize = setting->value("fontSize").toString();
+    G::fontSize = setting->value("fontSize").toString();
     classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
     classificationBadgeInThumbDiameter = setting->value("classificationBadgeInThumbDiameter").toInt();
     isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
