@@ -15,11 +15,12 @@ Classes:
 TokenList = a dragable list of all available tokens.
 
 TokenEdit = a subclassed QTestEdit that accepts drops and treats tokens as
-characters (the cursor only selects the entire token, not individual char).
+            characters (the cursor only selects the entire token, not individual
+            char).
 
 TokenDlg = a dialog that houses the token editor.
 
-
+TokenDlg is called from IngestDlg and InfoString.
 */
 
 /*******************************************************************************
@@ -249,6 +250,26 @@ bool TokenEdit::isLikelyUnique()
    TokenDlg Class
 *******************************************************************************/
 
+/*  The TokenDlg has a list of tokens on the left and a textbox on the right
+where the tokens can be dragged.  The calling function must define a token
+list, an example token list and a token parser routine.  TokenDlg's function
+is to select and order the tokens to create the desired string.  The user can
+inserrt any text, except / or \, in the token string.
+
+For example, the token string:
+
+    {MODEL} | {ShutterSpeed} sec at f/{Aperture}
+
+would produce the token string result:
+
+    Nikon D5 | 1/250 sec at f/5.6
+
+where the values of the tokens is extracted from the image file metadata.
+
+TokenDlg builds the token string.  The calling function parses it to produce
+the result.
+*/
+
 TokenDlg::TokenDlg(QStringList &tokens,
                    QMap<QString, QString> &exampleMap,
                    QMap<QString, QString> &templatesMap,
@@ -282,6 +303,7 @@ TokenDlg::TokenDlg(QStringList &tokens,
     QMap. This is accomplished by also saving the keys in the templateCB as
     tooltips. When the dialog closes via the Ok button the QMap is updated to
     match any changes made to templatesCB and tokenEdit. */
+
     int row = 0;
     QMap<QString, QString>::iterator i;
     for (i = templatesMap.begin(); i != templatesMap.end(); ++i) {

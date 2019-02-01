@@ -48,14 +48,14 @@ public:
     {
         if (TokenDlg->objectName().isEmpty())
             TokenDlg->setObjectName(QString::fromUtf8("TokenDlg"));
-        TokenDlg->resize(756, 452);
+        TokenDlg->resize(1047, 542);
         TokenDlg->setStyleSheet(QString::fromUtf8(""));
         tokenList = new TokenList(TokenDlg);
         tokenList->setObjectName(QString::fromUtf8("tokenList"));
-        tokenList->setGeometry(QRect(30, 50, 141, 381));
+        tokenList->setGeometry(QRect(30, 50, 141, 481));
         tokenEdit = new TokenEdit(TokenDlg);
         tokenEdit->setObjectName(QString::fromUtf8("tokenEdit"));
-        tokenEdit->setGeometry(QRect(180, 130, 561, 61));
+        tokenEdit->setGeometry(QRect(180, 130, 851, 111));
         QFont font;
         font.setPointSize(16);
         tokenEdit->setFont(font);
@@ -68,10 +68,10 @@ public:
         label_2->setGeometry(QRect(180, 110, 91, 16));
         label_3 = new QLabel(TokenDlg);
         label_3->setObjectName(QString::fromUtf8("label_3"));
-        label_3->setGeometry(QRect(180, 220, 141, 16));
+        label_3->setGeometry(QRect(180, 260, 141, 16));
         templatesCB = new QComboBox(TokenDlg);
         templatesCB->setObjectName(QString::fromUtf8("templatesCB"));
-        templatesCB->setGeometry(QRect(180, 50, 561, 26));
+        templatesCB->setGeometry(QRect(180, 50, 231, 26));
         templatesCB->setEditable(false);
         templatesCB->setInsertPolicy(QComboBox::InsertAtBottom);
         label_4 = new QLabel(TokenDlg);
@@ -79,7 +79,7 @@ public:
         label_4->setGeometry(QRect(180, 30, 91, 16));
         layoutWidget = new QWidget(TokenDlg);
         layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
-        layoutWidget->setGeometry(QRect(210, 400, 521, 32));
+        layoutWidget->setGeometry(QRect(500, 490, 521, 32));
         horizontalLayout = new QHBoxLayout(layoutWidget);
         horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
         horizontalLayout->setSizeConstraint(QLayout::SetDefaultConstraint);
@@ -129,15 +129,15 @@ public:
 
         resultText = new QTextBrowser(TokenDlg);
         resultText->setObjectName(QString::fromUtf8("resultText"));
-        resultText->setGeometry(QRect(180, 240, 561, 61));
+        resultText->setGeometry(QRect(180, 280, 851, 111));
         resultText->setStyleSheet(QString::fromUtf8(""));
         label_5 = new QLabel(TokenDlg);
         label_5->setObjectName(QString::fromUtf8("label_5"));
-        label_5->setGeometry(QRect(180, 320, 551, 21));
+        label_5->setGeometry(QRect(180, 400, 551, 21));
         label_5->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
         uniqueWarningLabel = new QLabel(TokenDlg);
         uniqueWarningLabel->setObjectName(QString::fromUtf8("uniqueWarningLabel"));
-        uniqueWarningLabel->setGeometry(QRect(180, 350, 551, 41));
+        uniqueWarningLabel->setGeometry(QRect(180, 430, 551, 41));
         uniqueWarningLabel->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
         uniqueWarningLabel->setWordWrap(true);
 
