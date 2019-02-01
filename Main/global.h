@@ -81,6 +81,8 @@ namespace G
     extern QString mode;
     extern QString source;
 
+    extern QString fontSize;
+
     extern qreal actualDevicePixelRatio;
 
     extern bool isThreadTrackingOn;

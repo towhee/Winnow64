@@ -729,7 +729,7 @@ to help make it visible against different coloured backgrounds. */
     font.setKerning(true);
 
     infoOverlay->setFont(font);      // not working
-    int fontSize = 13;
+    int fontSize = 13;          // rgh make this a preference
 
     infoOverlay->setStyleSheet("font: " + QString::number(fontSize) + "pt;");
     infoOverlay->setText(infoString);
