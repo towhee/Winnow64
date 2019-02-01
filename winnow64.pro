@@ -106,7 +106,8 @@ FORMS += \
     Help/message.ui \
     Help/shortcutsform.ui \
     Help/welcome.ui \
-    Metadata/metadatareport.ui
+    Metadata/metadatareport.ui \
+    Dialogs/testdlg.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns

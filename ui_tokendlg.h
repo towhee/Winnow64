@@ -48,7 +48,7 @@ public:
     {
         if (TokenDlg->objectName().isEmpty())
             TokenDlg->setObjectName(QString::fromUtf8("TokenDlg"));
-        TokenDlg->resize(766, 452);
+        TokenDlg->resize(756, 452);
         TokenDlg->setStyleSheet(QString::fromUtf8(""));
         tokenList = new TokenList(TokenDlg);
         tokenList->setObjectName(QString::fromUtf8("tokenList"));
