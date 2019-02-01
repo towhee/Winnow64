@@ -86,8 +86,6 @@ ImageView::ImageView(QWidget *parent,
 
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
     infoEffect->setOpacity(0.8);
-//    infoLabel->setGraphicsEffect(infoEffect);
-//    infoLabelShadow->setGraphicsEffect(infoEffect);
     infoOverlay->setGraphicsEffect(infoEffect);
 
     // rgh is this needed or holdover from prev program
@@ -746,7 +744,6 @@ void ImageView::monitorCursorState()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "ImageView::monitorCursorState";
     static QPoint lastPos;
 
     if (QCursor::pos() != lastPos) {
@@ -1005,10 +1002,6 @@ void ImageView::enterEvent(QEvent *event)
     }
     QVariant x = event->type();     // suppress compiler warning
     this->setFocus();
-//    qDebug() << G::t.restart() << "\t" << qApp->focusWidget() << imageIndex << thumbView->currentIndex();
-//    if (imageIndex != thumbView->currentIndex()) {
-//        thumbView->setCurrentIndex(imageIndex);
-//    }
 }
 
 // DRAG AND DROP

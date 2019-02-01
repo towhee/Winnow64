@@ -1,7 +1,4 @@
 BUGS
-- When sort the selection vs current image gets muddled
-- Fix dialog shooting info template to auto expand
-- Edit shooting info {HOUR} {MINUTE} {SECOND} not working
 - Fix editbox in some tableviews (infoview, external programs)
 - Image count not showing in bookmarks`
 - Check if cacheDelay is still important
@@ -20,6 +17,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Auto expand dialog shooting info template
 - tableView adjust to changing font size
 - undo / redo history
 - Speed up Tiffs
@@ -43,7 +41,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
-- If click on number in FSTree or Fav does not select folder
+- Added milliseconds to shooting info
+- Edit shooting info {HOUR} {MINUTE} {SECOND} not working
+- If click on number in Fav does not select folder
 - Bookmarks accepts drag events from explorer and finder
 - In grid mode pick a thumb and grid scrolls and picks another thumb instead
 - Eliminated signals/slots from PrefDlg

@@ -488,9 +488,9 @@ which is created in MW, and in InfoView.
         setData(index(row, G::EmailColumn), email);
         setData(index(row, G::UrlColumn), url);
         if(isShowCacheStatus) {
-//            qDebug() << row << "adding metadata for " << fPath;
-//            emit updateProgress(row, row + 1, rowCount(), QColor(100,150,150),
-//                                "datamodel - adding metadata");
+/*          qDebug() << row << "adding metadata for " << fPath;
+            emit updateProgress(row, row + 1, rowCount(), QColor(100,150,150),
+                                "datamodel - adding metadata");*/
             progressBar->updateProgress(row, row + 1, rowCount(), QColor(100,150,150),
                                     "datamodel - adding metadata");
             if(row % 100 == 0) qApp->processEvents();
@@ -575,8 +575,8 @@ void DataModel::filterItemCount()
 // -----------------------------------------------------------------------------
 
 SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
-    combineRawJpg(combineRawJpg),
-    QSortFilterProxyModel(parent)
+    QSortFilterProxyModel(parent),
+    combineRawJpg(combineRawJpg)
 {
     this->filters = filters;
 }
@@ -605,7 +605,6 @@ map to columns in the data model ie Picked, Rating, Label ...
 
     static int counter = 0;
     counter++;
-//    qDebug() << G::t.restart() << "\t" << "Filtering" << counter;
     int dataModelColumn;
     bool isMatch = true;                   // overall match
     bool isCategoryUnchecked = true;
@@ -655,9 +654,6 @@ map to columns in the data model ie Picked, Rating, Label ...
     }
     // check results of category items filter match for the last group
     if (isCategoryUnchecked) isMatch = true;
-
-//    qDebug() << G::t.restart() << "\t" << "SortFilter::filterAcceptsRow After iteration  isMatch =" << isMatch;
-
     return isMatch;
 }
 
