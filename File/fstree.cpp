@@ -296,19 +296,19 @@ void FSTree::paintEvent(QPaintEvent *event)
 
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
-    qDebug() << QTime::currentTime() << "MouseButtonPress" << __FUNCTION__;
+//    qDebug() << "FSTree::mousePressEvent";
     QTreeView::mousePressEvent(event);
 }
 
 void FSTree::mouseReleaseEvent(QMouseEvent *event)
 {
-    qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__;
+//    qDebug()  << "FSTree::mouseReleaseEvent";
     QTreeView::mouseReleaseEvent(event);
 }
 
 void FSTree::mouseMoveEvent(QMouseEvent *event)
 {
-    qDebug() << "tttttttttttttt";
+//    qDebug() << "FSTree::mouseMoveEvent";
     QTreeView::mouseMoveEvent(event);
     QModelIndex idx = indexAt(event->pos());
 }
