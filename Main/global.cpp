@@ -15,6 +15,8 @@ namespace G
     QString mode;                       // In MW: Loupe, Grid, Table or Compare
     QString source;                     // GridMouseClick, ThumbMouseClick, TableMouseClick
 
+    QString fontSize;
+
     qreal actualDevicePixelRatio;
 
     // not persistent
