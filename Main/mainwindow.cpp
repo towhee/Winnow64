@@ -8305,12 +8305,9 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString path = "D:/Pictures";
-//    QModelIndex idx = fsTree->fsModel->index(path);
-//    qDebug() << idx.row();
-//    fsTree->setCurrentIndex(idx);
-    fsTree->select(path);
-    folderSelectionChange();
+    QDateTime created = metadata->createdDate;
+    qDebug() << created;
+    qDebug() << created.time().toString("hh");
 
     /*
     updateAppDlg = new UpdateApp(version, css2);

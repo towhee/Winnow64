@@ -4,6 +4,15 @@
 #include <QDebug>
 
 /*
+When this dialog is invoked the files that have been picked are copied to a primary
+destination folder, and optionally, to a backup location.  This process is known as
+ingestion: selecting and copying images froma camera card to a computer.
+
+The destination folder can be selected/created manually or automatically.  If
+automatic, a root folder is selected/created, a path to the destination folder
+is defined using tokens, and the destination folder description defined.  The
+picked images can be renamed during this process.
+
 Files are copied to a destination based on building a file path consisting of:
 
       Root Folder                   (rootFolderPath)
@@ -921,6 +930,7 @@ The list of tokens in the token editor will appear in this order.
             << "HOUR"
             << "MINUTE"
             << "SECOND"
+            << "MILLISECOND"
             << "TITLE"
             << "CREATOR"
             << "COPYRIGHT"
@@ -958,6 +968,7 @@ void IngestDlg::initExampleMap()
     exampleMap["HOUR"] = "08";
     exampleMap["MINUTE"] = "32";
     exampleMap["SECOND"] = "45";
+    exampleMap["MILLISECOND"] = "167";
     exampleMap["TITLE"] = "Hill_Wedding";
     exampleMap["CREATOR"] = "Rory Hill";
     exampleMap["COPYRIGHT"] = "2018 Rory Hill";
