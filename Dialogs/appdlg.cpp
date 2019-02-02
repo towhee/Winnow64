@@ -3,19 +3,17 @@
 #include <QDebug>
 
 /*
-This class maintains a list of external programs that Winnow can use to open
-with the current selection to files.  The external apps list is passed as
-the QList externalApps, and is edited internally as xApps.  The list elements
-are pairs of QString (name/path) for each app.  In order to pass this as an
-argument from MW to here it is necessary to put the definition for the struct
-"Pair" in global.h.
+This class maintains a list of external programs that Winnow can use to open with the current
+selection to files. The external apps list is passed as the QList externalApps, and is edited
+internally as xApps. The list elements are pairs of QString (name/path) for each app. In order
+to pass this as an argument from MW to here it is necessary to put the definition for the
+struct "Pair" in global.h.
 
-The external app list is added to the table ui->appsTable for display in the
-dialog.  The user can add apps, delete apps, change the order and edit the app
-display name.
+The external app list is added to the table ui->appsTable for display in the dialog. The user
+can add apps, delete apps, change the order and edit the app display name.
 
-When the changes are saved xApps is cleared and then rebuilt by iterating the
-ui->appsTable table.
+When the changes are saved xApps is cleared and then rebuilt by iterating the ui->appsTable
+table.
 
 Cancel exits with no changes to the external app list.
 */
