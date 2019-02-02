@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'helpform.ui'
 **
-** Created by: Qt User Interface Compiler version 5.10.0
+** Created by: Qt User Interface Compiler version 5.12.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,11 +10,8 @@
 #define UI_HELPFORM_H
 
 #include <QtCore/QVariant>
-#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QGridLayout>
-#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QTextBrowser>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
@@ -31,18 +28,18 @@ public:
     void setupUi(QWidget *helpForm)
     {
         if (helpForm->objectName().isEmpty())
-            helpForm->setObjectName(QStringLiteral("helpForm"));
+            helpForm->setObjectName(QString::fromUtf8("helpForm"));
         helpForm->setWindowModality(Qt::NonModal);
         helpForm->resize(824, 690);
-        helpForm->setStyleSheet(QStringLiteral("font-size: 14px;"));
+        helpForm->setStyleSheet(QString::fromUtf8("font-size: 14px;"));
         gridLayout = new QGridLayout(helpForm);
-        gridLayout->setObjectName(QStringLiteral("gridLayout"));
+        gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
         gridLayout->setContentsMargins(0, 0, 0, 0);
         verticalLayout = new QVBoxLayout();
-        verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
+        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
         textBrowser = new QTextBrowser(helpForm);
-        textBrowser->setObjectName(QStringLiteral("textBrowser"));
-        textBrowser->setSource(QUrl(QStringLiteral("qrc:/Docs/Winnow help.html")));
+        textBrowser->setObjectName(QString::fromUtf8("textBrowser"));
+        textBrowser->setSource(QUrl(QString::fromUtf8("qrc:/Docs/Winnow help.html")));
         textBrowser->setOpenExternalLinks(false);
 
         verticalLayout->addWidget(textBrowser);

@@ -116,5 +116,6 @@
         <file>images/checkmark48.png</file>
         <file>images/checkmark.png</file>
         <file>Docs/winnow.html</file>
+        <file>Docs/versions.html</file>
     </qresource>
 </RCC>
