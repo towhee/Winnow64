@@ -60,16 +60,6 @@ void BookMarks::reloadBookmarks()
 	while (it.hasNext()) {
 		QString itemPath = it.next();
         addBookmark(itemPath);
-//	    QTreeWidgetItem *item = new QTreeWidgetItem(this);
-//        item->setText(0, QFileInfo(itemPath).fileName());
-//        item->setIcon(0, QIcon(":/images/bookmarks.png"));
-//        item->setToolTip(0, itemPath);
-//        insertTopLevelItem(0, item);
-//        dir->setPath(itemPath);
-//        int count = dir->entryInfoList().size();
-//        item->setText(1, QString::number(count));
-//        item->setToolTip(1, itemPath);
-//        item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
     }
 }
 
@@ -85,6 +75,20 @@ void BookMarks::addBookmark(QString itemPath)
     item->setText(1, QString::number(count));
     item->setToolTip(1, itemPath);
     item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
+}
+
+void BookMarks::count()
+{
+     QTreeWidgetItemIterator it(this);
+     while (*it) {
+         QString path = (*it)->toolTip(0);
+         dir->setPath(path);
+         int count = dir->entryInfoList().size();
+         (*it)->setText(1, QString::number(count));
+         qDebug() << path << count;
+         ++it;
+     }
+
 }
 
 void BookMarks::select(QString fPath)

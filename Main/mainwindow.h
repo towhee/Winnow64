@@ -59,13 +59,14 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.7.0.1 released 2019-01-31";
+    QString version = "0.9.7.0.1 released 2019-02-01";
     QString versionDetail =
             "<a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#0000ff;\">Version Information</span></a>.</p></body></html>";
 
     bool isShift;               // used when opening if shift key pressed
 
     int copyCutCount;   // req'd?
+    QTextStream rpt;
 
     // QSettings
     QSettings *setting;

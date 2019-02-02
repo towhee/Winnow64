@@ -13,6 +13,7 @@ public:
     BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount);
     void reloadBookmarks();
     void select(QString fPath);
+    void count();
 
     QSet<QString> bookmarkPaths;
     bool showImageCount;
