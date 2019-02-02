@@ -44,6 +44,44 @@ void ProgressBar::clearProgress()
     mw1->progressLabel->setPixmap(*(mw1->progressPixmap));
 }
 
+void ProgressBar::updateCursor(int item,
+                               int items,
+                               QColor currentColor,
+                               QColor imageCacheColor)
+{
+    static int prevCursorPos = 0;
+    int pos = prevCursorPos;
+
+
+    QPainter pnt(mw1->progressPixmap);
+    int barWidth = mw1->progressWidth;
+    float itemWidth = (float)barWidth / items;
+    int pxStartOld = qRound(pos * itemWidth);
+    int pxWidth = itemWidth + 1;
+    if(pxWidth < 5) pxWidth = 5;
+
+
+    // paint out the old cursor location
+    QLinearGradient oldGradient = getGradient(imageCacheColor);
+    QRect oldRect(pxStartOld, htOffset, pxWidth, ht);
+    pnt.fillRect(oldRect, oldGradient);
+    mw1->progressLabel->setPixmap(*(mw1->progressPixmap));
+
+    pos = item;
+    int pxStartNew = qRound(pos * itemWidth);
+
+    // paint in the new cursor location
+    QLinearGradient newGradient = getGradient(currentColor);
+    QRect newRect(pxStartNew, htOffset, pxWidth, ht);
+    pnt.fillRect(newRect, newGradient);
+    mw1->progressLabel->setPixmap(*(mw1->progressPixmap));
+
+    qDebug() << "prev =" << prevCursorPos << "pxStartOld =" << pxStartOld << "width =" << pxWidth
+             << "current =" << pos <<  "pxStartNew =" << pxStartNew << "width =" << pxWidth;
+
+    prevCursorPos = pos;
+}
+
 void ProgressBar::updateProgress(int fromItem,
                                  int toItem,
                                  int items,
