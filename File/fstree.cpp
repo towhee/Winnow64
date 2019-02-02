@@ -112,16 +112,9 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
     // return image count for each folder
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
-//            QString fPath = qvariant_cast<QString>
-//                    (QFileSystemModel::data(index, QFileSystemModel::FilePathRole));
-//            if(newData) qDebug() << fPath << newData;
-//            dir->setPath(fPath);
-//            int count = dir->entryInfoList().size();
-//            QString imageCount = "";
-//            if (count > 0) imageCount = QString::number(count, 'f', 0);
-            QString fPath = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
-//            QString imageCount = count[fPath];
-            return count[fPath];
+            QString path = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
+//            qDebug() << path << count.value(path);
+            return count.value(path);
         }
         if (role == Qt::TextAlignmentRole)
             return static_cast<QVariant>(Qt::AlignRight | Qt::AlignVCenter);
@@ -185,6 +178,7 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     dir->setNameFilters(*fileFilters);
     dir->setFilter(QDir::Files);
 
+    connect(this, SIGNAL(expanded(const QModelIndex&)), this, SLOT(expand(const QModelIndex&)));
 }
 
 void FSTree::createModel()
@@ -230,6 +224,8 @@ the folders by deleting the model and re-creating it.
 
     // apply model to treeview
     setModel(fsFilter);
+    connect(fsModel, SIGNAL(noCount()), this, SLOT(getImageCount()));
+
 }
 
 void FSTree::refreshModel()
@@ -301,7 +297,30 @@ void FSTree::resizeColumns()
         imageCountColumnWidth = 0;
         hideColumn(4);
     }
-    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth);
+    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth - 10);
+}
+
+void FSTree::expand(const QModelIndex &idx)
+{
+    qDebug() << "FSTree::expand" << idx;
+    QTreeView::expand(idx);
+    QTimer::singleShot(500, this, SLOT(getImageCount()));
+}
+
+void FSTree::getImageCount(/*QModelIndex idx*/)
+{
+    QModelIndex idx = indexAt(rect().topLeft());  // delta
+    while (idx.isValid())
+    {
+        QString path = idx.data(QFileSystemModel::FilePathRole).toString();
+        if(!count.contains(path)) {
+            dir->setPath(path);
+            int n = dir->entryInfoList().size();
+            count[path] = QString::number(n, 'f', 0);
+        }
+        idx = indexBelow(idx);
+    }
+    newData = true;
 }
 
 void FSTree::paintEvent(QPaintEvent *event)
@@ -309,27 +328,8 @@ void FSTree::paintEvent(QPaintEvent *event)
     resizeColumns();
     QTreeView::paintEvent(event);
     newData = false;
-    QTimer::singleShot(250, this, SLOT(treeChange()));
-}
-
-void FSTree::treeChange()
-{
-    static bool isFirst = true;
-    QModelIndex idx = indexAt(rect().topLeft());
-    QModelIndex idx1 = indexAt(rect().bottomLeft());
-    count.clear();
-    while (idx.isValid())
-    {
-        QString path = idx.data(QFileSystemModel::FilePathRole).toString();
-        dir->setPath(path);
-        int n = dir->entryInfoList().size();
-        count[path] = QString::number(n, 'f', 0);
-        if(idx == idx1) break;
-        idx = indexBelow(idx);
-    }
-    newData = true;
-    if(isFirst) repaint();
-    isFirst = false;
+//    QTimer::singleShot(250, this, SLOT(treeChange()));
+//    getImageCount();
 }
 
 void FSTree::mousePressEvent(QMouseEvent *event)

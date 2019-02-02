@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'message.ui'
 **
-** Created by: Qt User Interface Compiler version 5.10.0
+** Created by: Qt User Interface Compiler version 5.12.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,10 +10,7 @@
 #define UI_MESSAGE_H
 
 #include <QtCore/QVariant>
-#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QButtonGroup>
-#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
@@ -29,12 +26,12 @@ public:
     void setupUi(QWidget *message)
     {
         if (message->objectName().isEmpty())
-            message->setObjectName(QStringLiteral("message"));
+            message->setObjectName(QString::fromUtf8("message"));
         message->resize(640, 480);
         verticalLayout = new QVBoxLayout(message);
-        verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
+        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
         msgLabel = new QLabel(message);
-        msgLabel->setObjectName(QStringLiteral("msgLabel"));
+        msgLabel->setObjectName(QString::fromUtf8("msgLabel"));
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);

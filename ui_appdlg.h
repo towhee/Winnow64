@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'appdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.10.0
+** Created by: Qt User Interface Compiler version 5.12.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,9 +10,7 @@
 #define UI_APPDLG_H
 
 #include <QtCore/QVariant>
-#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
@@ -40,18 +38,18 @@ public:
     void setupUi(QDialog *Appdlg)
     {
         if (Appdlg->objectName().isEmpty())
-            Appdlg->setObjectName(QStringLiteral("Appdlg"));
+            Appdlg->setObjectName(QString::fromUtf8("Appdlg"));
         Appdlg->resize(880, 400);
         horizontalLayoutWidget = new QWidget(Appdlg);
-        horizontalLayoutWidget->setObjectName(QStringLiteral("horizontalLayoutWidget"));
+        horizontalLayoutWidget->setObjectName(QString::fromUtf8("horizontalLayoutWidget"));
         horizontalLayoutWidget->setGeometry(QRect(20, 20, 841, 271));
         horizontalLayout = new QHBoxLayout(horizontalLayoutWidget);
-        horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
+        horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
         appsTable = new QTableWidget(horizontalLayoutWidget);
         if (appsTable->columnCount() < 3)
             appsTable->setColumnCount(3);
-        appsTable->setObjectName(QStringLiteral("appsTable"));
+        appsTable->setObjectName(QString::fromUtf8("appsTable"));
         appsTable->setFrameShape(QFrame::Box);
         appsTable->setEditTriggers(QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked);
         appsTable->setAlternatingRowColors(true);
@@ -64,43 +62,43 @@ public:
         horizontalLayout->addWidget(appsTable);
 
         horizontalLayoutWidget_2 = new QWidget(Appdlg);
-        horizontalLayoutWidget_2->setObjectName(QStringLiteral("horizontalLayoutWidget_2"));
+        horizontalLayoutWidget_2->setObjectName(QString::fromUtf8("horizontalLayoutWidget_2"));
         horizontalLayoutWidget_2->setGeometry(QRect(20, 320, 840, 51));
         horizontalLayout_2 = new QHBoxLayout(horizontalLayoutWidget_2);
-        horizontalLayout_2->setObjectName(QStringLiteral("horizontalLayout_2"));
+        horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
         horizontalLayout_2->setContentsMargins(0, 0, 0, 0);
         moveDown = new QPushButton(horizontalLayoutWidget_2);
-        moveDown->setObjectName(QStringLiteral("moveDown"));
+        moveDown->setObjectName(QString::fromUtf8("moveDown"));
         moveDown->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(moveDown);
 
         moveUp = new QPushButton(horizontalLayoutWidget_2);
-        moveUp->setObjectName(QStringLiteral("moveUp"));
+        moveUp->setObjectName(QString::fromUtf8("moveUp"));
         moveUp->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(moveUp);
 
         addBtn = new QPushButton(horizontalLayoutWidget_2);
-        addBtn->setObjectName(QStringLiteral("addBtn"));
+        addBtn->setObjectName(QString::fromUtf8("addBtn"));
         addBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(addBtn);
 
         removeBtn = new QPushButton(horizontalLayoutWidget_2);
-        removeBtn->setObjectName(QStringLiteral("removeBtn"));
+        removeBtn->setObjectName(QString::fromUtf8("removeBtn"));
         removeBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(removeBtn);
 
         okBtn = new QPushButton(horizontalLayoutWidget_2);
-        okBtn->setObjectName(QStringLiteral("okBtn"));
+        okBtn->setObjectName(QString::fromUtf8("okBtn"));
         okBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(okBtn);
 
         cancelBtn = new QPushButton(horizontalLayoutWidget_2);
-        cancelBtn->setObjectName(QStringLiteral("cancelBtn"));
+        cancelBtn->setObjectName(QString::fromUtf8("cancelBtn"));
         cancelBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(cancelBtn);

@@ -31,6 +31,9 @@ public:
     bool &newData;
     QHash <QString, QString> &count;
 
+//signals:
+//    void  noCount() const;
+
 private:
     QDir *dir;
     int imageCountColumn = 4;
@@ -61,9 +64,10 @@ public:
 
 public slots:
     void resizeColumns();
+    void expand(const QModelIndex &idx);
+    void getImageCount();
 
 private slots:
-    void treeChange();
 
 protected:
     void mousePressEvent(QMouseEvent *event);       // debugging

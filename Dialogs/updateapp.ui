@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>544</width>
-    <height>299</height>
+    <height>248</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,7 +23,7 @@
    <property name="geometry">
     <rect>
      <x>280</x>
-     <y>250</y>
+     <y>190</y>
      <width>241</width>
      <height>32</height>
     </rect>
@@ -44,14 +44,14 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>190</y>
+     <y>130</y>
      <width>391</width>
      <height>31</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>9</pointsize>
+     <pointsize>10</pointsize>
     </font>
    </property>
    <property name="text">
@@ -69,7 +69,9 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>9</pointsize>
+     <pointsize>10</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
     </font>
    </property>
    <property name="text">
@@ -101,14 +103,14 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>80</y>
+     <y>60</y>
      <width>481</width>
      <height>31</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>9</pointsize>
+     <pointsize>10</pointsize>
     </font>
    </property>
    <property name="text">
@@ -119,18 +121,18 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>120</y>
+     <y>84</y>
      <width>601</width>
      <height>31</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>9</pointsize>
+     <pointsize>10</pointsize>
     </font>
    </property>
    <property name="text">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can view version update notes &lt;a href=&quot;http://165.227.46.158/winnow/winnow.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;here&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can view version update notes &lt;a href=&quot;http://165.227.46.158/winnow/versions.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;here&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </widget>
  </widget>

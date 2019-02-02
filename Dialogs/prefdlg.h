@@ -17,7 +17,7 @@ public:
     ~Prefdlg();
 
 signals:
-    void updatePage(int page);
+    void  updatePage(int page);
 
 protected:
 
