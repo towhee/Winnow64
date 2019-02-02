@@ -55,14 +55,18 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
 /*------------------------------------------------------------------------------
 CLASS FSModel subclassing QFileSystemModel
 ------------------------------------------------------------------------------*/
-FSModel::FSModel(QWidget *parent, Metadata *metadata, bool &newData, QHash<QString, QString> &count)
+
+/* We are subclassing QFileSystemModel in order to add a column for imageCount
+   to the model in order to display the image count beside each folder in the
+   TreeView.
+*/
+
+FSModel::FSModel(QWidget *parent, Metadata *metadata, QHash<QString, QString> &count)
                  : QFileSystemModel(parent),
-                   newData(newData),
                    count(count)
 {
     QStringList *fileFilters = new QStringList;
     dir = new QDir();
-//    this->showImageCount = showImageCount;
 
     fileFilters->clear();
     foreach (const QString &str, metadata->supportedFormats)
@@ -109,11 +113,12 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
 {
-    // return image count for each folder
+    /* Return image count for each folder by looking it up in the QHash count which is
+       built in FSTree::getImageCount and referenced here.  This is much faster than
+       performing the image count "on-the-fly" here, which caused scroll latency. */
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
             QString path = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
-//            qDebug() << path << count.value(path);
             return count.value(path);
         }
         if (role == Qt::TextAlignmentRole)
@@ -187,7 +192,7 @@ void FSTree::createModel()
 Create the model and filter in a separate function as it is also used to refresh
 the folders by deleting the model and re-creating it.
 */
-    fsModel = new FSModel(this, metadata, newData, count);
+    fsModel = new FSModel(this, metadata, count);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     fsModel->setRootPath("");
 
@@ -224,8 +229,6 @@ the folders by deleting the model and re-creating it.
 
     // apply model to treeview
     setModel(fsFilter);
-    connect(fsModel, SIGNAL(noCount()), this, SLOT(getImageCount()));
-
 }
 
 void FSTree::refreshModel()
@@ -302,13 +305,24 @@ void FSTree::resizeColumns()
 
 void FSTree::expand(const QModelIndex &idx)
 {
-    qDebug() << "FSTree::expand" << idx;
     QTreeView::expand(idx);
-    QTimer::singleShot(500, this, SLOT(getImageCount()));
+    // slight delay calling getImageCount to allow the tree node to expand
+    QTimer::singleShot(50, this, SLOT(getImageCount()));
 }
 
-void FSTree::getImageCount(/*QModelIndex idx*/)
+void FSTree::getImageCount()
 {
+/*
+This function stores the image count (that winnow can read) for each folder that is
+visible (expanded) in the TreeView in a QHash.  The QHash is referenced in the FSModel
+and displayed in a subclass of QFileSystemModel data, where the image count has been
+added as column 4.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QModelIndex idx = indexAt(rect().topLeft());  // delta
     while (idx.isValid())
     {
@@ -320,16 +334,12 @@ void FSTree::getImageCount(/*QModelIndex idx*/)
         }
         idx = indexBelow(idx);
     }
-    newData = true;
 }
 
 void FSTree::paintEvent(QPaintEvent *event)
 {
     resizeColumns();
     QTreeView::paintEvent(event);
-    newData = false;
-//    QTimer::singleShot(250, this, SLOT(treeChange()));
-//    getImageCount();
 }
 
 void FSTree::mousePressEvent(QMouseEvent *event)

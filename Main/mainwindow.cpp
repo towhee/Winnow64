@@ -136,6 +136,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     isSettings = true;
     isInitializing = false;
 
+    // if no fsTree expansion then fire getImageCount the first time
     fsTree->getImageCount();
 }
 
@@ -983,6 +984,9 @@ so scrollTo and delegate use of the current index must check the row.
         thumb->loadThumb(fPath, image);
         thumbView->setIcon(currentRow, image);
     }
+
+    // update cursor position on progressBar
+    updateImageCacheStatus("Update cursor", currentRow, "MW::fileSelectionChange");
 }
 
 void MW::clearAll()
@@ -1125,7 +1129,6 @@ void MW::updateMetadataCacheStatus(int row, bool clear)
     /* Displays a statusbar showing the metadata cache status.
 
     If clear = true then just repaint the progress bar gray and return.
-
     If clear = false then update the progress for the row that has been cached.
     */
     {
@@ -1169,12 +1172,12 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     }
     /* Displays a statusbar showing the metadata cache status.  Also shows the cache
     size in the info panel.
-
-    If clear = true then just repaint the progress bar gray and return.
-
-    If clear = false then update the progress bar for the target range and the
-    row that has been cached.
     */
+
+    qDebug() << "MW::updateImageCacheStatus  Instruction ="
+             << instruction
+             << "row =" << row
+             << "source =" << source;
 
     // show cache amount ie "4.2 of 16GB" in info panel
     QString cacheAmount = QString::number(float(imageCacheThread->cache.currMB)/1000,'f',1)
@@ -1183,14 +1186,9 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
 
-    /*qDebug() << "MW::updateImageCacheStatus  isShowCacheStatus =" << isShowCacheStatus
-             << "instruction =" << instruction
-             << "row =" << row
-             << "source =" << source;
-    */
-
     if(!isShowCacheStatus) return;
 
+    // just repaint the progress bar gray and return.
     if(instruction == "Clear") {
         progressBar->clearProgress();
         return;
@@ -1199,11 +1197,9 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     // create a short alias to keep code shorter
     ImageCache *ic = imageCacheThread;
     int rows = ic->cache.totFiles;
-//    int rows = dm->sf->rowCount();
 
-    if(instruction == "Update row") {
-        progressBar->updateProgress(row, row + 1, rows, imageCacheColor,
-                                    "image cache - current row cached");
+    if(instruction == "Update cursor") {
+        progressBar->updateCursor(row, rows, currentColor, imageCacheColor);
         return;
     }
 
@@ -1216,115 +1212,17 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
         progressBar->updateProgress(tFirst, tLast, rows, targetColor,
                                     "image cache - target range");
         // cached
-        for (int row = 0; row < rows; ++row) {
-            if (ic->cacheItemList.at(row).isCached)
-                progressBar->updateProgress(row, row + 1, rows, imageCacheColor,
+        for (int i = 0; i < rows; ++i) {
+            if (ic->cacheItemList.at(i).isCached)
+                progressBar->updateProgress(i, i + 1, rows, imageCacheColor,
                                             "image cache - all rows cached");
         }
-        row = ic->cache.key;
-        // current selected
-        progressBar->updateProgress(row, row + 1, rows, currentColor,
-                                    "image cache - current selection");
+        // cursor
+        progressBar->updateCursor(row, rows, currentColor, imageCacheColor);
         return;
     }
 
     return;
-
-    // create a short alias to keep code shorter
-//    ImageCache *ic = imageCacheThread;
-
-    int a = ic->cache.targetFirst;
-    int b = ic->cache.targetLast - a + 1;
-    progressBar->updateProgress(a, b, rows, targetColor, "");
-
-    // show the rectangle for the current cache by painting each item that has been cached
-    for (int row=0; row < ic->cache.totFiles; ++row) {
-        if (ic->cacheItemList.at(row).isCached) {
-            progressBar->updateProgress(row, 1, rows, imageCacheColor, "");
-        }
-    }
-
-    // current position
-    row = ic->cache.key;
-    progressBar->updateProgress(row, 1, rows, currentColor, "");
-
-    return;
-
-    // trap instance where cache out of sync
-    if(ic->cache.totFiles - 1 > ic->cacheItemList.length()) return;
-
-//    // Match the background color in the app status bar so blends in
-//    QColor cacheBGColor = QColor(85,85,85);
-
-//    // create a label bitmap to paint on
-//    QImage pmCacheStatus(QSize(ic->cache.pxTotWidth, 25), QImage::Format_RGB32);
-//    pmCacheStatus.fill(cacheBGColor);
-//    QPainter pnt(cachePixmap);
-////    QPainter pnt(&pmCacheStatus);
-
-//    int htOffset = 9;       // the offset from the top of pnt to the progress bar
-//    int ht = 8;             // the height of the progress bar
-
-//    // back color for the entire progress bar for all the files
-//    QLinearGradient cacheAllColor(0, htOffset, 0, ht+htOffset);
-//    cacheAllColor.setColorAt(0, QColor(150,150,150));
-//    cacheAllColor.setColorAt(1, QColor(100,100,100));
-
-//    // color for the portion of the total bar that is targeted to be cached
-//    // this depends on cursor direction, cache size and current cache status
-//    QLinearGradient cacheTargetColor(0, htOffset, 0, ht+htOffset);
-//    cacheTargetColor.setColorAt(0, QColor(125,125,125));
-//    cacheTargetColor.setColorAt(1, QColor(75,75,75));
-
-//    // color for the portion that has been cached
-//    QLinearGradient cacheCurrentColor(0, htOffset, 0, ht+htOffset);
-//    cacheCurrentColor.setColorAt(0, QColor(108,150,108));
-//    cacheCurrentColor.setColorAt(1, QColor(58,100,58));
-
-//    // color for the current image within the total images
-//    QLinearGradient cachePosColor(0, htOffset, 0, ht+htOffset);
-//    // red
-////    cachePosColor.setColorAt(0, QColor(125,0,0));
-////    cachePosColor.setColorAt(1, QColor(75,0,0));
-//    // light green
-//    cachePosColor.setColorAt(0, QColor(158,200,158));
-//    cachePosColor.setColorAt(1, QColor(58,100,58));
-
-//    // show the rectangle for entire bar, representing all the files available
-//    pnt.fillRect(QRect(0, htOffset, ic->cache.pxTotWidth, ht), cacheAllColor);
-
-//    // show the rectangle for target cache.  If the pos is close to
-//    // the boundary there could be spillover, which is added to the
-//    // target range in the other direction.
-//    int pxTargetStart = ic->pxStart(ic->cache.targetFirst);
-//    int pxTargetWidth = ic->pxEnd(ic->cache.targetLast) - pxTargetStart;
-//    pnt.fillRect(QRect(pxTargetStart, htOffset, pxTargetWidth, ht), cacheTargetColor);
-
-//    // show the rectangle for the current cache by painting each item that has been cached
-//    for (int i=0; i < ic->cache.totFiles; ++i) {
-//        if (ic->cacheItemList.at(i).isCached) {
-//            pnt.fillRect(QRect(ic->pxStart(i), htOffset, ic->cache.pxUnitWidth+1, ht), cacheCurrentColor);
-//        }
-//    }
-
-//    // show the current image position
-//    pnt.fillRect(QRect(ic->pxStart(ic->cache.key), htOffset, ic->cache.pxUnitWidth+1, ht), cachePosColor);
-
-    // build cache usage string
-    QString mbCacheSize = QString::number(ic->cache.currMB)
-            + " of "
-            + QString::number(ic->cache.maxMB)
-            + " MB";
-//    qDebug() << G::t.restart() << "\t" << "ic->cache size " + mbCacheSize;
-
-//    G::track(__FUNCTION__, "tiger show cache status");
-    // ping mainwindow to show cache update in the status bar
-
-    progressLabel->setPixmap(*progressPixmap);
-//    if (ic->cache.isShowCacheStatus) showCacheStatus(pmCacheStatus);
-
-//    if (ic->cache.isShowCacheStatus) emit showCacheStatus(pmCacheStatus);
-
 }
 
 void MW::loadImageCache()
