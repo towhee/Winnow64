@@ -135,6 +135,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     if (!isSettings) centralLayout->setCurrentIndex(StartTab);
     isSettings = true;
     isInitializing = false;
+
+    fsTree->getImageCount();
 }
 
 void MW::initialize()
@@ -8316,104 +8318,7 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    bookmarks->count();
-
-    /*
-    updateAppDlg = new UpdateApp(version, css2);
-    int ret = updateAppDlg->exec();
-
-    QVector<QString> shortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
-    qDebug() << shortcut[0];
-
-    qDebug() << gridView->verticalScrollBar()->pageStep()
-             << gridView->verticalScrollBar()->maximum()
-             << gridView->verticalScrollBar()->value();
-
-    gridView->verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
-
-    compareImages->test();
-    centralLayout->setCurrentIndex(CompareTab);
-
-    updateAppDlg = new UpdateApp(updateNotes);
-    int ret = updateAppDlg->exec();
-    qDebug() << ret << QDialog::Accepted << QDialog::Rejected;
-
-    QAbstractItemModel *fs = fsTree->model();
-    QModelIndex id0 = fsTree->selectionModel()->selectedRows().at(0);
-    QModelIndex idx = fs->index(id0.row(), 4, id0.parent());
-
-    QVariant fPath = fs->data(id0, QFileSystemModel::FilePathRole);
-    QVariant imageCount = fs->data(idNum);
-    qDebug() << fPath;
-
-    fs->setData(idx, "99", Qt::DisplayRole);
-
-    QString fontSize = "8";
-    QString s = "QWidget {font-size: " + fontSize + "px;}";
-    this->setStyleSheet(s + css);
-
-
-        qDebug() << "selection clear from test";
-    thumbView->selectionModel()->clearSelection();
-
-    QModelIndexList selectedIdxList = thumbView->selectionModel()->selectedRows();
-    for (int tn = 0; tn < selectedIdxList.size() ; ++tn) {
-        QString s = selectedIdxList[tn].data(G::PathRole).toString();
-        qDebug() << "Selected image:" << s;
-    }
-
-    dm->clear();
-
-    qDebug() << "Attempting to eject drive " << currentViewDir[0] << "currentViewDir =" << currentViewDir
-             << "Unicode =" << currentViewDir[0].unicode();;
-    char driveLetter = currentViewDir[0].unicode();
-    if(Usb::isUsb(driveLetter)) {
-        QString driveRoot = currentViewDir.left(3);
-        dm->load(driveRoot, false);
-        refreshFolders();
-        bool result = Usb::eject(driveLetter);
-        qDebug() << "eject result =" << result;
-
-    }
-    else {
-        qDebug() << "Drive " << currentViewDir[0] << "is not removable and cannot be ejected";
-    }
-    return;
-
-
-    char driveLetter = 'P';
-    char devicepath[7];
-    char format[] = "\\\\.\\?:";
-    strcpy_s(devicepath, format);
-    devicepath[4] = driveLetter;
-    DWORD dwRet = 0;
-    wchar_t wtext[7];
-    size_t textlen = 7;
-    mbstowcs_s(&textlen, wtext, devicepath,strlen(devicepath)+1);
-
-    HANDLE handle = CreateFile(wtext, GENERIC_READ, FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
-    DWORD bytes = 0;
-    DeviceIoControl(handle, FSCTL_LOCK_VOLUME, 0, 0, 0, 0, &bytes, 0);
-    DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, 0, 0, 0, 0, &bytes, 0);
-    DeviceIoControl(handle, IOCTL_STORAGE_EJECT_MEDIA, 0, 0, 0, 0, &bytes, 0);
-    CloseHandle(handle);
-
-    qDebug() << "Ejected ";
-
-    qDebug() << QImageReader::supportedImageFormats();
-    helpShortcuts();
-
-    metadata->reportMetadataCache(thumbView->getCurrentFilename());
-
-        QString s = thumbView->getCurrentFilename();
-    qDebug() << "MW::test thumbView->getCurrentFilename() =" << s;
-
-    QLabel *label = new QLabel;
-    label->setText(" TEST ");
-    label->setStyleSheet("QLabel{color:yellow;}");
-    menuBar()->setCornerWidget(label, Qt::TopRightCorner);
-
-*/
+    fsTree->getImageCount();
 }
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
