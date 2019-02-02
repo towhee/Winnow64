@@ -124,7 +124,8 @@ DISTFILES += \
     notes/Scratch.txt \
     notes/Shortcuts.txt \
     notes/snippets.txt \
-    notes/xmp.txt
+    notes/xmp.txt \
+    Docs/versions
 
 #macx {
 #    QMAKE_MAC_SDK = macosx10.12

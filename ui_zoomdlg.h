@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'zoomdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.10.0
+** Created by: Qt User Interface Compiler version 5.12.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -10,13 +10,10 @@
 #define UI_ZOOMDLG_H
 
 #include <QtCore/QVariant>
-#include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QHBoxLayout>
-#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QRadioButton>
@@ -51,23 +48,23 @@ public:
     void setupUi(QDialog *ZoomDlg)
     {
         if (ZoomDlg->objectName().isEmpty())
-            ZoomDlg->setObjectName(QStringLiteral("ZoomDlg"));
+            ZoomDlg->setObjectName(QString::fromUtf8("ZoomDlg"));
         ZoomDlg->resize(705, 69);
-        ZoomDlg->setWindowOpacity(0.85);
+        ZoomDlg->setWindowOpacity(0.850000000000000);
         border = new QFrame(ZoomDlg);
-        border->setObjectName(QStringLiteral("border"));
+        border->setObjectName(QString::fromUtf8("border"));
         border->setGeometry(QRect(0, 0, 705, 69));
         border->setFrameShape(QFrame::Box);
         horizontalLayout_3 = new QHBoxLayout(border);
-        horizontalLayout_3->setObjectName(QStringLiteral("horizontalLayout_3"));
+        horizontalLayout_3->setObjectName(QString::fromUtf8("horizontalLayout_3"));
         verticalLayout = new QVBoxLayout();
-        verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
+        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
         verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
         verticalLayout->addItem(verticalSpacer);
 
         zoomSlider = new QSlider(border);
-        zoomSlider->setObjectName(QStringLiteral("zoomSlider"));
+        zoomSlider->setObjectName(QString::fromUtf8("zoomSlider"));
         zoomSlider->setMaximumSize(QSize(16777215, 10));
         zoomSlider->setFocusPolicy(Qt::StrongFocus);
         zoomSlider->setMinimum(1);
@@ -80,9 +77,9 @@ public:
         verticalLayout->addWidget(zoomSlider);
 
         horizontalLayout_2 = new QHBoxLayout();
-        horizontalLayout_2->setObjectName(QStringLiteral("horizontalLayout_2"));
+        horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
         radio25Button = new QRadioButton(border);
-        radio25Button->setObjectName(QStringLiteral("radio25Button"));
+        radio25Button->setObjectName(QString::fromUtf8("radio25Button"));
         QFont font;
         font.setPointSize(11);
         radio25Button->setFont(font);
@@ -90,19 +87,19 @@ public:
         horizontalLayout_2->addWidget(radio25Button);
 
         radio50Button = new QRadioButton(border);
-        radio50Button->setObjectName(QStringLiteral("radio50Button"));
+        radio50Button->setObjectName(QString::fromUtf8("radio50Button"));
         radio50Button->setFont(font);
 
         horizontalLayout_2->addWidget(radio50Button);
 
         radio66Button = new QRadioButton(border);
-        radio66Button->setObjectName(QStringLiteral("radio66Button"));
+        radio66Button->setObjectName(QString::fromUtf8("radio66Button"));
         radio66Button->setFont(font);
 
         horizontalLayout_2->addWidget(radio66Button);
 
         radio100Button = new QRadioButton(border);
-        radio100Button->setObjectName(QStringLiteral("radio100Button"));
+        radio100Button->setObjectName(QString::fromUtf8("radio100Button"));
         QFont font1;
         font1.setPointSize(8);
         radio100Button->setFont(font1);
@@ -110,13 +107,13 @@ public:
         horizontalLayout_2->addWidget(radio100Button);
 
         radio133Button = new QRadioButton(border);
-        radio133Button->setObjectName(QStringLiteral("radio133Button"));
+        radio133Button->setObjectName(QString::fromUtf8("radio133Button"));
         radio133Button->setFont(font);
 
         horizontalLayout_2->addWidget(radio133Button);
 
         radio200Button = new QRadioButton(border);
-        radio200Button->setObjectName(QStringLiteral("radio200Button"));
+        radio200Button->setObjectName(QString::fromUtf8("radio200Button"));
         radio200Button->setFont(font);
 
         horizontalLayout_2->addWidget(radio200Button);
@@ -132,9 +129,9 @@ public:
         horizontalLayout_3->addLayout(verticalLayout);
 
         horizontalLayout = new QHBoxLayout();
-        horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
+        horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
         zoomSB = new QSpinBox(border);
-        zoomSB->setObjectName(QStringLiteral("zoomSB"));
+        zoomSB->setObjectName(QString::fromUtf8("zoomSB"));
         zoomSB->setMinimumSize(QSize(0, 0));
         zoomSB->setMaximumSize(QSize(16777215, 40));
         QFont font2;
@@ -151,14 +148,14 @@ public:
         horizontalLayout->addWidget(zoomSB);
 
         pctLabel = new QLabel(border);
-        pctLabel->setObjectName(QStringLiteral("pctLabel"));
+        pctLabel->setObjectName(QString::fromUtf8("pctLabel"));
         pctLabel->setMaximumSize(QSize(16777215, 20));
         pctLabel->setLineWidth(0);
 
         horizontalLayout->addWidget(pctLabel);
 
         toggleZoomAmountBtn = new QPushButton(border);
-        toggleZoomAmountBtn->setObjectName(QStringLiteral("toggleZoomAmountBtn"));
+        toggleZoomAmountBtn->setObjectName(QString::fromUtf8("toggleZoomAmountBtn"));
         toggleZoomAmountBtn->setFocusPolicy(Qt::NoFocus);
 
         horizontalLayout->addWidget(toggleZoomAmountBtn);

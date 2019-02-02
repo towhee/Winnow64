@@ -61,7 +61,7 @@ public:
 
     QString version = "0.9.7.0.1 released 2019-02-01";
     QString versionDetail =
-            "<a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#0000ff;\">Version Information</span></a>.</p></body></html>";
+            "<a href=\"http://165.227.46.158/winnow/versions.html\"><span style=\" text-decoration: underline; color:#0000ff;\">Version Information</span></a>.</p></body></html>";
 
     bool isShift;               // used when opening if shift key pressed
 
