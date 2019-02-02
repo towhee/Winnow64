@@ -488,9 +488,6 @@ which is created in MW, and in InfoView.
         setData(index(row, G::EmailColumn), email);
         setData(index(row, G::UrlColumn), url);
         if(isShowCacheStatus) {
-/*          qDebug() << row << "adding metadata for " << fPath;
-            emit updateProgress(row, row + 1, rowCount(), QColor(100,150,150),
-                                "datamodel - adding metadata");*/
             progressBar->updateProgress(row, row + 1, rowCount(), QColor(100,150,150),
                                     "datamodel - adding metadata");
             if(row % 100 == 0) qApp->processEvents();

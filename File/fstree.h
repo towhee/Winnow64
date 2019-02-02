@@ -22,17 +22,13 @@ protected:
 class FSModel : public QFileSystemModel
 {
 public:
-    FSModel(QWidget *parent, Metadata *metadata, bool &newData, QHash<QString, QString> &count);
+    FSModel(QWidget *parent, Metadata *metadata, QHash<QString, QString> &count);
 	bool hasChildren(const QModelIndex &parent) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QVariant data(const QModelIndex &index, int role) const;
     bool showImageCount;
-    bool &newData;
     QHash <QString, QString> &count;
-
-//signals:
-//    void  noCount() const;
 
 private:
     QDir *dir;

@@ -7,7 +7,6 @@ _ Sometimes when select new folder first image shows as selected but cannot chan
 - Monitor res not always showing
 - Select in grid sometimes misses thumbs in a column
 PERFORMANCE
-- show image count in folders panel slows UI
 - Show cursor as separate label on top of cacheLabel to improve performance.
 - try multiple caching threads
 CODE IMPROVEMENTS
