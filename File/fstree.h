@@ -15,18 +15,21 @@ public:
     FSFilter(QObject *parent);
 
 protected:
-    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const; // override;
+    bool filterAcceptsRow(int source_row,
+                          const QModelIndex &source_parent) const; // override;
 };
 
 class FSModel : public QFileSystemModel
 {
 public:
-    FSModel(QWidget *parent, Metadata *metadata);
+    FSModel(QWidget *parent, Metadata *metadata, bool &newData, QHash<QString, QString> &count);
 	bool hasChildren(const QModelIndex &parent) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QVariant data(const QModelIndex &index, int role) const;
     bool showImageCount;
+    bool &newData;
+    QHash <QString, QString> &count;
 
 private:
     QDir *dir;
@@ -46,8 +49,6 @@ public:
 
 
     FSModel *fsModel;
-//    QFileSystemModel *fsModel;
-
     FSFilter *fsFilter;
 
 	QModelIndex getCurrentIndex();
@@ -55,8 +56,14 @@ public:
     void scrollToCurrent();
     void showSupportedImageCount();
 
+    bool newData;
+    QHash <QString, QString> count;
+
 public slots:
     void resizeColumns();
+
+private slots:
+    void treeChange();
 
 protected:
     void mousePressEvent(QMouseEvent *event);       // debugging

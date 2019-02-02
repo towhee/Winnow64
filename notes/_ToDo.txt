@@ -1,8 +1,5 @@
 BUGS
-- Fix editbox in some tableviews (infoview, external programs)
-- Image count not showing in bookmarks`
 - Check if cacheDelay is still important
-- Disable Ingest menu when no picks
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
 OLD BUGS?
@@ -41,6 +38,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Speeded up image count in folders panel
+- Image count not updating in bookmarks`
+- Fix editbox in some tableviews (infoview, external programs)
 - Added milliseconds to shooting info
 - Edit shooting info {HOUR} {MINUTE} {SECOND} not working
 - If click on number in Fav does not select folder
