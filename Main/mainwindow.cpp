@@ -298,12 +298,22 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     static int n = 0;
 
     // use to show all events being filtered - handy to figure out which to intercept
-//    if (event->type() != QEvent::Paint
+//    if (event->type()        != QEvent::Paint
 //            && event->type() != QEvent::UpdateRequest
 //            && event->type() != QEvent::ZeroTimerEvent
 //            && event->type() != QEvent::Timer)
-//        qDebug() << event << event->type()
-//                 << "currentViewDir:" << currentViewDir;
+
+//    qDebug() << event << "\t"
+//                 << event->type() << "\t"
+//                 << obj << "\t"
+//                 << obj->objectName();
+
+//    rpt.flush();
+//    QString reportString = "";
+//    rpt.setString(&reportString);
+//    rpt.setFieldWidth(80);  rpt << (qDebug() << event);
+//    std::cout << reportString.toStdString() << std::flush;
+//    qDebug().
 
 //    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
 //        G::track(__FUNCTION__, "Performance profiling");
@@ -5683,7 +5693,8 @@ for each bookmark folder.
     G::track(__FUNCTION__);
     #endif
     }
-    bookmarks->reloadBookmarks();
+//    bookmarks->reloadBookmarks();
+    bookmarks->count();
 }
 
 // rgh used?
@@ -8305,9 +8316,7 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QDateTime created = metadata->createdDate;
-    qDebug() << created;
-    qDebug() << created.time().toString("hh");
+    bookmarks->count();
 
     /*
     updateAppDlg = new UpdateApp(version, css2);
