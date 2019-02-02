@@ -55,8 +55,10 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
 /*------------------------------------------------------------------------------
 CLASS FSModel subclassing QFileSystemModel
 ------------------------------------------------------------------------------*/
-FSModel::FSModel(QWidget *parent, Metadata *metadata /*, bool showImageCount */)
-    : QFileSystemModel(parent)
+FSModel::FSModel(QWidget *parent, Metadata *metadata, bool &newData, QHash<QString, QString> &count)
+                 : QFileSystemModel(parent),
+                   newData(newData),
+                   count(count)
 {
     QStringList *fileFilters = new QStringList;
     dir = new QDir();
@@ -110,13 +112,16 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
     // return image count for each folder
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
-            QString fPath = qvariant_cast<QString>
-                    (QFileSystemModel::data(index, QFileSystemModel::FilePathRole));
-            dir->setPath(fPath);
-            int count = dir->entryInfoList().size();
-            QString imageCount = "";
-            if (count > 0) imageCount = QString::number(count, 'f', 0);
-            return imageCount;
+//            QString fPath = qvariant_cast<QString>
+//                    (QFileSystemModel::data(index, QFileSystemModel::FilePathRole));
+//            if(newData) qDebug() << fPath << newData;
+//            dir->setPath(fPath);
+//            int count = dir->entryInfoList().size();
+//            QString imageCount = "";
+//            if (count > 0) imageCount = QString::number(count, 'f', 0);
+            QString fPath = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
+//            QString imageCount = count[fPath];
+            return count[fPath];
         }
         if (role == Qt::TextAlignmentRole)
             return static_cast<QVariant>(Qt::AlignRight | Qt::AlignVCenter);
@@ -169,6 +174,17 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     setAcceptDrops(true);
     setDragEnabled(true);
     setDragDropMode(QAbstractItemView::InternalMove);
+
+    QStringList *fileFilters = new QStringList;
+    dir = new QDir();
+//    this->showImageCount = showImageCount;
+
+    fileFilters->clear();
+    foreach (const QString &str, metadata->supportedFormats)
+            fileFilters->append("*." + str);
+    dir->setNameFilters(*fileFilters);
+    dir->setFilter(QDir::Files);
+
 }
 
 void FSTree::createModel()
@@ -177,7 +193,7 @@ void FSTree::createModel()
 Create the model and filter in a separate function as it is also used to refresh
 the folders by deleting the model and re-creating it.
 */
-    fsModel = new FSModel(this, metadata);
+    fsModel = new FSModel(this, metadata, newData, count);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     fsModel->setRootPath("");
 
@@ -292,6 +308,28 @@ void FSTree::paintEvent(QPaintEvent *event)
 {
     resizeColumns();
     QTreeView::paintEvent(event);
+    newData = false;
+    QTimer::singleShot(250, this, SLOT(treeChange()));
+}
+
+void FSTree::treeChange()
+{
+    static bool isFirst = true;
+    QModelIndex idx = indexAt(rect().topLeft());
+    QModelIndex idx1 = indexAt(rect().bottomLeft());
+    count.clear();
+    while (idx.isValid())
+    {
+        QString path = idx.data(QFileSystemModel::FilePathRole).toString();
+        dir->setPath(path);
+        int n = dir->entryInfoList().size();
+        count[path] = QString::number(n, 'f', 0);
+        if(idx == idx1) break;
+        idx = indexBelow(idx);
+    }
+    newData = true;
+    if(isFirst) repaint();
+    isFirst = false;
 }
 
 void FSTree::mousePressEvent(QMouseEvent *event)
