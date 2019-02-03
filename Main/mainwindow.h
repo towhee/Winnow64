@@ -59,7 +59,7 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = 0);
 
-    QString version = "0.9.7.0.3 released 2019-02-02";
+    QString version = "0.9.7.0.4 released 2019-02-02";
     QString versionDetail =
             "<a href=\"http://165.227.46.158/winnow/versions.html\"><span style=\" text-decoration: underline; color:#0000ff;\">Version Information</span></a>.</p></body></html>";
 
@@ -255,14 +255,14 @@ protected:
     void keyReleaseEvent(QKeyEvent *event);
 //    void mouseMoveEvent(QMouseEvent *event);
 //    void mousePressEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
+//    void mouseReleaseEvent(QMouseEvent *event);
 //    void mouseDoubleClickEvent(QMouseEvent *event);
     void dropEvent(QDropEvent *event);
     void dragEnterEvent(QDragEnterEvent *event);
 
 public slots:
     void folderSelectionChange();
-    void fileSelectionChange(QModelIndex current, QModelIndex previous);
+    void fileSelectionChange(QModelIndex current, QModelIndex);
     void nullFiltration();
     void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
@@ -385,7 +385,7 @@ private slots:
 
     void runExternalApp();
     void cleanupSender();
-    void externalAppError(QProcess::ProcessError err);
+    void externalAppError(QProcess::ProcessError);
 
     void addIngestHistoryFolder(QString fPath);
 

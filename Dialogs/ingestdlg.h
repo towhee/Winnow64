@@ -43,9 +43,9 @@ private slots:
     void updateFolderPath();
 
     void on_autoRadio_toggled(bool checked);
-    void on_manualRadio_toggled(bool checked);
+    void on_manualRadio_toggled(bool);
 
-    void on_autoIngestTab_currentChanged(int index);
+    void on_autoIngestTab_currentChanged(int);
     void on_selectFolderBtn_clicked();
     void on_selectFolderBtn_2_clicked();
     void on_selectRootFolderBtn_2_clicked();
@@ -55,14 +55,14 @@ private slots:
     void on_pathTemplatesBtn_clicked();
     void on_pathTemplatesBtn_2_clicked();
     void on_descriptionLineEdit_textChanged(const QString &);
-    void on_descriptionLineEdit_2_textChanged(const QString &arg1);
+    void on_descriptionLineEdit_2_textChanged(const QString);
 
     void on_filenameTemplatesBtn_clicked();
     void on_filenameTemplatesCB_currentIndexChanged(const QString &arg1);
     void on_spinBoxStartNumber_valueChanged(const QString);
 
     void on_combinedIncludeJpgChk_clicked();
-    void on_ejectChk_stateChanged(int arg1);
+    void on_ejectChk_stateChanged(int);
     void on_backupChk_stateChanged(int arg1);
 
     void on_cancelBtn_clicked();
