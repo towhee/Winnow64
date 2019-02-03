@@ -49,8 +49,7 @@ void MetadataCache::stopMetadateCache()
     }
 }
 
-void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus,
-                                      int cacheStatusWidth)
+void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus)
 {
     {
     #ifdef ISDEBUG
