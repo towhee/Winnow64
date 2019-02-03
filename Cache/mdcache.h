@@ -21,7 +21,7 @@ public:
     MetadataCache(QObject *parent, DataModel *dm,
                   Metadata *metadata);
     ~MetadataCache();
-    void loadMetadataCache(int startRow, bool isShowCacheStatus, int cacheStatusWidth);
+    void loadMetadataCache(int startRow, bool isShowCacheStatus);
     void stopMetadateCache();
     bool restart;
 

@@ -1,7 +1,9 @@
 #include "progressbar.h"
+#include <QDebug>
 #include "Main/mainwindow.h"
 #include "Main/global.h"
-#include <QDebug>
+
+extrn MW *mw1;
 
 /* Displays a statusbar showing the metadata cache status.
 
@@ -76,9 +78,6 @@ void ProgressBar::updateCursor(int item,
     pnt.fillRect(newRect, newGradient);
     mw1->progressLabel->setPixmap(*(mw1->progressPixmap));
 
-    qDebug() << "prev =" << prevCursorPos << "pxStartOld =" << pxStartOld << "width =" << pxWidth
-             << "current =" << pos <<  "pxStartNew =" << pxStartNew << "width =" << pxWidth;
-
     prevCursorPos = pos;
 }
 
@@ -89,7 +88,7 @@ void ProgressBar::updateProgress(int fromItem,
                                  QString source)
 {
     // only show 1 in n to speed things up
-    int n = 10;
+//    int n = 10;
     counter++;
 //    int iterations = items / 10;
 //    if(counter % n != 0 && counter > 1) return;

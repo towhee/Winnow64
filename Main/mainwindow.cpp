@@ -259,10 +259,10 @@ void MW::resizeEvent(QResizeEvent *event)
 ////    event->ignore();
 //}
 
-void MW::mouseReleaseEvent(QMouseEvent *event)
-{
-//    QMainWindow::mouseReleaseEvent(event);
-}
+//void MW::mouseReleaseEvent(QMouseEvent *event)
+//{
+////    QMainWindow::mouseReleaseEvent(event);
+//}
 
 void MW::keyPressEvent(QKeyEvent *event)
 {
@@ -832,14 +832,14 @@ void MW::folderSelectionChange()
      thread also loads the thumbnails. It triggers the loadImageCache when it
      is finished. The image cache is limited by the amount of memory allocated. */
 
-     metadataCacheThread->loadMetadataCache(0, isShowCacheStatus, progressWidth);
+     metadataCacheThread->loadMetadataCache(0, isShowCacheStatus);
 
      // format pickMemSize as bytes, KB, MB or GB
      pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
      updateStatus(true);
 }
 
-void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
+void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 {
 /*
 Triggered when file selection changes (folder change selects new image, so it
@@ -1106,7 +1106,7 @@ the scrolling.
     if (!allMetadataLoaded && metadataCacheThread->isRunning()) {
         if (metadataCacheStartRow > 0)
             metadataCacheThread->loadMetadataCache(metadataCacheStartRow,
-                  isShowCacheStatus, progressWidth);
+                  isShowCacheStatus);
     }
 }
 
@@ -1121,7 +1121,7 @@ void MW::loadMetadataCache(int startRow)
     metadataCacheThread->stopMetadateCache();
 
     // startRow in case user scrolls ahead and thumbs not yet loaded
-    metadataCacheThread->loadMetadataCache(startRow, isShowCacheStatus, progressWidth);
+    metadataCacheThread->loadMetadataCache(startRow, isShowCacheStatus);
 }
 
 void MW::updateMetadataCacheStatus(int row, bool clear)
@@ -1174,10 +1174,11 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     size in the info panel.
     */
 
-    qDebug() << "MW::updateImageCacheStatus  Instruction ="
+/*    qDebug() << "MW::updateImageCacheStatus  Instruction ="
              << instruction
              << "row =" << row
              << "source =" << source;
+             */
 
     // show cache amount ie "4.2 of 16GB" in info panel
     QString cacheAmount = QString::number(float(imageCacheThread->cache.currMB)/1000,'f',1)
@@ -1218,6 +1219,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
                                             "image cache - all rows cached");
         }
         // cursor
+        row = currentRow;
         progressBar->updateCursor(row, rows, currentColor, imageCacheColor);
         return;
     }
@@ -3078,9 +3080,11 @@ void MW::createDataModel()
     #endif
     }
     metadata = new Metadata;
+    progressBar = new ProgressBar(this);
+
     // loadSettings not run yet
     combineRawJpg = setting->value("combineRawJpg").toBool();
-    dm = new DataModel(this, metadata, filters, combineRawJpg);
+    dm = new DataModel(this, metadata, progressBar, filters, combineRawJpg);
     thumb = new Thumb(this, metadata);
 
     connect(dm->sf, &SortFilter::reloadImageCache, this, &MW::loadFilteredImageCache);
@@ -3606,8 +3610,7 @@ void MW::createStatusBar()
     // label to hold QPixmap showing progress
     progressLabel = new QLabel();
 
-    // created a ProgressBar class
-    progressBar = new ProgressBar(this);
+    // progressBar created in MW::createDataModel, where it is first req'd
 
     // set up pixmap that shows progress in the cache
     progressWidth = setting->value("cacheStatusWidth").toInt();
@@ -5008,7 +5011,7 @@ is received here to delete the process.
     delete QObject::sender();
 }
 
-void MW::externalAppError(QProcess::ProcessError err)
+void MW::externalAppError(QProcess::ProcessError /*err*/)
 {
     {
     #ifdef ISDEBUG
@@ -8216,7 +8219,8 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    fsTree->getImageCount();
+    setFixedSize(QSize(1280, 720));
+
 }
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
