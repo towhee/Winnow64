@@ -5,9 +5,42 @@ For windows PuTTY Key generator and winscp for file transfers.
 
 For Mac:
 ---------------------------------------------------------------------
-Mac Deployment:
-cd /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_10_0_clang_64bit-Release
-/Users/roryhill/Qt/5.10.0/clang_64/bin/macdeployqt Winnow.app
+Mac Deployment: (located in /Users/roryhill/Projects/WinnowInstall/Batch/DeployOnMac)
+cd /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_12_0_clang_64bit-Release
+/Users/roryhill/Qt/5.12.0/clang_64/bin/macdeployqt Winnow.app -dmg
+
+Useful paths:
+/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data
+/Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_12_0_clang_64bit-Release
+/Users/roryhill/Qt/Tools/QtInstallerFramework/3.0/bin/
+
+INSTALLATION COMMANDS:
+
+cd /Users/roryhill/Projects/WinnowInstall
+
+#Copy app from release to local install packages:
+cp -r /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_12_0_clang_64bit-Release/Winnow.dmg packages/com.rh.bin/data
+
+
+#Update the repository:
+rm -r repository
+/Users/roryhill/Qt/Tools/QtInstallerFramework/3.0/bin/repogen -p packages --update-new-components repository
+
+#Create the installer "winnow installer"
+/Users/roryhill/Qt/Tools/QtInstallerFramework/3.0/bin/binarycreator --online-only -c config/config.xml -p packages winnow.dmg
+
+#Start the sftp to copy to server:
+sftp root@165.227.46.158
+cd /var/www/html/winnow_mac
+put -r /Users/roryhill/Projects/WinnowInstall/repository
+put -r /Users/roryhill/Projects/WinnowInstall/winnow.dmg
+
+# if updating on windows ignore html files
+#cd ../winnow
+#put /Users/roryhill/Projects/Winnow64/Docs/winnow.html
+#put /Users/roryhill/Projects/Winnow64/Docs/versions.html 
+exit
+
 
 For Win: 
 ---------------------------------------------------------------------
