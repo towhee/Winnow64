@@ -759,7 +759,7 @@ void IngestDlg::on_descriptionLineEdit_textChanged(const QString& arg1)
     updateEnabledState();
 }
 
-void IngestDlg::on_descriptionLineEdit_2_textChanged(const QString &arg1)
+void IngestDlg::on_descriptionLineEdit_2_textChanged(const QString/* &arg1*/)
 {
     updateFolderPath();
 //    ui->folderLabel_2->setText(arg1);
@@ -895,7 +895,7 @@ void IngestDlg::on_autoRadio_toggled(bool checked)
     }
 }
 
-void IngestDlg::on_manualRadio_toggled(bool checked)
+void IngestDlg::on_manualRadio_toggled(bool /*checked*/)
 {
     isAuto = false;
     if (ui->manualFolderLabel->text().length() > 0) {
@@ -1082,7 +1082,7 @@ void IngestDlg::on_combinedIncludeJpgChk_clicked()
     getPicks();
 }
 
-void IngestDlg::on_ejectChk_stateChanged(int arg1)
+void IngestDlg::on_ejectChk_stateChanged(int /*arg1*/)
 {
     autoEjectUsb = ui->ejectChk->isChecked();
 }
@@ -1135,7 +1135,7 @@ void IngestDlg::on_okBtn_clicked()
     ingest();
 }
 
-void IngestDlg::on_autoIngestTab_currentChanged(int index)
+void IngestDlg::on_autoIngestTab_currentChanged(int /*index*/)
 {
     buildFileNameSequence();
 }

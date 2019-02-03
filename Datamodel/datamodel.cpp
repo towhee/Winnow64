@@ -1,8 +1,13 @@
 #include "Datamodel/datamodel.h"
 
-DataModel::DataModel(QWidget *parent, Metadata *metadata, Filters *filters, bool &combineRawJpg) :
-    QStandardItemModel(parent),
-    combineRawJpg(combineRawJpg)
+DataModel::DataModel(QWidget *parent,
+                     Metadata *metadata,
+                     ProgressBar *progressBar,
+                     Filters *filters,
+                     bool &combineRawJpg) :
+
+                     QStandardItemModel(parent),
+                     combineRawJpg(combineRawJpg)
 {
 /*
 The datamodel (dm thoughout app) contains information about each eligible image
@@ -99,6 +104,7 @@ Code examples for model:
     mw = parent;
     this->metadata = metadata;
     this->filters = filters;
+    this->progressBar = progressBar;
 
     setSortRole(Qt::EditRole);
 
@@ -287,6 +293,8 @@ bool DataModel::addFileData()
     QElapsedTimer t;
     t.start();
 
+    progressBar->clearProgress();
+
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 
     static QStandardItem *item;
@@ -382,12 +390,16 @@ bool DataModel::addFileData()
                 }
             }
         }
+        progressBar->updateProgress(row, row + 1, fileInfoList.count(), QColor(85,100,115),
+                                "datamodel - adding file info");
+        if(row % 100 == 0) qApp->processEvents();
 
         /* the rest of the data model columns are added after the metadata
         has been loaded, when the image caching is called.  See
         MW::loadImageCache and thumbView::addMetadataToModel    */
     }
     filters->addCategoryFromData(typesMap, filters->types);
+    qDebug() << "File info colected for all files";
     return true;
 }
 
@@ -406,7 +418,7 @@ which is created in MW, and in InfoView.
 
     QElapsedTimer t;
     t.start();
-//    if(isShowCacheStatus) progressBar->clearProgress();
+    if(isShowCacheStatus) progressBar->clearProgress();
 
     hasDupRawJpg = false;
 
