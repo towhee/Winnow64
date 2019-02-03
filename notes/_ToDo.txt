@@ -1,4 +1,5 @@
 BUGS
+-
 - Check if cacheDelay is still important
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
@@ -7,7 +8,6 @@ _ Sometimes when select new folder first image shows as selected but cannot chan
 - Monitor res not always showing
 - Select in grid sometimes misses thumbs in a column
 PERFORMANCE
-- Show cursor as separate label on top of cacheLabel to improve performance.
 - try multiple caching threads
 CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
@@ -38,6 +38,8 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- AppDlg table not stretching and word wrap was on
+- Show cursor as separate label on top of cacheLabel to improve performance.
 - Speeded up image count in folders panel
 - Image count not updating in bookmarks`
 - Fix editbox in some tableviews (infoview, external programs)
