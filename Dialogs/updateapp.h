@@ -17,7 +17,7 @@ public:
     ~UpdateApp();
 
 protected:
-    void showEvent(QShowEvent *event) override;
+    void showEvent(QShowEvent *event);
 
 private slots:
     void on_buttonBox_accepted();
