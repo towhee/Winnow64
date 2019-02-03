@@ -215,7 +215,6 @@ void Appdlg::on_moveUp_clicked()
     if(ui->appsTable->item(row, 1)->text() == "") return;
     if(ui->appsTable->item(row - 1, 1)->text() == "") return;
     // count rows with app name - xApps not updated until save
-    int rows = xApps.length();
     if(row < 1) return;
 
     QTableWidgetItem *srcName = ui->appsTable->takeItem(row, 1);

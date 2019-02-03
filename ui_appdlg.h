@@ -15,18 +15,19 @@
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QSpacerItem>
 #include <QtWidgets/QTableWidget>
-#include <QtWidgets/QWidget>
+#include <QtWidgets/QVBoxLayout>
 
 QT_BEGIN_NAMESPACE
 
 class Ui_Appdlg
 {
 public:
-    QWidget *horizontalLayoutWidget;
+    QVBoxLayout *verticalLayout;
     QHBoxLayout *horizontalLayout;
     QTableWidget *appsTable;
-    QWidget *horizontalLayoutWidget_2;
+    QSpacerItem *horizontalSpacer;
     QHBoxLayout *horizontalLayout_2;
     QPushButton *moveDown;
     QPushButton *moveUp;
@@ -39,69 +40,74 @@ public:
     {
         if (Appdlg->objectName().isEmpty())
             Appdlg->setObjectName(QString::fromUtf8("Appdlg"));
-        Appdlg->resize(880, 400);
-        horizontalLayoutWidget = new QWidget(Appdlg);
-        horizontalLayoutWidget->setObjectName(QString::fromUtf8("horizontalLayoutWidget"));
-        horizontalLayoutWidget->setGeometry(QRect(20, 20, 841, 271));
-        horizontalLayout = new QHBoxLayout(horizontalLayoutWidget);
+        Appdlg->resize(948, 400);
+        verticalLayout = new QVBoxLayout(Appdlg);
+        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+        horizontalLayout = new QHBoxLayout();
         horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
-        horizontalLayout->setContentsMargins(0, 0, 0, 0);
-        appsTable = new QTableWidget(horizontalLayoutWidget);
+        appsTable = new QTableWidget(Appdlg);
         if (appsTable->columnCount() < 3)
             appsTable->setColumnCount(3);
         appsTable->setObjectName(QString::fromUtf8("appsTable"));
         appsTable->setFrameShape(QFrame::Box);
         appsTable->setEditTriggers(QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked);
         appsTable->setAlternatingRowColors(true);
+        appsTable->setWordWrap(false);
         appsTable->setColumnCount(3);
         appsTable->horizontalHeader()->setDefaultSectionSize(300);
         appsTable->verticalHeader()->setVisible(false);
-        appsTable->verticalHeader()->setDefaultSectionSize(24);
+        appsTable->verticalHeader()->setDefaultSectionSize(26);
         appsTable->verticalHeader()->setMinimumSectionSize(24);
 
         horizontalLayout->addWidget(appsTable);
 
-        horizontalLayoutWidget_2 = new QWidget(Appdlg);
-        horizontalLayoutWidget_2->setObjectName(QString::fromUtf8("horizontalLayoutWidget_2"));
-        horizontalLayoutWidget_2->setGeometry(QRect(20, 320, 840, 51));
-        horizontalLayout_2 = new QHBoxLayout(horizontalLayoutWidget_2);
+
+        verticalLayout->addLayout(horizontalLayout);
+
+        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        verticalLayout->addItem(horizontalSpacer);
+
+        horizontalLayout_2 = new QHBoxLayout();
         horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
-        horizontalLayout_2->setContentsMargins(0, 0, 0, 0);
-        moveDown = new QPushButton(horizontalLayoutWidget_2);
+        moveDown = new QPushButton(Appdlg);
         moveDown->setObjectName(QString::fromUtf8("moveDown"));
         moveDown->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(moveDown);
 
-        moveUp = new QPushButton(horizontalLayoutWidget_2);
+        moveUp = new QPushButton(Appdlg);
         moveUp->setObjectName(QString::fromUtf8("moveUp"));
         moveUp->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(moveUp);
 
-        addBtn = new QPushButton(horizontalLayoutWidget_2);
+        addBtn = new QPushButton(Appdlg);
         addBtn->setObjectName(QString::fromUtf8("addBtn"));
         addBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(addBtn);
 
-        removeBtn = new QPushButton(horizontalLayoutWidget_2);
+        removeBtn = new QPushButton(Appdlg);
         removeBtn->setObjectName(QString::fromUtf8("removeBtn"));
         removeBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(removeBtn);
 
-        okBtn = new QPushButton(horizontalLayoutWidget_2);
+        okBtn = new QPushButton(Appdlg);
         okBtn->setObjectName(QString::fromUtf8("okBtn"));
         okBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(okBtn);
 
-        cancelBtn = new QPushButton(horizontalLayoutWidget_2);
+        cancelBtn = new QPushButton(Appdlg);
         cancelBtn->setObjectName(QString::fromUtf8("cancelBtn"));
         cancelBtn->setAutoDefault(false);
 
         horizontalLayout_2->addWidget(cancelBtn);
+
+
+        verticalLayout->addLayout(horizontalLayout_2);
 
 
         retranslateUi(Appdlg);
