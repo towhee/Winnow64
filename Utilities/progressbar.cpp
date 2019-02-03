@@ -3,7 +3,7 @@
 #include "Main/mainwindow.h"
 #include "Main/global.h"
 
-extrn MW *mw1;
+//extrn MW *mw1;
 
 /* Displays a statusbar showing the metadata cache status.
 
