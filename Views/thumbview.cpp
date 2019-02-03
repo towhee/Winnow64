@@ -989,7 +989,7 @@ void ThumbView::updateLayout()
     QListView::event(&event);
 }
 
-void ThumbView::scrollDown(int step)
+void ThumbView::scrollDown(int /*step*/)
 {
     if(wrapThumbs) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
@@ -999,7 +999,7 @@ void ThumbView::scrollDown(int step)
     }
 }
 
-void ThumbView::scrollUp(int step)
+void ThumbView::scrollUp(int /*step*/)
 {
     if(wrapThumbs) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
@@ -1009,7 +1009,7 @@ void ThumbView::scrollUp(int step)
     }
 }
 
-void ThumbView::scrollPageDown(int step)
+void ThumbView::scrollPageDown(int /*step*/)
 {
     if(wrapThumbs) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
@@ -1019,7 +1019,7 @@ void ThumbView::scrollPageDown(int step)
     }
 }
 
-void ThumbView::scrollPageUp(int step)
+void ThumbView::scrollPageUp(int /*step*/)
 {
     if(wrapThumbs) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
