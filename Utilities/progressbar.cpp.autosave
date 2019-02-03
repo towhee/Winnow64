@@ -3,8 +3,6 @@
 #include "Main/mainwindow.h"
 #include "Main/global.h"
 
-extrn MW *mw1;
-
 /* Displays a statusbar showing the metadata cache status.
 
 The app status bar is 25 pixels high.  Create a bitmap the height of the

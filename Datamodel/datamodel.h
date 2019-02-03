@@ -37,7 +37,11 @@ class DataModel : public QStandardItemModel
 {
     Q_OBJECT
 public:
-    DataModel(QWidget *parent, Metadata *metadata, Filters *filters, bool &combineRawJpg);
+    DataModel(QWidget *parent,
+              Metadata *metadata,
+              ProgressBar *progressBar,
+              Filters *filters,
+              bool &combineRawJpg);
 
     bool load(QString &dir, bool includeSubfolders);
     void clear();
@@ -69,6 +73,7 @@ private:
     QWidget *mw;
     Metadata *metadata;
     Filters *filters;
+    ProgressBar *progressBar;
     bool &combineRawJpg;
     QList<QFileInfo> fileInfoList;
     static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
