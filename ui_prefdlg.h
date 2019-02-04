@@ -48,10 +48,14 @@ public:
     QGroupBox *groupBoxFolders_2;
     QCheckBox *mouseClickScrollChk;
     QWidget *page_4;
-    QGroupBox *groupBoxFolders_3;
+    QGroupBox *groupBoxFontSize;
     QSlider *globalFontSizeSlider;
     QLabel *globalFontSizeLbl;
-    QGroupBox *groupBoxFolders_4;
+    QSlider *infoFontSizeSlider;
+    QLabel *label_21;
+    QLabel *label_22;
+    QLabel *infoFontSizeLbl;
+    QGroupBox *groupBoxClassificationSize;
     QSlider *classificationBadgeImageDiamSlider;
     QLabel *classificationBadgeImageDiamLbl;
     QLabel *label_13;
@@ -215,12 +219,12 @@ public:
         stackedWidget->addWidget(pageGeneral);
         page_4 = new QWidget();
         page_4->setObjectName(QString::fromUtf8("page_4"));
-        groupBoxFolders_3 = new QGroupBox(page_4);
-        groupBoxFolders_3->setObjectName(QString::fromUtf8("groupBoxFolders_3"));
-        groupBoxFolders_3->setGeometry(QRect(20, 20, 431, 91));
-        globalFontSizeSlider = new QSlider(groupBoxFolders_3);
+        groupBoxFontSize = new QGroupBox(page_4);
+        groupBoxFontSize->setObjectName(QString::fromUtf8("groupBoxFontSize"));
+        groupBoxFontSize->setGeometry(QRect(20, 20, 431, 111));
+        globalFontSizeSlider = new QSlider(groupBoxFontSize);
         globalFontSizeSlider->setObjectName(QString::fromUtf8("globalFontSizeSlider"));
-        globalFontSizeSlider->setGeometry(QRect(40, 40, 311, 22));
+        globalFontSizeSlider->setGeometry(QRect(130, 40, 251, 22));
         globalFontSizeSlider->setMinimum(8);
         globalFontSizeSlider->setMaximum(20);
         globalFontSizeSlider->setPageStep(1);
@@ -228,15 +232,38 @@ public:
         globalFontSizeSlider->setOrientation(Qt::Horizontal);
         globalFontSizeSlider->setTickPosition(QSlider::TicksAbove);
         globalFontSizeSlider->setTickInterval(1);
-        globalFontSizeLbl = new QLabel(groupBoxFolders_3);
+        globalFontSizeLbl = new QLabel(groupBoxFontSize);
         globalFontSizeLbl->setObjectName(QString::fromUtf8("globalFontSizeLbl"));
-        globalFontSizeLbl->setGeometry(QRect(360, 30, 55, 31));
-        groupBoxFolders_4 = new QGroupBox(page_4);
-        groupBoxFolders_4->setObjectName(QString::fromUtf8("groupBoxFolders_4"));
-        groupBoxFolders_4->setGeometry(QRect(20, 130, 431, 121));
-        classificationBadgeImageDiamSlider = new QSlider(groupBoxFolders_4);
+        globalFontSizeLbl->setGeometry(QRect(385, 40, 41, 20));
+        infoFontSizeSlider = new QSlider(groupBoxFontSize);
+        infoFontSizeSlider->setObjectName(QString::fromUtf8("infoFontSizeSlider"));
+        infoFontSizeSlider->setGeometry(QRect(130, 70, 251, 22));
+        infoFontSizeSlider->setMinimum(8);
+        infoFontSizeSlider->setMaximum(30);
+        infoFontSizeSlider->setPageStep(1);
+        infoFontSizeSlider->setValue(14);
+        infoFontSizeSlider->setOrientation(Qt::Horizontal);
+        infoFontSizeSlider->setTickPosition(QSlider::TicksAbove);
+        infoFontSizeSlider->setTickInterval(1);
+        label_21 = new QLabel(groupBoxFontSize);
+        label_21->setObjectName(QString::fromUtf8("label_21"));
+        label_21->setGeometry(QRect(10, 40, 81, 20));
+        QFont font1;
+        font1.setPointSize(10);
+        label_21->setFont(font1);
+        label_22 = new QLabel(groupBoxFontSize);
+        label_22->setObjectName(QString::fromUtf8("label_22"));
+        label_22->setGeometry(QRect(10, 70, 111, 20));
+        label_22->setFont(font1);
+        infoFontSizeLbl = new QLabel(groupBoxFontSize);
+        infoFontSizeLbl->setObjectName(QString::fromUtf8("infoFontSizeLbl"));
+        infoFontSizeLbl->setGeometry(QRect(385, 70, 41, 20));
+        groupBoxClassificationSize = new QGroupBox(page_4);
+        groupBoxClassificationSize->setObjectName(QString::fromUtf8("groupBoxClassificationSize"));
+        groupBoxClassificationSize->setGeometry(QRect(20, 150, 431, 121));
+        classificationBadgeImageDiamSlider = new QSlider(groupBoxClassificationSize);
         classificationBadgeImageDiamSlider->setObjectName(QString::fromUtf8("classificationBadgeImageDiamSlider"));
-        classificationBadgeImageDiamSlider->setGeometry(QRect(100, 40, 251, 22));
+        classificationBadgeImageDiamSlider->setGeometry(QRect(130, 40, 251, 22));
         classificationBadgeImageDiamSlider->setMinimum(0);
         classificationBadgeImageDiamSlider->setMaximum(100);
         classificationBadgeImageDiamSlider->setPageStep(10);
@@ -244,21 +271,23 @@ public:
         classificationBadgeImageDiamSlider->setOrientation(Qt::Horizontal);
         classificationBadgeImageDiamSlider->setTickPosition(QSlider::TicksAbove);
         classificationBadgeImageDiamSlider->setTickInterval(10);
-        classificationBadgeImageDiamLbl = new QLabel(groupBoxFolders_4);
+        classificationBadgeImageDiamLbl = new QLabel(groupBoxClassificationSize);
         classificationBadgeImageDiamLbl->setObjectName(QString::fromUtf8("classificationBadgeImageDiamLbl"));
-        classificationBadgeImageDiamLbl->setGeometry(QRect(360, 30, 55, 31));
-        label_13 = new QLabel(groupBoxFolders_4);
+        classificationBadgeImageDiamLbl->setGeometry(QRect(385, 40, 41, 20));
+        label_13 = new QLabel(groupBoxClassificationSize);
         label_13->setObjectName(QString::fromUtf8("label_13"));
         label_13->setGeometry(QRect(10, 40, 81, 20));
-        label_20 = new QLabel(groupBoxFolders_4);
+        label_13->setFont(font1);
+        label_20 = new QLabel(groupBoxClassificationSize);
         label_20->setObjectName(QString::fromUtf8("label_20"));
-        label_20->setGeometry(QRect(10, 80, 81, 20));
-        classificationBadgeThumbDiamLbl = new QLabel(groupBoxFolders_4);
+        label_20->setGeometry(QRect(10, 70, 81, 20));
+        label_20->setFont(font1);
+        classificationBadgeThumbDiamLbl = new QLabel(groupBoxClassificationSize);
         classificationBadgeThumbDiamLbl->setObjectName(QString::fromUtf8("classificationBadgeThumbDiamLbl"));
-        classificationBadgeThumbDiamLbl->setGeometry(QRect(360, 70, 55, 31));
-        classificationBadgeThumbDiamSlider = new QSlider(groupBoxFolders_4);
+        classificationBadgeThumbDiamLbl->setGeometry(QRect(385, 70, 41, 20));
+        classificationBadgeThumbDiamSlider = new QSlider(groupBoxClassificationSize);
         classificationBadgeThumbDiamSlider->setObjectName(QString::fromUtf8("classificationBadgeThumbDiamSlider"));
-        classificationBadgeThumbDiamSlider->setGeometry(QRect(100, 80, 251, 22));
+        classificationBadgeThumbDiamSlider->setGeometry(QRect(130, 70, 251, 22));
         classificationBadgeThumbDiamSlider->setMinimum(0);
         classificationBadgeThumbDiamSlider->setMaximum(50);
         classificationBadgeThumbDiamSlider->setPageStep(5);
@@ -788,6 +817,12 @@ public:
         page_2 = new QWidget();
         page_2->setObjectName(QString::fromUtf8("page_2"));
         listContainer->addWidget(page_2);
+#ifndef QT_NO_SHORTCUT
+        globalFontSizeLbl->setBuddy(globalFontSizeSlider);
+        infoFontSizeLbl->setBuddy(infoFontSizeSlider);
+        classificationBadgeImageDiamLbl->setBuddy(classificationBadgeImageDiamSlider);
+        classificationBadgeThumbDiamLbl->setBuddy(classificationBadgeThumbDiamSlider);
+#endif // QT_NO_SHORTCUT
 
         retranslateUi(Prefdlg);
         QObject::connect(iconWidthSlider, SIGNAL(valueChanged(int)), iconWidthLbl, SLOT(setNum(int)));
@@ -805,7 +840,7 @@ public:
         QObject::connect(classificationBadgeThumbDiamSlider, SIGNAL(valueChanged(int)), classificationBadgeThumbDiamLbl, SLOT(setNum(int)));
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(2);
+        stackedWidget->setCurrentIndex(1);
         listContainer->setCurrentIndex(0);
 
 
@@ -827,12 +862,18 @@ public:
         updateAppChk->setText(QApplication::translate("Prefdlg", "Check for program updates", nullptr));
         groupBoxFolders_2->setTitle(QApplication::translate("Prefdlg", "Mouse click selection", nullptr));
         mouseClickScrollChk->setText(QApplication::translate("Prefdlg", "Scroll to position at center when mouse click", nullptr));
-        groupBoxFolders_3->setTitle(QApplication::translate("Prefdlg", "Application font size", nullptr));
+        groupBoxFontSize->setTitle(QApplication::translate("Prefdlg", "Font size", nullptr));
 #ifndef QT_NO_TOOLTIP
         globalFontSizeSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
         globalFontSizeLbl->setText(QString());
-        groupBoxFolders_4->setTitle(QApplication::translate("Prefdlg", "Classification badge diameter", nullptr));
+#ifndef QT_NO_TOOLTIP
+        infoFontSizeSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        label_21->setText(QApplication::translate("Prefdlg", "Global", nullptr));
+        label_22->setText(QApplication::translate("Prefdlg", "Info overlay", nullptr));
+        infoFontSizeLbl->setText(QString());
+        groupBoxClassificationSize->setTitle(QApplication::translate("Prefdlg", "Classification badge diameter", nullptr));
 #ifndef QT_NO_TOOLTIP
         classificationBadgeImageDiamSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
