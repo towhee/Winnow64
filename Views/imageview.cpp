@@ -723,13 +723,13 @@ to help make it visible against different coloured backgrounds. */
         y = sceneOrigin.y() + offset;
     else y = offset;
 
-    QFont font( "Tahoma", 20);
+    QFont font( "Tahoma", infoOverlayFontSize);
     font.setKerning(true);
 
     infoOverlay->setFont(font);      // not working
-    int fontSize = 13;          // rgh make this a preference
+//    int fontSize = 13;          // rgh make this a preference
 
-    infoOverlay->setStyleSheet("font: " + QString::number(fontSize) + "pt;");
+    infoOverlay->setStyleSheet("font: " + QString::number(infoOverlayFontSize) + "pt;");
     infoOverlay->setText(infoString);
     infoOverlay->adjustSize();
     // make a little wider to account for the drop shadow

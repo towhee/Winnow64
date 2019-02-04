@@ -169,6 +169,7 @@ qrc_winnow.cpp
 notes/_ToDo.txt.autosave
 Makefile.Release
 Makefile.Debug
+debug/
 debug/zoomdlg.obj
 debug/xmp.obj
 debug/workspacedlg.obj
@@ -279,6 +280,7 @@ debug/ui_zoomdlg.h
 debug/Winnow.exe
 debug/Winnow.pdb
 debug/Winnow_resource.rc
+release/
 release/release/moc_circlelabel.cpp
 release/release/moc_copypickdlg.cpp
 release/release/moc_dircompleter.cpp
