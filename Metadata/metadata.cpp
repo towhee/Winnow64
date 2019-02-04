@@ -3693,6 +3693,7 @@ bool Metadata::formatTIF()
     // read offset to first IFD
     ulong ifdOffset = get4(file.read(4));
     ulong nextIFDOffset = readIFD("IFD0", ifdOffset);
+    nextIFDOffset = 0;  // suppress compiler warning
 
     lengthFullJPG = 1;  // set arbitrary length to avoid error msg as tif do not
                          // have full size embedded jpg
