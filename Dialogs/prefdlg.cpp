@@ -23,8 +23,19 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->globalFontSizeSlider->setMinimum(8);
     ui->globalFontSizeSlider->setMaximum(20);
     ui->globalFontSizeSlider->setValue(G::fontSize.toInt());
+    ui->globalFontSizeLbl->setText(G::fontSize);
+
+    ui->infoFontSizeSlider->setTickInterval(2);
+    ui->infoFontSizeSlider->setMinimum(6);
+    ui->infoFontSizeSlider->setMaximum(34);
+    ui->infoFontSizeLbl->setText(QString::number(m->imageView->infoOverlayFontSize));
+    qDebug() << ui->infoFontSizeLbl->text();
+
     ui->classificationBadgeImageDiamSlider->setValue(m->classificationBadgeInImageDiameter);
+    ui->classificationBadgeImageDiamLbl->setText(QString::number(m->classificationBadgeInImageDiameter));
     ui->classificationBadgeThumbDiamSlider->setValue(m->classificationBadgeInThumbDiameter);
+    ui->classificationBadgeThumbDiamLbl->setText(QString::number(m->classificationBadgeInThumbDiameter));
+
     ui->rememberFolderChk->setChecked(m->rememberLastDir);
     ui->updateAppChk->setChecked(m->checkIfUpdate);
     ui->trackpadIterateRadio->setChecked(!m->imageView->useWheelToScroll);
@@ -164,9 +175,6 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->tableFieldsTable->setStyleSheet("QTableView {border:none; gridline-color:rgb(85,85,85)}");
 
     okToUpdate = true;
-
-//    connect(ui->globalFontSizeSlider, SIGNAL(sliderPressed()), this, SLOT(on_slider_pressed()));
-//    connect(ui->globalFontSizeSlider, SIGNAL(sliderReleased()), this, SLOT(on_slider_released()));
 }
 
 Prefdlg::~Prefdlg()
@@ -280,6 +288,15 @@ void Prefdlg::on_globalFontSizeSlider_sliderReleased()
     m->setFontSize(value);
 }
 
+
+void Prefdlg::on_infoFontSizeSlider_valueChanged(int value)
+{
+    if (okToUpdate) {
+        m->imageView->infoOverlayFontSize = value;
+        ui->infoFontSizeLbl->setText(QString::number(value));
+        m->setInfoFontSize();
+    }
+}
 void Prefdlg::on_cachePreviewsChk_clicked()
 {
     if (okToUpdate) {

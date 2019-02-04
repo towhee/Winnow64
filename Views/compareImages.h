@@ -49,7 +49,7 @@ private slots:
     void pan(QPointF scrollPct, QModelIndex idx);
     void startPan(QModelIndex idx);
     void cleanupAfterPan(QPointF deltaPct, QModelIndex idx);
-    void align(QPointF basePos, QModelIndex idx);
+    void align(QPointF, QModelIndex idx);
     void togglePickSignalRelay();
     void deselectAll();
 
