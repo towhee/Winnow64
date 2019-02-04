@@ -76,6 +76,8 @@ private slots:
     void on_updateAppChk_stateChanged(int value);
 
 
+    void on_infoFontSizeSlider_valueChanged(int value);
+
 private:
     Ui::Prefdlg *ui;
     QStandardItemModel *okInfo;

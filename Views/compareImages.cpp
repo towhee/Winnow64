@@ -441,13 +441,14 @@ void CompareImages::cleanupAfterPan(QPointF deltaPct, QModelIndex idx)
 }
 
 // try to find a commmon feature to align all comparison images - not working very well
-void CompareImages::align(QPointF basePos, QModelIndex idx)
+void CompareImages::align(QPointF /*basePos*/, QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+
     int idxRow = 0;
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex == idx) {

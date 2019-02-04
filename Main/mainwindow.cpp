@@ -298,7 +298,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 //bool MW::event(QObject *obj, QEvent *event)
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
-    static int n = 0;
+//    static int n = 0;
 
     // use to show all events being filtered - handy to figure out which to intercept
 //    if (event->type()        != QEvent::Paint
@@ -398,7 +398,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         addBookmarkAction->setEnabled(true);
         revealFileActionFromContext->setEnabled(true);
         if(obj == fsTree->viewport()) {
-            QContextMenuEvent *e = (QContextMenuEvent *)event;
+            QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
             QModelIndex idx = fsTree->indexAt(e->pos());
             mouseOverFolder = idx.data(QFileSystemModel::FilePathRole).toString();
             enableEjectUsbMenu(mouseOverFolder);
@@ -410,7 +410,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
         else if(obj == bookmarks->viewport()) {
-            QContextMenuEvent *e = (QContextMenuEvent *)event;
+            QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
             QModelIndex idx = bookmarks->indexAt(e->pos());
             mouseOverFolder = idx.data(Qt::ToolTipRole).toString();
             enableEjectUsbMenu(mouseOverFolder);
@@ -445,13 +445,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     if (event->type() == QEvent::MouseButtonPress) {
 //        qDebug() << QTime::currentTime() << "MouseButtonPress" << __FUNCTION__;
-        QMouseEvent *e = (QMouseEvent *)event;
+        QMouseEvent *e = static_cast<QMouseEvent *>(event);
         if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
     }
 
     if (event->type() == QEvent::MouseButtonRelease) {
 //        qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__;
-        QMouseEvent *e = (QMouseEvent *)event;
+        QMouseEvent *e = static_cast<QMouseEvent *>(event);
         if (e->button() == Qt::LeftButton) {
             isLeftMouseBtnPressed = false;
             isMouseDrag = false;
@@ -1149,18 +1149,6 @@ void MW::updateMetadataCacheStatus(int row, bool clear)
                                 metadataCacheColor,
                                 "metadata - currently cached");
     return;
-
-    // show the rectangle for the current cache by painting each item that has been cached
-    for(int row = 0; row < dm->rowCount()+1; row++) {
-        QModelIndex idx = dm->index(row, 0);
-        QString fPath = idx.data(G::PathRole).toString();
-        if(metadata->isLoaded(fPath)) {
-            progressBar->updateProgress(row, row + 1, dm->rowCount(),
-                                        metadataCacheColor,
-                                        "not being used");
-        }
-    }
-    return;
 }
 
 void MW::updateImageCacheStatus(QString instruction, int row, QString source)
@@ -1173,7 +1161,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     /* Displays a statusbar showing the metadata cache status.  Also shows the cache
     size in the info panel.
     */
-
+    source = "";    // suppress compiler warning
 /*    qDebug() << "MW::updateImageCacheStatus  Instruction ="
              << instruction
              << "row =" << row
@@ -1181,7 +1169,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
              */
 
     // show cache amount ie "4.2 of 16GB" in info panel
-    QString cacheAmount = QString::number(float(imageCacheThread->cache.currMB)/1000,'f',1)
+    QString cacheAmount = QString::number(double(imageCacheThread->cache.currMB)/1000,'f',1)
             + " of "
             + QString::number(imageCacheThread->cache.maxMB/1000) + "GB";
     QStandardItemModel *k = infoView->ok;
@@ -3342,6 +3330,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
 
     imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
 
+    imageView->infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
     lastPrefPage = setting->value("lastPrefPage").toInt();
     mouseClickScroll = setting->value("mouseClickScroll").toBool();
     qreal tempZoom = setting->value("toggleZoomValue").toReal();
@@ -3744,14 +3733,13 @@ QString MW::getZoom()
 QString MW::getPicked()
 {
 /*
-
+Returns a string like "16 (38MB)"
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QModelIndex idx;
     int count = 0;
     for (int row = 0; row < dm->sf->rowCount(); row++)
         if (dm->sf->index(row, G::PickColumn).data() == "true") count++;
@@ -3759,7 +3747,6 @@ QString MW::getPicked()
 
     if (count == 0) return "Nothing";
     return QString::number(count) + " ("  + pickMemSize + ")";
-//    return QString::number(count) + image  + pickMemSize;
 }
 
 void MW::updateStatus(bool keepBase, QString s)
@@ -3919,6 +3906,9 @@ void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QStri
     G::track(__FUNCTION__);
     #endif
     }
+    // calledBy is present for debugging
+    calledBy = "";  // suppress compiler warning
+
     if (isRunning) {
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
         #ifdef Q_OS_WIN
@@ -4231,7 +4221,7 @@ void MW::sortThumbnails()
     }
     if(sortMenuUpdateToMatchTable) return;
 
-    int sortColumn;
+    int sortColumn = 0;
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;
     if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;
@@ -4497,19 +4487,10 @@ workspace with a matching name to the action is used.
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << "\n======================================= Invoke Workspace ============================================";
-//    if (fullScreenAction->isChecked() != w.isFullScreen)
-//        fullScreenAction->setChecked(w.isFullScreen);
-//    setFullNormal();
-//    if(w.isFullScreen) showFullScreen();
-//    else showNormal();
-//    showNormal();
     restoreGeometry(w.geometry);
     restoreState(w.state);
     // two restoreState req'd for going from docked to floating docks
     restoreState(w.state);
-//    windowTitleBarVisibleAction->setChecked(w.isWindowTitleBarVisible);
-//    menuBarVisibleAction->setChecked(true);
     menuBarVisibleAction->setChecked(w.isMenuBarVisible);
     statusBarVisibleAction->setChecked(w.isStatusBarVisible);
     folderDockVisibleAction->setChecked(w.isFolderDockVisible);
@@ -4544,9 +4525,8 @@ workspace with a matching name to the action is used.
     gridView->showThumbLabels = w.showThumbLabelsGrid;
     thumbView->setThumbParameters();
     gridView->setThumbParameters();
-    // if in grid view override normal behavior if workspace invoked
-    wasThumbDockVisible = w.isThumbDockVisible;
     updateState();
+    if(!gridView->isVisible()) wasThumbDockVisible = w.isThumbDockVisible;
 }
 
 void MW::snapshotWorkspace(workspaceData &wsd)
@@ -4559,7 +4539,6 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
     wsd.isFullScreen = isFullScreen();
-//    wsd.isWindowTitleBarVisible = windowTitleBarVisibleAction->isChecked();
     wsd.isMenuBarVisible = menuBarVisibleAction->isChecked();
     wsd.isStatusBarVisible = statusBarVisibleAction->isChecked();
     wsd.isFolderDockVisible = folderDockVisibleAction->isChecked();
@@ -4692,7 +4671,8 @@ app is "stranded" on secondary monitors that are not attached.
     #endif
     }
     QRect desktop = qApp->desktop()->availableGeometry();
-    resize(0.75 * desktop.width(), 0.75 * desktop.height());
+    resize(static_cast<int>(0.75 * desktop.width()),
+           static_cast<int>(0.75 * desktop.height()));
     setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
         size(), desktop));
 //    windowTitleBarVisibleAction->setChecked(true);
@@ -5039,7 +5019,7 @@ void MW::runExternalApp()
 //    return;
 
     QString appPath = "";
-    QString appName = ((QAction*) sender())->text();
+    QString appName = (static_cast<QAction*>(sender()))->text();
     for(int i = 0; i < externalApps.length(); ++i) {
         if(externalApps.at(i).name == appName) {
             appPath = externalApps.at(i).path;
@@ -5081,7 +5061,7 @@ void MW::runExternalApp()
                     "QPushButton:default {background-color: rgb(68,95,118);}";
         msgBox.setStyleSheet(s);
         QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
-        QGridLayout* layout = (QGridLayout*)msgBox.layout();
+        QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
         int ret = msgBox.exec();
         if (ret == QMessageBox::Cancel) return;
@@ -5187,6 +5167,13 @@ void MW::setFontSize(int pixels)
     this->setStyleSheet(s + css2);
 }
 
+void MW::setInfoFontSize()
+{
+    /* imageView->infoOverlayFontSize already defined in preferences - just call
+       so can redraw  */
+    imageView->moveShootingInfo(imageView->shootingInfo);
+}
+
 void MW::setClassificationBadgeImageDiam(int d)
 {
     classificationBadgeInImageDiameter = d;
@@ -5221,7 +5208,7 @@ void MW::setDisplayResolution()
 #ifdef Q_OS_WIN
 //    G::devicePixelRatio = 1;
     // make sure the centroid is on a screen
-    if(qApp->screenAt(loc) != NULL) {
+    if(qApp->screenAt(loc) != nullptr) {
         displayHorizontalPixels = qApp->screenAt(loc)->geometry().width();
         displayVerticalPixels = qApp->screenAt(loc)->geometry().height();
     }
@@ -5263,7 +5250,8 @@ void MW::setActualDevicePixelRatio()
 {
     int virtualWidth = QGuiApplication::primaryScreen()->geometry().width();
     if (displayHorizontalPixels > 0)
-        G::actualDevicePixelRatio = (float)displayHorizontalPixels / virtualWidth;
+        G::actualDevicePixelRatio =
+            static_cast<int>(static_cast<float>(displayHorizontalPixels) / virtualWidth);
     else
         G::actualDevicePixelRatio = QPaintDevice::devicePixelRatio();
 
@@ -5322,6 +5310,7 @@ void MW::toggleFullScreen()
     if (fullScreenAction->isChecked())
     {
         snapshotWorkspace(ws);
+        isNormalScreen = false;
         showFullScreen();
         folderDockVisibleAction->setChecked(fullScreenDocks.isFolders);
         folderDock->setVisible(fullScreenDocks.isFolders);
@@ -5340,6 +5329,7 @@ void MW::toggleFullScreen()
     }
     else
     {
+        isNormalScreen = true;
         showNormal();
         invokeWorkspace(ws);
 //        imageView->setCursorHiding(false);
@@ -5646,14 +5636,15 @@ re-established when the application is re-opened.
     #endif
     }
     // general
-    setting->setValue("lastPrefPage", (int)lastPrefPage);
-    setting->setValue("mouseClickScroll", (bool)mouseClickScroll);
+    setting->setValue("lastPrefPage", lastPrefPage);
+    setting->setValue("mouseClickScroll", mouseClickScroll);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
 
     // appearance
     setting->setValue("fontSize", G::fontSize);
     setting->setValue("classificationBadgeInImageDiameter", classificationBadgeInImageDiameter);
     setting->setValue("classificationBadgeInThumbDiameter", thumbView->badgeSize);
+    setting->setValue("infoOverlayFontSize", imageView->infoOverlayFontSize);
 
     // files
     setting->setValue("rememberLastDir", rememberLastDir);
@@ -5671,11 +5662,11 @@ re-established when the application is re-opened.
     setting->setValue("gotoIngestFolder", gotoIngestFolder);
     setting->setValue("ingestRootFolder", ingestRootFolder);
     setting->setValue("ingestRootFolder2", ingestRootFolder2);
-    setting->setValue("pathTemplateSelected", (int)pathTemplateSelected);
-    setting->setValue("pathTemplateSelected2", (int)pathTemplateSelected2);
+    setting->setValue("pathTemplateSelected", pathTemplateSelected);
+    setting->setValue("pathTemplateSelected2", pathTemplateSelected2);
     setting->setValue("manualFolderPath", manualFolderPath);
     setting->setValue("manualFolderPath2", manualFolderPath2);
-    setting->setValue("filenameTemplateSelected", (int)filenameTemplateSelected);
+    setting->setValue("filenameTemplateSelected", filenameTemplateSelected);
 
     // thumbs
     setting->setValue("thumbSpacing", thumbView->thumbSpacing);
@@ -5683,8 +5674,8 @@ re-established when the application is re-opened.
     setting->setValue("thumbWidth", thumbView->thumbWidth);
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
-    setting->setValue("showThumbLabels", (bool)thumbView->showThumbLabels);
-    setting->setValue("wrapThumbs", (bool)thumbView->wrapThumbs);
+    setting->setValue("showThumbLabels", thumbView->showThumbLabels);
+    setting->setValue("wrapThumbs", thumbView->wrapThumbs);
 
     // grid
     setting->setValue("thumbSpacingGrid", gridView->thumbSpacing);
@@ -5692,56 +5683,56 @@ re-established when the application is re-opened.
     setting->setValue("thumbWidthGrid", gridView->thumbWidth);
     setting->setValue("thumbHeightGrid", gridView->thumbHeight);
     setting->setValue("labelFontSizeGrid", gridView->labelFontSize);
-    setting->setValue("showThumbLabelsGrid", (bool)gridView->showThumbLabels);
+    setting->setValue("showThumbLabelsGrid", gridView->showThumbLabels);
 
     // slideshow
-    setting->setValue("slideShowDelay", (int)slideShowDelay);
-    setting->setValue("slideShowRandom", (bool)slideShowRandom);
-    setting->setValue("slideShowWrap", (bool)slideShowWrap);
+    setting->setValue("slideShowDelay", slideShowDelay);
+    setting->setValue("slideShowRandom", slideShowRandom);
+    setting->setValue("slideShowWrap", slideShowWrap);
 
     // cache
-    setting->setValue("cacheSizeMB", (int)cacheSizeMB);
-    setting->setValue("isShowCacheStatus", (bool)isShowCacheStatus);
-    setting->setValue("cacheDelay", (int)cacheDelay);
-    setting->setValue("isShowCacheThreadActivity", (bool)isShowCacheThreadActivity);
-    setting->setValue("cacheStatusWidth", (int)progressWidth);
-    setting->setValue("cacheWtAhead", (int)cacheWtAhead);
-    setting->setValue("isCachePreview", (int)isCachePreview);
-    setting->setValue("cachePreviewWidth", (int)cachePreviewWidth);
-    setting->setValue("cachePreviewHeight", (int)cachePreviewHeight);
+    setting->setValue("cacheSizeMB", cacheSizeMB);
+    setting->setValue("isShowCacheStatus", isShowCacheStatus);
+    setting->setValue("cacheDelay", cacheDelay);
+    setting->setValue("isShowCacheThreadActivity", isShowCacheThreadActivity);
+    setting->setValue("cacheStatusWidth", progressWidth);
+    setting->setValue("cacheWtAhead", cacheWtAhead);
+    setting->setValue("isCachePreview", isCachePreview);
+    setting->setValue("cachePreviewWidth", cachePreviewWidth);
+    setting->setValue("cachePreviewHeight", cachePreviewHeight);
 
     // full screen
-    setting->setValue("isFullScreenFolders", (bool)fullScreenDocks.isFolders);
-    setting->setValue("isFullScreenFavs", (bool)fullScreenDocks.isFavs);
-    setting->setValue("isFullScreenFilters", (bool)fullScreenDocks.isFilters);
-    setting->setValue("isFullScreenMetadata", (bool)fullScreenDocks.isMetadata);
-    setting->setValue("isFullScreenThumbs", (bool)fullScreenDocks.isThumbs);
-    setting->setValue("isFullScreenStatusBar", (bool)fullScreenDocks.isStatusBar);
+    setting->setValue("isFullScreenFolders", fullScreenDocks.isFolders);
+    setting->setValue("isFullScreenFavs", fullScreenDocks.isFavs);
+    setting->setValue("isFullScreenFilters", fullScreenDocks.isFilters);
+    setting->setValue("isFullScreenMetadata", fullScreenDocks.isMetadata);
+    setting->setValue("isFullScreenThumbs", fullScreenDocks.isThumbs);
+    setting->setValue("isFullScreenStatusBar", fullScreenDocks.isStatusBar);
 
     // state
     setting->setValue("Geometry", saveGeometry());
     setting->setValue("WindowState", saveState());
-    setting->setValue("isFullScreen", (bool)isFullScreen());
+    setting->setValue("isFullScreen", isFullScreen());
 
-    setting->setValue("isRatingBadgeVisible", (bool)ratingBadgeVisibleAction->isChecked());
-    setting->setValue("isImageInfoVisible", (bool)infoVisibleAction->isChecked());
-    setting->setValue("isLoupeDisplay", (bool)asLoupeAction->isChecked());
-    setting->setValue("isGridDisplay", (bool)asGridAction->isChecked());
-    setting->setValue("isTableDisplay", (bool)asTableAction->isChecked());
-    setting->setValue("isCompareDisplay", (bool)asCompareAction->isChecked());
+    setting->setValue("isRatingBadgeVisible", ratingBadgeVisibleAction->isChecked());
+    setting->setValue("isImageInfoVisible", infoVisibleAction->isChecked());
+    setting->setValue("isLoupeDisplay", asLoupeAction->isChecked());
+    setting->setValue("isGridDisplay", asGridAction->isChecked());
+    setting->setValue("isTableDisplay", asTableAction->isChecked());
+    setting->setValue("isCompareDisplay", asCompareAction->isChecked());
 
-    setting->setValue("isMenuBarVisible", (bool)menuBarVisibleAction->isChecked());
-    setting->setValue("isStatusBarVisible", (bool)statusBarVisibleAction->isChecked());
-    setting->setValue("isFolderDockVisible", (bool)folderDockVisibleAction->isChecked());
-    setting->setValue("isFavDockVisible", (bool)favDockVisibleAction->isChecked());
-    setting->setValue("isFilterDockVisible", (bool)filterDockVisibleAction->isChecked());
-    setting->setValue("isMetadataDockVisible", (bool)metadataDockVisibleAction->isChecked());
-    setting->setValue("isThumbDockVisible", (bool)thumbDockVisibleAction->isChecked());
-    setting->setValue("isFolderDockLocked", (bool)folderDockLockAction->isChecked());
-    setting->setValue("isFavDockLocked", (bool)favDockLockAction->isChecked());
-    setting->setValue("isFilterDockLocked", (bool)filterDockLockAction->isChecked());
-    setting->setValue("isMetadataDockLocked", (bool)metadataDockLockAction->isChecked());
-    setting->setValue("isThumbDockLocked", (bool)thumbDockLockAction->isChecked());
+    setting->setValue("isMenuBarVisible", menuBarVisibleAction->isChecked());
+    setting->setValue("isStatusBarVisible", statusBarVisibleAction->isChecked());
+    setting->setValue("isFolderDockVisible", folderDockVisibleAction->isChecked());
+    setting->setValue("isFavDockVisible", favDockVisibleAction->isChecked());
+    setting->setValue("isFilterDockVisible", filterDockVisibleAction->isChecked());
+    setting->setValue("isMetadataDockVisible", metadataDockVisibleAction->isChecked());
+    setting->setValue("isThumbDockVisible", thumbDockVisibleAction->isChecked());
+    setting->setValue("isFolderDockLocked", folderDockLockAction->isChecked());
+    setting->setValue("isFavDockLocked", favDockLockAction->isChecked());
+    setting->setValue("isFilterDockLocked", filterDockLockAction->isChecked());
+    setting->setValue("isMetadataDockLocked", metadataDockLockAction->isChecked());
+    setting->setValue("isThumbDockLocked", thumbDockLockAction->isChecked());
     setting->setValue("wasThumbDockVisible", wasThumbDockVisible);
 
     /* InfoView okToShow fields */
@@ -5929,6 +5920,7 @@ Preferences are located in the prefdlg class and updated here.
         G::fontSize = 14;
         classificationBadgeInImageDiameter = 20;
         classificationBadgeInThumbDiameter = 12;
+//        imageView->infoOverlayFontSize = 14;
 
         // slideshow
         slideShowDelay = 5;
@@ -5953,6 +5945,7 @@ Preferences are located in the prefdlg class and updated here.
 
     // appearance
     G::fontSize = setting->value("fontSize").toString();
+    // load imageView->infoOverlayFontSize later as imageView has not been created yet
     classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
     classificationBadgeInThumbDiameter = setting->value("classificationBadgeInThumbDiameter").toInt();
     isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
@@ -6470,38 +6463,23 @@ notification when the QListView has finished painting itself.
     // save selection as tableView is hidden and not synced
     saveSelection();
 
-//    // save the current row as it will be lost when ThumbView becomes visible
-//    int previousRow = currentRow;
-
-//    // flag so can adjust index in fileSelectionChange as well
-//    modeChangeJustHappened = true;
-
     /* show imageView in the central widget. This makes thumbView visible, and
     it updates the index to its previous state.  The index update triggers
     fileSelectionChange  */
     centralLayout->setCurrentIndex(LoupeTab);
     prevCentralView = LoupeTab;
-//    modeChangeJustHappened = false;
 
-//    currentRow = previousRow;       // used by eventFilter in ThumbView
-
-    // if thumbdock was not visible need to "refresh" it as it loses its settings
-    if(!thumbDock->isVisible()) {
-//        thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-        // recover the current index
-//        thumbView->setCurrentIndex(dm->sf->index(previousRow, 0));
-        // if was in grid mode then restore thumbdock to previous state
-        if (hasGridBeenActivated) {
-            if(wasThumbDockVisible) toggleThumbDockVisibity();
-            hasGridBeenActivated = false;
-        }
+    // recover thumbdock if it was visible before as gridView and full screen can
+    // remove the thumbdock
+    if(isNormalScreen){
+        if(wasThumbDockVisible && !thumbDock->isVisible()) thumbDock->setVisible(true);
+        if(!wasThumbDockVisible && thumbDock->isVisible()) thumbDock->setVisible(false);
     }
 
     QModelIndex idx = dm->sf->index(currentRow, 0);
     thumbView->setCurrentIndex(idx);
 
     // update imageView, use cache if image loaded, else read it from file
-//    QModelIndex idx = thumbView->currentIndex();
     QString fPath = idx.data(G::PathRole).toString();
     if (imageView->isVisible()) {
         if (imageView->loadImage(idx, fPath)) {
@@ -6521,7 +6499,7 @@ notification when the QListView has finished painting itself.
     thumbView->setThumbParameters();
 
     /* flag to intercept scrollbar paint events in ThumbView::eventFilter and
-    scroll to position when the painting is completed */
+       scroll to position when the painting is completed */
     thumbView->readyToScroll = true;
 
     prevMode = "Loupe";
@@ -6530,12 +6508,11 @@ notification when the QListView has finished painting itself.
 void MW::gridDisplay()
 {
 /*
-Note: When the gridView is displayed it needs to be scrolled to the
-currentIndex since it has been "hidden". However, the scrollbars take a long
-time to paint after the view show event, so the ThumbView::scrollToCurrent
-function must be delayed. This is done by the eventFilter in MW (installEventFilter),
-intercepted the scrollbar paint events. This is a bit of a cludge to get around
-lack of notification when the QListView has finished painting itself.
+Note: When the gridView is displayed it needs to be scrolled to the currentIndex since it has
+been "hidden". However, the scrollbars take a long time to paint after the view show event, so
+the ThumbView::scrollToCurrent function must be delayed. This is done by the eventFilter in MW
+(installEventFilter), intercepted the scrollbar paint events. This is a bit of a cludge to get
+around lack of notification when the QListView has finished painting itself.
 */
     {
     #ifdef ISDEBUG
@@ -6548,14 +6525,11 @@ lack of notification when the QListView has finished painting itself.
     // save selection as tableView is hidden and not synced
     saveSelection();
 
-    hasGridBeenActivated = true;
-    // remember previous state of thumbDock so can recover if change mode
-    wasThumbDockVisible = thumbDockVisibleAction->isChecked();
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
     thumbDock->setVisible(false);
     thumbDockVisibleAction->setChecked(false);
-//    if(thumbDock->isVisible()) toggleThumbDockVisibity();
-    // show tableView in central widget
+
+    // show gridView in central widget
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
 
@@ -6614,11 +6588,11 @@ void MW::tableDisplay()
     tableView->setCurrentIndex(idx);
     thumbView->setCurrentIndex(idx);
 
-    /* if was in grid mode then restore thumbdock to previous state since
-       thumbView is hidden when in gridView */
-    if (hasGridBeenActivated) {
-        if(!thumbDock->isVisible() && wasThumbDockVisible) toggleThumbDockVisibity();
-        hasGridBeenActivated = false;
+    // recover thumbdock if it was visible before as gridView and full screen can
+    // remove the thumbdock
+    if(isNormalScreen){
+        if(wasThumbDockVisible && !thumbDock->isVisible()) thumbDock->setVisible(true);
+        if(!wasThumbDockVisible && thumbDock->isVisible()) thumbDock->setVisible(false);
     }
 
     // req'd after compare mode to re-enable extended selection
@@ -6708,17 +6682,6 @@ void MW::recoverSelection()
     foreach (idx, selectedRows)
         selection.select(idx, idx);
     selectionModel->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-}
-
-void MW::setFullNormal()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    if (fullScreenAction->isChecked()) showFullScreen();
-    else showNormal();
 }
 
 void MW::setCentralView()
@@ -6934,8 +6897,8 @@ void MW::toggleThumbDockVisibity()
         thumbDockVisibleAction->setChecked(true);
     }
 
-    if (G::mode != "Grid")
-        wasThumbDockVisible = thumbDockVisibleAction->isChecked();
+    if (G::mode != "Grid" && isNormalScreen)
+        wasThumbDockVisible = thumbDock->isVisible();
 }
 
 void MW::setMenuBarVisibility() {
@@ -8219,14 +8182,14 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    setFixedSize(QSize(1280, 720));
+    qDebug() << "wasThumbDockVisible =" << wasThumbDockVisible;
+
+//    setFixedSize(QSize(1280, 720));
 
 }
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    progressBar->updateProgress(4, 20, 40, addMetadataColor, "test");
-    return;
     QString fPath = "D:/Pictures/_ThumbTest/2008-02-06_0966.jpg";
     metadata->testNewFileFormat(fPath);
 }

@@ -1,5 +1,4 @@
 BUGS
--
 - Check if cacheDelay is still important
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
@@ -13,6 +12,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Hide cursor during slideshow
 - For very large folders only load one or two grids of images at a time
 - Auto expand dialog shooting info template
 - tableView adjust to changing font size
@@ -20,24 +20,25 @@ ENHANCEMENTS
 - Speed up Tiffs
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
-- Add check for go to ingest folder after ingesting
 - Check for updates on Mac
 - Detect drive mounting
-- Track downloads by ip address
 - Invert filter
 - Make all message boxes consistent (see runExternalApp)
-- Create installer for mac
 - Remove Windows Registry settings during uninstall
 - When ingesting confirm all files copied correctly (option)
 - Add more raw file formats - DNG, Pentax ...
 - Add completer for title in metadata
-- Add metadata performance options to preferences
 - Get Sony image count, camera SN
 - Add zoom increment amount to preferences
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Fullscreen does not always remember thumbnail status when return to normal view
+- Create installer for mac
+- Add check for go to ingest folder after ingesting
+- Track downloads by ip address
+- Change size of shooting info
 - AppDlg table not stretching and word wrap was on
 - Show cursor as separate label on top of cacheLabel to improve performance.
 - Speeded up image count in folders panel

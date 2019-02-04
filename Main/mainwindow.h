@@ -203,6 +203,7 @@ public:
         bool isThumbs;
         bool isStatusBar;
     } fullScreenDocks;
+    bool isNormalScreen;
 
     QString currentViewDir;
 
@@ -365,6 +366,7 @@ private slots:
     void updateClassification();
     void refreshFolders();
     void setFontSize(int pixels);
+    void setInfoFontSize();
     void setClassificationBadgeImageDiam(int d);
     void setClassificationBadgeThumbDiam(int d);
     void setPrefPage(int page);
@@ -389,7 +391,6 @@ private slots:
 
     void addIngestHistoryFolder(QString fPath);
 
-    void setFullNormal();
     void setCentralView();
 
     void setThumbDockVisibity();

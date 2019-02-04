@@ -38,7 +38,7 @@ namespace G
 //                  << "\n" << std::flush;
 
         const QByteArray b = " ";
-        const char *str = b.data();
+//        const char *str = b.data();
 
         QString time = QString::number(G::t.restart());
 
