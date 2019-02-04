@@ -43,6 +43,8 @@ public:
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void rotate(int degrees);
     void moveShootingInfo(QString infoString);
+    QString shootingInfo;
+    int infoOverlayFontSize;
     ClassificationLabel *classificationLabel;
     QPixmap *pickPixmap;
 
@@ -167,7 +169,6 @@ private:
     QSize full;
 
     QString currentImagePath;
-    QString shootingInfo;
     bool firstImageLoaded;
     int classificationBadgeDiam;
 
