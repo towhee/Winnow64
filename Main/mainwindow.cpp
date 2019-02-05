@@ -4932,17 +4932,23 @@ void MW::about()
     G::track(__FUNCTION__);
     #endif
     }
-    QString aboutString = "<h1>Winnow version " + version + "</h1>"
-        + "<h3>"
-        + tr("<p>Image viewer and ingester</p>")
-        + "Qt v" + QT_VERSION_STR
-        + "<p></p>"
-        + "<p>Author: Rory Hill."
-        + "<p>Latest change: " + versionDetail
-        + "<p>Winnow is licensed under the GNU General Public License version 3</p>"
-        + "<p></p></h3";
 
-    QMessageBox::about(this, tr("About") + " Winnow", aboutString);
+    QString qtVersion = QT_VERSION_STR;
+    qtVersion.prepend("Qt: ");
+    aboutDlg = new AboutDlg(this, version, qtVersion, website);
+    aboutDlg->exec();
+
+//    QString aboutString = "<h1>Winnow version " + version + "</h1>"
+//        + "<h3>"
+//        + tr("<p>Image viewer and ingester</p>")
+//        + "Qt v" + QT_VERSION_STR
+//        + "<p></p>"
+//        + "<p>Author: Rory Hill."
+//        + "<p>Latest change: " + versionDetail
+//        + "<p>Winnow is licensed under the GNU General Public License version 3</p>"
+//        + "<p></p></h3";
+
+//    QMessageBox::about(this, tr("About") + " Winnow", aboutString);
 }
 
 void MW::externalAppManager()

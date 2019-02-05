@@ -46,7 +46,8 @@ HEADERS += \
     Utilities/popup.h \
     Utilities/progressbar.h \
     Utilities/usb.h \
-    Utilities/utilities.h
+    Utilities/utilities.h \
+    Dialogs/aboutdlg.h
 
 SOURCES += \
     Cache/imagecache.cpp \
@@ -85,7 +86,8 @@ SOURCES += \
     Utilities/popup.cpp \
     Utilities/progressbar.cpp \
     Utilities/usb.cpp \
-    Utilities/utilities.cpp
+    Utilities/utilities.cpp \
+    Dialogs/aboutdlg.cpp
 
 # OBJECTIVE_SOURCES += MacOS/macscale.mm
 
@@ -107,7 +109,9 @@ FORMS += \
     Help/shortcutsform.ui \
     Help/welcome.ui \
     Metadata/metadatareport.ui \
-    Dialogs/testdlg.ui
+    Dialogs/testdlg.ui \
+    Dialogs/aboutdlg.ui \
+    Dialogs/test1.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns
