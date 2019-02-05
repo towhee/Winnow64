@@ -37,7 +37,10 @@ void Utilities::hideCursor()
     QApplication::setOverrideCursor(Qt::BlankCursor);
 <<<<<<< HEAD
     // TestAsyncFileReads branch change #1
+<<<<<<< HEAD
     // TestAsyncFileReads branch change #2
 =======
 >>>>>>> parent of 9ea0713... Change 1 test
+=======
+>>>>>>> parent of eac07e9... Change 2 test
 }
