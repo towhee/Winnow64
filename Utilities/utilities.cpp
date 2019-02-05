@@ -35,6 +35,9 @@ QString Utilities::enquote(QString &s)
 void Utilities::hideCursor()
 {
     QApplication::setOverrideCursor(Qt::BlankCursor);
+<<<<<<< HEAD
     // TestAsyncFileReads branch change #1
     // TestAsyncFileReads branch change #2
+=======
+>>>>>>> parent of 9ea0713... Change 1 test
 }
