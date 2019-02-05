@@ -2043,12 +2043,12 @@ void Metadata::reportMetadata()
         rpt << xmpStr;
     }
 
-//    QDialog *dlg = new QDialog;
-//    Ui::metadataReporttDlg md;
-//    md.setupUi(dlg);
-//    md.textBrowser->setText(reportString);
-//    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-//    dlg->show();
+    QDialog *dlg = new QDialog;
+    Ui::metadataReporttDlg md;
+    md.setupUi(dlg);
+    md.textBrowser->setText(reportString);
+    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+    dlg->show();
     std::cout << reportString.toStdString() << std::flush;
 }
 

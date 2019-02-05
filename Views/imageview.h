@@ -24,7 +24,8 @@ public:
               InfoString *infoString,
               bool isShootingInfoVisible,
               bool isRatingBadgeVisible,
-              int classificationBadgeDiam);
+              int classificationBadgeDiam,
+              bool &isSlideshow);
 
     qreal zoom;
     qreal refZoom;                      // adjusted to real screen pixels
@@ -58,11 +59,13 @@ public slots:
     void zoomToFit();
     void zoomTo(qreal zoomTo);
     void zoomToggle();
+    void hideCursor();
     void setClassificationBadgeImageDiam(int d);
 
 signals:
     void togglePick();
     void updateStatus(bool, QString);
+    void killSlideshow();                   // only call when slideshow is active
     void zoomChange(qreal zoomValue);
     void handleDrop(const QMimeData *mimeData);
 
@@ -172,6 +175,7 @@ private:
     bool firstImageLoaded;
     int classificationBadgeDiam;
 
+    bool &isSlideshow;
     bool cursorIsHidden;        // use for slideshow and full screen - review rgh
     bool moveImageLocked;       // control when con drag image around
     bool isZoom;
