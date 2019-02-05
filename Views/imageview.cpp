@@ -791,7 +791,6 @@ void ImageView::hideCursor()
 /*
 Called from mouse move event in a delay if in slideshow mode.
 */
-    G::track(__FUNCTION__, "hide cursor after delay");
     setCursor(Qt::BlankCursor);
 }
 
