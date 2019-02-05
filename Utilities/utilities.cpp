@@ -37,4 +37,8 @@ void Utilities::hideCursor()
     QApplication::setOverrideCursor(Qt::BlankCursor);
     // TestAsyncFileReads branch change #1
     // TestAsyncFileReads branch change #2
+
+    // TestAsyncFileReads branch change #2
+
+
 }
