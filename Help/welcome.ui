@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>814</width>
-    <height>508</height>
+    <width>1340</width>
+    <height>1044</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,11 +30,14 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>793</width>
-     <height>832</height>
+     <width>1319</width>
+     <height>1837</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="bottomMargin">
+     <number>1100</number>
+    </property>
     <item>
      <spacer name="horizontalSpacer">
       <property name="orientation">
@@ -42,7 +45,7 @@
       </property>
       <property name="sizeHint" stdset="0">
        <size>
-        <width>56</width>
+        <width>30</width>
         <height>20</height>
        </size>
       </property>
@@ -67,7 +70,7 @@
        <widget class="QFrame" name="frame_2">
         <property name="maximumSize">
          <size>
-          <width>500</width>
+          <width>16777215</width>
           <height>16777215</height>
          </size>
         </property>
@@ -88,7 +91,7 @@
            </property>
            <property name="maximumSize">
             <size>
-             <width>600</width>
+             <width>1500</width>
              <height>16777215</height>
             </size>
            </property>
@@ -120,9 +123,15 @@
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
           <widget class="QLabel" name="tipsLabel">
+           <property name="minimumSize">
+            <size>
+             <width>900</width>
+             <height>0</height>
+            </size>
+           </property>
            <property name="maximumSize">
             <size>
-             <width>500</width>
+             <width>1500</width>
              <height>16777215</height>
             </size>
            </property>
@@ -168,7 +177,7 @@
       </property>
       <property name="sizeHint" stdset="0">
        <size>
-        <width>67</width>
+        <width>30</width>
         <height>20</height>
        </size>
       </property>
