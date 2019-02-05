@@ -125,6 +125,8 @@ exiftool/example1.cpp
 *.stash
 *.o
 Makefile
+Makefile.Debug
+Makefile.Release
 moc_appdlg.cpp
 moc_bookmarks.cpp
 moc_classificationlabel.cpp

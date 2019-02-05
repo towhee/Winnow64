@@ -47,7 +47,8 @@ HEADERS += \
     Utilities/progressbar.h \
     Utilities/usb.h \
     Utilities/utilities.h \
-    Dialogs/aboutdlg.h
+    Dialogs/aboutdlg.h \
+    Utilities/cursor.h
 
 SOURCES += \
     Cache/imagecache.cpp \

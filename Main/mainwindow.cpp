@@ -145,7 +145,7 @@ void MW::initialize()
     this->setWindowTitle("Winnow");
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     isInitializing = true;
-    isSlideShowActive = false;
+    isSlideShow = false;
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
     ingestHistoryFolders = new QStringList;
@@ -494,10 +494,10 @@ bool MW::event(QEvent *event)
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
 
         if (keyEvent->key() == Qt::Key_Escape) {
-            if (isSlideShowActive) slideShow();     // toggles slideshow off
+            if (isSlideShow) slideShow();     // toggles slideshow off
         }
         // change delay 1 - 9 seconds
-        if (isSlideShowActive) {
+        if (isSlideShow) {
             int n = keyEvent->key() - 48;
             if (n > 0 && n <=9) {
                 slideShowDelay = n;
@@ -696,7 +696,7 @@ void MW::folderSelectionChange()
     setThreadRunStatusInactive();
 
     // stop slideshow if a new folder is selected
-    if (isSlideShowActive && !isStressTest) slideShow();
+    if (isSlideShow && !isStressTest) slideShow();
 
     // if previously in compare mode switch to loupe mode
     if (asCompareAction->isChecked()) {
@@ -3326,7 +3326,8 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
                               infoString,
                               setting->value("isImageInfoVisible").toBool(),
                               setting->value("isRatingBadgeVisible").toBool(),
-                              setting->value("classificationBadgeInImageDiameter").toInt());
+                              setting->value("classificationBadgeInImageDiameter").toInt(),
+                              isSlideShow);
 
     imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
 
@@ -3348,6 +3349,9 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
 
     connect(imageView, SIGNAL(handleDrop(const QMimeData*)),
             this, SLOT(handleDrop(const QMimeData*)));
+
+    connect(imageView, SIGNAL(killSlideshow()),
+            this, SLOT(slideshow()));
 }
 
 void MW::createCompareView()
@@ -5936,7 +5940,7 @@ Preferences are located in the prefdlg class and updated here.
         // cache
         cacheSizeMB = 2000;
         isShowCacheStatus = false;
-        cacheDelay = 250;
+        cacheDelay = 0;
         isShowCacheThreadActivity = false;
         progressWidth = 200;
         cacheWtAhead = 5;
@@ -7775,15 +7779,16 @@ void MW::slideShow()
     G::track(__FUNCTION__);
     #endif
     }
-    if (isSlideShowActive) {
-        isSlideShowActive = false;
+    if (isSlideShow) {
+        imageView->setCursor(Qt::ArrowCursor);
+        isSlideShow = false;
         slideShowAction->setText(tr("Slide Show"));
         popUp->showPopup(this, "Stopping slideshow", 1000, 0.5);
         slideShowTimer->stop();
         delete slideShowTimer;
-//        delete popUp;
     } else {
-        isSlideShowActive = true;
+        imageView->setCursor(Qt::BlankCursor);
+        isSlideShow = true;
         QString msg = "Starting slideshow";
         msg += "\nInterval = " + QString::number(slideShowDelay) + " second(s)";
         if (slideShowRandom)  msg += "\nRandom selection";
@@ -7799,7 +7804,6 @@ void MW::slideShow()
         connect(slideShowTimer, SIGNAL(timeout()), this, SLOT(nextSlide()));
 //        if (isStressTest) slideShowDelay = 0.9;
         slideShowTimer->start(slideShowDelay * 1000);
-//        nextSlide();
     }
 }
 
@@ -8188,7 +8192,7 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << "wasThumbDockVisible =" << wasThumbDockVisible;
+    imageView->setCursor(Qt::BlankCursor);
 
 //    setFixedSize(QSize(1280, 720));
 
