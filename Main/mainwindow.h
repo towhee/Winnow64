@@ -32,6 +32,7 @@
 #include "Utilities/popup.h"
 #include "Cache/imagecache.h"
 #include "ingestdlg.h"
+#include "aboutdlg.h"
 #include "Image/thumb.h"
 //#include "dircompleter.h"
 #include "prefdlg.h"
@@ -57,11 +58,14 @@ class MW : public QMainWindow
     friend class InfoView;
 
 public:
-    MW(QWidget *parent = 0);
+    MW(QWidget *parent = nullptr);
 
-    QString version = "0.9.7.0.4 released 2019-02-02";
-    QString versionDetail =
-            "<a href=\"http://165.227.46.158/winnow/versions.html\"><span style=\" text-decoration: underline; color:#0000ff;\">Version Information</span></a>.</p></body></html>";
+    QString version = "Version: 0.9.7.0.5 released 2019-02-03";
+    QString website = "Website: "
+            "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
+            "<span style=\" text-decoration: underline; color:#e5e5e5;\">"
+            "Winnow main page</span></a>.  "
+            "Includes links to download and video tutorials.</p></body></html>";
 
     bool isShift;               // used when opening if shift key pressed
 
@@ -717,9 +721,10 @@ private:
     Thumb *thumb;
     InfoView *infoView;
     IngestDlg *ingestDlg;
+    AboutDlg *aboutDlg;
     WorkspaceDlg *workspaceDlg;
     UpdateApp *updateAppDlg;
-    ZoomDlg *zoomDlg = 0;
+    ZoomDlg *zoomDlg = nullptr;
     PopUp *popUp;
     QTimer *slideShowTimer;
     QWidget *folderDockOrigWidget;
