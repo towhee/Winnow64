@@ -31,3 +31,8 @@ QString Utilities::enquote(QString &s)
 {
     return QChar('\"') + s + QChar('\"');
 }
+
+void Utilities::hideCursor()
+{
+    QApplication::setOverrideCursor(Qt::BlankCursor);
+}
