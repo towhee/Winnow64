@@ -42,17 +42,18 @@ public:
     {
         if (welcomeScrollArea->objectName().isEmpty())
             welcomeScrollArea->setObjectName(QString::fromUtf8("welcomeScrollArea"));
-        welcomeScrollArea->resize(814, 508);
+        welcomeScrollArea->resize(1340, 1044);
         welcomeScrollArea->setFrameShape(QFrame::NoFrame);
         welcomeScrollArea->setFrameShadow(QFrame::Plain);
         welcomeScrollArea->setLineWidth(5);
         welcomeScrollArea->setWidgetResizable(true);
         scrollAreaWidgetContents = new QWidget();
         scrollAreaWidgetContents->setObjectName(QString::fromUtf8("scrollAreaWidgetContents"));
-        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 793, 832));
+        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 1319, 1837));
         horizontalLayout = new QHBoxLayout(scrollAreaWidgetContents);
         horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
-        horizontalSpacer = new QSpacerItem(56, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalLayout->setContentsMargins(-1, -1, -1, 1100);
+        horizontalSpacer = new QSpacerItem(30, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
         horizontalLayout->addItem(horizontalSpacer);
 
@@ -64,7 +65,7 @@ public:
 
         frame_2 = new QFrame(scrollAreaWidgetContents);
         frame_2->setObjectName(QString::fromUtf8("frame_2"));
-        frame_2->setMaximumSize(QSize(500, 16777215));
+        frame_2->setMaximumSize(QSize(16777215, 16777215));
         frame_2->setFrameShape(QFrame::NoFrame);
         frame_2->setFrameShadow(QFrame::Raised);
         horizontalLayout_3 = new QHBoxLayout(frame_2);
@@ -72,7 +73,7 @@ public:
         welcomeLabel = new QLabel(frame_2);
         welcomeLabel->setObjectName(QString::fromUtf8("welcomeLabel"));
         welcomeLabel->setMinimumSize(QSize(500, 0));
-        welcomeLabel->setMaximumSize(QSize(600, 16777215));
+        welcomeLabel->setMaximumSize(QSize(1500, 16777215));
         welcomeLabel->setFrameShape(QFrame::Box);
         welcomeLabel->setAlignment(Qt::AlignCenter);
         welcomeLabel->setWordWrap(true);
@@ -90,7 +91,8 @@ public:
         horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
         tipsLabel = new QLabel(frame);
         tipsLabel->setObjectName(QString::fromUtf8("tipsLabel"));
-        tipsLabel->setMaximumSize(QSize(500, 16777215));
+        tipsLabel->setMinimumSize(QSize(900, 0));
+        tipsLabel->setMaximumSize(QSize(1500, 16777215));
         tipsLabel->setFrameShape(QFrame::Box);
         tipsLabel->setLineWidth(1);
         tipsLabel->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
@@ -108,7 +110,7 @@ public:
 
         horizontalLayout->addLayout(verticalLayout);
 
-        horizontalSpacer_2 = new QSpacerItem(67, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalSpacer_2 = new QSpacerItem(30, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
         horizontalLayout->addItem(horizontalSpacer_2);
 

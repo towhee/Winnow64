@@ -1,4 +1,6 @@
 BUGS
+- Report metadata sending to console
+- Dmg app missing logo
 - Check if cacheDelay is still important
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
@@ -34,12 +36,14 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Made the token editor sizable so drag and example areas can expand
+- Tweaked about dialog and added links to website and email to winnowimageviewer@outlook.com
 - Fullscreen does not always remember thumbnail status when return to normal view
 - Create installer for mac
-- Add check for go to ingest folder after ingesting
-- Track downloads by ip address
 - Change size of shooting info
 - AppDlg table not stretching and word wrap was on
+- Add check for go to ingest folder after ingesting
+- Track downloads by ip address
 - Show cursor as separate label on top of cacheLabel to improve performance.
 - Speeded up image count in folders panel
 - Image count not updating in bookmarks`
