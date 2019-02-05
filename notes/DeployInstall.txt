@@ -56,8 +56,7 @@ Win Installation Update:
 -  Update deploy if new dlls required
 -  Update version in mainwindow.h
 -  Update winnow.exe by compiling in release mode without shadow build
--  Update winnow.html version on main page on server at http://165.227.46.158/winnow/winnow.html
-   - edit in creator Docs/winnow.html (don't forget to save)
+-  Edit in creator Docs/versions.html (don't forget to save) server loc = http://165.227.46.158/winnow/versions.html
    - when run onlineinstallation.bat it will copy winnow.html to server
 -  Update and save the version in D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
 -  Update and save the version and release date in
