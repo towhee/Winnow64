@@ -28,9 +28,11 @@ ImageView::ImageView(QWidget *parent,
                      InfoString *infoString,
                      bool isShootingInfoVisible,
                      bool isRatingBadgeVisible,
-                     int classificationBadgeDiam) :
+                     int classificationBadgeDiam,
+                     bool &isSlideshow):
 
-                     QGraphicsView(centralWidget)
+                     QGraphicsView(centralWidget),
+                     isSlideshow(isSlideshow)
 {
     {
     #ifdef ISDEBUG
@@ -45,6 +47,7 @@ ImageView::ImageView(QWidget *parent,
     this->thumbView = thumbView;
     this->infoString = infoString;
     this->classificationBadgeDiam = classificationBadgeDiam;
+    this->isSlideshow = isSlideshow;
     pixmap = new Pixmap(this, metadata);
 
     scene = new QGraphicsScene();
@@ -269,6 +272,7 @@ because setTransformationAnchor(QGraphicsView::AnchorUnderMouse).
 ● The app status is updated.
 ● The zoom amount is updated in ZoomDlg if it is open.
 
+If isSlideshow then hide mouse cursor unless is moves.
 */
     {
     #ifdef ISDEBUG
@@ -293,8 +297,11 @@ because setTransformationAnchor(QGraphicsView::AnchorUnderMouse).
     isFit = (zoom == zoomFit);
     if (isZoom) scrollPct = getScrollPct();
     wasZoomFit = zoom == zoomFit;
-    if (isZoom) setCursor(Qt::OpenHandCursor);
-    else setCursor(Qt::ArrowCursor);
+
+    if (!isSlideshow) {
+        if (isZoom) setCursor(Qt::OpenHandCursor);
+        else setCursor(Qt::ArrowCursor);
+    }
 
     placeClassificationBadge();
     moveShootingInfo(shootingInfo);
@@ -779,6 +786,15 @@ void ImageView::setCursorHiding(bool hide)
     }
 }
 
+void ImageView::hideCursor()
+{
+/*
+Called from mouse move event in a delay if in slideshow mode.
+*/
+    G::track(__FUNCTION__, "hide cursor after delay");
+    setCursor(Qt::BlankCursor);
+}
+
 //void ImageView::compareZoomAtCoord(QPointF coord, bool isZoom)
 //{
 ///* Same as when user mouse clicks on the image.  Called from compareView to
@@ -928,16 +944,18 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 {
 /*
 Pan the image during a mouse drag operation
+Set a delay to hide cursor is in slideshow mode
 */
     {
     #ifdef ISDEBUG
 //    G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "ImageView::mouseMoveEvent" << isMouseDrag;
+    static QPoint prevPos = event->pos();
+
     if (isLeftMouseBtnPressed) {
+        if(isSlideshow) emit killSlideshow();
         isMouseDrag = true;
-//        qDebug() << G::t.restart() << "\t" << "ImageView::mouseMoveEvent  isLeftMouseBtnPressed" << isLeftMouseBtnPressed << "isMouseDrag" << isMouseDrag;
         setCursor(Qt::ClosedHandCursor);
         horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
                                        (event->x() - mousePressPt.x()));
@@ -945,8 +963,17 @@ Pan the image during a mouse drag operation
                                       (event->y() - mousePressPt.y()));
         mousePressPt.setX(event->x());
         mousePressPt.setY(event->y());
-//        qDebug() << G::t.restart() << "\t" << event;
     }
+    else{
+        if(isSlideshow) {
+            if(event->pos() != prevPos) {
+                setCursor(Qt::ArrowCursor);
+                QTimer::singleShot(500, this, SLOT(hideCursor()));
+            }
+        }
+    }
+
+    prevPos = event->pos();
     event->ignore();
 
 //    QGraphicsView::mouseMoveEvent(event);

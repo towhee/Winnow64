@@ -227,7 +227,7 @@ public:
     bool modeChangeJustHappened;
 
     bool isCurrentFolderOkay;
-    bool isSlideShowActive;
+    bool isSlideShow;
     bool copyOp;
     bool isDragDrop;
     QString dragDropFilePath;
@@ -278,6 +278,7 @@ public slots:
     void setThumbDockFloatFeatures(bool isFloat);
     void resortImageCache();
     void setCentralMessage(QString message);
+    void slideShow();
     void test();                    // for debugging
     void testNewFileFormat();       // for debugging
 
@@ -376,7 +377,6 @@ private slots:
     void setPrefPage(int page);
     void setDisplayResolution();
     void setCombineRawJpg();
-    void slideShow();
     void nextSlide();
     void setCacheParameters();
     void selectAllThumbs();
