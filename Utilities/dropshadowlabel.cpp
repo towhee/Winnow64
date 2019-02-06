@@ -26,8 +26,8 @@ void DropShadowLabel::paintEvent(QPaintEvent* /*event*/)
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setRenderHint(QPainter::TextAntialiasing, true);
 
-    QRect rect1(0, 0, this->width() + 100, this->height() + 20);
-    QRect rect2(2, 2, this->width() + 100, this->height() + 20);
+    QRect rect1(0, 0, this->width()*2 + 100, this->height()*2 + 20);
+    QRect rect2(2, 2, this->width()*2 + 100, this->height()*2 + 20);
 
     QFont font = painter.font();
 //    font.setPixelSize(16);
