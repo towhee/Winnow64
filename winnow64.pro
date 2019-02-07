@@ -6,9 +6,11 @@ INCLUDEPATH += Utilities
 INCLUDEPATH += MacOS
 
 QT += widgets
+QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h
+HEADERS += Cache/imagecache.h \
+    Test/readmdconcurrent.h
 HEADERS += Test/readsync.h
 HEADERS += Test/readasync.h
 HEADERS += Test/asynctask.h
@@ -49,7 +51,8 @@ HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
 
-SOURCES += Cache/imagecache.cpp
+SOURCES += Cache/imagecache.cpp \
+    Test/readmdconcurrent.cpp
 SOURCES += Test/readsync.cpp
 SOURCES += Test/readasync.cpp
 SOURCES += Test/asynctask.cpp

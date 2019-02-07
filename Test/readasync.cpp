@@ -3,7 +3,6 @@
 ReadASync::ReadASync(QObject *parent, DataModel *dm)
 {
     this->dm = dm;
-
 }
 
 ReadASync::~ReadASync()
