@@ -48,6 +48,10 @@
 #include "ui_welcome.h"
 #include "ui_message.h"
 
+#include "Test/readasync.h"
+#include "Test/readsync.h"
+#include "Test/asynctask.h"
+
 class MW : public QMainWindow
 {
     Q_OBJECT
@@ -279,12 +283,28 @@ public slots:
     void resortImageCache();
     void setCentralMessage(QString message);
     void slideShow();
+
     void test();                    // for debugging
     void testNewFileFormat();       // for debugging
+
+//// testing async
+
+//    void go();
+//    void doTasks(const QStringList &sourceFiles);
+//    bool checkIfDone();
+
+//private:
+//    volatile bool stopped;
+//    int total;
+//    int done;
+//    QVector<int> chunkSizes(const int size, const int chunkCount);
+
+//// end texting async
 
 signals:
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     void closeZoomDlg();
+    void aSyncGo(int);
 
 private slots:
     bool checkForUpdate();

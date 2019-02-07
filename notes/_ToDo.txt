@@ -35,6 +35,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Ingest dialog not remembering auto bool setting
 - Hide cursor during slideshow
 - Report metadata sending to console
 - Auto expand dialog shooting info template
