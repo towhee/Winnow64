@@ -1102,6 +1102,8 @@ void IngestDlg::on_helpBtn_clicked()
 
 void IngestDlg::on_cancelBtn_clicked()
 {
+    qDebug() << "isAuto" << isAuto;
+
     reject();
 }
 
