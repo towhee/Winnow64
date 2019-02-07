@@ -1,17 +1,17 @@
-#ifndef READASYNC_H
-#define READASYNC_H
+#ifndef READMDCONCURRENT_H
+#define READMDCONCURRENT_H
+
 
 #include <QtWidgets>
 #include "Datamodel/datamodel.h"
-#include "Test/asynctask.h"
 
-class ReadASync : public QObject
+class ReadMdConcurrent : public QObject
 {
     Q_OBJECT
 
 public:
-    ReadASync(QObject *parent, DataModel *dm);
-    ~ReadASync();
+    ReadMdConcurrent(QObject *parent, DataModel *dm);
+    ~ReadMdConcurrent();
     void doTasks(const QStringList &sourceFiles);
 
 public slots:
@@ -29,4 +29,4 @@ private:
     QVector<int> chunkSizes(const int size, const int chunkCount);
 };
 
-#endif // READASYNC_H
+#endif // READMDCONCURRENT_H
