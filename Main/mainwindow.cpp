@@ -3130,7 +3130,7 @@ void MW::createCaching()
 
     /* When a new folder is selected the metadataCacheThread is started to
        load all the metadata and thumbs for each image.  If the user scrolls
-       during the cahe process then the metadataCacheThread is restarted at the
+       during the cache process then the metadataCacheThread is restarted at the
        first visible thumb to speed up the display of the thumbs for the user.
        However, if every scroll event triggered a restart it would be
        inefficient, so this timer is used to wait for a pause in the scrolling
@@ -7232,6 +7232,7 @@ void MW::ingest()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << "autoIngestFolderPath" << autoIngestFolderPath;
     if (thumbView->isPick()) {
         ingestDlg = new IngestDlg(this,
                                   combineRawJpg,
@@ -7258,8 +7259,10 @@ void MW::ingest()
 
         connect(ingestDlg, SIGNAL(revealIngestLocation(QString)),
                 this, SLOT(revealInFileBrowser(QString)));
+
         if(ingestDlg->exec() && autoEjectUsb) ejectUsb(currentViewDir);;
         delete ingestDlg;
+        qDebug() << "autoIngestFolderPath" << autoIngestFolderPath;
 
         if(gotoIngestFolder) {
             fsTree->select(lastIngestLocation);
@@ -8190,9 +8193,111 @@ void MW::helpWelcome()
     centralLayout->setCurrentIndex(StartTab);
 }
 
+//void MW::go()        // = convertOrCancel
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    stopped = true;
+//    if (QThreadPool::globalInstance()->activeThreadCount())
+//        QThreadPool::globalInstance()->waitForDone();
+//    QStringList sourceFiles;
+//    for(int row = 0; row < 100; ++row) {
+//        sourceFiles.append(dm->index(row, 0).data(G::PathRole).toString());
+//    }
+//    doTasks(sourceFiles);
+//}
+
+//void MW::doTasks(const QStringList &sourceFiles) // = convertFiles
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+////    QElapsedTimer t;
+////    t.start();
+
+//    stopped = false;
+//    total = sourceFiles.count();
+//    done = 0;
+//    const QVector<int> sizes = chunkSizes(100, QThread::idealThreadCount());
+
+//    int offset = 0;
+//    foreach (const int chunkSize, sizes) {
+//        ASyncTask *task = new ASyncTask(this,
+//                                        &stopped,
+//                                        sourceFiles.mid(offset, chunkSize));
+//        QThreadPool::globalInstance()->start(task);
+//        offset += chunkSize;
+//    }
+////    if(checkIfDone())
+////        qDebug() << "Elapsed ms =" << t.elapsed();
+//}
+
+//QVector<int> MW::chunkSizes(const int size, const int chunkCount)
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    Q_ASSERT(size > 0 && chunkCount > 0);
+//    if (chunkCount == 1)
+//        return QVector<int>() << size;
+//    QVector<int> result(chunkCount, size / chunkCount);
+//    if (int remainder = size % chunkCount) {
+//        int index = 0;
+//        for (int i = 0; i < remainder; ++i) {
+//            ++result[index];
+//            ++index;
+//            index %= chunkCount;
+//        }
+//    }
+//    return result;
+//}
+
+//bool MW::checkIfDone()
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    bool isDone = false;
+//    if (QThreadPool::globalInstance()->activeThreadCount())
+//        QTimer::singleShot(100, this, SLOT(checkIfDone()));
+//    else {
+//        if (done == total) {
+//            qDebug() << "Finished";
+//            isDone = true;
+//        }
+//        else {
+//            qDebug() << done << "so far";
+//        }
+//        stopped = isDone;
+//    }
+//    return isDone;
+//}
+
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    imageView->setCursor(Qt::BlankCursor);
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int total = 100;
+
+//    ReadSync *readSync = new ReadSync(this, dm);
+//    readSync->go(total);
+
+    ReadASync *readASync = new ReadASync(this, dm);
+    connect(this, SIGNAL(aSyncGo(int)), readASync, SLOT(go(int)));
+    emit aSyncGo(total);
+
 
 //    setFixedSize(QSize(1280, 720));
 

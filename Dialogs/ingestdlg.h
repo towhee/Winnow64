@@ -91,11 +91,11 @@ private:
     bool parametersOk();
 
     bool isInitializing;
-    bool isAuto;
 
     QFileSystemModel fileSystemModel;
     Metadata *metadata;
     DataModel *dm;
+    bool &isAuto;
     bool &combineRawJpg;
     bool &autoEjectUsb;
     bool &isBackup;
