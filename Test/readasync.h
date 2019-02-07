@@ -2,10 +2,6 @@
 #define READASYNC_H
 
 #include <QtWidgets>
-//#include <QMutex>
-//#include <QSize>
-//#include <QThread>
-//#include <QWaitCondition>
 #include "Datamodel/datamodel.h"
 #include "Test/asynctask.h"
 
