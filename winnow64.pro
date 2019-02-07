@@ -9,6 +9,9 @@ QT += widgets
 QT += xmlpatterns
 
 HEADERS += Cache/imagecache.h
+HEADERS += Test/readsync.h
+HEADERS += Test/readasync.h
+HEADERS += Test/asynctask.h
 HEADERS += Cache/mdcache.h
 HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/appdlg.h
@@ -47,6 +50,9 @@ HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
 
 SOURCES += Cache/imagecache.cpp
+SOURCES += Test/readsync.cpp
+SOURCES += Test/readasync.cpp
+SOURCES += Test/asynctask.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
@@ -103,7 +109,6 @@ FORMS += Help/message.ui
 FORMS += Help/shortcutsform.ui
 FORMS += Help/welcome.ui
 FORMS += Metadata/metadatareport.ui
-
 FORMS += Dialogs/testdlg.ui
 FORMS += Dialogs/test1.ui
 
