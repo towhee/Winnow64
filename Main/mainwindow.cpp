@@ -8289,15 +8289,18 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     G::track(__FUNCTION__);
     #endif
     }
-    int total = 100;
+    int total = 20;
 
 //    ReadSync *readSync = new ReadSync(this, dm);
 //    readSync->go(total);
 
-    ReadASync *readASync = new ReadASync(this, dm);
-    connect(this, SIGNAL(aSyncGo(int)), readASync, SLOT(go(int)));
-    emit aSyncGo(total);
+//    ReadASync *readASync = new ReadASync(this, dm);
+//    connect(this, SIGNAL(aSyncGo(int)), readASync, SLOT(go(int)));
+//    emit aSyncGo(total);
 
+    ReadMdConcurrent *readMdConcurrent = new ReadMdConcurrent(this, dm);
+    connect(this, SIGNAL(aSyncGo(int)), readMdConcurrent, SLOT(go(int)));
+    emit aSyncGo(total);
 
 //    setFixedSize(QSize(1280, 720));
 

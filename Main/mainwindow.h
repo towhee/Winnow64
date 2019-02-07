@@ -50,6 +50,7 @@
 
 #include "Test/readasync.h"
 #include "Test/readsync.h"
+#include "Test/readmdconcurrent.h"
 #include "Test/asynctask.h"
 
 class MW : public QMainWindow

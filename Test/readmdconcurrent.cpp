@@ -1,15 +1,39 @@
-#include "readasync.h"
+#include "Test/readmdconcurrent.h"
+#include <QtConcurrentRun>
 
-ReadASync::ReadASync(QObject *parent, DataModel *dm)
+namespace {
+
+void getMetadata(QObject *receiver, volatile bool *stopped,
+                 const QStringList &sourceFiles)
+{
+    foreach (const QString &source, sourceFiles) {
+        if (*stopped)
+            return;
+        QFileInfo fileInfo(source);
+        QFile file;
+        file.setFileName(source);
+        file.open(QIODevice::ReadOnly);
+        file.readAll();
+        file.close();
+        QString message = QObject::tr("Read '%1'").arg(source);
+        QMetaObject::invokeMethod(receiver, "announceProgress",
+                Qt::QueuedConnection, Q_ARG(bool, true),
+                Q_ARG(QString, message));
+    }
+}
+
+} // anonymous namespace
+
+ReadMdConcurrent::ReadMdConcurrent(QObject *parent, DataModel *dm)
 {
     this->dm = dm;
 }
 
-ReadASync::~ReadASync()
+ReadMdConcurrent::~ReadMdConcurrent()
 {
 }
 
-void ReadASync::go(int amount)        // = convertOrCancel
+void ReadMdConcurrent::go(int amount)        // = convertOrCancel
 {
     stopped = true;
     if (QThreadPool::globalInstance()->activeThreadCount())
@@ -22,7 +46,7 @@ void ReadASync::go(int amount)        // = convertOrCancel
     doTasks(sourceFiles);
 }
 
-void ReadASync::doTasks(const QStringList &sourceFiles) // = convertFiles
+void ReadMdConcurrent::doTasks(const QStringList &sourceFiles) // = convertFiles
 {
 
     t.restart();
@@ -35,16 +59,21 @@ void ReadASync::doTasks(const QStringList &sourceFiles) // = convertFiles
 
     int offset = 0;
     foreach (const int chunkSize, sizes) {
-        ASyncTask *task = new ASyncTask(this,
-                                        &stopped,
-                                        sourceFiles.mid(offset, chunkSize));
-        QThreadPool::globalInstance()->start(task);
+
+        QtConcurrent::run(getMetadata, this, &stopped,
+                sourceFiles.mid(offset, chunkSize));
+
+
+//        ASyncTask *task = new ASyncTask(this,
+//                                        &stopped,
+//                                        sourceFiles.mid(offset, chunkSize));
+//        QThreadPool::globalInstance()->start(getMetadata);
         offset += chunkSize;
     }
     checkIfDone();
 }
 
-QVector<int> ReadASync::chunkSizes(const int size, const int chunkCount)
+QVector<int> ReadMdConcurrent::chunkSizes(const int size, const int chunkCount)
 {
     Q_ASSERT(size > 0 && chunkCount > 0);
     if (chunkCount == 1)
@@ -62,7 +91,7 @@ QVector<int> ReadASync::chunkSizes(const int size, const int chunkCount)
     return result;
 }
 
-void ReadASync::checkIfDone()
+void ReadMdConcurrent::checkIfDone()
 {
     if (QThreadPool::globalInstance()->activeThreadCount())
         QTimer::singleShot(500, this, SLOT(checkIfDone()));
@@ -79,11 +108,11 @@ void ReadASync::checkIfDone()
     }
 }
 
-void ReadASync::announceProgress(bool readFile, const QString &message)
+void ReadMdConcurrent::announceProgress(bool readFile, const QString &message)
 {
     if (stopped)
         return;
-//    qDebug() << message;
+    qDebug() << message;
     if (readFile)
         ++done;
 }
