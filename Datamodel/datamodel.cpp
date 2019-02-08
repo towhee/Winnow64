@@ -399,7 +399,6 @@ bool DataModel::addFileData()
         MW::loadImageCache and thumbView::addMetadataToModel    */
     }
     filters->addCategoryFromData(typesMap, filters->types);
-    qDebug() << "File info colected for all files";
     return true;
 }
 
@@ -524,6 +523,134 @@ which is created in MW, and in InfoView.
     #ifdef ISPROFILE
     G::track(__FUNCTION__, "Leaving...");
     #endif
+}
+
+bool DataModel::updateMetadataItem(ImageMetadata *meta,
+                                   bool isShowCacheStatus)
+{
+    /*
+    This function is called after the metadata for all the eligible images in
+    the selected folder have been cached.  The metadata is displayed in tableView,
+    which is created in MW, and in InfoView.
+    */
+        {
+        #ifdef ISDEBUG
+        G::track(__FUNCTION__);
+        #endif
+        }
+
+        QElapsedTimer t;
+        t.start();
+        if(isShowCacheStatus) progressBar->clearProgress();
+
+        hasDupRawJpg = false;
+
+        // add a rebuild filters routine to call after a metadata update is complete for
+        // all rows in datamodel
+
+//        // collect all unique instances for filtration (use QMap to maintain order)
+//        QMap<QVariant, QString> modelMap;
+//        QMap<QVariant, QString> lensMap;
+//        QMap<QVariant, QString> titleMap;
+//        QMap<QVariant, QString> flMap;
+//        QMap<QVariant, QString> creatorMap;
+//        QMap<QVariant, QString> yearMap;
+//        QMap<QVariant, QString> dayMap;
+
+        /*
+        qDebug() << "DataModel::addMetadata " << index(row,0).data(G::PathRole).toString()
+                 << "\tDupHideRawRole =" << index(row,0).data(G::DupHideRawRole).toBool()
+                 << "\tDupRawIdxRole =" << index(row,0).data(G::DupRawIdxRole);
+        */
+
+        int row = meta->row;
+
+//        QModelIndex idx = index(row, G::PathColumn);
+//        QString fPath = idx.data(G::PathRole).toString();
+
+//        QString label =  metadata->getLabel(fPath);
+//        QString rating = metadata->getRating(fPath);
+//        uint width = metadata->getWidth(fPath);
+//        uint height = metadata->getHeight(fPath);
+//        QDateTime createdDate = metadata->getCreatedDate(fPath);
+//        QString createdDT = createdDate.toString("yyyy-MM-dd hh:mm:ss");
+//        QString year = createdDate.toString("yyyy");
+//        QString day = createdDate.toString("yyyy-MM-dd");
+//        QString mp = QString::number((width * height) / 1000000.0, 'f', 2);
+//        QString dim = QString::number(width) + "x" + QString::number(height);
+//        float apertureNum = metadata->getApertureNum(fPath);
+//        QString ss = metadata->getExposureTime(fPath);
+//        float ssNum = metadata->getExposureTimeNum(fPath);
+//        int isoNum = metadata->getISONum(fPath);
+//        QString model = metadata->getModel(fPath);
+//        QString lens = metadata->getLens(fPath);
+//        QString fl = metadata->getFocalLength(fPath);
+//        int flNum = metadata->getFocalLengthNum(fPath);
+//        QString title = metadata->getTitle(fPath);
+//        QString creator = metadata->getCreator(fPath).trimmed();
+//        QString copyright = metadata->getCopyright(fPath);
+//        QString email = metadata->getEmail(fPath);
+//        QString url = metadata->getUrl(fPath);
+
+//        if (!creatorMap.contains(creator)) creatorMap[creator] = creator;
+//        if (!yearMap.contains(year)) yearMap[year] = year;
+//        if (!dayMap.contains(day)) dayMap[day] = day;
+//        if (!modelMap.contains(model)) modelMap[model] = model;
+//        if (!lensMap.contains(lens)) lensMap[lens] = lens;
+//        if (!flMap.contains(fl)) flMap[flNum] = fl;
+//        if (!titleMap.contains(title)) titleMap[title] = title;
+
+        setData(index(row, G::LabelColumn), meta->label);
+        setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        setData(index(row, G::RatingColumn), meta->rating);
+        setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        setData(index(row, G::CreatedColumn), meta->createdDate.toString("yyyy-MM-dd hh:mm:ss"));
+        setData(index(row, G::YearColumn), meta->year);
+        setData(index(row, G::DayColumn), meta->day);
+        setData(index(row, G::MegaPixelsColumn), QString::number((meta->width * meta->height) / 1000000.0, 'f', 2));
+        setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        setData(index(row, G::DimensionsColumn), QString::number(meta->width) + "x" + QString::number(meta->height));
+        setData(index(row, G::RotationColumn), 0);
+        setData(index(row, G::RotationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        setData(index(row, G::ApertureColumn), meta->apertureNum);
+        setData(index(row, G::ApertureColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        setData(index(row, G::ShutterspeedColumn), meta->exposureTimeNum);
+        setData(index(row, G::ShutterspeedColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        setData(index(row, G::ISOColumn), meta->ISONum);
+        setData(index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        setData(index(row, G::CameraModelColumn), meta->model);
+        setData(index(row, G::LensColumn), meta->lens);
+        setData(index(row, G::FocalLengthColumn), meta->focalLengthNum);
+        setData(index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        setData(index(row, G::TitleColumn), meta->title);
+        setData(index(row, G::CreatorColumn), meta->creator);
+        setData(index(row, G::CopyrightColumn), meta->copyright);
+        setData(index(row, G::EmailColumn), meta->email);
+        setData(index(row, G::UrlColumn), meta->url);
+        if(isShowCacheStatus) {
+            progressBar->updateProgress(row, row + 1, rowCount(), QColor(100,150,150),
+                                    "datamodel - adding metadata");
+            if(row % 100 == 0) qApp->processEvents();
+        }
+
+        // build filter items
+//        filters->addCategoryFromData(modelMap, filters->models);
+//        filters->addCategoryFromData(lensMap, filters->lenses);
+//        filters->addCategoryFromData(flMap, filters->focalLengths);
+//        filters->addCategoryFromData(titleMap, filters->titles);
+//        filters->addCategoryFromData(creatorMap, filters->creators);
+//        filters->addCategoryFromData(yearMap, filters->years);
+//        filters->addCategoryFromData(dayMap, filters->days);
+
+        // list used by imageCacheThread, filtered by row+jpg if combined
+        for (int i = 0; i < sf->rowCount(); ++i)
+                imageFilePathList.append(sf->index(i,0).data(G::PathRole).toString());
+
+        // req'd for 1st image, probably loaded before metadata cached
+        emit updateClassification();
+        #ifdef ISPROFILE
+        G::track(__FUNCTION__, "Leaving...");
+        #endif
 }
 
 QModelIndex DataModel::find(QString fPath)
