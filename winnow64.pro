@@ -10,7 +10,9 @@ QT += concurrent
 QT += xmlpatterns
 
 HEADERS += Cache/imagecache.h \
-    Test/readmdconcurrent.h
+    Test/readmdconcurrent.h \
+    Cache/mdcacher.h \
+    Cache/mdcachemgr.h
 HEADERS += Test/readsync.h
 HEADERS += Test/readasync.h
 HEADERS += Test/asynctask.h
@@ -52,7 +54,9 @@ HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
 
 SOURCES += Cache/imagecache.cpp \
-    Test/readmdconcurrent.cpp
+    Test/readmdconcurrent.cpp \
+    Cache/mdcacher.cpp \
+    Cache/mdcachemgr.cpp
 SOURCES += Test/readsync.cpp
 SOURCES += Test/readasync.cpp
 SOURCES += Test/asynctask.cpp
