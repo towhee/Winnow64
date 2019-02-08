@@ -44,6 +44,7 @@ public:
               bool &combineRawJpg);
 
     bool load(QString &dir, bool includeSubfolders);
+    bool updateMetadataItem(ImageMetadata *meta, bool isShowCacheStatus);
     void clear();
     void addMetadata(ProgressBar *progressBar, bool isShowCacheStatus);
     void updateImageList();

@@ -29,6 +29,7 @@ This class structure of all the fields in metadata is used to insert a new item
 into "QMap<QString, ImageMetadata> metaCache" in Metadata::loadImageMetadata.
 */
 public:
+    int row;                // datamodel row
     bool isPicked;          //rgh required?
     ulong offsetFullJPG;
     ulong lengthFullJPG;
@@ -99,6 +100,7 @@ public:
     void testNewFileFormat(const QString &path);
 
     // variables used to hold data before insertion into QMap metaCache
+    int row;                // datamodel row
     bool isPicked;
     ulong offsetFullJPG;
     ulong lengthFullJPG;
