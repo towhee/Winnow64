@@ -4966,8 +4966,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     #endif
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "Metadata::loadImageMetadata  fileInfo.filePath() ="
-//             << fileInfo.filePath();
     // check if already loaded
     fPath = fileInfo.filePath();
     if (metaCache[fPath].metadataLoaded && !isReport) return true;
