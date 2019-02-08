@@ -832,7 +832,7 @@ void MW::folderSelectionChange()
      thread also loads the thumbnails. It triggers the loadImageCache when it
      is finished. The image cache is limited by the amount of memory allocated. */
 
-     metadataCacheThread->loadMetadataCache(0, isShowCacheStatus);
+//     metadataCacheThread->loadMetadataCache(0, isShowCacheStatus);
 
      // format pickMemSize as bytes, KB, MB or GB
      pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -1227,6 +1227,8 @@ been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << "MW::loadImageCache";
+
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
@@ -8291,6 +8293,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     }
     int total = 20;
 
+
+
 //    ReadSync *readSync = new ReadSync(this, dm);
 //    readSync->go(total);
 
@@ -8298,12 +8302,22 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    connect(this, SIGNAL(aSyncGo(int)), readASync, SLOT(go(int)));
 //    emit aSyncGo(total);
 
-    ReadMdConcurrent *readMdConcurrent = new ReadMdConcurrent(this, dm);
+    // only run once or reinstantiate many copies
+    ReadMdConcurrent *readMdConcurrent = new ReadMdConcurrent(this, dm, metadata);
     connect(this, SIGNAL(aSyncGo(int)), readMdConcurrent, SLOT(go(int)));
+    connect(readMdConcurrent, SIGNAL(loadMetadata(QFileInfo,bool,bool,bool,bool)),
+            metadata, SLOT(loadImageMetadata(QFileInfo,bool,bool,bool,bool)));
+    connect(&readMdConcurrent->watcher, SIGNAL(finished()), this, SLOT(test2()));
     emit aSyncGo(total);
 
 //    setFixedSize(QSize(1280, 720));
 
+}
+
+void MW::test2()
+{
+    qDebug() << "Watcher reports finished";
+    loadImageCache();
 }
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
