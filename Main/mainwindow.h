@@ -27,10 +27,15 @@
 #include "Views/imageview.h"
 #include "Views/infoview.h"
 #include "Views/infostring.h"
-#include "Cache/mdcache.h"
 #include "Metadata/metadata.h"
 #include "Utilities/popup.h"
+
+#include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
+
+#include "Cache/mdcachemgr.h"
+#include "Cache/mdcacher.h"
+
 #include "ingestdlg.h"
 #include "aboutdlg.h"
 #include "Image/thumb.h"
@@ -61,6 +66,7 @@ class MW : public QMainWindow
     friend class ProgressBar;   // mw1
     friend class Prefdlg;       // m
     friend class InfoView;
+    friend class MdCacheMgr;
 
 public:
     MW(QWidget *parent = nullptr);
@@ -286,6 +292,7 @@ public slots:
     void slideShow();
 
     void test();                    // for debugging
+    void test2();
     void testNewFileFormat();       // for debugging
 
 //// testing async
