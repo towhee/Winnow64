@@ -35,6 +35,7 @@
 
 #include "Cache/mdcachemgr.h"
 #include "Cache/mdcacher.h"
+#include "Cache/threadsafehash.h"
 
 #include "ingestdlg.h"
 #include "aboutdlg.h"
@@ -79,6 +80,8 @@ public:
             "Includes links to download and video tutorials.</p></body></html>";
 
     bool isShift;               // used when opening if shift key pressed
+
+    bool isTempNewCacheMethod = false;
 
     int copyCutCount;   // req'd?
     QTextStream rpt;
@@ -279,6 +282,7 @@ protected:
 public slots:
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex);
+    void updateMetadata(int thread, bool showProgress);
     void nullFiltration();
     void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
@@ -744,7 +748,11 @@ private:
     InfoString *infoString;
     QHeaderView *headerView;
     CompareImages *compareImages;
+
     MetadataCache *metadataCacheThread;
+    MdCacheMgr *mdCacheMgr;
+//    MetaHash metaHash;
+
     ImageCache *imageCacheThread;
     Thumb *thumb;
     InfoView *infoView;
