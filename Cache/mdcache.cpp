@@ -218,7 +218,7 @@ that have been missed.
     }
 
     t.start();
-    qDebug() << "Before" << t.elapsed();
+//    qDebug() << "Before" << t.elapsed();
     emit updateIsRunning(true, true, __FUNCTION__);
 
     mutex.lock();
@@ -264,7 +264,7 @@ that have been missed.
     emit updateAllMetadataLoaded(allMetadataLoaded);
 
     qApp->processEvents();
-    qDebug() << "After" << t.elapsed();
+//    qDebug() << "After" << t.elapsed();
 
     /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the
