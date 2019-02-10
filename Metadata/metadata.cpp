@@ -4976,7 +4976,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     okToReadXmp = isLoadXmp;
     okToReadXmp = true;
 
-    ImageMetadata imageMetadata;
+//    ImageMetadata imageMetadata;
     bool result = readMetadata(isReport, fileInfo.filePath());
 
 //    if (fPath == "D:/Pictures/_ThumbTest/FujiXT2.RAF")

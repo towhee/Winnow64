@@ -1,15 +1,16 @@
 #ifndef MDCACHER_H
 #define MDCACHER_H
 
-
 #include <QtWidgets>
 #include <QMutex>
 #include <QSize>
 #include <QThread>
 #include <QWaitCondition>
+#include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/thumb.h"
+#include "Cache/threadsafehash.h"
 
 struct ThreadItem{
     int row;
@@ -22,9 +23,9 @@ class MdCacher : public QThread
     Q_OBJECT
 
 public:
-    MdCacher(QObject *parent, Metadata *metadata);
+    MdCacher(QObject *parent, DataModel *dm, Metadata *metadata, MetaHash *metaHash);
     ~MdCacher() override;
-    void loadMetadataCache(QVector<ThreadItem> items,
+    void loadMetadataCache(QVector<ThreadItem> &items,
                            bool isShowCacheStatus);
     void stopMetadateCache();
     bool restart;
@@ -36,11 +37,14 @@ protected:
 
 signals:
     void setIcon(int, QImage);
+    void processBuffer();
+    void updateAllMetadataLoaded(int, bool);
+    void finished();
+
     void refreshThumbs();
     void loadImageMetadata(QFileInfo);
     void loadImageCache();
-    void updateIsRunning(bool, bool, QString);
-    void updateAllMetadataLoaded(bool);
+//    void updateIsRunning(bool, bool, QString);
     void updateFilterCount();
     void updateStatus(bool, QString);
     void showCacheStatus(int, bool);            // row, renew progress bar
@@ -48,29 +52,35 @@ signals:
 private:
     QMutex mutex;
     QWaitCondition condition;
-    bool abort;
+    volatile bool abort;
+
+    DataModel *dm;
     Metadata *metadata;
     Thumb *thumb;
     QMap<int, bool> loadMap;
-    QString folderPath;
+    int thread;
 
+//    TSHash<int, ImageMetadata> *metaHash;
+    MetaHash *metaHash;
+
+    bool isShowCacheStatus;
+    bool allMetadataLoaded;
 
     ThreadItem threadItem;
 
-    QStringList &fList;      // list of files to cache metadata
+    QStringList fList;      // list of files to cache metadata
     QVector <ThreadItem> items;
 
     QModelIndex idx;
     int startRow;
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
-    bool allMetadataLoaded;
 
+//    QString folderPath;
     void createCacheStatus();
     void updateCacheStatus(int row);
     void loadMetadata();
 
-     bool isShowCacheStatus;
 
     QElapsedTimer t;
 };
