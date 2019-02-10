@@ -569,45 +569,45 @@ void ImageCache::reportCacheProgress(QString action)
 //    rpt.setFieldWidth(9);  rpt << currMB;
 }
 
-int ImageCache::pxMid(int key)
-{
-/*
-returns the cache status bar x coordinate for the midpoint of the item key
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return qRound((float)cache.pxUnitWidth * (key+1)
-                  - cache.pxUnitWidth/2);
-}
+//int ImageCache::pxMid(int key)
+//{
+///*
+//returns the cache status bar x coordinate for the midpoint of the item key
+//*/
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    return qRound((float)cache.pxUnitWidth * (key+1)
+//                  - cache.pxUnitWidth/2);
+//}
 
-int ImageCache::pxStart(int key)
-{
-/*
-returns the cache status bar x coordinate for the start of the item key
-*/
-    {
-    #ifdef ISDEBUG
-//    G::track(__FUNCTION__, cacheMgr.at(key).fName);
-    #endif
-    }
-    return qRound((float)cache.pxUnitWidth * key);
-}
+//int ImageCache::pxStart(int key)
+//{
+///*
+//returns the cache status bar x coordinate for the start of the item key
+//*/
+//    {
+//    #ifdef ISDEBUG
+////    G::track(__FUNCTION__, cacheMgr.at(key).fName);
+//    #endif
+//    }
+//    return qRound((float)cache.pxUnitWidth * key);
+//}
 
-int ImageCache::pxEnd(int key)
-{
-/*
-returns the cache status bar x coordinate for the end of the item key
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return qRound((float)cache.pxUnitWidth * (key+1));
-}
+//int ImageCache::pxEnd(int key)
+//{
+///*
+//returns the cache status bar x coordinate for the end of the item key
+//*/
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    return qRound((float)cache.pxUnitWidth * (key+1));
+//}
 
 void ImageCache::buildImageCacheList(QStringList &imageList)
 {
