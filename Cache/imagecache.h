@@ -33,6 +33,7 @@ public:
     void filterImageCache(QStringList &filteredFilePathList,
                            QString &currentImageFullPath);
     void stopImageCache();
+    void clearImageCache();
     void pauseImageCache();
     QSize getPreviewSize();
     void reportCache(QString title = "");

@@ -81,7 +81,7 @@ void MdCacher::loadMetadataCache(QVector <ThreadItem> &items,
     this->isShowCacheStatus = isShowCacheStatus;
     if (isShowCacheStatus) emit showCacheStatus(0, true);
 
-    qDebug() << "MdCacher::loadMetadataCache  Thread" << items[0].thread;
+//    qDebug() << "MdCacher::loadMetadataCache  Thread" << items[0].thread;
 
     start(TimeCriticalPriority);
 }
@@ -97,7 +97,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     #endif
     }
 
-   qDebug() << "MdCacher::loadMetadata  Thread" << items[0].thread;
+//   qDebug() << "MdCacher::loadMetadata  Thread" << items[0].thread;
 
     int totRows = items.count();
     for (int row = 0; row < totRows; ++row) {
@@ -132,10 +132,10 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         // empty array item
         if (fPath == "") continue;
 
-        qDebug() << "MdCacher::loadMetadata  Thread" << items[row].thread
-                 << "row" << row
-                 << "dmRow" << items[row].row
-                 << "fPath" << items[row].fPath;
+//        qDebug() << "MdCacher::loadMetadata  Thread" << items[row].thread
+//                 << "row" << row
+//                 << "dmRow" << items[row].row
+//                 << "fPath" << items[row].fPath;
 
         // update the cache status graphic in the status bar
         if (metadataLoaded && thumbLoaded) {
@@ -254,7 +254,7 @@ that have been missed.
 //    qDebug() << "Before" << t.elapsed();
 //    emit updateIsRunning(true, true, __FUNCTION__);
 
-    qDebug() << "MdCacher::run  Thread" << items[0].thread;
+//    qDebug() << "MdCacher::run  Thread" << items[0].thread;
     thread = items[0].thread;
 
     mutex.lock();
@@ -300,7 +300,7 @@ that have been missed.
     emit updateAllMetadataLoaded(thread, allMetadataLoaded);
 
     qApp->processEvents();
-    qDebug() << "After" << t.elapsed();
+//    qDebug() << "After" << t.elapsed();
 
     /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the

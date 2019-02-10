@@ -834,6 +834,7 @@ void MW::folderSelectionChange()
      thread also loads the thumbnails. It triggers the loadImageCache when it
      is finished. The image cache is limited by the amount of memory allocated. */
 
+    cacheTimer.restart();
 
     if (isTempNewCacheMethod) mdCacheMgr->loadMetadataCache(0);
     else metadataCacheThread->loadMetadataCache(0, isShowCacheStatus);
@@ -1236,7 +1237,8 @@ been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "MW::loadImageCache";
+    qDebug() << "MW::loadImageCache  Time to cache metadata ="
+             << cacheTimer.elapsed();
 
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
@@ -1293,7 +1295,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
 //    QString fPath = item->text(0);
     const QString fPath =  item->toolTip(col);
     isCurrentFolderOkay = isFolderValid(fPath, true, false);
-    qDebug() << QTime::currentTime() << "isCurrentFolderOkay" << isCurrentFolderOkay << __FUNCTION__;
+//    qDebug() << QTime::currentTime() << "isCurrentFolderOkay" << isCurrentFolderOkay << __FUNCTION__;
 
     if (isCurrentFolderOkay) {
         QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
@@ -3165,6 +3167,9 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));
 
+    connect(mdCacheMgr, SIGNAL(loadImageCache()),
+            this, SLOT(loadImageCache()));
+
     connect(metadataCacheThread, SIGNAL(updateIsRunning(bool,bool,QString)),
             this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
 
@@ -3176,6 +3181,7 @@ void MW::createCaching()
 
     connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
             this, SLOT(updateMetadataCacheStatus(int,bool)));
+
 
     imageCacheTimer = new QTimer(this);
     imageCacheTimer->setSingleShot(true);

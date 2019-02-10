@@ -29,11 +29,53 @@ void MdCacheMgr::done(int thread, bool allMetadataLoaded)
     qDebug() << "Thread" << thread << "has finished";
     static int threadCount = 0;
     threadCount++;
-    if(threadCount == threads) qDebug() << "All threads have finished";
+    if(threadCount == threadTot) {
+        stop();
+        items.clear();
+        threadItems.clear();
+        cacher.clear();
+        meta.clear();
+
+        qDebug() << "Metadata caching completed.  Loading image cache.";
+        emit loadImageCache();
+        threadCount = 0;
+    }
+}
+
+void MdCacheMgr::stop()
+{
+    while (metas.count()) {
+        QMutableListIterator<QPointer<Metadata> > i(metas);
+        while (i.hasNext()) {
+            QPointer<Metadata> meta = i.next();
+            if (meta) {
+                delete meta;
+                i.remove();
+            }
+            else
+                i.remove();
+        }
+    }
+    while (cachers.count()) {
+        QMutableListIterator<QPointer<MdCacher> > i(cachers);
+        while (i.hasNext()) {
+            QPointer<MdCacher> thread = i.next();
+            if (thread) {
+                if (thread->wait(100)) {
+                    delete thread;
+                    i.remove();
+                }
+            }
+            else
+                i.remove();
+        }
+    }
+    Q_ASSERT(cachers.isEmpty());
 }
 
 void MdCacheMgr::loadMetadataCache(int startRow)
 {
+    stop();
     // get a list of all the files requiring metadata extraction
     allFilePaths.clear();
     for(int row = 0; row < dm->rowCount(); row++) {
@@ -47,7 +89,7 @@ void MdCacheMgr::loadMetadataCache(int startRow)
 void MdCacheMgr::launchCachers()
 {
     chunkify();
-    for (int thread = 0; thread < threads; ++thread) {
+    for (int thread = 0; thread < threadTot; ++thread) {
 //        qDebug() << "MdCacheMgr:: launchCachers  thread" << thread;
 //        for (int i = 0; i < 3; ++i) qDebug() << "\t fPath" << items[thread][i].fPath;
 
@@ -56,6 +98,9 @@ void MdCacheMgr::launchCachers()
 //        Metadata *meta = new Metadata;
 //        MdCacher *cacher = new MdCacher(this, dm, meta);
 
+        cachers << cacher;
+        metas << meta;
+
         connect(cacher, SIGNAL(processBuffer()),
                 dm, SLOT(processMetadataBuffer()));
 
@@ -63,8 +108,9 @@ void MdCacheMgr::launchCachers()
                 thumbView, SLOT(setIcon(int, QImage)));
 
         connect(cacher, SIGNAL(updateAllMetadataLoaded(int, bool)), this, SLOT(done(int, bool)));
-        connect(cacher, &QThread::finished, cacher, &QObject::deleteLater);
-//        connect(cacher, SIGNAL(finished()), cacher, SLOT(deleteLater()));
+//        connect(cacher, &QThread::finished, cacher, &QObject::deleteLater);
+
+        //        connect(cacher, SIGNAL(finished()), cacher, SLOT(deleteLater()));
 //        connect(cacher, &MdCacher::finished, cacher, &QObject::deleteLater);
 
         cacher->loadMetadataCache(items[thread], isShowCacheStatus);
@@ -74,16 +120,16 @@ void MdCacheMgr::launchCachers()
 void MdCacheMgr::chunkify()
 {
     // get number of threads = chunks to populate with metadata
-    threads = QThread::idealThreadCount();
+    threadTot = QThread::idealThreadCount();
     int itemsPerThread;
     int rows = allFilePaths.count();
-    if(rows % threads == 0) itemsPerThread = (double)rows / threads;
-    else itemsPerThread = (double)rows / threads + 1;
+    if(rows % threadTot == 0) itemsPerThread = (double)rows / threadTot;
+    else itemsPerThread = (double)rows / threadTot + 1;
 
 //    qDebug() << "rows" << rows << "threads" << threads << "itemsPerThread" << itemsPerThread;
 
-    items.resize(threads);
-    for (int thread = 0; thread < threads; ++thread)
+    items.resize(threadTot);
+    for (int thread = 0; thread < threadTot; ++thread)
         items[thread].resize(itemsPerThread);
 
     threadItems.resize(itemsPerThread);
@@ -93,7 +139,7 @@ void MdCacheMgr::chunkify()
     int row = 0;
     int threadItemCount = 0;
     while (row < (rows - 1)) {
-        for(int thread = 0; thread < threads; ++thread) {
+        for(int thread = 0; thread < threadTot; ++thread) {
             threadItem.row = row;
             threadItem.fPath = allFilePaths.at(row);
             threadItem.thread = thread;
