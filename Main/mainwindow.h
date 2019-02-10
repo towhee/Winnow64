@@ -815,6 +815,8 @@ private:
     QString imageCacheFilePath;
     QTimer *imageCacheTimer;
 
+    QElapsedTimer cacheTimer;       // temp for testing
+
     bool newScrollSignal;           // used for scroll signal delay in case many/sec
     QTimer *metadataCacheScrollTimer;
     int metadataCacheStartRow;

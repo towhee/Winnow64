@@ -103,6 +103,14 @@ cacheMgr:  the list of all the cacheItems
 imCache: a hash structure indexed by image file path holding each QImage
 
 */
+void ImageCache::clearImageCache()
+{
+    imCache.clear();
+    cacheItemList.clear();
+    cacheItemListCopy.clear();
+    toCache.clear();
+    toDecache.clear();
+}
 
 void ImageCache::stopImageCache()
 {
@@ -117,6 +125,7 @@ folder change.  The cache status label in the status bar will be hidden.
     #endif
     }
     if (isRunning()) {
+        clearImageCache();
         mutex.lock();
         abort = true;
         condition.wakeOne();
@@ -569,45 +578,45 @@ void ImageCache::reportCacheProgress(QString action)
 //    rpt.setFieldWidth(9);  rpt << currMB;
 }
 
-int ImageCache::pxMid(int key)
-{
-/*
-returns the cache status bar x coordinate for the midpoint of the item key
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return qRound((float)cache.pxUnitWidth * (key+1)
-                  - cache.pxUnitWidth/2);
-}
+//int ImageCache::pxMid(int key)
+//{
+///*
+//returns the cache status bar x coordinate for the midpoint of the item key
+//*/
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    return qRound((float)cache.pxUnitWidth * (key+1)
+//                  - cache.pxUnitWidth/2);
+//}
 
-int ImageCache::pxStart(int key)
-{
-/*
-returns the cache status bar x coordinate for the start of the item key
-*/
-    {
-    #ifdef ISDEBUG
-//    G::track(__FUNCTION__, cacheMgr.at(key).fName);
-    #endif
-    }
-    return qRound((float)cache.pxUnitWidth * key);
-}
+//int ImageCache::pxStart(int key)
+//{
+///*
+//returns the cache status bar x coordinate for the start of the item key
+//*/
+//    {
+//    #ifdef ISDEBUG
+////    G::track(__FUNCTION__, cacheMgr.at(key).fName);
+//    #endif
+//    }
+//    return qRound((float)cache.pxUnitWidth * key);
+//}
 
-int ImageCache::pxEnd(int key)
-{
-/*
-returns the cache status bar x coordinate for the end of the item key
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return qRound((float)cache.pxUnitWidth * (key+1));
-}
+//int ImageCache::pxEnd(int key)
+//{
+///*
+//returns the cache status bar x coordinate for the end of the item key
+//*/
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    return qRound((float)cache.pxUnitWidth * (key+1));
+//}
 
 void ImageCache::buildImageCacheList(QStringList &imageList)
 {
@@ -950,6 +959,7 @@ void ImageCache::run()
         if (fPath == prevFileName) return;
 
         QImage im;
+        // rgh what is getImage used for???
         if (getImage->load(fPath, im)) {
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
