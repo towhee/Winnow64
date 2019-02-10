@@ -74,9 +74,9 @@ public:
 
     QList<CacheItem> cacheItemList, cacheItemListCopy;
 
-    int pxMid(int key);             // center current position on statusbar
-    int pxStart(int key);           // start current position on statusbar
-    int pxEnd(int key);             // end current position on statusbar
+//    int pxMid(int key);             // center current position on statusbar
+//    int pxStart(int key);           // start current position on statusbar
+//    int pxEnd(int key);             // end current position on statusbar
 
 signals:
     void showCacheStatus(QString instruction, int key = 0, QString source = "");
