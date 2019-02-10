@@ -44,12 +44,13 @@ public:
               bool &combineRawJpg);
 
     bool load(QString &dir, bool includeSubfolders);
-    bool updateMetadataItem(ImageMetadata *meta, bool isShowCacheStatus);
     void clear();
     void addMetadata(ProgressBar *progressBar, bool isShowCacheStatus);
     void updateImageList();
     void sortThumbs(int sortColumn, bool isReverse);
     QModelIndex find(QString fPath);
+
+    MetaHash metaHash;
 
     SortFilter *sf;
     QStringList imageFilePathList;
@@ -69,6 +70,8 @@ signals:
 
 public slots:
     void filterItemCount();
+    void processMetadataBuffer();
+    bool updateMetadataItem(ImageMetadata m);
 
 private:
     QWidget *mw;
@@ -87,6 +90,9 @@ private:
 
     bool addFileData();
     void rawPlusJpg();
+
+    QElapsedTimer t;
+
 };
 
 #endif // DATAMODEL_H

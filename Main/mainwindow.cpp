@@ -136,6 +136,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     isSettings = true;
     isInitializing = false;
 
+    qRegisterMetaType<ImageMetadata>();
+
     // if no fsTree expansion then fire getImageCount the first time
     fsTree->getImageCount();
 }
@@ -832,11 +834,13 @@ void MW::folderSelectionChange()
      thread also loads the thumbnails. It triggers the loadImageCache when it
      is finished. The image cache is limited by the amount of memory allocated. */
 
-//     metadataCacheThread->loadMetadataCache(0, isShowCacheStatus);
 
-     // format pickMemSize as bytes, KB, MB or GB
-     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-     updateStatus(true);
+    if (isTempNewCacheMethod) mdCacheMgr->loadMetadataCache(0);
+    else metadataCacheThread->loadMetadataCache(0, isShowCacheStatus);
+
+    // format pickMemSize as bytes, KB, MB or GB
+    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updateStatus(true);
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
@@ -1122,6 +1126,11 @@ void MW::loadMetadataCache(int startRow)
 
     // startRow in case user scrolls ahead and thumbs not yet loaded
     metadataCacheThread->loadMetadataCache(startRow, isShowCacheStatus);
+}
+
+void MW::updateMetadata(int thread, bool showProgress)
+{
+    qDebug() << "MW::updateMetadata for thread" << thread;
 }
 
 void MW::updateMetadataCacheStatus(int row, bool clear)
@@ -3129,6 +3138,9 @@ void MW::createCaching()
     }
     metadataCacheThread = new MetadataCache(this, dm, metadata);
     imageCacheThread = new ImageCache(this, metadata);
+
+    // new kid on the block
+    mdCacheMgr = new MdCacheMgr(this, dm, thumbView);
 
     /* When a new folder is selected the metadataCacheThread is started to
        load all the metadata and thumbs for each image.  If the user scrolls
@@ -8291,9 +8303,15 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     G::track(__FUNCTION__);
     #endif
     }
-    int total = 20;
 
+    isTempNewCacheMethod = !isTempNewCacheMethod;
+    qDebug() << "CACHE METHOD NEW:" <<  isTempNewCacheMethod;
+    return;
 
+//    MdCacheMgr * mdCacheMgr = new MdCacheMgr(this, dm);
+//    mdCacheMgr->loadMetadataCache(0);
+
+//    int total = 20;
 
 //    ReadSync *readSync = new ReadSync(this, dm);
 //    readSync->go(total);
@@ -8303,12 +8321,12 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    emit aSyncGo(total);
 
     // only run once or reinstantiate many copies
-    ReadMdConcurrent *readMdConcurrent = new ReadMdConcurrent(this, dm, metadata);
-    connect(this, SIGNAL(aSyncGo(int)), readMdConcurrent, SLOT(go(int)));
-    connect(readMdConcurrent, SIGNAL(loadMetadata(QFileInfo,bool,bool,bool,bool)),
-            metadata, SLOT(loadImageMetadata(QFileInfo,bool,bool,bool,bool)));
-    connect(&readMdConcurrent->watcher, SIGNAL(finished()), this, SLOT(test2()));
-    emit aSyncGo(total);
+//    ReadMdConcurrent *readMdConcurrent = new ReadMdConcurrent(this, dm, metadata);
+//    connect(this, SIGNAL(aSyncGo(int)), readMdConcurrent, SLOT(go(int)));
+//    connect(readMdConcurrent, SIGNAL(loadMetadata(QFileInfo,bool,bool,bool,bool)),
+//            metadata, SLOT(loadImageMetadata(QFileInfo,bool,bool,bool,bool)));
+//    connect(&readMdConcurrent->watcher, SIGNAL(finished()), this, SLOT(test2()));
+//    emit aSyncGo(total);
 
 //    setFixedSize(QSize(1280, 720));
 
