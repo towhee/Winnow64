@@ -16,18 +16,29 @@ public:
     MdCacheMgr(QObject *parent, DataModel *dm, ThumbView *thumbView);
     void loadMetadataCache(int startRow);
 
+signals:
+    void loadImageCache();
+
 public slots:
-    void done(int thread, bool allMetadataLoaded);
+    void done(int threadCount, bool allMetadataLoaded);
 
 private:
     void launchCachers();
     void chunkify();
+    void stop();
+
     DataModel *dm;
     ThumbView *thumbView;
 
-    int thread;
-    int threads;
+    int threadCount;
+    int threadTot;
     QStringList allFilePaths;
+
+    // list of threads to run
+    QList<QPointer<MdCacher> > cachers;
+
+    // list of metadata objects created
+    QList<QPointer<Metadata> > metas;
 
     // chunkified data for each thread
     QVector <QPointer<MdCacher>> cacher;

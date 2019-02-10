@@ -415,11 +415,7 @@ which is created in MW, and in InfoView.
     #endif
     }
 
-    static int count;
-    if (count == 0) {
-        t.restart();
-    }
-    count++;
+//    t.restart();
 
     if(isShowCacheStatus) progressBar->clearProgress();
 
@@ -528,7 +524,7 @@ which is created in MW, and in InfoView.
     G::track(__FUNCTION__, "Leaving...");
     #endif
 
-    if (count == sf->rowCount()) qDebug() << "Time to get metadata =" << t.elapsed();
+//    qDebug() << "Sync: Time to get metadata =" << t.elapsed();
 }
 
 void DataModel::processMetadataBuffer()
@@ -554,11 +550,16 @@ bool DataModel::updateMetadataItem(ImageMetadata m)
     #endif
     }
 
-    static int count;
-    if (count == 0) {
-        t.restart();
-    }
-    count++;
+//    static int count;
+//    if (count == 0) {
+//        t.restart();
+//    }
+//    count++;
+////    qDebug() << count;
+//    if (count == sf->rowCount()) {
+//        qDebug() << "ASync: Time to get metadata =" << t.elapsed() << "file count =" << count;
+//        count = 0;
+//    }
 //    if(isShowCacheStatus) progressBar->clearProgress();
 //    qDebug() << "Made it to DataModel::updateMetadataItem   thread" << thread
 //             << metaHash.row << metaHash.createdDate;
@@ -623,7 +624,6 @@ bool DataModel::updateMetadataItem(ImageMetadata m)
     G::track(__FUNCTION__, "Leaving...");
     #endif
 
-    if (count == sf->rowCount()) qDebug() << "Time to get metadata =" << t.elapsed();
     return true;
 }
 
