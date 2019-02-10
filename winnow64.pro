@@ -10,12 +10,10 @@ QT += concurrent
 QT += xmlpatterns
 
 HEADERS += Cache/imagecache.h \
-    Test/readmdconcurrent.h \
-    Cache/mdcacher.h \
-    Cache/mdcachemgr.h
-HEADERS += Test/readsync.h
-HEADERS += Test/readasync.h
-HEADERS += Test/asynctask.h
+    Cache/tshash.h \
+    Metadata/imagemetadata.h
+HEADERS += Cache/mdcacher.h
+HEADERS += Cache/mdcachemgr.h
 HEADERS += Cache/mdcache.h
 HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/appdlg.h
@@ -52,6 +50,11 @@ HEADERS += Utilities/popup.h
 HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
+
+HEADERS += Test/readmdconcurrent.h
+HEADERS += Test/readsync.h
+HEADERS += Test/readasync.h
+HEADERS += Test/asynctask.h
 
 SOURCES += Cache/imagecache.cpp \
     Test/readmdconcurrent.cpp \
