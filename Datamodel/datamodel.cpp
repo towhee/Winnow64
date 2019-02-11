@@ -422,13 +422,13 @@ which is created in MW, and in InfoView.
     hasDupRawJpg = false;
 
     // collect all unique instances for filtration (use QMap to maintain order)
-//    QMap<QVariant, QString> modelMap;
-//    QMap<QVariant, QString> lensMap;
-//    QMap<QVariant, QString> titleMap;
-//    QMap<QVariant, QString> flMap;
-//    QMap<QVariant, QString> creatorMap;
-//    QMap<QVariant, QString> yearMap;
-//    QMap<QVariant, QString> dayMap;
+    QMap<QVariant, QString> modelMap;
+    QMap<QVariant, QString> lensMap;
+    QMap<QVariant, QString> titleMap;
+    QMap<QVariant, QString> flMap;
+    QMap<QVariant, QString> creatorMap;
+    QMap<QVariant, QString> yearMap;
+    QMap<QVariant, QString> dayMap;
 
     for(int row = 0; row < rowCount(); row++) {
         /*
@@ -463,13 +463,13 @@ which is created in MW, and in InfoView.
         QString email = metadata->getEmail(fPath);
         QString url = metadata->getUrl(fPath);
 
-//        if (!creatorMap.contains(creator)) creatorMap[creator] = creator;
-//        if (!yearMap.contains(year)) yearMap[year] = year;
-//        if (!dayMap.contains(day)) dayMap[day] = day;
-//        if (!modelMap.contains(model)) modelMap[model] = model;
-//        if (!lensMap.contains(lens)) lensMap[lens] = lens;
-//        if (!flMap.contains(fl)) flMap[flNum] = fl;
-//        if (!titleMap.contains(title)) titleMap[title] = title;
+        if (!creatorMap.contains(creator)) creatorMap[creator] = creator;
+        if (!yearMap.contains(year)) yearMap[year] = year;
+        if (!dayMap.contains(day)) dayMap[day] = day;
+        if (!modelMap.contains(model)) modelMap[model] = model;
+        if (!lensMap.contains(lens)) lensMap[lens] = lens;
+        if (!flMap.contains(fl)) flMap[flNum] = fl;
+        if (!titleMap.contains(title)) titleMap[title] = title;
 
         setData(index(row, G::LabelColumn), label);
         setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -506,13 +506,13 @@ which is created in MW, and in InfoView.
     }
 
     // build filter items
-//    filters->addCategoryFromData(modelMap, filters->models);
-//    filters->addCategoryFromData(lensMap, filters->lenses);
-//    filters->addCategoryFromData(flMap, filters->focalLengths);
-//    filters->addCategoryFromData(titleMap, filters->titles);
-//    filters->addCategoryFromData(creatorMap, filters->creators);
-//    filters->addCategoryFromData(yearMap, filters->years);
-//    filters->addCategoryFromData(dayMap, filters->days);
+    filters->addCategoryFromData(modelMap, filters->models);
+    filters->addCategoryFromData(lensMap, filters->lenses);
+    filters->addCategoryFromData(flMap, filters->focalLengths);
+    filters->addCategoryFromData(titleMap, filters->titles);
+    filters->addCategoryFromData(creatorMap, filters->creators);
+    filters->addCategoryFromData(yearMap, filters->years);
+    filters->addCategoryFromData(dayMap, filters->days);
 
     // list used by imageCacheThread, filtered by row+jpg if combined
     for (int i = 0; i < sf->rowCount(); ++i)
