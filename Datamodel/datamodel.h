@@ -72,6 +72,7 @@ public slots:
     void filterItemCount();
     void processMetadataBuffer();
     bool updateMetadataItem(ImageMetadata m);
+    void updateFilters();
 
 private:
     QWidget *mw;

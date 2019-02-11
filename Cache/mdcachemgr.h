@@ -18,6 +18,9 @@ public:
 
 signals:
     void loadImageCache();
+    void updateFilterCount();
+    void updateAllMetadataLoaded(bool);
+    void updateIsRunning(bool, bool, QString);
 
 public slots:
     void done(int threadCount, bool allMetadataLoaded);
