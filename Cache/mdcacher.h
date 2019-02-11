@@ -45,7 +45,6 @@ signals:
     void loadImageMetadata(QFileInfo);
     void loadImageCache();
 //    void updateIsRunning(bool, bool, QString);
-    void updateFilterCount();
     void updateStatus(bool, QString);
     void showCacheStatus(int, bool);            // row, renew progress bar
 
