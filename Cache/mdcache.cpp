@@ -275,5 +275,5 @@ that have been missed.
     emit updateIsRunning(false, true, __FUNCTION__);
 
     // update the item counts in Filters
-    emit updateFilterCount();
+//    emit updateFilterCount();
 }

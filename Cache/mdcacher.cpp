@@ -313,5 +313,5 @@ that have been missed.
     // update the item counts in Filters
 //    emit updateFilterCount();
 
-    emit finished();
+//    emit finished();
 }
