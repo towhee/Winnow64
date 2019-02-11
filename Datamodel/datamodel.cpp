@@ -498,6 +498,7 @@ which is created in MW, and in InfoView.
         setData(index(row, G::CopyrightColumn), copyright);
         setData(index(row, G::EmailColumn), email);
         setData(index(row, G::UrlColumn), url);
+
         if(isShowCacheStatus) {
             progressBar->updateProgress(row, row + 1, rowCount(), QColor(100,150,150),
                                     "datamodel - adding metadata");
@@ -549,32 +550,6 @@ bool DataModel::updateMetadataItem(ImageMetadata m)
     G::track(__FUNCTION__);
     #endif
     }
-
-//    static int count;
-//    if (count == 0) {
-//        t.restart();
-//    }
-//    count++;
-////    qDebug() << count;
-//    if (count == sf->rowCount()) {
-//        qDebug() << "ASync: Time to get metadata =" << t.elapsed() << "file count =" << count;
-//        count = 0;
-//    }
-//    if(isShowCacheStatus) progressBar->clearProgress();
-//    qDebug() << "Made it to DataModel::updateMetadataItem   thread" << thread
-//             << metaHash.row << metaHash.createdDate;
-
-    hasDupRawJpg = false;
-
-    // add a rebuild filters routine to call after a metaHashdata update is complete for
-    // all rows in datamodel
-
-    /*
-    qDebug() << "DataModel::addmetaHashdata " << index(row,0).data(G::PathRole).toString()
-             << "\tDupHideRawRole =" << index(row,0).data(G::DupHideRawRole).toBool()
-             << "\tDupRawIdxRole =" << index(row,0).data(G::DupRawIdxRole);
-    */
-
     int row = m.row;
 
     setData(index(row, G::LabelColumn), m.label);
@@ -619,12 +594,60 @@ bool DataModel::updateMetadataItem(ImageMetadata m)
             imageFilePathList.append(sf->index(i,0).data(G::PathRole).toString());
 
     // req'd for 1st image, probably loaded before metadata cached
-    emit updateClassification();
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__, "Leaving...");
-    #endif
+    if (row == 0) emit updateClassification();
 
     return true;
+}
+
+void DataModel::updateFilters()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << "DataModel::updateFilters()";
+
+    // collect all unique instances for filtration (use QMap to maintain order)
+    QMap<QVariant, QString> modelMap;
+    QMap<QVariant, QString> lensMap;
+    QMap<QVariant, QString> titleMap;
+    QMap<QVariant, QString> flMap;
+    QMap<QVariant, QString> creatorMap;
+    QMap<QVariant, QString> yearMap;
+    QMap<QVariant, QString> dayMap;
+
+    for(int row = 0; row < rowCount(); row++) {
+        QString model = index(row, G::CameraModelColumn).data().toString();
+        if (!modelMap.contains(model)) modelMap[model] = model;
+
+        QString lens = index(row, G::LensColumn).data().toString();
+        if (!lensMap.contains(lens)) lensMap[lens] = lens;
+
+        QString title = index(row, G::TitleColumn).data().toString();
+        if (!titleMap.contains(title)) titleMap[title] = title;
+
+        QString flNum = index(row, G::FocalLengthColumn).data().toString();
+        if (!flMap.contains(flNum)) flMap[flNum] = flNum;
+
+        QString creator = index(row, G::CreatorColumn).data().toString();
+        if (!creatorMap.contains(creator)) creatorMap[creator] = creator;
+
+        QString year = index(row, G::YearColumn).data().toString();
+        if (!yearMap.contains(year)) yearMap[year] = year;
+
+        QString day = index(row, G::DayColumn).data().toString();
+        if (!dayMap.contains(day)) dayMap[day] = day;
+    }
+
+    // build filter items
+    filters->addCategoryFromData(modelMap, filters->models);
+    filters->addCategoryFromData(lensMap, filters->lenses);
+    filters->addCategoryFromData(flMap, filters->focalLengths);
+    filters->addCategoryFromData(titleMap, filters->titles);
+    filters->addCategoryFromData(creatorMap, filters->creators);
+    filters->addCategoryFromData(yearMap, filters->years);
+    filters->addCategoryFromData(dayMap, filters->days);
 }
 
 QModelIndex DataModel::find(QString fPath)

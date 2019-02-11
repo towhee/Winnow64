@@ -1237,6 +1237,8 @@ been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
+    if (isTempNewCacheMethod) dm->updateFilters();
+
     qDebug() << "MW::loadImageCache  Time to cache metadata ="
              << cacheTimer.elapsed();
 
@@ -3161,7 +3163,13 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(updateFilterCount()),
             this, SLOT(updateFilterCount()));
 
+    connect(mdCacheMgr, SIGNAL(updateFilterCount()),
+            this, SLOT(updateFilterCount()));
+
     connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
+            this, SLOT(updateAllMetadataLoaded(bool)));
+
+    connect(mdCacheMgr, SIGNAL(updateAllMetadataLoaded(bool)),
             this, SLOT(updateAllMetadataLoaded(bool)));
 
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
@@ -3173,8 +3181,13 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(updateIsRunning(bool,bool,QString)),
             this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
 
+    connect(mdCacheMgr, SIGNAL(updateIsRunning(bool,bool,QString)),
+            this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
+
     connect(metadataCacheThread, SIGNAL(setIcon(int, QImage)),
             thumbView, SLOT(setIcon(int, QImage)));
+
+    // the setIcon connection for setIcon is in MdCacher
 
     connect(metadataCacheThread, SIGNAL(refreshThumbs()),
             thumbView, SLOT(refreshThumbs()));
@@ -7441,11 +7454,6 @@ sure the classification label is not visible.
         compareImages->updateClassification(isPick, rating, colorClass,
                                             isRatingBadgeVisible,
                                             thumbView->currentIndex());
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, "Completed");
-    #endif
-    }
 }
 
 void MW::setRating()
