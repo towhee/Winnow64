@@ -106,10 +106,10 @@ imCache: a hash structure indexed by image file path holding each QImage
 void ImageCache::clearImageCache()
 {
     imCache.clear();
-    cacheItemList.clear();
     cacheItemListCopy.clear();
     toCache.clear();
     toDecache.clear();
+    // do not clear cacheItemList as it might be still being used in MW::updateImageCacheStatus
 }
 
 void ImageCache::stopImageCache()
@@ -125,7 +125,6 @@ folder change.  The cache status label in the status bar will be hidden.
     #endif
     }
     if (isRunning()) {
-        clearImageCache();
         mutex.lock();
         abort = true;
         condition.wakeOne();
@@ -134,6 +133,7 @@ folder change.  The cache status label in the status bar will be hidden.
         abort = false;
 //        G::track(__FUNCTION__, "tiger emitting updateIsRunning");
         emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
+        clearImageCache();
     }
 }
 
