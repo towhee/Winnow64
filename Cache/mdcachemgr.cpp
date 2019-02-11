@@ -26,7 +26,7 @@ MdCacheMgr::MdCacheMgr(QObject *parent, DataModel *dm, ThumbView *thumbView) : Q
 
 void MdCacheMgr::done(int thread, bool allMetadataLoaded)
 {
-    qDebug() << "Thread" << thread << "has finished";
+//    qDebug() << "Thread" << thread << "has finished";
     static int threadCount = 0;
     threadCount++;
     if(threadCount == threadTot) {
@@ -36,8 +36,11 @@ void MdCacheMgr::done(int thread, bool allMetadataLoaded)
         cacher.clear();
         meta.clear();
 
-        qDebug() << "Metadata caching completed.  Loading image cache.";
+//        qDebug() << "Metadata caching completed.  Loading image cache.";
         emit loadImageCache();
+        emit updateFilterCount();
+        emit updateAllMetadataLoaded(true);
+        emit updateIsRunning(false, true, __FUNCTION__);
         threadCount = 0;
     }
 }
@@ -114,6 +117,7 @@ void MdCacheMgr::launchCachers()
 //        connect(cacher, &MdCacher::finished, cacher, &QObject::deleteLater);
 
         cacher->loadMetadataCache(items[thread], isShowCacheStatus);
+        emit updateIsRunning(true, true, __FUNCTION__);
     }
 }
 
