@@ -19,6 +19,9 @@ namespace G
 
     qreal actualDevicePixelRatio;
 
+    int cores;
+    bool aSync;
+
     // not persistent
     bool isThreadTrackingOn;
     bool isNewFolderLoaded;

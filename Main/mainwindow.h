@@ -82,8 +82,6 @@ public:
 
     bool isShift;               // used when opening if shift key pressed
 
-    bool isTempNewCacheMethod = true;   // ASync
-
     int copyCutCount;   // req'd?
     QTextStream rpt;
 

@@ -81,6 +81,9 @@ public:
     QRadioButton *cache90AheadRadio;
     QRadioButton *cache100AheadRadio;
     QSlider *progressWidthSlider;
+    QLabel *coresLbl;
+    QSpinBox *coresSpinBox;
+    QCheckBox *aSynchChk;
     QWidget *pageSlideshow;
     QCheckBox *slideshowRandomChk;
     QLabel *label_12;
@@ -301,43 +304,47 @@ public:
         cacheSizeSpinbox = new QSpinBox(pageCache);
         cacheSizeSpinbox->setObjectName(QString::fromUtf8("cacheSizeSpinbox"));
         cacheSizeSpinbox->setGeometry(QRect(140, 23, 51, 18));
+        QFont font2;
+        font2.setPointSize(9);
+        cacheSizeSpinbox->setFont(font2);
         cacheSizeSpinbox->setMinimum(1);
         cacheSizeSpinbox->setMaximum(64);
         label_10 = new QLabel(pageCache);
         label_10->setObjectName(QString::fromUtf8("label_10"));
         label_10->setGeometry(QRect(40, 320, 91, 18));
-        label_10->setFont(font);
+        label_10->setFont(font2);
         label_10->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
         label_8 = new QLabel(pageCache);
         label_8->setObjectName(QString::fromUtf8("label_8"));
         label_8->setGeometry(QRect(30, 24, 91, 16));
-        label_8->setFont(font);
+        label_8->setFont(font2);
         label_8->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
         label = new QLabel(pageCache);
         label->setObjectName(QString::fromUtf8("label"));
         label->setGeometry(QRect(30, 60, 111, 16));
-        label->setFont(font);
+        label->setFont(font2);
         label->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
         showCacheStatusChk = new QCheckBox(pageCache);
         showCacheStatusChk->setObjectName(QString::fromUtf8("showCacheStatusChk"));
         showCacheStatusChk->setGeometry(QRect(20, 289, 281, 21));
-        showCacheStatusChk->setFont(font);
+        showCacheStatusChk->setFont(font2);
         cachePreviewsChk = new QCheckBox(pageCache);
         cachePreviewsChk->setObjectName(QString::fromUtf8("cachePreviewsChk"));
         cachePreviewsChk->setGeometry(QRect(20, 240, 341, 20));
-        cachePreviewsChk->setFont(font);
+        cachePreviewsChk->setFont(font2);
         showCacheThreadActivityChk = new QCheckBox(pageCache);
         showCacheThreadActivityChk->setObjectName(QString::fromUtf8("showCacheThreadActivityChk"));
         showCacheThreadActivityChk->setGeometry(QRect(20, 360, 351, 17));
-        showCacheThreadActivityChk->setFont(font);
+        showCacheThreadActivityChk->setFont(font2);
         label_9 = new QLabel(pageCache);
         label_9->setObjectName(QString::fromUtf8("label_9"));
         label_9->setGeometry(QRect(260, 24, 91, 16));
-        label_9->setFont(font);
+        label_9->setFont(font2);
         label_9->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         cacheDelaySpinbox = new QSpinBox(pageCache);
         cacheDelaySpinbox->setObjectName(QString::fromUtf8("cacheDelaySpinbox"));
         cacheDelaySpinbox->setGeometry(QRect(360, 23, 71, 18));
+        cacheDelaySpinbox->setFont(font2);
         cacheDelaySpinbox->setMinimum(0);
         cacheDelaySpinbox->setMaximum(500);
         cacheDelaySpinbox->setSingleStep(25);
@@ -349,37 +356,37 @@ public:
         verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
         cache50AheadRadio = new QRadioButton(frame);
         cache50AheadRadio->setObjectName(QString::fromUtf8("cache50AheadRadio"));
-        cache50AheadRadio->setFont(font);
+        cache50AheadRadio->setFont(font2);
 
         verticalLayout->addWidget(cache50AheadRadio);
 
         cache60AheadRadio = new QRadioButton(frame);
         cache60AheadRadio->setObjectName(QString::fromUtf8("cache60AheadRadio"));
-        cache60AheadRadio->setFont(font);
+        cache60AheadRadio->setFont(font2);
 
         verticalLayout->addWidget(cache60AheadRadio);
 
         cache70AheadRadio = new QRadioButton(frame);
         cache70AheadRadio->setObjectName(QString::fromUtf8("cache70AheadRadio"));
-        cache70AheadRadio->setFont(font);
+        cache70AheadRadio->setFont(font2);
 
         verticalLayout->addWidget(cache70AheadRadio);
 
         cache80AheadRadio = new QRadioButton(frame);
         cache80AheadRadio->setObjectName(QString::fromUtf8("cache80AheadRadio"));
-        cache80AheadRadio->setFont(font);
+        cache80AheadRadio->setFont(font2);
 
         verticalLayout->addWidget(cache80AheadRadio);
 
         cache90AheadRadio = new QRadioButton(frame);
         cache90AheadRadio->setObjectName(QString::fromUtf8("cache90AheadRadio"));
-        cache90AheadRadio->setFont(font);
+        cache90AheadRadio->setFont(font2);
 
         verticalLayout->addWidget(cache90AheadRadio);
 
         cache100AheadRadio = new QRadioButton(frame);
         cache100AheadRadio->setObjectName(QString::fromUtf8("cache100AheadRadio"));
-        cache100AheadRadio->setFont(font);
+        cache100AheadRadio->setFont(font2);
 
         verticalLayout->addWidget(cache100AheadRadio);
 
@@ -394,6 +401,21 @@ public:
         progressWidthSlider->setOrientation(Qt::Horizontal);
         progressWidthSlider->setTickPosition(QSlider::TicksAbove);
         progressWidthSlider->setTickInterval(100);
+        coresLbl = new QLabel(pageCache);
+        coresLbl->setObjectName(QString::fromUtf8("coresLbl"));
+        coresLbl->setGeometry(QRect(20, 451, 91, 16));
+        coresLbl->setFont(font2);
+        coresLbl->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
+        coresSpinBox = new QSpinBox(pageCache);
+        coresSpinBox->setObjectName(QString::fromUtf8("coresSpinBox"));
+        coresSpinBox->setGeometry(QRect(130, 450, 51, 18));
+        coresSpinBox->setFont(font2);
+        coresSpinBox->setMinimum(0);
+        coresSpinBox->setMaximum(8);
+        aSynchChk = new QCheckBox(pageCache);
+        aSynchChk->setObjectName(QString::fromUtf8("aSynchChk"));
+        aSynchChk->setGeometry(QRect(240, 450, 221, 20));
+        aSynchChk->setFont(font2);
         stackedWidget->addWidget(pageCache);
         pageSlideshow = new QWidget();
         pageSlideshow->setObjectName(QString::fromUtf8("pageSlideshow"));
@@ -840,7 +862,7 @@ public:
         QObject::connect(classificationBadgeThumbDiamSlider, SIGNAL(valueChanged(int)), classificationBadgeThumbDiamLbl, SLOT(setNum(int)));
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(1);
+        stackedWidget->setCurrentIndex(2);
         listContainer->setCurrentIndex(0);
 
 
@@ -942,6 +964,14 @@ public:
         cache100AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
         cache100AheadRadio->setText(QApplication::translate("Prefdlg", "100% ahead", nullptr));
+#ifndef QT_NO_TOOLTIP
+        coresLbl->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        coresLbl->setText(QApplication::translate("Prefdlg", "Cores to use", nullptr));
+#ifndef QT_NO_TOOLTIP
+        coresSpinBox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        aSynchChk->setText(QApplication::translate("Prefdlg", "Asynchronous", nullptr));
         slideshowRandomChk->setText(QString());
         label_12->setText(QApplication::translate("Prefdlg", "Show random order", nullptr));
 #ifndef QT_NO_TOOLTIP
