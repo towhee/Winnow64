@@ -140,6 +140,8 @@ Code examples for model:
     dir = new QDir();
     fileFilters = new QStringList;          // eligible image file types
     emptyImg.load(":/images/no_image.png");
+
+    connect(this, SIGNAL(updateMetadata(ImageMetadata)), this, SLOT(updateMetadataItem(ImageMetadata)));
 }
 
 void DataModel::clear()
@@ -531,10 +533,19 @@ which is created in MW, and in InfoView.
 // ASync
 void DataModel::processMetadataBuffer()
 {
+    static int count = 0;
+    count++;
     forever {
         bool more = true;
-        ImageMetadata m = metaHash.takeOne(&more);
-        updateMetadataItem(m);
+        bool gotOne = false;
+        ImageMetadata m;
+        metaHash.takeOne(m, more, gotOne);
+        qDebug() << "DataModel::processMetadataBuffer  GotOne Entry:"
+                 << count
+                 << "row = " << m.row
+                 << "gotOne =" << gotOne;
+//        if (gotOne) emit updateMetadata(m);
+        if (gotOne) updateMetadataItem(m);
         if (!more) break;
     }
 }
@@ -554,6 +565,11 @@ bool DataModel::updateMetadataItem(ImageMetadata m)
     }
 
     int row = m.row;
+
+    QString fPath = index(row, 0).data(G::PathRole).toString();
+    qDebug() << "Setting the datamodel for row" << row << fPath;
+    qDebug() << "m.label" << m.label
+             << "m.createdDate" << m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
 
     setData(index(row, G::LabelColumn), m.label);
     setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -593,7 +609,10 @@ bool DataModel::updateMetadataItem(ImageMetadata m)
 
 
     // list used by imageCacheThread, filtered by row+jpg if combined
-    for (int i = 0; i < sf->rowCount(); ++i)
+
+    // move somewhere else
+    if(row == 0)
+        for (int i = 0; i < sf->rowCount(); ++i)
             imageFilePathList.append(sf->index(i,0).data(G::PathRole).toString());
 
     // req'd for 1st image, probably loaded before metadata cached
