@@ -609,6 +609,25 @@ bool ThumbView::isThumb(int row)
     return dm->sf->index(row, 0).data(Qt::DecorationRole).isNull();
 }
 
+// ASync
+void ThumbView::processIconBuffer()
+{
+    static int count = 0;
+    count++;
+    forever {
+        bool more = true;
+        int row;
+        QImage image;
+        iconHash.takeOne(row, image, more);
+        qDebug() << "ThumbView::processIconBuffer  Entry:"
+                 << count
+                 << "row = " << row
+                 << "image size" << image.size();
+        if (row >= 0) setIcon(row, image);
+        if (!more) break;
+    }
+}
+
 void ThumbView::setIcon(int row, QImage thumb)
 {
 /*
@@ -623,17 +642,18 @@ crash.
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
-#ifdef ISPROFILE
-G::track(__FUNCTION__);
-#endif
     }
+    QString fPath = dm->index(row, 0).data().toString();
+    qDebug() << "ThumbView::setIcon for row " << row << fPath;
     QStandardItem *item = new QStandardItem;
     QModelIndex idx = dm->index(row, 0, QModelIndex());
     if (!idx.isValid()) {
+        qDebug() << "row" << row << "is invalid";
         return;
     }
     item = dm->itemFromIndex(idx);
     item->setIcon(QPixmap::fromImage(thumb));
+//    qApp->processEvents();
 }
 
 // Used by thumbnail navigation (left, right, up, down etc)

@@ -528,16 +528,18 @@ which is created in MW, and in InfoView.
 //    qDebug() << "Sync: Time to get metadata =" << t.elapsed();
 }
 
+// ASync
 void DataModel::processMetadataBuffer()
 {
     forever {
-        bool more;
+        bool more = true;
         ImageMetadata m = metaHash.takeOne(&more);
-        if (!more) break;
         updateMetadataItem(m);
+        if (!more) break;
     }
 }
 
+// ASync
 bool DataModel::updateMetadataItem(ImageMetadata m)
 {
     /*
@@ -550,6 +552,7 @@ bool DataModel::updateMetadataItem(ImageMetadata m)
     G::track(__FUNCTION__);
     #endif
     }
+
     int row = m.row;
 
     setData(index(row, G::LabelColumn), m.label);
@@ -599,6 +602,7 @@ bool DataModel::updateMetadataItem(ImageMetadata m)
     return true;
 }
 
+// ASync
 void DataModel::updateFilters()
 {
     {
