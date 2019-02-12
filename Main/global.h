@@ -2,7 +2,8 @@
 #define GLOBAL_H
 
 //#define ISDEBUG        // Uncomment this line to show debugging output
-//#define ISPROFILE       // Uncomment this line to show profiling output
+//#define ISPROFILE      // Uncomment this line to show profiling output
+//#define ISTEST         // Uncomment this line to show profiling output
 
 #include <QtWidgets>
 #include <QColor>
@@ -99,9 +100,11 @@ namespace G
     extern QElapsedTimer t;
     extern bool isTimer;
 
-
+    extern int cores;
+    extern bool aSync;
 
     extern void track(QString functionName = "", QString comment = "");
+
 
 //    class Profile
 //    {

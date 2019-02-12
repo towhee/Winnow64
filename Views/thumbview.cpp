@@ -622,12 +622,14 @@ void ThumbView::processIconBuffer()
             int x = 2;
         }
         iconHash.takeOne(row, image, more);
+#ifdef ISTEST
         qDebug() << "ThumbView::processIconBuffer  Entry:"
                  << count
                  << "row = " << row
                  << "image size" << image.size();
+#endif
         if (row >= 0) setIcon(row, image);
-        if (!more) break;
+        if (!more) return;
     }
 }
 
@@ -647,7 +649,9 @@ crash.
     #endif
     }
     QString fPath = dm->index(row, 0).data().toString();
+#ifdef ISTEST
     qDebug() << "ThumbView::setIcon for row " << row << fPath;
+#endif
     QStandardItem *item = new QStandardItem;
     QModelIndex idx = dm->index(row, 0, QModelIndex());
     if (!idx.isValid()) {
