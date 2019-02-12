@@ -1239,6 +1239,7 @@ been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
+    // ASync
     if (isTempNewCacheMethod) dm->updateFilters();
 
     qDebug() << "MW::loadImageCache  Time to cache metadata ="
@@ -1247,7 +1248,10 @@ been consumed or all the images are cached.
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
-    dm->addMetadata(progressBar, isShowCacheStatus);
+
+    // ASync
+    if (!isTempNewCacheMethod)
+     dm->addMetadata(progressBar, isShowCacheStatus);
 
     statusBar()->showMessage("Loading the image cache", 1000);
     // have to wait for the data before resize table columns
