@@ -540,10 +540,12 @@ void DataModel::processMetadataBuffer()
         bool gotOne = false;
         ImageMetadata m;
         metaHash.takeOne(m, more, gotOne);
+        #ifdef ISTEST
         qDebug() << "DataModel::processMetadataBuffer  GotOne Entry:"
                  << count
                  << "row = " << m.row
                  << "gotOne =" << gotOne;
+        #endif
 //        if (gotOne) emit updateMetadata(m);
         if (gotOne) updateMetadataItem(m);
         if (!more) break;
@@ -567,9 +569,11 @@ bool DataModel::updateMetadataItem(ImageMetadata m)
     int row = m.row;
 
     QString fPath = index(row, 0).data(G::PathRole).toString();
+#ifdef ISTEST
     qDebug() << "Setting the datamodel for row" << row << fPath;
     qDebug() << "m.label" << m.label
              << "m.createdDate" << m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
+#endif
 
     setData(index(row, G::LabelColumn), m.label);
     setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -629,7 +633,9 @@ void DataModel::updateFilters()
     G::track(__FUNCTION__);
     #endif
     }
+#ifdef ISTEST
     qDebug() << "DataModel::updateFilters()";
+#endif
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;

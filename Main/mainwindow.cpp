@@ -838,7 +838,7 @@ void MW::folderSelectionChange()
     cacheTimer.restart();
 
     // ASync
-    if (isTempNewCacheMethod) mdCacheMgr->loadMetadataCache(0);
+    if (G::aSync) mdCacheMgr->loadMetadataCache(0);
     else metadataCacheThread->loadMetadataCache(0, isShowCacheStatus);
 
     // format pickMemSize as bytes, KB, MB or GB
@@ -1240,7 +1240,7 @@ been consumed or all the images are cached.
     #endif
     }
     // ASync
-    if (isTempNewCacheMethod) dm->updateFilters();
+    if (G::aSync) dm->updateFilters();
 
     qDebug() << "MW::loadImageCache  Time to cache metadata ="
              << cacheTimer.elapsed();
@@ -1250,7 +1250,7 @@ been consumed or all the images are cached.
     qApp->processEvents();
 
     // ASync
-    if (!isTempNewCacheMethod)
+    if (!G::aSync)
      dm->addMetadata(progressBar, isShowCacheStatus);
 
     statusBar()->showMessage("Loading the image cache", 1000);
@@ -5760,6 +5760,8 @@ re-established when the application is re-opened.
     setting->setValue("isCachePreview", isCachePreview);
     setting->setValue("cachePreviewWidth", cachePreviewWidth);
     setting->setValue("cachePreviewHeight", cachePreviewHeight);
+    setting->setValue("cores", G::cores);
+    setting->setValue("aSync", G::aSync);
 
     // full screen
     setting->setValue("isFullScreenFolders", fullScreenDocks.isFolders);
@@ -5997,6 +5999,8 @@ Preferences are located in the prefdlg class and updated here.
         isCachePreview = true;
         cachePreviewWidth = 2000;
         cachePreviewHeight = 1600;
+        G::cores = 2;
+        G::aSync = true;
 
         return false;
     }
@@ -6043,6 +6047,8 @@ Preferences are located in the prefdlg class and updated here.
     isCachePreview = setting->value("isCachePreview").toBool();
     cachePreviewWidth = setting->value("cachePreviewWidth").toInt();
     cachePreviewHeight = setting->value("cachePreviewHeight").toInt();
+    G::cores = setting->value("cores").toInt();
+    G::aSync = setting->value("aSync").toBool();
 
     // full screen
     fullScreenDocks.isFolders = setting->value("isFullScreenFolders").toBool();
@@ -8329,38 +8335,7 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-
-    isTempNewCacheMethod = !isTempNewCacheMethod;
-    qDebug() << "CACHE METHOD NEW:" <<  isTempNewCacheMethod;
-    return;
-
-//    MdCacheMgr * mdCacheMgr = new MdCacheMgr(this, dm);
-//    mdCacheMgr->loadMetadataCache(0);
-
-//    int total = 20;
-
-//    ReadSync *readSync = new ReadSync(this, dm);
-//    readSync->go(total);
-
-//    ReadASync *readASync = new ReadASync(this, dm);
-//    connect(this, SIGNAL(aSyncGo(int)), readASync, SLOT(go(int)));
-//    emit aSyncGo(total);
-
-    // only run once or reinstantiate many copies
-//    ReadMdConcurrent *readMdConcurrent = new ReadMdConcurrent(this, dm, metadata);
-//    connect(this, SIGNAL(aSyncGo(int)), readMdConcurrent, SLOT(go(int)));
-//    connect(readMdConcurrent, SIGNAL(loadMetadata(QFileInfo,bool,bool,bool,bool)),
-//            metadata, SLOT(loadImageMetadata(QFileInfo,bool,bool,bool,bool)));
-//    connect(&readMdConcurrent->watcher, SIGNAL(finished()), this, SLOT(test2()));
-//    emit aSyncGo(total);
-
-//    setFixedSize(QSize(1280, 720));
-
+    qDebug() << G::cores << G::aSync;
 }
 
 void MW::test2()
