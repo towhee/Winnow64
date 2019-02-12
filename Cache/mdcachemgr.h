@@ -15,6 +15,7 @@ class MdCacheMgr : public QObject
 public:
     MdCacheMgr(QObject *parent, DataModel *dm, ThumbView *thumbView);
     void loadMetadataCache(int startRow);
+    void stop();
 
 signals:
     void loadImageCache();
@@ -28,7 +29,8 @@ public slots:
 private:
     void launchCachers();
     void chunkify();
-    void stop();
+    void cleanup();
+    void createCachers();
 
     DataModel *dm;
     ThumbView *thumbView;

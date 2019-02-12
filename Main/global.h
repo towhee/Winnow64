@@ -68,6 +68,11 @@ namespace G
         QString path;
     };
 
+    struct ImPair {
+        int row;
+        QImage image;
+    };
+
     extern QColor labelNoneColor;
     extern QColor labelRedColor;
     extern QColor labelYellowColor;

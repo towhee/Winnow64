@@ -1,6 +1,10 @@
 #include "mdcacher.h"
 
-MdCacher::MdCacher(QObject *parent, DataModel *dm, Metadata *metadata, MetaHash *metaHash)
+MdCacher::MdCacher(QObject *parent,
+                   DataModel *dm,
+                   Metadata *metadata,
+                   MetaHash *metaHash,
+                   ImageHash *iconHash)
             : QThread(parent)
 {
     {
@@ -11,9 +15,11 @@ MdCacher::MdCacher(QObject *parent, DataModel *dm, Metadata *metadata, MetaHash 
     this->dm = dm;
     this->metadata = metadata;
     this->metaHash = metaHash;
+    this->iconHash = iconHash;
     thumb = new Thumb(this, metadata);
-    restart = false;
     abort = false;
+
+    // defined in global.h
     thumbMax.setWidth(THUMB_MAX);
     thumbMax.setHeight(THUMB_MAX);
 }
@@ -44,11 +50,11 @@ void MdCacher::stopMetadateCache()
         mutex.unlock();
         wait();
         abort = false;
-//        emit updateIsRunning(false, false, __FUNCTION__);
+        emit endCaching(thread, allMetadataLoaded);
     }
 }
 
-void MdCacher::loadMetadataCache(QVector <ThreadItem> &items,
+void MdCacher::loadMetadataCache(QVector<ThreadItem> &items,
                                  bool isShowCacheStatus)
 {
     {
@@ -60,28 +66,41 @@ void MdCacher::loadMetadataCache(QVector <ThreadItem> &items,
     #endif
     }
     if (isRunning()) {
-        mutex.lock();
+//        mutex.lock();
         abort = true;
-        condition.wakeOne();
-        mutex.unlock();
+//        condition.wakeOne();
+//        mutex.unlock();
         wait();
     }
     abort = false;
 
-    this->items = items;
+    /* items holds the informaton req'd for this thread
+       items.row    = the datamodel row
+       items.thread = this thread number (used to report back source)
+       items.fPath  = the file to process
+    */
+
+    this->items = items;    
+    thread = items[0].thread;
+    allMetadataLoaded = false;
 
     /* Create a map container for every row in the list of files to track metadata caching.
     This is used to confirm all the metadata is loaded before ending the metadata cache.
     */
     loadMap.clear();
-    for(int i = 0; i < items.count(); ++i) loadMap[i] = false;
-
-    allMetadataLoaded = false;
+    for (int i = 0; i < items.count(); ++i) loadMap[i] = false;
 
     this->isShowCacheStatus = isShowCacheStatus;
     if (isShowCacheStatus) emit showCacheStatus(0, true);
 
 //    qDebug() << "MdCacher::loadMetadataCache  Thread" << items[0].thread;
+    qDebug() << "Starting Thread" << thread;
+    for (int i = 0; i < items.count(); ++i) {
+        qDebug() << "Array index =" << i
+                 << "items.at(i).thread =" << items.at(i).thread
+                 << "items.at(i).row =" << items.at(i).row
+                 << "items.at(i).fPath =" << items.at(i).fPath;
+    }
 
     start(TimeCriticalPriority);
 }
@@ -89,7 +108,8 @@ void MdCacher::loadMetadataCache(QVector <ThreadItem> &items,
 void MdCacher::loadMetadata()
 {
 /*
-Load the metadata and thumb (icon) for all the image files in a folder.
+Load the metadata and thumb (icon) for all the image files assigned to the
+thread.
 */
     {
     #ifdef ISDEBUG
@@ -97,10 +117,10 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     #endif
     }
 
-//   qDebug() << "MdCacher::loadMetadata  Thread" << items[0].thread;
 
+    // get metadata for each item assigned to this thread
     int totRows = items.count();
-    for (int row = 0; row < totRows; ++row) {
+    for (int row = startRow; row < totRows; ++row) {
         if (abort) {
             {
             #ifdef ISDEBUG
@@ -127,9 +147,11 @@ Load the metadata and thumb (icon) for all the image files in a folder.
 
         bool thumbLoaded = false;
         bool metadataLoaded = false;
+
+        // file path for this item
         QString fPath = items.at(row).fPath;
 
-        // empty array item
+        // just in case an empty item
         if (fPath == "") continue;
 
 //        qDebug() << "MdCacher::loadMetadata  Thread" << items[row].thread
@@ -162,6 +184,10 @@ Load the metadata and thumb (icon) for all the image files in a folder.
                 // datamodel row so can efficiently update datamodel
                 metadata->imageMetadata.row = items[row].row;
                 metadataLoaded = true;
+
+//                qDebug() << "mdcacher thread" << thread << "loading metadata for " << fPath;
+                metaHash->insert(row, metadata->imageMetadata);
+
                 {
                 #ifdef ISDEBUG
                 QString s = "Loaded metadata for row " + QString::number(row + 1) + " " + fPath;
@@ -176,10 +202,14 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             QImage image;
             mutex.lock();
             thumbLoaded = thumb->loadThumb(fPath, image);
-            mutex.unlock();
             if (thumbLoaded) {
-                emit setIcon(items[row].row, image.scaled(THUMB_MAX, THUMB_MAX, Qt::KeepAspectRatio));
+                qDebug() << "mdcacher thread signalling thread" << thread
+                         << "row =" << items[row].row
+                         << fPath;
+//                emit setIcon(items[row].row, image.scaled(THUMB_MAX, THUMB_MAX, Qt::KeepAspectRatio));
+                iconHash->insert(items[row].row, image.scaled(THUMB_MAX, THUMB_MAX, Qt::KeepAspectRatio));
             }
+            mutex.unlock();
         }
         else {
             QString s = "Thumb icon not obtained for row " + QString::number(row + 1) + " " + fPath;
@@ -207,12 +237,16 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         qDebug() << "title" << metadata->imageMetadata.title;
 */
 
-        metaHash->insert(row, metadata->imageMetadata);
-        emit processBuffer();
 
         if (metadataLoaded && thumbLoaded) {
             loadMap[row] = true;
             if (isShowCacheStatus) emit showCacheStatus(row, false);
+        }
+
+        if (row % 20 == 0 || row == totRows - 1) {
+            emit processMetadataBuffer();
+            emit processIconBuffer();
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         }
     }
 }
@@ -255,11 +289,10 @@ that have been missed.
 //    emit updateIsRunning(true, true, __FUNCTION__);
 
 //    qDebug() << "MdCacher::run  Thread" << items[0].thread;
-    thread = items[0].thread;
+//    thread = items[0].thread;
 
-    mutex.lock();
-    int rowCount = fList.count();
-    mutex.unlock();
+    int rowCount = items.count();
+    startRow = 0;
 
     do {
         if (abort) {
@@ -268,15 +301,8 @@ that have been missed.
             mutex.lock(); G::track(__FUNCTION__, "Aborting ..."); mutex.unlock();
             #endif
             }
-
-            emit updateAllMetadataLoaded(thread, allMetadataLoaded);
-//            emit updateIsRunning(false, false, __FUNCTION__);
+            stopMetadateCache();
             return;
-        }
-        {
-        #ifdef ISDEBUG
-        mutex.lock(); G::track(__FUNCTION__, "try loadMetadata"); mutex.unlock();
-        #endif
         }
 
         loadMetadata();
@@ -289,17 +315,20 @@ that have been missed.
                 break;
             }
         }
-        {
-        #ifdef ISDEBUG
-        QString s = "allMetadataLoaded = " + allMetadataLoaded ? "true" : "false";
-        mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
-        #endif
-        }
     }
     while (!allMetadataLoaded);  // && t.elapsed() < 30000);
-    emit updateAllMetadataLoaded(thread, allMetadataLoaded);
+
+    emit endCaching(thread, allMetadataLoaded);
 
     qApp->processEvents();
+}
+
+
+
+
+
+
+
 //    qDebug() << "After" << t.elapsed();
 
     /* After loading metadata it is okay to cache full size images, where the
@@ -314,4 +343,3 @@ that have been missed.
 //    emit updateFilterCount();
 
 //    emit finished();
-}
