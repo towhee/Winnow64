@@ -54,9 +54,11 @@ public:
 
     void insert(const Key &key, const Value &value)
     {
+        QWriteLocker locker(&lock);
+        qDebug() << "inserting key" << key
+                    << "hash items" << hash.size();
         hash.insert(key, value);
     }
-
 
     int remove(const Key &key)
     {
@@ -84,22 +86,41 @@ public:
 //    }
 
 
-    ImageMetadata takeOne(bool *more)
+    void takeOne(ImageMetadata &m, bool &more, bool &gotOne)
     {
         Q_ASSERT(more);
         QWriteLocker locker(&lock);
-        typename QHash<Key, Value>::const_iterator i =
-                hash.constBegin();
-        if (i == hash.constEnd()) {
-            *more = false;
-            ImageMetadata nullValue;
-            return nullValue;
+        QHashIterator<int, ImageMetadata> i(hash);
+        while (i.hasNext()) {
+            i.next();
+            m = i.value();
+            gotOne = true;
+            hash.remove(i.key());
+            qDebug() << "MetaHash - Removing hash row" << i.key()
+                     << "DM row" << m.row
+                     << "hash items remaining" << hash.size();
+            return;
         }
-        *more = true;
-        const ImageMetadata value = hash.value(i.key());
-        hash.remove(i.key());
-        return value;
-    }
+        qDebug() << "No items in the MetaHash";
+        more = false;
+     }
+
+//    ImageMetadata takeOne(bool *more)
+//    {
+//        Q_ASSERT(more);
+//        QWriteLocker locker(&lock);
+//        typename QHash<Key, Value>::const_iterator i =
+//                hash.constBegin();
+//        if (i == hash.constEnd()) {
+//            *more = false;
+//            ImageMetadata nullValue;
+//            return nullValue;
+//        }
+//        *more = true;
+//        const ImageMetadata value = hash.value(i.key());
+//        hash.remove(i.key());
+//        return value;
+//    }
 
     QHash<Key, Value> takeOneHashItem(bool *more)
     {
@@ -144,10 +165,15 @@ class ImageHash
 public:
     explicit ImageHash() {}
 
+    void clear()
+    {
+        QWriteLocker locker(&lock);
+        hash.clear();
+    }
+
     void insert(const int &key, const QImage &value)
     {
-//        QWriteLocker locker(&lock);
-        qDebug() << "Inserting row" << key
+        qDebug() << "Inserting key" << key
                  << "hash items" << hash.size();
         hash.insert(key, value);
     }
@@ -160,12 +186,12 @@ public:
             i.next();
             row = i.key();
             image = i.value();
-            qDebug() << "Removing row" << i.key()
-                     << "hash items" << hash.size();
+            qDebug() << "IconHash - Removing row" << i.key()
+                     << "hash items remaining" << hash.size();
             hash.remove(i.key());
             return;
         }
-        qDebug() << "No items in the hash";
+//        qDebug() << "No items in the ImageHash";
         more = false;
         row = -1;
     }

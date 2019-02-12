@@ -80,6 +80,7 @@ private:
 
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
+    int readFailure;
     QElapsedTimer t;
 
     void loadMetadata();
