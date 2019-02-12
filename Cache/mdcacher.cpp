@@ -73,6 +73,7 @@ void MdCacher::loadMetadataCache(QVector<ThreadItem> &items,
         wait();
     }
     abort = false;
+    readFailure = 0;
 
     /* items holds the informaton req'd for this thread
        items.row    = the datamodel row
@@ -185,8 +186,8 @@ thread.
                 metadata->imageMetadata.row = items[row].row;
                 metadataLoaded = true;
 
-//                qDebug() << "mdcacher thread" << thread << "loading metadata for " << fPath;
-                metaHash->insert(row, metadata->imageMetadata);
+                qDebug() << "mdcacher thread" << thread << "loading metadata for " << fPath;
+                metaHash->insert(items[row].row, metadata->imageMetadata);
 
                 {
                 #ifdef ISDEBUG
@@ -195,21 +196,28 @@ thread.
                 #endif
                 }
             }
-//            mutex.unlock();
+            else {
+                qDebug() << "MdCacher thread" << thread << "failed to load metadata for row"
+                         << items[row].row << fPath;
+            }
         }
 
         if (!thumbLoaded) {
             QImage image;
             mutex.lock();
             thumbLoaded = thumb->loadThumb(fPath, image);
+            mutex.unlock();
             if (thumbLoaded) {
-                qDebug() << "mdcacher thread signalling thread" << thread
-                         << "row =" << items[row].row
-                         << fPath;
+//                qDebug() << "mdcacher thread signaling thread" << thread
+//                         << "row =" << items[row].row
+//                         << fPath;
 //                emit setIcon(items[row].row, image.scaled(THUMB_MAX, THUMB_MAX, Qt::KeepAspectRatio));
                 iconHash->insert(items[row].row, image.scaled(THUMB_MAX, THUMB_MAX, Qt::KeepAspectRatio));
             }
-            mutex.unlock();
+            else {
+                qDebug() << "MdCacher thread" << thread << "failed to load thumb for row"
+                         << items[row].row << fPath;
+            }
         }
         else {
             QString s = "Thumb icon not obtained for row " + QString::number(row + 1) + " " + fPath;
@@ -243,10 +251,10 @@ thread.
             if (isShowCacheStatus) emit showCacheStatus(row, false);
         }
 
-        if (row % 20 == 0 || row == totRows - 1) {
+        if ((row % 20 == 0 && row > 0) || row == totRows - 1) {
             emit processMetadataBuffer();
             emit processIconBuffer();
-            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+//            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         }
     }
 }
@@ -315,9 +323,12 @@ that have been missed.
                 break;
             }
         }
+        qDebug() << "End of while loop in MdCacher::run   allMetadataLoaded =" << allMetadataLoaded;
+        if (!allMetadataLoaded) readFailure++;
+        if (readFailure > 3) break;
     }
     while (!allMetadataLoaded);  // && t.elapsed() < 30000);
-
+    qDebug() << "Exiting thread" << thread;
     emit endCaching(thread, allMetadataLoaded);
 
     qApp->processEvents();

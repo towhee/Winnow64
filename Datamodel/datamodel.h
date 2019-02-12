@@ -65,6 +65,7 @@ public:
 signals:
     void popup(QString msg, int ms, float opacity);
     void closePopup();
+    void updateMetadata(ImageMetadata m);   //ASync
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void updateIcon(int row, QImage icon);
     void msg(QString message);
