@@ -33,6 +33,7 @@
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
 
+// ASync
 #include "Cache/mdcachemgr.h"
 #include "Cache/mdcacher.h"
 #include "Cache/threadsafehash.h"
@@ -81,7 +82,7 @@ public:
 
     bool isShift;               // used when opening if shift key pressed
 
-    bool isTempNewCacheMethod = false;
+    bool isTempNewCacheMethod = true;   // ASync
 
     int copyCutCount;   // req'd?
     QTextStream rpt;

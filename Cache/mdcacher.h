@@ -23,30 +23,36 @@ class MdCacher : public QThread
     Q_OBJECT
 
 public:
-    MdCacher(QObject *parent, DataModel *dm, Metadata *metadata, MetaHash *metaHash);
+    MdCacher(QObject *parent,
+             DataModel *dm,
+             Metadata *metadata,
+             MetaHash *metaHash,
+             ImageHash *iconHash);
     ~MdCacher() override;
     void loadMetadataCache(QVector<ThreadItem> &items,
                            bool isShowCacheStatus);
     void stopMetadateCache();
-    bool restart;
 
-//    int cacheStatusWidth;
+    // handy to determine source thread later in debugging
+    int thread;
 
 protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-    void setIcon(int, QImage);
-    void processBuffer();
-    void updateAllMetadataLoaded(int, bool);
-    void finished();
+    void processMetadataBuffer();
+    void processIconBuffer();
+    void endCaching(int, bool);
+    void showCacheStatus(int, bool);            // row, renew progress bar
 
+    // not being used
+    void finished();
+    void setIcon(int, QImage);
     void refreshThumbs();
     void loadImageMetadata(QFileInfo);
     void loadImageCache();
 //    void updateIsRunning(bool, bool, QString);
     void updateStatus(bool, QString);
-    void showCacheStatus(int, bool);            // row, renew progress bar
 
 private:
     QMutex mutex;
@@ -57,30 +63,25 @@ private:
     Metadata *metadata;
     Thumb *thumb;
     QMap<int, bool> loadMap;
-    int thread;
 
-//    TSHash<int, ImageMetadata> *metaHash;
     MetaHash *metaHash;
+    ImageHash *iconHash;
 
     bool isShowCacheStatus;
     bool allMetadataLoaded;
 
+    // struct defined at top of header, also used in MdCacheMgr
     ThreadItem threadItem;
-
-    QStringList fList;      // list of files to cache metadata
+    // info for every file to be processed (row, path, thread#)
     QVector <ThreadItem> items;
 
-    QModelIndex idx;
+    // new start position if metadata was not aquired for a file
     int startRow;
+
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
-
-//    QString folderPath;
-    void createCacheStatus();
-    void updateCacheStatus(int row);
-    void loadMetadata();
-
-
     QElapsedTimer t;
+
+    void loadMetadata();
 };
 #endif // MDCACHER_H
