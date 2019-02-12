@@ -114,6 +114,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     case 10: ui->cache100AheadRadio->setChecked(true);
     }
     ui->cachePreviewsChk->setChecked(m->isCachePreview);
+    ui->coresSpinBox->setValue(G::cores);
+    ui->aSynchChk->setChecked(G::aSync);
 
     // full screen
     ui->foldersChk->setChecked(m->fullScreenDocks.isFolders);
@@ -596,4 +598,15 @@ void Prefdlg::on_statusBarChk_clicked()
     if (okToUpdate) {
         m->fullScreenDocks.isStatusBar = ui->statusBarChk->isChecked();
     }
+}
+
+void Prefdlg::on_coresSpinBox_valueChanged(int arg1)
+{
+    G::cores = arg1;
+}
+
+
+void Prefdlg::on_aSynchChk_clicked()
+{
+    G::aSync = ui->aSynchChk->isChecked();
 }
