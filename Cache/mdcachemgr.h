@@ -29,7 +29,7 @@ public slots:
 private:
     void launchCachers();
     void chunkify();
-    void cleanup();
+    void clear();
     void createCachers();
 
     DataModel *dm;
