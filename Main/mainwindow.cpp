@@ -682,6 +682,7 @@ void MW::folderSelectionChange()
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
+    mdCacheMgr->stop();     // ASync
     allMetadataLoaded = false;
 
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
@@ -836,6 +837,7 @@ void MW::folderSelectionChange()
 
     cacheTimer.restart();
 
+    // ASync
     if (isTempNewCacheMethod) mdCacheMgr->loadMetadataCache(0);
     else metadataCacheThread->loadMetadataCache(0, isShowCacheStatus);
 
@@ -1252,9 +1254,14 @@ been consumed or all the images are cached.
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
     QModelIndexList indexesList = selectionModel->selectedIndexes();
+//    Q_ASSERT(indexesList.isEmpty());
+    QString fPath;
+    if (indexesList.isEmpty())
+        fPath = dm->sf->index(0, G::PathColumn).data().toString();
+    else
+        fPath = indexesList.first().data(G::PathRole).toString();
 
     // imageCacheThread checks if already running and restarts caching
-    QString fPath = indexesList.first().data(G::PathRole).toString();
     imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
         isShowCacheStatus, progressWidth, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
@@ -3096,8 +3103,10 @@ void MW::createDataModel()
     connect(dm, &DataModel::popup, this, &MW::popup);
     connect(dm, &DataModel::closePopup, this, &MW::closePopup);
     connect(dm, &DataModel::msg, this, &MW::setCentralMessage);
-    connect(dm, SIGNAL(updateProgress(int,int,int,QColor,QString)),
-            this, SLOT(updateProgress(int,int,int,QColor,QString)));
+//    connect(dm, &DataModel::updateIcon, thumbView, &ThumbView::setIcon);
+//    connect(dm, SIGNAL(updateIcon(int,QImage)), thumbView, SLOT(setIcon(int, QImage)));
+//    connect(dm, SIGNAL(updateProgress(int,int,int,QColor,QString)),
+//            this, SLOT(updateProgress(int,int,int,QColor,QString)));
 }
 
 void MW::createSelectionModel()
@@ -3144,7 +3153,7 @@ void MW::createCaching()
     imageCacheThread = new ImageCache(this, metadata);
 
     // new kid on the block
-    mdCacheMgr = new MdCacheMgr(this, dm, thumbView);
+    mdCacheMgr = new MdCacheMgr(this, dm, thumbView);   // ASync
 
     /* When a new folder is selected the metadataCacheThread is started to
        load all the metadata and thumbs for each image.  If the user scrolls
@@ -3163,24 +3172,28 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(updateFilterCount()),
             this, SLOT(updateFilterCount()));
 
+    // ASync
     connect(mdCacheMgr, SIGNAL(updateFilterCount()),
             this, SLOT(updateFilterCount()));
 
     connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
             this, SLOT(updateAllMetadataLoaded(bool)));
 
+    // ASync
     connect(mdCacheMgr, SIGNAL(updateAllMetadataLoaded(bool)),
             this, SLOT(updateAllMetadataLoaded(bool)));
 
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));
 
+    // ASync
     connect(mdCacheMgr, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));
 
     connect(metadataCacheThread, SIGNAL(updateIsRunning(bool,bool,QString)),
             this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
 
+    // ASync
     connect(mdCacheMgr, SIGNAL(updateIsRunning(bool,bool,QString)),
             this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
 
@@ -3384,7 +3397,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
             this, SLOT(handleDrop(const QMimeData*)));
 
     connect(imageView, SIGNAL(killSlideshow()),
-            this, SLOT(slideshow()));
+            this, SLOT(slideShow()));
 }
 
 void MW::createCompareView()
