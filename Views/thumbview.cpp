@@ -618,6 +618,9 @@ void ThumbView::processIconBuffer()
         bool more = true;
         int row;
         QImage image;
+        if (count == 2){
+            int x = 2;
+        }
         iconHash.takeOne(row, image, more);
         qDebug() << "ThumbView::processIconBuffer  Entry:"
                  << count
@@ -648,7 +651,7 @@ crash.
     QStandardItem *item = new QStandardItem;
     QModelIndex idx = dm->index(row, 0, QModelIndex());
     if (!idx.isValid()) {
-        qDebug() << "row" << row << "is invalid";
+//        qDebug() << "row" << row << "is invalid";
         return;
     }
     item = dm->itemFromIndex(idx);

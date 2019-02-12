@@ -44,12 +44,8 @@ void MdCacheMgr::done(int thread, bool allMetadataLoaded)
 //    qDebug() << "Thread" << thread << "has finished";
     static int threadCount = 0;
     threadCount++;
+    clear();
     if(threadCount == threadTot) {
-        cleanup();
-        items.clear();
-        threadItems.clear();
-        cacher.clear();
-        meta.clear();
 
 //        qDebug() << "Metadata caching completed.  Loading image cache.";
         emit updateFilterCount();
@@ -60,7 +56,7 @@ void MdCacheMgr::done(int thread, bool allMetadataLoaded)
     }
 }
 
-void MdCacheMgr::cleanup()
+void MdCacheMgr::clear()
 {
     while (cachers.count()) {
         QMutableListIterator<QPointer<MdCacher>> i(cachers);
@@ -78,14 +74,14 @@ void MdCacheMgr::cleanup()
     }
     Q_ASSERT(cachers.isEmpty());
 
-    qDebug() << "\nDeleting Metas   Count =" << metas.count();
+//    qDebug() << "\nDeleting Metas   Count =" << metas.count();
     int count = 0;
     while (metas.count()) {
         QMutableListIterator<QPointer<Metadata>> i(metas);
         while (i.hasNext()) {
             QPointer<Metadata> meta = i.next();
             if (meta) {
-                qDebug() << "Deleting meta #" << count;
+//                qDebug() << "Deleting meta #" << count;
                 delete meta;
                 i.remove();
             }
@@ -96,13 +92,21 @@ void MdCacheMgr::cleanup()
         }
     }
     Q_ASSERT(metas.isEmpty());
+
+    allFilePaths.clear();
+    items.clear();
+    threadItems.clear();
+    cacher.clear();
+    meta.clear();
+//    thumbView->iconHash.clear();
+//    dm->metaHash.clear();
 }
 
 void MdCacheMgr::loadMetadataCache(int startRow)
 {
     stop();
+    clear();
     // get a list of all the files requiring metadata extraction
-    allFilePaths.clear();
     for(int row = 0; row < dm->rowCount(); row++) {
         QModelIndex idx = dm->index(row, G::PathColumn);
         allFilePaths.append(idx.data(G::PathRole).toString());
@@ -177,7 +181,9 @@ void MdCacheMgr::chunkify()
     if(rows % threadTot == 0) itemsPerThread = (double)rows / threadTot;
     else itemsPerThread = (double)rows / threadTot + 1;
 
-//    qDebug() << "rows" << rows << "threads" << threads << "itemsPerThread" << itemsPerThread;
+    qDebug() << "rows" << rows
+             << "threads" << threadTot
+             << "itemsPerThread" << itemsPerThread;
 
     // resize the array before populating
     items.resize(threadTot);
