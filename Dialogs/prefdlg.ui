@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>1</number>
+    <number>2</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -502,6 +502,11 @@
        <height>18</height>
       </rect>
      </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
      <property name="toolTip">
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
@@ -523,7 +528,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="toolTip">
@@ -547,7 +552,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="toolTip">
@@ -571,7 +576,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="toolTip">
@@ -595,7 +600,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="toolTip">
@@ -616,7 +621,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="toolTip">
@@ -637,7 +642,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="toolTip">
@@ -658,7 +663,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>9</pointsize>
       </font>
      </property>
      <property name="toolTip">
@@ -679,6 +684,11 @@
        <width>71</width>
        <height>18</height>
       </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
      </property>
      <property name="toolTip">
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Caching images and rendering the selected image simultaneously can degrade performance when rapidly moving through images.  The delay allows the next image selected to be rendered without any caching activity.  Try experimenting with the delay value if you are experiencing hesitation rendering the selected image.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -710,7 +720,7 @@
        <widget class="QRadioButton" name="cache50AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="toolTip">
@@ -725,7 +735,7 @@
        <widget class="QRadioButton" name="cache60AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="toolTip">
@@ -740,7 +750,7 @@
        <widget class="QRadioButton" name="cache70AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="toolTip">
@@ -755,7 +765,7 @@
        <widget class="QRadioButton" name="cache80AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="toolTip">
@@ -770,7 +780,7 @@
        <widget class="QRadioButton" name="cache90AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="toolTip">
@@ -785,7 +795,7 @@
        <widget class="QRadioButton" name="cache100AheadRadio">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>9</pointsize>
          </font>
         </property>
         <property name="toolTip">
@@ -830,6 +840,72 @@
      </property>
      <property name="tickInterval">
       <number>100</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="coresLbl">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>451</y>
+       <width>91</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Cores to use</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QSpinBox" name="coresSpinBox">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>450</y>
+       <width>51</width>
+       <height>18</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>8</number>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="aSynchChk">
+     <property name="geometry">
+      <rect>
+       <x>240</x>
+       <y>450</y>
+       <width>221</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Asynchronous</string>
      </property>
     </widget>
    </widget>

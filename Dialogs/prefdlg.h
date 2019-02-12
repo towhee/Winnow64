@@ -78,6 +78,11 @@ private slots:
 
     void on_infoFontSizeSlider_valueChanged(int value);
 
+    void on_coresSpinBox_valueChanged(int arg1);
+
+
+    void on_aSynchChk_clicked();
+
 private:
     Ui::Prefdlg *ui;
     QStandardItemModel *okInfo;
