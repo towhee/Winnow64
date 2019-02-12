@@ -95,12 +95,16 @@ void MdCacher::loadMetadataCache(QVector<ThreadItem> &items,
     if (isShowCacheStatus) emit showCacheStatus(0, true);
 
 //    qDebug() << "MdCacher::loadMetadataCache  Thread" << items[0].thread;
+#ifdef ISTEST
     qDebug() << "Starting Thread" << thread;
+#endif
     for (int i = 0; i < items.count(); ++i) {
+#ifdef ISTEST
         qDebug() << "Array index =" << i
                  << "items.at(i).thread =" << items.at(i).thread
                  << "items.at(i).row =" << items.at(i).row
                  << "items.at(i).fPath =" << items.at(i).fPath;
+#endif
     }
 
     start(TimeCriticalPriority);
@@ -186,7 +190,9 @@ thread.
                 metadata->imageMetadata.row = items[row].row;
                 metadataLoaded = true;
 
+#ifdef ISTEST
                 qDebug() << "mdcacher thread" << thread << "loading metadata for " << fPath;
+#endif
                 metaHash->insert(items[row].row, metadata->imageMetadata);
 
                 {
@@ -328,7 +334,9 @@ that have been missed.
         if (readFailure > 3) break;
     }
     while (!allMetadataLoaded);  // && t.elapsed() < 30000);
+#ifdef ISTEST
     qDebug() << "Exiting thread" << thread;
+#endif
     emit endCaching(thread, allMetadataLoaded);
 
     qApp->processEvents();

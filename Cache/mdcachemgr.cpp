@@ -111,7 +111,9 @@ void MdCacheMgr::loadMetadataCache(int startRow)
         QModelIndex idx = dm->index(row, G::PathColumn);
         allFilePaths.append(idx.data(G::PathRole).toString());
     }
+#ifdef ISTEST
     qDebug() << "\n NEW FOLDER";
+#endif
     launchCachers();
 }
 
@@ -174,16 +176,23 @@ void MdCacheMgr::chunkify()
     int rows = allFilePaths.count();
 
     // get number of threads = chunks to populate with metadata
-    threadTot = QThread::idealThreadCount();
+//    threadTot = QThread::idealThreadCount();
+//    if (rows < threadTot) threadTot = rows;
+
+    threadTot = G::cores;
     if (rows < threadTot) threadTot = rows;
+
+
 
     int itemsPerThread;
     if(rows % threadTot == 0) itemsPerThread = (double)rows / threadTot;
     else itemsPerThread = (double)rows / threadTot + 1;
 
+#ifdef ISTEST
     qDebug() << "rows" << rows
              << "threads" << threadTot
              << "itemsPerThread" << itemsPerThread;
+#endif
 
     // resize the array before populating
     items.resize(threadTot);
@@ -197,12 +206,14 @@ void MdCacheMgr::chunkify()
         threadItem.thread = row % threadTot;
         int threadItemCount = row / threadTot;
         items[threadItem.thread][threadItemCount] = threadItem;
+#ifdef ISTEST
         qDebug() << "row" << row << "rows" << rows
                  << "thread" << threadItem.thread
                  << "threadItemCount" << threadItemCount
                  << "threadItem: row" << threadItem.row
                  << "fPath" << threadItem.fPath
                  << "thread" << threadItem.thread;
+#endif
     }
 }
 
