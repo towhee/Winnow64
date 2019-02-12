@@ -5,10 +5,12 @@
 #include <QReadLocker>
 #include <QWriteLocker>
 #include <QMultiHash>
-
-//#include <QtCore>
-
+#include <QImage>
 #include "Metadata/imagemetadata.h"
+#include "Main/global.h"
+
+// ASync
+
 template<typename Key, typename Value>
 class TSHash
 {
@@ -99,6 +101,21 @@ public:
         return value;
     }
 
+    QHash<Key, Value> takeOneHashItem(bool *more)
+    {
+        Q_ASSERT(more);
+        QWriteLocker locker(&lock);
+        typename QHash<Key, Value>::const_iterator i = hash.constBegin();
+        if (i == hash.constEnd()) {
+            *more = false;
+            return nullptr;
+        }
+        *more = true;
+        QHash<Key, Value> v = i;
+        hash.remove(i.key());
+        return v;
+    }
+
 //    const QList<Value> takeOne(bool *more)
 //    {
 //        Q_ASSERT(more);
@@ -121,4 +138,41 @@ private:
 //    QMultiHash<Key, Value> hash;
 };
 
+//template<typename Key, typename Value>
+class ImageHash
+{
+public:
+    explicit ImageHash() {}
+
+    void insert(const int &key, const QImage &value)
+    {
+//        QWriteLocker locker(&lock);
+        qDebug() << "Inserting row" << key
+                 << "hash items" << hash.size();
+        hash.insert(key, value);
+    }
+
+    void takeOne(int &row, QImage &image, bool &more)
+    {
+        QWriteLocker locker(&lock);
+        QHashIterator<int, QImage> i(hash);
+        while (i.hasNext()) {
+            i.next();
+            row = i.key();
+            image = i.value();
+            qDebug() << "Removing row" << i.key()
+                     << "hash items" << hash.size();
+            hash.remove(i.key());
+            return;
+        }
+        qDebug() << "No items in the hash";
+        more = false;
+        row = -1;
+    }
+
+private:
+    mutable QReadWriteLock lock;
+//    QHash<Key, Value> hash;
+    QHash<int, QImage> hash;
+};
 #endif // TSHASH_H

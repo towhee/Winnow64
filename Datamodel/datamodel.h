@@ -50,7 +50,8 @@ public:
     void sortThumbs(int sortColumn, bool isReverse);
     QModelIndex find(QString fPath);
 
-    MetaHash metaHash;
+    MetaHash metaHash;  // ASync
+    ImageHash iconHash;  // ASync
 
     SortFilter *sf;
     QStringList imageFilePathList;
@@ -65,8 +66,9 @@ signals:
     void popup(QString msg, int ms, float opacity);
     void closePopup();
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
+    void updateIcon(int row, QImage icon);
     void msg(QString message);
-    void updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString source);
+//    void updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString source);
 
 public slots:
     void filterItemCount();
