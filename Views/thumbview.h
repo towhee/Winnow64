@@ -32,7 +32,6 @@ public:
 
     void updateLayout();
 
-
     ThumbViewDelegate *thumbViewDelegate;
     void selectThumb(int row);
     void selectThumb(QString &filePath);
@@ -56,7 +55,7 @@ public:
     int getHorizontalScrollBarMax();
     int getVerticalScrollBarMax();
 
-    QItemSelectionModel *thumbViewSelection;
+     QItemSelectionModel *thumbViewSelection;
 
     ImageHash iconHash;  // ASync
 

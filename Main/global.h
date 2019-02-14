@@ -74,6 +74,7 @@ namespace G
         QImage image;
     };
 
+
     extern QColor labelNoneColor;
     extern QColor labelRedColor;
     extern QColor labelYellowColor;

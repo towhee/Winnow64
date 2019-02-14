@@ -1,14 +1,5 @@
 #include "Datamodel/datamodel.h"
 
-DataModel::DataModel(QWidget *parent,
-                     Metadata *metadata,
-                     ProgressBar *progressBar,
-                     Filters *filters,
-                     bool &combineRawJpg) :
-
-                     QStandardItemModel(parent),
-                     combineRawJpg(combineRawJpg)
-{
 /*
 The datamodel (dm thoughout app) contains information about each eligible image
 file in the selected folder (and optionally the subfolder heirarchy).  Eligible
@@ -96,6 +87,17 @@ Code examples for model:
     // to force the model to refresh
     dm->sf->filterChange();        // executes invalidateFilter() in proxy
 */
+
+DataModel::DataModel(QWidget *parent,
+                     Metadata *metadata,
+                     ProgressBar *progressBar,
+                     Filters *filters,
+                     bool &combineRawJpg) :
+
+                     QStandardItemModel(parent),
+                     combineRawJpg(combineRawJpg)
+{
+
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -539,7 +541,7 @@ void DataModel::processMetadataBuffer()
         bool more = true;
         bool gotOne = false;
         ImageMetadata m;
-        metaHash.takeOne(m, more, gotOne);
+        metaHash.takeOne(&m, &more, &gotOne);
         #ifdef ISTEST
         qDebug() << "DataModel::processMetadataBuffer  GotOne Entry:"
                  << count

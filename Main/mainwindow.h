@@ -29,6 +29,7 @@
 #include "Views/infostring.h"
 #include "Metadata/metadata.h"
 #include "Utilities/popup.h"
+#include "Main/dockwidget.h"
 
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
@@ -98,7 +99,7 @@ public:
     QStringList *ingestHistoryFolders;
     QStringList ingestDescriptionCompleter;
 
-    QDockWidget *thumbDock;
+    DockWidget *thumbDock;
 
     G::Pair externalApp;                  // external application name / executable path
     QList<G::Pair> externalApps;          // list of external apps
@@ -433,6 +434,7 @@ private slots:
     void setFavDockVisibility();
     void setFilterDockVisibility();
     void setMetadataDockVisibility();
+    void setMetadataDockSize();
 
     void toggleThumbDockVisibity();
     void toggleFolderDockVisibility();
@@ -727,16 +729,16 @@ private:
     QLabel *metadataThreadRunningLabel;
     QLabel *thumbThreadRunningLabel;
     QLabel *imageThreadRunningLabel;
-    QDockWidget *folderDock;
-    QDockWidget *favDock;
-    QDockWidget *filterDock;
+    DockWidget *folderDock;
+    DockWidget *favDock;
+    DockWidget *filterDock;
+    DockWidget *metadataDock;
     FSTree *fsTree;
     BookMarks *bookmarks;
     Filters *filters;
     QWidget *centralWidget;
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;
-    QDockWidget *metadataDock;
     DataModel *dm;
     QItemSelectionModel *selectionModel;
     Metadata *metadata;

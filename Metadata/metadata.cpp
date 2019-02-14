@@ -4941,6 +4941,11 @@ void Metadata::setPick(const QString &imageFileName, bool choice)
 
 void Metadata::clear()
 {
+    /*  Clears the QMap that holds the ImageMetadata for each image in the
+       datamodel.
+
+       rgh - Look at eliminating this structure and just use datamodel.
+    */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
