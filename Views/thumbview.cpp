@@ -134,6 +134,7 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
     setUniformItemSizes(false);
     setMaximumHeight(100000);
     setContentsMargins(0,0,0,0);
+//    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     horizontalScrollBar()->setObjectName("ThumbViewHorizontalScrollBar");
     verticalScrollBar()->setObjectName("ThumbViewVerticalScrollBar");
@@ -618,10 +619,7 @@ void ThumbView::processIconBuffer()
         bool more = true;
         int row;
         QImage image;
-        if (count == 2){
-            int x = 2;
-        }
-        iconHash.takeOne(row, image, more);
+        iconHash.takeOne(&row, &image, &more);
 #ifdef ISTEST
         qDebug() << "ThumbView::processIconBuffer  Entry:"
                  << count
