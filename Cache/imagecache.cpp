@@ -132,9 +132,9 @@ folder change.  The cache status label in the status bar will be hidden.
         wait();
         abort = false;
 //        G::track(__FUNCTION__, "tiger emitting updateIsRunning");
-        emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
-        clearImageCache();
     }
+    emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
+    clearImageCache();
 }
 
 void ImageCache::pauseImageCache()
@@ -578,46 +578,6 @@ void ImageCache::reportCacheProgress(QString action)
 //    rpt.setFieldWidth(9);  rpt << currMB;
 }
 
-//int ImageCache::pxMid(int key)
-//{
-///*
-//returns the cache status bar x coordinate for the midpoint of the item key
-//*/
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    return qRound((float)cache.pxUnitWidth * (key+1)
-//                  - cache.pxUnitWidth/2);
-//}
-
-//int ImageCache::pxStart(int key)
-//{
-///*
-//returns the cache status bar x coordinate for the start of the item key
-//*/
-//    {
-//    #ifdef ISDEBUG
-////    G::track(__FUNCTION__, cacheMgr.at(key).fName);
-//    #endif
-//    }
-//    return qRound((float)cache.pxUnitWidth * key);
-//}
-
-//int ImageCache::pxEnd(int key)
-//{
-///*
-//returns the cache status bar x coordinate for the end of the item key
-//*/
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    return qRound((float)cache.pxUnitWidth * (key+1));
-//}
-
 void ImageCache::buildImageCacheList(QStringList &imageList)
 {
 /* The imageCacheList must match dm->sf and contains the information required
@@ -685,15 +645,6 @@ void ImageCache::initImageCache(QStringList &imageList, int &cacheSizeMB,
 
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
-
-    /* check if still in same folder with the same number of files. This could
-    change if inclSubFolders is changed or images have been added or removed
-    from the folder(s) */
-
-//    if (imageList.at(0) == cache.dir) {
-////        qDebug() << G::t.restart() << "\t" << "cacheMgr.size" << cacheMgr.size() << "folder now size" << imageList.size();
-//        if (cacheMgr.size() == imageList.size()) return;
-//    }
 
     imCache.clear();
 //    cacheItemList.clear();
@@ -808,10 +759,18 @@ Apparently there needs to be a slight delay before calling.
     if (cache.isShowCacheStatus) emit showCacheStatus("Update all rows", i, "ImageCache::updateImageCachePosition");
 
     // if all images are cached then we're done
-    if (cacheUpToDate()) return;
+    if (cacheUpToDate()) {
+        /* instance where go from blank folder to one image folder.  The first image is
+           directly loaded (and cached) in ImageView and the file selection position changes,
+           so this function is called, but the cache is up-to-date.  Make sure the image cache
+           activity light is turned off in the status bar, which is normally done at the end of
+           ImageCache::run.
+        */
+        emit updateIsRunning(false, true);  // bool isRunning, bool showCacheLabel
+        return;
+    }
 
     start(IdlePriority);
-//    G::track(__FUNCTION__, "Finished");
 }
 
 void ImageCache::filterImageCache(QStringList &filteredFilePathList,
@@ -959,7 +918,6 @@ void ImageCache::run()
         if (fPath == prevFileName) return;
 
         QImage im;
-        // rgh what is getImage used for???
         if (getImage->load(fPath, im)) {
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
@@ -988,7 +946,7 @@ void ImageCache::run()
         if (!toCache.isEmpty()) toCache.removeFirst();
         cache.currMB = getImCacheSize();
         #ifdef ISDEBUG
-        G::track(__FUNCTION__, "Emitting update cache status from loop");
+        G::track(__FUNCTION__, "Emiting update cache status from loop");
         #endif
         if(cache.isShowCacheStatus)
             emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");

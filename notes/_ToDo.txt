@@ -1,5 +1,5 @@
 BUGS
-- ImageView::scale comparing floats potentailly bad
+- ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
@@ -12,13 +12,16 @@ PERFORMANCE
 - Check if cacheDelay is still important (It appears not, but leave in but
   set to zero for now
 CODE IMPROVEMENTS
+- Eliminate metaCache in Metadata - just use datamodel
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Lock docks to a size, chk resize behavior as separate windows
 - For very large folders only load one or two grids of images at a time
 - tableView adjust to changing font size
 - undo / redo history
 - Speed up Tiffs
+- Thumbs resize to fit central view
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 - Check for updates on Mac
@@ -35,6 +38,8 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Recover memory when select empty folder
+- If go from blank folder to one with only 1 image the image cache does not update indicator
 - Ingest dialog not remembering auto bool setting
 - Hide cursor during slideshow
 - Report metadata sending to console

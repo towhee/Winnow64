@@ -50,7 +50,7 @@ public:
         version->setFont(font);
         title = new QLabel(About);
         title->setObjectName(QString::fromUtf8("title"));
-        title->setGeometry(QRect(0, 0, 590, 50));
+        title->setGeometry(QRect(0, 0, 701, 50));
         title->setStyleSheet(QString::fromUtf8("font: 20pt \"Tahoma\";\n"
 ""));
         title->setAlignment(Qt::AlignCenter);
@@ -100,7 +100,7 @@ public:
         About->setWindowTitle(QApplication::translate("About", "About", nullptr));
         label->setText(QString());
         version->setText(QApplication::translate("About", "Version 0.9.7.5 updated 2019-02-03", nullptr));
-        title->setText(QApplication::translate("About", "Image Viewer and Ingester", nullptr));
+        title->setText(QApplication::translate("About", "Winnow Image Viewer and Ingester", nullptr));
         webSite->setText(QApplication::translate("About", "<html><head/><body><p>Website:  <a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#e5e5e5;\">Winnow main page</span></a>", nullptr));
         email->setText(QApplication::translate("About", "<html><head/><body><p>Email:  <a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#e5e5e5;\">winnowimageviewer@outlook.com</span></a>", nullptr));
         Author->setText(QApplication::translate("About", "Author:  Rory Hill", nullptr));

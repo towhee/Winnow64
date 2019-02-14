@@ -44,9 +44,9 @@ void MetadataCache::stopMetadateCache()
         mutex.unlock();
         wait();
         abort = false;
-//        do {} while(isRunning());
         emit updateIsRunning(false, false, __FUNCTION__);
     }
+    loadMap.clear();
 }
 
 void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus)
@@ -72,10 +72,14 @@ void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus)
     this->startRow = startRow;
 
     /* Create a map container for every row in the datamodel to track metadata caching.
-    This is used to confirm all the metadata is loaded before ending the metadata cache.
+    This is used to confirm all the metadata is loaded before ending the metadata cache.  If
+    the startRow is greater than zero then this means the scroll event has resulted in skipping
+    ahead, and we do not want ot lose track of the thumbs already loaded.
     */
-    loadMap.clear();
-    for(int i = 0; i < dm->rowCount(); ++i) loadMap[i] = false;
+    if (startRow == 0) {
+        loadMap.clear();
+        for(int i = 0; i < dm->rowCount(); ++i) loadMap[i] = false;
+    }
 
     folderPath = dm->currentFolderPath;
     allMetadataLoaded = false;

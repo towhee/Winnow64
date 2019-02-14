@@ -329,7 +329,9 @@ that have been missed.
                 break;
             }
         }
+#ifdef ISTEST
         qDebug() << "End of while loop in MdCacher::run   allMetadataLoaded =" << allMetadataLoaded;
+#endif
         if (!allMetadataLoaded) readFailure++;
         if (readFailure > 3) break;
     }
