@@ -109,19 +109,13 @@ private:
     Metadata *metadata;
     ImageCache *imageCacheThread;
     ThumbView *thumbView;
-//    bool &isRatingBadgeVisible;
     InfoString *infoString;
     Pixmap *pixmap;
-    QImageReader imageReader;
-    QLabel *imageLabel;
 
     QGraphicsScene *scene;
     QGraphicsPixmapItem *pmItem;
     QGraphicsTextItem *infoItem;
     QMatrix matrix;
-
-    QPixmap displayPixmap;
-    QImage displayImage;
 
     QTimer *mouseMovementTimer;
     QTimer *loadFullSizeTimer;

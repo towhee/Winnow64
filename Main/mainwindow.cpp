@@ -194,6 +194,7 @@ void MW::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
     qApp->processEvents();
     if(checkIfUpdate) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
+    setMetadataDockSize();
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -964,9 +965,11 @@ so scrollTo and delegate use of the current index must check the row.
 
     if (metadataLoaded) {
         imageCacheFilePath = fPath;
-        // PERFORMANCE KILLER
-//        imageCacheThread->updateImageCachePosition(imageCacheFilePath);
-
+        /* This singleshot timer signals the image cache that the position has moved in the
+        file selection. Calling imageCacheThread->updateImageCachePosition directly from
+        fileSelectionChange resulted in a significant delay, so the singleshot short delay
+        avoids this.  This is a work-around.
+        */
         imageCacheTimer->start(50);
 
         // do a quick update to current position in progress bar here?
@@ -1013,7 +1016,6 @@ a bookmark or ejects a drive and the resulting folder does not have any eligible
     metadataCacheThread->stopMetadateCache();
     allMetadataLoaded = false;
     dm->clear();
-//    popUp->close();
     infoView->clearInfo();
     metadata->clear();
     imageView->clear();
@@ -1026,7 +1028,6 @@ a bookmark or ejects a drive and the resulting folder does not have any eligible
     progressLabel->setVisible(false);
 //    currentViewDir = "";
     updateClassification();
-
 }
 
 void MW::nullFiltration()
@@ -1101,10 +1102,9 @@ vertical scrollbar (does not have a horizontal scrollbar).
 void MW::delayProcessLoadMetadataCacheScrollEvent()
 {
 /*
-If there has not been another call to this function in 300ms then the
-metadataCacheThread is restarted at the row of the first visible thumb after
-the scrolling.
-*/
+If there has not been another call to this function in 300ms then the metadataCacheThread is
+restarted at the row of the first visible thumb after the scrolling.
+ */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -1112,8 +1112,7 @@ the scrolling.
     }
     if (!allMetadataLoaded && metadataCacheThread->isRunning()) {
         if (metadataCacheStartRow > 0)
-            metadataCacheThread->loadMetadataCache(metadataCacheStartRow,
-                  isShowCacheStatus);
+            metadataCacheThread->loadMetadataCache(metadataCacheStartRow, isShowCacheStatus);
     }
 }
 
@@ -1242,8 +1241,6 @@ been consumed or all the images are cached.
     // ASync
     if (G::aSync) dm->updateFilters();
 
-    qDebug() << "MW::loadImageCache  Time to cache metadata ="
-             << cacheTimer.elapsed();
 
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
@@ -1252,6 +1249,25 @@ been consumed or all the images are cached.
     // ASync
     if (!G::aSync)
      dm->addMetadata(progressBar, isShowCacheStatus);
+
+//#ifdef ISTEST
+    QString async;
+    int threads;
+    int n = dm->sf->rowCount();
+    if (G::aSync) {
+        async = "Asynchronous ";
+        threads = G::cores;
+    }
+    else {
+        async = "Synchronous  ";
+        threads = 1;
+    }
+
+    qDebug() << "Method:" << async
+             << "Threads:" << threads
+             << "Files:" << n
+             << "Time(ms):" << cacheTimer.elapsed();
+//#endif
 
     statusBar()->showMessage("Loading the image cache", 1000);
     // have to wait for the data before resize table columns
@@ -3169,7 +3185,7 @@ void MW::createCaching()
     */
     metadataCacheScrollTimer = new QTimer(this);
     metadataCacheScrollTimer->setSingleShot(true);
-    // rgh next connect to update
+    // next connect to update
     connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
             SLOT(delayProcessLoadMetadataCacheScrollEvent()));
 
@@ -3213,9 +3229,14 @@ void MW::createCaching()
             this, SLOT(updateMetadataCacheStatus(int,bool)));
 
 
+    /* This singleshot timer signals the image cache that the position has moved in the
+    file selection. Calling imageCacheThread->updateImageCachePosition directly from
+    fileSelectionChange resulted in a significant delay, so the singleshot short delay
+    avoids this.  This is a work-around.
+    */
     imageCacheTimer = new QTimer(this);
     imageCacheTimer->setSingleShot(true);
-
+    // connect timer to update image cache position
     connect(imageCacheTimer, SIGNAL(timeout()), this,
             SLOT(updateImageCachePosition()));
 
@@ -3502,27 +3523,57 @@ void MW::createDocks()
     G::track(__FUNCTION__);
     #endif
     }
-    folderDock = new QDockWidget(tr("  Folders  "), this);
+    folderDock = new DockWidget(tr("  Folders  "), this);
     folderDock->setObjectName("File System");
     folderDock->setWidget(fsTree);
 
-    favDock = new QDockWidget(tr("  Fav  "), this);
+    setting->beginGroup(("FolderDockFloat"));
+    folderDock->dw.screen = setting->value("screen").toInt();
+    folderDock->dw.pos = setting->value("pos").toPoint();
+    folderDock->dw.size = setting->value("size").toSize();
+    setting->endGroup();
+
+    favDock = new DockWidget(tr("  Fav  "), this);
     favDock->setObjectName("Bookmarks");
     favDock->setWidget(bookmarks);
 
-    metadataDock = new QDockWidget(tr("  Metadata  "), this);
+    setting->beginGroup(("FavDockFloat"));
+    favDock->dw.screen = setting->value("screen").toInt();
+    favDock->dw.pos = setting->value("pos").toPoint();
+    favDock->dw.size = setting->value("size").toSize();
+    setting->endGroup();
+
+    metadataDock = new DockWidget(tr("  Metadata  "), this);
     metadataDock->setObjectName("Image Info");
     metadataDock->setWidget(infoView);
 
-    filterDock = new QDockWidget(tr("  Filters  "), this);
+    setting->beginGroup(("MetadataDockFloat"));
+    metadataDock->dw.screen = setting->value("screen").toInt();
+    metadataDock->dw.pos = setting->value("pos").toPoint();
+    metadataDock->dw.size = setting->value("size").toSize();
+    setting->endGroup();
+
+    filterDock = new DockWidget(tr("  Filters  "), this);
     filterDock->setObjectName("Filters");
     filterDock->setWidget(filters);
 
-    thumbDock = new QDockWidget(tr("Thumbnails"), this);
+    setting->beginGroup(("FilterDock"));
+    filterDock->dw.screen = setting->value("screen").toInt();
+    filterDock->dw.pos = setting->value("pos").toPoint();
+    filterDock->dw.size = setting->value("size").toSize();
+    setting->endGroup();
+
+    thumbDock = new DockWidget(tr("Thumbnails"), this);
     thumbDock->setObjectName("thumbDock");
     thumbDock->setWidget(thumbView);
     thumbDock->setWindowTitle("Thumbs");
     thumbDock->installEventFilter(this);
+
+    setting->beginGroup(("ThumbDockFloat"));
+    thumbDock->dw.screen = setting->value("screen").toInt();
+    thumbDock->dw.pos = setting->value("pos").toPoint();
+    thumbDock->dw.size = setting->value("size").toSize();
+    setting->endGroup();
 
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
@@ -5797,6 +5848,41 @@ re-established when the application is re-opened.
     setting->setValue("isThumbDockLocked", thumbDockLockAction->isChecked());
     setting->setValue("wasThumbDockVisible", wasThumbDockVisible);
 
+     /* FolderDock floating info */
+    setting->beginGroup(("FolderDock"));
+    setting->setValue("screen", folderDock->dw.screen);
+    setting->setValue("pos", folderDock->dw.pos);
+    setting->setValue("size", folderDock->dw.size);
+    setting->endGroup();
+
+    /* FavDock floating info */
+    setting->beginGroup(("FavDock"));
+    setting->setValue("screen", favDock->dw.screen);
+    setting->setValue("pos", favDock->dw.pos);
+    setting->setValue("size", favDock->dw.size);
+    setting->endGroup();
+
+    /* MetadataDock floating info */
+    setting->beginGroup(("MetadataDock"));
+    setting->setValue("screen", metadataDock->dw.screen);
+    setting->setValue("pos", metadataDock->dw.pos);
+    setting->setValue("size", metadataDock->dw.size);
+    setting->endGroup();
+
+    /* FilterDock floating info */
+    setting->beginGroup(("FilterDock"));
+    setting->setValue("screen", filterDock->dw.screen);
+    setting->setValue("pos", filterDock->dw.pos);
+    setting->setValue("size", filterDock->dw.size);
+    setting->endGroup();
+
+    /* ThumbDock floating info */
+    setting->beginGroup(("ThumbDockFloat"));
+    setting->setValue("screen", thumbDock->dw.screen);
+    setting->setValue("pos", thumbDock->dw.pos);
+    setting->setValue("size", thumbDock->dw.size);
+    setting->endGroup();
+
     /* InfoView okToShow fields */
     setting->beginGroup("InfoFields");
     setting->remove("");
@@ -6002,6 +6088,9 @@ Preferences are located in the prefdlg class and updated here.
         G::cores = 2;
         G::aSync = true;
 
+        // state
+        thumbDock->dw.size = QSize(600, 600);
+
         return false;
     }
 
@@ -6057,6 +6146,7 @@ Preferences are located in the prefdlg class and updated here.
     fullScreenDocks.isMetadata = setting->value("isFullScreenMetadata").toBool();
     fullScreenDocks.isThumbs = setting->value("isFullScreenThumbs").toBool();
     fullScreenDocks.isStatusBar = setting->value("isFullScreenStatusBar").toBool();
+
 
     /* read external apps */
     /* moved to createActions as required to populate open with ... menu */
@@ -6815,6 +6905,13 @@ void MW::setFilterDockVisibility()
 void MW::setMetadataDockVisibility()
 {
     metadataDock->setVisible(metadataDockVisibleAction->isChecked());
+}
+
+void MW::setMetadataDockSize()
+{
+    qDebug() << "infoView->size()" << infoView->size();
+    qDebug() << "metadataDock->size()" << metadataDock->size();
+//    metadataDock->setFixedSize(infoView->size());
 }
 
 void MW::setThumbDockVisibity()
@@ -8244,98 +8341,56 @@ void MW::helpWelcome()
     centralLayout->setCurrentIndex(StartTab);
 }
 
-//void MW::go()        // = convertOrCancel
-//{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    stopped = true;
-//    if (QThreadPool::globalInstance()->activeThreadCount())
-//        QThreadPool::globalInstance()->waitForDone();
-//    QStringList sourceFiles;
-//    for(int row = 0; row < 100; ++row) {
-//        sourceFiles.append(dm->index(row, 0).data(G::PathRole).toString());
-//    }
-//    doTasks(sourceFiles);
-//}
-
-//void MW::doTasks(const QStringList &sourceFiles) // = convertFiles
-//{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-////    QElapsedTimer t;
-////    t.start();
-
-//    stopped = false;
-//    total = sourceFiles.count();
-//    done = 0;
-//    const QVector<int> sizes = chunkSizes(100, QThread::idealThreadCount());
-
-//    int offset = 0;
-//    foreach (const int chunkSize, sizes) {
-//        ASyncTask *task = new ASyncTask(this,
-//                                        &stopped,
-//                                        sourceFiles.mid(offset, chunkSize));
-//        QThreadPool::globalInstance()->start(task);
-//        offset += chunkSize;
-//    }
-////    if(checkIfDone())
-////        qDebug() << "Elapsed ms =" << t.elapsed();
-//}
-
-//QVector<int> MW::chunkSizes(const int size, const int chunkCount)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    Q_ASSERT(size > 0 && chunkCount > 0);
-//    if (chunkCount == 1)
-//        return QVector<int>() << size;
-//    QVector<int> result(chunkCount, size / chunkCount);
-//    if (int remainder = size % chunkCount) {
-//        int index = 0;
-//        for (int i = 0; i < remainder; ++i) {
-//            ++result[index];
-//            ++index;
-//            index %= chunkCount;
-//        }
-//    }
-//    return result;
-//}
-
-//bool MW::checkIfDone()
-//{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    bool isDone = false;
-//    if (QThreadPool::globalInstance()->activeThreadCount())
-//        QTimer::singleShot(100, this, SLOT(checkIfDone()));
-//    else {
-//        if (done == total) {
-//            qDebug() << "Finished";
-//            isDone = true;
-//        }
-//        else {
-//            qDebug() << done << "so far";
-//        }
-//        stopped = isDone;
-//    }
-//    return isDone;
-//}
-
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << G::cores << G::aSync;
+/*
+    qDebug() << "Number of screens:" << QGuiApplication::screens().size();
+    qDebug() << "Primary screen:" << QGuiApplication::primaryScreen()->name();
+    foreach (QScreen *screen, QGuiApplication::screens()) {
+        qDebug() << "Information for screen:" << screen->name();
+        qDebug() << "  Available geometry:" << screen->availableGeometry().x() << screen->availableGeometry().y() << screen->availableGeometry().width() << "x" << screen->availableGeometry().height();
+        qDebug() << "  Available size:" << screen->availableSize().width() << "x" << screen->availableSize().height();
+        qDebug() << "  Available virtual geometry:" << screen->availableVirtualGeometry().x() << screen->availableVirtualGeometry().y() << screen->availableVirtualGeometry().width() << "x" << screen->availableVirtualGeometry().height();
+        qDebug() << "  Available virtual size:" << screen->availableVirtualSize().width() << "x" << screen->availableVirtualSize().height();
+        qDebug() << "  Depth:" << screen->depth() << "bits";
+        qDebug() << "  Geometry:" << screen->geometry().x() << screen->geometry().y() << screen->geometry().width() << "x" << screen->geometry().height();
+        qDebug() << "  Logical DPI:" << screen->logicalDotsPerInch();
+        qDebug() << "  Logical DPI X:" << screen->logicalDotsPerInchX();
+        qDebug() << "  Logical DPI Y:" << screen->logicalDotsPerInchY();
+//        qDebug() << "  Orientation:" << Orientation(screen->orientation());
+        qDebug() << "  Physical DPI:" << screen->physicalDotsPerInch();
+        qDebug() << "  Physical DPI X:" << screen->physicalDotsPerInchX();
+        qDebug() << "  Physical DPI Y:" << screen->physicalDotsPerInchY();
+        qDebug() << "  Physical size:" << screen->physicalSize().width() << "x" << screen->physicalSize().height() << "mm";
+//        qDebug() << "  Primary orientation:" << Orientation(screen->primaryOrientation());
+        qDebug() << "  Refresh rate:" << screen->refreshRate() << "Hz";
+        qDebug() << "  Size:" << screen->size().width() << "x" << screen->size().height();
+        qDebug() << "  Virtual geometry:" << screen->virtualGeometry().x() << screen->virtualGeometry().y() << screen->virtualGeometry().width() << "x" << screen->virtualGeometry().height();
+        qDebug() << "  Virtual size:" << screen->virtualSize().width() << "x" << screen->virtualSize().height();
+    }
+
+*/
+//    QScreen *screen;
+//    screen = qApp->screenAt(thumbDock->window()->geometry().center());
+
+
+
+//    int screenNumber = QApplication::desktop()->screenNumber(thumbDock);
+    qDebug() << "Screen =" << thumbDock->dw.screen
+             << "Pos =" << thumbDock->dw.pos
+             << "Size =" << thumbDock->dw.size;
+
+    // How to move to another screen
+//    QRect screenres = QApplication::desktop()->screenGeometry(2/*thumbDock->dw.screen*/);
+//    thumbDock->move(QPoint(screenres.x() + thumbDock->dw.pos.x(), screenres.y() + thumbDock->dw.pos.y()));
+
+
+    //    qDebug() << "Screen =" << qApp->screenAt(thumbDock->window()->geometry().center());
+//    thumbDock->window()->setGeometry(100, 200, thumbDock->floatSize.width(), thumbDock->floatSize.height());
+//    qApp->screenAt(
+//    thumbDock->sizeHint();
+//    thumbDock->adjustSize();
+
 }
 
 void MW::test2()
