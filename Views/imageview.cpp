@@ -182,6 +182,7 @@ to prevent jarring changes in perceived scale by the user.
         }
     }
     else {
+        QPixmap displayPixmap;
         isLoaded = pixmap->load(fPath, displayPixmap);
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
@@ -247,9 +248,11 @@ void ImageView::clear()
     G::track(__FUNCTION__);
     #endif
     }
-    pmItem->setVisible(false);
     shootingInfo = "";
     infoOverlay->setText("");
+    pmItem->setVisible(false);
+    QPixmap nullPm;
+    pmItem->setPixmap(nullPm);
 }
 
 void ImageView::noJpgAvailable()
@@ -699,6 +702,7 @@ void ImageView::transform()
     G::track(__FUNCTION__);
     #endif
     }
+    QImage displayImage;
     rotateByExifRotation(displayImage, currentImagePath);
 }
 

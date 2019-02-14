@@ -11,7 +11,9 @@ QT += xmlpatterns
 
 HEADERS += Cache/imagecache.h \
     Cache/tshash.h \
-    Metadata/imagemetadata.h
+    Metadata/imagemetadata.h \
+    Main/dockwidget.h \
+    Main/dockwidget.h
 HEADERS += Cache/mdcacher.h
 HEADERS += Cache/mdcachemgr.h
 HEADERS += Cache/mdcache.h
@@ -59,7 +61,8 @@ HEADERS += Test/asynctask.h
 SOURCES += Cache/imagecache.cpp \
     Test/readmdconcurrent.cpp \
     Cache/mdcacher.cpp \
-    Cache/mdcachemgr.cpp
+    Cache/mdcachemgr.cpp \
+    Main/dockwidget.cpp
 SOURCES += Test/readsync.cpp
 SOURCES += Test/readasync.cpp
 SOURCES += Test/asynctask.cpp
