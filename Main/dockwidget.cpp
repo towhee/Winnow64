@@ -1,5 +1,19 @@
 #include "dockwidget.h"
-#include <QDebug>
+
+/*
+QDockWidget has a feature where you can double click on the title bar and the dock will toggle
+to a floating window and back to its docked state. The problem is if you move and resize the
+floating window and then toggle back to the dock and then back to floating again, your
+position and size are lost.
+
+This subclass of QDockWidget overrides the MouseButtonDblClick, resizeEvent and moveEvent,
+ignoring Qt's attempts to impose its size and location "suggestions. The screen, position and
+window size and stored in a struct, which in turn is saved in QSettings for persistence
+between sessions.
+
+When a mouse bouble click occurs in the docked state, the stored screen, postion and size are
+used to re-establish the prior state.
+*/
 
 DockWidget::DockWidget(const QString &title, QWidget *parent)
     : QDockWidget(title, parent)
@@ -9,17 +23,15 @@ DockWidget::DockWidget(const QString &title, QWidget *parent)
 
 bool DockWidget::event(QEvent *event)
 {
-//    qDebug() << "Event type:" << event->type() << "Event:" << event;
     if (event->type() == QEvent::MouseButtonDblClick) {
         ignore = true;
         setFloating(!isFloating());
         if (isFloating()) {
-            rpt("Double click and floating before move and adjust");
+            // move and size to previous state
             QRect screenres = QApplication::desktop()->screenGeometry(dw.screen);
             move(QPoint(screenres.x() + dw.pos.x(), screenres.y() + dw.pos.y()));
             ignore = false;
             adjustSize();
-            rpt("Double click and floating after move and adjust");
         }
         ignore = false;
         return true;
@@ -39,8 +51,6 @@ void DockWidget::resizeEvent(QResizeEvent *event)
         QRect a = QApplication::desktop()->screen(dw.screen)->geometry();
         dw.pos = QPoint(r.x() - a.x(), r.y() - a.y());
         dw.size = event->size();
-//        dw.pos = QPoint(x(), y());
-        rpt("DockWidget::resizeEvent ");
     }
 }
 
@@ -49,7 +59,7 @@ QSize DockWidget::sizeHint() const
     return dw.size;
 }
 
-void DockWidget::moveEvent(QMoveEvent *event)
+void DockWidget::moveEvent(QMoveEvent /**event*/)
 {
     if (ignore || !isFloating()) return;
     dw.screen = QApplication::desktop()->screenNumber(this);
@@ -57,8 +67,6 @@ void DockWidget::moveEvent(QMoveEvent *event)
     QRect a = QApplication::desktop()->screen(dw.screen)->geometry();
     dw.pos = QPoint(r.x() - a.x(), r.y() - a.y());
     dw.size = QSize(r.width(), r.height());
-//    floatRect = QRect(dwPos, dwSize);
-    rpt("DockWidget::moveEvent");
 }
 
 void DockWidget::rpt(QString s)

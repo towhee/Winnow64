@@ -2,7 +2,7 @@
 #define PREFDLG_H
 
 #include <QDialog>
-#include "Main/mainwindow.h"
+#include <QtWidgets>
 
 namespace Ui {
 class Prefdlg;
