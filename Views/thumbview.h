@@ -74,6 +74,8 @@ public slots:
     void scrollToCurrent(int row);
     void thumbsEnlarge();
     void thumbsShrink();
+    void thumbsEnlargeJustified();
+    void thumbsShrinkJustified();
     void thumbsFit(Qt::DockWidgetArea area);
     void thumbsFitTopOrBottom();
     void invertSelection();                         //in use
@@ -138,6 +140,15 @@ private:
 
     bool isLeftMouseBtnPressed;
     bool isMouseDrag;
+
+    void rptThumbGridInfo(QString s);
+    int listViewMargin = 6;
+    int cellMargin = 0;
+    int tpr;
+    int gap;
+    int wRow;
+    int wCell;
+
 
 signals:
     void togglePick();

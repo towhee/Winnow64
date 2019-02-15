@@ -1,10 +1,12 @@
 #include "Dialogs/prefdlg.h"
 #include "ui_prefdlg.h"
+#include "Main/mainwindow.h"
 #include "Main/global.h"
+
 #include <QDebug>
 
 // this works because prefdlg is a friend class of MW
-MW *m;
+MW *m0;
 
 Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     QDialog(parent),
@@ -15,9 +17,10 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->listWidget->setCurrentRow(lastPrefPage);
 
 //    // this works because prefdlg is a friend class of MW
-//    MW *m = qobject_cast<MW*>(parent);
-    m = qobject_cast<MW*>(parent);
+//    MW *mw = qobject_cast<MW*>(parent);
 
+//    MW *mw;
+    m0 = qobject_cast<MW*>(parent);
     // general
     ui->globalFontSizeSlider->setTickInterval(1);
     ui->globalFontSizeSlider->setMinimum(8);
@@ -28,45 +31,45 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->infoFontSizeSlider->setTickInterval(2);
     ui->infoFontSizeSlider->setMinimum(6);
     ui->infoFontSizeSlider->setMaximum(34);
-    ui->infoFontSizeLbl->setText(QString::number(m->imageView->infoOverlayFontSize));
+    ui->infoFontSizeLbl->setText(QString::number(m0->imageView->infoOverlayFontSize));
     qDebug() << ui->infoFontSizeLbl->text();
 
-    ui->classificationBadgeImageDiamSlider->setValue(m->classificationBadgeInImageDiameter);
-    ui->classificationBadgeImageDiamLbl->setText(QString::number(m->classificationBadgeInImageDiameter));
-    ui->classificationBadgeThumbDiamSlider->setValue(m->classificationBadgeInThumbDiameter);
-    ui->classificationBadgeThumbDiamLbl->setText(QString::number(m->classificationBadgeInThumbDiameter));
+    ui->classificationBadgeImageDiamSlider->setValue(m0->classificationBadgeInImageDiameter);
+    ui->classificationBadgeImageDiamLbl->setText(QString::number(m0->classificationBadgeInImageDiameter));
+    ui->classificationBadgeThumbDiamSlider->setValue(m0->classificationBadgeInThumbDiameter);
+    ui->classificationBadgeThumbDiamLbl->setText(QString::number(m0->classificationBadgeInThumbDiameter));
 
-    ui->rememberFolderChk->setChecked(m->rememberLastDir);
-    ui->updateAppChk->setChecked(m->checkIfUpdate);
-    ui->trackpadIterateRadio->setChecked(!m->imageView->useWheelToScroll);
-    ui->trackpadScrollRadio->setChecked(m->imageView->useWheelToScroll);
-    ui->mouseClickScrollChk->setChecked((m->mouseClickScroll));
+    ui->rememberFolderChk->setChecked(m0->rememberLastDir);
+    ui->updateAppChk->setChecked(m0->checkIfUpdate);
+    ui->trackpadIterateRadio->setChecked(!m0->imageView->useWheelToScroll);
+    ui->trackpadScrollRadio->setChecked(m0->imageView->useWheelToScroll);
+    ui->mouseClickScrollChk->setChecked((m0->mouseClickScroll));
 
     // thumbs
     ui->iconWidthSlider->setSingleStep(1);
     ui->iconWidthSlider->setTickInterval(50);
     ui->iconWidthSlider->setTickPosition(QSlider::TicksAbove);
     ui->iconWidthSlider->setMaximum(THUMB_MAX);
-    ui->iconWidthSlider->setValue(m->thumbView->thumbWidth);
+    ui->iconWidthSlider->setValue(m0->thumbView->thumbWidth);
     ui->iconHeightSlider->setSingleStep(1);
     ui->iconHeightSlider->setTickInterval(50);
     ui->iconHeightSlider->setTickPosition(QSlider::TicksAbove);
     ui->iconHeightSlider->setMaximum(THUMB_MAX);
-    ui->iconHeightSlider->setValue(m->thumbView->thumbHeight);
+    ui->iconHeightSlider->setValue(m0->thumbView->thumbHeight);
     ui->thumbSpacingSlider->setSingleStep(1);
     ui->thumbSpacingSlider->setTickInterval(3);
     ui->thumbSpacingSlider->setTickPosition(QSlider::TicksAbove);
-    ui->thumbSpacingSlider->setValue(m->thumbView->thumbSpacing);
+    ui->thumbSpacingSlider->setValue(m0->thumbView->thumbSpacing);
     ui->iconPaddingSlider->setSingleStep(1);
     ui->iconPaddingSlider->setTickInterval(1);
     ui->iconPaddingSlider->setTickPosition(QSlider::TicksAbove);
-    ui->iconPaddingSlider->setValue(m->thumbView->thumbPadding);
+    ui->iconPaddingSlider->setValue(m0->thumbView->thumbPadding);
     ui->fontSizeSlider->setSingleStep(1);
     ui->fontSizeSlider->setTickInterval(1);
     ui->fontSizeSlider->setTickPosition(QSlider::TicksAbove);
-    ui->fontSizeSlider->setValue(m->thumbView->labelFontSize);
-    ui->showThumbLabelChk->setChecked(m->thumbView->showThumbLabels);
-    ui->wrapChk->setChecked(m->thumbView->wrapThumbs);
+    ui->fontSizeSlider->setValue(m0->thumbView->labelFontSize);
+    ui->showThumbLabelChk->setChecked(m0->thumbView->showThumbLabels);
+    ui->wrapChk->setChecked(m0->thumbView->wrapThumbs);
     ui->lockDimChk->setChecked(true);
 
     // grid
@@ -74,38 +77,38 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->iconWidthSlider_2->setTickInterval(50);
     ui->iconWidthSlider_2->setTickPosition(QSlider::TicksAbove);
     ui->iconWidthSlider_2->setMaximum(THUMB_MAX);
-    ui->iconWidthSlider_2->setValue(m->gridView->thumbWidth);
+    ui->iconWidthSlider_2->setValue(m0->gridView->thumbWidth);
     ui->iconHeightSlider_2->setSingleStep(1);
     ui->iconHeightSlider_2->setTickInterval(50);
     ui->iconHeightSlider_2->setTickPosition(QSlider::TicksAbove);
     ui->iconHeightSlider_2->setMaximum(THUMB_MAX);
-    ui->iconHeightSlider_2->setValue(m->gridView->thumbHeight);
+    ui->iconHeightSlider_2->setValue(m0->gridView->thumbHeight);
     ui->thumbSpacingSlider_2->setSingleStep(1);
     ui->thumbSpacingSlider_2->setTickInterval(3);
     ui->thumbSpacingSlider_2->setTickPosition(QSlider::TicksAbove);
-    ui->thumbSpacingSlider_2->setValue(m->gridView->thumbSpacing);
+    ui->thumbSpacingSlider_2->setValue(m0->gridView->thumbSpacing);
     ui->iconPaddingSlider_2->setSingleStep(1);
     ui->iconPaddingSlider_2->setTickInterval(1);
     ui->iconPaddingSlider_2->setTickPosition(QSlider::TicksAbove);
-    ui->iconPaddingSlider_2->setValue(m->gridView->thumbPadding);
+    ui->iconPaddingSlider_2->setValue(m0->gridView->thumbPadding);
     ui->fontSizeSlider_2->setTickInterval(1);
     ui->fontSizeSlider_2->setTickPosition(QSlider::TicksAbove);
-    ui->fontSizeSlider_2->setValue(m->thumbView->labelFontSize);
-    ui->fontSizeSlider_2->setValue(m->gridView->labelFontSize);
-    ui->showThumbLabelChk_2->setChecked(m->gridView->showThumbLabels);
+    ui->fontSizeSlider_2->setValue(m0->thumbView->labelFontSize);
+    ui->fontSizeSlider_2->setValue(m0->gridView->labelFontSize);
+    ui->showThumbLabelChk_2->setChecked(m0->gridView->showThumbLabels);
     ui->lockDimChk_2->setChecked(true);
 
     // slideshow
-    ui->slideshowDelaySpinbox->setValue(m->slideShowDelay);
-    ui->slideshowRandomChk->setChecked(m->slideShowRandom);
+    ui->slideshowDelaySpinbox->setValue(m0->slideShowDelay);
+    ui->slideshowRandomChk->setChecked(m0->slideShowRandom);
 
     // cache
-    ui->cacheSizeSpinbox->setValue(m->cacheSizeMB / 1000);
-    ui->showCacheStatusChk->setChecked(m->isShowCacheStatus);
-    ui->cacheDelaySpinbox->setValue(m->cacheDelay);
-    ui->showCacheThreadActivityChk->setChecked(m->isShowCacheThreadActivity);
-    ui->progressWidthSlider->setValue(m->progressWidth);
-    switch (m->cacheWtAhead) {
+    ui->cacheSizeSpinbox->setValue(m0->cacheSizeMB / 1000);
+    ui->showCacheStatusChk->setChecked(m0->isShowCacheStatus);
+    ui->cacheDelaySpinbox->setValue(m0->cacheDelay);
+    ui->showCacheThreadActivityChk->setChecked(m0->isShowCacheThreadActivity);
+    ui->progressWidthSlider->setValue(m0->progressWidth);
+    switch (m0->cacheWtAhead) {
     case 5: ui->cache50AheadRadio->setChecked(true); break;
     case 6: ui->cache60AheadRadio->setChecked(true); break;
     case 7: ui->cache70AheadRadio->setChecked(true); break;
@@ -113,20 +116,20 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     case 9: ui->cache90AheadRadio->setChecked(true); break;
     case 10: ui->cache100AheadRadio->setChecked(true);
     }
-    ui->cachePreviewsChk->setChecked(m->isCachePreview);
+    ui->cachePreviewsChk->setChecked(m0->isCachePreview);
     ui->coresSpinBox->setValue(G::cores);
     ui->aSynchChk->setChecked(G::aSync);
 
     // full screen
-    ui->foldersChk->setChecked(m->fullScreenDocks.isFolders);
-    ui->favsChk->setChecked(m->fullScreenDocks.isFavs);
-    ui->filtersChk->setChecked(m->fullScreenDocks.isFilters);
-    ui->metadataChk->setChecked(m->fullScreenDocks.isMetadata);
-    ui->thumbsChk->setChecked(m->fullScreenDocks.isThumbs);
-    ui->statusBarChk->setChecked(m->fullScreenDocks.isStatusBar);
+    ui->foldersChk->setChecked(m0->fullScreenDocks.isFolders);
+    ui->favsChk->setChecked(m0->fullScreenDocks.isFavs);
+    ui->filtersChk->setChecked(m0->fullScreenDocks.isFilters);
+    ui->metadataChk->setChecked(m0->fullScreenDocks.isMetadata);
+    ui->thumbsChk->setChecked(m0->fullScreenDocks.isThumbs);
+    ui->statusBarChk->setChecked(m0->fullScreenDocks.isStatusBar);
 
     // InfoView fields to show
-    okInfo = m->infoView->ok;
+    okInfo = m0->infoView->ok;
     ui->infoFieldsTreeView->setModel(okInfo);
     for(int row = 0; row < okInfo->rowCount(); row++) {
         QModelIndex parentIdx = okInfo->index(row, 0);
@@ -157,7 +160,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->infoFieldsTreeView->setStyleSheet("QTreeView {border: none;}");
 
     // TableView fields to show
-    okTable = m->tableView->ok;
+    okTable = m0->tableView->ok;
     ui->tableFieldsTable->setModel(okTable);
     for(int row = 0; row < okTable->rowCount(); row++) {
         QModelIndex idx = okTable->index(row, 1);
@@ -249,8 +252,8 @@ Sync preference category list and preference items in stacked form
 //    qDebug() << "on_listWidget_currentItemChanged" << ui->listWidget->currentRow();
 //    int page = ui->listWidget->currentRow();
     // for some bizarre reason this doesn't work and causes crash
-//    m->setPrefPage(page);
-//    m->lastPrefPage = page;
+//    mw->setPrefPage(page);
+//    mw->lastPrefPage = page;
 
     // hence send signal instead
     emit updatePage(ui->listWidget->currentRow());
@@ -260,18 +263,18 @@ Sync preference category list and preference items in stacked form
 void Prefdlg::on_classificationBadgeThumbDiamSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->classificationBadgeInThumbDiameter = value;
-        m->thumbView->badgeSize = value;
-        m->gridView->badgeSize = value;
-        m->thumbView->setThumbParameters();
-        m->gridView->setThumbParameters();
+        m0->classificationBadgeInThumbDiameter = value;
+        m0->thumbView->badgeSize = value;
+        m0->gridView->badgeSize = value;
+        m0->thumbView->setThumbParameters();
+        m0->gridView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_classificationBadgeImageDiamSlider_valueChanged(int value)
 {
-    m->classificationBadgeInImageDiameter = value;
-    m->imageView->setClassificationBadgeImageDiam(value);
+    m0->classificationBadgeInImageDiameter = value;
+    m0->imageView->setClassificationBadgeImageDiam(value);
 }
 
 void Prefdlg::on_globalFontSizeSlider_valueChanged(int value)
@@ -280,64 +283,64 @@ void Prefdlg::on_globalFontSizeSlider_valueChanged(int value)
     // if user just clicks on slider then updateFontSize is emitted
 //    if(isSliderPressed) return;
     if (okToUpdate) {
-        m->setFontSize(value);
+        m0->setFontSize(value);
     }
 }
 
 void Prefdlg::on_globalFontSizeSlider_sliderReleased()
 {
     int value = ui->globalFontSizeSlider->value();
-    m->setFontSize(value);
+    m0->setFontSize(value);
 }
 
 
 void Prefdlg::on_infoFontSizeSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->imageView->infoOverlayFontSize = value;
+        m0->imageView->infoOverlayFontSize = value;
         ui->infoFontSizeLbl->setText(QString::number(value));
-        m->setInfoFontSize();
+        m0->setInfoFontSize();
     }
 }
 void Prefdlg::on_cachePreviewsChk_clicked()
 {
     if (okToUpdate) {
-        m->isCachePreview = ui->showCacheThreadActivityChk->isChecked();
+        m0->isCachePreview = ui->showCacheThreadActivityChk->isChecked();
     }
 }
 
 void Prefdlg::on_rememberFolderChk_clicked()
 {
     if (okToUpdate) {
-        m->rememberLastDir = ui->rememberFolderChk->isChecked();
+        m0->rememberLastDir = ui->rememberFolderChk->isChecked();
     }
 }
 
 void Prefdlg::on_updateAppChk_stateChanged(int /*value*/)
 {
     if (okToUpdate) {
-        m->checkIfUpdate = ui->updateAppChk->isChecked();
+        m0->checkIfUpdate = ui->updateAppChk->isChecked();
     }
 }
 
 void Prefdlg::on_mouseClickScrollChk_clicked()
 {
     if (okToUpdate) {
-        m->mouseClickScroll = ui->mouseClickScrollChk->isChecked();
+        m0->mouseClickScroll = ui->mouseClickScrollChk->isChecked();
     }
 }
 
 void Prefdlg::on_trackpadIterateRadio_clicked()
 {
     if(okToUpdate) {
-        m->imageView->useWheelToScroll = false;
+        m0->imageView->useWheelToScroll = false;
     }
 }
 
 void Prefdlg::on_trackpadScrollRadio_clicked()
 {
     if(okToUpdate) {
-        m->imageView->useWheelToScroll = true;
+        m0->imageView->useWheelToScroll = true;
     }
 }
 
@@ -345,34 +348,34 @@ void Prefdlg::on_trackpadScrollRadio_clicked()
 void Prefdlg::on_iconWidthSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->thumbView->thumbWidth = value;
+        m0->thumbView->thumbWidth = value;
         if (ui->lockDimChk->isChecked()) ui->iconHeightSlider->setValue(value);
-        m->thumbView->setThumbParameters();
+        m0->thumbView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_iconHeightSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->thumbView->thumbHeight = value;
+        m0->thumbView->thumbHeight = value;
         if (ui->lockDimChk->isChecked()) ui->iconWidthSlider->setValue(value);
-        m->thumbView->setThumbParameters();
+        m0->thumbView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_thumbSpacingSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->thumbView->thumbSpacing = value;
-        m->thumbView->setThumbParameters();
+        m0->thumbView->thumbSpacing = value;
+        m0->thumbView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_iconPaddingSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->thumbView->thumbPadding = value;
-        m->thumbView->setThumbParameters();
+        m0->thumbView->thumbPadding = value;
+        m0->thumbView->setThumbParameters();
     }
 }
 
@@ -380,24 +383,24 @@ void Prefdlg::on_iconPaddingSlider_valueChanged(int value)
 void Prefdlg::on_showThumbLabelChk_clicked()
 {
     if (okToUpdate) {
-        m->thumbView->thumbPadding = ui->showThumbLabelChk->isChecked();
-        m->thumbView->setThumbParameters();
+        m0->thumbView->thumbPadding = ui->showThumbLabelChk->isChecked();
+        m0->thumbView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_wrapChk_clicked()
 {
     if (okToUpdate) {
-        m->thumbView->wrapThumbs = ui->wrapChk->isChecked();
-        m->thumbView->setThumbParameters();
+        m0->thumbView->wrapThumbs = ui->wrapChk->isChecked();
+        m0->thumbView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->thumbView->labelFontSize = value;
-        m->thumbView->setThumbParameters();
+        m0->thumbView->labelFontSize = value;
+        m0->thumbView->setThumbParameters();
     }
 }
 
@@ -405,50 +408,50 @@ void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->gridView->thumbWidth = value;
-        if (ui->lockDimChk_2->isChecked()) ui->iconHeightSlider->setValue(value);
-        m->gridView->setThumbParameters();
+        m0->gridView->thumbWidth = value;
+        if (ui->lockDimChk_2->isChecked()) ui->iconHeightSlider_2->setValue(value);
+        m0->gridView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->gridView->thumbHeight = value;
-        if (ui->lockDimChk_2->isChecked()) ui->iconWidthSlider->setValue(value);
-        m->gridView->setThumbParameters();
+        m0->gridView->thumbHeight = value;
+        if (ui->lockDimChk_2->isChecked()) ui->iconWidthSlider_2->setValue(value);
+        m0->gridView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_thumbSpacingSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->gridView->thumbSpacing = value;
-        m->gridView->setThumbParameters();
+        m0->gridView->thumbSpacing = value;
+        m0->gridView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_iconPaddingSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->gridView->thumbPadding = value;
-        m->gridView->setThumbParameters();
+        m0->gridView->thumbPadding = value;
+        m0->gridView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_showThumbLabelChk_2_clicked()
 {
     if (okToUpdate) {
-        m->gridView->thumbPadding = ui->showThumbLabelChk_2->isChecked();
-        m->gridView->setThumbParameters();
+        m0->gridView->thumbPadding = ui->showThumbLabelChk_2->isChecked();
+        m0->gridView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_fontSizeSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->gridView->labelFontSize = value;
-        m->gridView->setThumbParameters();
+        m0->gridView->labelFontSize = value;
+        m0->gridView->setThumbParameters();
     }
 }
 
@@ -456,14 +459,14 @@ void Prefdlg::on_fontSizeSlider_2_valueChanged(int value)
 void Prefdlg::on_slideshowDelaySpinbox_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->slideShowDelay = value;
+        m0->slideShowDelay = value;
     }
 }
 
 void Prefdlg::on_slideshowRandomChk_clicked()
 {
     if (okToUpdate) {
-        m->slideShowRandom = ui->slideshowRandomChk->isChecked();
+        m0->slideShowRandom = ui->slideshowRandomChk->isChecked();
     }
 }
 
@@ -471,88 +474,88 @@ void Prefdlg::on_slideshowRandomChk_clicked()
 void Prefdlg::on_cacheSizeSpinbox_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->cacheSizeMB = value * 1000;
-        m->setCacheParameters();
+        m0->cacheSizeMB = value * 1000;
+        m0->setCacheParameters();
     }
 }
 
 void Prefdlg::on_showCacheStatusChk_clicked()
 {
     if (okToUpdate) {
-        m->isShowCacheStatus = ui->showCacheStatusChk->isChecked();
-        m->setCacheParameters();
+        m0->isShowCacheStatus = ui->showCacheStatusChk->isChecked();
+        m0->setCacheParameters();
     }
 }
 
 void Prefdlg::on_cacheDelaySpinbox_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->cacheDelay = value;
-        m->setCacheParameters();
+        m0->cacheDelay = value;
+        m0->setCacheParameters();
     }
 }
 
 void Prefdlg::on_showCacheThreadActivityChk_clicked()
 {
     if (okToUpdate) {
-        m->isShowCacheThreadActivity = ui->showCacheThreadActivityChk->isChecked();
-        m->setCacheParameters();
+        m0->isShowCacheThreadActivity = ui->showCacheThreadActivityChk->isChecked();
+        m0->setCacheParameters();
     }
 }
 
 void Prefdlg::on_progressWidthSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        m->progressWidth = value;
-        m->setCacheParameters();
+        m0->progressWidth = value;
+        m0->setCacheParameters();
     }
 }
 
 void Prefdlg::on_cache50AheadRadio_clicked()
 {
     if (okToUpdate) {
-        m->cacheWtAhead = 5;
-        m->setCacheParameters();
+        m0->cacheWtAhead = 5;
+        m0->setCacheParameters();
    }
 }
 
 void Prefdlg::on_cache60AheadRadio_clicked()
 {
     if (okToUpdate) {
-        m->cacheWtAhead = 6;
-        m->setCacheParameters();
+        m0->cacheWtAhead = 6;
+        m0->setCacheParameters();
     }
 }
 
 void Prefdlg::on_cache70AheadRadio_clicked()
 {
     if (okToUpdate) {
-        m->cacheWtAhead = 7;
-        m->setCacheParameters();
+        m0->cacheWtAhead = 7;
+        m0->setCacheParameters();
     }
 }
 
 void Prefdlg::on_cache80AheadRadio_clicked()
 {
     if (okToUpdate) {
-        m->cacheWtAhead = 8;
-        m->setCacheParameters();
+        m0->cacheWtAhead = 8;
+        m0->setCacheParameters();
     }
 }
 
 void Prefdlg::on_cache90AheadRadio_clicked()
 {
     if (okToUpdate) {
-        m->cacheWtAhead = 9;
-        m->setCacheParameters();
+        m0->cacheWtAhead = 9;
+        m0->setCacheParameters();
     }
 }
 
 void Prefdlg::on_cache100AheadRadio_clicked()
 {
     if (okToUpdate) {
-        m->cacheWtAhead = 10;
-        m->setCacheParameters();
+        m0->cacheWtAhead = 10;
+        m0->setCacheParameters();
     }
 }
 
@@ -560,35 +563,35 @@ void Prefdlg::on_cache100AheadRadio_clicked()
 void Prefdlg::on_foldersChk_clicked()
 {
     if (okToUpdate) {
-        m->fullScreenDocks.isFolders = ui->foldersChk->isChecked();
+        m0->fullScreenDocks.isFolders = ui->foldersChk->isChecked();
     }
 }
 
 void Prefdlg::on_favsChk_clicked()
 {
     if (okToUpdate) {
-        m->fullScreenDocks.isFavs = ui->favsChk->isChecked();
+        m0->fullScreenDocks.isFavs = ui->favsChk->isChecked();
     }
 }
 
 void Prefdlg::on_filtersChk_clicked()
 {
     if (okToUpdate) {
-        m->fullScreenDocks.isFilters = ui->filtersChk->isChecked();
+        m0->fullScreenDocks.isFilters = ui->filtersChk->isChecked();
     }
 }
 
 void Prefdlg::on_metadataChk_clicked()
 {
     if (okToUpdate) {
-        m->fullScreenDocks.isMetadata = ui->metadataChk->isChecked();
+        m0->fullScreenDocks.isMetadata = ui->metadataChk->isChecked();
     }
 }
 
 void Prefdlg::on_thumbsChk_clicked()
 {
     if (okToUpdate) {
-        m->fullScreenDocks.isThumbs = ui->thumbsChk->isChecked();
+        m0->fullScreenDocks.isThumbs = ui->thumbsChk->isChecked();
     }
 }
 
@@ -596,7 +599,7 @@ void Prefdlg::on_thumbsChk_clicked()
 void Prefdlg::on_statusBarChk_clicked()
 {
     if (okToUpdate) {
-        m->fullScreenDocks.isStatusBar = ui->statusBarChk->isChecked();
+        m0->fullScreenDocks.isStatusBar = ui->statusBarChk->isChecked();
     }
 }
 

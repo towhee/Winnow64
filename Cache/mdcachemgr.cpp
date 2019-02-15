@@ -1,5 +1,5 @@
 #include "mdcachemgr.h"
-#include "Main/mainwindow.h"
+//#include "Main/mainwindow.h"
 
 /*
 This class loads the metadata from the image files listed in the datamodel.  It is

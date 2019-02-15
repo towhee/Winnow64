@@ -4391,7 +4391,7 @@ void MW::thumbsEnlarge()
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::mode == "Grid") gridView->thumbsEnlarge();
+    if (G::mode == "Grid") gridView->thumbsEnlargeJustified();
     else thumbView->thumbsEnlarge();
 }
 
@@ -4402,7 +4402,7 @@ void MW::thumbsShrink()
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::mode == "Grid") gridView->thumbsShrink();
+    if (G::mode == "Grid") gridView->thumbsShrinkJustified();
     else thumbView->thumbsShrink();
 }
 
@@ -8343,53 +8343,10 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-/*
-    qDebug() << "Number of screens:" << QGuiApplication::screens().size();
-    qDebug() << "Primary screen:" << QGuiApplication::primaryScreen()->name();
-    foreach (QScreen *screen, QGuiApplication::screens()) {
-        qDebug() << "Information for screen:" << screen->name();
-        qDebug() << "  Available geometry:" << screen->availableGeometry().x() << screen->availableGeometry().y() << screen->availableGeometry().width() << "x" << screen->availableGeometry().height();
-        qDebug() << "  Available size:" << screen->availableSize().width() << "x" << screen->availableSize().height();
-        qDebug() << "  Available virtual geometry:" << screen->availableVirtualGeometry().x() << screen->availableVirtualGeometry().y() << screen->availableVirtualGeometry().width() << "x" << screen->availableVirtualGeometry().height();
-        qDebug() << "  Available virtual size:" << screen->availableVirtualSize().width() << "x" << screen->availableVirtualSize().height();
-        qDebug() << "  Depth:" << screen->depth() << "bits";
-        qDebug() << "  Geometry:" << screen->geometry().x() << screen->geometry().y() << screen->geometry().width() << "x" << screen->geometry().height();
-        qDebug() << "  Logical DPI:" << screen->logicalDotsPerInch();
-        qDebug() << "  Logical DPI X:" << screen->logicalDotsPerInchX();
-        qDebug() << "  Logical DPI Y:" << screen->logicalDotsPerInchY();
-//        qDebug() << "  Orientation:" << Orientation(screen->orientation());
-        qDebug() << "  Physical DPI:" << screen->physicalDotsPerInch();
-        qDebug() << "  Physical DPI X:" << screen->physicalDotsPerInchX();
-        qDebug() << "  Physical DPI Y:" << screen->physicalDotsPerInchY();
-        qDebug() << "  Physical size:" << screen->physicalSize().width() << "x" << screen->physicalSize().height() << "mm";
-//        qDebug() << "  Primary orientation:" << Orientation(screen->primaryOrientation());
-        qDebug() << "  Refresh rate:" << screen->refreshRate() << "Hz";
-        qDebug() << "  Size:" << screen->size().width() << "x" << screen->size().height();
-        qDebug() << "  Virtual geometry:" << screen->virtualGeometry().x() << screen->virtualGeometry().y() << screen->virtualGeometry().width() << "x" << screen->virtualGeometry().height();
-        qDebug() << "  Virtual size:" << screen->virtualSize().width() << "x" << screen->virtualSize().height();
-    }
-
-*/
-//    QScreen *screen;
-//    screen = qApp->screenAt(thumbDock->window()->geometry().center());
-
-
-
-//    int screenNumber = QApplication::desktop()->screenNumber(thumbDock);
-    qDebug() << "Screen =" << thumbDock->dw.screen
-             << "Pos =" << thumbDock->dw.pos
-             << "Size =" << thumbDock->dw.size;
-
-    // How to move to another screen
-//    QRect screenres = QApplication::desktop()->screenGeometry(2/*thumbDock->dw.screen*/);
-//    thumbDock->move(QPoint(screenres.x() + thumbDock->dw.pos.x(), screenres.y() + thumbDock->dw.pos.y()));
-
-
-    //    qDebug() << "Screen =" << qApp->screenAt(thumbDock->window()->geometry().center());
-//    thumbDock->window()->setGeometry(100, 200, thumbDock->floatSize.width(), thumbDock->floatSize.height());
-//    qApp->screenAt(
-//    thumbDock->sizeHint();
-//    thumbDock->adjustSize();
+    gridView->thumbsShrinkJustified();
+    return;
+    qDebug() << gridView->width()
+             << gridView->viewport()->width();
 
 }
 

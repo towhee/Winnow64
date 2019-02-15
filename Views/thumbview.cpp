@@ -99,8 +99,7 @@ ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
 
 */
 
-// Declare here as #include "mainwindow" causes errors if put in header
-MW *mw;
+MW *m2;
 
 ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
     : QListView(parent)
@@ -115,7 +114,7 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
 
     // this works because ThumbView is a friend class of MW.  It is used in the
     // event filter to access the thumbDock
-    mw = qobject_cast<MW*>(parent);
+    m2 = qobject_cast<MW*>(parent);
     pickFilter = false;
 
     setViewMode(QListView::IconMode);
@@ -123,17 +122,21 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
     setTabKeyNavigation(true);  // not working
     setResizeMode(QListView::Adjust);
     setLayoutMode(QListView::Batched);
-//    setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
-    setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
+//    setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     verticalScrollBar()->setObjectName("VerticalScrollBar");
     horizontalScrollBar()->setObjectName("HorizontalScrollBar");
     setWordWrap(true);
     setDragEnabled(true);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setSelectionBehavior(QAbstractItemView::SelectRows);
-    setUniformItemSizes(false);
+    setSelectionRectVisible(true);
+    setUniformItemSizes(true);
+//    setUniformItemSizes(false);
     setMaximumHeight(100000);
     setContentsMargins(0,0,0,0);
+    setSpacing(0);
+    setLineWidth(0);
 //    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     horizontalScrollBar()->setObjectName("ThumbViewHorizontalScrollBar");
@@ -144,7 +147,7 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
 
     setModel(this->dm->sf);
 
-    thumbViewDelegate = new ThumbViewDelegate(this, mw->isRatingBadgeVisible);
+    thumbViewDelegate = new ThumbViewDelegate(this, m2->isRatingBadgeVisible);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     setItemDelegate(thumbViewDelegate);
@@ -219,7 +222,7 @@ possibly altered thumbnail dimensions.
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     if(objectName() == "Thumbnails") {
-        if (!mw->thumbDock->isFloating())
+        if (!m2->thumbDock->isFloating())
             emit updateThumbDockHeight();
     }
 }
@@ -550,24 +553,6 @@ int ThumbView::getNearestPick()
     return 0;
 }
 
-//void ThumbView::toggleFilterPick(bool isFilter)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    pickFilter = isFilter;
-//    if (pickFilter) {
-//// rgh this doesn't look right??
-////        int row = getNearestPick();
-////        selectThumb(row);
-////        dm->sf->setFilterRegExp("true");   // show only picked items
-//    }
-//    else
-//        dm->sf->setFilterRegExp("");       // no filter - show all
-//}
-
 void ThumbView::sortThumbs(int sortColumn, bool isReverse)
 {
     {
@@ -658,7 +643,6 @@ crash.
     }
     item = dm->itemFromIndex(idx);
     item->setIcon(QPixmap::fromImage(thumb));
-//    qApp->processEvents();
 }
 
 // Used by thumbnail navigation (left, right, up, down etc)
@@ -797,6 +781,23 @@ void ThumbView::selectPrevPick()
     selectThumb(getPrevPick());
 }
 
+void ThumbView::rptThumbGridInfo(QString s)
+{
+    int actualViewPortWidth = viewport()->width();
+    int actualCellWidth = getThumbCellSize().width();
+
+    qDebug() << s
+//             << "\nadjustedViewPortWidth" << wRow
+//             << "\nadjustedCellWidth" << wCell
+//             << "\nthumbWidth" << thumbWidth
+//             << "\ngridSize" << gridSize()
+//             << "\nthumbsPerRow" << tpr
+//             << "\nrightSideGap" << gap
+//             << "\ngap - adjustedCellWidth" << gap - wCell
+             << "\nactualViewPortWidth" << actualViewPortWidth
+             << "   actualCellWidth" << actualCellWidth;
+}
+
 void ThumbView::thumbsEnlarge()
 {
     {
@@ -808,14 +809,27 @@ void ThumbView::thumbsEnlarge()
     if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
     if (thumbWidth < THUMB_MAX && thumbHeight < THUMB_MAX)
     {
-        thumbWidth *= 1.1;
-        thumbHeight *= 1.1;
+        thumbWidth += 1;
+        thumbHeight += 1;
+        wCell = getThumbCellSize().width() - cellMargin;
+        wCell += 1;
+        tpr = wRow / wCell;                             // thumbs per row
+        gap = wRow % wCell;
+        rptThumbGridInfo("Enlarge 1 pixel");
+
         if (thumbWidth > THUMB_MAX) thumbWidth = THUMB_MAX;
         if (thumbHeight > THUMB_MAX) thumbHeight = THUMB_MAX;
     }
-//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsEnlarge  thumbHeight =" << thumbHeight;
+//    if (thumbWidth < THUMB_MAX && thumbHeight < THUMB_MAX)
+//    {
+//        thumbWidth *= 1.1;
+//        thumbHeight *= 1.1;
+//        if (thumbWidth > THUMB_MAX) thumbWidth = THUMB_MAX;
+//        if (thumbHeight > THUMB_MAX) thumbHeight = THUMB_MAX;
+//    }
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+    wRow = viewport()->width() - listViewMargin;    // factors scrollbar
 }
 
 void ThumbView::thumbsShrink()
@@ -826,14 +840,78 @@ void ThumbView::thumbsShrink()
     #endif
     }
     if (thumbWidth > THUMB_MIN  && thumbHeight > THUMB_MIN) {
-        thumbWidth *= 0.9;
-        thumbHeight *= 0.9;
+        thumbWidth -= 1;
+        thumbHeight -= 1;
+        wCell = getThumbCellSize().width() - cellMargin;
+        wCell -= 1;
+        wRow = viewport()->width() - listViewMargin;    // factors scrollbar
+        tpr = wRow / wCell;                             // thumbs per row
+        gap = wRow % wCell;
+
         if (thumbWidth < THUMB_MIN) thumbWidth = THUMB_MIN;
         if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
     }
-//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Calling setThumbParameters from ThumbView::thumbsShring  thumbHeight =" << thumbHeight;
+//    if (thumbWidth > THUMB_MIN  && thumbHeight > THUMB_MIN) {
+//        thumbWidth *= 0.9;
+//        thumbHeight *= 0.9;
+//        if (thumbWidth < THUMB_MIN) thumbWidth = THUMB_MIN;
+//        if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
+//    }
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+    rptThumbGridInfo("Shrink 1 pixel");
+}
+
+void ThumbView::thumbsEnlargeJustified()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+
+    wCell = getThumbCellSize().width();
+    wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
+
+    tpr = wRow / wCell - 1;                        // thumbs per row
+    wCell = wRow / tpr;
+
+    if (wCell > THUMB_MAX) return;
+
+    int oldThumbWidth = thumbWidth;
+    thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
+    thumbHeight = (thumbHeight / oldThumbWidth) * thumbWidth;
+
+    setThumbParameters();
+    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+
+    return;
+}
+
+void ThumbView::thumbsShrinkJustified()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+
+    wCell = getThumbCellSize().width();
+    wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
+
+    tpr = wRow / wCell + 1;                        // thumbs per row
+    wCell = wRow / tpr;
+
+    if (wCell < THUMB_MIN) return;
+
+    int oldThumbWidth = thumbWidth;
+    thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
+    thumbHeight = (thumbHeight / oldThumbWidth) * thumbWidth;
+
+    setThumbParameters();
+    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+
+    return;
 }
 
 void ThumbView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
@@ -866,50 +944,16 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 Entering ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
     if (G::mode == "Grid") {
         return;
-
-        // adjust thumb width
-        if (thumbWidth < THUMB_MIN || thumbHeight < 0) {
-            thumbWidth = 100;           // rgh 100?
-            thumbHeight = 100;
-        }
-        int scrollWidth = 12;           // rgh make CONSTANT
-//        int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
-        int width = viewport()->width() - scrollWidth - 2;
-        // get the thumb cell width with no padding
-        int thumbCellWidth = thumbViewDelegate->getThumbCell().width() - thumbPadding * 2;
-//        int thumbCellWidth = thumbWidth + thumbSpacing + 4;
-        int rightSideGap = 99999;
-        thumbPadding = 0;
-        int remain;
-        int padding = 0;
-        bool improving;
-        // increase padding until wrapping occurs
-        do {
-            improving = false;
-            int cellWidth = thumbCellWidth + padding * 2;
-            remain = width % cellWidth;
-            if (remain < rightSideGap) {
-                improving = true;
-                rightSideGap = remain;
-                thumbPadding = padding;
-            }
-            padding++;
-        } while (improving);
-//        qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
-        setThumbParameters(thumbWidth, thumbHeight, thumbSpacing, thumbPadding,
-                           labelFontSize, showThumbLabels, wrapThumbs, thumbSize);
-        return;
     }
+
     // all wrapping is row wrapping
     if (isWrapping()) {
         return;
-//        qDebug() << G::t.restart() << "\t" << "ThumbView::thumbsFit isWrapping = true";
+
         // adjust thumb width
-        int scrollWidth = 12;
-//        int scrollWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+        int scrollWidth = G::scrollBarThickness;
         int width = viewport()->width() - scrollWidth - 2;
         int thumbCellWidth = thumbViewDelegate->getThumbCell().width() - thumbPadding * 2;
         int rightSideGap = 99999;
@@ -928,8 +972,6 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
             }
             padding++;
         } while (improving);
-//        qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
-//        setThumbParameters();
     }
     // no wrapping - must be bottom or top dock area
     else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea
@@ -937,13 +979,14 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         // set target ht based on space with scrollbar (always on)
         int ht = height();
         int scrollHeight = 12;
-//        int scrollHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
         ht -= scrollHeight;
 
         // adjust thumb height
         float aspect = thumbWidth / thumbHeight;
+
         // get the current thumb cell
         int thumbSpaceHeight = thumbViewDelegate->getThumbCell().height();
+
         // margin = nonthumb space is used to rebuild cell after thumb resize to fit
         int margin = thumbSpaceHeight - thumbHeight;
         int thumbMax = getThumbSpaceMax();
@@ -951,11 +994,9 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         thumbHeight = thumbSpaceHeight - margin;
         thumbWidth = thumbHeight * aspect;
 
-//        qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::thumbsFit    thumbHeight = " << thumbHeight;
-
         // change the thumbnail size in thumbViewDelegate
-//        qDebug() << G::t.restart() << "\t" << "Calling setThumbParameters from ThumbView::thumbsFit thumbWidth" << thumbWidth ;
         setSpacing(thumbSpacing);
+
         thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
             thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     }
@@ -968,9 +1009,6 @@ Called by MW::eventFilter when a thumbDock resize event occurs triggered by the
 user resizing the thumbDock. Adjust the size of the thumbs to fit the new
 thumbDock height.
 
-Note that MW events have been sent to thumbView by installEventFilter in MW
-constructor.
-
 For thumbSpace anatomy (see ThumbViewDelegate)
 */
     {
@@ -979,25 +1017,31 @@ For thumbSpace anatomy (see ThumbViewDelegate)
     #endif
     }
     float aspect = (float)thumbWidth / thumbHeight;
+
     // viewport available height
     int netViewportHt = height() - G::scrollBarThickness;
     int hMax = getThumbSpaceMax();
     int hMin = getThumbSpaceMin();
+
     // restrict thumbSpace within limits
     int newThumbSpaceHt = netViewportHt > hMax ? hMax : netViewportHt;
     newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
+
     // derive new thumbsize from new thumbSpace
     thumbHeight = thumbViewDelegate->getThumbHeightFromAvailHeight(newThumbSpaceHt);
+
     // make sure within range (should be from thumbSpace check but just to be sure)
     thumbHeight = thumbHeight > THUMB_MAX ? THUMB_MAX : thumbHeight;
     thumbHeight = thumbHeight < THUMB_MIN ? THUMB_MIN : thumbHeight;
     thumbWidth = thumbHeight * aspect;
+
     // check thumbWidth within range
     if(thumbWidth > THUMB_MAX) {
         thumbWidth = THUMB_MAX;
         thumbHeight = THUMB_MAX / aspect;
     }
     setSpacing(thumbSpacing);
+
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbPadding, labelFontSize, showThumbLabels, badgeSize);
 }
@@ -1057,17 +1101,16 @@ void ThumbView::scrollPageUp(int /*step*/)
 void ThumbView::scrollToCurrent(int row)
 {
 /*
-This is called from ThumbView::eventFilter after the eventFilter intercepts the
-last scrollbar paint event for the newly visible ThumbView.  ThumbView is newly
-visible because in a mode change in MW (ie from Grid to Loupe) thumbView was
-hidden in Grid but visible in Loupe.  Widgets will not respond while hidden so
-we must wait until ThumbView is visible and completely repainted.  It takes a
-while for the scrollbars to finish painting, so when that is done, we want to
-scroll to the current position.
+This is called from MW::eventFilter after the eventFilter intercepts the last scrollbar paint
+event for the newly visible ThumbView. ThumbView is newly visible because in a mode change in
+MW (ie from Grid to Loupe) thumbView was hidden in Grid but visible in Loupe. Widgets will not
+respond while hidden so we must wait until ThumbView is visible and completely repainted. It
+takes a while for the scrollbars to finish painting, so when that is done, we want to scroll
+to the current position.
 
-It is also called from MW::delayScroll, which in turn, is called by
-MW::fileSelectionChange when a new image is selected and the selection was
-triggered by a mouse click and MW::mouseClickScroll == true.
+It is also called from MW::delayScroll, which in turn, is called by MW::fileSelectionChange
+when a new image is selected and the selection was triggered by a mouse click and
+MW::mouseClickScroll == true.
 */
     {
     #ifdef ISDEBUG
@@ -1093,6 +1136,10 @@ int ThumbView::getHorizontalScrollBarOffset(int row)
     int pageWidth = viewport()->width();
     int thumbWidth = getThumbCellSize().width();
 
+    qDebug() << "ThumbView::getHorizontalScrollBarOffset   "
+             << "pageWidth" << pageWidth
+             << "thumbWidth" << pageWidth;
+
     if (pageWidth < THUMB_MIN || thumbWidth < THUMB_MIN)
         return 0;
 
@@ -1109,7 +1156,7 @@ int ThumbView::getHorizontalScrollBarOffset(int row)
     if (scrollOffset > hMax) scrollOffset = hMax;
     /*
     qDebug() << G::t.restart() << "\t" << objectName()
-             << "Row =" << mw->currentRow
+             << "Row =" << m2->currentRow
              << "horizontalScrollBarMax Qt vs Me"
              << horizontalScrollBar()->maximum()
              << hMax
@@ -1155,7 +1202,7 @@ int ThumbView::getVerticalScrollBarOffset(int row)
     if (scrollOffset > vMax) scrollOffset = vMax;
     /*
     qDebug() << G::t.restart() << "\t" << objectName()
-             << "Row =" << mw->currentRow
+             << "Row =" << m2->currentRow
              << "thumbRow" << thumbRow
              << "verticalScrollBarMax Qt vs Me"
              << verticalScrollBar()->maximum()
@@ -1209,7 +1256,7 @@ int ThumbView::getVerticalScrollBarMax()
     int vMax = pages * pageHeight;
     /*
     qDebug() << G::t.restart() << "\t" << objectName()
-             << "Row =" << mw->currentRow
+             << "Row =" << m2->currentRow
              << "verticalScrollBarMax Qt vs Me"
              << verticalScrollBar()->maximum()
              << vMax;
@@ -1250,12 +1297,12 @@ different position than the current image.
     // forward and back buttons
     if (event->button() == Qt::BackButton) {
 //        thumbView->selectPrev();
-        mw->togglePick();
+        m2->togglePick();
         return;
     }
     if (event->button() == Qt::ForwardButton) {
 //        thumbView->selectNext();
-        mw->togglePick();
+        m2->togglePick();
         return;
     }
 
