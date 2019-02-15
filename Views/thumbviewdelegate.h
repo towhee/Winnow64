@@ -25,10 +25,16 @@ public:
 
     QSize getThumbCell();
     int getThumbHeightFromAvailHeight(int availHeight);
+    int getThumbWidthFromCellWidth(int cellWidth);
     void reportThumbAttributes();
 
     QModelIndex currentIndex;
     int currentRow;
+
+    int itemPadding;
+    int itemBorderThickness;
+    int thumbBorderThickness;
+    int thumbBorderPadding;
 
 signals:
     void update(const QModelIndex index, QRect iconRect) const;
@@ -57,10 +63,6 @@ private:
     QPen currentPen;
     QPen selectedPen;
 
-    int itemPadding;
-    int itemBorderThickness;
-    int thumbBorderThickness;
-    int thumbBorderPadding;
     int fontHt;
     int badgeSize;
     int cacheDiam = 6;

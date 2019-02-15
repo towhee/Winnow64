@@ -65,11 +65,9 @@ class MW : public QMainWindow
 {
     Q_OBJECT
 
-    friend class ThumbView;     // mw
+    friend class Prefdlg;       // m0
     friend class ProgressBar;   // mw1
-    friend class Prefdlg;       // m
-    friend class InfoView;
-    friend class MdCacheMgr;
+    friend class ThumbView;     // mw2
 
 public:
     MW(QWidget *parent = nullptr);
@@ -497,6 +495,9 @@ private slots:
 
 private:
 
+//    friend class ProgressBar;   // mw1
+
+
     QMenuBar *thumbsMenuBar;
     QMenu *fileMenu;
     QMenu *openWithMenu;
@@ -895,6 +896,5 @@ private:
     //    void setViewerKeyEventsEnabled(bool enabled);
 
 };
-
 #endif // MAINWINDOW_H
 
