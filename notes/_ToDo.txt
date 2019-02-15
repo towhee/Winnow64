@@ -1,4 +1,5 @@
 BUGS
+- Lock width = height not working in grid preferences
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
