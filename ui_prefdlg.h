@@ -126,6 +126,7 @@ public:
     QLabel *label_18;
     QLabel *iconHeightLbl_2;
     QLabel *label_19;
+    QFrame *frame_4;
     QWidget *pageFullScreen;
     QLabel *fullScreenExplanationLbl;
     QWidget *layoutWidget1;
@@ -606,12 +607,12 @@ public:
         thumbSpacingLbl_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         label_14 = new QLabel(pageThumbsGrid);
         label_14->setObjectName(QString::fromUtf8("label_14"));
-        label_14->setGeometry(QRect(20, 115, 151, 16));
-        label_14->setFont(font);
+        label_14->setGeometry(QRect(100, 400, 151, 22));
+        label_14->setFont(font2);
         label_15 = new QLabel(pageThumbsGrid);
         label_15->setObjectName(QString::fromUtf8("label_15"));
         label_15->setGeometry(QRect(20, 135, 141, 16));
-        label_15->setFont(font);
+        label_15->setFont(font2);
         iconWidthSlider_2 = new QSlider(pageThumbsGrid);
         iconWidthSlider_2->setObjectName(QString::fromUtf8("iconWidthSlider_2"));
         iconWidthSlider_2->setGeometry(QRect(200, 30, 160, 22));
@@ -629,7 +630,7 @@ public:
         showThumbLabelChk_2 = new QCheckBox(pageThumbsGrid);
         showThumbLabelChk_2->setObjectName(QString::fromUtf8("showThumbLabelChk_2"));
         showThumbLabelChk_2->setGeometry(QRect(20, 180, 201, 17));
-        showThumbLabelChk_2->setFont(font);
+        showThumbLabelChk_2->setFont(font2);
         fontSizeLbl_2 = new QLabel(pageThumbsGrid);
         fontSizeLbl_2->setObjectName(QString::fromUtf8("fontSizeLbl_2"));
         fontSizeLbl_2->setGeometry(QRect(380, 196, 30, 16));
@@ -652,7 +653,7 @@ public:
         iconPaddingSlider_2->setTickInterval(5);
         thumbSpacingSlider_2 = new QSlider(pageThumbsGrid);
         thumbSpacingSlider_2->setObjectName(QString::fromUtf8("thumbSpacingSlider_2"));
-        thumbSpacingSlider_2->setGeometry(QRect(200, 115, 160, 22));
+        thumbSpacingSlider_2->setGeometry(QRect(280, 400, 160, 22));
         thumbSpacingSlider_2->setFont(font);
         thumbSpacingSlider_2->setMinimum(0);
         thumbSpacingSlider_2->setMaximum(30);
@@ -667,7 +668,7 @@ public:
         label_17 = new QLabel(pageThumbsGrid);
         label_17->setObjectName(QString::fromUtf8("label_17"));
         label_17->setGeometry(QRect(20, 30, 131, 16));
-        label_17->setFont(font);
+        label_17->setFont(font2);
         iconHeightSlider_2 = new QSlider(pageThumbsGrid);
         iconHeightSlider_2->setObjectName(QString::fromUtf8("iconHeightSlider_2"));
         iconHeightSlider_2->setGeometry(QRect(200, 50, 160, 22));
@@ -685,11 +686,11 @@ public:
         lockDimChk_2 = new QCheckBox(pageThumbsGrid);
         lockDimChk_2->setObjectName(QString::fromUtf8("lockDimChk_2"));
         lockDimChk_2->setGeometry(QRect(20, 70, 181, 20));
-        lockDimChk_2->setFont(font);
+        lockDimChk_2->setFont(font2);
         label_18 = new QLabel(pageThumbsGrid);
         label_18->setObjectName(QString::fromUtf8("label_18"));
         label_18->setGeometry(QRect(20, 50, 131, 16));
-        label_18->setFont(font);
+        label_18->setFont(font2);
         iconHeightLbl_2 = new QLabel(pageThumbsGrid);
         iconHeightLbl_2->setObjectName(QString::fromUtf8("iconHeightLbl_2"));
         iconHeightLbl_2->setGeometry(QRect(380, 50, 30, 16));
@@ -699,7 +700,13 @@ public:
         label_19 = new QLabel(pageThumbsGrid);
         label_19->setObjectName(QString::fromUtf8("label_19"));
         label_19->setGeometry(QRect(20, 200, 121, 16));
-        label_19->setFont(font);
+        label_19->setFont(font2);
+        frame_4 = new QFrame(pageThumbsGrid);
+        frame_4->setObjectName(QString::fromUtf8("frame_4"));
+        frame_4->setGeometry(QRect(30, 310, 421, 161));
+        frame_4->setAutoFillBackground(true);
+        frame_4->setFrameShape(QFrame::StyledPanel);
+        frame_4->setFrameShadow(QFrame::Raised);
         stackedWidget->addWidget(pageThumbsGrid);
         pageFullScreen = new QWidget();
         pageFullScreen->setObjectName(QString::fromUtf8("pageFullScreen"));
@@ -862,7 +869,7 @@ public:
         QObject::connect(classificationBadgeThumbDiamSlider, SIGNAL(valueChanged(int)), classificationBadgeThumbDiamLbl, SLOT(setNum(int)));
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(2);
+        stackedWidget->setCurrentIndex(5);
         listContainer->setCurrentIndex(0);
 
 

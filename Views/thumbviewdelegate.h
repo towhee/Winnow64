@@ -20,7 +20,7 @@ public:
     QSize sizeHint(const QStyleOptionViewItem &option,
                    const QModelIndex &index ) const;
 
-    void setThumbDimensions(int thumbWidth, int thumbHeight, int thumbPadding,
+    void setThumbDimensions(int thumbWidth, int thumbHeight, int thumbSpacing, int thumbPadding,
           int labelFontSize, bool showThumbLabels, int badgeSize);
 
     QSize getThumbCell();
@@ -31,6 +31,7 @@ public:
     QModelIndex currentIndex;
     int currentRow;
 
+    int thumbSpacing;
     int itemPadding;
     int itemBorderThickness;
     int thumbBorderThickness;
@@ -87,6 +88,7 @@ private:
     QSize thumbSize;
     QSize selectedSize;
     QSize thumbSpace;
+    QSize cellSpace;
 
     QRect thumbRect;
     QRect itemRect;

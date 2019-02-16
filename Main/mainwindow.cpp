@@ -4391,7 +4391,7 @@ void MW::thumbsEnlarge()
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::mode == "Grid") gridView->thumbsEnlargeJustified();
+    if (G::mode == "Grid") gridView->gridEnlargeJustified();
     else thumbView->thumbsEnlarge();
 }
 
@@ -4402,7 +4402,7 @@ void MW::thumbsShrink()
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::mode == "Grid") gridView->thumbsShrinkJustified();
+    if (G::mode == "Grid") gridView->gridShrinkJustified();
     else thumbView->thumbsShrink();
 }
 
@@ -8343,10 +8343,9 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    gridView->thumbsShrinkJustified();
-    return;
     qDebug() << gridView->width()
-             << gridView->viewport()->width();
+             << gridView->viewport()->width()
+             << gridView->getThumbCellSize().width() ;
 
 }
 

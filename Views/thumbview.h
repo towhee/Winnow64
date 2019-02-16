@@ -74,8 +74,8 @@ public slots:
     void scrollToCurrent(int row);
     void thumbsEnlarge();
     void thumbsShrink();
-    void thumbsEnlargeJustified();
-    void thumbsShrinkJustified();
+    void gridEnlargeJustified();
+    void gridShrinkJustified();
     void thumbsFit(Qt::DockWidgetArea area);
     void thumbsFitTopOrBottom();
     void invertSelection();                         //in use
@@ -104,6 +104,9 @@ public slots:
     void selectPrevPick();
     void copyThumbs();
     void sortThumbs(int sortColumn, bool isReverse);
+
+    void thumbsRejustify();
+
 
 private slots:
 //    void delaySelectCurrentThumb();
@@ -141,14 +144,9 @@ private:
     bool isLeftMouseBtnPressed;
     bool isMouseDrag;
 
-    void rptThumbGridInfo(QString s);
-    int listViewMargin = 6;
-    int cellMargin = 0;
-    int tpr;
-    int gap;
-    int wRow;
-    int wCell;
-
+    // used during gridView resize to keep close to beginning thumb size
+    int assignedThumbWidth;
+    bool skipResize;
 
 signals:
     void togglePick();
