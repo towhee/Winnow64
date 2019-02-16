@@ -1,5 +1,5 @@
 BUGS
-- Lock width = height not working in grid preferences
+- Thumb labels not working
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
@@ -17,6 +17,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Add menu option to filter on the most recent day
 - Lock docks to a size, chk resize behavior as separate windows
 - For very large folders only load one or two grids of images at a time
 - tableView adjust to changing font size
@@ -39,6 +40,8 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Lock width = height not working in grid preferences
+- GridView justification
 - Recover memory when select empty folder
 - If go from blank folder to one with only 1 image the image cache does not update indicator
 - Ingest dialog not remembering auto bool setting
