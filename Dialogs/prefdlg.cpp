@@ -411,6 +411,7 @@ void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
         m0->gridView->thumbWidth = value;
         if (ui->lockDimChk_2->isChecked()) ui->iconHeightSlider_2->setValue(value);
         m0->gridView->setThumbParameters();
+
     }
 }
 
@@ -420,6 +421,7 @@ void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
         m0->gridView->thumbHeight = value;
         if (ui->lockDimChk_2->isChecked()) ui->iconWidthSlider_2->setValue(value);
         m0->gridView->setThumbParameters();
+        m0->gridView->thumbsRejustify();
     }
 }
 
@@ -428,6 +430,7 @@ void Prefdlg::on_thumbSpacingSlider_2_valueChanged(int value)
     if (okToUpdate) {
         m0->gridView->thumbSpacing = value;
         m0->gridView->setThumbParameters();
+        m0->gridView->thumbsRejustify();
     }
 }
 
@@ -436,6 +439,7 @@ void Prefdlg::on_iconPaddingSlider_2_valueChanged(int value)
     if (okToUpdate) {
         m0->gridView->thumbPadding = value;
         m0->gridView->setThumbParameters();
+        m0->gridView->thumbsRejustify();
     }
 }
 

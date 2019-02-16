@@ -4,33 +4,69 @@
 /*
 ThumbViewDelegate Anatomy:
 
+|----------------------------cellSpace-----------------------------|
+|            thumbSpacing                                          |
+|    |-----------------------thumbSpace-----------------------|    |
+|    |       itemPadding                                      |    |
+|    |  ||===================itemBorder===================||  |    |
+|    |  ||   thumbPadding                                 ||  |    |
+|    |  ||  ||==============thumbBorder===============||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||            thumb/icon                  ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||==============thumbBorder===============||  ||  |    |
+|    |  ||   thumbPadding                                 ||  |    |
+|    |  ||------------------------------------------------||  |    |
+|    |  ||                     label*                     ||  |    |
+|    |  ||===================itemBorder===================||  |    |
+|    |       itemPadding                                      |    |
+|    |-----------------------thumbSpace-----------------------|    |
+|            thumbSpacing                                          |
+|------------------------------------------------------------------|
 
-|-----------------------thumbSpace-----------------------|
-|       itemPadding                                      |
-|  ||===================itemBorder===================||  |
-|  ||   thumbPadding                                 ||  |
-|  ||  ||==============thumbBorder===============||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||            thumb/icon                  ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||                                        ||  ||  |
-|  ||  ||==============thumbBorder===============||  ||  |
-|  ||   thumbPadding                                 ||  |
-|  ||------------------------------------------------||  |
-|  ||                     label*                     ||  |
-|  ||===================itemBorder===================||  |
-|       itemPadding                                      |
-|-----------------------thumbSpace-----------------------|
+// change naming and add a cellBorder layer instead of thumbSpacing?
+
+|----------------------------cellBorder----------------------------|
+|            thumbPadding                                          |
+|    |-----------------------thumbBorder----------------------|    |
+|    |       itemPadding                                      |    |
+|    |  ||===================itemBorder===================||  |    |
+|    |  ||   iconPadding                                  ||  |    |
+|    |  ||  ||==============ticonBorder===============||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                 Icon                   ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||                                        ||  ||  |    |
+|    |  ||  ||==============thumbBorder===============||  ||  |    |
+|    |  ||                                                ||  |    |
+|    |  ||------------------------------------------------||  |    |
+|    |  ||                     label*                     ||  |    |
+|    |  ||================================================||  |    |
+|    |                                                        |    |
+|    |--------------------------------------------------------|    |
+|                                                                  |
+|------------------------------------------------------------------|
 
 * label border has 0 thickness
 
@@ -71,13 +107,20 @@ ThumbViewDelegate::ThumbViewDelegate(QObject *parent, bool &isRatingBadgeVisible
 }
 
 void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
-         int thumbPadding, int labelFontSize, bool showThumbLabels, int badgeSize)
+         int thumbSpacing, int thumbPadding, int labelFontSize, bool showThumbLabels,
+          int badgeSize)
 {
     {
     #ifdef ISDEBUG
 //  G::track(__FUNCTION__);
     #endif
     }
+    /* thumbSpacing not being used at present.  It was initially meant to control the
+    QListView->setSpacing(), which is outside of the delegate.  Using it makes it more
+    difficult to mange the gridView justification.  If it is decided another layer would be
+    useful it would be better to include the cellBorder and thumbPadding suggested in the
+    diagram comments above.  */
+
     delegateShowThumbLabels = showThumbLabels;
     itemPadding = thumbPadding;
     font = QApplication::font();
@@ -113,6 +156,8 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
                              + fontHt
                              + itemBorderThickness*2
                              + itemPadding*2);
+
+    cellSpace = thumbSpace + QSize(thumbSpacing, thumbSpacing);
 
     // define some offsets
     paddingOffset = QPoint(itemPadding, itemPadding);
