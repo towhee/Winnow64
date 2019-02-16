@@ -149,7 +149,7 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
 
     thumbViewDelegate = new ThumbViewDelegate(this, m2->isRatingBadgeVisible);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-        thumbPadding, labelFontSize, showThumbLabels, badgeSize);
+        thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     setItemDelegate(thumbViewDelegate);
 
     // used to provide iconRect info to zoom to point clicked on thumb
@@ -220,7 +220,7 @@ possibly altered thumbnail dimensions.
     }
     setSpacing(thumbSpacing);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-        thumbPadding, labelFontSize, showThumbLabels, badgeSize);
+        thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     if(objectName() == "Thumbnails") {
         if (!m2->thumbDock->isFloating())
             emit updateThumbDockHeight();
@@ -781,25 +781,11 @@ void ThumbView::selectPrevPick()
     selectThumb(getPrevPick());
 }
 
-void ThumbView::rptThumbGridInfo(QString s)
-{
-    int actualViewPortWidth = viewport()->width();
-    int actualCellWidth = getThumbCellSize().width();
-
-    qDebug() << s
-//             << "\nadjustedViewPortWidth" << wRow
-//             << "\nadjustedCellWidth" << wCell
-//             << "\nthumbWidth" << thumbWidth
-//             << "\ngridSize" << gridSize()
-//             << "\nthumbsPerRow" << tpr
-//             << "\nrightSideGap" << gap
-//             << "\ngap - adjustedCellWidth" << gap - wCell
-             << "\nactualViewPortWidth" << actualViewPortWidth
-             << "   actualCellWidth" << actualCellWidth;
-}
-
 void ThumbView::thumbsEnlarge()
 {
+/* This function enlarges the size of the thumbnails in the thumbView, with the objectName
+   "Thumbnails", which either resides in a dock or a floating window.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -809,71 +795,100 @@ void ThumbView::thumbsEnlarge()
     if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
     if (thumbWidth < THUMB_MAX && thumbHeight < THUMB_MAX)
     {
-        thumbWidth += 1;
-        thumbHeight += 1;
-        wCell = getThumbCellSize().width() - cellMargin;
-        wCell += 1;
-        tpr = wRow / wCell;                             // thumbs per row
-        gap = wRow % wCell;
-        rptThumbGridInfo("Enlarge 1 pixel");
-
+        thumbWidth *= 1.1;
+        thumbHeight *= 1.1;
         if (thumbWidth > THUMB_MAX) thumbWidth = THUMB_MAX;
         if (thumbHeight > THUMB_MAX) thumbHeight = THUMB_MAX;
     }
-//    if (thumbWidth < THUMB_MAX && thumbHeight < THUMB_MAX)
-//    {
-//        thumbWidth *= 1.1;
-//        thumbHeight *= 1.1;
-//        if (thumbWidth > THUMB_MAX) thumbWidth = THUMB_MAX;
-//        if (thumbHeight > THUMB_MAX) thumbHeight = THUMB_MAX;
-//    }
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
-    wRow = viewport()->width() - listViewMargin;    // factors scrollbar
 }
 
 void ThumbView::thumbsShrink()
 {
+/* This function reduces the size of the thumbnails in the thumbView, with the objectName
+   "Thumbnails", which either resides in a dock or a floating window.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
     if (thumbWidth > THUMB_MIN  && thumbHeight > THUMB_MIN) {
-        thumbWidth -= 1;
-        thumbHeight -= 1;
-        wCell = getThumbCellSize().width() - cellMargin;
-        wCell -= 1;
-        wRow = viewport()->width() - listViewMargin;    // factors scrollbar
-        tpr = wRow / wCell;                             // thumbs per row
-        gap = wRow % wCell;
-
+        thumbWidth *= 0.9;
+        thumbHeight *= 0.9;
         if (thumbWidth < THUMB_MIN) thumbWidth = THUMB_MIN;
         if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
     }
-//    if (thumbWidth > THUMB_MIN  && thumbHeight > THUMB_MIN) {
-//        thumbWidth *= 0.9;
-//        thumbHeight *= 0.9;
-//        if (thumbWidth < THUMB_MIN) thumbWidth = THUMB_MIN;
-//        if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
-//    }
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
-    rptThumbGridInfo("Shrink 1 pixel");
 }
 
-void ThumbView::thumbsEnlargeJustified()
+void ThumbView::thumbsRejustify()
 {
+/* This function controls the resizing behavior of the gridview cells when the window is
+resized or the gridview preferences are edited. The grid cells sizes are maintained while
+keeping the right side "justified". The cells can be direcly adjusted using the "[" and "]"
+keys, but this is handled by the gridShrinkJustified and gridEnlargeJustified functions.
+
+The key to making this work is the variable assignedThumbWidth, which is increased or decreased in the shrink and
+enlarge functions, and used to maintain the cell size during the resize and preference adjustment
+operations.
+
+It could all be managed from this function, but is being kept separate for greater simplicity.
+
+Again, note this only applied to the gridview with the objectName = "Grid". The thumbview,
+with objectName "Thumbnails", is handled by thumbsEnlarge and thumbsShrink.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    int increment;
+    if (thumbWidth < assignedThumbWidth) increment = -1;
+    else increment = 1;
 
-    wCell = getThumbCellSize().width();
-    wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
+    int wCell = getThumbCellSize().width();
+    int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
 
-    tpr = wRow / wCell - 1;                        // thumbs per row
+    int tpr = wRow / wCell + increment;                // thumbs per row
+    wCell = wRow / tpr;
+
+    if (increment == 1 && wCell < THUMB_MIN) return;
+    if (increment == -1 && wCell > THUMB_MAX) return;
+
+    int oldThumbWidth = thumbWidth;
+    thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
+    thumbHeight = (thumbHeight / oldThumbWidth) * thumbWidth;
+
+    skipResize = true;      // prevent feedback loop
+
+    setThumbParameters();
+    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+}
+
+void ThumbView::gridEnlargeJustified()
+{
+/*
+   This function enlarges the grid cells while keeping the right hand side margin minimized.
+   To make this work it is critical to assign the correct value to the row width: wRow.  The
+   superclass QListView, uses a width that assumes there will always be a scrollbar and also a
+   "margin". The width of the QListView (width()) is reduced by the width of the scrollbar and
+   and additional "margin", determined by experimentation, to be 8 pixels.
+
+   The variable assignedThumbWidth remebers the current grid cell size as a reference to
+   maintain the grid size during resizing and pad size changes in preferences.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int wCell = getThumbCellSize().width();
+    int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
+
+    int tpr = wRow / wCell - 1;                        // thumbs per row
     wCell = wRow / tpr;
 
     if (wCell > THUMB_MAX) return;
@@ -882,24 +897,34 @@ void ThumbView::thumbsEnlargeJustified()
     thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
     thumbHeight = (thumbHeight / oldThumbWidth) * thumbWidth;
 
+    assignedThumbWidth = thumbWidth;
+    skipResize = true;      // prevent feedback loop
+
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
-
-    return;
 }
 
-void ThumbView::thumbsShrinkJustified()
+void ThumbView::gridShrinkJustified()
 {
+/*
+   This function shrinks the grid cells while keeping the right hand side margin minimized.
+   To make this work it is critical to assign the correct value to the row width: wRow.  The
+   superclass QListView, uses a width that assumes there will always be a scrollbar and also a
+   "margin". The width of the QListView (width()) is reduced by the width of the scrollbar and
+   and additional "margin", determined by experimentation, to be 8 pixels.
+
+   The variable assignedThumbWidth remebers the current grid cell size as a reference to
+   maintain the grid size during resizing and pad size changes in preferences.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    int wCell = getThumbCellSize().width();
+    int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
 
-    wCell = getThumbCellSize().width();
-    wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
-
-    tpr = wRow / wCell + 1;                        // thumbs per row
+    int tpr = wRow / wCell + 1;                        // thumbs per row
     wCell = wRow / tpr;
 
     if (wCell < THUMB_MIN) return;
@@ -908,10 +933,11 @@ void ThumbView::thumbsShrinkJustified()
     thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
     thumbHeight = (thumbHeight / oldThumbWidth) * thumbWidth;
 
+    assignedThumbWidth = thumbWidth;
+    skipResize = true;      // prevent feedback loop
+
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
-
-    return;
 }
 
 void ThumbView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
@@ -934,7 +960,24 @@ void ThumbView::resizeEvent(QResizeEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
+    if (skipResize) {
+        skipResize = false;
+        return;
+    }
+    static int count = -1;
+    count++;
+    qDebug() << "Resize" << objectName() << count;
     QListView::resizeEvent(event);
+    static int prevWidth;
+    if (count == 0) {
+        prevWidth = width();
+        return;
+    }
+    count++;
+    if (objectName() == "Thumbnails") return;
+    qDebug() << "width vs prevWidth" << width() << prevWidth;
+    if (width() == prevWidth) return;
+    thumbsRejustify();
 }
 
 void ThumbView::thumbsFit(Qt::DockWidgetArea area)
@@ -998,7 +1041,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         setSpacing(thumbSpacing);
 
         thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-            thumbPadding, labelFontSize, showThumbLabels, badgeSize);
+            thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     }
 }
 
@@ -1043,7 +1086,7 @@ For thumbSpace anatomy (see ThumbViewDelegate)
     setSpacing(thumbSpacing);
 
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-        thumbPadding, labelFontSize, showThumbLabels, badgeSize);
+        thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
 }
 
 void ThumbView::updateLayout()
