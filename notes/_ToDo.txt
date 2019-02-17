@@ -22,7 +22,6 @@ ENHANCEMENTS
 - For very large folders only load one or two grids of images at a time
 - tableView adjust to changing font size
 - Speed up Tiffs
-- Thumbs resize to fit central view
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 - Check for updates on Mac
@@ -38,6 +37,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Thumbs resize to fit central view
 - undo / redo history
 - Added All count to filters
 - Invert filter
@@ -50,7 +50,6 @@ DONE/FIXED
 - Recover memory when select empty folder
 - If go from blank folder to one with only 1 image the image cache does not update indicator
 - Ingest dialog not remembering auto bool setting
-
 - Hide cursor during slideshow
 - Report metadata sending to console
 - Auto expand dialog shooting info template
