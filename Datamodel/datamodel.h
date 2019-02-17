@@ -72,7 +72,8 @@ signals:
 //    void updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString source);
 
 public slots:
-    void filterItemCount();
+    void filteredItemCount();
+    void unfilteredItemCount();
     void processMetadataBuffer();
     bool updateMetadataItem(ImageMetadata m);
     void updateFilters();
