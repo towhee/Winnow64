@@ -1,5 +1,4 @@
 BUGS
-- Thumb labels not working
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
@@ -17,18 +16,17 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Add menu option to filter on the most recent day
+- Auto change thumb aspect ratio to match images
+- Set thumb maximum size in preferences
 - Lock docks to a size, chk resize behavior as separate windows
 - For very large folders only load one or two grids of images at a time
 - tableView adjust to changing font size
-- undo / redo history
 - Speed up Tiffs
 - Thumbs resize to fit central view
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 - Check for updates on Mac
 - Detect drive mounting
-- Invert filter
 - Make all message boxes consistent (see runExternalApp)
 - Remove Windows Registry settings during uninstall
 - When ingesting confirm all files copied correctly (option)
@@ -40,11 +38,19 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- undo / redo history
+- Added All count to filters
+- Invert filter
+- Filter count not updated until pick something
+- Add menu option to filter on the most recent day
+- First thumb smaller than the rest
+- Thumb labels not working
 - Lock width = height not working in grid preferences
 - GridView justification
 - Recover memory when select empty folder
 - If go from blank folder to one with only 1 image the image cache does not update indicator
 - Ingest dialog not remembering auto bool setting
+
 - Hide cursor during slideshow
 - Report metadata sending to console
 - Auto expand dialog shooting info template

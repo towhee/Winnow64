@@ -709,7 +709,7 @@ the sort or filter or toggles raw+jpg.
     }
 }
 
-void DataModel::filterItemCount()
+void DataModel::filteredItemCount()
 {
     {
     #ifdef ISDEBUG
@@ -729,6 +729,31 @@ void DataModel::filterItemCount()
             }
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        }
+        ++it;
+    }
+}
+
+void DataModel::unfilteredItemCount()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+
+    QTreeWidgetItemIterator it(filters);
+    while (*it) {
+        if ((*it)->parent()) {
+            int col = filters->filterCategoryToDmColumn[(*it)->parent()->text(0)];
+            QString searchValue = (*it)->text(1);
+            int tot = 0;
+            for (int row = 0; row < rowCount(); ++row) {
+                QString value = index(row, col).data().toString();
+                if (value == searchValue) tot++;
+            }
+            (*it)->setData(3, Qt::EditRole, QString::number(tot));
+            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
         }
         ++it;
     }
@@ -769,7 +794,7 @@ map to columns in the data model ie Picked, Rating, Label ...
 
     static int counter = 0;
     counter++;
-    int dataModelColumn;
+    int dataModelColumn = 0;
     bool isMatch = true;                   // overall match
     bool isCategoryUnchecked = true;
 

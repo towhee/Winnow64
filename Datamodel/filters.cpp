@@ -22,12 +22,14 @@ QSortFilterProxy (sf) in datamodel.
     }
     setRootIsDecorated(true);
     setSelectionMode(QAbstractItemView::NoSelection);
-    setColumnCount(3);
-    setHeaderHidden(true);
+    setColumnCount(4);
+    setHeaderHidden(false);
     setColumnWidth(0, 250);
     setColumnWidth(1, 50);
     setColumnWidth(2, 50);
-    setHeaderLabels({"Filter", "Value", "Count"});
+    setColumnWidth(3, 50);
+    setHeaderLabels({"", "Value", "Filter", "All"});
+    header()->setDefaultAlignment(Qt::AlignCenter);
     hideColumn(1);
 
     setIndentation(10);
@@ -72,6 +74,7 @@ void Filters::createPredefinedFilters()
     refine->setFont(0, categoryFont);
     refine->setBackground(0, categoryBackground);
     refine->setBackground(2, categoryBackground);
+    refine->setBackground(3, categoryBackground);
     refine->setData(0, G::ColumnRole, G::RefineColumn);
     refineFalse = new QTreeWidgetItem(refine);
     refineFalse->setText(0, "False");
@@ -87,6 +90,7 @@ void Filters::createPredefinedFilters()
     picks->setFont(0, categoryFont);
     picks->setBackground(0, categoryBackground);
     picks->setBackground(2, categoryBackground);
+    picks->setBackground(3, categoryBackground);
     picks->setData(0, G::ColumnRole, G::PickColumn);
     picksFalse = new QTreeWidgetItem(picks);
     picksFalse->setText(0, "Not Picked");
@@ -103,6 +107,7 @@ void Filters::createPredefinedFilters()
     ratings->setFont(0, categoryFont);
     ratings->setBackground(0, categoryBackground);
     ratings->setBackground(2, categoryBackground);
+    ratings->setBackground(3, categoryBackground);
     ratings->setData(0, G::ColumnRole, G::RatingColumn);
 
     ratingsNone = new QTreeWidgetItem(ratings);
@@ -135,6 +140,7 @@ void Filters::createPredefinedFilters()
     labels->setFont(0, categoryFont);
     labels->setBackground(0, categoryBackground);
     labels->setBackground(2, categoryBackground);
+    labels->setBackground(3, categoryBackground);
     labels->setData(0, G::ColumnRole, G::LabelColumn);
 
     labelsNone = new QTreeWidgetItem(labels);
@@ -180,6 +186,7 @@ by addCategoryFromData.
     types->setFont(0, categoryFont);
     types->setBackground(0, categoryBackground);
     types->setBackground(2, categoryBackground);
+    types->setBackground(3, categoryBackground);
     types->setData(0, G::ColumnRole, G::TypeColumn);
 
     years = new QTreeWidgetItem(this);
@@ -187,6 +194,7 @@ by addCategoryFromData.
     years->setFont(0, categoryFont);
     years->setBackground(0, categoryBackground);
     years->setBackground(2, categoryBackground);
+    years->setBackground(3, categoryBackground);
     years->setData(0, G::ColumnRole, G::YearColumn);
 
     days = new QTreeWidgetItem(this);
@@ -194,6 +202,7 @@ by addCategoryFromData.
     days->setFont(0, categoryFont);
     days->setBackground(0, categoryBackground);
     days->setBackground(2, categoryBackground);
+    days->setBackground(3, categoryBackground);
     days->setData(0, G::ColumnRole, G::DayColumn);
 
     models = new QTreeWidgetItem(this);
@@ -201,6 +210,7 @@ by addCategoryFromData.
     models->setFont(0, categoryFont);
     models->setBackground(0, categoryBackground);
     models->setBackground(2, categoryBackground);
+    models->setBackground(3, categoryBackground);
     models->setData(0, G::ColumnRole, G::CameraModelColumn);
 
     lenses = new QTreeWidgetItem(this);
@@ -208,6 +218,7 @@ by addCategoryFromData.
     lenses->setFont(0, categoryFont);
     lenses->setBackground(0, categoryBackground);
     lenses->setBackground(2, categoryBackground);
+    lenses->setBackground(3, categoryBackground);
     lenses->setData(0, G::ColumnRole, G::LensColumn);
 
     focalLengths = new QTreeWidgetItem(this);
@@ -215,6 +226,7 @@ by addCategoryFromData.
     focalLengths->setFont(0, categoryFont);
     focalLengths->setBackground(0, categoryBackground);
     focalLengths->setBackground(2, categoryBackground);
+    focalLengths->setBackground(3, categoryBackground);
     focalLengths->setData(0, G::ColumnRole, G::FocalLengthColumn);
 
     titles = new QTreeWidgetItem(this);
@@ -222,6 +234,7 @@ by addCategoryFromData.
     titles->setFont(0, categoryFont);
     titles->setBackground(0, categoryBackground);
     titles->setBackground(2, categoryBackground);
+    titles->setBackground(3, categoryBackground);
     titles->setData(0, G::ColumnRole, G::TitleColumn);
 
     creators = new QTreeWidgetItem(this);
@@ -229,6 +242,7 @@ by addCategoryFromData.
     creators->setFont(0, categoryFont);
     creators->setBackground(0, categoryBackground);
     creators->setBackground(2, categoryBackground);
+    creators->setBackground(3, categoryBackground);
     creators->setData(0, G::ColumnRole, G::CreatorColumn);
 }
 
@@ -260,7 +274,6 @@ void Filters::checkPicks(bool check)
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     if (check) {
         picksFalse->setCheckState(0, Qt::Unchecked);
         picksTrue->setCheckState(0, Qt::Checked);
@@ -290,6 +303,52 @@ This is used to determine the filter status in MW::updateFilterStatus
         ++it;
     }
     return false;
+}
+
+void Filters::invertFilters()
+{
+    QList<QString> catWithCheckedItems;
+    QString cat = "";
+    QTreeWidgetItemIterator it(this);
+
+    // populate catWithCheckedItems list with only categories that have one or more checked items
+    while (*it) {
+        // if no parent then it is a category
+        if (!(*it)->parent()) {
+            cat = (*it)->text(0);
+//            qDebug() << (*it)->text(0);
+        }
+        // traverse the children of the category
+        if ((*it)->parent()) {
+            bool isChecked = (*it)->checkState(0);
+            if (isChecked && cat != "") {
+                catWithCheckedItems.append((*it)->parent()->text(0));
+                // prevent adding same category twice
+                cat = "";
+            }
+        }
+        ++it;
+    }
+
+    // invert categories with checked items
+    QTreeWidgetItemIterator it2(this);
+    while (*it2) {
+        // traverse the children of the category and invert checkstate
+        if ((*it2)->parent()) {
+            // only want categories with checked items
+            QString s = (*it2)->parent()->text(0);
+            if (catWithCheckedItems.contains(s)) {
+                // ignore items that do not exist in datamodel (column 3 has unfiltered count)
+                if ((*it2)->text(3) != "0") {
+                    // invert check state
+                    if ((*it2)->checkState(0)) (*it2)->setCheckState(0, Qt::Unchecked);
+                    else (*it2)->setCheckState(0, Qt::Checked);
+                }
+            }
+        }
+        ++it2;
+    }
+    // emit filterChange();  // this is done im MW::invertFilters - which calls this function
 }
 
 void Filters::uncheckAllFilters()
@@ -356,7 +415,8 @@ createDynamicFilters;
 
 void Filters::resizeEvent(QResizeEvent *event)
 {
+    setColumnWidth(3, 45);
     setColumnWidth(2, 45);
-    setColumnWidth(0, width() - G::scrollBarThickness - 45);
+    setColumnWidth(0, width() - G::scrollBarThickness - 90);
     QTreeWidget::resizeEvent(event);
 }
