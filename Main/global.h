@@ -15,7 +15,7 @@
 #include <QMutex>
 
 #define THUMB_MIN	40
-#define THUMB_MAX	480
+#define THUMB_MAX	256  //480
 
 namespace G
 {

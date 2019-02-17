@@ -383,7 +383,7 @@ void Prefdlg::on_iconPaddingSlider_valueChanged(int value)
 void Prefdlg::on_showThumbLabelChk_clicked()
 {
     if (okToUpdate) {
-        m0->thumbView->thumbPadding = ui->showThumbLabelChk->isChecked();
+        m0->thumbView->showThumbLabels = ui->showThumbLabelChk->isChecked();
         m0->thumbView->setThumbParameters();
     }
 }
