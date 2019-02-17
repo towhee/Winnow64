@@ -194,7 +194,7 @@ void MW::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
     qApp->processEvents();
     if(checkIfUpdate) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
-    setMetadataDockSize();
+//    setMetadataDockFixedSize();
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -2417,6 +2417,13 @@ void MW::createActions()
         allDocksLockAction->setChecked(true);
     wasThumbDockVisible = setting->value("wasThumbDockVisible").toBool();
 
+    metadataFixedSizeAction = new QAction(tr("Metadata Panel Fix Size"), this);
+    metadataFixedSizeAction->setObjectName("metadataFixedSize");
+    metadataFixedSizeAction->setShortcutVisibleInContextMenu(true);
+    metadataFixedSizeAction->setCheckable(true);
+    addAction(metadataFixedSizeAction);
+    connect(metadataFixedSizeAction, &QAction::triggered, this, &MW::setMetadataDockFixedSize);
+
     // Workspace submenu of Window menu
     defaultWorkspaceAction = new QAction(tr("Default Workspace"), this);
     defaultWorkspaceAction->setObjectName("defaultWorkspace");
@@ -2812,6 +2819,7 @@ void MW::createMenus()
     metadataActions->append(prefInfoAction);
     metadataActions->append(separatorAction);
     metadataActions->append(metadataDockLockAction);
+    metadataActions->append(metadataFixedSizeAction);
 
     // Open with Menu (used in thumbview context menu)
     QAction *openWithGroupAct = new QAction(tr("Open with..."), this);
@@ -6953,9 +6961,17 @@ void MW::setMetadataDockVisibility()
     metadataDock->setVisible(metadataDockVisibleAction->isChecked());
 }
 
-void MW::setMetadataDockSize()
+void MW::setMetadataDockFixedSize()
 {
-    // add if decide to "freeze" dock size
+    if (metadataFixedSizeAction->isChecked()) {
+        qDebug() << "variable size";
+        metadataDock->setMinimumSize(200, 125);
+        metadataDock->setMaximumSize(999999, 999999);
+    }
+    else {
+        qDebug() << "fixed size";
+        metadataDock->setFixedSize(metadataDock->size());
+    }
 }
 
 void MW::setThumbDockVisibity()
@@ -8387,7 +8403,29 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    filters->invertFilters();
+    int maxW = 0, maxH = 0;
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        QModelIndex idx = dm->index(row, 0);
+        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(THUMB_MAX);
+        if (maxW < pm.width()) maxW = pm.width();
+        if (maxH < pm.height()) maxH = pm.height();
+    }
+    if (maxW == maxH && gridView->thumbWidth > gridView->thumbHeight)
+        gridView->thumbHeight = gridView->thumbWidth;
+    if (maxW == maxH && gridView->thumbHeight > gridView->thumbWidth)
+        gridView->thumbWidth = gridView->thumbHeight;
+    if (maxW > maxH) gridView->thumbHeight = gridView->thumbWidth * ((double)maxH / maxW);
+    if (maxH > maxW) gridView->thumbWidth = gridView->thumbHeight * ((double)maxW / maxH);
+    gridView->setThumbParameters();
+    qDebug() << maxW << maxH << gridView->thumbWidth << gridView->thumbHeight;
+    return;
+
+    return;
+
+    metadataDock->setMinimumSize(200, 125);
+    metadataDock->setMaximumSize(999999, 999999);
+    qDebug() << metadataDock->minimumSize();
+
 
     //    metadataDock->setFixedSize(metadataDock->size());
 }
