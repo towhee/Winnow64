@@ -433,7 +433,7 @@ private slots:
     void setFavDockVisibility();
     void setFilterDockVisibility();
     void setMetadataDockVisibility();
-    void setMetadataDockSize();
+    void setMetadataDockFixedSize();
 
     void toggleThumbDockVisibity();
     void toggleFolderDockVisibility();
@@ -687,6 +687,8 @@ private:
     QAction *metadataDockLockAction;
     QAction *thumbDockLockAction;
     QAction *allDocksLockAction;
+
+    QAction *metadataFixedSizeAction;
 
     // Workspace Menu
 
