@@ -955,6 +955,10 @@ click position that is then sent to imageView to zoom to the same spot
 
 void ThumbView::resizeEvent(QResizeEvent *event)
 {
+/*  resizeEvent can be triggered by a change in the gridView cell size (thumbWidth) that
+   requires justification.  That is filtered by checking if the ThumbView width has changed
+   or skipResize has been set.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -966,7 +970,6 @@ void ThumbView::resizeEvent(QResizeEvent *event)
     }
     static int count = -1;
     count++;
-    qDebug() << "Resize" << objectName() << count;
     QListView::resizeEvent(event);
     static int prevWidth;
     if (count == 0) {
@@ -975,7 +978,6 @@ void ThumbView::resizeEvent(QResizeEvent *event)
     }
     count++;
     if (objectName() == "Thumbnails") return;
-    qDebug() << "width vs prevWidth" << width() << prevWidth;
     if (width() == prevWidth) return;
     thumbsRejustify();
 }

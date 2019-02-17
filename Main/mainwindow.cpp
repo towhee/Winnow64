@@ -1250,7 +1250,12 @@ been consumed or all the images are cached.
     if (!G::aSync)
      dm->addMetadata(progressBar, isShowCacheStatus);
 
-//#ifdef ISTEST
+    // update filter item counts
+    dm->filteredItemCount();
+    dm->unfilteredItemCount();
+
+
+#ifdef ISTEST
     QString async;
     int threads;
     int n = dm->sf->rowCount();
@@ -1267,7 +1272,7 @@ been consumed or all the images are cached.
              << "Threads:" << threads
              << "Files:" << n
              << "Time(ms):" << cacheTimer.elapsed();
-//#endif
+#endif
 
     statusBar()->showMessage("Loading the image cache", 1000);
     // have to wait for the data before resize table columns
@@ -1670,7 +1675,7 @@ void MW::createActions()
     addAction(filterPickAction);
     connect(filterPickAction, &QAction::triggered, filters, &Filters::checkPicks);
 
-    popPickHistoryAction = new QAction(tr("Undo Pick"), this);
+    popPickHistoryAction = new QAction(tr("Recover prior pick state"), this);
     popPickHistoryAction->setObjectName("togglePick");
     popPickHistoryAction->setShortcutVisibleInContextMenu(true);
     addAction(popPickHistoryAction);
@@ -1968,9 +1973,15 @@ void MW::createActions()
 
     filterInvertAction = new QAction(tr("Invert Filter"), this);
     filterInvertAction->setShortcutVisibleInContextMenu(true);
-    filterInvertAction->setCheckable(true);
+    filterInvertAction->setCheckable(false);
     addAction(filterInvertAction);
     connect(filterInvertAction,  &QAction::triggered, this, &MW::invertFilters);
+
+    filterLastDayAction = new QAction(tr("Most recent day"), this);
+    filterLastDayAction->setShortcutVisibleInContextMenu(true);
+    filterLastDayAction->setCheckable(true);
+    addAction(filterLastDayAction);
+    connect(filterLastDayAction,  &QAction::triggered, this, &MW::filterLastDay);
 
     // Sort Menu
 
@@ -2656,6 +2667,7 @@ void MW::createMenus()
     filterMenu->addAction(filterPurpleAction);
     filterMenu->addSeparator();
     filterMenu->addAction(filterInvertAction);
+    filterMenu->addAction(filterLastDayAction);
 
     // Sort Menu
 
@@ -2944,7 +2956,6 @@ void MW::enableSelectionDependentMenus()
     G::track(__FUNCTION__);
     #endif
     }
-    filterInvertAction->setEnabled(false);      // temp until implement
 
     if(selectionModel->selectedRows().count() > 0) {
         openWithMenu->setEnabled(true);
@@ -4164,6 +4175,38 @@ tableView.
     resortImageCache();
 }
 
+void MW::filterLastDay()
+{
+/*
+.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (dm->rowCount() == 0) {
+        popup("No images available to filter", 2000, 0.75);
+        filterLastDayAction->setChecked(false);
+        return;
+    }
+    int last = filters->days->childCount();
+    if (last == 0) {
+        popup("No days are available to filter", 2000, 0.75);
+        filterLastDayAction->setChecked(false);
+        return;
+    }
+    uncheckAllFilters();
+    if (filterLastDayAction->isChecked()) {
+        filters->days->child(last - 1)->setCheckState(0, Qt::Checked);
+    }
+    else {
+        filterLastDayAction->setChecked(false);
+    }
+    filterChange();
+
+}
+
 void MW::filterChange(bool isFilter)
 {
 /*
@@ -4177,7 +4220,7 @@ All filter changes should be routed to here as a central clearing house.
     // refresh the proxy sort/filter
     dm->sf->filterChange();
     // update filter panel image count by filter item
-    dm->filterItemCount();
+    dm->filteredItemCount();
     // update the status panel filtration status
     updateFilterStatus(isFilter);
     // update the image list to match dm->sf filration
@@ -4227,16 +4270,17 @@ void MW::invertFilters()
 /*
 Currently this is just clearing filters ...  rgh what to do?
 */
-    if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Unchecked);
-    if (filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Unchecked);
-    if (filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Unchecked);
-    if (filterRating4Action->isChecked()) filters->ratings4->setCheckState(0, Qt::Unchecked);
-    if (filterRating5Action->isChecked()) filters->ratings5->setCheckState(0, Qt::Unchecked);
-    if (filterRedAction->isChecked()) filters->labelsRed->setCheckState(0, Qt::Unchecked);
-    if (filterYellowAction->isChecked()) filters->labelsYellow->setCheckState(0, Qt::Unchecked);
-    if (filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Unchecked);
-    if (filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Unchecked);
-    if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Unchecked);
+    if (dm->rowCount() == 0) {
+        popup("No images available to invert filtration", 2000, 0.75);
+        filterLastDayAction->setChecked(false);
+        return;
+    }
+    if (dm->rowCount() == dm->sf->rowCount()) {
+        popup("No filters assigned - null inversion would result", 2000, 0.75);
+        filterLastDayAction->setChecked(false);
+        return;
+    }
+    filters->invertFilters();
 
     filterChange();
 }
@@ -4262,7 +4306,7 @@ void MW::uncheckAllFilters()
 void MW::updateFilterCount()
 {
     statusBar()->showMessage("Filters are updating for all the metadata in the folder", 1000);
-    dm->filterItemCount();
+    dm->filteredItemCount();
 }
 
 void MW::refine()
@@ -6375,6 +6419,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         filterBlueAction->setShortcut(QKeySequence("Shift+9"));
         filterPurpleAction->setShortcut(QKeySequence("Shift+0"));
 
+        filterLastDayAction->setShortcut(QKeySequence("Shift+D"));
+
         // View
         asLoupeAction->setShortcut(QKeySequence("E"));
         asGridAction->setShortcut(QKeySequence("G"));
@@ -6909,9 +6955,7 @@ void MW::setMetadataDockVisibility()
 
 void MW::setMetadataDockSize()
 {
-    qDebug() << "infoView->size()" << infoView->size();
-    qDebug() << "metadataDock->size()" << metadataDock->size();
-//    metadataDock->setFixedSize(infoView->size());
+    // add if decide to "freeze" dock size
 }
 
 void MW::setThumbDockVisibity()
@@ -7292,7 +7336,7 @@ void MW::togglePick()   // not currently used
     updateStatus(true, "");
 
     // update filter counts
-    dm->filterItemCount();
+    dm->filteredItemCount();
 }
 
 void MW::pushPick(QString fPath, QString status)
@@ -7356,7 +7400,7 @@ void MW::updatePickFromHistory(QString fPath, QString status)
         updateStatus(true, "");
 
         // update filter counts
-        dm->filterItemCount();
+        dm->filteredItemCount();
     }
 }
 
@@ -7647,7 +7691,7 @@ the rating for all the selected thumbs.
     dm->sf->filterChange();
 
     // update filter counts
-    dm->filterItemCount();
+    dm->filteredItemCount();
 }
 
 void MW::setColorClass()
@@ -7719,7 +7763,7 @@ set the color class for all the selected thumbs.
     dm->sf->filterChange();
 
     // update filter counts
-    dm->filterItemCount();
+    dm->filteredItemCount();
 }
 
 void MW::metadataChanged(QStandardItem* item)
@@ -8343,10 +8387,9 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << gridView->width()
-             << gridView->viewport()->width()
-             << gridView->getThumbCellSize().width() ;
+    filters->invertFilters();
 
+    //    metadataDock->setFixedSize(metadataDock->size());
 }
 
 void MW::test2()

@@ -1,5 +1,11 @@
 #include "Image/thumb.h"
 
+/*
+   Loads a thumbnail preview from a file based on metadata already extracted by mdCache.  If
+   the file contains a thumbnail jpg it is extracted.  If not, then then entire image is read
+   and scaled to thumbMax.
+*/
+
 Thumb::Thumb(QObject *parent, Metadata *metadata) : QObject(parent)
 {
     this->metadata = metadata;
@@ -50,7 +56,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
     bool success;
     QFile imFile(fPath);
     QImageReader thumbReader;
-    QSize thumbMax(THUMB_MAX, THUMB_MAX);       // rgh review hard coding thumb size
+//    QSize thumbMax(THUMB_MAX, THUMB_MAX);       // rgh review hard coding thumb size
     if (imFile.open(QIODevice::ReadOnly)) {
         // close file to allow qt thumbReader to work
         imFile.close();
@@ -103,9 +109,9 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
                 imFile.close();
                 if (image.isNull() && G::isThreadTrackingOn )
                     track(fPath, "Empty thumb");
-                  if (G::isThreadTrackingOn) qDebug() << G::t.restart() << "\t" << fPath << "Scaling:" << image.size();
+                if (G::isThreadTrackingOn) qDebug() << G::t.restart() << "\t" << fPath << "Scaling:" << image.size();
 
-                image.scaled(thumbMax, Qt::KeepAspectRatio);
+                image = image.scaled(thumbMax, Qt::KeepAspectRatio);
                 success = true;
             }
             else {
