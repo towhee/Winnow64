@@ -52,6 +52,7 @@ signals:
 public slots:
 
     bool isAnyFilter();
+    void invertFilters();
     void uncheckAllFilters();
     void expandAllFilters();
     void collapseAllFilters();

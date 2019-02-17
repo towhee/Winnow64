@@ -72,7 +72,7 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = nullptr);
 
-    QString version = "Version: 0.9.7.0.6 released 2019-02-05";
+    QString version = "Version: 0.9.7.1 released 2019-02-16";
     QString website = "Website: "
             "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"
@@ -331,6 +331,7 @@ private slots:
     void setColorClass();
     void setRotation(int degrees);
     void metadataChanged(QStandardItem* item);
+    void filterLastDay();
     void filterChange(bool isFilter = true);
     void quickFilter();
     void invertFilters();
@@ -616,6 +617,7 @@ private:
     QAction *filterBlueAction;
     QAction *filterPurpleAction;
     QAction *filterInvertAction;
+    QAction *filterLastDayAction;
 
     // Sort Menu
     QActionGroup *sortGroupAction;
