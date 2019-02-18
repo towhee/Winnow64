@@ -444,13 +444,9 @@ void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
     if (okToUpdate) {
         if (!ignoreGridBestAspectChange) {
             m0->gridView->thumbWidth = value;
-            if (ui->lockDimChk_2->isChecked()) {
-                ui->iconHeightSlider_2->setValue(value);
-            }
-            else {
-                m0->gridView->thumbsRejustify();
-            }
+            if (ui->lockDimChk_2->isChecked()) ui->iconHeightSlider_2->setValue(value);
             m0->gridView->setThumbParameters();
+//            m0->gridView->thumbsRejustify();
             ui->bestAspectChk_2->setChecked(false);
         }
     }
@@ -461,14 +457,9 @@ void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
     if (okToUpdate) {
         if (!ignoreGridBestAspectChange) {
             m0->gridView->thumbHeight = value;
-            if (ui->lockDimChk_2->isChecked()) {
-                ui->iconWidthSlider_2->setValue(value);
-            }
-            else {
-                m0->gridView->thumbsRejustify();
-            }
+            if (ui->lockDimChk_2->isChecked()) ui->iconWidthSlider_2->setValue(value);
             m0->gridView->setThumbParameters();
-            m0->gridView->thumbsRejustify();
+//            m0->gridView->thumbsRejustify();
             ui->bestAspectChk_2->setChecked(false);
         }
     }

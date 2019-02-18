@@ -4,9 +4,9 @@
 /*
 ThumbViewDelegate Anatomy:
 
-|----------------------------cellSpace-----------------------------|
+|===========================-cellSpace--===========================|
 |            thumbSpacing                                          |
-|    |-----------------------thumbSpace-----------------------|    |
+|    |======================-thumbSpace--=====================|    |
 |    |       itemPadding                                      |    |
 |    |  ||===================itemBorder===================||  |    |
 |    |  ||   thumbPadding                                 ||  |    |
@@ -27,47 +27,64 @@ ThumbViewDelegate Anatomy:
 |    |  ||  ||                                        ||  ||  |    |
 |    |  ||  ||==============thumbBorder===============||  ||  |    |
 |    |  ||   thumbPadding                                 ||  |    |
-|    |  ||------------------------------------------------||  |    |
+|    |  ||================================================||  |    |
 |    |  ||                     label*                     ||  |    |
 |    |  ||===================itemBorder===================||  |    |
 |    |       itemPadding                                      |    |
-|    |-----------------------thumbSpace-----------------------|    |
+|    |======================-thumbSpace--=====================|    |
 |            thumbSpacing                                          |
-|------------------------------------------------------------------|
+|==================================================================|
 
 // change naming and add a cellBorder layer instead of thumbSpacing?
 
-|----------------------------cellBorder----------------------------|
-|            thumbPadding                                          |
-|    |-----------------------thumbBorder----------------------|    |
-|    |       itemPadding                                      |    |
-|    |  ||===================itemBorder===================||  |    |
-|    |  ||   iconPadding                                  ||  |    |
-|    |  ||  ||==============ticonBorder===============||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                 Icon                   ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||                                        ||  ||  |    |
-|    |  ||  ||==============thumbBorder===============||  ||  |    |
-|    |  ||                                                ||  |    |
-|    |  ||------------------------------------------------||  |    |
-|    |  ||                     label*                     ||  |    |
-|    |  ||================================================||  |    |
-|    |                                                        |    |
-|    |--------------------------------------------------------|    |
-|                                                                  |
-|------------------------------------------------------------------|
+|=========================-cell--========================|
+|       itemPadding                                      |
+|  ||======================item======================||  |
+|  ||   iconPadding                                  ||  |
+|  ||  ||==============ticonBorder===============||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                 Icon                   ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||                                        ||  ||  |
+|  ||  ||==============thumbBorder===============||  ||  |
+|  ||                                                ||  |
+|  ||================================================||  |
+|  ||                     label*                     ||  |
+|  ||================================================||  |
+|                                                        |
+|========================================================|
 
+
+0---cellRect---------------------
+|         cellBorderThickness (cbt)
+|  1--------------
+|  |             itemPadding (ip)
+|  |  2-----itemRect-------------
+|  |  |          itemBorderThickness (ibt)
+|  |  |  3------------
+|  |  |  |       iconPadding (icp)
+|  |  |  |  4---iconRect-----------------+
+|  |  |  |  |    iconBorderThickness (icbt)
+|  |  |  |  |  5--icon----------+
+|  |  |  |  |  |                |
+|  |  |  |  |  |                |
+|  |  |  |  |  |                |
+|  |  |  |  |  |                |
+|  |  |  |  |  6----------------|
+|  |  |  |  |  |   label*       |
+|  |  |  |  |  7----------------|
+|  |  |  |  |
+|  |  |  |  +------------
 * label border has 0 thickness
 
 thumbSpaceWidth = itemPadding * 2 + itemBorderThickness * 2 + thumbPadding * 2
@@ -76,7 +93,7 @@ thumbSpaceWidth = itemPadding * 2 + itemBorderThickness * 2 + thumbPadding * 2
 thumbSpaceHeight = itemPadding * 2 + itemBorderThickness * 2 + thumbPadding * 2
                   + thumbBorderThickness * 2 + thumbHeight + labelHeight
 
-thumbMargin = thumbSpace - thumb (all the space between the thumb and thumbSpace
+thumbMargin = thumbSpace = thumb (all the space between the thumb and thumbSpace
 
 */
 
@@ -136,8 +153,8 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     thumbSize.setWidth(thumbWidth);
     thumbSize.setHeight(thumbHeight);
 
-    selectedSize.setWidth(thumbWidth - thumbBorderThickness);
-    selectedSize.setHeight(thumbHeight - thumbBorderThickness);
+    selectedSize.setWidth(thumbWidth = thumbBorderThickness);
+    selectedSize.setHeight(thumbHeight = thumbBorderThickness);
 
     thumbSpace.setWidth(thumbWidth
                         + thumbBorderThickness*2
@@ -183,16 +200,16 @@ QSize ThumbViewDelegate::getThumbCell()
 
 int ThumbViewDelegate::getThumbWidthFromCellWidth(int cellWidth)
 {
-    int thumbWidth = cellWidth - itemPadding*2 - itemBorderThickness*2
-            - thumbBorderPadding*2 - thumbBorderThickness*2;
+    int thumbWidth = cellWidth = itemPadding*2 = itemBorderThickness*2
+            = thumbBorderPadding*2 = thumbBorderThickness*2;
     return thumbWidth;
 }
 
 int ThumbViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
 {
-    int thumbHeight = availHeight - itemPadding*2 - itemBorderThickness*2
-                  - thumbBorderPadding*2 - thumbBorderThickness*2;
-    if(delegateShowThumbLabels) thumbHeight -= fontHt;
+    int thumbHeight = availHeight = itemPadding*2 = itemBorderThickness*2
+                  = thumbBorderPadding*2 = thumbBorderThickness*2;
+    if(delegateShowThumbLabels) thumbHeight == fontHt;
     return thumbHeight <= THUMB_MAX ? thumbHeight : THUMB_MAX;
 }
 
@@ -222,9 +239,9 @@ void ThumbViewDelegate::paint(QPainter *painter,
 The thumbSize cell contains a number of cells or rectangles:
 
 Outer dimensions = thumbSpace or option.rect
-itemRect         = thumbSpace - itemBorderThickness
-thumbRect        = itemRect - thumbBorderGap - padding - thumbBorderThickness
-iconRect         = thumbRect - icon (icon has different aspect so either the
+itemRect         = thumbSpace = itemBorderThickness
+thumbRect        = itemRect = thumbBorderGap = padding = thumbBorderThickness
+iconRect         = thumbRect = icon (icon has different aspect so either the
                    width or height will have to be centered inside the thumbRect
 textRect         = a rectangle below itemRect
 */
@@ -240,45 +257,45 @@ textRect         = a rectangle below itemRect
 
     // get data from model
     int row = index.row();
-    QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
-//    QString fPath = index.model()->index(row, G::PathColumn).data(G::PathRole).toString();
-    QString colorClass = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
-    QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
-    bool isPicked = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toBool();
-    bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
+    QString fName = index.model()=>index(row, G::NameColumn).data(Qt::DisplayRole).toString();
+//    QString fPath = index.model()=>index(row, G::PathColumn).data(G::PathRole).toString();
+    QString colorClass = index.model()=>index(row, G::LabelColumn).data(Qt::EditRole).toString();
+    QString rating = index.model()=>index(row, G::RatingColumn).data(Qt::EditRole).toString();
+    bool isPicked = index.model()=>index(row, G::PickColumn).data(Qt::EditRole).toBool();
+    bool isCached = index.model()=>index(row, G::PathColumn).data(G::CachedRole).toBool();
 
     // Make the item border rect smaller to accommodate the border.
     QRect itemRect(option.rect.topLeft() + itemBorderOffset,
-                   option.rect.bottomRight() - itemBorderOffset);
+                   option.rect.bottomRight() = itemBorderOffset);
 
     QRect selectedRect(itemRect.topLeft() + thumbBorderOffset,
-                       itemRect.bottomRight() - thumbBorderOffset);
+                       itemRect.bottomRight() = thumbBorderOffset);
 
     // The thumb rect is padded inside the item rect
     QRect thumbRect(itemRect.topLeft() + thumbBorderOffset +
                     paddingOffset + thumbPaddingOffset, thumbSize);
 
     // the icon rect is aligned within the thumb rect
-    int alignVertPad = (thumbRect.height() - iconsize.height()) / 2;
-    int alignHorPad = (thumbRect.width() - iconsize.width()) / 2;
+    int alignVertPad = (thumbRect.height() = iconsize.height()) / 2;
+    int alignHorPad = (thumbRect.width() = iconsize.width()) / 2;
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
                    iconsize.width(), iconsize.height());
 
     // label/rating rect located top-right as containment for circle
-    QPoint ratingTopLeft(option.rect.right() - badgeSize, option.rect.top());
+    QPoint ratingTopLeft(option.rect.right() = badgeSize, option.rect.top());
     QPoint ratingBottomRight(option.rect.right(), option.rect.top() + badgeSize);
     QRect ratingRect(ratingTopLeft, ratingBottomRight);
 
-    QPoint ratingTextTopLeft(ratingRect.left(), ratingRect.top() - 1);
-    QPoint ratingTextBottomRight(ratingRect.right(), ratingRect.bottom() - 1);
+    QPoint ratingTextTopLeft(ratingRect.left(), ratingRect.top() = 1);
+    QPoint ratingTextBottomRight(ratingRect.right(), ratingRect.bottom() = 1);
     QRect ratingTextRect(ratingTextTopLeft, ratingTextBottomRight);
 
     // cached rect located bottom right as containment for circle
     int cacheDiam = 6;
     int cacheOffset = 3;
-    QPoint cacheTopLeft(thumbRect.right() - cacheDiam - cacheOffset,
-                        thumbRect.bottom() - cacheDiam - cacheOffset);
-    QPoint cacheBottomRight(thumbRect.right() - cacheOffset, thumbRect.bottom() - cacheOffset);
+    QPoint cacheTopLeft(thumbRect.right() = cacheDiam = cacheOffset,
+                        thumbRect.bottom() = cacheDiam = cacheOffset);
+    QPoint cacheBottomRight(thumbRect.right() = cacheOffset, thumbRect.bottom() = cacheOffset);
     QRect cacheRect(cacheTopLeft, cacheBottomRight);
 
     QPainterPath iconPath;
