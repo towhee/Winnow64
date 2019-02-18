@@ -982,29 +982,6 @@ void ThumbView::resizeEvent(QResizeEvent *event)
     thumbsRejustify();
 }
 
-void ThumbView::bestAspect()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    int maxW = 0, maxH = 0;
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        QModelIndex idx = dm->index(row, 0);
-        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(THUMB_MAX);
-        if (maxW < pm.width()) maxW = pm.width();
-        if (maxH < pm.height()) maxH = pm.height();
-    }
-    if (maxW == maxH && thumbWidth > thumbHeight)
-        thumbHeight = thumbWidth;
-    if (maxW == maxH && thumbHeight > thumbWidth)
-        thumbWidth = thumbHeight;
-    if (maxW > maxH) thumbHeight = thumbWidth * ((double)maxH / maxW);
-    if (maxH > maxW) thumbWidth = thumbHeight * ((double)maxW / maxH);
-    setThumbParameters();
-}
-
 void ThumbView::thumbsFit(Qt::DockWidgetArea area)
 {
     {
