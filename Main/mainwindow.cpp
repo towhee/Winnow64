@@ -1254,9 +1254,6 @@ been consumed or all the images are cached.
     dm->filteredItemCount();
     dm->unfilteredItemCount();
 
-    // determine the aspect ratio for a best fit for thumbnails
-    if (thumbView->isBestAspect) thumbView->bestAspect();
-    if (gridView->isBestAspect) gridView->bestAspect();
 
 #ifdef ISTEST
     QString async;
@@ -3293,7 +3290,6 @@ void MW::createThumbView()
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
     thumbView->wrapThumbs = setting->value("wrapThumbs").toBool();
-    thumbView->isBestAspect = setting->value("isBestAspect").toBool();
     thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
 
     // double mouse click fires displayLoupe
@@ -3334,7 +3330,6 @@ void MW::createGridView()
     gridView->thumbHeight = setting->value("thumbHeightGrid").toInt();
     gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
     gridView->showThumbLabels = setting->value("showThumbLabelsGrid").toBool();
-    gridView->isBestAspect = setting->value("isBestAspectGrid").toBool();
     gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
 
     // double mouse click fires displayLoupe
@@ -5844,7 +5839,6 @@ re-established when the application is re-opened.
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showThumbLabels", thumbView->showThumbLabels);
     setting->setValue("wrapThumbs", thumbView->wrapThumbs);
-    setting->setValue("isBestAspect", thumbView->isBestAspect);
 
     // grid
     setting->setValue("thumbSpacingGrid", gridView->thumbSpacing);
@@ -5853,7 +5847,6 @@ re-established when the application is re-opened.
     setting->setValue("thumbHeightGrid", gridView->thumbHeight);
     setting->setValue("labelFontSizeGrid", gridView->labelFontSize);
     setting->setValue("showThumbLabelsGrid", gridView->showThumbLabels);
-    setting->setValue("isBestAspectGrid", gridView->isBestAspect);
 
     // slideshow
     setting->setValue("slideShowDelay", slideShowDelay);
@@ -5941,10 +5934,6 @@ re-established when the application is re-opened.
     setting->setValue("pos", thumbDock->dw.pos);
     setting->setValue("size", thumbDock->dw.size);
     setting->endGroup();
-
-    /* ThumbView parameters */              // rgh to do (also GridView parameters)
-//    setting->beginGroup(("ThumbView"));
-//    setting->endGroup();
 
     /* InfoView okToShow fields */
     setting->beginGroup("InfoFields");
@@ -8414,6 +8403,25 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    int maxW = 0, maxH = 0;
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        QModelIndex idx = dm->index(row, 0);
+        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(THUMB_MAX);
+        if (maxW < pm.width()) maxW = pm.width();
+        if (maxH < pm.height()) maxH = pm.height();
+    }
+    if (maxW == maxH && gridView->thumbWidth > gridView->thumbHeight)
+        gridView->thumbHeight = gridView->thumbWidth;
+    if (maxW == maxH && gridView->thumbHeight > gridView->thumbWidth)
+        gridView->thumbWidth = gridView->thumbHeight;
+    if (maxW > maxH) gridView->thumbHeight = gridView->thumbWidth * ((double)maxH / maxW);
+    if (maxH > maxW) gridView->thumbWidth = gridView->thumbHeight * ((double)maxW / maxH);
+    gridView->setThumbParameters();
+    qDebug() << maxW << maxH << gridView->thumbWidth << gridView->thumbHeight;
+    return;
+
+    return;
+
     metadataDock->setMinimumSize(200, 125);
     metadataDock->setMaximumSize(999999, 999999);
     qDebug() << metadataDock->minimumSize();
