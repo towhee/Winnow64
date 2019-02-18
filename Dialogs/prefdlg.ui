@@ -1086,7 +1086,7 @@
        <x>380</x>
        <y>115</y>
        <width>30</width>
-       <height>0</height>
+       <height>16</height>
       </rect>
      </property>
      <property name="font">
@@ -1110,12 +1110,12 @@
        <x>20</x>
        <y>115</y>
        <width>151</width>
-       <height>0</height>
+       <height>16</height>
       </rect>
      </property>
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>12</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1133,7 +1133,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>12</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1196,7 +1196,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>12</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1278,7 +1278,7 @@
        <x>200</x>
        <y>115</y>
        <width>160</width>
-       <height>0</height>
+       <height>22</height>
       </rect>
      </property>
      <property name="font">
@@ -1328,7 +1328,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>12</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1391,7 +1391,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>12</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1409,7 +1409,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>12</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1451,7 +1451,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>12</pointsize>
       </font>
      </property>
      <property name="text">
@@ -1467,31 +1467,8 @@
        <height>20</height>
       </rect>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
      <property name="text">
       <string>Wrap thumbnails when docked on sides or when floating</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="bestAspectChk">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>100</y>
-       <width>431</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Let Winnow determine best fit based on aspect ratios of images</string>
      </property>
     </widget>
    </widget>
@@ -1576,7 +1553,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>12</pointsize>
       </font>
      </property>
      <property name="frameShape">
@@ -1595,7 +1572,7 @@
        <x>380</x>
        <y>115</y>
        <width>30</width>
-       <height>0</height>
+       <height>16</height>
       </rect>
      </property>
      <property name="font">
@@ -1984,24 +1961,6 @@
      </property>
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="bestAspectChk_2">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>100</y>
-       <width>431</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Let Winnow determine best fit based on aspect ratios of images</string>
      </property>
     </widget>
    </widget>

@@ -29,7 +29,6 @@ public:
 
     bool isTopOrBottomDock;
     bool isFloat;       // set by MW ...
-    bool isBestAspect;
 
     void updateLayout();
 
@@ -77,7 +76,6 @@ public slots:
     void thumbsShrink();
     void gridEnlargeJustified();
     void gridShrinkJustified();
-    void bestAspect();
     void thumbsFit(Qt::DockWidgetArea area);
     void thumbsFitTopOrBottom();
     void invertSelection();                         //in use
