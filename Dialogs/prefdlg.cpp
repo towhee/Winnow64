@@ -70,9 +70,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->fontSizeSlider->setValue(m0->thumbView->labelFontSize);
     ui->showThumbLabelChk->setChecked(m0->thumbView->showThumbLabels);
     ui->wrapChk->setChecked(m0->thumbView->wrapThumbs);
-    ui->bestAspectChk->setChecked(m0->thumbView->isBestAspect);
-    if (ui->bestAspectChk->isChecked()) ui->lockDimChk->setChecked(false);
-    else ui->lockDimChk->setChecked(true);
+    ui->lockDimChk->setChecked(true);
 
     // grid
     ui->iconWidthSlider_2->setSingleStep(1);
@@ -98,9 +96,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->fontSizeSlider_2->setValue(m0->thumbView->labelFontSize);
     ui->fontSizeSlider_2->setValue(m0->gridView->labelFontSize);
     ui->showThumbLabelChk_2->setChecked(m0->gridView->showThumbLabels);
-    ui->bestAspectChk_2->setChecked(m0->gridView->isBestAspect);
-    if (ui->bestAspectChk_2->isChecked()) ui->lockDimChk_2->setChecked(false);
-    else ui->lockDimChk_2->setChecked(true);
+    ui->lockDimChk_2->setChecked(true);
 
     // slideshow
     ui->slideshowDelaySpinbox->setValue(m0->slideShowDelay);
@@ -352,24 +348,18 @@ void Prefdlg::on_trackpadScrollRadio_clicked()
 void Prefdlg::on_iconWidthSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        if (!ignoreThumbBestAspectChange) {
-            m0->thumbView->thumbWidth = value;
-            if (ui->lockDimChk->isChecked()) ui->iconHeightSlider->setValue(value);
-            m0->thumbView->setThumbParameters();
-            ui->bestAspectChk->setChecked(false);
-        }
+        m0->thumbView->thumbWidth = value;
+        if (ui->lockDimChk->isChecked()) ui->iconHeightSlider->setValue(value);
+        m0->thumbView->setThumbParameters();
     }
 }
 
 void Prefdlg::on_iconHeightSlider_valueChanged(int value)
 {
     if (okToUpdate) {
-        if (!ignoreThumbBestAspectChange) {
-            m0->thumbView->thumbHeight = value;
-            if (ui->lockDimChk->isChecked()) ui->iconWidthSlider->setValue(value);
-            m0->thumbView->setThumbParameters();
-            ui->bestAspectChk->setChecked(false);
-        }
+        m0->thumbView->thumbHeight = value;
+        if (ui->lockDimChk->isChecked()) ui->iconWidthSlider->setValue(value);
+        m0->thumbView->setThumbParameters();
     }
 }
 
@@ -406,30 +396,6 @@ void Prefdlg::on_wrapChk_clicked()
     }
 }
 
-void Prefdlg::on_lockDimChk_clicked(bool checked)
-{
-    if (okToUpdate) {
-        if (checked) ui->bestAspectChk->setChecked(false);
-   }
-}
-
-void Prefdlg::on_bestAspectChk_clicked(bool checked)
-{
-    if (okToUpdate) {
-        m0->thumbView->isBestAspect = checked;
-        if (checked) {
-            ui->lockDimChk->setChecked(false);
-            m0->thumbView->isBestAspect = checked;
-            m0->thumbView->bestAspect();
-            m0->thumbView->setThumbParameters();
-            ignoreThumbBestAspectChange = true;
-            ui->iconWidthSlider->setValue(m0->thumbView->thumbWidth);
-            ui->iconHeightSlider->setValue(m0->thumbView->thumbHeight);
-            ignoreThumbBestAspectChange = false;
-        }
-    }
-}
-
 void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 {
     if (okToUpdate) {
@@ -442,6 +408,7 @@ void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
+<<<<<<< HEAD
         if (!ignoreGridBestAspectChange) {
             m0->gridView->thumbWidth = value;
             if (ui->lockDimChk_2->isChecked()) ui->iconHeightSlider_2->setValue(value);
@@ -449,12 +416,19 @@ void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
 //            m0->gridView->thumbsRejustify();
             ui->bestAspectChk_2->setChecked(false);
         }
+=======
+        m0->gridView->thumbWidth = value;
+        if (ui->lockDimChk_2->isChecked()) ui->iconHeightSlider_2->setValue(value);
+        m0->gridView->setThumbParameters();
+
+>>>>>>> parent of ef8ae81... sync mac
     }
 }
 
 void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
 {
     if (okToUpdate) {
+<<<<<<< HEAD
         if (!ignoreGridBestAspectChange) {
             m0->gridView->thumbHeight = value;
             if (ui->lockDimChk_2->isChecked()) ui->iconWidthSlider_2->setValue(value);
@@ -462,6 +436,12 @@ void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
 //            m0->gridView->thumbsRejustify();
             ui->bestAspectChk_2->setChecked(false);
         }
+=======
+        m0->gridView->thumbHeight = value;
+        if (ui->lockDimChk_2->isChecked()) ui->iconWidthSlider_2->setValue(value);
+        m0->gridView->setThumbParameters();
+        m0->gridView->thumbsRejustify();
+>>>>>>> parent of ef8ae81... sync mac
     }
 }
 
@@ -488,30 +468,6 @@ void Prefdlg::on_showThumbLabelChk_2_clicked()
     if (okToUpdate) {
         m0->gridView->thumbPadding = ui->showThumbLabelChk_2->isChecked();
         m0->gridView->setThumbParameters();
-    }
-}
-
-void Prefdlg::on_lockDimChk_2_clicked(bool checked)
-{
-    if (okToUpdate) {
-        if (checked) ui->bestAspectChk_2->setChecked(false);
-   }
-}
-
-void Prefdlg::on_bestAspectChk_2_clicked(bool checked)
-{
-    if (okToUpdate) {
-        if (checked) {
-            ui->lockDimChk_2->setChecked(false);
-            m0->gridView->isBestAspect = checked;
-            m0->gridView->bestAspect();
-            m0->gridView->setThumbParameters();
-            m0->gridView->thumbsRejustify();
-            ignoreGridBestAspectChange = true;
-            ui->iconWidthSlider_2->setValue(m0->gridView->thumbWidth);
-            ui->iconHeightSlider_2->setValue(m0->gridView->thumbHeight);
-            ignoreGridBestAspectChange = false;
-        }
     }
 }
 
@@ -681,5 +637,3 @@ void Prefdlg::on_aSynchChk_clicked()
 {
     G::aSync = ui->aSynchChk->isChecked();
 }
-
-
