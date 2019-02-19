@@ -83,6 +83,13 @@ private slots:
 
     void on_aSynchChk_clicked();
 
+    void on_bestAspectChk_clicked(bool checked);
+
+    void on_bestAspectChk_2_clicked(bool checked);
+
+    void on_lockDimChk_clicked(bool checked);
+
+    void on_lockDimChk_2_clicked(bool checked);
 private:
     Ui::Prefdlg *ui;
     QStandardItemModel *okInfo;
@@ -90,6 +97,9 @@ private:
     void reject();
     bool okToUpdate;
     bool isSliderPressed;
+
+    bool ignoreThumbBestAspectChange;
+    bool ignoreGridBestAspectChange;
 
    int cacheWtAhead;
    QString source;     // "thumbView" or "gridView"
