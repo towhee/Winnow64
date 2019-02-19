@@ -108,6 +108,7 @@ public:
     QLabel *iconHeightLbl;
     QLabel *label_7;
     QCheckBox *wrapChk;
+    QCheckBox *bestAspectChk;
     QWidget *pageThumbsGrid;
     QLabel *iconWidthLbl_2;
     QSlider *fontSizeSlider_2;
@@ -127,6 +128,7 @@ public:
     QLabel *iconHeightLbl_2;
     QLabel *label_19;
     QFrame *frame_4;
+    QCheckBox *bestAspectChk_2;
     QWidget *pageFullScreen;
     QLabel *fullScreenExplanationLbl;
     QWidget *layoutWidget1;
@@ -467,13 +469,13 @@ public:
         iconPaddingLbl->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         thumbSpacingLbl = new QLabel(pageThumbsDock);
         thumbSpacingLbl->setObjectName(QString::fromUtf8("thumbSpacingLbl"));
-        thumbSpacingLbl->setGeometry(QRect(380, 115, 30, 16));
+        thumbSpacingLbl->setGeometry(QRect(380, 115, 30, 0));
         thumbSpacingLbl->setFont(font);
         thumbSpacingLbl->setFrameShape(QFrame::NoFrame);
         thumbSpacingLbl->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         label_4 = new QLabel(pageThumbsDock);
         label_4->setObjectName(QString::fromUtf8("label_4"));
-        label_4->setGeometry(QRect(20, 115, 151, 16));
+        label_4->setGeometry(QRect(20, 115, 151, 0));
         label_4->setFont(font);
         label_5 = new QLabel(pageThumbsDock);
         label_5->setObjectName(QString::fromUtf8("label_5"));
@@ -519,7 +521,7 @@ public:
         iconPaddingSlider->setTickInterval(5);
         thumbSpacingSlider = new QSlider(pageThumbsDock);
         thumbSpacingSlider->setObjectName(QString::fromUtf8("thumbSpacingSlider"));
-        thumbSpacingSlider->setGeometry(QRect(200, 115, 160, 22));
+        thumbSpacingSlider->setGeometry(QRect(200, 115, 160, 0));
         thumbSpacingSlider->setFont(font);
         thumbSpacingSlider->setMinimum(0);
         thumbSpacingSlider->setMaximum(30);
@@ -570,6 +572,11 @@ public:
         wrapChk = new QCheckBox(pageThumbsDock);
         wrapChk->setObjectName(QString::fromUtf8("wrapChk"));
         wrapChk->setGeometry(QRect(20, 250, 431, 20));
+        wrapChk->setFont(font2);
+        bestAspectChk = new QCheckBox(pageThumbsDock);
+        bestAspectChk->setObjectName(QString::fromUtf8("bestAspectChk"));
+        bestAspectChk->setGeometry(QRect(20, 100, 431, 20));
+        bestAspectChk->setFont(font);
         stackedWidget->addWidget(pageThumbsDock);
         pageThumbsGrid = new QWidget();
         pageThumbsGrid->setObjectName(QString::fromUtf8("pageThumbsGrid"));
@@ -601,7 +608,7 @@ public:
         iconPaddingLbl_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         thumbSpacingLbl_2 = new QLabel(pageThumbsGrid);
         thumbSpacingLbl_2->setObjectName(QString::fromUtf8("thumbSpacingLbl_2"));
-        thumbSpacingLbl_2->setGeometry(QRect(380, 115, 30, 16));
+        thumbSpacingLbl_2->setGeometry(QRect(380, 115, 30, 0));
         thumbSpacingLbl_2->setFont(font);
         thumbSpacingLbl_2->setFrameShape(QFrame::NoFrame);
         thumbSpacingLbl_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
@@ -707,6 +714,10 @@ public:
         frame_4->setAutoFillBackground(true);
         frame_4->setFrameShape(QFrame::StyledPanel);
         frame_4->setFrameShadow(QFrame::Raised);
+        bestAspectChk_2 = new QCheckBox(pageThumbsGrid);
+        bestAspectChk_2->setObjectName(QString::fromUtf8("bestAspectChk_2"));
+        bestAspectChk_2->setGeometry(QRect(20, 100, 431, 20));
+        bestAspectChk_2->setFont(font);
         stackedWidget->addWidget(pageThumbsGrid);
         pageFullScreen = new QWidget();
         pageFullScreen->setObjectName(QString::fromUtf8("pageFullScreen"));
@@ -1001,6 +1012,7 @@ public:
         iconHeightLbl->setText(QString());
         label_7->setText(QApplication::translate("Prefdlg", "Font size", nullptr));
         wrapChk->setText(QApplication::translate("Prefdlg", "Wrap thumbnails when docked on sides or when floating", nullptr));
+        bestAspectChk->setText(QApplication::translate("Prefdlg", "Let Winnow determine best fit based on aspect ratios of images", nullptr));
         iconWidthLbl_2->setText(QString());
         iconPaddingLbl_2->setText(QApplication::translate("Prefdlg", "0", nullptr));
         thumbSpacingLbl_2->setText(QString());
@@ -1013,6 +1025,7 @@ public:
         label_18->setText(QApplication::translate("Prefdlg", "Icon height (px)", nullptr));
         iconHeightLbl_2->setText(QString());
         label_19->setText(QApplication::translate("Prefdlg", "Font size", nullptr));
+        bestAspectChk_2->setText(QApplication::translate("Prefdlg", "Let Winnow determine best fit based on aspect ratios of images", nullptr));
         fullScreenExplanationLbl->setText(QApplication::translate("Prefdlg", "<html><head/><body><p>When full screen is chosen, select which panels should be visible. Hiding all the docks will result in only the loupe view or grid of all the thumbnails being visible.  You can still show/hide panels in the usual way, so this is just a customization to shortcut to your usual full screen preference.</p><p>When you leave full screen view the application will return to its prior state.</p></body></html>", nullptr));
         foldersChk->setText(QApplication::translate("Prefdlg", "Folders", nullptr));
         favsChk->setText(QApplication::translate("Prefdlg", "Favourites", nullptr));
