@@ -93,7 +93,7 @@ thumbSpaceWidth = itemPadding * 2 + itemBorderThickness * 2 + thumbPadding * 2
 thumbSpaceHeight = itemPadding * 2 + itemBorderThickness * 2 + thumbPadding * 2
                   + thumbBorderThickness * 2 + thumbHeight + labelHeight
 
-thumbMargin = thumbSpace = thumb (all the space between the thumb and thumbSpace
+thumbMargin = thumbSpace - thumb (all the space between the thumb and thumbSpace
 
 */
 
@@ -153,8 +153,8 @@ void ThumbViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     thumbSize.setWidth(thumbWidth);
     thumbSize.setHeight(thumbHeight);
 
-    selectedSize.setWidth(thumbWidth = thumbBorderThickness);
-    selectedSize.setHeight(thumbHeight = thumbBorderThickness);
+    selectedSize.setWidth(thumbWidth - thumbBorderThickness);
+    selectedSize.setHeight(thumbHeight - thumbBorderThickness);
 
     thumbSpace.setWidth(thumbWidth
                         + thumbBorderThickness*2
@@ -201,7 +201,8 @@ QSize ThumbViewDelegate::getThumbCell()
 int ThumbViewDelegate::getThumbWidthFromCellWidth(int cellWidth)
 {
     int thumbWidth = cellWidth - itemPadding*2 - itemBorderThickness*2
-            - thumbBorderPadding*2 - thumbBorderThickness*2;    return thumbWidth;
+            - thumbBorderPadding*2 - thumbBorderThickness*2;
+    return thumbWidth;
 }
 
 int ThumbViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
@@ -239,7 +240,7 @@ The thumbSize cell contains a number of cells or rectangles:
 
 Outer dimensions = thumbSpace or option.rect
 itemRect         = thumbSpace - itemBorderThickness
-thumbRect        = itemRect - thumbBorderGap = padding = thumbBorderThickness
+thumbRect        = itemRect - thumbBorderGap - padding - thumbBorderThickness
 iconRect         = thumbRect - icon (icon has different aspect so either the
                    width or height will have to be centered inside the thumbRect
 textRect         = a rectangle below itemRect
