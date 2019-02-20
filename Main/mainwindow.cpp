@@ -4692,6 +4692,8 @@ workspace with a matching name to the action is used.
     thumbView->setThumbParameters();
     gridView->setThumbParameters();
     updateState();
+//    thumbView->rejustify(false);
+//    gridView->rejustify(false);
     if(!gridView->isVisible()) wasThumbDockVisible = w.isThumbDockVisible;
 }
 
