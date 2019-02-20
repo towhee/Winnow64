@@ -2,6 +2,8 @@ user name = towhee
 password = Qtc++2013
 
 cd to parent folder for repository
+    cd "/d/My Projects/Winnow Project/Winnow64"
+
 git clone https://github.com/towhee/Winnow64
 
 git config --global user.email "hillrg@hotmail.com"
@@ -20,5 +22,8 @@ git push // password = Qtc++2013
 
 git pull            // sync local with origin
 
+
 git checkout -- fstree.cpp    // discards changed file fxtree.cpp
 git checkout -- .             // discards all changes
+
+git rm debug/Winnow.exe       // removes Winnow.exe from reporitory if accidently not ignored
