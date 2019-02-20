@@ -845,20 +845,28 @@ with objectName "Thumbnails", is handled by thumbsEnlarge and thumbsShrink.
     G::track(__FUNCTION__);
     #endif
     }
-    static int prevWidth = 0;
-    if (width() == prevWidth) return;
-    prevWidth = width();
+    if (!wrapThumbs) return;
 
+    static int prevWidth = 0;
+    if (/*checkIfResize == true && */width() == prevWidth) return;
+    prevWidth = width();
+    qDebug() << "rejustify1";
     // get
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
+    if (assignedThumbWidth < 40 || assignedThumbWidth > 480) assignedThumbWidth = thumbWidth;
     int wCell = thumbViewDelegate->getCellWidthFromThumbWidth(assignedThumbWidth);
-    if (wCell == 0 || wRow == 0) return;
+    qDebug() << "wCell" << wCell << "assignedThumbWidth" << assignedThumbWidth;
+    if (wCell == 0) return;
     int tpr = wRow / wCell;
+    qDebug() << "tpr" << tpr << "wRow" << wRow;
+    if (tpr == 0) return;
     wCell = wRow / tpr;
+    qDebug() << "rejustify2";
 
     thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
     thumbHeight = thumbWidth * bestAspectRatio;
-
+    qDebug() << "thumbWidth" << thumbWidth << "thumbHeight" << thumbHeight
+             << "bestAspectRatio" << bestAspectRatio;
     skipResize = true;      // prevent feedback loop
 
     setThumbParameters();
@@ -1250,21 +1258,31 @@ int IconView::getVerticalScrollBarOffset(int row)
     G::track(__FUNCTION__);
     #endif
     }
+    if (objectName() == "Thumbnails") return 0;
     int pageWidth = viewport()->width();
     int pageHeight = viewport()->height();
     int thumbCellWidth = getThumbCellSize().width();
     int thumbCellHeight = getThumbCellSize().height();
 
-    if (pageWidth < ICON_MIN ||pageHeight < ICON_MIN || thumbCellWidth < ICON_MIN || thumbCellHeight < ICON_MIN)
+    if (pageWidth < ICON_MIN || pageHeight < ICON_MIN || thumbCellWidth < ICON_MIN || thumbCellHeight < ICON_MIN)
         return 0;
+    if (thumbCellWidth == 0  || thumbCellHeight == 0 || pageWidth == 0 || pageHeight == 0) return 0;
 
     float thumbsPerPage = pageWidth / thumbCellWidth * (float)pageHeight / thumbCellHeight;
     float thumbRowsPerPage = (float)pageHeight / thumbCellHeight;
     int n = dm->sf->rowCount();
-//    qDebug() << G::t.restart() << "\t" << "thumbsPerPage" << thumbsPerPage;
+/*    qDebug() << "objectName" << objectName()
+             << "pageWidth" << pageWidth
+             << "pageHeight" << pageHeight
+             << "thumbCellWidth" << thumbCellWidth
+             << "thumbCellHeight" << thumbCellHeight
+             << "thumbRowsPerPage" << thumbRowsPerPage
+             << "thumbsPerPage" << thumbsPerPage;  */
     float pages = (float(n) / thumbsPerPage) - 1;
     int vMax = pages * pageWidth;
 
+    Q_ASSERT(thumbCellWidth == 0);
+    Q_ASSERT(pageWidth == 0);
     int thumbRow = row / (pageWidth / thumbCellWidth);
     int startNoScrollItems = thumbRowsPerPage / 2;
     float fractpart = fmodf (thumbRowsPerPage / 2 , 1.0);
@@ -1301,6 +1319,7 @@ int IconView::getHorizontalScrollBarMax()
     }
     int pageWidth = viewport()->width();
     int thumbWidth = getThumbCellSize().width();
+    if (thumbWidth == 0) return 0;
     float thumbsPerPage = (double)pageWidth / thumbWidth;
     int n = dm->sf->rowCount();
     float pages = float(n) / thumbsPerPage - 1;
@@ -1322,7 +1341,11 @@ int IconView::getVerticalScrollBarMax()
     int pageHeight = viewport()->height();
     int thumbCellWidth = getThumbCellSize().width();
     int thumbCellHeight = getThumbCellSize().height();
+
+    if (thumbCellWidth == 0  || thumbCellHeight == 0 || pageWidth == 0 || pageHeight == 0) return 0;
+
     float thumbsPerPage = pageWidth / thumbCellWidth * (float)pageHeight / thumbCellHeight;
+    if (thumbsPerPage == 0) return 0;
     int n = dm->sf->rowCount();
     float pages = float(n) / thumbsPerPage - 1;
     int vMax = pages * pageHeight;
