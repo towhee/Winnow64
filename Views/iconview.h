@@ -6,17 +6,17 @@
 #include "File/fstree.h"
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
-#include "thumbviewdelegate.h"
+#include "iconviewdelegate.h"
 #include "Datamodel/filters.h"
 #include "Cache/threadsafehash.h"
 #include <math.h>
 
-class ThumbView : public QListView
+class IconView : public QListView
 {
     Q_OBJECT
 
 public:
-    ThumbView(QWidget *parent, DataModel *dm, QString objName);
+    IconView(QWidget *parent, DataModel *dm, QString objName);
 
     int thumbWidth;
     int thumbHeight;
@@ -33,7 +33,7 @@ public:
 
     void updateLayout();
 
-    ThumbViewDelegate *thumbViewDelegate;
+    IconViewDelegate *thumbViewDelegate;
     void selectThumb(int row);
     void selectThumb(QString &filePath);
     bool isThumb(int row);
@@ -67,6 +67,12 @@ public:
     bool readyToScroll;
     bool scrollPaintFound;
 
+    enum JustifyAction {
+        Shrink = 1,
+        Enlarge = -1
+    };
+    double bestAspectRatio;
+
 public slots:
     void scrollDown(int);
     void scrollUp(int);
@@ -75,8 +81,9 @@ public slots:
     void scrollToCurrent(int row);
     void thumbsEnlarge();
     void thumbsShrink();
-    void gridEnlargeJustified();
-    void gridShrinkJustified();
+    void justify(JustifyAction action);
+    void justify(int tpr);
+    void rejustify();
     void thumbsFit(Qt::DockWidgetArea area);
     void bestAspect();
     void thumbsFitTopOrBottom();
@@ -106,9 +113,6 @@ public slots:
     void selectPrevPick();
     void copyThumbs();
     void sortThumbs(int sortColumn, bool isReverse);
-
-    void thumbsRejustify();
-
 
 private slots:
 //    void delaySelectCurrentThumb();

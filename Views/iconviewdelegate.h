@@ -7,12 +7,12 @@
 #include <QFont>
 #include "Main/global.h"
 
-class ThumbViewDelegate : public QStyledItemDelegate
+class IconViewDelegate : public QStyledItemDelegate
 {
     Q_OBJECT
 
 public:
-    ThumbViewDelegate(QObject *parent, bool &isRatingBadgeVisible);
+    IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible);
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
                const QModelIndex &index) const;
@@ -23,19 +23,25 @@ public:
     void setThumbDimensions(int thumbWidth, int thumbHeight, int thumbSpacing, int thumbPadding,
           int labelFontSize, bool showThumbLabels, int badgeSize);
 
-    QSize getThumbCell();
-    int getThumbHeightFromAvailHeight(int availHeight);
+    QSize getCellSize();
+    int getCellHeightFromAvailHeight(int availHeight);
     int getThumbWidthFromCellWidth(int cellWidth);
+    int getCellWidthFromThumbWidth(int width);
     void reportThumbAttributes();
 
     QModelIndex currentIndex;
     int currentRow;
 
+    const QRect r;
+
     int thumbSpacing;
-    int itemPadding;
-    int itemBorderThickness;
-    int thumbBorderThickness;
-    int thumbBorderPadding;
+
+    int fPad;
+    int tPad;
+    int pad;
+    int pad2;
+    int fPad2;
+    int tPad2;
 
 signals:
     void update(const QModelIndex index, QRect iconRect) const;
@@ -65,6 +71,8 @@ private:
     QPen selectedPen;
 
     int fontHt;
+    int textHeadroom;
+    int textHeight;
     int badgeSize;
     int cacheDiam = 6;
     int cacheOffset = 3;
@@ -73,10 +81,11 @@ private:
     int alignVertPad;
     int alignHorPad;
 
-    QPoint itemBorderOffset;
-    QPoint thumbPaddingOffset;
-    QPoint thumbBorderOffset;
-    QPoint paddingOffset;
+    QPoint fPadOffset;
+    QPoint tPadOffset;
+    QPoint currOffset;
+    QPoint textHtOffset;
+
     QPoint ratingTopLeft;
     QPoint ratingBottomRight;
     QRect ratingRect;
@@ -86,17 +95,21 @@ private:
     QPoint cacheBottomRight;
 
     QSize thumbSize;
+    QSize frameSize;
     QSize selectedSize;
-    QSize thumbSpace;
+    QSize cellSize;
     QSize cellSpace;
 
-    QRect thumbRect;
-    QRect itemRect;
-    QRect selectedRect;
-    QRect iconRect;
-    QRect ratingTextRect;
-    QRect cacheRect;
-    QRect textRect;
+
+    // For some weird reason cannot edit QRect declared in header
+//    QRect iconRect;
+//    QRect thumbRect;
+//    QRect frameRect;
+//    QRect cellRect;
+//    QRect selectedRect;
+//    QRect ratingTextRect;
+//    QRect cacheRect;
+//    QRect textRect;
 };
 
 #endif // THUMBVIEWDELEGATE_H

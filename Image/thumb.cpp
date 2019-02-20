@@ -9,8 +9,8 @@
 Thumb::Thumb(QObject *parent, Metadata *metadata) : QObject(parent)
 {
     this->metadata = metadata;
-    thumbMax.setWidth(THUMB_MAX);
-    thumbMax.setHeight(THUMB_MAX);
+    thumbMax.setWidth(ICON_MAX);
+    thumbMax.setHeight(ICON_MAX);
 }
 
 void Thumb::track(QString fPath, QString msg)
