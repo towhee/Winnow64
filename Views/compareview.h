@@ -4,7 +4,7 @@
 #include <QtWidgets>
 #include "Metadata/metadata.h"
 #include "Cache/imagecache.h"
-#include "Views/thumbview.h"
+#include "Views/iconview.h"
 #include "Utilities/classificationlabel.h"
 #include "Image/pixmap.h"
 
@@ -14,7 +14,7 @@ class CompareView : public QGraphicsView
 
 public:
     CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
-              ImageCache *imageCacheThread, ThumbView *thumbView);
+              ImageCache *imageCacheThread, IconView *thumbView);
 
     qreal zoom;
     qreal toggleZoom;
@@ -70,7 +70,7 @@ private:
     QSize gridCell;
     Metadata *metadata;
     ImageCache *imageCacheThread;
-    ThumbView *thumbView;
+    IconView *thumbView;
     Pixmap *pixmap;
     QImageReader imageReader;
 

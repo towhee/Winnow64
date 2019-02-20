@@ -14,7 +14,7 @@ When the metadata has been read, each thread sends the metadata->metaCache QMap 
 the datamodel to update.
 */
 
-MdCacheMgr::MdCacheMgr(QObject *parent, DataModel *dm, ThumbView *thumbView) : QObject(parent)
+MdCacheMgr::MdCacheMgr(QObject *parent, DataModel *dm, IconView *thumbView) : QObject(parent)
 {
     this->dm = dm;
     this->thumbView = thumbView;

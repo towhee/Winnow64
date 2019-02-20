@@ -14,8 +14,8 @@
 #include <iomanip>
 #include <QMutex>
 
-#define THUMB_MIN	40
-#define THUMB_MAX	256  //480
+#define ICON_MIN	40
+#define ICON_MAX	256  //480
 
 namespace G
 {

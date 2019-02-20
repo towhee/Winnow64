@@ -65,7 +65,7 @@ CompareView::CompareView(QWidget *parent,
                          QSize gridCell,
                          Metadata *metadata,
                          ImageCache *imageCacheThread,
-                         ThumbView *thumbView)
+                         IconView *thumbView)
 {
     {
     #ifdef ISDEBUG

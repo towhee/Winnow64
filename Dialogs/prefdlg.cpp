@@ -46,61 +46,19 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->mouseClickScrollChk->setChecked((m0->mouseClickScroll));
 
     // thumbs
-    ui->iconWidthSlider->setSingleStep(1);
-    ui->iconWidthSlider->setTickInterval(50);
-    ui->iconWidthSlider->setTickPosition(QSlider::TicksAbove);
-    ui->iconWidthSlider->setMaximum(THUMB_MAX);
-    ui->iconWidthSlider->setValue(m0->thumbView->thumbWidth);
-    ui->iconHeightSlider->setSingleStep(1);
-    ui->iconHeightSlider->setTickInterval(50);
-    ui->iconHeightSlider->setTickPosition(QSlider::TicksAbove);
-    ui->iconHeightSlider->setMaximum(THUMB_MAX);
-    ui->iconHeightSlider->setValue(m0->thumbView->thumbHeight);
-    ui->thumbSpacingSlider->setSingleStep(1);
-    ui->thumbSpacingSlider->setTickInterval(3);
-    ui->thumbSpacingSlider->setTickPosition(QSlider::TicksAbove);
-    ui->thumbSpacingSlider->setValue(m0->thumbView->thumbSpacing);
-    ui->iconPaddingSlider->setSingleStep(1);
-    ui->iconPaddingSlider->setTickInterval(1);
-    ui->iconPaddingSlider->setTickPosition(QSlider::TicksAbove);
-    ui->iconPaddingSlider->setValue(m0->thumbView->thumbPadding);
     ui->fontSizeSlider->setSingleStep(1);
     ui->fontSizeSlider->setTickInterval(1);
     ui->fontSizeSlider->setTickPosition(QSlider::TicksAbove);
     ui->fontSizeSlider->setValue(m0->thumbView->labelFontSize);
     ui->showThumbLabelChk->setChecked(m0->thumbView->showThumbLabels);
     ui->wrapChk->setChecked(m0->thumbView->wrapThumbs);
-    ui->bestAspectChk->setChecked(m0->thumbView->isBestAspect);
-    if (ui->bestAspectChk->isChecked()) ui->lockDimChk->setChecked(false);
-    else ui->lockDimChk->setChecked(true);
 
     // grid
-    ui->iconWidthSlider_2->setSingleStep(1);
-    ui->iconWidthSlider_2->setTickInterval(50);
-    ui->iconWidthSlider_2->setTickPosition(QSlider::TicksAbove);
-    ui->iconWidthSlider_2->setMaximum(THUMB_MAX);
-    ui->iconWidthSlider_2->setValue(m0->gridView->thumbWidth);
-    ui->iconHeightSlider_2->setSingleStep(1);
-    ui->iconHeightSlider_2->setTickInterval(50);
-    ui->iconHeightSlider_2->setTickPosition(QSlider::TicksAbove);
-    ui->iconHeightSlider_2->setMaximum(THUMB_MAX);
-    ui->iconHeightSlider_2->setValue(m0->gridView->thumbHeight);
-    ui->thumbSpacingSlider_2->setSingleStep(1);
-    ui->thumbSpacingSlider_2->setTickInterval(3);
-    ui->thumbSpacingSlider_2->setTickPosition(QSlider::TicksAbove);
-    ui->thumbSpacingSlider_2->setValue(m0->gridView->thumbSpacing);
-    ui->iconPaddingSlider_2->setSingleStep(1);
-    ui->iconPaddingSlider_2->setTickInterval(1);
-    ui->iconPaddingSlider_2->setTickPosition(QSlider::TicksAbove);
-    ui->iconPaddingSlider_2->setValue(m0->gridView->thumbPadding);
     ui->fontSizeSlider_2->setTickInterval(1);
     ui->fontSizeSlider_2->setTickPosition(QSlider::TicksAbove);
     ui->fontSizeSlider_2->setValue(m0->thumbView->labelFontSize);
     ui->fontSizeSlider_2->setValue(m0->gridView->labelFontSize);
     ui->showThumbLabelChk_2->setChecked(m0->gridView->showThumbLabels);
-    ui->bestAspectChk_2->setChecked(m0->gridView->isBestAspect);
-    if (ui->bestAspectChk_2->isChecked()) ui->lockDimChk_2->setChecked(false);
-    else ui->lockDimChk_2->setChecked(true);
 
     // slideshow
     ui->slideshowDelaySpinbox->setValue(m0->slideShowDelay);
@@ -349,70 +307,17 @@ void Prefdlg::on_trackpadScrollRadio_clicked()
 }
 
 // thumbs
-void Prefdlg::on_iconWidthSlider_valueChanged(int value)
+void Prefdlg::on_thumbSmallerBtn_pressed()
 {
-    if (okToUpdate) {
-        if (!ignoreThumbBestAspectChange) {
-            m0->thumbView->thumbWidth = value;
-            if (ui->lockDimChk->isChecked()) ui->iconHeightSlider->setValue(value);
-            m0->thumbView->setThumbParameters();
-            ui->bestAspectChk->setChecked(false);
-        }
-    }
+    if (m0->thumbView->wrapThumbs) m0->thumbView->justify(IconView::JustifyAction::Shrink);
+    else m0->thumbView->thumbsShrink();
 }
 
-void Prefdlg::on_iconHeightSlider_valueChanged(int value)
+void Prefdlg::on_thumbLargerBtn_pressed()
 {
-    if (okToUpdate) {
-        if (!ignoreThumbBestAspectChange) {
-            m0->thumbView->thumbHeight = value;
-            if (ui->lockDimChk->isChecked()) ui->iconWidthSlider->setValue(value);
-            m0->thumbView->setThumbParameters();
-            ui->bestAspectChk->setChecked(false);
-        }
-    }
+    if (m0->thumbView->wrapThumbs) m0->thumbView->justify(IconView::JustifyAction::Enlarge);
+    else m0->thumbView->thumbsEnlarge();
 }
-
-void Prefdlg::on_lockDimChk_clicked(bool checked)
-{
-    if (okToUpdate) {
-        if (checked) ui->bestAspectChk->setChecked(false);
-   }
-}
-
-void Prefdlg::on_bestAspectChk_clicked(bool checked)
-{
-    if (okToUpdate) {
-        m0->thumbView->isBestAspect = checked;
-        if (checked) {
-            ui->lockDimChk->setChecked(false);
-            m0->thumbView->isBestAspect = checked;
-            m0->thumbView->bestAspect();
-            m0->thumbView->setThumbParameters();
-            ignoreThumbBestAspectChange = true;
-            ui->iconWidthSlider->setValue(m0->thumbView->thumbWidth);
-            ui->iconHeightSlider->setValue(m0->thumbView->thumbHeight);
-            ignoreThumbBestAspectChange = false;
-        }
-    }
-}
-
-void Prefdlg::on_thumbSpacingSlider_valueChanged(int value)
-{
-    if (okToUpdate) {
-        m0->thumbView->thumbSpacing = value;
-        m0->thumbView->setThumbParameters();
-    }
-}
-
-void Prefdlg::on_iconPaddingSlider_valueChanged(int value)
-{
-    if (okToUpdate) {
-        m0->thumbView->thumbPadding = value;
-        m0->thumbView->setThumbParameters();
-    }
-}
-
 
 void Prefdlg::on_showThumbLabelChk_clicked()
 {
@@ -439,76 +344,21 @@ void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 }
 
 // grid
-void Prefdlg::on_iconWidthSlider_2_valueChanged(int value)
+void Prefdlg::on_gridSmallerBtn_clicked()
 {
-    if (okToUpdate) {
-        if (!ignoreGridBestAspectChange) {
-            m0->gridView->thumbWidth = value;
-            if (ui->lockDimChk_2->isChecked()) ui->iconHeightSlider_2->setValue(value);
-            m0->gridView->setThumbParameters();
-            m0->gridView->thumbsRejustify();
-        }
-    }
+    m0->gridView->justify(IconView::JustifyAction::Shrink);
 }
 
-void Prefdlg::on_iconHeightSlider_2_valueChanged(int value)
+void Prefdlg::on_gridLargerBtn_pressed()
 {
-    if (okToUpdate) {
-        if (!ignoreGridBestAspectChange) {
-            m0->gridView->thumbHeight = value;
-            if (ui->lockDimChk_2->isChecked()) ui->iconWidthSlider_2->setValue(value);
-            m0->gridView->setThumbParameters();
-            m0->gridView->thumbsRejustify();
-        }
-    }
-}
+    m0->gridView->justify(IconView::JustifyAction::Enlarge);
 
-void Prefdlg::on_lockDimChk_2_clicked(bool checked)
-{
-    if (okToUpdate) {
-        if (checked) ui->bestAspectChk_2->setChecked(false);
-   }
-}
-
-void Prefdlg::on_bestAspectChk_2_clicked(bool checked)
-{
-    if (okToUpdate) {
-        if (checked) {
-            ui->lockDimChk_2->setChecked(false);
-            m0->gridView->isBestAspect = checked;
-            m0->gridView->bestAspect();
-//            m0->gridView->setThumbParameters();
-//            m0->gridView->thumbsRejustify();
-            ignoreGridBestAspectChange = true;
-            ui->iconWidthSlider_2->setValue(m0->gridView->thumbWidth);
-            ui->iconHeightSlider_2->setValue(m0->gridView->thumbHeight);
-            ignoreGridBestAspectChange = false;
-        }
-    }
-}
-
-void Prefdlg::on_thumbSpacingSlider_2_valueChanged(int value)
-{
-    if (okToUpdate) {
-        m0->gridView->thumbSpacing = value;
-        m0->gridView->setThumbParameters();
-        m0->gridView->thumbsRejustify();
-    }
-}
-
-void Prefdlg::on_iconPaddingSlider_2_valueChanged(int value)
-{
-    if (okToUpdate) {
-        m0->gridView->thumbPadding = value;
-        m0->gridView->setThumbParameters();
-        m0->gridView->thumbsRejustify();
-    }
 }
 
 void Prefdlg::on_showThumbLabelChk_2_clicked()
 {
     if (okToUpdate) {
-        m0->gridView->thumbPadding = ui->showThumbLabelChk_2->isChecked();
+        m0->gridView->showThumbLabels = ui->showThumbLabelChk_2->isChecked();
         m0->gridView->setThumbParameters();
     }
 }
@@ -679,3 +529,4 @@ void Prefdlg::on_aSynchChk_clicked()
 {
     G::aSync = ui->aSynchChk->isChecked();
 }
+
