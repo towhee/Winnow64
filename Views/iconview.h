@@ -82,8 +82,8 @@ public slots:
     void thumbsEnlarge();
     void thumbsShrink();
     void justify(JustifyAction action);
-    void justify(int tpr);
     void rejustify();
+    void resizeRejustify();
     void thumbsFit(Qt::DockWidgetArea area);
     void bestAspect();
     void thumbsFitTopOrBottom();
