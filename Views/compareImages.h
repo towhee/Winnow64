@@ -3,7 +3,7 @@
 
 #include <QtWidgets>
 #include "Metadata/metadata.h"
-#include "Views/thumbview.h"
+#include "Views/iconview.h"
 #include "Views/compareview.h"
 #include "Image/imagealign.h"
 #include "Datamodel/datamodel.h"
@@ -14,7 +14,7 @@ class CompareImages : public QWidget
 
 public:
     CompareImages(QWidget *parent, QWidget *centralWidget, Metadata *metadata, DataModel *dm,
-                  ThumbView *thumbView, ImageCache *imageCacheThread);
+                  IconView *thumbView, ImageCache *imageCacheThread);
 
     qreal toggleZoom;
     qreal zoomValue;
@@ -56,7 +56,7 @@ private slots:
 private:
     Metadata *metadata;
     DataModel *dm;
-    ThumbView *thumbView;
+    IconView *thumbView;
     ImageCache *imageCacheThread;
     QWidget *centralWidget;
 //    bool &isRatingBadgeVisible;

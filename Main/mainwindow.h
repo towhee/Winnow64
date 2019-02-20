@@ -22,7 +22,7 @@
 #include "File/bookmarks.h"
 #include "File/fstree.h"
 #include "Views/compareImages.h"
-#include "Views/thumbview.h"
+#include "Views/iconview.h"
 #include "Views/tableview.h"
 #include "Views/imageview.h"
 #include "Views/infoview.h"
@@ -67,7 +67,7 @@ class MW : public QMainWindow
 
     friend class Prefdlg;       // m0
     friend class ProgressBar;   // mw1
-    friend class ThumbView;     // mw2
+    friend class IconView;     // mw2
 
 public:
     MW(QWidget *parent = nullptr);
@@ -747,8 +747,8 @@ private:
     DataModel *dm;
     QItemSelectionModel *selectionModel;
     Metadata *metadata;
-    ThumbView *thumbView;
-    ThumbView *gridView;
+    IconView *thumbView;
+    IconView *gridView;
     TableView *tableView;
     ImageView *imageView;
     InfoString *infoString;

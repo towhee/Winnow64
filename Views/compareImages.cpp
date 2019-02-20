@@ -10,7 +10,7 @@ CompareImages::CompareImages(QWidget *parent,
                          QWidget *centralWidget,
                          Metadata *metadata,
                          DataModel *dm,
-                         ThumbView *thumbView,
+                         IconView *thumbView,
                          ImageCache *imageCacheThread)
     : QWidget(parent)
 {
