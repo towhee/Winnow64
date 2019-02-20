@@ -1254,6 +1254,9 @@ been consumed or all the images are cached.
     dm->filteredItemCount();
     dm->unfilteredItemCount();
 
+    // determine best aspect ratio for thumbnails
+    gridView->bestAspect();
+    thumbView->bestAspect();
 
 #ifdef ISTEST
     QString async;
@@ -1649,7 +1652,7 @@ void MW::createActions()
     invertSelectionAction->setShortcutVisibleInContextMenu(true);
     addAction(invertSelectionAction);
     connect(invertSelectionAction, &QAction::triggered,
-            thumbView, &ThumbView::invertSelection);
+            thumbView, &IconView::invertSelection);
 
     refineAction = new QAction(tr("Refine"), this);
     refineAction->setObjectName("Refine");
@@ -1687,7 +1690,7 @@ void MW::createActions()
     copyImagesAction->setShortcutVisibleInContextMenu(true);
     copyImagesAction->setShortcut(QKeySequence("Ctrl+C"));
     addAction(copyImagesAction);
-    connect(copyImagesAction, &QAction::triggered, thumbView, &ThumbView::copyThumbs);
+    connect(copyImagesAction, &QAction::triggered, thumbView, &IconView::copyThumbs);
 
     rate0Action = new QAction(tr("Clear rating"), this);
     rate0Action->setObjectName("Rate0");
@@ -1877,19 +1880,19 @@ void MW::createActions()
     randomImageAction->setObjectName("randomImage");
     randomImageAction->setShortcutVisibleInContextMenu(true);
     addAction(randomImageAction);
-    connect(randomImageAction, &QAction::triggered, thumbView, &ThumbView::selectRandom);
+    connect(randomImageAction, &QAction::triggered, thumbView, &IconView::selectRandom);
 
     nextPickAction = new QAction(tr("Next Pick"), this);
     nextPickAction->setObjectName("nextPick");
     nextPickAction->setShortcutVisibleInContextMenu(true);
     addAction(nextPickAction);
-    connect(nextPickAction, &QAction::triggered, thumbView, &ThumbView::selectNextPick);
+    connect(nextPickAction, &QAction::triggered, thumbView, &IconView::selectNextPick);
 
     prevPickAction = new QAction(tr("Previous Pick"), this);
     prevPickAction->setObjectName("prevPick");
     prevPickAction->setShortcutVisibleInContextMenu(true);
     addAction(prevPickAction);
-    connect(prevPickAction, &QAction::triggered, thumbView, &ThumbView::selectPrevPick);
+    connect(prevPickAction, &QAction::triggered, thumbView, &IconView::selectPrevPick);
 
     // Filters
 
@@ -3278,7 +3281,7 @@ void MW::createThumbView()
     G::track(__FUNCTION__);
     #endif
     }
-    thumbView = new ThumbView(this, dm, "Thumbnails");
+    thumbView = new IconView(this, dm, "Thumbnails");
     thumbView->setObjectName("Thumbnails");
     thumbView->setAutoScroll(false);
 
@@ -3319,7 +3322,7 @@ void MW::createGridView()
     G::track(__FUNCTION__);
     #endif
     }
-    gridView = new ThumbView(this, dm, "Grid");
+    gridView = new IconView(this, dm, "Grid");
     gridView->setObjectName("Grid");
     gridView->setWrapping(true);
     gridView->setAutoScroll(false);
@@ -4443,8 +4446,11 @@ void MW::thumbsEnlarge()
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::mode == "Grid") gridView->gridEnlargeJustified();
-    else thumbView->thumbsEnlarge();
+    if (G::mode == "Grid") gridView->justify(IconView::JustifyAction::Enlarge);
+    else {
+        if (thumbView->wrapThumbs) thumbView->justify(IconView::JustifyAction::Enlarge);
+        else thumbView->thumbsShrink();
+    }
 }
 
 void MW::thumbsShrink()
@@ -4454,8 +4460,11 @@ void MW::thumbsShrink()
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::mode == "Grid") gridView->gridShrinkJustified();
-    else thumbView->thumbsShrink();
+    if (G::mode == "Grid") gridView->justify(IconView::JustifyAction::Shrink);
+    else {
+        if (thumbView->wrapThumbs) thumbView->justify(IconView::JustifyAction::Shrink);
+        else thumbView->thumbsShrink();
+    }
 }
 
 /* RECENT MENU
@@ -5696,7 +5705,7 @@ Also, the orientation metadata must be updated for any images ingested.
         QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
         QStandardItem *item = new QStandardItem;
         item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
-        QPixmap pm = item->icon().pixmap(THUMB_MAX, THUMB_MAX);
+        QPixmap pm = item->icon().pixmap(ICON_MAX, ICON_MAX);
         pm = pm.transformed(trans, Qt::SmoothTransformation);
         item->setIcon(pm);
         thumbView->refreshThumbs();
@@ -8406,7 +8415,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     int maxW = 0, maxH = 0;
     for (int row = 0; row < dm->rowCount(); ++row) {
         QModelIndex idx = dm->index(row, 0);
-        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(THUMB_MAX);
+        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(ICON_MAX);
         if (maxW < pm.width()) maxW = pm.width();
         if (maxH < pm.height()) maxH = pm.height();
     }

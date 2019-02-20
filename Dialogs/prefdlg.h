@@ -29,17 +29,13 @@ private slots:
     void on_slider_pressed();
     void on_slider_released();
     // thumbs
-    void on_iconWidthSlider_valueChanged(int value);
-    void on_iconHeightSlider_valueChanged(int value);
-    void on_thumbSpacingSlider_valueChanged(int value);
-    void on_iconPaddingSlider_valueChanged(int value);
+    void on_thumbSmallerBtn_pressed();
+    void on_thumbLargerBtn_pressed();
     void on_showThumbLabelChk_clicked();
     void on_fontSizeSlider_valueChanged(int value);
     // thumbsGrid
-    void on_iconWidthSlider_2_valueChanged(int value);
-    void on_iconHeightSlider_2_valueChanged(int value);
-    void on_thumbSpacingSlider_2_valueChanged(int value);
-    void on_iconPaddingSlider_2_valueChanged(int value);
+    void on_gridSmallerBtn_clicked();
+    void on_gridLargerBtn_pressed();
     void on_showThumbLabelChk_2_clicked();
     void on_fontSizeSlider_2_valueChanged(int value);
     // slideshow
@@ -83,13 +79,6 @@ private slots:
 
     void on_aSynchChk_clicked();
 
-    void on_bestAspectChk_clicked(bool checked);
-
-    void on_bestAspectChk_2_clicked(bool checked);
-
-    void on_lockDimChk_clicked(bool checked);
-
-    void on_lockDimChk_2_clicked(bool checked);
 private:
     Ui::Prefdlg *ui;
     QStandardItemModel *okInfo;

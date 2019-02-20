@@ -2,7 +2,7 @@
 #define INGESTDLG_H
 
 #include <QtWidgets>
-#include "Views/thumbview.h"
+#include "Views/iconview.h"
 #include "Datamodel/datamodel.h"
 #include "tokendlg.h"
 

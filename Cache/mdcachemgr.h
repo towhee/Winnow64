@@ -4,7 +4,7 @@
 #include <QtWidgets>
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
-#include "Views/thumbview.h"
+#include "Views/iconview.h"
 #include "Image/thumb.h"
 #include "Cache/mdcacher.h"
 
@@ -13,7 +13,7 @@ class MdCacheMgr : public QObject
     Q_OBJECT
 
 public:
-    MdCacheMgr(QObject *parent, DataModel *dm, ThumbView *thumbView);
+    MdCacheMgr(QObject *parent, DataModel *dm, IconView *thumbView);
     void loadMetadataCache(int startRow);
     void stop();
 
@@ -33,7 +33,7 @@ private:
     void createCachers();
 
     DataModel *dm;
-    ThumbView *thumbView;
+    IconView *thumbView;
 
     int threadCount;
     int threadTot;
