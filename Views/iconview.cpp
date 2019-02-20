@@ -824,6 +824,14 @@ void IconView::thumbsShrink()
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
+void IconView::resizeRejustify()
+{
+    static int prevWidth = 0;
+    if (width() == prevWidth) return;
+    prevWidth = width();
+    rejustify();
+}
+
 void IconView::rejustify()
 {
 /* This function controls the resizing behavior of the gridview cells when the window is
@@ -847,32 +855,24 @@ with objectName "Thumbnails", is handled by thumbsEnlarge and thumbsShrink.
     }
     if (!wrapThumbs) return;
 
-    static int prevWidth = 0;
-    if (/*checkIfResize == true && */width() == prevWidth) return;
-    prevWidth = width();
-    qDebug() << "rejustify1";
     // get
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
     if (assignedThumbWidth < 40 || assignedThumbWidth > 480) assignedThumbWidth = thumbWidth;
     int wCell = thumbViewDelegate->getCellWidthFromThumbWidth(assignedThumbWidth);
-    qDebug() << "wCell" << wCell << "assignedThumbWidth" << assignedThumbWidth;
+
     if (wCell == 0) return;
     int tpr = wRow / wCell;
-    qDebug() << "tpr" << tpr << "wRow" << wRow;
+
     if (tpr == 0) return;
     wCell = wRow / tpr;
-    qDebug() << "rejustify2";
 
     thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
     thumbHeight = thumbWidth * bestAspectRatio;
-    qDebug() << "thumbWidth" << thumbWidth << "thumbHeight" << thumbHeight
-             << "bestAspectRatio" << bestAspectRatio;
+
     skipResize = true;      // prevent feedback loop
 
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
-
-//    qDebug() << "assignedThumbWidth" << assignedThumbWidth;
 }
 
 void IconView::justify(JustifyAction action)
@@ -900,41 +900,6 @@ void IconView::justify(JustifyAction action)
     wCell = wRow / tpr;
 
     if (wCell > ICON_MAX) return;
-
-    thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
-    thumbHeight = thumbWidth * bestAspectRatio;
-
-    assignedThumbWidth = thumbWidth;
-    skipResize = true;      // prevent feedback loop
-
-    setThumbParameters();
-    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
-}
-
-void IconView::justify(int tpr)
-{
-/*
-   This function shrinks the grid cells while keeping the right hand side margin minimized.
-   To make this work it is critical to assign the correct value to the row width: wRow.  The
-   superclass QListView, uses a width that assumes there will always be a scrollbar and also a
-   "margin". The width of the QListView (width()) is reduced by the width of the scrollbar and
-   and additional "margin", determined by experimentation, to be 8 pixels.
-
-   The variable assignedThumbWidth remebers the current grid cell size as a reference to
-   maintain the grid size during resizing and pad size changes in preferences.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    int wCell = thumbViewDelegate->getCellSize().width();
-    int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
-
-//    int tpr = wRow / wCell + 1;                        // thumbs per row
-    int wCell = wRow / tpr;
-
-    if (wCell < ICON_MIN) return;
 
     thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
     thumbHeight = thumbWidth * bestAspectRatio;
@@ -985,7 +950,7 @@ void IconView::resizeEvent(QResizeEvent *event)
     count++;
     if (objectName() == "Thumbnails" && wrapThumbs == false) return;
     if (width() == prevWidth) return;
-    QTimer::singleShot(500, this, SLOT(rejustify()));
+    QTimer::singleShot(500, this, SLOT(resizeRejustify()));
 }
 
 void IconView::bestAspect()
