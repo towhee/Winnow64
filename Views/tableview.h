@@ -4,7 +4,7 @@
 #include <QtWidgets>
 #include "Main/global.h"
 #include "Datamodel/datamodel.h"
-#include "Views/thumbview.h"
+#include "Views/iconview.h"
 
 class TableView : public QTableView
 {
@@ -25,7 +25,7 @@ protected:
     void mousePressEvent(QMouseEvent *event);
 
 private:
-    ThumbView *thumbView;
+    IconView *thumbView;
     DataModel *dm;
     void createOkToShow();
 
