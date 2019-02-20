@@ -138,7 +138,7 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     textHtOffset.setX(0);
     textHtOffset.setY(fPad + textHeight - textHeadroom);
 
-//    reportThumbAttributes();
+    reportThumbAttributes();
 }
 
 void IconViewDelegate::reportThumbAttributes()
@@ -155,6 +155,7 @@ void IconViewDelegate::reportThumbAttributes()
 
 QSize IconViewDelegate::getCellSize()
 {
+//    reportThumbAttributes();
     return cellSize;
 }
 
