@@ -9,14 +9,11 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h \
-    Cache/tshash.h \
-    Metadata/imagemetadata.h \
-    Main/dockwidget.h \
-    Main/dockwidget.h
+HEADERS += Cache/imagecache.h
+HEADERS += Cache/mdcache.h
 HEADERS += Cache/mdcacher.h
 HEADERS += Cache/mdcachemgr.h
-HEADERS += Cache/mdcache.h
+HEADERS += Cache/tshash.h
 HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/ingestdlg.h
@@ -34,18 +31,20 @@ HEADERS += Datamodel/datamodel.h
 HEADERS += Datamodel/filters.h
 HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
+HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
 HEADERS += Main/mainwindow.h
+HEADERS += Metadata/imagemetadata.h
 HEADERS += Metadata/metadata.h
 HEADERS += Metadata/xmp.h
 HEADERS += Views/compareImages.h
 HEADERS += Views/compareview.h
+HEADERS += Views/iconview.h
+HEADERS += Views/iconviewdelegate.h
 HEADERS += Views/imageview.h
+HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
-HEADERS += Views/thumbview.h
-HEADERS += Views/thumbviewdelegate.h
-HEADERS += Views/infostring.h
 HEADERS += Utilities/classificationlabel.h
 HEADERS += Utilities/dropshadowlabel.h
 HEADERS += Utilities/popup.h
@@ -58,14 +57,9 @@ HEADERS += Test/readsync.h
 HEADERS += Test/readasync.h
 HEADERS += Test/asynctask.h
 
-SOURCES += Cache/imagecache.cpp \
-    Test/readmdconcurrent.cpp \
-    Cache/mdcacher.cpp \
-    Cache/mdcachemgr.cpp \
-    Main/dockwidget.cpp
-SOURCES += Test/readsync.cpp
-SOURCES += Test/readasync.cpp
-SOURCES += Test/asynctask.cpp
+SOURCES += Cache/imagecache.cpp
+SOURCES += Cache/mdcacher.cpp
+SOURCES += Cache/mdcachemgr.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
@@ -84,6 +78,7 @@ SOURCES += File/fstree.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
 SOURCES += Image/thumb.cpp
+SOURCES += Main/dockwidget.cpp
 SOURCES += Main/global.cpp
 SOURCES += Main/main.cpp
 SOURCES += Main/mainwindow.cpp
@@ -91,11 +86,11 @@ SOURCES += Metadata/metadata.cpp
 SOURCES += Metadata/xmp.cpp
 SOURCES += Views/compareImages.cpp
 SOURCES += Views/compareview.cpp
+SOURCES += Views/iconview.cpp
+SOURCES += Views/iconviewdelegate.cpp
 SOURCES += Views/imageview.cpp
 SOURCES += Views/infoview.cpp
 SOURCES += Views/tableview.cpp
-SOURCES += Views/thumbview.cpp
-SOURCES += Views/thumbviewdelegate.cpp
 SOURCES += Views/infostring.cpp
 SOURCES += Utilities/classificationlabel.cpp
 SOURCES += Utilities/dropshadowlabel.cpp
@@ -103,6 +98,11 @@ SOURCES += Utilities/popup.cpp
 SOURCES += Utilities/progressbar.cpp
 SOURCES += Utilities/usb.cpp
 SOURCES += Utilities/utilities.cpp
+
+SOURCES += Test/asynctask.cpp
+SOURCES += Test/readsync.cpp
+SOURCES += Test/readasync.cpp
+SOURCES += Test/readmdconcurrent.cpp
 
 FORMS += Dialogs/aboutdlg.ui
 FORMS += Dialogs/aligndlg.ui

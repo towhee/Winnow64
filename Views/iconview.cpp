@@ -1,4 +1,4 @@
-#include "Views/thumbview.h"
+#include "Views/iconview.h"
 #include "Main/mainwindow.h"
 
 /*  ThumbView Overview
@@ -101,7 +101,7 @@ ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
 
 MW *m2;
 
-ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
+IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     : QListView(parent)
 {
     {
@@ -147,7 +147,7 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
 
     setModel(this->dm->sf);
 
-    thumbViewDelegate = new ThumbViewDelegate(this, m2->isRatingBadgeVisible);
+    thumbViewDelegate = new IconViewDelegate(this, m2->isRatingBadgeVisible);
     thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     setItemDelegate(thumbViewDelegate);
@@ -158,7 +158,7 @@ ThumbView::ThumbView(QWidget *parent, DataModel *dm, QString objName)
             this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
 }
 
-void ThumbView::reportThumbs()
+void IconView::reportThumbs()
 {
     /*
     QModelIndex idx;
@@ -170,7 +170,7 @@ void ThumbView::reportThumbs()
     */
 }
 
-void ThumbView::refreshThumb(QModelIndex idx, int role)
+void IconView::refreshThumb(QModelIndex idx, int role)
 {
     {
     #ifdef ISDEBUG
@@ -182,7 +182,7 @@ void ThumbView::refreshThumb(QModelIndex idx, int role)
     dataChanged(idx, idx, roles);
 }
 
-void ThumbView::refreshThumbs() {
+void IconView::refreshThumbs() {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -191,7 +191,7 @@ void ThumbView::refreshThumbs() {
     dataChanged(dm->sf->index(0, 0), dm->sf->index(getLastRow(), 0));
 }
 
-void ThumbView::setThumbParameters()
+void IconView::setThumbParameters()
 {
 /*
 When thumb parameters (height, width, padding, fontsize, showLabels) are
@@ -227,7 +227,7 @@ possibly altered thumbnail dimensions.
     }
 }
 
-void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
+void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight,
         int _thumbSpacing, int _thumbPadding, int _labelFontSize,
         bool _showThumbLabels, bool _wrapThumbs, int _badgeSize)
 {
@@ -247,27 +247,27 @@ void ThumbView::setThumbParameters(int _thumbWidth, int _thumbHeight,
     setThumbParameters();
 }
 
-int ThumbView::getThumbSpaceMin()
+int IconView::getThumbSpaceMin()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    return THUMB_MIN + thumbSpacing * 2 + thumbPadding *2 + 8;
+    return ICON_MIN + thumbSpacing * 2 + thumbPadding *2 + 8;
 }
 
-int ThumbView::getThumbSpaceMax()
+int IconView::getThumbSpaceMax()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    return THUMB_MAX + thumbSpacing * 2 + thumbPadding *2 + 8;
+    return ICON_MAX + thumbSpacing * 2 + thumbPadding *2 + 8;
 }
 
-QSize ThumbView::getThumbCellSize()
+QSize IconView::getThumbCellSize()
 {
     {
     #ifdef ISDEBUG
@@ -275,10 +275,10 @@ QSize ThumbView::getThumbCellSize()
     #endif
     }
 //    setThumbParameters(false);    // reqd?  rgh
-    return thumbViewDelegate->getThumbCell();
+    return thumbViewDelegate->getCellSize();
 }
 
-int ThumbView::getThumbSpaceWidth(int thumbSpaceHeight)
+int IconView::getThumbSpaceWidth(int thumbSpaceHeight)
 {
 /*
 The thumbSpace is the total cell occupied be the thumbnail, including the outer
@@ -296,19 +296,19 @@ changes height to determine whether a scrollbar is required.
     }
     float aspect = thumbWidth / thumbHeight;
     // Difference between thumbSpace and thumbHeight
-    int margin = thumbViewDelegate->getThumbCell().height() - thumbHeight;
+    int margin = thumbViewDelegate->getCellSize().height() - thumbHeight;
     int newThumbHeight = thumbSpaceHeight - margin;
     int newThumbWidth = newThumbHeight * aspect;
     return newThumbWidth + margin - 1;
 }
 
-int ThumbView::getScrollThreshold(int thumbSpaceHeight)
+int IconView::getScrollThreshold(int thumbSpaceHeight)
 {
     return viewport()->width() / getThumbSpaceWidth(thumbSpaceHeight);
 }
 
 // debugging
-void ThumbView::reportThumb()
+void IconView::reportThumb()
 {
     {
     #ifdef ISDEBUG
@@ -322,7 +322,7 @@ void ThumbView::reportThumb()
 
 }
 
-int ThumbView::getCurrentRow()
+int IconView::getCurrentRow()
 {
     {
     #ifdef ISDEBUG
@@ -332,7 +332,7 @@ int ThumbView::getCurrentRow()
     return currentIndex().row();
 }
 
-int ThumbView::getNextRow()
+int IconView::getNextRow()
 {
     {
     #ifdef ISDEBUG
@@ -345,7 +345,7 @@ int ThumbView::getNextRow()
     return row + 1;
 }
 
-int ThumbView::getPrevRow()
+int IconView::getPrevRow()
 {
     {
     #ifdef ISDEBUG
@@ -358,7 +358,7 @@ int ThumbView::getPrevRow()
     return row - 1;
 }
 
-int ThumbView::getLastRow()
+int IconView::getLastRow()
 {
     {
     #ifdef ISDEBUG
@@ -368,7 +368,7 @@ int ThumbView::getLastRow()
     return dm->sf->rowCount() - 1;
 }
 
-int ThumbView::getRandomRow()
+int IconView::getRandomRow()
 {
     {
     #ifdef ISDEBUG
@@ -378,7 +378,7 @@ int ThumbView::getRandomRow()
     return qrand() % (dm->sf->rowCount());
 }
 
-bool ThumbView::isSelectedItem()
+bool IconView::isSelectedItem()
 {
     // call before getting current row or index
     {
@@ -394,7 +394,7 @@ bool ThumbView::isSelectedItem()
         return false;
 }
 
-int ThumbView::getFirstVisible()
+int IconView::getFirstVisible()
 {
 /*
 Return the datamodel row for the first thumb visible in the thumbView. This is
@@ -421,7 +421,7 @@ of images in the selected folder.
     return -1;
 }
 
-int ThumbView::getLastVisible()
+int IconView::getLastVisible()
 {
 /*
 Return the datamodel row for the last thumb visible in the thumbView. This is
@@ -444,7 +444,7 @@ of images in the selected folder.
     return -1;
 }
 
-QString ThumbView::getCurrentFilePath()
+QString IconView::getCurrentFilePath()
 {
     {
     #ifdef ISDEBUG
@@ -457,7 +457,7 @@ QString ThumbView::getCurrentFilePath()
 // PICKS: Items that have been picked
 
 // used in MW::ingests
-bool ThumbView::isPick()
+bool IconView::isPick()
 {
     {
     #ifdef ISDEBUG
@@ -471,7 +471,7 @@ bool ThumbView::isPick()
     return false;
 }
 
-QFileInfoList ThumbView::getPicks()
+QFileInfoList IconView::getPicks()
 {
 /* Returns a list of all the files that have been picked.  It is used in
 MW, passing the list on to the ingestDlg for ingestion/copying to another
@@ -495,7 +495,7 @@ folder.
     return fileInfoList;
 }
 
-int ThumbView::getNextPick()
+int IconView::getNextPick()
 {
     {
     #ifdef ISDEBUG
@@ -513,7 +513,7 @@ int ThumbView::getNextPick()
     return -1;
 }
 
-int ThumbView::getPrevPick()
+int IconView::getPrevPick()
 {
     {
     #ifdef ISDEBUG
@@ -530,7 +530,7 @@ int ThumbView::getPrevPick()
     return -1;
 }
 
-int ThumbView::getNearestPick()
+int IconView::getNearestPick()
 {
 /* Returns the model row of the nearest pick, used in toggleFilterPick */
     {
@@ -553,7 +553,7 @@ int ThumbView::getNearestPick()
     return 0;
 }
 
-void ThumbView::sortThumbs(int sortColumn, bool isReverse)
+void IconView::sortThumbs(int sortColumn, bool isReverse)
 {
     {
     #ifdef ISDEBUG
@@ -566,7 +566,7 @@ void ThumbView::sortThumbs(int sortColumn, bool isReverse)
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
-QStringList ThumbView::getSelectedThumbsList()
+QStringList IconView::getSelectedThumbsList()
 {
 /* This was used by the eliminated tags class and is not used but looks
 useful.
@@ -585,7 +585,7 @@ useful.
     return SelectedThumbsPaths;
 }
 
-bool ThumbView::isThumb(int row)
+bool IconView::isThumb(int row)
 {
     {
     #ifdef ISDEBUG
@@ -596,7 +596,7 @@ bool ThumbView::isThumb(int row)
 }
 
 // ASync
-void ThumbView::processIconBuffer()
+void IconView::processIconBuffer()
 {
     static int count = 0;
     count++;
@@ -616,7 +616,7 @@ void ThumbView::processIconBuffer()
     }
 }
 
-void ThumbView::setIcon(int row, QImage thumb)
+void IconView::setIcon(int row, QImage thumb)
 {
 /*
 This slot is signalled from metadataCacheThread to set the thumbView icon.
@@ -646,7 +646,7 @@ crash.
 }
 
 // Used by thumbnail navigation (left, right, up, down etc)
-void ThumbView::selectThumb(QModelIndex idx)
+void IconView::selectThumb(QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
@@ -660,7 +660,7 @@ void ThumbView::selectThumb(QModelIndex idx)
     }
 }
 
-void ThumbView::selectThumb(int row)
+void IconView::selectThumb(int row)
 {
     {
     #ifdef ISDEBUG
@@ -674,7 +674,7 @@ void ThumbView::selectThumb(int row)
     selectThumb(idx);
 }
 
-void ThumbView::selectThumb(QString &fName)
+void IconView::selectThumb(QString &fName)
 {
     {
     #ifdef ISDEBUG
@@ -687,7 +687,7 @@ void ThumbView::selectThumb(QString &fName)
     if(idx.isValid()) selectThumb(idx);
 }
 
-void ThumbView::selectNext()
+void IconView::selectNext()
 {
     {
     #ifdef ISDEBUG
@@ -698,7 +698,7 @@ void ThumbView::selectNext()
     selectThumb(getNextRow());
 }
 
-void ThumbView::selectPrev()
+void IconView::selectPrev()
 {
     {
     #ifdef ISDEBUG
@@ -709,7 +709,7 @@ void ThumbView::selectPrev()
     selectThumb(getPrevRow());
 }
 
-void ThumbView::selectUp()
+void IconView::selectUp()
 {
     {
     #ifdef ISDEBUG
@@ -720,7 +720,7 @@ void ThumbView::selectUp()
     else setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
 }
 
-void ThumbView::selectDown()
+void IconView::selectDown()
 {
     {
     #ifdef ISDEBUG
@@ -731,7 +731,7 @@ void ThumbView::selectDown()
     else setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
 }
 
-void ThumbView::selectFirst()
+void IconView::selectFirst()
 {
     {
     #ifdef ISDEBUG
@@ -741,7 +741,7 @@ void ThumbView::selectFirst()
     selectThumb(0);
 }
 
-void ThumbView::selectLast()
+void IconView::selectLast()
 {
     {
     #ifdef ISDEBUG
@@ -751,7 +751,7 @@ void ThumbView::selectLast()
     selectThumb(getLastRow());
 }
 
-void ThumbView::selectRandom()
+void IconView::selectRandom()
 {
     {
     #ifdef ISDEBUG
@@ -761,7 +761,7 @@ void ThumbView::selectRandom()
     selectThumb(getRandomRow());
 }
 
-void ThumbView::selectNextPick()
+void IconView::selectNextPick()
 {
     {
     #ifdef ISDEBUG
@@ -771,7 +771,7 @@ void ThumbView::selectNextPick()
     selectThumb(getNextPick());
 }
 
-void ThumbView::selectPrevPick()
+void IconView::selectPrevPick()
 {
     {
     #ifdef ISDEBUG
@@ -781,7 +781,7 @@ void ThumbView::selectPrevPick()
     selectThumb(getPrevPick());
 }
 
-void ThumbView::thumbsEnlarge()
+void IconView::thumbsEnlarge()
 {
 /* This function enlarges the size of the thumbnails in the thumbView, with the objectName
    "Thumbnails", which either resides in a dock or a floating window.
@@ -791,20 +791,20 @@ void ThumbView::thumbsEnlarge()
     G::track(__FUNCTION__);
     #endif
     }
-    if (thumbWidth < THUMB_MIN) thumbWidth = THUMB_MIN;
-    if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
-    if (thumbWidth < THUMB_MAX && thumbHeight < THUMB_MAX)
+    if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
+    if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
+    if (thumbWidth < ICON_MAX && thumbHeight < ICON_MAX)
     {
         thumbWidth *= 1.1;
         thumbHeight *= 1.1;
-        if (thumbWidth > THUMB_MAX) thumbWidth = THUMB_MAX;
-        if (thumbHeight > THUMB_MAX) thumbHeight = THUMB_MAX;
+        if (thumbWidth > ICON_MAX) thumbWidth = ICON_MAX;
+        if (thumbHeight > ICON_MAX) thumbHeight = ICON_MAX;
     }
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
-void ThumbView::thumbsShrink()
+void IconView::thumbsShrink()
 {
 /* This function reduces the size of the thumbnails in the thumbView, with the objectName
    "Thumbnails", which either resides in a dock or a floating window.
@@ -814,17 +814,17 @@ void ThumbView::thumbsShrink()
     G::track(__FUNCTION__);
     #endif
     }
-    if (thumbWidth > THUMB_MIN  && thumbHeight > THUMB_MIN) {
+    if (thumbWidth > ICON_MIN  && thumbHeight > ICON_MIN) {
         thumbWidth *= 0.9;
         thumbHeight *= 0.9;
-        if (thumbWidth < THUMB_MIN) thumbWidth = THUMB_MIN;
-        if (thumbHeight < THUMB_MIN) thumbHeight = THUMB_MIN;
+        if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
+        if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
     }
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
-void ThumbView::thumbsRejustify()
+void IconView::rejustify()
 {
 /* This function controls the resizing behavior of the gridview cells when the window is
 resized or the gridview preferences are edited. The grid cells sizes are maintained while
@@ -845,30 +845,29 @@ with objectName "Thumbnails", is handled by thumbsEnlarge and thumbsShrink.
     G::track(__FUNCTION__);
     #endif
     }
-    int increment;
-    if (thumbWidth < assignedThumbWidth) increment = -1;
-    else increment = 1;
+    static int prevWidth = 0;
+    if (width() == prevWidth) return;
+    prevWidth = width();
 
-    int wCell = getThumbCellSize().width();
+    // get
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
-
-    int tpr = wRow / wCell + increment;                // thumbs per row
+    int wCell = thumbViewDelegate->getCellWidthFromThumbWidth(assignedThumbWidth);
+    if (wCell == 0 || wRow == 0) return;
+    int tpr = wRow / wCell;
     wCell = wRow / tpr;
 
-    if (increment == 1 && wCell < THUMB_MIN) return;
-    if (increment == -1 && wCell > THUMB_MAX) return;
-
-    int oldThumbWidth = thumbWidth;
     thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
-    thumbHeight = (thumbHeight / oldThumbWidth) * thumbWidth;
+    thumbHeight = thumbWidth * bestAspectRatio;
 
     skipResize = true;      // prevent feedback loop
 
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+
+//    qDebug() << "assignedThumbWidth" << assignedThumbWidth;
 }
 
-void ThumbView::gridEnlargeJustified()
+void IconView::justify(JustifyAction action)
 {
 /*
    This function enlarges the grid cells while keeping the right hand side margin minimized.
@@ -885,17 +884,17 @@ void ThumbView::gridEnlargeJustified()
     G::track(__FUNCTION__);
     #endif
     }
-    int wCell = getThumbCellSize().width();
+    int wCell = thumbViewDelegate->getCellSize().width();
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
 
-    int tpr = wRow / wCell - 1;                        // thumbs per row
+    int tpr = wRow / wCell + action;                        // thumbs per row
+    if (tpr < 1) return;
     wCell = wRow / tpr;
 
-    if (wCell > THUMB_MAX) return;
+    if (wCell > ICON_MAX) return;
 
-    int oldThumbWidth = thumbWidth;
     thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
-    thumbHeight = (thumbHeight / oldThumbWidth) * thumbWidth;
+    thumbHeight = thumbWidth * bestAspectRatio;
 
     assignedThumbWidth = thumbWidth;
     skipResize = true;      // prevent feedback loop
@@ -904,7 +903,7 @@ void ThumbView::gridEnlargeJustified()
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
-void ThumbView::gridShrinkJustified()
+void IconView::justify(int tpr)
 {
 /*
    This function shrinks the grid cells while keeping the right hand side margin minimized.
@@ -921,17 +920,16 @@ void ThumbView::gridShrinkJustified()
     G::track(__FUNCTION__);
     #endif
     }
-    int wCell = getThumbCellSize().width();
+//    int wCell = thumbViewDelegate->getCellSize().width();
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
 
-    int tpr = wRow / wCell + 1;                        // thumbs per row
-    wCell = wRow / tpr;
+//    int tpr = wRow / wCell + 1;                        // thumbs per row
+    int wCell = wRow / tpr;
 
-    if (wCell < THUMB_MIN) return;
+    if (wCell < ICON_MIN) return;
 
-    int oldThumbWidth = thumbWidth;
     thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
-    thumbHeight = (thumbHeight / oldThumbWidth) * thumbWidth;
+    thumbHeight = thumbWidth * bestAspectRatio;
 
     assignedThumbWidth = thumbWidth;
     skipResize = true;      // prevent feedback loop
@@ -940,7 +938,7 @@ void ThumbView::gridShrinkJustified()
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
-void ThumbView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
+void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
 {
 /* thumbViewDelegate triggers this to provide rect data to calc thumb mouse
 click position that is then sent to imageView to zoom to the same spot
@@ -953,7 +951,7 @@ click position that is then sent to imageView to zoom to the same spot
     dm->sf->setData(index, iconRect, G::ThumbRectRole);
 }
 
-void ThumbView::resizeEvent(QResizeEvent *event)
+void IconView::resizeEvent(QResizeEvent *event)
 {
 /*  resizeEvent can be triggered by a change in the gridView cell size (thumbWidth) that
    requires justification.  That is filtered by checking if the ThumbView width has changed
@@ -964,25 +962,25 @@ void ThumbView::resizeEvent(QResizeEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
+    QListView::resizeEvent(event);
     if (skipResize) {
         skipResize = false;
         return;
     }
     static int count = -1;
     count++;
-    QListView::resizeEvent(event);
     static int prevWidth;
     if (count == 0) {
         prevWidth = width();
         return;
     }
     count++;
-    if (objectName() == "Thumbnails") return;
+    if (objectName() == "Thumbnails" && wrapThumbs == false) return;
     if (width() == prevWidth) return;
-    thumbsRejustify();
+    QTimer::singleShot(500, this, SLOT(rejustify()));
 }
 
-void ThumbView::bestAspect()
+void IconView::bestAspect()
 {
     {
     #ifdef ISDEBUG
@@ -990,11 +988,16 @@ void ThumbView::bestAspect()
     #endif
     }
     int maxW = 0, maxH = 0;
+    if (thumbWidth > ICON_MAX) thumbWidth = ICON_MAX;
+    if (thumbHeight > ICON_MAX) thumbHeight = ICON_MAX;
+    if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
+    if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
     for (int row = 0; row < dm->rowCount(); ++row) {
         QModelIndex idx = dm->index(row, 0);
-        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(THUMB_MAX);
+        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(ICON_MAX);
         if (maxW < pm.width()) maxW = pm.width();
         if (maxH < pm.height()) maxH = pm.height();
+        if (maxW == ICON_MAX && maxH == ICON_MAX) break;
     }
     if (maxW == maxH && thumbWidth > thumbHeight)
         thumbHeight = thumbWidth;
@@ -1003,9 +1006,10 @@ void ThumbView::bestAspect()
     if (maxW > maxH) thumbHeight = thumbWidth * ((double)maxH / maxW);
     if (maxH > maxW) thumbWidth = thumbHeight * ((double)maxW / maxH);
     setThumbParameters();
+    bestAspectRatio = (double)thumbHeight / thumbWidth;
 }
 
-void ThumbView::thumbsFit(Qt::DockWidgetArea area)
+void IconView::thumbsFit(Qt::DockWidgetArea area)
 {
     {
     #ifdef ISDEBUG
@@ -1023,7 +1027,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         // adjust thumb width
         int scrollWidth = G::scrollBarThickness;
         int width = viewport()->width() - scrollWidth - 2;
-        int thumbCellWidth = thumbViewDelegate->getThumbCell().width() - thumbPadding * 2;
+        int thumbCellWidth = thumbViewDelegate->getCellSize().width() - thumbPadding * 2;
         int rightSideGap = 99999;
         thumbPadding = 0;
         int remain;
@@ -1053,7 +1057,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
         float aspect = thumbWidth / thumbHeight;
 
         // get the current thumb cell
-        int thumbSpaceHeight = thumbViewDelegate->getThumbCell().height();
+        int thumbSpaceHeight = thumbViewDelegate->getCellSize().height();
 
         // margin = nonthumb space is used to rebuild cell after thumb resize to fit
         int margin = thumbSpaceHeight - thumbHeight;
@@ -1070,7 +1074,7 @@ void ThumbView::thumbsFit(Qt::DockWidgetArea area)
     }
 }
 
-void ThumbView::thumbsFitTopOrBottom()
+void IconView::thumbsFitTopOrBottom()
 {
 /*
 Called by MW::eventFilter when a thumbDock resize event occurs triggered by the
@@ -1096,17 +1100,17 @@ For thumbSpace anatomy (see ThumbViewDelegate)
     newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
 
     // derive new thumbsize from new thumbSpace
-    thumbHeight = thumbViewDelegate->getThumbHeightFromAvailHeight(newThumbSpaceHt);
+    thumbHeight = thumbViewDelegate->getCellHeightFromAvailHeight(newThumbSpaceHt);
 
     // make sure within range (should be from thumbSpace check but just to be sure)
-    thumbHeight = thumbHeight > THUMB_MAX ? THUMB_MAX : thumbHeight;
-    thumbHeight = thumbHeight < THUMB_MIN ? THUMB_MIN : thumbHeight;
+    thumbHeight = thumbHeight > ICON_MAX ? ICON_MAX : thumbHeight;
+    thumbHeight = thumbHeight < ICON_MIN ? ICON_MIN : thumbHeight;
     thumbWidth = thumbHeight * aspect;
 
     // check thumbWidth within range
-    if(thumbWidth > THUMB_MAX) {
-        thumbWidth = THUMB_MAX;
-        thumbHeight = THUMB_MAX / aspect;
+    if(thumbWidth > ICON_MAX) {
+        thumbWidth = ICON_MAX;
+        thumbHeight = ICON_MAX / aspect;
     }
     setSpacing(thumbSpacing);
 
@@ -1114,7 +1118,7 @@ For thumbSpace anatomy (see ThumbViewDelegate)
         thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
 }
 
-void ThumbView::updateLayout()
+void IconView::updateLayout()
 {
     {
     #ifdef ISDEBUG
@@ -1126,7 +1130,7 @@ void ThumbView::updateLayout()
     QListView::event(&event);
 }
 
-void ThumbView::scrollDown(int /*step*/)
+void IconView::scrollDown(int /*step*/)
 {
     if(wrapThumbs) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
@@ -1136,7 +1140,7 @@ void ThumbView::scrollDown(int /*step*/)
     }
 }
 
-void ThumbView::scrollUp(int /*step*/)
+void IconView::scrollUp(int /*step*/)
 {
     if(wrapThumbs) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
@@ -1146,7 +1150,7 @@ void ThumbView::scrollUp(int /*step*/)
     }
 }
 
-void ThumbView::scrollPageDown(int /*step*/)
+void IconView::scrollPageDown(int /*step*/)
 {
     if(wrapThumbs) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
@@ -1156,7 +1160,7 @@ void ThumbView::scrollPageDown(int /*step*/)
     }
 }
 
-void ThumbView::scrollPageUp(int /*step*/)
+void IconView::scrollPageUp(int /*step*/)
 {
     if(wrapThumbs) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
@@ -1166,7 +1170,7 @@ void ThumbView::scrollPageUp(int /*step*/)
     }
 }
 
-void ThumbView::scrollToCurrent(int row)
+void IconView::scrollToCurrent(int row)
 {
 /*
 This is called from MW::eventFilter after the eventFilter intercepts the last scrollbar paint
@@ -1194,7 +1198,7 @@ MW::mouseClickScroll == true.
     readyToScroll = false;
 }
 
-int ThumbView::getHorizontalScrollBarOffset(int row)
+int IconView::getHorizontalScrollBarOffset(int row)
 {
     {
     #ifdef ISDEBUG
@@ -1208,7 +1212,7 @@ int ThumbView::getHorizontalScrollBarOffset(int row)
              << "pageWidth" << pageWidth
              << "thumbWidth" << pageWidth;
 
-    if (pageWidth < THUMB_MIN || thumbWidth < THUMB_MIN)
+    if (pageWidth < ICON_MIN || thumbWidth < ICON_MIN)
         return 0;
 
     float thumbsPerPage = (double)pageWidth / thumbWidth;
@@ -1239,7 +1243,7 @@ int ThumbView::getHorizontalScrollBarOffset(int row)
     return scrollOffset;
 }
 
-int ThumbView::getVerticalScrollBarOffset(int row)
+int IconView::getVerticalScrollBarOffset(int row)
 {
     {
     #ifdef ISDEBUG
@@ -1251,7 +1255,7 @@ int ThumbView::getVerticalScrollBarOffset(int row)
     int thumbCellWidth = getThumbCellSize().width();
     int thumbCellHeight = getThumbCellSize().height();
 
-    if (pageWidth < THUMB_MIN ||pageHeight < THUMB_MIN || thumbCellWidth < THUMB_MIN || thumbCellHeight < THUMB_MIN)
+    if (pageWidth < ICON_MIN ||pageHeight < ICON_MIN || thumbCellWidth < ICON_MIN || thumbCellHeight < ICON_MIN)
         return 0;
 
     float thumbsPerPage = pageWidth / thumbCellWidth * (float)pageHeight / thumbCellHeight;
@@ -1285,7 +1289,7 @@ int ThumbView::getVerticalScrollBarOffset(int row)
 */
     return scrollOffset;
 }
-int ThumbView::getHorizontalScrollBarMax()
+int IconView::getHorizontalScrollBarMax()
 {
 /*
 
@@ -1304,7 +1308,7 @@ int ThumbView::getHorizontalScrollBarMax()
     return hMax;
 }
 
-int ThumbView::getVerticalScrollBarMax()
+int IconView::getVerticalScrollBarMax()
 {
 /*
 
@@ -1332,7 +1336,7 @@ int ThumbView::getVerticalScrollBarMax()
     return vMax;
 }
 
-void ThumbView::wheelEvent(QWheelEvent *event)
+void IconView::wheelEvent(QWheelEvent *event)
 {
     {
     #ifdef ISDEBUG
@@ -1342,7 +1346,7 @@ void ThumbView::wheelEvent(QWheelEvent *event)
     QListView::wheelEvent(event);
 }
 
-void ThumbView::mousePressEvent(QMouseEvent *event)
+void IconView::mousePressEvent(QMouseEvent *event)
 {
 /*
 Captures the position of the mouse click within the thumbnail. This is sent
@@ -1396,7 +1400,7 @@ different position than the current image.
     QListView::mousePressEvent(event);
 }
 
-void ThumbView::mouseMoveEvent(QMouseEvent *event)
+void IconView::mouseMoveEvent(QMouseEvent *event)
 {
     {
     #ifdef ISDEBUG
@@ -1408,7 +1412,7 @@ void ThumbView::mouseMoveEvent(QMouseEvent *event)
     QListView::mouseMoveEvent(event);
 }
 
-void ThumbView::mouseReleaseEvent(QMouseEvent *event)
+void IconView::mouseReleaseEvent(QMouseEvent *event)
 {
     {
     #ifdef ISDEBUG
@@ -1429,7 +1433,7 @@ void ThumbView::mouseReleaseEvent(QMouseEvent *event)
 
 //}
 
-void ThumbView::mouseDoubleClickEvent(QMouseEvent *event)
+void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 {
 /*
 Show the image in loupe view.  Scroll the thumbView or gridView to position at
@@ -1448,7 +1452,7 @@ center.
     scrollToCurrent(currentIndex().row());
 }
 
-void ThumbView::invertSelection()
+void IconView::invertSelection()
 {
 /*
 Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct
@@ -1465,7 +1469,7 @@ Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct
     selectionModel()->select(toggleSelection, QItemSelectionModel::Toggle);
 }
 
-void ThumbView::copyThumbs()        // rgh is this working?
+void IconView::copyThumbs()        // rgh is this working?
 {
     {
     #ifdef ISDEBUG
@@ -1490,7 +1494,7 @@ void ThumbView::copyThumbs()        // rgh is this working?
     clipboard->setMimeData(mimeData);
 }
 
-void ThumbView::startDrag(Qt::DropActions)
+void IconView::startDrag(Qt::DropActions)
 {
 /*
 Drag and drop thumbs to another program.

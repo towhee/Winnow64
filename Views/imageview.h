@@ -5,7 +5,7 @@
 #include <QHash>
 #include "Metadata/metadata.h"
 #include "Cache/imagecache.h"
-#include "Views/thumbview.h"
+#include "Views/iconview.h"
 #include "Views/infostring.h"
 #include "Utilities/dropshadowlabel.h"
 #include "Utilities/classificationlabel.h"
@@ -20,7 +20,7 @@ public:
               QWidget *centralWidget,
               Metadata *metadata,
               ImageCache *imageCacheThread,
-              ThumbView *thumbView,
+              IconView *thumbView,
               InfoString *infoString,
               bool isShootingInfoVisible,
               bool isRatingBadgeVisible,
@@ -108,7 +108,7 @@ private:
     QWidget *centralWidget;
     Metadata *metadata;
     ImageCache *imageCacheThread;
-    ThumbView *thumbView;
+    IconView *thumbView;
     InfoString *infoString;
     Pixmap *pixmap;
 
