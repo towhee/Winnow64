@@ -138,7 +138,7 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     textHtOffset.setX(0);
     textHtOffset.setY(fPad + textHeight - textHeadroom);
 
-    reportThumbAttributes();
+//    reportThumbAttributes();
 }
 
 void IconViewDelegate::reportThumbAttributes()
@@ -159,6 +159,11 @@ QSize IconViewDelegate::getCellSize()
     return cellSize;
 }
 
+QSize IconViewDelegate::getCellSize(QSize icon)
+{
+    return (icon + QSize(pad2, pad2 + textHeight));
+}
+
 int IconViewDelegate::getThumbWidthFromCellWidth(int cellWidth)
 {
     return cellWidth - pad2;
@@ -169,10 +174,14 @@ int IconViewDelegate::getCellWidthFromThumbWidth(int width)
     return width + pad2;
 }
 
+int IconViewDelegate::getCellHeightFromThumbHeight(int height)
+{
+    return height + pad2 + textHeight;
+}
+
 int IconViewDelegate::getCellHeightFromAvailHeight(int availHeight)
 {
-    int thumbHeight = availHeight - fPad - tPad;
-    if(delegateShowThumbLabels) thumbHeight -= fontHt;
+    int thumbHeight = availHeight - pad2 - textHeight;
     return thumbHeight <= ICON_MAX ? thumbHeight : ICON_MAX;
 }
 
