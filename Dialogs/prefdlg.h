@@ -79,6 +79,8 @@ private slots:
 
     void on_aSynchChk_clicked();
 
+    void on_maxIconSizeSpinBox_valueChanged(int arg1);
+
 private:
     Ui::Prefdlg *ui;
     QStandardItemModel *okInfo;
