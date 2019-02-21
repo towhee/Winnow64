@@ -182,7 +182,7 @@ int IconViewDelegate::getCellHeightFromThumbHeight(int height)
 int IconViewDelegate::getCellHeightFromAvailHeight(int availHeight)
 {
     int thumbHeight = availHeight - pad2 - textHeight;
-    return thumbHeight <= ICON_MAX ? thumbHeight : ICON_MAX;
+    return thumbHeight <= G::maxIconSize ? thumbHeight : G::maxIconSize;
 }
 
 void IconViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex /*previous*/)

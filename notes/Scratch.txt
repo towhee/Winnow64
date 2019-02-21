@@ -264,7 +264,7 @@ int IconView::getThumbSpaceMax()
     G::track(__FUNCTION__);
     #endif
     }
-    return ICON_MAX + thumbSpacing * 2 + thumbPadding *2 + 8;
+    return G::maxIconSize + thumbSpacing * 2 + thumbPadding *2 + 8;
 }
 
 QSize IconView::getThumbCellSize()
@@ -793,12 +793,12 @@ void IconView::thumbsEnlarge()
     }
     if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
     if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
-    if (thumbWidth < ICON_MAX && thumbHeight < ICON_MAX)
+    if (thumbWidth < G::maxIconSize && thumbHeight < G::maxIconSize)
     {
         thumbWidth *= 1.1;
         thumbHeight *= 1.1;
-        if (thumbWidth > ICON_MAX) thumbWidth = ICON_MAX;
-        if (thumbHeight > ICON_MAX) thumbHeight = ICON_MAX;
+        if (thumbWidth > G::maxIconSize) thumbWidth = G::maxIconSize;
+        if (thumbHeight > G::maxIconSize) thumbHeight = G::maxIconSize;
     }
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
@@ -891,7 +891,7 @@ void IconView::justify(JustifyAction action)
     if (tpr < 1) return;
     wCell = wRow / tpr;
 
-    if (wCell > ICON_MAX) return;
+    if (wCell > G::maxIconSize) return;
 
     thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
     thumbHeight = thumbWidth * bestAspectRatio;
@@ -988,16 +988,16 @@ void IconView::bestAspect()
     #endif
     }
     int maxW = 0, maxH = 0;
-    if (thumbWidth > ICON_MAX) thumbWidth = ICON_MAX;
-    if (thumbHeight > ICON_MAX) thumbHeight = ICON_MAX;
+    if (thumbWidth > G::maxIconSize) thumbWidth = G::maxIconSize;
+    if (thumbHeight > G::maxIconSize) thumbHeight = G::maxIconSize;
     if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
     if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
     for (int row = 0; row < dm->rowCount(); ++row) {
         QModelIndex idx = dm->index(row, 0);
-        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(ICON_MAX);
+        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(G::maxIconSize);
         if (maxW < pm.width()) maxW = pm.width();
         if (maxH < pm.height()) maxH = pm.height();
-        if (maxW == ICON_MAX && maxH == ICON_MAX) break;
+        if (maxW == G::maxIconSize && maxH == G::maxIconSize) break;
     }
     if (maxW == maxH && thumbWidth > thumbHeight)
         thumbHeight = thumbWidth;
@@ -1103,14 +1103,14 @@ For thumbSpace anatomy (see ThumbViewDelegate)
     thumbHeight = thumbViewDelegate->getCellHeightFromAvailHeight(newThumbSpaceHt);
 
     // make sure within range (should be from thumbSpace check but just to be sure)
-    thumbHeight = thumbHeight > ICON_MAX ? ICON_MAX : thumbHeight;
+    thumbHeight = thumbHeight > G::maxIconSize ? G::maxIconSize : thumbHeight;
     thumbHeight = thumbHeight < ICON_MIN ? ICON_MIN : thumbHeight;
     thumbWidth = thumbHeight * aspect;
 
     // check thumbWidth within range
-    if(thumbWidth > ICON_MAX) {
-        thumbWidth = ICON_MAX;
-        thumbHeight = ICON_MAX / aspect;
+    if(thumbWidth > G::maxIconSize) {
+        thumbWidth = G::maxIconSize;
+        thumbHeight = G::maxIconSize / aspect;
     }
     setSpacing(thumbSpacing);
 
