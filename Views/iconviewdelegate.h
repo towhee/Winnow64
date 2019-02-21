@@ -24,9 +24,12 @@ public:
           int labelFontSize, bool showThumbLabels, int badgeSize);
 
     QSize getCellSize();
+    QSize getCellSize(QSize icon);
     int getCellHeightFromAvailHeight(int availHeight);
     int getThumbWidthFromCellWidth(int cellWidth);
     int getCellWidthFromThumbWidth(int width);
+    int getCellHeightFromThumbHeight(int height);
+
     void reportThumbAttributes();
 
     QModelIndex currentIndex;

@@ -436,24 +436,20 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     /* A splitter resize of top/bottom thumbDock is happening:
 
-    Events are filtered from qApp here by an installEventFilter in the MW
-    contructor to monitor the splitter resize of the thumbdock when it is
-    docked horizontally. In this situation, as the vertical height of the
-    thumbDock changes the size of the thumbnails is modified to fit the
-    thumbDock by calling thumbsFitTopOrBottom. The mouse events determine when
-    a mouseDrag operation is happening in combination with thumbDock resizing.
-    The thumbDock is referenced from the parent because thumbView is a friend
-    class to MW.
+    Events are filtered from qApp here by an installEventFilter in the MW contructor to
+    monitor the splitter resize of the thumbdock when it is docked horizontally. In this
+    situation, as the vertical height of the thumbDock changes the size of the thumbnails is
+    modified to fit the thumbDock by calling thumbsFitTopOrBottom. The mouse events determine
+    when a mouseDrag operation is happening in combination with thumbDock resizing. The
+    thumbDock is referenced from the parent because thumbView is a friend class to MW.
     */
 
     if (event->type() == QEvent::MouseButtonPress) {
-//        qDebug() << QTime::currentTime() << "MouseButtonPress" << __FUNCTION__;
         QMouseEvent *e = static_cast<QMouseEvent *>(event);
         if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
     }
 
     if (event->type() == QEvent::MouseButtonRelease) {
-//        qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__;
         QMouseEvent *e = static_cast<QMouseEvent *>(event);
         if (e->button() == Qt::LeftButton) {
             isLeftMouseBtnPressed = false;
@@ -469,7 +465,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         isMouseDrag = false;
     }
 
-    // if a lot of stuff make thumbs fit the resized thumb dock
+    // make thumbs fit the resized thumb dock
     if (obj == thumbDock) {
         if (event->type() == QEvent::Resize) {
             if (isMouseDrag) {
@@ -909,8 +905,8 @@ so scrollTo and delegate use of the current index must check the row.
     currentRow = current.row();
 
     // update delegates so they can highlight the current item
-    thumbView->thumbViewDelegate->currentRow = currentRow;
-    gridView->thumbViewDelegate->currentRow = currentRow;
+    thumbView->iconViewDelegate->currentRow = currentRow;
+    gridView->iconViewDelegate->currentRow = currentRow;
 
     // don't scroll mouse click source (screws up double clicks and disorients users
     if(G::source == "TableMouseClick") {
@@ -6618,18 +6614,15 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         // if thumbDock area changed then set dock height to thumb sizw
         if (!thumbDock->isFloating() && !asGridAction->isChecked()) {
             // make thumbDock height fit thumbs
-            int maxHt = thumbView->getThumbSpaceMax();
-            int minHt = thumbView->getThumbSpaceMin();
-//            int scrollBarHeight = 12;
-//            int scrollBarHeight = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
-//            int test = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
-//            qDebug() << G::t.restart() << "\t" << "qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent)" << test;
+            int maxHt = thumbView->iconViewDelegate->getCellSize(QSize(thumbView->iconWMax, thumbView->iconHMax)).height() + 10;
+            int minHt = thumbView->iconViewDelegate->getCellSize(QSize(ICON_MIN, ICON_MIN)).height();
 
-            int thumbCellHt = thumbView->getThumbCellSize().height();
+            int cellHt = thumbView->getCellSize().height();
 
             maxHt += G::scrollBarThickness;
             minHt += G::scrollBarThickness;
-            int newThumbDockHeight = thumbCellHt + G::scrollBarThickness;
+
+            int newThumbDockHeight = cellHt + G::scrollBarThickness;
 //            if (newThumbDockHeight > maxHt) newThumbDockHeight = maxHt;
 
             thumbView->setMaximumHeight(maxHt);

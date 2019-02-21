@@ -33,7 +33,7 @@ public:
 
     void updateLayout();
 
-    IconViewDelegate *thumbViewDelegate;
+    IconViewDelegate *iconViewDelegate;
     void selectThumb(int row);
     void selectThumb(QString &filePath);
     bool isThumb(int row);
@@ -41,9 +41,9 @@ public:
 
     QFileInfoList getPicks();
     bool isPick();
-    int getThumbSpaceMin();
-    int getThumbSpaceMax();
-    QSize getThumbCellSize();
+    QSize getMinCellSize();
+    QSize getMaxCellSize();
+    QSize getCellSize();
     int getThumbSpaceWidth(int thumbSpaceHeight);
     int getScrollThreshold(int thumbSpaceHeight);
     QStringList getSelectedThumbsList();        //used by tags, might be useful
@@ -72,6 +72,8 @@ public:
         Enlarge = -1
     };
     double bestAspectRatio;
+    int iconWMax;               // widest icon found in datamodel
+    int iconHMax;               // highest icon found in datamodel
 
 public slots:
     void scrollDown(int);
