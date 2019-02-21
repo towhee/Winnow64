@@ -14,8 +14,8 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
     thumb = new Thumb(this, metadata);
     restart = false;
     abort = false;
-    thumbMax.setWidth(ICON_MAX);
-    thumbMax.setHeight(ICON_MAX);
+    thumbMax.setWidth(G::maxIconSize);
+    thumbMax.setHeight(G::maxIconSize);
 }
 
 MetadataCache::~MetadataCache()
@@ -173,7 +173,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             thumbLoaded = thumb->loadThumb(fPath, image);
             mutex.unlock();
             if (thumbLoaded) {
-                emit setIcon(row, image.scaled(ICON_MAX, ICON_MAX, Qt::KeepAspectRatio));
+                emit setIcon(row, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
             }
         }
         else {

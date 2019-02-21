@@ -74,6 +74,7 @@ namespace G
         QImage image;
     };
 
+    extern int maxIconSize;
 
     extern QColor labelNoneColor;
     extern QColor labelRedColor;

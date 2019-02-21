@@ -28,6 +28,9 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->globalFontSizeSlider->setValue(G::fontSize.toInt());
     ui->globalFontSizeLbl->setText(G::fontSize);
 
+    // datamodel
+    ui->maxIconSizeSpinBox->setValue(G::maxIconSize);
+
     ui->infoFontSizeSlider->setTickInterval(2);
     ui->infoFontSizeSlider->setMinimum(6);
     ui->infoFontSizeSlider->setMaximum(34);
@@ -530,3 +533,8 @@ void Prefdlg::on_aSynchChk_clicked()
     G::aSync = ui->aSynchChk->isChecked();
 }
 
+
+void Prefdlg::on_maxIconSizeSpinBox_valueChanged(int arg1)
+{
+    G::maxIconSize = arg1;
+}
