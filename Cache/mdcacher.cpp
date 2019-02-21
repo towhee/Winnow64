@@ -20,8 +20,8 @@ MdCacher::MdCacher(QObject *parent,
     abort = false;
 
     // defined in global.h
-    thumbMax.setWidth(ICON_MAX);
-    thumbMax.setHeight(ICON_MAX);
+    thumbMax.setWidth(G::maxIconSize);
+    thumbMax.setHeight(G::maxIconSize);
 }
 
 MdCacher::~MdCacher()
@@ -218,7 +218,7 @@ thread.
 //                         << "row =" << items[row].row
 //                         << fPath;
 //                emit setIcon(items[row].row, image.scaled(THUMB_MAX, THUMB_MAX, Qt::KeepAspectRatio));
-                iconHash->insert(items[row].row, image.scaled(ICON_MAX, ICON_MAX, Qt::KeepAspectRatio));
+                iconHash->insert(items[row].row, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
             }
             else {
                 qDebug() << "MdCacher thread" << thread << "failed to load thumb for row"
