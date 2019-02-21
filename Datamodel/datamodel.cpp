@@ -311,7 +311,7 @@ bool DataModel::addFileData()
     imageFilePathList.clear();
 
     // rgh not working
-    emptyPixMap = QPixmap::fromImage(emptyImg).scaled(ICON_MAX, ICON_MAX);
+    emptyPixMap = QPixmap::fromImage(emptyImg).scaled(G::maxIconSize, G::maxIconSize);
 
     for (fileIndex = 0; fileIndex < fileInfoList.count(); ++fileIndex) {
 

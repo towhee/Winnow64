@@ -3282,8 +3282,8 @@ void MW::createThumbView()
     thumbView->setAutoScroll(false);
 
     // loadSettings has not run yet (dependencies, but QSettings has been opened
-    thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
-    thumbView->thumbPadding = setting->value("thumbPadding").toInt();
+//    thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
+//    thumbView->thumbPadding = setting->value("thumbPadding").toInt();
     thumbView->thumbWidth = setting->value("thumbWidth").toInt();
     thumbView->thumbHeight = setting->value("thumbHeight").toInt();
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
@@ -3323,8 +3323,8 @@ void MW::createGridView()
     gridView->setWrapping(true);
     gridView->setAutoScroll(false);
 
-    gridView->thumbSpacing = setting->value("thumbSpacingGrid").toInt();
-    gridView->thumbPadding = setting->value("thumbPaddingGrid").toInt();
+//    gridView->thumbSpacing = setting->value("thumbSpacingGrid").toInt();
+//    gridView->thumbPadding = setting->value("thumbPaddingGrid").toInt();
     gridView->thumbWidth = setting->value("thumbWidthGrid").toInt();
     gridView->thumbHeight = setting->value("thumbHeightGrid").toInt();
     gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
@@ -4685,11 +4685,11 @@ workspace with a matching name to the action is used.
     gridView->thumbPadding = w.thumbPaddingGrid;
     gridView->labelFontSize = w.labelFontSizeGrid;
     gridView->showThumbLabels = w.showThumbLabelsGrid;
+    thumbView->rejustify();
+    gridView->rejustify();
     thumbView->setThumbParameters();
     gridView->setThumbParameters();
     updateState();
-    thumbView->rejustify();
-    gridView->rejustify();
     if(!gridView->isVisible()) wasThumbDockVisible = w.isThumbDockVisible;
 }
 
@@ -5703,7 +5703,7 @@ Also, the orientation metadata must be updated for any images ingested.
         QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
         QStandardItem *item = new QStandardItem;
         item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
-        QPixmap pm = item->icon().pixmap(ICON_MAX, ICON_MAX);
+        QPixmap pm = item->icon().pixmap(G::maxIconSize, G::maxIconSize);
         pm = pm.transformed(trans, Qt::SmoothTransformation);
         item->setIcon(pm);
         thumbView->refreshThumbs();
@@ -5810,6 +5810,9 @@ re-established when the application is re-opened.
     setting->setValue("mouseClickScroll", mouseClickScroll);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
 
+    // datamodel
+    setting->setValue("maxIconSize", G::maxIconSize);
+
     // appearance
     setting->setValue("fontSize", G::fontSize);
     setting->setValue("classificationBadgeInImageDiameter", classificationBadgeInImageDiameter);
@@ -5839,8 +5842,8 @@ re-established when the application is re-opened.
     setting->setValue("filenameTemplateSelected", filenameTemplateSelected);
 
     // thumbs
-    setting->setValue("thumbSpacing", thumbView->thumbSpacing);
-    setting->setValue("thumbPadding", thumbView->thumbPadding);
+//    setting->setValue("thumbSpacing", thumbView->thumbSpacing);
+//    setting->setValue("thumbPadding", thumbView->thumbPadding);
     setting->setValue("thumbWidth", thumbView->thumbWidth);
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
@@ -5848,8 +5851,8 @@ re-established when the application is re-opened.
     setting->setValue("wrapThumbs", thumbView->wrapThumbs);
 
     // grid
-    setting->setValue("thumbSpacingGrid", gridView->thumbSpacing);
-    setting->setValue("thumbPaddingGrid", gridView->thumbPadding);
+//    setting->setValue("thumbSpacingGrid", gridView->thumbSpacing);
+//    setting->setValue("thumbPaddingGrid", gridView->thumbPadding);
     setting->setValue("thumbWidthGrid", gridView->thumbWidth);
     setting->setValue("thumbHeightGrid", gridView->thumbHeight);
     setting->setValue("labelFontSizeGrid", gridView->labelFontSize);
@@ -6123,6 +6126,9 @@ Preferences are located in the prefdlg class and updated here.
         autoEjectUsb = false;
         combineRawJpg = true;
 
+        // datamodel
+        G::maxIconSize = 256;
+
         // appearance
         G::fontSize = 14;
         classificationBadgeInImageDiameter = 20;
@@ -6161,6 +6167,9 @@ Preferences are located in the prefdlg class and updated here.
     classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
     classificationBadgeInThumbDiameter = setting->value("classificationBadgeInThumbDiameter").toInt();
     isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
+
+    // datamodel
+    G::maxIconSize = setting->value("maxIconSize").toInt();
 
     // files
     rememberLastDir = setting->value("rememberLastDir").toBool();
@@ -8410,7 +8419,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     int maxW = 0, maxH = 0;
     for (int row = 0; row < dm->rowCount(); ++row) {
         QModelIndex idx = dm->index(row, 0);
-        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(ICON_MAX);
+        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(G::maxIconSize);
         if (maxW < pm.width()) maxW = pm.width();
         if (maxH < pm.height()) maxH = pm.height();
     }

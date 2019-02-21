@@ -9,8 +9,6 @@
 Thumb::Thumb(QObject *parent, Metadata *metadata) : QObject(parent)
 {
     this->metadata = metadata;
-    thumbMax.setWidth(ICON_MAX);
-    thumbMax.setHeight(ICON_MAX);
 }
 
 void Thumb::track(QString fPath, QString msg)
@@ -53,6 +51,8 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
     G::track(__FUNCTION__);
     #endif
     }
+    thumbMax.setWidth(G::maxIconSize);
+    thumbMax.setHeight(G::maxIconSize);
     bool success;
     QFile imFile(fPath);
     QImageReader thumbReader;
@@ -86,6 +86,9 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
     G::track(__FUNCTION__);
     #endif
     }
+    thumbMax.setWidth(G::maxIconSize);
+    thumbMax.setHeight(G::maxIconSize);
+
     bool success = false;
     QFile imFile(fPath);
 
