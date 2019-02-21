@@ -773,12 +773,12 @@ void IconView::thumbsEnlarge()
     }
     if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
     if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
-    if (thumbWidth < ICON_MAX && thumbHeight < ICON_MAX)
+    if (thumbWidth < G::maxIconSize && thumbHeight < G::maxIconSize)
     {
         thumbWidth *= 1.1;
         thumbHeight *= 1.1;
-        if (thumbWidth > ICON_MAX) thumbWidth = ICON_MAX;
-        if (thumbHeight > ICON_MAX) thumbHeight = ICON_MAX;
+        if (thumbWidth > G::maxIconSize) thumbWidth = G::maxIconSize;
+        if (thumbHeight > G::maxIconSize) thumbHeight = G::maxIconSize;
     }
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
@@ -875,7 +875,7 @@ void IconView::justify(JustifyAction action)
     if (tpr < 1) return;
     wCell = wRow / tpr;
 
-    if (wCell > ICON_MAX) return;
+    if (wCell > G::maxIconSize) return;
 
     thumbWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
     thumbHeight = thumbWidth * bestAspectRatio;
@@ -948,16 +948,16 @@ loaded.  Both thumbView and gridView have to be called.
     #endif
     }
     iconWMax = 0, iconHMax = 0;
-    if (thumbWidth > ICON_MAX) thumbWidth = ICON_MAX;
-    if (thumbHeight > ICON_MAX) thumbHeight = ICON_MAX;
+    if (thumbWidth > G::maxIconSize) thumbWidth = G::maxIconSize;
+    if (thumbHeight > G::maxIconSize) thumbHeight = G::maxIconSize;
     if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
     if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
     for (int row = 0; row < dm->rowCount(); ++row) {
         QModelIndex idx = dm->index(row, 0);
-        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(ICON_MAX);
+        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(G::maxIconSize);
         if (iconWMax < pm.width()) iconWMax = pm.width();
         if (iconHMax < pm.height()) iconHMax = pm.height();
-        if (iconWMax == ICON_MAX && iconHMax == ICON_MAX) break;
+        if (iconWMax == G::maxIconSize && iconHMax == G::maxIconSize) break;
     }
     if (iconWMax == iconHMax && thumbWidth > thumbHeight)
         thumbHeight = thumbWidth;
@@ -1037,83 +1037,45 @@ qDebug() << "thumbsFit   thumbHeight" << thumbHeight << "thumbWidth" << thumbWid
 void IconView::thumbsFitTopOrBottom()
 {
 /*
-Called by MW::eventFilter when a thumbDock resize event occurs triggered by the
-user resizing the thumbDock. Adjust the size of the thumbs to fit the new
-thumbDock height.
+Called by MW::eventFilter when a thumbDock resize event occurs triggered by the user resizing
+the thumbDock. Adjust the size of the thumbs to fit the new thumbDock height.
 
-For thumbSpace anatomy (see ThumbViewDelegate)
+For thumbSpace anatomy (see IconViewDelegate)
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-
-//    float aspect = (float)thumbWidth / thumbHeight;
-
-//    // viewport available height
-//    int netViewportHt = height() - G::scrollBarThickness;
-//    int hMax = ICON_MAX + thumbSpacing * 2 + thumbPadding *2 + 8; //getThumbSpaceMax();
-//    int hMin = ICON_MIN + thumbSpacing * 2 + thumbPadding *2 + 8; //getThumbSpaceMin();
-
-//    // restrict thumbSpace within limits
-//    int newThumbSpaceHt = netViewportHt > hMax ? hMax : netViewportHt;
-//    newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
-
-//    // derive new thumbsize from new thumbSpace
-//    thumbHeight = iconViewDelegate->getCellHeightFromAvailHeight(newThumbSpaceHt);
-
-//    // make sure within range (should be from thumbSpace check but just to be sure)
-//    thumbHeight = thumbHeight > ICON_MAX ? ICON_MAX : thumbHeight;
-//    thumbHeight = thumbHeight < ICON_MIN ? ICON_MIN : thumbHeight;
-//    thumbWidth = thumbHeight * aspect;
-
-//    // check thumbWidth within range
-//    if(thumbWidth > ICON_MAX) {
-//        thumbWidth = ICON_MAX;
-//        thumbHeight = ICON_MAX / aspect;
-//    }
-//    setSpacing(thumbSpacing);
-
-//    iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-//        thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
-
-
-
     float aspect = (float)thumbWidth / thumbHeight;
 
     // viewport available height
     int netViewportHt = height() - G::scrollBarThickness;
 
-//    int hMax = ICON_MAX + thumbSpacing * 2 + thumbPadding *2 + 8; //getThumbSpaceMax();
-//    int hMin = ICON_MIN + thumbSpacing * 2 + thumbPadding *2 + 8; //getThumbSpaceMin();
-    int hMax = iconViewDelegate->getCellHeightFromThumbHeight(ICON_MAX * bestAspectRatio);
+    int hMax = iconViewDelegate->getCellHeightFromThumbHeight(G::maxIconSize * bestAspectRatio);
     int hMin = iconViewDelegate->getCellHeightFromThumbHeight(ICON_MIN);
-//    int hMax = getThumbSpaceMax();
-//    int hMin = getThumbSpaceMin();
-    qDebug() << "thumbsFitTopOrBottom   hMax" << hMax << "hMin" << hMin
-             << "netViewportHt" << netViewportHt
-             << "bestAspectRatio" << bestAspectRatio
-             << "aspect" << aspect;
+
     // restrict thumbSpace within limits
     int newThumbSpaceHt = netViewportHt > hMax ? hMax : netViewportHt;
     newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
 
     // derive new thumbsize from new thumbSpace
     thumbHeight = iconViewDelegate->getCellHeightFromAvailHeight(newThumbSpaceHt);
-qDebug() << "thumbsFitTopOrBottom   thumbHeight = iconViewDelegate->getCellHeightFromAvailHeight(newThumbSpaceHt)" << thumbHeight;
+
     // make sure within range (should be from thumbSpace check but just to be sure)
-    thumbHeight = thumbHeight > ICON_MAX ? ICON_MAX : thumbHeight;
+    thumbHeight = thumbHeight > G::maxIconSize ? G::maxIconSize : thumbHeight;
     thumbHeight = thumbHeight < ICON_MIN ? ICON_MIN : thumbHeight;
     thumbWidth = thumbHeight * aspect;
 
     // check thumbWidth within range
-    if(thumbWidth > ICON_MAX) {
-        thumbWidth = ICON_MAX;
-        thumbHeight = ICON_MAX / aspect;
+    if(thumbWidth > G::maxIconSize) {
+        thumbWidth = G::maxIconSize;
+        thumbHeight = G::maxIconSize / aspect;
     }
+
+    // this is critical - otherwise thumbs bunch up
     setSpacing(thumbSpacing);
-    qDebug() << "thumbsFitTopOrBottom   thumbHeight" << thumbHeight << "thumbWidth" << thumbWidth;
+
     iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
 }

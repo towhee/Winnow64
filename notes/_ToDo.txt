@@ -16,8 +16,6 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Auto change thumb aspect ratio to match images
-- Set thumb maximum size in preferences
 - Lock docks to a size, chk resize behavior as separate windows
 - For very large folders only load one or two grids of images at a time
 - tableView adjust to changing font size
@@ -37,6 +35,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Set thumb maximum size in preferences
+- Thumb justification
+- Auto change thumb aspect ratio to match images
 - Thumbs resize to fit central view
 - undo / redo history
 - Added All count to filters
