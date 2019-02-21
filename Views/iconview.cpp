@@ -147,14 +147,14 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
 
     setModel(this->dm->sf);
 
-    thumbViewDelegate = new IconViewDelegate(this, m2->isRatingBadgeVisible);
-    thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+    iconViewDelegate = new IconViewDelegate(this, m2->isRatingBadgeVisible);
+    iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
-    setItemDelegate(thumbViewDelegate);
+    setItemDelegate(iconViewDelegate);
 
     // used to provide iconRect info to zoom to point clicked on thumb
     // in imageView
-    connect(thumbViewDelegate, SIGNAL(update(QModelIndex, QRect)),
+    connect(iconViewDelegate, SIGNAL(update(QModelIndex, QRect)),
             this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
 }
 
@@ -219,7 +219,7 @@ possibly altered thumbnail dimensions.
     #endif
     }
     setSpacing(thumbSpacing);
-    thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+    iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     if(objectName() == "Thumbnails") {
         if (!m2->thumbDock->isFloating())
@@ -247,27 +247,7 @@ void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight,
     setThumbParameters();
 }
 
-int IconView::getThumbSpaceMin()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return ICON_MIN + thumbSpacing * 2 + thumbPadding *2 + 8;
-}
-
-int IconView::getThumbSpaceMax()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return ICON_MAX + thumbSpacing * 2 + thumbPadding *2 + 8;
-}
-
-QSize IconView::getThumbCellSize()
+QSize IconView::getCellSize()
 {
     {
     #ifdef ISDEBUG
@@ -275,7 +255,7 @@ QSize IconView::getThumbCellSize()
     #endif
     }
 //    setThumbParameters(false);    // reqd?  rgh
-    return thumbViewDelegate->getCellSize();
+    return iconViewDelegate->getCellSize();
 }
 
 int IconView::getThumbSpaceWidth(int thumbSpaceHeight)
@@ -296,7 +276,7 @@ changes height to determine whether a scrollbar is required.
     }
     float aspect = thumbWidth / thumbHeight;
     // Difference between thumbSpace and thumbHeight
-    int margin = thumbViewDelegate->getCellSize().height() - thumbHeight;
+    int margin = iconViewDelegate->getCellSize().height() - thumbHeight;
     int newThumbHeight = thumbSpaceHeight - margin;
     int newThumbWidth = newThumbHeight * aspect;
     return newThumbWidth + margin - 1;
@@ -826,6 +806,7 @@ void IconView::thumbsShrink()
 
 void IconView::resizeRejustify()
 {
+    qDebug() << "IconView::resizeRejustify";
     static int prevWidth = 0;
     if (width() == prevWidth) return;
     prevWidth = width();
@@ -834,19 +815,14 @@ void IconView::resizeRejustify()
 
 void IconView::rejustify()
 {
-/* This function controls the resizing behavior of the gridview cells when the window is
-resized or the gridview preferences are edited. The grid cells sizes are maintained while
-keeping the right side "justified". The cells can be direcly adjusted using the "[" and "]"
-keys, but this is handled by the gridShrinkJustified and gridEnlargeJustified functions.
+/* This function controls the resizing behavior of the thumbnails in gridview and thumbview
+when wrapping = true and the window is resized or the gridview preferences are edited. The
+grid cells sizes are maintained while keeping the right side "justified". The cells can be
+direcly adjusted using the "[" and "]" keys, but this is handled by the justify() function.
 
-The key to making this work is the variable assignedThumbWidth, which is increased or decreased in the shrink and
-enlarge functions, and used to maintain the cell size during the resize and preference adjustment
-operations.
-
-It could all be managed from this function, but is being kept separate for greater simplicity.
-
-Again, note this only applied to the gridview with the objectName = "Grid". The thumbview,
-with objectName "Thumbnails", is handled by thumbsEnlarge and thumbsShrink.
+The key to making this work is the variable assignedThumbWidth, which is increased or
+decreased in the justify() function, and used to maintain the cell size during the
+resize and preference adjustment operations.
 */
     {
     #ifdef ISDEBUG
@@ -858,7 +834,7 @@ with objectName "Thumbnails", is handled by thumbsEnlarge and thumbsShrink.
     // get
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
     if (assignedThumbWidth < 40 || assignedThumbWidth > 480) assignedThumbWidth = thumbWidth;
-    int wCell = thumbViewDelegate->getCellWidthFromThumbWidth(assignedThumbWidth);
+    int wCell = iconViewDelegate->getCellWidthFromThumbWidth(assignedThumbWidth);
 
     if (wCell == 0) return;
     int tpr = wRow / wCell;
@@ -866,7 +842,7 @@ with objectName "Thumbnails", is handled by thumbsEnlarge and thumbsShrink.
     if (tpr == 0) return;
     wCell = wRow / tpr;
 
-    thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
+    thumbWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
     thumbHeight = thumbWidth * bestAspectRatio;
 
     skipResize = true;      // prevent feedback loop
@@ -878,11 +854,11 @@ with objectName "Thumbnails", is handled by thumbsEnlarge and thumbsShrink.
 void IconView::justify(JustifyAction action)
 {
 /*
-   This function enlarges the grid cells while keeping the right hand side margin minimized.
-   To make this work it is critical to assign the correct value to the row width: wRow.  The
-   superclass QListView, uses a width that assumes there will always be a scrollbar and also a
-   "margin". The width of the QListView (width()) is reduced by the width of the scrollbar and
-   and additional "margin", determined by experimentation, to be 8 pixels.
+   This function enlarges or shrinks the grid cells while keeping the right hand side margin
+   minimized. To make this work it is critical to assign the correct value to the row width:
+   wRow. The superclass QListView, uses a width that assumes there will always be a scrollbar
+   and also a "margin". The width of the QListView (width()) is reduced by the width of the
+   scrollbar and and additional "margin", determined by experimentation, to be 8 pixels.
 
    The variable assignedThumbWidth remebers the current grid cell size as a reference to
    maintain the grid size during resizing and pad size changes in preferences.
@@ -892,7 +868,7 @@ void IconView::justify(JustifyAction action)
     G::track(__FUNCTION__);
     #endif
     }
-    int wCell = thumbViewDelegate->getCellSize().width();
+    int wCell = iconViewDelegate->getCellSize().width();
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
 
     int tpr = wRow / wCell + action;                        // thumbs per row
@@ -901,7 +877,7 @@ void IconView::justify(JustifyAction action)
 
     if (wCell > ICON_MAX) return;
 
-    thumbWidth = thumbViewDelegate->getThumbWidthFromCellWidth(wCell);
+    thumbWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
     thumbHeight = thumbWidth * bestAspectRatio;
 
     assignedThumbWidth = thumbWidth;
@@ -935,6 +911,7 @@ void IconView::resizeEvent(QResizeEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << "IconView::resizeEvent";
     QListView::resizeEvent(event);
     if (skipResize) {
         skipResize = false;
@@ -948,19 +925,29 @@ void IconView::resizeEvent(QResizeEvent *event)
         return;
     }
     count++;
-    if (objectName() == "Thumbnails" && wrapThumbs == false) return;
+    if (objectName() == "Thumbnails" && wrapThumbs == false) {
+        qDebug() << "if (objectName() == \"Thumbnails\" && wrapThumbs == false)";
+        return;
+    }
     if (width() == prevWidth) return;
     QTimer::singleShot(500, this, SLOT(resizeRejustify()));
 }
 
 void IconView::bestAspect()
 {
+/* This function scans icons in the datamodel to find the greatest height and width of the
+icons. The resulting max width and height are sent to IconViewDelegate to define the thumbRect
+that holds each icon.  This is also the most compact container available.
+
+The function is called after a new folder is selected and the datamodel icon data has been
+loaded.  Both thumbView and gridView have to be called.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    int maxW = 0, maxH = 0;
+    iconWMax = 0, iconHMax = 0;
     if (thumbWidth > ICON_MAX) thumbWidth = ICON_MAX;
     if (thumbHeight > ICON_MAX) thumbHeight = ICON_MAX;
     if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
@@ -968,16 +955,16 @@ void IconView::bestAspect()
     for (int row = 0; row < dm->rowCount(); ++row) {
         QModelIndex idx = dm->index(row, 0);
         QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(ICON_MAX);
-        if (maxW < pm.width()) maxW = pm.width();
-        if (maxH < pm.height()) maxH = pm.height();
-        if (maxW == ICON_MAX && maxH == ICON_MAX) break;
+        if (iconWMax < pm.width()) iconWMax = pm.width();
+        if (iconHMax < pm.height()) iconHMax = pm.height();
+        if (iconWMax == ICON_MAX && iconHMax == ICON_MAX) break;
     }
-    if (maxW == maxH && thumbWidth > thumbHeight)
+    if (iconWMax == iconHMax && thumbWidth > thumbHeight)
         thumbHeight = thumbWidth;
-    if (maxW == maxH && thumbHeight > thumbWidth)
+    if (iconWMax == iconHMax && thumbHeight > thumbWidth)
         thumbWidth = thumbHeight;
-    if (maxW > maxH) thumbHeight = thumbWidth * ((double)maxH / maxW);
-    if (maxH > maxW) thumbWidth = thumbHeight * ((double)maxW / maxH);
+    if (iconWMax > iconHMax) thumbHeight = thumbWidth * ((double)iconHMax / iconWMax);
+    if (iconHMax > iconWMax) thumbWidth = thumbHeight * ((double)iconWMax / iconHMax);
     setThumbParameters();
     bestAspectRatio = (double)thumbHeight / thumbWidth;
 }
@@ -1000,7 +987,7 @@ void IconView::thumbsFit(Qt::DockWidgetArea area)
         // adjust thumb width
         int scrollWidth = G::scrollBarThickness;
         int width = viewport()->width() - scrollWidth - 2;
-        int thumbCellWidth = thumbViewDelegate->getCellSize().width() - thumbPadding * 2;
+        int thumbCellWidth = iconViewDelegate->getCellSize().width() - thumbPadding * 2;
         int rightSideGap = 99999;
         thumbPadding = 0;
         int remain;
@@ -1023,26 +1010,26 @@ void IconView::thumbsFit(Qt::DockWidgetArea area)
              || !wrapThumbs){
         // set target ht based on space with scrollbar (always on)
         int ht = height();
-        int scrollHeight = 12;
+        int scrollHeight = G::scrollBarThickness;
         ht -= scrollHeight;
 
         // adjust thumb height
         float aspect = thumbWidth / thumbHeight;
 
         // get the current thumb cell
-        int thumbSpaceHeight = thumbViewDelegate->getCellSize().height();
+        int cellHeight = iconViewDelegate->getCellSize().height();
 
-        // margin = nonthumb space is used to rebuild cell after thumb resize to fit
-        int margin = thumbSpaceHeight - thumbHeight;
-        int thumbMax = getThumbSpaceMax();
-        thumbSpaceHeight = ht < thumbMax ? ht : thumbMax;
-        thumbHeight = thumbSpaceHeight - margin;
+        // padding = nonthumb space is used to rebuild cell after thumb resize to fit
+        int padding = cellHeight - thumbHeight;
+        int maxCellHeight = iconViewDelegate->getCellSize(QSize(iconWMax, iconHMax)).height();
+        cellHeight = ht < maxCellHeight ? ht : maxCellHeight;
+        thumbHeight = cellHeight - padding;
         thumbWidth = thumbHeight * aspect;
 
         // change the thumbnail size in thumbViewDelegate
-        setSpacing(thumbSpacing);
-
-        thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+//        setSpacing(thumbSpacing);
+qDebug() << "thumbsFit   thumbHeight" << thumbHeight << "thumbWidth" << thumbWidth;
+        iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
             thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     }
 }
@@ -1065,16 +1052,22 @@ For thumbSpace anatomy (see ThumbViewDelegate)
 
     // viewport available height
     int netViewportHt = height() - G::scrollBarThickness;
-    int hMax = getThumbSpaceMax();
-    int hMin = getThumbSpaceMin();
 
+    int hMax = iconViewDelegate->getCellHeightFromThumbHeight(ICON_MAX * bestAspectRatio);
+    int hMin = iconViewDelegate->getCellHeightFromThumbHeight(ICON_MIN);
+//    int hMax = getThumbSpaceMax();
+//    int hMin = getThumbSpaceMin();
+    qDebug() << "thumbsFitTopOrBottom   hMax" << hMax << "hMin" << hMin
+             << "netViewportHt" << netViewportHt
+             << "bestAspectRatio" << bestAspectRatio
+             << "aspect" << aspect;
     // restrict thumbSpace within limits
     int newThumbSpaceHt = netViewportHt > hMax ? hMax : netViewportHt;
     newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
 
     // derive new thumbsize from new thumbSpace
-    thumbHeight = thumbViewDelegate->getCellHeightFromAvailHeight(newThumbSpaceHt);
-
+    thumbHeight = iconViewDelegate->getCellHeightFromAvailHeight(newThumbSpaceHt);
+qDebug() << "thumbsFitTopOrBottom   thumbHeight = iconViewDelegate->getCellHeightFromAvailHeight(newThumbSpaceHt)" << thumbHeight;
     // make sure within range (should be from thumbSpace check but just to be sure)
     thumbHeight = thumbHeight > ICON_MAX ? ICON_MAX : thumbHeight;
     thumbHeight = thumbHeight < ICON_MIN ? ICON_MIN : thumbHeight;
@@ -1085,10 +1078,11 @@ For thumbSpace anatomy (see ThumbViewDelegate)
         thumbWidth = ICON_MAX;
         thumbHeight = ICON_MAX / aspect;
     }
-    setSpacing(thumbSpacing);
-
-    thumbViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+//    setSpacing(thumbSpacing);
+    qDebug() << "thumbsFitTopOrBottom   thumbHeight" << thumbHeight << "thumbWidth" << thumbWidth;
+    iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
+    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
 void IconView::updateLayout()
@@ -1179,7 +1173,7 @@ int IconView::getHorizontalScrollBarOffset(int row)
     #endif
     }
     int pageWidth = viewport()->width();
-    int thumbWidth = getThumbCellSize().width();
+    int thumbWidth = getCellSize().width();
 
     qDebug() << "ThumbView::getHorizontalScrollBarOffset   "
              << "pageWidth" << pageWidth
@@ -1226,8 +1220,8 @@ int IconView::getVerticalScrollBarOffset(int row)
     if (objectName() == "Thumbnails") return 0;
     int pageWidth = viewport()->width();
     int pageHeight = viewport()->height();
-    int thumbCellWidth = getThumbCellSize().width();
-    int thumbCellHeight = getThumbCellSize().height();
+    int thumbCellWidth = getCellSize().width();
+    int thumbCellHeight = getCellSize().height();
 
     if (pageWidth < ICON_MIN || pageHeight < ICON_MIN || thumbCellWidth < ICON_MIN || thumbCellHeight < ICON_MIN)
         return 0;
@@ -1283,7 +1277,7 @@ int IconView::getHorizontalScrollBarMax()
     #endif
     }
     int pageWidth = viewport()->width();
-    int thumbWidth = getThumbCellSize().width();
+    int thumbWidth = getCellSize().width();
     if (thumbWidth == 0) return 0;
     float thumbsPerPage = (double)pageWidth / thumbWidth;
     int n = dm->sf->rowCount();
@@ -1304,8 +1298,8 @@ int IconView::getVerticalScrollBarMax()
     }
     int pageWidth = viewport()->width();
     int pageHeight = viewport()->height();
-    int thumbCellWidth = getThumbCellSize().width();
-    int thumbCellHeight = getThumbCellSize().height();
+    int thumbCellWidth = getCellSize().width();
+    int thumbCellHeight = getCellSize().height();
 
     if (thumbCellWidth == 0  || thumbCellHeight == 0 || pageWidth == 0 || pageHeight == 0) return 0;
 
