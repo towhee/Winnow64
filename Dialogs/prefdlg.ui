@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>4</number>
+    <number>2</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -646,7 +646,7 @@
        <x>260</x>
        <y>24</y>
        <width>91</width>
-       <height>16</height>
+       <height>0</height>
       </rect>
      </property>
      <property name="font">
@@ -670,7 +670,7 @@
        <x>360</x>
        <y>23</y>
        <width>71</width>
-       <height>18</height>
+       <height>0</height>
       </rect>
      </property>
      <property name="font">
@@ -828,72 +828,6 @@
      </property>
      <property name="tickInterval">
       <number>100</number>
-     </property>
-    </widget>
-    <widget class="QLabel" name="coresLbl">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>451</y>
-       <width>91</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Cores to use</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QSpinBox" name="coresSpinBox">
-     <property name="geometry">
-      <rect>
-       <x>130</x>
-       <y>450</y>
-       <width>51</width>
-       <height>18</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="minimum">
-      <number>0</number>
-     </property>
-     <property name="maximum">
-      <number>8</number>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="aSynchChk">
-     <property name="geometry">
-      <rect>
-       <x>240</x>
-       <y>450</y>
-       <width>221</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Asynchronous</string>
      </property>
     </widget>
    </widget>
@@ -1738,7 +1672,7 @@
        <rect>
         <x>240</x>
         <y>0</y>
-        <width>191</width>
+        <width>221</width>
         <height>471</height>
        </rect>
       </property>
@@ -1756,7 +1690,7 @@
         <rect>
          <x>10</x>
          <y>0</y>
-         <width>188</width>
+         <width>201</width>
          <height>471</height>
         </rect>
        </property>
@@ -1783,7 +1717,10 @@
            </size>
           </property>
           <attribute name="verticalHeaderDefaultSectionSize">
-           <number>34</number>
+           <number>1</number>
+          </attribute>
+          <attribute name="verticalHeaderMinimumSectionSize">
+           <number>1</number>
           </attribute>
          </widget>
         </item>

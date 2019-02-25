@@ -29,21 +29,18 @@
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
-    <item>
-     <widget class="QLabel" name="label">
-      <property name="font">
-       <font>
-        <pointsize>14</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Winnow Shortcuts&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-    </item>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
     <item>
      <widget class="QTreeWidget" name="treeWidget">
       <property name="focusPolicy">
@@ -101,6 +98,17 @@
         </property>
         <property name="text">
          <string>O</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Open USB Drive</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + O</string>
+        </property>
+        <property name="text">
+         <string>This is the letter &quot;O&quot;, not zero</string>
         </property>
        </item>
        <item>
@@ -349,6 +357,17 @@
         </property>
         <property name="text">
          <string>Cmd/Ctrl + Shift + 0</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Most recent day</string>
+        </property>
+        <property name="text">
+         <string>Shift + D</string>
+        </property>
+        <property name="text">
+         <string/>
         </property>
        </item>
       </item>
