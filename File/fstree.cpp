@@ -395,39 +395,3 @@ void FSTree::dropEvent(QDropEvent *event)
 		setCurrentIndex(dndOrigSelection);
 	}
 }
-
- /*Tried to update count after tree created but no access to add to datamodel
- in QFileSystemModel.  The solution is to return data on-the-fly that is not
- stored in the datamodel.  This causes the tree to be laggy.
-
- Kept as comment for future reference
-
-void FSTree::showSupportedImageCount()
-{
-    // do some initializing
-    fileFilters->clear();
-    foreach (const QString &str, metadata->supportedFormats)
-            fileFilters->append("*." + str);
-    dir->setNameFilters(*fileFilters);
-    dir->setFilter(QDir::Files);
-
-    walkTree(rootIndex());
-}
-
-void FSTree::walkTree(const QModelIndex &row)
-{
-    if (fsModel->hasChildren(row)) {
-        for (int i = 0; i < fsModel->rowCount(row); ++i){
-            QModelIndex idx = fsModel->index(i, 0, row);
-            QString fPath = qvariant_cast<QString>(idx.data(QFileSystemModel::FilePathRole));
-            dir->setPath(fPath);
-            QModelIndex idx2 = fsModel->index(i, 4, row);
-            fsModel->setData(idx2, dir->entryInfoList().size(), Qt::DisplayRole);
-            fsModel->setData(idx2, dir->entryInfoList().size(), Qt::EditRole);
-            qDebug() << G::t.restart() << "\t" << fPath << dir->entryInfoList().size();
-            walkTree(idx);
-        }
-    }
-}
-*/
-
