@@ -52,17 +52,18 @@ IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
         : isRatingBadgeVisible(isRatingBadgeVisible)
 {
     parent->isWidgetType();         // suppress compiler warning
-    fPad = 3;
-    tPad = 2;         // allow small gap between thumb and outer border
+    fPad = 5;
+    tPad = 4;         // allow small gap between thumb and outer border
 
-    int currentWidth = 2;
+    int currentWidth = 3;
     int selectedWidth = 2;
     int pickWidth = 2;
 
     // define colors
-    defaultBorderColor = QColor(95, 95, 95, 255);
+    defaultBorderColor = QColor(Qt::gray);
     currentItemColor = QColor(Qt::yellow);
-    selectedColor = QColor(Qt::lightGray);
+    selectedColor = QColor(Qt::white);
+//    selectedColor = QColor(Qt::lightGray);
     pickColor = QColor(Qt::green);
     cacheColor = QColor(Qt::red);
     cacheBorderColor = QColor(Qt::lightGray);
