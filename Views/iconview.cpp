@@ -1077,6 +1077,7 @@ For thumbSpace anatomy (see IconViewDelegate)
 
     iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
+    scrollToCurrent(currentIndex().row());
 }
 
 void IconView::updateLayout()

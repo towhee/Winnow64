@@ -8278,8 +8278,17 @@ void MW::openUsbFolder()
     }
 
     QString drive;
-    loadUsbDlg = new LoadUsbDlg(this, usbDrives, drive);
-    loadUsbDlg->exec();
+
+    if (usbDrives.length() > 1) {
+        loadUsbDlg = new LoadUsbDlg(this, usbDrives, drive);
+        loadUsbDlg->exec();
+    }
+    else if (usbDrives.length() == 1) {
+        drive = usbDrives.at(0);
+    }
+    else if (usbDrives.length() == 0) {
+
+    }
 
     subFoldersAction->setChecked(true);
     updateSubfolderStatus();
