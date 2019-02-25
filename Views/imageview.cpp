@@ -934,6 +934,13 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         scrollCount = 0;                // still used?
         mousePressPt.setX(event->x());
         mousePressPt.setY(event->y());
+
+        if (zoom == zoomFit) {
+            zoom = toggleZoom;
+            scale();
+            ignoreMousePress = true;
+        }
+
         QGraphicsView::mousePressEvent(event);
     }
 //    QGraphicsView::mousePressEvent(event);
@@ -1010,11 +1017,16 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
 
-    if (!isZoom && zoom < zoomFit * 0.99)
-        zoom = zoomFit;
-    else
-        isZoom ? zoom = zoomFit : zoom = toggleZoom;
-    scale();
+    if (!ignoreMousePress) {
+        if (!isZoom && zoom < zoomFit * 0.99) {
+            zoom = zoomFit;
+        }
+        else {
+            isZoom ? zoom = zoomFit : zoom = toggleZoom;
+        }
+        scale();
+    }
+    ignoreMousePress = false;
     QGraphicsView::mouseReleaseEvent(event);
 }
 
