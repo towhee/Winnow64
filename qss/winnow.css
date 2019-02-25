@@ -174,12 +174,14 @@ QStackedWidget {
 }
 
 QListWidget {
-    background-color: rgb(77,77,77);
-    selection-color: rgb(225,225,0);
-    selection-background-color: rgb(85,85,85);
+    /*alternate-background-color: rgb(90,90,90);*/
+    gridline-color: rgb(75,75,75);
+    color: rgb(190,190,190);
+    /*selection-color: rgb(190,190,190);*/
+    selection-background-color: rgb(45,45,45);
     border: 1px solid rgb(95,95,95);
 
-    /*selection-background-color: rgb(95,95,95);*/
+    selection-background-color: rgb(95,95,95);
 }
 
 QTreeWidget {
@@ -235,6 +237,7 @@ QHeaderView
     color: rgb(190,190,190);
 /*    color: rgb(85,85,85);  */
 /*    font-size: 10px;      */
+    /*height: 20px;*/
 }
 
 QHeaderView::section {
@@ -245,7 +248,10 @@ QHeaderView::section {
     border: 1px solid rgb(85,85,85);
     border-bottom: 1px solid rgb(85,85,85);
     color: rgb(225,225,225);
+    max-height: 24px;
+    /*text-align: center left;   does not work */
 /*    font: 13px;       */
+
 }
 
 QAbstractScrollArea {

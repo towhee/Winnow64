@@ -326,3 +326,5 @@ release/moc_updateapp.cpp
 *.Debug
 *.exe
 Views/iconview.cpp.autosave
+Makefile.Debug
+Makefile.Release

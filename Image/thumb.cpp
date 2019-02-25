@@ -53,6 +53,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
     }
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
+//    qDebug() << "thumbMax" << thumbMax;
     bool success;
     QFile imFile(fPath);
     QImageReader thumbReader;
@@ -88,7 +89,7 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
     }
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
-
+//    qDebug() << "thumbMax" << thumbMax;
     bool success = false;
     QFile imFile(fPath);
 

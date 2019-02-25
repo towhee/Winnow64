@@ -3,12 +3,7 @@ BUGS
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
-OLD BUGS?
-_ Sometimes when select new folder first image shows as selected but cannot change classification
-- Monitor res not always showing
-- Select in grid sometimes misses thumbs in a column
 PERFORMANCE
-- try multiple caching threads
 - Check if cacheDelay is still important (It appears not, but leave in but
   set to zero for now
 CODE IMPROVEMENTS
@@ -35,6 +30,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- try multiple caching threads (no improvement)
 - Set thumb maximum size in preferences
 - Thumb justification
 - Auto change thumb aspect ratio to match images
