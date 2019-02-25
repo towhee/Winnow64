@@ -753,9 +753,9 @@ void MW::folderSelectionChange()
     addRecentFolder(currentViewDir);
 
     // show image count in Folders (fsTree) if showImageCountAction isChecked
-    if (showImageCountAction->isChecked()) {
+//    if (showImageCountAction->isChecked()) {
+    if (showImageCount) {
         fsTree->setShowImageCount(true);
-//        fsTree->fsModel->fetchMore(fsTree->rootIndex());
     }
 
     // update menu
@@ -1399,6 +1399,12 @@ void MW::createActions()
     addAction(openAction);
     connect(openAction, &QAction::triggered, this, &MW::openFolder);
 
+    openUsbAction = new QAction(tr("Open Usb Folder"), this);
+    openUsbAction->setObjectName("openUsbFolder");
+    openUsbAction->setShortcutVisibleInContextMenu(true);
+    addAction(openUsbAction);
+    connect(openUsbAction, &QAction::triggered, this, &MW::openUsbFolder);
+
     openWithMenu = new QMenu(tr("Open With..."));
 
     openWithMenuAction = new QAction(tr("Open With..."), this);
@@ -1523,7 +1529,7 @@ void MW::createActions()
     showImageCountAction->setObjectName("showImageCount");
     showImageCountAction->setShortcutVisibleInContextMenu(true);
     showImageCountAction->setCheckable(true);
-    showImageCountAction->setChecked(setting->value("showImageCount").toBool());
+//    showImageCountAction->setChecked(setting->value("showImageCount").toBool());
     addAction(showImageCountAction);
     connect(showImageCountAction, &QAction::triggered, this, &MW::setShowImageCount);
 
@@ -2552,6 +2558,7 @@ void MW::createMenus()
     QAction *fileGroupAct = new QAction("File", this);
     fileGroupAct->setMenu(fileMenu);
     fileMenu->addAction(openAction);
+    fileMenu->addAction(openUsbAction);
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
     openWithMenu->addAction(manageAppAction);
     openWithMenu->addSeparator();
@@ -2577,7 +2584,7 @@ void MW::createMenus()
             SLOT(invokeIngestHistoryFolder(QAction*)));
     fileMenu->addAction(ejectAction);
     fileMenu->addSeparator();
-    fileMenu->addAction(showImageCountAction);
+//    fileMenu->addAction(showImageCountAction);
     fileMenu->addAction(combineRawJpgAction);
     fileMenu->addAction(subFoldersAction);
      fileMenu->addAction(addBookmarkAction);
@@ -2782,7 +2789,7 @@ void MW::createMenus()
     fsTreeActions->append(collapseFoldersAction);
     fsTreeActions->append(ejectActionFromContextMenu);
     fsTreeActions->append(separatorAction);
-    fsTreeActions->append(showImageCountAction);
+//    fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileActionFromContext);
     fsTreeActions->append(separatorAction1);
     fsTreeActions->append(pasteAction);
@@ -3279,11 +3286,10 @@ void MW::createThumbView()
     }
     thumbView = new IconView(this, dm, "Thumbnails");
     thumbView->setObjectName("Thumbnails");
+    thumbView->setSpacing(0);                // thumbView not visivle without this
     thumbView->setAutoScroll(false);
 
     // loadSettings has not run yet (dependencies, but QSettings has been opened
-//    thumbView->thumbSpacing = setting->value("thumbSpacing").toInt();
-//    thumbView->thumbPadding = setting->value("thumbPadding").toInt();
     thumbView->thumbWidth = setting->value("thumbWidth").toInt();
     thumbView->thumbHeight = setting->value("thumbHeight").toInt();
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
@@ -3320,11 +3326,10 @@ void MW::createGridView()
     }
     gridView = new IconView(this, dm, "Grid");
     gridView->setObjectName("Grid");
+    gridView->setSpacing(0);                // gridView not visivle without this
     gridView->setWrapping(true);
     gridView->setAutoScroll(false);
 
-//    gridView->thumbSpacing = setting->value("thumbSpacingGrid").toInt();
-//    gridView->thumbPadding = setting->value("thumbPaddingGrid").toInt();
     gridView->thumbWidth = setting->value("thumbWidthGrid").toInt();
     gridView->thumbHeight = setting->value("thumbHeightGrid").toInt();
     gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
@@ -5824,7 +5829,7 @@ re-established when the application is re-opened.
     setting->setValue("checkIfUpdate", checkIfUpdate);
     setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
-    setting->setValue("showImageCount", showImageCountAction->isChecked());
+//    setting->setValue("showImageCount", showImageCountAction->isChecked());
     setting->setValue("combineRawJpg", combineRawJpg);
     setting->setValue("useWheelToScroll", imageView->useWheelToScroll);
 
@@ -6369,6 +6374,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
 
         // File
         openAction->setShortcut(QKeySequence("O"));
+        openUsbAction->setShortcut(QKeySequence("Ctrl+O"));
         manageAppAction->setShortcut(QKeySequence("Alt+O"));
         ingestAction->setShortcut(QKeySequence("Q"));
         showImageCountAction->setShortcut(QKeySequence("\\"));
@@ -8239,6 +8245,57 @@ void MW::openFolder()
     fsTree->select(dirPath);
     folderSelectionChange();
 }
+void MW::openUsbFolder()
+{
+    struct  UsbInfo {
+        QString rootPath;
+        QString name;
+        QString description;
+    };
+    UsbInfo usbInfo;
+
+    QMap<QString, UsbInfo> usbMap;
+    QStringList usbDrives;
+    int n = 0;
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                if (Usb::isUsb(storage.rootPath())) {
+                    usbInfo.rootPath = storage.rootPath();
+                    usbInfo.name = storage.name();
+                    QString count = QString::number(n) + ". ";
+                    if (usbInfo.name.length() > 0)
+                        usbInfo.description = count + usbInfo.name + " (" + usbInfo.rootPath + ")";
+                    else
+                        usbInfo.description = count + usbInfo.rootPath;
+                    usbMap.insert(usbInfo.description, usbInfo);
+
+                    usbDrives << usbInfo.description;
+                    n++;
+                }
+            }
+        }
+    }
+
+    QString drive;
+    loadUsbDlg = new LoadUsbDlg(this, usbDrives, drive);
+    loadUsbDlg->exec();
+
+    subFoldersAction->setChecked(true);
+    updateSubfolderStatus();
+    QString fPath = usbMap[drive].rootPath;
+    fsTree->select(fPath);
+    isCurrentFolderOkay = isFolderValid(fPath, true, false);
+    if (isCurrentFolderOkay) {
+        QModelIndex idx = fsTree->fsModel->index(fPath);
+        QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
+        fsTree->setCurrentIndex(filterIdx);
+        fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
+        folderSelectionChange();
+        subFoldersAction->setChecked(false);
+        updateSubfolderStatus();
+    }
+}
 
 void MW::revealFile()
 {
@@ -8399,11 +8456,13 @@ void MW::helpShortcuts()
     ui.treeWidget->setColumnWidth(0, 250);
     ui.treeWidget->setColumnWidth(1, 100);
     ui.treeWidget->setColumnWidth(2, 250);
-    ui.treeWidget->header()->setMinimumHeight(20);
+//    ui.treeWidget->headerItem()->setTextAlignment(0, Qt::AlignCenter);
+//    ui.treeWidget->header()->setMinimumHeight(16);
     ui.treeWidget->expandAll();
-    QFile fStyle(":/qss/winnow.css");
-    fStyle.open(QIODevice::ReadOnly);
-    ui.scrollAreaWidgetContents->setStyleSheet(fStyle.readAll());
+//    QFile fStyle(":/qss/winnow.css");
+//    fStyle.open(QIODevice::ReadOnly);
+    ui.scrollAreaWidgetContents->setStyleSheet(css);
+//    ui.scrollAreaWidgetContents->setStyleSheet(fStyle.readAll());
 //    ui.scrollAreaWidgetContents->setStyleSheet("QTreeView::item { height: 20px;}");
 
     helpShortcuts->show();
@@ -8416,31 +8475,65 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    int maxW = 0, maxH = 0;
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        QModelIndex idx = dm->index(row, 0);
-        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(G::maxIconSize);
-        if (maxW < pm.width()) maxW = pm.width();
-        if (maxH < pm.height()) maxH = pm.height();
+    struct  UsbInfo {
+        QString rootPath;
+        QString name;
+        QString description;
+    };
+    UsbInfo usbInfo;
+
+    QMap<QString, UsbInfo> usbMap;
+
+    QStringList usbDrives;
+    int n;
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+/*        qDebug() << G::t.restart() << "\t" << "FSTree::createModel  " << storage.rootPath()
+                 << "storage.isValid()" << storage.isValid()
+                 << "storage.isReady()" << storage.isReady()
+                 << "storage.isReadOnly()" << storage.isReadOnly();
+                 */
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                if (Usb::isUsb(storage.rootPath())) {
+                    usbInfo.rootPath = storage.rootPath();
+                    usbInfo.name = storage.name();
+                    QString count = QString::number(n) + ". ";
+                    if (usbInfo.name.length() > 0)
+                        usbInfo.description = count + usbInfo.name + " (" + usbInfo.rootPath + ")";
+                    else
+                        usbInfo.description = count + usbInfo.rootPath;
+                    usbMap.insert(usbInfo.description, usbInfo);
+
+                    usbDrives << usbInfo.description;
+                    n++;
+                    qDebug() << "name:" << storage.name() << storage.rootPath();
+                }
+            }
+        }
     }
-    if (maxW == maxH && gridView->thumbWidth > gridView->thumbHeight)
-        gridView->thumbHeight = gridView->thumbWidth;
-    if (maxW == maxH && gridView->thumbHeight > gridView->thumbWidth)
-        gridView->thumbWidth = gridView->thumbHeight;
-    if (maxW > maxH) gridView->thumbHeight = gridView->thumbWidth * ((double)maxH / maxW);
-    if (maxH > maxW) gridView->thumbWidth = gridView->thumbHeight * ((double)maxW / maxH);
-    gridView->setThumbParameters();
-    qDebug() << maxW << maxH << gridView->thumbWidth << gridView->thumbHeight;
-    return;
 
-    return;
+    QString drive;
+    loadUsbDlg = new LoadUsbDlg(this, usbDrives, drive);
+    loadUsbDlg->exec();
 
-    metadataDock->setMinimumSize(200, 125);
-    metadataDock->setMaximumSize(999999, 999999);
-    qDebug() << metadataDock->minimumSize();
+    qDebug() << drive << usbMap[drive].rootPath;
+    subFoldersAction->setChecked(true);
+    updateSubfolderStatus();
+    QString fPath = usbMap[drive].rootPath;
+    fsTree->select(fPath);
+//    fsTree->fsModel->selectionModel->select(fsTree->fsModel->index(path));
+//    fsTree->setCurrentIndex(fsTree->fsModel->index(path));
+    isCurrentFolderOkay = isFolderValid(fPath, true, false);
+//    qDebug() << QTime::currentTime() << "isCurrentFolderOkay" << isCurrentFolderOkay << __FUNCTION__;
 
+    if (isCurrentFolderOkay) {
+        QModelIndex idx = fsTree->fsModel->index(fPath);
+        QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
+        fsTree->setCurrentIndex(filterIdx);
+        fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
+        folderSelectionChange();
+    }
 
-    //    metadataDock->setFixedSize(metadataDock->size());
 }
 
 void MW::test2()
@@ -8451,6 +8544,10 @@ void MW::test2()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+    qDebug() << "maxIconSize" << G::maxIconSize;
+    gridView->setSpacing(0);
+    return;
+
     QString fPath = "D:/Pictures/_ThumbTest/2008-02-06_0966.jpg";
     metadata->testNewFileFormat(fPath);
 }

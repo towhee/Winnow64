@@ -82,8 +82,6 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     case 10: ui->cache100AheadRadio->setChecked(true);
     }
     ui->cachePreviewsChk->setChecked(m0->isCachePreview);
-    ui->coresSpinBox->setValue(G::cores);
-    ui->aSynchChk->setChecked(G::aSync);
 
     // full screen
     ui->foldersChk->setChecked(m0->fullScreenDocks.isFolders);
@@ -141,6 +139,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->tableFieldsTable->horizontalHeader()->setVisible(false);
     ui->tableFieldsTable->horizontalHeader()->setStretchLastSection(true);
     ui->tableFieldsTable->verticalHeader()->setVisible(false);
+    ui->tableFieldsTable->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    ui->tableFieldsTable->verticalHeader()->setDefaultSectionSize(G::fontSize.toInt() + 6);
     ui->tableFieldsTable->resizeColumnsToContents();
     ui->tableFieldsTable->setStyleSheet("QTableView {border:none; gridline-color:rgb(85,85,85)}");
 
@@ -157,17 +157,17 @@ void Prefdlg::reject()
     QDialog::reject();
 }
 
-void Prefdlg::on_slider_pressed()
-{
-    // used to prevent font size updates while slider is pressed to prevent slider latency
-    isSliderPressed = true;
-}
+//void Prefdlg::on_slider_pressed()
+//{
+//    // used to prevent font size updates while slider is pressed to prevent slider latency
+//    isSliderPressed = true;
+//}
 
-void Prefdlg::on_slider_released()
-{
-    // used to prevent font size updates while slider is pressed to prevent slider latency
-    isSliderPressed = false;
-}
+//void Prefdlg::on_slider_released()
+//{
+//    // used to prevent font size updates while slider is pressed to prevent slider latency
+//    isSliderPressed = false;
+//}
 
 void Prefdlg::on_infoField_changed()
 {
@@ -307,6 +307,10 @@ void Prefdlg::on_trackpadScrollRadio_clicked()
     if(okToUpdate) {
         m0->imageView->useWheelToScroll = true;
     }
+}
+void Prefdlg::on_maxIconSizeSpinBox_valueChanged(int arg1)
+{
+    G::maxIconSize = arg1;
 }
 
 // thumbs
@@ -522,19 +526,3 @@ void Prefdlg::on_statusBarChk_clicked()
     }
 }
 
-void Prefdlg::on_coresSpinBox_valueChanged(int arg1)
-{
-    G::cores = arg1;
-}
-
-
-void Prefdlg::on_aSynchChk_clicked()
-{
-    G::aSync = ui->aSynchChk->isChecked();
-}
-
-
-void Prefdlg::on_maxIconSizeSpinBox_valueChanged(int arg1)
-{
-    G::maxIconSize = arg1;
-}
