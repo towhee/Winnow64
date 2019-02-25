@@ -9,7 +9,8 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h
+HEADERS += Cache/imagecache.h \
+    Dialogs/loadusbdlg.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/mdcacher.h
 HEADERS += Cache/mdcachemgr.h
@@ -57,7 +58,8 @@ HEADERS += Test/readsync.h
 HEADERS += Test/readasync.h
 HEADERS += Test/asynctask.h
 
-SOURCES += Cache/imagecache.cpp
+SOURCES += Cache/imagecache.cpp \
+    Dialogs/loadusbdlg.cpp
 SOURCES += Cache/mdcacher.cpp
 SOURCES += Cache/mdcachemgr.cpp
 SOURCES += Cache/mdcache.cpp
@@ -104,7 +106,8 @@ SOURCES += Test/readsync.cpp
 SOURCES += Test/readasync.cpp
 SOURCES += Test/readmdconcurrent.cpp
 
-FORMS += Dialogs/aboutdlg.ui
+FORMS += Dialogs/aboutdlg.ui \
+    Dialogs/loadusbdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/ingestdlg.ui

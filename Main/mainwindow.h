@@ -47,6 +47,7 @@
 #include "updateapp.h"
 #include "workspacedlg.h"
 #include "zoomdlg.h"
+#include "loadusbdlg.h"
 #include "Utilities/utilities.h"
 #include "Utilities/usb.h"
 #include "progressbar.h"
@@ -238,6 +239,7 @@ public:
     bool allMetadataLoaded;
     bool modeChangeJustHappened;
 
+    bool showImageCount = true;
     bool isCurrentFolderOkay;
     bool isSlideShow;
     bool copyOp;
@@ -460,6 +462,7 @@ private slots:
     void reportState();
 
     void openFolder();
+    void openUsbFolder();
     void revealFile();
     void revealFileFromContext();
     void revealInFileBrowser(QString path);
@@ -523,6 +526,7 @@ private:
 
     // File menu
     QAction *openAction;
+    QAction *openUsbAction;
     QAction *revealFileAction;
     QAction *revealFileActionFromContext;
     QAction *openWithMenuAction;
@@ -763,6 +767,7 @@ private:
     Thumb *thumb;
     InfoView *infoView;
     IngestDlg *ingestDlg;
+    LoadUsbDlg *loadUsbDlg;
     AboutDlg *aboutDlg;
     WorkspaceDlg *workspaceDlg;
     UpdateApp *updateAppDlg;
