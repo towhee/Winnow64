@@ -908,10 +908,6 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     }
     static int n = 0;
     n++;
-//    qDebug() << "mousePressEvent" << n
-//             << "button =" << event->button();
-    qDebug() << QTime::currentTime() << "MouseButtonPress" << __FUNCTION__;
-
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
 
@@ -989,7 +985,6 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << QTime::currentTime() << "MouseButtonRelease" << __FUNCTION__ << "\n";
     // prevent zooming when right click for context menu
     if (event->button() == Qt::RightButton) {
         return;

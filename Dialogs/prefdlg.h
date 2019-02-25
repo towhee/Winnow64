@@ -26,8 +26,10 @@ private slots:
     void on_rememberFolderChk_clicked();
     void on_trackpadIterateRadio_clicked();
     void on_trackpadScrollRadio_clicked();
-    void on_slider_pressed();
-    void on_slider_released();
+//    void on_slider_pressed();
+//    void on_slider_released();
+    // datamodel
+    void on_maxIconSizeSpinBox_valueChanged(int arg1);
     // thumbs
     void on_thumbSmallerBtn_pressed();
     void on_thumbLargerBtn_pressed();
@@ -54,6 +56,7 @@ private slots:
     void on_cache90AheadRadio_clicked();
     void on_cache100AheadRadio_clicked();
     void on_cachePreviewsChk_clicked();
+
     void on_listWidget_currentItemChanged(QListWidgetItem *current);
     void on_foldersChk_clicked();
     void on_favsChk_clicked();
@@ -65,21 +68,14 @@ private slots:
     void on_tableField_changed();
     void on_wrapChk_clicked();
     void on_mouseClickScrollChk_clicked();
+    // appearance
     void on_globalFontSizeSlider_valueChanged(int value);
     void on_globalFontSizeSlider_sliderReleased();
     void on_classificationBadgeImageDiamSlider_valueChanged(int value);
     void on_classificationBadgeThumbDiamSlider_valueChanged(int);
     void on_updateAppChk_stateChanged(int value);
-
-
     void on_infoFontSizeSlider_valueChanged(int value);
 
-    void on_coresSpinBox_valueChanged(int arg1);
-
-
-    void on_aSynchChk_clicked();
-
-    void on_maxIconSizeSpinBox_valueChanged(int arg1);
 
 private:
     Ui::Prefdlg *ui;

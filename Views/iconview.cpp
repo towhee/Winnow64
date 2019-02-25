@@ -218,7 +218,7 @@ possibly altered thumbnail dimensions.
     G::track(__FUNCTION__);
     #endif
     }
-    setSpacing(thumbSpacing);
+    setSpacing(0);
     iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     if(objectName() == "Thumbnails") {
@@ -911,7 +911,6 @@ void IconView::resizeEvent(QResizeEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "IconView::resizeEvent";
     QListView::resizeEvent(event);
     if (skipResize) {
         skipResize = false;
@@ -1074,7 +1073,7 @@ For thumbSpace anatomy (see IconViewDelegate)
     }
 
     // this is critical - otherwise thumbs bunch up
-    setSpacing(thumbSpacing);
+    setSpacing(0);
 
     iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
@@ -1169,10 +1168,6 @@ int IconView::getHorizontalScrollBarOffset(int row)
     }
     int pageWidth = viewport()->width();
     int thumbWidth = getCellSize().width();
-
-    qDebug() << "ThumbView::getHorizontalScrollBarOffset   "
-             << "pageWidth" << pageWidth
-             << "thumbWidth" << pageWidth;
 
     if (pageWidth < ICON_MIN || thumbWidth < ICON_MIN)
         return 0;

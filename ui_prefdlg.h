@@ -81,9 +81,6 @@ public:
     QRadioButton *cache90AheadRadio;
     QRadioButton *cache100AheadRadio;
     QSlider *progressWidthSlider;
-    QLabel *coresLbl;
-    QSpinBox *coresSpinBox;
-    QCheckBox *aSynchChk;
     QWidget *pageSlideshow;
     QCheckBox *slideshowRandomChk;
     QLabel *label_12;
@@ -323,12 +320,12 @@ public:
         showCacheThreadActivityChk->setFont(font2);
         label_9 = new QLabel(pageCache);
         label_9->setObjectName(QString::fromUtf8("label_9"));
-        label_9->setGeometry(QRect(260, 24, 91, 16));
+        label_9->setGeometry(QRect(260, 24, 91, 0));
         label_9->setFont(font2);
         label_9->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         cacheDelaySpinbox = new QSpinBox(pageCache);
         cacheDelaySpinbox->setObjectName(QString::fromUtf8("cacheDelaySpinbox"));
-        cacheDelaySpinbox->setGeometry(QRect(360, 23, 71, 18));
+        cacheDelaySpinbox->setGeometry(QRect(360, 23, 71, 0));
         cacheDelaySpinbox->setFont(font2);
         cacheDelaySpinbox->setMinimum(0);
         cacheDelaySpinbox->setMaximum(500);
@@ -386,21 +383,6 @@ public:
         progressWidthSlider->setOrientation(Qt::Horizontal);
         progressWidthSlider->setTickPosition(QSlider::TicksAbove);
         progressWidthSlider->setTickInterval(100);
-        coresLbl = new QLabel(pageCache);
-        coresLbl->setObjectName(QString::fromUtf8("coresLbl"));
-        coresLbl->setGeometry(QRect(20, 451, 91, 16));
-        coresLbl->setFont(font2);
-        coresLbl->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
-        coresSpinBox = new QSpinBox(pageCache);
-        coresSpinBox->setObjectName(QString::fromUtf8("coresSpinBox"));
-        coresSpinBox->setGeometry(QRect(130, 450, 51, 18));
-        coresSpinBox->setFont(font2);
-        coresSpinBox->setMinimum(0);
-        coresSpinBox->setMaximum(8);
-        aSynchChk = new QCheckBox(pageCache);
-        aSynchChk->setObjectName(QString::fromUtf8("aSynchChk"));
-        aSynchChk->setGeometry(QRect(240, 450, 221, 20));
-        aSynchChk->setFont(font2);
         stackedWidget->addWidget(pageCache);
         pageSlideshow = new QWidget();
         pageSlideshow->setObjectName(QString::fromUtf8("pageSlideshow"));
@@ -559,7 +541,7 @@ public:
         label_4->setWordWrap(true);
         label_5 = new QLabel(pageThumbnails);
         label_5->setObjectName(QString::fromUtf8("label_5"));
-        label_5->setGeometry(QRect(260, 380, 55, 22));
+        label_5->setGeometry(QRect(260, 380, 141, 22));
         label_5->setFont(font2);
         stackedWidget->addWidget(pageThumbnails);
         pageFullScreen = new QWidget();
@@ -652,12 +634,12 @@ public:
 
         frame_3 = new QFrame(frame_2);
         frame_3->setObjectName(QString::fromUtf8("frame_3"));
-        frame_3->setGeometry(QRect(240, 0, 191, 471));
+        frame_3->setGeometry(QRect(240, 0, 221, 471));
         frame_3->setFrameShape(QFrame::NoFrame);
         frame_3->setFrameShadow(QFrame::Raised);
         layoutWidget3 = new QWidget(frame_3);
         layoutWidget3->setObjectName(QString::fromUtf8("layoutWidget3"));
-        layoutWidget3->setGeometry(QRect(10, 0, 188, 471));
+        layoutWidget3->setGeometry(QRect(10, 0, 201, 471));
         verticalLayout_5 = new QVBoxLayout(layoutWidget3);
         verticalLayout_5->setObjectName(QString::fromUtf8("verticalLayout_5"));
         verticalLayout_5->setContentsMargins(0, 0, 0, 0);
@@ -670,7 +652,8 @@ public:
         tableFieldsTable->setObjectName(QString::fromUtf8("tableFieldsTable"));
         tableFieldsTable->setMaximumSize(QSize(200, 16777215));
         tableFieldsTable->setIconSize(QSize(0, 0));
-        tableFieldsTable->verticalHeader()->setDefaultSectionSize(34);
+        tableFieldsTable->verticalHeader()->setDefaultSectionSize(1);
+        tableFieldsTable->verticalHeader()->setMinimumSectionSize(1);
 
         verticalLayout_5->addWidget(tableFieldsTable);
 
@@ -708,7 +691,7 @@ public:
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
         QObject::connect(fontSizeSlider_2, SIGNAL(valueChanged(int)), fontSizeLbl_2, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(4);
+        stackedWidget->setCurrentIndex(2);
         listContainer->setCurrentIndex(0);
 
 
@@ -810,14 +793,6 @@ public:
         cache100AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
         cache100AheadRadio->setText(QApplication::translate("Prefdlg", "100% ahead", nullptr));
-#ifndef QT_NO_TOOLTIP
-        coresLbl->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        coresLbl->setText(QApplication::translate("Prefdlg", "Cores to use", nullptr));
-#ifndef QT_NO_TOOLTIP
-        coresSpinBox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        aSynchChk->setText(QApplication::translate("Prefdlg", "Asynchronous", nullptr));
         slideshowRandomChk->setText(QString());
         label_12->setText(QApplication::translate("Prefdlg", "Show random order", nullptr));
 #ifndef QT_NO_TOOLTIP
@@ -844,7 +819,7 @@ public:
         showThumbLabelChk_2->setText(QApplication::translate("Prefdlg", "Show thumbnail filename", nullptr));
         label_3->setText(QApplication::translate("Prefdlg", "Maximum thumbnail size", nullptr));
         label_4->setText(QApplication::translate("Prefdlg", "<html><head/><body><p><span style=\" font-weight:600; color:#ff0000;\">WARNING</span><span style=\" color:#ff0000;\">: </span><span style=\" color:#e5e5e5;\">Larger thumbnail sizes can consume huge amounts of memory if you load a folder with a lot of images. </span></p></body></html>", nullptr));
-        label_5->setText(QApplication::translate("Prefdlg", "pixels", nullptr));
+        label_5->setText(QApplication::translate("Prefdlg", "pixels (40 - 480)", nullptr));
         fullScreenExplanationLbl->setText(QApplication::translate("Prefdlg", "<html><head/><body><p>When full screen is chosen, select which panels should be visible. Hiding all the docks will result in only the loupe view or grid of all the thumbnails being visible.  You can still show/hide panels in the usual way, so this is just a customization to shortcut to your usual full screen preference.</p><p>When you leave full screen view the application will return to its prior state.</p></body></html>", nullptr));
         foldersChk->setText(QApplication::translate("Prefdlg", "Folders", nullptr));
         favsChk->setText(QApplication::translate("Prefdlg", "Favourites", nullptr));
