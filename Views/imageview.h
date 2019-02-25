@@ -172,6 +172,7 @@ private:
     bool &isSlideshow;
     bool cursorIsHidden;        // use for slideshow and full screen - review rgh
     bool moveImageLocked;       // control when con drag image around
+    bool ignoreMousePress;
     bool isZoom;
     bool isFit;
     bool wasZoomFit;
