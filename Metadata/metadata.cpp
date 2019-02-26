@@ -3675,6 +3675,199 @@ bool Metadata::formatFuji()
     return true;
 }
 
+bool Metadata::formatDNG()
+{
+    //file.open happens in readMetadata
+
+    // set arbitrary order
+    order = 0x4D4D;
+    ulong startOffset = 0;
+
+    // first two bytes is the endian order
+    order = get2(file.read(2));
+    if (order != 0x4D4D && order != 0x4949) return false;
+
+    // should be magic number 42 next
+    if (get2(file.read(2)) != 42) return false;
+
+    // read offset to first IFD
+    ulong ifdOffset = get4(file.read(4));
+    ulong nextIFDOffset = readIFD("IFD0", ifdOffset);
+    nextIFDOffset = 0;  // suppress compiler warning
+
+    lengthFullJPG = 1;  // set arbitrary length to avoid error msg as tif do not
+                         // have full size embedded jpg
+
+    // IFD0: *******************************************************************
+
+    // IFD0: Model
+    (ifdDataHash.contains(272))
+        ? model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount)
+        : model = "";
+
+    // IFD0: Make
+    (ifdDataHash.contains(271))
+        ? make = getString(ifdDataHash.value(271).tagValue + startOffset,
+        ifdDataHash.value(271).tagCount)
+        : make = "";
+
+    // IFD0: Title (ImageDescription)
+    (ifdDataHash.contains(270))
+        ? title = getString(ifdDataHash.value(315).tagValue + startOffset,
+        ifdDataHash.value(270).tagCount)
+        : title = "";
+
+    // IFD0: Creator (artist)
+    (ifdDataHash.contains(315))
+        ? creator = getString(ifdDataHash.value(315).tagValue + startOffset,
+        ifdDataHash.value(315).tagCount)
+        : creator = "";
+
+    // IFD0: Copyright
+    (ifdDataHash.contains(33432))
+            ? copyright = getString(ifdDataHash.value(33432).tagValue + startOffset,
+                                  ifdDataHash.value(33432).tagCount)
+            : copyright = "";
+
+    // IFD0: width
+    (ifdDataHash.contains(256))
+        ? width = ifdDataHash.value(256).tagValue
+        : width = 0;
+
+    // IFD0: height
+    (ifdDataHash.contains(257))
+        ? height = ifdDataHash.value(257).tagValue
+        : height = 0;
+
+    if (!width || !height) getDimensions(0);
+
+    // IFD0: EXIF offset
+    ulong ifdEXIFOffset = 0;
+    if (ifdDataHash.contains(34665))
+        ifdEXIFOffset = ifdDataHash.value(34665).tagValue;
+
+    // IFD0: Photoshop offset
+    ulong ifdPhotoshopOffset = 0;
+    if (ifdDataHash.contains(34377))
+        ifdPhotoshopOffset = ifdDataHash.value(34377).tagValue;
+
+    // IFD0: IPTC offset
+    ulong ifdIPTCOffset = 0;
+    if (ifdDataHash.contains(33723))
+        ifdIPTCOffset = ifdDataHash.value(33723).tagValue;
+
+    // IFD0: XMP offset
+    ulong ifdXMPOffset = 0;
+    if (ifdDataHash.contains(700)) {
+        ifdXMPOffset = ifdDataHash.value(700).tagValue;
+        xmpSegmentOffset = ifdXMPOffset;
+        int xmpSegmentLength = ifdDataHash.value(700).tagCount;
+        xmpNextSegmentOffset = xmpSegmentOffset + xmpSegmentLength;
+    }
+
+    // EXIF: *******************************************************************
+
+    if (ifdEXIFOffset) readIFD("IFD Exif", ifdEXIFOffset);
+
+    // EXIF: created datetime
+    QString createdExif;
+    (ifdDataHash.contains(36868))
+        ? createdExif = getString(ifdDataHash.value(36868).tagValue,
+        ifdDataHash.value(36868).tagCount)
+        : createdExif = "";
+    if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+
+    // EXIF: shutter speed
+    if (ifdDataHash.contains(33434)) {
+        float x = getReal(ifdDataHash.value(33434).tagValue);
+        if (x < 1 ) {
+            uint t = qRound(1 / x);
+            exposureTime = "1/" + QString::number(t);
+            exposureTimeNum = x;
+        } else {
+            uint t = (uint)x;
+            exposureTime = QString::number(t);
+            exposureTimeNum = t;
+        }
+        exposureTime += " sec";
+    } else {
+        exposureTime = "";
+    }
+
+    // EXIF: aperture
+    if (ifdDataHash.contains(33437)) {
+        float x = getReal(ifdDataHash.value(33437).tagValue);
+        aperture = "f/" + QString::number(x, 'f', 1);
+        apertureNum = qRound(x * 10) / 10.0;
+    } else {
+        aperture = "";
+        apertureNum = 0;
+    }
+
+    // EXIF: ISO
+    if (ifdDataHash.contains(34855)) {
+        ulong x = ifdDataHash.value(34855).tagValue;
+        ISONum = static_cast<int>(x);
+        ISO = QString::number(ISONum);
+    } else {
+        ISO = "";
+        ISONum = 0;
+    }
+
+    // EXIF: focal length
+    if (ifdDataHash.contains(37386)) {
+        float x = getReal(ifdDataHash.value(37386).tagValue);
+        focalLengthNum = static_cast<int>(x);
+        focalLength = QString::number(x, 'f', 0) + "mm";
+    } else {
+        focalLength = "";
+        focalLengthNum = 0;
+    }
+
+    // EXIF: lens model
+    (ifdDataHash.contains(42036))
+            ? lens = getString(ifdDataHash.value(42036).tagValue,
+                                  ifdDataHash.value(42036).tagCount)
+            : lens = "";
+
+    // Photoshop: **************************************************************
+    // Get embedded JPG if available
+
+    foundTifThumb = false;
+    if (ifdPhotoshopOffset) readIRB(ifdPhotoshopOffset);
+
+    // IPTC: *******************************************************************
+    // Get title if available
+
+    if (ifdIPTCOffset) readIPTC(ifdIPTCOffset);
+
+    // read XMP - no XMP in fuji raw files
+    if (isXmp && okToReadXmp) {
+        Xmp xmp(file, xmpSegmentOffset, xmpNextSegmentOffset);
+        rating = xmp.getItem("Rating");     // case is important "Rating"
+        label = xmp.getItem("Label");       // case is important "Label"
+        title = xmp.getItem("title");       // case is important "title"
+        cameraSN = xmp.getItem("SerialNumber");
+        if (lens.isEmpty()) lens = xmp.getItem("Lens");
+        lensSN = xmp.getItem("LensSerialNumber");
+        if (creator.isEmpty()) creator = xmp.getItem("creator");
+        copyright = xmp.getItem("rights");
+        email = xmp.getItem("CiEmailWork");
+        url = xmp.getItem("CiUrlWork");
+
+        // save original values so can determine if edited when writing changes
+        _title = title;
+        _rating = rating;
+        _label = label;
+
+        if (report) xmpString = xmp.metaAsString();
+    }
+
+    if (report) reportMetadata();
+
+    return true;
+}
+
 bool Metadata::formatTIF()
 {
     //file.open happens in readMetadata
@@ -4299,8 +4492,7 @@ void Metadata::testNewFileFormat(const QString &path)
     file.open(QIODevice::ReadOnly);
 
     // edit test format to use:
-    formatJPG();
-//    formatPanasonic();
+    formatDNG();
     reportMetadata();
 }
 
