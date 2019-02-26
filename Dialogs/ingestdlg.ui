@@ -734,7 +734,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="primaryTab">
      <attribute name="title">
@@ -967,7 +967,7 @@
     </widget>
     <widget class="QWidget" name="backupTab">
      <attribute name="title">
-      <string>  Backup Location Parameters  </string>
+      <string>Backup Location Parameters</string>
      </attribute>
      <widget class="QLabel" name="folderLabel_2">
       <property name="geometry">
@@ -1571,7 +1571,7 @@
      <x>20</x>
      <y>640</y>
      <width>311</width>
-     <height>20</height>
+     <height>0</height>
     </rect>
    </property>
    <property name="font">

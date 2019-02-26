@@ -20,8 +20,8 @@ protected:
     void showEvent(QShowEvent *event);
 
 private slots:
-    void on_buttonBox_accepted();
-    void on_buttonBox_rejected();
+    void on_yesBtn_clicked();
+    void on_cancelBtn_clicked();
 
 private:
     Ui::UpdateApp *ui;

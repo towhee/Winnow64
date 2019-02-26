@@ -66,7 +66,7 @@ private slots:
     void on_statusBarChk_clicked();
     void on_infoField_changed();
     void on_tableField_changed();
-    void on_wrapChk_clicked();
+//    void on_wrapChk_clicked();
     void on_mouseClickScrollChk_clicked();
     // appearance
     void on_globalFontSizeSlider_valueChanged(int value);
