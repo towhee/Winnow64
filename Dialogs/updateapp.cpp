@@ -26,10 +26,13 @@ void UpdateApp::showEvent(QShowEvent *event)
     QDialog::showEvent(event);
 }
 
-void UpdateApp::on_buttonBox_accepted()
+
+void UpdateApp::on_yesBtn_clicked()
 {
+    accept();
 }
 
-void UpdateApp::on_buttonBox_rejected()
+void UpdateApp::on_cancelBtn_clicked()
 {
+    reject();
 }

@@ -73,7 +73,7 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = nullptr);
 
-    QString version = "Version: 0.9.7.2 released 2019-02-21";
+    QString version = "Version: 0.9.7.3.4 released 2019-02-25";
     QString website = "Website: "
             "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"
@@ -130,7 +130,7 @@ public:
         int thumbHeight;
         int labelFontSize;
         bool showThumbLabels;
-        bool wrapThumbs;
+//        bool wrapThumbs;
         int thumbSpacingGrid;
         int thumbPaddingGrid;
         int thumbWidthGrid;
@@ -396,7 +396,7 @@ private slots:
     void setRatingBadgeVisibility();
     void setShootingInfoVisibility();
     void selectShootingInfo();
-    void toggleThumbWrap();
+//    void toggleThumbWrap();
     void togglePick();
     void pushPick(QString fPath, QString status = "true");
     void popPick();
@@ -420,7 +420,7 @@ private slots:
     void showHiddenFiles();
     void thumbsEnlarge();
     void thumbsShrink();
-    void setDockFitThumbs();
+//    void setDockFitThumbs();
 
     void runExternalApp();
     void cleanupSender();
@@ -663,10 +663,10 @@ private:
     QAction *zoomOutAction;
     QAction *zoomToggleAction;
     QActionGroup *zoomGroupAction;
-    QAction *thumbsWrapAction;
+//    QAction *thumbsWrapAction;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
-    QAction *thumbsFitAction;   // used?? rgh
+//    QAction *thumbsFitAction;   // used?? rgh
 //    QAction *showThumbLabelsAction;
     QAction *sortReverseAction;
 
