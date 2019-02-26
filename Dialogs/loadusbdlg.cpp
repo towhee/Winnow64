@@ -1,5 +1,6 @@
 #include "loadusbdlg.h"
 #include "ui_loadusbdlg.h"
+#include <QDebug>
 
 LoadUsbDlg::LoadUsbDlg(QWidget *parent, QStringList &usbDrives, QString &selectedDrive) :
     QDialog(parent),
