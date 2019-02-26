@@ -322,6 +322,7 @@ private:
     bool formatPanasonic();
     bool formatJPG();
     bool formatTIF();
+    bool formatDNG();
 
 signals:
 
