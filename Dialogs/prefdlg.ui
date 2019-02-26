@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>2</number>
+    <number>4</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -915,30 +915,12 @@
        <x>10</x>
        <y>20</y>
        <width>461</width>
-       <height>151</height>
+       <height>121</height>
       </rect>
      </property>
      <property name="title">
       <string>Docked</string>
      </property>
-     <widget class="QCheckBox" name="wrapChk">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>110</y>
-        <width>431</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>9</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Wrap thumbnails when docked on sides or when floating</string>
-      </property>
-     </widget>
      <widget class="QCheckBox" name="showThumbLabelChk">
       <property name="geometry">
        <rect>
@@ -1154,7 +1136,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>190</y>
+       <y>160</y>
        <width>461</width>
        <height>121</height>
       </rect>
@@ -1717,7 +1699,7 @@
            </size>
           </property>
           <attribute name="verticalHeaderDefaultSectionSize">
-           <number>1</number>
+           <number>34</number>
           </attribute>
           <attribute name="verticalHeaderMinimumSectionSize">
            <number>1</number>

@@ -24,10 +24,10 @@ public:
     int thumbPadding;
     int labelFontSize;
     bool showThumbLabels;
-    bool wrapThumbs;
+//    bool wrapThumbs;
     int badgeSize;
 
-    bool isTopOrBottomDock;
+//    bool isTopOrBottomDock;
     bool isFloat;       // set by MW ...
     bool isBestAspect;
 
@@ -85,7 +85,7 @@ public slots:
     void thumbsShrink();
     void justify(JustifyAction action);
     void rejustify();
-    void resizeRejustify();
+//    void resizeRejustify();
     void thumbsFit(Qt::DockWidgetArea area);
     void bestAspect();
     void thumbsFitTopOrBottom();
@@ -101,7 +101,7 @@ public slots:
     void setIcon(int row, QImage thumb);
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
              int _thumbPadding, int _labelFontSize, bool _showThumbLabels,
-             bool _wrapThumbs, int _badgeSize);
+             /*bool _wrapThumbs, */int _badgeSize);
     void reportThumbs();
     void selectThumb(QModelIndex idx);
     void selectNext();
