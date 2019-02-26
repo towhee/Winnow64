@@ -83,6 +83,9 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
     setStyleSheet(css);
 
+    isBackupChkBox = new QCheckBox;
+    ui->autoIngestTab->tabBar()->setTabButton(1, QTabBar::LeftSide, isBackupChkBox);
+
     isInitializing = true;
     getPicks();
 
@@ -144,6 +147,7 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->ejectChk->setChecked(autoEjectUsb);
     // initialize use backup as well as primary ingest
     ui->backupChk->setChecked(isBackup);
+    isBackupChkBox->setChecked(isBackup);
     // initialize open ingest folder after ingest
     ui->openIngestFolderChk->setChecked(gotoIngestFolder);
 
@@ -152,6 +156,9 @@ IngestDlg::IngestDlg(QWidget *parent,
     isInitializing = false;
     updateExistingSequence();
     buildFileNameSequence();
+
+    connect(isBackupChkBox, SIGNAL(stateChanged(int)),
+            this, SLOT(on_isBackupChkBox_stateChanged(int)));
 }
 
 IngestDlg::~IngestDlg()
@@ -257,7 +264,7 @@ Each picked image is copied from the source to the destination.
 
     Finally the source file is copied to the renamed destination.
 */
-    bool backup = ui->backupChk->isChecked();
+//    bool backup = ui->backupChk->isChecked();
 
     // get rid of "/" at end of path for history (in file menu)
     QString historyPath = folderPath.left(folderPath.length() - 1);
@@ -281,7 +288,8 @@ Each picked image is copied from the source to the destination.
 
     // copy cycles req'd: 1 if no backup, 2 if backup
     int n;
-    backup ? n = 2 : n = 1;
+    isBackup ? n = 2 : n = 1;
+    qDebug() << "Ingesting  isBackup =" << isBackup;
 
     // copy picked images
     ui->progressBar->setVisible(true);
@@ -321,9 +329,10 @@ Each picked image is copied from the source to the destination.
         if (metadata->writeMetadata(sourcePath, buffer)
         && metadata->sidecarFormats.contains(suffix)) {
             // copy image file
+//            QFile sourceFile(sourcePath);
             QFile::copy(sourcePath, destinationPath);
-            if(backup) QFile::copy(sourcePath, backupPath);
-             if (metadata->internalXmpFormats.contains(suffix)) {
+            if(isBackup) QFile::copy(sourcePath, backupPath);
+            if (metadata->internalXmpFormats.contains(suffix)) {
                 // write xmp data into image file       rgh needs some work!!!
                 QFile newFile(destinationPath);
                 newFile.open(QIODevice::WriteOnly);
@@ -336,7 +345,7 @@ Each picked image is copied from the source to the destination.
                 sidecarFile.open(QIODevice::WriteOnly);
                 sidecarFile.write(buffer);
                 sidecarFile.close();
-                if(backup) {
+                if(isBackup) {
                     QFile sidecarFile(folderPath2 + destBaseName + ".xmp");
                     sidecarFile.open(QIODevice::WriteOnly);
                     sidecarFile.write(buffer);
@@ -347,7 +356,7 @@ Each picked image is copied from the source to the destination.
         // no xmp data, just copy source to destination
         else {
             QFile::copy(sourcePath, destinationPath);
-            if(backup) QFile::copy(sourcePath, backupPath);
+            if(isBackup) QFile::copy(sourcePath, backupPath);
         }
     }
 //    emit revealIngestLocation(folderPath);
@@ -838,6 +847,7 @@ void IngestDlg::updateEnabledState()
         ui->descriptionLineEdit_2->setEnabled(true);
         ui->destinationFolderLabel_2->setEnabled(true);
         ui->folderLabel_2->setEnabled(true);
+        isBackupChkBox->setEnabled(true);
 
         ui->selectFolderBtn->setEnabled(false);
         ui->selectFolderBtn_2->setEnabled(false);
@@ -865,6 +875,7 @@ void IngestDlg::updateEnabledState()
         ui->descriptionLineEdit_2->setEnabled(false);
         ui->destinationFolderLabel_2->setEnabled(false);
         ui->folderLabel_2->setEnabled(false);
+        isBackupChkBox->setEnabled(false);
 
         ui->selectFolderBtn->setEnabled(true);
         ui->selectFolderBtn_2->setEnabled(true);
@@ -1090,6 +1101,12 @@ void IngestDlg::on_ejectChk_stateChanged(int /*arg1*/)
 void IngestDlg::on_backupChk_stateChanged(int arg1)
 {
     isBackup = arg1;
+}
+
+void IngestDlg::on_isBackupChkBox_stateChanged(int arg1)
+{
+    isBackup = arg1;
+    qDebug() << "IngestDlg::on_isBackupChkBox_stateChanged  isBackup =" << isBackup;
 }
 
 void IngestDlg::on_helpBtn_clicked()
