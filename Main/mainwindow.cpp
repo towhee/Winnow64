@@ -8497,7 +8497,8 @@ void MW::test2()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    QString fPath = "D:/Pictures/_TIFF/2019-02-21_0107.dng";
+//    QString fPath = "D:/Pictures/_DNG/LeicaM10.dng";
+    QString fPath = "D:/Pictures/_DNG/DngNikonD850FromLightroom.dng";
     metadata->testNewFileFormat(fPath);
 }
 

@@ -82,12 +82,12 @@ void Metadata::initSupportedFiles()
     #endif
     }
     // add raw file types here as they are supported
-    rawFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2";
+    rawFormats << "arw" << "cr2" << "dng" << "nef" << "orf" << "raf" << "sr2" << "rw2";
     sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2" << "jpg";
     internalXmpFormats << "notyetjpg";
     xmpWriteFormats << "jpg" << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2";
 
-    supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "gif" <<
+    supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "dng" << "gif" <<
     "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
     "orf" << "pbm" << "pgm" << "png" << "ppm" << "raf" << "rw2" << "sr2" << "svg" <<
     "svgz" << "tga" << "tif" << "wbmp" << "webp" << "xbm" << "xpm";
@@ -3759,11 +3759,79 @@ bool Metadata::formatDNG()
     // IFD0: XMP offset
     ulong ifdXMPOffset = 0;
     if (ifdDataHash.contains(700)) {
+        isXmp = true;
         ifdXMPOffset = ifdDataHash.value(700).tagValue;
         xmpSegmentOffset = ifdXMPOffset;
         int xmpSegmentLength = ifdDataHash.value(700).tagCount;
         xmpNextSegmentOffset = xmpSegmentOffset + xmpSegmentLength;
     }
+
+    // SubIFDs: ****************************************************************
+    /* The DNG subIFDs each contain info for the embedded previews.  We record each
+       one and then determine which ones are JPG and assign the smallest as a thumb
+       and tghe largest as the full size preview JPG.
+       */
+    struct JpgInfo {
+        ulong width;
+        ulong height;
+        ulong offset;
+        ulong length;
+    } jpgInfo;
+
+    QList<JpgInfo> jpgs;
+    QList<ulong> ifdOffsets;
+    if(ifdDataHash.contains(330)) {
+        if (ifdDataHash.value(330).tagCount > 1)
+            ifdOffsets = getSubIfdOffsets(ifdDataHash.value(330).tagValue,
+                                      ifdDataHash.value(330).tagCount);
+        else ifdOffsets.append(ifdDataHash.value(330).tagValue);
+
+        QString hdr;
+        int count = 0;
+        ulong smallest = 999999;
+        ulong largest = 0;
+        int smallJpg = 0;
+        int largeJpg = 0;
+
+        // iterate subIFDs looking for embedded JPGs
+        for(int i = 0; i < ifdOffsets.length(); ++i) {
+            hdr = "SubIFD" + QString::number(i + 1);
+            readIFD(hdr, ifdOffsets[i]);
+            // look for embedded image offset
+            if (ifdDataHash.contains(273)) {
+                // is it a JPG
+                ulong offset = ifdDataHash.value(273).tagValue;
+                file.seek(offset);
+//                ulong x = get2(file.read(2));
+                if (get2(file.read(2)) != 0xD8FF) break;  // order = 4949 so reverse
+                // yes it is a JPG
+                jpgInfo.offset = offset;
+                jpgInfo.length = ifdDataHash.value(279).tagValue;;
+                jpgInfo.width = ifdDataHash.value(256).tagValue;
+                jpgInfo.height = ifdDataHash.value(257).tagValue;
+                jpgs.append(jpgInfo);
+                // find smallest and largest
+                if (jpgInfo.width < smallest) {
+                    smallest = jpgInfo.width;
+                    smallJpg = count;
+                }
+                if (jpgInfo.width > largest) {
+                    largest = jpgInfo.width;
+                    largeJpg = count;
+                }
+                count++;
+            }
+        }
+        if (jpgs.length() > 0) {
+            width = jpgs.at(largeJpg).width;
+            height = jpgs.at(largeJpg).height;
+            offsetFullJPG = jpgs.at(largeJpg).offset;
+            lengthFullJPG = jpgs.at(largeJpg).length;
+            offsetSmallJPG = jpgs.at(smallJpg).offset;
+            lengthSmallJPG = jpgs.at(smallJpg).length;
+        }
+    }
+
 
     // EXIF: *******************************************************************
 
@@ -4493,7 +4561,7 @@ void Metadata::testNewFileFormat(const QString &path)
 
     // edit test format to use:
     formatDNG();
-    reportMetadata();
+//    reportMetadata();
 }
 
 bool Metadata::readMetadata(bool isReport, const QString &path)
@@ -4531,6 +4599,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     do {
         if (file.open(QIODevice::ReadOnly)) {
             if (ext == "cr2") formatCanon();
+            if (ext == "dng") formatDNG();
             if (ext == "raf") formatFuji();
             if (ext == "jpg") formatJPG();
             if (ext == "nef") formatNikon();

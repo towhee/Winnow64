@@ -22,7 +22,6 @@ ENHANCEMENTS
 - Make all message boxes consistent (see runExternalApp)
 - Remove Windows Registry settings during uninstall
 - When ingesting confirm all files copied correctly (option)
-- Add more raw file formats - DNG, Pentax ...
 - Add completer for title in metadata
 - Get Sony image count, camera SN
 - Add zoom increment amount to preferences
@@ -30,6 +29,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Add more raw file formats - DNG, Pentax ...
 - try multiple caching threads (no improvement)
 - Set thumb maximum size in preferences
 - Thumb justification
