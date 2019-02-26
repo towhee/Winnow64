@@ -88,7 +88,6 @@ public:
     QLabel *label_11;
     QWidget *pageThumbnails;
     QGroupBox *groupBox;
-    QCheckBox *wrapChk;
     QCheckBox *showThumbLabelChk;
     QLabel *label_7;
     QPushButton *thumbSmallerBtn;
@@ -407,11 +406,7 @@ public:
         pageThumbnails->setObjectName(QString::fromUtf8("pageThumbnails"));
         groupBox = new QGroupBox(pageThumbnails);
         groupBox->setObjectName(QString::fromUtf8("groupBox"));
-        groupBox->setGeometry(QRect(10, 20, 461, 151));
-        wrapChk = new QCheckBox(groupBox);
-        wrapChk->setObjectName(QString::fromUtf8("wrapChk"));
-        wrapChk->setGeometry(QRect(20, 110, 431, 20));
-        wrapChk->setFont(font2);
+        groupBox->setGeometry(QRect(10, 20, 461, 121));
         showThumbLabelChk = new QCheckBox(groupBox);
         showThumbLabelChk->setObjectName(QString::fromUtf8("showThumbLabelChk"));
         showThumbLabelChk->setGeometry(QRect(20, 60, 221, 17));
@@ -467,7 +462,7 @@ public:
         thumbLargerBtn->setAutoDefault(false);
         groupBox_2 = new QGroupBox(pageThumbnails);
         groupBox_2->setObjectName(QString::fromUtf8("groupBox_2"));
-        groupBox_2->setGeometry(QRect(10, 190, 461, 121));
+        groupBox_2->setGeometry(QRect(10, 160, 461, 121));
         fontSizeLbl_2 = new QLabel(groupBox_2);
         fontSizeLbl_2->setObjectName(QString::fromUtf8("fontSizeLbl_2"));
         fontSizeLbl_2->setGeometry(QRect(420, 80, 30, 16));
@@ -652,7 +647,7 @@ public:
         tableFieldsTable->setObjectName(QString::fromUtf8("tableFieldsTable"));
         tableFieldsTable->setMaximumSize(QSize(200, 16777215));
         tableFieldsTable->setIconSize(QSize(0, 0));
-        tableFieldsTable->verticalHeader()->setDefaultSectionSize(1);
+        tableFieldsTable->verticalHeader()->setDefaultSectionSize(34);
         tableFieldsTable->verticalHeader()->setMinimumSectionSize(1);
 
         verticalLayout_5->addWidget(tableFieldsTable);
@@ -691,7 +686,7 @@ public:
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
         QObject::connect(fontSizeSlider_2, SIGNAL(valueChanged(int)), fontSizeLbl_2, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(2);
+        stackedWidget->setCurrentIndex(4);
         listContainer->setCurrentIndex(0);
 
 
@@ -803,7 +798,6 @@ public:
 #endif // QT_NO_TOOLTIP
         label_11->setText(QApplication::translate("Prefdlg", "Delay (sec)", nullptr));
         groupBox->setTitle(QApplication::translate("Prefdlg", "Docked", nullptr));
-        wrapChk->setText(QApplication::translate("Prefdlg", "Wrap thumbnails when docked on sides or when floating", nullptr));
         showThumbLabelChk->setText(QApplication::translate("Prefdlg", "Show thumbnail filename", nullptr));
         label_7->setText(QApplication::translate("Prefdlg", "Font size", nullptr));
         thumbSmallerBtn->setText(QApplication::translate("Prefdlg", "<", nullptr));

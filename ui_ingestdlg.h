@@ -428,13 +428,13 @@ public:
         openIngestFolderChk->setFont(font);
         backupChk = new QCheckBox(IngestDlg);
         backupChk->setObjectName(QString::fromUtf8("backupChk"));
-        backupChk->setGeometry(QRect(20, 640, 311, 20));
+        backupChk->setGeometry(QRect(20, 640, 311, 0));
         backupChk->setFont(font);
 
         retranslateUi(IngestDlg);
 
         selectFolderBtn->setDefault(false);
-        autoIngestTab->setCurrentIndex(0);
+        autoIngestTab->setCurrentIndex(1);
         selectRootFolderBtn->setDefault(false);
         pathTemplatesBtn->setDefault(false);
         selectRootFolderBtn_2->setDefault(false);
@@ -563,7 +563,7 @@ public:
         pathTemplatesBtn_2->setToolTip(QString());
 #endif // QT_NO_TOOLTIP
         pathTemplatesBtn_2->setText(QApplication::translate("IngestDlg", "Edit template(s)", nullptr));
-        autoIngestTab->setTabText(autoIngestTab->indexOf(backupTab), QApplication::translate("IngestDlg", "  Backup Location Parameters  ", nullptr));
+        autoIngestTab->setTabText(autoIngestTab->indexOf(backupTab), QApplication::translate("IngestDlg", "Backup Location Parameters", nullptr));
 #ifndef QT_NO_TOOLTIP
         helpBtn->setToolTip(QString());
 #endif // QT_NO_TOOLTIP

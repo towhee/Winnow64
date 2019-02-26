@@ -473,7 +473,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     Qt::DockWidgetArea area = dockWidgetArea(thumbDock);
                     if (area == Qt::BottomDockWidgetArea
                     || area == Qt::TopDockWidgetArea
-                    || !thumbView->wrapThumbs) {
+                    || !thumbView->isWrapping()) {
                         thumbView->thumbsFitTopOrBottom();
                     }
                 }
@@ -977,11 +977,13 @@ so scrollTo and delegate use of the current index must check the row.
         if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
             dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
         {
-            thumbsWrapAction->setChecked(false);
+//            thumbsWrapAction->setChecked(false);
             thumbView->setWrapping(false);
         }
-        thumbsWrapAction->setChecked(true);
-        if(thumbDock->isFloating()) thumbView->setWrapping(true);
+        else {
+//            thumbsWrapAction->setChecked(true);
+            thumbView->setWrapping(true);
+        }
     }
 
     // load thumbnail if not done yet
@@ -2234,12 +2236,12 @@ void MW::createActions()
     addAction(zoomToggleAction);
     connect(zoomToggleAction, &QAction::triggered, this, &MW::zoomToggle);
 
-    thumbsWrapAction = new QAction(tr("Wrap thumbs"), this);
-    thumbsWrapAction->setObjectName("wrapThumbs");
-    thumbsWrapAction->setShortcutVisibleInContextMenu(true);
-    thumbsWrapAction->setCheckable(true);
-    addAction(thumbsWrapAction);
-    connect(thumbsWrapAction, &QAction::triggered, this, &MW::toggleThumbWrap);
+//    thumbsWrapAction = new QAction(tr("Wrap thumbs"), this);
+//    thumbsWrapAction->setObjectName("wrapThumbs");
+//    thumbsWrapAction->setShortcutVisibleInContextMenu(true);
+//    thumbsWrapAction->setCheckable(true);
+//    addAction(thumbsWrapAction);
+//    connect(thumbsWrapAction, &QAction::triggered, this, &MW::toggleThumbWrap);
 
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
@@ -2253,11 +2255,11 @@ void MW::createActions()
     addAction(thumbsShrinkAction);
     connect(thumbsShrinkAction, &QAction::triggered, this, &MW::thumbsShrink);
 
-    thumbsFitAction = new QAction(tr("Fit thumbs"), this);
-    thumbsFitAction->setObjectName("thumbsZoomOut");
-    thumbsFitAction->setShortcutVisibleInContextMenu(true);
-    addAction(thumbsFitAction);
-    connect(thumbsFitAction, &QAction::triggered, this, &MW::setDockFitThumbs);
+//    thumbsFitAction = new QAction(tr("Fit thumbs"), this);
+//    thumbsFitAction->setObjectName("thumbsZoomOut");
+//    thumbsFitAction->setShortcutVisibleInContextMenu(true);
+//    addAction(thumbsFitAction);
+//    connect(thumbsFitAction, &QAction::triggered, this, &MW::setDockFitThumbs);
 
 //    showThumbLabelsAction = new QAction(tr("Thumb labels"), this);
 //    showThumbLabelsAction->setObjectName("showLabels");
@@ -2711,7 +2713,7 @@ void MW::createMenus()
     viewMenu->addAction(zoomOutAction);
     viewMenu->addAction(zoomToggleAction);
     viewMenu->addSeparator();
-    viewMenu->addAction(thumbsWrapAction);
+//    viewMenu->addAction(thumbsWrapAction);
     viewMenu->addAction(thumbsEnlargeAction);
     viewMenu->addAction(thumbsShrinkAction);
 //    viewMenu->addAction(thumbsFitAction);
@@ -2842,7 +2844,7 @@ void MW::createMenus()
     thumbViewActions->append(rotateRightAction);
     thumbViewActions->append(rotateLeftAction);
     thumbViewActions->append(separatorAction2);
-    thumbViewActions->append(thumbsWrapAction);
+//    thumbViewActions->append(thumbsWrapAction);
     thumbViewActions->append(thumbsEnlargeAction);
     thumbViewActions->append(thumbsShrinkAction);
     thumbViewActions->append(separatorAction3);
@@ -3026,7 +3028,7 @@ void MW::enableSelectionDependentMenus()
         zoomInAction->setEnabled(true);
         zoomOutAction->setEnabled(true);
         zoomToggleAction->setEnabled(true);
-        thumbsWrapAction->setEnabled(true);
+//        thumbsWrapAction->setEnabled(true);
         thumbsEnlargeAction->setEnabled(true);
         thumbsShrinkAction->setEnabled(true);
     }
@@ -3085,7 +3087,7 @@ void MW::enableSelectionDependentMenus()
         zoomInAction->setEnabled(false);
         zoomOutAction->setEnabled(false);
         zoomToggleAction->setEnabled(false);
-        thumbsWrapAction->setEnabled(false);
+//        thumbsWrapAction->setEnabled(false);
         thumbsEnlargeAction->setEnabled(false);
         thumbsShrinkAction->setEnabled(false);
     }
@@ -3286,7 +3288,7 @@ void MW::createThumbView()
     }
     thumbView = new IconView(this, dm, "Thumbnails");
     thumbView->setObjectName("Thumbnails");
-    thumbView->setSpacing(0);                // thumbView not visivle without this
+//    thumbView->setSpacing(0);                // thumbView not visible without this
     thumbView->setAutoScroll(false);
 
     // loadSettings has not run yet (dependencies, but QSettings has been opened
@@ -3294,7 +3296,7 @@ void MW::createThumbView()
     thumbView->thumbHeight = setting->value("thumbHeight").toInt();
     thumbView->labelFontSize = setting->value("labelFontSize").toInt();
     thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
-    thumbView->wrapThumbs = setting->value("wrapThumbs").toBool();
+//    thumbView->wrapThumbs = setting->value("wrapThumbs").toBool();
     thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
 
     // double mouse click fires displayLoupe
@@ -3326,7 +3328,7 @@ void MW::createGridView()
     }
     gridView = new IconView(this, dm, "Grid");
     gridView->setObjectName("Grid");
-    gridView->setSpacing(0);                // gridView not visivle without this
+//    gridView->setSpacing(0);                // gridView not visible without this
     gridView->setWrapping(true);
     gridView->setAutoScroll(false);
 
@@ -4430,15 +4432,15 @@ void MW::showHiddenFiles()
 //        tableView->scrollTo(thumbView->currentIndex(), QAbstractItemView::EnsureVisible);
 //}
 
-void MW::setDockFitThumbs()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    setThumbDockFeatures(dockWidgetArea(thumbDock));
-}
+//void MW::setDockFitThumbs()
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    setThumbDockFeatures(dockWidgetArea(thumbDock));
+//}
 
 void MW::thumbsEnlarge()
 {
@@ -4449,7 +4451,7 @@ void MW::thumbsEnlarge()
     }
     if (G::mode == "Grid") gridView->justify(IconView::JustifyAction::Enlarge);
     else {
-        if (thumbView->wrapThumbs) thumbView->justify(IconView::JustifyAction::Enlarge);
+        if (thumbView->isWrapping()) thumbView->justify(IconView::JustifyAction::Enlarge);
         else thumbView->thumbsShrink();
     }
 }
@@ -4463,7 +4465,7 @@ void MW::thumbsShrink()
     }
     if (G::mode == "Grid") gridView->justify(IconView::JustifyAction::Shrink);
     else {
-        if (thumbView->wrapThumbs) thumbView->justify(IconView::JustifyAction::Shrink);
+        if (thumbView->isWrapping()) thumbView->justify(IconView::JustifyAction::Shrink);
         else thumbView->thumbsShrink();
     }
 }
@@ -4681,9 +4683,9 @@ workspace with a matching name to the action is used.
     thumbView->thumbPadding = w.thumbPadding;
     thumbView->labelFontSize = w.labelFontSize;
     thumbView->showThumbLabels = w.showThumbLabels;
-    thumbsWrapAction->setChecked(w.wrapThumbs);
-    thumbView->wrapThumbs = w.wrapThumbs;
-    thumbView->setWrapping(w.wrapThumbs);
+//    thumbsWrapAction->setChecked(w.wrapThumbs);
+//    thumbView->wrapThumbs = w.wrapThumbs;
+//    thumbView->setWrapping(w.wrapThumbs);
     gridView->thumbWidth = w.thumbWidthGrid;
     gridView->thumbHeight = w.thumbHeightGrid;
     gridView->thumbSpacing = w.thumbSpacingGrid;
@@ -4733,7 +4735,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.thumbHeight = thumbView->thumbHeight;
     wsd.labelFontSize = thumbView->labelFontSize;
     wsd.showThumbLabels = thumbView->showThumbLabels;
-    wsd.wrapThumbs = thumbView->wrapThumbs;
+//    wsd.wrapThumbs = thumbView->wrapThumbs;
 
     wsd.thumbSpacingGrid = gridView->thumbSpacing;
     wsd.thumbPaddingGrid = gridView->thumbPadding;
@@ -4866,7 +4868,7 @@ app is "stranded" on secondary monitors that are not attached.
     thumbView->thumbHeight = 100;
     thumbView->labelFontSize = 8;
     thumbView->showThumbLabels = true;
-    thumbView->wrapThumbs = false;
+//    thumbView->wrapThumbs = false;
 
     gridView->thumbSpacing = 0;
     gridView->thumbPadding = 0;
@@ -4875,7 +4877,7 @@ app is "stranded" on secondary monitors that are not attached.
     gridView->labelFontSize = 8;
     gridView->showThumbLabels = true;
 
-    thumbsWrapAction->setChecked(false);
+//    thumbsWrapAction->setChecked(false);
     thumbView->setWrapping(false);
 
 //    qDebug() << G::t.restart() << "\t" << "\nMW::defaultWorkspace before calling setThumbParameters" << "\n"
@@ -4914,7 +4916,10 @@ app is "stranded" on secondary monitors that are not attached.
 //    widgetTabBar->setCurrentIndex(0);
 
     resizeDocks({thumbDock}, {100}, Qt::Vertical);
-    setDockFitThumbs();
+
+    setThumbDockFeatures(dockWidgetArea(thumbDock));
+//    setDockFitThumbs();
+
     asLoupeAction->setChecked(true);
     infoVisibleAction->setChecked(true);
     updateState();
@@ -4981,7 +4986,7 @@ void MW::reportWorkspace(int n)
              << "\nthumbHeight" << ws.thumbHeight
              << "\nlabelFontSize" << ws.labelFontSize
              << "\nshowThumbLabels" << ws.showThumbLabels
-             << "\nwrapThumbs" << ws.wrapThumbs
+//             << "\nwrapThumbs" << ws.wrapThumbs
              << "\nthumbSpacingGrid" << ws.thumbSpacingGrid
              << "\nthumbPaddingGrid" << ws.thumbPaddingGrid
              << "\nthumbWidthGrid" << ws.thumbWidthGrid
@@ -5024,7 +5029,7 @@ void MW::loadWorkspaces()
         ws.thumbHeight = setting->value("thumbHeight").toInt();
         ws.labelFontSize = setting->value("labelFontSize").toInt();
         ws.showThumbLabels = setting->value("showThumbLabels").toBool();
-        ws.wrapThumbs = setting->value("wrapThumbs").toBool();
+//        ws.wrapThumbs = setting->value("wrapThumbs").toBool();
         ws.thumbSpacingGrid = setting->value("thumbSpacingGrid").toInt();
         ws.thumbPaddingGrid = setting->value("thumbPaddingGrid").toInt();
         ws.thumbWidthGrid = setting->value("thumbWidthGrid").toInt();
@@ -5070,7 +5075,7 @@ void MW::reportState()
              << "\nthumbHeight" << w.thumbHeight
              << "\nlabelFontSize" << w.labelFontSize
              << "\nshowThumbLabels" << w.showThumbLabels
-             << "\nwrapThumbs" << w.wrapThumbs
+//             << "\nwrapThumbs" << w.wrapThumbs
              << "\nthumbSpacingGrid" << w.thumbSpacingGrid
              << "\nthumbPaddingGrid" << w.thumbPaddingGrid
              << "\nthumbWidthGrid" << w.thumbWidthGrid
@@ -5853,7 +5858,7 @@ re-established when the application is re-opened.
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showThumbLabels", thumbView->showThumbLabels);
-    setting->setValue("wrapThumbs", thumbView->wrapThumbs);
+//    setting->setValue("wrapThumbs", thumbView->wrapThumbs);
 
     // grid
 //    setting->setValue("thumbSpacingGrid", gridView->thumbSpacing);
@@ -6083,7 +6088,7 @@ re-established when the application is re-opened.
         setting->setValue("thumbWidth", ws.thumbWidth);
         setting->setValue("thumbHeight", ws.thumbHeight);
         setting->setValue("showThumbLabels", ws.showThumbLabels);
-        setting->setValue("wrapThumbs", ws.wrapThumbs);
+//        setting->setValue("wrapThumbs", ws.wrapThumbs);
         setting->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
         setting->setValue("thumbPaddingGrid", ws.thumbPaddingGrid);
         setting->setValue("thumbWidthGrid", ws.thumbWidthGrid);
@@ -6565,7 +6570,7 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
-        thumbsWrapAction->setChecked(true);
+//        thumbsWrapAction->setChecked(true);
         thumbView->setWrapping(true);
         thumbView->isFloat = isFloat;
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -6596,18 +6601,16 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 
     Note that a floating thumbDock does not trigger this slot. The float
     condition is handled by setThumbDockFloatFeatures.
+
+    Also note that the gridView is located in the central widget so this function only
+    applies to thumbView (the docked version of IconView).
+
     */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MW::setThumbDockFeatures________________________________________";
-    if(isInitializing) {
-//        qDebug() << G::t.restart() << "\t" << "Still initializing - cancel setThumbDockFeatures";
-//        return;
-    }
-
     thumbView->setMaximumHeight(100000);
 
     /* Check if the thumbDock is docked top or bottom.  If so, set the titlebar
@@ -6616,35 +6619,32 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
        thumbs).  The vertical scrollbar depends on whether wrapping is checked
        in preferences.
     */
-    if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea || !thumbView->wrapThumbs)
-    {
+    if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea) {
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
-        thumbsWrapAction->setChecked(false);
+//        thumbsWrapAction->setChecked(false);
         thumbView->setWrapping(false);
-//        qDebug() << G::t.restart() << "\t" << "MW::setThumbDockFeatures   thumbView->setWrapping(false);";
-        thumbView->isTopOrBottomDock = true;
-        // if thumbDock area changed then set dock height to thumb sizw
-        if (!thumbDock->isFloating() && !asGridAction->isChecked()) {
-            // make thumbDock height fit thumbs
-            int maxHt = thumbView->iconViewDelegate->getCellSize(QSize(thumbView->iconWMax, thumbView->iconHMax)).height() + 10;
-            int minHt = thumbView->iconViewDelegate->getCellSize(QSize(ICON_MIN, ICON_MIN)).height();
 
-            int cellHt = thumbView->getCellSize().height();
+        // if thumbDock area changed then set dock height to thumb size
+        // make thumbDock height fit thumbs
+        int maxHt = thumbView->iconViewDelegate->getCellSize(QSize(thumbView->iconWMax, thumbView->iconHMax)).height() + 10;
+        int minHt = thumbView->iconViewDelegate->getCellSize(QSize(ICON_MIN, ICON_MIN)).height();
 
-            maxHt += G::scrollBarThickness;
-            minHt += G::scrollBarThickness;
+        int cellHt = thumbView->getCellSize().height();
 
-            int newThumbDockHeight = cellHt + G::scrollBarThickness;
+        maxHt += G::scrollBarThickness;
+        minHt += G::scrollBarThickness;
+
+        int newThumbDockHeight = cellHt + G::scrollBarThickness;
 //            if (newThumbDockHeight > maxHt) newThumbDockHeight = maxHt;
 
-            thumbView->setMaximumHeight(maxHt);
-            thumbView->setMinimumHeight(minHt);
+        thumbView->setMaximumHeight(maxHt);
+        thumbView->setMinimumHeight(minHt);
 
-            thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-            resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
+        thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
 /*
                qDebug() << G::t.restart() << "\t" << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
                      << "***  thumbView Ht =" << thumbView->height()
@@ -6653,9 +6653,9 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                      << "newThumbDockHeight" << newThumbDockHeight
                      << "scrollBarHeight =" << G::scrollBarThickness << isScrollBar;
                      */
-        }
     }
-    /* must be docked left or right.  Turn horizontal scrollbars off.  Turn
+
+    /* must be docked left or right or is floating.  Turn horizontal scrollbars off.  Turn
        wrapping on
     */
     else {
@@ -6663,9 +6663,8 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        thumbsWrapAction->setChecked(true);
+//        thumbsWrapAction->setChecked(true);
         thumbView->setWrapping(true);
-        thumbView->isTopOrBottomDock = false;
     }
 }
 
@@ -7318,12 +7317,12 @@ void MW::setStatus(QString state)
     stateLabel->setText("    " + state + "    ");
 }
 
-void MW::toggleThumbWrap()
-{
-    thumbView->wrapThumbs = !thumbView->wrapThumbs;
-    thumbsWrapAction->setChecked(thumbView->wrapThumbs);
-    thumbView->setWrapping(thumbView->wrapThumbs);
-}
+//void MW::toggleThumbWrap()
+//{
+//    thumbView->wrapThumbs = !thumbView->wrapThumbs;
+//    thumbsWrapAction->setChecked(thumbView->wrapThumbs);
+//    thumbView->setWrapping(thumbView->wrapThumbs);
+//}
 
 void MW::togglePick()   // not currently used
 {
@@ -8484,65 +8483,9 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    struct  UsbInfo {
-        QString rootPath;
-        QString name;
-        QString description;
-    };
-    UsbInfo usbInfo;
-
-    QMap<QString, UsbInfo> usbMap;
-
-    QStringList usbDrives;
-    int n;
-    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
-/*        qDebug() << G::t.restart() << "\t" << "FSTree::createModel  " << storage.rootPath()
-                 << "storage.isValid()" << storage.isValid()
-                 << "storage.isReady()" << storage.isReady()
-                 << "storage.isReadOnly()" << storage.isReadOnly();
-                 */
-        if (storage.isValid() && storage.isReady()) {
-            if (!storage.isReadOnly()) {
-                if (Usb::isUsb(storage.rootPath())) {
-                    usbInfo.rootPath = storage.rootPath();
-                    usbInfo.name = storage.name();
-                    QString count = QString::number(n) + ". ";
-                    if (usbInfo.name.length() > 0)
-                        usbInfo.description = count + usbInfo.name + " (" + usbInfo.rootPath + ")";
-                    else
-                        usbInfo.description = count + usbInfo.rootPath;
-                    usbMap.insert(usbInfo.description, usbInfo);
-
-                    usbDrives << usbInfo.description;
-                    n++;
-                    qDebug() << "name:" << storage.name() << storage.rootPath();
-                }
-            }
-        }
-    }
-
-    QString drive;
-    loadUsbDlg = new LoadUsbDlg(this, usbDrives, drive);
-    loadUsbDlg->exec();
-
-    qDebug() << drive << usbMap[drive].rootPath;
-    subFoldersAction->setChecked(true);
-    updateSubfolderStatus();
-    QString fPath = usbMap[drive].rootPath;
-    fsTree->select(fPath);
-//    fsTree->fsModel->selectionModel->select(fsTree->fsModel->index(path));
-//    fsTree->setCurrentIndex(fsTree->fsModel->index(path));
-    isCurrentFolderOkay = isFolderValid(fPath, true, false);
-//    qDebug() << QTime::currentTime() << "isCurrentFolderOkay" << isCurrentFolderOkay << __FUNCTION__;
-
-    if (isCurrentFolderOkay) {
-        QModelIndex idx = fsTree->fsModel->index(fPath);
-        QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
-        fsTree->setCurrentIndex(filterIdx);
-        fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
-        folderSelectionChange();
-    }
-
+    updateAppDlg = new UpdateApp(version, css);
+    int ret = updateAppDlg->exec();
+    qDebug() << ret;
 }
 
 void MW::test2()
@@ -8553,8 +8496,9 @@ void MW::test2()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    qDebug() << "maxIconSize" << G::maxIconSize;
+//    qDebug() << "maxIconSize" << G::maxIconSize;
     gridView->setSpacing(0);
+    thumbView->setSpacing(0);
     return;
 
     QString fPath = "D:/Pictures/_ThumbTest/2008-02-06_0966.jpg";
