@@ -5096,7 +5096,8 @@ void MW::reportMetadata()
     G::track(__FUNCTION__);
     #endif
     }
-    metadata->readMetadata(true, thumbView->getCurrentFilePath());
+    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+    metadata->readMetadata(true, fPath);
 }
 
 void MW::about()
@@ -8496,12 +8497,7 @@ void MW::test2()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-//    qDebug() << "maxIconSize" << G::maxIconSize;
-    gridView->setSpacing(0);
-    thumbView->setSpacing(0);
-    return;
-
-    QString fPath = "D:/Pictures/_ThumbTest/2008-02-06_0966.jpg";
+    QString fPath = "D:/Pictures/_TIFF/2019-02-21_0107.dng";
     metadata->testNewFileFormat(fPath);
 }
 
