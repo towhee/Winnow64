@@ -137,7 +137,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setContentsMargins(0,0,0,0);
     setSpacing(0);
     setLineWidth(0);
-//    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     horizontalScrollBar()->setObjectName("ThumbViewHorizontalScrollBar");
     verticalScrollBar()->setObjectName("ThumbViewVerticalScrollBar");
@@ -218,9 +218,9 @@ possibly altered thumbnail dimensions.
     G::track(__FUNCTION__);
     #endif
     }
-    setSpacing(0);
+    setSpacing(-1);
     iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-        thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
+        0, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     if(objectName() == "Thumbnails") {
         if (!m2->thumbDock->isFloating())
             emit updateThumbDockHeight();
@@ -229,7 +229,7 @@ possibly altered thumbnail dimensions.
 
 void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight,
         int _thumbSpacing, int _thumbPadding, int _labelFontSize,
-        bool _showThumbLabels, bool _wrapThumbs, int _badgeSize)
+        bool _showThumbLabels, /*bool _wrapThumbs, */int _badgeSize)
 {
     {
     #ifdef ISDEBUG
@@ -242,7 +242,7 @@ void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight,
     thumbPadding = _thumbPadding;
     labelFontSize = _labelFontSize;
     showThumbLabels = _showThumbLabels;
-    wrapThumbs = _wrapThumbs;
+//    wrapThumbs = _wrapThumbs;
     badgeSize = _badgeSize;
     setThumbParameters();
 }
@@ -636,7 +636,7 @@ void IconView::selectThumb(QModelIndex idx)
     if (idx.isValid()) {
 //        G::isMouseClick = true;
         setCurrentIndex(idx);
-//        scrollTo(idx, ScrollHint::PositionAtCenter);
+        scrollTo(idx, ScrollHint::PositionAtCenter);
     }
 }
 
@@ -804,14 +804,14 @@ void IconView::thumbsShrink()
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
-void IconView::resizeRejustify()
-{
-    qDebug() << "IconView::resizeRejustify";
-    static int prevWidth = 0;
-    if (width() == prevWidth) return;
-    prevWidth = width();
-    rejustify();
-}
+//void IconView::resizeRejustify()
+//{
+////    qDebug() << "IconView::resizeRejustify";
+//    static int prevWidth = 0;
+//    if (width() == prevWidth) return;
+//    prevWidth = width();
+//    rejustify();
+//}
 
 void IconView::rejustify()
 {
@@ -829,7 +829,7 @@ resize and preference adjustment operations.
     G::track(__FUNCTION__);
     #endif
     }
-    if (!wrapThumbs) return;
+    if (!isWrapping()) return;
 
     // get
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
@@ -912,24 +912,18 @@ void IconView::resizeEvent(QResizeEvent *event)
     #endif
     }
     QListView::resizeEvent(event);
+
+    // prevent a feedback loop where justify() or rejustify() triggers a resize event
     if (skipResize) {
         skipResize = false;
         return;
     }
-    static int count = -1;
-    count++;
-    static int prevWidth;
-    if (count == 0) {
-        prevWidth = width();
-        return;
+
+    static int prevWidth = 0;
+    if (isWrapping() && width() != prevWidth) {
+        QTimer::singleShot(500, this, SLOT(rejustify()));
     }
-    count++;
-    if (objectName() == "Thumbnails" && wrapThumbs == false) {
-        qDebug() << "if (objectName() == \"Thumbnails\" && wrapThumbs == false)";
-        return;
-    }
-    if (width() == prevWidth) return;
-    QTimer::singleShot(500, this, SLOT(resizeRejustify()));
+    prevWidth = width();
 }
 
 void IconView::bestAspect()
@@ -1006,7 +1000,7 @@ void IconView::thumbsFit(Qt::DockWidgetArea area)
     }
     // no wrapping - must be bottom or top dock area
     else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea
-             || !wrapThumbs){
+             || !isWrapping()){
         // set target ht based on space with scrollbar (always on)
         int ht = height();
         int scrollHeight = G::scrollBarThickness;
@@ -1026,7 +1020,7 @@ void IconView::thumbsFit(Qt::DockWidgetArea area)
         thumbWidth = thumbHeight * aspect;
 
         // change the thumbnail size in thumbViewDelegate
-//        setSpacing(thumbSpacing);
+        setSpacing(0);
 qDebug() << "thumbsFit   thumbHeight" << thumbHeight << "thumbWidth" << thumbWidth;
         iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
             thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
@@ -1094,7 +1088,7 @@ void IconView::updateLayout()
 
 void IconView::scrollDown(int /*step*/)
 {
-    if(wrapThumbs) {
+    if(isWrapping()) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
     }
     else {
@@ -1104,7 +1098,7 @@ void IconView::scrollDown(int /*step*/)
 
 void IconView::scrollUp(int /*step*/)
 {
-    if(wrapThumbs) {
+    if(isWrapping()) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
     }
     else {
@@ -1114,7 +1108,7 @@ void IconView::scrollUp(int /*step*/)
 
 void IconView::scrollPageDown(int /*step*/)
 {
-    if(wrapThumbs) {
+    if(isWrapping()) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
     }
     else {
@@ -1124,7 +1118,7 @@ void IconView::scrollPageDown(int /*step*/)
 
 void IconView::scrollPageUp(int /*step*/)
 {
-    if(wrapThumbs) {
+    if(isWrapping()) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
     }
     else {
@@ -1231,8 +1225,8 @@ int IconView::getVerticalScrollBarOffset(int row)
     float pages = (float(n) / thumbsPerPage) - 1;
     int vMax = pages * pageWidth;
 
-    Q_ASSERT(thumbCellWidth == 0);
-    Q_ASSERT(pageWidth == 0);
+//    Q_ASSERT(thumbCellWidth == 0);
+//    Q_ASSERT(pageWidth == 0);
     int thumbRow = row / (pageWidth / thumbCellWidth);
     int startNoScrollItems = thumbRowsPerPage / 2;
     float fractpart = fmodf (thumbRowsPerPage / 2 , 1.0);

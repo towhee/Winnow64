@@ -935,13 +935,13 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         mousePressPt.setX(event->x());
         mousePressPt.setY(event->y());
 
+        QGraphicsView::mousePressEvent(event);
         if (zoom == zoomFit) {
             zoom = toggleZoom;
             scale();
             ignoreMousePress = true;
         }
 
-        QGraphicsView::mousePressEvent(event);
     }
 //    QGraphicsView::mousePressEvent(event);
 }

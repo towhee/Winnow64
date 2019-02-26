@@ -146,7 +146,7 @@ QTabWidget::tab-bar {
 QTabBar::tab {
     color: silver;
     background-color: rgb(85,85,85);
-    border: 1px solid rgb(99,99,99);
+    border: 1px solid gray;
     padding: 4px 4px;
 }
 
@@ -169,7 +169,8 @@ QListView {
 }
 
 QStackedWidget {
-    border: 1px solid rgb(95,95,95);
+    border: 1px solid gray;
+    /*border: 1px solid rgb(95,95,95);*/
     border-radius: 5px;
 }
 

@@ -64,6 +64,7 @@ private slots:
     void on_combinedIncludeJpgChk_clicked();
     void on_ejectChk_stateChanged(int);
     void on_backupChk_stateChanged(int arg1);
+    void on_isBackupChkBox_stateChanged(int arg1);
 
     void on_cancelBtn_clicked();
     void on_okBtn_clicked();
@@ -129,6 +130,9 @@ private:
     // file name creation
     int& filenameTemplateSelected;
     QString fileSuffix;
+
+    // checkbox in Backup location tab
+    QCheckBox *isBackupChkBox;
 
     int seqWidth;
     int seqStart;

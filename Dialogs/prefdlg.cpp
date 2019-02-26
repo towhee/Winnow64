@@ -54,7 +54,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->fontSizeSlider->setTickPosition(QSlider::TicksAbove);
     ui->fontSizeSlider->setValue(m0->thumbView->labelFontSize);
     ui->showThumbLabelChk->setChecked(m0->thumbView->showThumbLabels);
-    ui->wrapChk->setChecked(m0->thumbView->wrapThumbs);
+//    ui->wrapChk->setChecked(m0->thumbView->wrapThumbs);
 
     // grid
     ui->fontSizeSlider_2->setTickInterval(1);
@@ -316,13 +316,13 @@ void Prefdlg::on_maxIconSizeSpinBox_valueChanged(int arg1)
 // thumbs
 void Prefdlg::on_thumbSmallerBtn_pressed()
 {
-    if (m0->thumbView->wrapThumbs) m0->thumbView->justify(IconView::JustifyAction::Shrink);
+    if (m0->thumbView->isWrapping()) m0->thumbView->justify(IconView::JustifyAction::Shrink);
     else m0->thumbView->thumbsShrink();
 }
 
 void Prefdlg::on_thumbLargerBtn_pressed()
 {
-    if (m0->thumbView->wrapThumbs) m0->thumbView->justify(IconView::JustifyAction::Enlarge);
+    if (m0->thumbView->isWrapping()) m0->thumbView->justify(IconView::JustifyAction::Enlarge);
     else m0->thumbView->thumbsEnlarge();
 }
 
@@ -334,13 +334,13 @@ void Prefdlg::on_showThumbLabelChk_clicked()
     }
 }
 
-void Prefdlg::on_wrapChk_clicked()
-{
-    if (okToUpdate) {
-        m0->thumbView->wrapThumbs = ui->wrapChk->isChecked();
-        m0->thumbView->setThumbParameters();
-    }
-}
+//void Prefdlg::on_wrapChk_clicked()
+//{
+//    if (okToUpdate) {
+////        m0->thumbView->wrapThumbs = ui->wrapChk->isChecked();
+////        m0->thumbView->setThumbParameters();
+//    }
+//}
 
 void Prefdlg::on_fontSizeSlider_valueChanged(int value)
 {

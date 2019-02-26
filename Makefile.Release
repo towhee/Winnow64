@@ -23115,7 +23115,11 @@ release\loadusbdlg.obj: Dialogs\loadusbdlg.cpp Dialogs\loadusbdlg.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\qtwidgetsversion.h \
-		ui_loadusbdlg.h
+		ui_loadusbdlg.h \
+		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QApplication \
+		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QLabel \
+		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QListWidget \
+		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QVBoxLayout
 
 release\mdcacher.obj: Cache\mdcacher.cpp Cache\mdcacher.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QtWidgets \
