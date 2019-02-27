@@ -31,6 +31,9 @@ public:
     bool isFloat;       // set by MW ...
     bool isBestAspect;
 
+//    uint firstVisibleRow;
+//    uint lastVisibleRow;
+
     void updateLayout();
 
     IconViewDelegate *iconViewDelegate;
@@ -49,6 +52,8 @@ public:
     QStringList getSelectedThumbsList();        //used by tags, might be useful
     int getCurrentRow();
     QString getCurrentFilePath();       //not used, but might be handy
+    void getVisibleRows(int &firstRow, int &lastRow);
+
     void setThumbParameters();
 
     int getHorizontalScrollBarOffset(int row);

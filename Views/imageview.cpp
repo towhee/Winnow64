@@ -355,7 +355,7 @@ bool ImageView::sceneBiggerThanView()
     QPoint pBR = mapFromScene(scene->width(), scene->height());
     int sceneViewWidth = pBR.x() - pTL.x();
     int sceneViewHeight = pBR.y() - pTL.y();
-    if (sceneViewWidth > rect().width() && sceneViewHeight > rect().height())
+    if (sceneViewWidth > rect().width() || sceneViewHeight > rect().height())
         return true;
     else
         return false;
@@ -477,7 +477,6 @@ void ImageView::resizeEvent(QResizeEvent *event)
     #endif
     }
     QGraphicsView::resizeEvent(event);
-
     zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
     static QRect prevRect;
     static bool wasSceneClipped;
@@ -495,9 +494,9 @@ void ImageView::resizeEvent(QResizeEvent *event)
             viewPortIsExpanding = true;
         bool sceneClipped = sceneBiggerThanView();
         if ((sceneClipped && !isZoom) ||
-        (zoom == zoomFit) ||
-        ((viewPortIsExpanding && !sceneClipped) && wasZoomFit) ||
-        (wasSceneClipped && !sceneClipped)) {
+                (zoom == zoomFit) ||
+                ((viewPortIsExpanding && !sceneClipped) && wasZoomFit) ||
+                (wasSceneClipped && !sceneClipped)) {
             zoom = zoomFit;
             wasZoomFit = true;
             scale();
