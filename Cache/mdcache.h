@@ -21,7 +21,7 @@ public:
     MetadataCache(QObject *parent, DataModel *dm,
                   Metadata *metadata);
     ~MetadataCache();
-    void loadMetadataCache(int startRow, bool isShowCacheStatus);
+    void loadMetadataCache(int startRow, int endRow, bool isShowCacheStatus);
     void stopMetadateCache();
     bool restart;
 
@@ -53,6 +53,7 @@ private:
 
     QModelIndex idx;
     int startRow;
+    int endRow;
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
     bool allMetadataLoaded;

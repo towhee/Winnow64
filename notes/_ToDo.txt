@@ -29,6 +29,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- ImageView not resizing when thumbdock gets taller
 - Add more raw file formats - DNG, Pentax ...
 - try multiple caching threads (no improvement)
 - Set thumb maximum size in preferences
