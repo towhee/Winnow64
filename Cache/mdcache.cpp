@@ -49,7 +49,7 @@ void MetadataCache::stopMetadateCache()
     loadMap.clear();
 }
 
-void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus)
+void MetadataCache::loadMetadataCache(int startRow, int endRow, bool isShowCacheStatus)
 {
     {
     #ifdef ISDEBUG
@@ -70,6 +70,7 @@ void MetadataCache::loadMetadataCache(int startRow, bool isShowCacheStatus)
 
     allMetadataLoaded = false;
     this->startRow = startRow;
+    this->endRow = endRow;
 
     /* Create a map container for every row in the datamodel to track metadata caching.
     This is used to confirm all the metadata is loaded before ending the metadata cache.  If
@@ -105,8 +106,8 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-    int totRows = dm->rowCount();
-    for (int row = startRow; row < totRows; ++row) {
+//    int totRows = dm->rowCount();
+    for (int row = startRow; row < endRow; ++row) {
         if (abort) {
             {
             #ifdef ISDEBUG
