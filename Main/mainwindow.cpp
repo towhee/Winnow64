@@ -836,7 +836,7 @@ void MW::folderSelectionChange()
 
     // ASync
     if (G::aSync) mdCacheMgr->loadMetadataCache(0);
-    else metadataCacheThread->loadMetadataCache(0, isShowCacheStatus);
+    else metadataCacheThread->loadMetadataCache(0, dm->rowCount(), isShowCacheStatus);
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -1110,7 +1110,9 @@ restarted at the row of the first visible thumb after the scrolling.
     }
     if (!allMetadataLoaded && metadataCacheThread->isRunning()) {
         if (metadataCacheStartRow > 0)
-            metadataCacheThread->loadMetadataCache(metadataCacheStartRow, isShowCacheStatus);
+            metadataCacheThread->loadMetadataCache(metadataCacheStartRow,
+                                                   dm->rowCount(),
+                                                   isShowCacheStatus);
     }
 }
 
@@ -1125,7 +1127,7 @@ void MW::loadMetadataCache(int startRow)
     metadataCacheThread->stopMetadateCache();
 
     // startRow in case user scrolls ahead and thumbs not yet loaded
-    metadataCacheThread->loadMetadataCache(startRow, isShowCacheStatus);
+    metadataCacheThread->loadMetadataCache(startRow, dm->rowCount(), isShowCacheStatus);
 }
 
 void MW::updateMetadata(int thread, bool showProgress)
@@ -8484,9 +8486,9 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    updateAppDlg = new UpdateApp(version, css);
-    int ret = updateAppDlg->exec();
-    qDebug() << ret;
+    int a, b;
+    gridView->getVisibleRows(a, b);
+    qDebug() << a << b;
 }
 
 void MW::test2()

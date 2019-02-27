@@ -284,6 +284,11 @@ changes height to determine whether a scrollbar is required.
 
 int IconView::getScrollThreshold(int thumbSpaceHeight)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return viewport()->width() / getThumbSpaceWidth(thumbSpaceHeight);
 }
 
@@ -1048,7 +1053,7 @@ For thumbSpace anatomy (see IconViewDelegate)
     int hMax = iconViewDelegate->getCellHeightFromThumbHeight(G::maxIconSize * bestAspectRatio);
     int hMin = iconViewDelegate->getCellHeightFromThumbHeight(ICON_MIN);
 
-    // restrict thumbSpace within limits
+    // restrict icon cell height within limits
     int newThumbSpaceHt = netViewportHt > hMax ? hMax : netViewportHt;
     newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
 
@@ -1086,8 +1091,26 @@ void IconView::updateLayout()
     QListView::event(&event);
 }
 
+void IconView::getVisibleRows(int &firstRow, int &lastRow)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int w = viewport()->width() - G::scrollBarThickness - thumbWidth / 2;
+    int h = viewport()->height() - 5;
+    firstRow = indexAt(QPoint(0, 0)).row();
+    lastRow = indexAt(QPoint(w, h)).row();
+}
+
 void IconView::scrollDown(int /*step*/)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if(isWrapping()) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
     }
@@ -1098,6 +1121,11 @@ void IconView::scrollDown(int /*step*/)
 
 void IconView::scrollUp(int /*step*/)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if(isWrapping()) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
     }
@@ -1108,6 +1136,11 @@ void IconView::scrollUp(int /*step*/)
 
 void IconView::scrollPageDown(int /*step*/)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if(isWrapping()) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
     }
@@ -1118,6 +1151,11 @@ void IconView::scrollPageDown(int /*step*/)
 
 void IconView::scrollPageUp(int /*step*/)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if(isWrapping()) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
     }
