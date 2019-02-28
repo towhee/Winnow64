@@ -1,6 +1,50 @@
 #include "Main/global.h"
 #include "Cache/mdcache.h"
 
+/*
+The metadata cache reads the relevant metadata and preview thumbnail from the image files and
+stores this information in the datamodel dm. The critical metadata is the offset and length of
+the embedded JPGs, which is required by the ImageCache and ImageView to display the images and
+IconView to display the thumbnails. The other metadata is in the nice-to-know category.
+
+Reading the metadata can become time consuming and the thumbnails or icons can consume a lot
+of memory, so the metadata is read in chunks. Each chunk size (number of image files) is the
+greater of the default value of maxSegmentSize or the number of thumbs visible in the GridView
+viewport.
+
+To keep it simple and minimize several threads trying to access the same image file at the same
+time the following order of events occurs when Winnow is started or a new folder is selected:
+
+    * Winnow is started and an instance of MetadataCache is created (metadataCacheThread) An
+      instance of ImageCache also created (imageCacheThread).
+
+    * A new folder is selected and MW::folderSelectionChange executes, which in turn, starts
+      metadataCacheThread::loadNewMetadataCache.
+
+    * loadNewMetadataCache starts the thread and metadataCacheThread::run reads a chunk of
+      image files, loading the data to the datamodel.
+
+    * After the chunk is loaded metadataCacheThread emits a signal to start imageCacheThread.
+
+    * The new chunk of metadata is added to the datamodel filters.
+
+When the user scrolls through the thumbnails:
+
+    * A 300ms singleShot timer is invoked to call MW::delayProcessLoadMetadataCacheScrollEvent, The delay allows rapid scrolling without
+      firing the metadataCacheThread until the user pauses.
+
+    * As above, the metadata chunk is loaded and the datamodel filter is updated.
+
+When the user selects a thumbnail:
+
+    * Check to see if a new chunk of metadata is required (has the metadata already been
+      loaded.
+
+    * Check to see if the ImageCache needs to be updated.
+
+    * Load ImageView either from the cache or directly from the file if not cached.
+*/
+
 MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
                   Metadata *metadata) : QThread(parent)
 {
@@ -69,10 +113,7 @@ void MetadataCache::loadNewMetadataCache(int startRow,
         wait();
     }
     abort = false;
-
     allMetadataLoaded = false;
-//    this->startRow = startRow;
-//    this->endRow = endRow;
 
     /* Create a map container for every row in the datamodel to track metadata caching.
     This is used to confirm all the metadata is loaded before ending the metadata cache.  If
@@ -87,11 +128,18 @@ void MetadataCache::loadNewMetadataCache(int startRow,
     folderPath = dm->currentFolderPath;
 
     this->isShowCacheStatus = isShowCacheStatus;
-    if (isShowCacheStatus) emit showCacheStatus(0, true);
+//    if (isShowCacheStatus) emit showCacheStatus(0, true);
 
-    loadMetadataCache(startRow, thumbsPerPage);
+    startNewCache = true;
 
-//    start(TimeCriticalPriority);
+    this->startRow = startRow;
+    int segmentSize = thumbsPerPage > maxSegmentSize ? thumbsPerPage : maxSegmentSize;
+    this->endRow = startRow + segmentSize;
+    if (this->endRow >= dm->rowCount()) this->endRow = dm->rowCount();
+
+//    loadMetadataCache(startRow, thumbsPerPage);
+
+    start(TimeCriticalPriority);
 }
 
 void MetadataCache::loadMetadataCache(int startRow, int thumbsPerPage)
@@ -114,6 +162,7 @@ void MetadataCache::loadMetadataCache(int startRow, int thumbsPerPage)
         wait();
     }
     abort = false;
+    startNewCache = false;
 
     this->startRow = startRow;
     int segmentSize = thumbsPerPage > maxSegmentSize ? thumbsPerPage : maxSegmentSize;
@@ -175,7 +224,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         // update the cache status graphic in the status bar
         if (metadataLoaded && thumbLoaded) {
             loadMap[row] = true;
-            if (isShowCacheStatus) emit showCacheStatus(row, false);
+//            if (isShowCacheStatus) emit showCacheStatus(row, false);
             continue;
         }
 
@@ -198,6 +247,8 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             // emit loadImageMetadata(fileInfo, true, true, false);
             mutex.lock();
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+                metadata->imageMetadata.row = row;
+                dm->updateMetadataItem(metadata->imageMetadata);
                 metadataLoaded = true;
                 {
                 #ifdef ISDEBUG
@@ -225,7 +276,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
 
         if (metadataLoaded && thumbLoaded) {
             loadMap[row] = true;
-            if (isShowCacheStatus) emit showCacheStatus(row, false);
+//            if (isShowCacheStatus) emit showCacheStatus(row, false);
         }
         qDebug() << "MetadataCache::loadMetadataSegment()" << row;
     }
@@ -319,7 +370,7 @@ that have been missed.
     /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */
-    emit loadImageCache();
+    if (startNewCache) emit loadImageCache();
 
     // update status of metadataThreadRunningLabel in statusbar
     emit updateIsRunning(false, true, __FUNCTION__);
