@@ -218,7 +218,7 @@ possibly altered thumbnail dimensions.
     G::track(__FUNCTION__);
     #endif
     }
-    setSpacing(-1);
+    setSpacing(0);
     iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         0, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     if(objectName() == "Thumbnails") {
