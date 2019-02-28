@@ -58,6 +58,7 @@ private:
     int endRow;
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
+    bool startNewCache;
     bool allMetadataLoaded;
 
     void createCacheStatus();
