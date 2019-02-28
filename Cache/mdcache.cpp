@@ -49,7 +49,9 @@ void MetadataCache::stopMetadateCache()
     loadMap.clear();
 }
 
-void MetadataCache::loadMetadataCache(int startRow, int endRow, bool isShowCacheStatus)
+void MetadataCache::loadNewMetadataCache(int startRow,
+                                         int thumbsPerPage,
+                                         bool isShowCacheStatus)
 {
     {
     #ifdef ISDEBUG
@@ -69,8 +71,8 @@ void MetadataCache::loadMetadataCache(int startRow, int endRow, bool isShowCache
     abort = false;
 
     allMetadataLoaded = false;
-    this->startRow = startRow;
-    this->endRow = endRow;
+//    this->startRow = startRow;
+//    this->endRow = endRow;
 
     /* Create a map container for every row in the datamodel to track metadata caching.
     This is used to confirm all the metadata is loaded before ending the metadata cache.  If
@@ -83,10 +85,49 @@ void MetadataCache::loadMetadataCache(int startRow, int endRow, bool isShowCache
     }
 
     folderPath = dm->currentFolderPath;
-    allMetadataLoaded = false;
 
     this->isShowCacheStatus = isShowCacheStatus;
     if (isShowCacheStatus) emit showCacheStatus(0, true);
+
+    loadMetadataCache(startRow, thumbsPerPage);
+
+//    start(TimeCriticalPriority);
+}
+
+void MetadataCache::loadMetadataCache(int startRow, int thumbsPerPage)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISPROFILE
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (allMetadataLoaded) return;
+
+    if (isRunning()) {
+        mutex.lock();
+        abort = true;
+        condition.wakeOne();
+        mutex.unlock();
+        wait();
+    }
+    abort = false;
+
+    this->startRow = startRow;
+    int segmentSize = thumbsPerPage > maxSegmentSize ? thumbsPerPage : maxSegmentSize;
+    this->endRow = startRow + segmentSize;
+    if (this->endRow >= dm->rowCount()) this->endRow = dm->rowCount();
+
+qDebug() << "MetadataCache::loadMetadataCache  "
+         << "thumbsPerPage" << thumbsPerPage
+         << "segmentSize" << segmentSize
+         << "startRow" << startRow
+         << "endRow" << endRow;
+
+    // emulate old behavior
+//    this->endRow = dm->rowCount();
 
     start(TimeCriticalPriority);
 }
@@ -96,7 +137,7 @@ void MetadataCache::track(QString fPath, QString msg)
     if (G::isThreadTrackingOn) qDebug() << G::t.restart() << "\t" << "• Metadata Caching" << fPath << msg;
 }
 
-void MetadataCache::loadMetadata()
+bool MetadataCache::loadMetadataSegment()
 {
 /*
 Load the metadata and thumb (icon) for all the image files in a folder.
@@ -117,7 +158,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             }
             emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false, true, __FUNCTION__);
-            return;
+            return false;
         }
 
         // is metadata already cached
@@ -186,7 +227,9 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             loadMap[row] = true;
             if (isShowCacheStatus) emit showCacheStatus(row, false);
         }
+        qDebug() << "MetadataCache::loadMetadataSegment()" << row;
     }
+    return true;
 }
 
 void MetadataCache::run()
@@ -230,6 +273,8 @@ that have been missed.
     int rowCount = dm->rowCount();
     mutex.unlock();
 
+    bool segmentLoaded = false;
+
     do {
         if (abort) {
             {
@@ -248,7 +293,7 @@ that have been missed.
         #endif
         }
 
-        loadMetadata();
+        segmentLoaded = loadMetadataSegment();
         // check if all metadata and thumbs have been loaded
         allMetadataLoaded = true;
         for(int i = 0; i < rowCount; ++i) {
@@ -265,7 +310,7 @@ that have been missed.
         #endif
         }
     }
-    while (!allMetadataLoaded);  // && t.elapsed() < 30000);
+    while (!allMetadataLoaded && !segmentLoaded);  // && t.elapsed() < 30000);
     emit updateAllMetadataLoaded(allMetadataLoaded);
 
     qApp->processEvents();

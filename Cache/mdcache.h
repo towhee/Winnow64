@@ -21,9 +21,11 @@ public:
     MetadataCache(QObject *parent, DataModel *dm,
                   Metadata *metadata);
     ~MetadataCache();
-    void loadMetadataCache(int startRow, int endRow, bool isShowCacheStatus);
+    void loadNewMetadataCache(int startRow, int thumbsPerPage, bool isShowCacheStatus);
+    void loadMetadataCache(int startRow, int endRow);
     void stopMetadateCache();
     bool restart;
+    int maxSegmentSize = 250;
 
 //    int cacheStatusWidth;
 
@@ -60,7 +62,7 @@ private:
 
     void createCacheStatus();
     void updateCacheStatus(int row);
-    void loadMetadata();
+    bool loadMetadataSegment();
     void track(QString fPath, QString msg);
 
      bool isShowCacheStatus;
