@@ -834,6 +834,9 @@ void MW::folderSelectionChange()
 
     cacheTimer.restart();
 
+    // initialize datamodel image list used by image cache
+    dm->updateImageList();
+
     // ASync
     if (G::aSync) mdCacheMgr->loadMetadataCache(0);
     else metadataCacheThread->loadNewMetadataCache(0,
@@ -1128,7 +1131,7 @@ restarted at the row of the first visible thumb after the scrolling.
         thumbsPerPage = gridView->getThumbsPerPage();
     }
     if (!allMetadataLoaded) {
-        imageCacheThread->pauseImageCache();
+//        imageCacheThread->pauseImageCache();
         metadataCacheThread->loadMetadataCache(firstRow, thumbsPerPage);
     }
 
@@ -1264,14 +1267,15 @@ been consumed or all the images are cached.
     // ASync
     if (G::aSync) dm->updateFilters();
 
+    // After add chunked metadata update the filters
+    dm->updateFilters();
 
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
 
-    // ASync
-    if (!G::aSync)
-     dm->addMetadata(progressBar, isShowCacheStatus);
+    // Now doing this during loadMetaChunk in metadataCacheThread
+//    if (!G::aSync) dm->addMetadata(progressBar, isShowCacheStatus);
 
     // update filter item counts
     dm->filteredItemCount();
@@ -1312,6 +1316,8 @@ been consumed or all the images are cached.
     else
         fPath = indexesList.first().data(G::PathRole).toString();
 
+//    return;
+
     // imageCacheThread checks if already running and restarts caching
     imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
         isShowCacheStatus, progressWidth, cacheWtAhead, isCachePreview,
@@ -1321,6 +1327,7 @@ been consumed or all the images are cached.
     metadataLoaded = true;
 
     // tell image cache new position
+    qDebug() << "MW::loadImageCache   fPath" << fPath;
     imageCacheThread->updateImageCachePosition(fPath);
 }
 
