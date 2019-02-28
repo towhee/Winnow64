@@ -836,7 +836,9 @@ void MW::folderSelectionChange()
 
     // ASync
     if (G::aSync) mdCacheMgr->loadMetadataCache(0);
-    else metadataCacheThread->loadMetadataCache(0, dm->rowCount(), isShowCacheStatus);
+    else metadataCacheThread->loadNewMetadataCache(0,
+                                                   gridView->getThumbsPerPage(),
+                                                   isShowCacheStatus);
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -1075,6 +1077,9 @@ horizontal and vertical scrollbars.
     if (allMetadataLoaded)  return;
     metadataCacheStartRow = thumbView->getFirstVisible();
     metadataCacheScrollTimer->start(cacheDelay);
+//    int i1, i2;
+//    thumbView->getVisibleRows(i1, i2);
+//    qDebug() << "Thumb visible rows:" << i1 << i2;
 }
 
 void MW::loadMetadataCacheGridScrollEvent()
@@ -1095,6 +1100,10 @@ vertical scrollbar (does not have a horizontal scrollbar).
     if (allMetadataLoaded)  return;
     metadataCacheStartRow = gridView->getFirstVisible();
     metadataCacheScrollTimer->start(cacheDelay);
+    qDebug() << "Grid visible rows:"
+             << gridView->getFirstVisible()
+             << gridView->getLastVisible()
+             << "thumbs per page =" << gridView->getThumbsPerPage();
 }
 
 void MW::delayProcessLoadMetadataCacheScrollEvent()
@@ -1108,14 +1117,28 @@ restarted at the row of the first visible thumb after the scrolling.
     G::track(__FUNCTION__);
     #endif
     }
-    if (!allMetadataLoaded && metadataCacheThread->isRunning()) {
-        if (metadataCacheStartRow > 0)
-            metadataCacheThread->loadMetadataCache(metadataCacheStartRow,
-                                                   dm->rowCount(),
-                                                   isShowCacheStatus);
+    int firstRow = 0;
+    int thumbsPerPage = 0;
+    if (thumbView->isVisible()) {
+        firstRow = thumbView->getFirstVisible();
+        thumbsPerPage = thumbView->getThumbsPerPage();
     }
+    if (gridView->isVisible()) {
+        firstRow = gridView->getFirstVisible();
+        thumbsPerPage = gridView->getThumbsPerPage();
+    }
+    if (!allMetadataLoaded) {
+        imageCacheThread->pauseImageCache();
+        metadataCacheThread->loadMetadataCache(firstRow, thumbsPerPage);
+    }
+
+//    if (!allMetadataLoaded && metadataCacheThread->isRunning()) {
+//        if (metadataCacheStartRow > 0)
+//            metadataCacheThread->loadMetadataCache(firstRow, thumbsPerPage);
+//    }
 }
 
+// rgh not used??
 void MW::loadMetadataCache(int startRow)
 {
     {
@@ -1124,10 +1147,10 @@ void MW::loadMetadataCache(int startRow)
     G::track(__FUNCTION__, s);
     #endif
     }
-    metadataCacheThread->stopMetadateCache();
+//    metadataCacheThread->stopMetadateCache();
 
-    // startRow in case user scrolls ahead and thumbs not yet loaded
-    metadataCacheThread->loadMetadataCache(startRow, dm->rowCount(), isShowCacheStatus);
+//    // startRow in case user scrolls ahead and thumbs not yet loaded
+//    metadataCacheThread->loadMetadataCache(startRow, dm->rowCount(), isShowCacheStatus);
 }
 
 void MW::updateMetadata(int thread, bool showProgress)
@@ -8486,9 +8509,9 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    int a, b;
-    gridView->getVisibleRows(a, b);
-    qDebug() << a << b;
+//    int a, b;
+//    gridView->getVisibleRows(a, b);
+//    qDebug() << a << b;
 }
 
 void MW::test2()
