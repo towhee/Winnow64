@@ -218,7 +218,7 @@ possibly altered thumbnail dimensions.
     G::track(__FUNCTION__);
     #endif
     }
-    setSpacing(-1);
+    setSpacing(0);
     iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         0, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
     if(objectName() == "Thumbnails") {
@@ -379,6 +379,22 @@ bool IconView::isSelectedItem()
         return false;
 }
 
+int IconView::getThumbsPerPage()
+{
+    int rowWidth = viewport()->width() - G::scrollBarThickness;
+    int cellWidth = getCellSize().width();
+    if (cellWidth == 0) return 0;
+    // thumbs per row
+    int tpr = rowWidth / getCellSize().width() + 1;
+    int cellHeight = getCellSize().height();
+    if (cellHeight == 0) return 0;
+    // rows per page (page = viewport)
+    int rpp = viewport()->height() / cellHeight + 2;
+    qDebug() << "tpr" << tpr
+             << "rpp" << rpp;
+    return tpr * rpp;
+}
+
 int IconView::getFirstVisible()
 {
 /*
@@ -396,10 +412,6 @@ of images in the selected folder.
     QRect thumbViewRect = viewport()->rect();
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
-//            QRect thumbRect = visualRect(dm->sf->index(row, 0));
-//            qDebug() << G::t.restart() << "\t" << "ThumbView::getFirstVisible  row =" << row
-//                     << "thumbRect =" << thumbRect
-//                     << "thumbViewRect =" << thumbViewRect;
             return row;
         }
     }
@@ -409,7 +421,7 @@ of images in the selected folder.
 int IconView::getLastVisible()
 {
 /*
-Return the datamodel row for the last thumb visible in the thumbView. This is
+Return the datamodel row for the last thumb visible in the IconView. This is
 used to prioritize thumbnail loading when a new folder is selected to show the
 user thumbnails as quickly as possible, instead of waiting for all the
 thumbnails to be generated. This can take a few seconds if there are thousands
@@ -1091,19 +1103,6 @@ void IconView::updateLayout()
     QListView::event(&event);
 }
 
-void IconView::getVisibleRows(int &firstRow, int &lastRow)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    int w = viewport()->width() - G::scrollBarThickness - thumbWidth / 2;
-    int h = viewport()->height() - 5;
-    firstRow = indexAt(QPoint(0, 0)).row();
-    lastRow = indexAt(QPoint(w, h)).row();
-}
-
 void IconView::scrollDown(int /*step*/)
 {
     {
@@ -1289,6 +1288,7 @@ int IconView::getVerticalScrollBarOffset(int row)
 */
     return scrollOffset;
 }
+
 int IconView::getHorizontalScrollBarMax()
 {
 /*
@@ -1364,7 +1364,6 @@ different position than the current image.
     G::track(__FUNCTION__);
     #endif
     }
-
     if (event->button() == Qt::RightButton) return;
 
     // is this a grid or a thumb view

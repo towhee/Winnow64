@@ -52,7 +52,6 @@ public:
     QStringList getSelectedThumbsList();        //used by tags, might be useful
     int getCurrentRow();
     QString getCurrentFilePath();       //not used, but might be handy
-    void getVisibleRows(int &firstRow, int &lastRow);
 
     void setThumbParameters();
 
@@ -99,6 +98,7 @@ public slots:
 
     int getFirstVisible();
     int getLastVisible();
+    int getThumbsPerPage();
 
     void refreshThumb(QModelIndex idx, int role);
     void refreshThumbs();
