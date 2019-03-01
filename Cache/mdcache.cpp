@@ -112,6 +112,7 @@ void MetadataCache::loadNewMetadataCache(int startRow,
         mutex.unlock();
         wait();
     }
+    G::track(__FUNCTION__);
     abort = false;
     allMetadataLoaded = false;
 
@@ -130,7 +131,7 @@ void MetadataCache::loadNewMetadataCache(int startRow,
     this->isShowCacheStatus = isShowCacheStatus;
 //    if (isShowCacheStatus) emit showCacheStatus(0, true);
 
-    startNewCache = true;
+    runImageCacheWhenDone = true;
 
     this->startRow = startRow;
     int segmentSize = thumbsPerPage > maxSegmentSize ? thumbsPerPage : maxSegmentSize;
@@ -152,6 +153,7 @@ void MetadataCache::loadMetadataCache(int startRow, int thumbsPerPage)
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     if (allMetadataLoaded) return;
 
     if (isRunning()) {
@@ -162,7 +164,7 @@ void MetadataCache::loadMetadataCache(int startRow, int thumbsPerPage)
         wait();
     }
     abort = false;
-    startNewCache = false;
+    runImageCacheWhenDone = false;
 
     this->startRow = startRow;
     int segmentSize = thumbsPerPage > maxSegmentSize ? thumbsPerPage : maxSegmentSize;
@@ -186,7 +188,7 @@ void MetadataCache::track(QString fPath, QString msg)
     if (G::isThreadTrackingOn) qDebug() << G::t.restart() << "\t" << "• Metadata Caching" << fPath << msg;
 }
 
-bool MetadataCache::loadMetadataSegment()
+bool MetadataCache::loadMetadataChunk()
 {
 /*
 Load the metadata and thumb (icon) for all the image files in a folder.
@@ -278,7 +280,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             loadMap[row] = true;
 //            if (isShowCacheStatus) emit showCacheStatus(row, false);
         }
-        qDebug() << "MetadataCache::loadMetadataSegment()" << row;
+//        qDebug() << "MetadataCache::loadMetadataSegment()" << row;
     }
     return true;
 }
@@ -316,7 +318,7 @@ that have been missed.
     #endif
     }
 
-    t.start();
+//    t.start();
 //    qDebug() << "Before" << t.elapsed();
     emit updateIsRunning(true, true, __FUNCTION__);
 
@@ -324,7 +326,7 @@ that have been missed.
     int rowCount = dm->rowCount();
     mutex.unlock();
 
-    bool segmentLoaded = false;
+    bool chunkLoaded = false;
 
     do {
         if (abort) {
@@ -344,7 +346,7 @@ that have been missed.
         #endif
         }
 
-        segmentLoaded = loadMetadataSegment();
+        chunkLoaded = loadMetadataChunk();
         // check if all metadata and thumbs have been loaded
         allMetadataLoaded = true;
         for(int i = 0; i < rowCount; ++i) {
@@ -361,16 +363,17 @@ that have been missed.
         #endif
         }
     }
-    while (!allMetadataLoaded && !segmentLoaded);  // && t.elapsed() < 30000);
+    while (!allMetadataLoaded && !chunkLoaded);  // && t.elapsed() < 30000);
     emit updateAllMetadataLoaded(allMetadataLoaded);
 
     qApp->processEvents();
-//    qDebug() << "After" << t.elapsed();
 
     /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */
-    if (startNewCache) emit loadImageCache();
+
+    qDebug() << "if (runImageCacheWhenDone) emit loadImageCache()";
+    if (runImageCacheWhenDone) emit loadImageCache();
 
     // update status of metadataThreadRunningLabel in statusbar
     emit updateIsRunning(false, true, __FUNCTION__);
