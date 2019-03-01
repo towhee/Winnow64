@@ -10,6 +10,7 @@
 #include <QWaitCondition>
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
+#include "Cache/imagecache.h"
 #include "Image/thumb.h"
 
 
@@ -19,10 +20,11 @@ class MetadataCache : public QThread
 
 public:
     MetadataCache(QObject *parent, DataModel *dm,
-                  Metadata *metadata);
+                  Metadata *metadata, ImageCache *imageCacheThread);
     ~MetadataCache();
-    void loadNewMetadataCache(int startRow, int thumbsPerPage, bool isShowCacheStatus);
+    void loadNewMetadataCache(int startRow, int thumbsPerPage/*, bool isShowCacheStatus*/);
     void loadMetadataCache(int startRow, int endRow);
+    void loadEntireMetadataCache();
     void stopMetadateCache();
     bool restart;
     int maxSegmentSize = 250;
@@ -34,14 +36,17 @@ protected:
 
 signals:
     void setIcon(int, QImage);
-    void refreshThumbs();
-    void loadImageMetadata(QFileInfo);
     void loadImageCache();
+    void pauseImageCache();
+    void resumeImageCache();
     void updateIsRunning(bool, bool, QString);
     void updateAllMetadataLoaded(bool);
-    void updateFilterCount();
-    void updateStatus(bool, QString);
+    void updateFilters();
     void showCacheStatus(int, bool);            // row, renew progress bar
+
+//    void refreshThumbs();
+//    void loadImageMetadata(QFileInfo);
+//    void updateStatus(bool, QString);
 
 private:
     QMutex mutex;
@@ -49,6 +54,7 @@ private:
     bool abort;
     DataModel *dm;
     Metadata *metadata;
+    ImageCache * imageCacheThread;
     Thumb *thumb;
     QMap<int, bool> loadMap;
     QString folderPath;
@@ -58,15 +64,18 @@ private:
     int endRow;
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
+
     bool runImageCacheWhenDone;
     bool allMetadataLoaded;
+    bool isShowCacheStatus;
+    bool cacheIcons;
 
     void createCacheStatus();
     void updateCacheStatus(int row);
     bool loadMetadataChunk();
-    void track(QString fPath, QString msg);
+//    void track(QString fPath, QString msg);
 
-     bool isShowCacheStatus;
+//     bool isShowCacheStatus;
 
     QElapsedTimer t;
 };
