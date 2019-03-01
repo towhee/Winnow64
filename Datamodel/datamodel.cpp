@@ -571,11 +571,11 @@ bool DataModel::updateMetadataItem(ImageMetadata m)
     int row = m.row;
 
     QString fPath = index(row, 0).data(G::PathRole).toString();
-//#ifdef ISTEST
+#ifdef ISTEST
     qDebug() << "Setting the datamodel for row" << row << fPath;
     qDebug() << "m.label" << m.label
              << "m.createdDate" << m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
-//#endif
+#endif
 
     setData(index(row, G::LabelColumn), m.label);
     setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);

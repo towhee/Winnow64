@@ -1130,8 +1130,8 @@ restarted at the row of the first visible thumb after the scrolling.
         firstRow = gridView->getFirstVisible();
         thumbsPerPage = gridView->getThumbsPerPage();
     }
-    if (!allMetadataLoaded) {
-//        imageCacheThread->pauseImageCache();
+    if (!allMetadataLoaded && !metadataCacheThread->isRunning()) {
+        imageCacheThread->pauseImageCache();
         metadataCacheThread->loadMetadataCache(firstRow, thumbsPerPage);
     }
 
@@ -1255,7 +1255,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
 void MW::loadImageCache()
 {
 /*
-This is called from the metadataCacheThread after all the metadata has been
+This is signaled from the metadataCacheThread after all the metadata has been
 loaded. The imageCache loads images until the assigned amount of memory has
 been consumed or all the images are cached.
  */
@@ -1273,6 +1273,8 @@ been consumed or all the images are cached.
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
+
+    qDebug() << "MW::loadImageCache to here";
 
     // Now doing this during loadMetaChunk in metadataCacheThread
 //    if (!G::aSync) dm->addMetadata(progressBar, isShowCacheStatus);
