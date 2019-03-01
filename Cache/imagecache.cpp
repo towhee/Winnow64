@@ -767,6 +767,7 @@ Apparently there needs to be a slight delay before calling.
            ImageCache::run.
         */
         emit updateIsRunning(false, true);  // bool isRunning, bool showCacheLabel
+        qDebug() << "ImageCache::updateImageCachePosition  cacheUpToDate = true";
         return;
     }
 
