@@ -390,8 +390,8 @@ int IconView::getThumbsPerPage()
     if (cellHeight == 0) return 0;
     // rows per page (page = viewport)
     int rpp = viewport()->height() / cellHeight + 2;
-    qDebug() << "tpr" << tpr
-             << "rpp" << rpp;
+//    qDebug() << "tpr" << tpr
+//             << "rpp" << rpp;
     return tpr * rpp;
 }
 

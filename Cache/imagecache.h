@@ -35,6 +35,8 @@ public:
     void stopImageCache();
     void clearImageCache();
     void pauseImageCache();
+    void resumeImageCache();
+    bool cacheUpToDate();           // target range all cached
     QSize getPreviewSize();
     void reportCache(QString title = "");
 
@@ -103,7 +105,6 @@ private:
     QList<uint>toDecache;
 
     ulong getImCacheSize();         // add up total MB cached
-    bool cacheUpToDate();           // target range all cached
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
     bool nextToCache();             // find highest priority not cached

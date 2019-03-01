@@ -203,7 +203,7 @@ public:
     // preferences: cache
     int cacheSizeMB;
     bool isShowCacheStatus;
-    int cacheDelay;
+    int cacheDelay = 100;
     bool isShowCacheThreadActivity;
     int progressWidth;
     int cacheWtAhead;
@@ -384,7 +384,7 @@ private slots:
     void loadMetadataCacheGridScrollEvent();
     void loadMetadataCache(int startRow = 0);
     void loadImageCache();
-    void updateFilterCount();
+    void updateFilters();
     void loadFilteredImageCache();
     void addNewBookmark();
     void addNewBookmarkFromContext();
