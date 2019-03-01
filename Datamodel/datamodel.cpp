@@ -143,7 +143,7 @@ DataModel::DataModel(QWidget *parent,
     fileFilters = new QStringList;          // eligible image file types
     emptyImg.load(":/images/no_image.png");
 
-    connect(this, SIGNAL(updateMetadata(ImageMetadata)), this, SLOT(updateMetadataItem(ImageMetadata)));
+    connect(this, SIGNAL(updateMetadata(ImageMetadata)), this, SLOT(addMetadataItem(ImageMetadata)));
 }
 
 void DataModel::clear()
@@ -549,13 +549,13 @@ void DataModel::processMetadataBuffer()
                  << "gotOne =" << gotOne;
         #endif
 //        if (gotOne) emit updateMetadata(m);
-        if (gotOne) updateMetadataItem(m);
+        if (gotOne) addMetadataItem(m);
         if (!more) break;
     }
 }
 
 // ASync
-bool DataModel::updateMetadataItem(ImageMetadata m)
+bool DataModel::addMetadataItem(ImageMetadata m)
 {
     /*
     This function is called after the metadata for all the eligible images in
@@ -582,8 +582,8 @@ bool DataModel::updateMetadataItem(ImageMetadata m)
     setData(index(row, G::RatingColumn), m.rating);
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::CreatedColumn), m.createdDate.toString("yyyy-MM-dd hh:mm:ss"));
-    setData(index(row, G::YearColumn), m.year);
-    setData(index(row, G::DayColumn), m.day);
+    setData(index(row, G::YearColumn), m.createdDate.toString("yyyy"));
+    setData(index(row, G::DayColumn), m.createdDate.toString("yyyy-MM-dd"));
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
     setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::DimensionsColumn), QString::number(m.width) + "x" + QString::number(m.height));
@@ -635,9 +635,7 @@ void DataModel::updateFilters()
     G::track(__FUNCTION__);
     #endif
     }
-#ifdef ISTEST
     qDebug() << "DataModel::updateFilters()";
-#endif
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
@@ -679,6 +677,9 @@ void DataModel::updateFilters()
     filters->addCategoryFromData(creatorMap, filters->creators);
     filters->addCategoryFromData(yearMap, filters->years);
     filters->addCategoryFromData(dayMap, filters->days);
+
+    filteredItemCount();
+    unfilteredItemCount();
 }
 
 QModelIndex DataModel::find(QString fPath)
