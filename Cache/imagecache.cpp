@@ -160,6 +160,21 @@ the datamodel, such as filtration or sorting.
     }
 }
 
+void ImageCache::resumeImageCache()
+{
+/*
+Restart the image cache after it has been paused.  This is used by metadataCacheThread
+after scroll events and the imageCacheThread has been paused to resume loading the iamge
+cache.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (!isRunning()) start(IdlePriority);
+}
+
 void ImageCache::track(QString fPath, QString msg)
 {
     qDebug() << G::t.restart() << "\t" << "••• Image Caching  " << fPath << msg;

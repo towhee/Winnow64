@@ -837,11 +837,7 @@ void MW::folderSelectionChange()
     // initialize datamodel image list used by image cache
     dm->updateImageList();
 
-    // ASync
-    if (G::aSync) mdCacheMgr->loadMetadataCache(0);
-    else metadataCacheThread->loadNewMetadataCache(0,
-                                                   gridView->getThumbsPerPage(),
-                                                   isShowCacheStatus);
+    metadataCacheThread->loadNewMetadataCache(0, gridView->getThumbsPerPage());
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -1080,9 +1076,6 @@ horizontal and vertical scrollbars.
     if (allMetadataLoaded)  return;
     metadataCacheStartRow = thumbView->getFirstVisible();
     metadataCacheScrollTimer->start(cacheDelay);
-//    int i1, i2;
-//    thumbView->getVisibleRows(i1, i2);
-//    qDebug() << "Thumb visible rows:" << i1 << i2;
 }
 
 void MW::loadMetadataCacheGridScrollEvent()
@@ -1103,18 +1096,18 @@ vertical scrollbar (does not have a horizontal scrollbar).
     if (allMetadataLoaded)  return;
     metadataCacheStartRow = gridView->getFirstVisible();
     metadataCacheScrollTimer->start(cacheDelay);
-    qDebug() << "Grid visible rows:"
-             << gridView->getFirstVisible()
-             << gridView->getLastVisible()
-             << "thumbs per page =" << gridView->getThumbsPerPage();
+//    qDebug() << "Grid visible rows:"
+//             << gridView->getFirstVisible()
+//             << gridView->getLastVisible()
+//             << "thumbs per page =" << gridView->getThumbsPerPage();
 }
 
 void MW::delayProcessLoadMetadataCacheScrollEvent()
 {
 /*
-If there has not been another call to this function in 300ms then the metadataCacheThread is
-restarted at the row of the first visible thumb after the scrolling.
- */
+If there has not been another call to this function in cacheDelay ms then the
+metadataCacheThread is restarted at the row of the first visible thumb after the scrolling.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -1122,23 +1115,21 @@ restarted at the row of the first visible thumb after the scrolling.
     }
     int firstRow = 0;
     int thumbsPerPage = 0;
+
     if (thumbView->isVisible()) {
         firstRow = thumbView->getFirstVisible();
         thumbsPerPage = thumbView->getThumbsPerPage();
     }
+
     if (gridView->isVisible()) {
         firstRow = gridView->getFirstVisible();
         thumbsPerPage = gridView->getThumbsPerPage();
     }
+
     if (!allMetadataLoaded && !metadataCacheThread->isRunning()) {
         imageCacheThread->pauseImageCache();
         metadataCacheThread->loadMetadataCache(firstRow, thumbsPerPage);
     }
-
-//    if (!allMetadataLoaded && metadataCacheThread->isRunning()) {
-//        if (metadataCacheStartRow > 0)
-//            metadataCacheThread->loadMetadataCache(firstRow, thumbsPerPage);
-//    }
 }
 
 // rgh not used??
@@ -1265,10 +1256,10 @@ been consumed or all the images are cached.
     #endif
     }
     // ASync
-    if (G::aSync) dm->updateFilters();
+    if (G::aSync && allMetadataLoaded) dm->updateFilters();
 
     // After add chunked metadata update the filters
-    dm->updateFilters();
+//    if (allMetadataLoaded) dm->updateFilters();
 
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
@@ -3230,8 +3221,8 @@ void MW::createCaching()
     G::track(__FUNCTION__);
     #endif
     }
-    metadataCacheThread = new MetadataCache(this, dm, metadata);
     imageCacheThread = new ImageCache(this, metadata);
+    metadataCacheThread = new MetadataCache(this, dm, metadata, imageCacheThread);
 
     // new kid on the block
     mdCacheMgr = new MdCacheMgr(this, dm, thumbView);   // ASync
@@ -3250,30 +3241,31 @@ void MW::createCaching()
     connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
             SLOT(delayProcessLoadMetadataCacheScrollEvent()));
 
-    connect(metadataCacheThread, SIGNAL(updateFilterCount()),
-            this, SLOT(updateFilterCount()));
-
-    // ASync
-    connect(mdCacheMgr, SIGNAL(updateFilterCount()),
-            this, SLOT(updateFilterCount()));
+    connect(metadataCacheThread, SIGNAL(updateFilters()),
+            this, SLOT(updateFilters()));
 
     connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
-            this, SLOT(updateAllMetadataLoaded(bool)));
-
-    // ASync
-    connect(mdCacheMgr, SIGNAL(updateAllMetadataLoaded(bool)),
             this, SLOT(updateAllMetadataLoaded(bool)));
 
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));
 
-    // ASync
-    connect(mdCacheMgr, SIGNAL(loadImageCache()),
-            this, SLOT(loadImageCache()));
-
     connect(metadataCacheThread, SIGNAL(updateIsRunning(bool,bool,QString)),
             this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
 
+    // show progress bar when executing loadEntireMetadataCache
+    connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
+            this, SLOT(updateMetadataCacheStatus(int,bool)));
+
+    // ASync
+    connect(mdCacheMgr, SIGNAL(updateFilters()),
+            this, SLOT(updateFilters()));
+    // ASync
+    connect(mdCacheMgr, SIGNAL(updateAllMetadataLoaded(bool)),
+            this, SLOT(updateAllMetadataLoaded(bool)));
+    // ASync
+    connect(mdCacheMgr, SIGNAL(loadImageCache()),
+            this, SLOT(loadImageCache()));
     // ASync
     connect(mdCacheMgr, SIGNAL(updateIsRunning(bool,bool,QString)),
             this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
@@ -3283,12 +3275,8 @@ void MW::createCaching()
 
     // the setIcon connection for setIcon is in MdCacher
 
-    connect(metadataCacheThread, SIGNAL(refreshThumbs()),
-            thumbView, SLOT(refreshThumbs()));
-
-    connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
-            this, SLOT(updateMetadataCacheStatus(int,bool)));
-
+//    connect(metadataCacheThread, SIGNAL(refreshThumbs()),
+//            thumbView, SLOT(refreshThumbs()));
 
     /* This singleshot timer signals the image cache that the position has moved in the
     file selection. Calling imageCacheThread->updateImageCachePosition directly from
@@ -4196,6 +4184,8 @@ tableView.
     G::track(__FUNCTION__);
     #endif
     }
+    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
     switch (column) {
     case 1: sortFileNameAction->setChecked(true); break;
@@ -4233,6 +4223,8 @@ void MW::filterLastDay()
     G::track(__FUNCTION__);
     #endif
     }
+    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+
     if (dm->rowCount() == 0) {
         popup("No images available to filter", 2000, 0.75);
         filterLastDayAction->setChecked(false);
@@ -4265,6 +4257,8 @@ All filter changes should be routed to here as a central clearing house.
     G::track(__FUNCTION__);
     #endif
     }
+    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+
     // refresh the proxy sort/filter
     dm->sf->filterChange();
     // update filter panel image count by filter item
@@ -4318,6 +4312,8 @@ void MW::invertFilters()
 /*
 Currently this is just clearing filters ...  rgh what to do?
 */
+    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+
     if (dm->rowCount() == 0) {
         popup("No images available to invert filtration", 2000, 0.75);
         filterLastDayAction->setChecked(false);
@@ -4335,6 +4331,8 @@ Currently this is just clearing filters ...  rgh what to do?
 
 void MW::uncheckAllFilters()
 {
+    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+
     filters->uncheckAllFilters();
     filterPickAction->setChecked(false);
     filterRating1Action->setChecked(false);
@@ -4351,10 +4349,12 @@ void MW::uncheckAllFilters()
     filterChange(false);
 }
 
-void MW::updateFilterCount()
+void MW::updateFilters()
 {
     statusBar()->showMessage("Filters are updating for all the metadata in the folder", 1000);
-    dm->filteredItemCount();
+    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+    if (allMetadataLoaded) dm->updateFilters();
+//    dm->filteredItemCount();
 }
 
 void MW::refine()
@@ -4417,6 +4417,7 @@ void MW::sortThumbnails()
     #endif
     }
     if(sortMenuUpdateToMatchTable) return;
+    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
 
     int sortColumn = 0;
 
@@ -6242,7 +6243,7 @@ Preferences are located in the prefdlg class and updated here.
     // cache
     cacheSizeMB = setting->value("cacheSizeMB").toInt();
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
-    cacheDelay = setting->value("cacheDelay").toInt();
+//    cacheDelay = setting->value("cacheDelay").toInt();
     isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
     progressWidth = setting->value("cacheStatusWidth").toInt();
     cacheWtAhead = setting->value("cacheWtAhead").toInt();
@@ -8518,9 +8519,7 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    int a, b;
-//    gridView->getVisibleRows(a, b);
-//    qDebug() << a << b;
+    metadataCacheThread->loadEntireMetadataCache();
 }
 
 void MW::test2()
