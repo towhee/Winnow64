@@ -124,24 +124,16 @@ void MetadataCache::loadNewMetadataCache(int startRow, int thumbsPerPage)
     the startRow is greater than zero then this means the scroll event has resulted in skipping
     ahead, and we do not want ot lose track of the thumbs already loaded.
     */
-//    if (startRow == 0) {
-        loadMap.clear();
-        for(int i = 0; i < dm->rowCount(); ++i) loadMap[i] = false;
-//    }
+    loadMap.clear();
+    for(int i = 0; i < dm->rowCount(); ++i) loadMap[i] = false;
 
     folderPath = dm->currentFolderPath;
-
-//    this->isShowCacheStatus = isShowCacheStatus;
-//    if (isShowCacheStatus) emit showCacheStatus(0, true);
-
     runImageCacheWhenDone = true;
 
     this->startRow = startRow;
     int segmentSize = thumbsPerPage > maxSegmentSize ? thumbsPerPage : maxSegmentSize;
     this->endRow = startRow + segmentSize;
     if (this->endRow >= dm->rowCount()) this->endRow = dm->rowCount();
-
-//    loadMetadataCache(startRow, thumbsPerPage);
 
     start(TimeCriticalPriority);
 }
@@ -222,89 +214,47 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-//    int totRows = dm->rowCount();
     for (int row = startRow; row < endRow; ++row) {
         if (abort) {
-            {
-            #ifdef ISDEBUG
-            QString s = "Aborting at row = " + QString::number(row);
-            mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
-            #endif
-            }
             emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false, true, __FUNCTION__);
             return false;
         }
 
-        // is metadata already cached
-        if (loadMap[row]) continue;
 
         // maybe metadata loaded by user picking image while cache is still building
         mutex.lock();
-        idx = dm->index(row, 0);
+        idx = dm->sf->index(row, 0);
+        int dmRow = dm->sf->mapToSource(idx).row();
         QString fPath = idx.data(G::PathRole).toString();
-        bool thumbLoaded = idx.data(Qt::DecorationRole).isValid();
-        bool metadataLoaded = metadata->isLoaded(fPath);
         mutex.unlock();
 
-        // update the cache status graphic in the status bar
-        if (metadataLoaded && thumbLoaded) {
-            loadMap[row] = true;
-//            if (isShowCacheStatus) emit showCacheStatus(row, false);
-            continue;
-        }
-
-        // update status
-//        QString s = "Loading metadata " + QString::number(row + 1) + " of " + QString::number(totRows);
-//        emit updateStatus(false, s);
-
-        {
-        #ifdef ISDEBUG
-        QString s = "Attempting to load metadata for row " + QString::number(row + 1) + " " + fPath;
-        mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
-        #endif
-        }
+        // is metadata already cached
+        if (loadMap[dmRow]) continue;
 
         // load metadata
-        if (!metadataLoaded) {
-            QFileInfo fileInfo(fPath);
-            metadataLoaded = true;
-            // tried emit signal to metadata but really slow
-            // emit loadImageMetadata(fileInfo, true, true, false);
-            mutex.lock();
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
-                metadata->imageMetadata.row = row;
-                dm->addMetadataItem(metadata->imageMetadata);
-                metadataLoaded = true;
-                {
-                #ifdef ISDEBUG
-                QString s = "Loaded metadata for row " + QString::number(row + 1) + " " + fPath;
-                G::track(__FUNCTION__, s);
-                #endif
-                }
-            }
-            mutex.unlock();
+        QFileInfo fileInfo(fPath);
+        /*
+           tried emit signal to metadata but really slow
+           emit loadImageMetadata(fileInfo, true, true, false);  */
+        mutex.lock();
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+            metadata->imageMetadata.row = row;
+            dm->addMetadataItem(metadata->imageMetadata);
+        }
+        mutex.unlock();
+
+        // load icon
+        QImage image;
+        mutex.lock();
+        bool thumbLoaded = thumb->loadThumb(fPath, image);
+        mutex.unlock();
+        if (thumbLoaded) {
+            emit setIcon(row, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
         }
 
-        if (!thumbLoaded) {
-            QImage image;
-            mutex.lock();
-            thumbLoaded = thumb->loadThumb(fPath, image);
-            mutex.unlock();
-            if (thumbLoaded) {
-                emit setIcon(row, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-            }
-        }
-        else {
-            QString s = "Thumb icon not obtained for row " + QString::number(row + 1) + " " + fPath;
-            mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
-        }
-
-        if (metadataLoaded && thumbLoaded) {
-            loadMap[row] = true;
-//            if (isShowCacheStatus) emit showCacheStatus(row, false);
-        }
-//        qDebug() << "MetadataCache::loadMetadataSegment()" << row;
+        // keep track of what has been loaded
+        loadMap[dmRow] = true;
     }
     return true;
 }
@@ -350,42 +300,19 @@ that have been missed.
 
     bool chunkLoaded = false;
 
-    do {
-        if (abort) {
-            {
-            #ifdef ISDEBUG
-            mutex.lock(); G::track(__FUNCTION__, "Aborting ..."); mutex.unlock();
-            #endif
-            }
+    chunkLoaded = loadMetadataChunk();
+    if (abort) return;
 
-            emit updateAllMetadataLoaded(allMetadataLoaded);
-            emit updateIsRunning(false, false, __FUNCTION__);
-            return;
-        }
-        {
-        #ifdef ISDEBUG
-        mutex.lock(); G::track(__FUNCTION__, "try loadMetadata"); mutex.unlock();
-        #endif
-        }
-
-        chunkLoaded = loadMetadataChunk();
-        // check if all metadata and thumbs have been loaded
-        allMetadataLoaded = true;
-        for(int i = 0; i < rowCount; ++i) {
-            if (!loadMap[i]) {
-                startRow = i;
-                allMetadataLoaded = false;
-                break;
-            }
-        }
-        {
-        #ifdef ISDEBUG
-        QString s = "allMetadataLoaded = " + allMetadataLoaded ? "true" : "false";
-        mutex.lock(); G::track(__FUNCTION__, s); mutex.unlock();
-        #endif
+    // check if all metadata and thumbs have been loaded
+    allMetadataLoaded = true;
+    for(int i = 0; i < rowCount; ++i) {
+        if (!loadMap[i]) {
+            startRow = i;
+            allMetadataLoaded = false;
+            break;
         }
     }
-    while (!allMetadataLoaded && !chunkLoaded);  // && t.elapsed() < 30000);
+
     emit updateAllMetadataLoaded(allMetadataLoaded);
 
     if (allMetadataLoaded) emit updateFilters();
@@ -395,8 +322,6 @@ that have been missed.
     /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */
-
-//    qDebug() << "if (runImageCacheWhenDone) emit loadImageCache()";
     if (runImageCacheWhenDone) emit loadImageCache();
 
     if (!imageCacheThread->cacheUpToDate()) {
@@ -406,7 +331,4 @@ that have been missed.
 
     // update status of metadataThreadRunningLabel in statusbar
     emit updateIsRunning(false, true, __FUNCTION__);
-
-    // update the item counts in Filters
-//    emit updateFilterCount();
 }
