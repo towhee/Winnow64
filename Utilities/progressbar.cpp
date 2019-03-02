@@ -48,6 +48,18 @@ void ProgressBar::clearProgress()
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
 
+void ProgressBar::saveProgressState()
+{
+    int w = m1->progressLabel->pixmap()->width();
+    int h = m1->progressLabel->pixmap()->height();
+    state = m1->progressLabel->pixmap()->copy(0, 0, w, h);
+}
+
+void ProgressBar::recoverProgressState()
+{
+    m1->progressLabel->setPixmap(state);
+}
+
 void ProgressBar::updateCursor(int item,
                                int items,
                                QColor currentColor,
