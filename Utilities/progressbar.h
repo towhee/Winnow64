@@ -15,12 +15,15 @@ public:
     void clearProgress();
     void updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString source);
     void updateCursor(int item, int items, QColor currentColor, QColor imageCacheColor);
+    void saveProgressState();
+    void recoverProgressState();
 
 signals:
 
 public slots:
 
 private:
+    QPixmap state;
     QLinearGradient getGradient(QColor c1);
     int counter = 0;
     int htOffset;       // the offset from the top of pnt to the progress bar

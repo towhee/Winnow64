@@ -555,7 +555,7 @@ void DataModel::processMetadataBuffer()
 }
 
 // ASync
-bool DataModel::addMetadataItem(ImageMetadata m)
+bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
 {
     /*
     This function is called after the metadata for all the eligible images in
@@ -604,14 +604,12 @@ bool DataModel::addMetadataItem(ImageMetadata m)
     setData(index(row, G::CopyrightColumn), m.copyright);
     setData(index(row, G::EmailColumn), m.email);
     setData(index(row, G::UrlColumn), m.url);
-//    if(isShowCacheStatus) {
-//        progressBar->updateProgress(row, row + 1, rowCount(), Qt::yellow,
-//                                "datamodel - adding metadata");
-//        progressBar->updateProgress(row, row + 1, rowCount(), QColor(100,150,150),
-//                                    "datamodel - adding metadata");
-//        qApp->processEvents();
-//        if(row % 100 == 0) qApp->processEvents();
-//    }
+    if (isShowCacheStatus) {
+        progressBar->updateProgress(row, row + 1, rowCount(),
+                                    QColor(100,150,150),
+                                    "datamodel - adding metadata");
+        qApp->processEvents();
+    }
 
 
     // list used by imageCacheThread, filtered by row+jpg if combined
