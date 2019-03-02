@@ -51,6 +51,13 @@ public:
     virtual QString displayText(const QVariant & value, const QLocale & locale) const;
 };
 
+class DimensionItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit DimensionItemDelegate(QObject* parent = 0);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+};
+
 class ApertureItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
