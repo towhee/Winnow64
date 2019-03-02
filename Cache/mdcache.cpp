@@ -184,35 +184,32 @@ void MetadataCache::loadMetadataCache(int startRow, int thumbsPerPage)
     start(TimeCriticalPriority);
 }
 
-void MetadataCache::loadEntireMetadataCache()
+void MetadataCache::loadAllMetadata()
 {
 /*
-Call this function to make sure metadata has been loaded for every image in the datamodel.  This
-is required when filtering and sorting the model.
+This function is intended to load metadata (but not the icon) quickly for the entire datamodel.
+This information is required for a filter or sort operation, which requires the entire dataset.
+Since the program will be waiting for the update this does not need to run as a separate thread
+and can be executed directly.
 */
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-    if (allMetadataLoaded) return;
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        // is metadata already cached
+        if (loadMap[row]) continue;
 
-    if (isRunning()) {
-        mutex.lock();
-        abort = true;
-        condition.wakeOne();
-        mutex.unlock();
-        wait();
+        QString fPath = dm->index(row, 0).data(G::PathRole).toString();
+        QFileInfo fileInfo(fPath);
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+            metadata->imageMetadata.row = row;
+            dm->addMetadataItem(metadata->imageMetadata, true);
+            loadMap[row] = true;
+        }
+//        if (isShowCacheStatus) emit showCacheStatus(row, false);
     }
-    abort = false;
-    runImageCacheWhenDone = false;
-
-    if (imageCacheThread->isRunning())imageCacheThread->pauseImageCache();
-
-    this->startRow = startRow;
-    this->endRow = dm->rowCount();
-
-    start(TimeCriticalPriority);
 }
 
 bool MetadataCache::loadMetadataChunk()
