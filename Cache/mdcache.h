@@ -24,12 +24,12 @@ public:
     ~MetadataCache();
     void loadNewMetadataCache(int startRow, int thumbsPerPage/*, bool isShowCacheStatus*/);
     void loadMetadataCache(int startRow, int endRow);
-    void loadEntireMetadataCache();
+    void loadAllMetadata();
     void stopMetadateCache();
     bool restart;
     int maxSegmentSize = 250;
 
-//    int cacheStatusWidth;
+    QMap<int, bool> loadMap;
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -56,7 +56,6 @@ private:
     Metadata *metadata;
     ImageCache * imageCacheThread;
     Thumb *thumb;
-    QMap<int, bool> loadMap;
     QString folderPath;
 
     QModelIndex idx;

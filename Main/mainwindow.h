@@ -382,7 +382,8 @@ private slots:
     void delayProcessLoadMetadataCacheScrollEvent();
     void loadMetadataCacheThumbScrollEvent();
     void loadMetadataCacheGridScrollEvent();
-    void loadMetadataCache(int startRow = 0);
+//    void loadMetadataCache(int startRow = 0);
+    void loadEntireMetadataCache();
     void loadImageCache();
     void updateFilters();
     void loadFilteredImageCache();
