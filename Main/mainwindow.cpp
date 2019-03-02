@@ -1073,7 +1073,7 @@ horizontal and vertical scrollbars.
     G::track(__FUNCTION__);
     #endif
     }
-    if (allMetadataLoaded)  return;
+//    if (allMetadataLoaded)  return;
     metadataCacheStartRow = thumbView->getFirstVisible();
     metadataCacheScrollTimer->start(cacheDelay);
 }
@@ -1093,7 +1093,7 @@ vertical scrollbar (does not have a horizontal scrollbar).
     G::track(__FUNCTION__);
     #endif
     }
-    if (allMetadataLoaded)  return;
+//    if (allMetadataLoaded)  return;
     metadataCacheStartRow = gridView->getFirstVisible();
     metadataCacheScrollTimer->start(cacheDelay);
 //    qDebug() << "Grid visible rows:"
@@ -1102,7 +1102,7 @@ vertical scrollbar (does not have a horizontal scrollbar).
 //             << "thumbs per page =" << gridView->getThumbsPerPage();
 }
 
-void MW::delayProcessLoadMetadataCacheScrollEvent()
+void MW::loadMetadataChunk()
 {
 /*
 If there has not been another call to this function in cacheDelay ms then the
@@ -1113,6 +1113,8 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     G::track(__FUNCTION__);
     #endif
     }
+//    if (metadataCacheThread->isRunning()) return;
+
     int firstRow = 0;
     int thumbsPerPage = 0;
 
@@ -1126,27 +1128,48 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
         thumbsPerPage = gridView->getThumbsPerPage();
     }
 
-    if (!allMetadataLoaded && !metadataCacheThread->isRunning()) {
-        imageCacheThread->pauseImageCache();
-        metadataCacheThread->loadMetadataCache(firstRow, thumbsPerPage);
-    }
+    qDebug() << "MW::loadMetadataChunk " << firstRow << thumbsPerPage;
+
+    if (imageCacheThread->isRunning()) imageCacheThread->pauseImageCache();
+    metadataCacheThread->loadMetadataCache(firstRow, thumbsPerPage);
 }
 
 void MW::loadEntireMetadataCache()
 {
-    imageCacheThread->pauseImageCache();
+/*
+This is called before a filter or sort operation, which only make sense if all the
+metadata has been loaded.  This function does not load the icons.  It is not run in a
+separate thread as the filter and sort operations cannot commence until all the metadata
+has been loaded.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+//    if (metadataCacheThread->isAllMetadataLoaded()) return;
+    bool resumeImageCaching = false;
+    if (imageCacheThread->isRunning()) {
+        imageCacheThread->pauseImageCache();
+        resumeImageCaching = true;
+    }
     popUp->showPopup(this, "Loading metadata...", 2000, 0.75);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
     progressBar->saveProgressState();
     progressBar->clearProgress();
     int rows = dm->rowCount();
     for (int row = 0; row < rows; ++row) {
-        if (metadataCacheThread->loadMap[row]) {
+        if (dm->index(row, G::CreatedColumn).data().isNull()) {
             progressBar->updateProgress(row, row + 1, rows, QColor(100,150,150), "");
         }
     }
     metadataCacheThread->loadAllMetadata();
+    allMetadataLoaded = true;
+    dm->updateFilters();
     progressBar->recoverProgressState();
-    imageCacheThread->resumeImageCache();
+    if (resumeImageCaching) imageCacheThread->resumeImageCache();
+    QApplication::restoreOverrideCursor();
+    QApplication::processEvents();
 }
 
 void MW::updateMetadata(int thread, bool showProgress)
@@ -3241,7 +3264,7 @@ void MW::createCaching()
     metadataCacheScrollTimer->setSingleShot(true);
     // next connect to update
     connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
-            SLOT(delayProcessLoadMetadataCacheScrollEvent()));
+            SLOT(loadMetadataChunk()));
 
     connect(metadataCacheThread, SIGNAL(updateFilters()),
             this, SLOT(updateFilters()));
@@ -4246,7 +4269,7 @@ void MW::filterLastDay()
         filterLastDayAction->setChecked(false);
     }
     filterChange();
-
+    loadMetadataChunk();
 }
 
 void MW::filterChange(bool isFilter)
@@ -4278,7 +4301,6 @@ All filter changes should be routed to here as a central clearing house.
     if (dm->sf->rowCount()) {
         // if filtered but no selection
         if (!selectionModel->selectedRows().count()) {
-//            if (!thumbView->selectionModel()->selectedRows().count()) {
             thumbView->selectFirst();
             centralLayout->setCurrentIndex(prevCentralView);
         }
@@ -8521,7 +8543,9 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    loadEntireMetadataCache();
+//    loadEntireMetadataCache();
+    int row = 260;
+    qDebug() << row << dm->sf->index(row, G::CreatedColumn).data().isNull();
 }
 
 void MW::test2()

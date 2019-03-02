@@ -5264,7 +5264,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.dimensions = QString::number(width) + "x" + QString::number(height);
     imageMetadata.orientation = orientation;
     imageMetadata.rotationDegrees = rotationDegrees;
-//    imageMetadata.created = created;
     imageMetadata.createdDate = createdDate;
     imageMetadata.model = model.trimmed();
     imageMetadata.exposureTime = exposureTime;

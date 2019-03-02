@@ -235,8 +235,9 @@ public:
 
     // mode change
     QString prevMode;
-    int currentRow;             // the current row in fileSelection
+    int currentRow;             // the current row in MW::fileSelection
     bool allMetadataLoaded;
+    bool allIconsLoaded;
     bool modeChangeJustHappened;
 
     bool showImageCount = true;
@@ -379,7 +380,7 @@ private slots:
     void updateMetadataCacheStatus(int row, bool clear = false);
     void updateImageCacheStatus(QString instruction, int row, QString source);
     // caching
-    void delayProcessLoadMetadataCacheScrollEvent();
+    void loadMetadataChunk();
     void loadMetadataCacheThumbScrollEvent();
     void loadMetadataCacheGridScrollEvent();
 //    void loadMetadataCache(int startRow = 0);
