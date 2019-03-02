@@ -605,19 +605,9 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::EmailColumn), m.email);
     setData(index(row, G::UrlColumn), m.url);
     if (isShowCacheStatus) {
-        progressBar->updateProgress(row, row + 1, rowCount(),
-                                    QColor(100,150,150),
-                                    "datamodel - adding metadata");
+        progressBar->updateProgress(row, row + 1, rowCount(), QColor(100,150,150), "");
         qApp->processEvents();
     }
-
-
-    // list used by imageCacheThread, filtered by row+jpg if combined
-
-    // move somewhere else
-    if(row == 0)
-        for (int i = 0; i < sf->rowCount(); ++i)
-            imageFilePathList.append(sf->index(i,0).data(G::PathRole).toString());
 
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
@@ -625,7 +615,6 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     return true;
 }
 
-// ASync
 void DataModel::updateFilters()
 {
     {
@@ -633,8 +622,6 @@ void DataModel::updateFilters()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "DataModel::updateFilters()";
-
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
     QMap<QVariant, QString> lensMap;

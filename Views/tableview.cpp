@@ -17,10 +17,11 @@ TableView::TableView(DataModel *dm)
     setModel(dm->sf);
     setSortingEnabled(true);
     setAlternatingRowColors(true);
-    horizontalHeader()->setStretchLastSection(true);
     horizontalHeader()->setFixedHeight(22);
     horizontalHeader()->setSortIndicatorShown(false);
     horizontalHeader()->setSectionsMovable(true);
+    horizontalHeader()->setStretchLastSection(true);
+//    horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     verticalHeader()->setVisible(false);
 
     setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -38,6 +39,9 @@ TableView::TableView(DataModel *dm)
 
     PickItemDelegate *pickItemDelegate = new PickItemDelegate;
     setItemDelegateForColumn(G::PickColumn, pickItemDelegate);
+
+    DimensionItemDelegate *dimensionItemDelegate = new DimensionItemDelegate;
+    setItemDelegateForColumn(G::DimensionsColumn, dimensionItemDelegate);
 
     ApertureItemDelegate *apertureItemDelegate = new ApertureItemDelegate;
     setItemDelegateForColumn(G::ApertureColumn, apertureItemDelegate);
@@ -168,6 +172,15 @@ QString PickItemDelegate::displayText(const QVariant& value, const QLocale& /*lo
     return (value == "true") ? "✓" : "";
 }
 
+DimensionItemDelegate::DimensionItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString DimensionItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+    return " " + value.toString() + " ";
+}
+
 ApertureItemDelegate::ApertureItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 {
 }
@@ -176,7 +189,7 @@ QString ApertureItemDelegate::displayText(const QVariant& value, const QLocale& 
 {
     if (value == 0) return QString();
 
-    return "f/" + QString::number(value.toDouble(), 'f', 1);
+    return "   f/" + QString::number(value.toDouble(), 'f', 1) + " ";
 }
 
 ExposureTimeItemDelegate::ExposureTimeItemDelegate(QObject* parent): QStyledItemDelegate(parent)
@@ -209,7 +222,7 @@ QString FocalLengthItemDelegate::displayText(const QVariant& value, const QLocal
     if (value == 0)
     return QString();
 
-    return QString::number(value.toDouble(), 'f', 0) + "mm   ";
+    return "    " + QString::number(value.toDouble(), 'f', 0) + "mm    ";
 }
 
 ISOItemDelegate::ISOItemDelegate(QObject* parent): QStyledItemDelegate(parent)
