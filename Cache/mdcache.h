@@ -26,9 +26,10 @@ public:
     void loadMetadataCache(int startRow, int endRow);
     void loadAllMetadata();
     void stopMetadateCache();
-    bool restart;
-    int maxSegmentSize = 250;
+    bool isAllMetadataLoaded();
 
+    bool restart;
+    int maxChunkSize = 250;
     QMap<int, bool> loadMap;
 
 protected:
@@ -71,7 +72,7 @@ private:
 
     void createCacheStatus();
     void updateCacheStatus(int row);
-    bool loadMetadataChunk();
+    bool loadMetadataIconChunk();
 //    void track(QString fPath, QString msg);
 
 //     bool isShowCacheStatus;
