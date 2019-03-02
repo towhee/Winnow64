@@ -1132,19 +1132,21 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     }
 }
 
-// rgh not used??
-void MW::loadMetadataCache(int startRow)
+void MW::loadEntireMetadataCache()
 {
-    {
-    #ifdef ISDEBUG
-    QString s = "startRow = " + QString::number(startRow);
-    G::track(__FUNCTION__, s);
-    #endif
+    imageCacheThread->pauseImageCache();
+    popUp->showPopup(this, "Loading metadata...", 2000, 0.75);
+    progressBar->saveProgressState();
+    progressBar->clearProgress();
+    int rows = dm->rowCount();
+    for (int row = 0; row < rows; ++row) {
+        if (metadataCacheThread->loadMap[row]) {
+            progressBar->updateProgress(row, row + 1, rows, QColor(100,150,150), "");
+        }
     }
-//    metadataCacheThread->stopMetadateCache();
-
-//    // startRow in case user scrolls ahead and thumbs not yet loaded
-//    metadataCacheThread->loadMetadataCache(startRow, dm->rowCount(), isShowCacheStatus);
+    metadataCacheThread->loadAllMetadata();
+    progressBar->recoverProgressState();
+    imageCacheThread->resumeImageCache();
 }
 
 void MW::updateMetadata(int thread, bool showProgress)
@@ -4184,7 +4186,7 @@ tableView.
     G::track(__FUNCTION__);
     #endif
     }
-    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+    if (!allMetadataLoaded) loadEntireMetadataCache();
 
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
     switch (column) {
@@ -4223,7 +4225,7 @@ void MW::filterLastDay()
     G::track(__FUNCTION__);
     #endif
     }
-    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+    if (!allMetadataLoaded) loadEntireMetadataCache();
 
     if (dm->rowCount() == 0) {
         popup("No images available to filter", 2000, 0.75);
@@ -4257,7 +4259,7 @@ All filter changes should be routed to here as a central clearing house.
     G::track(__FUNCTION__);
     #endif
     }
-    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+    if (!allMetadataLoaded) loadEntireMetadataCache();
 
     // refresh the proxy sort/filter
     dm->sf->filterChange();
@@ -4312,7 +4314,7 @@ void MW::invertFilters()
 /*
 Currently this is just clearing filters ...  rgh what to do?
 */
-    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+    if (!allMetadataLoaded) loadEntireMetadataCache();
 
     if (dm->rowCount() == 0) {
         popup("No images available to invert filtration", 2000, 0.75);
@@ -4331,7 +4333,7 @@ Currently this is just clearing filters ...  rgh what to do?
 
 void MW::uncheckAllFilters()
 {
-    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+    if (!allMetadataLoaded) loadEntireMetadataCache();
 
     filters->uncheckAllFilters();
     filterPickAction->setChecked(false);
@@ -4352,7 +4354,7 @@ void MW::uncheckAllFilters()
 void MW::updateFilters()
 {
     statusBar()->showMessage("Filters are updating for all the metadata in the folder", 1000);
-    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+    if (!allMetadataLoaded) loadEntireMetadataCache();
     if (allMetadataLoaded) dm->updateFilters();
 //    dm->filteredItemCount();
 }
@@ -4417,7 +4419,7 @@ void MW::sortThumbnails()
     #endif
     }
     if(sortMenuUpdateToMatchTable) return;
-    if (!allMetadataLoaded) metadataCacheThread->loadEntireMetadataCache();
+    if (!allMetadataLoaded) loadEntireMetadataCache();
 
     int sortColumn = 0;
 
@@ -8519,7 +8521,7 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    metadataCacheThread->loadEntireMetadataCache();
+    loadEntireMetadataCache();
 }
 
 void MW::test2()
