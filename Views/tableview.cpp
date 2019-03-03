@@ -34,6 +34,11 @@ TableView::TableView(DataModel *dm)
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setDefaultSectionSize(24);
 
+
+
+    FileItemDelegate *fileItemDelegate = new FileItemDelegate;
+    setItemDelegateForColumn(G::PathColumn, fileItemDelegate);
+
     RefineItemDelegate *refineItemDelegate = new RefineItemDelegate;
     setItemDelegateForColumn(G::RefineColumn, refineItemDelegate);
 
@@ -71,6 +76,37 @@ void TableView::scrollToCurrent()
     // G::scrollToCenter needed?
     QModelIndex idx = dm->sf->index(currentIndex().row(), 1);
     scrollTo(idx, ScrollHint::PositionAtCenter);
+}
+
+int TableView::sizeHintForColumn(int column) const
+{
+    QFontMetrics fm(this->font());
+    if (column == G::NameColumn) return fm.width("2019-02-25_0001.jpg========");
+    if (column == G::RefineColumn) return fm.width("=Refine=");
+    if (column == G::PickColumn) return fm.width("=Pick=");
+    if (column == G::LabelColumn) return fm.width("=Colour=");
+    if (column == G::RatingColumn) return fm.width("=Rating=");
+    if (column == G::TypeColumn) return fm.width("=Type=");
+    if (column == G::SizeColumn) return fm.width("=999,999,999=");
+    if (column == G::CreatedColumn) return fm.width("=2019-09-09 09:09:09=");
+    if (column == G::ModifiedColumn) return fm.width("=2019-09-09 09:09:09=");
+    if (column == G::YearColumn) return fm.width("=2000=");
+    if (column == G::DayColumn) return fm.width("=2000-00-00=");
+    if (column == G::CreatorColumn) return fm.width("Rory Hill=====");
+    if (column == G::MegaPixelsColumn) return fm.width("=999.99=");
+    if (column == G::DimensionsColumn) return fm.width("=99999x99999=");
+    if (column == G::RotationColumn) return fm.width("=Rot=");
+    if (column == G::ApertureColumn) return fm.width("=Aperture=");
+    if (column == G::ShutterspeedColumn) return fm.width("=1/8000 sec=");
+    if (column == G::ISOColumn) return fm.width("999999");
+    if (column == G::CameraModelColumn) return fm.width("Nikon D850============");
+    if (column == G::LensColumn) return fm.width("Lens======================");
+    if (column == G::FocalLengthColumn) return fm.width("=Focal length=");
+    if (column == G::TitleColumn) return fm.width("=Title=");
+    if (column == G::CopyrightColumn) return fm.width("=Copyright=");
+    if (column == G::EmailColumn) return fm.width("=Email=");
+    if (column == G::UrlColumn) return fm.width("=Url=");
+    return 50;
 }
 
 bool TableView::eventFilter(QObject *obj, QEvent *event)
@@ -154,6 +190,17 @@ and this slot is then signalled to update which fields are visible.
 //   DELEGATES
 //------------------------------------------------------------------------------
 
+FileItemDelegate::FileItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QSize FileItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+//    QFontMetrics fm(option.font);
+//    int width = fm.width("2019-02-25_0001.jpg    ");
+//    return QSize(width, option.rect.height());
+}
+
 RefineItemDelegate::RefineItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 {
 }
@@ -161,6 +208,13 @@ RefineItemDelegate::RefineItemDelegate(QObject* parent): QStyledItemDelegate(par
 QString RefineItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
     return (value.toBool()) ? "true" : "";
+}
+
+QSize RefineItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+//    QFontMetrics fm(option.font);
+//    int width = fm.width(" Refine ");
+//    return QSize(width, option.rect.height());
 }
 
 PickItemDelegate::PickItemDelegate(QObject* parent): QStyledItemDelegate(parent)

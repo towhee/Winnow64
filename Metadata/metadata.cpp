@@ -5281,7 +5281,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.label = label;
     imageMetadata._label = _label;
     imageMetadata.lens = lens;
-    imageMetadata.creator = creator;
+    imageMetadata.creator = creator.trimmed();
     imageMetadata._creator = _creator;
     imageMetadata.copyright = copyright;
     imageMetadata._copyright = _copyright;
