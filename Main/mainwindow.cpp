@@ -1153,13 +1153,13 @@ has been loaded.
         imageCacheThread->pauseImageCache();
         resumeImageCaching = true;
     }
-    popUp->showPopup(this, "Loading metadata...", 2000, 0.75);
+    popUp->showPopup(this, "It may take a moment to load all the metadata...", 2000, 0.75);
     QApplication::setOverrideCursor(Qt::WaitCursor);
     progressBar->saveProgressState();
     progressBar->clearProgress();
     int rows = dm->rowCount();
     for (int row = 0; row < rows; ++row) {
-        if (dm->index(row, G::CreatedColumn).data().isNull()) {
+        if (!dm->index(row, G::CreatedColumn).data().isNull()) {
             progressBar->updateProgress(row, row + 1, rows, QColor(100,150,150), "");
         }
     }

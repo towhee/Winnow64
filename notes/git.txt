@@ -11,7 +11,7 @@ git config --global user.name "towhee"
 
 git config --global credential.helper cache     // for linux
 
-cd to Winnow64
+cd to Winnow64  ie  cd /Users/roryhill/Projects/Winnow64
 git status
 
 git add --all       //
