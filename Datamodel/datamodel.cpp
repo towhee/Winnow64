@@ -587,6 +587,7 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
     setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::DimensionsColumn), QString::number(m.width) + "x" + QString::number(m.height));
+    setData(index(row, G::DimensionsColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::RotationColumn), 0);
     setData(index(row, G::RotationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::ApertureColumn), m.apertureNum);
