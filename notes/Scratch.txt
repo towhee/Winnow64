@@ -1,2 +1,6 @@
-loadNewMetadataCache
-loadMetadataCache
+filename
+pick
+rating
+dimensions
+aperture
+focal length
