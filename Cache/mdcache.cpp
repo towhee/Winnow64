@@ -200,14 +200,14 @@ image files are loaded.  The imageCacheThread is not invoked.
 void MetadataCache::loadAllMetadata()
 {
 /*
-This function is intended to load metadata (but not the icon) quickly for the entire datamodel.
-This information is required for a filter or sort operation, which requires the entire dataset.
-Since the program will be waiting for the update this does not need to run as a separate thread
-and can be executed directly.
+This function is intended to load metadata (but not the icon) quickly for the entire
+datamodel. This information is required for a filter or sort operation, which requires
+the entire dataset. Since the program will be waiting for the update this does not need
+to run as a separate thread and can be executed directly.
 */
     {
     #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
+    G::track(__FUNCTION__);
     #endif
     }
     for (int row = 0; row < dm->rowCount(); ++row) {
@@ -219,9 +219,8 @@ and can be executed directly.
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
             metadata->imageMetadata.row = row;
             dm->addMetadataItem(metadata->imageMetadata, true);
-//            loadMap[row] = true;
+//            qDebug() << row << fPath;
         }
-//        if (isShowCacheStatus) emit showCacheStatus(row, false);
     }
     allMetadataLoaded = true;
 //    emit updateAllMetadataLoaded(allMetadataLoaded);
@@ -344,10 +343,10 @@ that have been missed.
     offset to embedded full size jpgs */
     if (runImageCacheWhenDone) emit loadImageCache();
 
-    if (!imageCacheThread->cacheUpToDate()) {
-        qDebug() << "Resuming image caching";
-        imageCacheThread->resumeImageCache();
-    }
+//    if (!imageCacheThread->cacheUpToDate()) {
+//        qDebug() << "Resuming image caching";
+//        imageCacheThread->resumeImageCache();
+//    }
 
     // update status of metadataThreadRunningLabel in statusbar
     emit updateIsRunning(false, true, __FUNCTION__);
