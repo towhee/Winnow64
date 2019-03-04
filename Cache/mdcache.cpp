@@ -101,14 +101,25 @@ void MetadataCache::stopMetadateCache()
 bool MetadataCache::isAllMetadataLoaded()
 {
     allMetadataLoaded = true;
-//    for(int i = 0; i < dm->rowCount(); ++i) {
-    for(int i = 0; i < dm->rowCount(); ++i) {
+    for (int i = 0; i < dm->rowCount(); ++i) {
         if (dm->index(i, G::CreatedColumn).data().isNull()) {
             allMetadataLoaded = false;
             break;
         }
     }
     return allMetadataLoaded;
+}
+
+bool MetadataCache::isAllIconsLoaded()
+{
+    allIconsLoaded = true;
+    for (int i = 0; i < dm->rowCount(); ++i) {
+        if (dm->index(i, G::PathColumn).data(Qt::DecorationRole).isNull()) {
+            allIconsLoaded = false;
+            break;
+        }
+    }
+    return allIconsLoaded;
 }
 
 void MetadataCache::loadNewMetadataCache(int startRow, int thumbsPerPage)
@@ -185,7 +196,7 @@ image files are loaded.  The imageCacheThread is not invoked.
     if (imageCacheThread->isRunning())imageCacheThread->pauseImageCache();
 
     int rowCount = dm->sf->rowCount();
-    this->startRow = startRow;
+    this->startRow = startRow >= 0 ? startRow : 0;
     int chunkSize = thumbsPerPage > maxChunkSize ? thumbsPerPage : maxChunkSize;
     this->endRow = startRow + chunkSize;
     if (this->endRow >= rowCount) this->endRow = rowCount;
@@ -193,6 +204,16 @@ image files are loaded.  The imageCacheThread is not invoked.
     qDebug() << "MetadataCache::loadMetadataCache  "
              << "startRow" << startRow
              << "endRow" << endRow;
+
+    bool foundItemsToLoad = false;
+    for (int i = startRow; i < endRow; ++i) {
+        if (dm->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
+            foundItemsToLoad = true;
+        if (dm->index(i, G::CreatedColumn).data().isNull())
+            foundItemsToLoad = true;
+        if (foundItemsToLoad) break;
+    }
+    if (!foundItemsToLoad) return;
 
     start(TimeCriticalPriority);
 }
@@ -210,6 +231,8 @@ to run as a separate thread and can be executed directly.
     G::track(__FUNCTION__);
     #endif
     }
+    t.start();
+    int count = 0;
     for (int row = 0; row < dm->rowCount(); ++row) {
         // is metadata already cached
         if (!dm->index(row, G::CreatedColumn).data().isNull()) continue;
@@ -219,10 +242,12 @@ to run as a separate thread and can be executed directly.
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
             metadata->imageMetadata.row = row;
             dm->addMetadataItem(metadata->imageMetadata, true);
+            count++;
 //            qDebug() << row << fPath;
         }
     }
     allMetadataLoaded = true;
+    qDebug() << "MetadataCache::loadAllMetadata" << count << t.elapsed();
 //    emit updateAllMetadataLoaded(allMetadataLoaded);
 }
 
@@ -236,13 +261,15 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
+    t.start();
+    int count = 0;
+
     for (int row = startRow; row < endRow; ++row) {
         if (abort) {
             emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false, true, __FUNCTION__);
             return false;
         }
-
 
         // file path and dm source row in case filtered or sorted
         mutex.lock();
@@ -276,6 +303,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             }
         }
     }
+    qDebug() << "MetadataCache::loadMetadataIconChunk" << count << t.elapsed();
     return true;
 }
 

@@ -27,6 +27,7 @@ public:
     void loadAllMetadata();
     void stopMetadateCache();
     bool isAllMetadataLoaded();
+    bool isAllIconsLoaded();
 
     bool restart;
     int maxChunkSize = 250;
@@ -67,6 +68,7 @@ private:
 
     bool runImageCacheWhenDone;
     bool allMetadataLoaded;
+    bool allIconsLoaded;
     bool isShowCacheStatus;
     bool cacheIcons;
 
