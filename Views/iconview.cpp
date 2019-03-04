@@ -892,7 +892,7 @@ void IconView::justify(JustifyAction action)
     if (tpr < 1) return;
     wCell = wRow / tpr;
 
-    if (wCell > G::maxIconSize) return;
+    if (wCell > G::maxIconSize) wCell = G::maxIconSize;
 
     thumbWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
     thumbHeight = thumbWidth * bestAspectRatio;

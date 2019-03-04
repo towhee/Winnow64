@@ -994,6 +994,8 @@ so scrollTo and delegate use of the current index must check the row.
         thumbView->setIcon(currentRow, image);
     }
 
+//    if (thumbView->isVisible()) thumbView->setFocus();
+
     // update cursor position on progressBar
     updateImageCacheStatus("Update cursor", currentRow, "MW::fileSelectionChange");
 }
@@ -1158,13 +1160,35 @@ has been loaded.
     progressBar->saveProgressState();
     progressBar->clearProgress();
     int rows = dm->rowCount();
+    // update progress for already loaded metadata
     for (int row = 0; row < rows; ++row) {
         if (!dm->index(row, G::CreatedColumn).data().isNull()) {
             progressBar->updateProgress(row, row + 1, rows, QColor(100,150,150), "");
         }
     }
-    metadataCacheThread->loadAllMetadata();
+
+    QElapsedTimer t;
+    t.start();
+    int count = 0;
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        // is metadata already cached
+        if (!dm->index(row, G::CreatedColumn).data().isNull()) continue;
+
+        QString fPath = dm->index(row, 0).data(G::PathRole).toString();
+        QFileInfo fileInfo(fPath);
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+            metadata->imageMetadata.row = row;
+            dm->addMetadataItem(metadata->imageMetadata, true);
+            count++;
+//            qDebug() << row << fPath;
+        }
+    }
     allMetadataLoaded = true;
+    qDebug() << "MetadataCache::loadAllMetadata" << count << t.elapsed();
+
+    //    metadataCacheThread->loadAllMetadata();
+//    allMetadataLoaded = true;
+
     dm->updateFilters();
     progressBar->recoverProgressState();
     if (resumeImageCaching) imageCacheThread->resumeImageCache();
@@ -4282,7 +4306,7 @@ All filter changes should be routed to here as a central clearing house.
     G::track(__FUNCTION__);
     #endif
     }
-    if (!allMetadataLoaded) loadEntireMetadataCache();
+    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
 
     // refresh the proxy sort/filter
     dm->sf->filterChange();
@@ -4308,6 +4332,8 @@ All filter changes should be routed to here as a central clearing house.
     }
     // if filter has eliminated all rows so nothing to show
     else nullFiltration();
+
+    loadMetadataChunk();
 }
 
 void MW::quickFilter()
@@ -6764,6 +6790,8 @@ notification when the QListView has finished painting itself.
         if(!wasThumbDockVisible && thumbDock->isVisible()) thumbDock->setVisible(false);
     }
 
+    if (thumbView->isVisible()) thumbView->setFocus();
+
     QModelIndex idx = dm->sf->index(currentRow, 0);
     thumbView->setCurrentIndex(idx);
 
@@ -8543,9 +8571,16 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    loadEntireMetadataCache();
-    int row = 260;
-    qDebug() << row << dm->sf->index(row, G::CreatedColumn).data().isNull();
+    QElapsedTimer t;
+    t.restart();
+    metadataCacheThread->isAllMetadataLoaded();
+    qDebug() << "metadataCacheThread->isAllMetadataLoaded time" << t.nsecsElapsed() << t.elapsed();
+    t.restart();
+    metadataCacheThread->isAllIconsLoaded();
+    qDebug() << "metadataCacheThread->isAllIconsLoaded time" << t.nsecsElapsed() << t.elapsed();
+    t.restart();
+    loadMetadataChunk();
+    qDebug() << "loadMetadataChunk time" << t.nsecsElapsed() << t.elapsed();
 }
 
 void MW::test2()
