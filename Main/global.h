@@ -31,7 +31,7 @@ namespace G
     };
 
     /*
-    dataModel setHorizontalHeaderItem must include all prior enum but
+    dataModel setHorizontalHeaderItem in DataModel::DataModel must include all prior enum but
     not in the same order!
     */
     enum dataModelColumns {
@@ -43,6 +43,8 @@ namespace G
         RatingColumn,
         TypeColumn,
         SizeColumn,
+        WidthColumn,
+        HeightColumn,
         CreatedColumn,
         ModifiedColumn,
         YearColumn,
