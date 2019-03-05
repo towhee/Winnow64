@@ -616,6 +616,7 @@ It is built from the imageList, which is sent from MW.
     float folderMB = 0;
     cache.totFiles = imageList.size();
 
+    G::track("Start");
     for (int i=0; i < cache.totFiles; ++i) {
         QString fPath = imageList.at(i);
 //        qDebug() << G::t.restart() << "\t" << "Image Cache row =" << i << fPath;
@@ -641,6 +642,7 @@ It is built from the imageList, which is sent from MW.
 
         folderMB += cacheItem.sizeMB;
     }
+    G::track("Finished");
     cache.folderMB = qRound(folderMB);
 }
 

@@ -302,7 +302,6 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         }
         count++;
 
-        if (row = endRow) emit loadImageCache();
         if (row > endRow) continue;
 
         // load icon

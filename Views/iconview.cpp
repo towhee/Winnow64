@@ -964,6 +964,7 @@ loaded.  Both thumbView and gridView have to be called.
     if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
     for (int row = 0; row < dm->rowCount(); ++row) {
         QModelIndex idx = dm->index(row, 0);
+        if (idx.data(Qt::DecorationRole).isNull()) continue;
         QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(G::maxIconSize);
         if (iconWMax < pm.width()) iconWMax = pm.width();
         if (iconHMax < pm.height()) iconHMax = pm.height();
