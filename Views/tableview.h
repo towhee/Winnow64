@@ -38,19 +38,19 @@ signals:
 
 #include <QStyledItemDelegate>
 
-class FileItemDelegate : public QStyledItemDelegate {
-    Q_OBJECT
-public:
-    explicit FileItemDelegate(QObject* parent = 0);
-    virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
-};
+//class FileItemDelegate : public QStyledItemDelegate {
+//    Q_OBJECT
+//public:
+//    explicit FileItemDelegate(QObject* parent = 0);
+//    virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+//};
 
 class RefineItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
     explicit RefineItemDelegate(QObject* parent = 0);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
-    virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+//    virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 };
 
 class PickItemDelegate : public QStyledItemDelegate {
