@@ -5227,9 +5227,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
     #endif
     }
     // check if already loaded

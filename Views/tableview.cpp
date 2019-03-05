@@ -36,8 +36,8 @@ TableView::TableView(DataModel *dm)
 
 
 
-    FileItemDelegate *fileItemDelegate = new FileItemDelegate;
-    setItemDelegateForColumn(G::PathColumn, fileItemDelegate);
+//    FileItemDelegate *fileItemDelegate = new FileItemDelegate;
+//    setItemDelegateForColumn(G::PathColumn, fileItemDelegate);
 
     RefineItemDelegate *refineItemDelegate = new RefineItemDelegate;
     setItemDelegateForColumn(G::RefineColumn, refineItemDelegate);
@@ -190,16 +190,16 @@ and this slot is then signalled to update which fields are visible.
 //   DELEGATES
 //------------------------------------------------------------------------------
 
-FileItemDelegate::FileItemDelegate(QObject* parent): QStyledItemDelegate(parent)
-{
-}
+//FileItemDelegate::FileItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+//{
+//}
 
-QSize FileItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
-{
-//    QFontMetrics fm(option.font);
-//    int width = fm.width("2019-02-25_0001.jpg    ");
-//    return QSize(width, option.rect.height());
-}
+//QSize FileItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+//{
+////    QFontMetrics fm(option.font);
+////    int width = fm.width("2019-02-25_0001.jpg    ");
+////    return QSize(width, option.rect.height());
+//}
 
 RefineItemDelegate::RefineItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 {
@@ -210,12 +210,12 @@ QString RefineItemDelegate::displayText(const QVariant& value, const QLocale& /*
     return (value.toBool()) ? "true" : "";
 }
 
-QSize RefineItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
-{
-//    QFontMetrics fm(option.font);
-//    int width = fm.width(" Refine ");
-//    return QSize(width, option.rect.height());
-}
+//QSize RefineItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+//{
+////    QFontMetrics fm(option.font);
+////    int width = fm.width(" Refine ");
+////    return QSize(width, option.rect.height());
+//}
 
 PickItemDelegate::PickItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 {

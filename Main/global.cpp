@@ -45,7 +45,8 @@ namespace G
         const QByteArray b = " ";
 //        const char *str = b.data();
 
-        QString time = QString::number(G::t.restart());
+        QString time = QString::number(G::t.nsecsElapsed());
+        G::t.restart();
 
         qDebug() << time.rightJustified(10, ' ') << " "
                  << functionName.leftJustified(50, '.') << " "
