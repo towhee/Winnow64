@@ -119,6 +119,8 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating"));
     setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type"));
     setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size"));
+    setHorizontalHeaderItem(G::WidthColumn, new QStandardItem("Width"));
+    setHorizontalHeaderItem(G::HeightColumn, new QStandardItem("Height"));
     setHorizontalHeaderItem(G::CreatedColumn, new QStandardItem("Created"));
     setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified"));
     setHorizontalHeaderItem(G::YearColumn, new QStandardItem("Year"));
@@ -570,7 +572,7 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
 
     int row = m.row;
 
-    QString fPath = index(row, 0).data(G::PathRole).toString();
+//    QString fPath = index(row, 0).data(G::PathRole).toString();
 #ifdef ISTEST
     qDebug() << "Setting the datamodel for row" << row << fPath;
     qDebug() << "m.label" << m.label
@@ -586,6 +588,10 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::DayColumn), m.createdDate.toString("yyyy-MM-dd"));
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
     setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::WidthColumn), QString::number(m.width));
+    setData(index(row, G::WidthColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+    setData(index(row, G::HeightColumn), QString::number(m.height));
+    setData(index(row, G::HeightColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::DimensionsColumn), QString::number(m.width) + "x" + QString::number(m.height));
     setData(index(row, G::DimensionsColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::RotationColumn), 0);

@@ -165,6 +165,7 @@ and icons are loaded into the datamodel.
     int segmentSize = thumbsPerPage > maxChunkSize ? thumbsPerPage : maxChunkSize;
     this->endRow = startRow + segmentSize;
     if (this->endRow >= dm->rowCount()) this->endRow = dm->rowCount();
+//    this->endRow = dm->rowCount();
 
     start(TimeCriticalPriority);
 }
@@ -231,7 +232,8 @@ to run as a separate thread and can be executed directly.
     G::track(__FUNCTION__);
     #endif
     }
-    t.start();
+    G::t.restart();
+    t.restart();
     int count = 0;
     for (int row = 0; row < dm->rowCount(); ++row) {
         // is metadata already cached
@@ -240,14 +242,18 @@ to run as a separate thread and can be executed directly.
         QString fPath = dm->index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+//            G::track(__FUNCTION__, "metadata->loadImageMetadata row " + QString::number(row));
             metadata->imageMetadata.row = row;
             dm->addMetadataItem(metadata->imageMetadata, true);
+//            G::track(__FUNCTION__, "dm->addMetadataItem         row " + QString::number(row));
             count++;
 //            qDebug() << row << fPath;
         }
     }
     allMetadataLoaded = true;
-    qDebug() << "MetadataCache::loadAllMetadata" << count << t.elapsed();
+    qint64 ms = t.elapsed();
+    qreal msperfile = (float)ms / count;
+    qDebug() << "MetadataCache::loadAllMetadata for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
 //    emit updateAllMetadataLoaded(allMetadataLoaded);
 }
 
@@ -261,10 +267,11 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-    t.start();
+    t.restart();
+    G::t.restart();
     int count = 0;
 
-    for (int row = startRow; row < endRow; ++row) {
+    for (int row = startRow; row < dm->rowCount(); ++row) {
         if (abort) {
             emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false, true, __FUNCTION__);
@@ -286,24 +293,33 @@ Load the metadata and thumb (icon) for all the image files in a folder.
                emit loadImageMetadata(fileInfo, true, true, false);  */
             mutex.lock();
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+//                G::track("metadata->loadImageMetadata row " + QString::number(row));
                 metadata->imageMetadata.row = dmRow;
                 dm->addMetadataItem(metadata->imageMetadata);
+//                G::track("dm->addMetadataItem         row " + QString::number(row));
             }
             mutex.unlock();
         }
+        count++;
+
+        if (row = endRow) emit loadImageCache();
+        if (row > endRow) continue;
 
         // load icon
         if (idx.data(Qt::DecorationRole).isNull()) {
             QImage image;
             mutex.lock();
             bool thumbLoaded = thumb->loadThumb(fPath, image);
+//            G::track("Thumb->loadThumb            row " + QString::number(row));
             mutex.unlock();
             if (thumbLoaded) {
                 emit setIcon(dmRow, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
             }
         }
     }
-    qDebug() << "MetadataCache::loadMetadataIconChunk" << count << t.elapsed();
+    qint64 ms = t.elapsed();
+    qreal msperfile = (float)ms / count;
+    qDebug() << "MetadataCache::loadMetadataIconChunk for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
     return true;
 }
 
@@ -369,7 +385,8 @@ that have been missed.
     /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */
-    if (runImageCacheWhenDone) emit loadImageCache();
+    qDebug() << "yyy" << runImageCacheWhenDone;
+//    if (runImageCacheWhenDone) emit loadImageCache();
 
 //    if (!imageCacheThread->cacheUpToDate()) {
 //        qDebug() << "Resuming image caching";

@@ -978,11 +978,9 @@ so scrollTo and delegate use of the current index must check the row.
         if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
             dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
         {
-//            thumbsWrapAction->setChecked(false);
             thumbView->setWrapping(false);
         }
         else {
-//            thumbsWrapAction->setChecked(true);
             thumbView->setWrapping(true);
         }
     }
@@ -1115,6 +1113,8 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
+    return;
 //    if (metadataCacheThread->isRunning()) return;
 
     int firstRow = 0;
@@ -1149,13 +1149,16 @@ has been loaded.
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
 //    if (metadataCacheThread->isAllMetadataLoaded()) return;
     bool resumeImageCaching = false;
     if (imageCacheThread->isRunning()) {
         imageCacheThread->pauseImageCache();
         resumeImageCaching = true;
     }
-    popUp->showPopup(this, "It may take a moment to load all the metadata...", 2000, 0.75);
+    popUp->showPopup(this, "It may take a moment to load all the metadata...\n"
+                     "This is required before any filtering or sorting of metadata can be done.",
+                     2000, 0.75);
     QApplication::setOverrideCursor(Qt::WaitCursor);
     progressBar->saveProgressState();
     progressBar->clearProgress();
@@ -1167,27 +1170,10 @@ has been loaded.
         }
     }
 
-    QElapsedTimer t;
-    t.start();
-    int count = 0;
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        // is metadata already cached
-        if (!dm->index(row, G::CreatedColumn).data().isNull()) continue;
-
-        QString fPath = dm->index(row, 0).data(G::PathRole).toString();
-        QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
-            metadata->imageMetadata.row = row;
-            dm->addMetadataItem(metadata->imageMetadata, true);
-            count++;
-//            qDebug() << row << fPath;
-        }
-    }
-    allMetadataLoaded = true;
-    qDebug() << "MetadataCache::loadAllMetadata" << count << t.elapsed();
-
-    //    metadataCacheThread->loadAllMetadata();
+//    metadataCacheThread->loadAllMetadata();
 //    allMetadataLoaded = true;
+
+    metadataCacheThread->loadMetadataCache(250, 500);
 
     dm->updateFilters();
     progressBar->recoverProgressState();
@@ -3361,6 +3347,7 @@ void MW::createThumbView()
     thumbView->setObjectName("Thumbnails");
 //    thumbView->setSpacing(0);                // thumbView not visible without this
     thumbView->setAutoScroll(false);
+    thumbView->setWrapping(false);
 
     // loadSettings has not run yet (dependencies, but QSettings has been opened
     thumbView->thumbWidth = setting->value("thumbWidth").toInt();
@@ -4233,7 +4220,7 @@ tableView.
     G::track(__FUNCTION__);
     #endif
     }
-    if (!allMetadataLoaded) loadEntireMetadataCache();
+    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
 
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
     switch (column) {
@@ -4272,7 +4259,7 @@ void MW::filterLastDay()
     G::track(__FUNCTION__);
     #endif
     }
-    if (!allMetadataLoaded) loadEntireMetadataCache();
+    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
 
     if (dm->rowCount() == 0) {
         popup("No images available to filter", 2000, 0.75);
@@ -4362,7 +4349,7 @@ void MW::invertFilters()
 /*
 Currently this is just clearing filters ...  rgh what to do?
 */
-    if (!allMetadataLoaded) loadEntireMetadataCache();
+    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
 
     if (dm->rowCount() == 0) {
         popup("No images available to invert filtration", 2000, 0.75);
@@ -4381,7 +4368,7 @@ Currently this is just clearing filters ...  rgh what to do?
 
 void MW::uncheckAllFilters()
 {
-    if (!allMetadataLoaded) loadEntireMetadataCache();
+    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
 
     filters->uncheckAllFilters();
     filterPickAction->setChecked(false);
@@ -4467,7 +4454,7 @@ void MW::sortThumbnails()
     #endif
     }
     if(sortMenuUpdateToMatchTable) return;
-    if (!allMetadataLoaded) loadEntireMetadataCache();
+    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
 
     int sortColumn = 0;
 
@@ -6752,6 +6739,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 //        thumbsWrapAction->setChecked(true);
         thumbView->setWrapping(true);
     }
+    qDebug() << "xxx " << thumbView->isWrapping();
 }
 
 void MW::loupeDisplay()
@@ -8571,16 +8559,22 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QElapsedTimer t;
-    t.restart();
-    metadataCacheThread->isAllMetadataLoaded();
-    qDebug() << "metadataCacheThread->isAllMetadataLoaded time" << t.nsecsElapsed() << t.elapsed();
-    t.restart();
-    metadataCacheThread->isAllIconsLoaded();
-    qDebug() << "metadataCacheThread->isAllIconsLoaded time" << t.nsecsElapsed() << t.elapsed();
-    t.restart();
-    loadMetadataChunk();
-    qDebug() << "loadMetadataChunk time" << t.nsecsElapsed() << t.elapsed();
+    qDebug() << thumbView->isWrapping();
+    thumbView->bestAspect();
+
+//    thumbView->setWrapping(false);
+//    loadEntireMetadataCache();
+
+//    QElapsedTimer t;
+//    t.restart();
+//    metadataCacheThread->isAllMetadataLoaded();
+//    qDebug() << "metadataCacheThread->isAllMetadataLoaded time" << t.nsecsElapsed() << t.elapsed();
+//    t.restart();
+//    metadataCacheThread->isAllIconsLoaded();
+//    qDebug() << "metadataCacheThread->isAllIconsLoaded time" << t.nsecsElapsed() << t.elapsed();
+//    t.restart();
+//    loadMetadataChunk();
+//    qDebug() << "loadMetadataChunk time" << t.nsecsElapsed() << t.elapsed();
 }
 
 void MW::test2()

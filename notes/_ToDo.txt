@@ -1,4 +1,5 @@
 BUGS
+- Preferences show infoView items missing scrollbar
 - ImageView add timer to mousePressed/released to id panning and zooming intent
 - Zoom HUD broken
 - ImageView::scale comparing floats potentially bad
