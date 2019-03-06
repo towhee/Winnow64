@@ -60,13 +60,14 @@ public:
 
     // image cache
     struct CacheItem {
-        int key;
-        int origKey;
-        QString fName;
-        bool isCached;
-        bool isTarget;
-        int priority;
-        float sizeMB;
+        int key;                    // same as row in dm->sf (sorted and filtered datamodel)
+        int origKey;                // the key of a previous filter or sort
+        QString fName;              // image full path
+        bool isMetadata;            // has metadata for embedded jpg offset and length been loaded
+        bool isCached;              // has image been cached
+        bool isTarget;              // is this image targeted to be cached
+        int priority;               // priority to cache image
+        float sizeMB;               // memory req'd to cache iamge
     } cacheItem;
 
     QList<CacheItem> cacheItemList, cacheItemListCopy;
