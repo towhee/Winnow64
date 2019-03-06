@@ -302,7 +302,6 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         }
         count++;
 
-        if (row = endRow) emit loadImageCache();
         if (row > endRow) continue;
 
         // load icon
@@ -386,7 +385,7 @@ that have been missed.
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */
     qDebug() << "yyy" << runImageCacheWhenDone;
-//    if (runImageCacheWhenDone) emit loadImageCache();
+    if (runImageCacheWhenDone) emit loadImageCache();
 
 //    if (!imageCacheThread->cacheUpToDate()) {
 //        qDebug() << "Resuming image caching";
