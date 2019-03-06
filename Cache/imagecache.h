@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QObject>
 #include "Main/global.h"
+#include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include <algorithm>         // reqd to sort cache
 #include <QMutex>
@@ -18,20 +19,16 @@ class ImageCache : public QThread
     Q_OBJECT
 
 public:
-    ImageCache(QObject *parent, Metadata *metadata);
+    ImageCache(QObject *parent, DataModel *dm, Metadata *metadata);
     ~ImageCache();
 
-    void initImageCache(QStringList &imageList, int &cacheSizeMB,
-             bool &isShowCacheStatus, int &cacheStatusWidth, int &cacheWtAhead,
+    void initImageCache(int &cacheSizeMB,
+             bool &isShowCacheStatus, int &cacheWtAhead,
              bool &usePreview, int &previewWidth, int &previewHeight);
     void updateImageCachePosition(QString  &fPath);
-    void updateCacheStatusCurrentImagePosition(QString &fPath);
-    void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
-             int &cacheStatusWidth, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
-    void resortImageCache(QStringList &resortedFilePathList,
-             QString &currentImageFullPath);
-    void filterImageCache(QStringList &filteredFilePathList,
-                           QString &currentImageFullPath);
+    void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
+    void resortImageCache(QString &currentImageFullPath);
+    void filterImageCache(QString &currentImageFullPath);
     void stopImageCache();
     void clearImageCache();
     void pauseImageCache();
@@ -46,7 +43,6 @@ public:
     struct Cache {
         int key;                    // current image
         int prevKey;                // used to establish directionof travel
-        QString dir;                // compare to input to see if different
         uint toCacheKey;            // next file to cache
         uint toDecacheKey;          // next file to remove from cache
         bool isForward;             // direction of travel in folder
@@ -57,8 +53,6 @@ public:
         uint folderMB;              // MB required for all files in folder
         int targetFirst;            // beginning of target range to cache
         int targetLast;             // end of the target range to cache
-        int pxTotWidth;             // width in pixels of graphic in statusbar
-        float pxUnitWidth;          // width of one file on graphic in statusbar
         bool isShowCacheStatus;     // show in app status bar
         bool usePreview;            // cache smaller pixmap for speedier initial display
         QSize previewSize;          // monitor display dimensions for scale of previews
@@ -98,6 +92,7 @@ private:
     bool restart;
     bool abort;
 
+    DataModel *dm;
     Metadata *metadata;
     Pixmap *getImage;
 
@@ -114,14 +109,9 @@ private:
     void checkForSurplus();         // after filtration get rid of cached images not needed
     static bool prioritySort(const CacheItem &p1, const CacheItem &p2);
     static bool keySort(const CacheItem &k1, const CacheItem &k2);
-//    int pxMid(int key);             // center current position on statusbar
-//    int pxStart(int key);           // start current position on statusbar
-//    int pxEnd(int key);             // end current position on statusbar
-    void buildImageCacheList(QStringList &imageList); //
+    void buildImageCacheList(); //
     QSize scalePreview(ulong w, ulong h);
-//    void reportCache(QString title = "");
     void reportCacheProgress(QString action);
-    void track(QString fPath, QString msg);
 };
 
 #endif // IMAGECACHE_H
