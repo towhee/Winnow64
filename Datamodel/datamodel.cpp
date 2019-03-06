@@ -221,7 +221,8 @@ Steps:
 //    filters->removeChildrenDynamicFilters();
 
     timeToQuit = false;
-    int imageCount = 0;
+    imageCount = 0;
+    countInterval = 1000;
     QString escapeClause = "Press \"Esc\" to stop.\n\n";
     QString root;
     if (dir->isRoot()) root = "Drive ";
@@ -235,13 +236,13 @@ Steps:
     for (int i = 0; i < folderImageCount; ++i) {
         fileInfoList.append(dir->entryInfoList().at(i));
         imageCount++;
-        if (i % 100 == 0 && i > 0) {
+        if (imageCount % countInterval == 0 && imageCount > 0) {
             QString s = escapeClause + "Scanning image " +
-                        QString::number(i) + " of " +
+                        QString::number(imageCount) + " of " +
                         QString::number(folderImageCount) +
                         " in " + root + currentFolderPath;
             emit msg(s);
-//            qApp->processEvents();
+            qApp->processEvents();
         }
         if (timeToQuit) return false;
     }
@@ -264,13 +265,16 @@ Steps:
                 fileInfoList.append(dir->entryInfoList().at(i));
                 imageCount++;
                 // report file progress within folder
-                if (i % 100 == 0 && i > 0) {
-                    QString s = escapeClause + "Scanning image " +
-                                QString::number(i) + " of " +
+                if (imageCount % countInterval == 0 && imageCount > 0) {
+                    QString s = "Folder " + escapeClause +
+                                it.filePath() +
+                                QString::number(i) + " with " +
                                 QString::number(folderImageCount) +
-                                " in " + currentFolderPath;
+                                " images."
+                                "\n\n" + QString::number(imageCount) +
+                                " images scanned";
                     emit msg(s);
-//                    qApp->processEvents();
+                    qApp->processEvents();
                 }
             }
         }
@@ -314,8 +318,9 @@ bool DataModel::addFileData()
 
     // rgh not working
     emptyPixMap = QPixmap::fromImage(emptyImg).scaled(G::maxIconSize, G::maxIconSize);
-
     for (fileIndex = 0; fileIndex < fileInfoList.count(); ++fileIndex) {
+
+        if (timeToQuit) return false;
 
         // get file info
         fileInfo = fileInfoList.at(fileIndex);
@@ -399,6 +404,12 @@ bool DataModel::addFileData()
         progressBar->updateProgress(row, row + 1, fileInfoList.count(), QColor(85,100,115),
                                 "datamodel - adding file info");
         if(row % 100 == 0) qApp->processEvents();
+
+        if(row % countInterval == 0) {
+            s = "Adding " + QString::number(row) + " of " + QString::number(fileInfoList.count());
+            emit msg(s);
+            qApp->processEvents();
+        }
 
         /* the rest of the data model columns are added after the metadata
         has been loaded, when the image caching is called.  See

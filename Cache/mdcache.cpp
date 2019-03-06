@@ -271,7 +271,8 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     G::t.restart();
     int count = 0;
 
-    for (int row = startRow; row < dm->rowCount(); ++row) {
+    for (int row = startRow; row < endRow; ++row) {
+//    for (int row = startRow; row < dm->rowCount(); ++row) {
         if (abort) {
             emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false, true, __FUNCTION__);

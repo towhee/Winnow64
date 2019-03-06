@@ -512,6 +512,7 @@ void ImageCache::reportCache(QString title)
     rpt << "Index"
         << "Key"
         << "OrigKey"
+        << "isMeta"
         << "Priority"
         << "Target"
         << "Cached"
@@ -535,6 +536,7 @@ void ImageCache::reportCache(QString title)
         rpt << i
             << cacheItemList.at(i).key
             << cacheItemList.at(i).origKey
+            << cacheItemList.at(i).isMetadata
             << cacheItemList.at(i).priority
             << cacheItemList.at(i).isTarget
             << cacheItemList.at(i).isCached
@@ -637,6 +639,8 @@ It is built from dm->sf (sorted and/or filtered datamodel).
             h = p.height();
             cacheItem.sizeMB += (float)w * h / 256000;
         }
+        cacheItem.isMetadata = w > 0;
+//        cacheItem.isMetadata = !dm->sf->index(i, G::CreatedColumn).data().isNull();
         cacheItemList.append(cacheItem);
 
         folderMB += cacheItem.sizeMB;
