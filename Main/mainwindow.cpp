@@ -1347,8 +1347,8 @@ been consumed or all the images are cached.
 //    return;
 
     // imageCacheThread checks if already running and restarts caching
-    imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
-        isShowCacheStatus, progressWidth, cacheWtAhead, isCachePreview,
+    imageCacheThread->initImageCache(cacheSizeMB,
+        isShowCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
 
     // have to wait until image caching thread running before setting flag
@@ -1373,8 +1373,8 @@ void MW::loadFilteredImageCache()
     dm->updateImageList();
 
     // imageChacheThread checks if already running and restarts
-    imageCacheThread->initImageCache(dm->imageFilePathList, cacheSizeMB,
-        isShowCacheStatus, progressWidth, cacheWtAhead, isCachePreview,
+    imageCacheThread->initImageCache(cacheSizeMB,
+        isShowCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
     imageCacheThread->updateImageCachePosition(fPath);
 }
@@ -3256,7 +3256,7 @@ void MW::createCaching()
     G::track(__FUNCTION__);
     #endif
     }
-    imageCacheThread = new ImageCache(this, metadata);
+    imageCacheThread = new ImageCache(this, dm, metadata);
     metadataCacheThread = new MetadataCache(this, dm, metadata, imageCacheThread);
 
     // new kid on the block
@@ -3858,8 +3858,7 @@ parameters.  Any visibility changes are executed.
     }
 
     imageCacheThread->updateImageCacheParam(cacheSizeMB, isShowCacheStatus,
-             progressWidth, cacheWtAhead, isCachePreview,
-             displayHorizontalPixels, displayVerticalPixels);
+             cacheWtAhead, isCachePreview, displayHorizontalPixels, displayVerticalPixels);
 
     progressLabel->setFixedWidth(progressWidth);
     progressPixmap->scaled(progressWidth, 25);
@@ -4201,7 +4200,7 @@ void MW::resortImageCache()
         currentFilePath = idx.data(G::PathRole).toString();
     }
     thumbView->selectThumb(idx);
-    imageCacheThread->resortImageCache(dm->imageFilePathList, currentFilePath);
+    imageCacheThread->resortImageCache(currentFilePath);
 }
 
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
@@ -4307,7 +4306,7 @@ All filter changes should be routed to here as a central clearing house.
     QModelIndex idx = thumbView->currentIndex();
     QString currentFilePath = idx.data(G::PathRole).toString();
     // filter the image cache
-    imageCacheThread->filterImageCache(dm->imageFilePathList, currentFilePath);
+    imageCacheThread->filterImageCache(currentFilePath);
 
     if (dm->sf->rowCount()) {
         // if filtered but no selection
@@ -8559,8 +8558,10 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << thumbView->isWrapping();
-    thumbView->bestAspect();
+    imageCacheThread->reportCache("Report Cache");
+
+//    qDebug() << thumbView->isWrapping();
+//    thumbView->bestAspect();
 
 //    thumbView->setWrapping(false);
 //    loadEntireMetadataCache();

@@ -10,6 +10,7 @@ PERFORMANCE
 - Check if cacheDelay is still important (It appears not, but leave in but
   set to zero for now
 CODE IMPROVEMENTS
+- Is G::isNewFolderLoaded req'd?
 - Eliminate metaCache in Metadata - just use datamodel
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
