@@ -835,6 +835,7 @@ void MW::folderSelectionChange()
     cacheTimer.restart();
 
     // initialize datamodel image list used by image cache
+    // req'd rgh
     dm->updateImageList();
 
     metadataCacheThread->loadNewMetadataCache(0, gridView->getThumbsPerPage());
@@ -8558,7 +8559,9 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    imageCacheThread->reportCache("Report Cache");
+    imageCacheThread->reportCache("");
+
+//    imageCacheThread->reportCache("Report Cache");
 
 //    qDebug() << thumbView->isWrapping();
 //    thumbView->bestAspect();
