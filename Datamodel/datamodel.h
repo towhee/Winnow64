@@ -96,6 +96,8 @@ private:
     bool addFileData();
     void rawPlusJpg();
 
+    int imageCount;
+    int countInterval = 0;
     QElapsedTimer t;
 
 };
