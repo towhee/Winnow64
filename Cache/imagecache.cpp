@@ -113,6 +113,7 @@ respect potential thread collision issues.  The functions and objects are:
 void ImageCache::clearImageCache()
 {
     imCache.clear();
+    cacheItemList.clear();
     cacheItemListCopy.clear();
     toCache.clear();
     toDecache.clear();
@@ -665,9 +666,6 @@ void ImageCache::initImageCache(int &cacheSizeMB,
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
 
-    imCache.clear();
-//    cacheItemList.clear();
-
     // cache is a structure to hold cache management parameters
     cache.key = 0;
     cache.prevKey = -1;
@@ -811,7 +809,10 @@ If there is filtering then the entire cache is reloaded.
     G::track(__FUNCTION__);;
     #endif
     }
+    G::track(__FUNCTION__);;
     if (isRunning()) pauseImageCache();
+
+    reportCache("Before sort");
 
     cacheItemListCopy = cacheItemList;
     cacheItemList.clear();
@@ -864,16 +865,15 @@ If there is filtering then the entire cache is reloaded.
     }*/
 
     cacheItemListCopy.clear();
-
     cache.totFiles = filterRowCount;
-//    cache.pxUnitWidth = (float)cache.pxTotWidth/filterRowCount;
-
     if (cache.isShowCacheStatus) showCacheStatus("Update all rows", 0, "ImageCache::resortImageCache");
 
     cache.prevKey = cache.key;
     cache.currMB = getImCacheSize();
     setPriorities(cache.key);
     setTargetRange();
+
+    reportCache("After sort");
 
 /*    qDebug() << "\nAfter reset priorities and target range:" << "\nKey OrigKey Priority Target Cached SizeMB Width Height FName";
     for (int i=0; i<cache.totFiles; ++i) {

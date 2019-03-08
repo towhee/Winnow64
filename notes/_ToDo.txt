@@ -1,4 +1,5 @@
 BUGS
+- Reset sorting and filtering when new folder selected
 - Preferences show infoView items missing scrollbar
 - ImageView add timer to mousePressed/released to id panning and zooming intent
 - Zoom HUD broken
@@ -33,6 +34,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Not reporting Make for NEF files
 - ImageView not resizing when thumbdock gets taller
 - Add more raw file formats - DNG, Pentax ...
 - try multiple caching threads (no improvement)
