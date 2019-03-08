@@ -186,9 +186,10 @@ int IconViewDelegate::getCellHeightFromAvailHeight(int availHeight)
     return thumbHeight <= G::maxIconSize ? thumbHeight : G::maxIconSize;
 }
 
-void IconViewDelegate::onCurrentChanged(QModelIndex current, QModelIndex /*previous*/)
+void IconViewDelegate::setCurrentIndex(QModelIndex current)
 {
     currentRow = current.row();     // this slot not being used
+    qDebug() << "IconViewDelegate::onCurrentChanged" << currentRow;
 }
 
 QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
