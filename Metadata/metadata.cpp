@@ -2845,10 +2845,11 @@ void Metadata::formatNikon()
     // get offset to first IFD and read it
     ulong offsetIfd0 = get4(file.read(4));
 
-    // Nikon does not chaim IFDs
+    // Nikon does not chain IFDs
     readIFD("IFD0", offsetIfd0);
 
     // pull data reqd from IFD0
+    make = getString(ifdDataHash.value(271).tagValue, ifdDataHash.value(271).tagCount);
     model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
     orientation = ifdDataHash.value(274).tagValue;
     creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount);
