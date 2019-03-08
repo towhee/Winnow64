@@ -22,8 +22,16 @@ public:
     MetadataCache(QObject *parent, DataModel *dm,
                   Metadata *metadata, ImageCache *imageCacheThread);
     ~MetadataCache();
-    void loadNewMetadataCache(int startRow, int thumbsPerPage/*, bool isShowCacheStatus*/);
-    void loadMetadataCache(int startRow, int endRow);
+
+    enum CacheImages {
+        No = 0,
+        New = 1,
+        Update = 2,
+        Resume = 3
+    };
+
+    void loadNewMetadataCache(int thumbsPerPage/*, bool isShowCacheStatus*/);
+    void loadMetadataCache(int startRow, int endRow, CacheImages cacheImages);
     void loadAllMetadata();
     void stopMetadateCache();
     bool isAllMetadataLoaded();
@@ -32,6 +40,7 @@ public:
     bool restart;
     int maxChunkSize = 250;
     QMap<int, bool> loadMap;
+
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -63,10 +72,11 @@ private:
     QModelIndex idx;
     int startRow;
     int endRow;
+    CacheImages cacheImages;
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
 
-    bool runImageCacheWhenDone;
+//    bool runImageCacheWhenDone;
     bool allMetadataLoaded;
     bool allIconsLoaded;
     bool isShowCacheStatus;

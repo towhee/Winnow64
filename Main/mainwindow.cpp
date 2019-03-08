@@ -658,7 +658,8 @@ void MW::handleStartupArgs()
      speedy for the user.
 
  -   The metadata caching thread collects information required by the
-     image cache thread.
+     image cache thread.  If the number of images in the folder(s) is
+     greater than the threshold only a chunck of metadata is collected.
 
  -   The image caching thread requires the offset and length for the
      full size embedded jpg, the image width and height in order to
@@ -838,7 +839,7 @@ void MW::folderSelectionChange()
     // req'd rgh
     dm->updateImageList();
 
-    metadataCacheThread->loadNewMetadataCache(0, gridView->getThumbsPerPage());
+    metadataCacheThread->loadNewMetadataCache(gridView->getThumbsPerPage());
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -878,6 +879,9 @@ so scrollTo and delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
+    G::track(__FUNCTION__, current.data(G::PathRole).toString());
+    qDebug() << current.row() << current.column();
+
     bool isStart = false;
 
     if(!isCurrentFolderOkay) return;
@@ -905,6 +909,8 @@ so scrollTo and delegate use of the current index must check the row.
 
     // record current row as it is used to sync everything
     currentRow = current.row();
+    int dmCurrentRow = dm->sf->mapToSource(current).row();
+    dmCurrentIndex = dm->index(dmCurrentRow, 0);
 
     // update delegates so they can highlight the current item
     thumbView->iconViewDelegate->currentRow = currentRow;
@@ -1103,7 +1109,27 @@ vertical scrollbar (does not have a horizontal scrollbar).
 //             << "thumbs per page =" << gridView->getThumbsPerPage();
 }
 
-void MW::loadMetadataChunk()
+int MW::getThumbsPerPage()
+{
+    int tpp1 = 0;
+    int tpp2 = 0;
+    if (thumbView->isVisible()) tpp1 = thumbView->getThumbsPerPage();
+    if (gridView->isVisible()) tpp2 = gridView->getThumbsPerPage();
+    int tpp = tpp1 > tpp2 ? tpp1 : tpp2;
+    return tpp;
+}
+
+int MW::getFirstVisibleThumb()
+{
+    int fvt1 = 0;
+    int fvt2 = 0;
+    if (thumbView->isVisible()) fvt1 = thumbView->getFirstVisible();
+    if (gridView->isVisible()) fvt2 = gridView->getFirstVisible();
+    int fvt = fvt1 > fvt2 ? fvt1 : fvt2;
+    return fvt;
+}
+
+void MW::loadMetadataChunkAfterScroll()
 {
 /*
 If there has not been another call to this function in cacheDelay ms then the
@@ -1114,27 +1140,37 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
-    return;
+//    G::track(__FUNCTION__);
 //    if (metadataCacheThread->isRunning()) return;
 
-    int firstRow = 0;
-    int thumbsPerPage = 0;
-
-    if (thumbView->isVisible()) {
-        firstRow = thumbView->getFirstVisible();
-        thumbsPerPage = thumbView->getThumbsPerPage();
-    }
-
-    if (gridView->isVisible()) {
-        firstRow = gridView->getFirstVisible();
-        thumbsPerPage = gridView->getThumbsPerPage();
-    }
-
-    qDebug() << "MW::loadMetadataChunk " << firstRow << thumbsPerPage;
+//    qDebug() << "MW::loadMetadataChunk " << firstRow << thumbsPerPage;
 
     if (imageCacheThread->isRunning()) imageCacheThread->pauseImageCache();
-    metadataCacheThread->loadMetadataCache(firstRow, thumbsPerPage);
+    metadataCacheThread->loadMetadataCache(getFirstVisibleThumb(),
+                                           getThumbsPerPage(),
+                                           MetadataCache::CacheImages::Resume);
+}
+
+void MW::loadMetadataChunk()
+{
+    /*
+If there has not been another call to this function in cacheDelay ms then the
+metadataCacheThread is restarted at the row of the first visible thumb after the scrolling.
+*/
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    //    G::track(__FUNCTION__);
+    //    if (metadataCacheThread->isRunning()) return;
+
+    //    qDebug() << "MW::loadMetadataChunk " << firstRow << thumbsPerPage;
+
+    if (imageCacheThread->isRunning()) imageCacheThread->pauseImageCache();
+    metadataCacheThread->loadMetadataCache(getFirstVisibleThumb(),
+                                           getThumbsPerPage(),
+                                           MetadataCache::CacheImages::Update);
 }
 
 void MW::loadEntireMetadataCache()
@@ -1266,6 +1302,8 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
                                     "image cache - target range");
         // cached
         for (int i = 0; i < rows; ++i) {
+            // bail if list has been cleared because new folder selected
+            if (ic->cacheItemList.isEmpty()) return;
             if (ic->cacheItemList.at(i).isCached)
                 progressBar->updateProgress(i, i + 1, rows, imageCacheColor,
                                             "image cache - all rows cached");
@@ -1300,8 +1338,6 @@ been consumed or all the images are cached.
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
-
-    qDebug() << "MW::loadImageCache to here";
 
     // Now doing this during loadMetaChunk in metadataCacheThread
 //    if (!G::aSync) dm->addMetadata(progressBar, isShowCacheStatus);
@@ -4191,16 +4227,18 @@ void MW::resortImageCache()
     G::track(__FUNCTION__);
     #endif
     }
-    int sfRowCount = dm->sf->rowCount();
-    if (!sfRowCount) return;
-    dm->updateImageList();
-    QModelIndex idx = thumbView->currentIndex();
-    QString currentFilePath = idx.data(G::PathRole).toString();
-    if(!dm->imageFilePathList.contains(currentFilePath)) {
-        idx = dm->sf->index(0, 0);
-        currentFilePath = idx.data(G::PathRole).toString();
-    }
-    thumbView->selectThumb(idx);
+    if (!dm->sf->rowCount()) return;
+//    dm->updateImageList();
+//    QModelIndex idx = thumbView->currentIndex();
+//    QString currentFilePath = idx.data(G::PathRole).toString();
+//    if(!dm->imageFilePathList.contains(currentFilePath)) {
+//        idx = dm->sf->index(0, 0);
+//        currentFilePath = idx.data(G::PathRole).toString();
+//    }
+
+    QString currentFilePath = dmCurrentIndex.data(G::PathRole).toString();
+    QModelIndex idx = dm->sf->mapFromSource(dmCurrentIndex);
+    fileSelectionChange(idx, idx);
     imageCacheThread->resortImageCache(currentFilePath);
 }
 
@@ -6739,7 +6777,6 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 //        thumbsWrapAction->setChecked(true);
         thumbView->setWrapping(true);
     }
-    qDebug() << "xxx " << thumbView->isWrapping();
 }
 
 void MW::loupeDisplay()
@@ -6840,7 +6877,6 @@ around lack of notification when the QListView has finished painting itself.
     QModelIndex idx = dm->sf->index(currentRow, 0);
     gridView->setCurrentIndex(idx);
     thumbView->setCurrentIndex(idx);
-
 
     // req'd to show thumbs first time
     gridView->setThumbParameters();

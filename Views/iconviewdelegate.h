@@ -50,7 +50,7 @@ signals:
     void update(const QModelIndex index, QRect iconRect) const;
 
 public slots:
-    void onCurrentChanged(QModelIndex current, QModelIndex previous);
+    void setCurrentIndex(QModelIndex current);
 
 private:
     QObject parent;
