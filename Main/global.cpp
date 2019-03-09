@@ -27,6 +27,7 @@ namespace G
     // not persistent
     bool isThreadTrackingOn;
     bool isNewFolderLoaded;
+    bool isInitializing;
     int scrollBarThickness = 14;        // Also set in winnowstyle.css for vertical and horizontal
     QModelIndexList copyCutIdxList;
     QStringList copyCutFileList;
@@ -48,8 +49,11 @@ namespace G
         QString time = QString::number(G::t.nsecsElapsed());
         G::t.restart();
 
+        QString initializing = isInitializing ? "initalizing = true" : "initializing = false";
+
         qDebug() << time.rightJustified(10, ' ') << " "
                  << functionName.leftJustified(50, '.') << " "
+                 << initializing.leftJustified(25)
                  << comment;
 
 //        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
