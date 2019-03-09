@@ -304,7 +304,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 //    static int n = 0;
 
     // use to show all events being filtered - handy to figure out which to intercept
-//    if (event->type()        != QEvent::Paint
+//    if (event->type()
+//                             != QEvent::Paint
 //            && event->type() != QEvent::UpdateRequest
 //            && event->type() != QEvent::ZeroTimerEvent
 //            && event->type() != QEvent::Timer)
@@ -840,7 +841,7 @@ void MW::folderSelectionChange()
     // req'd rgh
     dm->updateImageList();
 
-    qDebug() << "metadataCacheThread->loadNewMetadataCache(getThumbsPerPage())  dm->rowCount() =" << dm->rowCount();
+    qDebug() << "MW::folderSelectionChange  dm->rowCount() =" << dm->rowCount();
     metadataCacheThread->loadNewMetadataCache(getThumbsPerPage());
 
     // format pickMemSize as bytes, KB, MB or GB
@@ -881,7 +882,7 @@ so scrollTo and delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-//    G::track(__FUNCTION__, current.data(G::PathRole).toString());
+    G::track(__FUNCTION__, current.data(G::PathRole).toString());
 //    qDebug() << current.row() << current.column();
 
     bool isStart = false;
@@ -1086,13 +1087,14 @@ horizontal and vertical scrollbars.
     if (G::isInitializing) return;
 
     metadataCacheStartRow = thumbView->getFirstVisible();
+    qDebug() << "MW::loadMetadataCacheThumbScrollEvent  start =" << metadataCacheStartRow;
     metadataCacheScrollTimer->start(cacheDelay);
 }
 
 void MW::loadMetadataCacheGridScrollEvent()
 {
 /*
-See MetadataCache::run comments in mdcache.cpp.  A 300ms singleshot timer
+See MetadataCache::run comments in mdcache.cpp.  A 100ms singleshot timer
 insures that the metadata caching is not restarted until there is a pause in
 the scolling.
 
@@ -1105,10 +1107,22 @@ vertical scrollbar (does not have a horizontal scrollbar).
     #endif
     }
 //    if (allMetadataLoaded)  return;
+//    qDebug() << "MW::loadMetadataCacheGridScrollEvent  justUpdatedBestFit =" << justUpdatedBestFit;
     if (G::isInitializing) return;
+    if (justUpdatedBestFit) {
+//        justUpdatedBestFit = false;
+//        return;
+    }
 
     metadataCacheStartRow = gridView->getFirstVisible();
-    metadataCacheScrollTimer->start(cacheDelay);
+    qDebug() << "\nMW::loadMetadataCacheGridScrollEvent  "
+               << "start =" << metadataCacheStartRow
+               << "justUpdatedBestFit =" << justUpdatedBestFit;
+
+    justUpdatedBestFit = false;
+
+//    metadataCacheScrollTimer->start(cacheDelay);
+
 //    qDebug() << "Grid visible rows:"
 //             << gridView->getFirstVisible()
 //             << gridView->getLastVisible()
@@ -1335,6 +1349,7 @@ void MW::updateIconBestFit()
     G::track(__FUNCTION__);
     #endif
     }
+    justUpdatedBestFit = true;
     gridView->bestAspect();
     thumbView->bestAspect();
 }
@@ -4381,6 +4396,11 @@ void MW::invertFilters()
 /*
 Currently this is just clearing filters ...  rgh what to do?
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
 
     if (dm->rowCount() == 0) {
@@ -4400,6 +4420,12 @@ Currently this is just clearing filters ...  rgh what to do?
 
 void MW::uncheckAllFilters()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+
     if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
 
     filters->uncheckAllFilters();
@@ -4420,6 +4446,11 @@ void MW::uncheckAllFilters()
 
 void MW::updateFilters()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     statusBar()->showMessage("Filters are updating for all the metadata in the folder", 1000);
     if (!allMetadataLoaded) loadEntireMetadataCache();
     if (allMetadataLoaded) dm->updateFilters();
@@ -4432,11 +4463,11 @@ void MW::refine()
     Clears refine for all rows, sets refine = true if pick = true, and clears pick
     for all rows.
     */
-        {
-        #ifdef ISDEBUG
-        G::track(__FUNCTION__);
-        #endif
-        }
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     uncheckAllFilters();
 
     // Are there any picks to refine?
@@ -4573,10 +4604,6 @@ void MW::thumbsShrink()
         else thumbView->thumbsShrink();
     }
 }
-
-/* RECENT MENU
- *
- */
 
 void MW::addRecentFolder(QString fPath)
 {
@@ -5106,6 +5133,11 @@ void MW::reportWorkspace(int n)
 
 void MW::loadWorkspaces()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int size = setting->beginReadArray("workspaces");
     for (int i = 0; i < size; ++i) {
         setting->setArrayIndex(i);
@@ -5447,6 +5479,11 @@ void MW::setShowImageCount()
 
 void MW::setFontSize(int pixels)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     G::fontSize = QString::number(pixels);
     QString s = "QWidget {font-size: " + G::fontSize + "px;}";
     this->setStyleSheet(s + css2);
@@ -5454,6 +5491,11 @@ void MW::setFontSize(int pixels)
 
 void MW::setInfoFontSize()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     /* imageView->infoOverlayFontSize already defined in preferences - just call
        so can redraw  */
     imageView->moveShootingInfo(imageView->shootingInfo);
@@ -5461,6 +5503,11 @@ void MW::setInfoFontSize()
 
 void MW::setClassificationBadgeImageDiam(int d)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     classificationBadgeInImageDiameter = d;
     imageView->setClassificationBadgeImageDiam(d);
 //    placeClassificationBadge();
@@ -5469,6 +5516,11 @@ void MW::setClassificationBadgeImageDiam(int d)
 
 void MW::setClassificationBadgeThumbDiam(int d)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     classificationBadgeInThumbDiameter = d;
 //    placeClassificationBadge();
 //    qDebug() << "ImageView::setClassificationBadgeImageDiam =" << classificationBadgeInThumbDiameter;
@@ -5488,6 +5540,11 @@ void MW::setPrefPage(int page)
 
 void MW::setDisplayResolution()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QPoint loc = centralWidget->window()->geometry().center();
 
 #ifdef Q_OS_WIN
@@ -5533,6 +5590,11 @@ void MW::setDisplayResolution()
 
 void MW::setActualDevicePixelRatio()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int virtualWidth = QGuiApplication::primaryScreen()->geometry().width();
     if (displayHorizontalPixels > 0)
         G::actualDevicePixelRatio =
@@ -5791,6 +5853,11 @@ being accessed by ImageCache but the datamodel is not.
 
 Also, the orientation metadata must be updated for any images ingested.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // rotate current loupe view image
     imageView->rotate(degrees);
 
@@ -8589,8 +8656,8 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    gridView->bestAspect();
-    thumbView->bestAspect();
+    updateIconBestFit();
+//    thumbView->bestAspect();
 
 //    QList<int> iconsCached;
 //    for (int i = 0; i < 10; ++i) iconsCached.append(i);

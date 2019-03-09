@@ -87,9 +87,6 @@ void MetadataCache::stopMetadateCache()
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
     }
     if (isRunning()) {
         mutex.lock();
@@ -105,6 +102,11 @@ void MetadataCache::stopMetadateCache()
 
 bool MetadataCache::isAllMetadataLoaded()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     allMetadataLoaded = true;
     for (int i = 0; i < dm->rowCount(); ++i) {
         if (dm->index(i, G::CreatedColumn).data().isNull()) {
@@ -117,6 +119,11 @@ bool MetadataCache::isAllMetadataLoaded()
 
 bool MetadataCache::isAllIconsLoaded()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     bool loaded = true;
     for (int i = 0; i < dm->rowCount(); ++i) {
         if (dm->index(i, G::PathColumn).data(Qt::DecorationRole).isNull()) {
@@ -139,9 +146,6 @@ and icons are loaded into the datamodel.
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
     }
     if (isRunning()) {
         mutex.lock();
@@ -156,6 +160,7 @@ and icons are loaded into the datamodel.
     cacheImages = CacheImages::New;
     imageCacheWasRunning = false;
     iconsCached.clear();
+    foundItemsToLoad = true;
 
     /* Create a map container for every row in the datamodel to track metadata caching. This
     is used to confirm all the metadata is loaded before ending the metadata cache. If the
@@ -174,6 +179,12 @@ and icons are loaded into the datamodel.
     this->endRow = startRow + segmentSize;
     if (this->endRow >= dm->rowCount()) this->endRow = dm->rowCount();
 //    this->endRow = dm->rowCount();
+
+    qDebug() << "MetadataCache::loadNewMetadataCache  "
+             << "startRow" << startRow
+             << "endRow" << endRow
+             << "foundItemsToLoad" << foundItemsToLoad;
+
     setIconTargets(startRow , thumbsPerPage);
     start(TimeCriticalPriority);
 }
@@ -218,10 +229,6 @@ image files are loaded.  The imageCacheThread is not invoked.
     this->endRow = startRow + chunkSize;
     if (this->endRow >= rowCount) this->endRow = rowCount;
 
-//    qDebug() << "MetadataCache::loadMetadataCache  "
-//             << "startRow" << startRow
-//             << "endRow" << endRow;
-
     foundItemsToLoad = false;
     for (int i = startRow; i < endRow; ++i) {
         if (dm->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
@@ -230,6 +237,11 @@ image files are loaded.  The imageCacheThread is not invoked.
             foundItemsToLoad = true;
         if (foundItemsToLoad) break;
     }
+
+    qDebug() << "MetadataCache::loadMetadataCache  "
+             << "startRow" << startRow
+             << "endRow" << endRow
+             << "foundItemsToLoad" << foundItemsToLoad;
 
     setIconTargets(startRow , thumbsPerPage);
     start(TimeCriticalPriority);
@@ -275,18 +287,32 @@ to run as a separate thread and can be executed directly.
 
 void MetadataCache::setIconTargets(int start, int thumbsPerPage)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (thumbsPerPage == 0) thumbsPerPage = maxChunkSize;
-    qDebug() << "MetadataCache::setIconTargets" << start << thumbsPerPage;
     iconTargetStart = start - thumbsPerPage;
     if (iconTargetStart < 0) iconTargetStart = 0;
     iconTargetEnd = start + thumbsPerPage * 2;
 //    mutex.lock();
     if (iconTargetEnd > dm->sf->rowCount()) iconTargetEnd = dm->sf->rowCount();
+    qDebug() << "MetadataCache::setIconTargets"
+             << "start" << start
+             << "thumbsPerPage" << thumbsPerPage
+             << "iconTargetStart" << iconTargetStart
+             << "iconTargetEnd" << iconTargetEnd;
 //    mutex.unloack();
 }
 
 void MetadataCache::iconCleanup()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QMutableListIterator<int> i(iconsCached);
     mutex.lock();
     QPixmap nullPm;
@@ -345,9 +371,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
             /*
                tried emit signal to metadata but really slow
                emit loadImageMetadata(fileInfo, true, true, false);  */
-//            qDebug() << "XXX" << __FUNCTION__ << fPath;
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
-//                G::track("metadata->loadImageMetadata row " + QString::number(row));
                 metadata->imageMetadata.row = dmRow;
                 dm->addMetadataItem(metadata->imageMetadata);
 //                G::track("dm->addMetadataItem         row " + QString::number(row));
@@ -356,7 +380,8 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         mutex.unlock();
         count++;
 
-//        if (row > endRow) continue;
+        if (row < iconTargetStart) continue;
+        if (row > iconTargetEnd) continue;
 
         // load icon
         mutex.lock();
@@ -428,10 +453,10 @@ that have been missed.
         }
         mutex.unlock();
 
-        iconCleanup();
+//        iconCleanup();
 
         emit updateAllMetadataLoaded(allMetadataLoaded);
-        emit updateIconBestFit();
+//        emit updateIconBestFit();
 
         if (allMetadataLoaded) emit updateFilters();
         qApp->processEvents();

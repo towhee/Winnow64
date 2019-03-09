@@ -240,6 +240,7 @@ public:
     bool allMetadataLoaded;
     bool allIconsLoaded;
     bool modeChangeJustHappened;
+    bool justUpdatedBestFit;
 
     bool showImageCount = true;
     bool isCurrentFolderOkay;
