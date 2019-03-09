@@ -386,7 +386,7 @@ dc schema for title:
                 endPos = xmpBa.indexOf("\"", ++startPos);
                 foundItem = true;
             }
-            else return "";
+            else return false;
         }
 
         if (xmpBa.at(startPos) == 0x3E) {                     // = '>'
