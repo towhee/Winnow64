@@ -327,6 +327,7 @@ added as column 4.
     while (idx.isValid())
     {
         QString path = idx.data(QFileSystemModel::FilePathRole).toString();
+//        qDebug() << __FUNCTION__ << path;
         if(!count.contains(path)) {
             dir->setPath(path);
             int n = dir->entryInfoList().size();

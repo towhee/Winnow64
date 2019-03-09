@@ -97,6 +97,7 @@ namespace G
 
     extern bool isThreadTrackingOn;
     extern bool isNewFolderLoaded;
+    extern bool isInitializing;
     extern int scrollBarThickness;
 //    extern qreal devicePixelRatio;
     extern QModelIndexList copyCutIdxList;  // req'd?

@@ -957,6 +957,7 @@ loaded.  Both thumbView and gridView have to be called.
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     iconWMax = 0, iconHMax = 0;
     if (thumbWidth > G::maxIconSize) thumbWidth = G::maxIconSize;
     if (thumbHeight > G::maxIconSize) thumbHeight = G::maxIconSize;
