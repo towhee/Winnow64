@@ -154,6 +154,8 @@ and icons are loaded into the datamodel.
     abort = false;
     allMetadataLoaded = false;
     cacheImages = CacheImages::New;
+    imageCacheWasRunning = false;
+    iconsCached.clear();
 
     /* Create a map container for every row in the datamodel to track metadata caching. This
     is used to confirm all the metadata is loaded before ending the metadata cache. If the
@@ -167,12 +169,12 @@ and icons are loaded into the datamodel.
     folderPath = dm->currentFolderPath;
 //    runImageCacheWhenDone = true;
 
-    this->startRow = startRow;
+    this->startRow = 0;
     int segmentSize = thumbsPerPage > maxChunkSize ? thumbsPerPage : maxChunkSize;
     this->endRow = startRow + segmentSize;
     if (this->endRow >= dm->rowCount()) this->endRow = dm->rowCount();
 //    this->endRow = dm->rowCount();
-
+    setIconTargets(startRow , thumbsPerPage);
     start(TimeCriticalPriority);
 }
 
@@ -202,7 +204,13 @@ image files are loaded.  The imageCacheThread is not invoked.
 //    runImageCacheWhenDone = false;
     this->cacheImages = cacheImages;
 
-    if (imageCacheThread->isRunning())imageCacheThread->pauseImageCache();
+    if (imageCacheThread->isRunning()){
+        imageCacheThread->pauseImageCache();
+        imageCacheWasRunning = true;
+    }
+    else {
+        imageCacheWasRunning = false;
+    }
 
     int rowCount = dm->sf->rowCount();
     this->startRow = startRow >= 0 ? startRow : 0;
@@ -214,7 +222,7 @@ image files are loaded.  The imageCacheThread is not invoked.
 //             << "startRow" << startRow
 //             << "endRow" << endRow;
 
-    bool foundItemsToLoad = false;
+    foundItemsToLoad = false;
     for (int i = startRow; i < endRow; ++i) {
         if (dm->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
             foundItemsToLoad = true;
@@ -222,8 +230,8 @@ image files are loaded.  The imageCacheThread is not invoked.
             foundItemsToLoad = true;
         if (foundItemsToLoad) break;
     }
-    if (!foundItemsToLoad) return;
 
+    setIconTargets(startRow , thumbsPerPage);
     start(TimeCriticalPriority);
 }
 
@@ -265,6 +273,37 @@ to run as a separate thread and can be executed directly.
 //    emit updateAllMetadataLoaded(allMetadataLoaded);
 }
 
+void MetadataCache::setIconTargets(int start, int thumbsPerPage)
+{
+    if (thumbsPerPage == 0) thumbsPerPage = maxChunkSize;
+    qDebug() << "MetadataCache::setIconTargets" << start << thumbsPerPage;
+    iconTargetStart = start - thumbsPerPage;
+    if (iconTargetStart < 0) iconTargetStart = 0;
+    iconTargetEnd = start + thumbsPerPage * 2;
+//    mutex.lock();
+    if (iconTargetEnd > dm->sf->rowCount()) iconTargetEnd = dm->sf->rowCount();
+//    mutex.unloack();
+}
+
+void MetadataCache::iconCleanup()
+{
+    QMutableListIterator<int> i(iconsCached);
+    mutex.lock();
+    QPixmap nullPm;
+    while (i.hasNext()) {
+        i.next();
+        int row = i.value();
+        if (row < iconTargetStart || row > iconTargetEnd) {
+            i.remove();
+            QStandardItem *item = new QStandardItem;
+            QModelIndex idx = dm->index(row, 0, QModelIndex());
+            item = dm->itemFromIndex(idx);
+            item->setIcon(nullPm);
+        }
+    }
+    mutex.unlock();
+}
+
 bool MetadataCache::loadMetadataIconChunk()
 {
 /*
@@ -282,7 +321,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     for (int row = startRow; row < endRow; ++row) {
 //    for (int row = startRow; row < dm->rowCount(); ++row) {
         if (abort) {
-            emit updateAllMetadataLoaded(isAllMetadataLoaded);
+            emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false, true, __FUNCTION__);
             return false;
         }
@@ -294,36 +333,43 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         QString fPath = idx.data(G::PathRole).toString();
         mutex.unlock();
 
+//        qDebug() << "WWW" << __FUNCTION__
+//                 << "row =" << row
+//                 << "dm->sf->rowCount" << dm->sf->rowCount()
+//                 << "dmRow =" << dmRow << "fPath =" << fPath;
+
         // load metadata
+        mutex.lock();
         if (dm->sf->index(row, G::CreatedColumn).data().isNull()) {
             QFileInfo fileInfo(fPath);
             /*
                tried emit signal to metadata but really slow
                emit loadImageMetadata(fileInfo, true, true, false);  */
-            mutex.lock();
+//            qDebug() << "XXX" << __FUNCTION__ << fPath;
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
 //                G::track("metadata->loadImageMetadata row " + QString::number(row));
                 metadata->imageMetadata.row = dmRow;
                 dm->addMetadataItem(metadata->imageMetadata);
 //                G::track("dm->addMetadataItem         row " + QString::number(row));
             }
-            mutex.unlock();
         }
+        mutex.unlock();
         count++;
 
 //        if (row > endRow) continue;
 
         // load icon
+        mutex.lock();
         if (idx.data(Qt::DecorationRole).isNull()) {
             QImage image;
-            mutex.lock();
             bool thumbLoaded = thumb->loadThumb(fPath, image);
 //            G::track("Thumb->loadThumb            row " + QString::number(row));
-            mutex.unlock();
             if (thumbLoaded) {
                 emit setIcon(dmRow, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                iconsCached.append(dmRow);
             }
         }
+        mutex.unlock();
     }
     qint64 ms = t.elapsed();
     qreal msperfile = (float)ms / count;
@@ -359,48 +405,51 @@ that have been missed.
     #ifdef ISDEBUG
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
     }
+    if (foundItemsToLoad) {
+        emit updateIsRunning(true, true, __FUNCTION__);
 
-    emit updateIsRunning(true, true, __FUNCTION__);
+        mutex.lock();
+        int rowCount = dm->rowCount();
+        mutex.unlock();
 
-    mutex.lock();
-    int rowCount = dm->rowCount();
-    mutex.unlock();
+        bool chunkLoaded = false;
+        chunkLoaded = loadMetadataIconChunk();
+        if (abort) return;
 
-    bool chunkLoaded = false;
-
-    chunkLoaded = loadMetadataIconChunk();
-    if (abort) return;
-
-    // check if all metadata and thumbs have been loaded
-    allMetadataLoaded = true;
-    for(int i = 0; i < rowCount; ++i) {
-        if (dm->sf->index(i, G::CreatedColumn).data().isNull()) {
-            allMetadataLoaded = false;
-            break;
+        // check if all metadata and thumbs have been loaded
+        allMetadataLoaded = true;
+        mutex.lock();
+        for(int i = 0; i < rowCount; ++i) {
+            if (dm->sf->index(i, G::CreatedColumn).data().isNull()) {
+                allMetadataLoaded = false;
+                break;
+            }
         }
+        mutex.unlock();
+
+        iconCleanup();
+
+        emit updateAllMetadataLoaded(allMetadataLoaded);
+        emit updateIconBestFit();
+
+        if (allMetadataLoaded) emit updateFilters();
+        qApp->processEvents();
+
+        // update status of metadataThreadRunningLabel in statusbar
+        emit updateIsRunning(false, true, __FUNCTION__);
     }
-
-    emit updateAllMetadataLoaded(isAllMetadataLoaded);
-
-    if (allMetadataLoaded) emit updateFilters();
-
-    qApp->processEvents();
 
     /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */
     if (cacheImages == CacheImages::New) emit loadImageCache();
-    if (cacheImages == CacheImages::Resume) imageCacheThread->resumeImageCache();
+    if (cacheImages == CacheImages::Resume && imageCacheWasRunning)
+        imageCacheThread->resumeImageCache();
 
 //    if (!imageCacheThread->cacheUpToDate()) {
 //        qDebug() << "Resuming image caching";
 //        imageCacheThread->resumeImageCache();
 //    }
 
-    // update status of metadataThreadRunningLabel in statusbar
-    emit updateIsRunning(false, true, __FUNCTION__);
 }

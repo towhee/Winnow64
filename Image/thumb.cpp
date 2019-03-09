@@ -57,6 +57,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
     bool success;
     QFile imFile(fPath);
     QImageReader thumbReader;
+//    qDebug() << __FUNCTION__  << "Open file" << fPath;
 //    QSize thumbMax(THUMB_MAX, THUMB_MAX);       // rgh review hard coding thumb size
     if (imFile.open(QIODevice::ReadOnly)) {
         // close file to allow qt thumbReader to work
@@ -106,6 +107,7 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
     #endif
     }
 
+//    qDebug() << __FUNCTION__  << "Open file" << fPath;
     if (imFile.open(QIODevice::ReadOnly)) {
         if (imFile.seek(offsetThumb)) {
             QByteArray buf = imFile.read(lengthThumb);

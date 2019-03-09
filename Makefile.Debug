@@ -1218,6 +1218,7 @@ debug\moc_imagecache.cpp: C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QModelIndexList \
 		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QMutex \
+		Datamodel\datamodel.h \
 		Metadata\metadata.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.12.0\msvc2017_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -1315,16 +1316,15 @@ debug\moc_imagecache.cpp: C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QDialog \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
-		Image\pixmap.h \
-		Datamodel\datamodel.h \
 		Datamodel\filters.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QPainter \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QLabel \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
+		Image\pixmap.h \
 		Cache\imagecache.h \
 		debug\moc_predefs.h \
 		C:\Qt\5.12.0\msvc2017_64\bin\moc.exe
@@ -14551,16 +14551,16 @@ debug\moc_compareview.cpp: C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QtWidgets 
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Cache\imagecache.h \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
-		Image\pixmap.h \
 		Datamodel\datamodel.h \
 		Datamodel\filters.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QPainter \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QLabel \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
+		Image\pixmap.h \
 		Views\iconview.h \
 		File\fstree.h \
 		Views\iconviewdelegate.h \
@@ -16198,16 +16198,16 @@ debug\moc_imageview.cpp: C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Cache\imagecache.h \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
-		Image\pixmap.h \
 		Datamodel\datamodel.h \
 		Datamodel\filters.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QPainter \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QLabel \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
+		Image\pixmap.h \
 		Views\iconview.h \
 		File\fstree.h \
 		Views\iconviewdelegate.h \
@@ -22537,6 +22537,7 @@ debug\imagecache.obj: Cache\imagecache.cpp Cache\imagecache.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QModelIndexList \
 		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QMutex \
+		Datamodel\datamodel.h \
 		Metadata\metadata.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.12.0\msvc2017_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -22634,16 +22635,15 @@ debug\imagecache.obj: Cache\imagecache.cpp Cache\imagecache.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QDialog \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
-		Image\pixmap.h \
-		Datamodel\datamodel.h \
 		Datamodel\filters.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QPainter \
-		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QLabel
+		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QLabel \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
+		Image\pixmap.h
 
 debug\loadusbdlg.obj: Dialogs\loadusbdlg.cpp Dialogs\loadusbdlg.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QDialog \
@@ -37892,16 +37892,16 @@ debug\compareview.obj: Views\compareview.cpp Views\compareview.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Cache\imagecache.h \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
-		Image\pixmap.h \
 		Datamodel\datamodel.h \
 		Datamodel\filters.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QPainter \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QLabel \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
+		Image\pixmap.h \
 		Views\iconview.h \
 		File\fstree.h \
 		Views\iconviewdelegate.h \
@@ -39590,16 +39590,16 @@ debug\imageview.obj: Views\imageview.cpp C:\Qt\5.12.0\msvc2017_64\include\QtWidg
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QVBoxLayout \
 		Cache\imagecache.h \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
-		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
-		Image\pixmap.h \
 		Datamodel\datamodel.h \
 		Datamodel\filters.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QPainter \
 		C:\Qt\5.12.0\msvc2017_64\include\QtWidgets\QLabel \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QThread \
+		C:\Qt\5.12.0\msvc2017_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.12.0\msvc2017_64\include\QtGui\QGradient \
+		Image\pixmap.h \
 		Views\iconview.h \
 		File\fstree.h \
 		Views\iconviewdelegate.h \

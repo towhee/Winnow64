@@ -812,7 +812,7 @@ If there is filtering then the entire cache is reloaded.
     G::track(__FUNCTION__);;
     if (isRunning()) pauseImageCache();
 
-    reportCache("Before sort");
+//    reportCache("Before sort");
 
     cacheItemListCopy = cacheItemList;
     cacheItemList.clear();
@@ -873,7 +873,7 @@ If there is filtering then the entire cache is reloaded.
     setPriorities(cache.key);
     setTargetRange();
 
-    reportCache("After sort");
+//    reportCache("After sort");
 
 /*    qDebug() << "\nAfter reset priorities and target range:" << "\nKey OrigKey Priority Target Cached SizeMB Width Height FName";
     for (int i=0; i<cache.totFiles; ++i) {
