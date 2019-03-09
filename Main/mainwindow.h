@@ -374,6 +374,7 @@ private slots:
     // caching status functions
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();
+    void updateIconBestFit();
     void updateImageCachePosition();
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy);
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
@@ -815,7 +816,7 @@ private:
     bool isLoadSettings;
     bool isSettings;
     bool isFirstTimeNoSettings;
-    bool isInitializing;
+//    bool isInitializing;
     bool isStartSilentCheckForUpdates = true;    // flag true until startup check for updates has been completed
     bool isStressTest;
     bool hasGridBeenActivated;

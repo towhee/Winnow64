@@ -134,7 +134,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     if (!isSettings) centralLayout->setCurrentIndex(StartTab);
     isSettings = true;
-    isInitializing = false;
+    G::isInitializing = false;
 
     qRegisterMetaType<ImageMetadata>();
 
@@ -146,7 +146,7 @@ void MW::initialize()
 {
     this->setWindowTitle("Winnow");
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    isInitializing = true;
+    G::isInitializing = true;
     isSlideShow = false;
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
@@ -717,7 +717,7 @@ void MW::folderSelectionChange()
     }
 
     // If just opened application
-    if (isInitializing) {
+    if (G::isInitializing) {
         if (rememberLastDir) {
             // lastDir is from QSettings for persistent memory between sessions
             if (isFolderValid(lastDir, true, true)) {
@@ -726,7 +726,7 @@ void MW::folderSelectionChange()
                 fsTree->select(currentViewDir);
             }
             else {
-               isInitializing = false;
+               G::isInitializing = false;
                QModelIndex idx = fsTree->fsModel->index(currentViewDir);
                if (fsTree->fsModel->hasIndex(idx.row(), idx.column(), idx.parent()))
                     fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(idx));
@@ -736,7 +736,7 @@ void MW::folderSelectionChange()
     }
 
     // folder selected from Folders or Bookmarks(Favs)
-    if (!isInitializing || !rememberLastDir) {
+    if (!G::isInitializing || !rememberLastDir) {
         currentViewDir = getSelectedPath();
     }
 
@@ -783,6 +783,7 @@ void MW::folderSelectionChange()
     */
 //    G::track(__FUNCTION__, "tiger calling clearAll");
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
+        qDebug() << "Datamodel Failed To Load for" << currentViewDir;
         clearAll();
         enableSelectionDependentMenus();
         QDir dir(currentViewDir);
@@ -839,7 +840,8 @@ void MW::folderSelectionChange()
     // req'd rgh
     dm->updateImageList();
 
-    metadataCacheThread->loadNewMetadataCache(gridView->getThumbsPerPage());
+    qDebug() << "metadataCacheThread->loadNewMetadataCache(getThumbsPerPage())  dm->rowCount() =" << dm->rowCount();
+    metadataCacheThread->loadNewMetadataCache(getThumbsPerPage());
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -879,8 +881,8 @@ so scrollTo and delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-    G::track(__FUNCTION__, current.data(G::PathRole).toString());
-    qDebug() << current.row() << current.column();
+//    G::track(__FUNCTION__, current.data(G::PathRole).toString());
+//    qDebug() << current.row() << current.column();
 
     bool isStart = false;
 
@@ -905,7 +907,7 @@ so scrollTo and delegate use of the current index must check the row.
 
     // user clicks outside thumb but inside treeView dock
     QModelIndexList selected = selectionModel->selectedIndexes();
-    if (selected.isEmpty() && !isInitializing) return;
+    if (selected.isEmpty() && !G::isInitializing) return;
 
     // record current row as it is used to sync everything
     currentRow = current.row();
@@ -980,8 +982,8 @@ so scrollTo and delegate use of the current index must check the row.
     }
 
     // terminate initializing flag (set when new folder selected)
-    if (isInitializing) {
-        isInitializing = false;
+    if (G::isInitializing) {
+        G::isInitializing = false;
         if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
             dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
         {
@@ -1027,7 +1029,7 @@ a bookmark or ejects a drive and the resulting folder does not have any eligible
     imageView->clear();
 //    progressLabel->setVisible(false);
     setThreadRunStatusInactive();                      // turn thread activity buttons gray
-    isInitializing = false;
+    G::isInitializing = false;
     isDragDrop = false;
 
     updateStatus(false, "");
@@ -1044,7 +1046,7 @@ void MW::nullFiltration()
     metadata->clear();
     imageView->clear();
     progressLabel->setVisible(false);
-//    isInitializing = false;
+//    G::isInitializing = false;
     isDragDrop = false;
 }
 
@@ -1081,6 +1083,8 @@ horizontal and vertical scrollbars.
     #endif
     }
 //    if (allMetadataLoaded)  return;
+    if (G::isInitializing) return;
+
     metadataCacheStartRow = thumbView->getFirstVisible();
     metadataCacheScrollTimer->start(cacheDelay);
 }
@@ -1101,6 +1105,8 @@ vertical scrollbar (does not have a horizontal scrollbar).
     #endif
     }
 //    if (allMetadataLoaded)  return;
+    if (G::isInitializing) return;
+
     metadataCacheStartRow = gridView->getFirstVisible();
     metadataCacheScrollTimer->start(cacheDelay);
 //    qDebug() << "Grid visible rows:"
@@ -1145,7 +1151,8 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
 
 //    qDebug() << "MW::loadMetadataChunk " << firstRow << thumbsPerPage;
 
-    if (imageCacheThread->isRunning()) imageCacheThread->pauseImageCache();
+    if (G::isInitializing || dm->rowCount() == 0) return;
+
     metadataCacheThread->loadMetadataCache(getFirstVisibleThumb(),
                                            getThumbsPerPage(),
                                            MetadataCache::CacheImages::Resume);
@@ -1153,7 +1160,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
 
 void MW::loadMetadataChunk()
 {
-    /*
+/*
 If there has not been another call to this function in cacheDelay ms then the
 metadataCacheThread is restarted at the row of the first visible thumb after the scrolling.
 */
@@ -1166,6 +1173,8 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     //    if (metadataCacheThread->isRunning()) return;
 
     //    qDebug() << "MW::loadMetadataChunk " << firstRow << thumbsPerPage;
+
+    if (G::isInitializing || dm->rowCount() == 0) return;
 
     if (imageCacheThread->isRunning()) imageCacheThread->pauseImageCache();
     metadataCacheThread->loadMetadataCache(getFirstVisibleThumb(),
@@ -1188,6 +1197,8 @@ has been loaded.
     }
     G::track(__FUNCTION__);
 //    if (metadataCacheThread->isAllMetadataLoaded()) return;
+    if (G::isInitializing) return;
+
     bool resumeImageCaching = false;
     if (imageCacheThread->isRunning()) {
         imageCacheThread->pauseImageCache();
@@ -1207,10 +1218,10 @@ has been loaded.
         }
     }
 
-//    metadataCacheThread->loadAllMetadata();
-//    allMetadataLoaded = true;
+    metadataCacheThread->loadAllMetadata();
+    allMetadataLoaded = true;
 
-    metadataCacheThread->loadMetadataCache(250, 500);
+//    metadataCacheThread->loadMetadataCache(250, 500);
 
     dm->updateFilters();
     progressBar->recoverProgressState();
@@ -1317,6 +1328,17 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     return;
 }
 
+void MW::updateIconBestFit()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    gridView->bestAspect();
+    thumbView->bestAspect();
+}
+
 void MW::loadImageCache()
 {
 /*
@@ -1329,59 +1351,28 @@ been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
-    // ASync
-    if (G::aSync && allMetadataLoaded) dm->updateFilters();
-
-    // After add chunked metadata update the filters
-//    if (allMetadataLoaded) dm->updateFilters();
-
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
-
-    // Now doing this during loadMetaChunk in metadataCacheThread
-//    if (!G::aSync) dm->addMetadata(progressBar, isShowCacheStatus);
 
     // update filter item counts
     dm->filteredItemCount();
     dm->unfilteredItemCount();
 
     // determine best aspect ratio for thumbnails
-    gridView->bestAspect();
-    thumbView->bestAspect();
+//    gridView->bestAspect();
+//    thumbView->bestAspect();
 
-#ifdef ISTEST
-    QString async;
-    int threads;
-    int n = dm->sf->rowCount();
-    if (G::aSync) {
-        async = "Asynchronous ";
-        threads = G::cores;
-    }
-    else {
-        async = "Synchronous  ";
-        threads = 1;
-    }
-
-    qDebug() << "Method:" << async
-             << "Threads:" << threads
-             << "Files:" << n
-             << "Time(ms):" << cacheTimer.elapsed();
-#endif
-
-    statusBar()->showMessage("Loading the image cache", 1000);
+    statusBar()->showMessage("Loading the image cache", 1000);  // rgh remove this?
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
     QModelIndexList indexesList = selectionModel->selectedIndexes();
-//    Q_ASSERT(indexesList.isEmpty());
     QString fPath;
     if (indexesList.isEmpty())
         fPath = dm->sf->index(0, G::PathColumn).data().toString();
     else
         fPath = indexesList.first().data(G::PathRole).toString();
-
-//    return;
 
     // imageCacheThread checks if already running and restarts caching
     imageCacheThread->initImageCache(cacheSizeMB,
@@ -1452,7 +1443,7 @@ void MW::checkDirState(const QModelIndex &, int, int)
     G::track(__FUNCTION__);
     #endif
     }
-    if (isInitializing) return;
+    if (G::isInitializing) return;
 
     if (!QDir().exists(currentViewDir)) {
         currentViewDir = "";
@@ -3315,6 +3306,9 @@ void MW::createCaching()
 
     connect(metadataCacheThread, SIGNAL(updateFilters()),
             this, SLOT(updateFilters()));
+
+    connect(metadataCacheThread, SIGNAL(updateIconBestFit()),
+            this, SLOT(updateIconBestFit()));
 
     connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
             this, SLOT(updateAllMetadataLoaded(bool)));
@@ -7115,7 +7109,7 @@ void MW::toggleFolderDockVisibility() {
     G::track(__FUNCTION__);
     #endif
     }
-    if (isInitializing) return;
+    if (G::isInitializing) return;
 
     if (folderDock->isVisible() && folderDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
     if (folderDock->isVisible() && !folderDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
@@ -7144,7 +7138,7 @@ void MW::toggleFavDockVisibility() {
     #endif
     }
     G::track(__FUNCTION__);
-    if (isInitializing) return;
+    if (G::isInitializing) return;
 
     if (favDock->isVisible() && favDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
     if (favDock->isVisible() && !favDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
@@ -7172,7 +7166,7 @@ void MW::toggleFilterDockVisibility() {
     G::track(__FUNCTION__);
     #endif
     }
-    if (isInitializing) return;
+    if (G::isInitializing) return;
 
     if (filterDock->isVisible() && filterDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
     if (filterDock->isVisible() && !filterDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
@@ -7200,7 +7194,7 @@ void MW::toggleMetadataDockVisibility() {
     G::track(__FUNCTION__);
     #endif
     }
-    if (isInitializing) return;
+    if (G::isInitializing) return;
 
     if (metadataDock->isVisible() && metadataDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
     if (metadataDock->isVisible() && !metadataDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
@@ -7229,7 +7223,7 @@ void MW::toggleThumbDockVisibity()
     G::track(__FUNCTION__);
     #endif
     }
-    if (isInitializing) return;
+    if (G::isInitializing) return;
 
     if (thumbDock->isVisible() && thumbDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
     if (thumbDock->isVisible() && !thumbDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
@@ -8595,7 +8589,25 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    imageCacheThread->reportCache("");
+    gridView->bestAspect();
+    thumbView->bestAspect();
+
+//    QList<int> iconsCached;
+//    for (int i = 0; i < 10; ++i) iconsCached.append(i);
+//    qDebug() << iconsCached;
+//    QMutableListIterator<int> i(iconsCached);
+//    while (i.hasNext()) {
+//        i.next();
+//        int x = i.value();
+//        if (x < 3 || x > 7) i.remove();
+//    }
+//    qDebug() << iconsCached;
+
+//    metadataCacheThread->iconCleanup();
+//    QImage im;
+//    gridView->setIcon(0, im);
+
+//    imageCacheThread->reportCache("");
 
 //    imageCacheThread->reportCache("Report Cache");
 
