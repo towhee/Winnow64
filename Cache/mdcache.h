@@ -41,7 +41,6 @@ public:
     int maxChunkSize = 250;
     QMap<int, bool> loadMap;
 
-
 protected:
     void run() Q_DECL_OVERRIDE;
 
@@ -52,12 +51,9 @@ signals:
     void resumeImageCache();
     void updateIsRunning(bool, bool, QString);
     void updateAllMetadataLoaded(bool);
+    void updateIconBestFit();
     void updateFilters();
     void showCacheStatus(int, bool);            // row, renew progress bar
-
-//    void refreshThumbs();
-//    void loadImageMetadata(QFileInfo);
-//    void updateStatus(bool, QString);
 
 private:
     QMutex mutex;
@@ -72,11 +68,18 @@ private:
     QModelIndex idx;
     int startRow;
     int endRow;
+
+    // icon caching
+    int iconTargetStart = 4;
+    int iconTargetEnd = 8;
+    QList<int> iconsCached;
+
+    bool foundItemsToLoad;
+    bool imageCacheWasRunning;
     CacheImages cacheImages;
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
 
-//    bool runImageCacheWhenDone;
     bool allMetadataLoaded;
     bool allIconsLoaded;
     bool isShowCacheStatus;
@@ -85,7 +88,8 @@ private:
     void createCacheStatus();
     void updateCacheStatus(int row);
     bool loadMetadataIconChunk();
-//    void track(QString fPath, QString msg);
+    void iconCleanup();
+    void setIconTargets(int start, int end);
 
 //     bool isShowCacheStatus;
 

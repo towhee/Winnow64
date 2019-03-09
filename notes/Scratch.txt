@@ -4,3 +4,9 @@ rating
 dimensions
 aperture
 focal length
+
+"   6905700"   "MW::handleStartupArgs............................."   ""
+"  35385200"   "MW::setThumbDockFeatures.........................."   ""
+"   2732400"   "IconView::getCellSize............................."   ""
+QWidget::setMaximumSize: (Thumbnails/IconView) Negative sizes (16777215,-842150387) are not possible
+

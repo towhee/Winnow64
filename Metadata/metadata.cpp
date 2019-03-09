@@ -4596,7 +4596,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     int msDelay = 0;
     int msInc = 1;
     bool fileOpened = false;
-//    qDebug() << G::t.restart() << "\t" << "Metadata::readMetadata  fPath =" << fPath;
     do {
         if (file.open(QIODevice::ReadOnly)) {
             if (ext == "cr2") formatCanon();
