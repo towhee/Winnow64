@@ -193,13 +193,15 @@ void IconViewDelegate::setCurrentIndex(QModelIndex current)
 }
 
 QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
-                              const QModelIndex& /*index*/) const
+                              const QModelIndex& index) const
 {
     {
     #ifdef ISDEBUG
 //  G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << "IconViewDelegate::sizeHint  "
+             << "row =" << index.row();
     QFont font = QApplication::font();
     QFontMetrics fm(font);
     return cellSize;
@@ -226,7 +228,9 @@ textRect         = a rectangle below itemRect
     }
     painter->save();
 
-//qDebug() << "option =" << option.rect;/
+//qDebug() << "IconViewDelegate::paint  "
+//         << "option =" << option.rect
+//         << "row =" << index.row();
 
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     QSize iconsize = icon.actualSize(thumbSize);
