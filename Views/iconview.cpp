@@ -1,6 +1,32 @@
 #include "Views/iconview.h"
 #include "Main/mainwindow.h"
 
+// Trial to prevent unwanted scrolling - did not work
+
+ScrollBar::ScrollBar(QWidget *parent) :
+    QScrollBar(parent)
+{
+
+}
+
+void ScrollBar::setValue(int value)
+{
+    qDebug() << "ScrollBar::setValue" << value;
+    QScrollBar::setValue(value);
+}
+
+bool ScrollBar::event(QEvent *event)
+{
+//    qDebug() << "ScrollBar::event" << event;
+    return QScrollBar::event(event);
+}
+
+void ScrollBar::sliderChange(QAbstractSlider::SliderChange change)
+{
+//    qDebug() << "ScrollBar::sliderChange" << change;
+    QScrollBar::sliderChange(change);
+}
+
 /*  ThumbView Overview
 
 ThumbView manages the list of images within a folder and it's children
@@ -117,11 +143,15 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     m2 = qobject_cast<MW*>(parent);
     pickFilter = false;
 
+//    ScrollBar *scrollBar = new ScrollBar;
+//    setVerticalScrollBar(scrollBar);
+
     setViewMode(QListView::IconMode);
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setTabKeyNavigation(true);  // not working
     setResizeMode(QListView::Adjust);
     setLayoutMode(QListView::Batched);
+
     setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
 //    setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     verticalScrollBar()->setObjectName("VerticalScrollBar");
@@ -139,8 +169,10 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setLineWidth(0);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-    horizontalScrollBar()->setObjectName("ThumbViewHorizontalScrollBar");
-    verticalScrollBar()->setObjectName("ThumbViewVerticalScrollBar");
+//    if (objName == "Thumbnails") {
+        horizontalScrollBar()->setObjectName("ThumbViewHorizontalScrollBar");
+        verticalScrollBar()->setObjectName("ThumbViewVerticalScrollBar");
+//    }
 //    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 //    setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
 //    setBatchSize(2);
@@ -846,6 +878,7 @@ resize and preference adjustment operations.
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     if (!isWrapping()) return;
 
     // get
@@ -930,11 +963,13 @@ void IconView::resizeEvent(QResizeEvent *event)
     }
     QListView::resizeEvent(event);
 
+    m2->loadMetadataCacheAfterDelay();
+
     // prevent a feedback loop where justify() or rejustify() triggers a resize event
-    if (skipResize) {
-        skipResize = false;
-        return;
-    }
+//    if (skipResize) {
+//        skipResize = false;
+//        return;
+//    }
 
     static int prevWidth = 0;
     if (isWrapping() && width() != prevWidth) {
@@ -977,6 +1012,9 @@ loaded.  Both thumbView and gridView have to be called.
     if (iconWMax > iconHMax) thumbHeight = thumbWidth * ((double)iconHMax / iconWMax);
     if (iconHMax > iconWMax) thumbWidth = thumbHeight * ((double)iconWMax / iconHMax);
     setThumbParameters();
+//    iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
+//        0, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
+//    setSpacing(0);
     bestAspectRatio = (double)thumbHeight / thumbWidth;
 }
 
@@ -1183,8 +1221,6 @@ MW::mouseClickScroll == true.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
-
     if (!isWrapping())
         horizontalScrollBar()->setValue(getHorizontalScrollBarOffset(row));
     else

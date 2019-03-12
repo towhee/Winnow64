@@ -386,9 +386,9 @@ private slots:
     int getThumbsPerPage();
     int getFirstVisibleThumb();
     void loadMetadataChunk();
-    void loadMetadataChunkAfterScroll();
-    void loadMetadataCacheThumbScrollEvent();
-    void loadMetadataCacheGridScrollEvent();
+//    void loadMetadataChunkAfterScroll();
+//    void loadMetadataCacheThumbScrollEvent();
+    void loadMetadataCacheAfterDelay();
 //    void loadMetadataCache(int startRow = 0);
     void loadEntireMetadataCache();
     void loadImageCache();
@@ -838,7 +838,6 @@ private:
 
     bool newScrollSignal;           // used for scroll signal delay in case many/sec
     QTimer *metadataCacheScrollTimer;
-    int metadataCacheStartRow;
 
     int prevCentralView;
     QString mouseOverFolder;        // current mouseover folder in folder dock used
