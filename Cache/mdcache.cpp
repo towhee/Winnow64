@@ -296,14 +296,16 @@ void MetadataCache::setIconTargets(int start, int thumbsPerPage)
     iconTargetStart = start - thumbsPerPage;
     if (iconTargetStart < 0) iconTargetStart = 0;
     iconTargetEnd = start + thumbsPerPage * 2;
-//    mutex.lock();
     if (iconTargetEnd > dm->sf->rowCount()) iconTargetEnd = dm->sf->rowCount();
+
+    if (iconTargetStart < startRow) startRow = iconTargetStart;
+    if (iconTargetEnd > endRow) endRow = iconTargetEnd;
+
     qDebug() << "MetadataCache::setIconTargets"
              << "start" << start
              << "thumbsPerPage" << thumbsPerPage
              << "iconTargetStart" << iconTargetStart
              << "iconTargetEnd" << iconTargetEnd;
-//    mutex.unloack();
 }
 
 void MetadataCache::iconCleanup()
@@ -344,7 +346,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     G::t.restart();
     int count = 0;
 
-    for (int row = startRow; row < endRow; ++row) {
+    for (row = startRow; row < endRow; ++row) {
 //    for (int row = startRow; row < dm->rowCount(); ++row) {
         if (abort) {
             emit updateAllMetadataLoaded(allMetadataLoaded);
@@ -440,7 +442,11 @@ that have been missed.
 
         bool chunkLoaded = false;
         chunkLoaded = loadMetadataIconChunk();
-        if (abort) return;
+        if (abort) {
+            qDebug() << "!!!!  Aborting MetadataCache::run  "
+                     << "row =" << row;
+            return;
+        }
 
         // check if all metadata and thumbs have been loaded
         allMetadataLoaded = true;
@@ -453,10 +459,13 @@ that have been missed.
         }
         mutex.unlock();
 
-//        iconCleanup();
+        iconCleanup();
 
         emit updateAllMetadataLoaded(allMetadataLoaded);
-//        emit updateIconBestFit();
+
+        /* Only get bestFit on the first cache because the QListView rescrolls whenever a
+           change to sizehint occurs  */
+        if (cacheImages == CacheImages::New) emit updateIconBestFit();
 
         if (allMetadataLoaded) emit updateFilters();
         qApp->processEvents();
@@ -468,6 +477,13 @@ that have been missed.
     /* After loading metadata it is okay to cache full size images, where the
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */
+
+    qDebug() << "cacheImages =" << cacheImages
+             << " (No = 0, "
+                "New = 1, "
+                "Update = 2, "
+                "Resume = 3)";
+
     if (cacheImages == CacheImages::New) emit loadImageCache();
     if (cacheImages == CacheImages::Resume && imageCacheWasRunning)
         imageCacheThread->resumeImageCache();
