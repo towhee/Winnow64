@@ -390,6 +390,44 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
          }
     }
 
+    if(event->type() == QEvent::Paint
+            && gridView->readyToScroll
+            && (obj->objectName() == "ThumbViewVerticalScrollBar"
+            || obj->objectName() == "ThumbViewHorizontalScrollBar"))
+    {
+        if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
+            /*
+            qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
+                     << horizontalScrollBar()->maximum()
+                     << getHorizontalScrollBarMax();
+                     */
+            if (gridView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
+                /*
+                 qDebug() << G::t.restart() << "\t" << objectName()
+                     << ": Event Filter sending row =" << currentRow
+                     << "horizontalScrollBarMax Qt vs Me"
+                     << thumbView->horizontalScrollBar()->maximum()
+                     << thumbView->getHorizontalScrollBarMax();     */
+                gridView->scrollToCurrent(currentRow);
+            }
+        }
+        if (obj->objectName() == "ThumbViewVerticalScrollBar") {
+             /*
+             qDebug() << G::t.restart() << "\t" << objectName() << "VerScrollCurrentMax / FinalMax:"
+                      << thumbView->verticalScrollBar()->maximum()
+                      << thumbView->getVerticalScrollBarMax();*/
+             if (gridView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
+                /*
+                 qDebug() << G::t.restart() << "\t" << objectName()
+                          << ": Event Filter sending row =" << currentRow
+                          << "verticalScrollBarMax Qt vs Me"
+                          << thumbView->verticalScrollBar()->maximum()
+                          << thumbView->getVerticalScrollBarMax();*/
+                 gridView->scrollToCurrent(currentRow);
+             }
+         }
+    }
+
     /*  Intercept context menu
      Intercept context menu to enable/disable:
      - eject usb drive menu item
@@ -727,7 +765,7 @@ void MW::folderSelectionChange()
                 fsTree->select(currentViewDir);
             }
             else {
-               G::isInitializing = false;
+//               G::isInitializing = false;
                QModelIndex idx = fsTree->fsModel->index(currentViewDir);
                if (fsTree->fsModel->hasIndex(idx.row(), idx.column(), idx.parent()))
                     fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(idx));
@@ -776,6 +814,15 @@ void MW::folderSelectionChange()
     executed when the change file event is fired.
     */
     metadataLoaded = false;
+
+    /* While still initializing the window show event has not happened yet, so base the
+    thumbsPerPage, used to figure out how many icons to cache, on the thumbsPerPage saved
+    from the last session in settings.  Otherwise just use existing windows and sizes to make
+    the calculation.  G::isInitializing is set to false in fileSelectionChange, which is called
+    */
+    int thumbsPerPage;
+    if (G::isInitializing) thumbsPerPage = setting->value("thumbsPerPage").toInt();
+    else thumbsPerPage = getThumbsPerPage();
 
     /* The first time a folder is selected the datamodel is loaded with all the
     supported images.  If there are no supported images then do some cleanup. If
@@ -841,12 +888,14 @@ void MW::folderSelectionChange()
     // req'd rgh
     dm->updateImageList();
 
-    qDebug() << "MW::folderSelectionChange  dm->rowCount() =" << dm->rowCount();
-    metadataCacheThread->loadNewMetadataCache(getThumbsPerPage());
+    qDebug() << "G::isInitializing" << G::isInitializing << thumbsPerPage;
+    metadataCacheThread->loadNewMetadataCache(thumbsPerPage);
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
     updateStatus(true);
+
+    G::isInitializing = false;
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
@@ -1068,15 +1117,18 @@ been cached (including the thumbs).
     allMetadataLoaded = isLoaded;
 }
 
-void MW::loadMetadataCacheThumbScrollEvent()
+void MW::loadMetadataCacheAfterDelay()
 {
 /*
-See MetadataCache::run comments in mdcache.cpp.  A 300ms singleshot timer
-insures that the metadata caching is not restarted until there is a pause in
-the scrolling.
+See MetadataCache::run comments in mdcache.cpp. A 100ms singleshot timer insures that the
+metadata caching is not restarted until there is a pause in the scolling.
 
-This function is connected to the value change signal in both the thumbView
-horizontal and vertical scrollbars.
+This function is connected to the value change signal in the gridView vertical scrollbar (does
+not have a horizontal scrollbar) and the thumbView vertical and horizontal scrollbars.  It is
+also connected to the resize event in IconView, as a resize could increase the number of thumbs
+visible (ie resize to full screen) that require metadata or icons to be cached.
+
+After the delay, if another singleshot has not been fired, loadMetadataChunk is called.
 */
     {
     #ifdef ISDEBUG
@@ -1084,92 +1136,53 @@ horizontal and vertical scrollbars.
     #endif
     }
 //    if (allMetadataLoaded)  return;
-    if (G::isInitializing) return;
+    if (G::isInitializing || !G::isNewFolderLoaded) return;
 
-    metadataCacheStartRow = thumbView->getFirstVisible();
-    qDebug() << "MW::loadMetadataCacheThumbScrollEvent  start =" << metadataCacheStartRow;
+    qDebug() << "\nMW::loadMetadataCacheGridScrollEvent  ";
+
     metadataCacheScrollTimer->start(cacheDelay);
-}
-
-void MW::loadMetadataCacheGridScrollEvent()
-{
-/*
-See MetadataCache::run comments in mdcache.cpp.  A 100ms singleshot timer
-insures that the metadata caching is not restarted until there is a pause in
-the scolling.
-
-This function is connected to the value change signal in the gridView
-vertical scrollbar (does not have a horizontal scrollbar).
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    if (allMetadataLoaded)  return;
-//    qDebug() << "MW::loadMetadataCacheGridScrollEvent  justUpdatedBestFit =" << justUpdatedBestFit;
-    if (G::isInitializing) return;
-    if (justUpdatedBestFit) {
-//        justUpdatedBestFit = false;
-//        return;
-    }
-
-    metadataCacheStartRow = gridView->getFirstVisible();
-    qDebug() << "\nMW::loadMetadataCacheGridScrollEvent  "
-               << "start =" << metadataCacheStartRow
-               << "justUpdatedBestFit =" << justUpdatedBestFit;
-
-    justUpdatedBestFit = false;
-
-//    metadataCacheScrollTimer->start(cacheDelay);
-
-//    qDebug() << "Grid visible rows:"
-//             << gridView->getFirstVisible()
-//             << gridView->getLastVisible()
-//             << "thumbs per page =" << gridView->getThumbsPerPage();
 }
 
 int MW::getThumbsPerPage()
 {
+/*
+Returns the greater number of thumbnails that will be visible in the gridView or thumbView
+viewports.  This is used to determine how many thumbnails/icons to cache in
+MetadataCache::setIconTargets.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int tpp1 = 0;
     int tpp2 = 0;
-    if (thumbView->isVisible()) tpp1 = thumbView->getThumbsPerPage();
-    if (gridView->isVisible()) tpp2 = gridView->getThumbsPerPage();
+    tpp1 = thumbView->getThumbsPerPage();
+    tpp2 = gridView->getThumbsPerPage();
     int tpp = tpp1 > tpp2 ? tpp1 : tpp2;
     return tpp;
 }
 
 int MW::getFirstVisibleThumb()
 {
-    int fvt1 = 0;
-    int fvt2 = 0;
-    if (thumbView->isVisible()) fvt1 = thumbView->getFirstVisible();
-    if (gridView->isVisible()) fvt2 = gridView->getFirstVisible();
-    int fvt = fvt1 > fvt2 ? fvt1 : fvt2;
-    return fvt;
-}
-
-void MW::loadMetadataChunkAfterScroll()
-{
 /*
-If there has not been another call to this function in cacheDelay ms then the
-metadataCacheThread is restarted at the row of the first visible thumb after the scrolling.
+Returns the lesser number of the first visible thumbnail in the gridView or thumbView
+viewports. This is used to determine how many thumbnails/icons to cache in
+MetadataCache::setIconTargets and the start row for matadata caching in
+MetadataCache::loadMetadataCache.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-//    G::track(__FUNCTION__);
-//    if (metadataCacheThread->isRunning()) return;
-
-//    qDebug() << "MW::loadMetadataChunk " << firstRow << thumbsPerPage;
-
-    if (G::isInitializing || dm->rowCount() == 0) return;
-
-    metadataCacheThread->loadMetadataCache(getFirstVisibleThumb(),
-                                           getThumbsPerPage(),
-                                           MetadataCache::CacheImages::Resume);
+    int last = dm->sf->rowCount();
+    int fvt1 = last;
+    int fvt2 = last;
+    if (thumbView->isVisible()) fvt1 = thumbView->getFirstVisible();
+    if (gridView->isVisible()) fvt2 = gridView->getFirstVisible();
+    int fvt = fvt1 < fvt2 ? fvt1 : fvt2;
+    return fvt;
 }
 
 void MW::loadMetadataChunk()
@@ -1186,7 +1199,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     //    G::track(__FUNCTION__);
     //    if (metadataCacheThread->isRunning()) return;
 
-    //    qDebug() << "MW::loadMetadataChunk " << firstRow << thumbsPerPage;
+    qDebug() << "MW::loadMetadataChunk " << getFirstVisibleThumb() << getThumbsPerPage();
 
     if (G::isInitializing || dm->rowCount() == 0) return;
 
@@ -1344,14 +1357,24 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
 
 void MW::updateIconBestFit()
 {
+/*
+This function is signalled from MetadataCache after each chunk of icons have been processed.
+The best aspect of the thumbnail cells is calculated. The repainting of the thumbs triggers an
+unwanted scrolling, so the first visible thumbnail is recorded before the bestAspect is called
+and the IconView is returned to its previous position after.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    justUpdatedBestFit = true;
+//    justUpdatedBestFit = true;
+//    qDebug() << "MW::updateIconBestFit" << gridView->verticalScrollBar()->value();
+//    int gridFirstVisible = gridView->getFirstVisible();
     gridView->bestAspect();
     thumbView->bestAspect();
+//    QModelIndex idx = dm->sf->index(gridFirstVisible, 0);
+//    gridView->scrollTo(idx, QAbstractItemView::PositionAtTop);
 }
 
 void MW::loadImageCache()
@@ -1366,6 +1389,8 @@ been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
+
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
@@ -3338,18 +3363,18 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
             this, SLOT(updateMetadataCacheStatus(int,bool)));
 
-    // ASync
-    connect(mdCacheMgr, SIGNAL(updateFilters()),
-            this, SLOT(updateFilters()));
-    // ASync
-    connect(mdCacheMgr, SIGNAL(updateAllMetadataLoaded(bool)),
-            this, SLOT(updateAllMetadataLoaded(bool)));
-    // ASync
-    connect(mdCacheMgr, SIGNAL(loadImageCache()),
-            this, SLOT(loadImageCache()));
-    // ASync
-    connect(mdCacheMgr, SIGNAL(updateIsRunning(bool,bool,QString)),
-            this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
+//    // ASync
+//    connect(mdCacheMgr, SIGNAL(updateFilters()),
+//            this, SLOT(updateFilters()));
+//    // ASync
+//    connect(mdCacheMgr, SIGNAL(updateAllMetadataLoaded(bool)),
+//            this, SLOT(updateAllMetadataLoaded(bool)));
+//    // ASync
+//    connect(mdCacheMgr, SIGNAL(loadImageCache()),
+//            this, SLOT(loadImageCache()));
+//    // ASync
+//    connect(mdCacheMgr, SIGNAL(updateIsRunning(bool,bool,QString)),
+//            this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
 
     connect(metadataCacheThread, SIGNAL(setIcon(int, QImage)),
             thumbView, SLOT(setIcon(int, QImage)));
@@ -3417,10 +3442,10 @@ void MW::createThumbView()
             this, SLOT(updateStatus(bool, QString)));
 
     connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheThumbScrollEvent()));
+            this, SLOT(loadMetadataCacheAfterDelay()));
 
     connect(thumbView->horizontalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheThumbScrollEvent()));
+            this, SLOT(loadMetadataCacheAfterDelay()));
 }
 
 void MW::createGridView()
@@ -3446,7 +3471,7 @@ void MW::createGridView()
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
     connect(gridView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheGridScrollEvent()));
+            this, SLOT(loadMetadataCacheAfterDelay()));
 }
 
 void MW::createTableView()
@@ -5586,6 +5611,7 @@ void MW::setDisplayResolution()
     cachePreviewWidth = displayHorizontalPixels;
     cachePreviewHeight = displayVerticalPixels;
     setActualDevicePixelRatio();
+    updateIconBestFit();            // not helping
 }
 
 void MW::setActualDevicePixelRatio()
@@ -6039,6 +6065,8 @@ re-established when the application is re-opened.
     setting->setValue("thumbHeightGrid", gridView->thumbHeight);
     setting->setValue("labelFontSizeGrid", gridView->labelFontSize);
     setting->setValue("showThumbLabelsGrid", gridView->showThumbLabels);
+
+    setting->setValue("thumbsPerPage", getThumbsPerPage());
 
     // slideshow
     setting->setValue("slideShowDelay", slideShowDelay);
@@ -8657,43 +8685,6 @@ void MW::helpWelcome()
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     updateIconBestFit();
-//    thumbView->bestAspect();
-
-//    QList<int> iconsCached;
-//    for (int i = 0; i < 10; ++i) iconsCached.append(i);
-//    qDebug() << iconsCached;
-//    QMutableListIterator<int> i(iconsCached);
-//    while (i.hasNext()) {
-//        i.next();
-//        int x = i.value();
-//        if (x < 3 || x > 7) i.remove();
-//    }
-//    qDebug() << iconsCached;
-
-//    metadataCacheThread->iconCleanup();
-//    QImage im;
-//    gridView->setIcon(0, im);
-
-//    imageCacheThread->reportCache("");
-
-//    imageCacheThread->reportCache("Report Cache");
-
-//    qDebug() << thumbView->isWrapping();
-//    thumbView->bestAspect();
-
-//    thumbView->setWrapping(false);
-//    loadEntireMetadataCache();
-
-//    QElapsedTimer t;
-//    t.restart();
-//    metadataCacheThread->isAllMetadataLoaded();
-//    qDebug() << "metadataCacheThread->isAllMetadataLoaded time" << t.nsecsElapsed() << t.elapsed();
-//    t.restart();
-//    metadataCacheThread->isAllIconsLoaded();
-//    qDebug() << "metadataCacheThread->isAllIconsLoaded time" << t.nsecsElapsed() << t.elapsed();
-//    t.restart();
-//    loadMetadataChunk();
-//    qDebug() << "loadMetadataChunk time" << t.nsecsElapsed() << t.elapsed();
 }
 
 void MW::test2()

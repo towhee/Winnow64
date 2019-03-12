@@ -200,8 +200,8 @@ QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
 //  G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "IconViewDelegate::sizeHint  "
-             << "row =" << index.row();
+//    qDebug() << "IconViewDelegate::sizeHint  "
+//             << "row =" << index.row();
     QFont font = QApplication::font();
     QFontMetrics fm(font);
     return cellSize;
