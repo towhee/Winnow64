@@ -68,6 +68,7 @@ private:
     QModelIndex idx;
     int startRow;
     int endRow;
+    int row;
 
     // icon caching
     int iconTargetStart = 4;

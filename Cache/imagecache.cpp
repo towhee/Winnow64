@@ -718,6 +718,7 @@ Apparently there needs to be a slight delay before calling.
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     // just in case stopImageCache not called before this
     if (isRunning()) pauseImageCache();
 
@@ -749,6 +750,7 @@ Apparently there needs to be a slight delay before calling.
            activity light is turned off in the status bar, which is normally done at the end of
            ImageCache::run.
         */
+        qDebug() << "Image cache is up-to-date";
         emit updateIsRunning(false, true);  // bool isRunning, bool showCacheLabel
         return;
     }

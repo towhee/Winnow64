@@ -1,6 +1,35 @@
 #ifndef THUMBVIEW_H
 #define THUMBVIEW_H
 
+#include <QAbstractSlider>
+
+//class AbstractSlider : public QAbstractSlider
+//{
+//    Q_OBJECT
+//public:
+//    explicit AbstractSlider(QWidget *parent = nullptr);
+//};
+
+#include <QScrollBar>
+
+class ScrollBar : public QScrollBar
+{
+    Q_OBJECT
+public:
+    explicit ScrollBar(QWidget *parent = nullptr);
+    void setValue(int value);
+
+protected:
+    bool event (QEvent *event);
+    void sliderChange(QAbstractSlider::SliderChange change);
+
+signals:
+
+public slots:
+
+};
+
+
 #include <QtWidgets>
 #include "Main/global.h"
 #include "File/fstree.h"
