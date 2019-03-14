@@ -237,6 +237,8 @@ public:
     QString prevMode;
     int currentRow;             // the current row in MW::fileSelection
     QModelIndex dmCurrentIndex;
+    bool didScrollAway = false;
+    int didScrollAwayToRow;
     bool allMetadataLoaded;
     bool allIconsLoaded;
     bool modeChangeJustHappened;
@@ -385,10 +387,12 @@ private slots:
     // caching
     int getThumbsPerPage();
     int getFirstVisibleThumb();
+    int getLastVisibleThumb();
+    bool isCurrentThumbVisible();
     void loadMetadataChunk();
 //    void loadMetadataChunkAfterScroll();
 //    void loadMetadataCacheThumbScrollEvent();
-    void loadMetadataCacheAfterDelay();
+    void loadMetadataCacheAfterDelay(int value);
 //    void loadMetadataCache(int startRow = 0);
     void loadEntireMetadataCache();
     void loadImageCache();

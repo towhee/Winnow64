@@ -12,6 +12,7 @@
 
 #include <QScrollBar>
 
+// this ScrollBar experiment did not help
 class ScrollBar : public QScrollBar
 {
     Q_OBJECT
@@ -55,13 +56,15 @@ public:
     bool showThumbLabels;
 //    bool wrapThumbs;
     int badgeSize;
+    QSize cellSize;
 
 //    bool isTopOrBottomDock;
     bool isFloat;       // set by MW ...
     bool isBestAspect;
 
-//    uint firstVisibleRow;
-//    uint lastVisibleRow;
+    int firstVisibleRow;
+    int lastVisibleRow;
+    int thumbsPerPage;
 
     void updateLayout();
 
@@ -127,6 +130,8 @@ public slots:
 
     int getFirstVisible();
     int getLastVisible();
+    void setViewportParameters();
+    bool isRowVisible(int row);
     int getThumbsPerPage();
 
     void refreshThumb(QModelIndex idx, int role);
