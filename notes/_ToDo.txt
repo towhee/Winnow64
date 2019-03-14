@@ -1,4 +1,6 @@
 BUGS
+- if scroll in thumbView then switch to gridView, it reverts to last selected
+- number selected in status not showing multiple selection count
 - not scrolling to current when switch from loupe to grid mode
 - Not remembering mode correctly when opening
 - Dragging between monitors sometimes loses thumb best fit
