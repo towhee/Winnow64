@@ -41,6 +41,9 @@ public:
     int maxChunkSize = 250;
     QMap<int, bool> loadMap;
 
+    int recacheIfLessThan;
+    int recacheIfGreaterThan;
+
 protected:
     void run() Q_DECL_OVERRIDE;
 
@@ -71,8 +74,8 @@ private:
     int row;
 
     // icon caching
-    int iconTargetStart = 4;
-    int iconTargetEnd = 8;
+    int iconTargetStart;
+    int iconTargetEnd;
     QList<int> iconsCached;
 
     bool foundItemsToLoad;

@@ -16,18 +16,28 @@ viewport.
 To keep it simple and minimize several threads trying to access the same image file at the same
 time the following order of events occurs when Winnow is started or a new folder is selected:
 
-    * Winnow is started and an instance of MetadataCache is created (metadataCacheThread). An
+    * Winnow is started an instance of MetadataCache is created (metadataCacheThread). An
       instance of ImageCache also created (imageCacheThread).
+
+    * After the show event, the IconView first/last/thumbsPerPage is determined and
+      metadataCacheThread::loadNewMetadataCache runs.
+
+    * loadNewMetadataCache starts metadataCacheThread and metadataCacheThread::run reads a
+      chunk of image files, loading the metadata and icons to the datamodel.
+
+    * After the chunk is loaded metadataCacheThread emits a signal to start imageCacheThread.
+
+    *** The new chunk of metadata is added to the datamodel filters.
+
+When Winnow is running and a new folder is selected
 
     * A new folder is selected and MW::folderSelectionChange executes, which in turn, starts
       metadataCacheThread::loadNewMetadataCache.
 
-    * loadNewMetadataCache starts the thread and metadataCacheThread::run reads a chunk of
-      image files, loading the data to the datamodel.
+    * loadNewMetadataCache starts metadataCacheThread and metadataCacheThread::run reads a
+      chunk of image files, loading the metadata and icons to the datamodel.
 
     * After the chunk is loaded metadataCacheThread emits a signal to start imageCacheThread.
-
-    * The new chunk of metadata is added to the datamodel filters.
 
 When the user scrolls through the thumbnails:
 
@@ -301,11 +311,19 @@ void MetadataCache::setIconTargets(int start, int thumbsPerPage)
     if (iconTargetStart < startRow) startRow = iconTargetStart;
     if (iconTargetEnd > endRow) endRow = iconTargetEnd;
 
+    int targetSize = iconTargetEnd - iconTargetStart;
+    if (iconTargetStart > 0) recacheIfLessThan = iconTargetStart + targetSize / 2 - targetSize / 7;
+    else recacheIfLessThan = 0;
+    if (iconTargetEnd < dm->sf->rowCount()) recacheIfGreaterThan = startRow + targetSize / 2 + targetSize / 7;
+    else recacheIfGreaterThan = dm->sf->rowCount();
+
     qDebug() << "MetadataCache::setIconTargets"
              << "start" << start
              << "thumbsPerPage" << thumbsPerPage
              << "iconTargetStart" << iconTargetStart
-             << "iconTargetEnd" << iconTargetEnd;
+             << "iconTargetEnd" << iconTargetEnd
+             << "recacheIfLessThan" << recacheIfLessThan
+             << "recacheIfGreaterThan" << recacheIfGreaterThan;
 }
 
 void MetadataCache::iconCleanup()
@@ -467,8 +485,8 @@ that have been missed.
            change to sizehint occurs  */
         if (cacheImages == CacheImages::New) emit updateIconBestFit();
 
-        if (allMetadataLoaded) emit updateFilters();
-        qApp->processEvents();
+//        if (allMetadataLoaded) emit updateFilters();
+//        qApp->processEvents();
 
         // update status of metadataThreadRunningLabel in statusbar
         emit updateIsRunning(false, true, __FUNCTION__);
@@ -478,11 +496,11 @@ that have been missed.
     target cache needs to know how big each image is (width, height) and the
     offset to embedded full size jpgs */
 
-    qDebug() << "cacheImages =" << cacheImages
+    /* qDebug() << "cacheImages =" << cacheImages
              << " (No = 0, "
                 "New = 1, "
                 "Update = 2, "
-                "Resume = 3)";
+                "Resume = 3)";*/
 
     if (cacheImages == CacheImages::New) emit loadImageCache();
     if (cacheImages == CacheImages::Resume && imageCacheWasRunning)
