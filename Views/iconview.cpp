@@ -424,7 +424,8 @@ int IconView::getThumbsPerPage()
     int rpp = viewport()->height() / cellHeight + 2;
 //    qDebug() << "tpr" << tpr
 //             << "rpp" << rpp;
-    return tpr * rpp;
+    thumbsPerPage = tpr * rpp;
+    return thumbsPerPage;
 }
 
 int IconView::getFirstVisible()
@@ -471,6 +472,40 @@ of images in the selected folder.
         }
     }
     return -1;
+}
+
+void IconView::setViewportParameters()
+{
+/*
+Set the firstVisibleRow, lastVisibleRow and thumbsPerPage.  This is called when the application
+show event occurs, when there is a viewport scroll event or when an icon justification happens.
+*/    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int row;
+    firstVisibleRow = 0;
+    QRect thumbViewRect = viewport()->rect();
+    for (row = 0; row < dm->sf->rowCount(); ++row) {
+        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
+            firstVisibleRow = row;
+            break;
+        }
+    }
+    for (row = firstVisibleRow; row < dm->sf->rowCount(); ++row) {
+        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
+            lastVisibleRow = row;
+        }
+        else break;
+    }
+    thumbsPerPage = lastVisibleRow - firstVisibleRow;
+}
+
+bool IconView::isRowVisible(int row)
+{
+    setViewportParameters();
+    return row > firstVisibleRow && row < lastVisibleRow;
 }
 
 QString IconView::getCurrentFilePath()
@@ -878,7 +913,9 @@ resize and preference adjustment operations.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
+    qDebug() << objectName() << "::rejustify   "
+             << "isWrapping" << isWrapping();
+
     if (!isWrapping()) return;
 
     // get
@@ -898,7 +935,14 @@ resize and preference adjustment operations.
     skipResize = true;      // prevent feedback loop
 
     setThumbParameters();
-    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+    setViewportParameters();
+
+    qDebug() << objectName() << "::rejustify   "
+             << "firstVisibleRow" << firstVisibleRow
+             << "lastVisibleRow" << lastVisibleRow
+             << "thumbsPerPage" << thumbsPerPage;
+
+//    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
 void IconView::justify(JustifyAction action)
@@ -925,7 +969,7 @@ void IconView::justify(JustifyAction action)
     if (tpr < 1) return;
     wCell = wRow / tpr;
 
-    if (wCell > G::maxIconSize) wCell = G::maxIconSize;
+    if (wCell > G::maxIconSize) wCell = wRow / ++tpr;
 
     thumbWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
     thumbHeight = thumbWidth * bestAspectRatio;
@@ -934,7 +978,9 @@ void IconView::justify(JustifyAction action)
     skipResize = true;      // prevent feedback loop
 
     setThumbParameters();
-    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+    setViewportParameters();
+
+//    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
 void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
@@ -963,7 +1009,7 @@ void IconView::resizeEvent(QResizeEvent *event)
     }
     QListView::resizeEvent(event);
 
-    m2->loadMetadataCacheAfterDelay();
+    m2->loadMetadataCacheAfterDelay(-1);
 
     // prevent a feedback loop where justify() or rejustify() triggers a resize event
 //    if (skipResize) {
