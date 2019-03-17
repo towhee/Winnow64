@@ -12,9 +12,15 @@ class TableView : public QTableView
 
 public:
     TableView(DataModel *dm);
+    void setViewportParameters();
     void scrollToCurrent();
     bool readyToScroll;
     QStandardItemModel *ok;
+
+    int firstVisibleRow;
+    int midVisibleRow;
+    int lastVisibleRow;
+    bool isCurrentVisible;
 
 public slots:
     void showOrHide();

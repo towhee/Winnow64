@@ -236,9 +236,8 @@ public:
     // mode change
     QString prevMode;
     int currentRow;             // the current row in MW::fileSelection
+    int scrollRow;              // the row to scroll to when change mode
     QModelIndex dmCurrentIndex;
-    bool didScrollAway = false;
-    int didScrollAwayToRow;
     bool allMetadataLoaded;
     bool allIconsLoaded;
     bool modeChangeJustHappened;
