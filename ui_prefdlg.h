@@ -63,24 +63,34 @@ public:
     QLabel *classificationBadgeThumbDiamLbl;
     QSlider *classificationBadgeThumbDiamSlider;
     QWidget *pageCache;
-    QSpinBox *cacheSizeSpinbox;
-    QLabel *label_10;
-    QLabel *label_8;
-    QLabel *label;
-    QCheckBox *showCacheStatusChk;
-    QCheckBox *cachePreviewsChk;
-    QCheckBox *showCacheThreadActivityChk;
     QLabel *label_9;
     QSpinBox *cacheDelaySpinbox;
-    QFrame *frame;
-    QVBoxLayout *verticalLayout;
+    QGroupBox *groupBox_3;
+    QCheckBox *showCacheStatusChk;
+    QLabel *label_10;
+    QSlider *progressWidthSlider;
+    QCheckBox *showCacheThreadActivityChk;
+    QCheckBox *cachePreviewsChk;
+    QRadioButton *cache100AheadRadio;
+    QRadioButton *cache70AheadRadio;
+    QRadioButton *cache90AheadRadio;
     QRadioButton *cache50AheadRadio;
     QRadioButton *cache60AheadRadio;
-    QRadioButton *cache70AheadRadio;
     QRadioButton *cache80AheadRadio;
-    QRadioButton *cache90AheadRadio;
-    QRadioButton *cache100AheadRadio;
-    QSlider *progressWidthSlider;
+    QSpinBox *cacheSizeSpinbox;
+    QLabel *label_8;
+    QLabel *label;
+    QGroupBox *metadataCacheGroupBox;
+    QRadioButton *metadataCacheAllRadio;
+    QRadioButton *metadataCacheChunkRadio;
+    QSpinBox *metadataCacheSizeSpinbox;
+    QLabel *label_14;
+    QGroupBox *thumbnailCacheGroupBoc;
+    QRadioButton *thumbnailCachAllRadio;
+    QRadioButton *thumbnailCacheChunkRadio;
+    QSpinBox *thumbnailCacheSizeSpinbox;
+    QLabel *label_15;
+    QLabel *label_18;
     QWidget *pageSlideshow;
     QCheckBox *slideshowRandomChk;
     QLabel *label_12;
@@ -119,7 +129,7 @@ public:
     QCheckBox *statusBarChk;
     QWidget *pageShowHideFields;
     QFrame *frame_2;
-    QFrame *frame1;
+    QFrame *frame;
     QWidget *layoutWidget2;
     QVBoxLayout *verticalLayout_4;
     QLabel *label_6;
@@ -139,7 +149,7 @@ public:
     {
         if (Prefdlg->objectName().isEmpty())
             Prefdlg->setObjectName(QString::fromUtf8("Prefdlg"));
-        Prefdlg->resize(706, 577);
+        Prefdlg->resize(705, 582);
         QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
@@ -282,44 +292,11 @@ public:
         stackedWidget->addWidget(pageAppearance);
         pageCache = new QWidget();
         pageCache->setObjectName(QString::fromUtf8("pageCache"));
-        cacheSizeSpinbox = new QSpinBox(pageCache);
-        cacheSizeSpinbox->setObjectName(QString::fromUtf8("cacheSizeSpinbox"));
-        cacheSizeSpinbox->setGeometry(QRect(140, 23, 51, 18));
-        QFont font2;
-        font2.setPointSize(9);
-        cacheSizeSpinbox->setFont(font2);
-        cacheSizeSpinbox->setMinimum(1);
-        cacheSizeSpinbox->setMaximum(64);
-        label_10 = new QLabel(pageCache);
-        label_10->setObjectName(QString::fromUtf8("label_10"));
-        label_10->setGeometry(QRect(40, 320, 91, 18));
-        label_10->setFont(font2);
-        label_10->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
-        label_8 = new QLabel(pageCache);
-        label_8->setObjectName(QString::fromUtf8("label_8"));
-        label_8->setGeometry(QRect(30, 24, 91, 16));
-        label_8->setFont(font2);
-        label_8->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
-        label = new QLabel(pageCache);
-        label->setObjectName(QString::fromUtf8("label"));
-        label->setGeometry(QRect(30, 60, 111, 16));
-        label->setFont(font2);
-        label->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
-        showCacheStatusChk = new QCheckBox(pageCache);
-        showCacheStatusChk->setObjectName(QString::fromUtf8("showCacheStatusChk"));
-        showCacheStatusChk->setGeometry(QRect(20, 289, 281, 21));
-        showCacheStatusChk->setFont(font2);
-        cachePreviewsChk = new QCheckBox(pageCache);
-        cachePreviewsChk->setObjectName(QString::fromUtf8("cachePreviewsChk"));
-        cachePreviewsChk->setGeometry(QRect(20, 240, 341, 20));
-        cachePreviewsChk->setFont(font2);
-        showCacheThreadActivityChk = new QCheckBox(pageCache);
-        showCacheThreadActivityChk->setObjectName(QString::fromUtf8("showCacheThreadActivityChk"));
-        showCacheThreadActivityChk->setGeometry(QRect(20, 360, 351, 17));
-        showCacheThreadActivityChk->setFont(font2);
         label_9 = new QLabel(pageCache);
         label_9->setObjectName(QString::fromUtf8("label_9"));
         label_9->setGeometry(QRect(260, 24, 91, 0));
+        QFont font2;
+        font2.setPointSize(9);
         label_9->setFont(font2);
         label_9->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         cacheDelaySpinbox = new QSpinBox(pageCache);
@@ -330,50 +307,22 @@ public:
         cacheDelaySpinbox->setMaximum(500);
         cacheDelaySpinbox->setSingleStep(25);
         cacheDelaySpinbox->setValue(250);
-        frame = new QFrame(pageCache);
-        frame->setObjectName(QString::fromUtf8("frame"));
-        frame->setGeometry(QRect(132, 50, 151, 161));
-        verticalLayout = new QVBoxLayout(frame);
-        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
-        cache50AheadRadio = new QRadioButton(frame);
-        cache50AheadRadio->setObjectName(QString::fromUtf8("cache50AheadRadio"));
-        cache50AheadRadio->setFont(font2);
-
-        verticalLayout->addWidget(cache50AheadRadio);
-
-        cache60AheadRadio = new QRadioButton(frame);
-        cache60AheadRadio->setObjectName(QString::fromUtf8("cache60AheadRadio"));
-        cache60AheadRadio->setFont(font2);
-
-        verticalLayout->addWidget(cache60AheadRadio);
-
-        cache70AheadRadio = new QRadioButton(frame);
-        cache70AheadRadio->setObjectName(QString::fromUtf8("cache70AheadRadio"));
-        cache70AheadRadio->setFont(font2);
-
-        verticalLayout->addWidget(cache70AheadRadio);
-
-        cache80AheadRadio = new QRadioButton(frame);
-        cache80AheadRadio->setObjectName(QString::fromUtf8("cache80AheadRadio"));
-        cache80AheadRadio->setFont(font2);
-
-        verticalLayout->addWidget(cache80AheadRadio);
-
-        cache90AheadRadio = new QRadioButton(frame);
-        cache90AheadRadio->setObjectName(QString::fromUtf8("cache90AheadRadio"));
-        cache90AheadRadio->setFont(font2);
-
-        verticalLayout->addWidget(cache90AheadRadio);
-
-        cache100AheadRadio = new QRadioButton(frame);
-        cache100AheadRadio->setObjectName(QString::fromUtf8("cache100AheadRadio"));
-        cache100AheadRadio->setFont(font2);
-
-        verticalLayout->addWidget(cache100AheadRadio);
-
-        progressWidthSlider = new QSlider(pageCache);
+        groupBox_3 = new QGroupBox(pageCache);
+        groupBox_3->setObjectName(QString::fromUtf8("groupBox_3"));
+        groupBox_3->setGeometry(QRect(20, 240, 451, 221));
+        groupBox_3->setFont(font2);
+        showCacheStatusChk = new QCheckBox(groupBox_3);
+        showCacheStatusChk->setObjectName(QString::fromUtf8("showCacheStatusChk"));
+        showCacheStatusChk->setGeometry(QRect(20, 189, 191, 21));
+        showCacheStatusChk->setFont(font2);
+        label_10 = new QLabel(groupBox_3);
+        label_10->setObjectName(QString::fromUtf8("label_10"));
+        label_10->setGeometry(QRect(210, 190, 41, 20));
+        label_10->setFont(font2);
+        label_10->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
+        progressWidthSlider = new QSlider(groupBox_3);
         progressWidthSlider->setObjectName(QString::fromUtf8("progressWidthSlider"));
-        progressWidthSlider->setGeometry(QRect(140, 320, 291, 22));
+        progressWidthSlider->setGeometry(QRect(260, 190, 181, 24));
         progressWidthSlider->setMinimum(100);
         progressWidthSlider->setMaximum(1000);
         progressWidthSlider->setSingleStep(100);
@@ -382,6 +331,104 @@ public:
         progressWidthSlider->setOrientation(Qt::Horizontal);
         progressWidthSlider->setTickPosition(QSlider::TicksAbove);
         progressWidthSlider->setTickInterval(100);
+        showCacheThreadActivityChk = new QCheckBox(groupBox_3);
+        showCacheThreadActivityChk->setObjectName(QString::fromUtf8("showCacheThreadActivityChk"));
+        showCacheThreadActivityChk->setGeometry(QRect(20, 169, 231, 17));
+        showCacheThreadActivityChk->setFont(font2);
+        cachePreviewsChk = new QCheckBox(groupBox_3);
+        cachePreviewsChk->setObjectName(QString::fromUtf8("cachePreviewsChk"));
+        cachePreviewsChk->setGeometry(QRect(20, 144, 341, 20));
+        cachePreviewsChk->setFont(font2);
+        cache100AheadRadio = new QRadioButton(groupBox_3);
+        cache100AheadRadio->setObjectName(QString::fromUtf8("cache100AheadRadio"));
+        cache100AheadRadio->setGeometry(QRect(320, 110, 129, 17));
+        cache100AheadRadio->setFont(font2);
+        cache70AheadRadio = new QRadioButton(groupBox_3);
+        cache70AheadRadio->setObjectName(QString::fromUtf8("cache70AheadRadio"));
+        cache70AheadRadio->setGeometry(QRect(320, 85, 129, 17));
+        cache70AheadRadio->setFont(font2);
+        cache90AheadRadio = new QRadioButton(groupBox_3);
+        cache90AheadRadio->setObjectName(QString::fromUtf8("cache90AheadRadio"));
+        cache90AheadRadio->setGeometry(QRect(180, 110, 129, 17));
+        cache90AheadRadio->setFont(font2);
+        cache50AheadRadio = new QRadioButton(groupBox_3);
+        cache50AheadRadio->setObjectName(QString::fromUtf8("cache50AheadRadio"));
+        cache50AheadRadio->setGeometry(QRect(40, 85, 129, 18));
+        cache50AheadRadio->setFont(font2);
+        cache60AheadRadio = new QRadioButton(groupBox_3);
+        cache60AheadRadio->setObjectName(QString::fromUtf8("cache60AheadRadio"));
+        cache60AheadRadio->setGeometry(QRect(180, 85, 129, 17));
+        cache60AheadRadio->setFont(font2);
+        cache80AheadRadio = new QRadioButton(groupBox_3);
+        cache80AheadRadio->setObjectName(QString::fromUtf8("cache80AheadRadio"));
+        cache80AheadRadio->setGeometry(QRect(40, 110, 129, 18));
+        cache80AheadRadio->setFont(font2);
+        cacheSizeSpinbox = new QSpinBox(groupBox_3);
+        cacheSizeSpinbox->setObjectName(QString::fromUtf8("cacheSizeSpinbox"));
+        cacheSizeSpinbox->setGeometry(QRect(130, 30, 51, 18));
+        cacheSizeSpinbox->setFont(font2);
+        cacheSizeSpinbox->setMinimum(1);
+        cacheSizeSpinbox->setMaximum(64);
+        label_8 = new QLabel(groupBox_3);
+        label_8->setObjectName(QString::fromUtf8("label_8"));
+        label_8->setGeometry(QRect(20, 30, 91, 16));
+        label_8->setFont(font2);
+        label_8->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
+        label = new QLabel(groupBox_3);
+        label->setObjectName(QString::fromUtf8("label"));
+        label->setGeometry(QRect(20, 60, 111, 16));
+        label->setFont(font2);
+        label->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
+        metadataCacheGroupBox = new QGroupBox(pageCache);
+        metadataCacheGroupBox->setObjectName(QString::fromUtf8("metadataCacheGroupBox"));
+        metadataCacheGroupBox->setGeometry(QRect(20, 20, 451, 81));
+        metadataCacheGroupBox->setFont(font2);
+        metadataCacheAllRadio = new QRadioButton(metadataCacheGroupBox);
+        metadataCacheAllRadio->setObjectName(QString::fromUtf8("metadataCacheAllRadio"));
+        metadataCacheAllRadio->setGeometry(QRect(20, 25, 411, 20));
+        metadataCacheAllRadio->setFont(font2);
+        metadataCacheChunkRadio = new QRadioButton(metadataCacheGroupBox);
+        metadataCacheChunkRadio->setObjectName(QString::fromUtf8("metadataCacheChunkRadio"));
+        metadataCacheChunkRadio->setGeometry(QRect(20, 50, 71, 20));
+        metadataCacheChunkRadio->setFont(font2);
+        metadataCacheSizeSpinbox = new QSpinBox(metadataCacheGroupBox);
+        metadataCacheSizeSpinbox->setObjectName(QString::fromUtf8("metadataCacheSizeSpinbox"));
+        metadataCacheSizeSpinbox->setGeometry(QRect(90, 51, 51, 18));
+        metadataCacheSizeSpinbox->setFont(font2);
+        metadataCacheSizeSpinbox->setMinimum(100);
+        metadataCacheSizeSpinbox->setMaximum(1000000);
+        metadataCacheSizeSpinbox->setValue(250);
+        label_14 = new QLabel(metadataCacheGroupBox);
+        label_14->setObjectName(QString::fromUtf8("label_14"));
+        label_14->setGeometry(QRect(150, 51, 251, 16));
+        label_14->setFont(font2);
+        thumbnailCacheGroupBoc = new QGroupBox(pageCache);
+        thumbnailCacheGroupBoc->setObjectName(QString::fromUtf8("thumbnailCacheGroupBoc"));
+        thumbnailCacheGroupBoc->setGeometry(QRect(20, 120, 451, 101));
+        thumbnailCacheGroupBoc->setFont(font2);
+        thumbnailCachAllRadio = new QRadioButton(thumbnailCacheGroupBoc);
+        thumbnailCachAllRadio->setObjectName(QString::fromUtf8("thumbnailCachAllRadio"));
+        thumbnailCachAllRadio->setGeometry(QRect(20, 25, 21, 21));
+        thumbnailCachAllRadio->setFont(font2);
+        thumbnailCacheChunkRadio = new QRadioButton(thumbnailCacheGroupBoc);
+        thumbnailCacheChunkRadio->setObjectName(QString::fromUtf8("thumbnailCacheChunkRadio"));
+        thumbnailCacheChunkRadio->setGeometry(QRect(20, 69, 71, 20));
+        thumbnailCacheChunkRadio->setFont(font2);
+        thumbnailCacheSizeSpinbox = new QSpinBox(thumbnailCacheGroupBoc);
+        thumbnailCacheSizeSpinbox->setObjectName(QString::fromUtf8("thumbnailCacheSizeSpinbox"));
+        thumbnailCacheSizeSpinbox->setGeometry(QRect(90, 70, 51, 18));
+        thumbnailCacheSizeSpinbox->setFont(font2);
+        thumbnailCacheSizeSpinbox->setMinimum(1);
+        thumbnailCacheSizeSpinbox->setMaximum(1000);
+        label_15 = new QLabel(thumbnailCacheGroupBoc);
+        label_15->setObjectName(QString::fromUtf8("label_15"));
+        label_15->setGeometry(QRect(150, 70, 251, 16));
+        label_15->setFont(font2);
+        label_18 = new QLabel(thumbnailCacheGroupBoc);
+        label_18->setObjectName(QString::fromUtf8("label_18"));
+        label_18->setGeometry(QRect(43, 26, 401, 41));
+        label_18->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
+        label_18->setWordWrap(true);
         stackedWidget->addWidget(pageCache);
         pageSlideshow = new QWidget();
         pageSlideshow->setObjectName(QString::fromUtf8("pageSlideshow"));
@@ -598,12 +645,12 @@ public:
         frame_2->setGeometry(QRect(10, 10, 460, 481));
         frame_2->setFrameShape(QFrame::NoFrame);
         frame_2->setFrameShadow(QFrame::Raised);
-        frame1 = new QFrame(frame_2);
-        frame1->setObjectName(QString::fromUtf8("frame1"));
-        frame1->setGeometry(QRect(20, 0, 181, 471));
-        frame1->setFrameShape(QFrame::NoFrame);
-        frame1->setFrameShadow(QFrame::Raised);
-        layoutWidget2 = new QWidget(frame1);
+        frame = new QFrame(frame_2);
+        frame->setObjectName(QString::fromUtf8("frame"));
+        frame->setGeometry(QRect(20, 0, 181, 471));
+        frame->setFrameShape(QFrame::NoFrame);
+        frame->setFrameShadow(QFrame::Raised);
+        layoutWidget2 = new QWidget(frame);
         layoutWidget2->setObjectName(QString::fromUtf8("layoutWidget2"));
         layoutWidget2->setGeometry(QRect(0, 0, 198, 471));
         verticalLayout_4 = new QVBoxLayout(layoutWidget2);
@@ -731,39 +778,41 @@ public:
         classificationBadgeThumbDiamSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
 #ifndef QT_NO_TOOLTIP
-        cacheSizeSpinbox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
-        label_10->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This sets the width of the cache status shown on the application status bar.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label_10->setText(QApplication::translate("Prefdlg", "Bar width", nullptr));
-#ifndef QT_NO_TOOLTIP
-        label_8->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label_8->setText(QApplication::translate("Prefdlg", "Cache size (GB)", nullptr));
-#ifndef QT_NO_TOOLTIP
-        label->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label->setText(QApplication::translate("Prefdlg", "Cache strategy", nullptr));
-#ifndef QT_NO_TOOLTIP
-        showCacheStatusChk->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This will show the cache status in the status bar at the bottom of the application.  If you do not see the status bar you can enable it in the Windows menu or by pressing F10.  If you hover over the cache status another tooltip will explain the colour codes for the current file, target cache, current cache and total images.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        showCacheStatusChk->setText(QApplication::translate("Prefdlg", "Show cache progress bar", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cachePreviewsChk->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>The largest preview embedded in the image file will be cached.  However, for large files this can take time.  This option tells the application to first create a smaller preview that will fit your monitor while the larger one is being built.  Try checking this option if you are experiencing some latency in loupe mode.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        cachePreviewsChk->setText(QApplication::translate("Prefdlg", "Cache previews scaled to monitor resolution", nullptr));
-#ifndef QT_NO_TOOLTIP
-        showCacheThreadActivityChk->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This will display two small activity lights on the status bar at the bottom of the application window. The activity lights turn green when there is caching activity for building metadata/thumbnails and full scale images.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        showCacheThreadActivityChk->setText(QApplication::translate("Prefdlg", "Show cache thread activity", nullptr));
-#ifndef QT_NO_TOOLTIP
         label_9->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Caching images and rendering the selected image simultaneously can degrade performance when rapidly moving through images.  The delay allows the next image selected to be rendered without any caching activity.  Try experimenting with the delay value if you are experiencing hesitation rendering the selected image.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
         label_9->setText(QApplication::translate("Prefdlg", "Delay (ms)", nullptr));
 #ifndef QT_NO_TOOLTIP
         cacheDelaySpinbox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Caching images and rendering the selected image simultaneously can degrade performance when rapidly moving through images.  The delay allows the next image selected to be rendered without any caching activity.  Try experimenting with the delay value if you are experiencing hesitation rendering the selected image.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
+        groupBox_3->setTitle(QApplication::translate("Prefdlg", "Full size loupe image cache", nullptr));
+#ifndef QT_NO_TOOLTIP
+        showCacheStatusChk->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This will show the cache status in the status bar at the bottom of the application.  If you do not see the status bar you can enable it in the Windows menu or by pressing F10.  If you hover over the cache status another tooltip will explain the colour codes for the current file, target cache, current cache and total images.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        showCacheStatusChk->setText(QApplication::translate("Prefdlg", "Show cache progress bar", nullptr));
+#ifndef QT_NO_TOOLTIP
+        label_10->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This sets the width of the cache status shown on the application status bar.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        label_10->setText(QApplication::translate("Prefdlg", "width", nullptr));
+#ifndef QT_NO_TOOLTIP
+        showCacheThreadActivityChk->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This will display two small activity lights on the status bar at the bottom of the application window. The activity lights turn green when there is caching activity for building metadata/thumbnails and full scale images.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        showCacheThreadActivityChk->setText(QApplication::translate("Prefdlg", "Show cache thread activity", nullptr));
+#ifndef QT_NO_TOOLTIP
+        cachePreviewsChk->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>The largest preview embedded in the image file will be cached.  However, for large files this can take time.  This option tells the application to first create a smaller preview that will fit your monitor while the larger one is being built.  Try checking this option if you are experiencing some latency in loupe mode.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        cachePreviewsChk->setText(QApplication::translate("Prefdlg", "Cache previews scaled to monitor resolution", nullptr));
+#ifndef QT_NO_TOOLTIP
+        cache100AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        cache100AheadRadio->setText(QApplication::translate("Prefdlg", "100% ahead", nullptr));
+#ifndef QT_NO_TOOLTIP
+        cache70AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        cache70AheadRadio->setText(QApplication::translate("Prefdlg", "70% ahead", nullptr));
+#ifndef QT_NO_TOOLTIP
+        cache90AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        cache90AheadRadio->setText(QApplication::translate("Prefdlg", "90% ahead", nullptr));
 #ifndef QT_NO_TOOLTIP
         cache50AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
@@ -773,21 +822,35 @@ public:
 #endif // QT_NO_TOOLTIP
         cache60AheadRadio->setText(QApplication::translate("Prefdlg", "60% ahead", nullptr));
 #ifndef QT_NO_TOOLTIP
-        cache70AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        cache70AheadRadio->setText(QApplication::translate("Prefdlg", "70% ahead", nullptr));
-#ifndef QT_NO_TOOLTIP
         cache80AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
         cache80AheadRadio->setText(QApplication::translate("Prefdlg", "80% ahead", nullptr));
 #ifndef QT_NO_TOOLTIP
-        cache90AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+        cacheSizeSpinbox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
-        cache90AheadRadio->setText(QApplication::translate("Prefdlg", "90% ahead", nullptr));
 #ifndef QT_NO_TOOLTIP
-        cache100AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+        label_8->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
-        cache100AheadRadio->setText(QApplication::translate("Prefdlg", "100% ahead", nullptr));
+        label_8->setText(QApplication::translate("Prefdlg", "Cache size (GB)", nullptr));
+#ifndef QT_NO_TOOLTIP
+        label->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        label->setText(QApplication::translate("Prefdlg", "Cache strategy:", nullptr));
+        metadataCacheGroupBox->setTitle(QApplication::translate("Prefdlg", "Metadata cache", nullptr));
+        metadataCacheAllRadio->setText(QApplication::translate("Prefdlg", "Cache all items when open folder (could be a slight delay)", nullptr));
+        metadataCacheChunkRadio->setText(QApplication::translate("Prefdlg", "Cache", nullptr));
+#ifndef QT_NO_TOOLTIP
+        metadataCacheSizeSpinbox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        label_14->setText(QApplication::translate("Prefdlg", "items at a time", nullptr));
+        thumbnailCacheGroupBoc->setTitle(QApplication::translate("Prefdlg", "Thumbnail cache", nullptr));
+        thumbnailCachAllRadio->setText(QString());
+        thumbnailCacheChunkRadio->setText(QApplication::translate("Prefdlg", "Cache", nullptr));
+#ifndef QT_NO_TOOLTIP
+        thumbnailCacheSizeSpinbox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_NO_TOOLTIP
+        label_15->setText(QApplication::translate("Prefdlg", "viewports ahead", nullptr));
+        label_18->setText(QApplication::translate("Prefdlg", "Cache all thumbnails in folder(s).  This can cause an initial delay and consume a lot of memory.", nullptr));
         slideshowRandomChk->setText(QString());
         label_12->setText(QApplication::translate("Prefdlg", "Show random order", nullptr));
 #ifndef QT_NO_TOOLTIP
@@ -822,7 +885,7 @@ public:
         thumbsChk->setText(QApplication::translate("Prefdlg", "Thumbnails", nullptr));
         statusBarChk->setText(QApplication::translate("Prefdlg", "Status Bar", nullptr));
 #ifndef QT_NO_TOOLTIP
-        frame1->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Select which items to show or hide in the metadata panel.</p></body></html>", nullptr));
+        frame->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Select which items to show or hide in the metadata panel.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
         label_6->setText(QApplication::translate("Prefdlg", "Metadata Panel Items", nullptr));
 #ifndef QT_NO_TOOLTIP
