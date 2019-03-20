@@ -62,7 +62,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     • Select a folder
       • Load datamodel with QDir info on each image file
       • Add the rest of the metadata to datamodel (incl thumbs as icons)
-      • Build the image cache
+      • Update the image cache
 
     */
 
@@ -694,7 +694,7 @@ void MW::handleStartupArgs()
 
  -   The image caching thread requires the offset and length for the
      full size embedded jpg, the image width and height in order to
-     calculate memory requirements, build the image priority queues, the
+     calculate memory requirements, Update the image priority queues, the
      target range and limit the cache to the assigned maximum size.
 
  *************************************************************************/
@@ -890,7 +890,7 @@ Triggered when file selection changes (folder change selects new image, so it
 also triggers this function). The new image is loaded, the pick status is
 updated and the infoView metadata is updated. The imageCache is updated if
 necessary. The imageCache will not be updated if triggered by
-folderSelectionChange since a new one will be build.
+folderSelectionChange since a new one will be Update.
 
 It has proven quite difficult to sync the thumbView, tableView and gridView,
 keeping the currentIndex in the center position (scrolling). The issue is
@@ -1203,12 +1203,13 @@ After the delay, if another singleshot has not been fired, loadMetadataChunk is 
     #endif
     }
 //    if (allMetadataLoaded)  return;
-    qDebug() << "\nMW::loadMetadataCacheAfterDelay  "
-             << "currentRow" << currentRow
-             << "firstVisibleRowRow" << getFirstVisibleThumb()
-             << "metadataCacheThread->recacheIfLessThan" << metadataCacheThread->recacheIfLessThan
-             << "metadataCacheThread->recacheIfGreaterThan" << metadataCacheThread->recacheIfGreaterThan
-             << "\n";
+
+//    qDebug() << "\nMW::loadMetadataCacheAfterDelay  "
+//             << "currentRow" << currentRow
+//             << "firstVisibleRow" << getFirstVisibleThumb()
+//             << "metadataCacheThread->recacheIfLessThan" << metadataCacheThread->recacheIfLessThan
+//             << "metadataCacheThread->recacheIfGreaterThan" << metadataCacheThread->recacheIfGreaterThan
+//             << "\n";
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
@@ -1261,8 +1262,8 @@ has been loaded.
     #endif
     }
     G::track(__FUNCTION__);
-//    if (metadataCacheThread->isAllMetadataLoaded()) return;
     if (G::isInitializing) return;
+    if (metadataCacheThread->isAllMetadataLoaded()) return;
 
     bool resumeImageCaching = false;
     if (imageCacheThread->isRunning()) {
@@ -1275,6 +1276,7 @@ has been loaded.
     QApplication::setOverrideCursor(Qt::WaitCursor);
     progressBar->saveProgressState();
     progressBar->clearProgress();
+    QApplication::processEvents();
     int rows = dm->rowCount();
     // update progress for already loaded metadata
     for (int row = 0; row < rows; ++row) {
@@ -1282,8 +1284,9 @@ has been loaded.
             progressBar->updateProgress(row, row + 1, rows, QColor(100,150,150), "");
         }
     }
-
-    metadataCacheThread->loadAllMetadata();
+    QApplication::processEvents();
+//    metadataCacheThread->loadAllMetadata();
+    dm->addAllMetadata(true);
     allMetadataLoaded = true;
 
 //    metadataCacheThread->loadMetadataCache(250, 500);
@@ -2156,6 +2159,12 @@ void MW::createActions()
     addAction(filterLastDayAction);
     connect(filterLastDayAction,  &QAction::triggered, this, &MW::filterLastDay);
 
+    filterUpdateAction = new QAction(tr("Update all filters"), this);
+    filterUpdateAction->setShortcutVisibleInContextMenu(true);
+    filterUpdateAction->setCheckable(true);
+    addAction(filterUpdateAction);
+    connect(filterUpdateAction,  &QAction::triggered, this, &MW::updateFilters);
+
     // Sort Menu
 
     sortFileNameAction = new QAction(tr("Sort by file name"), this);
@@ -2847,8 +2856,10 @@ void MW::createMenus()
     filterMenu->addAction(filterBlueAction);
     filterMenu->addAction(filterPurpleAction);
     filterMenu->addSeparator();
-    filterMenu->addAction(filterInvertAction);
     filterMenu->addAction(filterLastDayAction);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterUpdateAction);
+    filterMenu->addAction(filterInvertAction);
 
     // Sort Menu
 
@@ -2980,6 +2991,7 @@ void MW::createMenus()
     filterActions = new QList<QAction *>;
 //    QList<QAction *> *filterActions = new QList<QAction *>;
     filterActions->append(uncheckAllFiltersAction);
+    filterActions->append(filterUpdateAction);
     filterActions->append(separatorAction);
     filterActions->append(expandAllAction);
     filterActions->append(collapseAllAction);
@@ -4242,7 +4254,7 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
     }
     imageThreadRunningLabel->setText("◉");
 //    G::track(__FUNCTION__, "tiger");
-    if (isShowCacheThreadActivity) progressLabel->setVisible(showCacheLabel);
+//    if (isShowCacheThreadActivity) progressLabel->setVisible(showCacheLabel);
 }
 
 void MW::setThreadRunStatusInactive()
@@ -4308,6 +4320,16 @@ void MW::resortImageCache()
 //        currentFilePath = idx.data(G::PathRole).toString();
 //    }
 
+//    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
+
+    // redo to enable loading metadata chunks
+    thumbView->setViewportParameters();
+    gridView->setViewportParameters();
+    qDebug() << "MW::resortImageCache   "
+             << "gridView->firstVisibleRow" << gridView->firstVisibleRow;
+//    loadMetadataChunk();
+    loadEntireMetadataCache();
+
     QString currentFilePath = dmCurrentIndex.data(G::PathRole).toString();
     QModelIndex idx = dm->sf->mapFromSource(dmCurrentIndex);
     fileSelectionChange(idx, idx);
@@ -4317,13 +4339,11 @@ void MW::resortImageCache()
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 {
 /*
-This slot function is triggered by the tableView->horizontalHeader
-sortIndicatorChanged signal being emitted, which tells us that the data model
-sort/filter has been re-sorted. As a consequence we need to update the menu
-checked status for the correct column and also resync the image cache. However,
-changing the menu checked state for any of the menu sort actions triggers a
-sort, which needs to be suppressed while syncing the menu actions with
-tableView.
+This slot function is triggered by the tableView->horizontalHeader sortIndicatorChanged signal
+being emitted, which tells us that the data model sort/filter has been re-sorted. As a
+consequence we need to update the menu checked status for the correct column and also resync
+the image cache. However, changing the menu checked state for any of the menu sort actions
+triggers a sort, which needs to be suppressed while syncing the menu actions with tableView.
 */
     {
     #ifdef ISDEBUG
@@ -4376,12 +4396,18 @@ void MW::filterLastDay()
         filterLastDayAction->setChecked(false);
         return;
     }
+
+    // if the additional filters have not been built then do an update
+    if (!filters->days->childCount()) dm->updateFilters();
+
+    // if there still are no days then tell user and return
     int last = filters->days->childCount();
-    if (last == 0) {
+    if (filters->days->childCount() == 0) {
         popup("No days are available to filter", 2000, 0.75);
         filterLastDayAction->setChecked(false);
         return;
     }
+
     uncheckAllFilters();
     if (filterLastDayAction->isChecked()) {
         filters->days->child(last - 1)->setCheckState(0, Qt::Checked);
@@ -4390,7 +4416,6 @@ void MW::filterLastDay()
         filterLastDayAction->setChecked(false);
     }
     filterChange();
-    loadMetadataChunk();
 }
 
 void MW::filterChange(bool isFilter)
@@ -4426,11 +4451,13 @@ All filter changes should be routed to here as a central clearing house.
             centralLayout->setCurrentIndex(prevCentralView);
         }
         updateStatus(true);
+        // update first/last/mid visible thumbnails
+        thumbView->setViewportParameters();
+        gridView->setViewportParameters();
+        loadMetadataChunk();
     }
     // if filter has eliminated all rows so nothing to show
     else nullFiltration();
-
-    loadMetadataChunk();
 }
 
 void MW::quickFilter()
@@ -4514,10 +4541,8 @@ void MW::updateFilters()
     G::track(__FUNCTION__);
     #endif
     }
-    statusBar()->showMessage("Filters are updating for all the metadata in the folder", 1000);
-    if (!allMetadataLoaded) loadEntireMetadataCache();
-    if (allMetadataLoaded) dm->updateFilters();
-//    dm->filteredItemCount();
+    loadEntireMetadataCache();
+//    dm->updateFilters();
 }
 
 void MW::refine()
@@ -4958,7 +4983,7 @@ Delete, rename and reassign workspaces.
     G::track(__FUNCTION__);
     #endif
     }
-    // build a list of workspace names for the manager dialog
+    // Update a list of workspace names for the manager dialog
     QList<QString> wsList;
     for (int i=0; i<workspaces->count(); i++)
         wsList.append(workspaces->at(i).name);
@@ -4987,7 +5012,7 @@ void MW::deleteWorkspace(int n)
     // remove workspace from list of workspaces
     workspaces->removeAt(n);
 
-    // sync menus by rebuilding.  Tried to use indexes but had problems so
+    // sync menus by reUpdateing.  Tried to use indexes but had problems so
     // resorted to brute force solution
     syncWorkspaceMenu();
 }
@@ -5455,7 +5480,7 @@ void MW::runExternalApp()
         QFileInfo fInfo = fPath;
         QString folderPath = fInfo.dir().absolutePath() + "/";
 
-        // build arguments
+        // Update arguments
         if(appExecutable == "Photo Mechanic.exe") arguments << folderPath;
         else arguments << fPath;
 
@@ -6954,13 +6979,7 @@ notification when the QListView has finished painting itself.
 
     // recover thumbdock if it was visible before as gridView and full screen can
     // hide the thumbdock
-    if(isNormalScreen){
-        if(wasThumbDockVisible) {
-            thumbDock->setVisible(true);
-//        if(wasThumbDockVisible && !thumbDock->isVisible()) thumbDock->setVisible(true);
-//        if(!wasThumbDockVisible && thumbDock->isVisible()) thumbDock->setVisible(false);
-        }
-    }
+    if(isNormalScreen && wasThumbDockVisible) thumbDock->setVisible(true);
 
     if (thumbView->isVisible()) thumbView->setFocus();
 
@@ -8774,11 +8793,8 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    tableView->setViewportParameters();
-    gridView->setViewportParameters();
-    qDebug() << gridView->midVisibleRow
-             << tableView->midVisibleRow;
-
+//    dm->updateFilters();
+    progressBar->clearProgress();
 }
 
 void MW::test2()

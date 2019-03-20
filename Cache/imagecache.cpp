@@ -718,7 +718,6 @@ Apparently there needs to be a slight delay before calling.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     // just in case stopImageCache not called before this
     if (isRunning()) pauseImageCache();
 

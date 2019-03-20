@@ -75,6 +75,7 @@ public slots:
     void filteredItemCount();
     void unfilteredItemCount();
     void processMetadataBuffer();
+    void addAllMetadata(bool isShowCacheStatus = false);
     bool addMetadataItem(ImageMetadata m, bool isShowCacheStatus = false);
     void updateFilters();
 

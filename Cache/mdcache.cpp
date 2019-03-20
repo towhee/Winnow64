@@ -16,13 +16,13 @@ viewport.
 To keep it simple and minimize several threads trying to access the same image file at the same
 time the following order of events occurs when Winnow is started or a new folder is selected:
 
-    * Winnow is started an instance of MetadataCache is created (metadataCacheThread). An
+    * Winnow is started and an instance of MetadataCache is created (metadataCacheThread). An
       instance of ImageCache also created (imageCacheThread).
 
     * After the show event, the IconView first/last/thumbsPerPage is determined and
       metadataCacheThread::loadNewMetadataCache runs.
 
-    * loadNewMetadataCache starts metadataCacheThread and metadataCacheThread::run reads a
+    * MW::loadNewMetadataCache starts metadataCacheThread and metadataCacheThread::run reads a
       chunk of image files, loading the metadata and icons to the datamodel.
 
     * After the chunk is loaded metadataCacheThread emits a signal to start imageCacheThread.
@@ -171,6 +171,7 @@ and icons are loaded into the datamodel.
     imageCacheWasRunning = false;
     iconsCached.clear();
     foundItemsToLoad = true;
+    int imageCount = dm->rowCount();
 
     /* Create a map container for every row in the datamodel to track metadata caching. This
     is used to confirm all the metadata is loaded before ending the metadata cache. If the
@@ -185,9 +186,13 @@ and icons are loaded into the datamodel.
 //    runImageCacheWhenDone = true;
 
     this->startRow = 0;
-    int segmentSize = thumbsPerPage > maxChunkSize ? thumbsPerPage : maxChunkSize;
-    this->endRow = startRow + segmentSize;
-    if (this->endRow >= dm->rowCount()) this->endRow = dm->rowCount();
+    if (metadataCacheAll || imageCount < metadataCacheAllIfLessThan)
+        this->endRow = imageCount;
+    else {
+        int segmentSize = thumbsPerPage > metadataChunkSize ? thumbsPerPage : metadataChunkSize;
+        this->endRow = startRow + segmentSize;
+        if (this->endRow >= dm->rowCount()) this->endRow = dm->rowCount();
+    }
 //    this->endRow = dm->rowCount();
 
     qDebug() << "MetadataCache::loadNewMetadataCache  "
@@ -199,7 +204,7 @@ and icons are loaded into the datamodel.
     start(TimeCriticalPriority);
 }
 
-void MetadataCache::loadMetadataCache(int startRow, int thumbsPerPage,
+void MetadataCache::loadMetadataCache(int fromRow, int thumbsPerPage,
                                       CacheImages cacheImages)
 {
 /*
@@ -234,16 +239,16 @@ image files are loaded.  The imageCacheThread is not invoked.
     }
 
     int rowCount = dm->sf->rowCount();
-    this->startRow = startRow >= 0 ? startRow : 0;
-    int chunkSize = thumbsPerPage > maxChunkSize ? thumbsPerPage : maxChunkSize;
-    this->endRow = startRow + chunkSize;
-    if (this->endRow >= rowCount) this->endRow = rowCount;
+    startRow = fromRow >= 0 ? fromRow : 0;
+    int chunkSize = thumbsPerPage > metadataChunkSize ? thumbsPerPage : metadataChunkSize;
+    endRow = startRow + chunkSize;
+    if (endRow > rowCount) this->endRow = rowCount;
 
     foundItemsToLoad = false;
     for (int i = startRow; i < endRow; ++i) {
-        if (dm->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
+        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
             foundItemsToLoad = true;
-        if (dm->index(i, G::CreatedColumn).data().isNull())
+        if (dm->sf->index(i, G::CreatedColumn).data().isNull())
             foundItemsToLoad = true;
         if (foundItemsToLoad) break;
     }
@@ -270,6 +275,10 @@ to run as a separate thread and can be executed directly.
     G::track(__FUNCTION__);
     #endif
     }
+    cacheImages = CacheImages::All;
+    startRow = 0;
+    endRow = dm->rowCount();
+
     G::t.restart();
     t.restart();
     int count = 0;
@@ -297,25 +306,42 @@ to run as a separate thread and can be executed directly.
 
 void MetadataCache::setIconTargets(int start, int thumbsPerPage)
 {
+/*
+Icon target range is the rows where we want to see an icon (thumbnail). For example, when the
+user scrolls through the gridView, the icons visible in the gridView need to be loaded. The
+targets are assigned so we can cache the icons in advance. The number of icons visible in the
+gridView or thumbView (whichever is greater) is thumbsPerPage. The strategy is to cache n
+pages of icons before and after the current page, where n = iconPagesToCacheAhead.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    if (thumbsPerPage == 0) thumbsPerPage = maxChunkSize;
-    iconTargetStart = start - thumbsPerPage;
+    int rowCount = dm->sf->rowCount();
+    if (thumbsPerPage == 0) thumbsPerPage = metadataChunkSize;
+    iconTargetStart = start - thumbsPerPage * iconPagesToCacheAhead;
     if (iconTargetStart < 0) iconTargetStart = 0;
-    iconTargetEnd = start + thumbsPerPage * 2;
-    if (iconTargetEnd > dm->sf->rowCount()) iconTargetEnd = dm->sf->rowCount();
 
+    if (iconsCacheAllIfLessThan > rowCount) {
+        iconTargetEnd = rowCount;
+    }
+    else {
+        iconTargetEnd = start + thumbsPerPage * (iconPagesToCacheAhead + 1);
+        if (iconTargetEnd > rowCount) iconTargetEnd = rowCount;
+        if (rowCount < iconsCacheAllIfLessThan) iconTargetEnd = rowCount;
+    }
+
+    // reset range for loadMetadataIconChunk to include icon target range
     if (iconTargetStart < startRow) startRow = iconTargetStart;
     if (iconTargetEnd > endRow) endRow = iconTargetEnd;
 
+    // set thresholds before calling MW::loadMetadataChunk
     int targetSize = iconTargetEnd - iconTargetStart;
     if (iconTargetStart > 0) recacheIfLessThan = iconTargetStart + targetSize / 2 - targetSize / 7;
     else recacheIfLessThan = 0;
-    if (iconTargetEnd < dm->sf->rowCount()) recacheIfGreaterThan = startRow + targetSize / 2 + targetSize / 7;
-    else recacheIfGreaterThan = dm->sf->rowCount();
+    if (iconTargetEnd < rowCount) recacheIfGreaterThan = startRow + targetSize / 2 + targetSize / 7;
+    else recacheIfGreaterThan = rowCount;
 
     qDebug() << "MetadataCache::setIconTargets"
              << "start" << start
@@ -328,23 +354,25 @@ void MetadataCache::setIconTargets(int start, int thumbsPerPage)
 
 void MetadataCache::iconCleanup()
 {
+/*
+When the icon targets (the rows that we want to load icons) change we need to clean up any
+other rows that have icons previously loaded in order to minimize memory consumption. Rows
+that have icons are tracked in the list iconsCached as the dm row (not dm->sf proxy).
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
     QMutableListIterator<int> i(iconsCached);
-    mutex.lock();
     QPixmap nullPm;
+    mutex.lock();
     while (i.hasNext()) {
         i.next();
         int row = i.value();
         if (row < iconTargetStart || row > iconTargetEnd) {
             i.remove();
-            QStandardItem *item = new QStandardItem;
-            QModelIndex idx = dm->index(row, 0, QModelIndex());
-            item = dm->itemFromIndex(idx);
-            item->setIcon(nullPm);
+            dm->itemFromIndex(dm->index(row, 0))->setIcon(nullPm);
         }
     }
     mutex.unlock();
@@ -400,8 +428,25 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         mutex.unlock();
         count++;
 
+        if (cacheImages == CacheImages::All) continue;
         if (row < iconTargetStart) continue;
         if (row > iconTargetEnd) continue;
+
+        QStandardItem *item = new QStandardItem;
+        item = dm->itemFromIndex(idx);
+
+        // idx.data(Qt::DecorationRole) = QVariant(QIcon, QIcon(availableSizes[normal,Off]=(QSize(256, 144)),cacheKey=0x15000000000))
+
+//        qDebug() << "MetadataCache::loadMetadataIconChunk  "
+//                 << "row =" << row
+//                 << "dmRow =" << dmRow
+//                 << "iconTargetStart =" << iconTargetStart
+//                 << "iconTargetEnd =" << iconTargetEnd
+//                 << "idx.data(Qt::DecorationRole) =" << idx.data(Qt::DecorationRole);
+
+        //                 << "item->icon() =" << item
+//                 << fPath;
+
 
         // load icon
         mutex.lock();

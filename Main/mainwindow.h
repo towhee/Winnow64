@@ -633,6 +633,7 @@ private:
     QAction *filterPurpleAction;
     QAction *filterInvertAction;
     QAction *filterLastDayAction;
+    QAction *filterUpdateAction;
 
     // Sort Menu
     QActionGroup *sortGroupAction;

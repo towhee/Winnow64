@@ -453,6 +453,9 @@ which is created in MW, and in InfoView.
                  << "\tDupHideRawRole =" << index(row,0).data(G::DupHideRawRole).toBool()
                  << "\tDupRawIdxRole =" << index(row,0).data(G::DupRawIdxRole);
         */
+        // row has already been loaded
+        if (!index(row, G::CreatedColumn).data().isNull()) continue;
+
         QModelIndex idx = index(row, G::PathColumn);
         QString fPath = idx.data(G::PathRole).toString();
 
@@ -567,7 +570,36 @@ void DataModel::processMetadataBuffer()
     }
 }
 
-// ASync
+void DataModel::addAllMetadata(bool isShowCacheStatus)
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    G::t.restart();
+    int count = 0;
+    for (int row = 0; row < rowCount(); ++row) {
+        // is metadata already cached
+        if (!index(row, G::CreatedColumn).data().isNull()) continue;
+
+        QString fPath = index(row, 0).data(G::PathRole).toString();
+        QFileInfo fileInfo(fPath);
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+            metadata->imageMetadata.row = row;
+            addMetadataItem(metadata->imageMetadata, isShowCacheStatus);
+            count++;
+        }
+    }
+//    allMetadataLoaded = true;
+    qint64 ms = G::t.elapsed();
+    qreal msperfile = (float)ms / count;
+    qDebug() << "DataModel::addAllMetadata for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
+}
+
 bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
 {
     /*
@@ -580,7 +612,7 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     G::track(__FUNCTION__);
     #endif
     }
-
+    static int lastProgressRow = 0;
     int row = m.row;
 
 //    QString fPath = index(row, 0).data(G::PathRole).toString();
@@ -623,8 +655,11 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::EmailColumn), m.email);
     setData(index(row, G::UrlColumn), m.url);
     if (isShowCacheStatus) {
-        progressBar->updateProgress(row, row + 1, rowCount(), QColor(100,150,150), "");
-        qApp->processEvents();
+        if (row % 100 == 0 || row == rowCount() - 1) {
+            progressBar->updateProgress(lastProgressRow, row + 1, rowCount(), QColor(100,150,150), "");
+            qApp->processEvents();
+            lastProgressRow = row;
+        }
     }
 
     // req'd for 1st image, probably loaded before metadata cached
@@ -640,6 +675,9 @@ void DataModel::updateFilters()
     G::track(__FUNCTION__);
     #endif
     }
+    popup("Building filters.  This could take a few seconds to complete.", 2000, 0.75);
+
+
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
     QMap<QVariant, QString> lensMap;
@@ -649,7 +687,12 @@ void DataModel::updateFilters()
     QMap<QVariant, QString> yearMap;
     QMap<QVariant, QString> dayMap;
 
-    for(int row = 0; row < rowCount(); row++) {
+    progressBar->clearProgress();
+    qApp->processEvents();
+
+    int prev = 0;
+    int rows = rowCount();
+    for(int row = 0; row < rows; row++) {
         QString model = index(row, G::CameraModelColumn).data().toString();
         if (!modelMap.contains(model)) modelMap[model] = model;
 
@@ -670,19 +713,63 @@ void DataModel::updateFilters()
 
         QString day = index(row, G::DayColumn).data().toString();
         if (!dayMap.contains(day)) dayMap[day] = day;
+
+        if (row % 100 == 0 || row == rowCount() - 1) {
+            progressBar->updateProgress(prev, row + 1, rows, QColor(Qt::darkRed), "");
+            qApp->processEvents();
+            prev = row;
+        }
     }
 
     // build filter items
+    progressBar->clearProgress();
+    rows = 9;
+    qApp->processEvents();
+
     filters->addCategoryFromData(modelMap, filters->models);
+    int row = 0;
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    qApp->processEvents();
+
     filters->addCategoryFromData(lensMap, filters->lenses);
+    row++;
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    qApp->processEvents();
+
     filters->addCategoryFromData(flMap, filters->focalLengths);
+    row++;
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    qApp->processEvents();
+
     filters->addCategoryFromData(titleMap, filters->titles);
+    row++;
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    qApp->processEvents();
+
     filters->addCategoryFromData(creatorMap, filters->creators);
+    row++;
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    qApp->processEvents();
+
     filters->addCategoryFromData(yearMap, filters->years);
+    row++;
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    qApp->processEvents();
+
     filters->addCategoryFromData(dayMap, filters->days);
+    row++;
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    qApp->processEvents();
 
     filteredItemCount();
+    row++;
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    qApp->processEvents();
+
     unfilteredItemCount();
+    row++;
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    qApp->processEvents();
 }
 
 QModelIndex DataModel::find(QString fPath)

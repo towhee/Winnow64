@@ -27,19 +27,29 @@ public:
         No = 0,
         New = 1,
         Update = 2,
-        Resume = 3
+        Resume = 3,
+        All = 4
     };
 
     void loadNewMetadataCache(int thumbsPerPage/*, bool isShowCacheStatus*/);
-    void loadMetadataCache(int startRow, int endRow, CacheImages cacheImages);
+    void loadMetadataCache(int fromRow, int endRow, CacheImages cacheImages);
     void loadAllMetadata();
     void stopMetadateCache();
     bool isAllMetadataLoaded();
     bool isAllIconsLoaded();
 
     bool restart;
-    int maxChunkSize = 250;
     QMap<int, bool> loadMap;
+
+    int metadataChunkSize = 250;
+    int metadataCacheAllIfLessThan = 1000;
+    bool metadataCacheAll = false;
+    bool metadataCacheChunks = true;
+
+    int iconPagesToCacheAhead = 2;
+    int iconsCacheAllIfLessThan = 250;
+    bool iconsCacheAll = false;
+    bool iconsCacheChunks = true;
 
     int recacheIfLessThan;
     int recacheIfGreaterThan;

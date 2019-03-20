@@ -697,7 +697,8 @@ crash.
     G::track(__FUNCTION__);
     #endif
     }
-    QString fPath = dm->index(row, 0).data().toString();
+    QString fPath = dm->index(row, 0).data(G::PathRole).toString();
+//    qDebug() << "IconView::setIcon: " << fPath;
 #ifdef ISTEST
     qDebug() << "ThumbView::setIcon for row " << row << fPath;
 #endif
