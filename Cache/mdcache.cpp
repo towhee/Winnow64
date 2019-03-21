@@ -195,10 +195,10 @@ and icons are loaded into the datamodel.
     }
 //    this->endRow = dm->rowCount();
 
-    qDebug() << "MetadataCache::loadNewMetadataCache  "
-             << "startRow" << startRow
-             << "endRow" << endRow
-             << "foundItemsToLoad" << foundItemsToLoad;
+//    qDebug() << "MetadataCache::loadNewMetadataCache  "
+//             << "startRow" << startRow
+//             << "endRow" << endRow
+//             << "foundItemsToLoad" << foundItemsToLoad;
 
     setIconTargets(startRow , thumbsPerPage);
     start(TimeCriticalPriority);
@@ -253,56 +253,56 @@ image files are loaded.  The imageCacheThread is not invoked.
         if (foundItemsToLoad) break;
     }
 
-    qDebug() << "MetadataCache::loadMetadataCache  "
-             << "startRow" << startRow
-             << "endRow" << endRow
-             << "foundItemsToLoad" << foundItemsToLoad;
+//    qDebug() << "MetadataCache::loadMetadataCache  "
+//             << "startRow" << startRow
+//             << "endRow" << endRow
+//             << "foundItemsToLoad" << foundItemsToLoad;
 
     setIconTargets(startRow , thumbsPerPage);
     start(TimeCriticalPriority);
 }
 
-void MetadataCache::loadAllMetadata()
-{
-/*
-This function is intended to load metadata (but not the icon) quickly for the entire
-datamodel. This information is required for a filter or sort operation, which requires
-the entire dataset. Since the program will be waiting for the update this does not need
-to run as a separate thread and can be executed directly.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    cacheImages = CacheImages::All;
-    startRow = 0;
-    endRow = dm->rowCount();
+//void MetadataCache::loadAllMetadata()
+//{
+///*
+//This function is intended to load metadata (but not the icon) quickly for the entire
+//datamodel. This information is required for a filter or sort operation, which requires
+//the entire dataset. Since the program will be waiting for the update this does not need
+//to run as a separate thread and can be executed directly.
+//*/
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    cacheImages = CacheImages::All;
+//    startRow = 0;
+//    endRow = dm->rowCount();
 
-    G::t.restart();
-    t.restart();
-    int count = 0;
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        // is metadata already cached
-        if (!dm->index(row, G::CreatedColumn).data().isNull()) continue;
+//    G::t.restart();
+//    t.restart();
+//    int count = 0;
+//    for (int row = 0; row < dm->rowCount(); ++row) {
+//        // is metadata already cached
+//        if (!dm->index(row, G::CreatedColumn).data().isNull()) continue;
 
-        QString fPath = dm->index(row, 0).data(G::PathRole).toString();
-        QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
-//            G::track(__FUNCTION__, "metadata->loadImageMetadata row " + QString::number(row));
-            metadata->imageMetadata.row = row;
-            dm->addMetadataItem(metadata->imageMetadata, true);
-//            G::track(__FUNCTION__, "dm->addMetadataItem         row " + QString::number(row));
-            count++;
-//            qDebug() << row << fPath;
-        }
-    }
-    allMetadataLoaded = true;
-    qint64 ms = t.elapsed();
-    qreal msperfile = (float)ms / count;
-    qDebug() << "MetadataCache::loadAllMetadata for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
-//    emit updateAllMetadataLoaded(allMetadataLoaded);
-}
+//        QString fPath = dm->index(row, 0).data(G::PathRole).toString();
+//        QFileInfo fileInfo(fPath);
+//        if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+////            G::track(__FUNCTION__, "metadata->loadImageMetadata row " + QString::number(row));
+//            metadata->imageMetadata.row = row;
+//            dm->addMetadataItem(metadata->imageMetadata, true);
+////            G::track(__FUNCTION__, "dm->addMetadataItem         row " + QString::number(row));
+//            count++;
+////            qDebug() << row << fPath;
+//        }
+//    }
+//    allMetadataLoaded = true;
+//    qint64 ms = t.elapsed();
+//    qreal msperfile = (float)ms / count;
+//    qDebug() << "MetadataCache::loadAllMetadata for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
+////    emit updateAllMetadataLoaded(allMetadataLoaded);
+//}
 
 void MetadataCache::setIconTargets(int start, int thumbsPerPage)
 {
@@ -343,13 +343,13 @@ pages of icons before and after the current page, where n = iconPagesToCacheAhea
     if (iconTargetEnd < rowCount) recacheIfGreaterThan = startRow + targetSize / 2 + targetSize / 7;
     else recacheIfGreaterThan = rowCount;
 
-    qDebug() << "MetadataCache::setIconTargets"
-             << "start" << start
-             << "thumbsPerPage" << thumbsPerPage
-             << "iconTargetStart" << iconTargetStart
-             << "iconTargetEnd" << iconTargetEnd
-             << "recacheIfLessThan" << recacheIfLessThan
-             << "recacheIfGreaterThan" << recacheIfGreaterThan;
+//    qDebug() << "MetadataCache::setIconTargets"
+//             << "start" << start
+//             << "thumbsPerPage" << thumbsPerPage
+//             << "iconTargetStart" << iconTargetStart
+//             << "iconTargetEnd" << iconTargetEnd
+//             << "recacheIfLessThan" << recacheIfLessThan
+//             << "recacheIfGreaterThan" << recacheIfGreaterThan;
 }
 
 void MetadataCache::iconCleanup()
@@ -463,7 +463,7 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     }
     qint64 ms = t.elapsed();
     qreal msperfile = (float)ms / count;
-    qDebug() << "MetadataCache::loadMetadataIconChunk for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
+//    qDebug() << "MetadataCache::loadMetadataIconChunk for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
     return true;
 }
 
@@ -529,9 +529,6 @@ that have been missed.
         /* Only get bestFit on the first cache because the QListView rescrolls whenever a
            change to sizehint occurs  */
         if (cacheImages == CacheImages::New) emit updateIconBestFit();
-
-//        if (allMetadataLoaded) emit updateFilters();
-//        qApp->processEvents();
 
         // update status of metadataThreadRunningLabel in statusbar
         emit updateIsRunning(false, true, __FUNCTION__);

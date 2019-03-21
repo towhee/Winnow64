@@ -35,9 +35,9 @@
 #include "Cache/imagecache.h"
 
 // ASync
-#include "Cache/mdcachemgr.h"
-#include "Cache/mdcacher.h"
-#include "Cache/threadsafehash.h"
+//#include "Cache/mdcachemgr.h"
+//#include "Cache/mdcacher.h"
+//#include "Cache/threadsafehash.h"
 
 #include "ingestdlg.h"
 #include "aboutdlg.h"
@@ -57,10 +57,10 @@
 #include "ui_welcome.h"
 #include "ui_message.h"
 
-#include "Test/readasync.h"
-#include "Test/readsync.h"
-#include "Test/readmdconcurrent.h"
-#include "Test/asynctask.h"
+//#include "Test/readasync.h"
+//#include "Test/readsync.h"
+//#include "Test/readmdconcurrent.h"
+//#include "Test/asynctask.h"
 
 class MW : public QMainWindow
 {
@@ -286,7 +286,6 @@ protected:
 public slots:
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex);
-    void updateMetadata(int thread, bool showProgress);
     void nullFiltration();
     void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
@@ -370,7 +369,7 @@ private slots:
     void updateSubfolderStatus();
     void updateRawJpgStatus();
     // status functions
-    void updateStatus(bool showFileCount, QString s = "");
+    void updateStatus(bool keepBase = true, QString s = "");
     void clearStatus();
     void updateFilterStatus(bool isFilter = true);
     // caching status functions
@@ -391,7 +390,7 @@ private slots:
     void loadMetadataChunk();
 //    void loadMetadataChunkAfterScroll();
 //    void loadMetadataCacheThumbScrollEvent();
-    void loadMetadataCacheAfterDelay(int value);
+    void loadMetadataCacheAfterDelay();
 //    void loadMetadataCache(int startRow = 0);
     void loadEntireMetadataCache();
     void loadImageCache();
@@ -772,7 +771,7 @@ private:
     CompareImages *compareImages;
 
     MetadataCache *metadataCacheThread;
-    MdCacheMgr *mdCacheMgr;
+//    MdCacheMgr *mdCacheMgr;
 //    MetaHash metaHash;
 
     ImageCache *imageCacheThread;

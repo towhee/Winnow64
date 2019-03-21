@@ -632,6 +632,36 @@ void IconView::sortThumbs(int sortColumn, bool isReverse)
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
+void IconView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+/*
+For some reason the selectionModel rowCount is not up-to-date and the selection is updated
+after the MD::fileSelectionChange occurs, hence update the status bar from here.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QListView::selectionChanged(selected, deselected);
+    if (!G::isInitializing) emit updateStatus(true, "");
+}
+
+int IconView::getSelectedCount()
+{
+/*
+For some reason the selectionModel->selectedRows().count() is not up-to-date but
+selectedIndexes().count() works. This is called from MW::updateStatus to report the number of
+images selected.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    return selectedIndexes().count();
+}
+
 QStringList IconView::getSelectedThumbsList()
 {
 /* This was used by the eliminated tags class and is not used but looks
@@ -916,8 +946,8 @@ resize and preference adjustment operations.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << objectName() << "::rejustify   "
-             << "isWrapping" << isWrapping();
+//    qDebug() << objectName() << "::rejustify   "
+//             << "isWrapping" << isWrapping();
 
     if (!isWrapping()) return;
 
@@ -940,10 +970,10 @@ resize and preference adjustment operations.
     setThumbParameters();
     setViewportParameters();
 
-    qDebug() << objectName() << "::rejustify   "
-             << "firstVisibleRow" << firstVisibleRow
-             << "lastVisibleRow" << lastVisibleRow
-             << "thumbsPerPage" << thumbsPerPage;
+//    qDebug() << objectName() << "::rejustify   "
+//             << "firstVisibleRow" << firstVisibleRow
+//             << "lastVisibleRow" << lastVisibleRow
+//             << "thumbsPerPage" << thumbsPerPage;
 
 //    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -1012,7 +1042,7 @@ void IconView::resizeEvent(QResizeEvent *event)
     }
     QListView::resizeEvent(event);
 
-    m2->loadMetadataCacheAfterDelay(-1);
+    m2->loadMetadataCacheAfterDelay();
 
     // prevent a feedback loop where justify() or rejustify() triggers a resize event
 //    if (skipResize) {

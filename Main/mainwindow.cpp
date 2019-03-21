@@ -137,6 +137,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     G::isInitializing = false;
 
     qRegisterMetaType<ImageMetadata>();
+    qRegisterMetaType<QVector<int>>();
 
     // if no fsTree expansion then fire getImageCount the first time
     fsTree->getImageCount();
@@ -193,7 +194,6 @@ void MW::showEvent(QShowEvent *event)
     #endif
     }
     QMainWindow::showEvent(event);
-    G::track(__FUNCTION__);
 
     /* When Winnow is starting and the previously open folder from the last session is opened
     (because the preferences "remember last folder" has been checked) the MetadataCache cannot
@@ -205,10 +205,10 @@ void MW::showEvent(QShowEvent *event)
     thumbView->setViewportParameters();
     gridView->setViewportParameters();
     metadataCacheThread->loadNewMetadataCache(getThumbsPerPage());
-
     qApp->processEvents();
+
+    // check for updates
     if(checkIfUpdate) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
-//    setMetadataDockFixedSize();
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -525,6 +525,7 @@ bool MW::event(QEvent *event)
 
         if (keyEvent->key() == Qt::Key_Escape) {
             if (isSlideShow) slideShow();     // toggles slideshow off
+            if (G::mode == "Loupe") gridDisplay();
         }
         // change delay 1 - 9 seconds
         if (isSlideShow) {
@@ -711,7 +712,7 @@ void MW::folderSelectionChange()
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
-    mdCacheMgr->stop();     // ASync
+//    mdCacheMgr->stop();     // ASync
     allMetadataLoaded = false;
 
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
@@ -916,7 +917,7 @@ so scrollTo and delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-    G::track(__FUNCTION__, current.data(G::PathRole).toString());
+//    G::track(__FUNCTION__, current.data(G::PathRole).toString());
 //    qDebug() << current.row() << current.column();
 
     bool isStart = false;
@@ -932,7 +933,7 @@ so scrollTo and delegate use of the current index must check the row.
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
 
-    if(isStart) return;
+    if (isStart) return;
 
 /*    if (isDragDrop && dragDropFilePath.length() > 0) {
         thumbView->selectThumb(dragDropFilePath);
@@ -946,14 +947,14 @@ so scrollTo and delegate use of the current index must check the row.
 
     // record current row as it is used to sync everything
     currentRow = current.row();
-    int dmCurrentRow = dm->sf->mapToSource(current).row();
-    dmCurrentIndex = dm->index(dmCurrentRow, 0);
+    int dmCurrentRow = dm->sf->mapToSource(current).row();              // new
+    dmCurrentIndex = dm->index(dmCurrentRow, 0);                        // new
 
     // update delegates so they can highlight the current item
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
 
-    // don't scroll mouse click source (screws up double clicks and disorients users
+    // don't scroll mouse click source (screws up double clicks and disorients users)
     if(G::source == "TableMouseClick") {
         if (gridView->isVisible()) gridView->scrollToRow(currentRow);
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow);
@@ -987,8 +988,7 @@ so scrollTo and delegate use of the current index must check the row.
     // update the metadata panel
     infoView->updateInfo(fPath);
 
-    // update the status bar with ie "5 of 290   30% zoom   3.6GB picked"
-    updateStatus(true);
+    // updateStatus happens in IconView::selectionChanged
 
     progressLabel->setVisible(isShowCacheStatus);
 
@@ -1184,7 +1184,7 @@ metadata caching.
     return (currentRow > getFirstVisibleThumb() && currentRow < getLastVisibleThumb());
 }
 
-void MW::loadMetadataCacheAfterDelay(int value)
+void MW::loadMetadataCacheAfterDelay()
 {
 /*
 See MetadataCache::run comments in mdcache.cpp. A 100ms singleshot timer insures that the
@@ -1231,15 +1231,10 @@ If there has not been another call to this function in cacheDelay ms then the
 metadataCacheThread is restarted at the row of the first visible thumb after the scrolling.
 */
     {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
     }
-    //    G::track(__FUNCTION__);
-    //    if (metadataCacheThread->isRunning()) return;
-
-    qDebug() << "MW::loadMetadataChunk " << getFirstVisibleThumb() << getThumbsPerPage();
-
     if (G::isInitializing || dm->rowCount() == 0) return;
 
     if (imageCacheThread->isRunning()) imageCacheThread->pauseImageCache();
@@ -1261,7 +1256,6 @@ has been loaded.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     if (G::isInitializing) return;
     if (metadataCacheThread->isAllMetadataLoaded()) return;
 
@@ -1288,19 +1282,11 @@ has been loaded.
 //    metadataCacheThread->loadAllMetadata();
     dm->addAllMetadata(true);
     allMetadataLoaded = true;
-
-//    metadataCacheThread->loadMetadataCache(250, 500);
-
     dm->updateFilters();
     progressBar->recoverProgressState();
     if (resumeImageCaching) imageCacheThread->resumeImageCache();
     QApplication::restoreOverrideCursor();
     QApplication::processEvents();
-}
-
-void MW::updateMetadata(int thread, bool showProgress)
-{
-    qDebug() << "MW::updateMetadata for thread" << thread;
 }
 
 void MW::updateMetadataCacheStatus(int row, bool clear)
@@ -1430,8 +1416,6 @@ been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
-
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
@@ -1464,7 +1448,6 @@ been consumed or all the images are cached.
     metadataLoaded = true;
 
     // tell image cache new position
-    qDebug() << "MW::loadImageCache   fPath" << fPath;
     imageCacheThread->updateImageCachePosition(fPath);
 }
 
@@ -3378,7 +3361,7 @@ void MW::createCaching()
     metadataCacheThread = new MetadataCache(this, dm, metadata, imageCacheThread);
 
     // new kid on the block
-    mdCacheMgr = new MdCacheMgr(this, dm, thumbView);   // ASync
+//    mdCacheMgr = new MdCacheMgr(this, dm, thumbView);   // ASync
 
     /* When a new folder is selected the metadataCacheThread is started to
        load all the metadata and thumbs for each image.  If the user scrolls
@@ -3492,10 +3475,10 @@ void MW::createThumbView()
             this, SLOT(updateStatus(bool, QString)));
 
     connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheAfterDelay(int)));
+            this, SLOT(loadMetadataCacheAfterDelay()));
 
     connect(thumbView->horizontalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheAfterDelay(int)));
+            this, SLOT(loadMetadataCacheAfterDelay()));
 }
 
 void MW::createGridView()
@@ -3521,7 +3504,7 @@ void MW::createGridView()
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
     connect(gridView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheAfterDelay(int)));
+            this, SLOT(loadMetadataCacheAfterDelay()));
 }
 
 void MW::createTableView()
@@ -4108,7 +4091,7 @@ QString fileSym = "📷";
         if (G::mode == "Loupe" || G::mode == "Compare")
             base += "Zoom: " + getZoom();
         base += spacer + "Pos: " + getPosition();
-        QString s = QString::number(selectionModel->selectedRows().count());
+        QString s = QString::number(thumbView->getSelectedCount());
         base += spacer +"Selected: " + s;
         base += spacer + "Picked: " + getPicked();
         base += spacer;
@@ -4116,7 +4099,6 @@ QString fileSym = "📷";
 
     status = " " + base + s;
     stateLabel->setText(status);
-//    qDebug() << "Status:" << status;
 
     // update InfoView - flag updates so itemChanged be ignored in MW::metadataChanged
     infoView->isNewImageDataChange = true;
@@ -4253,8 +4235,6 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
         #endif
     }
     imageThreadRunningLabel->setText("◉");
-//    G::track(__FUNCTION__, "tiger");
-//    if (isShowCacheThreadActivity) progressLabel->setVisible(showCacheLabel);
 }
 
 void MW::setThreadRunStatusInactive()
@@ -4542,7 +4522,7 @@ void MW::updateFilters()
     #endif
     }
     loadEntireMetadataCache();
-//    dm->updateFilters();
+    dm->updateFilters();
 }
 
 void MW::refine()
@@ -4692,7 +4672,7 @@ void MW::thumbsShrink()
         else thumbView->thumbsShrink();
     }
     // may be more icons to cache
-    loadMetadataCacheAfterDelay(-1);
+    loadMetadataCacheAfterDelay();
 }
 
 void MW::addRecentFolder(QString fPath)
@@ -6952,8 +6932,6 @@ notification when the QListView has finished painting itself.
     #endif
     }
     G::mode = "Loupe";
-    qDebug() << G::mode << "wasThumbDockVisible" << wasThumbDockVisible
-             <<"isNormalScreen" << isNormalScreen;
 
     // save selection as tableView is hidden and not synced
     saveSelection();
@@ -6961,8 +6939,6 @@ notification when the QListView has finished painting itself.
     // sync scrolling between modes (loupe, grid and table)
     if (prevMode == "Table") {
         tableView->setViewportParameters();
-        qDebug() << "table  midVisible =" << tableView->midVisibleRow
-                 << "tableView->isCurrentVisible =" << tableView->isCurrentVisible;
         if (tableView->isCurrentVisible) scrollRow = currentRow;
         else scrollRow = tableView->midVisibleRow;
     }
@@ -7033,8 +7009,10 @@ around lack of notification when the QListView has finished painting itself.
     saveSelection();
 
     // remember thumbView visibility so can re-establish if change mode again
-    if (thumbView->isVisible()) wasThumbDockVisible = true;
-    else wasThumbDockVisible = false;
+    if (!G::isInitializing) {
+        if (thumbView->isVisible()) wasThumbDockVisible = true;
+        else wasThumbDockVisible = false;
+    }
 
     // sync scrolling between modes (loupe, grid and table)
     if (prevMode == "Table") {
@@ -7077,8 +7055,6 @@ around lack of notification when the QListView has finished painting itself.
     emit closeZoomDlg();
 
     prevMode = "Grid";
-
-    qDebug() << prevMode << "wasThumbDockVisible" << wasThumbDockVisible;
 }
 
 void MW::tableDisplay()
@@ -8793,8 +8769,8 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    dm->updateFilters();
-    progressBar->clearProgress();
+    qDebug() << "test   selectionModel->selectedRows().count() ="
+             << selectionModel->selectedRows().count();
 }
 
 void MW::test2()

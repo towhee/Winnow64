@@ -33,7 +33,7 @@ public:
 
     void loadNewMetadataCache(int thumbsPerPage/*, bool isShowCacheStatus*/);
     void loadMetadataCache(int fromRow, int endRow, CacheImages cacheImages);
-    void loadAllMetadata();
+//    void loadAllMetadata();
     void stopMetadateCache();
     bool isAllMetadataLoaded();
     bool isAllIconsLoaded();

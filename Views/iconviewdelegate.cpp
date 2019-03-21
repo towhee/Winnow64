@@ -352,6 +352,8 @@ textRect         = a rectangle below itemRect
         painter->drawEllipse(cacheRect);
     }
 
+    /* provide rect data to calc thumb mouse click position that is then sent to imageView to
+    zoom to the same spot */
     emit update(index, iconRect);
 
     painter->restore();

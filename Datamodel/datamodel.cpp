@@ -203,6 +203,7 @@ Steps:
     #endif
     }
     currentFolderPath = folderPath;
+    filtersBuilt = false;
 
     //  clear the model
     clear();
@@ -573,7 +574,10 @@ void DataModel::processMetadataBuffer()
 void DataModel::addAllMetadata(bool isShowCacheStatus)
 {
 /*
-
+This function is intended to load metadata (but not the icon) quickly for the entire
+datamodel. This information is required for a filter or sort operation, which requires
+the entire dataset. Since the program will be waiting for the update this does not need
+to run as a separate thread and can be executed directly.
 */
     {
     #ifdef ISDEBUG
@@ -675,8 +679,9 @@ void DataModel::updateFilters()
     G::track(__FUNCTION__);
     #endif
     }
-    popup("Building filters.  This could take a few seconds to complete.", 2000, 0.75);
+    if (filtersBuilt) return;
 
+    popup("Building filters.  This could take a few seconds to complete.", 2000, 0.75);
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
@@ -770,6 +775,8 @@ void DataModel::updateFilters()
     row++;
     progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
     qApp->processEvents();
+
+    filtersBuilt = true;
 }
 
 QModelIndex DataModel::find(QString fPath)
