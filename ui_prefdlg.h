@@ -647,7 +647,7 @@ public:
         frame_2->setFrameShadow(QFrame::Raised);
         frame = new QFrame(frame_2);
         frame->setObjectName(QString::fromUtf8("frame"));
-        frame->setGeometry(QRect(20, 0, 181, 471));
+        frame->setGeometry(QRect(20, 0, 211, 471));
         frame->setFrameShape(QFrame::NoFrame);
         frame->setFrameShadow(QFrame::Raised);
         layoutWidget2 = new QWidget(frame);
@@ -733,7 +733,7 @@ public:
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
         QObject::connect(fontSizeSlider_2, SIGNAL(valueChanged(int)), fontSizeLbl_2, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(4);
+        stackedWidget->setCurrentIndex(6);
         listContainer->setCurrentIndex(0);
 
 

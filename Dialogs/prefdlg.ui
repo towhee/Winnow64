@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>4</number>
+    <number>6</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -1835,7 +1835,7 @@
        <rect>
         <x>20</x>
         <y>0</y>
-        <width>181</width>
+        <width>211</width>
         <height>471</height>
        </rect>
       </property>
