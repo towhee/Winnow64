@@ -1062,6 +1062,7 @@ a bookmark or ejects a drive and the resulting folder does not have any eligible
     infoView->clearInfo();
     metadata->clear();
     imageView->clear();
+    currentRow = 0;
 //    progressLabel->setVisible(false);
     setThreadRunStatusInactive();                      // turn thread activity buttons gray
 //    G::isInitializing = false;
@@ -6943,7 +6944,8 @@ notification when the QListView has finished painting itself.
         else scrollRow = tableView->midVisibleRow;
     }
     if (prevMode == "Grid") {
-        if(gridView->isRowVisible(currentRow)) scrollRow = currentRow;
+        qDebug() << "gridView->isRowVisible(currentRow)" << gridView->isRowVisible(currentRow);
+        if (gridView->isRowVisible(currentRow)) scrollRow = currentRow;
         else scrollRow = gridView->midVisibleRow;
     }
 

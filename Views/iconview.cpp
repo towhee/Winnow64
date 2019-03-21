@@ -507,7 +507,7 @@ show event occurs, when there is a viewport scroll event or when an icon justifi
 bool IconView::isRowVisible(int row)
 {
     setViewportParameters();
-    return row > firstVisibleRow && row < lastVisibleRow;
+    return row >= firstVisibleRow && row <= lastVisibleRow;
 }
 
 QString IconView::getCurrentFilePath()
