@@ -1,12 +1,12 @@
 BUGS
-- if scroll in thumbView then switch to gridView, it reverts to last selected
-- number selected in status not showing multiple selection count
-- not scrolling to current when switch from loupe to grid mode
+- if current visible in grid should also be visibel in loupe when switch
+- number selected in status not updating correctly
 - Not remembering mode correctly when opening
 - Dragging between monitors sometimes loses thumb best fit
 - Reset sorting and filtering when new folder selected
 - Preferences show infoView items missing scrollbar
 - ImageView add timer to mousePressed/released to id panning and zooming intent
+- Zoom % not updating on status bar
 - Zoom HUD broken
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
@@ -39,6 +39,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- if scroll in thumbView then switch to gridView, it reverts to last selected
 - Not invoking best fit when maximize window
 - Not reporting Make for NEF files
 - ImageView not resizing when thumbdock gets taller

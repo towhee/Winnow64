@@ -85,6 +85,7 @@ public:
     QStringList getSelectedThumbsList();        //used by tags, might be useful
     int getCurrentRow();
     QString getCurrentFilePath();       //not used, but might be handy
+    int getSelectedCount();
 
     void setThumbParameters();
 
@@ -158,6 +159,7 @@ public slots:
 
 private slots:
 //    void delaySelectCurrentThumb();
+    void selectionChanged (const QItemSelection &selected, const QItemSelection &deselected);
 
 protected:
     void startDrag(Qt::DropActions);
