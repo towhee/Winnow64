@@ -1531,7 +1531,6 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event << event->pos();
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }
