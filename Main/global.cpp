@@ -19,7 +19,8 @@ namespace G
 
     QString fontSize;
 
-    qreal actualDevicePixelRatio;
+    int actualDevicePixelRatio;
+    bool allMetadataLoaded;
 
     int cores;
     bool aSync;

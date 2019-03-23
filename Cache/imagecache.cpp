@@ -749,7 +749,6 @@ Apparently there needs to be a slight delay before calling.
            activity light is turned off in the status bar, which is normally done at the end of
            ImageCache::run.
         */
-        qDebug() << "Image cache is up-to-date";
         emit updateIsRunning(false, true);  // bool isRunning, bool showCacheLabel
         return;
     }

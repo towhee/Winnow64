@@ -29,4 +29,5 @@ git checkout -- .             // discards all changes
 git rm debug/Winnow.exe       // removes Winnow.exe from repository if accidently not ignored
 
 // removes debug/Winnow.exe from entire repository history
-$ git filter-branch --index-filter 'git rm --cached --ignore-unmatched debug/Winnow.exe' HEAD
+git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch debug/Winnow.exe' HEAD
+git push origin --force --all

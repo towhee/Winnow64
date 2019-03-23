@@ -33,7 +33,6 @@ public:
 
     void loadNewMetadataCache(int thumbsPerPage/*, bool isShowCacheStatus*/);
     void loadMetadataCache(int fromRow, int endRow, CacheImages cacheImages);
-//    void loadAllMetadata();
     void stopMetadateCache();
     bool isAllMetadataLoaded();
     bool isAllIconsLoaded();
@@ -63,7 +62,7 @@ signals:
     void pauseImageCache();
     void resumeImageCache();
     void updateIsRunning(bool, bool, QString);
-    void updateAllMetadataLoaded(bool);
+//    void updateAllMetadataLoaded(bool);
     void updateIconBestFit();
     void updateFilters();
     void showCacheStatus(int, bool);            // row, renew progress bar
@@ -94,7 +93,7 @@ private:
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
 
-    bool allMetadataLoaded;
+//    bool allMetadataLoaded;
     bool allIconsLoaded;
     bool isShowCacheStatus;
     bool cacheIcons;

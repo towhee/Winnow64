@@ -598,7 +598,7 @@ to run as a separate thread and can be executed directly.
             count++;
         }
     }
-//    allMetadataLoaded = true;
+    G::allMetadataLoaded = true;
     qint64 ms = G::t.elapsed();
     qreal msperfile = (float)ms / count;
     qDebug() << "DataModel::addAllMetadata for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
@@ -681,7 +681,7 @@ void DataModel::updateFilters()
     }
     if (filtersBuilt) return;
 
-    popup("Building filters.  This could take a few seconds to complete.", 2000, 0.75);
+    popup("Building filters.  This could take a while to complete.", 3000, 0.75);
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;

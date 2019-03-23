@@ -1,9 +1,4 @@
 BUGS
-- Dragging between monitors sometimes loses thumb best fit
-- Reset sorting and filtering when new folder selected
-- ImageView add timer to mousePressed/released to id panning and zooming intent
-- Zoom % not updating on status bar
-- Zoom HUD broken
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
@@ -35,6 +30,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Reset sorting and filtering when new folder selected
+- Dragging between monitors sometimes loses thumb best fit
+- Zoom % not updating on status bar
 - Not remembering mode correctly when opening
 - if current visible in grid should also be visible in loupe when switch
 - Preferences show infoView items missing scrollbar
