@@ -238,7 +238,6 @@ public:
     int currentRow;             // the current row in MW::fileSelection
     int scrollRow;              // the row to scroll to when change mode
     QModelIndex dmCurrentIndex;
-    bool allMetadataLoaded;
     bool allIconsLoaded;
     bool modeChangeJustHappened;
     bool justUpdatedBestFit;
@@ -379,7 +378,6 @@ private slots:
     void updateImageCachePosition();
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy);
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
-    void updateAllMetadataLoaded(bool isLoaded);
     void updateMetadataCacheStatus(int row, bool clear = false);
     void updateImageCacheStatus(QString instruction, int row, QString source);
     // caching

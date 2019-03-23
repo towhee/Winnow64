@@ -117,14 +117,14 @@ bool MetadataCache::isAllMetadataLoaded()
     G::track(__FUNCTION__);
     #endif
     }
-    allMetadataLoaded = true;
+    G::allMetadataLoaded = true;
     for (int i = 0; i < dm->rowCount(); ++i) {
         if (dm->index(i, G::CreatedColumn).data().isNull()) {
-            allMetadataLoaded = false;
+            G::allMetadataLoaded = false;
             break;
         }
     }
-    return allMetadataLoaded;
+    return G::allMetadataLoaded;
 }
 
 bool MetadataCache::isAllIconsLoaded()
@@ -166,7 +166,7 @@ and icons are loaded into the datamodel.
     }
 //    G::track(__FUNCTION__);
     abort = false;
-    allMetadataLoaded = false;
+    G::allMetadataLoaded = false;
     cacheImages = CacheImages::New;
     imageCacheWasRunning = false;
     iconsCached.clear();
@@ -217,7 +217,7 @@ image files are loaded.  The imageCacheThread is not invoked.
     G::track(__FUNCTION__);
     #endif
     }
-//    if (allMetadataLoaded) return;
+    if (G::allMetadataLoaded) return;
 
     if (isRunning()) {
         mutex.lock();
@@ -261,48 +261,6 @@ image files are loaded.  The imageCacheThread is not invoked.
     setIconTargets(startRow , thumbsPerPage);
     start(TimeCriticalPriority);
 }
-
-//void MetadataCache::loadAllMetadata()
-//{
-///*
-//This function is intended to load metadata (but not the icon) quickly for the entire
-//datamodel. This information is required for a filter or sort operation, which requires
-//the entire dataset. Since the program will be waiting for the update this does not need
-//to run as a separate thread and can be executed directly.
-//*/
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    cacheImages = CacheImages::All;
-//    startRow = 0;
-//    endRow = dm->rowCount();
-
-//    G::t.restart();
-//    t.restart();
-//    int count = 0;
-//    for (int row = 0; row < dm->rowCount(); ++row) {
-//        // is metadata already cached
-//        if (!dm->index(row, G::CreatedColumn).data().isNull()) continue;
-
-//        QString fPath = dm->index(row, 0).data(G::PathRole).toString();
-//        QFileInfo fileInfo(fPath);
-//        if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
-////            G::track(__FUNCTION__, "metadata->loadImageMetadata row " + QString::number(row));
-//            metadata->imageMetadata.row = row;
-//            dm->addMetadataItem(metadata->imageMetadata, true);
-////            G::track(__FUNCTION__, "dm->addMetadataItem         row " + QString::number(row));
-//            count++;
-////            qDebug() << row << fPath;
-//        }
-//    }
-//    allMetadataLoaded = true;
-//    qint64 ms = t.elapsed();
-//    qreal msperfile = (float)ms / count;
-//    qDebug() << "MetadataCache::loadAllMetadata for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
-////    emit updateAllMetadataLoaded(allMetadataLoaded);
-//}
 
 void MetadataCache::setIconTargets(int start, int thumbsPerPage)
 {
@@ -395,7 +353,6 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     for (row = startRow; row < endRow; ++row) {
 //    for (int row = startRow; row < dm->rowCount(); ++row) {
         if (abort) {
-            emit updateAllMetadataLoaded(allMetadataLoaded);
             emit updateIsRunning(false, true, __FUNCTION__);
             return false;
         }
@@ -512,19 +469,19 @@ that have been missed.
         }
 
         // check if all metadata and thumbs have been loaded
-        allMetadataLoaded = true;
-        mutex.lock();
-        for(int i = 0; i < rowCount; ++i) {
-            if (dm->sf->index(i, G::CreatedColumn).data().isNull()) {
-                allMetadataLoaded = false;
-                break;
+        if (!G::allMetadataLoaded) {
+            G::allMetadataLoaded = true;
+            mutex.lock();
+            for(int i = 0; i < rowCount; ++i) {
+                if (dm->sf->index(i, G::CreatedColumn).data().isNull()) {
+                    G::allMetadataLoaded = false;
+                    break;
+                }
             }
+            mutex.unlock();
         }
-        mutex.unlock();
 
         iconCleanup();
-
-        emit updateAllMetadataLoaded(allMetadataLoaded);
 
         /* Only get bestFit on the first cache because the QListView rescrolls whenever a
            change to sizehint occurs  */

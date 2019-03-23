@@ -93,7 +93,8 @@ namespace G
 
     extern QString fontSize;
 
-    extern qreal actualDevicePixelRatio;
+    extern int actualDevicePixelRatio;
+    extern bool allMetadataLoaded;
 
     extern bool isThreadTrackingOn;
     extern bool isNewFolderLoaded;
