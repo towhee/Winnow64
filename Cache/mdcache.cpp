@@ -217,7 +217,7 @@ image files are loaded.  The imageCacheThread is not invoked.
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::allMetadataLoaded) return;
+//    if (G::allMetadataLoaded) return;
 
     if (isRunning()) {
         mutex.lock();
@@ -259,7 +259,8 @@ image files are loaded.  The imageCacheThread is not invoked.
 //             << "foundItemsToLoad" << foundItemsToLoad;
 
     setIconTargets(startRow , thumbsPerPage);
-    start(TimeCriticalPriority);
+    start(IdlePriority);
+//    start(TimeCriticalPriority);
 }
 
 void MetadataCache::setIconTargets(int start, int thumbsPerPage)
@@ -350,6 +351,13 @@ Load the metadata and thumb (icon) for all the image files in a folder.
     G::t.restart();
     int count = 0;
 
+    if (G::allMetadataLoaded) return true;
+
+    if (metadataCacheAll) {
+        startRow = 0;
+        endRow = dm->rowCount();
+    }
+
     for (row = startRow; row < endRow; ++row) {
 //    for (int row = startRow; row < dm->rowCount(); ++row) {
         if (abort) {
@@ -385,25 +393,28 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         mutex.unlock();
         count++;
 
-        if (cacheImages == CacheImages::All) continue;
-        if (row < iconTargetStart) continue;
-        if (row > iconTargetEnd) continue;
+        // skip loading icon?
+        if (!iconsCacheAll) {
+            if (cacheImages == CacheImages::All) continue;
+            if (row < iconTargetStart) continue;
+            if (row > iconTargetEnd) continue;
+        }
 
+/*      Debugging stuff
         QStandardItem *item = new QStandardItem;
         item = dm->itemFromIndex(idx);
 
-        // idx.data(Qt::DecorationRole) = QVariant(QIcon, QIcon(availableSizes[normal,Off]=(QSize(256, 144)),cacheKey=0x15000000000))
+        idx.data(Qt::DecorationRole) = QVariant(QIcon, QIcon(availableSizes[normal,Off]=(QSize(256, 144)),cacheKey=0x15000000000))
+        qDebug() << "MetadataCache::loadMetadataIconChunk  "
+                 << "row =" << row
+                 << "dmRow =" << dmRow
+                 << "iconTargetStart =" << iconTargetStart
+                 << "iconTargetEnd =" << iconTargetEnd
+                 << "idx.data(Qt::DecorationRole) =" << idx.data(Qt::DecorationRole);
 
-//        qDebug() << "MetadataCache::loadMetadataIconChunk  "
-//                 << "row =" << row
-//                 << "dmRow =" << dmRow
-//                 << "iconTargetStart =" << iconTargetStart
-//                 << "iconTargetEnd =" << iconTargetEnd
-//                 << "idx.data(Qt::DecorationRole) =" << idx.data(Qt::DecorationRole);
-
-        //                 << "item->icon() =" << item
-//                 << fPath;
-
+                 << "item->icon() =" << item
+                 << fPath;
+                 */
 
         // load icon
         mutex.lock();

@@ -40,14 +40,15 @@ public:
     bool restart;
     QMap<int, bool> loadMap;
 
-    int metadataChunkSize = 250;
-    int metadataCacheAllIfLessThan = 1000;
     bool metadataCacheAll = false;
+    bool iconsCacheAll = false;
+
+    int metadataChunkSize = 250;
+    int metadataCacheAllIfLessThan = 250;
     bool metadataCacheChunks = true;
 
     int iconPagesToCacheAhead = 2;
     int iconsCacheAllIfLessThan = 250;
-    bool iconsCacheAll = false;
     bool iconsCacheChunks = true;
 
     int recacheIfLessThan;
