@@ -3333,9 +3333,6 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(updateIconBestFit()),
             this, SLOT(updateIconBestFit()));
 
-    connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
-            this, SLOT(updateAllMetadataLoaded(bool)));
-
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));
 
@@ -4308,16 +4305,19 @@ void MW::filterLastDay()
     G::track(__FUNCTION__);
     #endif
     }
-    if (!G::allMetadataLoaded) loadEntireMetadataCache();
-
+    G::t.restart();
+    G::track(__FUNCTION__, "Starting");
     if (dm->rowCount() == 0) {
         popup("No images available to filter", 2000, 0.75);
         filterLastDayAction->setChecked(false);
         return;
     }
 
+    if (!G::allMetadataLoaded) loadEntireMetadataCache();
+
     // if the additional filters have not been built then do an update
     if (!filters->days->childCount()) dm->updateFilters();
+    G::track(__FUNCTION__, "dm->updateFilters()");
 
     // if there still are no days then tell user and return
     int last = filters->days->childCount();
@@ -4328,6 +4328,7 @@ void MW::filterLastDay()
     }
 
     uncheckAllFilters();
+    G::track(__FUNCTION__, "uncheckAllFilters()");
     if (filterLastDayAction->isChecked()) {
         filters->days->child(last - 1)->setCheckState(0, Qt::Checked);
     }
@@ -4347,16 +4348,20 @@ All filter changes should be routed to here as a central clearing house.
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__, "Starting");
     if (!G::allMetadataLoaded) loadEntireMetadataCache();
 
     // refresh the proxy sort/filter
     dm->sf->filterChange();
+    G::track(__FUNCTION__, "dm->sf->filterChange()");
     // update filter panel image count by filter item
     dm->filteredItemCount();
+    G::track(__FUNCTION__, "dm->filteredItemCount()");
     // update the status panel filtration status
     updateFilterStatus(isFilter);
+    G::track(__FUNCTION__, "updateFilterStatus(isFilter)");
     // update the image list to match dm->sf filration
-    dm->updateImageList();
+//    dm->updateImageList();
     // get the current selected item
     QModelIndex idx = thumbView->currentIndex();
     QString currentFilePath = idx.data(G::PathRole).toString();
@@ -4373,7 +4378,9 @@ All filter changes should be routed to here as a central clearing house.
         // update first/last/mid visible thumbnails
         thumbView->setViewportParameters();
         gridView->setViewportParameters();
+        G::track(__FUNCTION__, "setViewportParameters()");
         loadMetadataChunk();
+        G::track(__FUNCTION__, "loadMetadataChunk()");
     }
     // if filter has eliminated all rows so nothing to show
     else nullFiltration();
@@ -8714,10 +8721,10 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QPoint loc = centralWidget->window()->geometry().center();
-    QScreen *screen = qApp->screenAt(loc);
-    int virtualWidth = screen->geometry().width();
-    qDebug() << "virtualWidth =" << virtualWidth;
+    quint64 n = 1234567890;
+    qlonglong x = n;
+    QLocale c(QLocale::C);
+    qDebug() << QString("%L1").arg(x);
 }
 
 void MW::test2()
