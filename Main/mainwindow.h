@@ -392,7 +392,7 @@ private slots:
 //    void loadMetadataCache(int startRow = 0);
     void loadEntireMetadataCache();
     void loadImageCache();
-    void updateFilters();
+    void buildFilters();
     void loadFilteredImageCache();
     void addNewBookmark();
     void addNewBookmarkFromContext();

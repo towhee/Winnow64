@@ -170,7 +170,7 @@ void ImageCache::resumeImageCache()
 {
 /*
 Restart the image cache after it has been paused. This is used by metadataCacheThread after
-scroll events and the imageCacheThread has been paused to resume loading the iamge cache.
+scroll events and the imageCacheThread has been paused to resume loading the image cache.
 */
     {
     #ifdef ISDEBUG
@@ -658,10 +658,11 @@ void ImageCache::initImageCache(int &cacheSizeMB,
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
 
-    G::isNewFolderLoaded = true;
+//    G::isNewFolderLoaded = true;
 
     // just in case stopImageCache not called before this
     if (isRunning()) stopImageCache();
@@ -718,6 +719,7 @@ Apparently there needs to be a slight delay before calling.
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     // just in case stopImageCache not called before this
     if (isRunning()) pauseImageCache();
 

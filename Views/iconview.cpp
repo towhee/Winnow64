@@ -832,9 +832,10 @@ void IconView::selectFirst()
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+        G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     selectThumb(0);
 }
 

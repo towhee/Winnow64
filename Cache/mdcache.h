@@ -23,19 +23,22 @@ public:
                   Metadata *metadata, ImageCache *imageCacheThread);
     ~MetadataCache();
 
-    enum CacheImages {
-        No = 0,
-        New = 1,
-        Update = 2,
-        Resume = 3,
-        All = 4
+    enum Action {
+        NewFolder = 0,
+        MetaChunk = 1,
+        IconChunk = 2,
+        MetaIconChunk = 3,
+        AllMetadata = 4,
+        Resume = 5
     };
 
-    void loadNewMetadataCache(int thumbsPerPage/*, bool isShowCacheStatus*/);
-    void loadMetadataCache(int fromRow, int endRow, CacheImages cacheImages);
+    void loadNewFolder(int thumbsPerPage/*, bool isShowCacheStatus*/);
+    void loadMetadataIconChunk(int fromRow, int endRow);
+    void loadAllMetadata();
+    void loadIconChunk(int fromRow, int thumbsPerPage);
     void stopMetadateCache();
     bool isAllMetadataLoaded();
-    bool isAllIconsLoaded();
+    bool isAllIconLoaded();
 
     bool restart;
     QMap<int, bool> loadMap;
@@ -65,6 +68,7 @@ signals:
     void updateIsRunning(bool, bool, QString);
 //    void updateAllMetadataLoaded(bool);
     void updateIconBestFit();
+    void selectFirst();
     void updateFilters();
     void showCacheStatus(int, bool);            // row, renew progress bar
 
@@ -90,7 +94,7 @@ private:
 
     bool foundItemsToLoad;
     bool imageCacheWasRunning;
-    CacheImages cacheImages;
+    Action action;
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
 
@@ -101,7 +105,9 @@ private:
 
     void createCacheStatus();
     void updateCacheStatus(int row);
-    bool loadMetadataIconChunk();
+    void readMetadataIconChunk();
+    void readAllMetadata();
+    void readIconChunk();
     void iconCleanup();
     void setIconTargets(int start, int end);
 

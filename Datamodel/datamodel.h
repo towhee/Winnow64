@@ -78,7 +78,7 @@ public slots:
     void processMetadataBuffer();
     void addAllMetadata(bool isShowCacheStatus = false);
     bool addMetadataItem(ImageMetadata m, bool isShowCacheStatus = false);
-    void updateFilters();
+    void buildFilters();
 
 private:
     QWidget *mw;
