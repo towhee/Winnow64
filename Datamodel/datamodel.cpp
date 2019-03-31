@@ -672,7 +672,7 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     return true;
 }
 
-void DataModel::updateFilters()
+void DataModel::buildFilters()
 {
     {
     #ifdef ISDEBUG
@@ -774,9 +774,10 @@ void DataModel::updateFilters()
     unfilteredItemCount();
     row++;
     progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
-    qApp->processEvents();
 
     filtersBuilt = true;
+    popup("Filters have been updated.", 1000, 0.75);
+    qApp->processEvents();
 }
 
 QModelIndex DataModel::find(QString fPath)

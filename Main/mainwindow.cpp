@@ -194,6 +194,8 @@ void MW::showEvent(QShowEvent *event)
     #endif
     }
     QMainWindow::showEvent(event);
+    G::track(__FUNCTION__);
+    qDebug() << "G::isInitializing =" << G::isInitializing;
 
     /* When Winnow is starting and the previously open folder from the last session is opened
     (because the preferences "remember last folder" has been checked) the MetadataCache cannot
@@ -202,10 +204,10 @@ void MW::showEvent(QShowEvent *event)
     determined by the first/last visible icons in the IconViews and the count of thumbsPerPage.
     These can only be determined after the show event.
     */
-    thumbView->setViewportParameters();
-    gridView->setViewportParameters();
-    metadataCacheThread->loadNewMetadataCache(getThumbsPerPage());
-    qApp->processEvents();
+//    thumbView->setViewportParameters();
+//    gridView->setViewportParameters();
+//    metadataCacheThread->loadNewFolder(getThumbsPerPage());
+//    qApp->processEvents();
 
     // check for updates
     if(checkIfUpdate) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
@@ -837,14 +839,10 @@ void MW::folderSelectionChange()
 
     cacheTimer.restart();
 
-    // initialize datamodel image list used by image cache
-    // req'd rgh
-    dm->updateImageList();
-
     /* While still initializing, the window show event has not happened yet, so the
     thumbsPerPage, used to figure out how many icons to cache, is unknown.  Invoke after show
     event in this case. */
-    if (!G::isInitializing) metadataCacheThread->loadNewMetadataCache(getThumbsPerPage());
+    /*if (!G::isInitializing) */metadataCacheThread->loadNewFolder(getThumbsPerPage());
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -883,8 +881,8 @@ delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-//    G::track(__FUNCTION__, current.data(G::PathRole).toString());
-//    qDebug() << current.row() << current.column();
+    G::track(__FUNCTION__, current.data(G::PathRole).toString());
+    qDebug() << current.row() << current.column();
 
     bool isStart = false;
 
@@ -1064,6 +1062,7 @@ MetadataCache::setIconTargets.
     G::track(__FUNCTION__);
     #endif
     }
+    if (G::isInitializing) return 250;
     int tpp1 = 0;
     int tpp2 = 0;
 //    tpp1 = thumbView->getThumbsPerPage();
@@ -1168,8 +1167,8 @@ After the delay, if another singleshot has not been fired, loadMetadataChunk is 
 
     int midRow = getFirstVisibleThumb() + getThumbsPerPage() / 2;
 
-    if (midRow > metadataCacheThread->recacheIfLessThan &&
-        midRow < metadataCacheThread->recacheIfGreaterThan) return;
+    if (midRow < metadataCacheThread->recacheIfLessThan &&
+        midRow > metadataCacheThread->recacheIfGreaterThan) return;
 
     metadataCacheScrollTimer->start(cacheDelay);
 }
@@ -1188,9 +1187,8 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     if (G::isInitializing || dm->rowCount() == 0) return;
 
     if (imageCacheThread->isRunning()) imageCacheThread->pauseImageCache();
-    metadataCacheThread->loadMetadataCache(getFirstVisibleThumb(),
-                                           getThumbsPerPage(),
-                                           MetadataCache::CacheImages::Update);
+    metadataCacheThread->loadMetadataIconChunk(getFirstVisibleThumb(),
+                                               getThumbsPerPage());
 }
 
 void MW::loadEntireMetadataCache()
@@ -1229,8 +1227,13 @@ has been loaded.
         }
     }
     QApplication::processEvents();
-    dm->addAllMetadata(true);
-    dm->updateFilters();
+
+//    dm->addAllMetadata(true);
+    metadataCacheThread->loadAllMetadata();
+    metadataCacheThread->wait();
+
+    dm->buildFilters();
+
     progressBar->recoverProgressState();
     if (resumeImageCaching) imageCacheThread->resumeImageCache();
     QApplication::restoreOverrideCursor();
@@ -1395,10 +1398,13 @@ been consumed or all the images are cached.
         cachePreviewWidth, cachePreviewHeight);
 
     // have to wait until image caching thread running before setting flag
+    // rgh still need this?
     metadataLoaded = true;
 
     // tell image cache new position
     imageCacheThread->updateImageCachePosition(fPath);
+
+    G::isNewFolderLoaded = true;
 }
 
 void MW::loadFilteredImageCache()
@@ -2094,9 +2100,8 @@ void MW::createActions()
 
     filterUpdateAction = new QAction(tr("Update all filters"), this);
     filterUpdateAction->setShortcutVisibleInContextMenu(true);
-    filterUpdateAction->setCheckable(true);
     addAction(filterUpdateAction);
-    connect(filterUpdateAction,  &QAction::triggered, this, &MW::updateFilters);
+    connect(filterUpdateAction,  &QAction::triggered, this, &MW::buildFilters);
 
     // Sort Menu
 
@@ -3327,11 +3332,14 @@ void MW::createCaching()
     connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
             SLOT(loadMetadataChunk()));
 
-    connect(metadataCacheThread, SIGNAL(updateFilters()),
-            this, SLOT(updateFilters()));
+    connect(metadataCacheThread, SIGNAL(buildFilters()),
+            this, SLOT(buildFilters()));
 
     connect(metadataCacheThread, SIGNAL(updateIconBestFit()),
             this, SLOT(updateIconBestFit()));
+
+    connect(metadataCacheThread, SIGNAL(selectFirst()),
+            thumbView, SLOT(selectFirst()));
 
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));
@@ -4295,53 +4303,50 @@ triggers a sort, which needs to be suppressed while syncing the menu actions wit
     resortImageCache();
 }
 
-void MW::filterLastDay()
-{
 /*
-.
+FILTERS & SORTING
+
+Filters have two types:
+
+    1. Metadata known by the operating system (name, suffix, size, modified date)
+    2. Metadata read from the file by Winnow
+
+When a folder is first selected only type 1 information is known for all the files in the
+folder unless the folder is small enough so all the files were read in one pass. Filtering and
+sorting can only occur when the filter item is known for all the files. This is tracked by
+G::allMetadataLoaded.
+
+Type 2 Filtration steps:
+
+    * Make sure all metadata has been loaded for all files
+    * Build the filters
+    * Filter based on criteria selected
 */
+
+void MW::buildFilters()
+{
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    G::t.restart();
-    G::track(__FUNCTION__, "Starting");
-    if (dm->rowCount() == 0) {
-        popup("No images available to filter", 2000, 0.75);
-        filterLastDayAction->setChecked(false);
-        return;
-    }
-
-    if (!G::allMetadataLoaded) loadEntireMetadataCache();
-
-    // if the additional filters have not been built then do an update
-    if (!filters->days->childCount()) dm->updateFilters();
-    G::track(__FUNCTION__, "dm->updateFilters()");
-
-    // if there still are no days then tell user and return
-    int last = filters->days->childCount();
-    if (filters->days->childCount() == 0) {
-        popup("No days are available to filter", 2000, 0.75);
-        filterLastDayAction->setChecked(false);
-        return;
-    }
-
-    uncheckAllFilters();
-    G::track(__FUNCTION__, "uncheckAllFilters()");
-    if (filterLastDayAction->isChecked()) {
-        filters->days->child(last - 1)->setCheckState(0, Qt::Checked);
+    if (!G::allMetadataLoaded) {
+        loadEntireMetadataCache();
     }
     else {
-        filterLastDayAction->setChecked(false);
+        dm->buildFilters();
+        progressBar->recoverProgressState();
     }
-    filterChange();
 }
 
 void MW::filterChange(bool isFilter)
 {
 /*
-All filter changes should be routed to here as a central clearing house.
+All filter changes should be routed to here as a central clearing house. The datamodel filter
+is refreshed, the filter panel counts are updated, the current index is updated, the image
+cache is rebuilt to match the current filter, any prior selection that is still available is
+set, the thumb and grid first/last/thumbsPerPage parameters are recalculated and icons are
+loaded if necessary.
 */
     {
     #ifdef ISDEBUG
@@ -4365,8 +4370,6 @@ All filter changes should be routed to here as a central clearing house.
     // get the current selected item
     QModelIndex idx = thumbView->currentIndex();
     QString currentFilePath = idx.data(G::PathRole).toString();
-    // filter the image cache
-    imageCacheThread->filterImageCache(currentFilePath);
 
     if (dm->sf->rowCount()) {
         // if filtered but no selection
@@ -4381,6 +4384,9 @@ All filter changes should be routed to here as a central clearing house.
         G::track(__FUNCTION__, "setViewportParameters()");
         loadMetadataChunk();
         G::track(__FUNCTION__, "loadMetadataChunk()");
+        // filter the image cache
+        imageCacheThread->filterImageCache(currentFilePath);
+        G::track(__FUNCTION__, "imageCacheThread->filterImageCache(currentFilePath) " + currentFilePath);
     }
     // if filter has eliminated all rows so nothing to show
     else nullFiltration();
@@ -4410,7 +4416,7 @@ void MW::quickFilter()
 void MW::invertFilters()
 {
 /*
-Currently this is just clearing filters ...  rgh what to do?
+
 */
     {
     #ifdef ISDEBUG
@@ -4456,21 +4462,53 @@ void MW::uncheckAllFilters()
     filterGreenAction->setChecked(false);
     filterBlueAction->setChecked(false);
     filterPurpleAction->setChecked(false);
+    filterLastDayAction->setChecked(false);
 
     filterChange(false);
 }
 
-void MW::updateFilters()
+void MW::filterLastDay()
 {
+/*
+.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    if (!G::allMetadataLoaded) {
-        loadEntireMetadataCache();
-        dm->updateFilters();
+    G::t.restart();
+    G::track(__FUNCTION__, "Starting");
+    if (dm->rowCount() == 0) {
+        popup("No images available to filter", 2000, 0.75);
+        filterLastDayAction->setChecked(false);
+        return;
     }
+
+    if (!G::allMetadataLoaded) loadEntireMetadataCache();
+
+    // if the additional filters have not been built then do an update
+    if (!filters->days->childCount()) dm->buildFilters();
+    G::track(__FUNCTION__, "dm->updateFilters()");
+
+    // if there still are no days then tell user and return
+    int last = filters->days->childCount();
+    if (filters->days->childCount() == 0) {
+        popup("No days are available to filter", 2000, 0.75);
+        filterLastDayAction->setChecked(false);
+        return;
+    }
+
+    uncheckAllFilters();
+    G::track(__FUNCTION__, "uncheckAllFilters()");
+    if (filterLastDayAction->isChecked()) {
+        filters->days->child(last - 1)->setCheckState(0, Qt::Checked);
+    }
+    else {
+        filterLastDayAction->setChecked(false);
+    }
+
+    filterChange();
 }
 
 void MW::refine()
