@@ -86,6 +86,7 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
     abort = false;
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
+    qRegisterMetaType<QVector<int>>();
 }
 
 MetadataCache::~MetadataCache()
@@ -244,7 +245,8 @@ image files are loaded.  The imageCacheThread is not invoked.
     #endif
     }
     G::track(__FUNCTION__);
-    qDebug() << "G::isInitializing =" << G::isInitializing;
+    qDebug() << "G::isInitializing =" << G::isInitializing
+             << "fromRow =" << fromRow;
     if (isRunning()) {
         mutex.lock();
         abort = true;

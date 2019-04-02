@@ -164,6 +164,7 @@ void MW::initialize()
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
     G::ratings << "1" << "2" << "3" << "4" << "5";
     pickStack = new QStack<Pick>;
+    scrollRow = 0;
 }
 
 void MW::setupPlatform()
@@ -371,12 +372,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                      << getHorizontalScrollBarMax();
                      */
             if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
-                /*
-                 qDebug() << G::t.restart() << "\t" << objectName()
+
+                 qDebug() << objectName()
                      << ": Event Filter sending row =" << currentRow
                      << "horizontalScrollBarMax Qt vs Me"
                      << thumbView->horizontalScrollBar()->maximum()
-                     << thumbView->getHorizontalScrollBarMax();     */
+                     << thumbView->getHorizontalScrollBarMax();
                 thumbView->scrollToRow(scrollRow);
             }
         }
@@ -1151,6 +1152,7 @@ After the delay, if another singleshot has not been fired, loadMetadataChunk is 
     G::track(__FUNCTION__);
     #endif
     }
+    return;
 //    if (G::allMetadataLoaded)  return;
 
 //    qDebug() << "\nMW::loadMetadataCacheAfterDelay  "
@@ -3407,6 +3409,7 @@ void MW::createThumbView()
 //    thumbView->setSpacing(0);                // thumbView not visible without this
     thumbView->setAutoScroll(false);
     thumbView->setWrapping(false);
+    thumbView->firstVisibleRow = 0;
 
     // loadSettings has not run yet (dependencies, but QSettings has been opened
     thumbView->thumbWidth = setting->value("thumbWidth").toInt();
@@ -3448,6 +3451,7 @@ void MW::createGridView()
 //    gridView->setSpacing(0);                // gridView not visible without this
     gridView->setWrapping(true);
     gridView->setAutoScroll(false);
+    gridView->firstVisibleRow = 0;
 
     gridView->thumbWidth = setting->value("thumbWidthGrid").toInt();
     gridView->thumbHeight = setting->value("thumbHeightGrid").toInt();

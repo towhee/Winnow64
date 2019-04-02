@@ -485,15 +485,15 @@ show event occurs, when there is a viewport scroll event or when an icon justifi
     #endif
     }
     int row;
-    firstVisibleRow = indexAt(QPoint(0, 0)).row();
-//    firstVisibleRow = 0;
+//    firstVisibleRow = indexAt(QPoint(0, 0)).row();
+    firstVisibleRow = 0;
     QRect thumbViewRect = viewport()->rect();
-//    for (row = 0; row < dm->sf->rowCount(); ++row) {
-//        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
-//            firstVisibleRow = row;
-//            break;
-//        }
-//    }
+    for (row = 0; row < dm->sf->rowCount(); ++row) {
+        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
+            firstVisibleRow = row;
+            break;
+        }
+    }
     for (row = firstVisibleRow; row < dm->sf->rowCount(); ++row) {
         if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
             lastVisibleRow = row;
@@ -1301,6 +1301,7 @@ MW::mouseClickScroll == true.
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__, QString::number(row));
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 
