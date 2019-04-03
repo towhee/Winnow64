@@ -26,4 +26,8 @@ git pull            // sync local with origin
 git checkout -- fstree.cpp    // discards changed file fxtree.cpp
 git checkout -- .             // discards all changes
 
-git rm debug/Winnow.exe       // removes Winnow.exe from reporitory if accidently not ignored
+git rm debug/Winnow.exe       // removes Winnow.exe from repository if accidently not ignored
+
+// removes debug/Winnow.exe from entire repository history
+git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch debug/Winnow.exe' HEAD
+git push origin --force --all
