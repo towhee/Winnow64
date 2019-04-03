@@ -485,15 +485,15 @@ show event occurs, when there is a viewport scroll event or when an icon justifi
     #endif
     }
     int row;
-    firstVisibleRow = indexAt(QPoint(0, 0)).row();
-//    firstVisibleRow = 0;
+//    firstVisibleRow = indexAt(QPoint(0, 0)).row();
+    firstVisibleRow = 0;
     QRect thumbViewRect = viewport()->rect();
-//    for (row = 0; row < dm->sf->rowCount(); ++row) {
-//        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
-//            firstVisibleRow = row;
-//            break;
-//        }
-//    }
+    for (row = 0; row < dm->sf->rowCount(); ++row) {
+        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
+            firstVisibleRow = row;
+            break;
+        }
+    }
     for (row = firstVisibleRow; row < dm->sf->rowCount(); ++row) {
         if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
             lastVisibleRow = row;
@@ -507,7 +507,7 @@ show event occurs, when there is a viewport scroll event or when an icon justifi
 bool IconView::isRowVisible(int row)
 {
     setViewportParameters();
-    return row > firstVisibleRow && row < lastVisibleRow;
+    return row >= firstVisibleRow && row <= lastVisibleRow;
 }
 
 QString IconView::getCurrentFilePath()
@@ -632,6 +632,36 @@ void IconView::sortThumbs(int sortColumn, bool isReverse)
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
+void IconView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+/*
+For some reason the selectionModel rowCount is not up-to-date and the selection is updated
+after the MD::fileSelectionChange occurs, hence update the status bar from here.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QListView::selectionChanged(selected, deselected);
+    if (!G::isInitializing) emit updateStatus(true, "");
+}
+
+int IconView::getSelectedCount()
+{
+/*
+For some reason the selectionModel->selectedRows().count() is not up-to-date but
+selectedIndexes().count() works. This is called from MW::updateStatus to report the number of
+images selected.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    return selectedIndexes().count();
+}
+
 QStringList IconView::getSelectedThumbsList()
 {
 /* This was used by the eliminated tags class and is not used but looks
@@ -697,7 +727,8 @@ crash.
     G::track(__FUNCTION__);
     #endif
     }
-    QString fPath = dm->index(row, 0).data().toString();
+    QString fPath = dm->index(row, 0).data(G::PathRole).toString();
+//    qDebug() << "IconView::setIcon: " << fPath;
 #ifdef ISTEST
     qDebug() << "ThumbView::setIcon for row " << row << fPath;
 #endif
@@ -801,9 +832,10 @@ void IconView::selectFirst()
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+        G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     selectThumb(0);
 }
 
@@ -915,8 +947,8 @@ resize and preference adjustment operations.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << objectName() << "::rejustify   "
-             << "isWrapping" << isWrapping();
+//    qDebug() << objectName() << "::rejustify   "
+//             << "isWrapping" << isWrapping();
 
     if (!isWrapping()) return;
 
@@ -939,10 +971,10 @@ resize and preference adjustment operations.
     setThumbParameters();
     setViewportParameters();
 
-    qDebug() << objectName() << "::rejustify   "
-             << "firstVisibleRow" << firstVisibleRow
-             << "lastVisibleRow" << lastVisibleRow
-             << "thumbsPerPage" << thumbsPerPage;
+//    qDebug() << objectName() << "::rejustify   "
+//             << "firstVisibleRow" << firstVisibleRow
+//             << "lastVisibleRow" << lastVisibleRow
+//             << "thumbsPerPage" << thumbsPerPage;
 
 //    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -1011,7 +1043,7 @@ void IconView::resizeEvent(QResizeEvent *event)
     }
     QListView::resizeEvent(event);
 
-    m2->loadMetadataCacheAfterDelay(-1);
+    m2->loadMetadataCacheAfterDelay();
 
     // prevent a feedback loop where justify() or rejustify() triggers a resize event
 //    if (skipResize) {
@@ -1269,6 +1301,7 @@ MW::mouseClickScroll == true.
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__, QString::number(row));
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 
@@ -1500,7 +1533,6 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << "🔎🔎🔎 ThumbView::mouseMoveEvent event =" << event << event->pos();
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }
