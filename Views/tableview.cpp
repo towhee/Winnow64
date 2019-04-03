@@ -66,6 +66,16 @@ TableView::TableView(DataModel *dm)
     createOkToShow();
 }
 
+void TableView::setViewportParameters()
+{
+    firstVisibleRow = rowAt(0);
+    midVisibleRow = rowAt(height() / 2);
+    lastVisibleRow = rowAt(height());
+
+    int row = currentIndex().row();
+    isCurrentVisible = (row >= firstVisibleRow && row <= lastVisibleRow);
+}
+
 void TableView::scrollToCurrent()
 {
     {

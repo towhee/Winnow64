@@ -63,6 +63,7 @@ public:
     bool isBestAspect;
 
     int firstVisibleRow;
+    int midVisibleRow;
     int lastVisibleRow;
     int thumbsPerPage;
 
@@ -116,7 +117,7 @@ public slots:
     void scrollUp(int);
     void scrollPageDown(int);
     void scrollPageUp(int);
-    void scrollToCurrent(int row);
+    void scrollToRow(int row);
     void thumbsEnlarge();
     void thumbsShrink();
     void justify(JustifyAction action);
