@@ -171,7 +171,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
 
 //    if (objName == "Thumbnails") {
         horizontalScrollBar()->setObjectName("ThumbViewHorizontalScrollBar");
-        verticalScrollBar()->setObjectName("ThumbViewVerticalScrollBar");
+        verticalScrollBar()->setObjectName("IconViewVerticalScrollBar");
 //    }
 //    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 //    setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
@@ -485,14 +485,15 @@ show event occurs, when there is a viewport scroll event or when an icon justifi
     #endif
     }
     int row;
-    firstVisibleRow = 0;
+    firstVisibleRow = indexAt(QPoint(0, 0)).row();
+//    firstVisibleRow = 0;
     QRect thumbViewRect = viewport()->rect();
-    for (row = 0; row < dm->sf->rowCount(); ++row) {
-        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
-            firstVisibleRow = row;
-            break;
-        }
-    }
+//    for (row = 0; row < dm->sf->rowCount(); ++row) {
+//        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
+//            firstVisibleRow = row;
+//            break;
+//        }
+//    }
     for (row = firstVisibleRow; row < dm->sf->rowCount(); ++row) {
         if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
             lastVisibleRow = row;
@@ -500,6 +501,7 @@ show event occurs, when there is a viewport scroll event or when an icon justifi
         else break;
     }
     thumbsPerPage = lastVisibleRow - firstVisibleRow;
+    midVisibleRow = firstVisibleRow + thumbsPerPage / 2;
 }
 
 bool IconView::isRowVisible(int row)
@@ -1173,7 +1175,7 @@ For thumbSpace anatomy (see IconViewDelegate)
 
     iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
-    scrollToCurrent(currentIndex().row());
+    scrollToRow(currentIndex().row());
 }
 
 void IconView::updateLayout()
@@ -1248,15 +1250,15 @@ void IconView::scrollPageUp(int /*step*/)
     }
 }
 
-void IconView::scrollToCurrent(int row)
+void IconView::scrollToRow(int row)
 {
 /*
-This is called from MW::eventFilter after the eventFilter intercepts the last scrollbar paint
-event for the newly visible ThumbView. ThumbView is newly visible because in a mode change in
-MW (ie from Grid to Loupe) thumbView was hidden in Grid but visible in Loupe. Widgets will not
-respond while hidden so we must wait until ThumbView is visible and completely repainted. It
-takes a while for the scrollbars to finish painting, so when that is done, we want to scroll
-to the current position.
+This is called from MW::eventFilter after the eventFilter intercepts the last scrollbar
+paint event for the newly visible ThumbView. ThumbView is newly visible because in a mode
+change in MW (ie from Grid to Loupe) thumbView was hidden in Grid but visible in Loupe.
+Widgets will not respond while hidden so we must wait until ThumbView is visible and
+completely repainted. It takes a while for the scrollbars to finish painting, so when
+that is done, we want to scroll to the current position.
 
 It is also called from MW::delayScroll, which in turn, is called by MW::fileSelectionChange
 when a new image is selected and the selection was triggered by a mouse click and
@@ -1267,10 +1269,13 @@ MW::mouseClickScroll == true.
     G::track(__FUNCTION__);
     #endif
     }
-    if (!isWrapping())
-        horizontalScrollBar()->setValue(getHorizontalScrollBarOffset(row));
-    else
-        verticalScrollBar()->setValue(getVerticalScrollBarOffset(row));
+    QModelIndex idx = dm->sf->index(row, 0);
+    scrollTo(idx, QAbstractItemView::PositionAtCenter);
+
+//    if (!isWrapping())
+//        horizontalScrollBar()->setValue(getHorizontalScrollBarOffset(row));
+//    else
+//        verticalScrollBar()->setValue(getVerticalScrollBarOffset(row));
 
     readyToScroll = false;
 }
@@ -1537,7 +1542,7 @@ center.
     if (G::mode != "Loupe" && event->button() == Qt::LeftButton) {
         emit displayLoupe();
     }
-    scrollToCurrent(currentIndex().row());
+    scrollToRow(currentIndex().row());
 }
 
 void IconView::invertSelection()
