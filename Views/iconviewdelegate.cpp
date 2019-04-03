@@ -60,7 +60,10 @@ IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
     int pickWidth = 2;
 
     // define colors
-    defaultBorderColor = QColor(Qt::gray);
+    defaultBorderColor = QColor(108,108,108);
+//    defaultBorderColor = QColor(118,118,118);
+//    defaultBorderColor = QColor(128,128,128);
+//    defaultBorderColor = QColor(Qt::gray);
     currentItemColor = QColor(Qt::yellow);
     selectedColor = QColor(Qt::white);
 //    selectedColor = QColor(Qt::lightGray);
