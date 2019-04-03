@@ -928,6 +928,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     }
 
     isMouseDoubleClick = false;
+    isMouseDrag = false;
     if (event->button() == Qt::LeftButton) {
         isLeftMouseBtnPressed = true;
         scrollCount = 0;                // still used?
@@ -949,7 +950,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 {
 /*
 Pan the image during a mouse drag operation
-Set a delay to hide cursor is in slideshow mode
+Set a delay to hide cursor if in slideshow mode
 */
     {
     #ifdef ISDEBUG
@@ -958,7 +959,7 @@ Set a delay to hide cursor is in slideshow mode
     }
     static QPoint prevPos = event->pos();
 
-    if (isLeftMouseBtnPressed) {
+    if (isLeftMouseBtnPressed && event->pos() != prevPos) {
         if(isSlideshow) emit killSlideshow();
         isMouseDrag = true;
         setCursor(Qt::ClosedHandCursor);
@@ -997,19 +998,10 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     }
 
     // prevent zooming when forward and back buttons
-    if (event->button() == Qt::BackButton
-    ||  event->button() == Qt::ForwardButton) {
-        return;
-    }
-    if (event->button() == Qt::ForwardButton) {
-        thumbView->selectNext();
-        return;
-    }
+    if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) return;
 
-    //    qDebug() << G::t.restart() << "\t" << "mouseReleaseEvent" << event << "isMouseDrag" << isMouseDrag;
     isLeftMouseBtnPressed = false;
     if (isMouseDrag || isMouseDoubleClick) {
-//        qDebug() << G::t.restart() << "\t" << "mouseReleaseEvent  if (isMouseDrag || isMouseDoubleClick)" << event << "isMouseDrag" << isMouseDrag;
         isMouseDrag = false;
         if (isZoom) setCursor((Qt::OpenHandCursor));
         else setCursor(Qt::ArrowCursor);

@@ -62,7 +62,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     • Select a folder
       • Load datamodel with QDir info on each image file
       • Add the rest of the metadata to datamodel (incl thumbs as icons)
-      • Build the image cache
+      • Update the image cache
 
     */
 
@@ -116,7 +116,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     loadShortcuts(true);            // dependent on createActions
     setupCentralWidget();
     createAppStyle();
-    setActualDevicePixelRatio();       // dependent on Settings
+    setActualDevicePixelRatio();
 
     // recall previous thumbDock state in case last closed in Grid mode
     thumbDockVisibleAction->setChecked(wasThumbDockVisible);
@@ -137,6 +137,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     G::isInitializing = false;
 
     qRegisterMetaType<ImageMetadata>();
+    qRegisterMetaType<QVector<int>>();
 
     // if no fsTree expansion then fire getImageCount the first time
     fsTree->getImageCount();
@@ -163,6 +164,7 @@ void MW::initialize()
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
     G::ratings << "1" << "2" << "3" << "4" << "5";
     pickStack = new QStack<Pick>;
+    scrollRow = 0;
 }
 
 void MW::setupPlatform()
@@ -194,6 +196,7 @@ void MW::showEvent(QShowEvent *event)
     }
     QMainWindow::showEvent(event);
     G::track(__FUNCTION__);
+    qDebug() << "G::isInitializing =" << G::isInitializing;
 
     /* When Winnow is starting and the previously open folder from the last session is opened
     (because the preferences "remember last folder" has been checked) the MetadataCache cannot
@@ -202,13 +205,13 @@ void MW::showEvent(QShowEvent *event)
     determined by the first/last visible icons in the IconViews and the count of thumbsPerPage.
     These can only be determined after the show event.
     */
-    thumbView->setViewportParameters();
-    gridView->setViewportParameters();
-    metadataCacheThread->loadNewMetadataCache(getThumbsPerPage());
+//    thumbView->setViewportParameters();
+//    gridView->setViewportParameters();
+//    metadataCacheThread->loadNewFolder(getThumbsPerPage());
+//    qApp->processEvents();
 
-    qApp->processEvents();
+    // check for updates
     if(checkIfUpdate) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
-//    setMetadataDockFixedSize();
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -244,43 +247,6 @@ void MW::resizeEvent(QResizeEvent *event)
     emit resizeMW(this->geometry(), centralWidget->geometry());
 }
 
-//QSize MW::screen()
-//{
-//    QWindow *win = new QWindow;
-//    QPoint loc = centralWidget->window()->geometry().center();
-//    win->setScreen(qApp->screenAt(loc));
-//    win->showFullScreen();
-////    qDebug() << G::t.restart() << "\t" << "MW::Test  Width =" << win->width() << "Height =" << win->height()
-////             << qApp->screenAt(loc)->name();
-//    win->close();
-//    return QSize(win->width(), win->height());
-//}
-
-//void MW::mousePressEvent(QMouseEvent *event)
-//{
-////    qDebug() << G::t.restart() << "\t" << event;
-////    if (event->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
-////    if (event->button() == Qt::LeftButton) qDebug() << G::t.restart() << "\t" << "mousePressEvent  isLeftMouseBtnPressed" << isLeftMouseBtnPressed;
-////    QMainWindow::mousePressEvent(event);
-//    lastIndexChangeEvent = "MouseClick";
-//    QAbstractItemView::mousePressEvent(event);
-//}
-
-//void MW::mouseMoveEvent(QMouseEvent *event)
-//{
-//    qDebug() << G::t.restart() << "\t" << event;
-//    if (isLeftMouseBtnPressed) {
-//        isMouseDrag = true;
-//    }
-//    QMainWindow::mouseReleaseEvent(event);
-////    event->ignore();
-//}
-
-//void MW::mouseReleaseEvent(QMouseEvent *event)
-//{
-////    QMainWindow::mouseReleaseEvent(event);
-//}
-
 void MW::keyPressEvent(QKeyEvent *event)
 {
 
@@ -308,46 +274,74 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 
 //    isShift = false;
 
-//    qDebug() << G::t.restart() << "\t" << "MW::keyReleaseEvent" << event << isShift;
+    if (event->key() == Qt::Key_Escape) {
+        if (isSlideShow) slideShow();     // toggles slideshow off
+//            if (G::mode == "Loupe") gridDisplay();
+    }
+    // change slideshow delay 1 - 9 seconds
+    if (isSlideShow) {
+        int n = event->key() - 48;
+        if (n > 0 && n <=9) {
+            slideShowDelay = n;
+            slideShowTimer->setInterval(n * 1000);
+            QString msg = "Reset slideshow interval to ";
+            msg += QString::number(n) + " seconds";
+            popUp->showPopup(this, msg, 1000, 0.5);
+        }
+    }
     QMainWindow::keyReleaseEvent(event);
 }
 
-//bool MW::event(QObject *obj, QEvent *event)
+bool MW::event(QEvent *event)
+{
+/*    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+
+        if (keyEvent->key() == Qt::Key_Escape) {
+            if (isSlideShow) slideShow();     // toggles slideshow off
+        }
+        // change delay 1 - 9 seconds
+        if (isSlideShow) {
+            int n = keyEvent->key() - 48;
+            if (n > 0 && n <=9) {
+            }
+        }
+    }*/
+    return QMainWindow::event(event);
+}
+
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
-//    static int n = 0;
-
     // use to show all events being filtered - handy to figure out which to intercept
-//    if (event->type()
-//                             != QEvent::Paint
-//            && event->type() != QEvent::UpdateRequest
-//            && event->type() != QEvent::ZeroTimerEvent
-//            && event->type() != QEvent::Timer)
+/*    if (event->type()        != QEvent::Paint
+            && event->type() != QEvent::UpdateRequest
+            && event->type() != QEvent::ZeroTimerEvent
+            && event->type() != QEvent::Timer)
+    {
+        qDebug() << event << "\t"
+                 << event->type() << "\t"
+                 << obj << "\t"
+                 << obj->objectName();
+    }
+    */
 
-//    qDebug() << event << "\t"
-//                 << event->type() << "\t"
-//                 << obj << "\t"
-//                 << obj->objectName();
+/*    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
+        G::track(__FUNCTION__, "Performance profiling");
+        qDebug() << event <<  obj;
+    };
+    */
 
-//    rpt.flush();
-//    QString reportString = "";
-//    rpt.setString(&reportString);
-//    rpt.setFieldWidth(80);  rpt << (qDebug() << event);
-//    std::cout << reportString.toStdString() << std::flush;
-//    qDebug().
+    // figure out key presses
+/*    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent *event = static_cast<QKeyEvent *>(event);
+        qDebug() << "\nMW::eventFilter  keyPressEvent" << event;
+        if (event->key() == Qt::Key_Escape) {
+            dm->timeToQuit = true;
+        }
+    }
+    */
 
-//    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
-//        G::track(__FUNCTION__, "Performance profiling");
-//        qDebug() << event <<  obj;
-//    };
-
-//    if (event->type() == QEvent::KeyPress) {
-//        QKeyEvent *event = static_cast<QKeyEvent *>(event);
-//        qDebug() << "\nMW::eventFilter  keyPressEvent" << event;
-//        if (event->key() == Qt::Key_Escape) {
-//            dm->timeToQuit = true;
-//        }
-//    }
+    // ****************************************************************************************
 
     /* IconView is ready-to-go and can scroll to wherever we want:
 
@@ -378,12 +372,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                      << getHorizontalScrollBarMax();
                      */
             if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
-                /*
-                 qDebug() << G::t.restart() << "\t" << objectName()
+
+                 qDebug() << objectName()
                      << ": Event Filter sending row =" << currentRow
                      << "horizontalScrollBarMax Qt vs Me"
                      << thumbView->horizontalScrollBar()->maximum()
-                     << thumbView->getHorizontalScrollBarMax();     */
+                     << thumbView->getHorizontalScrollBarMax();
                 thumbView->scrollToRow(scrollRow);
             }
         }
@@ -419,6 +413,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
              gridView->scrollToRow(scrollRow);
          }
     }
+
+    // ****************************************************************************************
 
     /*  Intercept context menu
      Intercept context menu to enable/disable:
@@ -464,6 +460,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
     }
+
+    // ****************************************************************************************
 
     /* A splitter resize of top/bottom thumbDock is happening:
 
@@ -513,32 +511,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 
     return QWidget::eventFilter(obj, event);
-}
-
-bool MW::event(QEvent *event)
-{
-//    qDebug() << G::t.restart() << "\t" << event;
-
-    // slideshow
-    if (event->type() == QEvent::KeyRelease) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-
-        if (keyEvent->key() == Qt::Key_Escape) {
-            if (isSlideShow) slideShow();     // toggles slideshow off
-        }
-        // change delay 1 - 9 seconds
-        if (isSlideShow) {
-            int n = keyEvent->key() - 48;
-            if (n > 0 && n <=9) {
-                slideShowDelay = n;
-                slideShowTimer->setInterval(n * 1000);
-                QString msg = "Reset slideshow interval to ";
-                msg += QString::number(n) + " seconds";
-                popUp->showPopup(this, msg, 1000, 0.5);
-            }
-        }
-    }
-    return QMainWindow::event(event);
 }
 
 // DRAG AND DROP
@@ -694,7 +666,7 @@ void MW::handleStartupArgs()
 
  -   The image caching thread requires the offset and length for the
      full size embedded jpg, the image width and height in order to
-     calculate memory requirements, build the image priority queues, the
+     calculate memory requirements, Update the image priority queues, the
      target range and limit the cache to the assigned maximum size.
 
  *************************************************************************/
@@ -711,8 +683,8 @@ void MW::folderSelectionChange()
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
-    mdCacheMgr->stop();     // ASync
-    allMetadataLoaded = false;
+//    mdCacheMgr->stop();     // ASync
+    G::allMetadataLoaded = false;
 
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
     qApp->processEvents();
@@ -852,6 +824,7 @@ void MW::folderSelectionChange()
 
     // default sort by file name
     thumbView->sortThumbs(1, false);
+    thumbView->selectThumb(0);
 
     // no ratings or label color classes set yet so hide classificationLabel
 //    imageView->classificationLabel->setVisible(false);
@@ -867,14 +840,10 @@ void MW::folderSelectionChange()
 
     cacheTimer.restart();
 
-    // initialize datamodel image list used by image cache
-    // req'd rgh
-    dm->updateImageList();
-
     /* While still initializing, the window show event has not happened yet, so the
     thumbsPerPage, used to figure out how many icons to cache, is unknown.  Invoke after show
     event in this case. */
-    if (!G::isInitializing) metadataCacheThread->loadNewMetadataCache(getThumbsPerPage());
+    /*if (!G::isInitializing) */metadataCacheThread->loadNewFolder(getThumbsPerPage());
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -886,29 +855,26 @@ void MW::folderSelectionChange()
 void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 {
 /*
-Triggered when file selection changes (folder change selects new image, so it
-also triggers this function). The new image is loaded, the pick status is
-updated and the infoView metadata is updated. The imageCache is updated if
-necessary. The imageCache will not be updated if triggered by
-folderSelectionChange since a new one will be build.
+Triggered when file selection changes (folder change selects new image, so it also triggers
+this function). The new image is loaded, the pick status is updated and the infoView metadata
+is updated. The imageCache is updated if necessary. The imageCache will not be updated if
+triggered by folderSelectionChange since a new one will be Update.
 
-It has proven quite difficult to sync the thumbView, tableView and gridView,
-keeping the currentIndex in the center position (scrolling). The issue is
-timing as it can take the scrollbars a while to finish painting and there isn't
-an event to notify the view is ready for action. One to many scrollbar paint
-events are fired, and the scrollbar->maximum() value is tested against a
-calculated maximum to determine when the last paint event has fired. The
-scrollToCurrent function is called. It has also been necessary to write custom
-scrollbar functions because the scrollTo(idx, positionAtCenter) does not always
-work. Finally, when QAbstractItemView accepts a mouse press it adds a 100ms
-delay to avoid double clicks but this plays havoc with the scrolling, so a flag
-is used to track which actions are triggering changes in the datamodel index.
-If it is a mouse press then a singeShot timer in invoked to delay the scrolling
-to after QAbstractItemView is finished.
+It has proven quite difficult to sync the thumbView, tableView and gridView, keeping the
+currentIndex in the center position (scrolling). The issue is timing as it can take the
+scrollbars a while to finish painting and there isn't an event to notify the view is ready for
+action. One to many scrollbar paint events are fired, and the scrollbar->maximum() value is
+tested against a calculated maximum to determine when the last paint event has fired. The
+scrollToCurrent function is called. It has also been necessary to write custom scrollbar
+functions because the scrollTo(idx, positionAtCenter) does not always work. Finally, when
+QAbstractItemView accepts a mouse press it adds a 100ms delay to avoid double clicks but this
+plays havoc with the scrolling, so a flag is used to track which actions are triggering
+changes in the datamodel index. If it is a mouse press then a singeShot timer in invoked to
+delay the scrolling to after QAbstractItemView is finished.
 
-Note that the datamodel includes multiple columns for each row and the index
-sent to fileSelectionChange could be for a column other than 0 (from tableView)
-so scrollTo and delegate use of the current index must check the row.
+Note that the datamodel includes multiple columns for each row and the index sent to
+fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo and
+delegate use of the current index must check the row.
 */
     {
     #ifdef ISDEBUG
@@ -917,7 +883,7 @@ so scrollTo and delegate use of the current index must check the row.
     #endif
     }
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
-//    qDebug() << current.row() << current.column();
+    qDebug() << current.row() << current.column();
 
     bool isStart = false;
 
@@ -932,7 +898,7 @@ so scrollTo and delegate use of the current index must check the row.
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
 
-    if(isStart) return;
+    if (isStart) return;
 
 /*    if (isDragDrop && dragDropFilePath.length() > 0) {
         thumbView->selectThumb(dragDropFilePath);
@@ -946,14 +912,14 @@ so scrollTo and delegate use of the current index must check the row.
 
     // record current row as it is used to sync everything
     currentRow = current.row();
-    int dmCurrentRow = dm->sf->mapToSource(current).row();
-    dmCurrentIndex = dm->index(dmCurrentRow, 0);
+    int dmCurrentRow = dm->sf->mapToSource(current).row();              // new
+    dmCurrentIndex = dm->index(dmCurrentRow, 0);                        // new
 
     // update delegates so they can highlight the current item
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
 
-    // don't scroll mouse click source (screws up double clicks and disorients users
+    // don't scroll mouse click source (screws up double clicks and disorients users)
     if(G::source == "TableMouseClick") {
         if (gridView->isVisible()) gridView->scrollToRow(currentRow);
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow);
@@ -987,8 +953,9 @@ so scrollTo and delegate use of the current index must check the row.
     // update the metadata panel
     infoView->updateInfo(fPath);
 
-    // update the status bar with ie "5 of 290   30% zoom   3.6GB picked"
-    updateStatus(true);
+    // updateStatus happens in IconView::selectionChanged
+
+    progressLabel->setVisible(isShowCacheStatus);
 
     progressLabel->setVisible(isShowCacheStatus);
 
@@ -1057,11 +1024,12 @@ a bookmark or ejects a drive and the resulting folder does not have any eligible
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
-    allMetadataLoaded = false;
+    G::allMetadataLoaded = false;
     dm->clear();
     infoView->clearInfo();
     metadata->clear();
     imageView->clear();
+    currentRow = 0;
 //    progressLabel->setVisible(false);
     setThreadRunStatusInactive();                      // turn thread activity buttons gray
 //    G::isInitializing = false;
@@ -1085,23 +1053,6 @@ void MW::nullFiltration()
     isDragDrop = false;
 }
 
-void MW::updateAllMetadataLoaded(bool isLoaded)
-{
-/*
-This slot is signalled from the metadataCacheThread when all the metadata has
-been cached (including the thumbs).
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    allMetadataLoaded = isLoaded;
-}
-
 int MW::getThumbsPerPage()
 {
 /*
@@ -1114,6 +1065,7 @@ MetadataCache::setIconTargets.
     G::track(__FUNCTION__);
     #endif
     }
+    if (G::isInitializing) return 250;
     int tpp1 = 0;
     int tpp2 = 0;
 //    tpp1 = thumbView->getThumbsPerPage();
@@ -1184,7 +1136,7 @@ metadata caching.
     return (currentRow > getFirstVisibleThumb() && currentRow < getLastVisibleThumb());
 }
 
-void MW::loadMetadataCacheAfterDelay(int value)
+void MW::loadMetadataCacheAfterDelay()
 {
 /*
 See MetadataCache::run comments in mdcache.cpp. A 100ms singleshot timer insures that the
@@ -1202,10 +1154,14 @@ After the delay, if another singleshot has not been fired, loadMetadataChunk is 
     G::track(__FUNCTION__);
     #endif
     }
-//    if (allMetadataLoaded)  return;
+//    return;
+//    if (G::allMetadataLoaded)  return;
+
     qDebug() << "\nMW::loadMetadataCacheAfterDelay  "
+             << "G::isInitializing" << G::isInitializing
+             << "G::isNewFolderLoaded" << G::isNewFolderLoaded
              << "currentRow" << currentRow
-             << "firstVisibleRowRow" << getFirstVisibleThumb()
+             << "firstVisibleRow" << getFirstVisibleThumb()
              << "metadataCacheThread->recacheIfLessThan" << metadataCacheThread->recacheIfLessThan
              << "metadataCacheThread->recacheIfGreaterThan" << metadataCacheThread->recacheIfGreaterThan
              << "\n";
@@ -1217,8 +1173,8 @@ After the delay, if another singleshot has not been fired, loadMetadataChunk is 
 
     int midRow = getFirstVisibleThumb() + getThumbsPerPage() / 2;
 
-    if (midRow > metadataCacheThread->recacheIfLessThan &&
-        midRow < metadataCacheThread->recacheIfGreaterThan) return;
+    if (midRow < metadataCacheThread->recacheIfLessThan &&
+        midRow > metadataCacheThread->recacheIfGreaterThan) return;
 
     metadataCacheScrollTimer->start(cacheDelay);
 }
@@ -1234,17 +1190,11 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
         G::track(__FUNCTION__);
 #endif
     }
-    //    G::track(__FUNCTION__);
-    //    if (metadataCacheThread->isRunning()) return;
-
-    qDebug() << "MW::loadMetadataChunk " << getFirstVisibleThumb() << getThumbsPerPage();
-
     if (G::isInitializing || dm->rowCount() == 0) return;
 
     if (imageCacheThread->isRunning()) imageCacheThread->pauseImageCache();
-    metadataCacheThread->loadMetadataCache(getFirstVisibleThumb(),
-                                           getThumbsPerPage(),
-                                           MetadataCache::CacheImages::Update);
+    metadataCacheThread->loadMetadataIconChunk(getFirstVisibleThumb(),
+                                               getThumbsPerPage());
 }
 
 void MW::loadEntireMetadataCache()
@@ -1260,9 +1210,8 @@ has been loaded.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
-//    if (metadataCacheThread->isAllMetadataLoaded()) return;
     if (G::isInitializing) return;
+    if (metadataCacheThread->isAllMetadataLoaded()) return;
 
     bool resumeImageCaching = false;
     if (imageCacheThread->isRunning()) {
@@ -1275,6 +1224,7 @@ has been loaded.
     QApplication::setOverrideCursor(Qt::WaitCursor);
     progressBar->saveProgressState();
     progressBar->clearProgress();
+    QApplication::processEvents();
     int rows = dm->rowCount();
     // update progress for already loaded metadata
     for (int row = 0; row < rows; ++row) {
@@ -1282,22 +1232,18 @@ has been loaded.
             progressBar->updateProgress(row, row + 1, rows, QColor(100,150,150), "");
         }
     }
+    QApplication::processEvents();
 
+//    dm->addAllMetadata(true);
     metadataCacheThread->loadAllMetadata();
-    allMetadataLoaded = true;
+    metadataCacheThread->wait();
 
-//    metadataCacheThread->loadMetadataCache(250, 500);
+    dm->buildFilters();
 
-    dm->updateFilters();
     progressBar->recoverProgressState();
     if (resumeImageCaching) imageCacheThread->resumeImageCache();
     QApplication::restoreOverrideCursor();
     QApplication::processEvents();
-}
-
-void MW::updateMetadata(int thread, bool showProgress)
-{
-    qDebug() << "MW::updateMetadata for thread" << thread;
 }
 
 void MW::updateMetadataCacheStatus(int row, bool clear)
@@ -1427,21 +1373,17 @@ been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
-
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
 
-    // update filter item counts
+    // update filter item counts for rating and colour labels, plus other filters if
+    // all metadata has been loaded
     dm->filteredItemCount();
     dm->unfilteredItemCount();
 
-    // determine best aspect ratio for thumbnails
-//    gridView->bestAspect();
-//    thumbView->bestAspect();
-
     statusBar()->showMessage("Loading the image cache", 1000);  // rgh remove this?
+
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
@@ -1452,17 +1394,23 @@ been consumed or all the images are cached.
     else
         fPath = indexesList.first().data(G::PathRole).toString();
 
+    // the folder does not have any eligible images (probably from previous session and the
+    // drive has been removed or did have "include subfolders" activated
+    if (fPath == "") return;
+
     // imageCacheThread checks if already running and restarts caching
     imageCacheThread->initImageCache(cacheSizeMB,
         isShowCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
 
     // have to wait until image caching thread running before setting flag
+    // rgh still need this?
     metadataLoaded = true;
 
     // tell image cache new position
-    qDebug() << "MW::loadImageCache   fPath" << fPath;
     imageCacheThread->updateImageCachePosition(fPath);
+
+    G::isNewFolderLoaded = true;
 }
 
 void MW::loadFilteredImageCache()
@@ -2156,6 +2104,11 @@ void MW::createActions()
     addAction(filterLastDayAction);
     connect(filterLastDayAction,  &QAction::triggered, this, &MW::filterLastDay);
 
+    filterUpdateAction = new QAction(tr("Update all filters"), this);
+    filterUpdateAction->setShortcutVisibleInContextMenu(true);
+    addAction(filterUpdateAction);
+    connect(filterUpdateAction,  &QAction::triggered, this, &MW::buildFilters);
+
     // Sort Menu
 
     sortFileNameAction = new QAction(tr("Sort by file name"), this);
@@ -2847,6 +2800,9 @@ void MW::createMenus()
     filterMenu->addAction(filterBlueAction);
     filterMenu->addAction(filterPurpleAction);
     filterMenu->addSeparator();
+    filterMenu->addAction(filterLastDayAction);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterUpdateAction);
     filterMenu->addAction(filterInvertAction);
     filterMenu->addAction(filterLastDayAction);
 
@@ -2980,6 +2936,7 @@ void MW::createMenus()
     filterActions = new QList<QAction *>;
 //    QList<QAction *> *filterActions = new QList<QAction *>;
     filterActions->append(uncheckAllFiltersAction);
+    filterActions->append(filterUpdateAction);
     filterActions->append(separatorAction);
     filterActions->append(expandAllAction);
     filterActions->append(collapseAllAction);
@@ -3366,7 +3323,7 @@ void MW::createCaching()
     metadataCacheThread = new MetadataCache(this, dm, metadata, imageCacheThread);
 
     // new kid on the block
-    mdCacheMgr = new MdCacheMgr(this, dm, thumbView);   // ASync
+//    mdCacheMgr = new MdCacheMgr(this, dm, thumbView);   // ASync
 
     /* When a new folder is selected the metadataCacheThread is started to
        load all the metadata and thumbs for each image.  If the user scrolls
@@ -3382,14 +3339,14 @@ void MW::createCaching()
     connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
             SLOT(loadMetadataChunk()));
 
-    connect(metadataCacheThread, SIGNAL(updateFilters()),
-            this, SLOT(updateFilters()));
+    connect(metadataCacheThread, SIGNAL(buildFilters()),
+            this, SLOT(buildFilters()));
 
     connect(metadataCacheThread, SIGNAL(updateIconBestFit()),
             this, SLOT(updateIconBestFit()));
 
-    connect(metadataCacheThread, SIGNAL(updateAllMetadataLoaded(bool)),
-            this, SLOT(updateAllMetadataLoaded(bool)));
+    connect(metadataCacheThread, SIGNAL(selectFirst()),
+            thumbView, SLOT(selectFirst()));
 
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCache()));
@@ -3457,6 +3414,7 @@ void MW::createThumbView()
 //    thumbView->setSpacing(0);                // thumbView not visible without this
     thumbView->setAutoScroll(false);
     thumbView->setWrapping(false);
+    thumbView->firstVisibleRow = 0;
 
     // loadSettings has not run yet (dependencies, but QSettings has been opened
     thumbView->thumbWidth = setting->value("thumbWidth").toInt();
@@ -3480,10 +3438,10 @@ void MW::createThumbView()
             this, SLOT(updateStatus(bool, QString)));
 
     connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheAfterDelay(int)));
+            this, SLOT(loadMetadataCacheAfterDelay()));
 
     connect(thumbView->horizontalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheAfterDelay(int)));
+            this, SLOT(loadMetadataCacheAfterDelay()));
 }
 
 void MW::createGridView()
@@ -3498,6 +3456,7 @@ void MW::createGridView()
 //    gridView->setSpacing(0);                // gridView not visible without this
     gridView->setWrapping(true);
     gridView->setAutoScroll(false);
+    gridView->firstVisibleRow = 0;
 
     gridView->thumbWidth = setting->value("thumbWidthGrid").toInt();
     gridView->thumbHeight = setting->value("thumbHeightGrid").toInt();
@@ -3509,7 +3468,7 @@ void MW::createGridView()
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
     connect(gridView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheAfterDelay(int)));
+            this, SLOT(loadMetadataCacheAfterDelay()));
 }
 
 void MW::createTableView()
@@ -3651,6 +3610,57 @@ InfoView shows basic metadata in a dock widget.
     }
     infoView = new InfoView(this, metadata);
     infoView->setMaximumWidth(folderMaxWidth);
+
+    /* read InfoView okToShow fields */
+//    qDebug() << G::t.restart() << "\t" << "\nread InfoView okToShow fields\n";
+    setting->beginGroup("InfoFields");
+    QStringList setFields = setting->childKeys();
+    QList<QStandardItem *> itemList;
+    QStandardItemModel *k = infoView->ok;
+    // go through every setting in QSettings
+    bool isFound;
+    for (int i = 0; i < setFields.size(); ++i) {
+        isFound = false;
+        // Get a field and boolean
+        QString setField = setFields.at(i);
+        bool okToShow = setting->value(setField).toBool();
+        int row;
+        // search for the matching item in infoView
+        for (row = 0; row < k->rowCount(); row++) {
+            isFound = false;
+            QModelIndex idParent = k->index(row, 0);
+            QString fieldName = qvariant_cast<QString>(idParent.data());
+            // find the match
+//            qDebug() << G::t.restart() << "\t" << "Comparing parent" << fieldName << "to"<< setField;
+            if (fieldName == setField) {
+                QModelIndex idParentChk = k->index(row, 2);
+                // set the flag whether to display or not
+                k->setData(idParentChk, okToShow, Qt::EditRole);
+//                qDebug() << G::t.restart() << "\t" << "Parent match so set to" << okToShow
+//                         << idParent.data().toString() << "\n";
+                isFound = true;
+                break;
+            }
+            for (int childRow = 0; childRow < k->rowCount(idParent); childRow++) {
+                QModelIndex idChild = k->index(childRow, 0, idParent);
+                QString fieldName = qvariant_cast<QString>(idChild.data());
+                // find the match
+//                qDebug() << G::t.restart() << "\t" << "Comparing child" << fieldName << "to"<< setField;
+                if (fieldName == setField) {
+                    QModelIndex idChildChk = k->index(childRow, 2, idParent);
+                    // set the flag whether to display or not
+                    k->setData(idChildChk, okToShow, Qt::EditRole);
+//                    qDebug() << G::t.restart() << "\t" << "Child match so set to" << okToShow
+//                             << idChild.data().toString() << "\n";
+                    isFound = true;
+                    break;
+                }
+                if (isFound) break;
+            }
+            if (isFound) break;
+        }
+    }
+    setting->endGroup();
 
     /* read InfoView okToShow fields */
 //    qDebug() << G::t.restart() << "\t" << "\nread InfoView okToShow fields\n";
@@ -4096,7 +4106,7 @@ QString fileSym = "📷";
         if (G::mode == "Loupe" || G::mode == "Compare")
             base += "Zoom: " + getZoom();
         base += spacer + "Pos: " + getPosition();
-        QString s = QString::number(selectionModel->selectedRows().count());
+        QString s = QString::number(thumbView->getSelectedCount());
         base += spacer +"Selected: " + s;
         base += spacer + "Picked: " + getPicked();
         base += spacer;
@@ -4166,13 +4176,13 @@ The include subfolder status is shown in the status bar.
 
 void MW::updateRawJpgStatus()
 {
-    /*
+/*
 The include subfolder status is shown in the status bar.
 */
     {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
     }
     if (combineRawJpgAction->isChecked())
         rawJpgStatusLabel->setText("RAW/JPG ");
@@ -4300,13 +4310,12 @@ void MW::resortImageCache()
     #endif
     }
     if (!dm->sf->rowCount()) return;
-//    dm->updateImageList();
-//    QModelIndex idx = thumbView->currentIndex();
-//    QString currentFilePath = idx.data(G::PathRole).toString();
-//    if(!dm->imageFilePathList.contains(currentFilePath)) {
-//        idx = dm->sf->index(0, 0);
-//        currentFilePath = idx.data(G::PathRole).toString();
-//    }
+
+    if (!G::allMetadataLoaded) {
+        thumbView->setViewportParameters();
+        gridView->setViewportParameters();
+        loadEntireMetadataCache();
+    }
 
     QString currentFilePath = dmCurrentIndex.data(G::PathRole).toString();
     QModelIndex idx = dm->sf->mapFromSource(dmCurrentIndex);
@@ -4317,20 +4326,18 @@ void MW::resortImageCache()
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 {
 /*
-This slot function is triggered by the tableView->horizontalHeader
-sortIndicatorChanged signal being emitted, which tells us that the data model
-sort/filter has been re-sorted. As a consequence we need to update the menu
-checked status for the correct column and also resync the image cache. However,
-changing the menu checked state for any of the menu sort actions triggers a
-sort, which needs to be suppressed while syncing the menu actions with
-tableView.
+This slot function is triggered by the tableView->horizontalHeader sortIndicatorChanged signal
+being emitted, which tells us that the data model sort/filter has been re-sorted. As a
+consequence we need to update the menu checked status for the correct column and also resync
+the image cache. However, changing the menu checked state for any of the menu sort actions
+triggers a sort, which needs to be suppressed while syncing the menu actions with tableView.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
+    if (!G::allMetadataLoaded) loadEntireMetadataCache();
 
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
     switch (column) {
@@ -4359,65 +4366,73 @@ tableView.
     resortImageCache();
 }
 
-void MW::filterLastDay()
-{
 /*
-.
+FILTERS & SORTING
+
+Filters have two types:
+
+    1. Metadata known by the operating system (name, suffix, size, modified date)
+    2. Metadata read from the file by Winnow
+
+When a folder is first selected only type 1 information is known for all the files in the
+folder unless the folder is small enough so all the files were read in one pass. Filtering and
+sorting can only occur when the filter item is known for all the files. This is tracked by
+G::allMetadataLoaded.
+
+Type 2 Filtration steps:
+
+    * Make sure all metadata has been loaded for all files
+    * Build the filters
+    * Filter based on criteria selected
 */
+
+void MW::buildFilters()
+{
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
-
-    if (dm->rowCount() == 0) {
-        popup("No images available to filter", 2000, 0.75);
-        filterLastDayAction->setChecked(false);
-        return;
-    }
-    int last = filters->days->childCount();
-    if (last == 0) {
-        popup("No days are available to filter", 2000, 0.75);
-        filterLastDayAction->setChecked(false);
-        return;
-    }
-    uncheckAllFilters();
-    if (filterLastDayAction->isChecked()) {
-        filters->days->child(last - 1)->setCheckState(0, Qt::Checked);
+    if (!G::allMetadataLoaded) {
+        loadEntireMetadataCache();
     }
     else {
-        filterLastDayAction->setChecked(false);
+        dm->buildFilters();
+        progressBar->recoverProgressState();
     }
-    filterChange();
-    loadMetadataChunk();
 }
 
 void MW::filterChange(bool isFilter)
 {
 /*
-All filter changes should be routed to here as a central clearing house.
+All filter changes should be routed to here as a central clearing house. The datamodel filter
+is refreshed, the filter panel counts are updated, the current index is updated, the image
+cache is rebuilt to match the current filter, any prior selection that is still available is
+set, the thumb and grid first/last/thumbsPerPage parameters are recalculated and icons are
+loaded if necessary.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
+    G::track(__FUNCTION__, "Starting");
+    if (!G::allMetadataLoaded) loadEntireMetadataCache();
 
     // refresh the proxy sort/filter
     dm->sf->filterChange();
+    G::track(__FUNCTION__, "dm->sf->filterChange()");
     // update filter panel image count by filter item
     dm->filteredItemCount();
+    G::track(__FUNCTION__, "dm->filteredItemCount()");
     // update the status panel filtration status
     updateFilterStatus(isFilter);
+    G::track(__FUNCTION__, "updateFilterStatus(isFilter)");
     // update the image list to match dm->sf filration
-    dm->updateImageList();
+//    dm->updateImageList();
     // get the current selected item
     QModelIndex idx = thumbView->currentIndex();
     QString currentFilePath = idx.data(G::PathRole).toString();
-    // filter the image cache
-    imageCacheThread->filterImageCache(currentFilePath);
 
     if (dm->sf->rowCount()) {
         // if filtered but no selection
@@ -4426,6 +4441,15 @@ All filter changes should be routed to here as a central clearing house.
             centralLayout->setCurrentIndex(prevCentralView);
         }
         updateStatus(true);
+        // update first/last/mid visible thumbnails
+        thumbView->setViewportParameters();
+        gridView->setViewportParameters();
+        G::track(__FUNCTION__, "setViewportParameters()");
+        loadMetadataChunk();
+        G::track(__FUNCTION__, "loadMetadataChunk()");
+        // filter the image cache
+        imageCacheThread->filterImageCache(currentFilePath);
+        G::track(__FUNCTION__, "imageCacheThread->filterImageCache(currentFilePath) " + currentFilePath);
     }
     // if filter has eliminated all rows so nothing to show
     else nullFiltration();
@@ -4457,14 +4481,14 @@ void MW::quickFilter()
 void MW::invertFilters()
 {
 /*
-Currently this is just clearing filters ...  rgh what to do?
+
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
+    if (!G::allMetadataLoaded) loadEntireMetadataCache();
 
     if (dm->rowCount() == 0) {
         popup("No images available to invert filtration", 2000, 0.75);
@@ -4489,7 +4513,7 @@ void MW::uncheckAllFilters()
     #endif
     }
 
-    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
+    if (!G::allMetadataLoaded) loadEntireMetadataCache();
 
     filters->uncheckAllFilters();
     filterPickAction->setChecked(false);
@@ -4503,21 +4527,53 @@ void MW::uncheckAllFilters()
     filterGreenAction->setChecked(false);
     filterBlueAction->setChecked(false);
     filterPurpleAction->setChecked(false);
+    filterLastDayAction->setChecked(false);
 
     filterChange(false);
 }
 
-void MW::updateFilters()
+void MW::filterLastDay()
 {
+/*
+.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    statusBar()->showMessage("Filters are updating for all the metadata in the folder", 1000);
-    if (!allMetadataLoaded) loadEntireMetadataCache();
-    if (allMetadataLoaded) dm->updateFilters();
-//    dm->filteredItemCount();
+    G::t.restart();
+    G::track(__FUNCTION__, "Starting");
+    if (dm->rowCount() == 0) {
+        popup("No images available to filter", 2000, 0.75);
+        filterLastDayAction->setChecked(false);
+        return;
+    }
+
+    if (!G::allMetadataLoaded) loadEntireMetadataCache();
+
+    // if the additional filters have not been built then do an update
+    if (!filters->days->childCount()) dm->buildFilters();
+    G::track(__FUNCTION__, "dm->updateFilters()");
+
+    // if there still are no days then tell user and return
+    int last = filters->days->childCount();
+    if (filters->days->childCount() == 0) {
+        popup("No days are available to filter", 2000, 0.75);
+        filterLastDayAction->setChecked(false);
+        return;
+    }
+
+    uncheckAllFilters();
+    G::track(__FUNCTION__, "uncheckAllFilters()");
+    if (filterLastDayAction->isChecked()) {
+        filters->days->child(last - 1)->setCheckState(0, Qt::Checked);
+    }
+    else {
+        filterLastDayAction->setChecked(false);
+    }
+
+    filterChange();
 }
 
 void MW::refine()
@@ -4580,7 +4636,7 @@ void MW::sortThumbnails()
     #endif
     }
     if(sortMenuUpdateToMatchTable) return;
-    if (!metadataCacheThread->isAllMetadataLoaded()) loadEntireMetadataCache();
+    if (!G::allMetadataLoaded) loadEntireMetadataCache();
 
     int sortColumn = 0;
 
@@ -4615,31 +4671,6 @@ void MW::showHiddenFiles()
 //    fsTree->setModelFlags();
 }
 
-//void MW::delayScroll()
-//{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    qDebug() << "enter delayScroll";
-//    // scroll views to center on currentIndex
-//    if (thumbView->isVisible()) thumbView->scrollToCurrent(currentRow);
-//    if (gridView->isVisible()) gridView->scrollToCurrent(currentRow);
-//    if (tableView->isVisible())
-//        tableView->scrollTo(thumbView->currentIndex(), QAbstractItemView::EnsureVisible);
-//}
-
-//void MW::setDockFitThumbs()
-//{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    setThumbDockFeatures(dockWidgetArea(thumbDock));
-//}
-
 void MW::thumbsEnlarge()
 {
     {
@@ -4667,7 +4698,7 @@ void MW::thumbsShrink()
         else thumbView->thumbsShrink();
     }
     // may be more icons to cache
-    loadMetadataCacheAfterDelay(-1);
+    loadMetadataCacheAfterDelay();
 }
 
 void MW::addRecentFolder(QString fPath)
@@ -4958,7 +4989,7 @@ Delete, rename and reassign workspaces.
     G::track(__FUNCTION__);
     #endif
     }
-    // build a list of workspace names for the manager dialog
+    // Update a list of workspace names for the manager dialog
     QList<QString> wsList;
     for (int i=0; i<workspaces->count(); i++)
         wsList.append(workspaces->at(i).name);
@@ -4987,7 +5018,7 @@ void MW::deleteWorkspace(int n)
     // remove workspace from list of workspaces
     workspaces->removeAt(n);
 
-    // sync menus by rebuilding.  Tried to use indexes but had problems so
+    // sync menus by reUpdateing.  Tried to use indexes but had problems so
     // resorted to brute force solution
     syncWorkspaceMenu();
 }
@@ -5455,7 +5486,7 @@ void MW::runExternalApp()
         QFileInfo fInfo = fPath;
         QString folderPath = fInfo.dir().absolutePath() + "/";
 
-        // build arguments
+        // Update arguments
         if(appExecutable == "Photo Mechanic.exe") arguments << folderPath;
         else arguments << fPath;
 
@@ -5605,19 +5636,23 @@ void MW::setPrefPage(int page)
 
 void MW::setDisplayResolution()
 {
+/*
+This is called at startup and when the app window is dragged to another monitor.  The screen
+resolution is used to calculate and report the zoom in ImageView.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
     QPoint loc = centralWidget->window()->geometry().center();
+    QScreen *screen = qApp->screenAt(loc);
 
 #ifdef Q_OS_WIN
-//    G::devicePixelRatio = 1;
     // make sure the centroid is on a screen
-    if(qApp->screenAt(loc) != nullptr) {
-        displayHorizontalPixels = qApp->screenAt(loc)->geometry().width();
-        displayVerticalPixels = qApp->screenAt(loc)->geometry().height();
+    if(screen != nullptr) {
+        displayHorizontalPixels = screen->geometry().width();
+        displayVerticalPixels = screen->geometry().height();
     }
 #endif
 
@@ -5661,12 +5696,37 @@ void MW::setActualDevicePixelRatio()
     G::track(__FUNCTION__);
     #endif
     }
-    int virtualWidth = QGuiApplication::primaryScreen()->geometry().width();
-    if (displayHorizontalPixels > 0)
+
+    QPoint loc = centralWidget->window()->geometry().center();
+    QScreen *screen = qApp->screenAt(loc);
+
+    /* If the previous session was closed with the window mostly off screen, or a previous
+       screen (monitor) is no longer available, then relocate the app to the center of the
+       desktop */
+    if (screen == nullptr && G::isInitializing) {
+        G::actualDevicePixelRatio = 1;
+        QRect desktop = qApp->desktop()->availableGeometry();
+        resize(static_cast<int>(0.75 * desktop.width()),
+               static_cast<int>(0.75 * desktop.height()));
+        setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
+            size(), desktop));
+        qDebug() <<  "screen == nullptr && G::isInitializing"
+                  << desktop;
+        return;
+    }
+
+    // Prevent calculations while moving the app between and off monitors
+    if (screen == nullptr) return;
+
+    int virtualWidth = qApp->screenAt(loc)->geometry().width();
+
+    if (virtualWidth > 0)
         G::actualDevicePixelRatio =
             static_cast<int>(static_cast<float>(displayHorizontalPixels) / virtualWidth);
     else
         G::actualDevicePixelRatio = QPaintDevice::devicePixelRatio();
+
+    if (G::actualDevicePixelRatio == 0) G::actualDevicePixelRatio = 1;
 
 /*  MacOS Screen information
 #if defined(Q_OS_MAC)
@@ -6927,8 +6987,6 @@ notification when the QListView has finished painting itself.
     #endif
     }
     G::mode = "Loupe";
-    qDebug() << G::mode << "wasThumbDockVisible" << wasThumbDockVisible
-             <<"isNormalScreen" << isNormalScreen;
 
     // save selection as tableView is hidden and not synced
     saveSelection();
@@ -6936,13 +6994,11 @@ notification when the QListView has finished painting itself.
     // sync scrolling between modes (loupe, grid and table)
     if (prevMode == "Table") {
         tableView->setViewportParameters();
-        qDebug() << "table  midVisible =" << tableView->midVisibleRow
-                 << "tableView->isCurrentVisible =" << tableView->isCurrentVisible;
         if (tableView->isCurrentVisible) scrollRow = currentRow;
         else scrollRow = tableView->midVisibleRow;
     }
     if (prevMode == "Grid") {
-        if(gridView->isRowVisible(currentRow)) scrollRow = currentRow;
+        if (gridView->isRowVisible(currentRow)) scrollRow = currentRow;
         else scrollRow = gridView->midVisibleRow;
     }
 
@@ -6954,13 +7010,7 @@ notification when the QListView has finished painting itself.
 
     // recover thumbdock if it was visible before as gridView and full screen can
     // hide the thumbdock
-    if(isNormalScreen){
-        if(wasThumbDockVisible) {
-            thumbDock->setVisible(true);
-//        if(wasThumbDockVisible && !thumbDock->isVisible()) thumbDock->setVisible(true);
-//        if(!wasThumbDockVisible && thumbDock->isVisible()) thumbDock->setVisible(false);
-        }
-    }
+    if(isNormalScreen && wasThumbDockVisible) thumbDock->setVisible(true);
 
     if (thumbView->isVisible()) thumbView->setFocus();
 
@@ -7014,8 +7064,10 @@ around lack of notification when the QListView has finished painting itself.
     saveSelection();
 
     // remember thumbView visibility so can re-establish if change mode again
-    if (thumbView->isVisible()) wasThumbDockVisible = true;
-    else wasThumbDockVisible = false;
+    if (!G::isInitializing) {
+        if (thumbView->isVisible()) wasThumbDockVisible = true;
+        else wasThumbDockVisible = false;
+    }
 
     // sync scrolling between modes (loupe, grid and table)
     if (prevMode == "Table") {
@@ -8774,11 +8826,10 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    tableView->setViewportParameters();
-    gridView->setViewportParameters();
-    qDebug() << gridView->midVisibleRow
-             << tableView->midVisibleRow;
-
+    quint64 n = 1234567890;
+    qlonglong x = n;
+    QLocale c(QLocale::C);
+    qDebug() << QString("%L1").arg(x);
 }
 
 void MW::test2()

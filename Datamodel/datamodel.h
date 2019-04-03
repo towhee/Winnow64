@@ -58,6 +58,7 @@ public:
     QDir::SortFlags thumbsSortFlags;
     QString currentFolderPath;
     bool hasDupRawJpg;
+    bool filtersBuilt;
 
     // can be set from keyPressEvent in MW to terminate if recursive folder scan too long
     bool timeToQuit;
@@ -75,8 +76,9 @@ public slots:
     void filteredItemCount();
     void unfilteredItemCount();
     void processMetadataBuffer();
+    void addAllMetadata(bool isShowCacheStatus = false);
     bool addMetadataItem(ImageMetadata m, bool isShowCacheStatus = false);
-    void updateFilters();
+    void buildFilters();
 
 private:
     QWidget *mw;
