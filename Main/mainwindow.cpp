@@ -1152,15 +1152,17 @@ After the delay, if another singleshot has not been fired, loadMetadataChunk is 
     G::track(__FUNCTION__);
     #endif
     }
-    return;
+//    return;
 //    if (G::allMetadataLoaded)  return;
 
-//    qDebug() << "\nMW::loadMetadataCacheAfterDelay  "
-//             << "currentRow" << currentRow
-//             << "firstVisibleRow" << getFirstVisibleThumb()
-//             << "metadataCacheThread->recacheIfLessThan" << metadataCacheThread->recacheIfLessThan
-//             << "metadataCacheThread->recacheIfGreaterThan" << metadataCacheThread->recacheIfGreaterThan
-//             << "\n";
+    qDebug() << "\nMW::loadMetadataCacheAfterDelay  "
+             << "G::isInitializing" << G::isInitializing
+             << "G::isNewFolderLoaded" << G::isNewFolderLoaded
+             << "currentRow" << currentRow
+             << "firstVisibleRow" << getFirstVisibleThumb()
+             << "metadataCacheThread->recacheIfLessThan" << metadataCacheThread->recacheIfLessThan
+             << "metadataCacheThread->recacheIfGreaterThan" << metadataCacheThread->recacheIfGreaterThan
+             << "\n";
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
