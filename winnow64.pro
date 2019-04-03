@@ -9,15 +9,15 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h \
-    Dialogs/loadusbdlg.h
+HEADERS += Cache/imagecache.h
 HEADERS += Cache/mdcache.h
-HEADERS += Cache/mdcacher.h
-HEADERS += Cache/mdcachemgr.h
+# HEADERS += Cache/mdcacher.h
+# HEADERS += Cache/mdcachemgr.h
 HEADERS += Cache/tshash.h
 HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/ingestdlg.h
+HEADERS += Dialogs/loadusbdlg.h
 HEADERS += Dialogs/prefdlg.h
 HEADERS += Dialogs/renamedlg.h
 HEADERS += Dialogs/testaligndlg.h
@@ -53,21 +53,21 @@ HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
 
-HEADERS += Test/readmdconcurrent.h
-HEADERS += Test/readsync.h
-HEADERS += Test/readasync.h
-HEADERS += Test/asynctask.h
+#HEADERS += Test/readmdconcurrent.h
+#HEADERS += Test/readsync.h
+#HEADERS += Test/readasync.h
+#HEADERS += Test/asynctask.h
 
-SOURCES += Cache/imagecache.cpp \
-    Dialogs/loadusbdlg.cpp
-SOURCES += Cache/mdcacher.cpp
-SOURCES += Cache/mdcachemgr.cpp
+SOURCES += Cache/imagecache.cpp
+# SOURCES += Cache/mdcacher.cpp
+# SOURCES += Cache/mdcachemgr.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
 SOURCES += Dialogs/aboutdlg.cpp
 SOURCES += Dialogs/appdlg.cpp
 SOURCES += Dialogs/ingestdlg.cpp
+SOURCES += Dialogs/loadusbdlg.cpp
 SOURCES += Dialogs/prefdlg.cpp
 SOURCES += Dialogs/renamedlg.cpp
 SOURCES += Dialogs/testaligndlg.cpp
@@ -101,10 +101,10 @@ SOURCES += Utilities/progressbar.cpp
 SOURCES += Utilities/usb.cpp
 SOURCES += Utilities/utilities.cpp
 
-SOURCES += Test/asynctask.cpp
-SOURCES += Test/readsync.cpp
-SOURCES += Test/readasync.cpp
-SOURCES += Test/readmdconcurrent.cpp
+#SOURCES += Test/asynctask.cpp
+#SOURCES += Test/readsync.cpp
+#SOURCES += Test/readasync.cpp
+#SOURCES += Test/readmdconcurrent.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
     Dialogs/loadusbdlg.ui
@@ -158,4 +158,3 @@ DISTFILES += notes/xmp.txt
 mac:LIBS += -framework ApplicationServices
 mac:LIBS += -framework AppKit
 #mac:LIBS += -v
-

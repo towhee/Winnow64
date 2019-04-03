@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>706</width>
-    <height>577</height>
+    <width>705</width>
+    <height>582</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>4</number>
+    <number>6</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QGroupBox" name="groupBoxTrackpadAction">
@@ -481,165 +481,6 @@
     </widget>
    </widget>
    <widget class="QWidget" name="pageCache">
-    <widget class="QSpinBox" name="cacheSizeSpinbox">
-     <property name="geometry">
-      <rect>
-       <x>140</x>
-       <y>23</y>
-       <width>51</width>
-       <height>18</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="minimum">
-      <number>1</number>
-     </property>
-     <property name="maximum">
-      <number>64</number>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_10">
-     <property name="geometry">
-      <rect>
-       <x>40</x>
-       <y>320</y>
-       <width>91</width>
-       <height>18</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This sets the width of the cache status shown on the application status bar.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Bar width</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_8">
-     <property name="geometry">
-      <rect>
-       <x>30</x>
-       <y>24</y>
-       <width>91</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Cache size (GB)</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label">
-     <property name="geometry">
-      <rect>
-       <x>30</x>
-       <y>60</y>
-       <width>111</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Cache strategy</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="showCacheStatusChk">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>289</y>
-       <width>281</width>
-       <height>21</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This will show the cache status in the status bar at the bottom of the application.  If you do not see the status bar you can enable it in the Windows menu or by pressing F10.  If you hover over the cache status another tooltip will explain the colour codes for the current file, target cache, current cache and total images.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Show cache progress bar</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="cachePreviewsChk">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>240</y>
-       <width>341</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The largest preview embedded in the image file will be cached.  However, for large files this can take time.  This option tells the application to first create a smaller preview that will fit your monitor while the larger one is being built.  Try checking this option if you are experiencing some latency in loupe mode.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Cache previews scaled to monitor resolution</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="showCacheThreadActivityChk">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>360</y>
-       <width>351</width>
-       <height>17</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This will display two small activity lights on the status bar at the bottom of the application window. The activity lights turn green when there is caching activity for building metadata/thumbnails and full scale images.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Show cache thread activity</string>
-     </property>
-    </widget>
     <widget class="QLabel" name="label_9">
      <property name="geometry">
       <rect>
@@ -694,141 +535,556 @@
       <number>250</number>
      </property>
     </widget>
-    <widget class="QFrame" name="frame">
+    <widget class="QGroupBox" name="groupBox_3">
      <property name="geometry">
       <rect>
-       <x>132</x>
-       <y>50</y>
-       <width>151</width>
-       <height>161</height>
+       <x>20</x>
+       <y>240</y>
+       <width>451</width>
+       <height>221</height>
       </rect>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout">
-      <item>
-       <widget class="QRadioButton" name="cache50AheadRadio">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="text">
-         <string>50% ahead</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QRadioButton" name="cache60AheadRadio">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="text">
-         <string>60% ahead</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QRadioButton" name="cache70AheadRadio">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="text">
-         <string>70% ahead</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QRadioButton" name="cache80AheadRadio">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="text">
-         <string>80% ahead</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QRadioButton" name="cache90AheadRadio">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="text">
-         <string>90% ahead</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QRadioButton" name="cache100AheadRadio">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="text">
-         <string>100% ahead</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="title">
+      <string>Full size loupe image cache</string>
+     </property>
+     <widget class="QCheckBox" name="showCacheStatusChk">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>189</y>
+        <width>191</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This will show the cache status in the status bar at the bottom of the application.  If you do not see the status bar you can enable it in the Windows menu or by pressing F10.  If you hover over the cache status another tooltip will explain the colour codes for the current file, target cache, current cache and total images.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>Show cache progress bar</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_10">
+      <property name="geometry">
+       <rect>
+        <x>210</x>
+        <y>190</y>
+        <width>41</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This sets the width of the cache status shown on the application status bar.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>width</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QSlider" name="progressWidthSlider">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>190</y>
+        <width>181</width>
+        <height>24</height>
+       </rect>
+      </property>
+      <property name="minimum">
+       <number>100</number>
+      </property>
+      <property name="maximum">
+       <number>1000</number>
+      </property>
+      <property name="singleStep">
+       <number>100</number>
+      </property>
+      <property name="pageStep">
+       <number>200</number>
+      </property>
+      <property name="value">
+       <number>200</number>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="tickPosition">
+       <enum>QSlider::TicksAbove</enum>
+      </property>
+      <property name="tickInterval">
+       <number>100</number>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="showCacheThreadActivityChk">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>169</y>
+        <width>231</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This will display two small activity lights on the status bar at the bottom of the application window. The activity lights turn green when there is caching activity for building metadata/thumbnails and full scale images.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>Show cache thread activity</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="cachePreviewsChk">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>144</y>
+        <width>341</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The largest preview embedded in the image file will be cached.  However, for large files this can take time.  This option tells the application to first create a smaller preview that will fit your monitor while the larger one is being built.  Try checking this option if you are experiencing some latency in loupe mode.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>Cache previews scaled to monitor resolution</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="cache100AheadRadio">
+      <property name="geometry">
+       <rect>
+        <x>320</x>
+        <y>110</y>
+        <width>129</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>100% ahead</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="cache70AheadRadio">
+      <property name="geometry">
+       <rect>
+        <x>320</x>
+        <y>85</y>
+        <width>129</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>70% ahead</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="cache90AheadRadio">
+      <property name="geometry">
+       <rect>
+        <x>180</x>
+        <y>110</y>
+        <width>129</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>90% ahead</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="cache50AheadRadio">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>85</y>
+        <width>129</width>
+        <height>18</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>50% ahead</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="cache60AheadRadio">
+      <property name="geometry">
+       <rect>
+        <x>180</x>
+        <y>85</y>
+        <width>129</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>60% ahead</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="cache80AheadRadio">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>110</y>
+        <width>129</width>
+        <height>18</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>80% ahead</string>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="cacheSizeSpinbox">
+      <property name="geometry">
+       <rect>
+        <x>130</x>
+        <y>30</y>
+        <width>51</width>
+        <height>18</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="maximum">
+       <number>64</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_8">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>30</y>
+        <width>91</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>Cache size (GB)</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>60</y>
+        <width>111</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>Cache strategy:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+      </property>
+     </widget>
     </widget>
-    <widget class="QSlider" name="progressWidthSlider">
+    <widget class="QGroupBox" name="metadataCacheGroupBox">
      <property name="geometry">
       <rect>
-       <x>140</x>
-       <y>320</y>
-       <width>291</width>
-       <height>22</height>
+       <x>20</x>
+       <y>20</y>
+       <width>451</width>
+       <height>81</height>
       </rect>
      </property>
-     <property name="minimum">
-      <number>100</number>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
      </property>
-     <property name="maximum">
-      <number>1000</number>
+     <property name="title">
+      <string>Metadata cache</string>
      </property>
-     <property name="singleStep">
-      <number>100</number>
+     <widget class="QRadioButton" name="metadataCacheAllRadio">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>25</y>
+        <width>411</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Cache all items when open folder (could be a slight delay)</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="metadataCacheChunkRadio">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>50</y>
+        <width>71</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Cache</string>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="metadataCacheSizeSpinbox">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>51</y>
+        <width>51</width>
+        <height>18</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="minimum">
+       <number>100</number>
+      </property>
+      <property name="maximum">
+       <number>1000000</number>
+      </property>
+      <property name="value">
+       <number>250</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_14">
+      <property name="geometry">
+       <rect>
+        <x>150</x>
+        <y>51</y>
+        <width>251</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>items at a time</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="thumbnailCacheGroupBoc">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>120</y>
+       <width>451</width>
+       <height>101</height>
+      </rect>
      </property>
-     <property name="pageStep">
-      <number>200</number>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
      </property>
-     <property name="value">
-      <number>200</number>
+     <property name="title">
+      <string>Thumbnail cache</string>
      </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="tickPosition">
-      <enum>QSlider::TicksAbove</enum>
-     </property>
-     <property name="tickInterval">
-      <number>100</number>
-     </property>
+     <widget class="QRadioButton" name="thumbnailCachAllRadio">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>25</y>
+        <width>21</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="thumbnailCacheChunkRadio">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>69</y>
+        <width>71</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Cache</string>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="thumbnailCacheSizeSpinbox">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>70</y>
+        <width>51</width>
+        <height>18</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.&lt;/p&gt;&lt;p&gt;If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="maximum">
+       <number>1000</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_15">
+      <property name="geometry">
+       <rect>
+        <x>150</x>
+        <y>70</y>
+        <width>251</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>viewports ahead</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_18">
+      <property name="geometry">
+       <rect>
+        <x>43</x>
+        <y>26</y>
+        <width>401</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Cache all thumbnails in folder(s).  This can cause an initial delay and consume a lot of memory.</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
     </widget>
    </widget>
    <widget class="QWidget" name="pageSlideshow">
@@ -1375,6 +1631,216 @@
      <property name="alignment">
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
      </property>
+     <widget class="QLabel" name="fontSizeLbl_2">
+      <property name="geometry">
+       <rect>
+        <x>420</x>
+        <y>80</y>
+        <width>30</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_17">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>30</y>
+        <width>131</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Thumbnail size</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="gridSmallerBtn">
+      <property name="geometry">
+       <rect>
+        <x>200</x>
+        <y>30</y>
+        <width>40</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>7</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>400</width>
+        <height>20</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>&lt;</string>
+      </property>
+      <property name="autoRepeat">
+       <bool>true</bool>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_19">
+      <property name="geometry">
+       <rect>
+        <x>50</x>
+        <y>80</y>
+        <width>141</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Font size</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QSlider" name="fontSizeSlider_2">
+      <property name="geometry">
+       <rect>
+        <x>200</x>
+        <y>80</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="minimum">
+       <number>6</number>
+      </property>
+      <property name="maximum">
+       <number>20</number>
+      </property>
+      <property name="singleStep">
+       <number>1</number>
+      </property>
+      <property name="pageStep">
+       <number>5</number>
+      </property>
+      <property name="value">
+       <number>6</number>
+      </property>
+      <property name="sliderPosition">
+       <number>6</number>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="invertedAppearance">
+       <bool>false</bool>
+      </property>
+      <property name="tickPosition">
+       <enum>QSlider::NoTicks</enum>
+      </property>
+      <property name="tickInterval">
+       <number>5</number>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="gridLargerBtn">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>30</y>
+        <width>40</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>7</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>400</width>
+        <height>20</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>&gt;</string>
+      </property>
+      <property name="autoRepeat">
+       <bool>true</bool>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="showThumbLabelChk_2">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>60</y>
+        <width>201</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Show thumbnail filename</string>
+      </property>
+     </widget>
     </widget>
     <widget class="QSpinBox" name="maxIconSizeSpinBox">
      <property name="geometry">
@@ -1579,7 +2045,7 @@
        <rect>
         <x>20</x>
         <y>0</y>
-        <width>181</width>
+        <width>211</width>
         <height>471</height>
        </rect>
       </property>

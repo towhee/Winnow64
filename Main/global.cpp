@@ -19,7 +19,11 @@ namespace G
 
     QString fontSize;
 
-    qreal actualDevicePixelRatio;
+    int actualDevicePixelRatio;
+    bool allMetadataLoaded;
+
+    int cores;
+    bool aSync;
 
     int cores;
     bool aSync;
@@ -36,41 +40,16 @@ namespace G
 
     void track(QString functionName, QString comment)
     {
-//        std::cout << std::setw(7) << std::setfill(' ') << std::right << G::t.restart()
-//                  << "   "
-//                  << std::setw(50) << std::setfill(' ') << std::left << functionName.toStdString()
-//                  << "   "
-//                  << comment.toStdString()
-//                  << "\n" << std::flush;
+//        QString time = QString::number(G::t.nsecsElapsed());
+        QString time = QString("%L1").arg(t.nsecsElapsed());
+        t.restart();
 
-        const QByteArray b = " ";
-//        const char *str = b.data();
+//        QString initializing = isInitializing ? "initalizing = true" : "initializing = false";
 
-        QString time = QString::number(G::t.nsecsElapsed());
-        G::t.restart();
-
-        QString initializing = isInitializing ? "initalizing = true" : "initializing = false";
-
-        qDebug() << time.rightJustified(10, ' ') << " "
+        qDebug() << time.rightJustified(15, ' ') << " "
                  << functionName.leftJustified(50, '.') << " "
-                 << initializing.leftJustified(25)
+//                 << initializing.leftJustified(25)
                  << comment;
-
-//        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-//        Profile::print(functionName, comment);
     }
 
-//    void Profile::print(QString functionName, QString comment)
-//    {
-//        m.lock();
-//        std::cout << std::setw(7) << std::setfill(' ') << std::right << G::t.restart()
-//                  << "   "
-//                  << std::setw(50) << std::setfill(' ') << std::left << functionName.toStdString()
-//                  << "   "
-//                  << comment.toStdString()
-//                  << "\n" << std::flush;
-//        m.unlock();
-//    }
 }
-
-

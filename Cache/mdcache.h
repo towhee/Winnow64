@@ -23,23 +23,36 @@ public:
                   Metadata *metadata, ImageCache *imageCacheThread);
     ~MetadataCache();
 
-    enum CacheImages {
-        No = 0,
-        New = 1,
-        Update = 2,
-        Resume = 3
+    enum Action {
+        NewFolder = 0,
+        MetaChunk = 1,
+        IconChunk = 2,
+        MetaIconChunk = 3,
+        AllMetadata = 4,
+        Resume = 5
     };
 
-    void loadNewMetadataCache(int thumbsPerPage/*, bool isShowCacheStatus*/);
-    void loadMetadataCache(int startRow, int endRow, CacheImages cacheImages);
+    void loadNewFolder(int thumbsPerPage/*, bool isShowCacheStatus*/);
+    void loadMetadataIconChunk(int fromRow, int endRow);
     void loadAllMetadata();
+    void loadIconChunk(int fromRow, int thumbsPerPage);
     void stopMetadateCache();
     bool isAllMetadataLoaded();
-    bool isAllIconsLoaded();
+    bool isAllIconLoaded();
 
     bool restart;
-    int maxChunkSize = 250;
     QMap<int, bool> loadMap;
+
+    bool metadataCacheAll = false;
+    bool iconsCacheAll = false;
+
+    int metadataChunkSize = 250;
+    int metadataCacheAllIfLessThan = 250;
+    bool metadataCacheChunks = true;
+
+    int iconPagesToCacheAhead = 2;
+    int iconsCacheAllIfLessThan = 250;
+    bool iconsCacheChunks = true;
 
     int recacheIfLessThan;
     int recacheIfGreaterThan;
@@ -53,8 +66,9 @@ signals:
     void pauseImageCache();
     void resumeImageCache();
     void updateIsRunning(bool, bool, QString);
-    void updateAllMetadataLoaded(bool);
+//    void updateAllMetadataLoaded(bool);
     void updateIconBestFit();
+    void selectFirst();
     void updateFilters();
     void showCacheStatus(int, bool);            // row, renew progress bar
 
@@ -80,18 +94,20 @@ private:
 
     bool foundItemsToLoad;
     bool imageCacheWasRunning;
-    CacheImages cacheImages;
+    Action action;
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
 
-    bool allMetadataLoaded;
+//    bool allMetadataLoaded;
     bool allIconsLoaded;
     bool isShowCacheStatus;
     bool cacheIcons;
 
     void createCacheStatus();
     void updateCacheStatus(int row);
-    bool loadMetadataIconChunk();
+    void readMetadataIconChunk();
+    void readAllMetadata();
+    void readIconChunk();
     void iconCleanup();
     void setIconTargets(int start, int end);
 
@@ -101,4 +117,3 @@ private:
 };
 
 #endif // MDCACHE_H
-
