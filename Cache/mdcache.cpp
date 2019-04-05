@@ -173,7 +173,6 @@ maxChunkSize) image files metadata and icons are loaded into the datamodel.
     G::track(__FUNCTION__);
     abort = false;
     G::allMetadataLoaded = false;
-    imageCacheWasRunning = false;
     iconsCached.clear();
     foundItemsToLoad = true;
     int imageCount = dm->rowCount();
@@ -255,15 +254,6 @@ image files are loaded.  The imageCacheThread is not invoked.
         wait();
     }
     abort = false;
-//    runImageCacheWhenDone = false;
-
-    if (imageCacheThread->isRunning()){
-        imageCacheThread->pauseImageCache();
-        imageCacheWasRunning = true;
-    }
-    else {
-        imageCacheWasRunning = false;
-    }
 
     int rowCount = dm->sf->rowCount();
     startRow = fromRow >= 0 ? fromRow : 0;
@@ -586,6 +576,9 @@ that have been missed.
         int rowCount = dm->rowCount();
         mutex.unlock();
 
+        // pause image caching if it was running
+        if (imageCacheThread->isRunning()) imageCacheThread->pauseImageCache();
+
         // read all metadata but no icons
         if (action == Action::AllMetadata) readAllMetadata();
 
@@ -617,7 +610,11 @@ that have been missed.
             mutex.unlock();
         }
 
-        if (action == Action::MetaIconChunk || action == Action::IconChunk) iconCleanup();
+        if (action == Action::MetaIconChunk || action == Action::IconChunk) {
+            iconCleanup();
+            // resume image caching if it was interrupted
+            imageCacheThread->resumeImageCache();
+        }
 
         if (action == Action::NewFolder) {
             qDebug() << "if (action == Action::NewFolder)";
@@ -631,6 +628,7 @@ that have been missed.
 
         // update status of metadataThreadRunningLabel in statusbar
         emit updateIsRunning(false, true, __FUNCTION__);
+
     }
 
     /* After loading metadata it is okay to cache full size images, where the

@@ -2075,46 +2075,6 @@ void Metadata::reportMetadataHeader(QString title)
     rpt << "\n";
 }
 
-void Metadata::reportMetadataAllFiles()
-{
-/*
-Not used
-*/
-    QMapIterator<QString, ImageMetadata> i(metaCache);
-    while (i.hasNext())  {
-        i.next();
-        offsetFullJPG = i.value().offsetFullJPG;
-        lengthFullJPG = i.value().lengthFullJPG;
-        offsetThumbJPG = i.value().offsetThumbJPG;
-        lengthThumbJPG = i.value().lengthThumbJPG;
-        offsetSmallJPG = i.value().offsetSmallJPG;
-        lengthSmallJPG = i.value().lengthSmallJPG;
-        width = i.value().width;
-        height = i.value().height;
-//        created = i.value().created;
-        createdDate = i.value().createdDate;
-        model = i.value().model;
-        exposureTime = i.value().exposureTime;
-        exposureTimeNum = i.value().exposureTimeNum;
-        aperture = i.value().aperture;
-        apertureNum = i.value().apertureNum;
-        ISO = i.value().ISO;
-        ISONum = i.value().ISONum;
-        focalLength = i.value().focalLength;
-        focalLengthNum = i.value().focalLengthNum;
-        title = i.value().title;
-        lens = i.value().lens;
-        creator = i.value().creator;
-        copyright = i.value().copyright;
-        email = i.value().email;
-        url = i.value().url;
-
-        rpt << "\n";
-        std::cout << "FILE: " << i.key().toStdString()<< "\n";
-        reportMetadata();
-    }
-}
-
 void Metadata::reportMetadataCache(const QString &imageFileName)
 {
 /*
@@ -2234,7 +2194,7 @@ int Metadata::getNewOrientation(int orientation, int rotation)
     return orientationFromDegrees[degrees];
 }
 
-bool Metadata::writeMetadata(const QString &fPath, QByteArray &buffer)
+bool Metadata::writeMetadata(const QString &fPath, ImageMetadata m, QByteArray &buffer)
 {
 /*
 Called from ingest (Ingestdlg).  If it is a supported image type a copy of the
@@ -2255,17 +2215,17 @@ metadata is written to buffer and the original image file is copied unchanged.
     bool useSidecar = sidecarFormats.contains(suffix);
 
     // new orientation
-    int newOrientation = getNewOrientation(orientation, rotationDegrees);
+    int newOrientation = getNewOrientation(m.orientation, m.rotationDegrees);
 
     // has metadata been edited? ( _ is original data)
-    bool ratingChanged = rating != ""; //_rating;
-    bool labelChanged = label != "";  //_label;
-    bool titleChanged = title != _title;
-    bool creatorChanged = creator != _creator;
-    bool copyrightChanged = copyright != _copyright;
-    bool emailChanged = email != _email;
-    bool urlChanged = url != _url;
-    bool orientationChanged = orientation != newOrientation;
+    bool ratingChanged = m.rating != ""; //_rating;
+    bool labelChanged = m.label != "";  //_label;
+    bool titleChanged = m.title != m._title;
+    bool creatorChanged = m.creator != m._creator;
+    bool copyrightChanged = m.copyright != m._copyright;
+    bool emailChanged = m.email != m._email;
+    bool urlChanged = m.url != m._url;
+    bool orientationChanged = m.orientation != newOrientation;
     if (   !ratingChanged
         && !labelChanged
         && !titleChanged
@@ -2287,13 +2247,13 @@ metadata is written to buffer and the original image file is copied unchanged.
         QString s = QString::number(newOrientation);
         xmp.setItem("Orientation", s.toLatin1());
     }
-    if (urlChanged) xmp.setItem("CiUrlWork", url.toLatin1());
-    if (emailChanged) xmp.setItem("CiEmailWork", email.toLatin1());
-    if (copyrightChanged) xmp.setItem("rights", copyright.toLatin1());
-    if (creatorChanged) xmp.setItem("creator", creator.toLatin1());
-    if (titleChanged) xmp.setItem("title", title.toLatin1());
-    if (labelChanged) xmp.setItem("Label", label.toLatin1());
-    if (ratingChanged) xmp.setItem("Rating", rating.toLatin1());
+    if (urlChanged) xmp.setItem("CiUrlWork", m.url.toLatin1());
+    if (emailChanged) xmp.setItem("CiEmailWork", m.email.toLatin1());
+    if (copyrightChanged) xmp.setItem("rights", m.copyright.toLatin1());
+    if (creatorChanged) xmp.setItem("creator", m.creator.toLatin1());
+    if (titleChanged) xmp.setItem("title", m.title.toLatin1());
+    if (labelChanged) xmp.setItem("Label", m.label.toLatin1());
+    if (ratingChanged) xmp.setItem("Rating", m.rating.toLatin1());
 
     QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
@@ -2311,7 +2271,7 @@ metadata is written to buffer and the original image file is copied unchanged.
             QChar c = newOrientation & 0xFF;
             QByteArray ba;
             ba.append(c);
-            buffer.replace(orientationOffset, 1, ba);
+            buffer.replace(m.orientationOffset, 1, ba);
         }
         xmp.writeJPG(buffer);
     }
@@ -2923,7 +2883,7 @@ void Metadata::formatNikon()
     // Exif: get shutter speed
     if (ifdDataHash.contains(33434)) {
         float x = getReal(ifdDataHash.value(33434).tagValue);
-        if (x <1 ) {
+        if (x < 1 ) {
             uint t = qRound(1/x);
             exposureTime = "1/" + QString::number(t);
             exposureTimeNum = x;
@@ -3116,7 +3076,7 @@ void Metadata::formatCanon()
     // EXIF: shutter speed
     if (ifdDataHash.contains(33434)) {
         float x = getReal(ifdDataHash.value(33434).tagValue);
-        if (x <1 ) {
+        if (x < 1 ) {
             uint t = qRound(1/x);
             exposureTime = "1/" + QString::number(t);
             exposureTimeNum = x;
@@ -4798,30 +4758,6 @@ G::track(__FUNCTION__);
     return metaCache[imageFileName].dimensions;
 }
 
-QDateTime Metadata::getCreatedDate(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].createdDate;
-}
-
-//QString Metadata::getCreated(const QString &imageFileName)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << G::t.restart() << "\t" << "Metadata::getCreated" << imageFileName;
-//    #endif
-//    }
-//    return "";
-////    return metaCache[imageFileName].created;
-//}
-
 int Metadata::getYear(const QString &imageFileName)
 {
     {
@@ -4911,210 +4847,6 @@ float Metadata::getExposureTimeNum(const QString &imageFileName)
     return metaCache[imageFileName].exposureTimeNum;
 }
 
-QString Metadata::getAperture(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].aperture;
-}
-
-qreal Metadata::getApertureNum(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].apertureNum;
-}
-
-QString Metadata::getISO(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].ISO;
-}
-
-int Metadata::getISONum(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].ISONum;
-}
-
-QString Metadata::getFocalLength(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].focalLength;
-}
-
-int Metadata::getFocalLengthNum(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].focalLengthNum;
-}
-
-QString Metadata::getTitle(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].title;
-}
-
-QString Metadata::getRating(const QString &imageFileName)
-{
-    return metaCache[imageFileName].rating;
-}
-
-QString Metadata::getLabel(const QString &imageFileName)
-{
-    return metaCache[imageFileName].label;
-}
-
-QString Metadata::getLens(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].lens;
-}
-
-QString Metadata::getCreator(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].creator;
-}
-
-QString Metadata::getCopyright(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].copyright;
-}
-
-QString Metadata::getEmail(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].email;
-}
-
-QString Metadata::getUrl(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].url;
-}
-
-QString Metadata::getShootingInfo(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].shootingInfo;
-}
-
-void Metadata::setTitle(const QString &imageFileName, const QString &title)
-{
-    metaCache[imageFileName].title = title;
-}
-
-void Metadata::setCreator(const QString &imageFileName, const QString &creator)
-{
-    metaCache[imageFileName].creator = creator;
-}
-
-void Metadata::setCopyright(const QString &imageFileName, const QString &copyright)
-{
-    metaCache[imageFileName].copyright = copyright;
-}
-
-void Metadata::setEmail(const QString &imageFileName, const QString &email)
-{
-    metaCache[imageFileName].email = email;
-}
-
-void Metadata::setUrl(const QString &imageFileName, const QString &url)
-{
-    metaCache[imageFileName].url = url;
-}
-
-void Metadata::setLabel(const QString &imageFileName, const QString &label)
-{
-    metaCache[imageFileName].label = label;
-}
-
-void Metadata::setRating(const QString &imageFileName, const QString &rating)
-{
-    metaCache[imageFileName].rating = rating;
-}
 
 bool Metadata::getThumbUnavailable(const QString &imageFileName)
 {
@@ -5231,7 +4963,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     }
     // check if already loaded
     fPath = fileInfo.filePath();
-    if (metaCache[fPath].metadataLoaded && !isReport) return true;
+//    if (metaCache[fPath].metadataLoaded && !isReport) return true;
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load
     readEssentialMetadata = essential;
@@ -5240,7 +4972,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     okToReadXmp = true;
 
 //    ImageMetadata imageMetadata;
-    bool result = readMetadata(isReport, fileInfo.filePath());
+    bool result = readMetadata(isReport, fPath);
 
 //    if (fPath == "D:/Pictures/_ThumbTest/FujiXT2.RAF")
 //        qDebug() << G::t.restart() << "\t" << "Lets break here";
@@ -5262,6 +4994,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.orientation = orientation;
     imageMetadata.rotationDegrees = rotationDegrees;
     imageMetadata.createdDate = createdDate;
+    imageMetadata.make = make.trimmed();
     imageMetadata.model = model.trimmed();
     imageMetadata.exposureTime = exposureTime;
     imageMetadata.exposureTimeNum = exposureTimeNum;

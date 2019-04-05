@@ -23,6 +23,7 @@ Moving is accomplished by adjusting the viewport scrollbars.
 ImageView::ImageView(QWidget *parent,
                      QWidget *centralWidget,
                      Metadata *metadata,
+                     DataModel *dm,
                      ImageCache *imageCacheThread,
                      IconView *thumbView,
                      InfoString *infoString,
@@ -43,12 +44,13 @@ ImageView::ImageView(QWidget *parent,
     this->mainWindow = parent;
     this->centralWidget = centralWidget;
     this->metadata = metadata;
+    this->dm = dm;
     this->imageCacheThread = imageCacheThread;
     this->thumbView = thumbView;
     this->infoString = infoString;
     this->classificationBadgeDiam = classificationBadgeDiam;
     this->isSlideshow = isSlideshow;
-    pixmap = new Pixmap(this, metadata);
+    pixmap = new Pixmap(this, dm, metadata);
 
     scene = new QGraphicsScene();
     pmItem = new QGraphicsPixmapItem;

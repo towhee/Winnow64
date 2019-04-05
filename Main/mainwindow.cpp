@@ -951,7 +951,7 @@ delegate use of the current index must check the row.
     setWindowTitle("Winnow - " + fPath);
 
     // update the metadata panel
-    infoView->updateInfo(fPath);
+    infoView->updateInfo(currentRow);
 
     // updateStatus happens in IconView::selectionChanged
 
@@ -1155,7 +1155,7 @@ After the delay, if another singleshot has not been fired, loadMetadataChunk is 
 //    return;
 //    if (G::allMetadataLoaded)  return;
 
-    qDebug() << "\nMW::loadMetadataCacheAfterDelay  "
+/*    qDebug() << "\nMW::loadMetadataCacheAfterDelay  "
              << "G::isInitializing" << G::isInitializing
              << "G::isNewFolderLoaded" << G::isNewFolderLoaded
              << "currentRow" << currentRow
@@ -1163,6 +1163,7 @@ After the delay, if another singleshot has not been fired, loadMetadataChunk is 
              << "metadataCacheThread->recacheIfLessThan" << metadataCacheThread->recacheIfLessThan
              << "metadataCacheThread->recacheIfGreaterThan" << metadataCacheThread->recacheIfGreaterThan
              << "\n";
+             */
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
@@ -3523,7 +3524,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
     }
      /* This is the info displayed on top of the image in loupe view. It is
      dependent on template data stored in QSettings */
-    infoString = new InfoString(this, metadata, dm);
+    infoString = new InfoString(this, dm);
 
     infoString->currentInfoTemplate = setting->value("currentInfoTemplate").toString();
     setting->beginGroup("InfoTokens");
@@ -3540,6 +3541,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
     imageView = new ImageView(this,
                               centralWidget,
                               metadata,
+                              dm,
                               imageCacheThread,
                               thumbView,
                               infoString,
@@ -3605,7 +3607,7 @@ InfoView shows basic metadata in a dock widget.
     G::track(__FUNCTION__);
     #endif
     }
-    infoView = new InfoView(this, metadata);
+    infoView = new InfoView(this, dm, metadata);
     infoView->setMaximumWidth(folderMaxWidth);
 
     /* read InfoView okToShow fields */
@@ -5439,7 +5441,7 @@ void MW::runExternalApp()
         // buffer to hold file with edited xmp data
         QByteArray buffer;
 
-        if (metadata->writeMetadata(fPath, buffer)
+        if (metadata->writeMetadata(fPath, dm->getMetadata(fPath), buffer)
         && metadata->sidecarFormats.contains(suffix)) {
 
             if (metadata->internalXmpFormats.contains(suffix)) {
@@ -7975,7 +7977,7 @@ the rating for all the selected thumbs.
         // update metadata
         QModelIndex fPathIdx = dm->sf->index(selection.at(i).row(), G::PathColumn);
         QString fPath = fPathIdx.data(G::PathRole).toString();
-        metadata->setRating(fPath, rating);
+//        metadata->setRating(fPath, rating);
 
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
@@ -7989,13 +7991,13 @@ the rating for all the selected thumbs.
                 // update metadata
                 fPathIdx = dm->index(rawIdx.row(), G::PathColumn);
                 fPath = fPathIdx.data(G::PathRole).toString();
-                metadata->setRating(fPath, rating);
+//                metadata->setRating(fPath, rating);
             }
         }
     }
 
     // update metadata
-    metadata->setRating(thumbView->getCurrentFilePath(), rating);
+//    metadata->setRating(thumbView->getCurrentFilePath(), rating);
 
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
@@ -8049,7 +8051,7 @@ set the color class for all the selected thumbs.
         // update metadata
         QModelIndex fPathIdx = dm->sf->index(selection.at(i).row(), G::PathColumn);
         QString fPath = fPathIdx.data(G::PathRole).toString();
-        metadata->setLabel(fPath, colorClass);
+//        metadata->setLabel(fPath, colorClass);
 
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
@@ -8063,7 +8065,7 @@ set the color class for all the selected thumbs.
                 // update metadata
                 fPathIdx = dm->index(rawIdx.row(), G::PathColumn);
                 fPath = fPathIdx.data(G::PathRole).toString();
-                metadata->setLabel(fPath, colorClass);
+//                metadata->setLabel(fPath, colorClass);
             }
         }
     }
@@ -8130,11 +8132,11 @@ internally or as a sidecar when ingesting.
         idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
         QString fPath = idx.data(G::PathRole).toString();
         // update metadata
-        if (tagName == "Title") metadata->setTitle(fPath, tagValue);
-        if (tagName == "Creator") metadata->setCreator(fPath, tagValue);
-        if (tagName == "Copyright") metadata->setCopyright(fPath, tagValue);
-        if (tagName == "Email") metadata->setEmail(fPath, tagValue);
-        if (tagName == "Url") metadata->setUrl(fPath, tagValue);
+//        if (tagName == "Title") metadata->setTitle(fPath, tagValue);
+//        if (tagName == "Creator") metadata->setCreator(fPath, tagValue);
+//        if (tagName == "Copyright") metadata->setCopyright(fPath, tagValue);
+//        if (tagName == "Email") metadata->setEmail(fPath, tagValue);
+//        if (tagName == "Url") metadata->setUrl(fPath, tagValue);
     }
 }
 

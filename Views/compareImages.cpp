@@ -107,7 +107,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 //        QModelIndex idxPick = dm->sf->index(idxPath.row(), G::PickColumn);
         QString fPath = selection.at(i).data(G::PathRole).toString();
         // create new compareView and append to list
-        imList->append(new CompareView(this, gridCell, metadata, imageCacheThread, thumbView));
+        imList->append(new CompareView(this, gridCell, dm, metadata, imageCacheThread, thumbView));
         imList->at(i)->loadImage(selection.at(i), fPath);
         // set toggleZoom value (from QSettings)
         imList->at(i)->toggleZoom = toggleZoom;

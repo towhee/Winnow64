@@ -10,7 +10,7 @@ ImageCache::ImageCache(QObject *parent, DataModel *dm, Metadata *metadata) : QTh
     // Pixmap is a class that loads either a QPixmap or QImage from a file
     this->dm = dm;
     this->metadata = metadata;
-    getImage = new Pixmap(this, metadata);
+    getImage = new Pixmap(this, dm, metadata);
 
     restart = false;
     abort = false;
@@ -754,6 +754,8 @@ Apparently there needs to be a slight delay before calling.
         emit updateIsRunning(false, true);  // bool isRunning, bool showCacheLabel
         return;
     }
+
+//    reportCache();
 
     start(IdlePriority);
 }

@@ -1,4 +1,5 @@
 BUGS
+- Eliminate metaCache (replace in datamodel)
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)

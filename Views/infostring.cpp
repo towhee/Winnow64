@@ -17,11 +17,10 @@ metadata and return the string (example):
     Nikon D5 | 1/250 sec at f/5.6
 */
 
-InfoString::InfoString(QWidget *parent, Metadata *metadata, DataModel *dm) :
+InfoString::InfoString(QWidget *parent, DataModel *dm) :
                        QWidget(parent)
 {
     this->dm = dm;
-    m = metadata;
     initTokenList();
     initExampleMap();
     infoTemplates[" Default"] = "{Model} {FocalLength}  {ShutterSpeed} at f/{Aperture}, ISO {ISO}\n{Title}";
@@ -60,7 +59,7 @@ The currentInfoTemplate matching the index in the TokenDlg template combo
        if (ii == index) return i.key();
        ii++;
     }
-    return 0;
+    return "";
 }
 
 //void InfoString::setCurrentInfoTemplate(QString &currentInfoTemplate)
@@ -218,7 +217,7 @@ setMetadata must be called first to set metadata variables for the current
 image.
 */
     QFileInfo info(fPath);
-    m->setMetadata(fPath);
+    m = dm->getMetadata(fPath);
     QString s;
     int tokenEnd;
     int i = 0;
@@ -264,80 +263,80 @@ QString InfoString::tokenValue(QString &token,
         return QLocale(QLocale::English).toString(info.size());
     }
     if (token == "MPix") {
-        uint width = m->width;
-        uint height = m->height;
+        uint width = m.width;
+        uint height = m.height;
         return QString::number((width * height) / 1000000.0, 'f', 1);
     }
     if (token == "CreateDate")
-        return m->createdDate.toString("yyyy-MM-dd hh:mm:ss");
+        return m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
     if (token == "YYYY")
-        return m->createdDate.date().toString("yyyy");
+        return m.createdDate.date().toString("yyyy");
     if (token == "YY")
-        return m->createdDate.date().toString("yy");
+        return m.createdDate.date().toString("yy");
     if (token == "MONTH")
-        return m->createdDate.date().toString("MMMM").toUpper();
+        return m.createdDate.date().toString("MMMM").toUpper();
     if (token == "Month")
-        return m->createdDate.date().toString("MMMM");
+        return m.createdDate.date().toString("MMMM");
     if (token == "MON")
-        return m->createdDate.date().toString("MMM").toUpper();
+        return m.createdDate.date().toString("MMM").toUpper();
     if (token == "Mon")
-        return m->createdDate.date().toString("MMM");
+        return m.createdDate.date().toString("MMM");
     if (token == "MM")
-        return m->createdDate.date().toString("MM");
+        return m.createdDate.date().toString("MM");
     if (token == "DAY")
-        return m->createdDate.date().toString("dddd").toUpper();
+        return m.createdDate.date().toString("dddd").toUpper();
     if (token == "Day")
-        return m->createdDate.date().toString("dddd");
+        return m.createdDate.date().toString("dddd");
     if (token == "DDD")
-        return m->createdDate.date().toString("ddd").toUpper();
+        return m.createdDate.date().toString("ddd").toUpper();
     if (token == "Ddd")
-        return m->createdDate.date().toString("ddd");
+        return m.createdDate.date().toString("ddd");
     if (token == "DD")
-        return m->createdDate.date().toString("dd");
+        return m.createdDate.date().toString("dd");
     if (token == "HOUR")
-        return m->createdDate.time().toString("hh");
+        return m.createdDate.time().toString("hh");
     if (token == "MINUTE")
-        return m->createdDate.time().toString("mm");
+        return m.createdDate.time().toString("mm");
     if (token == "SECOND")
-        return m->createdDate.time().toString("ss");
+        return m.createdDate.time().toString("ss");
     if (token == "MILLISECOND")
-        return m->createdDate.time().toString("zzz");
+        return m.createdDate.time().toString("zzz");
     if (token == "ModifiedDate")
         return info.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     if (token == "Dimensions")
-        return m->dimensions;
+        return m.dimensions;
     if (token == "Width")
-        return QString::number(m->width);
+        return QString::number(m.width);
     if (token == "Height")
-        return QString::number(m->height);
+        return QString::number(m.height);
     if (token == "Rotation")
-        return QString::number(m->rotationDegrees);
+        return QString::number(m.rotationDegrees);
     if (token == "Orientation")
-        return QString::number(m->orientation);
+        return QString::number(m.orientation);
     if (token == "ShootingInfo")
-        return m->shootingInfo;
+        return m.shootingInfo;
     if (token == "Aperture")
-        return m->aperture;
+        return m.aperture;
     if (token == "ShutterSpeed")
-        return m->exposureTime;
+        return m.exposureTime;
     if (token == "ISO")
-        return m->ISO;
+        return m.ISO;
     if (token == "Model")
-        return m->model;
+        return m.model;
     if (token == "Lens")
-        return m->lens;
+        return m.lens;
     if (token == "FocalLength")
-        return m->focalLength;
+        return m.focalLength;
     if (token == "Creator")
-        return m->creator;
+        return m.creator;
     if (token == "Title")
-        return m->title;
+        return m.title;
     if (token == "Copyright")
-        return m->copyright;
+        return m.copyright;
     if (token == "Email")
-        return m->email;
+        return m.email;
     if (token == "Url")
-        return m->url;
+        return m.url;
     return "";
 }
 
