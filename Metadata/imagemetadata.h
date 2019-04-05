@@ -12,21 +12,21 @@ into "QMap<QString, ImageMetadata> metaCache" in Metadata::loadImageMetadata.
 public:
     int row;                // datamodel row
     bool isPicked;          //rgh required?
-    ulong offsetFullJPG;
-    ulong lengthFullJPG;
-    ulong offsetThumbJPG;
-    ulong lengthThumbJPG;
-    ulong offsetSmallJPG;
-    ulong lengthSmallJPG;
+    uint offsetFullJPG;
+    uint lengthFullJPG;
+    uint offsetThumbJPG;
+    uint lengthThumbJPG;
+    uint offsetSmallJPG;
+    uint lengthSmallJPG;
 
-    ulong xmpSegmentOffset;
-    ulong xmpNextSegmentOffset;
+    uint xmpSegmentOffset;
+    uint xmpNextSegmentOffset;
     bool isXmp;
-    ulong orientationOffset;
+    uint orientationOffset;
     int orientation;
     int rotationDegrees;            // additional rotation from edit
-    ulong width;
-    ulong height;
+    uint width;
+    uint height;
     QString dimensions;
     QDateTime createdDate;
     QString make;

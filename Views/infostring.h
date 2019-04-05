@@ -10,7 +10,7 @@ class InfoString : public QWidget
 {
     Q_OBJECT
 public:
-    explicit InfoString(QWidget *parent, Metadata *metadata, DataModel *dm);
+    explicit InfoString(QWidget *parent, DataModel *dm);
     void editTemplates();
 //    void setCurrentInfoTemplate(QString &currentInfoTemplate);
     QString getCurrentInfoTemplate();
@@ -24,7 +24,7 @@ signals:
 public slots:
 
 private:
-    Metadata *m;
+    ImageMetadata m;
     DataModel *dm;
     QStringList tokens;
     QMap<QString,QString> exampleMap;

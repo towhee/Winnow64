@@ -27,6 +27,8 @@ The data is structured in columns:
     ● Rating:           user edited         EditRole
     ● Label:            user edited         EditRole
     ● MegaPixels:       from metadata       EditRole
+    ● Width:            from metadata       EditRole
+    ● Height:           from metadata       EditRole
     ● Dimensions:       from metadata       EditRole
     ● Rotation:         user edited         EditRole
     ● Aperture:         from metadata       EditRole
@@ -38,6 +40,16 @@ The data is structured in columns:
     ● Copyright:        from metadata       EditRole
     ● Email:            from metadata       EditRole
     ● Url:              from metadata       EditRole
+    ● OffsetFullJPG:    from metadata       EditRole
+    ● LengthFullJPG:    from metadata       EditRole
+    ● OffsetThumbJPG:   from metadata       EditRole
+    ● LengthThumbJPG:   from metadata       EditRole
+    ● OffsetSmallJPG:   from metadata       EditRole
+    ● LengthSmallJPG:   from metadata       EditRole
+    ● XmpSegmentOffset: from metadata       EditRole
+    ● XmpNextSegmentOffset:  metadata       EditRole
+    ● IsXmp:            from metadata       EditRole
+    ● OrientationOffset:from metadata       EditRole
 
 Note that more items such as the file offsets to embedded JPG are stored in
 the metadata structure which is indexed by the file path.
@@ -132,10 +144,17 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::ApertureColumn, new QStandardItem("Aperture"));
     setHorizontalHeaderItem(G::ShutterspeedColumn, new QStandardItem("Shutter"));
     setHorizontalHeaderItem(G::ISOColumn, new QStandardItem("ISO"));
+    setHorizontalHeaderItem(G::CameraMakeColumn, new QStandardItem("Make"));
     setHorizontalHeaderItem(G::CameraModelColumn, new QStandardItem("Model"));
     setHorizontalHeaderItem(G::LensColumn, new QStandardItem("Lens"));
     setHorizontalHeaderItem(G::FocalLengthColumn, new QStandardItem("Focal length"));
+    setHorizontalHeaderItem(G::CopyrightColumn, new QStandardItem("Copyright"));
     setHorizontalHeaderItem(G::TitleColumn, new QStandardItem("Title"));
+
+//    setHorizontalHeaderItem(G::CopyrightColumn, new QStandardItem("Copyright"));
+//    setHorizontalHeaderItem(G::EmailColumn, new QStandardItem("Email"));
+//    setHorizontalHeaderItem(G::UrlColumn, new QStandardItem("Url"));
+//    setHorizontalHeaderItem(G::OffsetFullJPGColumn, new QStandardItem("OffsetFullJPG"));
 
     sf = new SortFilter(this, filters, combineRawJpg);
     sf->setSourceModel(this);
@@ -157,6 +176,8 @@ void DataModel::clear()
     }
     // clear the model
     removeRows(0, rowCount());
+    // clear the fPath index of datamodel rows
+    fPathRow.clear();
     // clear all items for filters based on data content ie file types, camera model
     filters->removeChildrenDynamicFilters();
 }
@@ -326,6 +347,10 @@ bool DataModel::addFileData()
         // get file info
         fileInfo = fileInfoList.at(fileIndex);
 
+        // append hash index of datamodel row for fPath for fast lookups
+        QString fPath = fileInfo.filePath();
+        fPathRow[fPath] = fileIndex;
+
         /* add icon as first column in new row
 
         This can be done two ways:
@@ -343,8 +368,9 @@ bool DataModel::addFileData()
 */
 
         item = new QStandardItem();
-        item->setData("", Qt::DisplayRole);     // column 0 just displays icon
-        item->setData(fileInfo.filePath(), G::PathRole);
+        item->setData("", Qt::DisplayRole);             // column 0 just displays icon
+        item->setData(fPath, G::PathRole);
+//        item->setData(fileInfo.filePath(), G::PathRole);
         item->setData(fileInfo.absoluteFilePath(), Qt::ToolTipRole);
         item->setData(QRect(), G::ThumbRectRole);     // define later when read
         item->setData(false, G::CachedRole);
@@ -420,133 +446,64 @@ bool DataModel::addFileData()
     return true;
 }
 
-void DataModel::addMetadata(ProgressBar *progressBar, bool isShowCacheStatus)
+ImageMetadata DataModel::getMetadata(QString fPath)
 {
-/*
-This function is called after the metadata for all the eligible images in
-the selected folder have been cached.  The metadata is displayed in tableView,
-which is created in MW, and in InfoView.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
+    int row = fPathRow[fPath];
+    ImageMetadata m;
+
+    m.row = row;
+    m.label = index(row, G::LabelColumn).data().toString();
+    m._label = index(row, G::_LabelColumn).data().toString();
+    m.rating = index(row, G::RatingColumn).data().toString();
+    m._rating = index(row, G::_RatingColumn).data().toString();
+    m.createdDate = index(row, G::CreatedColumn).data().toDateTime();
+    m.width = index(row, G::WidthColumn).data().toUInt();
+    m.height= index(row, G::HeightColumn).data().toUInt();
+    m.dimensions = index(row, G::DimensionsColumn).data().toString();
+    m.orientation = index(row, G::OrientationColumn).data().toInt();
+    m.rotationDegrees = index(row, G::RotationColumn).data().toInt();
+    m.apertureNum = index(row, G::ApertureColumn).data().toFloat();
+    m.aperture = "f/" + QString::number(m.apertureNum, 'f', 1);
+    m.exposureTimeNum = index(row, G::ShutterspeedColumn).data().toFloat();
+
+    if (m.exposureTimeNum < 1.0) {
+        uint t = qRound(1 / m.exposureTimeNum);
+        m.exposureTime = "1/" + QString::number(t);
+    } else {
+        m.exposureTime = QString::number(m.exposureTimeNum);
     }
+    m.exposureTime += " sec";
 
-//    t.restart();
+    m.ISONum = index(row, G::ISOColumn).data().toFloat();
+    m.ISO = QString::number(m.ISONum);
+    m.make = index(row, G::CameraMakeColumn).data().toString();
+    m.model = index(row, G::CameraModelColumn).data().toString();
+    m.lens = index(row, G::LensColumn).data().toString();
+    m.focalLengthNum = index(row, G::FocalLengthColumn).data().toInt();
+    m.focalLength = QString::number(m.focalLengthNum, 'f', 0) + "mm";
+    m.title = index(row, G::TitleColumn).data().toString();
+    m._title = index(row, G::_TitleColumn).data().toString();
+    m.creator = index(row, G::CreatorColumn).data().toString();
+    m._creator = index(row, G::_CreatorColumn).data().toString();
+    m.copyright = index(row, G::CopyrightColumn).data().toString();
+    m._copyright = index(row, G::_CopyrightColumn).data().toString();
+    m.email = index(row, G::EmailColumn).data().toString();
+    m._email = index(row, G::_EmailColumn).data().toString();
+    m.url = index(row, G::UrlColumn).data().toString();
+    m._url = index(row, G::_UrlColumn).data().toString();
 
-    if(isShowCacheStatus) progressBar->clearProgress();
-
-    hasDupRawJpg = false;
-
-    // collect all unique instances for filtration (use QMap to maintain order)
-    QMap<QVariant, QString> modelMap;
-    QMap<QVariant, QString> lensMap;
-    QMap<QVariant, QString> titleMap;
-    QMap<QVariant, QString> flMap;
-    QMap<QVariant, QString> creatorMap;
-    QMap<QVariant, QString> yearMap;
-    QMap<QVariant, QString> dayMap;
-
-    for(int row = 0; row < rowCount(); row++) {
-        /*
-        qDebug() << "DataModel::addMetadata " << index(row,0).data(G::PathRole).toString()
-                 << "\tDupHideRawRole =" << index(row,0).data(G::DupHideRawRole).toBool()
-                 << "\tDupRawIdxRole =" << index(row,0).data(G::DupRawIdxRole);
-        */
-        // row has already been loaded
-        if (!index(row, G::CreatedColumn).data().isNull()) continue;
-
-        QModelIndex idx = index(row, G::PathColumn);
-        QString fPath = idx.data(G::PathRole).toString();
-
-        QString label = metadata->getLabel(fPath);
-        QString rating = metadata->getRating(fPath);
-        uint width = metadata->getWidth(fPath);
-        uint height = metadata->getHeight(fPath);
-        QDateTime createdDate = metadata->getCreatedDate(fPath);
-        QString createdDT = createdDate.toString("yyyy-MM-dd hh:mm:ss");
-        QString year = createdDate.toString("yyyy");
-        QString day = createdDate.toString("yyyy-MM-dd");
-        QString mp = QString::number((width * height) / 1000000.0, 'f', 2);
-        QString dim = QString::number(width) + "x" + QString::number(height);
-        float apertureNum = metadata->getApertureNum(fPath);
-        QString ss = metadata->getExposureTime(fPath);
-        float ssNum = metadata->getExposureTimeNum(fPath);
-        int isoNum = metadata->getISONum(fPath);
-        QString model = metadata->getModel(fPath);
-        QString lens = metadata->getLens(fPath);
-        QString fl = metadata->getFocalLength(fPath);
-        int flNum = metadata->getFocalLengthNum(fPath);
-        QString title = metadata->getTitle(fPath);
-        QString creator = metadata->getCreator(fPath).trimmed();
-        QString copyright = metadata->getCopyright(fPath);
-        QString email = metadata->getEmail(fPath);
-        QString url = metadata->getUrl(fPath);
-
-        if (!creatorMap.contains(creator)) creatorMap[creator] = creator;
-        if (!yearMap.contains(year)) yearMap[year] = year;
-        if (!dayMap.contains(day)) dayMap[day] = day;
-        if (!modelMap.contains(model)) modelMap[model] = model;
-        if (!lensMap.contains(lens)) lensMap[lens] = lens;
-        if (!flMap.contains(fl)) flMap[flNum] = fl;
-        if (!titleMap.contains(title)) titleMap[title] = title;
-
-        setData(index(row, G::LabelColumn), label);
-        setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-        setData(index(row, G::RatingColumn), rating);
-        setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-        setData(index(row, G::CreatedColumn), createdDT);
-        setData(index(row, G::YearColumn), year);
-        setData(index(row, G::DayColumn), day);
-        setData(index(row, G::MegaPixelsColumn), mp);
-        setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        setData(index(row, G::DimensionsColumn), dim);
-        setData(index(row, G::RotationColumn), 0);
-        setData(index(row, G::RotationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-        setData(index(row, G::ApertureColumn), apertureNum);
-        setData(index(row, G::ApertureColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-        setData(index(row, G::ShutterspeedColumn), ssNum);
-        setData(index(row, G::ShutterspeedColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        setData(index(row, G::ISOColumn), isoNum);
-        setData(index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-        setData(index(row, G::CameraModelColumn), model);
-        setData(index(row, G::LensColumn), lens);
-        setData(index(row, G::FocalLengthColumn), flNum);
-        setData(index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        setData(index(row, G::TitleColumn), title);
-        setData(index(row, G::CreatorColumn), creator);
-        setData(index(row, G::CopyrightColumn), copyright);
-        setData(index(row, G::EmailColumn), email);
-        setData(index(row, G::UrlColumn), url);
-
-        if(isShowCacheStatus) {
-            progressBar->updateProgress(row, row + 1, rowCount(), QColor(100,150,150),
-                                    "datamodel - adding metadata");
-            if(row % 100 == 0) qApp->processEvents();
-        }
-    }
-
-    // build filter items
-    filters->addCategoryFromData(modelMap, filters->models);
-    filters->addCategoryFromData(lensMap, filters->lenses);
-    filters->addCategoryFromData(flMap, filters->focalLengths);
-    filters->addCategoryFromData(titleMap, filters->titles);
-    filters->addCategoryFromData(creatorMap, filters->creators);
-    filters->addCategoryFromData(yearMap, filters->years);
-    filters->addCategoryFromData(dayMap, filters->days);
-
-    // list used by imageCacheThread, filtered by row+jpg if combined
-    for (int i = 0; i < sf->rowCount(); ++i)
-            imageFilePathList.append(sf->index(i,0).data(G::PathRole).toString());
-
-    // req'd for 1st image, probably loaded before metadata cached
-    emit updateClassification();
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__, "Leaving...");
-    #endif
-
-//    qDebug() << "Sync: Time to get metadata =" << t.elapsed();
+    m.offsetFullJPG = index(row, G::OffsetFullJPGColumn).data().toUInt();
+    m.lengthFullJPG = index(row, G::LengthFullJPGColumn).data().toUInt();
+    m.offsetThumbJPG = index(row, G::OffsetThumbJPGColumn).data().toUInt();
+    m.lengthThumbJPG = index(row, G::LengthThumbJPGColumn).data().toUInt();
+    m.offsetSmallJPG = index(row, G::OffsetSmallJPGColumn).data().toUInt();
+    m.lengthSmallJPG = index(row, G::LengthSmallJPGColumn).data().toUInt();
+    m.xmpSegmentOffset = index(row, G::XmpSegmentOffsetColumn).data().toUInt();
+    m.xmpNextSegmentOffset = index(row, G::XmpNextSegmentOffsetColumn).data().toUInt();
+    m.orientationOffset = index(row, G::OrientationOffsetColumn).data().toUInt();
+    m.isXmp = index(row, G::IsXMPColumn).data().toBool();
+//     = index(row, G::RotationDegreesColumn), m.rotationDegrees
+    return m;
 }
 
 // ASync
@@ -628,9 +585,12 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
 
     setData(index(row, G::LabelColumn), m.label);
     setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+    setData(index(row, G::_LabelColumn), m._label);
     setData(index(row, G::RatingColumn), m.rating);
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-    setData(index(row, G::CreatedColumn), m.createdDate.toString("yyyy-MM-dd hh:mm:ss"));
+    setData(index(row, G::_RatingColumn), m._rating);
+    setData(index(row, G::CreatedColumn), m.createdDate);
+//    setData(index(row, G::CreatedColumn), m.createdDate.toString("yyyy-MM-dd hh:mm:ss"));
     setData(index(row, G::YearColumn), m.createdDate.toString("yyyy"));
     setData(index(row, G::DayColumn), m.createdDate.toString("yyyy-MM-dd"));
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
@@ -649,15 +609,35 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::ShutterspeedColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::ISOColumn), m.ISONum);
     setData(index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+    setData(index(row, G::CameraMakeColumn), m.make);
     setData(index(row, G::CameraModelColumn), m.model);
     setData(index(row, G::LensColumn), m.lens);
     setData(index(row, G::FocalLengthColumn), m.focalLengthNum);
     setData(index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::TitleColumn), m.title);
+    setData(index(row, G::_TitleColumn), m._title);
     setData(index(row, G::CreatorColumn), m.creator);
+    setData(index(row, G::_CreatorColumn), m._creator);
     setData(index(row, G::CopyrightColumn), m.copyright);
+    setData(index(row, G::_CopyrightColumn), m._copyright);
     setData(index(row, G::EmailColumn), m.email);
+    setData(index(row, G::_EmailColumn), m._email);
     setData(index(row, G::UrlColumn), m.url);
+    setData(index(row, G::_UrlColumn), m._url);
+
+    setData(index(row, G::OffsetFullJPGColumn), m.offsetFullJPG);
+    setData(index(row, G::LengthFullJPGColumn), m.lengthFullJPG);
+    setData(index(row, G::OffsetThumbJPGColumn), m.offsetThumbJPG);
+    setData(index(row, G::LengthThumbJPGColumn), m.lengthThumbJPG);
+    setData(index(row, G::OffsetSmallJPGColumn), m.offsetSmallJPG);
+    setData(index(row, G::LengthSmallJPGColumn), m.lengthSmallJPG);
+    setData(index(row, G::XmpSegmentOffsetColumn), m.xmpSegmentOffset);
+    setData(index(row, G::XmpNextSegmentOffsetColumn), m.xmpNextSegmentOffset);
+    setData(index(row, G::IsXMPColumn), m.isXmp);
+    setData(index(row, G::OrientationOffsetColumn), m.orientationOffset);
+    setData(index(row, G::OrientationColumn), m.orientation);
+    setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
+
     if (isShowCacheStatus) {
         if (row % 100 == 0 || row == rowCount() - 1) {
             progressBar->updateProgress(lastProgressRow, row + 1, rowCount(), QColor(100,150,150), "");

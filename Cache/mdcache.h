@@ -93,7 +93,6 @@ private:
     QList<int> iconsCached;
 
     bool foundItemsToLoad;
-    bool imageCacheWasRunning;
     Action action;
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error

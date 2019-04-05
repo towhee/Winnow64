@@ -38,14 +38,14 @@ class DataModel : public QStandardItemModel
     Q_OBJECT
 public:
     DataModel(QWidget *parent,
-              Metadata *metadata,
+              Metadata *getMetadata,
               ProgressBar *progressBar,
               Filters *filters,
               bool &combineRawJpg);
 
     bool load(QString &dir, bool includeSubfolders);
     void clear();
-    void addMetadata(ProgressBar *progressBar, bool isShowCacheStatus);
+    ImageMetadata getMetadata(QString fPath);
     void updateImageList();
     void sortThumbs(int sortColumn, bool isReverse);
     QModelIndex find(QString fPath);
@@ -54,6 +54,7 @@ public:
     ImageHash iconHash;  // ASync
 
     SortFilter *sf;
+    QHash<QString, int> fPathRow;
     QStringList imageFilePathList;
     QDir::SortFlags thumbsSortFlags;
     QString currentFolderPath;

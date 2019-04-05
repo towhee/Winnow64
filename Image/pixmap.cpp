@@ -1,8 +1,9 @@
 #include "Image/pixmap.h"
 #include "Main/global.h"
 
-Pixmap::Pixmap(QObject *parent, Metadata *metadata) : QObject(parent)
+Pixmap::Pixmap(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(parent)
 {
+    this->dm = dm;
     this->metadata = metadata;
 }
 
@@ -60,19 +61,18 @@ bool Pixmap::load(QString &fPath, QImage &image)
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
     QFile imFile(fPath);
+    int row = dm->fPathRow[fPath];
 
     if (metadata->rawFormats.contains(ext)) {
         // raw files handled by Qt
         do {
             // Check if metadata has been cached for this image
-            offsetFullJpg = metadata->getOffsetFullJPG(fPath);
-            lengthFullJpg = metadata->getLengthFullJPG(fPath);
-            if (offsetFullJpg == 0) {
+            if (dm->index(row, G::OffsetFullJPGColumn).data().isNull()) {
                 metadata->loadImageMetadata(fPath, true, false);
-                //try again
-                offsetFullJpg = metadata->getOffsetFullJPG(fPath);
-                lengthFullJpg = metadata->getLengthFullJPG(fPath);
+                dm->addMetadataItem(metadata->imageMetadata);
             }
+            offsetFullJpg = metadata->offsetFullJPG;
+            lengthFullJpg = metadata->lengthFullJPG;
             // try to read the file
             if (offsetFullJpg > 0 && lengthFullJpg > 0) {
                 if (imFile.open(QIODevice::ReadOnly)) {

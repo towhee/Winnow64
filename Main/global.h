@@ -35,6 +35,7 @@ namespace G
     not in the same order!
     */
     enum dataModelColumns {
+        // items available for TableView
         PathColumn,
         NameColumn,
         RefineColumn,
@@ -56,13 +57,36 @@ namespace G
         ApertureColumn,
         ShutterspeedColumn,
         ISOColumn,
+        CameraMakeColumn,
         CameraModelColumn,
         LensColumn,
         FocalLengthColumn,
-        TitleColumn,
         CopyrightColumn,
+        TitleColumn,
+        // unavailable for TableView from here on (move up and add dataModel setHorizontalHeaderItem)
         EmailColumn,
         UrlColumn,
+        // original values
+        _RatingColumn,
+        _LabelColumn,
+        _CreatorColumn,
+        _TitleColumn,
+        _CopyrightColumn,
+        _EmailColumn,
+        _UrlColumn,
+        // binary helpers
+        OffsetFullJPGColumn,
+        LengthFullJPGColumn,
+        OffsetThumbJPGColumn,
+        LengthThumbJPGColumn,
+        OffsetSmallJPGColumn,
+        LengthSmallJPGColumn,
+        XmpSegmentOffsetColumn,
+        XmpNextSegmentOffsetColumn,
+        IsXMPColumn,
+        OrientationOffsetColumn,
+        OrientationColumn,
+        RotationDegreesColumn,
         TotalColumns    // insert additional columns before this
     };
 
