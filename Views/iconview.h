@@ -96,8 +96,6 @@ public:
 
      QItemSelectionModel *thumbViewSelection;
 
-    ImageHash iconHash;  // ASync
-
     int thumbSize;
     QString pickMemorySize;
     QString filterStr;
@@ -138,7 +136,6 @@ public slots:
 
     void refreshThumb(QModelIndex idx, int role);
     void refreshThumbs();
-    void processIconBuffer();       // ASync
     void setIcon(int row, QImage thumb);
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
              int _thumbPadding, int _labelFontSize, bool _showThumbLabels,

@@ -34,11 +34,6 @@
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
 
-// ASync
-//#include "Cache/mdcachemgr.h"
-//#include "Cache/mdcacher.h"
-//#include "Cache/threadsafehash.h"
-
 #include "ingestdlg.h"
 #include "aboutdlg.h"
 #include "Image/thumb.h"
@@ -300,20 +295,6 @@ public slots:
     void test();                    // for debugging
     void test2();
     void testNewFileFormat();       // for debugging
-
-//// testing async
-
-//    void go();
-//    void doTasks(const QStringList &sourceFiles);
-//    bool checkIfDone();
-
-//private:
-//    volatile bool stopped;
-//    int total;
-//    int done;
-//    QVector<int> chunkSizes(const int size, const int chunkCount);
-
-//// end texting async
 
 signals:
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
@@ -815,10 +796,8 @@ private:
     bool wasThumbDockVisible;
     bool isUpdatingState;
 
-    bool isLoadSettings;
+    bool simulateJustInstalled;
     bool isSettings;
-    bool isFirstTimeNoSettings;
-//    bool isInitializing;
     bool isStartSilentCheckForUpdates = true;    // flag true until startup check for updates has been completed
     bool isStressTest;
     bool hasGridBeenActivated;
@@ -834,8 +813,6 @@ private:
 
     QString imageCacheFilePath;
     QTimer *imageCacheTimer;
-
-    QElapsedTimer cacheTimer;       // temp for testing
 
     bool newScrollSignal;           // used for scroll signal delay in case many/sec
     QTimer *metadataCacheScrollTimer;

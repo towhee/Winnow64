@@ -148,13 +148,33 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::CameraModelColumn, new QStandardItem("Model"));
     setHorizontalHeaderItem(G::LensColumn, new QStandardItem("Lens"));
     setHorizontalHeaderItem(G::FocalLengthColumn, new QStandardItem("Focal length"));
-    setHorizontalHeaderItem(G::CopyrightColumn, new QStandardItem("Copyright"));
     setHorizontalHeaderItem(G::TitleColumn, new QStandardItem("Title"));
+    setHorizontalHeaderItem(G::CopyrightColumn, new QStandardItem("Copyright"));
+    setHorizontalHeaderItem(G::EmailColumn, new QStandardItem("Email"));
+    setHorizontalHeaderItem(G::UrlColumn, new QStandardItem("Url"));
+    setHorizontalHeaderItem(G::_RatingColumn, new QStandardItem("_Rating"));
+    setHorizontalHeaderItem(G::_LabelColumn, new QStandardItem("_Label"));
+    setHorizontalHeaderItem(G::_CreatorColumn, new QStandardItem("_Creator"));
+    setHorizontalHeaderItem(G::_TitleColumn, new QStandardItem("_Title"));
+    setHorizontalHeaderItem(G::_CopyrightColumn, new QStandardItem("_Copyright"));
+    setHorizontalHeaderItem(G::_EmailColumn, new QStandardItem("_Email"));
+    setHorizontalHeaderItem(G::_UrlColumn, new QStandardItem("_Url"));
 
-//    setHorizontalHeaderItem(G::CopyrightColumn, new QStandardItem("Copyright"));
-//    setHorizontalHeaderItem(G::EmailColumn, new QStandardItem("Email"));
-//    setHorizontalHeaderItem(G::UrlColumn, new QStandardItem("Url"));
-//    setHorizontalHeaderItem(G::OffsetFullJPGColumn, new QStandardItem("OffsetFullJPG"));
+    setHorizontalHeaderItem(G::OffsetFullJPGColumn, new QStandardItem("OffsetFullJPG"));
+    setHorizontalHeaderItem(G::LengthFullJPGColumn, new QStandardItem("LengthFullJPG"));
+    setHorizontalHeaderItem(G::OffsetThumbJPGColumn, new QStandardItem("OffsetThumbJPG"));
+    setHorizontalHeaderItem(G::LengthThumbJPGColumn, new QStandardItem("LengthThumbJPF"));
+    setHorizontalHeaderItem(G::OffsetSmallJPGColumn, new QStandardItem("OffsetSmallJPG"));
+    setHorizontalHeaderItem(G::LengthSmallJPGColumn, new QStandardItem("LengthSmallJPG"));
+
+    setHorizontalHeaderItem(G::XmpSegmentOffsetColumn, new QStandardItem("XmpSegmentOffset"));
+    setHorizontalHeaderItem(G::XmpNextSegmentOffsetColumn, new QStandardItem("XmpNextSegmentOffset"));
+    setHorizontalHeaderItem(G::IsXMPColumn, new QStandardItem("IsXMP"));
+    setHorizontalHeaderItem(G::OrientationOffsetColumn, new QStandardItem("OrientationOffset"));
+    setHorizontalHeaderItem(G::OrientationColumn, new QStandardItem("Orientation"));
+    setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees"));
+    setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Err"));
+    setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo"));
 
     sf = new SortFilter(this, filters, combineRawJpg);
     sf->setSourceModel(this);
@@ -164,7 +184,7 @@ DataModel::DataModel(QWidget *parent,
     fileFilters = new QStringList;          // eligible image file types
     emptyImg.load(":/images/no_image.png");
 
-    connect(this, SIGNAL(updateMetadata(ImageMetadata)), this, SLOT(addMetadataItem(ImageMetadata)));
+//    connect(this, SIGNAL(updateMetadata(ImageMetadata)), this, SLOT(addMetadataItem(ImageMetadata)));
 }
 
 void DataModel::clear()
@@ -506,28 +526,6 @@ ImageMetadata DataModel::getMetadata(QString fPath)
     return m;
 }
 
-// ASync
-void DataModel::processMetadataBuffer()
-{
-    static int count = 0;
-    count++;
-    forever {
-        bool more = true;
-        bool gotOne = false;
-        ImageMetadata m;
-        metaHash.takeOne(&m, &more, &gotOne);
-        #ifdef ISTEST
-        qDebug() << "DataModel::processMetadataBuffer  GotOne Entry:"
-                 << count
-                 << "row = " << m.row
-                 << "gotOne =" << gotOne;
-        #endif
-//        if (gotOne) emit updateMetadata(m);
-        if (gotOne) addMetadataItem(m);
-        if (!more) break;
-    }
-}
-
 void DataModel::addAllMetadata(bool isShowCacheStatus)
 {
 /*
@@ -590,7 +588,6 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::_RatingColumn), m._rating);
     setData(index(row, G::CreatedColumn), m.createdDate);
-//    setData(index(row, G::CreatedColumn), m.createdDate.toString("yyyy-MM-dd hh:mm:ss"));
     setData(index(row, G::YearColumn), m.createdDate.toString("yyyy"));
     setData(index(row, G::DayColumn), m.createdDate.toString("yyyy-MM-dd"));
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
@@ -624,7 +621,6 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::_EmailColumn), m._email);
     setData(index(row, G::UrlColumn), m.url);
     setData(index(row, G::_UrlColumn), m._url);
-
     setData(index(row, G::OffsetFullJPGColumn), m.offsetFullJPG);
     setData(index(row, G::LengthFullJPGColumn), m.lengthFullJPG);
     setData(index(row, G::OffsetThumbJPGColumn), m.offsetThumbJPG);
@@ -637,6 +633,8 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::OrientationOffsetColumn), m.orientationOffset);
     setData(index(row, G::OrientationColumn), m.orientation);
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
+    setData(index(row, G::ErrColumn), m.err);
+    setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
 
     if (isShowCacheStatus) {
         if (row % 100 == 0 || row == rowCount() - 1) {
@@ -713,47 +711,47 @@ void DataModel::buildFilters()
 
     filters->addCategoryFromData(modelMap, filters->models);
     int row = 0;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
     qApp->processEvents();
 
     filters->addCategoryFromData(lensMap, filters->lenses);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
     qApp->processEvents();
 
     filters->addCategoryFromData(flMap, filters->focalLengths);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
     qApp->processEvents();
 
     filters->addCategoryFromData(titleMap, filters->titles);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
     qApp->processEvents();
 
     filters->addCategoryFromData(creatorMap, filters->creators);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
     qApp->processEvents();
 
     filters->addCategoryFromData(yearMap, filters->years);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
     qApp->processEvents();
 
     filters->addCategoryFromData(dayMap, filters->days);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
     qApp->processEvents();
 
     filteredItemCount();
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkBlue), "");
     qApp->processEvents();
 
     unfilteredItemCount();
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkMagenta), "");
+    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkBlue), "");
 
     filtersBuilt = true;
     popup("Filters have been updated.", 1000, 0.75);

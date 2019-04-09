@@ -69,7 +69,6 @@ signals:
 //    void updateAllMetadataLoaded(bool);
     void updateIconBestFit();
     void selectFirst();
-    void updateFilters();
     void showCacheStatus(int, bool);            // row, renew progress bar
 
 private:

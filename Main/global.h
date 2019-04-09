@@ -15,7 +15,7 @@
 #include <QMutex>
 
 #define ICON_MIN	40
-#define ICON_MAX	256  //480
+#define ICON_MAX	480  // 256
 
 namespace G
 {
@@ -63,9 +63,9 @@ namespace G
         FocalLengthColumn,
         CopyrightColumn,
         TitleColumn,
-        // unavailable for TableView from here on (move up and add dataModel setHorizontalHeaderItem)
         EmailColumn,
         UrlColumn,
+        // unavailable for TableView from here on (move items above to show and below to hide)
         // original values
         _RatingColumn,
         _LabelColumn,
@@ -74,6 +74,7 @@ namespace G
         _CopyrightColumn,
         _EmailColumn,
         _UrlColumn,
+
         // binary helpers
         OffsetFullJPGColumn,
         LengthFullJPGColumn,
@@ -87,6 +88,8 @@ namespace G
         OrientationOffsetColumn,
         OrientationColumn,
         RotationDegreesColumn,
+        ErrColumn,
+        ShootingInfoColumn,
         TotalColumns    // insert additional columns before this
     };
 
@@ -101,6 +104,7 @@ namespace G
     };
 
     extern int maxIconSize;
+    extern int minIconSize;
 
     extern QColor labelNoneColor;
     extern QColor labelRedColor;
@@ -130,18 +134,7 @@ namespace G
     extern QElapsedTimer t;
     extern bool isTimer;
 
-    extern int cores;
-    extern bool aSync;
-
     extern void track(QString functionName = "", QString comment = "");
-
-
-//    class Profile
-//    {
-//    private:
-//        static void print(QString functionName, QString comment);
-//        QMutex m;
-//    }
 
 }
 #endif // GLOBAL_H
