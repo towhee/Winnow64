@@ -2209,7 +2209,7 @@ metadata is written to buffer and the original image file is copied unchanged.
 
 //    qDebug() << "Metadata::writeMetadata fPath =" << fPath;
     // set locals to image data  ie title = metaCache[fPath].title
-    setMetadata(fPath);
+//    setMetadata(fPath);  // replaced by dm->getMetadata which supplies ImageMetadata m
 //    reportMetadataCache(fPath);
 
     bool useSidecar = sidecarFormats.contains(suffix);
@@ -4636,292 +4636,6 @@ void Metadata::removeImage(QString &imageFileName)
     metaCache.remove(imageFileName);
 }
 
-bool Metadata::isLoaded(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].metadataLoaded;
-}
-
-bool Metadata::isThumbLoaded(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].isThumbLoaded;
-}
-
-ulong Metadata::getOffsetFullJPG(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].offsetFullJPG;
-}
-
-ulong Metadata::getLengthFullJPG(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].lengthFullJPG;
-}
-
-ulong Metadata::getOffsetThumbJPG(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    #endif
-    }
-    return metaCache[imageFileName].offsetThumbJPG;
-}
-
-ulong Metadata::getLengthThumbJPG(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].lengthThumbJPG;
-}
-
-ulong Metadata::getOffsetSmallJPG(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].offsetSmallJPG;
-}
-
-ulong Metadata::getLengthSmallJPG(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].lengthSmallJPG;
-}
-
-ulong Metadata::getWidth(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].width;
-}
-
-ulong Metadata::getHeight(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].height;
-}
-
-QString Metadata::getDimensions(const QString &imageFileName)
-{
-    {
-#ifdef ISDEBUG
-G::track(__FUNCTION__);
-#endif
-    }
-    return metaCache[imageFileName].dimensions;
-}
-
-int Metadata::getYear(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].year;
-}
-
-int Metadata::getMonth(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].month;
-}
-
-int Metadata::getDay(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].day;
-}
-
-QString Metadata::getCopyFileNamePrefix(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].copyFileNamePrefix;
-}
-
-QString Metadata::getMake(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].make;
-}
-
-QString Metadata::getModel(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].model;
-}
-
-QString Metadata::getExposureTime(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].exposureTime;
-}
-
-float Metadata::getExposureTimeNum(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].exposureTimeNum;
-}
-
-
-bool Metadata::getThumbUnavailable(const QString &imageFileName)
-{
-    return metaCache[imageFileName].thumbUnavailable;
-}
-
-bool Metadata::getImageUnavailable(const QString &imageFileName)
-{
-    return metaCache[imageFileName].imageUnavailable;
-}
-
-QString Metadata::getErr(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].err;
-}
-
-void Metadata::setErr(const QString &imageFileName, const QString &err)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    metaCache[imageFileName].err = err;
-}
-
-int Metadata::getOrientation(QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
-    }
-    if (metaCache.contains(imageFileName)) {
-        return metaCache[imageFileName].orientation;
-    }
-    else return 0;
-}
-
-int Metadata::getRotation(QString &imageFileName)
-{
-    {
-#ifdef ISDEBUG
-G::track(__FUNCTION__);
-#endif
-    }
-    if (metaCache.contains(imageFileName)) {
-        return metaCache[imageFileName].rotationDegrees;
-    }
-    else return 0;
-}
-
-void Metadata::setRotation(const QString &imageFileName, const int rotationDegrees)
-{
-    metaCache[imageFileName].rotationDegrees = rotationDegrees;
-}
-
-bool Metadata::getPick(const QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return metaCache[imageFileName].isPicked;
-}
-
 void Metadata::setPick(const QString &imageFileName, bool choice)
 {
     {
@@ -5034,56 +4748,56 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
     imageMetadata.metadataLoaded = result;
 
-    metaCache.insert(fileInfo.filePath(), imageMetadata);
+//    metaCache.insert(fileInfo.filePath(), imageMetadata);
 
     return result;
 }
 
 void Metadata::setMetadata(const QString &imageFileName)
 {
-    isPicked =  metaCache[imageFileName].isPicked;
-    offsetFullJPG = metaCache[imageFileName].offsetFullJPG;
-    lengthFullJPG = metaCache[imageFileName].lengthFullJPG;
-    offsetThumbJPG = metaCache[imageFileName].offsetThumbJPG;
-    lengthThumbJPG = metaCache[imageFileName].lengthThumbJPG;
-    offsetSmallJPG = metaCache[imageFileName].offsetSmallJPG;
-    lengthSmallJPG = metaCache[imageFileName].lengthSmallJPG;
-    xmpSegmentOffset = metaCache[imageFileName].xmpSegmentOffset;
-    xmpNextSegmentOffset = metaCache[imageFileName].xmpNextSegmentOffset;
-    isXmp = metaCache[imageFileName].isXmp;
-    orientationOffset = metaCache[imageFileName].orientationOffset;
-    width = metaCache[imageFileName].width;
-    height = metaCache[imageFileName].height;
-    dimensions = metaCache[imageFileName].dimensions;
-    rotationDegrees = metaCache[imageFileName].rotationDegrees;
-//    created = metaCache[imageFileName].created;
-    createdDate = metaCache[imageFileName].createdDate;
-    model = metaCache[imageFileName].model;
-    exposureTime = metaCache[imageFileName].exposureTime;
-    exposureTimeNum = metaCache[imageFileName].exposureTimeNum;
-    aperture = metaCache[imageFileName].aperture;
-    apertureNum = metaCache[imageFileName].apertureNum;
-    ISO = metaCache[imageFileName].ISO;
-    ISONum = metaCache[imageFileName].ISONum;
-    focalLength = metaCache[imageFileName].focalLength;
-    focalLengthNum = metaCache[imageFileName].focalLengthNum;
-    title = metaCache[imageFileName].title;
-    _title = metaCache[imageFileName]._title;
-    rating = metaCache[imageFileName].rating;
-    _rating = metaCache[imageFileName]._rating;
-    label = metaCache[imageFileName].label;
-    _label = metaCache[imageFileName]._label;
-    lens = metaCache[imageFileName].lens;
-    creator = metaCache[imageFileName].creator;
-    _creator = metaCache[imageFileName]._creator;
-    copyright = metaCache[imageFileName].copyright;
-    _copyright = metaCache[imageFileName]._copyright;
-    email = metaCache[imageFileName].email;
-    _email = metaCache[imageFileName]._email;
-    url = metaCache[imageFileName].url;
-    _url = metaCache[imageFileName]._url;
-    orientation = metaCache[imageFileName].orientation;
-    shootingInfo = metaCache[imageFileName].shootingInfo;
+//    isPicked =  metaCache[imageFileName].isPicked;
+//    offsetFullJPG = metaCache[imageFileName].offsetFullJPG;
+//    lengthFullJPG = metaCache[imageFileName].lengthFullJPG;
+//    offsetThumbJPG = metaCache[imageFileName].offsetThumbJPG;
+//    lengthThumbJPG = metaCache[imageFileName].lengthThumbJPG;
+//    offsetSmallJPG = metaCache[imageFileName].offsetSmallJPG;
+//    lengthSmallJPG = metaCache[imageFileName].lengthSmallJPG;
+//    xmpSegmentOffset = metaCache[imageFileName].xmpSegmentOffset;
+//    xmpNextSegmentOffset = metaCache[imageFileName].xmpNextSegmentOffset;
+//    isXmp = metaCache[imageFileName].isXmp;
+//    orientationOffset = metaCache[imageFileName].orientationOffset;
+//    width = metaCache[imageFileName].width;
+//    height = metaCache[imageFileName].height;
+//    dimensions = metaCache[imageFileName].dimensions;
+//    rotationDegrees = metaCache[imageFileName].rotationDegrees;
+////    created = metaCache[imageFileName].created;
+//    createdDate = metaCache[imageFileName].createdDate;
+//    model = metaCache[imageFileName].model;
+//    exposureTime = metaCache[imageFileName].exposureTime;
+//    exposureTimeNum = metaCache[imageFileName].exposureTimeNum;
+//    aperture = metaCache[imageFileName].aperture;
+//    apertureNum = metaCache[imageFileName].apertureNum;
+//    ISO = metaCache[imageFileName].ISO;
+//    ISONum = metaCache[imageFileName].ISONum;
+//    focalLength = metaCache[imageFileName].focalLength;
+//    focalLengthNum = metaCache[imageFileName].focalLengthNum;
+//    title = metaCache[imageFileName].title;
+//    _title = metaCache[imageFileName]._title;
+//    rating = metaCache[imageFileName].rating;
+//    _rating = metaCache[imageFileName]._rating;
+//    label = metaCache[imageFileName].label;
+//    _label = metaCache[imageFileName]._label;
+//    lens = metaCache[imageFileName].lens;
+//    creator = metaCache[imageFileName].creator;
+//    _creator = metaCache[imageFileName]._creator;
+//    copyright = metaCache[imageFileName].copyright;
+//    _copyright = metaCache[imageFileName]._copyright;
+//    email = metaCache[imageFileName].email;
+//    _email = metaCache[imageFileName]._email;
+//    url = metaCache[imageFileName].url;
+//    _url = metaCache[imageFileName]._url;
+//    orientation = metaCache[imageFileName].orientation;
+//    shootingInfo = metaCache[imageFileName].shootingInfo;
 }
 
 // End Metadata

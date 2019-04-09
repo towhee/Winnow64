@@ -530,6 +530,7 @@ void ImageCache::reportCache(QString title)
     std::cout << reportString.toStdString() << std::flush;
 
     for (int i=0; i<cache.totFiles; ++i) {
+        int row = dm->fPathRow[cacheItemList.at(i).fName];
         rpt.flush();
         reportString = "";
         rpt.setFieldWidth(9);
@@ -542,8 +543,10 @@ void ImageCache::reportCache(QString title)
             << cacheItemList.at(i).isTarget
             << cacheItemList.at(i).isCached
             << cacheItemList.at(i).sizeMB
-            << metadata->getWidth(cacheItemList.at(i).fName)
-            << metadata->getHeight(cacheItemList.at(i).fName);
+            << dm->index(row, G::WidthColumn).data().toInt()
+            << dm->index(row, G::HeightColumn).data().toInt();
+//        << metadata->getWidth(cacheItemList.at(i).fName)
+//                << metadata->getHeight(cacheItemList.at(i).fName);
         rpt.setFieldWidth(3);
         rpt << "   ";
         rpt.setFieldAlignment(QTextStream::AlignLeft);
@@ -658,7 +661,6 @@ void ImageCache::initImageCache(int &cacheSizeMB,
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
 
@@ -719,7 +721,6 @@ Apparently there needs to be a slight delay before calling.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     // just in case stopImageCache not called before this
     if (isRunning()) pauseImageCache();
 

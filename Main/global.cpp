@@ -16,14 +16,12 @@ namespace G
     QString source;                     // GridMouseClick, ThumbMouseClick, TableMouseClick
 
     int maxIconSize;
+    int minIconSize = 40;
 
     QString fontSize;
 
     int actualDevicePixelRatio;
     bool allMetadataLoaded;
-
-    int cores;
-    bool aSync;
 
     // not persistent
     bool isThreadTrackingOn;
@@ -37,15 +35,11 @@ namespace G
 
     void track(QString functionName, QString comment)
     {
-//        QString time = QString::number(G::t.nsecsElapsed());
         QString time = QString("%L1").arg(t.nsecsElapsed());
         t.restart();
 
-//        QString initializing = isInitializing ? "initalizing = true" : "initializing = false";
-
         qDebug() << time.rightJustified(15, ' ') << " "
                  << functionName.leftJustified(50, '.') << " "
-//                 << initializing.leftJustified(25)
                  << comment;
     }
 

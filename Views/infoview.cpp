@@ -305,16 +305,11 @@ void InfoView::updateInfo(const int &row)
 
     // make sure there is metadata for this image
     if (dm->sf->index(row, G::CreatedColumn).data().isNull()) {
-//    if (!metadata->isLoaded(fPath)) {
-        qDebug() << "InfoView::updateInfo  row =" << row << fPath;
         metadata->loadImageMetadata(fPath, true, true, false, true);
         metadata->imageMetadata.row = row;
         dm->addMetadataItem(metadata->imageMetadata);
     }
 
-//    uint width = metadata->getWidth(fPath);
-//    uint height = metadata->getHeight(fPath);
-//    QString modified = imageInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     QString s;
     QVariant value;
 

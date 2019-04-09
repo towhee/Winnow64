@@ -81,7 +81,7 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
     this->dm = dm;
     this->metadata = metadata;
     this->imageCacheThread = imageCacheThread;
-    thumb = new Thumb(this, metadata);
+    thumb = new Thumb(this, dm, metadata);
     restart = false;
     abort = false;
     thumbMax.setWidth(G::maxIconSize);
@@ -170,7 +170,6 @@ maxChunkSize) image files metadata and icons are loaded into the datamodel.
         mutex.unlock();
         wait();
     }
-    G::track(__FUNCTION__);
     abort = false;
     G::allMetadataLoaded = false;
     iconsCached.clear();
@@ -243,9 +242,9 @@ image files are loaded.  The imageCacheThread is not invoked.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
-    qDebug() << "G::isInitializing =" << G::isInitializing
-             << "fromRow =" << fromRow;
+//    G::track(__FUNCTION__);
+//    qDebug() << "G::isInitializing =" << G::isInitializing
+//             << "fromRow =" << fromRow;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -345,13 +344,14 @@ pages of icons before and after the current page, where n = iconPagesToCacheAhea
     if (iconTargetEnd < rowCount) recacheIfLessThan = startRow + targetSize / 2 + targetSize / 7;
     else recacheIfLessThan = 0;
 
-    qDebug() << "MetadataCache::setIconTargets"
+/*    qDebug() << "MetadataCache::setIconTargets"
              << "start" << start
              << "thumbsPerPage" << thumbsPerPage
              << "iconTargetStart" << iconTargetStart
              << "iconTargetEnd" << iconTargetEnd
              << "recacheIfGreaterThan" << recacheIfGreaterThan
              << "recacheIfLessThan" << recacheIfLessThan;
+             */
 }
 
 void MetadataCache::iconCleanup()
@@ -617,12 +617,12 @@ that have been missed.
         }
 
         if (action == Action::NewFolder) {
-            qDebug() << "if (action == Action::NewFolder)";
             /* Only get bestFit on the first cache because the
             QListView rescrolls whenever a change to sizehint occurs */
             emit updateIconBestFit();
             // scroll to first image
             emit selectFirst();
+            // start image caching (full size)
             emit loadImageCache();
         }
 
@@ -630,19 +630,4 @@ that have been missed.
         emit updateIsRunning(false, true, __FUNCTION__);
 
     }
-
-    /* After loading metadata it is okay to cache full size images, where the
-    target cache needs to know how big each image is (width, height) and the
-    offset to embedded full size jpgs */
-
-
-
-//    if (action == Action::Resume && imageCacheWasRunning)
-//        imageCacheThread->resumeImageCache();
-
-//    if (!imageCacheThread->cacheUpToDate()) {
-//        qDebug() << "Resuming image caching";
-//        imageCacheThread->resumeImageCache();
-//    }
-
 }

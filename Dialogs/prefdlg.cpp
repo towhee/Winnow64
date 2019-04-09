@@ -59,7 +59,6 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     // grid
     ui->fontSizeSlider_2->setTickInterval(1);
     ui->fontSizeSlider_2->setTickPosition(QSlider::TicksAbove);
-    ui->fontSizeSlider_2->setValue(m0->thumbView->labelFontSize);
     ui->fontSizeSlider_2->setValue(m0->gridView->labelFontSize);
     ui->showThumbLabelChk_2->setChecked(m0->gridView->showThumbLabels);
 
@@ -132,6 +131,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
         QWidget *wid1 = ui->tableFieldsTable->indexWidget(idx);
         QCheckBox *box1 = qobject_cast<QCheckBox*>(wid1);
         box1->setChecked(idx.data().toBool());
+        // hide all datamodel columns after URL
+        if (row > G::UrlColumn - 1) ui->tableFieldsTable->setRowHidden(row, true);
         connect(box1, SIGNAL(clicked(bool)), this, SLOT(on_tableField_changed()));
     }
     // NOTE: row heights controlled by vertical header height in design form

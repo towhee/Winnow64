@@ -180,7 +180,8 @@ QSettings has been loaded.
         QString columnName = dm->horizontalHeaderItem(i)->text();
         ok->insertRow(i - 1);
         ok->setData(ok->index(i - 1, 0), columnName);
-        ok->setData(ok->index(i - 1, 1), true);
+        bool show = i <= G::UrlColumn;
+        ok->setData(ok->index(i - 1, 1), show);
     }
 
     connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),

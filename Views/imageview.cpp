@@ -141,6 +141,7 @@ to prevent jarring changes in perceived scale by the user.
     G::track(__FUNCTION__);
     #endif
     }
+
     // No folder selected yet
     if (!fPath.length()) return false;
 
@@ -321,8 +322,9 @@ void ImageView::setFullDim()
     G::track(__FUNCTION__);
     #endif
     }
-    full.setWidth(metadata->getWidth(currentImagePath));
-    full.setHeight(metadata->getHeight(currentImagePath));
+    int row = dm->fPathRow[currentImagePath];
+    full.setWidth(dm->index(row, G::WidthColumn).data().toInt());
+    full.setHeight(dm->index(row, G::HeightColumn).data().toInt());
 }
 
 void ImageView::setPreviewDim()
@@ -662,7 +664,9 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
     G::track(__FUNCTION__, "About to QTransform trans");
     #endif
     QTransform trans;
-    int orientation = metadata->getOrientation(imageFullPath);
+    int row = dm->fPathRow[imageFullPath];
+    int orientation = dm->index(row, G::OrientationColumn).data().toInt();
+//    int orientation = metadata->getOrientation(imageFullPath);
 
     switch(orientation) {
         case 2:

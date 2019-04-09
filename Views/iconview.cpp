@@ -691,27 +691,6 @@ bool IconView::isThumb(int row)
     return dm->sf->index(row, 0).data(Qt::DecorationRole).isNull();
 }
 
-// ASync
-void IconView::processIconBuffer()
-{
-    static int count = 0;
-    count++;
-    forever {
-        bool more = true;
-        int row;
-        QImage image;
-        iconHash.takeOne(&row, &image, &more);
-#ifdef ISTEST
-        qDebug() << "ThumbView::processIconBuffer  Entry:"
-                 << count
-                 << "row = " << row
-                 << "image size" << image.size();
-#endif
-        if (row >= 0) setIcon(row, image);
-        if (!more) return;
-    }
-}
-
 void IconView::setIcon(int row, QImage thumb)
 {
 /*
@@ -835,7 +814,6 @@ void IconView::selectFirst()
         G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     selectThumb(0);
 }
 
@@ -1072,7 +1050,9 @@ loaded.  Both thumbView and gridView have to be called.
     G::track(__FUNCTION__);
     #endif
     }
-    iconWMax = 0, iconHMax = 0;
+    G::track(__FUNCTION__);
+    iconWMax = 0;
+    iconHMax = 0;
     if (thumbWidth > G::maxIconSize) thumbWidth = G::maxIconSize;
     if (thumbHeight > G::maxIconSize) thumbHeight = G::maxIconSize;
     if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
@@ -1301,7 +1281,7 @@ MW::mouseClickScroll == true.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__, QString::number(row));
+//    G::track(__FUNCTION__, QString::number(row));
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 

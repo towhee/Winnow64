@@ -56,8 +56,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     QString err;            // type of error
 
-    ulong offsetFullJpg = 0;
-    ulong lengthFullJpg = 0;
+    uint offsetFullJpg = 0;
+    uint lengthFullJpg = 0;
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
     QFile imFile(fPath);
@@ -71,8 +71,10 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 metadata->loadImageMetadata(fPath, true, false);
                 dm->addMetadataItem(metadata->imageMetadata);
             }
-            offsetFullJpg = metadata->offsetFullJPG;
-            lengthFullJpg = metadata->lengthFullJPG;
+            offsetFullJpg = dm->index(row, G::OffsetFullJPGColumn).data().toUInt();
+            lengthFullJpg = dm->index(row, G::LengthFullJPGColumn).data().toUInt();
+//            offsetFullJpg = metadata->offsetFullJPG;
+//            lengthFullJpg = metadata->lengthFullJPG;
             // try to read the file
             if (offsetFullJpg > 0 && lengthFullJpg > 0) {
                 if (imFile.open(QIODevice::ReadOnly)) {
@@ -132,8 +134,10 @@ bool Pixmap::load(QString &fPath, QImage &image)
     G::track(__FUNCTION__, "Loaded " + fPath);
     #endif
     QTransform trans;
-    int orientation = metadata->getOrientation(fPath);
-    int rotationDegrees = metadata->getRotation(fPath);
+    int orientation = dm->index(row, G::OrientationColumn).data().toInt();
+    int rotationDegrees = dm->index(row, G::RotationDegreesColumn).data().toInt();
+//    int orientation = metadata->getOrientation(fPath);
+//    int rotationDegrees = metadata->getRotation(fPath);
     int degrees;
     if (orientation) {
         switch(orientation) {
@@ -157,7 +161,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
     }
 
     // record any errors
-    if (!success) metadata->setErr(fPath, err);
+    if (!success) dm->setData(dm->index(row, G::ErrColumn), err);
+//    if (!success) metadata->setErr(fPath, err);
 
     #ifdef ISDEBUG
     G::track(__FUNCTION__, "Completed load image");

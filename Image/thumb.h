@@ -4,15 +4,17 @@
 #include <QObject>
 #include <QtWidgets>
 #include "Metadata/metadata.h"
+#include "Datamodel/datamodel.h"
 
 class Thumb : public QObject
 {
     Q_OBJECT
 public:
-    explicit Thumb(QObject *parent, Metadata *metadata);
+    explicit Thumb(QObject *parent, DataModel *dm, Metadata *metadata);
     bool loadThumb(QString &fPath, QImage &image);
 
 private:
+    DataModel *dm;
     Metadata *metadata;
     QString err;
     QSize thumbMax;         // rgh review hard coding thumb size
