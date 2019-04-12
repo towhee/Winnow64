@@ -55,6 +55,8 @@ public:
     QStringList imageFilePathList;
     QDir::SortFlags thumbsSortFlags;
     QString currentFolderPath;
+    QString currentFilePath;            // used in caching to update image cache
+    int currentRow;                     // used in caching to check if new image selected
     bool hasDupRawJpg;
     bool filtersBuilt;
 

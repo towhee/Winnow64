@@ -30,8 +30,7 @@ MW *m1;
 
 ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)
 {
-    // ProgressBar is a friend of MW (see MW *m1 after MW class definition in mainwindow.h)
-//    MW *m1;
+    // ProgressBar is a friend of MW
     m1 = qobject_cast<MW*>(parent);
 
     htOffset = 9;               // the offset from the top of pnt to the progress bar
@@ -42,7 +41,7 @@ void ProgressBar::clearProgress()
 {
     counter = 0;
     QPainter pnt(m1->progressPixmap);
-    QLinearGradient bgGradient = getGradient(m1->progressBgColor);
+    QLinearGradient bgGradient = getGradient(G::progressBgColor);
     QRect bgRect(0, htOffset, m1->progressWidth, ht);
     pnt.fillRect(bgRect, bgGradient);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
@@ -74,7 +73,7 @@ void ProgressBar::updateCursor(int item,
     float itemWidth = (float)barWidth / items;
     int pxStartOld = qRound(pos * itemWidth);
     int pxWidth = itemWidth + 1;
-    if(pxWidth < 5) pxWidth = 5;
+    if(pxWidth < minCursorWidth) pxWidth = minCursorWidth;
 
 
     // paint out the old cursor location
@@ -99,7 +98,7 @@ void ProgressBar::updateProgress(int fromItem,
                                  int toItem,
                                  int items,
                                  QColor doneColor,
-                                 QString source)
+                                 QString comment)
 {
     // only show 1 in n to speed things up
 //    int n = 10;
@@ -138,6 +137,7 @@ void ProgressBar::updateProgress(int fromItem,
     QRect doneRect(pxStart, htOffset, pxWidth, ht);
     pnt.fillRect(doneRect, doneGradient);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
+    if (comment != "") m1->updateStatus(false, comment);
 }
 
 QLinearGradient ProgressBar::getGradient(QColor c1)

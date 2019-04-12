@@ -176,17 +176,7 @@ maxChunkSize) image files metadata and icons are loaded into the datamodel.
     foundItemsToLoad = true;
     int imageCount = dm->rowCount();
 
-    /* Create a map container for every row in the datamodel to track metadata caching. This
-    is used to confirm all the metadata is loaded before ending the metadata cache. If the
-    startRow is greater than zero then this means the scroll event has resulted in skipping
-    ahead, and we do not want ot lose track of the thumbs already loaded. After the metadata
-    and icons are loaded the imageCachingThread is invoked.
-    */
-//    loadMap.clear();
-//    for(int i = 0; i < dm->rowCount(); ++i) loadMap[i] = false;
-
     folderPath = dm->currentFolderPath;
-//    runImageCacheWhenDone = true;
 
     this->startRow = 0;
     if (metadataCacheAll || imageCount < metadataCacheAllIfLessThan)
@@ -242,9 +232,7 @@ image files are loaded.  The imageCacheThread is not invoked.
     G::track(__FUNCTION__);
     #endif
     }
-//    G::track(__FUNCTION__);
-//    qDebug() << "G::isInitializing =" << G::isInitializing
-//             << "fromRow =" << fromRow;
+    G::track(__FUNCTION__);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -269,10 +257,11 @@ image files are loaded.  The imageCacheThread is not invoked.
         if (foundItemsToLoad) break;
     }
 
-//    qDebug() << "MetadataCache::loadMetadataCache  "
-//             << "startRow" << startRow
-//             << "endRow" << endRow
-//             << "foundItemsToLoad" << foundItemsToLoad;
+    qDebug() << __FUNCTION__
+             << "startRow" << startRow
+             << "endRow" << endRow
+             << "foundItemsToLoad" << foundItemsToLoad
+             << "Start caching ...";
 
     setIconTargets(startRow , thumbsPerPage);
     action = Action::MetaIconChunk;
@@ -391,8 +380,10 @@ Load the thumb (icon) for all the image files in the .
     #endif
     }
     G::t.restart();
+    isShowCacheStatus = true;
     int count = 0;
-    for (int row = 0; row < dm->rowCount(); ++row) {
+    int rows = dm->rowCount();
+    for (int row = 0; row < rows; ++row) {
         // is metadata already cached
         if (!dm->index(row, G::CreatedColumn).data().isNull()) continue;
 
@@ -476,15 +467,8 @@ Load the metadata and thumb (icon) for all the image files in a folder.
         idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
         QString fPath = idx.data(G::PathRole).toString();
-        mutex.unlock();
-
-//        qDebug() << "WWW" << __FUNCTION__
-//                 << "row =" << row
-//                 << "dm->sf->rowCount" << dm->sf->rowCount()
-//                 << "dmRow =" << dmRow << "fPath =" << fPath;
 
         // load metadata
-        mutex.lock();
         if (dm->sf->index(row, G::CreatedColumn).data().isNull()) {
             QFileInfo fileInfo(fPath);
             /*
@@ -589,6 +573,7 @@ that have been missed.
         if (action == Action::MetaIconChunk) readMetadataIconChunk();
 
         // read metadata and icons in a new folder
+        mutex.lock(); G::track(__FUNCTION__, "Read the metadata"); qApp->processEvents(); mutex.unlock();
         if (action == Action::NewFolder) readMetadataIconChunk();
 
         if (abort) {
@@ -598,6 +583,7 @@ that have been missed.
         }
 
         // check if all metadata and thumbs have been loaded
+        mutex.lock(); G::track(__FUNCTION__, "Check if all metadata loaded"); qApp->processEvents(); mutex.unlock();
         if (!G::allMetadataLoaded) {
             G::allMetadataLoaded = true;
             mutex.lock();
@@ -619,6 +605,7 @@ that have been missed.
         if (action == Action::NewFolder) {
             /* Only get bestFit on the first cache because the
             QListView rescrolls whenever a change to sizehint occurs */
+            mutex.lock(); G::track(__FUNCTION__, "Completed loading metadata"); qApp->processEvents(); mutex.unlock();
             emit updateIconBestFit();
             // scroll to first image
             emit selectFirst();
@@ -626,8 +613,16 @@ that have been missed.
             emit loadImageCache();
         }
 
+
         // update status of metadataThreadRunningLabel in statusbar
         emit updateIsRunning(false, true, __FUNCTION__);
-
+        mutex.lock(); G::track(__FUNCTION__, "Exiting"); qApp->processEvents(); mutex.unlock();
+    }
+    qDebug() << "action =" << action
+             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "dm->currentRow" << dm->currentRow
+             << "previousRow" << previousRow;
+    if (action == Action::MetaIconChunk && dm->currentRow != previousRow && G::isNewFolderLoaded) {
+        imageCacheThread->updateImageCachePosition(dm->currentFilePath);
     }
 }

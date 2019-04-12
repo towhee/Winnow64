@@ -448,8 +448,9 @@ bool DataModel::addFileData()
                 }
             }
         }
-        progressBar->updateProgress(row, row + 1, fileInfoList.count(), QColor(85,100,115),
-                                "datamodel - adding file info");
+        progressBar->updateProgress(row, row + 1, fileInfoList.count(),
+                                    G::progressAddFileInfoColor,
+                                    "Reading the basic file information for each image");
         if(row % 100 == 0) qApp->processEvents();
 
         if(row % countInterval == 0) {
@@ -540,6 +541,7 @@ to run as a separate thread and can be executed directly.
     #endif
     }
     G::t.restart();
+    isShowCacheStatus = true;
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
         // is metadata already cached
@@ -573,13 +575,6 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     }
     static int lastProgressRow = 0;
     int row = m.row;
-
-//    QString fPath = index(row, 0).data(G::PathRole).toString();
-#ifdef ISTEST
-    qDebug() << "Setting the datamodel for row" << row << fPath;
-    qDebug() << "m.label" << m.label
-             << "m.createdDate" << m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
-#endif
 
     setData(index(row, G::LabelColumn), m.label);
     setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -638,8 +633,10 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
 
     if (isShowCacheStatus) {
         if (row % 100 == 0 || row == rowCount() - 1) {
-            progressBar->updateProgress(lastProgressRow, row + 1, rowCount(), QColor(100,150,150), "");
-            qApp->processEvents();
+            progressBar->updateProgress(lastProgressRow, row + 1, rowCount(),
+                G::progressAddMetadataColor,
+                "Reading the metadata for each image file");
+//            qApp->processEvents();
             lastProgressRow = row;
         }
     }
@@ -698,7 +695,8 @@ void DataModel::buildFilters()
         if (!dayMap.contains(day)) dayMap[day] = day;
 
         if (row % 100 == 0 || row == rowCount() - 1) {
-            progressBar->updateProgress(prev, row + 1, rows, QColor(Qt::darkRed), "");
+            progressBar->updateProgress(prev, row + 1, rows, G::progressBuildFiltersColor,
+                "Building filters...");
             qApp->processEvents();
             prev = row;
         }
@@ -711,47 +709,56 @@ void DataModel::buildFilters()
 
     filters->addCategoryFromData(modelMap, filters->models);
     int row = 0;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
+    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
+                                "Building lens filters...");
     qApp->processEvents();
 
     filters->addCategoryFromData(lensMap, filters->lenses);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
+    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
+                                "Building focal length filters...");
     qApp->processEvents();
 
     filters->addCategoryFromData(flMap, filters->focalLengths);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
+    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
+                                "Building image title filters...");
     qApp->processEvents();
 
     filters->addCategoryFromData(titleMap, filters->titles);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
+    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
+                                "Building creator filters...");
     qApp->processEvents();
 
     filters->addCategoryFromData(creatorMap, filters->creators);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
+    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
+                                "Building year created filters...");
     qApp->processEvents();
 
     filters->addCategoryFromData(yearMap, filters->years);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
+    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
+                                "Building day created filters...");
     qApp->processEvents();
 
     filters->addCategoryFromData(dayMap, filters->days);
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkGreen), "");
+    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
+                                "Counting filtered items for each category");
     qApp->processEvents();
 
     filteredItemCount();
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkBlue), "");
+    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
+                                "Counting unfiltered items for each category");
     qApp->processEvents();
 
     unfilteredItemCount();
     row++;
-    progressBar->updateProgress(row, row + 1, rows, QColor(Qt::darkBlue), "");
+    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
+                                "Counting unfiltered items for each category");
 
     filtersBuilt = true;
     popup("Filters have been updated.", 1000, 0.75);
