@@ -261,9 +261,33 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
     std::sort(cacheItemList.begin(), cacheItemList.end(), &ImageCache::prioritySort);
 
     // assign target files to cache and build a list by priority
-    // also build a list of files to dechache
+    // also build a list of files to decache
     uint sumMB = 0;
-    for (int i=0; i<cache.totFiles; ++i) {
+    for (int i = 0; i < cache.totFiles; ++i) {
+        // check if item metadata has been loaded and will be targeted
+        if (sumMB < cache.maxMB && !cacheItemList.at(i).isMetadata) {
+            // need to get metadata to calc memory req'd to cached
+
+            // file path and dm source row in case filtered or sorted
+            mutex.lock();
+            QModelIndex idx = dm->sf->index(i, 0);
+            int dmRow = dm->sf->mapToSource(idx).row();
+            QString fPath = idx.data(G::PathRole).toString();
+
+            // load metadata
+            if (dm->sf->index(i, G::CreatedColumn).data().isNull()) {
+                QFileInfo fileInfo(fPath);
+                if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+                    metadata->imageMetadata.row = dmRow;
+                    dm->addMetadataItem(metadata->imageMetadata);
+                    ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
+                    ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
+                    cacheItemList[i].sizeMB = (float)w * h / 256000;
+                    cacheItemList[i].isMetadata = w > 0;
+                }
+            }
+            mutex.unlock();
+        }
         sumMB += cacheItemList.at(i).sizeMB;
         if (sumMB < cache.maxMB) {
             cacheItemList[i].isTarget = true;
@@ -281,18 +305,18 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
     std::sort(cacheItemList.begin(), cacheItemList.end(), &ImageCache::keySort);
 
     int i;
-    for (i=0; i<cache.totFiles; ++i) {
+    for (i = 0; i < cache.totFiles; ++i) {
         if (cacheItemList.at(i).isTarget) {
             cache.targetFirst = i;
             break;
         }
     }
-    for (int j=i; j<cache.totFiles; ++j) {
+    for (int j = i; j < cache.totFiles; ++j) {
         if (!cacheItemList.at(j).isTarget) {
-            cache.targetLast = j-1;
+            cache.targetLast = j - 1;
             return;
         }
-        cache.targetLast = cache.totFiles-1;
+        cache.targetLast = cache.totFiles - 1;
     }
 }
 
@@ -359,6 +383,8 @@ void ImageCache::setPriorities(int key)
     }
     int aheadPos;
     int behindPos;
+
+//    qDebug() << __FUNCTION__ << "key =" << key << "cacheItemList.length() =" << cacheItemList.length();
     cacheItemList[key].priority = 0;
     int i = 1;                  // start at 1 because current pos preset to zero
     if (cache.isForward) {
@@ -652,6 +678,26 @@ It is built from dm->sf (sorted and/or filtered datamodel).
     cache.folderMB = qRound(folderMB);
 }
 
+void ImageCache::updateImageCacheList()
+{
+
+    for (int i = 0; i < dm->sf->rowCount(); ++i) {
+        if (!cacheItemList[i].isMetadata) {
+            // assume 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024000
+            ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
+            ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
+            cacheItemList[i].sizeMB = (float)w * h / 256000;
+//            if (cache.usePreview) {
+//                QSize p = scalePreview(w, h);
+//                w = p.width();
+//                h = p.height();
+//                cacheItem.sizeMB += (float)w * h / 256000;
+//            }
+            cacheItemList[i].isMetadata = w > 0;
+        }
+    }
+}
+
 void ImageCache::initImageCache(int &cacheSizeMB,
      bool &isShowCacheStatus, int &cacheWtAhead,
      bool &usePreview, int &previewWidth, int &previewHeight)
@@ -721,12 +767,13 @@ Apparently there needs to be a slight delay before calling.
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     // just in case stopImageCache not called before this
     if (isRunning()) pauseImageCache();
 
     // get cache item key
-    int i;
-    for (i = 0; i < cacheItemList.count(); i++) {
+    cache.key = 0;
+    for (int i = 0; i < cacheItemList.count(); i++) {
         if (cacheItemList.at(i).fName == fPath) {
             cache.key = i;
             break;
@@ -737,12 +784,19 @@ Apparently there needs to be a slight delay before calling.
     // reverse if at end of list
     if (cache.key == cacheItemList.count() - 1) cache.isForward = false;
     cache.prevKey = cache.key;
+
+    // may be new metadata for image size
+    updateImageCacheList();
     cache.currMB = getImCacheSize();
 
     setPriorities(cache.key);
     setTargetRange();
 
-    if (cache.isShowCacheStatus) emit showCacheStatus("Update all rows", i, "ImageCache::updateImageCachePosition");
+    if (cache.isShowCacheStatus) {
+        emit showCacheStatus("Update all rows",
+                             cache.key,
+                             "ImageCache::updateImageCachePosition");
+    }
 
     // if all images are cached then we're done
     if (cacheUpToDate()) {

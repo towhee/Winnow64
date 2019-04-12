@@ -1,5 +1,6 @@
 BUGS
-- Eliminate metaCache (replace in datamodel)
+- Finish cache preferences
+- Add / update tool tips in preferences and throughout program
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
@@ -13,10 +14,10 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Copy image
 - Refresh selected images
 - Speed up Tiffs
 - Lock docks to a size, chk resize behavior as separate windows
-- For very large folders only load one or two grids of images at a time
 - tableView adjust to changing font size
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
@@ -32,6 +33,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- When so settings file count not showing when start
+- For very large folders only load one or two grids of images at a time
+- Eliminate metaCache (replace in datamodel)
 - Reset sorting and filtering when new folder selected
 - Dragging between monitors sometimes loses thumb best fit
 - Zoom % not updating on status bar

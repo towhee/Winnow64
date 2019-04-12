@@ -111,6 +111,7 @@ private:
     static bool prioritySort(const CacheItem &p1, const CacheItem &p2);
     static bool keySort(const CacheItem &k1, const CacheItem &k2);
     void buildImageCacheList(); //
+    void updateImageCacheList(); //
     QSize scalePreview(ulong w, ulong h);
     void reportCacheProgress(QString action);
 };

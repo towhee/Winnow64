@@ -1050,7 +1050,7 @@ loaded.  Both thumbView and gridView have to be called.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, "Entering");
     iconWMax = 0;
     iconHMax = 0;
     if (thumbWidth > G::maxIconSize) thumbWidth = G::maxIconSize;
@@ -1072,10 +1072,9 @@ loaded.  Both thumbView and gridView have to be called.
     if (iconWMax > iconHMax) thumbHeight = thumbWidth * ((double)iconHMax / iconWMax);
     if (iconHMax > iconWMax) thumbWidth = thumbHeight * ((double)iconWMax / iconHMax);
     setThumbParameters();
-//    iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-//        0, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
-//    setSpacing(0);
     bestAspectRatio = (double)thumbHeight / thumbWidth;
+    G::track(__FUNCTION__, "Exiting");
+
 }
 
 void IconView::thumbsFit(Qt::DockWidgetArea area)

@@ -12,6 +12,15 @@ namespace G
 
     QStringList ratings, labelColors;
 
+    QColor progressCurrentColor = QColor(158,200,158);           // Light green
+    QColor progressBgColor = QColor(150,150,150);                // Light gray
+    QColor progressAppBgColor = QColor(85,85,85);                // Darker gray
+    QColor progressAddFileInfoColor = QColor(85,100,115);        // Slate blue
+    QColor progressAddMetadataColor = QColor(100,100,150);       // Purple
+    QColor progressBuildFiltersColor = QColor(75,75,125);        // Darker purple
+    QColor progressTargetColor = QColor(125,125,125);            // Gray
+    QColor progressImageCacheColor = QColor(108,150,108);        // Green
+
     QString mode;                       // In MW: Loupe, Grid, Table or Compare
     QString source;                     // GridMouseClick, ThumbMouseClick, TableMouseClick
 

@@ -250,18 +250,6 @@ public:
     QString css1;               // stylesheet text
     QString css2;               // stylesheet text
 
-    // Colors
-    // app
-    QColor appBgColor = QColor(85,85,85);
-    // progress bar
-    QColor currentColor = QColor(158,200,158);
-    QColor progressBgColor = QColor(150,150,150);       // light green
-    QColor targetColor = QColor(125,125,125);           // dark gray
-    QColor metadataCacheColor = QColor(100,100,150);    // purple
-    QColor imageCacheColor = QColor(108,150,108);       // green
-    QColor addMetadataColor = QColor(100,150,150);      // torquois
-//    QColor addMetadataColor = QColor(220,165,60);     // yellow
-
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
     void moveEvent(QMoveEvent *event);
@@ -372,7 +360,7 @@ private slots:
     void loadMetadataCacheAfterDelay();
 //    void loadMetadataCache(int startRow = 0);
     void loadEntireMetadataCache();
-    void loadImageCache();
+    void loadImageCacheForNewFolder();
     void buildFilters();
     void loadFilteredImageCache();
     void addNewBookmark();

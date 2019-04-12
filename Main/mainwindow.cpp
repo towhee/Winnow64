@@ -653,8 +653,18 @@ void MW::handleStartupArgs()
 
  -   The image caching thread requires the offset and length for the
      full size embedded jpg, the image width and height in order to
-     calculate memory requirements, Update the image priority queues, the
+     calculate memory requirements, update the image priority queues, the
      target range and limit the cache to the assigned maximum size.
+
+ A new image is selected which triggers fileSelectionChange
+
+ Caching flow
+
+ -  When a new folder or a new file is selected, or when a scroll event occurs in IconView
+    then the metadata cache (metadataCacheThread) is started.
+
+ -  The metadataCacheThread tests if a new file has been selected.  If so, then the
+    imageCacheThread is started.
 
  *************************************************************************/
 
@@ -747,9 +757,9 @@ void MW::folderSelectionChange()
     // update menu
     enableEjectUsbMenu(currentViewDir);
 
-    /* We do not want to update the imageCache while metadata is still being
-    loaded. The imageCache update is triggered in metadataCache, which is also
-    executed when the change file event is fired.
+    /* We do not want to update the imageCache while metadata is still being loaded. The
+    imageCache update is triggered in metadataCache, which is also executed when the change
+    file event is fired.
     */
     metadataLoaded = false;
 
@@ -811,7 +821,7 @@ void MW::folderSelectionChange()
     While still initializing, the window show event has not happened yet, so the
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
-
+    G::track(__FUNCTION__, "Calling MW::loadNewFolder");
     metadataCacheThread->loadNewFolder(getThumbsPerPage());
 
     // format pickMemSize as bytes, KB, MB or GB
@@ -851,7 +861,7 @@ delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-//    G::track(__FUNCTION__, current.data(G::PathRole).toString());
+    G::track(__FUNCTION__, current.data(G::PathRole).toString());
 //    qDebug() << current.row() << current.column();
 
     bool isStart = false;
@@ -882,6 +892,8 @@ delegate use of the current index must check the row.
 
     // record current row as it is used to sync everything
     currentRow = current.row();
+    // also record in datamodel so can be accessed by MdCache
+    dm->currentRow = currentRow;
     int dmCurrentRow = dm->sf->mapToSource(current).row();              // new
     dmCurrentIndex = dm->index(dmCurrentRow, 0);                        // new
 
@@ -917,8 +929,11 @@ delegate use of the current index must check the row.
     // reset table, grid or thumb item clicked
     G::source = "";
 
-    // the file path is used as an index in ImageView and Metadata
+    // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+    // also update datamodel, used in MdCache
+    dm->currentFilePath = fPath;
+
     setWindowTitle("Winnow - " + fPath);
 
     // update the metadata panel
@@ -931,8 +946,6 @@ delegate use of the current index must check the row.
     // update imageView, use cache if image loaded, else read it from file
     if (G::mode == "Loupe") {
         if (imageView->loadImage(current, fPath)) {
-            if (G::isThreadTrackingOn) qDebug()
-                << "MW::fileSelectionChange - loaded image file " << fPath;
             updateClassification();
         }
     }
@@ -940,17 +953,22 @@ delegate use of the current index must check the row.
     /* If the metadataCache is finished then update the imageCache, and keep it up-to-date
     with the current image selection.
     */
-    if (metadataLoaded) {
-        imageCacheFilePath = fPath;
-        /* This singleshot timer signals the image cache that the position has moved in the
-        file selection. Calling imageCacheThread->updateImageCachePosition directly from
-        fileSelectionChange resulted in a significant delay, so the singleshot short delay
-        avoids this.  This is a work-around.
-        */
-        imageCacheTimer->start(50);
-
-        // do a quick update to current position in progress bar here?
+    if (!G::isNewFolderLoaded) {
+        G::track(__FUNCTION__, "Calling MW::loadMetadataChunk");
+        loadMetadataChunk();
     }
+//    if (metadataLoaded) {
+//        imageCacheFilePath = fPath;
+//        /* This singleshot timer signals the image cache that the position has moved in the
+//        file selection. Calling imageCacheThread->updateImageCachePosition directly from
+//        fileSelectionChange resulted in a significant delay, so the singleshot short delay
+//        avoids this.  This is a work-around.
+//        */
+
+////        imageCacheTimer->start(50);
+
+//        // do a quick update to current position in progress bar here?
+//    }
 
     // terminate initializing flag (set when new folder selected)
     if (G::isInitializing) {
@@ -1116,21 +1134,19 @@ After the delay, if another singleshot has not been fired, loadMetadataChunk is 
     G::track(__FUNCTION__);
     #endif
     }
-//    return;
-//    if (G::allMetadataLoaded)  return;
-
-/*    qDebug() << "\nMW::loadMetadataCacheAfterDelay  "
-             << "G::isInitializing" << G::isInitializing
-             << "G::isNewFolderLoaded" << G::isNewFolderLoaded
-             << "currentRow" << currentRow
-             << "firstVisibleRow" << getFirstVisibleThumb()
-             << "metadataCacheThread->recacheIfLessThan" << metadataCacheThread->recacheIfLessThan
-             << "metadataCacheThread->recacheIfGreaterThan" << metadataCacheThread->recacheIfGreaterThan
-             << "\n";
-             */
+    G::track(__FUNCTION__);
+    static int previousRow = 0;
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
+    // has a new image been selected.  Caching invoked from MW::fileSelectionChange
+    if (previousRow != currentRow) {
+        G::track(__FUNCTION__, "previousRow != currentRow so no cache");
+        previousRow = currentRow;
+        return;
+    }
+
+    // Just a scroll event, so update metadata cache but not image cache
     thumbView->setViewportParameters();
     gridView->setViewportParameters();
 
@@ -1139,6 +1155,7 @@ After the delay, if another singleshot has not been fired, loadMetadataChunk is 
     if (midRow < metadataCacheThread->recacheIfLessThan &&
         midRow > metadataCacheThread->recacheIfGreaterThan) return;
 
+    G::track(__FUNCTION__, "Calling MW::loadMetadataChunk");
     metadataCacheScrollTimer->start(cacheDelay);
 }
 
@@ -1153,9 +1170,9 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::isInitializing || dm->rowCount() == 0) return;
+    G::track(__FUNCTION__);
+    if (G::isInitializing || dm->rowCount() == 0 || !G::isNewFolderLoaded) return;
 
-    if (imageCacheThread->isRunning()) imageCacheThread->pauseImageCache();
     metadataCacheThread->loadMetadataIconChunk(getFirstVisibleThumb(),
                                                getThumbsPerPage());
 }
@@ -1192,14 +1209,17 @@ has been loaded.
     // update progress for already loaded metadata
     for (int row = 0; row < rows; ++row) {
         if (!dm->index(row, G::CreatedColumn).data().isNull()) {
-            progressBar->updateProgress(row, row + 1, rows, QColor(100,150,150), "");
+            progressBar->updateProgress(row, row + 1, rows, G::progressAddMetadataColor, "");
         }
     }
     QApplication::processEvents();
 
-//    dm->addAllMetadata(true);
-    metadataCacheThread->loadAllMetadata();
-    metadataCacheThread->wait();
+    /* adding all metadata in dm slightly slower than using metadataCacheThread but progress
+       bar does not update from separate thread
+    */
+    dm->addAllMetadata(true);
+    // metadataCacheThread->loadAllMetadata();
+    // metadataCacheThread->wait();
 
     dm->buildFilters();
 
@@ -1231,8 +1251,8 @@ void MW::updateMetadataCacheStatus(int row, bool clear)
 
     // show the rectangle for the current cached
     progressBar->updateProgress(row, row + 1, dm->rowCount(),
-                                metadataCacheColor,
-                                "metadata - currently cached");
+                                G::progressAddMetadataColor,
+                                "");
     return;
 }
 
@@ -1272,8 +1292,8 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     ImageCache *ic = imageCacheThread;
     int rows = ic->cache.totFiles;
 
-    if(instruction == "Update cursor") {
-        progressBar->updateCursor(row, rows, currentColor, imageCacheColor);
+    if (instruction == "Update cursor") {
+        progressBar->updateCursor(row, rows, G::progressCurrentColor, G::progressImageCacheColor);
         return;
     }
 
@@ -1283,19 +1303,19 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
         // target range
         int tFirst = ic->cache.targetFirst;
         int tLast = ic->cache.targetLast + 1;
-        progressBar->updateProgress(tFirst, tLast, rows, targetColor,
-                                    "image cache - target range");
+        progressBar->updateProgress(tFirst, tLast, rows, G::progressTargetColor,
+                                    "");
         // cached
         for (int i = 0; i < rows; ++i) {
             // bail if list has been cleared because new folder selected
             if (ic->cacheItemList.isEmpty()) return;
             if (ic->cacheItemList.at(i).isCached)
-                progressBar->updateProgress(i, i + 1, rows, imageCacheColor,
-                                            "image cache - all rows cached");
+                progressBar->updateProgress(i, i + 1, rows, G::progressImageCacheColor,
+                                            "");
         }
         // cursor
         row = currentRow;
-        progressBar->updateCursor(row, rows, currentColor, imageCacheColor);
+        progressBar->updateCursor(row, rows, G::progressCurrentColor, G::progressImageCacheColor);
         return;
     }
 
@@ -1319,28 +1339,27 @@ and the IconView is returned to its previous position after.
     thumbView->bestAspect();
 }
 
-void MW::loadImageCache()
+void MW::loadImageCacheForNewFolder()
 {
 /*
-This function is signaled from the metadataCacheThread after all the metadata has been loaded.
-The imageCache loads images until the assigned amount of memory has been consumed or all the
-images are cached.
+This function is signaled from the metadataCacheThread after the metadata chunk has been
+loaded for a new folder selection. The imageCache loads images until the assigned amount of
+memory has been consumed or all the images are cached.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
 
-    // update filter item counts for rating and colour labels, plus other filters if
-    // all metadata has been loaded
-    dm->filteredItemCount();
-    dm->unfilteredItemCount();
-
-    statusBar()->showMessage("Loading the image cache", 1000);  // rgh remove this?
+//    // update filter item counts for rating and colour labels, plus other filters if
+//    // all metadata has been loaded
+//    dm->filteredItemCount();
+//    dm->unfilteredItemCount();
 
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
@@ -1362,7 +1381,6 @@ images are cached.
         cachePreviewWidth, cachePreviewHeight);
 
     // have to wait until image caching thread running before setting flag
-    // rgh still need this?
     metadataLoaded = true;
 
     // tell image cache new position
@@ -1393,6 +1411,7 @@ void MW::loadFilteredImageCache()
     imageCacheThread->initImageCache(cacheSizeMB,
         isShowCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
+    G::track(__FUNCTION__, "imageCacheThread->updateImageCachePosition(fPath)");
     imageCacheThread->updateImageCachePosition(fPath);
 }
 
@@ -3337,7 +3356,7 @@ void MW::createCaching()
             thumbView, SLOT(selectFirst()));
 
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
-            this, SLOT(loadImageCache()));
+            this, SLOT(loadImageCacheForNewFolder()));
 
     connect(metadataCacheThread, SIGNAL(updateIsRunning(bool,bool,QString)),
             this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
@@ -3359,11 +3378,11 @@ void MW::createCaching()
     fileSelectionChange resulted in a significant delay, so the singleshot short delay
     avoids this.  This is a work-around.
     */
-    imageCacheTimer = new QTimer(this);
-    imageCacheTimer->setSingleShot(true);
+//    imageCacheTimer = new QTimer(this);
+//    imageCacheTimer->setSingleShot(true);
     // connect timer to update image cache position
-    connect(imageCacheTimer, SIGNAL(timeout()), this,
-            SLOT(updateImageCachePosition()));
+//    connect(imageCacheTimer, SIGNAL(timeout()), this,
+//            SLOT(updateImageCachePosition()));
 
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
@@ -3783,6 +3802,7 @@ void MW::createFSTree()
     // loadSettings has not run yet (dependencies, but QSettings has been opened
     fsTree = new FSTree(this, metadata);
     fsTree->setMaximumWidth(folderMaxWidth);
+    fsTree->setShowImageCount(true);
 //    fsTree->setShowImageCount(setting->value("showImageCount").toBool());
 
     connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
@@ -3956,6 +3976,7 @@ parameters.  Any visibility changes are executed.
     progressPixmap->scaled(progressWidth, 25);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
+    G::track(__FUNCTION__, "imageCacheThread->updateImageCachePosition(fPath)");
     if (fPath.length())
         imageCacheThread->updateImageCachePosition(fPath);
 
@@ -4179,6 +4200,7 @@ void MW::updateImageCachePosition()
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__, "imageCacheThread->updateImageCachePosition(fPath)");
     imageCacheThread->updateImageCachePosition(imageCacheFilePath);
 }
 
@@ -4375,6 +4397,7 @@ void MW::buildFilters()
         dm->buildFilters();
         progressBar->recoverProgressState();
     }
+    updateStatus(true);
 }
 
 void MW::filterChange(bool isFilter)
@@ -4403,8 +4426,6 @@ loaded if necessary.
     // update the status panel filtration status
     updateFilterStatus(isFilter);
     G::track(__FUNCTION__, "updateFilterStatus(isFilter)");
-    // update the image list to match dm->sf filration
-//    dm->updateImageList();
     // get the current selected item
     QModelIndex idx = thumbView->currentIndex();
     QString currentFilePath = idx.data(G::PathRole).toString();
@@ -6868,7 +6889,6 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     thumbView->setMaximumHeight(100000);
 
     /* Check if the thumbDock is docked top or bottom. If so, set the titlebar to vertical and
@@ -8788,7 +8808,7 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    fsTree->getImageCount();
+    imageCacheThread->reportCache();
 
 //    thumbView->setWrapping(false);
 //    quint64 n = 1234567890;
@@ -8800,7 +8820,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 void MW::test2()
 {
     qDebug() << "Watcher reports finished";
-    loadImageCache();
+    loadImageCacheForNewFolder();
 }
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"

@@ -69,7 +69,7 @@ signals:
 //    void updateAllMetadataLoaded(bool);
     void updateIconBestFit();
     void selectFirst();
-    void showCacheStatus(int, bool);            // row, renew progress bar
+    void showCacheStatus(int, bool);            // row, clear progress bar
 
 private:
     QMutex mutex;
@@ -85,6 +85,7 @@ private:
     int startRow;
     int endRow;
     int row;
+    int previousRow = -1;
 
     // icon caching
     int iconTargetStart;
