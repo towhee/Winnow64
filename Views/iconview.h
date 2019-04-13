@@ -1,7 +1,7 @@
 #ifndef THUMBVIEW_H
 #define THUMBVIEW_H
 
-#include <QAbstractSlider>
+//#include <QAbstractSlider>
 
 //class AbstractSlider : public QAbstractSlider
 //{
@@ -10,25 +10,25 @@
 //    explicit AbstractSlider(QWidget *parent = nullptr);
 //};
 
-#include <QScrollBar>
+//#include <QScrollBar>
 
-// this ScrollBar experiment did not help
-class ScrollBar : public QScrollBar
-{
-    Q_OBJECT
-public:
-    explicit ScrollBar(QWidget *parent = nullptr);
-    void setValue(int value);
+//// this ScrollBar experiment did not help
+//class ScrollBar : public QScrollBar
+//{
+//    Q_OBJECT
+//public:
+//    explicit ScrollBar(QWidget *parent = nullptr);
+//    void setValue(int value);
 
-protected:
-    bool event (QEvent *event);
-    void sliderChange(QAbstractSlider::SliderChange change);
+//protected:
+//    bool event (QEvent *event);
+//    void sliderChange(QAbstractSlider::SliderChange change);
 
-signals:
+//signals:
 
-public slots:
+//public slots:
 
-};
+//};
 
 
 #include <QtWidgets>
@@ -108,8 +108,8 @@ public:
         Enlarge = -1
     };
     double bestAspectRatio;
-    int iconWMax;               // widest icon found in datamodel
-    int iconHMax;               // highest icon found in datamodel
+//    int iconWMax;               // widest icon found in datamodel
+//    int iconHMax;               // highest icon found in datamodel
 
 public slots:
     void scrollDown(int);

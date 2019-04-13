@@ -1,5 +1,113 @@
 #include "Main/mainwindow.h"
 
+/*
+***********************************************************************************************
+INITIALIZATION
+
+Persistant settings are saved between sessions using QSettings. Persistant settings form two
+categories at runtime: action settings and preference settings. Action settings are boolean
+and maintained by the action item setChecked value. Preferences can be anything and are
+maintained as public variables, mostly in MW (this class) and managed in the prefDlg class.
+
+Not all settings can be read immediately as the classes that use them may not yet have been
+created. Examples of this are IconView parameters or the recent folders menu list, since
+IconView and the menus have not been created yet. Therefore some settings are assigned up
+front and the rest are assigned as needed.
+
+• Load QSettings
+• Set default values if no settings available (first time run)
+• Set preference settings including
+    • General (previous folder etc)
+    • Slideshow
+    • Cache
+    • Full screen docks visible
+    • List of external apps
+    • Bookmarks
+    • Recent folders
+    • Ingest history folders
+    • Workspaces
+• Create actions and set checked based on persistant values from QSetting
+• Create bookmarks with persistant values from QSettings
+• Update external apps with persistant values from QSettings
+• Load shortcuts (based on being able to edit shortcuts)
+• Execute updateState function to implement all persistant state settings
+
+• Select a folder
+  • Load datamodel with QDir info on each image file
+  • Add the rest of the metadata to datamodel (incl thumbs as icons)
+  • Update the image cache
+
+***********************************************************************************************
+PROGRAM FLOW
+
+A new folder is selected which triggers folderSelectionChange:
+
+• All eligible image files in the folder are added DataModel (dm).
+
+• A thread is started to cache metadata and thumbs for all the images.
+
+• A second thread is started by the metadata thread to cache as many full size images as
+  assigned memory permits.
+
+• Selecting a new folder also causes the selection of the first image which fires a signal
+  for fileSelectionChange.
+
+• The first image is loaded. The metadata and thumbnail generation threads will still be
+  running, but things should appear to be speedy for the user.
+
+• The metadata caching thread collects information required by the image cache thread. If the
+  number of images in the folder(s) is greater than the threshold only a chunck of metadata is
+  collected.
+
+• The image caching thread requires the offset and length for the full size embedded jpg, the
+  image width and height in order to calculate memory requirements, update the image priority
+  queues, the target range and limit the cache to the assigned maximum size.
+
+A new image is selected which triggers fileSelectionChange
+
+• If starting the program select the first image in the folder.
+
+• Record the current datamodel row and its file path.
+
+• Update the thumbView and gridView delegates.
+
+• Synchronize the thumb, grid and table views.   If in loupe mode load the current image.
+
+• Update window title, statusbar, info panel and classification badges.
+
+• Update the metadata and image caching.
+
+• If the metadata has not been cached yet for the selected image (usually the first in a new
+  folder) then load the thumbnail.
+
+• Update the cursor position on the image caching progress bar.
+
+***********************************************************************************************
+CACHING
+
+• When a new folder or a new file is selected, or when a scroll event occurs in IconView
+  then the metadata cache (metadataCacheThread) is started.
+
+• The metadataCacheThread tests if a new file has been selected.  If so, then the
+  imageCacheThread is started and the metadata and icon chunks are read.
+
+• If it is a new folder metadataCacheThread emits a signal back to
+  MW::loadImageCacheForNewFolder, where some housekeeping occurs and the ImageCache is
+  initialized and started in imageCacheThread.  The full size images are cached.
+
+• If a new image is selected then MW::fileSelectionChange restarts metadataCacheThread to
+  cache any additional metadata or icons, and then restarts the imageCacheThread to cache
+  any additional full size images.
+
+• If the user scrolls in the thumbView or gridView scroll events are sent to
+  MW::loadMetadataCacheAfterDelay.  The delay insures that is the user is rapidly scrolling
+  then the next scroll event supercedes the prior and the metadataCacheThread is only
+  restarted when there is a pause or the scrolling is slow.  In this scenario the
+  imageCacheThread is not restarted becasue a new image has not been selected.
+
+***********************************************************************************************
+*/
+
 MW::MW(QWidget *parent) : QMainWindow(parent)
 {
     {
@@ -31,38 +139,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     }
 
-    /* Initialization process
-    *******************************************************************************
-    Persistant settings are saved between sessions using QSettings. Persistant
-    settings form two categories at runtime: action settings and preference
-    settings. Action settings are boolean and maintained by the action item
-    setChecked value.  Preferences can be anything and are maintained as public
-    variables in MW (this class) and managed in the prefDlg class.
-
-    • Load QSettings
-    • Set default values if no settings available (first time run)
-    • Set preference settings including
-        • General (previous folder etc)
-        • Slideshow
-        • Cache
-        • Full screen docks visible
-        • List of external apps
-        • Bookmarks
-        • Recent folders
-        • Ingest history folders
-        • Workspaces
-    • Create actions and set checked based on persistant values from QSetting
-    • Create bookmarks with persistant values from QSettings
-    • Update external apps with persistant values from QSettings
-    • Load shortcuts (based on being able to edit shortcuts)
-    • Execute updateState function to implement all persistant state settings
-
-    • Select a folder
-      • Load datamodel with QDir info on each image file
-      • Add the rest of the metadata to datamodel (incl thumbs as icons)
-      • Update the image cache
-
-    */
 
     // Initialize some variables etc
     initialize();
@@ -207,7 +283,8 @@ void MW::closeEvent(QCloseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    imageCacheThread->exit();
+    metadataCacheThread->stopMetadateCache();
+    imageCacheThread->stopImageCache();
     if (!simulateJustInstalled) writeSettings();
     hide();
     if (!QApplication::clipboard()->image().isNull()) {
@@ -625,50 +702,6 @@ void MW::handleStartupArgs()
     }
 }
 
-
-
-/**************************************************************************
- PROGRAM FLOW EVENT DISPATCH
-
- A new folder is selected which triggers folderSelectionChange:
-
- -   A list of all eligible image files in the folder is generated in
-     DataModel (dm).
-
- -   A thread is spawned to cache metadata and thumbs for all the images.
-
- -   A second thread is spawned by the metadata thread to cache as many full
-     size images as assigned memory permits.
-
- -   Selecting a new folder also causes the selection of the first image
-     which fires a signal for fileSelectionChange.
-
- -   The first image is loaded.  The metadata and thumbnail generation
-     threads will still be running, but things should appear to be
-     speedy for the user.
-
- -   The metadata caching thread collects information required by the
-     image cache thread.  If the number of images in the folder(s) is
-     greater than the threshold only a chunck of metadata is collected.
-
- -   The image caching thread requires the offset and length for the
-     full size embedded jpg, the image width and height in order to
-     calculate memory requirements, update the image priority queues, the
-     target range and limit the cache to the assigned maximum size.
-
- A new image is selected which triggers fileSelectionChange
-
- Caching flow
-
- -  When a new folder or a new file is selected, or when a scroll event occurs in IconView
-    then the metadata cache (metadataCacheThread) is started.
-
- -  The metadataCacheThread tests if a new file has been selected.  If so, then the
-    imageCacheThread is started.
-
- *************************************************************************/
-
-// triggered when new folder selection
 void MW::folderSelectionChange()
 {
     {
@@ -812,6 +845,10 @@ void MW::folderSelectionChange()
     popUp->close();
     updateStatus(false, "Collecting metadata for all images in folder(s)");
 
+    // reset for bestAspect calc
+    G::iconWMax = G::minIconSize;
+    G::iconHMax = G::minIconSize;
+
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
     and full size embedded jpgs and the image width and height, req'd in imageCache to manage
     cache max size. The metadataCaching thread also loads the thumbnails. It triggers the
@@ -821,7 +858,6 @@ void MW::folderSelectionChange()
     While still initializing, the window show event has not happened yet, so the
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
-    G::track(__FUNCTION__, "Calling MW::loadNewFolder");
     metadataCacheThread->loadNewFolder(getThumbsPerPage());
 
     // format pickMemSize as bytes, KB, MB or GB
@@ -861,7 +897,6 @@ delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-    G::track(__FUNCTION__, current.data(G::PathRole).toString());
 //    qDebug() << current.row() << current.column();
 
     bool isStart = false;
@@ -894,8 +929,12 @@ delegate use of the current index must check the row.
     currentRow = current.row();
     // also record in datamodel so can be accessed by MdCache
     dm->currentRow = currentRow;
-    int dmCurrentRow = dm->sf->mapToSource(current).row();              // new
-    dmCurrentIndex = dm->index(dmCurrentRow, 0);                        // new
+    int dmCurrentRow = dm->sf->mapToSource(current).row();
+    dmCurrentIndex = dm->index(dmCurrentRow, 0);
+    // the file path is used as an index in ImageView
+    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+    // also update datamodel, used in MdCache
+    dm->currentFilePath = fPath;
 
     // update delegates so they can highlight the current item
     thumbView->iconViewDelegate->currentRow = currentRow;
@@ -929,11 +968,9 @@ delegate use of the current index must check the row.
     // reset table, grid or thumb item clicked
     G::source = "";
 
-    // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
-    // also update datamodel, used in MdCache
-    dm->currentFilePath = fPath;
+    // updates
 
+    // new file name appended to window title
     setWindowTitle("Winnow - " + fPath);
 
     // update the metadata panel
@@ -950,27 +987,12 @@ delegate use of the current index must check the row.
         }
     }
 
-    /* If the metadataCache is finished then update the imageCache, and keep it up-to-date
-    with the current image selection.
-    */
+    // update caching
     if (!G::isNewFolderLoaded) {
-        G::track(__FUNCTION__, "Calling MW::loadMetadataChunk");
         loadMetadataChunk();
     }
-//    if (metadataLoaded) {
-//        imageCacheFilePath = fPath;
-//        /* This singleshot timer signals the image cache that the position has moved in the
-//        file selection. Calling imageCacheThread->updateImageCachePosition directly from
-//        fileSelectionChange resulted in a significant delay, so the singleshot short delay
-//        avoids this.  This is a work-around.
-//        */
 
-////        imageCacheTimer->start(50);
-
-//        // do a quick update to current position in progress bar here?
-//    }
-
-    // terminate initializing flag (set when new folder selected)
+    // initialize the thumbDock
     if (G::isInitializing) {
         if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
             dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
@@ -982,14 +1004,13 @@ delegate use of the current index must check the row.
         }
     }
 
-    // load thumbnail if not done yet
-    if (thumbView->isThumb(currentRow)) {
+    // load thumbnail if not cached yet (when loading new folder)
+    if (!thumbView->isThumb(currentRow)) {
         QImage image;
         thumb->loadThumb(fPath, image);
-        thumbView->setIcon(currentRow, image);
+        thumbView->setIcon(currentRow, image);        
+        updateIconBestFit();
     }
-
-//    if (thumbView->isVisible()) thumbView->setFocus();
 
     // update cursor position on progressBar
     updateImageCacheStatus("Update cursor", currentRow, "MW::fileSelectionChange");
@@ -1122,26 +1143,29 @@ void MW::loadMetadataCacheAfterDelay()
 See MetadataCache::run comments in mdcache.cpp. A 100ms singleshot timer insures that the
 metadata caching is not restarted until there is a pause in the scolling.
 
-This function is connected to the value change signal in the gridView vertical scrollbar (does
-not have a horizontal scrollbar) and the thumbView vertical and horizontal scrollbars.  It is
-also connected to the resize event in IconView, as a resize could increase the number of thumbs
-visible (ie resize to full screen) that require metadata or icons to be cached.
+The timer is fired from MW::eventFilter, which monitors the value change signal in the
+gridView vertical scrollbar (does not have a horizontal scrollbar) and the thumbView vertical
+and horizontal scrollbars. It is also connected to the resize event in IconView, as a resize
+could increase the number of thumbs visible (ie resize to full screen) that require metadata
+or icons to be cached.
 
 After the delay, if another singleshot has not been fired, loadMetadataChunk is called.
+
+Since this function is called from scroll or resize events the selected image does not change
+and there is no need to update the image cache.  The image cache is updated from
+MW::fileSelectionChange.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     static int previousRow = 0;
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
-    // has a new image been selected.  Caching invoked from MW::fileSelectionChange
+    // has a new image been selected.  Caching will be started from MW::fileSelectionChange
     if (previousRow != currentRow) {
-        G::track(__FUNCTION__, "previousRow != currentRow so no cache");
         previousRow = currentRow;
         return;
     }
@@ -1155,7 +1179,6 @@ After the delay, if another singleshot has not been fired, loadMetadataChunk is 
     if (midRow < metadataCacheThread->recacheIfLessThan &&
         midRow > metadataCacheThread->recacheIfGreaterThan) return;
 
-    G::track(__FUNCTION__, "Calling MW::loadMetadataChunk");
     metadataCacheScrollTimer->start(cacheDelay);
 }
 
@@ -1170,7 +1193,6 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     if (G::isInitializing || dm->rowCount() == 0 || !G::isNewFolderLoaded) return;
 
     metadataCacheThread->loadMetadataIconChunk(getFirstVisibleThumb(),
@@ -1180,10 +1202,9 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
 void MW::loadEntireMetadataCache()
 {
 /*
-This is called before a filter or sort operation, which only makes sense if all the
-metadata has been loaded.  This function does not load the icons.  It is not run in a
-separate thread as the filter and sort operations cannot commence until all the metadata
-has been loaded.
+This is called before a filter or sort operation, which only makes sense if all the metadata
+has been loaded. This function does not load the icons. It is not run in a separate thread as
+the filter and sort operations cannot commence until all the metadata has been loaded.
 */
     {
     #ifdef ISDEBUG
@@ -1351,7 +1372,6 @@ memory has been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
@@ -1382,6 +1402,8 @@ memory has been consumed or all the images are cached.
 
     // have to wait until image caching thread running before setting flag
     metadataLoaded = true;
+
+    qDebug() << __FUNCTION__ << fPath;
 
     // tell image cache new position
     imageCacheThread->updateImageCachePosition(fPath);
@@ -4675,7 +4697,7 @@ void MW::thumbsEnlarge()
     if (G::mode == "Grid") gridView->justify(IconView::JustifyAction::Enlarge);
     else {
         if (thumbView->isWrapping()) thumbView->justify(IconView::JustifyAction::Enlarge);
-        else thumbView->thumbsShrink();
+        else thumbView->thumbsEnlarge();
     }
 }
 
@@ -5669,7 +5691,7 @@ resolution is used to calculate and report the zoom in ImageView.
     cachePreviewWidth = displayHorizontalPixels;
     cachePreviewHeight = displayVerticalPixels;
     setActualDevicePixelRatio();
-    updateIconBestFit();            // not helping
+//    updateIconBestFit();            // not helping
 }
 
 void MW::setActualDevicePixelRatio()
@@ -6907,7 +6929,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         // if thumbDock area changed then set dock height to cell size
 
         // get max icon height based on best aspect
-        int hMax = thumbView->iconHMax;
+        int hMax = G::iconHMax;
 
         // max and min cell heights (icon plus padding + name text)
         int maxHt = thumbView->iconViewDelegate->getCellSize(QSize(hMax, hMax)).height();
@@ -8808,13 +8830,21 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    imageCacheThread->reportCache();
-
-//    thumbView->setWrapping(false);
-//    quint64 n = 1234567890;
-//    qlonglong x = n;
-//    QLocale c(QLocale::C);
-//    qDebug() << QString("%L1").arg(x);
+    QModelIndex index = dm->sf->index(currentRow, 0, QModelIndex());
+    const QRect rect = thumbView->visualRect(index);
+    const QRect area = thumbView->viewport()->rect();
+    const bool leftOf = rect.left() < area.left();
+    const bool rightOf = (rect.right() > area.right()) && (rect.left() > area.left());
+    int horizontalValue = thumbView->horizontalScrollBar()->value();
+    horizontalValue += rect.left() - ((area.width()- rect.width()) / 2);
+    qDebug() << thumbView->layoutDirection();
+    qDebug() << "scroll value =" << thumbView->horizontalScrollBar()->value()
+             << "scroll max =" << thumbView->horizontalScrollBar()->maximum()
+             << "rect =" << rect
+             << "area =" << area
+             << "leftOf =" << leftOf
+             << "rightOf =" << rightOf
+             << "horizontalValue =" << horizontalValue;
 }
 
 void MW::test2()
@@ -8825,7 +8855,7 @@ void MW::test2()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    thumbView->setWrapping(!thumbView->isWrapping());
+    thumbView->setWrapping(false);
     return;
 
     QString fPath = "D:/Pictures/_DNG/DngNikonD850FromLightroom.dng";

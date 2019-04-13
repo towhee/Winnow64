@@ -28,8 +28,7 @@ public:
         MetaChunk = 1,
         IconChunk = 2,
         MetaIconChunk = 3,
-        AllMetadata = 4,
-        Resume = 5
+        AllMetadata = 4
     };
 
     void loadNewFolder(int thumbsPerPage/*, bool isShowCacheStatus*/);
@@ -66,7 +65,6 @@ signals:
     void pauseImageCache();
     void resumeImageCache();
     void updateIsRunning(bool, bool, QString);
-//    void updateAllMetadataLoaded(bool);
     void updateIconBestFit();
     void selectFirst();
     void showCacheStatus(int, bool);            // row, clear progress bar
@@ -97,7 +95,6 @@ private:
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
 
-//    bool allMetadataLoaded;
     bool allIconsLoaded;
     bool isShowCacheStatus;
     bool cacheIcons;

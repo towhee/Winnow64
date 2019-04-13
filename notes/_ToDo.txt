@@ -1,4 +1,5 @@
 BUGS
+- wait for threads to finish when close main window
 - Finish cache preferences
 - Add / update tool tips in preferences and throughout program
 - ImageView::scale comparing floats potentially bad
