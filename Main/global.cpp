@@ -26,6 +26,8 @@ namespace G
 
     int maxIconSize;
     int minIconSize = 40;
+    int iconWMax;                       // widest icon found in datamodel
+    int iconHMax;                       // highest icon found in datamodel
 
     QString fontSize;
 

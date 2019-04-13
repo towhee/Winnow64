@@ -767,10 +767,10 @@ Apparently there needs to be a slight delay before calling.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     // just in case stopImageCache not called before this
     if (isRunning()) pauseImageCache();
 
+    Q_ASSERT(cacheItemList.length() > 0);
     // get cache item key
     cache.key = 0;
     for (int i = 0; i < cacheItemList.count(); i++) {
@@ -779,6 +779,8 @@ Apparently there needs to be a slight delay before calling.
             break;
         }
     }
+    Q_ASSERT(cache.key < cacheItemList.length());
+
 
     cache.isForward = (cache.key >= cache.prevKey);
     // reverse if at end of list
@@ -800,6 +802,7 @@ Apparently there needs to be a slight delay before calling.
 
     // if all images are cached then we're done
     if (cacheUpToDate()) {
+//        qDebug() << __FUNCTION__ << "cache up-to-date - quitting image cache";
         /* instance where go from blank folder to one image folder.  The first image is
            directly loaded (and cached) in ImageView and the file selection position changes,
            so this function is called, but the cache is up-to-date.  Make sure the image cache
@@ -810,7 +813,7 @@ Apparently there needs to be a slight delay before calling.
         return;
     }
 
-//    reportCache();
+//     reportCache();
 
     start(IdlePriority);
 }
