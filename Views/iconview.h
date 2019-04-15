@@ -108,8 +108,8 @@ public:
         Enlarge = -1
     };
     double bestAspectRatio;
-//    int iconWMax;               // widest icon found in datamodel
-//    int iconHMax;               // highest icon found in datamodel
+    int iconWMax;               // widest icon found in datamodel
+    int iconHMax;               // highest icon found in datamodel
 
 public slots:
     void scrollDown(int);
