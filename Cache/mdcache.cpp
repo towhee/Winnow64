@@ -610,7 +610,7 @@ If there has been a file selection change and not a new folder then update image
         if (action == Action::NewFolder) {
             /* Only get bestFit on the first cache because the QListView rescrolls
             whenever a change to sizehint occurs */
-            emit updateIconBestFit();
+//            emit updateIconBestFit();
             // scroll to first image
             emit selectFirst();
             // start image caching (full size)

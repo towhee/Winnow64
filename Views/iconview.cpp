@@ -250,16 +250,20 @@ possibly altered thumbnail dimensions.
     G::track(__FUNCTION__);
     #endif
     }
-//    setIconSize(QSize(thumbWidth, thumbHeight));
+    /* MUST set thumbdock height to fit thumbs BEFORE updating the delegate.  If not, and the
+       thumbView cells are taller than the dock then QIconview::visualRect is not calculated
+       correctly, and scrolling does not work properly */
+    if(objectName() == "Thumbnails") {
+        if (!m2->thumbDock->isFloating())
+            m2->setThumbDockHeight();
+    }
     setSpacing(0);
     iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         0, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
-    setSpacing(1);
-    setSpacing(0);
-    if(objectName() == "Thumbnails") {
-        if (!m2->thumbDock->isFloating())
-            emit updateThumbDockHeight();
-    }
+//    if(objectName() == "Thumbnails") {
+//        if (!m2->thumbDock->isFloating())
+//            emit updateThumbDockHeight();
+//    }
 }
 
 void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight,
@@ -1083,7 +1087,9 @@ loaded.  Both thumbView and gridView have to be called.
         thumbWidth = thumbHeight;
     if (iconWMax > iconHMax) thumbHeight = thumbWidth * ((double)iconHMax / iconWMax);
     if (iconHMax > iconWMax) thumbWidth = thumbHeight * ((double)iconWMax / iconHMax);
+
     setThumbParameters();
+
     // important to setIconSize or visualRect does not work correctly
 //    setIconSize(QSize(thumbWidth, thumbHeight));
     bestAspectRatio = (double)thumbHeight / thumbWidth;

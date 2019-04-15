@@ -997,6 +997,7 @@ delegate use of the current index must check the row.
     }
 
     // initialize the thumbDock
+//    if (!G::isNewFolderLoaded) {
     if (G::isInitializing) {
         if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
             dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
@@ -1009,17 +1010,12 @@ delegate use of the current index must check the row.
     }
 
     // load thumbnail if not cached yet (when loading new folder)
-    if (!thumbView->isThumb(currentRow)) {
-        QImage image;
-        thumb->loadThumb(fPath, image);
-        thumbView->setIcon(currentRow, image);
-
-//        thumbView->setWrapping(false);
-//        thumbView->setThumbParameters();
-//        setThumbDockHeight();
-
-        updateIconBestFit();
-    }
+//    if (!thumbView->isThumb(currentRow)) {
+//        QImage image;
+//        thumb->loadThumb(fPath, image);
+//        thumbView->setIcon(currentRow, image);
+////        updateIconBestFit();
+//    }
 
     // update cursor position on progressBar
     updateImageCacheStatus("Update cursor", currentRow, "MW::fileSelectionChange");
@@ -1394,6 +1390,8 @@ memory has been consumed or all the images are cached.
 //    // all metadata has been loaded
 //    dm->filteredItemCount();
 //    dm->unfilteredItemCount();
+
+    updateIconBestFit();
 
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
@@ -3443,7 +3441,7 @@ void MW::createThumbView()
     thumbView->setObjectName("Thumbnails");
 //    thumbView->setSpacing(0);                // thumbView not visible without this
     thumbView->setAutoScroll(false);
-    thumbView->setWrapping(false);
+//    thumbView->setWrapping(false);
     thumbView->firstVisibleRow = 0;
 
     if (isSettings) {
@@ -6883,7 +6881,7 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "Floating";
+    G::track(__FUNCTION__);
     if (isFloat) {
         thumbView->setMaximumHeight(100000);
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -8847,26 +8845,6 @@ void MW::helpWelcome()
     centralLayout->setCurrentIndex(StartTab);
 }
 
-void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
-{
-    updateIconBestFit();
-    QModelIndex index = dm->sf->index(currentRow, 0, QModelIndex());
-    const QRect rect = thumbView->visualRect(index);
-    const QRect area = thumbView->viewport()->rect();
-    const bool leftOf = rect.left() < area.left();
-    const bool rightOf = (rect.right() > area.right()) && (rect.left() > area.left());
-    int horizontalValue = thumbView->horizontalScrollBar()->value();
-    horizontalValue += rect.left() - ((area.width()- rect.width()) / 2);
-    qDebug() << thumbView->layoutDirection();
-    qDebug() << "scroll value =" << thumbView->horizontalScrollBar()->value()
-             << "scroll max =" << thumbView->horizontalScrollBar()->maximum()
-             << "rect =" << rect
-             << "area =" << area
-             << "leftOf =" << leftOf
-             << "rightOf =" << rightOf
-             << "horizontalValue =" << horizontalValue;
-}
-
 void MW::test2()
 {
     qDebug() << "Watcher reports finished";
@@ -8880,6 +8858,29 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
     QString fPath = "D:/Pictures/_DNG/DngNikonD850FromLightroom.dng";
     metadata->testNewFileFormat(fPath);
+}
+
+void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
+{
+
+    updateIconBestFit();
+
+//    updateIconBestFit();
+//    QModelIndex index = dm->sf->index(currentRow, 0, QModelIndex());
+//    const QRect rect = thumbView->visualRect(index);
+//    const QRect area = thumbView->viewport()->rect();
+//    const bool leftOf = rect.left() < area.left();
+//    const bool rightOf = (rect.right() > area.right()) && (rect.left() > area.left());
+//    int horizontalValue = thumbView->horizontalScrollBar()->value();
+//    horizontalValue += rect.left() - ((area.width()- rect.width()) / 2);
+//    qDebug() << thumbView->layoutDirection();
+//    qDebug() << "scroll value =" << thumbView->horizontalScrollBar()->value()
+//             << "scroll max =" << thumbView->horizontalScrollBar()->maximum()
+//             << "rect =" << rect
+//             << "area =" << area
+//             << "leftOf =" << leftOf
+//             << "rightOf =" << rightOf
+//             << "horizontalValue =" << horizontalValue;
 }
 
 // End MW
