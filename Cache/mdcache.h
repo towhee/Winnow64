@@ -80,10 +80,12 @@ private:
     QString folderPath;
 
     QModelIndex idx;
+    int currentRow;                             // current index row in datamodel
     int startRow;
     int endRow;
     int row;
     int previousRow = -1;
+    int tpp;                                    // thumbsPerPage;
 
     // icon caching
     int iconTargetStart;
@@ -99,6 +101,7 @@ private:
     bool isShowCacheStatus;
     bool cacheIcons;
 
+    void setRange();
     void createCacheStatus();
     void updateCacheStatus(int row);
     void readMetadataIconChunk();

@@ -416,15 +416,27 @@ bool IconView::isSelectedItem()
 
 int IconView::getThumbsPerPage()
 {
-    int rowWidth = viewport()->width() - G::scrollBarThickness;
-    int cellWidth = getCellSize().width();
-    if (cellWidth == 0) return 0;
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+//    qDebug() << __FUNCTION__ << "viewport()->isVisible()" << viewport()->isVisible();
+//    int viewportWidth = 0;
+//    int viewportHeight = 0;
+//    if (!viewport()->isVisible()) return(thumbsPerPage);
+
+    QSize vp = viewport()->size();
+    int rowWidth = vp.width() - G::scrollBarThickness;
+    QSize thumb(thumbWidth, thumbHeight);
+    QSize cell = iconViewDelegate->getCellSize(thumb);
+//    int cellWidth = getCellSize().width();
+    if (cell.width() == 0) return 0;
     // thumbs per row
-    int tpr = rowWidth / getCellSize().width() + 1;
-    int cellHeight = getCellSize().height();
-    if (cellHeight == 0) return 0;
+    int tpr = rowWidth / cell.width() + 1;
+    if (cell.height() == 0) return 0;
     // rows per page (page = viewport)
-    int rpp = viewport()->height() / cellHeight + 2;
+    int rpp = vp.height() / cell.height() + 2;
 //    qDebug() << "tpr" << tpr
 //             << "rpp" << rpp;
     thumbsPerPage = tpr * rpp;
@@ -717,13 +729,13 @@ crash.
     }
     item = dm->itemFromIndex(idx);
     item->setIcon(QPixmap::fromImage(thumb));
-    if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
+    if (iconWMax == G::maxIconSize && iconHMax == G::maxIconSize) return;
 
     // for best aspect calc
-    int w = thumb.width();
-    int h = thumb.height();
-    if (w > G::iconWMax) G::iconWMax = w;
-    if (h > G::iconHMax) G::iconHMax = h;
+//    int w = thumb.width();
+//    int h = thumb.height();
+//    if (w > iconWMax) iconWMax = w;
+//    if (h > iconHMax) iconHMax = h;
 }
 
 // Used by thumbnail navigation (left, right, up, down etc)
@@ -1024,6 +1036,8 @@ void IconView::resizeEvent(QResizeEvent *event)
     #endif
     }
     QListView::resizeEvent(event);
+    qDebug() << __FUNCTION__ << objectName() << viewport()->size();
+    getThumbsPerPage();
 
     m2->loadMetadataCacheAfterDelay();
     static int prevWidth = 0;
@@ -1051,8 +1065,7 @@ loaded.  Both thumbView and gridView have to be called.
     if (thumbHeight > G::maxIconSize) thumbHeight = G::maxIconSize;
     if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
     if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
-//    return;
-    /*
+
     iconWMax = 0;
     iconHMax = 0;
     for (int row = 0; row < dm->rowCount(); ++row) {
@@ -1062,13 +1075,14 @@ loaded.  Both thumbView and gridView have to be called.
         if (iconWMax < pm.width()) iconWMax = pm.width();
         if (iconHMax < pm.height()) iconHMax = pm.height();
         if (iconWMax == G::maxIconSize && iconHMax == G::maxIconSize) break;
-    } */
-    if (G::iconWMax == G::iconHMax && thumbWidth > thumbHeight)
+    }
+
+    if (iconWMax == iconHMax && thumbWidth > thumbHeight)
         thumbHeight = thumbWidth;
-    if (G::iconWMax == G::iconHMax && thumbHeight > thumbWidth)
+    if (iconWMax == iconHMax && thumbHeight > thumbWidth)
         thumbWidth = thumbHeight;
-    if (G::iconWMax > G::iconHMax) thumbHeight = thumbWidth * ((double)G::iconHMax / G::iconWMax);
-    if (G::iconHMax > G::iconWMax) thumbWidth = thumbHeight * ((double)G::iconWMax / G::iconHMax);
+    if (iconWMax > iconHMax) thumbHeight = thumbWidth * ((double)iconHMax / iconWMax);
+    if (iconHMax > iconWMax) thumbWidth = thumbHeight * ((double)iconWMax / iconHMax);
     setThumbParameters();
     // important to setIconSize or visualRect does not work correctly
 //    setIconSize(QSize(thumbWidth, thumbHeight));
@@ -1127,7 +1141,7 @@ void IconView::thumbsFit(Qt::DockWidgetArea area)
 
         // padding = nonthumb space is used to rebuild cell after thumb resize to fit
         int padding = cellHeight - thumbHeight;
-        int maxCellHeight = iconViewDelegate->getCellSize(QSize(G::iconWMax, G::iconHMax)).height();
+        int maxCellHeight = iconViewDelegate->getCellSize(QSize(iconWMax, iconHMax)).height();
         cellHeight = ht < maxCellHeight ? ht : maxCellHeight;
         thumbHeight = cellHeight - padding;
         thumbWidth = thumbHeight * aspect;

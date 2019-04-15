@@ -170,20 +170,22 @@ metadata and icons are loaded into the datamodel.
     G::allMetadataLoaded = false;
     iconsCached.clear();
     foundItemsToLoad = true;
-    int imageCount = dm->rowCount();
+    currentRow = 0;
+    tpp = thumbsPerPage;
 
-    folderPath = dm->currentFolderPath;
+//    int imageCount = dm->rowCount();
+//    folderPath = dm->currentFolderPath;
+//    this->startRow = 0;
+//    if (metadataCacheAll || imageCount < metadataCacheAllIfLessThan)
+//        this->endRow = imageCount;
+//    else {
+//        int segmentSize = thumbsPerPage > metadataChunkSize ? thumbsPerPage : metadataChunkSize;
+//        this->endRow = startRow + segmentSize;
+//        if (this->endRow >= dm->rowCount()) this->endRow = dm->rowCount();
+//    }
+//    setIconTargets(startRow , thumbsPerPage);
 
-    this->startRow = 0;
-    if (metadataCacheAll || imageCount < metadataCacheAllIfLessThan)
-        this->endRow = imageCount;
-    else {
-        int segmentSize = thumbsPerPage > metadataChunkSize ? thumbsPerPage : metadataChunkSize;
-        this->endRow = startRow + segmentSize;
-        if (this->endRow >= dm->rowCount()) this->endRow = dm->rowCount();
-    }
-
-    setIconTargets(startRow , thumbsPerPage);
+    setRange();
     action = Action::NewFolder;
     start(TimeCriticalPriority);
 }
@@ -217,7 +219,7 @@ progress bar update is more important then use the datamodel function dm::addAll
     start(TimeCriticalPriority);
 }
 
-void MetadataCache::loadMetadataIconChunk(int fromRow, int thumbsPerPage)
+void MetadataCache::loadMetadataIconChunk(int row, int thumbsPerPage)
 {
 /*
 This function is called from MW::fileSelectionChange, MW::filterChange and resize and scroll
@@ -238,11 +240,15 @@ If there has been a file selection change then the image cache is updated.
     }
     abort = false;
 
-    int rowCount = dm->sf->rowCount();
-    startRow = fromRow >= 0 ? fromRow : 0;
-    int chunkSize = thumbsPerPage > metadataChunkSize ? thumbsPerPage : metadataChunkSize;
-    endRow = startRow + chunkSize;
-    if (endRow > rowCount) this->endRow = rowCount;
+    currentRow = row;
+    tpp = thumbsPerPage;
+
+    setRange();
+
+    //    int chunkSize = thumbsPerPage > metadataChunkSize ? thumbsPerPage : metadataChunkSize;
+
+
+//    setIconTargets(startRow , thumbsPerPage);
 
     foundItemsToLoad = false;
     for (int i = startRow; i < endRow; ++i) {
@@ -252,10 +258,7 @@ If there has been a file selection change then the image cache is updated.
             foundItemsToLoad = true;
         if (foundItemsToLoad) break;
     }
-    qDebug() << __FUNCTION__
-             << "row =" << fromRow
-             << "foundItemsToLoad" << foundItemsToLoad;
-    setIconTargets(startRow , thumbsPerPage);
+
     action = Action::MetaIconChunk;
     start(TimeCriticalPriority);
 }
@@ -279,6 +282,25 @@ void MetadataCache::loadIconChunk(int fromRow, int thumbsPerPage)
     action = Action::IconChunk;
     setIconTargets(startRow , thumbsPerPage);
     start(IdlePriority);
+}
+
+void MetadataCache::setRange()
+{
+    int rowCount = dm->sf->rowCount();
+    // previous, current and next page = chunk
+    int chunk = tpp * 3;
+    chunk = 250;
+    startRow = currentRow - chunk / 2;
+    if (startRow < 0) startRow = 0;
+    endRow = currentRow + chunk / 2;
+    if (endRow > rowCount) endRow = rowCount;
+
+    qDebug() << __FUNCTION__
+             << "Current row" << currentRow
+             << "thumbsPerPage" << tpp
+             << "Chunk size" << chunk
+             << "Start row" << startRow
+             << "End row" << endRow;
 }
 
 void MetadataCache::setIconTargets(int start, int thumbsPerPage)
@@ -320,19 +342,19 @@ inefficient caching.
     // set thresholds before calling MW::loadMetadataChunk
     int targetSize = iconTargetEnd - iconTargetStart;
 
-    if (iconTargetStart > 0) recacheIfGreaterThan = iconTargetStart + targetSize / 2 - targetSize / 7;
-    else recacheIfGreaterThan = rowCount;
-    if (iconTargetEnd < rowCount) recacheIfLessThan = startRow + targetSize / 2 + targetSize / 7;
+    if (iconTargetStart > 0) recacheIfLessThan = iconTargetStart + targetSize / 2 - targetSize / 7;
     else recacheIfLessThan = 0;
+    if (iconTargetEnd < rowCount) recacheIfGreaterThan = startRow + targetSize / 2 + targetSize / 7;
+    else recacheIfGreaterThan = rowCount;
 
-/*    qDebug() << "MetadataCache::setIconTargets"
+    qDebug() << __FUNCTION__
              << "start" << start
              << "thumbsPerPage" << thumbsPerPage
              << "iconTargetStart" << iconTargetStart
              << "iconTargetEnd" << iconTargetEnd
              << "recacheIfGreaterThan" << recacheIfGreaterThan
              << "recacheIfLessThan" << recacheIfLessThan;
-             */
+
 }
 
 void MetadataCache::iconCleanup()
@@ -473,10 +495,10 @@ startRow and endRow.
         count++;
 
         // skip loading icon?
-        if (!iconsCacheAll) {
-            if (row < iconTargetStart) continue;
-            if (row > iconTargetEnd) continue;
-        }
+//        if (!iconsCacheAll) {
+//            if (row < iconTargetStart) continue;
+//            if (row > iconTargetEnd) continue;
+//        }
 
 /*      Debugging stuff
         QStandardItem *item = new QStandardItem;
@@ -533,6 +555,7 @@ If there has been a file selection change and not a new folder then update image
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
+    qDebug() << __FUNCTION__;
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
 
@@ -579,7 +602,7 @@ If there has been a file selection change and not a new folder then update image
 
         // clean up orphaned icons outside icon range
         if (action == Action::MetaIconChunk || action == Action::IconChunk) {
-            iconCleanup();
+//            iconCleanup();
             // resume image caching if it was interrupted
             imageCacheThread->resumeImageCache();
         }

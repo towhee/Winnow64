@@ -274,6 +274,8 @@ void MW::showEvent(QShowEvent *event)
 
     // show image count in folder panel if no folder selected
     if (!rememberLastDir) QTimer::singleShot(50, fsTree, SLOT(getImageCount()));
+
+    qDebug() << __FUNCTION__ << width();
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -846,8 +848,10 @@ void MW::folderSelectionChange()
     updateStatus(false, "Collecting metadata for all images in folder(s)");
 
     // reset for bestAspect calc
-    G::iconWMax = G::minIconSize;
-    G::iconHMax = G::minIconSize;
+    thumbView->iconWMax = G::minIconSize;
+    thumbView->iconHMax = G::minIconSize;
+    gridView->iconWMax = G::minIconSize;
+    gridView->iconHMax = G::minIconSize;
 
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
     and full size embedded jpgs and the image width and height, req'd in imageCache to manage
@@ -988,7 +992,7 @@ delegate use of the current index must check the row.
     }
 
     // update caching
-    if (!G::isNewFolderLoaded) {
+    if (G::isNewFolderLoaded) {
         loadMetadataChunk();
     }
 
@@ -1008,7 +1012,12 @@ delegate use of the current index must check the row.
     if (!thumbView->isThumb(currentRow)) {
         QImage image;
         thumb->loadThumb(fPath, image);
-        thumbView->setIcon(currentRow, image);        
+        thumbView->setIcon(currentRow, image);
+
+//        thumbView->setWrapping(false);
+//        thumbView->setThumbParameters();
+//        setThumbDockHeight();
+
         updateIconBestFit();
     }
 
@@ -1070,11 +1079,16 @@ to determine how many thumbnails/icons to cache in MetadataCache::setIconTargets
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::isInitializing) return 250;
+//    if (G::isInitializing) {
+//        return
+//    }
     int tpp1 = 0;
     int tpp2 = 0;
+//    tpp1 = thumbView->getThumbsPerPage();
+//    tpp2 = gridView->getThumbsPerPage();
     tpp1 = thumbView->thumbsPerPage;
     tpp2 = gridView->thumbsPerPage;
+    qDebug() << __FUNCTION__ << "tpp1" << tpp1 << "tpp2" << tpp2;
     return tpp1 > tpp2 ? tpp1 : tpp2;
 }
 
@@ -1193,7 +1207,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::isInitializing || dm->rowCount() == 0 || !G::isNewFolderLoaded) return;
+    if (G::isInitializing || dm->sf->rowCount() == 0 || !G::isNewFolderLoaded) return;
 
     metadataCacheThread->loadMetadataIconChunk(getFirstVisibleThumb(),
                                                getThumbsPerPage());
@@ -3439,6 +3453,7 @@ void MW::createThumbView()
         thumbView->labelFontSize = setting->value("labelFontSize").toInt();
         thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
         thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
+        thumbView->thumbsPerPage = setting->value("thumbsPerPage").toInt();
     }
     else {
         thumbView->thumbWidth = 100;
@@ -3446,6 +3461,7 @@ void MW::createThumbView()
         thumbView->labelFontSize = 12;
         thumbView->showThumbLabels = true;
         thumbView->badgeSize = classificationBadgeInThumbDiameter;
+        thumbView->thumbsPerPage = width() / thumbView->thumbWidth;
     }
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -3487,6 +3503,7 @@ void MW::createGridView()
         gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
         gridView->showThumbLabels = setting->value("showThumbLabelsGrid").toBool();
         gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
+        gridView->thumbsPerPage = setting->value("thumbsPerPage").toInt();
     }
     else {
         gridView->thumbWidth = 200;
@@ -3494,6 +3511,8 @@ void MW::createGridView()
         gridView->labelFontSize = 10;
         gridView->showThumbLabels = true;
         gridView->badgeSize = classificationBadgeInThumbDiameter;
+        // rgh has window size been assigned yet
+        gridView->thumbsPerPage = (width() / 200) * (height() / 200);
     }
 
     // double mouse click fires displayLoupe
@@ -6929,7 +6948,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         // if thumbDock area changed then set dock height to cell size
 
         // get max icon height based on best aspect
-        int hMax = G::iconHMax;
+        int hMax = thumbView->iconHMax;
 
         // max and min cell heights (icon plus padding + name text)
         int maxHt = thumbView->iconViewDelegate->getCellSize(QSize(hMax, hMax)).height();
@@ -8830,6 +8849,7 @@ void MW::helpWelcome()
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    updateIconBestFit();
     QModelIndex index = dm->sf->index(currentRow, 0, QModelIndex());
     const QRect rect = thumbView->visualRect(index);
     const QRect area = thumbView->viewport()->rect();
