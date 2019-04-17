@@ -1,5 +1,6 @@
 BUGS
-- wait for threads to finish when close main window
+- Test open app in tableview
+- T est open app when both thumb and grid views are hidden
 - Finish cache preferences
 - Add / update tool tips in preferences and throughout program
 - ImageView::scale comparing floats potentially bad
@@ -34,6 +35,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Wait for threads to finish when close main window
 - When so settings file count not showing when start
 - For very large folders only load one or two grids of images at a time
 - Eliminate metaCache (replace in datamodel)

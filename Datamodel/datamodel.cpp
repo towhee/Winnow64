@@ -391,7 +391,8 @@ bool DataModel::addFileData()
         item->setData("", Qt::DisplayRole);             // column 0 just displays icon
         item->setData(fPath, G::PathRole);
 //        item->setData(fileInfo.filePath(), G::PathRole);
-        item->setData(fileInfo.absoluteFilePath(), Qt::ToolTipRole);
+        QString tip = QString::number(fileIndex) + ": " + fileInfo.absoluteFilePath();
+        item->setData(tip, Qt::ToolTipRole);
         item->setData(QRect(), G::ThumbRectRole);     // define later when read
         item->setData(false, G::CachedRole);
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
