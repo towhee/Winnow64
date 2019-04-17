@@ -31,8 +31,8 @@ public:
         AllMetadata = 4
     };
 
-    void loadNewFolder(int thumbsPerPage/*, bool isShowCacheStatus*/);
-    void loadMetadataIconChunk(int fromRow, int endRow);
+    void loadNewFolder();
+    void loadMetadataIconChunk(int row);
     void loadAllMetadata();
     void loadIconChunk(int fromRow, int thumbsPerPage);
     void stopMetadateCache();
@@ -56,6 +56,11 @@ public:
     int recacheIfLessThan;
     int recacheIfGreaterThan;
 
+    // Iconview state
+    int firstIconVisible;
+    int midIconVisible;
+    int lastIconVisible;
+
 protected:
     void run() Q_DECL_OVERRIDE;
 
@@ -66,6 +71,7 @@ signals:
     void resumeImageCache();
     void updateIsRunning(bool, bool, QString);
     void updateIconBestFit();
+    void checkCacheComplete();
     void selectFirst();
     void showCacheStatus(int, bool);            // row, clear progress bar
 

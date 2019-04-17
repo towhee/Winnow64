@@ -145,7 +145,7 @@ bool MetadataCache::isAllIconLoaded()
     return loaded;
 }
 
-void MetadataCache::loadNewFolder(int thumbsPerPage)
+void MetadataCache::loadNewFolder()
 {
 /*
 This function is called from MW::folderSelectionChange and will not have any filtering so we
@@ -166,26 +166,16 @@ metadata and icons are loaded into the datamodel.
         mutex.unlock();
         wait();
     }
+    G::track(__FUNCTION__);
     abort = false;
     G::allMetadataLoaded = false;
     iconsCached.clear();
     foundItemsToLoad = true;
     currentRow = 0;
-    tpp = thumbsPerPage;
-
-//    int imageCount = dm->rowCount();
-//    folderPath = dm->currentFolderPath;
-//    this->startRow = 0;
-//    if (metadataCacheAll || imageCount < metadataCacheAllIfLessThan)
-//        this->endRow = imageCount;
-//    else {
-//        int segmentSize = thumbsPerPage > metadataChunkSize ? thumbsPerPage : metadataChunkSize;
-//        this->endRow = startRow + segmentSize;
-//        if (this->endRow >= dm->rowCount()) this->endRow = dm->rowCount();
-//    }
-//    setIconTargets(startRow , thumbsPerPage);
-
-    setRange();
+    startRow = 0;
+    endRow = metadataChunkSize;
+    int rowCount = dm->sf->rowCount();
+    if (endRow > rowCount) endRow = rowCount;
     action = Action::NewFolder;
     start(TimeCriticalPriority);
 }
@@ -214,12 +204,12 @@ progress bar update is more important then use the datamodel function dm::addAll
     }
     abort = false;
     startRow = 0;
-    endRow = dm->rowCount();
+    endRow = dm->sf->rowCount();
     action = Action::AllMetadata;
     start(TimeCriticalPriority);
 }
 
-void MetadataCache::loadMetadataIconChunk(int row, int thumbsPerPage)
+void MetadataCache::loadMetadataIconChunk(int row)
 {
 /*
 This function is called from MW::fileSelectionChange, MW::filterChange and resize and scroll
@@ -238,16 +228,13 @@ If there has been a file selection change then the image cache is updated.
         mutex.unlock();
         wait();
     }
+    G::track(__FUNCTION__);
     abort = false;
 
     currentRow = row;
-    tpp = thumbsPerPage;
+//    tpp = thumbsPerPage;
 
     setRange();
-
-    //    int chunkSize = thumbsPerPage > metadataChunkSize ? thumbsPerPage : metadataChunkSize;
-
-
 //    setIconTargets(startRow , thumbsPerPage);
 
     foundItemsToLoad = false;
@@ -258,7 +245,7 @@ If there has been a file selection change then the image cache is updated.
             foundItemsToLoad = true;
         if (foundItemsToLoad) break;
     }
-
+    qDebug() << __FUNCTION__ << "startRow" << startRow;
     action = Action::MetaIconChunk;
     start(TimeCriticalPriority);
 }
@@ -287,20 +274,27 @@ void MetadataCache::loadIconChunk(int fromRow, int thumbsPerPage)
 void MetadataCache::setRange()
 {
     int rowCount = dm->sf->rowCount();
-    // previous, current and next page = chunk
-    int chunk = tpp * 3;
-    chunk = 250;
-    startRow = currentRow - chunk / 2;
+    // default total per page (prev, curr and next pages)
+    int dtpp = metadataChunkSize / 3;
+
+    // total per page (tpp)
+    tpp = lastIconVisible - firstIconVisible + 1;
+    if (dtpp > tpp) tpp = dtpp;
+
+    // first to cache (startRow)
+    startRow = firstIconVisible - tpp;
     if (startRow < 0) startRow = 0;
-    endRow = currentRow + chunk / 2;
+
+    // last to cache (endRow)
+    endRow = lastIconVisible + tpp;
     if (endRow > rowCount) endRow = rowCount;
 
-    qDebug() << __FUNCTION__
-             << "Current row" << currentRow
-             << "thumbsPerPage" << tpp
-             << "Chunk size" << chunk
-             << "Start row" << startRow
-             << "End row" << endRow;
+    qDebug()  <<  __FUNCTION__
+              << "firstIconVisible =" << firstIconVisible
+              << "lastIconVisible =" << lastIconVisible
+              << "tpp =" << tpp
+              << "startRow =" << startRow
+              << "endRow =" << endRow;
 }
 
 void MetadataCache::setIconTargets(int start, int thumbsPerPage)
@@ -347,13 +341,13 @@ inefficient caching.
     if (iconTargetEnd < rowCount) recacheIfGreaterThan = startRow + targetSize / 2 + targetSize / 7;
     else recacheIfGreaterThan = rowCount;
 
-    qDebug() << __FUNCTION__
-             << "start" << start
-             << "thumbsPerPage" << thumbsPerPage
-             << "iconTargetStart" << iconTargetStart
-             << "iconTargetEnd" << iconTargetEnd
-             << "recacheIfGreaterThan" << recacheIfGreaterThan
-             << "recacheIfLessThan" << recacheIfLessThan;
+//    qDebug() << __FUNCTION__
+//             << "start" << start
+//             << "thumbsPerPage" << thumbsPerPage
+//             << "iconTargetStart" << iconTargetStart
+//             << "iconTargetEnd" << iconTargetEnd
+//             << "recacheIfGreaterThan" << recacheIfGreaterThan
+//             << "recacheIfLessThan" << recacheIfLessThan;
 
 }
 
@@ -468,6 +462,10 @@ startRow and endRow.
         endRow = dm->rowCount();
     }
 
+    qDebug() << __FUNCTION__
+             << "startRow =" << startRow
+             << "endRow =" << endRow;
+
     for (row = startRow; row < endRow; ++row) {
         if (abort) {
             emit updateIsRunning(false, true, __FUNCTION__);
@@ -555,9 +553,11 @@ If there has been a file selection change and not a new folder then update image
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
+
+        qDebug() << __FUNCTION__ << "startRow" << startRow;
 
         mutex.lock();
         int rowCount = dm->rowCount();
@@ -615,6 +615,8 @@ If there has been a file selection change and not a new folder then update image
             emit selectFirst();
             // start image caching (full size)
             emit loadImageCache();
+            // make a second pass if more than 250 thumbs visible in gridView or thumbView
+            emit checkCacheComplete();
         }
 
         // update status of metadataThreadRunningLabel in statusbar
@@ -625,6 +627,7 @@ If there has been a file selection change and not a new folder then update image
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "dm->currentRow" << dm->currentRow
              << "previousRow" << previousRow; */
+
     // if a file selection change and not a new folder then update image cache
     if (action == Action::MetaIconChunk && dm->currentRow != previousRow && G::isNewFolderLoaded) {
         imageCacheThread->updateImageCachePosition(dm->currentFilePath);

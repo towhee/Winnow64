@@ -2237,6 +2237,7 @@ metadata is written to buffer and the original image file is copied unchanged.
 
     // data edited, open image file
     file.setFileName(fPath);
+    // rgh error trap file operation
     file.open(QIODevice::ReadOnly);
 
     // update xmp data

@@ -131,6 +131,7 @@ public slots:
     int getFirstVisible();
     int getLastVisible();
     void setViewportParameters();
+    bool allPageIconsLoaded();
     bool isRowVisible(int row);
     int getThumbsPerPage();
 
