@@ -991,8 +991,9 @@ delegate use of the current index must check the row.
 
     // update caching
     if (G::isNewFolderLoaded) {
-        metadataCacheThread->loadMetadataIconChunk(currentRow);
-//        loadMetadataChunk();
+//        metadataCacheThread->loadMetadataIconChunk(currentRow);
+        loadMetadataChunk();
+//        imageCacheTimer->start(50);
     }
 
     // initialize the thumbDock
@@ -1062,77 +1063,11 @@ void MW::nullFiltration()
     isDragDrop = false;
 }
 
-int MW::getThumbsPerPage()
-{
-/*
-Returns the greater number of thumbnails that will be visible in the gridView or thumbView
-viewports. If the program is still initializing, then 250 thumbsPerPage is used.  The
-thumbsPerPage is updated every time IconView::setViewportParameters() is called.
-
-This is used to determine how many thumbnails/icons to cache in MetadataCache::setIconTargets.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    if (G::isInitializing) {
-//        return
-//    }
-    int tpp1 = 0;
-    int tpp2 = 0;
-    tpp1 = thumbView->thumbsPerPage;
-    tpp2 = gridView->thumbsPerPage;
-    qDebug() << __FUNCTION__ << "tpp1" << tpp1 << "tpp2" << tpp2;
-    return tpp1 > tpp2 ? tpp1 : tpp2;
-}
-
-int MW::getFirstVisibleThumb()
-{
-/*
-Returns the lesser number of the first visible thumbnail in the gridView or thumbView
-viewports. This is used to determine how many thumbnails/icons to cache in
-MetadataCache::setIconTargets and the start row for matadata caching in
-MetadataCache::loadMetadataCache.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    int last = dm->sf->rowCount();
-    int fvt1 = last;
-    int fvt2 = last;
-    if (thumbView->isVisible()) fvt1 = thumbView->firstVisibleRow;
-    if (gridView->isVisible()) fvt2 = gridView->firstVisibleRow;
-    return fvt1 < fvt2 ? fvt1 : fvt2;
-}
-
-int MW::getLastVisibleThumb()
-{
-    /*
-Returns the lesser number of the first visible thumbnail in the gridView or thumbView
-viewports. This is used to determine how many thumbnails/icons to cache in
-MetadataCache::setIconTargets and the start row for matadata caching in
-MetadataCache::loadMetadataCache.
-*/
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-    }
-    int lvt1 = 0;
-    int lvt2 = 0;
-    if (thumbView->isVisible()) lvt1 = thumbView->lastVisibleRow;
-    if (gridView->isVisible()) lvt2 = gridView->lastVisibleRow;
-    return lvt1 > lvt2 ? lvt1 : lvt2;
-}
-
 bool MW::isCurrentThumbVisible()
 {
-/*
+/*  rgh not being used
 This function is used to determine if it is worthwhile to cache more metadata and/or icons.  If
-the image/thumb that has just become the current image is alrady visible then do not invoke
+the image/thumb that has just become the current image is already visible then do not invoke
 metadata caching.
 */
     {
@@ -1140,14 +1075,17 @@ metadata caching.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "current" << currentRow
-             << "first" << getFirstVisibleThumb()
-             << "last" << getLastVisibleThumb();
-    return (currentRow > getFirstVisibleThumb() && currentRow < getLastVisibleThumb());
+    updateMetadataCacheIconviewState();
+    return (currentRow > metadataCacheThread->firstIconVisible &&
+            metadataCacheThread->lastIconVisible);
 }
 
 void MW::updateMetadataCacheIconviewState()
 {
+/*
+This function polls both thumbView and gridView to determine the first, mid and last thumbnail
+visible.  This is used in the metadataCacheThread to determine the range of files to cache.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -1158,15 +1096,19 @@ void MW::updateMetadataCacheIconviewState()
         metadataCacheThread->firstIconVisible = thumbView->firstVisibleRow;
         metadataCacheThread->midIconVisible = thumbView->midVisibleRow;
         metadataCacheThread->lastIconVisible = thumbView->lastVisibleRow;
+        metadataCacheThread->thumbsPerPage = metadataCacheThread->lastIconVisible - metadataCacheThread->firstIconVisible + 1;
         return;
     }
+
     if (!thumbView->isVisible() && gridView->isVisible()) {
         gridView->setViewportParameters();
         metadataCacheThread->firstIconVisible = gridView->firstVisibleRow;
         metadataCacheThread->midIconVisible = gridView->midVisibleRow;
         metadataCacheThread->lastIconVisible = gridView->lastVisibleRow;
+        metadataCacheThread->thumbsPerPage = metadataCacheThread->lastIconVisible - metadataCacheThread->firstIconVisible + 1;
         return;
     }
+
     if (thumbView->isVisible() && gridView->isVisible()) {
         thumbView->setViewportParameters();
         gridView->setViewportParameters();
@@ -1180,13 +1122,19 @@ void MW::updateMetadataCacheIconviewState()
         else {
             metadataCacheThread->midIconVisible = gridView->midVisibleRow;
         }
-        if (thumbView->lastVisibleRow < gridView->lastVisibleRow)
+        if (thumbView->lastVisibleRow > gridView->lastVisibleRow)
             metadataCacheThread->lastIconVisible = thumbView->lastVisibleRow;
         else {
             metadataCacheThread->lastIconVisible = gridView->lastVisibleRow;
         }
+        metadataCacheThread->thumbsPerPage = metadataCacheThread->lastIconVisible - metadataCacheThread->firstIconVisible + 1;
         return;
     }
+}
+
+void MW::updateImageCachePositionAfterDelay()
+{
+    imageCacheTimer->start(50);
 }
 
 void MW::checkCacheComplete()
@@ -1196,7 +1144,9 @@ void MW::checkCacheComplete()
     G::track(__FUNCTION__);
     #endif
     }
-    loadMetadataChunk();
+    qDebug() << __FUNCTION__;
+    updateMetadataCacheIconviewState();
+    metadataCacheThread->loadNewFolder2ndPass();
 }
 
 void MW::loadMetadataCacheAfterDelay()
@@ -1232,15 +1182,6 @@ MW::fileSelectionChange.
         return;
     }
 
-    // Just a scroll event, so update metadata cache but not image cache
-//    thumbView->setViewportParameters();
-//    gridView->setViewportParameters();
-
-//    int midRow = getFirstVisibleThumb() + getThumbsPerPage() / 2;
-
-//    if (midRow < metadataCacheThread->recacheIfLessThan &&
-//        midRow > metadataCacheThread->recacheIfGreaterThan) return;
-
     metadataCacheScrollTimer->start(cacheDelay);
 }
 
@@ -1255,7 +1196,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::isInitializing || dm->sf->rowCount() == 0 || !G::isNewFolderLoaded) return;
+    if (/*G::isInitializing || */dm->sf->rowCount() == 0/* || !G::isNewFolderLoaded*/) return;
 
     updateMetadataCacheIconviewState();
     metadataCacheThread->loadMetadataIconChunk(currentRow);
@@ -1472,7 +1413,7 @@ memory has been consumed or all the images are cached.
     qDebug() << __FUNCTION__ << fPath;
 
     // tell image cache new position
-    imageCacheThread->updateImageCachePosition(fPath);
+    imageCacheThread->updateImageCachePosition(/*fPath*/);
 
     G::isNewFolderLoaded = true;
 
@@ -1500,7 +1441,7 @@ void MW::loadFilteredImageCache()
         isShowCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
     G::track(__FUNCTION__, "imageCacheThread->updateImageCachePosition(fPath)");
-    imageCacheThread->updateImageCachePosition(fPath);
+    imageCacheThread->updateImageCachePosition(/*fPath*/);
 }
 
 // called by signal itemClicked in bookmark
@@ -3443,15 +3384,6 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(selectFirst()),
             thumbView, SLOT(selectFirst()));
 
-    connect(metadataCacheThread, SIGNAL(checkCacheComplete()),
-            this, SLOT(checkCacheComplete()));
-
-    connect(metadataCacheThread, SIGNAL(loadImageCache()),
-            this, SLOT(loadImageCacheForNewFolder()));
-
-    connect(metadataCacheThread, SIGNAL(updateIsRunning(bool,bool,QString)),
-            this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
-
     // show progress bar when executing loadEntireMetadataCache
     connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
             this, SLOT(updateMetadataCacheStatus(int,bool)));
@@ -3459,21 +3391,33 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(setIcon(int, QImage)),
             thumbView, SLOT(setIcon(int, QImage)));
 
-    // the setIcon connection for setIcon is in MdCacher
+    /* Image caching is triggered from the metadataCacheThread to avoid the two threads
+       running simultaneously and colliding */
 
-//    connect(metadataCacheThread, SIGNAL(refreshThumbs()),
-//            thumbView, SLOT(refreshThumbs()));
+    // load image cache for a new folder
+    connect(metadataCacheThread, SIGNAL(loadImageCache()),
+            this, SLOT(loadImageCacheForNewFolder()));
+
+    // 2nd pass loading image cache for a new folder
+    connect(metadataCacheThread, SIGNAL(checkCacheComplete()),
+            this, SLOT(checkCacheComplete()));
+
+    // when a new image has been selected trigger a delayed update to image cache
+    connect(metadataCacheThread, SIGNAL(updateImageCachePositionAfterDelay()),
+            this, SLOT(updateImageCachePositionAfterDelay()));
 
     /* This singleshot timer signals the image cache that the position has moved in the
-    file selection. Calling imageCacheThread->updateImageCachePosition directly from
-    fileSelectionChange resulted in a significant delay, so the singleshot short delay
-    avoids this.  This is a work-around.
+    file selection. The delay is used to queue many quick changes to the image and avoid
+    updating the image cache until there is a pause in image selection changes.  This allows
+    the user to rapidly move from one image to the next until they get to the current image
+    cache limit.
     */
-//    imageCacheTimer = new QTimer(this);
-//    imageCacheTimer->setSingleShot(true);
+    imageCacheTimer = new QTimer(this);
+    imageCacheTimer->setSingleShot(true);
+
     // connect timer to update image cache position
-//    connect(imageCacheTimer, SIGNAL(timeout()), this,
-//            SLOT(updateImageCachePosition()));
+    connect(imageCacheTimer, SIGNAL(timeout()), imageCacheThread,
+            SLOT(updateImageCachePosition()));
 
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
@@ -4074,7 +4018,7 @@ parameters.  Any visibility changes are executed.
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     G::track(__FUNCTION__, "imageCacheThread->updateImageCachePosition(fPath)");
     if (fPath.length())
-        imageCacheThread->updateImageCachePosition(fPath);
+        imageCacheThread->updateImageCachePosition(/*fPath*/);
 
     // update visibility if preferences have been changed
     progressLabel->setVisible(isShowCacheStatus);
@@ -4284,21 +4228,20 @@ The include subfolder status is shown in the status bar.
         rawJpgStatusLabel->setText("");
 }
 
-void MW::updateImageCachePosition()
-{
-/* This slot is connected to a singleshot timer to ping the image cache in case the position
-   has moved.  This is a work-around.  Calling imageCacheThread->updateImageCachePosition
-   from fileSelectionChange resulted in a significant delay, so the singleshot short delay
-   avoids this.
-   */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    G::track(__FUNCTION__, "imageCacheThread->updateImageCachePosition(fPath)");
-    imageCacheThread->updateImageCachePosition(imageCacheFilePath);
-}
+//void MW::updateImageCachePosition()
+//{
+///* This slot is connected to a singleshot timer to ping the image cache in case the position
+//   has moved.  This is a work-around.  Calling imageCacheThread->updateImageCachePosition
+//   from fileSelectionChange resulted in a significant delay, so the singleshot short delay
+//   avoids this.
+//   */
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    imageCacheThread->updateImageCachePosition(/*dm->currentFilePath*/);
+//}
 
 void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QString calledBy)
 {
@@ -6240,7 +6183,7 @@ re-established when the application is re-opened.
     setting->setValue("labelFontSizeGrid", gridView->labelFontSize);
     setting->setValue("showThumbLabelsGrid", gridView->showThumbLabels);
 
-    setting->setValue("thumbsPerPage", getThumbsPerPage());
+    setting->setValue("thumbsPerPage", metadataCacheThread->thumbsPerPage);
 
     // slideshow
     setting->setValue("slideShowDelay", slideShowDelay);
@@ -8914,24 +8857,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << "";
-    thumbView->setViewportParameters();
-    gridView->setViewportParameters();
-    qDebug() << "Flicker";
-    if (!thumbView->isVisible()) {
-        thumbView->setVisible(true);
-        thumbView->setThumbParameters();
-        thumbView->setViewportParameters();
-        thumbView->setVisible(false);
-    }
-    if (!gridView->isVisible()) {
-        gridView->setVisible(true);
-        QModelIndex idx = dm->sf->index(currentRow, 0);
-        gridView->setCurrentIndex(idx);
-        gridView->setThumbParameters();
-        gridView->setViewportParameters();
-        gridView->setVisible(false);
-    }
+    updateMetadataCacheIconviewState();
+    metadataCacheThread->setRange();
 }
 
 // End MW

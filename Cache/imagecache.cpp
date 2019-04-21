@@ -753,7 +753,7 @@ When various image cache parameters are changed in preferences they are updated 
     cache.previewSize = QSize(previewWidth, previewHeight);
 }
 
-void ImageCache::updateImageCachePosition(QString &fPath)
+void ImageCache::updateImageCachePosition(/*QString &fPath*/)
 {
 /*
 Updates the cache for the current image in the data model. The cache key is set, forward or
@@ -774,7 +774,7 @@ Apparently there needs to be a slight delay before calling.
     // get cache item key
     cache.key = 0;
     for (int i = 0; i < cacheItemList.count(); i++) {
-        if (cacheItemList.at(i).fName == fPath) {
+        if (cacheItemList.at(i).fName == dm->currentFilePath) {
             cache.key = i;
             break;
         }
@@ -799,6 +799,8 @@ Apparently there needs to be a slight delay before calling.
                              cache.key,
                              "ImageCache::updateImageCachePosition");
     }
+
+    qDebug() << __FUNCTION__ << dm->currentFilePath;
 
     // if all images are cached then we're done
     if (cacheUpToDate()) {
@@ -1014,8 +1016,8 @@ void ImageCache::run()
         if(cache.isShowCacheStatus)
             emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
         prevFileName = fPath;
+        checkForOrphans();
     }
-    checkForOrphans();
     if(cache.isShowCacheStatus)
         emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
 

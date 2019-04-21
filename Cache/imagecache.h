@@ -25,7 +25,6 @@ public:
     void initImageCache(int &cacheSizeMB,
              bool &isShowCacheStatus, int &cacheWtAhead,
              bool &usePreview, int &previewWidth, int &previewHeight);
-    void updateImageCachePosition(QString  &fPath);
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
     void resortImageCache(QString &currentImageFullPath);
     void filterImageCache(QString &currentImageFullPath);
@@ -72,10 +71,6 @@ public:
 
     QList<CacheItem> cacheItemList, cacheItemListCopy;
 
-//    int pxMid(int key);             // center current position on statusbar
-//    int pxStart(int key);           // start current position on statusbar
-//    int pxEnd(int key);             // end current position on statusbar
-
 signals:
     void showCacheStatus(QString instruction, int key = 0, QString source = "");
 //    void showCacheStatus(QImage imCacheStatus);
@@ -86,6 +81,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
+    void updateImageCachePosition();
 
 private:
     QMutex mutex;

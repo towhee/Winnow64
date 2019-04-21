@@ -402,6 +402,9 @@ bool IconView::isSelectedItem()
 
 int IconView::getThumbsPerPage()
 {
+/*
+This is not being used.  It has been replaced with setViewportParameters.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -507,8 +510,9 @@ bool IconView::allPageIconsLoaded()
 void IconView::setViewportParameters()
 {
 /*
-Set the firstVisibleRow, lastVisibleRow and thumbsPerPage.  This is called when the application
-show event occurs, when there is a viewport scroll event or when an icon justification happens.
+Set the firstVisibleRow, midVisible, RowlastVisibleRow and thumbsPerPage. This is called when
+the application show event occurs, when there is a viewport scroll event or when an icon
+justification happens.
 */
     {
     #ifdef ISDEBUG
@@ -516,8 +520,6 @@ show event occurs, when there is a viewport scroll event or when an icon justifi
     #endif
     }
     int row;
-//    firstVisibleRow = indexAt(QPoint(0, 0)).row();
-
     firstVisibleRow = 0;
     QRect vRect = visualRect(dm->sf->index(0, 0));
     QRect iconViewRect = viewport()->rect();
@@ -536,15 +538,17 @@ show event occurs, when there is a viewport scroll event or when an icon justifi
     thumbsPerPage = lastVisibleRow - firstVisibleRow + 1;
     midVisibleRow = firstVisibleRow + thumbsPerPage / 2;
 
-//    qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
-//             << "isInitializing =" << G::isInitializing
-//             << "isVisible =" << isVisible()
-//             << "visualRect =" << vRect
-//             << "iconViewRect =" << iconViewRect
-//             << "firstVisibleRow =" << firstVisibleRow
-//             << "lastVisibleRow =" << lastVisibleRow
-//             << "midVisibleRow =" << midVisibleRow
-//             << "thumbsPerPage =" << thumbsPerPage;
+//    bestAspect();
+
+
+    qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
+             << "isInitializing =" << G::isInitializing
+             << "isVisible =" << isVisible()
+             << "firstVisibleRow =" << firstVisibleRow
+             << "lastVisibleRow =" << lastVisibleRow
+             << "midVisibleRow =" << midVisibleRow
+             << "thumbsPerPage =" << thumbsPerPage;
+
 }
 
 bool IconView::isRowVisible(int row)
