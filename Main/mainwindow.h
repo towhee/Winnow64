@@ -344,17 +344,15 @@ private slots:
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();
     void updateIconBestFit();
-    void updateImageCachePosition();
+//    void updateImageCachePosition();  rgh trigger imageCache
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy);
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateMetadataCacheStatus(int row, bool clear = false);
     void updateImageCacheStatus(QString instruction, int row, QString source);
     // caching
+    void updateImageCachePositionAfterDelay();
     void checkCacheComplete();
     void updateMetadataCacheIconviewState();
-    int getThumbsPerPage();
-    int getFirstVisibleThumb();
-    int getLastVisibleThumb();
     bool isCurrentThumbVisible();
     void loadMetadataChunk();
 //    void loadMetadataChunkAfterScroll();

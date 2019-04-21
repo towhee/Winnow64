@@ -1,6 +1,6 @@
 BUGS
-- Test open app in tableview
-- T est open app when both thumb and grid views are hidden
+- Move imageCacheTimer to MdCache
+- Tableview showing tech columns
 - Finish cache preferences
 - Add / update tool tips in preferences and throughout program
 - ImageView::scale comparing floats potentially bad

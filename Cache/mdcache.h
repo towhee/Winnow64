@@ -25,19 +25,22 @@ public:
 
     enum Action {
         NewFolder = 0,
-        MetaChunk = 1,
-        IconChunk = 2,
-        MetaIconChunk = 3,
-        AllMetadata = 4
+        NewFolder2ndPass = 1,
+        MetaChunk = 2,
+        IconChunk = 3,
+        MetaIconChunk = 4,
+        AllMetadata = 5
     };
 
     void loadNewFolder();
+    void loadNewFolder2ndPass();
     void loadMetadataIconChunk(int row);
     void loadAllMetadata();
     void loadIconChunk(int fromRow, int thumbsPerPage);
     void stopMetadateCache();
     bool isAllMetadataLoaded();
     bool isAllIconLoaded();
+    void setRange();
 
     bool restart;
     QMap<int, bool> loadMap;
@@ -60,6 +63,10 @@ public:
     int firstIconVisible;
     int midIconVisible;
     int lastIconVisible;
+    int thumbsPerPage;
+
+    int prevFirstIconVisible;
+    int prevLastIconVisible;
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -67,6 +74,7 @@ protected:
 signals:
     void setIcon(int, QImage);
     void loadImageCache();
+    void updateImageCachePositionAfterDelay();
     void pauseImageCache();
     void resumeImageCache();
     void updateIsRunning(bool, bool, QString);
@@ -74,6 +82,9 @@ signals:
     void checkCacheComplete();
     void selectFirst();
     void showCacheStatus(int, bool);            // row, clear progress bar
+
+private slots:
+    void updateImageCachePosition();
 
 private:
     QMutex mutex;
@@ -83,6 +94,8 @@ private:
     Metadata *metadata;
     ImageCache * imageCacheThread;
     Thumb *thumb;
+//    QTimer *imageCacheTimer;        // start caching after small delay
+
     QString folderPath;
 
     QModelIndex idx;
@@ -107,7 +120,7 @@ private:
     bool isShowCacheStatus;
     bool cacheIcons;
 
-    void setRange();
+//    void setRange();
     void createCacheStatus();
     void updateCacheStatus(int row);
     void readMetadataIconChunk();
