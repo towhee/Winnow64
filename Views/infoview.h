@@ -14,8 +14,8 @@ class InfoView : public QTreeView
 	Q_OBJECT
 
 public:
-    InfoView(QWidget *parent, Metadata *metadata);
-    void updateInfo(const QString &imageFullPath);
+    InfoView(QWidget *parent, DataModel *dm, Metadata *metadata);
+    void updateInfo(const int &row);
     void clearInfo();
 
     // datamodel for metadata to show or hide
@@ -96,6 +96,7 @@ private:
     QModelIndex selectedEntry;
 	QMenu *infoMenu;
 	QAction *copyAction;
+    DataModel *dm;
     Metadata *metadata;
     QString fPath;
 };

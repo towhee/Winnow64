@@ -11,7 +11,7 @@ class Xmp : public QObject
 {
     Q_OBJECT
 public:
-    Xmp(QFile &file, ulong &offset, ulong &nextOffset, bool useSidecar = false,
+    Xmp(QFile &file, uint &offset, uint &nextOffset, bool useSidecar = false,
         QObject *parent = nullptr);
     QString getItem(QByteArray item);
     bool setItem(QByteArray item, QByteArray value);

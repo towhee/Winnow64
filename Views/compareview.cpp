@@ -63,6 +63,7 @@ Synced panning:
 
 CompareView::CompareView(QWidget *parent,
                          QSize gridCell,
+                         DataModel *dm,
                          Metadata *metadata,
                          ImageCache *imageCacheThread,
                          IconView *thumbView)
@@ -75,10 +76,11 @@ CompareView::CompareView(QWidget *parent,
 
     this->mainWindow = parent;
     this->gridCell = gridCell;
+    this->dm = dm;
     this->metadata = metadata;
     this->imageCacheThread = imageCacheThread;
     this->thumbView = thumbView;
-    pixmap = new Pixmap(this, metadata);
+    pixmap = new Pixmap(this, dm, metadata);
     this->setStyleSheet("QGraphicsView  {"
                         "margin:1; "
                         "border-style: solid; "

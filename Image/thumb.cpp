@@ -6,8 +6,9 @@
    and scaled to thumbMax.
 */
 
-Thumb::Thumb(QObject *parent, Metadata *metadata) : QObject(parent)
+Thumb::Thumb(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(parent)
 {
+    this->dm = dm;
     this->metadata = metadata;
 }
 
@@ -31,7 +32,9 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     G::track(__FUNCTION__, "About to QTransform trans");
     #endif
     QTransform trans;
-    int orientation = metadata->getOrientation(fPath);
+    int row = dm->fPathRow[fPath];
+    int orientation = dm->index(row, G::OrientationColumn).data().toInt();
+//    int orientation = metadata->getOrientation(fPath);
     switch(orientation) {
         case 6:
             trans.rotate(90);
@@ -93,9 +96,20 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
 //    qDebug() << "thumbMax" << thumbMax;
     bool success = false;
     QFile imFile(fPath);
+    int row = dm->fPathRow[fPath];
 
-    qint64 offsetThumb = metadata->getOffsetThumbJPG(fPath);
-    qint64 lengthThumb = metadata->getLengthThumbJPG(fPath);  // new
+    // Check if metadata has been cached for this image
+    if (dm->index(row, G::OffsetThumbJPGColumn).data().isNull()) {
+        metadata->loadImageMetadata(fPath, true, false);
+        dm->addMetadataItem(metadata->imageMetadata);
+    }
+    uint offsetThumb = dm->index(row, G::OffsetThumbJPGColumn).data().toUInt();
+    uint lengthThumb = dm->index(row, G::LengthThumbJPGColumn).data().toUInt();
+
+
+//    qint64 offsetThumb = metadata->getOffsetThumbJPG(fPath);
+//    qint64 lengthThumb = metadata->getLengthThumbJPG(fPath);  // new
+
 //    ulong lengthThumb = metadata->getLengthThumbJPG(fPath);  // new
 
     {
@@ -158,8 +172,15 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
     QString ext = fileInfo.completeSuffix().toLower();
 
     bool success = false;
-    ulong offsetThumb = metadata->getOffsetThumbJPG(fPath);
-    ulong lengthThumb = metadata->getLengthThumbJPG(fPath);
+    int row = dm->fPathRow[fPath];
+
+    // Check if metadata has been cached for this image
+    if (dm->index(row, G::OffsetThumbJPGColumn).data().isNull()) {
+        metadata->loadImageMetadata(fPath, true, false);
+        dm->addMetadataItem(metadata->imageMetadata);
+    }
+    uint offsetThumb = dm->index(row, G::OffsetThumbJPGColumn).data().toUInt();
+    uint lengthThumb = dm->index(row, G::LengthThumbJPGColumn).data().toUInt();
 
     /* A raw file may not have any embedded jpg or be corrupted.  */
 
@@ -180,14 +201,15 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
         /* read the raw file thumb using metadata for offset and length of
         embedded JPG.  Check if metadata has been cached for this image.
         */
-        if (metadata->isLoaded(fPath)) {
-            success = loadFromData(fPath, image);
-        }
-        else {
-            err = "Metadata has not been loaded yet - try again";
-            if (G::isThreadTrackingOn) track(fPath, err);
-        }
-//        if (!success) emit updateLoadThumb(fPath, err);
+        success = loadFromData(fPath, image);
+
+//        if (metadata->isLoaded(fPath)) {
+//            success = loadFromData(fPath, image);
+//        }
+//        else {
+//            err = "Metadata has not been loaded yet - try again";
+//            if (G::isThreadTrackingOn) track(fPath, err);
+//        }
     }
     else  {
         // read the image file (supported by Qt), scaling to thumbnail size

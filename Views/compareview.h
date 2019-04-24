@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include "Metadata/metadata.h"
+#include "Datamodel/datamodel.h"
 #include "Cache/imagecache.h"
 #include "Views/iconview.h"
 #include "Utilities/classificationlabel.h"
@@ -13,8 +14,12 @@ class CompareView : public QGraphicsView
     Q_OBJECT
 
 public:
-    CompareView(QWidget *parent, QSize gridCell, Metadata *metadata,
-              ImageCache *imageCacheThread, IconView *thumbView);
+    CompareView(QWidget *parent,
+                QSize gridCell,
+                DataModel *dm,
+                Metadata *metadata,
+                ImageCache *imageCacheThread,
+                IconView *thumbView);
 
     qreal zoom;
     qreal toggleZoom;
@@ -68,6 +73,7 @@ protected:
 private:
     QWidget *mainWindow;
     QSize gridCell;
+    DataModel *dm;
     Metadata *metadata;
     ImageCache *imageCacheThread;
     IconView *thumbView;
