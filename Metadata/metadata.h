@@ -31,9 +31,8 @@ class Metadata : public QObject
 {
     Q_OBJECT
 public:
-    Metadata(QObject *parent = 0);
+    Metadata(QObject *parent = nullptr);
     bool readMetadata(bool report, const QString &path);
-    void reportMetadataAllFiles();
     void reportMetadata();
     void reportMetadataCache(const QString &imageFileName);
     void testNewFileFormat(const QString &path);
@@ -41,21 +40,21 @@ public:
     // variables used to hold data before insertion into QMap metaCache
     int row;                // datamodel row
     bool isPicked;
-    ulong offsetFullJPG;
-    ulong lengthFullJPG;
-    ulong offsetThumbJPG;
-    ulong lengthThumbJPG;
-    ulong offsetSmallJPG;
-    ulong lengthSmallJPG;
+    uint offsetFullJPG;
+    uint lengthFullJPG;
+    uint offsetThumbJPG;
+    uint lengthThumbJPG;
+    uint offsetSmallJPG;
+    uint lengthSmallJPG;
 
-    ulong xmpSegmentOffset;
-    ulong xmpNextSegmentOffset;
+    uint xmpSegmentOffset;
+    uint xmpNextSegmentOffset;
     bool isXmp;
-    ulong orientationOffset;
+    uint orientationOffset;
     int orientation;
     int rotationDegrees;            // additional rotation from edit
-    ulong width;
-    ulong height;
+    uint width;
+    uint height;
     QString dimensions;
 //    QString created;
     QDateTime createdDate;
@@ -87,7 +86,7 @@ public:
     QString _url;                           // original value
     QString cameraSN;
     QString lensSN;
-    ulong shutterCount;
+    uint shutterCount;
 
     ImageMetadata imageMetadata;            // agregate for mdCacher
     // end variables used to hold data
@@ -124,59 +123,8 @@ public:
     void setPick(const QString &imageFileName, bool choice);
     void clear();
     void clearMetadata();
-    bool isLoaded(const QString &imageFullPath);
-    bool isThumbLoaded(const QString &imageFullPath);
-    ulong getOffsetFullJPG(const QString &imageFullPath);
-    ulong getLengthFullJPG(const QString &imageFullPath);
-    ulong getOffsetThumbJPG(const QString &imageFullPath);
-    ulong getLengthThumbJPG(const QString &imageFullPath);
-    ulong getOffsetSmallJPG(const QString &imageFullPath);
-    ulong getLengthSmallJPG(const QString &imageFullPath);
-    ulong getWidth(const QString &imageFullPath);
-    ulong getHeight(const QString &imageFullPath);
-    QString getDimensions(const QString &imageFullPath);
-    int getOrientation(QString &imageFileName);
-    int getRotation(QString &imageFileName);
-    void setRotation(const QString &imageFileName, const int rotationDegrees);
-    bool getPick(const QString &imageFileName);
-//    QString getCreated(const QString &imageFileName);
-    QString getMake(const QString &imageFileName);
-    QString getModel(const QString &imageFileName);
-    QString getExposureTime( const QString &imageFileName);
-    float getExposureTimeNum( const QString &imageFileName);
-    QString getAperture(const QString &imageFileName);
-    qreal getApertureNum(const QString &imageFileName);
-    QString getISO(const QString &imageFileName);
-    int getISONum(const QString &imageFileName);
-    QString getFocalLength(const QString &imageFileName);
-    int getFocalLengthNum(const QString &imageFileName);
-    QString getShootingInfo(const QString &imageFileName);
-    QString getTitle(const QString &imageFileName);
-    void setTitle(const QString &imageFileName, const QString &title);
-    QString getRating(const QString &imageFileName);
-    void setRating(const QString &imageFileName, const QString &rating);
-    QString getLabel(const QString &imageFileName);
-    void setLabel(const QString &imageFileName, const QString &label);
-    QString getLens(const QString &imageFileName);
-    QString getCreator(const QString &imageFileName);
-    void setCreator(const QString &imageFileName, const QString &creator);
-    QString getCopyright(const QString &imageFileName);
-    void setCopyright(const QString &imageFileName, const QString &copyright);
-    QString getEmail(const QString &imageFileName);
-    void setEmail(const QString &imageFileName, const QString &email);
-    QString getUrl(const QString &imageFileName);
-    void setUrl(const QString &imageFileName, const QString &url);
-    QDateTime getCreatedDate(const QString &imageFileName);
-    int getYear(const QString &imageFileName);
-    int getMonth(const QString &imageFileName);
-    int getDay(const QString &imageFileName);
-    bool getImageUnavailable(const QString &imageFileName);
-    bool getThumbUnavailable(const QString &imageFileName);
-    QString getErr(const QString &imageFileName);
-    void setErr(const QString &imageFileName, const QString &err);
-    QString getCopyFileNamePrefix(const QString &imageFileName);
 
-    bool writeMetadata(const QString &imageFileName, QByteArray &buffer);
+    bool writeMetadata(const QString &imageFileName, ImageMetadata m, QByteArray &buffer);
     void setMetadata(const QString &imageFileName);
 
     bool okToReadXmp;

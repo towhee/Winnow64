@@ -38,25 +38,25 @@ class DataModel : public QStandardItemModel
     Q_OBJECT
 public:
     DataModel(QWidget *parent,
-              Metadata *metadata,
+              Metadata *getMetadata,
               ProgressBar *progressBar,
               Filters *filters,
               bool &combineRawJpg);
 
     bool load(QString &dir, bool includeSubfolders);
     void clear();
-    void addMetadata(ProgressBar *progressBar, bool isShowCacheStatus);
+    ImageMetadata getMetadata(QString fPath);
     void updateImageList();
     void sortThumbs(int sortColumn, bool isReverse);
     QModelIndex find(QString fPath);
 
-    MetaHash metaHash;  // ASync
-    ImageHash iconHash;  // ASync
-
     SortFilter *sf;
+    QHash<QString, int> fPathRow;
     QStringList imageFilePathList;
     QDir::SortFlags thumbsSortFlags;
     QString currentFolderPath;
+    QString currentFilePath;            // used in caching to update image cache
+    int currentRow;                     // used in caching to check if new image selected
     bool hasDupRawJpg;
     bool filtersBuilt;
 
@@ -66,16 +66,13 @@ public:
 signals:
     void popup(QString msg, int ms, float opacity);
     void closePopup();
-    void updateMetadata(ImageMetadata m);   //ASync
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void updateIcon(int row, QImage icon);
     void msg(QString message);
-//    void updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString source);
 
 public slots:
     void filteredItemCount();
     void unfilteredItemCount();
-    void processMetadataBuffer();
     void addAllMetadata(bool isShowCacheStatus = false);
     bool addMetadataItem(ImageMetadata m, bool isShowCacheStatus = false);
     void buildFilters();

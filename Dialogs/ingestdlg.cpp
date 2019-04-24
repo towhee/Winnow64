@@ -326,7 +326,8 @@ Each picked image is copied from the source to the destination.
 
            This routine is also used in MW::runExternalApp()
         */
-        if (metadata->writeMetadata(sourcePath, buffer)
+        ;
+        if (metadata->writeMetadata(sourcePath, dm->getMetadata(sourcePath), buffer)
         && metadata->sidecarFormats.contains(suffix)) {
             // copy image file
 //            QFile sourceFile(sourcePath);
@@ -583,11 +584,12 @@ bool IngestDlg::isToken(QString tokenString, int pos)
     return false;
 }
 
-QString IngestDlg::parseTokenString(QFileInfo info,
-                                      QString tokenString)
+QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
 {
     QString fPath = info.absoluteFilePath();
-    createdDate = metadata->getCreatedDate(fPath);
+    ImageMetadata m = dm->getMetadata(fPath);
+    createdDate = m.createdDate;
+    qDebug() << __FUNCTION__ << fPath << createdDate;
     QString s;
     int i = 0;
     while (i < tokenString.length()) {
@@ -625,27 +627,27 @@ QString IngestDlg::parseTokenString(QFileInfo info,
             if (currentToken == "SECOND")
                 tokenResult = createdDate.date().toString("ss");
             if (currentToken == "TITLE")
-                tokenResult = metadata->getTitle(fPath);
+                tokenResult = m.title;
             if (currentToken == "CREATOR")
-                tokenResult = metadata->getCreator(fPath);
+                tokenResult = m.creator;
             if (currentToken == "COPYRIGHT")
-                tokenResult = metadata->getCopyright(fPath);
+                tokenResult = m.copyright;
             if (currentToken == "ORIGINAL FILENAME")
                 tokenResult = info.baseName();
             if (currentToken == "MAKE")
-                tokenResult = metadata->getMake(fPath);
+                tokenResult = m.make;
             if (currentToken == "MODEL")
-                tokenResult = metadata->getModel(fPath);
+                tokenResult = m.model;
             if (currentToken == "DIMENSIONS")
-                tokenResult = metadata->getDimensions(fPath);
+                tokenResult = m.dimensions;
             if (currentToken == "SHUTTER SPEED")
-                tokenResult = metadata->getExposureTime(fPath);
+                tokenResult = m.exposureTime;
             if (currentToken == "APERTURE")
-                tokenResult = metadata->getAperture(fPath);
+                tokenResult = m.aperture;
             if (currentToken == "ISO")
-                tokenResult = metadata->getISO(fPath);
+                tokenResult = m.ISO;
             if (currentToken == "FOCAL LENGTH")
-                tokenResult = metadata->getFocalLength(fPath);
+                tokenResult = m.focalLength;
             // sequence from XX to XXXXXXX.  seqNum must be pre-assigned.
             if (currentToken.left(2) == "XX") {
                 seqWidth = currentToken.length();

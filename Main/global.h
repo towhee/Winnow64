@@ -15,7 +15,7 @@
 #include <QMutex>
 
 #define ICON_MIN	40
-#define ICON_MAX	256  //480
+#define ICON_MAX	480  // 256
 
 namespace G
 {
@@ -35,6 +35,7 @@ namespace G
     not in the same order!
     */
     enum dataModelColumns {
+        // items available for TableView
         PathColumn,
         NameColumn,
         RefineColumn,
@@ -56,13 +57,39 @@ namespace G
         ApertureColumn,
         ShutterspeedColumn,
         ISOColumn,
+        CameraMakeColumn,
         CameraModelColumn,
         LensColumn,
         FocalLengthColumn,
-        TitleColumn,
         CopyrightColumn,
+        TitleColumn,
         EmailColumn,
         UrlColumn,
+        // unavailable for TableView from here on (move items above to show and below to hide)
+        // original values
+        _RatingColumn,
+        _LabelColumn,
+        _CreatorColumn,
+        _TitleColumn,
+        _CopyrightColumn,
+        _EmailColumn,
+        _UrlColumn,
+
+        // binary helpers
+        OffsetFullJPGColumn,
+        LengthFullJPGColumn,
+        OffsetThumbJPGColumn,
+        LengthThumbJPGColumn,
+        OffsetSmallJPGColumn,
+        LengthSmallJPGColumn,
+        XmpSegmentOffsetColumn,
+        XmpNextSegmentOffsetColumn,
+        IsXMPColumn,
+        OrientationOffsetColumn,
+        OrientationColumn,
+        RotationDegreesColumn,
+        ErrColumn,
+        ShootingInfoColumn,
         TotalColumns    // insert additional columns before this
     };
 
@@ -77,6 +104,9 @@ namespace G
     };
 
     extern int maxIconSize;
+    extern int minIconSize;
+    extern int iconWMax;
+    extern int iconHMax;
 
     extern QColor labelNoneColor;
     extern QColor labelRedColor;
@@ -87,6 +117,14 @@ namespace G
 
     extern QStringList ratings;
     extern QStringList labelColors;
+
+    extern QColor progressCurrentColor;
+    extern QColor progressBgColor;
+    extern QColor progressAddFileInfoColor;
+    extern QColor progressAddMetadataColor;
+    extern QColor progressBuildFiltersColor;
+    extern QColor progressTargetColor;
+    extern QColor progressImageCacheColor;
 
     extern QString mode;
     extern QString source;
@@ -106,18 +144,7 @@ namespace G
     extern QElapsedTimer t;
     extern bool isTimer;
 
-    extern int cores;
-    extern bool aSync;
-
     extern void track(QString functionName = "", QString comment = "");
-
-
-//    class Profile
-//    {
-//    private:
-//        static void print(QString functionName, QString comment);
-//        QMutex m;
-//    }
 
 }
 #endif // GLOBAL_H

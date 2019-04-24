@@ -1,63 +1,35 @@
 #include "Views/iconview.h"
 #include "Main/mainwindow.h"
 
-// Trial to prevent unwanted scrolling - did not work
-
-ScrollBar::ScrollBar(QWidget *parent) :
-    QScrollBar(parent)
-{
-
-}
-
-void ScrollBar::setValue(int value)
-{
-    qDebug() << "ScrollBar::setValue" << value;
-    QScrollBar::setValue(value);
-}
-
-bool ScrollBar::event(QEvent *event)
-{
-//    qDebug() << "ScrollBar::event" << event;
-    return QScrollBar::event(event);
-}
-
-void ScrollBar::sliderChange(QAbstractSlider::SliderChange change)
-{
-//    qDebug() << "ScrollBar::sliderChange" << change;
-    QScrollBar::sliderChange(change);
-}
-
 /*  ThumbView Overview
 
-ThumbView manages the list of images within a folder and it's children
-(optional). The thumbView can either be a QListView of file names or thumbnails.
-When a list item is selected the image is shown in imageView.
+ThumbView manages the list of images within a folder and it's children (optional). The
+thumbView can either be a QListView of file names or thumbnails. When a list item is selected
+the image is shown in imageView.
 
-The thumbView is inside a QDockWidget which allows it to dock and be moved and
-resized.
+The thumbView is inside a QDockWidget which allows it to dock and be moved and resized.
 
 ThumbView does the following:
 
-    Manages the file list of eligible images, including attributes for
-    selected and picked. Picked files are shown in green and can be filtered
-    and copied to another folder via the ingestDlg class.
+    Manages the file list of eligible images, including attributes for selected and picked.
+    Picked files are shown in green and can be filtered and copied to another folder via the
+    ingestDlg class.
 
     The thumbViewDelegate class formats the look of the thumbnails.
 
     Sorts the list based on date acquired, filename and forward/reverse
 
-    Provides functions to navigate the list, including current index, next item,
-    previous item, first item, last item and random item.
+    Provides functions to navigate the list, including current index, next item, previous
+    item, first item, last item and random item.
 
-    Changes in selection trigger the MW::fileSelectionChange which loads the new
-    selection in imageView and updates status.
+    Changes in selection trigger the MW::fileSelectionChange which loads the new selection in
+    imageView and updates status.
 
-    The mouse click location within the thumb is used in ImageView to pan a
-    zoomed image.
+    The mouse click location within the thumb is used in ImageView to pan a zoomed image.
 
 QStandardItemModel roles used:
 
-    1   DecorationRole - holds the thumb as an icon
+    1   DecorationRole - holds the thumbnail as an icon
     3   ToolTipRole - the file path
     8   BackgroundRole - the color of the background
    13   SizeHintRole - the QSize of the icon
@@ -73,8 +45,8 @@ QStandardItemModel roles used:
         RatingColumn
         LabelColumn
 
-Note that a "row" in this class refers to the row in the model, which has one
-thumb per row, not the view in the dock, where there can be many thumbs per row
+Note that a "row" in this class refers to the row in the model, which has one thumb per row,
+not the view in the dock, where there can be many thumbs per row
 
 ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
 
@@ -94,35 +66,45 @@ ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
         ● MW thumbDock Signal topLevelChanged
         ● MW::eventFilter() resize event
 
-    The thumbDock dimensions are controlled by the size of its contents - the
-    thumbView. When docked in bottom or top and thumb wrapping is false the
-    maximum height is defined by thumbView->setMaximumHeight().
+    The thumbDock dimensions are controlled by the size of its contents - the thumbView. When
+    docked in bottom or top and thumb wrapping is false the maximum height is defined by
+    thumbView->setMaximumHeight().
 
     ThumbDock resize to fit thumbs:
 
-        This only occurs when the thumbDock is located in the top or bottom
-        dock locations and wrap thumbs is not checked in prefDlg.
+        This only occurs when the thumbDock is located in the top or bottom dock locations and
+        wrap thumbs is not checked in prefDlg.
 
-        When a relocation to the top or bottom occurs the height of the
-        thumbDock is adjusted to fit the current size of the thumbs, depending
-        on whether a scrollbar is required. It can also occur when a new folder
-        is selected and the scrollbar requirement changes, depending on the
-        number of images in the folder. This behavior is managed in
+        When a relocation to the top or bottom occurs the height of the thumbDock is adjusted
+        to fit the current size of the thumbs, depending on whether a scrollbar is required.
+        It can also occur when a new folder is selected and the scrollbar requirement changes,
+        depending on the number of images in the folder. This behavior is managed in
         MW::setThumbDockFeatures.
 
-        Also, when thumbs are resized the height of the thumbDock is adjusted
-        to accomodate the new thumb height.
+        Also, when thumbs are resized the height of the thumbDock is adjusted to accomodate
+        the new thumb height.
 
     Thumb resize to fit in dock:
 
-        This also only occurs when the thumbDock is located in the top or bottom
-        dock locations and wrap thumbs is not checked in prefDlg.  If the
-        thumbDock horizontal splitter is dragged to make the thumbDock taller
-        or shorter, within the minimum and maximum thumbView heights, the thumb
-        sizes are adjusted to fit, factoring in the need for a scrollbar.
+        This also only occurs when the thumbDock is located in the top or bottom dock
+        locations and wrap thumbs is not checked in prefDlg. If the thumbDock horizontal
+        splitter is dragged to make the thumbDock taller or shorter, within the minimum and
+        maximum thumbView heights, the thumb sizes are adjusted to fit, factoring in the need
+        for a scrollbar.
 
         This is triggered by MW::eventFilter() and effectuated in thumbsFit().
 
+Loading icons
+
+    At a minimum we want to load icons for all the visible cells in the IconView.  This is a
+    little tricky to determine when the program is first opened if the thumbView is not
+    visible.  Also, we do not know the best fit size of the thumbs in advance as this is only
+    known after checking the aspect of each image in the folder.
+
+    Consequently an incremental approach is taken in MdCache, where the metadata and icons are
+    loaded.  A default number of icons (250) are loaded and the best aspect is determined.  The
+    number of thumbs visible in the viewport (thumbs per page or tpp) are calculated.  If this
+    is more than the number already read then the additional icons are read in a second pass.
 */
 
 MW *m2;
@@ -168,6 +150,8 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setSpacing(0);
     setLineWidth(0);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+    bestAspectRatio = 1;
 
 //    if (objName == "Thumbnails") {
         horizontalScrollBar()->setObjectName("ThumbViewHorizontalScrollBar");
@@ -250,13 +234,20 @@ possibly altered thumbnail dimensions.
     G::track(__FUNCTION__);
     #endif
     }
+    /* MUST set thumbdock height to fit thumbs BEFORE updating the delegate.  If not, and the
+       thumbView cells are taller than the dock then QIconview::visualRect is not calculated
+       correctly, and scrolling does not work properly */
+    if(objectName() == "Thumbnails") {
+        if (!m2->thumbDock->isFloating())
+            m2->setThumbDockHeight();
+    }
     setSpacing(0);
     iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         0, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
-    if(objectName() == "Thumbnails") {
-        if (!m2->thumbDock->isFloating())
-            emit updateThumbDockHeight();
-    }
+//    if(objectName() == "Thumbnails") {
+//        if (!m2->thumbDock->isFloating())
+//            emit updateThumbDockHeight();
+//    }
 }
 
 void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight,
@@ -413,18 +404,47 @@ bool IconView::isSelectedItem()
 
 int IconView::getThumbsPerPage()
 {
-    int rowWidth = viewport()->width() - G::scrollBarThickness;
-    int cellWidth = getCellSize().width();
-    if (cellWidth == 0) return 0;
+/*
+This is not being used.  It has been replaced with setViewportParameters.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString obj = objectName();
+    QSize vp = viewport()->size();
+//    if ((vp.width() == 0 || vp.height()) == 0 && objectName() == "Grid")
+//        vp = m2->centralWidget->size();
+    int rowWidth = vp.width() - G::scrollBarThickness;
+    QSize thumb(thumbWidth, thumbHeight);
+    QSize cell = iconViewDelegate->getCellSize(thumb);
+
     // thumbs per row
-    int tpr = rowWidth / getCellSize().width() + 1;
-    int cellHeight = getCellSize().height();
-    if (cellHeight == 0) return 0;
+    if (cell.width() == 0) return 0;
+    double tprDbl = (double) rowWidth / cell.width();
+    int tpr = rowWidth / cell.width();
+    if (tprDbl > tpr + .05) tpr += 1;
+
     // rows per page (page = viewport)
-    int rpp = viewport()->height() / cellHeight + 2;
-//    qDebug() << "tpr" << tpr
-//             << "rpp" << rpp;
+    if (cell.height() == 0) return 0;
+    double rppDbl = (double)vp.height() / cell.height();
+    if (rppDbl < 1) rppDbl = 1;
+    // get the remainder, if significant add possibility of 2 extra rows
+    int rpp = (int)rppDbl;
+    if (rpp - rppDbl < -0.05) rpp += 2;
+
+    // thumbs per page
     thumbsPerPage = tpr * rpp;
+    qDebug() << __FUNCTION__ << objectName()
+             << "G::isInitializing" << G::isInitializing
+             << "| G::isNewFolderLoaded" << G::isNewFolderLoaded
+             << "| isVisible = " << isVisible()
+             << "| page size =" << vp
+             << "| cell size =" << cell
+             << "| tpr =" << tpr
+             << "| rpp =" << rpp
+             << "| thumbsPerPage" << thumbsPerPage;
     return thumbsPerPage;
 }
 
@@ -474,34 +494,63 @@ of images in the selected folder.
     return -1;
 }
 
+bool IconView::allPageIconsLoaded()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    bool isLoaded = true;
+    for (int row = firstVisibleRow; row < dm->sf->rowCount(); ++row) {
+        if (dm->index(row, G::PathColumn).data(Qt::DecorationRole).isNull())
+            return false;
+    }
+    return true;
+}
+
 void IconView::setViewportParameters()
 {
 /*
-Set the firstVisibleRow, lastVisibleRow and thumbsPerPage.  This is called when the application
-show event occurs, when there is a viewport scroll event or when an icon justification happens.
-*/    {
+Set the firstVisibleRow, midVisible, RowlastVisibleRow and thumbsPerPage. This is called when
+the application show event occurs, when there is a viewport scroll event or when an icon
+justification happens.
+*/
+    {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
     int row;
-//    firstVisibleRow = indexAt(QPoint(0, 0)).row();
     firstVisibleRow = 0;
-    QRect thumbViewRect = viewport()->rect();
+    QRect vRect = visualRect(dm->sf->index(0, 0));
+    QRect iconViewRect = viewport()->rect();
     for (row = 0; row < dm->sf->rowCount(); ++row) {
-        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
+        if (visualRect(dm->sf->index(row, 0)).intersects(iconViewRect)) {
             firstVisibleRow = row;
             break;
         }
     }
     for (row = firstVisibleRow; row < dm->sf->rowCount(); ++row) {
-        if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
+        if (visualRect(dm->sf->index(row, 0)).intersects(iconViewRect)) {
             lastVisibleRow = row;
         }
         else break;
     }
-    thumbsPerPage = lastVisibleRow - firstVisibleRow;
+    thumbsPerPage = lastVisibleRow - firstVisibleRow + 1;
     midVisibleRow = firstVisibleRow + thumbsPerPage / 2;
+
+//    bestAspect();
+
+
+    qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
+             << "isInitializing =" << G::isInitializing
+             << "isVisible =" << isVisible()
+             << "firstVisibleRow =" << firstVisibleRow
+             << "lastVisibleRow =" << lastVisibleRow
+             << "midVisibleRow =" << midVisibleRow
+             << "thumbsPerPage =" << thumbsPerPage;
+
 }
 
 bool IconView::isRowVisible(int row)
@@ -691,27 +740,6 @@ bool IconView::isThumb(int row)
     return dm->sf->index(row, 0).data(Qt::DecorationRole).isNull();
 }
 
-// ASync
-void IconView::processIconBuffer()
-{
-    static int count = 0;
-    count++;
-    forever {
-        bool more = true;
-        int row;
-        QImage image;
-        iconHash.takeOne(&row, &image, &more);
-#ifdef ISTEST
-        qDebug() << "ThumbView::processIconBuffer  Entry:"
-                 << count
-                 << "row = " << row
-                 << "image size" << image.size();
-#endif
-        if (row >= 0) setIcon(row, image);
-        if (!more) return;
-    }
-}
-
 void IconView::setIcon(int row, QImage thumb)
 {
 /*
@@ -727,19 +755,21 @@ crash.
     G::track(__FUNCTION__);
     #endif
     }
-    QString fPath = dm->index(row, 0).data(G::PathRole).toString();
-//    qDebug() << "IconView::setIcon: " << fPath;
-#ifdef ISTEST
-    qDebug() << "ThumbView::setIcon for row " << row << fPath;
-#endif
+//    QString fPath = dm->index(row, 0).data(G::PathRole).toString();
     QStandardItem *item = new QStandardItem;
     QModelIndex idx = dm->index(row, 0, QModelIndex());
     if (!idx.isValid()) {
-//        qDebug() << "row" << row << "is invalid";
         return;
     }
     item = dm->itemFromIndex(idx);
     item->setIcon(QPixmap::fromImage(thumb));
+    if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
+
+    // for best aspect calc
+    int w = thumb.width();
+    int h = thumb.height();
+    if (w > G::iconWMax) G::iconWMax = w;
+    if (h > G::iconHMax) G::iconHMax = h;
 }
 
 // Used by thumbnail navigation (left, right, up, down etc)
@@ -751,7 +781,6 @@ void IconView::selectThumb(QModelIndex idx)
     #endif
     }
     if (idx.isValid()) {
-//        G::isMouseClick = true;
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
     }
@@ -835,7 +864,6 @@ void IconView::selectFirst()
         G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     selectThumb(0);
 }
 
@@ -1042,15 +1070,11 @@ void IconView::resizeEvent(QResizeEvent *event)
     #endif
     }
     QListView::resizeEvent(event);
+//    qDebug() << __FUNCTION__ << objectName() << viewport()->size();
+//    getThumbsPerPage();
+    if (!G::isInitializing) setViewportParameters();
 
     m2->loadMetadataCacheAfterDelay();
-
-    // prevent a feedback loop where justify() or rejustify() triggers a resize event
-//    if (skipResize) {
-//        skipResize = false;
-//        return;
-//    }
-
     static int prevWidth = 0;
     if (isWrapping() && width() != prevWidth) {
         QTimer::singleShot(500, this, SLOT(rejustify()));
@@ -1072,29 +1096,31 @@ loaded.  Both thumbView and gridView have to be called.
     G::track(__FUNCTION__);
     #endif
     }
-    iconWMax = 0, iconHMax = 0;
     if (thumbWidth > G::maxIconSize) thumbWidth = G::maxIconSize;
     if (thumbHeight > G::maxIconSize) thumbHeight = G::maxIconSize;
-    if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
-    if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        QModelIndex idx = dm->index(row, 0);
-        if (idx.data(Qt::DecorationRole).isNull()) continue;
-        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(G::maxIconSize);
-        if (iconWMax < pm.width()) iconWMax = pm.width();
-        if (iconHMax < pm.height()) iconHMax = pm.height();
-        if (iconWMax == G::maxIconSize && iconHMax == G::maxIconSize) break;
-    }
-    if (iconWMax == iconHMax && thumbWidth > thumbHeight)
+    if (thumbWidth < G::minIconSize) thumbWidth = G::minIconSize;
+    if (thumbHeight < G::minIconSize) thumbHeight = G::minIconSize;
+
+//    G::iconWMax = 0;
+//    G::iconHMax = 0;
+//    for (int row = 0; row < dm->rowCount(); ++row) {
+//        QModelIndex idx = dm->index(row, 0);
+//        if (idx.data(Qt::DecorationRole).isNull()) continue;
+//        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(G::maxIconSize);
+//        if (G::iconWMax < pm.width()) G::iconWMax = pm.width();
+//        if (G::iconHMax < pm.height()) G::iconHMax = pm.height();
+//        if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) break;
+//    }
+
+    if (G::iconWMax == G::iconHMax && thumbWidth > thumbHeight)
         thumbHeight = thumbWidth;
-    if (iconWMax == iconHMax && thumbHeight > thumbWidth)
+    if (G::iconWMax == G::iconHMax && thumbHeight > thumbWidth)
         thumbWidth = thumbHeight;
-    if (iconWMax > iconHMax) thumbHeight = thumbWidth * ((double)iconHMax / iconWMax);
-    if (iconHMax > iconWMax) thumbWidth = thumbHeight * ((double)iconWMax / iconHMax);
+    if (G::iconWMax > G::iconHMax) thumbHeight = thumbWidth * ((double)G::iconHMax / G::iconWMax);
+    if (G::iconHMax > G::iconWMax) thumbWidth = thumbHeight * ((double)G::iconWMax / G::iconHMax);
+
     setThumbParameters();
-//    iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
-//        0, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
-//    setSpacing(0);
+
     bestAspectRatio = (double)thumbHeight / thumbWidth;
 }
 
@@ -1150,7 +1176,7 @@ void IconView::thumbsFit(Qt::DockWidgetArea area)
 
         // padding = nonthumb space is used to rebuild cell after thumb resize to fit
         int padding = cellHeight - thumbHeight;
-        int maxCellHeight = iconViewDelegate->getCellSize(QSize(iconWMax, iconHMax)).height();
+        int maxCellHeight = iconViewDelegate->getCellSize(QSize(G::iconWMax, G::iconHMax)).height();
         cellHeight = ht < maxCellHeight ? ht : maxCellHeight;
         thumbHeight = cellHeight - padding;
         thumbWidth = thumbHeight * aspect;
@@ -1301,7 +1327,7 @@ MW::mouseClickScroll == true.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__, QString::number(row));
+//    G::track(__FUNCTION__, QString::number(row));
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 
