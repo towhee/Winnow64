@@ -151,6 +151,8 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setLineWidth(0);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
+    bestAspectRatio = 1;
+
 //    if (objName == "Thumbnails") {
         horizontalScrollBar()->setObjectName("ThumbViewHorizontalScrollBar");
         verticalScrollBar()->setObjectName("IconViewVerticalScrollBar");
@@ -761,13 +763,13 @@ crash.
     }
     item = dm->itemFromIndex(idx);
     item->setIcon(QPixmap::fromImage(thumb));
-    if (iconWMax == G::maxIconSize && iconHMax == G::maxIconSize) return;
+    if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
 
     // for best aspect calc
     int w = thumb.width();
     int h = thumb.height();
-    if (w > iconWMax) iconWMax = w;
-    if (h > iconHMax) iconHMax = h;
+    if (w > G::iconWMax) G::iconWMax = w;
+    if (h > G::iconHMax) G::iconHMax = h;
 }
 
 // Used by thumbnail navigation (left, right, up, down etc)
@@ -1070,7 +1072,7 @@ void IconView::resizeEvent(QResizeEvent *event)
     QListView::resizeEvent(event);
 //    qDebug() << __FUNCTION__ << objectName() << viewport()->size();
 //    getThumbsPerPage();
-    setViewportParameters();
+    if (!G::isInitializing) setViewportParameters();
 
     m2->loadMetadataCacheAfterDelay();
     static int prevWidth = 0;
@@ -1096,26 +1098,26 @@ loaded.  Both thumbView and gridView have to be called.
     }
     if (thumbWidth > G::maxIconSize) thumbWidth = G::maxIconSize;
     if (thumbHeight > G::maxIconSize) thumbHeight = G::maxIconSize;
-    if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
-    if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
+    if (thumbWidth < G::minIconSize) thumbWidth = G::minIconSize;
+    if (thumbHeight < G::minIconSize) thumbHeight = G::minIconSize;
 
-//    iconWMax = 0;
-//    iconHMax = 0;
+//    G::iconWMax = 0;
+//    G::iconHMax = 0;
 //    for (int row = 0; row < dm->rowCount(); ++row) {
 //        QModelIndex idx = dm->index(row, 0);
 //        if (idx.data(Qt::DecorationRole).isNull()) continue;
 //        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(G::maxIconSize);
-//        if (iconWMax < pm.width()) iconWMax = pm.width();
-//        if (iconHMax < pm.height()) iconHMax = pm.height();
-//        if (iconWMax == G::maxIconSize && iconHMax == G::maxIconSize) break;
+//        if (G::iconWMax < pm.width()) G::iconWMax = pm.width();
+//        if (G::iconHMax < pm.height()) G::iconHMax = pm.height();
+//        if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) break;
 //    }
 
-    if (iconWMax == iconHMax && thumbWidth > thumbHeight)
+    if (G::iconWMax == G::iconHMax && thumbWidth > thumbHeight)
         thumbHeight = thumbWidth;
-    if (iconWMax == iconHMax && thumbHeight > thumbWidth)
+    if (G::iconWMax == G::iconHMax && thumbHeight > thumbWidth)
         thumbWidth = thumbHeight;
-    if (iconWMax > iconHMax) thumbHeight = thumbWidth * ((double)iconHMax / iconWMax);
-    if (iconHMax > iconWMax) thumbWidth = thumbHeight * ((double)iconWMax / iconHMax);
+    if (G::iconWMax > G::iconHMax) thumbHeight = thumbWidth * ((double)G::iconHMax / G::iconWMax);
+    if (G::iconHMax > G::iconWMax) thumbWidth = thumbHeight * ((double)G::iconWMax / G::iconHMax);
 
     setThumbParameters();
 
@@ -1174,7 +1176,7 @@ void IconView::thumbsFit(Qt::DockWidgetArea area)
 
         // padding = nonthumb space is used to rebuild cell after thumb resize to fit
         int padding = cellHeight - thumbHeight;
-        int maxCellHeight = iconViewDelegate->getCellSize(QSize(iconWMax, iconHMax)).height();
+        int maxCellHeight = iconViewDelegate->getCellSize(QSize(G::iconWMax, G::iconHMax)).height();
         cellHeight = ht < maxCellHeight ? ht : maxCellHeight;
         thumbHeight = cellHeight - padding;
         thumbWidth = thumbHeight * aspect;

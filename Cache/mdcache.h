@@ -26,17 +26,17 @@ public:
     enum Action {
         NewFolder = 0,
         NewFolder2ndPass = 1,
-        MetaChunk = 2,
+        NewFileSelected = 2,
         IconChunk = 3,
-        MetaIconChunk = 4,
+        Scroll = 4,
         AllMetadata = 5
     };
 
     void loadNewFolder();
     void loadNewFolder2ndPass();
     void loadMetadataIconChunk(int row);
+    void fileSelectionChange(int row);
     void loadAllMetadata();
-    void loadIconChunk(int fromRow, int thumbsPerPage);
     void stopMetadateCache();
     bool isAllMetadataLoaded();
     bool isAllIconLoaded();
@@ -45,12 +45,12 @@ public:
     bool restart;
     QMap<int, bool> loadMap;
 
-    bool metadataCacheAll = false;
+//    bool metadataCacheAll = false;
     bool iconsCacheAll = false;
 
-    int metadataChunkSize = 250;
+    int metadataChunkSize;
+    int defaultMetadataChunkSize = 250;
     int metadataCacheAllIfLessThan = 250;
-    bool metadataCacheChunks = true;
 
     int iconPagesToCacheAhead = 2;
     int iconsCacheAllIfLessThan = 250;
@@ -79,12 +79,9 @@ signals:
     void resumeImageCache();
     void updateIsRunning(bool, bool, QString);
     void updateIconBestFit();
-    void checkCacheComplete();
+    void metadataCache2ndPass();
     void selectFirst();
     void showCacheStatus(int, bool);            // row, clear progress bar
-
-private slots:
-    void updateImageCachePosition();
 
 private:
     QMutex mutex;
@@ -127,7 +124,6 @@ private:
     void readAllMetadata();
     void readIconChunk();
     void iconCleanup();
-    void setIconTargets(int start, int end);
 
 //     bool isShowCacheStatus;
 

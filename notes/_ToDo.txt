@@ -1,5 +1,6 @@
 BUGS
-- Move imageCacheTimer to MdCache
+- Problems with D:\Pictures\Prints
+- Problems with D:\Programming\Icons\16x16\actions
 - Tableview showing tech columns
 - Finish cache preferences
 - Add / update tool tips in preferences and throughout program
@@ -35,6 +36,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Recent folders not trimmed to maxRecentFolders
 - Wait for threads to finish when close main window
 - When so settings file count not showing when start
 - For very large folders only load one or two grids of images at a time

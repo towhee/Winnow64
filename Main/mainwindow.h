@@ -351,7 +351,7 @@ private slots:
     void updateImageCacheStatus(QString instruction, int row, QString source);
     // caching
     void updateImageCachePositionAfterDelay();
-    void checkCacheComplete();
+    void metadataCache2ndPass();
     void updateMetadataCacheIconviewState();
     bool isCurrentThumbVisible();
     void loadMetadataChunk();

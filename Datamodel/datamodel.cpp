@@ -360,6 +360,7 @@ bool DataModel::addFileData()
 
     // rgh not working
     emptyPixMap = QPixmap::fromImage(emptyImg).scaled(G::maxIconSize, G::maxIconSize);
+
     for (fileIndex = 0; fileIndex < fileInfoList.count(); ++fileIndex) {
 
         if (timeToQuit) return false;
@@ -471,6 +472,17 @@ bool DataModel::addFileData()
 ImageMetadata DataModel::getMetadata(QString fPath)
 {
     int row = fPathRow[fPath];
+
+    // check if metadata loaded for this row
+    if (index(row, G::CreatedColumn).data().isNull()) {
+        QFileInfo fileInfo(fPath);
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+            metadata->imageMetadata.row = row;
+            addMetadataItem(metadata->imageMetadata);
+        }
+    }
+
+    qDebug() << __FUNCTION__ << "row =" << row;
     ImageMetadata m;
 
     m.row = row;
