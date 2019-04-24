@@ -13,17 +13,32 @@ of memory, so the metadata is read in chunks. Each chunk size (number of image f
 greater of the default value of maxChunkSize or the number of thumbs visible in the GridView
 viewport.
 
+          startRow    firstVisibleRow     lastVisibleRow
+0         |           |                   |          endRow                      dm->rowCount()
+|         |           |                   |          |                           |
+v         v           v                   v          v                           v
+----------xxxxxxxxxxxxvvvvvvvvvvvvvvvvvvvvvxxxxxxxxxxx----------------------------
+
+- = all items in datamodel
+x = icon cache range
+v = visible icons
+
 To keep it simple and minimize several threads trying to access the same image file at the same
 time the following order of events occurs when Winnow is started or a new folder is selected:
 
     • Winnow is started and an instance of MetadataCache is created (metadataCacheThread). An
-      instance of ImageCache also created (imageCacheThread).
+    instance of ImageCache also created (imageCacheThread).
 
-    • After the show event, the IconView first/last/thumbsPerPage is determined and
-      metadataCacheThread::loadNewMetadataCache runs.
+    • The user selects a folder or a previous session folder is selected if set in
+    preferences. MW::folderSelectionChange starts MetadataCache::loadNewFolder.
 
-    • MW::loadNewMetadataCache starts metadataCacheThread and metadataCacheThread::run reads a
-      chunk of image files, loading the metadata and icons to the datamodel.
+    • MetadataCache::loadNewFolder starts metadataCacheThread and metadataCacheThread::run
+    reads a chunk of image files, loading the metadata and icons to the datamodel. The number
+    of icons required to fill the grid or thumb views is not known until the image previews
+    have been read and the best aspect is determined. A second pass is required.
+
+    • MetadataCache::loadNewFolder2ndPass completes processing metadata and icons required in
+    the new folder.
 
     • After the chunk is loaded metadataCacheThread emits a signal to start imageCacheThread.
 
@@ -32,7 +47,7 @@ time the following order of events occurs when Winnow is started or a new folder
 When Winnow is running and a new folder is selected
 
     • A new folder is selected and MW::folderSelectionChange executes, which in turn, starts
-      metadataCacheThread::loadNewMetadataCache.
+      metadataCacheThread::loadNewFolder.
 
     • loadNewMetadataCache starts metadataCacheThread::run, which reads a chunk of image
       files, loading the metadata and icons to the datamodel.
@@ -58,9 +73,23 @@ When the user selects a thumbnail or a filter or sort has been invoked.
 
     • loadMetadataIconChunk is called and any addtional metadata or icons are loaded.
 
-    • imageCacheThread->updateImageCachePosition is called and the image cache is updated.
+    • a signal is emitted and imageCacheThread->updateImageCachePosition is called and the
+    image cache is updated.
 
     • Load ImageView either from the cache or directly from the file if not cached.
+
+Thread management
+
+    Thread collisions and preformance degradation occur if metadataCacheThread and
+    imageCacheThread run concurrently. The metadata cache thread is initiated from MW and the
+    image cache thread is always initiated from this thread - MdCache.
+
+    Both threads are initiated from singleShot timers.  If file selection is changing rapidly
+    (user holding down arrow key) or rapid scrolling is occurring then the timer prevents
+    cache updates until a pause occurs.
+
+    Timers cannot be initiated in another thread, so MW must be signaled to execute a 2nd pass
+    of the metadata cache for a new folder and when the image cache is initiated.
 
 */
 
@@ -80,12 +109,6 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
     abort = false;
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
-
-//    imageCacheTimer = new QTimer(this);
-//    imageCacheTimer->setSingleShot(true);
-
-//    connect(imageCacheTimer, SIGNAL(timeout()), this,
-//            SLOT(updateImageCachePosition()));
 
     qRegisterMetaType<QVector<int>>();
 }
@@ -115,7 +138,6 @@ void MetadataCache::stopMetadateCache()
         abort = false;
         emit updateIsRunning(false, false, __FUNCTION__);
     }
-//    loadMap.clear();
 }
 
 bool MetadataCache::isAllMetadataLoaded()
@@ -157,9 +179,14 @@ void MetadataCache::loadNewFolder()
 /*
 This function is called from MW::folderSelectionChange and will not have any filtering so we
 can use the datamodel dm directly. The greater of:
- - the number of visible cells in the gridView or
- - maxChunkSize
-metadata and icons are loaded into the datamodel.
+
+    - the number of visible cells in the gridView or
+    - maxChunkSize
+
+metadata and icons are loaded into the datamodel. The number of visible cells are not known
+yet because IconView::bestAspect has not been determined.
+
+MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
 */
     {
     #ifdef ISDEBUG
@@ -178,6 +205,7 @@ metadata and icons are loaded into the datamodel.
     G::allMetadataLoaded = false;
     iconsCached.clear();
     foundItemsToLoad = true;
+    metadataChunkSize = defaultMetadataChunkSize;
     currentRow = 0;
     previousRow = 0;
     startRow = 0;
@@ -259,9 +287,9 @@ progress bar update is more important then use the datamodel function dm::addAll
 void MetadataCache::loadMetadataIconChunk(int row)
 {
 /*
-This function is called from MW::fileSelectionChange, MW::filterChange and resize and scroll
-events in gridView and thumbView.  A chunk of metadata and icons are added to the datamodel.
-If there has been a file selection change then the image cache is updated.
+This function is called from MW::filterChange and resize and scroll events in gridView and
+thumbView. A chunk of metadata and icons are added to the datamodel. If there has been a file
+selection change then the image cache is updated.
 */
     {
     #ifdef ISDEBUG
@@ -280,7 +308,7 @@ If there has been a file selection change then the image cache is updated.
 
     currentRow = row;
     foundItemsToLoad = false;
-    if (currentRow <= prevFirstIconVisible && currentRow >= prevLastIconVisible) {
+    if (firstIconVisible < prevFirstIconVisible || lastIconVisible > prevLastIconVisible) {
         setRange();
         for (int i = startRow; i < endRow; ++i) {
             if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
@@ -291,17 +319,20 @@ If there has been a file selection change then the image cache is updated.
         }
     }
     qDebug() << __FUNCTION__ << "startRow" << startRow;
-    action = Action::MetaIconChunk;
+    action = Action::Scroll;
     start(TimeCriticalPriority);
 }
 
-void MetadataCache::loadIconChunk(int fromRow, int thumbsPerPage)
+void MetadataCache::fileSelectionChange(int row)
 {
-/* Not used at present */
+/*
+This function is called from MW::fileSelectionChange. A chunk of metadata and icons are added
+to the datamodel. The image cache is updated.
+*/
     {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
     }
     if (isRunning()) {
         mutex.lock();
@@ -311,9 +342,22 @@ void MetadataCache::loadIconChunk(int fromRow, int thumbsPerPage)
         wait();
     }
     abort = false;
-    action = Action::IconChunk;
-    setIconTargets(startRow , thumbsPerPage);
-    start(IdlePriority);
+
+    currentRow = row;
+    foundItemsToLoad = false;
+    if (currentRow <= prevFirstIconVisible || currentRow >= prevLastIconVisible) {
+        setRange();
+        for (int i = startRow; i < endRow; ++i) {
+            if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
+                foundItemsToLoad = true;
+            if (dm->sf->index(i, G::CreatedColumn).data().isNull())
+                foundItemsToLoad = true;
+            if (foundItemsToLoad) break;
+        }
+    }
+    qDebug() << __FUNCTION__ << "startRow" << startRow;
+    action = Action::NewFileSelected;
+    start(TimeCriticalPriority);
 }
 
 void MetadataCache::setRange()
@@ -325,6 +369,9 @@ void MetadataCache::setRange()
     // total per page (tpp)
     tpp = lastIconVisible - firstIconVisible + 1;
     if (dtpp > tpp) tpp = dtpp;
+
+    // if icons visible geater than chunk size then increase chunk size
+    if (tpp > metadataChunkSize) metadataChunkSize = tpp;
 
     // first to cache (startRow)
     startRow = firstIconVisible - tpp;
@@ -341,62 +388,9 @@ void MetadataCache::setRange()
               << "firstIconVisible =" << firstIconVisible
               << "lastIconVisible =" << lastIconVisible
               << "tpp =" << tpp
+              << "metadataChunkSize =" << metadataChunkSize
               << "startRow =" << startRow
               << "endRow =" << endRow;
-}
-
-void MetadataCache::setIconTargets(int start, int thumbsPerPage)
-{
-/*
-Icon target range is the rows where we want to see an icon (thumbnail). For example, when the
-user scrolls through the gridView, the icons visible in the gridView need to be loaded. The
-targets are assigned so we can cache the icons in advance. The number of icons visible in the
-gridView or thumbView (whichever is greater) is thumbsPerPage. The strategy is to cache n
-pages of icons before and after the current page, where n = iconPagesToCacheAhead.
-
-In addition, the thresholds recacheIfGreaterThan and recacheIfLessThan prevent caching
-operations while the current item selected is in the middle 2/3 of the target range to prevent
-inefficient caching.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    int rowCount = dm->sf->rowCount();
-    if (thumbsPerPage == 0) thumbsPerPage = metadataChunkSize;
-    iconTargetStart = start - thumbsPerPage * iconPagesToCacheAhead;
-    if (iconTargetStart < 0) iconTargetStart = 0;
-
-    if (iconsCacheAllIfLessThan > rowCount) {
-        iconTargetEnd = rowCount;
-    }
-    else {
-        iconTargetEnd = start + thumbsPerPage * (iconPagesToCacheAhead + 1);
-        if (iconTargetEnd > rowCount) iconTargetEnd = rowCount;
-        if (rowCount < iconsCacheAllIfLessThan) iconTargetEnd = rowCount;
-    }
-
-    // reset range for loadMetadataIconChunk to include icon target range
-    if (iconTargetStart < startRow) startRow = iconTargetStart;
-    if (iconTargetEnd > endRow) endRow = iconTargetEnd;
-
-    // set thresholds before calling MW::loadMetadataChunk
-    int targetSize = iconTargetEnd - iconTargetStart;
-
-    if (iconTargetStart > 0) recacheIfLessThan = iconTargetStart + targetSize / 2 - targetSize / 7;
-    else recacheIfLessThan = 0;
-    if (iconTargetEnd < rowCount) recacheIfGreaterThan = startRow + targetSize / 2 + targetSize / 7;
-    else recacheIfGreaterThan = rowCount;
-
-//    qDebug() << __FUNCTION__
-//             << "start" << start
-//             << "thumbsPerPage" << thumbsPerPage
-//             << "iconTargetStart" << iconTargetStart
-//             << "iconTargetEnd" << iconTargetEnd
-//             << "recacheIfGreaterThan" << recacheIfGreaterThan
-//             << "recacheIfLessThan" << recacheIfLessThan;
-
 }
 
 void MetadataCache::iconCleanup()
@@ -417,17 +411,13 @@ that have icons are tracked in the list iconsCached as the dm row (not dm->sf pr
     while (i.hasNext()) {
         i.next();
         int row = i.value();
-        if (row < iconTargetStart || row > iconTargetEnd) {
+//        if (row < iconTargetStart || row > iconTargetEnd) {
+        if (row < startRow || row > endRow) {
             i.remove();
             dm->itemFromIndex(dm->index(row, 0))->setIcon(nullPm);
         }
     }
     mutex.unlock();
-}
-
-void MetadataCache::updateImageCachePosition()
-{
-    imageCacheThread->updateImageCachePosition();
 }
 
 void MetadataCache::readAllMetadata()
@@ -510,14 +500,14 @@ startRow and endRow.
 //    G::t.restart();
     int count = 0;
 
-    if (metadataCacheAll) {
-        startRow = 0;
-        endRow = dm->rowCount();
-    }
+//    if (metadataCacheAll) {
+//        startRow = 0;
+//        endRow = dm->rowCount();
+//    }
 
-    qDebug() << __FUNCTION__
-             << "startRow =" << startRow
-             << "endRow =" << endRow;
+//    qDebug() << __FUNCTION__
+//             << "startRow =" << startRow
+//             << "endRow =" << endRow;
 
     for (row = startRow; row < endRow; ++row) {
         if (abort) {
@@ -545,28 +535,6 @@ startRow and endRow.
         mutex.unlock();
         count++;
 
-        // skip loading icon?
-//        if (!iconsCacheAll) {
-//            if (row < iconTargetStart) continue;
-//            if (row > iconTargetEnd) continue;
-//        }
-
-/*      Debugging stuff
-        QStandardItem *item = new QStandardItem;
-        item = dm->itemFromIndex(idx);
-
-        idx.data(Qt::DecorationRole) = QVariant(QIcon, QIcon(availableSizes[normal,Off]=(QSize(256, 144)),cacheKey=0x15000000000))
-        qDebug() << "MetadataCache::loadMetadataIconChunk  "
-                 << "row =" << row
-                 << "dmRow =" << dmRow
-                 << "iconTargetStart =" << iconTargetStart
-                 << "iconTargetEnd =" << iconTargetEnd
-                 << "idx.data(Qt::DecorationRole) =" << idx.data(Qt::DecorationRole);
-
-                 << "item->icon() =" << item
-                 << fPath;
-                 */
-
         // load icon
         mutex.lock();
         if (idx.data(Qt::DecorationRole).isNull()) {
@@ -579,9 +547,11 @@ startRow and endRow.
         }
         mutex.unlock();
     }
-//    qint64 ms = t.elapsed();
-//    qreal msperfile = (float)ms / count;
-//    qDebug() << "MetadataCache::loadMetadataIconChunk for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
+    /*
+    qint64 ms = t.elapsed();
+    qreal msperfile = (float)ms / count;
+    qDebug() << "MetadataCache::loadMetadataIconChunk for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
+    */
     return;
 }
 
@@ -602,7 +572,7 @@ If there has been a file selection change and not a new folder then update image
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
 
-        qDebug() << __FUNCTION__ << "startRow" << startRow;
+//        qDebug() << __FUNCTION__ << "startRow" << startRow;
 
         mutex.lock();
         int rowCount = dm->rowCount();
@@ -622,8 +592,11 @@ If there has been a file selection change and not a new folder then update image
         // read a chunk of icons
         if (action == Action::IconChunk) readIconChunk();
 
+        // read next metadata and icon chunk after a new file is selected
+        if (action == Action::NewFileSelected) readMetadataIconChunk();
+
         // read next metadata and icon chunk
-        if (action == Action::MetaIconChunk) readMetadataIconChunk();
+        if (action == Action::Scroll) readMetadataIconChunk();
 
         // read metadata and icons in a new folder - 1st pass
         if (action == Action::NewFolder) readMetadataIconChunk();
@@ -651,10 +624,8 @@ If there has been a file selection change and not a new folder then update image
         }
 
         // clean up orphaned icons outside icon range
-        if (action == Action::MetaIconChunk || action == Action::IconChunk) {
-//            iconCleanup();
-            // resume image caching if it was interrupted
-//            imageCacheThread->resumeImageCache();
+        if (action > Action::NewFolder2ndPass) {
+            iconCleanup();
         }
 
         if (action == Action::NewFolder) {
@@ -663,15 +634,15 @@ If there has been a file selection change and not a new folder then update image
 //            emit updateIconBestFit();
             // scroll to first image
             emit selectFirst();
-            // start image caching (full size)
-//            emit loadImageCache();
-            // make a second pass if more than 250 thumbs visible in gridView or thumbView
-            emit checkCacheComplete();
+            /* make a second pass if more than 250 thumbs visible in gridView or thumbView and
+               so can calc best aspect */
+            emit metadataCache2ndPass();
         }
 
         // update status of metadataThreadRunningLabel in statusbar
         emit updateIsRunning(false, true, __FUNCTION__);
 
+        // resume image caching if it was interrupted
         if (imageCachePaused) imageCacheThread->resumeImageCache();
     }
     /*
@@ -686,10 +657,7 @@ If there has been a file selection change and not a new folder then update image
     }
 
     // if a file selection change and not a new folder then update image cache
-    if (action == Action::MetaIconChunk && dm->currentRow != previousRow && G::isNewFolderLoaded) {
+    if (action == Action::NewFileSelected && dm->currentRow != previousRow && G::isNewFolderLoaded) {
         emit updateImageCachePositionAfterDelay();
-//        imageCacheThread->updateImageCachePosition(/*dm->currentFilePath*/);
-//        imageCacheTimer->start(50);
     }
-
 }

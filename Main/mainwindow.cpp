@@ -88,9 +88,6 @@ CACHING
 • When a new folder or a new file is selected, or when a scroll event occurs in IconView
   then the metadata cache (metadataCacheThread) is started.
 
-• The metadataCacheThread tests if a new file has been selected.  If so, then the
-  imageCacheThread is started and the metadata and icon chunks are read.
-
 • If it is a new folder metadataCacheThread emits a signal back to
   MW::loadImageCacheForNewFolder, where some housekeeping occurs and the ImageCache is
   initialized and started in imageCacheThread.  The full size images are cached.
@@ -103,7 +100,9 @@ CACHING
   MW::loadMetadataCacheAfterDelay.  The delay insures that is the user is rapidly scrolling
   then the next scroll event supercedes the prior and the metadataCacheThread is only
   restarted when there is a pause or the scrolling is slow.  In this scenario the
-  imageCacheThread is not restarted becasue a new image has not been selected.
+  imageCacheThread is not restarted because a new image has not been selected.
+
+* see top of mdcache.cpp comments for more detail
 
 ***********************************************************************************************
 */
@@ -846,10 +845,10 @@ void MW::folderSelectionChange()
     updateStatus(false, "Collecting metadata for all images in folder(s)");
 
     // reset for bestAspect calc
-    thumbView->iconWMax = G::minIconSize;
-    thumbView->iconHMax = G::minIconSize;
-    gridView->iconWMax = G::minIconSize;
-    gridView->iconHMax = G::minIconSize;
+//    G::iconWMax = G::minIconSize;
+//    G::iconHMax = G::minIconSize;
+//    G::iconWMax = G::maxIconSize;
+//    G::iconHMax = G::maxIconSize;
 
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
     and full size embedded jpgs and the image width and height, req'd in imageCache to manage
@@ -991,13 +990,11 @@ delegate use of the current index must check the row.
 
     // update caching
     if (G::isNewFolderLoaded) {
-//        metadataCacheThread->loadMetadataIconChunk(currentRow);
-        loadMetadataChunk();
-//        imageCacheTimer->start(50);
+        updateMetadataCacheIconviewState();
+        metadataCacheThread->fileSelectionChange(currentRow);
     }
 
     // initialize the thumbDock
-//    if (!G::isNewFolderLoaded) {
     if (G::isInitializing) {
         if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
             dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
@@ -1007,6 +1004,8 @@ delegate use of the current index must check the row.
         else {
             thumbView->setWrapping(true);
         }
+        qDebug() << __FUNCTION__ << "G::isInitializing = true    "
+                 << "gridView->thumbWidth =" << gridView->thumbWidth;
     }
 
     // load thumbnail if not cached yet (when loading new folder)
@@ -1137,7 +1136,7 @@ void MW::updateImageCachePositionAfterDelay()
     imageCacheTimer->start(50);
 }
 
-void MW::checkCacheComplete()
+void MW::metadataCache2ndPass()
 {
     {
     #ifdef ISDEBUG
@@ -1145,6 +1144,7 @@ void MW::checkCacheComplete()
     #endif
     }
     qDebug() << __FUNCTION__;
+//    updateIconBestFit();
     updateMetadataCacheIconviewState();
     metadataCacheThread->loadNewFolder2ndPass();
 }
@@ -3399,8 +3399,8 @@ void MW::createCaching()
             this, SLOT(loadImageCacheForNewFolder()));
 
     // 2nd pass loading image cache for a new folder
-    connect(metadataCacheThread, SIGNAL(checkCacheComplete()),
-            this, SLOT(checkCacheComplete()));
+    connect(metadataCacheThread, SIGNAL(metadataCache2ndPass()),
+            this, SLOT(metadataCache2ndPass()));
 
     // when a new image has been selected trigger a delayed update to image cache
     connect(metadataCacheThread, SIGNAL(updateImageCachePositionAfterDelay()),
@@ -4735,16 +4735,23 @@ void MW::addRecentFolder(QString fPath)
     G::track(__FUNCTION__);
     #endif
     }
-    if (!recentFolders->contains(fPath) && fPath != "") recentFolders->prepend(fPath);
-    int count = recentFolders->count();
+    if (recentFolders->contains(fPath) || fPath == "") return;
+    recentFolders->prepend(fPath);
+    int n = recentFolders->count();
     for (int i = 0; i < maxRecentFolders; i++) {
-        if (i < count) {
+        if (i < n) {
             recentFolderActions.at(i)->setText(recentFolders->at(i));
             recentFolderActions.at(i)->setVisible(true);
         }
         else {
             recentFolderActions.at(i)->setText("Future recent folder" + QString::number(i));
             recentFolderActions.at(i)->setVisible(false);
+        }
+    }
+    // if already maxRecentFolders trim excess items
+    if (n > maxRecentFolders) {
+        for (int i = n; i > maxRecentFolders; --i) {
+            recentFolders->removeAt(i - 1);
         }
     }
 }
@@ -6149,7 +6156,6 @@ re-established when the application is re-opened.
     setting->setValue("checkIfUpdate", checkIfUpdate);
     setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
-//    setting->setValue("showImageCount", showImageCountAction->isChecked());
     setting->setValue("combineRawJpg", combineRawJpg);
     setting->setValue("useWheelToScroll", imageView->useWheelToScroll);
 
@@ -6167,17 +6173,12 @@ re-established when the application is re-opened.
     setting->setValue("filenameTemplateSelected", filenameTemplateSelected);
 
     // thumbs
-//    setting->setValue("thumbSpacing", thumbView->thumbSpacing);
-//    setting->setValue("thumbPadding", thumbView->thumbPadding);
     setting->setValue("thumbWidth", thumbView->thumbWidth);
     setting->setValue("thumbHeight", thumbView->thumbHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showThumbLabels", thumbView->showThumbLabels);
-//    setting->setValue("wrapThumbs", thumbView->wrapThumbs);
 
     // grid
-//    setting->setValue("thumbSpacingGrid", gridView->thumbSpacing);
-//    setting->setValue("thumbPaddingGrid", gridView->thumbPadding);
     setting->setValue("thumbWidthGrid", gridView->thumbWidth);
     setting->setValue("thumbHeightGrid", gridView->thumbHeight);
     setting->setValue("labelFontSizeGrid", gridView->labelFontSize);
@@ -6353,8 +6354,10 @@ re-established when the application is re-opened.
     /* save recent folders */
     setting->beginGroup("RecentFolders");
     setting->remove("");
-    for (int i=0; i < recentFolders->count(); i++) {
-        setting->setValue("recentFolder" + QString::number(i+1),
+    QString leadingZero;
+    for (int i = 0; i < recentFolders->count(); i++) {
+        i < 9 ? leadingZero = "0" : leadingZero = "";
+        setting->setValue("recentFolder" + leadingZero + QString::number(i+1),
                           recentFolders->at(i));
     }
     setting->endGroup();
@@ -6940,7 +6943,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         // if thumbDock area changed then set dock height to cell size
 
         // get max icon height based on best aspect
-        int hMax = thumbView->iconHMax;
+        int hMax = G::iconHMax;
 
         // max and min cell heights (icon plus padding + name text)
         int maxHt = thumbView->iconViewDelegate->getCellSize(QSize(hMax, hMax)).height();
@@ -6951,7 +6954,6 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 
         // new cell height
         int cellHt = thumbView->iconViewDelegate->getCellHeightFromThumbHeight(thumbView->thumbHeight);
-//        int cellHt = thumbView->getCellSize().height();
 
         //  new dock height based on new cell size
         int newThumbDockHeight = cellHt + G::scrollBarThickness;
@@ -8857,8 +8859,15 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    updateMetadataCacheIconviewState();
-    metadataCacheThread->setRange();
+    qDebug();
+    for (int i = 0; i < pickStack->length(); ++i) {
+        QString s0 = QString::number(i);
+        QString s1 = pickStack->at(i).status;
+        QString s2 = pickStack->at(i).path;
+        qDebug() << s0.leftJustified(4)
+                 << s1.leftJustified(6)
+                 << s2;
+    }
 }
 
 // End MW
