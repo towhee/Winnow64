@@ -30,7 +30,7 @@ Example sidecar file that lightroom successfully reads:
 </x:xmpmeta>
 */
 
-Xmp::Xmp(QFile &file, ulong &offset, ulong &nextOffset, bool useSidecar,
+Xmp::Xmp(QFile &file, uint &offset, uint &nextOffset, bool useSidecar,
          QObject *parent) :  QObject(parent)
 {
     // no file xmp data, use the sidecar skeleton

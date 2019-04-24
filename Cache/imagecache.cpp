@@ -10,7 +10,7 @@ ImageCache::ImageCache(QObject *parent, DataModel *dm, Metadata *metadata) : QTh
     // Pixmap is a class that loads either a QPixmap or QImage from a file
     this->dm = dm;
     this->metadata = metadata;
-    getImage = new Pixmap(this, metadata);
+    getImage = new Pixmap(this, dm, metadata);
 
     restart = false;
     abort = false;
@@ -261,9 +261,33 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
     std::sort(cacheItemList.begin(), cacheItemList.end(), &ImageCache::prioritySort);
 
     // assign target files to cache and build a list by priority
-    // also build a list of files to dechache
+    // also build a list of files to decache
     uint sumMB = 0;
-    for (int i=0; i<cache.totFiles; ++i) {
+    for (int i = 0; i < cache.totFiles; ++i) {
+        // check if item metadata has been loaded and will be targeted
+        if (sumMB < cache.maxMB && !cacheItemList.at(i).isMetadata) {
+            // need to get metadata to calc memory req'd to cached
+
+            // file path and dm source row in case filtered or sorted
+            mutex.lock();
+            QModelIndex idx = dm->sf->index(i, 0);
+            int dmRow = dm->sf->mapToSource(idx).row();
+            QString fPath = idx.data(G::PathRole).toString();
+
+            // load metadata
+            if (dm->sf->index(i, G::CreatedColumn).data().isNull()) {
+                QFileInfo fileInfo(fPath);
+                if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+                    metadata->imageMetadata.row = dmRow;
+                    dm->addMetadataItem(metadata->imageMetadata);
+                    ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
+                    ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
+                    cacheItemList[i].sizeMB = (float)w * h / 256000;
+                    cacheItemList[i].isMetadata = w > 0;
+                }
+            }
+            mutex.unlock();
+        }
         sumMB += cacheItemList.at(i).sizeMB;
         if (sumMB < cache.maxMB) {
             cacheItemList[i].isTarget = true;
@@ -281,18 +305,18 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
     std::sort(cacheItemList.begin(), cacheItemList.end(), &ImageCache::keySort);
 
     int i;
-    for (i=0; i<cache.totFiles; ++i) {
+    for (i = 0; i < cache.totFiles; ++i) {
         if (cacheItemList.at(i).isTarget) {
             cache.targetFirst = i;
             break;
         }
     }
-    for (int j=i; j<cache.totFiles; ++j) {
+    for (int j = i; j < cache.totFiles; ++j) {
         if (!cacheItemList.at(j).isTarget) {
-            cache.targetLast = j-1;
+            cache.targetLast = j - 1;
             return;
         }
-        cache.targetLast = cache.totFiles-1;
+        cache.targetLast = cache.totFiles - 1;
     }
 }
 
@@ -359,6 +383,8 @@ void ImageCache::setPriorities(int key)
     }
     int aheadPos;
     int behindPos;
+
+//    qDebug() << __FUNCTION__ << "key =" << key << "cacheItemList.length() =" << cacheItemList.length();
     cacheItemList[key].priority = 0;
     int i = 1;                  // start at 1 because current pos preset to zero
     if (cache.isForward) {
@@ -530,6 +556,7 @@ void ImageCache::reportCache(QString title)
     std::cout << reportString.toStdString() << std::flush;
 
     for (int i=0; i<cache.totFiles; ++i) {
+        int row = dm->fPathRow[cacheItemList.at(i).fName];
         rpt.flush();
         reportString = "";
         rpt.setFieldWidth(9);
@@ -542,8 +569,10 @@ void ImageCache::reportCache(QString title)
             << cacheItemList.at(i).isTarget
             << cacheItemList.at(i).isCached
             << cacheItemList.at(i).sizeMB
-            << metadata->getWidth(cacheItemList.at(i).fName)
-            << metadata->getHeight(cacheItemList.at(i).fName);
+            << dm->index(row, G::WidthColumn).data().toInt()
+            << dm->index(row, G::HeightColumn).data().toInt();
+//        << metadata->getWidth(cacheItemList.at(i).fName)
+//                << metadata->getHeight(cacheItemList.at(i).fName);
         rpt.setFieldWidth(3);
         rpt << "   ";
         rpt.setFieldAlignment(QTextStream::AlignLeft);
@@ -649,6 +678,26 @@ It is built from dm->sf (sorted and/or filtered datamodel).
     cache.folderMB = qRound(folderMB);
 }
 
+void ImageCache::updateImageCacheList()
+{
+
+    for (int i = 0; i < dm->sf->rowCount(); ++i) {
+        if (!cacheItemList[i].isMetadata) {
+            // assume 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024000
+            ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
+            ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
+            cacheItemList[i].sizeMB = (float)w * h / 256000;
+//            if (cache.usePreview) {
+//                QSize p = scalePreview(w, h);
+//                w = p.width();
+//                h = p.height();
+//                cacheItem.sizeMB += (float)w * h / 256000;
+//            }
+            cacheItemList[i].isMetadata = w > 0;
+        }
+    }
+}
+
 void ImageCache::initImageCache(int &cacheSizeMB,
      bool &isShowCacheStatus, int &cacheWtAhead,
      bool &usePreview, int &previewWidth, int &previewHeight)
@@ -658,7 +707,6 @@ void ImageCache::initImageCache(int &cacheSizeMB,
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
 
@@ -705,7 +753,7 @@ When various image cache parameters are changed in preferences they are updated 
     cache.previewSize = QSize(previewWidth, previewHeight);
 }
 
-void ImageCache::updateImageCachePosition(QString &fPath)
+void ImageCache::updateImageCachePosition(/*QString &fPath*/)
 {
 /*
 Updates the cache for the current image in the data model. The cache key is set, forward or
@@ -719,32 +767,44 @@ Apparently there needs to be a slight delay before calling.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     // just in case stopImageCache not called before this
     if (isRunning()) pauseImageCache();
 
+    Q_ASSERT(cacheItemList.length() > 0);
     // get cache item key
-    int i;
-    for (i = 0; i < cacheItemList.count(); i++) {
-        if (cacheItemList.at(i).fName == fPath) {
+    cache.key = 0;
+    for (int i = 0; i < cacheItemList.count(); i++) {
+        if (cacheItemList.at(i).fName == dm->currentFilePath) {
             cache.key = i;
             break;
         }
     }
+    Q_ASSERT(cache.key < cacheItemList.length());
+
 
     cache.isForward = (cache.key >= cache.prevKey);
     // reverse if at end of list
     if (cache.key == cacheItemList.count() - 1) cache.isForward = false;
     cache.prevKey = cache.key;
+
+    // may be new metadata for image size
+    updateImageCacheList();
     cache.currMB = getImCacheSize();
 
     setPriorities(cache.key);
     setTargetRange();
 
-    if (cache.isShowCacheStatus) emit showCacheStatus("Update all rows", i, "ImageCache::updateImageCachePosition");
+    if (cache.isShowCacheStatus) {
+        emit showCacheStatus("Update all rows",
+                             cache.key,
+                             "ImageCache::updateImageCachePosition");
+    }
+
+    qDebug() << __FUNCTION__ << dm->currentFilePath;
 
     // if all images are cached then we're done
     if (cacheUpToDate()) {
+//        qDebug() << __FUNCTION__ << "cache up-to-date - quitting image cache";
         /* instance where go from blank folder to one image folder.  The first image is
            directly loaded (and cached) in ImageView and the file selection position changes,
            so this function is called, but the cache is up-to-date.  Make sure the image cache
@@ -754,6 +814,8 @@ Apparently there needs to be a slight delay before calling.
         emit updateIsRunning(false, true);  // bool isRunning, bool showCacheLabel
         return;
     }
+
+//     reportCache();
 
     start(IdlePriority);
 }
@@ -954,8 +1016,8 @@ void ImageCache::run()
         if(cache.isShowCacheStatus)
             emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
         prevFileName = fPath;
+        checkForOrphans();
     }
-    checkForOrphans();
     if(cache.isShowCacheStatus)
         emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
 

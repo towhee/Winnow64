@@ -3,7 +3,8 @@
 
 #include <QtWidgets>
 #include <QHash>
-#include "Metadata/metadata.h"
+#include "Datamodel/datamodel.h"
+//#include "Metadata/metadata.h"
 #include "Cache/imagecache.h"
 #include "Views/iconview.h"
 #include "Views/infostring.h"
@@ -19,6 +20,7 @@ public:
     ImageView(QWidget *parent,
               QWidget *centralWidget,
               Metadata *metadata,
+              DataModel *dm,
               ImageCache *imageCacheThread,
               IconView *thumbView,
               InfoString *infoString,
@@ -107,6 +109,7 @@ private:
     QWidget *mainWindow;
     QWidget *centralWidget;
     Metadata *metadata;
+    DataModel *dm;
     ImageCache *imageCacheThread;
     IconView *thumbView;
     InfoString *infoString;

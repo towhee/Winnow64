@@ -34,11 +34,6 @@
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
 
-// ASync
-//#include "Cache/mdcachemgr.h"
-//#include "Cache/mdcacher.h"
-//#include "Cache/threadsafehash.h"
-
 #include "ingestdlg.h"
 #include "aboutdlg.h"
 #include "Image/thumb.h"
@@ -255,18 +250,6 @@ public:
     QString css1;               // stylesheet text
     QString css2;               // stylesheet text
 
-    // Colors
-    // app
-    QColor appBgColor = QColor(85,85,85);
-    // progress bar
-    QColor currentColor = QColor(158,200,158);
-    QColor progressBgColor = QColor(150,150,150);       // light green
-    QColor targetColor = QColor(125,125,125);           // dark gray
-    QColor metadataCacheColor = QColor(100,100,150);    // purple
-    QColor imageCacheColor = QColor(108,150,108);       // green
-    QColor addMetadataColor = QColor(100,150,150);      // torquois
-//    QColor addMetadataColor = QColor(220,165,60);     // yellow
-
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
     void moveEvent(QMoveEvent *event);
@@ -300,20 +283,6 @@ public slots:
     void test();                    // for debugging
     void test2();
     void testNewFileFormat();       // for debugging
-
-//// testing async
-
-//    void go();
-//    void doTasks(const QStringList &sourceFiles);
-//    bool checkIfDone();
-
-//private:
-//    volatile bool stopped;
-//    int total;
-//    int done;
-//    QVector<int> chunkSizes(const int size, const int chunkCount);
-
-//// end texting async
 
 signals:
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
@@ -375,15 +344,15 @@ private slots:
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();
     void updateIconBestFit();
-    void updateImageCachePosition();
+//    void updateImageCachePosition();  rgh trigger imageCache
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy);
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateMetadataCacheStatus(int row, bool clear = false);
     void updateImageCacheStatus(QString instruction, int row, QString source);
     // caching
-    int getThumbsPerPage();
-    int getFirstVisibleThumb();
-    int getLastVisibleThumb();
+    void updateImageCachePositionAfterDelay();
+    void metadataCache2ndPass();
+    void updateMetadataCacheIconviewState();
     bool isCurrentThumbVisible();
     void loadMetadataChunk();
 //    void loadMetadataChunkAfterScroll();
@@ -391,7 +360,7 @@ private slots:
     void loadMetadataCacheAfterDelay();
 //    void loadMetadataCache(int startRow = 0);
     void loadEntireMetadataCache();
-    void loadImageCache();
+    void loadImageCacheForNewFolder();
     void buildFilters();
     void loadFilteredImageCache();
     void addNewBookmark();
@@ -815,10 +784,8 @@ private:
     bool wasThumbDockVisible;
     bool isUpdatingState;
 
-    bool isLoadSettings;
+    bool simulateJustInstalled;
     bool isSettings;
-    bool isFirstTimeNoSettings;
-//    bool isInitializing;
     bool isStartSilentCheckForUpdates = true;    // flag true until startup check for updates has been completed
     bool isStressTest;
     bool hasGridBeenActivated;
@@ -834,8 +801,6 @@ private:
 
     QString imageCacheFilePath;
     QTimer *imageCacheTimer;
-
-    QElapsedTimer cacheTimer;       // temp for testing
 
     bool newScrollSignal;           // used for scroll signal delay in case many/sec
     QTimer *metadataCacheScrollTimer;
