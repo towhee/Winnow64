@@ -39,6 +39,9 @@ TableView::TableView(DataModel *dm)
 //    FileItemDelegate *fileItemDelegate = new FileItemDelegate;
 //    setItemDelegateForColumn(G::PathColumn, fileItemDelegate);
 
+    CreatedItemDelegate *createdItemDelegate = new CreatedItemDelegate;
+    setItemDelegateForColumn(G::CreatedColumn, createdItemDelegate);
+
     RefineItemDelegate *refineItemDelegate = new RefineItemDelegate;
     setItemDelegateForColumn(G::RefineColumn, refineItemDelegate);
 
@@ -109,6 +112,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::ApertureColumn) return fm.width("=Aperture=");
     if (column == G::ShutterspeedColumn) return fm.width("=1/8000 sec=");
     if (column == G::ISOColumn) return fm.width("999999");
+    if (column == G::CameraMakeColumn) return fm.width("Nikon ========");
     if (column == G::CameraModelColumn) return fm.width("Nikon D850============");
     if (column == G::LensColumn) return fm.width("Lens======================");
     if (column == G::FocalLengthColumn) return fm.width("=Focal length=");
@@ -176,7 +180,8 @@ QSettings has been loaded.
         QString columnName = dm->horizontalHeaderItem(i)->text();
         ok->insertRow(i - 1);
         ok->setData(ok->index(i - 1, 0), columnName);
-        ok->setData(ok->index(i - 1, 1), true);
+        bool show = i <= G::UrlColumn;
+        ok->setData(ok->index(i - 1, 1), show);
     }
 
     connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
@@ -210,6 +215,15 @@ and this slot is then signalled to update which fields are visible.
 ////    int width = fm.width("2019-02-25_0001.jpg    ");
 ////    return QSize(width, option.rect.height());
 //}
+
+CreatedItemDelegate::CreatedItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString CreatedItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+    return value.toDateTime().toString("yyyy-MM-dd hh:mm:ss");
+}
 
 RefineItemDelegate::RefineItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 {

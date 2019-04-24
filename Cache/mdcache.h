@@ -25,30 +25,32 @@ public:
 
     enum Action {
         NewFolder = 0,
-        MetaChunk = 1,
-        IconChunk = 2,
-        MetaIconChunk = 3,
-        AllMetadata = 4,
-        Resume = 5
+        NewFolder2ndPass = 1,
+        NewFileSelected = 2,
+        IconChunk = 3,
+        Scroll = 4,
+        AllMetadata = 5
     };
 
-    void loadNewFolder(int thumbsPerPage/*, bool isShowCacheStatus*/);
-    void loadMetadataIconChunk(int fromRow, int endRow);
+    void loadNewFolder();
+    void loadNewFolder2ndPass();
+    void loadMetadataIconChunk(int row);
+    void fileSelectionChange(int row);
     void loadAllMetadata();
-    void loadIconChunk(int fromRow, int thumbsPerPage);
     void stopMetadateCache();
     bool isAllMetadataLoaded();
     bool isAllIconLoaded();
+    void setRange();
 
     bool restart;
     QMap<int, bool> loadMap;
 
-    bool metadataCacheAll = false;
+//    bool metadataCacheAll = false;
     bool iconsCacheAll = false;
 
-    int metadataChunkSize = 250;
+    int metadataChunkSize;
+    int defaultMetadataChunkSize = 250;
     int metadataCacheAllIfLessThan = 250;
-    bool metadataCacheChunks = true;
 
     int iconPagesToCacheAhead = 2;
     int iconsCacheAllIfLessThan = 250;
@@ -57,20 +59,29 @@ public:
     int recacheIfLessThan;
     int recacheIfGreaterThan;
 
+    // Iconview state
+    int firstIconVisible;
+    int midIconVisible;
+    int lastIconVisible;
+    int thumbsPerPage;
+
+    int prevFirstIconVisible;
+    int prevLastIconVisible;
+
 protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
     void setIcon(int, QImage);
     void loadImageCache();
+    void updateImageCachePositionAfterDelay();
     void pauseImageCache();
     void resumeImageCache();
     void updateIsRunning(bool, bool, QString);
-//    void updateAllMetadataLoaded(bool);
     void updateIconBestFit();
+    void metadataCache2ndPass();
     void selectFirst();
-    void updateFilters();
-    void showCacheStatus(int, bool);            // row, renew progress bar
+    void showCacheStatus(int, bool);            // row, clear progress bar
 
 private:
     QMutex mutex;
@@ -80,12 +91,17 @@ private:
     Metadata *metadata;
     ImageCache * imageCacheThread;
     Thumb *thumb;
+//    QTimer *imageCacheTimer;        // start caching after small delay
+
     QString folderPath;
 
     QModelIndex idx;
+    int currentRow;                             // current index row in datamodel
     int startRow;
     int endRow;
     int row;
+    int previousRow = -1;
+    int tpp;                                    // thumbsPerPage;
 
     // icon caching
     int iconTargetStart;
@@ -93,23 +109,21 @@ private:
     QList<int> iconsCached;
 
     bool foundItemsToLoad;
-    bool imageCacheWasRunning;
     Action action;
     QSize thumbMax;         // rgh review hard coding thumb size
     QString err;            // type of error
 
-//    bool allMetadataLoaded;
     bool allIconsLoaded;
     bool isShowCacheStatus;
     bool cacheIcons;
 
+//    void setRange();
     void createCacheStatus();
     void updateCacheStatus(int row);
     void readMetadataIconChunk();
     void readAllMetadata();
     void readIconChunk();
     void iconCleanup();
-    void setIconTargets(int start, int end);
 
 //     bool isShowCacheStatus;
 

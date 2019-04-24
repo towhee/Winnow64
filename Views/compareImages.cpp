@@ -91,7 +91,10 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 
     for (int i = 0; i < count; ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
-        QSize imSize(metadata->getWidth(fPath), metadata->getHeight(fPath));
+        int row = dm->fPathRow[fPath];
+        int width = dm->index(row, G::WidthColumn).data().toInt();
+        int height = dm->index(row, G::HeightColumn).data().toInt();
+        QSize imSize(width, height);
         sizeList->append(imSize);
     }
 
@@ -107,7 +110,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 //        QModelIndex idxPick = dm->sf->index(idxPath.row(), G::PickColumn);
         QString fPath = selection.at(i).data(G::PathRole).toString();
         // create new compareView and append to list
-        imList->append(new CompareView(this, gridCell, metadata, imageCacheThread, thumbView));
+        imList->append(new CompareView(this, gridCell, dm, metadata, imageCacheThread, thumbView));
         imList->at(i)->loadImage(selection.at(i), fPath);
         // set toggleZoom value (from QSettings)
         imList->at(i)->toggleZoom = toggleZoom;

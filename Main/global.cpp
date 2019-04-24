@@ -12,21 +12,27 @@ namespace G
 
     QStringList ratings, labelColors;
 
+    QColor progressCurrentColor = QColor(158,200,158);           // Light green
+    QColor progressBgColor = QColor(150,150,150);                // Light gray
+    QColor progressAppBgColor = QColor(85,85,85);                // Darker gray
+    QColor progressAddFileInfoColor = QColor(85,100,115);        // Slate blue
+    QColor progressAddMetadataColor = QColor(100,100,150);       // Purple
+    QColor progressBuildFiltersColor = QColor(75,75,125);        // Darker purple
+    QColor progressTargetColor = QColor(125,125,125);            // Gray
+    QColor progressImageCacheColor = QColor(108,150,108);        // Green
+
     QString mode;                       // In MW: Loupe, Grid, Table or Compare
     QString source;                     // GridMouseClick, ThumbMouseClick, TableMouseClick
 
     int maxIconSize;
+    int minIconSize = 40;
+    int iconWMax;                       // widest icon found in datamodel
+    int iconHMax;                       // highest icon found in datamodel
 
     QString fontSize;
 
     int actualDevicePixelRatio;
     bool allMetadataLoaded;
-
-    int cores;
-    bool aSync;
-
-    int cores;
-    bool aSync;
 
     // not persistent
     bool isThreadTrackingOn;
@@ -40,15 +46,11 @@ namespace G
 
     void track(QString functionName, QString comment)
     {
-//        QString time = QString::number(G::t.nsecsElapsed());
         QString time = QString("%L1").arg(t.nsecsElapsed());
         t.restart();
 
-//        QString initializing = isInitializing ? "initalizing = true" : "initializing = false";
-
         qDebug() << time.rightJustified(15, ' ') << " "
                  << functionName.leftJustified(50, '.') << " "
-//                 << initializing.leftJustified(25)
                  << comment;
     }
 
