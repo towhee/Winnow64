@@ -800,8 +800,6 @@ Apparently there needs to be a slight delay before calling.
                              "ImageCache::updateImageCachePosition");
     }
 
-    qDebug() << __FUNCTION__ << dm->currentFilePath;
-
     // if all images are cached then we're done
     if (cacheUpToDate()) {
 //        qDebug() << __FUNCTION__ << "cache up-to-date - quitting image cache";

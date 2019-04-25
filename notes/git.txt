@@ -1,3 +1,5 @@
+From GitHub Menu > Repository > Open in Git Bash
+
 user name = towhee
 password = Qtc++2013
 
