@@ -482,7 +482,6 @@ ImageMetadata DataModel::getMetadata(QString fPath)
         }
     }
 
-    qDebug() << __FUNCTION__ << "row =" << row;
     ImageMetadata m;
 
     m.row = row;

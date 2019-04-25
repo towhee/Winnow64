@@ -589,7 +589,7 @@ QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
     QString fPath = info.absoluteFilePath();
     ImageMetadata m = dm->getMetadata(fPath);
     createdDate = m.createdDate;
-    qDebug() << __FUNCTION__ << fPath << createdDate;
+//    qDebug() << __FUNCTION__ << fPath << createdDate;
     QString s;
     int i = 0;
     while (i < tokenString.length()) {

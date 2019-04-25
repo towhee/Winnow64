@@ -845,10 +845,8 @@ void MW::folderSelectionChange()
     updateStatus(false, "Collecting metadata for all images in folder(s)");
 
     // reset for bestAspect calc
-//    G::iconWMax = G::minIconSize;
-//    G::iconHMax = G::minIconSize;
-//    G::iconWMax = G::maxIconSize;
-//    G::iconHMax = G::maxIconSize;
+    G::iconWMax = G::minIconSize;
+    G::iconHMax = G::minIconSize;
 
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
     and full size embedded jpgs and the image width and height, req'd in imageCache to manage
@@ -1006,8 +1004,7 @@ delegate use of the current index must check the row.
         else {
             thumbView->setWrapping(true);
         }
-        qDebug() << __FUNCTION__ << "G::isInitializing = true    "
-                 << "gridView->thumbWidth =" << gridView->thumbWidth;
+        if (thumbDock->isFloating()) thumbView->setWrapping(true);
     }
 
     // load thumbnail if not cached yet (when loading new folder)
@@ -1138,15 +1135,14 @@ void MW::updateImageCachePositionAfterDelay()
     imageCacheTimer->start(50);
 }
 
-void MW::metadataCache2ndPass()
+void MW::loadMetadataCache2ndPass()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
-//    updateIconBestFit();
+    updateIconBestFit();
     updateMetadataCacheIconviewState();
     metadataCacheThread->loadNewFolder2ndPass();
 }
@@ -1411,8 +1407,6 @@ memory has been consumed or all the images are cached.
 
     // have to wait until image caching thread running before setting flag
     metadataLoaded = true;
-
-    qDebug() << __FUNCTION__ << fPath;
 
     // tell image cache new position
     imageCacheThread->updateImageCachePosition(/*fPath*/);
@@ -3402,8 +3396,8 @@ void MW::createCaching()
             this, SLOT(loadImageCacheForNewFolder()));
 
     // 2nd pass loading image cache for a new folder
-    connect(metadataCacheThread, SIGNAL(metadataCache2ndPass()),
-            this, SLOT(metadataCache2ndPass()));
+    connect(metadataCacheThread, SIGNAL(loadMetadataCache2ndPass()),
+            this, SLOT(loadMetadataCache2ndPass()));
 
     // when a new image has been selected trigger a delayed update to image cache
     connect(metadataCacheThread, SIGNAL(updateImageCachePositionAfterDelay()),
@@ -6937,7 +6931,7 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
+    qDebug() << __FUNCTION__ << "isFloat" << isFloat;
     if (isFloat) {
         thumbView->setMaximumHeight(100000);
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -7011,6 +7005,8 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         maxHt += G::scrollBarThickness;
         minHt += G::scrollBarThickness;
 
+        if (maxHt <= minHt) maxHt = G::maxIconSize;
+
         // new cell height
         int cellHt = thumbView->iconViewDelegate->getCellHeightFromThumbHeight(thumbView->thumbHeight);
 
@@ -7023,14 +7019,14 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
         resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
-
-/*        qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
+        /*
+        qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
              << "***  thumbView Ht =" << thumbView->height()
              << "maxHt ="  << maxHt << "minHt =" << minHt
              << "thumbHeight =" << thumbView->thumbHeight
              << "newThumbDockHeight" << newThumbDockHeight
              << "scrollBarHeight =" << G::scrollBarThickness;
-          */
+        */
     }
 
     /* Must be docked left or right or is floating.  Turn horizontal scrollbars off.  Turn
@@ -8920,6 +8916,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    thumbView->setWrapping(true);
+    return;
     qDebug();
     for (int i = 0; i < pickStack->length(); ++i) {
         QString s0 = QString::number(i);
