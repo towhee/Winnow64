@@ -103,7 +103,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
             }
             err = "Illegal offset to image or no length available";
             break;
-         }
+        }
         while (msDelay < totDelay && !success);
     }
     else {

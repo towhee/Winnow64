@@ -73,6 +73,13 @@ public:
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
+class IngestedItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit IngestedItemDelegate(QObject* parent = 0);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
+};
+
 class DimensionItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:

@@ -1,4 +1,5 @@
 BUGS
+- Cache after change filters not working
 - Problems with D:\Pictures\Prints
 - Problems with D:\Programming\Icons\16x16\actions
 - Tableview showing tech columns

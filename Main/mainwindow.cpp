@@ -896,8 +896,8 @@ delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-//    qDebug() << current.row() << current.column();
-
+    if (ignoreSelectionChange) return;
+//    qDebug() << __FUNCTION__ << current;
     bool isStart = false;
 
     if(!isCurrentFolderOkay) return;
@@ -1298,9 +1298,9 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
              */
 
     // show cache amount ie "4.2 of 16GB" in info panel
-    QString cacheAmount = QString::number(double(imageCacheThread->cache.currMB)/1000,'f',1)
+    QString cacheAmount = QString::number(double(imageCacheThread->cache.currMB)/1024,'f',1)
             + " of "
-            + QString::number(imageCacheThread->cache.maxMB/1000) + "GB";
+            + QString::number(imageCacheThread->cache.maxMB/1024) + "GB";
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
 
@@ -4667,8 +4667,6 @@ void MW::refine()
     G::track(__FUNCTION__);
     #endif
     }
-    uncheckAllFilters();
-
     // Are there any picks to refine?
     bool isPick = false;
     for (int row = 0; row < dm->rowCount(); ++row) {
@@ -4682,6 +4680,31 @@ void MW::refine()
         popup("There are no picks to refine", 2000, 0.75);
         return;
     }
+
+//    QMessageBox::StandardButton reply;
+//    reply = QMessageBox::question(this, "Refine",
+//                                  "This operation will clear all your picks.  Please confirm.",
+//                                  QMessageBox::Yes|QMessageBox::No);
+//    if (reply == QMessageBox::No) return;
+
+    QMessageBox msgBox;
+    int msgBoxWidth = 300;
+    msgBox.setWindowTitle("Refine Picks");
+    msgBox.setText("This operation filter on your picks and then clear your picks.");
+    msgBox.setInformativeText("Do you want continue?");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+    msgBox.setDefaultButton(QMessageBox::Yes);
+    msgBox.setIcon(QMessageBox::Warning);
+    QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
+                "QPushButton:default {background-color: rgb(68,95,118);}";
+    msgBox.setStyleSheet(s);
+    QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+    QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
+    layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+    int ret = msgBox.exec();
+    if (ret == QMessageBox::Cancel) return;
+
+    uncheckAllFilters();
 
     // clear refine = pick
     pushPick("Begin multiple select");
@@ -7735,15 +7758,33 @@ void MW::setStatus(QString state)
     stateLabel->setText("    " + state + "    ");
 }
 
-//void MW::toggleThumbWrap()
-//{
-//    thumbView->wrapThumbs = !thumbView->wrapThumbs;
-//    thumbsWrapAction->setChecked(thumbView->wrapThumbs);
-//    thumbView->setWrapping(thumbView->wrapThumbs);
-//}
-
-void MW::togglePick()   // not currently used
+void MW::setIngested()
 {
+    ignoreSelectionChange = true;
+    int prevRow = currentRow;
+    saveSelection();
+    selectionModel->clear();
+    for (int row = 0; row < dm->sf->rowCount(); ++row) {
+        if (dm->sf->index(row, G::PickColumn).data().toString() == "true") {
+            QModelIndex idx = dm->sf->index(row, G::IngestedColumn);
+            dm->sf->setData(idx, "true");
+            selectionModel->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        }
+    }
+    togglePick();
+    recoverSelection();
+    thumbView->selectThumb(prevRow);
+    ignoreSelectionChange = false;
+}
+
+void MW::togglePick()
+{
+/*
+If the selection has any images that are not picked then pick them all.
+If the entire selection was already picked then unpick them all.
+If the entire selection is unpicked then pick them all.
+Push the changes onto the pick history stack.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -7753,10 +7794,6 @@ void MW::togglePick()   // not currently used
     QModelIndexList idxList = selectionModel->selectedRows();
     QString pickStatus;
 
-    /* If the selection has any images that are not picked then pick them all.
-       If the entire selection was already picked then unpick them all.  If
-       the entire selection is unpicked then pick them all.
-    */
     bool foundFalse = false;
     // check if any images are not picked in the selection
     foreach (idx, idxList) {
@@ -7876,12 +7913,18 @@ qulonglong MW::memoryReqdForPicks()
 
 void MW::ingest()
 {
+/*
+
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << "autoIngestFolderPath" << autoIngestFolderPath;
+    static QString prevSourceFolder = "";
+    static QString baseFolderDescription = "";
+    if (prevSourceFolder != currentViewDir) baseFolderDescription = "";
+
     if (thumbView->isPick()) {
         ingestDlg = new IngestDlg(this,
                                   combineRawJpg,
@@ -7894,6 +7937,7 @@ void MW::ingest()
                                   ingestRootFolder2,
                                   manualFolderPath,
                                   manualFolderPath2,
+                                  baseFolderDescription,
                                   pathTemplates,
                                   filenameTemplates,
                                   pathTemplateSelected,
@@ -7909,14 +7953,23 @@ void MW::ingest()
         connect(ingestDlg, SIGNAL(revealIngestLocation(QString)),
                 this, SLOT(revealInFileBrowser(QString)));
 
-        if(ingestDlg->exec() && autoEjectUsb) ejectUsb(currentViewDir);;
+        bool ingested = ingestDlg->exec();
         delete ingestDlg;
-        qDebug() << "autoIngestFolderPath" << autoIngestFolderPath;
+
+        if (!ingested) return;
+
+        if (autoEjectUsb) ejectUsb(currentViewDir);;
+
+        prevSourceFolder = currentViewDir;
 
         if(gotoIngestFolder) {
             fsTree->select(lastIngestLocation);
             folderSelectionChange();
+            return;
         }
+
+        // set the ingested flags and clear the pick flags
+        setIngested();
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
@@ -8916,7 +8969,28 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    thumbView->setWrapping(true);
+    imageCacheThread->reportCache();
+
+    int w = 8288;
+    int h = 5520;
+    float x = (float)w * h / 262144;
+    qDebug();
+    qDebug() << imageCacheThread->imCache.count() << "images"
+             << x << "MB per image";
+    QHashIterator<QString, QImage> i(imageCacheThread->imCache);
+    while (i.hasNext()) {
+        i.next();
+        qDebug() << i.key() << ": " << i.value();
+    }
+
+//    for (int row = 0; row < imageCacheThread->imCache.count(); ++row) {
+//        QString fPath = dm->index(row, 0).data(G::PathRole).toString();
+    //    imageCacheThread->imCache.remove(fPath);
+//        qDebug() << row << fPath;
+//    }
+    return;
+
+    setIngested();
     return;
     qDebug();
     for (int i = 0; i < pickStack->length(); ++i) {

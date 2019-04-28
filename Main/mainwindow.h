@@ -76,6 +76,7 @@ public:
             "Includes links to download and video tutorials.</p></body></html>";
 
     bool isShift;               // used when opening if shift key pressed
+    bool ignoreSelectionChange = false;
 
     int copyCutCount;   // req'd?
     QTextStream rpt;
@@ -374,6 +375,7 @@ private slots:
     void setShootingInfoVisibility();
     void selectShootingInfo();
 //    void toggleThumbWrap();
+    void setIngested();
     void togglePick();
     void pushPick(QString fPath, QString status = "true");
     void popPick();
