@@ -282,7 +282,7 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
                     dm->addMetadataItem(metadata->imageMetadata);
                     ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
                     ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
-                    cacheItemList[i].sizeMB = (float)w * h / 256000;
+                    cacheItemList[i].sizeMB = (float)w * h / 262144;
                     cacheItemList[i].isMetadata = w > 0;
                 }
             }
@@ -659,16 +659,16 @@ It is built from dm->sf (sorted and/or filtered datamodel).
         cacheItem.isCached = false;
         cacheItem.isTarget = false;
         cacheItem.priority = i;
-        // assume 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024000
+        // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024
         ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
         ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
-        cacheItem.sizeMB = (float)w * h / 256000;
-        if (cache.usePreview) {
-            QSize p = scalePreview(w, h);
-            w = p.width();
-            h = p.height();
-            cacheItem.sizeMB += (float)w * h / 256000;
-        }
+        cacheItem.sizeMB = (float)w * h / 262144;
+//        if (cache.usePreview) {
+//            QSize p = scalePreview(w, h);
+//            w = p.width();
+//            h = p.height();
+//            cacheItem.sizeMB += (float)w * h / 262144;
+//        }
         cacheItem.isMetadata = w > 0;
 //        cacheItem.isMetadata = !dm->sf->index(i, G::CreatedColumn).data().isNull();
         cacheItemList.append(cacheItem);
@@ -683,15 +683,15 @@ void ImageCache::updateImageCacheList()
 
     for (int i = 0; i < dm->sf->rowCount(); ++i) {
         if (!cacheItemList[i].isMetadata) {
-            // assume 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024000
+            // assume 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024
             ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
             ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
-            cacheItemList[i].sizeMB = (float)w * h / 256000;
+            cacheItemList[i].sizeMB = (float)w * h / 262144;
 //            if (cache.usePreview) {
 //                QSize p = scalePreview(w, h);
 //                w = p.width();
 //                h = p.height();
-//                cacheItem.sizeMB += (float)w * h / 256000;
+//                cacheItem.sizeMB += (float)w * h / 262144;
 //            }
             cacheItemList[i].isMetadata = w > 0;
         }
@@ -985,6 +985,13 @@ void ImageCache::run()
             // is there room in cache?
             uint room = cache.maxMB - cache.currMB;
             uint roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
+            /*
+            qDebug() << __FUNCTION__
+                     << "maxMB =" << cache.maxMB
+                     << "currMB" << cache.currMB
+                     << "room =" << room
+                     << "toCache =" << cache.toCacheKey
+                     << "roomRqd =" << roomRqd;  */
             while (room < roomRqd) {
                 // make some room by removing lowest priority cached image
                 if(nextToDecache()) {
@@ -1000,22 +1007,19 @@ void ImageCache::run()
             }
             imCache.insert(fPath, im);
             emit updateCacheOnThumbs(fPath, true);
-            if (cache.usePreview) {
-                imCache.insert(fPath + "_Preview", im.scaled(cache.previewSize,
-                   Qt::KeepAspectRatio, Qt::FastTransformation));
-            }
+//            if (cache.usePreview) {
+//                imCache.insert(fPath + "_Preview", im.scaled(cache.previewSize,
+//                   Qt::KeepAspectRatio, Qt::FastTransformation));
+//            }
         }
         cacheItemList[cache.toCacheKey].isCached = true;
         if (!toCache.isEmpty()) toCache.removeFirst();
         cache.currMB = getImCacheSize();
-        #ifdef ISDEBUG
-        G::track(__FUNCTION__, "Emitting update cache status from loop");
-        #endif
         if(cache.isShowCacheStatus)
             emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
         prevFileName = fPath;
-        checkForOrphans();
     }
+    checkForOrphans();
     if(cache.isShowCacheStatus)
         emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
 

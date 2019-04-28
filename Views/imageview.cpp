@@ -185,7 +185,7 @@ to prevent jarring changes in perceived scale by the user.
         }
     }
     else {
-        QPixmap displayPixmap;
+        QPixmap  displayPixmap;
         isLoaded = pixmap->load(fPath, displayPixmap);
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
@@ -253,9 +253,9 @@ void ImageView::clear()
     }
     shootingInfo = "";
     infoOverlay->setText("");
-    pmItem->setVisible(false);
     QPixmap nullPm;
     pmItem->setPixmap(nullPm);
+    pmItem->setVisible(false);
 }
 
 void ImageView::noJpgAvailable()

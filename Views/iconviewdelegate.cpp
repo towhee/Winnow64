@@ -68,6 +68,7 @@ IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
     selectedColor = QColor(Qt::white);
 //    selectedColor = QColor(Qt::lightGray);
     pickColor = QColor(Qt::green);
+    ingestedColor = QColor(Qt::blue);
     cacheColor = QColor(Qt::red);
     cacheBorderColor = QColor(Qt::lightGray);
 
@@ -80,7 +81,10 @@ IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
     selectedPen.setWidth(selectedWidth);
     pick.setColor(pickColor);
     pick.setWidth(pickWidth);
+    ingested.setColor(ingestedColor);
+    ingested.setWidth(pickWidth);
     notPick.setColor(defaultBorderColor);
+    notPick.setWidth(pickWidth);
 
     // keep currentPen inside the cell
     int currentOffsetWidth = currentWidth / 2;
@@ -245,6 +249,7 @@ textRect         = a rectangle below itemRect
     QString colorClass = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     bool isPicked = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toBool();
+    bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
 
     // Make the item border rect smaller to accommodate the border.
@@ -311,6 +316,12 @@ textRect         = a rectangle below itemRect
     if (option.state.testFlag(QStyle::State_Selected)) {
         painter->setPen(selectedPen);
         painter->drawRoundedRect(frameRect, 8, 8);
+    }
+
+    // ingested item
+    if (isIngested) {
+        painter->setPen(ingested);
+        painter->drawPath(iconPath);
     }
 
     // picked item

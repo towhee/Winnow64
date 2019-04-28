@@ -127,6 +127,7 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem(QString("File Name")));
     setHorizontalHeaderItem(G::RefineColumn, new QStandardItem("Refine"));
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick"));
+    setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested"));
     setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour"));
     setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating"));
     setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type"));
@@ -413,7 +414,11 @@ bool DataModel::addFileData()
         setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::ModifiedColumn), fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss"));
         setData(index(row, G::RefineColumn), false);
+        setData(index(row, G::RefineColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::PickColumn), "false");
+        setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        setData(index(row, G::IngestedColumn), "false");
+        setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
 
         /* Save info for duplicated raw and jpg files, which generally are the
         result of setting raw+jpg in the camera. The datamodel is sorted by
