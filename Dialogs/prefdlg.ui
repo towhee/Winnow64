@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>705</width>
-    <height>582</height>
+    <height>588</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -59,136 +59,177 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>6</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
-    <widget class="QGroupBox" name="groupBoxTrackpadAction">
+    <widget class="QScrollArea" name="scrollArea">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>140</y>
-       <width>431</width>
-       <height>101</height>
+       <x>0</x>
+       <y>0</y>
+       <width>491</width>
+       <height>751</height>
       </rect>
      </property>
-     <property name="title">
-      <string>Trackpad Swipe / Mouse Wheel</string>
+     <property name="widgetResizable">
+      <bool>true</bool>
      </property>
-     <widget class="QWidget" name="layoutWidget">
+     <widget class="QWidget" name="scrollAreaWidgetContents">
       <property name="geometry">
        <rect>
-        <x>20</x>
-        <y>27</y>
-        <width>337</width>
-        <height>65</height>
+        <x>0</x>
+        <y>0</y>
+        <width>489</width>
+        <height>749</height>
        </rect>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
-       <item>
-        <widget class="QRadioButton" name="trackpadIterateRadio">
-         <property name="font">
-          <font>
-           <pointsize>12</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Next / previous image</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="trackpadScrollRadio">
-         <property name="font">
-          <font>
-           <pointsize>12</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Scroll current image when zoomed</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </widget>
-    <widget class="QGroupBox" name="groupBoxFolders">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>10</y>
-       <width>431</width>
-       <height>111</height>
-      </rect>
-     </property>
-     <property name="title">
-      <string>When open program</string>
-     </property>
-     <widget class="QCheckBox" name="rememberFolderChk">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>30</y>
-        <width>261</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Remember previous folder</string>
-      </property>
-     </widget>
-     <widget class="QCheckBox" name="updateAppChk">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>60</y>
-        <width>261</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Check for program updates</string>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QGroupBox" name="groupBoxFolders_2">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>260</y>
-       <width>431</width>
-       <height>71</height>
-      </rect>
-     </property>
-     <property name="title">
-      <string>Mouse click selection</string>
-     </property>
-     <widget class="QCheckBox" name="mouseClickScrollChk">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>30</y>
-        <width>371</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Scroll to position at center when mouse click</string>
-      </property>
+      <widget class="QGroupBox" name="groupBoxFolders">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>20</y>
+         <width>431</width>
+         <height>111</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>When open program</string>
+       </property>
+       <widget class="QCheckBox" name="rememberFolderChk">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>30</y>
+          <width>261</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Remember previous folder</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="updateAppChk">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>60</y>
+          <width>261</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Check for program updates</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QGroupBox" name="groupBoxTrackpadAction">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>150</y>
+         <width>431</width>
+         <height>101</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Trackpad Swipe / Mouse Wheel</string>
+       </property>
+       <widget class="QWidget" name="layoutWidget">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>27</y>
+          <width>337</width>
+          <height>65</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="QRadioButton" name="trackpadIterateRadio">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Next / previous image</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="trackpadScrollRadio">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Scroll current image when zoomed</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+      <widget class="QGroupBox" name="groupBoxFolders_2">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>270</y>
+         <width>431</width>
+         <height>71</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Mouse click selection</string>
+       </property>
+       <widget class="QCheckBox" name="mouseClickScrollChk">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>30</y>
+          <width>371</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Scroll to position at center when mouse click</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QLabel" name="label_23">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>580</y>
+         <width>47</width>
+         <height>13</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Test</string>
+       </property>
+      </widget>
      </widget>
     </widget>
    </widget>

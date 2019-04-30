@@ -79,7 +79,7 @@ signals:
     void resumeImageCache();
     void updateIsRunning(bool, bool, QString);
     void updateIconBestFit();
-    void metadataCache2ndPass();
+    void loadMetadataCache2ndPass();
     void selectFirst();
     void showCacheStatus(int, bool);            // row, clear progress bar
 

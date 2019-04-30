@@ -21,6 +21,7 @@
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QRadioButton>
+#include <QtWidgets/QScrollArea>
 #include <QtWidgets/QSlider>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QStackedWidget>
@@ -37,16 +38,19 @@ public:
     QPushButton *closeBtn;
     QStackedWidget *stackedWidget;
     QWidget *pageGeneral;
+    QScrollArea *scrollArea;
+    QWidget *scrollAreaWidgetContents;
+    QGroupBox *groupBoxFolders;
+    QCheckBox *rememberFolderChk;
+    QCheckBox *updateAppChk;
     QGroupBox *groupBoxTrackpadAction;
     QWidget *layoutWidget;
     QVBoxLayout *verticalLayout_3;
     QRadioButton *trackpadIterateRadio;
     QRadioButton *trackpadScrollRadio;
-    QGroupBox *groupBoxFolders;
-    QCheckBox *rememberFolderChk;
-    QCheckBox *updateAppChk;
     QGroupBox *groupBoxFolders_2;
     QCheckBox *mouseClickScrollChk;
+    QLabel *label_23;
     QWidget *pageAppearance;
     QGroupBox *groupBoxFontSize;
     QSlider *globalFontSizeSlider;
@@ -114,6 +118,13 @@ public:
     QPushButton *gridLargerBtn;
     QCheckBox *showThumbLabelChk_2;
     QLabel *label_3;
+    QLabel *fontSizeLbl_21;
+    QLabel *label_171;
+    QPushButton *gridSmallerBtn1;
+    QLabel *label_191;
+    QSlider *fontSizeSlider_21;
+    QPushButton *gridLargerBtn1;
+    QCheckBox *showThumbLabelChk_21;
     QSpinBox *maxIconSizeSpinBox;
     QLabel *label_4;
     QLabel *label_5;
@@ -149,7 +160,7 @@ public:
     {
         if (Prefdlg->objectName().isEmpty())
             Prefdlg->setObjectName(QString::fromUtf8("Prefdlg"));
-        Prefdlg->resize(705, 582);
+        Prefdlg->resize(705, 588);
         QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
@@ -171,9 +182,27 @@ public:
         stackedWidget->setFrameShape(QFrame::Panel);
         pageGeneral = new QWidget();
         pageGeneral->setObjectName(QString::fromUtf8("pageGeneral"));
-        groupBoxTrackpadAction = new QGroupBox(pageGeneral);
+        scrollArea = new QScrollArea(pageGeneral);
+        scrollArea->setObjectName(QString::fromUtf8("scrollArea"));
+        scrollArea->setGeometry(QRect(0, 0, 491, 751));
+        scrollArea->setWidgetResizable(true);
+        scrollAreaWidgetContents = new QWidget();
+        scrollAreaWidgetContents->setObjectName(QString::fromUtf8("scrollAreaWidgetContents"));
+        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 489, 749));
+        groupBoxFolders = new QGroupBox(scrollAreaWidgetContents);
+        groupBoxFolders->setObjectName(QString::fromUtf8("groupBoxFolders"));
+        groupBoxFolders->setGeometry(QRect(20, 20, 431, 111));
+        rememberFolderChk = new QCheckBox(groupBoxFolders);
+        rememberFolderChk->setObjectName(QString::fromUtf8("rememberFolderChk"));
+        rememberFolderChk->setGeometry(QRect(20, 30, 261, 20));
+        rememberFolderChk->setFont(font);
+        updateAppChk = new QCheckBox(groupBoxFolders);
+        updateAppChk->setObjectName(QString::fromUtf8("updateAppChk"));
+        updateAppChk->setGeometry(QRect(20, 60, 261, 20));
+        updateAppChk->setFont(font);
+        groupBoxTrackpadAction = new QGroupBox(scrollAreaWidgetContents);
         groupBoxTrackpadAction->setObjectName(QString::fromUtf8("groupBoxTrackpadAction"));
-        groupBoxTrackpadAction->setGeometry(QRect(20, 140, 431, 101));
+        groupBoxTrackpadAction->setGeometry(QRect(20, 150, 431, 101));
         layoutWidget = new QWidget(groupBoxTrackpadAction);
         layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
         layoutWidget->setGeometry(QRect(20, 27, 337, 65));
@@ -192,24 +221,18 @@ public:
 
         verticalLayout_3->addWidget(trackpadScrollRadio);
 
-        groupBoxFolders = new QGroupBox(pageGeneral);
-        groupBoxFolders->setObjectName(QString::fromUtf8("groupBoxFolders"));
-        groupBoxFolders->setGeometry(QRect(20, 10, 431, 111));
-        rememberFolderChk = new QCheckBox(groupBoxFolders);
-        rememberFolderChk->setObjectName(QString::fromUtf8("rememberFolderChk"));
-        rememberFolderChk->setGeometry(QRect(20, 30, 261, 20));
-        rememberFolderChk->setFont(font);
-        updateAppChk = new QCheckBox(groupBoxFolders);
-        updateAppChk->setObjectName(QString::fromUtf8("updateAppChk"));
-        updateAppChk->setGeometry(QRect(20, 60, 261, 20));
-        updateAppChk->setFont(font);
-        groupBoxFolders_2 = new QGroupBox(pageGeneral);
+        groupBoxFolders_2 = new QGroupBox(scrollAreaWidgetContents);
         groupBoxFolders_2->setObjectName(QString::fromUtf8("groupBoxFolders_2"));
-        groupBoxFolders_2->setGeometry(QRect(20, 260, 431, 71));
+        groupBoxFolders_2->setGeometry(QRect(20, 270, 431, 71));
         mouseClickScrollChk = new QCheckBox(groupBoxFolders_2);
         mouseClickScrollChk->setObjectName(QString::fromUtf8("mouseClickScrollChk"));
         mouseClickScrollChk->setGeometry(QRect(20, 30, 371, 20));
         mouseClickScrollChk->setFont(font);
+        label_23 = new QLabel(scrollAreaWidgetContents);
+        label_23->setObjectName(QString::fromUtf8("label_23"));
+        label_23->setGeometry(QRect(30, 580, 47, 13));
+        label_23->setFont(font);
+        scrollArea->setWidget(scrollAreaWidgetContents);
         stackedWidget->addWidget(pageGeneral);
         pageAppearance = new QWidget();
         pageAppearance->setObjectName(QString::fromUtf8("pageAppearance"));
@@ -568,6 +591,59 @@ public:
         label_3->setGeometry(QRect(30, 380, 171, 22));
         label_3->setFont(font2);
         label_3->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
+        fontSizeLbl_21 = new QLabel(label_3);
+        fontSizeLbl_21->setObjectName(QString::fromUtf8("fontSizeLbl_21"));
+        fontSizeLbl_21->setGeometry(QRect(420, 80, 30, 16));
+        fontSizeLbl_21->setFont(font);
+        fontSizeLbl_21->setFrameShape(QFrame::NoFrame);
+        fontSizeLbl_21->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
+        label_171 = new QLabel(label_3);
+        label_171->setObjectName(QString::fromUtf8("label_171"));
+        label_171->setGeometry(QRect(20, 30, 131, 16));
+        label_171->setFont(font2);
+        gridSmallerBtn1 = new QPushButton(label_3);
+        gridSmallerBtn1->setObjectName(QString::fromUtf8("gridSmallerBtn1"));
+        gridSmallerBtn1->setGeometry(QRect(200, 30, 40, 20));
+        sizePolicy.setHeightForWidth(gridSmallerBtn1->sizePolicy().hasHeightForWidth());
+        gridSmallerBtn1->setSizePolicy(sizePolicy);
+        gridSmallerBtn1->setMinimumSize(QSize(0, 7));
+        gridSmallerBtn1->setMaximumSize(QSize(400, 20));
+        gridSmallerBtn1->setFont(font2);
+        gridSmallerBtn1->setAutoRepeat(true);
+        gridSmallerBtn1->setAutoDefault(false);
+        label_191 = new QLabel(label_3);
+        label_191->setObjectName(QString::fromUtf8("label_191"));
+        label_191->setGeometry(QRect(50, 80, 141, 20));
+        label_191->setFont(font2);
+        label_191->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
+        fontSizeSlider_21 = new QSlider(label_3);
+        fontSizeSlider_21->setObjectName(QString::fromUtf8("fontSizeSlider_21"));
+        fontSizeSlider_21->setGeometry(QRect(200, 80, 211, 22));
+        fontSizeSlider_21->setFont(font);
+        fontSizeSlider_21->setMinimum(6);
+        fontSizeSlider_21->setMaximum(20);
+        fontSizeSlider_21->setSingleStep(1);
+        fontSizeSlider_21->setPageStep(5);
+        fontSizeSlider_21->setValue(6);
+        fontSizeSlider_21->setSliderPosition(6);
+        fontSizeSlider_21->setOrientation(Qt::Horizontal);
+        fontSizeSlider_21->setInvertedAppearance(false);
+        fontSizeSlider_21->setTickPosition(QSlider::NoTicks);
+        fontSizeSlider_21->setTickInterval(5);
+        gridLargerBtn1 = new QPushButton(label_3);
+        gridLargerBtn1->setObjectName(QString::fromUtf8("gridLargerBtn1"));
+        gridLargerBtn1->setGeometry(QRect(260, 30, 40, 20));
+        sizePolicy.setHeightForWidth(gridLargerBtn1->sizePolicy().hasHeightForWidth());
+        gridLargerBtn1->setSizePolicy(sizePolicy);
+        gridLargerBtn1->setMinimumSize(QSize(0, 7));
+        gridLargerBtn1->setMaximumSize(QSize(400, 20));
+        gridLargerBtn1->setFont(font2);
+        gridLargerBtn1->setAutoRepeat(true);
+        gridLargerBtn1->setAutoDefault(false);
+        showThumbLabelChk_21 = new QCheckBox(label_3);
+        showThumbLabelChk_21->setObjectName(QString::fromUtf8("showThumbLabelChk_21"));
+        showThumbLabelChk_21->setGeometry(QRect(20, 60, 201, 17));
+        showThumbLabelChk_21->setFont(font2);
         maxIconSizeSpinBox = new QSpinBox(pageThumbnails);
         maxIconSizeSpinBox->setObjectName(QString::fromUtf8("maxIconSizeSpinBox"));
         maxIconSizeSpinBox->setGeometry(QRect(210, 380, 41, 22));
@@ -733,7 +809,7 @@ public:
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
         QObject::connect(fontSizeSlider_2, SIGNAL(valueChanged(int)), fontSizeLbl_2, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(6);
+        stackedWidget->setCurrentIndex(0);
         listContainer->setCurrentIndex(0);
 
 
@@ -747,14 +823,15 @@ public:
         closeBtn->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>When closing the preferences dialog all changes will by retained.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
         closeBtn->setText(QApplication::translate("Prefdlg", "Okay", nullptr));
-        groupBoxTrackpadAction->setTitle(QApplication::translate("Prefdlg", "Trackpad Swipe / Mouse Wheel", nullptr));
-        trackpadIterateRadio->setText(QApplication::translate("Prefdlg", "Next / previous image", nullptr));
-        trackpadScrollRadio->setText(QApplication::translate("Prefdlg", "Scroll current image when zoomed", nullptr));
         groupBoxFolders->setTitle(QApplication::translate("Prefdlg", "When open program", nullptr));
         rememberFolderChk->setText(QApplication::translate("Prefdlg", "Remember previous folder", nullptr));
         updateAppChk->setText(QApplication::translate("Prefdlg", "Check for program updates", nullptr));
+        groupBoxTrackpadAction->setTitle(QApplication::translate("Prefdlg", "Trackpad Swipe / Mouse Wheel", nullptr));
+        trackpadIterateRadio->setText(QApplication::translate("Prefdlg", "Next / previous image", nullptr));
+        trackpadScrollRadio->setText(QApplication::translate("Prefdlg", "Scroll current image when zoomed", nullptr));
         groupBoxFolders_2->setTitle(QApplication::translate("Prefdlg", "Mouse click selection", nullptr));
         mouseClickScrollChk->setText(QApplication::translate("Prefdlg", "Scroll to position at center when mouse click", nullptr));
+        label_23->setText(QApplication::translate("Prefdlg", "Test", nullptr));
         groupBoxFontSize->setTitle(QApplication::translate("Prefdlg", "Font size", nullptr));
 #ifndef QT_NO_TOOLTIP
         globalFontSizeSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
@@ -878,6 +955,12 @@ public:
         gridLargerBtn->setText(QApplication::translate("Prefdlg", ">", nullptr));
         showThumbLabelChk_2->setText(QApplication::translate("Prefdlg", "Show thumbnail filename", nullptr));
         label_3->setText(QApplication::translate("Prefdlg", "Maximum thumbnail size", nullptr));
+        fontSizeLbl_21->setText(QString());
+        label_171->setText(QApplication::translate("Prefdlg", "Thumbnail size", nullptr));
+        gridSmallerBtn1->setText(QApplication::translate("Prefdlg", "<", nullptr));
+        label_191->setText(QApplication::translate("Prefdlg", "Font size", nullptr));
+        gridLargerBtn1->setText(QApplication::translate("Prefdlg", ">", nullptr));
+        showThumbLabelChk_21->setText(QApplication::translate("Prefdlg", "Show thumbnail filename", nullptr));
         label_4->setText(QApplication::translate("Prefdlg", "<html><head/><body><p><span style=\" font-weight:600; color:#ff0000;\">WARNING</span><span style=\" color:#ff0000;\">: </span><span style=\" color:#e5e5e5;\">Larger thumbnail sizes can consume huge amounts of memory if you load a folder with a lot of images. </span></p></body></html>", nullptr));
         label_5->setText(QApplication::translate("Prefdlg", "pixels (40 - 480)", nullptr));
         fullScreenExplanationLbl->setText(QApplication::translate("Prefdlg", "<html><head/><body><p>When full screen is chosen, select which panels should be visible. Hiding all the docks will result in only the loupe view or grid of all the thumbnails being visible.  You can still show/hide panels in the usual way, so this is just a customization to shortcut to your usual full screen preference.</p><p>When you leave full screen view the application will return to its prior state.</p></body></html>", nullptr));

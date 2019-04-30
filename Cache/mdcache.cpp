@@ -200,7 +200,6 @@ MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
         mutex.unlock();
         wait();
     }
-    G::track(__FUNCTION__);
     abort = false;
     G::allMetadataLoaded = false;
     iconsCached.clear();
@@ -237,7 +236,6 @@ metadata and icons are loaded into the datamodel.
         mutex.unlock();
         wait();
     }
-    G::track(__FUNCTION__);
     abort = false;
     currentRow = 0;
     setRange();
@@ -303,7 +301,6 @@ selection change then the image cache is updated.
         mutex.unlock();
         wait();
     }
-    G::track(__FUNCTION__);
     abort = false;
 
     currentRow = row;
@@ -318,7 +315,6 @@ selection change then the image cache is updated.
             if (foundItemsToLoad) break;
         }
     }
-    qDebug() << __FUNCTION__ << "startRow" << startRow;
     action = Action::Scroll;
     start(TimeCriticalPriority);
 }
@@ -355,7 +351,6 @@ to the datamodel. The image cache is updated.
             if (foundItemsToLoad) break;
         }
     }
-    qDebug() << __FUNCTION__ << "startRow" << startRow;
     action = Action::NewFileSelected;
     start(TimeCriticalPriority);
 }
@@ -383,14 +378,14 @@ void MetadataCache::setRange()
 
     prevFirstIconVisible = firstIconVisible;
     prevLastIconVisible = lastIconVisible;
-
+    /*
     qDebug()  <<  __FUNCTION__
               << "firstIconVisible =" << firstIconVisible
               << "lastIconVisible =" << lastIconVisible
               << "tpp =" << tpp
               << "metadataChunkSize =" << metadataChunkSize
               << "startRow =" << startRow
-              << "endRow =" << endRow;
+              << "endRow =" << endRow;*/
 }
 
 void MetadataCache::iconCleanup()
@@ -636,7 +631,7 @@ If there has been a file selection change and not a new folder then update image
             emit selectFirst();
             /* make a second pass if more than 250 thumbs visible in gridView or thumbView and
                so can calc best aspect */
-            emit metadataCache2ndPass();
+            emit loadMetadataCache2ndPass();
         }
 
         // update status of metadataThreadRunningLabel in statusbar
