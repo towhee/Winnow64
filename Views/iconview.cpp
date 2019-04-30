@@ -540,9 +540,7 @@ justification happens.
     thumbsPerPage = lastVisibleRow - firstVisibleRow + 1;
     midVisibleRow = firstVisibleRow + thumbsPerPage / 2;
 
-//    bestAspect();
-
-
+    /*
     qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
              << "isInitializing =" << G::isInitializing
              << "isVisible =" << isVisible()
@@ -550,7 +548,7 @@ justification happens.
              << "lastVisibleRow =" << lastVisibleRow
              << "midVisibleRow =" << midVisibleRow
              << "thumbsPerPage =" << thumbsPerPage;
-
+    */
 }
 
 bool IconView::isRowVisible(int row)
@@ -1122,6 +1120,10 @@ loaded.  Both thumbView and gridView have to be called.
     setThumbParameters();
 
     bestAspectRatio = (double)thumbHeight / thumbWidth;
+    /*
+    qDebug() << __FUNCTION__
+             << "G::iconWMax =" << G::iconWMax
+             << "G::iconHMax =" << G::iconHMax;*/
 }
 
 void IconView::thumbsFit(Qt::DockWidgetArea area)

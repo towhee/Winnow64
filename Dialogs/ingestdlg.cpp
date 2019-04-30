@@ -48,6 +48,7 @@ IngestDlg::IngestDlg(QWidget *parent,
                      QString &ingestRootFolder2,
                      QString &manualFolderPath,
                      QString &manualFolderPath2,
+                     QString &baseFolderDescription,
                      QMap<QString, QString>& pathTemplates,
                      QMap<QString, QString>& filenameTemplates,
                      int& pathTemplateSelected,
@@ -59,8 +60,8 @@ IngestDlg::IngestDlg(QWidget *parent,
 
                      QDialog(parent),
                      ui(new Ui::IngestDlg),
-                     isAuto(isAuto),
                      metadata(metadata),
+                     isAuto(isAuto),
                      combineRawJpg(combineRawJpg),
                      autoEjectUsb(autoEjectUsb),
                      isBackup(isBackup),
@@ -71,6 +72,7 @@ IngestDlg::IngestDlg(QWidget *parent,
                      pathTemplateSelected2(pathTemplateSelected2),
                      rootFolderPath(ingestRootFolder),
                      rootFolderPath2(ingestRootFolder2),
+                     baseFolderDescription(baseFolderDescription),
                      ingestDescriptionCompleter(ingestDescriptionCompleter),
                      manualFolderPath(manualFolderPath),
                      manualFolderPath2(manualFolderPath2),
@@ -93,7 +95,6 @@ IngestDlg::IngestDlg(QWidget *parent,
         Utilities::setOpacity(ui->combinedIncludeJpgChk, 0.5);
         ui->combinedIncludeJpgChk->setDisabled(true);
     }
-    qDebug() << rootFolderPath << rootFolderPath2;
     ui->rootFolderLabel->setText(rootFolderPath);
     ui->rootFolderLabel->setToolTip(ui->rootFolderLabel->text());
     ui->rootFolderLabel_2->setText(rootFolderPath2);
@@ -102,6 +103,8 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
     ui->manualFolderLabel_2->setText(manualFolderPath2);
     ui->manualFolderLabel_2->setToolTip( ui->manualFolderLabel_2->text());
+
+    ui->descriptionLineEdit->setText(baseFolderDescription);
 
     // initialize templates and tokens
     initTokenList();
@@ -134,6 +137,10 @@ IngestDlg::IngestDlg(QWidget *parent,
     else {
         ui->selectFolderBtn->setFocus();
         ui->manualRadio->setChecked(true);
+    }
+    if (baseFolderDescription.length() > 0) {
+        ui->okBtn->setDefault(true);
+        ui->okBtn->setFocus();
     }
     updateEnabledState();
 
@@ -289,7 +296,6 @@ Each picked image is copied from the source to the destination.
     // copy cycles req'd: 1 if no backup, 2 if backup
     int n;
     isBackup ? n = 2 : n = 1;
-    qDebug() << "Ingesting  isBackup =" << isBackup;
 
     // copy picked images
     ui->progressBar->setVisible(true);
@@ -361,7 +367,8 @@ Each picked image is copied from the source to the destination.
         }
     }
 //    emit revealIngestLocation(folderPath);
-    QDialog::close();
+    QDialog::accept();
+//    QDialog::close();
 }
 
 bool IngestDlg::parametersOk()
@@ -589,7 +596,7 @@ QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
     QString fPath = info.absoluteFilePath();
     ImageMetadata m = dm->getMetadata(fPath);
     createdDate = m.createdDate;
-    qDebug() << __FUNCTION__ << fPath << createdDate;
+//    qDebug() << __FUNCTION__ << fPath << createdDate;
     QString s;
     int i = 0;
     while (i < tokenString.length()) {
@@ -713,7 +720,6 @@ shown.
 
     QString dirPath;
     // folderpath based on primary or backup tab selected
-    qDebug() << "tab index =" << ui->autoIngestTab->tabBar()->currentIndex();
     if(ui->autoIngestTab->tabBar()->currentIndex() == 0) dirPath = folderPath;
     else dirPath = folderPath2;
 
@@ -762,7 +768,6 @@ void IngestDlg::on_descriptionLineEdit_textChanged(const QString& arg1)
     updateFolderPath();
     // copy primary description to backup description unless it is already different
     QString desc2 = ui->descriptionLineEdit_2->text();
-    qDebug() << "prevText / desc2" << prevText << desc2;
     if (desc2  == prevText) ui->descriptionLineEdit_2->setText(arg1);
 
     prevText = arg1;

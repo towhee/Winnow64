@@ -1498,6 +1498,9 @@
         <height>0</height>
        </size>
       </property>
+      <property name="focusPolicy">
+       <enum>Qt::StrongFocus</enum>
+      </property>
       <property name="toolTip">
        <string/>
       </property>
@@ -1505,6 +1508,9 @@
        <string>Ingest</string>
       </property>
       <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+      <property name="default">
        <bool>false</bool>
       </property>
      </widget>

@@ -40,6 +40,7 @@ namespace G
         NameColumn,
         RefineColumn,
         PickColumn,
+        IngestedColumn,
         LabelColumn,
         RatingColumn,
         TypeColumn,

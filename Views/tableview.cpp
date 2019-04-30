@@ -48,6 +48,9 @@ TableView::TableView(DataModel *dm)
     PickItemDelegate *pickItemDelegate = new PickItemDelegate;
     setItemDelegateForColumn(G::PickColumn, pickItemDelegate);
 
+    IngestedItemDelegate *ingestedItemDelegate = new IngestedItemDelegate;
+    setItemDelegateForColumn(G::IngestedColumn, ingestedItemDelegate);
+
     DimensionItemDelegate *dimensionItemDelegate = new DimensionItemDelegate;
     setItemDelegateForColumn(G::DimensionsColumn, dimensionItemDelegate);
 
@@ -97,6 +100,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::NameColumn) return fm.width("2019-02-25_0001.jpg========");
     if (column == G::RefineColumn) return fm.width("=Refine=");
     if (column == G::PickColumn) return fm.width("=Pick=");
+    if (column == G::IngestedColumn) return fm.width("=Ingested=");
     if (column == G::LabelColumn) return fm.width("=Colour=");
     if (column == G::RatingColumn) return fm.width("=Rating=");
     if (column == G::TypeColumn) return fm.width("=Type=");
@@ -182,7 +186,13 @@ QSettings has been loaded.
         ok->setData(ok->index(i - 1, 0), columnName);
         bool show = i <= G::UrlColumn;
         ok->setData(ok->index(i - 1, 1), show);
+        /*
+        qDebug() << __FUNCTION__
+                 << i
+                 << columnName
+                 << show;  */
     }
+    showOrHide();
 
     connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
             this, SLOT(showOrHide()));
@@ -198,6 +208,9 @@ and this slot is then signalled to update which fields are visible.
         bool showField = ok->index(i, 1).data().toBool();
         if (showField) showColumn(i + 1);
         else hideColumn(i + 1);
+        /*
+        QString s = ok->index(i, 0).data().toString();
+        qDebug() << __FUNCTION__ << i << s << showField;  */
     }
 }
 
@@ -246,6 +259,15 @@ PickItemDelegate::PickItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 }
 
 QString PickItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+    return (value == "true") ? "✓" : "";
+}
+
+IngestedItemDelegate::IngestedItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString IngestedItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
     return (value == "true") ? "✓" : "";
 }

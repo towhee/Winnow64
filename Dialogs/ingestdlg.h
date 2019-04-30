@@ -29,6 +29,7 @@ public:
                        QString &ingestRootFolder2,
                        QString &manualFolderPath,
                        QString &manualFolderPath2,
+                       QString &baseFolderDescription,
                        QMap<QString, QString>&pathTemplates,
                        QMap<QString, QString>&filenameTemplates,
                        int &pathTemplateSelected,
@@ -118,7 +119,7 @@ private:
     QString folderPath2; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
     QString fromRootToBaseFolder;
     QString fromRootToBaseFolder2;
-    QString baseFolderDescription;
+    QString &baseFolderDescription;             // auto reuse if same source folder as previous
     QString baseFolderDescription2;
     QStringList& ingestDescriptionCompleter;
 

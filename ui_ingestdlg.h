@@ -410,6 +410,7 @@ public:
         okBtn = new QPushButton(layoutWidget);
         okBtn->setObjectName(QString::fromUtf8("okBtn"));
         okBtn->setMinimumSize(QSize(93, 0));
+        okBtn->setFocusPolicy(Qt::StrongFocus);
         okBtn->setAutoDefault(false);
 
         horizontalLayout->addWidget(okBtn);
@@ -441,6 +442,7 @@ public:
         pathTemplatesBtn_2->setDefault(false);
         selectFolderBtn_2->setDefault(false);
         filenameTemplatesBtn->setDefault(false);
+        okBtn->setDefault(false);
 
 
         QMetaObject::connectSlotsByName(IngestDlg);
