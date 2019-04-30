@@ -855,9 +855,9 @@ image caching thread is restarted.
 
 //    reportCache("filterImageCache after setPriorities and setTargetRange");
 
-    if (cache.isShowCacheStatus) emit showCacheStatus("Update all rows", 0, "ImageCache::filterImageCache");
+//    if (cache.isShowCacheStatus) emit showCacheStatus("Update all rows", 0, "ImageCache::filterImageCache");
 
-    start(IdlePriority);
+//    start(IdlePriority);
 }
 
 void ImageCache::resortImageCache(QString &currentImageFullPath)

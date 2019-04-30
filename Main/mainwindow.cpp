@@ -105,6 +105,16 @@ CACHING
 * see top of mdcache.cpp comments for more detail
 
 ***********************************************************************************************
+
+New folder
+    Clear datamodel
+    Load datamodel file info
+    Load metadata chunk (250 items)
+    Load metadata 2nd pass
+    Initiate image cache
+
+
+
 */
 
 MW::MW(QWidget *parent) : QMainWindow(parent)
@@ -4525,16 +4535,20 @@ loaded if necessary.
             centralLayout->setCurrentIndex(prevCentralView);
         }
         updateStatus(true);
-        loadMetadataChunk();
-        G::track(__FUNCTION__, "loadMetadataChunk()");
+
         // filter the image cache
         imageCacheThread->filterImageCache(currentFilePath);
         G::track(__FUNCTION__, "imageCacheThread->filterImageCache(currentFilePath) " + currentFilePath);
+
+        updateMetadataCacheIconviewState();
+        metadataCacheThread->fileSelectionChange(currentRow);
+//        loadMetadataChunk();
+//        G::track(__FUNCTION__, "loadMetadataChunk()");
     }
     // if filter has eliminated all rows so nothing to show
     else nullFiltration();
 
-    loadMetadataChunk();
+//    loadMetadataChunk();
 }
 
 void MW::quickFilter()
@@ -4681,16 +4695,10 @@ void MW::refine()
         return;
     }
 
-//    QMessageBox::StandardButton reply;
-//    reply = QMessageBox::question(this, "Refine",
-//                                  "This operation will clear all your picks.  Please confirm.",
-//                                  QMessageBox::Yes|QMessageBox::No);
-//    if (reply == QMessageBox::No) return;
-
     QMessageBox msgBox;
     int msgBoxWidth = 300;
     msgBox.setWindowTitle("Refine Picks");
-    msgBox.setText("This operation filter on your picks and then clear your picks.");
+    msgBox.setText("This operation will filter to show only your picks and then clear your picks.");
     msgBox.setInformativeText("Do you want continue?");
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
     msgBox.setDefaultButton(QMessageBox::Yes);
@@ -4719,10 +4727,6 @@ void MW::refine()
         else dm->setData(dm->index(row, G::RefineColumn), false);
     }
     pushPick("End multiple select");
-
-//    // clear all picks
-//    for (int row = 0; row < dm->rowCount(); ++row)
-//        dm->setData(dm->index(row, G::PickColumn), "false");
 
     // reset filters
     filters->uncheckAllFilters();
