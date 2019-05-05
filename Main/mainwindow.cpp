@@ -151,6 +151,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     // Initialize some variables etc
     initialize();
+    createAppStyle();
 
     // platform specific settings
     setupPlatform();
@@ -199,7 +200,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     loadShortcuts(true);            // dependent on createActions
     setupCentralWidget();
-    createAppStyle();
+//    createAppStyle();
     setActualDevicePixelRatio();
 
     // recall previous thumbDock state in case last closed in Grid mode
@@ -228,6 +229,12 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 void MW::initialize()
 {
     this->setWindowTitle("Winnow");
+
+    qDebug() << "font" << font().family();
+    QFont f = font();
+    f.setPixelSize(13);
+    QGuiApplication::setFont(f);
+
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     G::isInitializing = true;
     isNormalScreen = true;
@@ -906,8 +913,11 @@ delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-    if (ignoreSelectionChange) return;
-//    qDebug() << __FUNCTION__ << current;
+//    qDebug() << __FUNCTION__ << current << ignoreSelectionChange;
+    if (ignoreSelectionChange) {
+//        ignoreSelectionChange = false;
+        return;
+    }
     bool isStart = false;
 
     if(!isCurrentFolderOkay) return;
@@ -4512,43 +4522,47 @@ loaded if necessary.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__, "Starting");
     if (!G::allMetadataLoaded) loadEntireMetadataCache();
-
     // refresh the proxy sort/filter
     dm->sf->filterChange();
-    G::track(__FUNCTION__, "dm->sf->filterChange()");
     // update filter panel image count by filter item
     dm->filteredItemCount();
-    G::track(__FUNCTION__, "dm->filteredItemCount()");
     // update the status panel filtration status
     updateFilterStatus(isFilter);
-    G::track(__FUNCTION__, "updateFilterStatus(isFilter)");
     // get the current selected item
     QModelIndex idx = thumbView->currentIndex();
     QString currentFilePath = idx.data(G::PathRole).toString();
 
     if (dm->sf->rowCount()) {
-        // if filtered but no selection
+        // if nothing selected after filter
         if (!selectionModel->selectedRows().count()) {
             thumbView->selectFirst();
-            centralLayout->setCurrentIndex(prevCentralView);
         }
+        // maintain selection and current row
+        else {
+            currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
+            thumbView->iconViewDelegate->currentRow = currentRow;
+            gridView->iconViewDelegate->currentRow = currentRow;
+            selectionModel->setCurrentIndex(dm->sf->index(currentRow, 0),
+                                            QItemSelectionModel::Current);
+
+            // the file path is used as an index in ImageView
+            QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+            // also update datamodel, used in MdCache
+            dm->currentFilePath = fPath;
+        }
+        centralLayout->setCurrentIndex(prevCentralView);
         updateStatus(true);
 
-        // filter the image cache
+        // filter the image cache to sync with datamodel filter
         imageCacheThread->filterImageCache(currentFilePath);
-        G::track(__FUNCTION__, "imageCacheThread->filterImageCache(currentFilePath) " + currentFilePath);
 
         updateMetadataCacheIconviewState();
-        metadataCacheThread->fileSelectionChange(currentRow);
-//        loadMetadataChunk();
-//        G::track(__FUNCTION__, "loadMetadataChunk()");
+        metadataCacheThread->filterChange(currentRow);
     }
+
     // if filter has eliminated all rows so nothing to show
     else nullFiltration();
-
-//    loadMetadataChunk();
 }
 
 void MW::quickFilter()
@@ -7212,7 +7226,7 @@ around lack of notification when the QListView has finished painting itself.
     gridView->setFocus();
     prevMode = "Grid";
 
-    qDebug() << prevMode << "wasThumbDockVisible" << wasThumbDockVisible;
+//    qDebug() << prevMode << "wasThumbDockVisible" << wasThumbDockVisible;
 }
 
 void MW::tableDisplay()
