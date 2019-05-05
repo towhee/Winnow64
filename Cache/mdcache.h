@@ -29,13 +29,15 @@ public:
         NewFileSelected = 2,
         IconChunk = 3,
         Scroll = 4,
-        AllMetadata = 5
+        FilterChange = 5,
+        AllMetadata = 6
     };
 
     void loadNewFolder();
     void loadNewFolder2ndPass();
     void loadMetadataIconChunk(int row);
     void fileSelectionChange(int row);
+    void filterChange(int row);
     void loadAllMetadata();
     void stopMetadateCache();
     bool isAllMetadataLoaded();

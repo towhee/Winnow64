@@ -151,6 +151,12 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setLineWidth(0);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
+
+    qDebug() << "iconview font" << font().family() << font().pixelSize();
+    QFont f = font();
+    f.setPixelSize(13);
+    setFont(f);
+
     bestAspectRatio = 1;
 
 //    if (objName == "Thumbnails") {
@@ -780,6 +786,7 @@ void IconView::selectThumb(QModelIndex idx)
     }
     if (idx.isValid()) {
         setCurrentIndex(idx);
+//        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::SelectCurrent);
         scrollTo(idx, ScrollHint::PositionAtCenter);
     }
 }

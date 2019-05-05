@@ -142,7 +142,6 @@ void TableView::mousePressEvent(QMouseEvent *event)
 {
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) return;
-    qDebug() << "TableView::mousePressEvent";
     G::source = "TableMouseClick";
     QTableView::mousePressEvent(event);
 }
