@@ -279,9 +279,6 @@ Steps:
 
     fileInfoList.clear();
 
-//    // clear all items for filters based on data content ie file types, camera model
-//    filters->removeChildrenDynamicFilters();
-
     timeToQuit = false;
     imageCount = 0;
     countInterval = 1000;
@@ -594,7 +591,9 @@ to run as a separate thread and can be executed directly.
     G::allMetadataLoaded = true;
     qint64 ms = G::t.elapsed();
     qreal msperfile = (float)ms / count;
-    qDebug() << "DataModel::addAllMetadata for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
+    qDebug() << "DataModel::addAllMetadata for" << count << "files"
+             << ms << "ms" << msperfile << "ms per file;"
+             << currentFolderPath;
 }
 
 bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
