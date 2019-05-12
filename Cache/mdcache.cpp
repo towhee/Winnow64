@@ -506,9 +506,9 @@ Load the thumb (icon) for all the image files in the target range.
         mutex.lock();
         idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
-        QString fPath = idx.data(G::PathRole).toString();
         if (idx.data(Qt::DecorationRole).isNull()) {
             QImage image;
+            QString fPath = idx.data(G::PathRole).toString();
             bool thumbLoaded = thumb->loadThumb(fPath, image);
             if (thumbLoaded) {
                 emit setIcon(dmRow, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
@@ -516,20 +516,6 @@ Load the thumb (icon) for all the image files in the target range.
             }
         }
         mutex.unlock();
-
-//        mutex.lock();
-//        idx = dm->sf->index(row, 0);
-//        int dmRow = dm->sf->mapToSource(idx).row();
-//        QString fPath = idx.data(G::PathRole).toString();
-//        if (idx.data(Qt::DecorationRole).isNull()) {
-//            QImage image;
-//            bool thumbLoaded = thumb->loadThumb(fPath, image);
-//            if (thumbLoaded) {
-//                emit setIcon(dmRow, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-//                iconsCached.append(dmRow);
-//            }
-//        }
-//        mutex.unlock();
     }
 }
 
@@ -673,7 +659,7 @@ If there has been a file selection change and not a new folder then update image
 
         // clean up orphaned icons outside icon range
         if (action > Action::FilterChange) {
-            iconCleanup();
+//            iconCleanup();
         }
 
         if (action == Action::NewFolder) {
@@ -701,16 +687,19 @@ If there has been a file selection change and not a new folder then update image
 
     // after 2nd pass on new folder initiate the image cache
     if (action == Action::NewFolder2ndPass) {
+//        qDebug() << __FUNCTION__ << "emit loadImageCache()";
         emit loadImageCache();
     }
 
     // if a file selection change and not a new folder then update image cache
     if (action == Action::NewFileSelected && dm->currentRow != previousRow && G::isNewFolderLoaded) {
+//        qDebug() << __FUNCTION__ << "fileSelectionChange emit updateImageCachePositionAfterDelay()";
         emit updateImageCachePositionAfterDelay();
     }
 
     // if filter change then update image cache
     if (action == Action::FilterChange) {
+//        qDebug() << __FUNCTION__ << "filterChange emit updateImageCachePositionAfterDelay()";
         emit updateImageCachePositionAfterDelay();
     }
 }

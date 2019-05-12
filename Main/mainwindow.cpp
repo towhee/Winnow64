@@ -404,39 +404,39 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
     */
 
+    // figure out key presses
 /*    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
         G::track(__FUNCTION__, "Performance profiling");
         qDebug() << event <<  obj;
     };
     */
 
+    /* ****************************************************************************************
+
+    Filters are only run on demand as they can take time to generate and the user will
+    not always need to filter.  The triggers to build the filters are:
+
+    - A filter is selected from the Filters menu actions
+
+    - The Filters panel is activated (this is detected here)
+       - they have not been built yet
+       - the filters panel is visible
+       - the ChildRemoved event fires for the filters widget
+    */
+
     if (!dm->filtersBuilt) {
         if (!filterDock->visibleRegion().isNull()) {
             if(obj->objectName() == "Filters") {
                 if (event->type() == QEvent::ChildRemoved) {
-//            qDebug() << event << event->type() <<  obj
-//                     << "dm->filtersBuilt" << dm->filtersBuilt
-//                     << "visibleRegion" << !filterDock->visibleRegion().isNull();;
                     buildFilters();
-//                    qDebug() << "******************* event->type() == QEvent::ChildAdded *********************";
                 }
             }
         }
     }
 
-    // figure out key presses
-/*    if (event->type() == QEvent::KeyPress) {
-        QKeyEvent *event = static_cast<QKeyEvent *>(event);
-        qDebug() << "\nMW::eventFilter  keyPressEvent" << event;
-        if (event->key() == Qt::Key_Escape) {
-            dm->timeToQuit = true;
-        }
-    }
-    */
+    /****************************************************************************************
 
-    // ****************************************************************************************
-
-    /* IconView is ready-to-go and can scroll to wherever we want:
+    IconView is ready-to-go and can scroll to wherever we want:
 
     When the user changes modes in MW (ie from Grid to Loupe) a IconView
     instance (either thumbView or gridView) can change state from hidden to
@@ -508,15 +508,16 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
          }
     }
 
-    // ****************************************************************************************
+    /****************************************************************************************
 
-    /*  Intercept context menu
-     Intercept context menu to enable/disable:
-     - eject usb drive menu item
-     - add bookmarks menu item
-     mouseOverFolder is used in folder related context menu actions instead of
-     currentViewDir
-     */
+    Intercept context menu
+
+    Intercept context menu to enable/disable:
+    - eject usb drive menu item
+    - add bookmarks menu item
+    mouseOverFolder is used in folder related context menu actions instead of
+    currentViewDir
+    */
 
     if (event->type() == QEvent::ContextMenu) {
         addBookmarkAction->setEnabled(true);
@@ -1421,7 +1422,7 @@ memory has been consumed or all the images are cached.
 
     updateIconBestFit();
 
-    // have to wait for the data before resize table columns
+    // had to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
     QModelIndexList indexesList = selectionModel->selectedIndexes();
@@ -1435,7 +1436,7 @@ memory has been consumed or all the images are cached.
     // drive has been removed or did have "include subfolders" activated
     if (fPath == "") return;
 
-    // imageCacheThread checks if already running and restarts caching
+    // set image cache parameters and build image cacheItemList
     imageCacheThread->initImageCache(cacheSizeMB,
         isShowCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
@@ -1444,6 +1445,7 @@ memory has been consumed or all the images are cached.
     metadataLoaded = true;
 
     // tell image cache new position
+//    qDebug() << __FUNCTION__ << "calling imageCacheThread->updateImageCachePosition";
     imageCacheThread->updateImageCachePosition(/*fPath*/);
 
     G::isNewFolderLoaded = true;
@@ -1471,7 +1473,7 @@ void MW::loadFilteredImageCache()
     imageCacheThread->initImageCache(cacheSizeMB,
         isShowCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
-    G::track(__FUNCTION__, "imageCacheThread->updateImageCachePosition(fPath)");
+    qDebug() << __FUNCTION__, "calling imageCacheThread->updateImageCachePosition(fPath)";
     imageCacheThread->updateImageCachePosition(/*fPath*/);
 }
 
@@ -4099,7 +4101,7 @@ parameters.  Any visibility changes are executed.
     progressPixmap->scaled(progressWidth, 25);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
-    G::track(__FUNCTION__, "imageCacheThread->updateImageCachePosition(fPath)");
+    qDebug() << __FUNCTION__, "calling imageCacheThread->updateImageCachePosition()";
     if (fPath.length())
         imageCacheThread->updateImageCachePosition(/*fPath*/);
 
@@ -4516,6 +4518,7 @@ void MW::buildFilters()
     if (!G::allMetadataLoaded) {
         loadEntireMetadataCache();
     }
+    imageCacheThread->filterImageCache(dm->currentFilePath);
     dm->buildFilters();
     progressBar->recoverProgressState();
     updateStatus(true);
@@ -4535,7 +4538,10 @@ and icons are loaded if necessary.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
+    // ignore if new folder is being loaded
+    if (!G::isNewFolderLoaded) return;
+
+    // Need all metadata loaded before filtering
     if (!G::allMetadataLoaded) loadEntireMetadataCache();
     // refresh the proxy sort/filter
     dm->sf->filterChange();
@@ -4554,7 +4560,7 @@ and icons are loaded if necessary.
 //    QString currentFilePath = idx.data(G::PathRole).toString();
 
     currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
-    qDebug() << __FUNCTION__ << currentRow;
+//    qDebug() << __FUNCTION__ << currentRow;
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
     selectionModel->setCurrentIndex(dm->sf->index(currentRow, 0),

@@ -644,12 +644,13 @@ It is built from dm->sf (sorted and/or filtered datamodel).
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << "for" << dm->currentFolderPath;
     cacheItemList.clear();
     // the total memory size of all the images in the folder currently selected
     float folderMB = 0;
     cache.totFiles = dm->sf->rowCount();
 
-    for (int i=0; i < dm->sf->rowCount(); ++i) {
+    for (int i = 0; i < dm->sf->rowCount(); ++i) {
         QString fPath = dm->sf->index(i, 0).data(G::PathRole).toString();
         /* cacheItemList is a list of cacheItem used to track the current
            cache status and make future caching decisions for each image  */
@@ -682,6 +683,14 @@ void ImageCache::updateImageCacheList()
 {
 
     for (int i = 0; i < dm->sf->rowCount(); ++i) {
+        if (i >= cacheItemList.length()) {
+            qDebug() << __FUNCTION__
+                     << "cacheItemList[0].fName" << cacheItemList[0].fName
+                     << "ITEM" << i
+                     << "EXCEEDS CACHEITEMLIST LENGTH" << cacheItemList.length()
+                     << dm->currentFilePath;
+            return;
+        }
         if (!cacheItemList[i].isMetadata) {
             // assume 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024
             ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
