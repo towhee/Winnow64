@@ -134,6 +134,7 @@ namespace G
 
     extern int actualDevicePixelRatio;
     extern bool allMetadataLoaded;
+    extern bool filtersNotBuilt;
 
     extern bool isThreadTrackingOn;
     extern bool isNewFolderLoaded;

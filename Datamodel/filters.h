@@ -53,6 +53,7 @@ public slots:
 
     bool isAnyFilter();
     void invertFilters();
+    void clearAll();
     void uncheckAllFilters();
     void expandAllFilters();
     void collapseAllFilters();

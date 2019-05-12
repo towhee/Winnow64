@@ -410,6 +410,20 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     };
     */
 
+    if (!dm->filtersBuilt) {
+        if (!filterDock->visibleRegion().isNull()) {
+            if(obj->objectName() == "Filters") {
+                if (event->type() == QEvent::ChildRemoved) {
+//            qDebug() << event << event->type() <<  obj
+//                     << "dm->filtersBuilt" << dm->filtersBuilt
+//                     << "visibleRegion" << !filterDock->visibleRegion().isNull();;
+                    buildFilters();
+//                    qDebug() << "******************* event->type() == QEvent::ChildAdded *********************";
+                }
+            }
+        }
+    }
+
     // figure out key presses
 /*    if (event->type() == QEvent::KeyPress) {
         QKeyEvent *event = static_cast<QKeyEvent *>(event);
@@ -817,6 +831,7 @@ void MW::folderSelectionChange()
     this function has been executed by the load subfolders command then all the
     subfolders will be recursively loaded into the datamodel.
     */
+    uncheckAllFilters();
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         qDebug() << "Datamodel Failed To Load for" << currentViewDir;
         clearAll();
@@ -4477,7 +4492,7 @@ FILTERS & SORTING
 Filters have two types:
 
     1. Metadata known by the operating system (name, suffix, size, modified date)
-    2. Metadata read from the file by Winnow
+    2. Metadata read from the file by Winnow (ie cameera model, aperture, ...)
 
 When a folder is first selected only type 1 information is known for all the files in the
 folder unless the folder is small enough so all the files were read in one pass. Filtering and
@@ -4501,27 +4516,26 @@ void MW::buildFilters()
     if (!G::allMetadataLoaded) {
         loadEntireMetadataCache();
     }
-    else {
-        dm->buildFilters();
-        progressBar->recoverProgressState();
-    }
+    dm->buildFilters();
+    progressBar->recoverProgressState();
     updateStatus(true);
 }
 
 void MW::filterChange(bool isFilter)
 {
 /*
-All filter changes should be routed to here as a central clearing house. The datamodel filter
-is refreshed, the filter panel counts are updated, the current index is updated, the image
-cache is rebuilt to match the current filter, any prior selection that is still available is
-set, the thumb and grid first/last/thumbsPerPage parameters are recalculated and icons are
-loaded if necessary.
+All filter changes should be routed to here as a central clearing house. The datamodel
+filter is refreshed, the filter panel counts are updated, the current index is updated,
+the image cache is rebuilt to match the current filter, any prior selection that is still
+available is set, the thumb and grid first/last/thumbsPerPage parameters are recalculated
+and icons are loaded if necessary.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if (!G::allMetadataLoaded) loadEntireMetadataCache();
     // refresh the proxy sort/filter
     dm->sf->filterChange();
@@ -4529,40 +4543,35 @@ loaded if necessary.
     dm->filteredItemCount();
     // update the status panel filtration status
     updateFilterStatus(isFilter);
-    // get the current selected item
-    QModelIndex idx = thumbView->currentIndex();
-    QString currentFilePath = idx.data(G::PathRole).toString();
-
-    if (dm->sf->rowCount()) {
-        // if nothing selected after filter
-        if (!selectionModel->selectedRows().count()) {
-            thumbView->selectFirst();
-        }
-        // maintain selection and current row
-        else {
-            currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
-            thumbView->iconViewDelegate->currentRow = currentRow;
-            gridView->iconViewDelegate->currentRow = currentRow;
-            selectionModel->setCurrentIndex(dm->sf->index(currentRow, 0),
-                                            QItemSelectionModel::Current);
-
-            // the file path is used as an index in ImageView
-            QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
-            // also update datamodel, used in MdCache
-            dm->currentFilePath = fPath;
-        }
-        centralLayout->setCurrentIndex(prevCentralView);
-        updateStatus(true);
-
-        // filter the image cache to sync with datamodel filter
-        imageCacheThread->filterImageCache(currentFilePath);
-
-        updateMetadataCacheIconviewState();
-        metadataCacheThread->filterChange(currentRow);
-    }
 
     // if filter has eliminated all rows so nothing to show
-    else nullFiltration();
+    if (!dm->sf->rowCount()) {
+        nullFiltration();
+        return;
+    }
+    // get the current selected item
+//    QModelIndex idx = thumbView->currentIndex();
+//    QString currentFilePath = idx.data(G::PathRole).toString();
+
+    currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
+    qDebug() << __FUNCTION__ << currentRow;
+    thumbView->iconViewDelegate->currentRow = currentRow;
+    gridView->iconViewDelegate->currentRow = currentRow;
+    selectionModel->setCurrentIndex(dm->sf->index(currentRow, 0),
+                                    QItemSelectionModel::Current);
+
+    // the file path is used as an index in ImageView
+    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+    // also update datamodel, used in MdCache
+    dm->currentFilePath = fPath;
+    centralLayout->setCurrentIndex(prevCentralView);
+    updateStatus(true);
+
+    // filter the image cache to sync with datamodel filter
+    imageCacheThread->filterImageCache(fPath);
+
+    updateMetadataCacheIconviewState();
+    metadataCacheThread->filterChange(currentRow);
 }
 
 void MW::quickFilter()
@@ -8074,31 +8083,40 @@ void MW::setCombineRawJpg()
 void MW::setCachedStatus(QString fPath, bool isCached)
 {
 /*
-When an image is cached in ImageCache a signal triggers this slot to update the
-datamodel cache status role.  After the datamodel update the thumbView and
-gridView thumbnail is refreshed to update the cache badge.
+When an image is added or removed from the image cache in ImageCache a signal triggers
+this slot to update the datamodel cache status role. After the datamodel update the
+thumbView and gridView thumbnail is refreshed to update the cache badge.
 
-Note that the datamodel is used (dm), not the proxy (dm->sf). If the proxy is
-used and the user then sorts or filters the index could go out of range and the
-app will crash.
+Note that the datamodel is used (dm), not the proxy (dm->sf). If the proxy is used and
+the user then sorts or filters the index could go out of range and the app will crash.
 
-Make sure the file path exists in the datamodel.  The most likely failure will
-be if a new folder has been selected but the image cache has not yet redirected.
+Make sure the file path exists in the datamodel. The most likely failure will be if a new
+folder has been selected but the image cache has not been rebuilt.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QModelIndexList idxList = dm->match(dm->index(0, 0), G::PathRole, fPath);
-    if (idxList.length()) {
-        QModelIndex idx = idxList[0];
-        if (idx.isValid()) {
-            dm->setData(idx, isCached, G::CachedRole);
-            thumbView->refreshThumb(idx, G::CachedRole);
-            gridView->refreshThumb(idx, G::CachedRole);
-        }
+//    int row = dm->fPathRow[fPath];
+//    QModelIndex idx = dm->sf->mapFromSource(dm->index(row, 0));
+    QModelIndex idx = dm->proxyIndexFromPath(fPath);
+    if (idx.isValid()) {
+        dm->sf->setData(idx, isCached, G::CachedRole);
+        thumbView->refreshThumb(idx, G::CachedRole);
+        gridView->refreshThumb(idx, G::CachedRole);
     }
+    return;
+
+//    QModelIndexList idxList = dm->match(dm->index(0, 0), G::PathRole, fPath);
+//    if (idxList.length()) {
+//        QModelIndex idx = idxList[0];
+//        if (idx.isValid()) {
+//            dm->setData(idx, isCached, G::CachedRole);
+//            thumbView->refreshThumb(idx, G::CachedRole);
+//            gridView->refreshThumb(idx, G::CachedRole);
+//        }
+//    }
 }
 
 void MW::updateClassification()
@@ -8987,6 +9005,38 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+
+    qDebug() << "isActiveWindow" << filterDock->isActiveWindow()
+             << "isVisible" << filterDock->isVisible()
+             << "isHidden" << filterDock->isHidden()
+             << "hasFocus" << filterDock->hasFocus()
+             << "isActiveWindow" << filterDock->isActiveWindow()
+             << "widget->hasFocus" << filterDock->widget()->hasFocus()
+             << "visibleRegion" << !filterDock->visibleRegion().isNull();
+    return;
+
+    int row = 1;
+    QString fPath = dm->index(row, 0).data(G::PathRole).toString();
+
+    QStandardItem *item = new QStandardItem;
+
+    QModelIndex idx = dm->index(row, 0, QModelIndex());
+    if (!idx.isValid()) {
+        return;
+    }
+
+//    item = dm->itemFromIndex(idx);
+//    item->setIcon(QPixmap::fromImage(thumb));
+
+    // debugging
+    QModelIndex sfIdx = dm->sf->mapFromSource(idx);
+    qDebug() << __FUNCTION__
+             << sfIdx.row()
+             << fPath
+             << sfIdx.data(Qt::DecorationRole).isNull()
+             << idx.data(Qt::DecorationRole).isNull();
+
+    return;
     imageCacheThread->reportCache();
 
     int w = 8288;

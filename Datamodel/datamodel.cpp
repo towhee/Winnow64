@@ -51,11 +51,13 @@ The data is structured in columns:
     ● IsXmp:            from metadata       EditRole
     ● OrientationOffset:from metadata       EditRole
 
+enum for roles and columns are in global.cpp
+
 Note that more items such as the file offsets to embedded JPG are stored in
 the metadata structure which is indexed by the file path.
 
-A QSortFilterProxyModel (SortFilter) is used by ThumbView, TableView,
-CompareView and ImageView (sf thoughout the app).
+A QSortFilterProxyModel (SortFilter = sf) is used by ThumbView, TableView,
+CompareView and ImageView (dm->sf thoughout the app).
 
 Sorting is applied both from the menu and by clicking TableView headers.  When
 sorting occurs all views are updated and the image cache is reindexed.
@@ -64,7 +66,22 @@ Filtering is applied from Filters, a QTreeWidget with checkable items for a
 number of datamodel columns.  Filtering also updates all views and the image
 cache is reloaded.
 
-enum for roles and columns are in global.cpp
+SORTING AND FILTERING FLOW
+
+Sorting and filtering requires that metadata exist for all images in the datamodel.
+However, metadata is loaded as required to improve performance in folders with many images.
+When filtering is requested the following steps occur:
+
+    • Note current image and selection
+    • Load all metadata if required
+    • Refresh the proxy sort/filter
+    • If criteria results in null dataset report in centralLayout and finished
+    • Re-establish current image and selection in filtered proxy
+    • Update the filter panel criteria tree item counts
+    • Update the status panel filtration status
+    • Reset centralLayout in case prior criteria resulted in null dataset
+    • Sync image cache cacheItemList to match dm->sf after filtering
+    • Make sure icons are loaded in all views and the image cache is up-to-date.
 
 Code examples for model:
 
@@ -201,6 +218,8 @@ void DataModel::clear()
     fPathRow.clear();
     // clear all items for filters based on data content ie file types, camera model
     filters->removeChildrenDynamicFilters();
+    // reset remaining criteria without signalling filter change as no new data yet
+    filters->clearAll();
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -672,6 +691,7 @@ void DataModel::buildFilters()
     #endif
     }
     if (filtersBuilt) return;
+    filtersBuilt = true;
 
     popup("Building filters.  This could take a while to complete.", 3000, 0.75);
 
@@ -782,13 +802,29 @@ void DataModel::buildFilters()
     qApp->processEvents();
 }
 
-QModelIndex DataModel::find(QString fPath)
+QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 {
+/*
+The hash table fPathRow {path, row} if build when the datamodel is loaded to provide a
+quick lookup to get the datamodel row from an image path.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int row = fPathRow[fPath];
+    QModelIndex idx = sf->mapFromSource(index(row, 0));
+    if (idx.isValid()) return idx;
+    return index(-1, -1);       // invalid index
+
+    /* deprecated code
     QModelIndexList idxList = sf->match(sf->index(0, 0), G::PathRole, fPath);
     if (idxList.size() > 0 && idxList[0].isValid()) {
         return idxList[0];
     }
     return index(-1, -1);       // invalid index
+    */
 }
 
 void DataModel::updateImageList()
