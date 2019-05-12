@@ -759,14 +759,25 @@ crash.
     G::track(__FUNCTION__);
     #endif
     }
-//    QString fPath = dm->index(row, 0).data(G::PathRole).toString();
+    QString fPath = dm->index(row, 0).data(G::PathRole).toString();
+
     QStandardItem *item = new QStandardItem;
+
     QModelIndex idx = dm->index(row, 0, QModelIndex());
     if (!idx.isValid()) {
         return;
     }
+
     item = dm->itemFromIndex(idx);
     item->setIcon(QPixmap::fromImage(thumb));
+
+    /* debugging
+    QModelIndex sfIdx = dm->sf->mapFromSource(idx);
+    qDebug() << __FUNCTION__
+             << sfIdx.row()
+             << fPath
+             << !idx.data(Qt::DecorationRole).isNull();*/
+
     if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
 
     // for best aspect calc

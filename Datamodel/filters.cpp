@@ -2,17 +2,21 @@
 
 Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 {
-/* Used to filter the datamodel, based on which items are checked in the tree.
+/*
+Used to define criteria for filtering the datamodel, based on which items are checked in
+the tree.
 
-It contains top level items (Categories ie Ratings, Color Classes, File types
-...). For each top level item the children are the filter choices to filter
-DataModel->Proxy (dm->sf). The categories are divided into predefined (Picks,
-Ratings and Color Classes) and dynamic categories based on existing metadata
-(File types, Camera Models, Focal Lengths and Titles). The dynamic filter
-options are populated by DataModel when folder data is loaded by addFiles and
-addMetadata. The actual filtering is executed in SortFilter subclass of
-QSortFilterProxy (sf) in datamodel.
+The tree contains top level items (Categories ie Ratings, Color Classes, File types ...).
+For each top level item the children are the filter choices to filter DataModel->Proxy
+(dm->sf). The categories are divided into predefined (Picks, Ratings and Color Classes)
+and dynamic categories based on existing metadata (File types, Camera Models, Focal
+Lengths, Titles etc).
 
+The dynamic filter options are populated by DataModel on demand when the user filters or
+the filters dock has focus.
+
+The actual filtering is executed in SortFilter subclass of QSortFilterProxy (sf) in
+datamodel.
 
 */
     {
@@ -351,9 +355,11 @@ void Filters::invertFilters()
     // emit filterChange();  // this is done im MW::invertFilters - which calls this function
 }
 
-void Filters::uncheckAllFilters()
+void Filters::clearAll()
 {
-/* Uncheck all the filter items
+/*
+Uncheck all the filter items but do not signal filter change.  This is called when a new
+folder is selected to reset the filter criteria.
 */
     {
     #ifdef ISDEBUG
@@ -364,7 +370,29 @@ void Filters::uncheckAllFilters()
     while (*it) {
         if ((*it)->parent()) {            
             (*it)->setCheckState(0, Qt::Unchecked);
-            (*it)->setData(2, Qt::EditRole, "test");
+            (*it)->setData(2, Qt::EditRole, "");
+            (*it)->setData(3, Qt::EditRole, "");
+            (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        }
+        ++it;
+    }
+}
+
+void Filters::uncheckAllFilters()
+{
+    /* Uncheck all the filter items
+*/
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        if ((*it)->parent()) {
+            (*it)->setCheckState(0, Qt::Unchecked);
+            (*it)->setData(2, Qt::EditRole, "");
+//            (*it)->setData(2, Qt::EditRole, "test");
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         }
         ++it;

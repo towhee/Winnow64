@@ -48,7 +48,7 @@ public:
     ImageMetadata getMetadata(QString fPath);
     void updateImageList();
     void sortThumbs(int sortColumn, bool isReverse);
-    QModelIndex find(QString fPath);
+    QModelIndex proxyIndexFromPath(QString fPath);
 
     SortFilter *sf;
     QHash<QString, int> fPathRow;

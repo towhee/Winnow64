@@ -33,6 +33,7 @@ namespace G
 
     int actualDevicePixelRatio;
     bool allMetadataLoaded;
+    bool filtersNotBuilt;
 
     // not persistent
     bool isThreadTrackingOn;

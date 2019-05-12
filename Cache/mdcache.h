@@ -26,10 +26,10 @@ public:
     enum Action {
         NewFolder = 0,
         NewFolder2ndPass = 1,
-        NewFileSelected = 2,
-        IconChunk = 3,
-        Scroll = 4,
-        FilterChange = 5,
+        FilterChange = 2,
+        NewFileSelected = 3,
+        IconChunk = 4,
+        Scroll = 5,
         AllMetadata = 6
     };
 

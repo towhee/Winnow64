@@ -555,7 +555,7 @@ void ImageCache::reportCache(QString title)
     rpt << "\n";
     std::cout << reportString.toStdString() << std::flush;
 
-    for (int i=0; i<cache.totFiles; ++i) {
+    for (int i = 0; i < cache.totFiles; ++i) {
         int row = dm->fPathRow[cacheItemList.at(i).fName];
         rpt.flush();
         reportString = "";
@@ -994,7 +994,7 @@ void ImageCache::run()
                      << "roomRqd =" << roomRqd;  */
             while (room < roomRqd) {
                 // make some room by removing lowest priority cached image
-                if(nextToDecache()) {
+                if (nextToDecache()) {
                     QString s = cacheItemList[cache.toDecacheKey].fName;
                     imCache.remove(s);
                     emit updateCacheOnThumbs(s, false);

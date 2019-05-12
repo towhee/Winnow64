@@ -516,6 +516,20 @@ Load the thumb (icon) for all the image files in the target range.
             }
         }
         mutex.unlock();
+
+//        mutex.lock();
+//        idx = dm->sf->index(row, 0);
+//        int dmRow = dm->sf->mapToSource(idx).row();
+//        QString fPath = idx.data(G::PathRole).toString();
+//        if (idx.data(Qt::DecorationRole).isNull()) {
+//            QImage image;
+//            bool thumbLoaded = thumb->loadThumb(fPath, image);
+//            if (thumbLoaded) {
+//                emit setIcon(dmRow, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+//                iconsCached.append(dmRow);
+//            }
+//        }
+//        mutex.unlock();
     }
 }
 
@@ -658,7 +672,7 @@ If there has been a file selection change and not a new folder then update image
         }
 
         // clean up orphaned icons outside icon range
-        if (action > Action::NewFolder2ndPass) {
+        if (action > Action::FilterChange) {
             iconCleanup();
         }
 

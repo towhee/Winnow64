@@ -1,10 +1,9 @@
 BUGS
+- Make sure filters updated when filters dock has focus
+- Clear filters when new folder
 - Shooting info string not working
-- Image caching not reporting correctly on thumbs (red dot)
-- Cache after change filters not working
 - Problems with D:\Pictures\Prints
 - Problems with D:\Programming\Icons\16x16\actions
-- Tableview showing tech columns
 - Finish cache preferences
 - Add / update tool tips in preferences and throughout program
 - ImageView::scale comparing floats potentially bad
@@ -12,7 +11,7 @@ BUGS
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
 PERFORMANCE
-- Check if cacheDelay is still important (It appears not, but leave in but
+- Check if cacheDelay is still important (it appears not, but leave in but
   set to zero for now
 CODE IMPROVEMENTS
 - Change setPixelSize to setPointSize throughout app
@@ -40,6 +39,10 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Cache after change filters not working
+- Image caching not reporting correctly on thumbs (red dot)
+- Tableview showing tech columns
+- replace find in datamodel using fPathRow hash lookup
 - Recent folders not trimmed to maxRecentFolders
 - Wait for threads to finish when close main window
 - When so settings file count not showing when start
