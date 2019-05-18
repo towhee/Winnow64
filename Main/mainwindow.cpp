@@ -1258,9 +1258,10 @@ the filter and sort operations cannot commence until all the metadata has been l
         imageCacheThread->pauseImageCache();
         resumeImageCaching = true;
     }
-    popUp->showPopup(this, "It may take a moment to load all the metadata...\n"
-                     "This is required before any filtering or sorting of metadata can be done.",
-                     2000, 0.75);
+    popup("It may take a moment to load all the metadata...\n"
+          "This is required before any filtering or sorting of metadata can be done.",
+          0, 0.75);
+    updateStatus(false, "Loading metadata for all images");
     QApplication::setOverrideCursor(Qt::WaitCursor);
     progressBar->saveProgressState();
     progressBar->clearProgress();
@@ -1281,11 +1282,12 @@ the filter and sort operations cannot commence until all the metadata has been l
     // metadataCacheThread->loadAllMetadata();
     // metadataCacheThread->wait();
 
-    dm->buildFilters();
+//    dm->buildFilters();
 
     progressBar->recoverProgressState();
     if (resumeImageCaching) imageCacheThread->resumeImageCache();
     QApplication::restoreOverrideCursor();
+    popup("Metadata loaded.", 500, 0.75);
     QApplication::processEvents();
 }
 
@@ -3412,6 +3414,9 @@ void MW::createCaching()
     connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
             SLOT(loadMetadataChunk()));
 
+    connect(metadataCacheThread, SIGNAL(updateIsRunning(bool,bool,QString)),
+            this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
+
     connect(metadataCacheThread, SIGNAL(updateIconBestFit()),
             this, SLOT(updateIconBestFit()));
 
@@ -4518,6 +4523,8 @@ void MW::buildFilters()
     if (!G::allMetadataLoaded) {
         loadEntireMetadataCache();
     }
+    updateStatus(false, "Building filters: loading metadata for all images ...");
+    qApp->processEvents();
     imageCacheThread->filterImageCache(dm->currentFilePath);
     dm->buildFilters();
     progressBar->recoverProgressState();
@@ -4563,8 +4570,9 @@ and icons are loaded if necessary.
 //    qDebug() << __FUNCTION__ << currentRow;
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
-    selectionModel->setCurrentIndex(dm->sf->index(currentRow, 0),
-                                    QItemSelectionModel::Current);
+    QModelIndex idx = dm->sf->index(currentRow, 0);
+    selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
+//    if (currentRow == 0) thumbView
 
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
@@ -4578,7 +4586,13 @@ and icons are loaded if necessary.
 
     updateMetadataCacheIconviewState();
     metadataCacheThread->filterChange(currentRow);
-}
+
+//    thumbView->selectThumb(currentRow);
+//    gridView->selectThumb(currentRow);
+    if (gridView->isVisible()) gridView->scrollToRow(currentRow);
+    if (thumbView->isVisible()) thumbView->scrollToRow(currentRow);
+    if (tableView->isVisible()) tableView->scrollTo(idx,
+         QAbstractItemView::ScrollHint::PositionAtCenter);}
 
 void MW::quickFilter()
 {
@@ -9011,6 +9025,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    loadEntireMetadataCache();
+    return;
+
+    qDebug() << dm->sf->mapFromSource(dm->index(0, 0)).row();
+    return;
 
     qDebug() << "isActiveWindow" << filterDock->isActiveWindow()
              << "isVisible" << filterDock->isVisible()

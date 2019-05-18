@@ -444,11 +444,15 @@ that have icons are tracked in the list iconsCached as the dm row (not dm->sf pr
     mutex.lock();
     while (i.hasNext()) {
         i.next();
-        int row = i.value();
-//        if (row < iconTargetStart || row > iconTargetEnd) {
-        if (row < startRow || row > endRow) {
+        // the datamodel row dmRow
+        int dmRow = i.value();
+        // the filtered proxy row sfRow
+        // mapFromSource returns -1 if dm->index(dmRow, 0) is not in the filtered dataset
+        int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
+        // remove all loaded icons outside target range
+        if (sfRow < startRow || sfRow > endRow) {
             i.remove();
-            dm->itemFromIndex(dm->index(row, 0))->setIcon(nullPm);
+            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(nullPm);
         }
     }
     mutex.unlock();
@@ -605,6 +609,7 @@ If there has been a file selection change and not a new folder then update image
 //    qDebug() << __FUNCTION__;
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
+        qApp->processEvents();
 
 //        qDebug() << __FUNCTION__ << "startRow" << startRow;
 
@@ -658,8 +663,8 @@ If there has been a file selection change and not a new folder then update image
         }
 
         // clean up orphaned icons outside icon range
-        if (action > Action::FilterChange) {
-//            iconCleanup();
+        if (action >= Action::FilterChange) {
+            iconCleanup();
         }
 
         if (action == Action::NewFolder) {

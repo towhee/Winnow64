@@ -62,10 +62,12 @@ public slots:
 
 protected:
     void resizeEvent(QResizeEvent *event);
+    void mousePressEvent(QMouseEvent *event);
 
 private:
     QLinearGradient categoryBackground;
     QFont categoryFont;
+    int indentation;
 };
 
 #endif // FILTERS_H

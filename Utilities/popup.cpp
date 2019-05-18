@@ -86,6 +86,8 @@ void PopUp::show()
 
     // set popupDuration = 0 to keep open and manually close like a msgbox
     if (popupDuration > 0) timer->start(popupDuration);
+
+    qApp->processEvents();
 }
 
 void PopUp::hideAnimation()
