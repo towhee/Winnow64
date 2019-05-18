@@ -1,5 +1,6 @@
 BUGS
-- Icon cleanup in MdCache
+- One click titlebar expand filter in panel
+- ThumbView flashes when loading folder with thousands of images
 - Shooting info string not working
 - Problems with D:\Pictures\Prints
 - Problems with D:\Programming\Icons\16x16\actions
@@ -19,6 +20,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Filter by folder
 - Copy image
 - Refresh selected images
 - Speed up Tiffs
@@ -38,6 +40,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Icon cleanup in MdCache
 - Make sure filters updated when filters dock has focus
 - Clear filters when new folder
 - Cache after change filters not working

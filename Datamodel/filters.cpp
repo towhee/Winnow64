@@ -36,7 +36,8 @@ datamodel.
     header()->setDefaultAlignment(Qt::AlignCenter);
     hideColumn(1);
 
-    setIndentation(10);
+    indentation = 10;
+    setIndentation(indentation);
 
     categoryBackground.setStart(0, 0);
     categoryBackground.setFinalStop(0, 18);
@@ -424,9 +425,6 @@ createDynamicFilters;
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
     }
     static QTreeWidgetItem *item;
     QMap<QVariant, QString> uniqueItems;
@@ -447,4 +445,22 @@ void Filters::resizeEvent(QResizeEvent *event)
     setColumnWidth(2, 45);
     setColumnWidth(0, width() - G::scrollBarThickness - 90);
     QTreeWidget::resizeEvent(event);
+}
+
+void Filters::mousePressEvent(QMouseEvent *event)
+{
+/*
+Single mouse click on item triggers expand/collapse same as clicking on decoration.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QPoint p = event->pos();
+    QModelIndex idx = indexAt(p);
+    if (idx.isValid() && p.x() >= indentation) {
+        isExpanded(idx) ? collapse(idx) : expand(idx);
+    }
+    QTreeWidget::mousePressEvent(event);
 }

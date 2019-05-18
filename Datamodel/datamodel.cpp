@@ -289,8 +289,10 @@ Steps:
 
     // load file list for the current folder
     int folderImageCount = dir->entryInfoList().size();
+
     // bail if no images and not including subfolders
     if (!folderImageCount && !includeSubfolders) return false;
+
     // add supported images in folder to image list
     for (int i = 0; i < folderImageCount; ++i) {
         fileInfoList.append(dir->entryInfoList().at(i));
@@ -333,6 +335,7 @@ Steps:
                                 "\n\n" + QString::number(imageCount) +
                                 " images scanned";
                     emit msg(s);
+//                    emit popup(s, 0, 0.75);
                     qApp->processEvents();
                 }
             }
@@ -668,10 +671,11 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
 
     if (isShowCacheStatus) {
         if (row % 100 == 0 || row == rowCount() - 1) {
+            qDebug() << __FUNCTION__ << lastProgressRow << row;
             progressBar->updateProgress(lastProgressRow, row + 1, rowCount(),
                 G::progressAddMetadataColor,
                 "Reading the metadata for each image file");
-//            qApp->processEvents();
+            qApp->processEvents();
             lastProgressRow = row;
         }
     }
@@ -692,7 +696,8 @@ void DataModel::buildFilters()
     if (filtersBuilt) return;
     filtersBuilt = true;
 
-    popup("Building filters.  This could take a while to complete.", 3000, 0.75);
+    emit popup("Building filters.  This could take a while to complete.", 0, 0.75);
+    qApp->processEvents();
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
