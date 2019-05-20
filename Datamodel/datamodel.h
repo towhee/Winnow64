@@ -98,6 +98,9 @@ private:
     int imageCount;
     int countInterval = 0;
     QElapsedTimer t;
+    QString buildMsg = "Building filters.  This could take a while to complete.\n";
+    QString buildSteps = "10";
+    int step;
 
 };
 

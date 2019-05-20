@@ -274,7 +274,7 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
             int dmRow = dm->sf->mapToSource(idx).row();
             QString fPath = idx.data(G::PathRole).toString();
 
-            // load metadata
+            // load metadata if missing
             if (dm->sf->index(i, G::CreatedColumn).data().isNull()) {
                 QFileInfo fileInfo(fPath);
                 if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
@@ -811,7 +811,7 @@ Apparently there needs to be a slight delay before calling.
 
     // if all images are cached then we're done
     if (cacheUpToDate()) {
-//        qDebug() << __FUNCTION__ << "cache up-to-date - quitting image cache";
+        qDebug() << __FUNCTION__ << "cache up-to-date - quitting image cache";
         /* instance where go from blank folder to one image folder.  The first image is
            directly loaded (and cached) in ImageView and the file selection position changes,
            so this function is called, but the cache is up-to-date.  Make sure the image cache

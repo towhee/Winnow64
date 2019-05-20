@@ -372,7 +372,7 @@ added to the datamodel. The image cache is updated.
 
     currentRow = row;
     foundItemsToLoad = false;
-    if (currentRow <= prevFirstIconVisible || currentRow >= prevLastIconVisible) {
+//    if (currentRow <= prevFirstIconVisible || currentRow >= prevLastIconVisible) {
         setRange();
         for (int i = startRow; i < endRow; ++i) {
             if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
@@ -381,7 +381,7 @@ added to the datamodel. The image cache is updated.
                 foundItemsToLoad = true;
             if (foundItemsToLoad) break;
         }
-    }
+//    }
     action = Action::NewFileSelected;
     start(TimeCriticalPriority);
 }
@@ -417,14 +417,14 @@ void MetadataCache::setRange()
 
     prevFirstIconVisible = firstIconVisible;
     prevLastIconVisible = lastIconVisible;
-    /*
+
     qDebug()  <<  __FUNCTION__
               << "firstIconVisible =" << firstIconVisible
               << "lastIconVisible =" << lastIconVisible
               << "tpp =" << tpp
               << "metadataChunkSize =" << metadataChunkSize
               << "startRow =" << startRow
-              << "endRow =" << endRow;*/
+              << "endRow =" << endRow;
 }
 
 void MetadataCache::iconCleanup()
@@ -695,11 +695,17 @@ If there has been a file selection change and not a new folder then update image
 //        qDebug() << __FUNCTION__ << "emit loadImageCache()";
         emit loadImageCache();
     }
-
+ 
     // if a file selection change and not a new folder then update image cache
-    if (action == Action::NewFileSelected && dm->currentRow != previousRow && G::isNewFolderLoaded) {
-//        qDebug() << __FUNCTION__ << "fileSelectionChange emit updateImageCachePositionAfterDelay()";
-        emit updateImageCachePositionAfterDelay();
+    if (action == Action::NewFileSelected) {
+        qDebug() << __FUNCTION__ << "fileSelectionChange"
+                 << "dm->currentFilePath" << dm->currentFilePath
+                 << "dm->currentRow" << dm->currentRow
+                 << "previousRow" << previousRow
+                 << "G::isNewFolderLoaded" << G::isNewFolderLoaded;
+        if (dm->currentRow != previousRow && G::isNewFolderLoaded) {
+            emit updateImageCachePositionAfterDelay();
+        }
     }
 
     // if filter change then update image cache
