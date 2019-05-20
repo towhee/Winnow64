@@ -1,10 +1,10 @@
 BUGS
-- One click titlebar expand filter in panel
+- Check all caching code
+- Finish cache preferences
 - ThumbView flashes when loading folder with thousands of images
 - Shooting info string not working
 - Problems with D:\Pictures\Prints
 - Problems with D:\Programming\Icons\16x16\actions
-- Finish cache preferences
 - Add / update tool tips in preferences and throughout program
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
@@ -40,6 +40,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- One click titlebar expand filter in panel
 - Icon cleanup in MdCache
 - Make sure filters updated when filters dock has focus
 - Clear filters when new folder

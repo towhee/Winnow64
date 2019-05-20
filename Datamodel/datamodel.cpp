@@ -672,11 +672,16 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     if (isShowCacheStatus) {
         if (row % 100 == 0 || row == rowCount() - 1) {
             qDebug() << __FUNCTION__ << lastProgressRow << row;
-            progressBar->updateProgress(lastProgressRow, row + 1, rowCount(),
-                G::progressAddMetadataColor,
-                "Reading the metadata for each image file");
-            qApp->processEvents();
+//            progressBar->updateProgress(lastProgressRow, row + 1, rowCount(),
+//                G::progressAddMetadataColor,
+//                "Reading the metadata for each image file");
+//            qApp->processEvents();
             lastProgressRow = row;
+
+            QString s = "Step 1 0f " + buildSteps + ":  Reading metadata ";
+            s += QString::number(row) + " of " + QString::number(rowCount());
+            emit popup(buildMsg + s, 0, 0.75);
+            qApp->processEvents();
         }
     }
 
@@ -696,9 +701,6 @@ void DataModel::buildFilters()
     if (filtersBuilt) return;
     filtersBuilt = true;
 
-    emit popup("Building filters.  This could take a while to complete.", 0, 0.75);
-    qApp->processEvents();
-
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
     QMap<QVariant, QString> lensMap;
@@ -708,8 +710,8 @@ void DataModel::buildFilters()
     QMap<QVariant, QString> yearMap;
     QMap<QVariant, QString> dayMap;
 
-    progressBar->clearProgress();
-    qApp->processEvents();
+//    progressBar->clearProgress();
+//    qApp->processEvents();
 
     int prev = 0;
     int rows = rowCount();
@@ -736,70 +738,83 @@ void DataModel::buildFilters()
         if (!dayMap.contains(day)) dayMap[day] = day;
 
         if (row % 100 == 0 || row == rowCount() - 1) {
-            progressBar->updateProgress(prev, row + 1, rows, G::progressBuildFiltersColor,
-                "Building filters...");
+//            progressBar->updateProgress(prev, row + 1, rows, G::progressBuildFiltersColor,
+//                "Building filters...");
+            QString s = "Step 2 0f " + buildSteps + ":  Mapping filters ";
+            s += QString::number(row) + " of " + QString::number(rowCount());
+            emit popup(buildMsg + s, 0, 0.75);
             qApp->processEvents();
             prev = row;
         }
     }
 
     // build filter items
-    progressBar->clearProgress();
-    rows = 9;
+//    progressBar->clearProgress();
+//    qApp->processEvents();
+
+    QString s = "Step 3 0f " + buildSteps + ":  Building camera model filters ...";
+    emit popup(buildMsg + s, 0, 0.75);
     qApp->processEvents();
+    step = 3;
 
     filters->addCategoryFromData(modelMap, filters->models);
-    int row = 0;
-    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
-                                "Building lens filters...");
+
+    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building lens filters ...";
+    emit popup(buildMsg + s, 0, 0.75);
     qApp->processEvents();
 
     filters->addCategoryFromData(lensMap, filters->lenses);
-    row++;
-    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
-                                "Building focal length filters...");
+    /*
+       progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
+                                "Building focal length filters..."); */
+
+    step++;
+    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building lens filters ...";
+    emit popup(buildMsg + s, 0, 0.75);
     qApp->processEvents();
 
     filters->addCategoryFromData(flMap, filters->focalLengths);
-    row++;
-    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
-                                "Building image title filters...");
+
+    step++;
+    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building lens filters ...";
+    emit popup(buildMsg + s, 0, 0.75);
     qApp->processEvents();
 
     filters->addCategoryFromData(titleMap, filters->titles);
-    row++;
-    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
-                                "Building creator filters...");
+
+    step++;
+    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building creator filters ...";
+    emit popup(buildMsg + s, 0, 0.75);
     qApp->processEvents();
 
     filters->addCategoryFromData(creatorMap, filters->creators);
-    row++;
-    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
-                                "Building year created filters...");
+
+    step++;
+    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building year filters ...";
+    emit popup(buildMsg + s, 0, 0.75);
     qApp->processEvents();
 
     filters->addCategoryFromData(yearMap, filters->years);
-    row++;
-    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
-                                "Building day created filters...");
+
+    step++;
+    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building day filters ...";
+    emit popup(buildMsg + s, 0, 0.75);
     qApp->processEvents();
 
     filters->addCategoryFromData(dayMap, filters->days);
-    row++;
-    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
-                                "Counting filtered items for each category");
+
+    step++;
+    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Counting filtered items ...";
+    emit popup(buildMsg + s, 0, 0.75);
     qApp->processEvents();
 
     filteredItemCount();
-    row++;
-    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
-                                "Counting unfiltered items for each category");
+    step++;
+    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Counting unfiltered items ...";
+    emit popup(buildMsg + s, 0, 0.75);
     qApp->processEvents();
 
     unfilteredItemCount();
-    row++;
-    progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
-                                "Counting unfiltered items for each category");
 
     filtersBuilt = true;
     popup("Filters have been updated.", 1000, 0.75);

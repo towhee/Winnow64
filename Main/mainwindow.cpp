@@ -125,7 +125,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     #endif
     }
 
-    {
     setObjectName("WinnowMainWindow");
 
     /* Note ISDEBUG is in globals.h
@@ -134,35 +133,28 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 //    qDebug() << G::t.restart() << "\t" << "isShift =" << isShift;
     isShift = false;
 
-
     // use this to show thread activity
     G::isThreadTrackingOn = false;
-
 
     isStressTest = false;
     // Global timer
     G::isTimer = true;
-    #ifdef ISPROFILE
-    G::t.start();
-    #endif
-
-    }
-
 
     // Initialize some variables etc
     initialize();
-    createAppStyle();
 
     // platform specific settings
     setupPlatform();
 
     // structure to hold persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
-    isSettings = false;
+    isSettings = loadSettings();    //dependent on bookmarks and actions, infoView
+
+    // app stylesheet and QSetting font size from last session
+    createAppStyle();
+
     // testing/debugging
     simulateJustInstalled = false;
-    // isLoadSettings used for debugging
-    isSettings = loadSettings();    //dependent on bookmarks and actions, infoView
     if (simulateJustInstalled) {
     }
 
@@ -1012,8 +1004,6 @@ delegate use of the current index must check the row.
     infoView->updateInfo(currentRow);
 
     // updateStatus happens in IconView::selectionChanged
-
-    progressLabel->setVisible(isShowCacheStatus);
 
     progressLabel->setVisible(isShowCacheStatus);
 
@@ -4002,7 +3992,8 @@ void MW::createAppStyle()
     G::track(__FUNCTION__);
     #endif
     }
-/* All the stylesheet text is saved in "/qss/winnow.css" except parameters we want
+/*
+   All the stylesheet text is saved in "/qss/winnow.css" except parameters we want
    to change programmatically, which is formulated in css1.
 */
     // add error trapping for file io  rgh todo
@@ -4010,7 +4001,12 @@ void MW::createAppStyle()
     fStyle.open(QIODevice::ReadOnly);
     css2 += fStyle.readAll();
 
-    if (isSettings) G::fontSize = setting->value("fontSize").toString();
+    if (isSettings) {
+        G::fontSize = setting->value("fontSize").toString();
+    }
+    else {
+        G::fontSize = "13";
+    }
     css1 = "QWidget {font-size: " + G::fontSize + "px;}";
     css = css1 + css2;
     this->setStyleSheet(css);
@@ -9025,7 +9021,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    loadEntireMetadataCache();
+    imageCacheThread->reportCache();
     return;
 
     qDebug() << dm->sf->mapFromSource(dm->index(0, 0)).row();
