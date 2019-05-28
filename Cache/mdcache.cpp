@@ -23,7 +23,7 @@ v         v           v                   v          v                          
 x = icon cache range
 v = visible icons
 
-To keep it simple and minimize several threads trying to access the same image file at the same
+To keep it simple and prevent several threads trying to access the same image file at the same
 time the following order of events occurs when Winnow is started or a new folder is selected:
 
     • Winnow is started and an instance of MetadataCache is created (metadataCacheThread). An
@@ -218,8 +218,11 @@ MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
 void MetadataCache::loadNewFolder2ndPass()
 {
 /*
-This function is called from MW::folderSelectionChange and will not have any filtering so we
-can use the datamodel dm directly. The greater of:
+This function is initiated after MetadataCache::loadNewFolder has called run.  A signal is
+emitted back to MW, which in turn calculates the best aspect and number of cells visible in
+the gridview, based on the metadata read in the first pass.
+
+The greater of:
  - the number of visible cells in the gridView or
  - maxChunkSize
 metadata and icons are loaded into the datamodel.

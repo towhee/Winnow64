@@ -269,24 +269,19 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
             // need to get metadata to calc memory req'd to cached
 
             // file path and dm source row in case filtered or sorted
-            mutex.lock();
-            QModelIndex idx = dm->sf->index(i, 0);
-            int dmRow = dm->sf->mapToSource(idx).row();
-            QString fPath = idx.data(G::PathRole).toString();
+            QString fPath = cacheItemList[i].fName;
+            int dmRow = dm->fPathRow[fPath];
 
-            // load metadata if missing
-            if (dm->sf->index(i, G::CreatedColumn).data().isNull()) {
-                QFileInfo fileInfo(fPath);
-                if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
-                    metadata->imageMetadata.row = dmRow;
-                    dm->addMetadataItem(metadata->imageMetadata);
-                    ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
-                    ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
-                    cacheItemList[i].sizeMB = (float)w * h / 262144;
-                    cacheItemList[i].isMetadata = w > 0;
-                }
+            // load metadata
+            QFileInfo fileInfo(fPath);
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+                metadata->imageMetadata.row = dmRow;
+                dm->addMetadataItem(metadata->imageMetadata);
+                ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
+                ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
+                cacheItemList[i].sizeMB = (float)w * h / 262144;
+                cacheItemList[i].isMetadata = w > 0;
             }
-            mutex.unlock();
         }
         sumMB += cacheItemList.at(i).sizeMB;
         if (sumMB < cache.maxMB) {

@@ -710,9 +710,6 @@ void DataModel::buildFilters()
     QMap<QVariant, QString> yearMap;
     QMap<QVariant, QString> dayMap;
 
-//    progressBar->clearProgress();
-//    qApp->processEvents();
-
     int prev = 0;
     int rows = rowCount();
     for(int row = 0; row < rows; row++) {
@@ -738,8 +735,6 @@ void DataModel::buildFilters()
         if (!dayMap.contains(day)) dayMap[day] = day;
 
         if (row % 100 == 0 || row == rowCount() - 1) {
-//            progressBar->updateProgress(prev, row + 1, rows, G::progressBuildFiltersColor,
-//                "Building filters...");
             QString s = "Step 2 0f " + buildSteps + ":  Mapping filters ";
             s += QString::number(row) + " of " + QString::number(rowCount());
             emit popup(buildMsg + s, 0, 0.75);
@@ -749,8 +744,6 @@ void DataModel::buildFilters()
     }
 
     // build filter items
-//    progressBar->clearProgress();
-//    qApp->processEvents();
 
     QString s = "Step 3 0f " + buildSteps + ":  Building camera model filters ...";
     emit popup(buildMsg + s, 0, 0.75);
