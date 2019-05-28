@@ -67,7 +67,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->slideshowRandomChk->setChecked(m0->slideShowRandom);
 
     // cache
-    ui->cacheSizeSpinbox->setValue(m0->cacheSizeMB / 1000);
+    ui->cacheSizeSpinbox->setValue(m0->cacheSizeMB / 1024);
     ui->showCacheStatusChk->setChecked(m0->isShowCacheStatus);
     ui->cacheDelaySpinbox->setValue(m0->cacheDelay);
     ui->showCacheThreadActivityChk->setChecked(m0->isShowCacheThreadActivity);
@@ -398,7 +398,7 @@ void Prefdlg::on_slideshowRandomChk_clicked()
 void Prefdlg::on_cacheSizeSpinbox_valueChanged(int value)
 {
     if (okToUpdate) {
-        m0->cacheSizeMB = value * 1000;
+        m0->cacheSizeMB = value * 1024;
         m0->setCacheParameters();
     }
 }

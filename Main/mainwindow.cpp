@@ -146,17 +146,15 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     // platform specific settings
     setupPlatform();
 
+    // testing/debugging
+    simulateJustInstalled = false;
+
     // structure to hold persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
     isSettings = loadSettings();    //dependent on bookmarks and actions, infoView
 
     // app stylesheet and QSetting font size from last session
     createAppStyle();
-
-    // testing/debugging
-    simulateJustInstalled = false;
-    if (simulateJustInstalled) {
-    }
 
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel (dm)
@@ -3619,7 +3617,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
         setting->endGroup();
         if (!infoString->infoTemplates.contains(" Default"))
             infoString->infoTemplates[" Default"] =
-            "{Model} {FocalLength}  {ShutterSpeed} at f/{Aperture}, ISO {ISO}\n{Title}";
+            "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}";
     }
 
     imageView = new ImageView(this,
@@ -9021,6 +9019,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qDebug() << dm->index(currentRow, G::ShootingInfoColumn).data().toString();
+    return;
+
     imageCacheThread->reportCache();
     return;
 

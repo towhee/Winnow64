@@ -4667,7 +4667,7 @@ void Metadata::loadFromThread(QFileInfo &fileInfo)
     loadImageMetadata(fileInfo, true, true, false, true);
 }
 
-bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
+bool Metadata:: loadImageMetadata(const QFileInfo &fileInfo,
                                  bool essential, bool nonEssential,
                                  bool isReport, bool isLoadXmp)
 {
