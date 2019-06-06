@@ -105,10 +105,7 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
     this->metadata = metadata;
     this->imageCacheThread = imageCacheThread;
     thumb = new Thumb(this, dm, metadata);
-    restart = false;
     abort = false;
-    thumbMax.setWidth(G::maxIconSize);
-    thumbMax.setHeight(G::maxIconSize);
 
     qRegisterMetaType<QVector<int>>();
 }
@@ -132,6 +129,7 @@ void MetadataCache::stopMetadateCache()
     if (isRunning()) {
         mutex.lock();
         abort = true;
+        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
@@ -195,6 +193,7 @@ MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
     }
     if (isRunning()) {
         mutex.lock();
+        qDebug() << "abort = true : " << __FUNCTION__;
         abort = true;
         condition.wakeOne();
         mutex.unlock();
@@ -205,8 +204,8 @@ MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
     iconsCached.clear();
     foundItemsToLoad = true;
     metadataChunkSize = defaultMetadataChunkSize;
-    currentRow = 0;
-    previousRow = 0;
+//    currentRow = 0;
+//    previousRow = 0;
     startRow = 0;
     endRow = metadataChunkSize;
     int rowCount = dm->sf->rowCount();
@@ -235,12 +234,13 @@ metadata and icons are loaded into the datamodel.
     if (isRunning()) {
         mutex.lock();
         abort = true;
+        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
     }
     abort = false;
-    currentRow = 0;
+//    currentRow = 0;
     setRange();
     foundItemsToLoad = false;
     if (!G::allMetadataLoaded) {
@@ -270,12 +270,13 @@ so only need to check for icons to read and then run the image cache.
     if (isRunning()) {
         mutex.lock();
         abort = true;
+        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
     }
     abort = false;
-    currentRow = row;
+//    currentRow = row;
     setRange();
     foundItemsToLoad = false;
     for (int i = startRow; i < endRow; ++i) {
@@ -305,6 +306,7 @@ progress bar update is more important then use the datamodel function dm::addAll
     if (isRunning()) {
         mutex.lock();
         abort = true;
+        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
@@ -329,15 +331,23 @@ selection change then the image cache is updated.
     #endif
     }
     if (isRunning()) {
-        mutex.lock();
-        abort = true;
-        condition.wakeOne();
-        mutex.unlock();
-        wait();
+        /* Check if still on the same page, which can happen when a fileSelectionChange
+           triggers a scroll event.  Both call the metaCacheThread and one can stop the
+           other.  Example, when user selects goto first image or goto last image.  */
+        if (row < firstIconVisible || row > lastIconVisible) {
+            mutex.lock();
+            abort = true;
+            qDebug() << "abort = true   row =" << row << __FUNCTION__;
+            condition.wakeOne();
+            mutex.unlock();
+            wait();
+        }
+        else return;
     }
+
     abort = false;
 
-    currentRow = row;
+//    currentRow = row;
     foundItemsToLoad = false;
     if (firstIconVisible < prevFirstIconVisible || lastIconVisible > prevLastIconVisible) {
         setRange();
@@ -367,13 +377,14 @@ added to the datamodel. The image cache is updated.
     if (isRunning()) {
         mutex.lock();
         abort = true;
+        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
     }
     abort = false;
 
-    currentRow = row;
+//    currentRow = row;
     foundItemsToLoad = false;
 //    if (currentRow <= prevFirstIconVisible || currentRow >= prevLastIconVisible) {
         setRange();
@@ -420,7 +431,7 @@ void MetadataCache::setRange()
 
     prevFirstIconVisible = firstIconVisible;
     prevLastIconVisible = lastIconVisible;
-
+    /*
     qDebug()  <<  __FUNCTION__
               << "firstIconVisible =" << firstIconVisible
               << "lastIconVisible =" << lastIconVisible
@@ -428,6 +439,7 @@ void MetadataCache::setRange()
               << "metadataChunkSize =" << metadataChunkSize
               << "startRow =" << startRow
               << "endRow =" << endRow;
+              */
 }
 
 void MetadataCache::iconCleanup()
@@ -459,6 +471,17 @@ that have icons are tracked in the list iconsCached as the dm row (not dm->sf pr
         }
     }
     mutex.unlock();
+}
+
+void MetadataCache::iconMax(QPixmap &thumb)
+{
+    if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
+
+    // for best aspect calc
+    int w = thumb.width();
+    int h = thumb.height();
+    if (w > G::iconWMax) G::iconWMax = w;
+    if (h > G::iconHMax) G::iconHMax = h;
 }
 
 void MetadataCache::readAllMetadata()
@@ -503,7 +526,7 @@ Load the thumb (icon) for all the image files in the target range.
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-    for (row = startRow; row <= endRow; ++row) {
+    for (int row = startRow; row <= endRow; ++row) {
         if (abort) {
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
@@ -511,14 +534,19 @@ Load the thumb (icon) for all the image files in the target range.
 
         // load icon
         mutex.lock();
-        idx = dm->sf->index(row, 0);
+        QModelIndex idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
         if (idx.data(Qt::DecorationRole).isNull()) {
             QImage image;
             QString fPath = idx.data(G::PathRole).toString();
             bool thumbLoaded = thumb->loadThumb(fPath, image);
             if (thumbLoaded) {
-                emit setIcon(dmRow, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+//                emit setIcon(dmRow, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+
+                // change to this instead of in iconview???
+                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+                iconMax(pm);
                 iconsCached.append(dmRow);
             }
         }
@@ -550,7 +578,7 @@ startRow and endRow.
 //             << "startRow =" << startRow
 //             << "endRow =" << endRow;
 
-    for (row = startRow; row < endRow; ++row) {
+    for (int row = startRow; row < endRow; ++row) {
         if (abort) {
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
@@ -558,7 +586,7 @@ startRow and endRow.
 
         // file path and dm source row in case filtered or sorted
         mutex.lock();
-        idx = dm->sf->index(row, 0);
+        QModelIndex idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
         QString fPath = idx.data(G::PathRole).toString();
 
@@ -582,7 +610,12 @@ startRow and endRow.
             QImage image;
             bool thumbLoaded = thumb->loadThumb(fPath, image);
             if (thumbLoaded) {
-                emit setIcon(dmRow, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+//                emit setIcon(dmRow, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+
+                // change to this instead of in iconview???
+                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+                iconMax(pm);
                 iconsCached.append(dmRow);
             }
         }
@@ -609,12 +642,9 @@ If there has been a file selection change and not a new folder then update image
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-//    qDebug() << __FUNCTION__;
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
         qApp->processEvents();
-
-//        qDebug() << __FUNCTION__ << "startRow" << startRow;
 
         mutex.lock();
         int rowCount = dm->rowCount();
@@ -647,8 +677,7 @@ If there has been a file selection change and not a new folder then update image
         if (action == Action::NewFolder2ndPass) readMetadataIconChunk();
 
         if (abort) {
-            qDebug() << "!!!!  Aborting MetadataCache::run  "
-                     << "row =" << row;
+//            qDebug() << "!!!!  Aborting MetadataCache::run  ";
             return;
         }
 
@@ -672,7 +701,7 @@ If there has been a file selection change and not a new folder then update image
 
         if (action == Action::NewFolder) {
             /* Only get bestFit on the first cache because the QListView rescrolls
-            whenever a change to sizehint occurs */
+               whenever a change to sizehint occurs */
 //            emit updateIconBestFit();
             // scroll to first image
             emit selectFirst();
@@ -701,12 +730,14 @@ If there has been a file selection change and not a new folder then update image
  
     // if a file selection change and not a new folder then update image cache
     if (action == Action::NewFileSelected) {
+        /*
         qDebug() << __FUNCTION__ << "fileSelectionChange"
                  << "dm->currentFilePath" << dm->currentFilePath
                  << "dm->currentRow" << dm->currentRow
                  << "previousRow" << previousRow
                  << "G::isNewFolderLoaded" << G::isNewFolderLoaded;
-        if (dm->currentRow != previousRow && G::isNewFolderLoaded) {
+                 */
+        if (G::isNewFolderLoaded) {
             emit updateImageCachePositionAfterDelay();
         }
     }

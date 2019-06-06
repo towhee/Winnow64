@@ -39,7 +39,7 @@ How the Image Cache works:
                   TTTTTTTTTTTTTTTTTTTTTTTTTTTTT
     ......................*............................................
 
-    . = all the images in the folder = all the thumbnails
+    . = all the thumbnails in dm->sf (filtered datamodel)
     * = the current thumbnail selected
     T = all the images targeted to cache.  The sum of T fills the assigned
         memory available for the cache ie 3000 MB
@@ -580,6 +580,13 @@ void ImageCache::reportCache(QString title)
     }
 }
 
+void ImageCache::reportToCache()
+{
+    qDebug() << "\nTo Cache: " << toCache.length() << "images:" ;
+    for (int i = 0; i < toCache.length(); ++i)
+        qDebug() << toCache.at(i);
+}
+
 void ImageCache::reportCacheProgress(QString action)
 {
     {
@@ -806,7 +813,7 @@ Apparently there needs to be a slight delay before calling.
 
     // if all images are cached then we're done
     if (cacheUpToDate()) {
-        qDebug() << __FUNCTION__ << "cache up-to-date - quitting image cache";
+//        qDebug() << __FUNCTION__ << "cache up-to-date - quitting image cache";
         /* instance where go from blank folder to one image folder.  The first image is
            directly loaded (and cached) in ImageView and the file selection position changes,
            so this function is called, but the cache is up-to-date.  Make sure the image cache
@@ -971,6 +978,7 @@ void ImageCache::run()
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     emit updateIsRunning(true, true);
     static QString prevFileName = "";
 

@@ -1,7 +1,8 @@
 BUGS
-- Check all caching code
+- Menu Go > Scroll actions not working (maybe rethink this)
+- Image cache GB used (infoview) keeps growing in size
+- Page up/down do not always work
 - Finish cache preferences
-- Shooting info string not working
 - Problems with D:\Pictures\Prints
 - Problems with D:\Programming\Icons\16x16\actions
 - Add / update tool tips in preferences and throughout program
@@ -39,6 +40,11 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- When slideshow random sometimes not read image
+- If slideshow random do not cache
+- Slideshow intercept keystrokes not overriding shortcuts
+- Repeat page up/down causes crash in grid mode
+- Shooting info string not working
 - One click titlebar expand filter in panel
 - Icon cleanup in MdCache
 - Make sure filters updated when filters dock has focus

@@ -747,6 +747,8 @@ bool IconView::isThumb(int row)
 void IconView::setIcon(int row, QImage thumb)
 {
 /*
+   ELIMINATED - ALL DONE IN meatdataCacheThread
+
 This slot is signalled from metadataCacheThread to set the thumbView icon.
 
 If a new folder is selected while the previous folder is being cached a race
@@ -759,17 +761,23 @@ crash.
     G::track(__FUNCTION__);
     #endif
     }
-    QString fPath = dm->index(row, 0).data(G::PathRole).toString();
+//    QString fPath = dm->index(row, 0).data(G::PathRole).toString();
 
-    QStandardItem *item = new QStandardItem;
 
-    QModelIndex idx = dm->index(row, 0, QModelIndex());
-    if (!idx.isValid()) {
-        return;
-    }
+//    QModelIndex idx = dm->index(row, 0, QModelIndex());
+//    if (!idx.isValid()) {
+//        return;
+//    }
+//    dm->itemFromIndex(dm->index(row, 0))->setIcon(QPixmap::fromImage(thumb));
 
-    item = dm->itemFromIndex(idx);
-    item->setIcon(QPixmap::fromImage(thumb));
+//    QStandardItem *item = new QStandardItem;
+//    item = dm->itemFromIndex(idx);
+
+//    Error after up/down key mashed
+//    Winnow(12636,0x1004445c0) malloc: *** error for object 0x109e12910: pointer being freed was not allocated
+//    Winnow(12636,0x1004445c0) malloc: *** set a breakpoint in malloc_error_break to debug
+//    item->setIcon(QPixmap::fromImage(thumb));
+
 
     /* debugging
     QModelIndex sfIdx = dm->sf->mapFromSource(idx);
@@ -1320,6 +1328,7 @@ void IconView::scrollPageUp(int /*step*/)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << isWrapping();
     if(isWrapping()) {
         horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
     }

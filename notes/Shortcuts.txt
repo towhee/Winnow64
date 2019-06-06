@@ -3,46 +3,64 @@ Escape full screen           ⎋
 Mouse click zoom 50%         5
 Mouse click zoom 100%        0
 Mouse click zoom 200%        2
+Rate image                   1-5
+Filter rating                1-5     ⇧
+Set color label              6-0
+Filter color label           6-0     ⇧
 During slideshow interval    0-9
 Invoke workspace             0-9  ⌘
+Open external program        0-9         ⌥
 Select all                   A    ⌘
 Invert Select all            A    ⌘  ⇧
 Enable subfolders            B
 Compare view                 C
+Clear Filters                C        ⇧
+Collapse all folders         C           ⌥
 Loupe view                   E
 Full screen                  F
 Reveal folder                F    ⌘
 Grid view                    G
 Show shooting information    I
-Include subfolders           I    ⌘
+Show rating/color            I    ⌘
+Combine Raw+Jpg              J    ⌘
 Loupe view                   L
 All docks lock               L    ⌘
+Report metadata              M    ⌘  ⇧  ⌥
 Open folder                  O
+Open USB Drive               O    ⌘
+Manage external programs     O           ⌥
+Pick image                   P
 Ingest / Copy to folder      Q
 Quit program                 Q    ⌘
-Report metadata              R    ⌘
+Refine                       R
+Reveal in Explore/Finder     R    ⌘
 Slideshow                    S
 Table view                   T
 New workspace                W
 Manage workspace             W    ⌘
 Default workspace            W    ⌘  ⇧
 Zoom fit <-> 100%            Z
-Folder dock                  F4
-Folder dock lock             F4      ⇧
-Fav dock                     F5
-Fav dock lock                F5      ⇧
+Recover prev picks           Z    ⌘      ⌥
+Exit full screen             Esc
+Folder dock                  F3
+Folder dock lock             F3      ⇧
+Fav dock                     F4
+Fav dock lock                F4      ⇧
+Filter dock                  F5
+Filter dock lock             F5      ⇧
+Refresh folders              F5   ⌘
 Metadata dock                F6
 Metadata dock lock           F6      ⇧
 Thumb dock                   F7
 Thumb lock dock              F7      ⇧
-Window title bar             F8
-Menu bar                     F9
 Status bar                   F10
 Preferences                  ,    ⌘
 Pick (toggle)                `
 Filter picks (toggle)        `    ⌘
-Rotate left                  [
-Rotate right                 ]
+Shrink thumbnails            [
+Rotate left                  [    ⌘
+Enlarge thumbnails           ]
+Rotate right                 ]    ⌘
 Enlarge Thumb                }
 Shrink thumb                 {
 Zoom out                     -
