@@ -185,6 +185,15 @@ to prevent jarring changes in perceived scale by the user.
         }
     }
     else {
+        // check metadata loaded for image (might not be if random slideshow)
+        int dmRow = dm->fPathRow[fPath];
+        if (dm->index(dmRow, G::CreatedColumn).data().isNull()) {
+            QFileInfo fileInfo(fPath);
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+                metadata->imageMetadata.row = dmRow;
+                dm->addMetadataItem(metadata->imageMetadata);
+            }
+        }
         QPixmap  displayPixmap;
         isLoaded = pixmap->load(fPath, displayPixmap);
         if (isLoaded) {

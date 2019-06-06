@@ -336,16 +336,24 @@ void MW::keyPressEvent(QKeyEvent *event)
         else dm->timeToQuit = true;
 
     }
+
+    QMainWindow::keyPressEvent(event);
 }
 
 void MW::keyReleaseEvent(QKeyEvent *event)
 {
 
-//    isShift = false;
-
+    // cancel slideshow
     if (event->key() == Qt::Key_Escape) {
         if (isSlideShow) slideShow();     // toggles slideshow off
-//            if (G::mode == "Loupe") gridDisplay();
+    }
+    // toggle random / sequential slideshow next slide
+    if (isSlideShow && event->key() == Qt::Key_R) {
+        slideShowRandom = !slideShowRandom;
+        QString msg = "Setting slideshow progress to ";
+        slideShowRandom ? msg = msg + "random" : msg = msg + "sequential";
+        popUp->showPopup(this, msg, 1000, 0.5);
+        return;
     }
     // change slideshow delay 1 - 9 seconds
     if (isSlideShow) {
@@ -357,7 +365,9 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             msg += QString::number(n) + " seconds";
             popUp->showPopup(this, msg, 1000, 0.5);
         }
+        return;
     }
+
     QMainWindow::keyReleaseEvent(event);
 }
 
@@ -1013,7 +1023,7 @@ delegate use of the current index must check the row.
     }
 
     // update caching
-    if (G::isNewFolderLoaded) {
+    if (G::isNewFolderLoaded && !(isSlideShow && slideShowRandom)) {
         updateMetadataCacheIconviewState();
         metadataCacheThread->fileSelectionChange(currentRow);
     }
@@ -1316,6 +1326,9 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     /* Displays a statusbar showing the metadata cache status.  Also shows the cache
     size in the info panel.
     */
+
+    if (isSlideShow && slideShowRandom) return;
+
     source = "";    // suppress compiler warning
 /*    qDebug() << "MW::updateImageCacheStatus  Instruction ="
              << instruction
@@ -4100,7 +4113,7 @@ parameters.  Any visibility changes are executed.
     progressPixmap->scaled(progressWidth, 25);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
-    qDebug() << __FUNCTION__, "calling imageCacheThread->updateImageCachePosition()";
+    qDebug() << __FUNCTION__ << "calling imageCacheThread->updateImageCachePosition()";
     if (fPath.length())
         imageCacheThread->updateImageCachePosition(/*fPath*/);
 
@@ -4718,6 +4731,9 @@ void MW::refine()
     G::track(__FUNCTION__);
     #endif
     }
+    // if slideshow then do not refine
+    if (isSlideShow) return;
+
     // Are there any picks to refine?
     bool isPick = false;
     for (int row = 0; row < dm->rowCount(); ++row) {
@@ -6817,9 +6833,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
         subFoldersAction->setShortcut(QKeySequence("B"));
         revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
-        refreshFoldersAction->setShortcut(QKeySequence("Alt+R"));
+        refreshFoldersAction->setShortcut(QKeySequence("Ctrl+F5"));
         collapseFoldersAction->setShortcut(QKeySequence("Alt+C"));
-        reportMetadataAction->setShortcut(QKeySequence("Ctrl+Shift+R"));
+        reportMetadataAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+M"));
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
 
         // Edit
@@ -6867,7 +6883,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
 
         nextPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Right"));
         prevPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Left"));
-        randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+R"));
+        randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+Right"));
 
         // Filters
         uncheckAllFiltersAction->setShortcut(QKeySequence("Shift+Ctrl+C"));
@@ -8186,6 +8202,9 @@ the rating for all the selected thumbs.
     G::track(__FUNCTION__);
     #endif
     }
+    // do not set rating if slideshow is on
+    if (isSlideShow) return;
+
     QObject* obj = sender();
     QString s = obj->objectName();
     if (s == "Rate0") rating = "";
@@ -8260,6 +8279,9 @@ set the color class for all the selected thumbs.
     G::track(__FUNCTION__);
     #endif
     }
+    // do not set color class if slideshow is on
+    if (isSlideShow) return;
+
     QObject* obj = sender();
     QString s = obj->objectName();
     if (s == "Label0") colorClass = "";
@@ -8500,6 +8522,7 @@ void MW::keyScrollUp()
 
 void MW::keyScrollPageDown()
 {
+    qDebug() << __FUNCTION__;
     if(G::mode == "Grid") gridView->scrollPageDown(0);
     if(thumbView->isVisible()) thumbView->scrollPageDown(0);
 }
@@ -8546,6 +8569,12 @@ void MW::slideShow()
         if (slideShowWrap) msg += "\nWrap at end of slides";
         else msg += "\nStop at end of slides";
         popUp->showPopup(this, msg, 4000, 0.5);
+
+        // No image caching if random slide show
+        if (imageCacheThread->isRunning() && slideShowRandom) {
+            imageCacheThread->pauseImageCache();
+        }
+        progressBar->clearProgress();
 
         if (isStressTest) getSubfolders("/users/roryhill/pictures");
 
@@ -9019,9 +9048,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << dm->index(currentRow, G::ShootingInfoColumn).data().toString();
-    return;
+    qDebug() << "test";  return;
+//    qDebug() << dm->index(currentRow, G::ShootingInfoColumn).data().toString();
+//    return;
 
+    imageCacheThread->reportToCache();
+    return;
     imageCacheThread->reportCache();
     return;
 

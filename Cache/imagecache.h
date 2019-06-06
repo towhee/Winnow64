@@ -35,6 +35,7 @@ public:
     bool cacheUpToDate();           // target range all cached
     QSize getPreviewSize();
     void reportCache(QString title = "");
+    void reportToCache();
 
     QHash<QString, QImage> imCache;
 

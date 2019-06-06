@@ -5,7 +5,6 @@
 
 #include <QtWidgets>
 #include <QMutex>
-#include <QSize>
 #include <QThread>
 #include <QWaitCondition>
 #include "Datamodel/datamodel.h"
@@ -44,22 +43,14 @@ public:
     bool isAllIconLoaded();
     void setRange();
 
-    bool restart;
-    QMap<int, bool> loadMap;
-
-//    bool metadataCacheAll = false;
-    bool iconsCacheAll = false;
-
     int metadataChunkSize;
     int defaultMetadataChunkSize = 250;
-    int metadataCacheAllIfLessThan = 250;
 
+    // not being used at present
+    int metadataCacheAllIfLessThan = 250;
     int iconPagesToCacheAhead = 2;
     int iconsCacheAllIfLessThan = 250;
     bool iconsCacheChunks = true;
-
-    int recacheIfLessThan;
-    int recacheIfGreaterThan;
 
     // Iconview state
     int firstIconVisible;
@@ -93,41 +84,28 @@ private:
     Metadata *metadata;
     ImageCache * imageCacheThread;
     Thumb *thumb;
-//    QTimer *imageCacheTimer;        // start caching after small delay
 
-    QString folderPath;
-
-    QModelIndex idx;
-    int currentRow;                             // current index row in datamodel
     int startRow;
     int endRow;
-    int row;
-    int previousRow = -1;
     int tpp;                                    // thumbsPerPage;
 
     // icon caching
-    int iconTargetStart;
-    int iconTargetEnd;
     QList<int> iconsCached;
 
     bool foundItemsToLoad;
     Action action;
-    QSize thumbMax;         // rgh review hard coding thumb size
-    QString err;            // type of error
 
     bool allIconsLoaded;
     bool isShowCacheStatus;
     bool cacheIcons;
 
-//    void setRange();
     void createCacheStatus();
     void updateCacheStatus(int row);
     void readMetadataIconChunk();
     void readAllMetadata();
     void readIconChunk();
     void iconCleanup();
-
-//     bool isShowCacheStatus;
+    void iconMax(QPixmap &thumb);
 
     QElapsedTimer t;
 };

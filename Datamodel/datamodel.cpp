@@ -548,6 +548,7 @@ ImageMetadata DataModel::getMetadata(QString fPath)
     m._email = index(row, G::_EmailColumn).data().toString();
     m.url = index(row, G::UrlColumn).data().toString();
     m._url = index(row, G::_UrlColumn).data().toString();
+    m.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
 
     m.offsetFullJPG = index(row, G::OffsetFullJPGColumn).data().toUInt();
     m.lengthFullJPG = index(row, G::LengthFullJPGColumn).data().toUInt();
