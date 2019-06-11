@@ -1,4 +1,7 @@
 BUGS
+- Help shortcutsform not updating
+- Filter counts when raw+jpg include raw and jpg files
+- Cache progress bar can cover cache activity spots if window is small
 - Menu Go > Scroll actions not working (maybe rethink this)
 - Image cache GB used (infoview) keeps growing in size
 - Page up/down do not always work
@@ -11,12 +14,9 @@ BUGS
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
 PERFORMANCE
-- Check if cacheDelay is still important (it appears not, but leave in but
-  set to zero for now
+- filteredItemCount and unfilteredItemCount slow
 CODE IMPROVEMENTS
 - Change setPixelSize to setPointSize throughout app
-- Is G::isNewFolderLoaded req'd?
-- Eliminate metaCache in Metadata - just use datamodel
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
@@ -40,6 +40,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Filter when select new folder
 - When slideshow random sometimes not read image
 - If slideshow random do not cache
 - Slideshow intercept keystrokes not overriding shortcuts

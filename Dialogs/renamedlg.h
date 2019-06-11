@@ -2,7 +2,6 @@
 #define RENAMEDLG_H
 
 #include <QtWidgets>
-#include "Utilities/popup.h"
 #include "Main/global.h"
 
 /*****************************************************************************/
@@ -17,7 +16,6 @@ protected:
 
 private:
     QDialog *parent;
-    PopUp *popup;
 };
 
 /*****************************************************************************/

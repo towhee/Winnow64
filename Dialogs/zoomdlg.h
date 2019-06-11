@@ -3,7 +3,6 @@
 
 #include <QtWidgets>
 #include <QDialog>
-#include <Utilities/popup.h>
 #include "Main/global.h"
 
 namespace Ui {
@@ -34,7 +33,6 @@ signals:
 
 private:
     Ui::ZoomDlg *ui;
-    PopUp *popUp;
 
 private slots:
     void on_zoomSB_valueChanged(int value);

@@ -33,7 +33,7 @@ namespace G
 
     int actualDevicePixelRatio;
     bool allMetadataLoaded;
-    bool filtersNotBuilt;
+    bool buildingFilters;
 
     // not persistent
     bool isThreadTrackingOn;
@@ -45,6 +45,8 @@ namespace G
     QElapsedTimer t;
     bool isTimer;
 
+//    PopUp popUp;
+
     void track(QString functionName, QString comment)
     {
         QString time = QString("%L1").arg(t.nsecsElapsed());
@@ -55,4 +57,9 @@ namespace G
                  << comment;
     }
 
+    PopUp *popUp;
+    void newPopUp(QWidget *widget)
+    {
+        popUp = new PopUp(widget);
+    }
 }

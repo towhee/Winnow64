@@ -28,7 +28,6 @@
 #include "Views/infoview.h"
 #include "Views/infostring.h"
 #include "Metadata/metadata.h"
-#include "Utilities/popup.h"
 #include "Main/dockwidget.h"
 
 #include "Cache/mdcache.h"
@@ -311,6 +310,7 @@ private slots:
     void invertFilters();
     void refine();
     void uncheckAllFilters();
+    void clearAllFilters();
     void sortThumbnails();
     void preferences(int page = -1);
     void externalAppManager();
@@ -468,8 +468,6 @@ private slots:
     void helpShortcuts();
     void helpWelcome();
 
-    void popup(QString msg, int ms, float opacity);
-    void closePopup();
 //    void delayScroll();
 
     //    void cutThumbs();
@@ -586,7 +584,7 @@ private:
 
     // Filters
 
-    QAction *uncheckAllFiltersAction;
+    QAction *clearAllFiltersAction;
     QAction *expandAllAction;
     QAction *collapseAllAction;
     QAction *filterRating1Action;
@@ -752,7 +750,6 @@ private:
     WorkspaceDlg *workspaceDlg;
     UpdateApp *updateAppDlg;
     ZoomDlg *zoomDlg = nullptr;
-    PopUp *popUp;
     QTimer *slideShowTimer;
     QWidget *folderDockOrigWidget;
     QWidget *favDockOrigWidget;
