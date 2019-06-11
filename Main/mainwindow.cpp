@@ -232,7 +232,7 @@ void MW::initialize()
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
     ingestHistoryFolders = new QStringList;
-    popUp = new PopUp;
+    G::newPopUp(this);
     hasGridBeenActivated = true;
     isDragDrop = false;
     setAcceptDrops(true);
@@ -244,6 +244,7 @@ void MW::initialize()
     G::ratings << "1" << "2" << "3" << "4" << "5";
     pickStack = new QStack<Pick>;
     scrollRow = 0;
+//    G::newPopUp();
 }
 
 void MW::setupPlatform()
@@ -292,6 +293,7 @@ void MW::closeEvent(QCloseEvent *event)
     metadataCacheThread->stopMetadateCache();
     imageCacheThread->stopImageCache();
     if (!simulateJustInstalled) writeSettings();
+    G::popUp->close();
     hide();
     if (!QApplication::clipboard()->image().isNull()) {
         QApplication::clipboard()->clear();
@@ -333,8 +335,9 @@ void MW::keyPressEvent(QKeyEvent *event)
         if(fullScreenAction->isChecked()) {
             escapeFullScreen();
         }
-        else dm->timeToQuit = true;
-
+        else {
+            dm->timeToQuit = true;
+        }
     }
 
     QMainWindow::keyPressEvent(event);
@@ -352,18 +355,18 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         slideShowRandom = !slideShowRandom;
         QString msg = "Setting slideshow progress to ";
         slideShowRandom ? msg = msg + "random" : msg = msg + "sequential";
-        popUp->showPopup(this, msg, 1000, 0.5);
+        G::popUp->show(msg);
         return;
     }
     // change slideshow delay 1 - 9 seconds
     if (isSlideShow) {
         int n = event->key() - 48;
-        if (n > 0 && n <=9) {
+        if (n > 0 && n <= 9) {
             slideShowDelay = n;
             slideShowTimer->setInterval(n * 1000);
             QString msg = "Reset slideshow interval to ";
             msg += QString::number(n) + " seconds";
-            popUp->showPopup(this, msg, 1000, 0.5);
+            G::popUp->show(msg);
         }
         return;
     }
@@ -391,7 +394,8 @@ bool MW::event(QEvent *event)
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
-    // use to show all events being filtered - handy to figure out which to intercept
+
+        // use to show all events being filtered - handy to figure out which to intercept
 /*    if (event->type()        != QEvent::Paint
             && event->type() != QEvent::UpdateRequest
             && event->type() != QEvent::ZeroTimerEvent
@@ -411,7 +415,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     };
     */
 
-    /* ****************************************************************************************
+    /* FILTERS ***************************************************************************
 
     Filters are only run on demand as they can take time to generate and the user will
     not always need to filter.  The triggers to build the filters are:
@@ -424,17 +428,21 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
        - the ChildRemoved event fires for the filters widget
     */
 
-    if (!dm->filtersBuilt) {
+    if (!dm->filtersBuilt && !G::isInitializing) {
         if (!filterDock->visibleRegion().isNull()) {
             if(obj->objectName() == "Filters") {
                 if (event->type() == QEvent::ChildRemoved) {
+                    /*
+                    qDebug() << "building filters from event filter"
+                             << "G::isInitializing" << G::isInitializing;
+                    */
                     buildFilters();
                 }
             }
         }
     }
 
-    /****************************************************************************************
+    /* ICONVIEW SCROLLING ****************************************************************
 
     IconView is ready-to-go and can scroll to wherever we want:
 
@@ -508,7 +516,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
          }
     }
 
-    /****************************************************************************************
+    /* CONTEXT MENU **********************************************************************
 
     Intercept context menu
 
@@ -556,9 +564,9 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
-    // ****************************************************************************************
+    /* THUMBDOCK SPLITTER ****************************************************************
 
-    /* A splitter resize of top/bottom thumbDock is happening:
+    A splitter resize of top/bottom thumbDock is happening:
 
     Events are filtered from qApp here by an installEventFilter in the MW contructor to
     monitor the splitter resize of the thumbdock when it is docked horizontally. In this
@@ -680,7 +688,7 @@ bool MW::checkForUpdate()
     if(process.error() != QProcess::UnknownError)
     {
         QString msg = "Error checking for updates";
-        popUp->showPopup(this, msg, 1500, 1.0);
+        G::popUp->show(msg, 1500);
         isStartSilentCheckForUpdates = false;
         return false;
     }
@@ -695,7 +703,7 @@ bool MW::checkForUpdate()
     if(data.isEmpty())
     {
         QString msg = "No updates available";
-        if(!isStartSilentCheckForUpdates) popUp->showPopup(this, msg, 1500, 1.0);
+        if(!isStartSilentCheckForUpdates) G::popUp->show(msg, 1500);
         isStartSilentCheckForUpdates = false;
         return false;
     }
@@ -715,7 +723,7 @@ bool MW::checkForUpdate()
     // Close Winnow
     if (startMaintenanceTool) qApp->closeAllWindows();
     else if(!isStartSilentCheckForUpdates)
-        popUp->showPopup(this, "The maintenance tool failed to open", 2000, .75);
+        G::popUp->show("The maintenance tool failed to open", 2000);
 
     isStartSilentCheckForUpdates = false;
 
@@ -837,6 +845,11 @@ void MW::folderSelectionChange()
         qDebug() << "Datamodel Failed To Load for" << currentViewDir;
         clearAll();
         enableSelectionDependentMenus();
+        if (dm->timeToQuit) {
+            updateStatus(false, "Image loading has been cancelled");
+            setCentralMessage("Image loading has been cancelled");
+            return;
+        }
         QDir dir(currentViewDir);
         if (dir.isRoot()) {
             updateStatus(false, "No supported images in this drive");
@@ -874,7 +887,7 @@ void MW::folderSelectionChange()
     thumbView->sortThumbs(1, false);
     thumbView->selectThumb(0);
 
-    popUp->close();
+//    popUp->close();   // rgh is this needed
     updateStatus(false, "Collecting metadata for all images in folder(s)");
 
     // reset for bestAspect calc
@@ -1256,10 +1269,10 @@ the filter and sort operations cannot commence until all the metadata has been l
         imageCacheThread->pauseImageCache();
         resumeImageCaching = true;
     }
-    popup("It may take a moment to load all the metadata...\n"
-          "This is required before any filtering or sorting of metadata can be done.",
-          0, 0.75);
-    updateStatus(false, "Loading metadata for all images");
+//    popup("It may take a moment to load all the metadata...\n"
+//          "This is required before any filtering or sorting of metadata can be done.",
+//          0, 0.75, true);
+//    updateStatus(false, "Loading metadata for all images");
     QApplication::setOverrideCursor(Qt::WaitCursor);
     progressBar->saveProgressState();
     progressBar->clearProgress();
@@ -1285,8 +1298,8 @@ the filter and sort operations cannot commence until all the metadata has been l
     progressBar->recoverProgressState();
     if (resumeImageCaching) imageCacheThread->resumeImageCache();
     QApplication::restoreOverrideCursor();
-    popup("Metadata loaded.", 500, 0.75);
-    QApplication::processEvents();
+//    popup("Metadata loaded.", 500, 0.75, true);
+//    QApplication::processEvents();
 }
 
 void MW::updateMetadataCacheStatus(int row, bool clear)
@@ -2073,11 +2086,11 @@ void MW::createActions()
 
     // Filters
 
-    uncheckAllFiltersAction = new QAction(tr("Uncheck all filters"), this);
-    uncheckAllFiltersAction->setObjectName("uncheckAllFilters");
-    uncheckAllFiltersAction->setShortcutVisibleInContextMenu(true);
-    addAction(uncheckAllFiltersAction);
-    connect(uncheckAllFiltersAction, &QAction::triggered, this, &MW::uncheckAllFilters);
+    clearAllFiltersAction = new QAction(tr("Clear all filters"), this);
+    clearAllFiltersAction->setObjectName("uncheckAllFilters");
+    clearAllFiltersAction->setShortcutVisibleInContextMenu(true);
+    addAction(clearAllFiltersAction);
+    connect(clearAllFiltersAction, &QAction::triggered, this, &MW::clearAllFilters);
 
     expandAllAction = new QAction(tr("Expand all filters"), this);
     expandAllAction->setObjectName("expandAll");
@@ -2717,15 +2730,15 @@ void MW::createActions()
     testAction->setObjectName("test");
     testAction->setShortcutVisibleInContextMenu(true);
     addAction(testAction);
-    testAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+F"));
-    connect(testAction, &QAction::triggered, this, &MW::testNewFileFormat);
+    testAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+T"));
+    connect(testAction, &QAction::triggered, this, &MW::test);
 
     testNewFileFormatAction = new QAction(tr("Test Metadata"), this);
     testNewFileFormatAction->setObjectName("testNewFileFormat");
     testNewFileFormatAction->setShortcutVisibleInContextMenu(true);
     addAction(testNewFileFormatAction);
-    testNewFileFormatAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+T"));
-    connect(testNewFileFormatAction, &QAction::triggered, this, &MW::test);
+    testNewFileFormatAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+F"));
+    connect(testNewFileFormatAction, &QAction::triggered, this, &MW::testNewFileFormat);
 
     // Possibly needed actions
 
@@ -2862,7 +2875,7 @@ void MW::createMenus()
     QMenu *filterMenu = new QMenu(this);
     QAction *filterGroupAct = new QAction("Filter", this);
     filterGroupAct->setMenu(filterMenu);
-    filterMenu->addAction(uncheckAllFiltersAction);
+    filterMenu->addAction(clearAllFiltersAction);
     filterMenu->addSeparator();
     filterMenu->addAction(filterPickAction);
     filterMenu->addSeparator();
@@ -2880,7 +2893,7 @@ void MW::createMenus()
     filterMenu->addSeparator();
     filterMenu->addAction(filterLastDayAction);
     filterMenu->addSeparator();
-    filterMenu->addAction(filterUpdateAction);
+//    filterMenu->addAction(filterUpdateAction);
     filterMenu->addAction(filterInvertAction);
     filterMenu->addAction(filterLastDayAction);
 
@@ -3013,8 +3026,8 @@ void MW::createMenus()
     // filters context menu
     filterActions = new QList<QAction *>;
 //    QList<QAction *> *filterActions = new QList<QAction *>;
-    filterActions->append(uncheckAllFiltersAction);
-    filterActions->append(filterUpdateAction);
+    filterActions->append(clearAllFiltersAction);
+//    filterActions->append(filterUpdateAction);
     filterActions->append(separatorAction);
     filterActions->append(expandAllAction);
     filterActions->append(collapseAllAction);
@@ -3210,7 +3223,7 @@ void MW::enableSelectionDependentMenus()
         keyEndAction->setEnabled(true);
         nextPickAction->setEnabled(true);
         prevPickAction->setEnabled(true);
-        uncheckAllFiltersAction->setEnabled(true);
+        clearAllFiltersAction->setEnabled(true);
         filterPickAction->setEnabled(true);
         filterRating1Action->setEnabled(true);
         filterRating2Action->setEnabled(true);
@@ -3269,7 +3282,7 @@ void MW::enableSelectionDependentMenus()
         keyEndAction->setEnabled(false);
         nextPickAction->setEnabled(false);
         prevPickAction->setEnabled(false);
-        uncheckAllFiltersAction->setEnabled(false);
+        clearAllFiltersAction->setEnabled(false);
         filterPickAction->setEnabled(false);
         filterRating1Action->setEnabled(false);
         filterRating2Action->setEnabled(false);
@@ -3346,11 +3359,21 @@ void MW::createDataModel()
     dm = new DataModel(this, metadata, progressBar, filters, combineRawJpg);
     thumb = new Thumb(this, dm, metadata);
 
+    // show appropriate count column in filters
+    if (combineRawJpg) {
+        filters->hideColumn(3);
+        filters->showColumn(4);
+    }
+    else {
+        filters->hideColumn(4);
+        filters->showColumn(3);
+    }
+
     connect(dm->sf, &SortFilter::reloadImageCache, this, &MW::loadFilteredImageCache);
 //    connect(dm->sf, &SortFilter::nullFilter, this, &MW::nullSelection);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
-    connect(dm, &DataModel::popup, this, &MW::popup);
-    connect(dm, &DataModel::closePopup, this, &MW::closePopup);
+//    connect(dm, &DataModel::setPopupTest, this, &MW::setPopupText);
+//    connect(dm, &DataModel::closePopup, this, &MW::closePopup);
     connect(dm, &DataModel::msg, this, &MW::setCentralMessage);
 //    connect(dm, &DataModel::updateIcon, thumbView, &ThumbView::setIcon);
 //    connect(dm, SIGNAL(updateIcon(int,QImage)), thumbView, SLOT(setIcon(int, QImage)));
@@ -4408,36 +4431,6 @@ void MW::setThreadRunStatusInactive()
     imageThreadRunningLabel->setText("◉");
 }
 
-void MW::popup(QString msg, int ms, float opacity)
-{
-/*
-This slot is available for other classes to signal in order to show popup
-messages, such as DataModel, which does not have access to MW, which is required
-by popUp to center itself in the app window.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    popUp->showPopup(this, msg, ms, opacity);
-}
-
-void MW::closePopup()
-{
-    /*
-    This slot is available for other classes to signal in order to close popup
-    messages, such as DataModel, which does not have access to MW, which is required
-    by popUp to center itself in the app window.
-    */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    popUp->close();
-}
-
 void MW::resortImageCache()
 {
     {
@@ -4527,15 +4520,24 @@ void MW::buildFilters()
     G::track(__FUNCTION__);
     #endif
     }
+    // check if filters have already been build
+    if (filters->days->childCount()) return;
+
+    G::buildingFilters = true;      // req'd for user messaging in load all metadata
+    G::popUp->setPopUpSize(800, 100);
+    QString msg = "Building filters.  This could take a while to complete.\n";
+    G::popUp->show(msg, 0);
+    updateStatus(false, "Building filters: loading metadata for all images ...");
     if (!G::allMetadataLoaded) {
         loadEntireMetadataCache();
     }
-    updateStatus(false, "Building filters: loading metadata for all images ...");
-    qApp->processEvents();
-    imageCacheThread->filterImageCache(dm->currentFilePath);
+//    qApp->processEvents();
     dm->buildFilters();
-    progressBar->recoverProgressState();
+//    progressBar->recoverProgressState();
+//    imageCacheThread->filterImageCache(dm->currentFilePath);
     updateStatus(true);
+    G::buildingFilters = false;
+    G::popUp->show("Filters completed");
 }
 
 void MW::filterChange(bool isFilter)
@@ -4552,6 +4554,7 @@ and icons are loaded if necessary.
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) return;
 
@@ -4608,6 +4611,7 @@ void MW::quickFilter()
     G::track(__FUNCTION__);
     #endif
     }
+    // checked
     if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Checked);
     if (filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Checked);
     if (filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Checked);
@@ -4618,6 +4622,18 @@ void MW::quickFilter()
     if (filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Checked);
     if (filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Checked);
     if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Checked);
+
+    // unchecked
+    if (!filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Unchecked);
+    if (!filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Unchecked);
+    if (!filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Unchecked);
+    if (!filterRating4Action->isChecked()) filters->ratings4->setCheckState(0, Qt::Unchecked);
+    if (!filterRating5Action->isChecked()) filters->ratings5->setCheckState(0, Qt::Unchecked);
+    if (!filterRedAction->isChecked()) filters->labelsRed->setCheckState(0, Qt::Unchecked);
+    if (!filterYellowAction->isChecked()) filters->labelsYellow->setCheckState(0, Qt::Unchecked);
+    if (!filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Unchecked);
+    if (!filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Unchecked);
+    if (!filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Unchecked);
 
     filterChange();
 }
@@ -4635,12 +4651,12 @@ void MW::invertFilters()
     if (!G::allMetadataLoaded) loadEntireMetadataCache();
 
     if (dm->rowCount() == 0) {
-        popup("No images available to invert filtration", 2000, 0.75);
+        G::popUp->show("No images available to invert filtration", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
     if (dm->rowCount() == dm->sf->rowCount()) {
-        popup("No filters assigned - null inversion would result", 2000, 0.75);
+        G::popUp->show("No filters assigned - null inversion would result", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
@@ -4656,9 +4672,6 @@ void MW::uncheckAllFilters()
     G::track(__FUNCTION__);
     #endif
     }
-
-    if (!G::allMetadataLoaded) loadEntireMetadataCache();
-
     filters->uncheckAllFilters();
     filterPickAction->setChecked(false);
     filterRating1Action->setChecked(false);
@@ -4672,6 +4685,19 @@ void MW::uncheckAllFilters()
     filterBlueAction->setChecked(false);
     filterPurpleAction->setChecked(false);
     filterLastDayAction->setChecked(false);
+}
+
+void MW::clearAllFilters()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+
+    qDebug() << __FUNCTION__;
+    if (!G::allMetadataLoaded) loadEntireMetadataCache();
+    uncheckAllFilters();
 
     filterChange(false);
 }
@@ -4686,35 +4712,28 @@ void MW::filterLastDay()
     G::track(__FUNCTION__);
     #endif
     }
-    G::t.restart();
-    G::track(__FUNCTION__, "Starting");
     if (dm->rowCount() == 0) {
-        popup("No images available to filter", 2000, 0.75);
+        G::popUp->show("No images available to filter", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
 
-    if (!G::allMetadataLoaded) loadEntireMetadataCache();
-
     // if the additional filters have not been built then do an update
-    if (!filters->days->childCount()) dm->buildFilters();
-    G::track(__FUNCTION__, "dm->updateFilters()");
+    if (!filters->days->childCount()) buildFilters();
 
     // if there still are no days then tell user and return
     int last = filters->days->childCount();
     if (filters->days->childCount() == 0) {
-        popup("No days are available to filter", 2000, 0.75);
+        G::popUp->show("No days are available to filter", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
 
-    uncheckAllFilters();
-    G::track(__FUNCTION__, "uncheckAllFilters()");
     if (filterLastDayAction->isChecked()) {
         filters->days->child(last - 1)->setCheckState(0, Qt::Checked);
     }
     else {
-        filterLastDayAction->setChecked(false);
+        filters->days->child(last - 1)->setCheckState(0, Qt::Unchecked);
     }
 
     filterChange();
@@ -4744,7 +4763,7 @@ void MW::refine()
     }
 
     if (!isPick) {
-        popup("There are no picks to refine", 2000, 0.75);
+        G::popUp->show("There are no picks to refine", 2000);
         return;
     }
 
@@ -4765,7 +4784,7 @@ void MW::refine()
     int ret = msgBox.exec();
     if (ret == QMessageBox::Cancel) return;
 
-    uncheckAllFilters();
+    clearAllFilters();
 
     // clear refine = pick
     pushPick("Begin multiple select");
@@ -5614,7 +5633,7 @@ void MW::runExternalApp()
     int nFiles = selectedIdxList.size();
 
     if (nFiles < 1) {
-        popup("No images have been selected", 2000, 0.75);
+        G::popUp->show("No images have been selected", 2000);
         return;
     }
 
@@ -5720,7 +5739,8 @@ void MW::setShowImageCount()
     #endif
     }
     if (!fsTree->isVisible()) {
-        popUp->showPopup(this, "Show image count is only available when the Folders Panel is visible", 1500, 0.75);
+        G::popUp->show("Show image count is only available when the Folders Panel is visible",
+              1500);
     }
     bool isShow = showImageCountAction->isChecked();
     fsTree->setShowImageCount(isShow);
@@ -6006,7 +6026,7 @@ are not applicable.
     }
     // only makes sense to zoom when in loupe or compare view
     if (G::mode == "Table" || G::mode == "Grid") {
-        popUp->showPopup(this, "The zoom dialog is only available in loupe view", 2000, 0.75);
+        G::popUp->show("The zoom dialog is only available in loupe view", 2000);
         return;
     }
 
@@ -6886,7 +6906,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+Right"));
 
         // Filters
-        uncheckAllFiltersAction->setShortcut(QKeySequence("Shift+Ctrl+C"));
+        clearAllFiltersAction->setShortcut(QKeySequence("Shift+C"));
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
 
         filterRating1Action->setShortcut(QKeySequence("Shift+1"));
@@ -7348,13 +7368,13 @@ void MW::compareDisplay()
     updateStatus(true);
     int n = selectionModel->selectedRows().count();
     if (n < 2) {
-        popUp->showPopup(this, "Select more than one image to compare.", 1000, 0.75);
+        G::popUp->show("Select more than one image to compare.");
         return;
     }
     if (n > 9) {
         QString msg = QString::number(n);
         msg += " images have been selected.  Only the first 9 will be compared.";
-        popUp->showPopup(this, msg, 2000, 0.75);
+        G::popUp->show(msg, 2000);
     }
 
     /* If thumbdock was visible and enter grid mode, make selection, and then
@@ -8055,17 +8075,17 @@ void MW::ejectUsb(QString path)
         refreshFolders();
         int result = Usb::eject(driveRoot);
         if(result < 2) {
-            popUp->showPopup(this, "Ejecting drive " + driveRoot, 2000, 0.75);
+            G::popUp->show("Ejecting drive " + driveRoot, 2000);
             folderSelectionChange();
 //            noFolderSelected();
 //            currentViewDir = "";
         }
         else
-            popUp->showPopup(this, "Failed to eject drive " + driveRoot, 2000, 0.75);
+            G::popUp->show("Failed to eject drive " + driveRoot, 2000);
     }
     else {
-        popUp->showPopup(this, "Drive " + currentViewDir[0]
-                + " is not removable and cannot be ejected", 2000, 0.75);
+        G::popUp->show("Drive " + currentViewDir[0]
+              + " is not removable and cannot be ejected", 2000);
     }
 }
 
@@ -8088,6 +8108,16 @@ void MW::setCombineRawJpg()
     }
     // flag used in MW, dm and sf
     combineRawJpg = combineRawJpgAction->isChecked();
+
+    // show appropriate count column in filters
+    if (combineRawJpg) {
+        filters->hideColumn(3);
+        filters->showColumn(4);
+    }
+    else {
+        filters->hideColumn(4);
+        filters->showColumn(3);
+    }
 
     // update the datamodel type column
     for (int row = 0; row < dm->rowCount(); ++row) {
@@ -8556,7 +8586,7 @@ void MW::slideShow()
         imageView->setCursor(Qt::ArrowCursor);
         isSlideShow = false;
         slideShowAction->setText(tr("Slide Show"));
-        popUp->showPopup(this, "Stopping slideshow", 1000, 0.5);
+        G::popUp->show("Stopping slideshow");
         slideShowTimer->stop();
         delete slideShowTimer;
     } else {
@@ -8568,7 +8598,7 @@ void MW::slideShow()
         else msg += "\nLinear selection";
         if (slideShowWrap) msg += "\nWrap at end of slides";
         else msg += "\nStop at end of slides";
-        popUp->showPopup(this, msg, 4000, 0.5);
+        G::popUp->show(msg, 4000, true);
 
         // No image caching if random slide show
         if (imageCacheThread->isRunning() && slideShowRandom) {
@@ -9048,81 +9078,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << "test";  return;
-//    qDebug() << dm->index(currentRow, G::ShootingInfoColumn).data().toString();
-//    return;
-
-    imageCacheThread->reportToCache();
-    return;
-    imageCacheThread->reportCache();
-    return;
-
-    qDebug() << dm->sf->mapFromSource(dm->index(0, 0)).row();
-    return;
-
-    qDebug() << "isActiveWindow" << filterDock->isActiveWindow()
-             << "isVisible" << filterDock->isVisible()
-             << "isHidden" << filterDock->isHidden()
-             << "hasFocus" << filterDock->hasFocus()
-             << "isActiveWindow" << filterDock->isActiveWindow()
-             << "widget->hasFocus" << filterDock->widget()->hasFocus()
-             << "visibleRegion" << !filterDock->visibleRegion().isNull();
-    return;
-
-    int row = 1;
-    QString fPath = dm->index(row, 0).data(G::PathRole).toString();
-
-    QStandardItem *item = new QStandardItem;
-
-    QModelIndex idx = dm->index(row, 0, QModelIndex());
-    if (!idx.isValid()) {
-        return;
-    }
-
-//    item = dm->itemFromIndex(idx);
-//    item->setIcon(QPixmap::fromImage(thumb));
-
-    // debugging
-    QModelIndex sfIdx = dm->sf->mapFromSource(idx);
-    qDebug() << __FUNCTION__
-             << sfIdx.row()
-             << fPath
-             << sfIdx.data(Qt::DecorationRole).isNull()
-             << idx.data(Qt::DecorationRole).isNull();
-
-    return;
-    imageCacheThread->reportCache();
-
-    int w = 8288;
-    int h = 5520;
-    float x = (float)w * h / 262144;
-    qDebug();
-    qDebug() << imageCacheThread->imCache.count() << "images"
-             << x << "MB per image";
-    QHashIterator<QString, QImage> i(imageCacheThread->imCache);
-    while (i.hasNext()) {
-        i.next();
-        qDebug() << i.key() << ": " << i.value();
-    }
-
-//    for (int row = 0; row < imageCacheThread->imCache.count(); ++row) {
-//        QString fPath = dm->index(row, 0).data(G::PathRole).toString();
-    //    imageCacheThread->imCache.remove(fPath);
-//        qDebug() << row << fPath;
-//    }
-    return;
-
-    setIngested();
-    return;
-    qDebug();
-    for (int i = 0; i < pickStack->length(); ++i) {
-        QString s0 = QString::number(i);
-        QString s1 = pickStack->at(i).status;
-        QString s2 = pickStack->at(i).path;
-        qDebug() << s0.leftJustified(4)
-                 << s1.leftJustified(6)
-                 << s2;
-    }
+    qDebug() << filters->days->childCount();
 }
 
 // End MW

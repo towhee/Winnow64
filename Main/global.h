@@ -3,7 +3,7 @@
 
 //#define ISDEBUG        // Uncomment this line to show debugging output
 //#define ISPROFILE      // Uncomment this line to show profiling output
-//#define ISTEST         // Uncomment this line to show profiling output
+//#define ISTEST         // Uncomment this line to show testing output
 
 #include <QtWidgets>
 #include <QColor>
@@ -13,6 +13,7 @@
 #include <iostream>
 #include <iomanip>
 #include <QMutex>
+#include "popup.h"
 
 #define ICON_MIN	40
 #define ICON_MAX	480  // 256
@@ -134,7 +135,7 @@ namespace G
 
     extern int actualDevicePixelRatio;
     extern bool allMetadataLoaded;
-    extern bool filtersNotBuilt;
+    extern bool buildingFilters;
 
     extern bool isThreadTrackingOn;
     extern bool isNewFolderLoaded;
@@ -148,6 +149,8 @@ namespace G
 
     extern void track(QString functionName = "", QString comment = "");
 
+    extern PopUp *popUp;
+    extern void newPopUp(QWidget *widget);
 }
 #endif // GLOBAL_H
 

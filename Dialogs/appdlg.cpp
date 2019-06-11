@@ -22,7 +22,6 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
     : QDialog(parent), ui(new Ui::Appdlg), xApps(externalApps)
 {
     ui->setupUi(this);
-    popUp = new PopUp;
 
     {
 #ifdef Q_OS_LINIX
@@ -139,8 +138,8 @@ void Appdlg::on_addBtn_clicked()
 void Appdlg::on_removeBtn_clicked()
 {
     int row = ui->appsTable->currentRow();
-        if(row < 0 || ui->appsTable->currentRow() > 9) {
-        popUp->showPopup(this, "No row selected", 1500, 0.75);
+    if (row < 0 || ui->appsTable->currentRow() > 9) {
+        G::popUp->show("No row selected");
         return;
     }
 

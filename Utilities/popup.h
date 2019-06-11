@@ -15,18 +15,18 @@ class PopUp : public QWidget
 
 
 public:
-    explicit PopUp(QWidget *parent = 0);
+    explicit PopUp(QWidget *source, QWidget *parent = 0);
     void setPopupOpacity(float opacity);
     float getPopupOpacity() const;
     void setPopupDuration(int msDuration);
-    void showPopup(QWidget *widget, const QString &text, int msDuration, float opacity);
+    void setPopUpSize(int w, int h);
+    void setPopupText(const QString& text); // Setting text notification
 
 protected:
     void paintEvent(QPaintEvent *event);    // The background will be drawn through the redraw method
 
 public slots:
-    void setPopupText(const QString& text); // Setting text notification
-    void show();                            /* own widget displaying method
+    void show(const QString &text, int msDuration = 1000, bool isAutoSize = true, float opacity = 0.75);                            /* own widget displaying method
                                              * It is necessary to pre-animation settings
                                              * */
     void hide();                            /* At the end of the animation, it is checked in a given slot,

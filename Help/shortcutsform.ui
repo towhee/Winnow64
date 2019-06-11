@@ -218,7 +218,7 @@
       </item>
       <item>
        <property name="text">
-        <string>Select, Pick and Classify</string>
+        <string>Select, Pick, Classify and Filter</string>
        </property>
        <property name="font">
         <font>
@@ -301,6 +301,9 @@
         <property name="text">
          <string>Cmd/Ctrl + `</string>
         </property>
+        <property name="text">
+         <string>Toggles</string>
+        </property>
        </item>
        <item>
         <property name="text">
@@ -319,6 +322,9 @@
         </property>
         <property name="text">
          <string>Shift 1 to 5</string>
+        </property>
+        <property name="text">
+         <string>Toggles</string>
         </property>
        </item>
        <item>
@@ -339,6 +345,9 @@
         <property name="text">
          <string>Shift 6 to 0</string>
         </property>
+        <property name="text">
+         <string>Toggles</string>
+        </property>
        </item>
        <item>
         <property name="text">
@@ -350,13 +359,24 @@
        </item>
        <item>
         <property name="text">
-         <string>Most recent day</string>
+         <string>Invert Filters</string>
+        </property>
+        <property name="text">
+         <string>Shift + I</string>
+        </property>
+        <property name="text">
+         <string>Toggles</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Filter most recent day</string>
         </property>
         <property name="text">
          <string>Shift + D</string>
         </property>
         <property name="text">
-         <string/>
+         <string>Toggles</string>
         </property>
        </item>
       </item>

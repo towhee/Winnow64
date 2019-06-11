@@ -83,6 +83,15 @@ When filtering is requested the following steps occur:
     • Sync image cache cacheItemList to match dm->sf after filtering
     • Make sure icons are loaded in all views and the image cache is up-to-date.
 
+RAW+JPG
+
+When Raw+Jpg are combined the following datamodel roles are used:
+
+G::DupIsJpgRole     True if jpg type and there is a matching raw file
+G::DupRawIdxRole    Raw file index if jpg has matching raw
+G::DupHideRawRole   True is there is a matching jpg file
+G::DupRawTypeRole   Raw file type if jpg type with matching raw
+
 Code examples for model:
 
     // current selection:
@@ -201,8 +210,6 @@ DataModel::DataModel(QWidget *parent,
     dir = new QDir();
     fileFilters = new QStringList;          // eligible image file types
     emptyImg.load(":/images/no_image.png");
-
-//    connect(this, SIGNAL(updateMetadata(ImageMetadata)), this, SLOT(addMetadataItem(ImageMetadata)));
 }
 
 void DataModel::clear()
@@ -255,8 +262,10 @@ Steps:
 - also determine if there are duplicate raw+jpg files, and if so, populate all
   the Dup...Role values to manage the raw+jpg files
 - after the metadataCacheThread has read all the metadata and thumbnails add
-  the rest of the metadata to the datamodel.  Build QMaps of unique field values
-  for the filters
+  the rest of the metadata to the datamodel.
+
+- Note: build QMaps of unique field values for the filters is not done here, but on
+  demand when the user selects the filter panel or a menu filter command.
 */
     {
     #ifdef ISDEBUG
@@ -283,6 +292,7 @@ Steps:
     imageCount = 0;
     countInterval = 1000;
     QString escapeClause = "Press \"Esc\" to stop.\n\n";
+    QString scanning = "Searching for eligible images.  ";
     QString root;
     if (dir->isRoot()) root = "Drive ";
     else root = "Folder ";
@@ -293,15 +303,15 @@ Steps:
     // bail if no images and not including subfolders
     if (!folderImageCount && !includeSubfolders) return false;
 
+    int folderCount = 1;
     // add supported images in folder to image list
     for (int i = 0; i < folderImageCount; ++i) {
         fileInfoList.append(dir->entryInfoList().at(i));
         imageCount++;
         if (imageCount % countInterval == 0 && imageCount > 0) {
-            QString s = escapeClause + "Scanning image " +
-                        QString::number(imageCount) + " of " +
-                        QString::number(folderImageCount) +
-                        " in " + root + currentFolderPath;
+            QString s = escapeClause + scanning +
+                        QString::number(imageCount) + " found so far in " +
+                        QString::number(folderCount) + " folders";
             emit msg(s);
             qApp->processEvents();
         }
@@ -310,7 +320,6 @@ Steps:
     if (!includeSubfolders) return addFileData();
 
     // if include subfolders
-    int folderCount = 1;
     QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
     while (it.hasNext()) {
         if (timeToQuit) return false;
@@ -327,28 +336,23 @@ Steps:
                 imageCount++;
                 // report file progress within folder
                 if (imageCount % countInterval == 0 && imageCount > 0) {
-                    QString s = "Folder " + escapeClause +
-                                it.filePath() +
-                                QString::number(i) + " with " +
-                                QString::number(folderImageCount) +
-                                " images."
-                                "\n\n" + QString::number(imageCount) +
-                                " images scanned";
+                    QString s = escapeClause + scanning +
+                            QString::number(imageCount) + " found so far in " +
+                            QString::number(folderCount) + " folders";
                     emit msg(s);
-//                    emit popup(s, 0, 0.75);
                     qApp->processEvents();
                 }
             }
         }
         // report folder progress
-        if (folderCount % 100 == 0 && folderCount > 0) {
-            QString s = escapeClause + "Scanning folder " +
-                        QString::number(folderCount) +
-                        " of parent " + root + currentFolderPath;
-            emit msg(s);
-            qApp->processEvents();
-            if (timeToQuit) return false;
-        }
+//        if (folderCount % 100 == 0 && folderCount > 0) {
+//            QString s = escapeClause + "Scanning folder " +
+//                        QString::number(folderCount) +
+//                        " of parent " + root + currentFolderPath;
+//            emit msg(s);
+//            qApp->processEvents();
+//            if (timeToQuit) return false;
+//        }
     }
     // if images were found and added to data model
     if (imageCount) return addFileData();
@@ -416,6 +420,7 @@ bool DataModel::addFileData()
         item->setData(tip, Qt::ToolTipRole);
         item->setData(QRect(), G::ThumbRectRole);     // define later when read
         item->setData(false, G::CachedRole);
+        item->setData(false, G::DupHideRawRole);      // default - overwrite if matching jpg
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         appendRow(item);
 
@@ -439,12 +444,12 @@ bool DataModel::addFileData()
         setData(index(row, G::IngestedColumn), "false");
         setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
 
-        /* Save info for duplicated raw and jpg files, which generally are the
-        result of setting raw+jpg in the camera. The datamodel is sorted by
-        file path, except raw files with the same path precede jpg files with
-        duplicate names. Two roles track duplicates: G::DupHideRawRole flags
-        jpg files with duplicate raws and G::DupRawIdxRole points to the
-        duplicate raw file from the jpg data row.   For example:
+        /* Save info for duplicated raw and jpg files, which generally are the result of
+        setting raw+jpg in the camera. The datamodel is sorted by file path, except raw
+        files with the same path precede jpg files with duplicate names. Two roles track
+        duplicates: G::DupHideRawRole flags jpg files with duplicate raws and
+        G::DupRawIdxRole points to the duplicate raw file from the jpg data row. For
+        example:
 
         Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF"  DupHideRawRole = true 	 DupRawIdxRole = (Invalid)
         Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG"  DupHideRawRole = false  DupRawIdxRole = QModelIndex(0,0)) DupRawTypeRole = "ORF"
@@ -479,15 +484,15 @@ bool DataModel::addFileData()
                                     "Reading the basic file information for each image");
         if(row % 100 == 0) qApp->processEvents();
 
-        if(row % countInterval == 0) {
-            s = "Adding " + QString::number(row) + " of " + QString::number(fileInfoList.count());
+        if(row % countInterval == 0 || row == 0) {
+            s = "Adding " + QString::number(row) + " of " +
+                QString::number(fileInfoList.count()) + " images";
             emit msg(s);
-            qApp->processEvents();
+//            qApp->processEvents();        // causes thumb dock to flicker
         }
 
-        /* the rest of the data model columns are added after the metadata
-        has been loaded, when the image caching is called.  See
-        MW::loadImageCache and thumbView::addMetadataToModel    */
+        /* the rest of the data model columns are added when the metadata
+        has been loaded on demand.  see addMetadataItem and mdCache    */
     }
     filters->addCategoryFromData(typesMap, filters->types);
     return true;
@@ -603,9 +608,10 @@ to run as a separate thread and can be executed directly.
 bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
 {
     /*
-    This function is called after the metadata for all the eligible images in
-    the selected folder have been cached.  The metadata is displayed in tableView,
-    which is created in MW, and in InfoView.
+    This function is called after the metadata for each eligible image in the selected
+    folder(s) is being cached or when addAllMetadata is called prior of filtering or
+    sorting. The metadata is displayed in tableView, which is created in MW, and in
+    InfoView.
     */
     {
     #ifdef ISDEBUG
@@ -670,18 +676,15 @@ bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::ErrColumn), m.err);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
 
-    if (isShowCacheStatus) {
-        if (row % 100 == 0 || row == rowCount() - 1) {
-            qDebug() << __FUNCTION__ << lastProgressRow << row;
-//            progressBar->updateProgress(lastProgressRow, row + 1, rowCount(),
-//                G::progressAddMetadataColor,
-//                "Reading the metadata for each image file");
-//            qApp->processEvents();
+    if (G::buildingFilters) {
+        if (row % 1000 == 0 || row == 0) {
             lastProgressRow = row;
-
-            QString s = "Step 1 0f " + buildSteps + ":  Reading metadata ";
+            QString s = "Step 1 0f " + buildSteps + ":  Reading metadata row ";
             s += QString::number(row) + " of " + QString::number(rowCount());
-            emit popup(buildMsg + s, 0, 0.75);
+            G::popUp->setPopupText(buildMsg + s);
+//            emit setPopupText(buildMsg + s);
+
+            qDebug() << buildMsg + s;
             qApp->processEvents();
         }
     }
@@ -700,7 +703,7 @@ void DataModel::buildFilters()
     #endif
     }
     if (filtersBuilt) return;
-    filtersBuilt = true;
+//    filtersBuilt = true;
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
@@ -711,8 +714,9 @@ void DataModel::buildFilters()
     QMap<QVariant, QString> yearMap;
     QMap<QVariant, QString> dayMap;
 
+    QString s;
     int prev = 0;
-    int rows = rowCount();
+    int rows = sf->rowCount();
     for(int row = 0; row < rows; row++) {
         QString model = index(row, G::CameraModelColumn).data().toString();
         if (!modelMap.contains(model)) modelMap[model] = model;
@@ -735,84 +739,33 @@ void DataModel::buildFilters()
         QString day = index(row, G::DayColumn).data().toString();
         if (!dayMap.contains(day)) dayMap[day] = day;
 
-        if (row % 100 == 0 || row == rowCount() - 1) {
-            QString s = "Step 2 0f " + buildSteps + ":  Mapping filters ";
+        if (row % 1000 == 0 || row == 0) {
+            s = "Step 2 0f " + buildSteps + ":  Finding unique items ";
             s += QString::number(row) + " of " + QString::number(rowCount());
-            emit popup(buildMsg + s, 0, 0.75);
-            qApp->processEvents();
+            G::popUp->setPopupText(buildMsg + s);
             prev = row;
         }
     }
 
     // build filter items
-
-    QString s = "Step 3 0f " + buildSteps + ":  Building camera model filters ...";
-    emit popup(buildMsg + s, 0, 0.75);
-    qApp->processEvents();
-    step = 3;
+    s = "Step 3 0f " + buildSteps + ":  Mapping filters ";
+    G::popUp->setPopupText(buildMsg + s);
 
     filters->addCategoryFromData(modelMap, filters->models);
-
-    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building lens filters ...";
-    emit popup(buildMsg + s, 0, 0.75);
-    qApp->processEvents();
-
     filters->addCategoryFromData(lensMap, filters->lenses);
-    /*
-       progressBar->updateProgress(row, row + 1, rows, G::progressBuildFiltersColor,
-                                "Building focal length filters..."); */
-
-    step++;
-    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building lens filters ...";
-    emit popup(buildMsg + s, 0, 0.75);
-    qApp->processEvents();
-
     filters->addCategoryFromData(flMap, filters->focalLengths);
-
-    step++;
-    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building lens filters ...";
-    emit popup(buildMsg + s, 0, 0.75);
-    qApp->processEvents();
-
     filters->addCategoryFromData(titleMap, filters->titles);
-
-    step++;
-    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building creator filters ...";
-    emit popup(buildMsg + s, 0, 0.75);
-    qApp->processEvents();
-
     filters->addCategoryFromData(creatorMap, filters->creators);
-
-    step++;
-    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building year filters ...";
-    emit popup(buildMsg + s, 0, 0.75);
-    qApp->processEvents();
-
     filters->addCategoryFromData(yearMap, filters->years);
-
-    step++;
-    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Building day filters ...";
-    emit popup(buildMsg + s, 0, 0.75);
-    qApp->processEvents();
-
     filters->addCategoryFromData(dayMap, filters->days);
 
-    step++;
-    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Counting filtered items ...";
-    emit popup(buildMsg + s, 0, 0.75);
+    s = "Step 4 0f " + buildSteps + ":  Tabulating filtered items ...";
+    G::popUp->setPopupText(buildMsg + s);
     qApp->processEvents();
-
     filteredItemCount();
-    step++;
-    s = "Step " + QString::number(step) + " 0f " + buildSteps + ":  Counting unfiltered items ...";
-    emit popup(buildMsg + s, 0, 0.75);
-    qApp->processEvents();
-
     unfilteredItemCount();
 
     filtersBuilt = true;
-    popup("Filters have been updated.", 1000, 0.75);
-    qApp->processEvents();
 }
 
 QModelIndex DataModel::proxyIndexFromPath(QString fPath)
@@ -898,12 +851,19 @@ void DataModel::unfilteredItemCount()
             int col = filters->filterCategoryToDmColumn[(*it)->parent()->text(0)];
             QString searchValue = (*it)->text(1);
             int tot = 0;
+            int totRawJpgCombined = 0;
             for (int row = 0; row < rowCount(); ++row) {
+                bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
                 QString value = index(row, col).data().toString();
-                if (value == searchValue) tot++;
+                if (value == searchValue) {
+                    tot++;
+                    if (combineRawJpg && !hideRaw) totRawJpgCombined++;
+                }
             }
             (*it)->setData(3, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+            (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
+            (*it)->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
         }
         ++it;
     }

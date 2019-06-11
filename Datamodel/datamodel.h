@@ -64,7 +64,8 @@ public:
     bool timeToQuit;
 
 signals:
-    void popup(QString msg, int ms, float opacity);
+    void setPopupTest(QString msg);
+//    void popup(QString msg, int ms, float opacity, bool isAutoSize);
     void closePopup();
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void updateIcon(int row, QImage icon);
@@ -99,7 +100,7 @@ private:
     int countInterval = 0;
     QElapsedTimer t;
     QString buildMsg = "Building filters.  This could take a while to complete.\n";
-    QString buildSteps = "10";
+    QString buildSteps = "4";
     int step;
 
 };

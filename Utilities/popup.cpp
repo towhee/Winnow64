@@ -4,8 +4,23 @@
 #include <QDesktopWidget>
 #include <QDebug>
 
-PopUp::PopUp(QWidget *parent) : QWidget(parent)
+/*
+This class shows a pop up message for a given time with an assigned transparency.  The
+default time is 1000 ms and the default transparency is 75%.
+
+The widget will autosize to fit the text message if isAutoSize is true.
+
+If there are a series of progress messages (example loading filters) then use the first
+message to set the size and then set isAutoSize = false and setPopupText to change the
+text while keeping the pop up box size constant.
+
+In Winnow an instance of this class is created in global so that it is available to all
+parts of the program.  It is created once in MW::initialize.
+*/
+
+PopUp::PopUp(QWidget *source, QWidget *parent) : QWidget(parent)
 {
+    this->source = source;
     setWindowFlags(Qt::FramelessWindowHint |        // Disable window decoration
                    Qt::Tool |                       // Discard display in a separate window
                    Qt::WindowStaysOnTopHint);       // Set on top of all windows
@@ -18,9 +33,9 @@ PopUp::PopUp(QWidget *parent) : QWidget(parent)
 
     label.setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
     label.setStyleSheet("QLabel { color : white; "
-                        "font-size: 20px;"
-                        "margin-top: 6px;"
-                        "margin-bottom: 6px;"
+                        "font-size: 16px;"
+                        "margin-top: 0px;"
+                        "margin-bottom: 0px;"
                         "margin-left: 10px;"
                         "margin-right: 10px; }");
 
@@ -50,14 +65,13 @@ void PopUp::paintEvent(QPaintEvent *event)
     painter.drawRoundedRect(roundedRect, 10, 10);
 }
 
-void PopUp::setPopupText(const QString &text)
+void PopUp::show(const QString &text, int msDuration, bool isAutoSize, float opacity)
 {
-    label.setText(text);    // Set the text in the Label
-    adjustSize();           // With the recalculation notice sizes
-}
+    popupDuration = msDuration;
+    popupOpacity = opacity;
+    label.setText(text);
+    if (isAutoSize) adjustSize();               // With the recalculation notice sizes
 
-void PopUp::show()
-{
     if (popupDuration > 0) {
         setWindowOpacity(0.0);                  // Set the transparency to zero
         animation.setDuration(150);             // Configuring the duration of the animation
@@ -82,7 +96,6 @@ void PopUp::show()
     QWidget::show();
 
     if (popupDuration > 0) animation.start();
-//    animation.start();
 
     // set popupDuration = 0 to keep open and manually close like a msgbox
     if (popupDuration > 0) timer->start(popupDuration);
@@ -102,15 +115,21 @@ void PopUp::hideAnimation()
 void PopUp::hide()
 {
     // If the widget is transparent, then hide it
-    if(getPopupOpacity() == 0.0){
+    if (popupOpacity == 0.0) {
         QWidget::hide();
     }
+}
+
+void PopUp::setPopupText(const QString &text)
+{
+    label.setText(text);
+    repaint(0, 0, width(), height());
+    qApp->processEvents();
 }
 
 void PopUp::setPopupOpacity(float opacity)
 {
     popupOpacity = opacity;
-
     setWindowOpacity(opacity);
 }
 
@@ -124,12 +143,9 @@ void PopUp::setPopupDuration(int msDuration)
     popupDuration = msDuration;
 }
 
-void PopUp::showPopup(QWidget *widget, const QString &text, int msDuration, float opacity)
+void PopUp::setPopUpSize(int w, int h)
 {
-    popupDuration = msDuration;
-    popupOpacity = opacity;
-    source = widget;
-    label.setText(text);    // Set the text in the Label
-    adjustSize();           // With the recalculation notice sizes
-    show();
+//    setFixedSize(w, h);
+    setGeometry(0, 0, w, h);
+    qApp->processEvents();
 }
