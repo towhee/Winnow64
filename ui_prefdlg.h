@@ -893,9 +893,6 @@ public:
 #ifndef QT_NO_TOOLTIP
         cache50AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
-        cache50AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
         cache50AheadRadio->setText(QApplication::translate("Prefdlg", "50% ahead", nullptr));
 #ifndef QT_NO_TOOLTIP
         cache60AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));

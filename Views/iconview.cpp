@@ -744,57 +744,6 @@ bool IconView::isThumb(int row)
     return dm->sf->index(row, 0).data(Qt::DecorationRole).isNull();
 }
 
-void IconView::setIcon(int row, QImage thumb)
-{
-/*
-   ELIMINATED - ALL DONE IN meatdataCacheThread
-
-This slot is signalled from metadataCacheThread to set the thumbView icon.
-
-If a new folder is selected while the previous folder is being cached a race
-condition can arise. Make sure the item is referring to the current directory.
-If not, item will be a dereferenced pointer and cause a segmentation fault
-crash.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    QString fPath = dm->index(row, 0).data(G::PathRole).toString();
-
-
-//    QModelIndex idx = dm->index(row, 0, QModelIndex());
-//    if (!idx.isValid()) {
-//        return;
-//    }
-//    dm->itemFromIndex(dm->index(row, 0))->setIcon(QPixmap::fromImage(thumb));
-
-//    QStandardItem *item = new QStandardItem;
-//    item = dm->itemFromIndex(idx);
-
-//    Error after up/down key mashed
-//    Winnow(12636,0x1004445c0) malloc: *** error for object 0x109e12910: pointer being freed was not allocated
-//    Winnow(12636,0x1004445c0) malloc: *** set a breakpoint in malloc_error_break to debug
-//    item->setIcon(QPixmap::fromImage(thumb));
-
-
-    /* debugging
-    QModelIndex sfIdx = dm->sf->mapFromSource(idx);
-    qDebug() << __FUNCTION__
-             << sfIdx.row()
-             << fPath
-             << !idx.data(Qt::DecorationRole).isNull();*/
-
-    if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
-
-    // for best aspect calc
-    int w = thumb.width();
-    int h = thumb.height();
-    if (w > G::iconWMax) G::iconWMax = w;
-    if (h > G::iconHMax) G::iconHMax = h;
-}
-
 // Used by thumbnail navigation (left, right, up, down etc)
 void IconView::selectThumb(QModelIndex idx)
 {

@@ -978,7 +978,6 @@ void ImageCache::run()
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     emit updateIsRunning(true, true);
     static QString prevFileName = "";
 

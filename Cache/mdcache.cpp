@@ -210,6 +210,9 @@ MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
     endRow = metadataChunkSize;
     int rowCount = dm->sf->rowCount();
     if (endRow > rowCount) endRow = rowCount;
+    // reset for bestAspect calc
+    G::iconWMax = G::minIconSize;
+    G::iconHMax = G::minIconSize;
     action = Action::NewFolder;
     start(TimeCriticalPriority);
 }
@@ -276,14 +279,14 @@ so only need to check for icons to read and then run the image cache.
         wait();
     }
     abort = false;
-//    currentRow = row;
     setRange();
-    foundItemsToLoad = false;
-    for (int i = startRow; i < endRow; ++i) {
-        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
-            foundItemsToLoad = true;
-        if (foundItemsToLoad) break;
-    }
+
+    // reset for bestAspect calc
+    G::iconWMax = G::minIconSize;
+    G::iconHMax = G::minIconSize;
+
+    // always read icons to determine best aspect even if they were already loaded
+    foundItemsToLoad = true;
     action = Action::FilterChange;
     start(TimeCriticalPriority);
 }
@@ -291,6 +294,8 @@ so only need to check for icons to read and then run the image cache.
 void MetadataCache::loadAllMetadata()
 {
 /*
+Using dm::addAllMetadata instead (see why below)
+
 All the metadata if loaded into the datamodel.  This is called prior to filtering or sorting
 the datamodel.  This is duplicated in the datamodel, where is can be run in the main thread,
 allowing for real time updates to the progress bar.
@@ -321,9 +326,10 @@ progress bar update is more important then use the datamodel function dm::addAll
 void MetadataCache::loadMetadataIconChunk(int row)
 {
 /*
-This function is called from MW::filterChange and resize and scroll events in gridView and
-thumbView. A chunk of metadata and icons are added to the datamodel. If there has been a file
-selection change then the image cache is updated.
+This function is called when there is a new folder or a file selection change or resize and
+scroll events in gridView and thumbView.
+
+A chunk of metadata and icons are added to the datamodel.
 */
     {
     #ifdef ISDEBUG
@@ -536,22 +542,18 @@ Load the thumb (icon) for all the image files in the target range.
         mutex.lock();
         QModelIndex idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
-        if (idx.data(Qt::DecorationRole).isNull()) {
-            QImage image;
-            QString fPath = idx.data(G::PathRole).toString();
-            bool thumbLoaded = thumb->loadThumb(fPath, image);
-            if (thumbLoaded) {
-//                emit setIcon(dmRow, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-
-                // change to this instead of in iconview???
-                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
-                iconMax(pm);
-                iconsCached.append(dmRow);
-            }
+        QImage image;
+        QString fPath = idx.data(G::PathRole).toString();
+        bool thumbLoaded = thumb->loadThumb(fPath, image);
+        if (thumbLoaded) {
+            QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+            iconMax(pm);
+            iconsCached.append(dmRow);
         }
         mutex.unlock();
     }
+    emit updateIconBestFit();
 }
 
 void MetadataCache::readMetadataIconChunk()
@@ -565,19 +567,7 @@ startRow and endRow.
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-//    t.restart();
-//    G::t.restart();
     int count = 0;
-
-//    if (metadataCacheAll) {
-//        startRow = 0;
-//        endRow = dm->rowCount();
-//    }
-
-//    qDebug() << __FUNCTION__
-//             << "startRow =" << startRow
-//             << "endRow =" << endRow;
-
     for (int row = startRow; row < endRow; ++row) {
         if (abort) {
             emit updateIsRunning(false, true, __FUNCTION__);
@@ -610,9 +600,6 @@ startRow and endRow.
             QImage image;
             bool thumbLoaded = thumb->loadThumb(fPath, image);
             if (thumbLoaded) {
-//                emit setIcon(dmRow, image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-
-                // change to this instead of in iconview???
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
                 dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
                 iconMax(pm);
@@ -621,6 +608,7 @@ startRow and endRow.
         }
         mutex.unlock();
     }
+    emit updateIconBestFit();
     /*
     qint64 ms = t.elapsed();
     qreal msperfile = (float)ms / count;
@@ -694,7 +682,7 @@ If there has been a file selection change and not a new folder then update image
             mutex.unlock();
         }
 
-        // clean up orphaned icons outside icon range
+        // clean up orphaned icons outside icon range   rgh what about other actions
         if (action >= Action::FilterChange) {
             iconCleanup();
         }
@@ -724,7 +712,6 @@ If there has been a file selection change and not a new folder then update image
 
     // after 2nd pass on new folder initiate the image cache
     if (action == Action::NewFolder2ndPass) {
-//        qDebug() << __FUNCTION__ << "emit loadImageCache()";
         emit loadImageCache();
     }
  
@@ -744,7 +731,6 @@ If there has been a file selection change and not a new folder then update image
 
     // if filter change then update image cache
     if (action == Action::FilterChange) {
-//        qDebug() << __FUNCTION__ << "filterChange emit updateImageCachePositionAfterDelay()";
         emit updateImageCachePositionAfterDelay();
     }
 }

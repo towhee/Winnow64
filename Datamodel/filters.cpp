@@ -33,7 +33,7 @@ datamodel.
     setColumnWidth(2, 50);
     setColumnWidth(3, 50);
     setColumnWidth(4, 50);
-    setHeaderLabels({"", "Value", "Filter", "All"});
+    setHeaderLabels({"", "Value", "Filter", "All", "Raw+Jpg"});
     header()->setDefaultAlignment(Qt::AlignCenter);
     hideColumn(1);
 
@@ -64,6 +64,9 @@ datamodel.
     filterCategoryToDmColumn["FocalLengths"] = G::FocalLengthColumn;
     filterCategoryToDmColumn["Title"] = G::TitleColumn;
     filterCategoryToDmColumn["Creators"] = G::CreatorColumn;
+
+    connect(this, &Filters::itemChanged, this, &Filters::itemChangedSignal);
+    connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
 }
 
 void Filters::createPredefinedFilters()
@@ -450,6 +453,51 @@ createDynamicFilters;
         item->setCheckState(0, Qt::Unchecked);
         item->setData(1, Qt::EditRole, key);
     }
+}
+
+void Filters::itemChangedSignal(QTreeWidgetItem *item, int column)
+{
+    bool isChild = item->parent();
+    bool ok = isChild && column == 0 && G::isNewFolderLoaded && !G::buildingFilters;
+    if (ok) {
+        itemHasChanged = true;
+        /*
+        qDebug() << __FUNCTION__
+                 << "G::isNewFolderLoaded" << G::isNewFolderLoaded
+                 << "G::buildingFilters" << G::buildingFilters
+                 << "item->text(column)" << item->text(column)
+                 << "item->parent()" << item->parent()
+                 << "isChild" << isChild
+                 << "column" << column
+                 << "itemHasChanged" << itemHasChanged
+                 << "result" << result;
+                 */
+    }
+//    emit filterChange(true);
+}
+
+void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
+{
+    bool isChild = item->parent();
+    bool ok = isChild && column == 0
+              && G::isNewFolderLoaded
+              && !G::buildingFilters
+              && itemHasChanged;
+    if (ok) {
+        /*
+        qDebug() << __FUNCTION__
+             << "G::isNewFolderLoaded" << G::isNewFolderLoaded
+             << "G::buildingFilters" << G::buildingFilters
+             << "item->text(column)" << item->text(column)
+             << "item->parent()" << item->parent()
+             << "isChild" << isChild
+             << "column" << column
+             << "itemHasChanged" << itemHasChanged
+             << "result" << result;
+             */
+        emit filterChange(true);
+    }
+    itemHasChanged = false;
 }
 
 void Filters::resizeEvent(QResizeEvent *event)
