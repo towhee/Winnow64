@@ -525,7 +525,8 @@ Load the thumb (icon) for all the image files in the folder(s).
 void MetadataCache::readIconChunk()
 {
 /*
-Load the thumb (icon) for all the image files in the target range.
+Load the thumb (icon) for all the image files in the target range.  This is called after a
+sort/filter change and all metadata has been loaded, but the icons visible havew changed.
 */
     {
     #ifdef ISDEBUG
@@ -553,6 +554,7 @@ Load the thumb (icon) for all the image files in the target range.
         }
         mutex.unlock();
     }
+    // reset after a filter change
     emit updateIconBestFit();
 }
 
@@ -608,7 +610,6 @@ startRow and endRow.
         }
         mutex.unlock();
     }
-    emit updateIconBestFit();
     /*
     qint64 ms = t.elapsed();
     qreal msperfile = (float)ms / count;
