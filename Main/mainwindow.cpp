@@ -105,16 +105,72 @@ CACHING
 * see top of mdcache.cpp comments for more detail
 
 ***********************************************************************************************
+DATAMODEL CHANGES
 
-New folder
-    Clear datamodel
-    Load datamodel file info
-    Load metadata chunk (250 items)
-    Load metadata 2nd pass
-    Initiate image cache
+Folder change
+    MW::folderSelectionChange
+        Housekeeping                    (stop cache threads, slideshow, initializing)
+    DataModel::load                     (load basic metadata for every eligible image)
+    MetadataCache::loadNewFolder
+    MetadataCache::setRange
+    MetadataCache::readMetadataIconChunk
+    MW::loadMetadataCache2ndPass
+    MW::updateIconBestFit
+    IconView::bestAspect
+    IconView::setThumbParameters
+    MW::updateMetadataCacheIconviewState
+    MetadataCache::loadNewFolder2ndPass
+    MetadataCache::setRange
+    MetadataCache::readMetadataIconChunk
+    MW::loadImageCacheForNewFolder
+    // need to repeat best fit?
+    MW::updateIconBestFit
+    IconView::bestAspect
+    IconView::setThumbParameters
+    ImageCache::initImageCache
+    ImageCache::buildImageCacheList
+    ImageCache::updateImageCachePosition
+    ImageCache::updateImageCacheList
+    ImageCache::setPriorities
+    ImageCache::setTargetRange
+    ImageCache::run
 
+Image change
+    MW::fileSelectionChange
+    MW::updateMetadataCacheIconviewState
+    MetadataCache::fileSelectionChange
+    MetadataCache::setRange
+    MetadataCache::readMetadataIconChunk
+    MW::updateImageCachePositionAfterDelay
+    ImageCache::updateImageCachePosition
+    ImageCache::updateImageCacheList
+    ImageCache::setPriorities
+    ImageCache::setTargetRange
+    ImageCache::run
 
-
+Filter change
+    MW::filterChange
+    MW::loadEntireMetadataCache
+    DataModel::addAllMetadata               (instead of MetadataCache::loadAllMetadata)
+    SortFilter::filterChange
+    DataModel::filteredItemCount
+    ImageCache::filterImageCache
+    ImageCache::buildImageCacheList
+    ImageCache::setPriorities
+    ImageCache::setTargetRange
+    ImageCache::checkAlreadyCached
+    ImageCache::checkForSurplus
+    MW::updateMetadataCacheIconviewState
+    MetadataCache::filterChange
+    MetadataCache::setRange
+    MetadataCache::readIconChunk
+    MetadataCache::iconCleanup              should image change also do icon cleanup??
+    MW::updateImageCachePositionAfterDelay
+    ImageCache::updateImageCachePosition
+    ImageCache::updateImageCacheList
+    ImageCache::setPriorities
+    ImageCache::setTargetRange
+    ImageCache::run
 */
 
 MW::MW(QWidget *parent) : QMainWindow(parent)
@@ -890,10 +946,6 @@ void MW::folderSelectionChange()
 //    popUp->close();   // rgh is this needed
     updateStatus(false, "Collecting metadata for all images in folder(s)");
 
-    // reset for bestAspect calc
-    G::iconWMax = G::minIconSize;
-    G::iconHMax = G::minIconSize;
-
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
     and full size embedded jpgs and the image width and height, req'd in imageCache to manage
     cache max size. The metadataCaching thread also loads the thumbnails. It triggers the
@@ -1179,6 +1231,22 @@ visible.  This is used in the metadataCacheThread to determine the range of file
 
 void MW::updateImageCachePositionAfterDelay()
 {
+/*
+Signalled from the imageCacheThread when a new image is selected or on a filtration change.
+
+The imageCacheTimer calls ImageCache::updateImageCachePosition, which updates the cache for
+the current image in the data model. The cache key is set, forward or backward progress is
+determined and the target range is updated. Image caching is reactivated.
+
+THERE IS A PERFORMANCE ISSUE IF THIS IS CALLED DIRECTLY FROM MW::fileSelectionchange.
+Apparently there needs to be a slight delay before calling.
+
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     imageCacheTimer->start(50);
 }
 
@@ -3370,23 +3438,15 @@ void MW::createDataModel()
     }
 
     connect(dm->sf, &SortFilter::reloadImageCache, this, &MW::loadFilteredImageCache);
-//    connect(dm->sf, &SortFilter::nullFilter, this, &MW::nullSelection);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
-//    connect(dm, &DataModel::setPopupTest, this, &MW::setPopupText);
-//    connect(dm, &DataModel::closePopup, this, &MW::closePopup);
     connect(dm, &DataModel::msg, this, &MW::setCentralMessage);
-//    connect(dm, &DataModel::updateIcon, thumbView, &ThumbView::setIcon);
-//    connect(dm, SIGNAL(updateIcon(int,QImage)), thumbView, SLOT(setIcon(int, QImage)));
-//    connect(dm, SIGNAL(updateProgress(int,int,int,QColor,QString)),
-//            this, SLOT(updateProgress(int,int,int,QColor,QString)));
 }
 
 void MW::createSelectionModel()
 {
 /*
-The application only has one selection model which is shared by ThumbView,
-GridView and TableView, insuring that each view is in sync, except when a
-view is hidden.
+The application only has one selection model which is shared by ThumbView, GridView and
+TableView, insuring that each view is in sync, except when a view is hidden.
 */
     {
     #ifdef ISDEBUG
@@ -3402,16 +3462,6 @@ view is hidden.
     // whenever currentIndex changes do a file selection change
     connect(selectionModel, &QItemSelectionModel::currentChanged,
             this, &MW::fileSelectionChange);
-
-    /* whenever the selection changes update the selection.  This is required
-       to recover the selection between mode changes, as the model selection
-       is lost when the view is hidden in the centralWidget stack layout
-
-       This does not work however, as it is called when a view is made visible
-       and does not have the up-to-date selection*/
-
-//    connect(selectionModel, &QItemSelectionModel::selectionChanged,
-//            this, &MW::saveSelection);
 }
 
 void MW::createCaching()
@@ -3424,13 +3474,12 @@ void MW::createCaching()
     imageCacheThread = new ImageCache(this, dm, metadata);
     metadataCacheThread = new MetadataCache(this, dm, metadata, imageCacheThread);
 
-    /* When a new folder is selected the metadataCacheThread is started to
-       load all the metadata and thumbs for each image.  If the user scrolls
-       during the cache process then the metadataCacheThread is restarted at the
-       first visible thumb to speed up the display of the thumbs for the user.
-       However, if every scroll event triggered a restart it would be
-       inefficient, so this timer is used to wait for a pause in the scrolling
-       before triggering a restart at the new place.
+    /* When a new folder is selected the metadataCacheThread is started to load all the
+    metadata and thumbs for each image. If the user scrolls during the cache process then the
+    metadataCacheThread is restarted at the first visible thumb to speed up the display of the
+    thumbs for the user. However, if every scroll event triggered a restart it would be
+    inefficient, so this timer is used to wait for a pause in the scrolling before triggering
+    a restart at the new place.
     */
     metadataCacheScrollTimer = new QTimer(this);
     metadataCacheScrollTimer->setSingleShot(true);
@@ -3981,7 +4030,7 @@ void MW::createFilterView()
     /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
        for every item in Filters */
 
-    connect(filters, &Filters::itemClicked, this, &MW::filterChange);
+//    connect(filters, &Filters::itemClicked, this, &MW::filterChange);
     connect(filters, &Filters::filterChange, this, &MW::filterChange);
 }
 
@@ -4554,16 +4603,24 @@ and icons are loaded if necessary.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) return;
 
+    qDebug() << __FUNCTION__;
+
     // Need all metadata loaded before filtering
     if (!G::allMetadataLoaded) loadEntireMetadataCache();
+
+    G::track(__FUNCTION__, "START");
+
     // refresh the proxy sort/filter
     dm->sf->filterChange();
+    G::track(__FUNCTION__, "dm->sf->filterChange()");
+
     // update filter panel image count by filter item
     dm->filteredItemCount();
+    G::track(__FUNCTION__, "dm->filteredItemCount()");
+
     // update the status panel filtration status
     updateFilterStatus(isFilter);
 
@@ -4572,20 +4629,17 @@ and icons are loaded if necessary.
         nullFiltration();
         return;
     }
-    // get the current selected item
-//    QModelIndex idx = thumbView->currentIndex();
-//    QString currentFilePath = idx.data(G::PathRole).toString();
 
+    // get the current selected item
     currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
-//    qDebug() << __FUNCTION__ << currentRow;
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
     QModelIndex idx = dm->sf->index(currentRow, 0);
     selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
-//    if (currentRow == 0) thumbView
 
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
     centralLayout->setCurrentIndex(prevCentralView);
@@ -4594,15 +4648,20 @@ and icons are loaded if necessary.
     // filter the image cache to sync with datamodel filter
     imageCacheThread->filterImageCache(fPath);
 
+    // update the icons to match the filtered view
     updateMetadataCacheIconviewState();
     metadataCacheThread->filterChange(currentRow);
+
+    // refit best aspect ??
+//    updateIconBestFit();            // not working
 
 //    thumbView->selectThumb(currentRow);
 //    gridView->selectThumb(currentRow);
     if (gridView->isVisible()) gridView->scrollToRow(currentRow);
     if (thumbView->isVisible()) thumbView->scrollToRow(currentRow);
     if (tableView->isVisible()) tableView->scrollTo(idx,
-         QAbstractItemView::ScrollHint::PositionAtCenter);}
+         QAbstractItemView::ScrollHint::PositionAtCenter);
+}
 
 void MW::quickFilter()
 {
@@ -9078,7 +9137,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << filters->days->childCount();
+    bool isUnfilteredItemCount = filters->refineTrue->text(3) == "";
+    qDebug() << filters->refineFalse->text(3)
+             << isUnfilteredItemCount;
 }
 
 // End MW

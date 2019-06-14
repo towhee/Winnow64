@@ -24,8 +24,7 @@ protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
 
 signals:
-    void reloadImageCache();
-//    void nullFilter();
+    void reloadImageCache();        // rgh do we need this?
 
 private:
     Filters *filters;
@@ -64,11 +63,7 @@ public:
     bool timeToQuit;
 
 signals:
-    void setPopupTest(QString msg);
-//    void popup(QString msg, int ms, float opacity, bool isAutoSize);
-    void closePopup();
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
-    void updateIcon(int row, QImage icon);
     void msg(QString message);
 
 public slots:

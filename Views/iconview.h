@@ -137,7 +137,6 @@ public slots:
 
     void refreshThumb(QModelIndex idx, int role);
     void refreshThumbs();
-    void setIcon(int row, QImage thumb);
     void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
              int _thumbPadding, int _labelFontSize, bool _showThumbLabels,
              /*bool _wrapThumbs, */int _badgeSize);

@@ -1,6 +1,6 @@
 BUGS
-- Help shortcutsform not updating
-- Filter counts when raw+jpg include raw and jpg files
+- Check usage of MW::loadFilteredImageCache
+- Update best aspect after filtering ??
 - Cache progress bar can cover cache activity spots if window is small
 - Menu Go > Scroll actions not working (maybe rethink this)
 - Image cache GB used (infoview) keeps growing in size
@@ -40,6 +40,8 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Filter counts when raw+jpg include raw and jpg files
+- Help shortcutsform not updating
 - Filter when select new folder
 - When slideshow random sometimes not read image
 - If slideshow random do not cache

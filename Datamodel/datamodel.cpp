@@ -827,8 +827,9 @@ void DataModel::filteredItemCount()
             QString searchValue = (*it)->text(1);
             int tot = 0;
             for (int row = 0; row < sf->rowCount(); ++row) {
-                QString value = sf->index(row, col).data().toString();
-                if (value == searchValue) tot++;
+//                QString value = sf->index(row, col).data().toString();
+                if (sf->index(row, col).data().toString() == searchValue) tot++;
+//                if (value == searchValue) tot++;
             }
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
@@ -839,11 +840,25 @@ void DataModel::filteredItemCount()
 
 void DataModel::unfilteredItemCount()
 {
+/*
+This function counts the number of occurences of each unique item in the datamodel, and also
+if raw+jpg have been combined.  The results as saved in the filters QTreeWidget in columns
+3 (all) and 4 (raw+jpg).
+
+It is only necessary to run this function once for a new folder(s) selection when filtration
+has been invoked.  Its counterpart, filteredItemCount, has to be run every time the filters
+change.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    // do not run if already totalled
+    bool isUnfilteredItemCount = filters->refineTrue->text(3)!= "" || filters->refineFalse->text(3) != "";
+    if (isUnfilteredItemCount) return;
+
+    G::track(__FUNCTION__, "Start");
 
     QTreeWidgetItemIterator it(filters);
     while (*it) {
@@ -852,21 +867,25 @@ void DataModel::unfilteredItemCount()
             QString searchValue = (*it)->text(1);
             int tot = 0;
             int totRawJpgCombined = 0;
+//            G::track(__FUNCTION__, "Start " + (*it)->text(1));
             for (int row = 0; row < rowCount(); ++row) {
                 bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
-                QString value = index(row, col).data().toString();
-                if (value == searchValue) {
+//                QString value = index(row, col).data().toString();
+                if (sf->index(row, col).data().toString() == searchValue) {
                     tot++;
                     if (combineRawJpg && !hideRaw) totRawJpgCombined++;
                 }
             }
+//            G::track(__FUNCTION__, (*it)->text(1));
             (*it)->setData(3, Qt::EditRole, QString::number(tot));
-            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+//            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
-            (*it)->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
+//            (*it)->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
         }
         ++it;
     }
+
+    G::track(__FUNCTION__, "End");
 }
 
 // -----------------------------------------------------------------------------

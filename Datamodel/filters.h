@@ -68,6 +68,10 @@ private:
     QLinearGradient categoryBackground;
     QFont categoryFont;
     int indentation;
+
+    bool itemHasChanged;
+    void itemChangedSignal(QTreeWidgetItem *item, int column);
+    void itemClickedSignal(QTreeWidgetItem *item, int column);
 };
 
 #endif // FILTERS_H
