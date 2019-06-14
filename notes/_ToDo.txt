@@ -1,6 +1,5 @@
 BUGS
 - Check usage of MW::loadFilteredImageCache
-- Update best aspect after filtering ??
 - Cache progress bar can cover cache activity spots if window is small
 - Menu Go > Scroll actions not working (maybe rethink this)
 - Image cache GB used (infoview) keeps growing in size
@@ -20,6 +19,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Add progress bar to popup
 - Filter by folder
 - Copy image
 - Refresh selected images
@@ -40,6 +40,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Update best aspect after filtering
 - Filter counts when raw+jpg include raw and jpg files
 - Help shortcutsform not updating
 - Filter when select new folder

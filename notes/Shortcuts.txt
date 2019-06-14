@@ -1,4 +1,5 @@
-Function                     Key  ⌘  ⇧  ⌥
+Function                     Key  ⌘  ⇧  ⌥   ⌘(ctrl) ⇧(shift)  ⌥(alt)   ⇧
+--------------------------------------------
 Escape full screen           ⎋
 Mouse click zoom 50%         5
 Mouse click zoom 100%        0
@@ -35,7 +36,11 @@ Ingest / Copy to folder      Q
 Quit program                 Q    ⌘
 Refine                       R
 Reveal in Explore/Finder     R    ⌘
+
+Function                     Key  ⌘  ⇧  ⌥   ⌘(ctrl) ⇧(shift)  ⌥(alt)
+--------------------------------------------
 Slideshow                    S
+Reverse sort                 S           ⌥
 Table view                   T
 New workspace                W
 Manage workspace             W    ⌘

@@ -502,19 +502,17 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     IconView is ready-to-go and can scroll to wherever we want:
 
-    When the user changes modes in MW (ie from Grid to Loupe) a IconView
-    instance (either thumbView or gridView) can change state from hidden to
-    visible. Since hidden widgets cannot be accessed we need to wait until the
-    IconView becomes visible and fully repainted before attempting to scroll
-    to the current index. The IconView scrollBar paint events are monitored
-    and when the last paint event occurs the scrollToCurrent function is
-    called. The last paint event is identified by calculating the maximum of
-    the scrollbar range and comparing it to the paint event, which updates the
-    range each time. With larger datasets (ie 1500+ thumbs) it can take a
-    number of paint events and 100s of ms to complete. A flag is assigned
-    (readyToScroll) to show when we need to monitor so not checking needlessly.
-    Unfortunately there does not appear to be any signal or event when
-    ListView is finished hence this cludge.
+    When the user changes modes in MW (ie from Grid to Loupe) a IconView instance (either
+    thumbView or gridView) can change state from hidden to visible. Since hidden widgets
+    cannot be accessed we need to wait until the IconView becomes visible and fully repainted
+    before attempting to scroll to the current index. The IconView scrollBar paint events are
+    monitored and when the last paint event occurs the scrollToCurrent function is called. The
+    last paint event is identified by calculating the maximum of the scrollbar range and
+    comparing it to the paint event, which updates the range each time. With larger datasets
+    (ie 1500+ thumbs) it can take a number of paint events and 100s of ms to complete. A flag
+    is assigned (readyToScroll) to show when we need to monitor so not checking needlessly.
+    Unfortunately there does not appear to be any signal or event when ListView is finished
+    hence this cludge.
     */
 
     if(event->type() == QEvent::Paint
@@ -525,17 +523,17 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
             /*
             qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
-                     << horizontalScrollBar()->maximum()
-                     << getHorizontalScrollBarMax();
-                     */
+                     << thumbView->horizontalScrollBar()->maximum()
+                     << thumbView->getHorizontalScrollBarMax();*/
+
             if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
                 /*
                 qDebug() << objectName()
                  << ": Event Filter sending row =" << currentRow
                  << "horizontalScrollBarMax Qt vs Me"
                  << thumbView->horizontalScrollBar()->maximum()
-                 << thumbView->getHorizontalScrollBarMax();
-                 */
+                 << thumbView->getHorizontalScrollBarMax();*/
+
                 thumbView->scrollToRow(scrollRow);
             }
         }
@@ -6982,6 +6980,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
 
         filterLastDayAction->setShortcut(QKeySequence("Shift+D"));
 
+        // Sort
+        sortReverseAction->setShortcut(QKeySequence("alt+S"));
+
         // View
         asLoupeAction->setShortcut(QKeySequence("E"));
         asGridAction->setShortcut(QKeySequence("G"));
@@ -7253,8 +7254,6 @@ around lack of notification when the QListView has finished painting itself.
     QString fPath = idx.data(G::PathRole).toString();
     if (imageView->isVisible()) {
         if (imageView->loadImage(idx, fPath)) {
-            if (G::isThreadTrackingOn) qDebug()
-                << "MW::fileSelectionChange - loaded image file " << fPath;
             updateClassification();
         }
     }
@@ -9137,9 +9136,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    bool isUnfilteredItemCount = filters->refineTrue->text(3) == "";
-    qDebug() << filters->refineFalse->text(3)
-             << isUnfilteredItemCount;
+    qDebug() << "HorScrollCurrentMax / FinalMax:"
+             << thumbView->horizontalScrollBar()->maximum()
+             << thumbView->getHorizontalScrollBarMax();
 }
 
 // End MW
