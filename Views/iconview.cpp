@@ -767,6 +767,7 @@ void IconView::selectThumb(int row)
     #endif
     }
     // some operations assign row = -1 if not found
+    qDebug() << __FUNCTION__ << "row =" << row;
     if (row < 0) return;
     setFocus();
     QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
@@ -780,6 +781,8 @@ void IconView::selectThumb(QString &fName)
     G::track(__FUNCTION__);
     #endif
     }
+    // rgh use dm->fPathRow[fPath] instead - much faster
+    // selectThumb(dm->fPathRow[fName]);
     QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fName);
     QModelIndex idx = idxList[0];
 //    qDebug() << G::t.restart() << "\t" << "selectThumb  idx.row()" << idx.row();
@@ -1210,7 +1213,7 @@ For thumbSpace anatomy (see IconViewDelegate)
 
     iconViewDelegate->setThumbDimensions(thumbWidth, thumbHeight,
         thumbSpacing, thumbPadding, labelFontSize, showThumbLabels, badgeSize);
-    scrollToRow(currentIndex().row());
+    scrollToRow(currentIndex().row(), __FUNCTION__);
 }
 
 void IconView::updateLayout()
@@ -1286,7 +1289,7 @@ void IconView::scrollPageUp(int /*step*/)
     }
 }
 
-void IconView::scrollToRow(int row)
+void IconView::scrollToRow(int row, QString source)
 {
 /*
 This is called from MW::eventFilter after the eventFilter intercepts the last scrollbar
@@ -1305,7 +1308,8 @@ MW::mouseClickScroll == true.
     G::track(__FUNCTION__);
     #endif
     }
-//    G::track(__FUNCTION__, QString::number(row));
+    qDebug() << __FUNCTION__ << objectName() << "row =" << row
+             << "source =" << source;
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 
@@ -1578,7 +1582,7 @@ center.
     if (G::mode != "Loupe" && event->button() == Qt::LeftButton) {
         emit displayLoupe();
     }
-    scrollToRow(currentIndex().row());
+    scrollToRow(currentIndex().row(), __FUNCTION__);
 }
 
 void IconView::invertSelection()

@@ -47,7 +47,7 @@ public:
     void addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category);
 
 signals:
-    void filterChange(bool isFilter);
+    void filterChange(QString source);
 
 public slots:
 

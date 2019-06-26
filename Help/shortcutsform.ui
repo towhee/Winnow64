@@ -99,6 +99,17 @@
         <property name="text">
          <string>O</string>
         </property>
+        <property name="text">
+         <string>This is the letter &quot;O&quot;, not zero</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Refresh Current Folder</string>
+        </property>
+        <property name="text">
+         <string>Opt/Alt + F5</string>
+        </property>
        </item>
        <item>
         <property name="text">
@@ -668,7 +679,7 @@
          <string>Show Rating Badge</string>
         </property>
         <property name="text">
-         <string>⌘I</string>
+         <string>Cmd/Ctrl + I</string>
         </property>
         <property name="text">
          <string>Toggles</string>
@@ -850,7 +861,7 @@
           <string>Files Panel Titlebar</string>
          </property>
          <property name="text">
-          <string>⇧F3</string>
+          <string>Shift +F3</string>
          </property>
          <property name="text">
           <string>Toggles</string>
@@ -861,7 +872,7 @@
           <string>Favourites Panel Titlebar</string>
          </property>
          <property name="text">
-          <string>⇧F4</string>
+          <string>Shift +F4</string>
          </property>
          <property name="text">
           <string>Toggles</string>
@@ -872,7 +883,7 @@
           <string>Filters Panel Titlebar</string>
          </property>
          <property name="text">
-          <string>⇧F5</string>
+          <string>Shift +F5</string>
          </property>
          <property name="text">
           <string>Toggles</string>
@@ -883,7 +894,7 @@
           <string>Metadata Panel Titlebar</string>
          </property>
          <property name="text">
-          <string>⇧F6</string>
+          <string>Shift +F6</string>
          </property>
          <property name="text">
           <string>Toggles</string>
@@ -894,7 +905,7 @@
           <string>Thumbnails Panel Titlebar</string>
          </property>
          <property name="text">
-          <string>⇧F7</string>
+          <string>Shift +F7</string>
          </property>
          <property name="text">
           <string>Toggles</string>
@@ -905,7 +916,7 @@
           <string>All Panel Titlebars</string>
          </property>
          <property name="text">
-          <string>⌘L</string>
+          <string>Cmd/Ctrl + L</string>
          </property>
          <property name="text">
           <string>Toggles</string>
@@ -928,7 +939,7 @@
          <string>Select Workspace</string>
         </property>
         <property name="text">
-         <string>⌘0 to ⌘9</string>
+         <string>Cmd/Ctrl + 0 to 9</string>
         </property>
        </item>
        <item>
@@ -944,7 +955,7 @@
          <string>Manage Workspaces</string>
         </property>
         <property name="text">
-         <string>⌘W</string>
+         <string>Cmd/Ctrl + W</string>
         </property>
        </item>
        <item>
@@ -952,7 +963,7 @@
          <string>Default Workspace</string>
         </property>
         <property name="text">
-         <string>⇧⌘W</string>
+         <string>Cmd/Ctrl + Shift +W</string>
         </property>
        </item>
       </item>

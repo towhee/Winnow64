@@ -37,6 +37,7 @@ namespace G
     */
     enum dataModelColumns {
         // items available for TableView
+        // items read when new folder (core fields)
         PathColumn,
         NameColumn,
         RefineColumn,
@@ -48,8 +49,9 @@ namespace G
         SizeColumn,
         WidthColumn,
         HeightColumn,
-        CreatedColumn,
         ModifiedColumn,
+        // items read on demand (secondary metadata fields)
+        CreatedColumn,
         YearColumn,
         DayColumn,
         CreatorColumn,
@@ -148,6 +150,7 @@ namespace G
     extern bool isTimer;
 
     extern void track(QString functionName = "", QString comment = "");
+    extern void wait(int ms);
 
     extern PopUp *popUp;
     extern void newPopUp(QWidget *widget);

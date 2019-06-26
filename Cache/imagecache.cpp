@@ -468,7 +468,7 @@ and no longer needed (not in the target range). Make sure to call setTargetRange
 void ImageCache::checkAlreadyCached()
 {
 /* If the user filters and the cache is being rebuilt check for images that are already
-cached and update cacheItemList statis.  Make sure to call setTargetRange first.
+cached and update cacheItemList status.  Make sure to call setTargetRange first.
 */
     {
     #ifdef ISDEBUG
@@ -683,7 +683,14 @@ It is built from dm->sf (sorted and/or filtered datamodel).
 
 void ImageCache::updateImageCacheList()
 {
-
+/*
+Update the width, height, size and isMetadata fields in the imageCacheList.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < dm->sf->rowCount(); ++i) {
         if (i >= cacheItemList.length()) {
             qDebug() << __FUNCTION__
@@ -781,7 +788,7 @@ Apparently there needs to be a slight delay before calling.
     // just in case stopImageCache not called before this
     if (isRunning()) pauseImageCache();
 
-    Q_ASSERT(cacheItemList.length() > 0);
+    Q_ASSERT(cacheItemList.length() > 0);   // must be items cached
     // get cache item key
     cache.key = 0;
     for (int i = 0; i < cacheItemList.count(); i++) {
@@ -866,12 +873,12 @@ image caching thread is restarted.
 
 //    reportCache("filterImageCache after setPriorities and setTargetRange");
 
-//    if (cache.isShowCacheStatus) emit showCacheStatus("Update all rows", 0, "ImageCache::filterImageCache");
+    if (cache.isShowCacheStatus) emit showCacheStatus("Update all rows", 0, "ImageCache::filterImageCache");
 
 //    start(IdlePriority);
 }
 
-void ImageCache::resortImageCache(QString &currentImageFullPath)
+void ImageCache::resortImageCache(/*QString &currentImageFullPath*/)
 {
 /*
 The cacheItemList is rebuilt to mirror the current sorting in SortFilter (dm->sf).
@@ -882,69 +889,69 @@ If there is filtering then the entire cache is reloaded.
     G::track(__FUNCTION__);;
     #endif
     }
-    G::track(__FUNCTION__);;
-    if (isRunning()) pauseImageCache();
+//    G::track(__FUNCTION__);;
+//    if (isRunning()) pauseImageCache();
 
-//    reportCache("Before sort");
+////    reportCache("Before sort");
 
-    cacheItemListCopy = cacheItemList;
-    cacheItemList.clear();
+//    cacheItemListCopy = cacheItemList;
+//    cacheItemList.clear();
 
-    int filterRowCount = dm->sf->rowCount();
-    int i;
-    for(int row = 0; row < filterRowCount; ++row) {
-        QString fPath = dm->sf->index(row, 0).data(G::PathRole).toString();
-        if(fPath == currentImageFullPath) cache.key = row;
-        for (i = 0; i < filterRowCount; ++i) {
-            if(cacheItemListCopy.at(i).fName == fPath) break;
-        }
-        cacheItem.fName = fPath;
-        cacheItem.isCached = cacheItemListCopy.at(i).isCached;
-        cacheItem.isTarget = cacheItemListCopy.at(i).isTarget;
-        cacheItem.key = row;
-        cacheItem.origKey = cacheItemListCopy.at(i).origKey;
-        cacheItem.priority = cacheItemListCopy.at(i).priority;
-        cacheItem.sizeMB = cacheItemListCopy.at(i).sizeMB;
+//    int filterRowCount = dm->sf->rowCount();
+//    int i;
+//    for(int row = 0; row < filterRowCount; ++row) {
+//        QString fPath = dm->sf->index(row, 0).data(G::PathRole).toString();
+//        if(fPath == currentImageFullPath) cache.key = row;
+//        for (i = 0; i < filterRowCount; ++i) {
+//            if(cacheItemListCopy.at(i).fName == fPath) break;
+//        }
+//        cacheItem.fName = fPath;
+//        cacheItem.isCached = cacheItemListCopy.at(i).isCached;
+//        cacheItem.isTarget = cacheItemListCopy.at(i).isTarget;
+//        cacheItem.key = row;
+//        cacheItem.origKey = cacheItemListCopy.at(i).origKey;
+//        cacheItem.priority = cacheItemListCopy.at(i).priority;
+//        cacheItem.sizeMB = cacheItemListCopy.at(i).sizeMB;
 
-        cacheItemList.append(cacheItem);
-    }
+//        cacheItemList.append(cacheItem);
+//    }
 
-/*    qDebug() << "\nBefore sort:" << "\nKey OrigKey Priority Target Cached SizeMB Width Height FName";
-    for (int i=0; i<cache.totFiles; ++i) {
-        qDebug()
-                 << cacheItemListCopy.at(i).key << "\t"
-                 << cacheItemListCopy.at(i).origKey << "\t"
-                 << cacheItemListCopy.at(i).priority << "\t"
-                 << cacheItemListCopy.at(i).isTarget << "\t"
-                 << cacheItemListCopy.at(i).isCached << "\t"
-                 << cacheItemListCopy.at(i).sizeMB << "\t"
-                 << metadata->getWidth(cacheItemListCopy.at(i).fName) << "\t"
-                 << metadata->getHeight(cacheItemListCopy.at(i).fName) << "\t"
-                 << cacheItemListCopy.at(i).fName;
-    }
+///*    qDebug() << "\nBefore sort:" << "\nKey OrigKey Priority Target Cached SizeMB Width Height FName";
+//    for (int i=0; i<cache.totFiles; ++i) {
+//        qDebug()
+//                 << cacheItemListCopy.at(i).key << "\t"
+//                 << cacheItemListCopy.at(i).origKey << "\t"
+//                 << cacheItemListCopy.at(i).priority << "\t"
+//                 << cacheItemListCopy.at(i).isTarget << "\t"
+//                 << cacheItemListCopy.at(i).isCached << "\t"
+//                 << cacheItemListCopy.at(i).sizeMB << "\t"
+//                 << metadata->getWidth(cacheItemListCopy.at(i).fName) << "\t"
+//                 << metadata->getHeight(cacheItemListCopy.at(i).fName) << "\t"
+//                 << cacheItemListCopy.at(i).fName;
+//    }
 
-    qDebug() << "\nAfter sort:" << "\nKey OrigKey Priority Target Cached SizeMB Width Height FName";
-    for (int i=0; i<cache.totFiles; ++i) {
-        qDebug()
-                 << cacheItemList.at(i).key << "\t"
-                 << cacheItemList.at(i).origKey << "\t"
-                 << cacheItemList.at(i).priority << "\t"
-                 << cacheItemList.at(i).isTarget << "\t"
-                 << cacheItemList.at(i).isCached << "\t"
-                 << cacheItemList.at(i).sizeMB << "\t"
-                 << metadata->getWidth(cacheItemList.at(i).fName) << "\t"
-                 << metadata->getHeight(cacheItemList.at(i).fName) << "\t"
-                 << cacheItemList.at(i).fName;
-    }*/
+//    qDebug() << "\nAfter sort:" << "\nKey OrigKey Priority Target Cached SizeMB Width Height FName";
+//    for (int i=0; i<cache.totFiles; ++i) {
+//        qDebug()
+//                 << cacheItemList.at(i).key << "\t"
+//                 << cacheItemList.at(i).origKey << "\t"
+//                 << cacheItemList.at(i).priority << "\t"
+//                 << cacheItemList.at(i).isTarget << "\t"
+//                 << cacheItemList.at(i).isCached << "\t"
+//                 << cacheItemList.at(i).sizeMB << "\t"
+//                 << metadata->getWidth(cacheItemList.at(i).fName) << "\t"
+//                 << metadata->getHeight(cacheItemList.at(i).fName) << "\t"
+//                 << cacheItemList.at(i).fName;
+//    }*/
 
-    cacheItemListCopy.clear();
-    cache.totFiles = filterRowCount;
-    if (cache.isShowCacheStatus) showCacheStatus("Update all rows", 0, "ImageCache::resortImageCache");
+//    cacheItemListCopy.clear();
+//    cache.totFiles = filterRowCount;
+//    if (cache.isShowCacheStatus) showCacheStatus("Update all rows", 0, "ImageCache::resortImageCache");
 
-    cache.prevKey = cache.key;
-    cache.currMB = getImCacheSize();
-    setPriorities(cache.key);
-    setTargetRange();
+//    cache.prevKey = cache.key;
+//    cache.currMB = getImCacheSize();
+//    setPriorities(cache.key);
+//    setTargetRange();
 
 //    reportCache("After sort");
 
@@ -962,7 +969,11 @@ If there is filtering then the entire cache is reloaded.
                  << cacheItemList.at(i).fName;
     }*/
 
-    start(IdlePriority);
+    // just in case stopImageCache not called before this
+    if (isRunning()) pauseImageCache();
+
+    clearImageCache();
+    buildImageCacheList();
 }
 
 void ImageCache::run()

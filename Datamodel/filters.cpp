@@ -303,7 +303,7 @@ void Filters::checkPicks(bool check)
         picksFalse->setCheckState(0, Qt::Unchecked);
         picksTrue->setCheckState(0, Qt::Unchecked);
     }
-    emit filterChange(true);
+    emit filterChange("Filters::checkPicks");
 }
 
 bool Filters::isAnyFilter()
@@ -391,6 +391,7 @@ folder is selected to reset the filter criteria.
             (*it)->setData(3, Qt::EditRole, "");
             (*it)->setData(4, Qt::EditRole, "");
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
         }
         ++it;
     }
@@ -411,10 +412,11 @@ void Filters::uncheckAllFilters()
             (*it)->setCheckState(0, Qt::Unchecked);
             (*it)->setData(2, Qt::EditRole, "");
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
         }
         ++it;
     }
-    emit filterChange(false);
+//    emit filterChange("Filters::uncheckAllFilters");
 }
 
 void Filters::expandAllFilters()
@@ -495,7 +497,7 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
              << "itemHasChanged" << itemHasChanged
              << "result" << result;
              */
-        emit filterChange(true);
+        emit filterChange("Filters::itemClickedSignal");
     }
     itemHasChanged = false;
 }

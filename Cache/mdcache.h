@@ -25,18 +25,22 @@ public:
     enum Action {
         NewFolder = 0,
         NewFolder2ndPass = 1,
-        FilterChange = 2,
-        NewFileSelected = 3,
-        IconChunk = 4,
-        Scroll = 5,
-        AllMetadata = 6
+        RefreshCurrent = 2,
+        FilterChange = 3,       // if action >= FilterChange then iconCleanup is run
+        SortChange = 4,
+        NewFileSelected = 5,
+        Scroll = 6,
+        AllMetadata = 7
     };
+    QStringList actionList;
 
     void loadNewFolder();
     void loadNewFolder2ndPass();
+    void refreshCurrent();
     void loadMetadataIconChunk(int row);
-    void fileSelectionChange(int row);
-    void filterChange(int row);
+    void fileSelectionChange();
+    void filterChange();
+    void sortChange();
     void loadAllMetadata();
     void stopMetadateCache();
     bool isAllMetadataLoaded();
@@ -65,7 +69,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-    void setIcon(int, QImage);
+//    void setIcon(int, QImage);
     void loadImageCache();
     void updateImageCachePositionAfterDelay();
     void pauseImageCache();
@@ -73,7 +77,9 @@ signals:
     void updateIsRunning(bool, bool, QString);
     void updateIconBestFit();
     void loadMetadataCache2ndPass();
+    void resortImageCache();
     void selectFirst();
+    void scrollToCurrent();
     void showCacheStatus(int, bool);            // row, clear progress bar
 
 private:

@@ -116,7 +116,7 @@ public slots:
     void scrollUp(int);
     void scrollPageDown(int);
     void scrollPageUp(int);
-    void scrollToRow(int row);
+    void scrollToRow(int row, QString source);
     void thumbsEnlarge();
     void thumbsShrink();
     void justify(JustifyAction action);

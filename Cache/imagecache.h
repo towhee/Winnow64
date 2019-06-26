@@ -26,7 +26,7 @@ public:
              bool &isShowCacheStatus, int &cacheWtAhead,
              bool &usePreview, int &previewWidth, int &previewHeight);
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
-    void resortImageCache(QString &currentImageFullPath);
+    void resortImageCache(/*QString &currentImageFullPath*/);
     void filterImageCache(QString &currentImageFullPath);
     void stopImageCache();
     void clearImageCache();

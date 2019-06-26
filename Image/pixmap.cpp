@@ -48,6 +48,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << "fPath =" << fPath;
 
     bool success = false;
     int totDelay = 500;     // milliseconds
@@ -68,7 +69,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
         do {
             // Check if metadata has been cached for this image
             if (dm->index(row, G::OffsetFullJPGColumn).data().isNull()) {
-                metadata->loadImageMetadata(fPath, true, false);
+                metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__);
                 dm->addMetadataItem(metadata->imageMetadata);
             }
             offsetFullJpg = dm->index(row, G::OffsetFullJPGColumn).data().toUInt();
