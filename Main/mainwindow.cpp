@@ -171,6 +171,11 @@ Filter change
     ImageCache::setPriorities
     ImageCache::setTargetRange
     ImageCache::run
+
+Sort change
+    MW::sortThumbnails
+    thumbView->sortThumbs
+    MW::resortImageCache
 */
 
 MW::MW(QWidget *parent) : QMainWindow(parent)
@@ -534,7 +539,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                  << thumbView->horizontalScrollBar()->maximum()
                  << thumbView->getHorizontalScrollBarMax();*/
 
-                thumbView->scrollToRow(scrollRow);
+                thumbView->scrollToRow(scrollRow, __FUNCTION__);
             }
         }
         if (obj->objectName() == "IconViewVerticalScrollBar") {
@@ -549,7 +554,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                           << "verticalScrollBarMax Qt vs Me"
                           << thumbView->verticalScrollBar()->maximum()
                           << thumbView->getVerticalScrollBarMax();*/
-                 thumbView->scrollToRow(scrollRow);
+                 thumbView->scrollToRow(scrollRow, __FUNCTION__);
              }
          }
     }
@@ -566,7 +571,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                       << gridView->verticalScrollBar()->maximum()
                       << gridView->getVerticalScrollBarMax();
              */
-             gridView->scrollToRow(scrollRow);
+             gridView->scrollToRow(scrollRow, __FUNCTION__);
          }
     }
 
@@ -894,7 +899,7 @@ void MW::folderSelectionChange()
     this function has been executed by the load subfolders command then all the
     subfolders will be recursively loaded into the datamodel.
     */
-    uncheckAllFilters();
+    if (!isRefreshingDM) uncheckAllFilters();
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         qDebug() << "Datamodel Failed To Load for" << currentViewDir;
         clearAll();
@@ -937,9 +942,6 @@ void MW::folderSelectionChange()
         thumbView->selectThumb(0);
     }
 
-    // default sort by file name
-    thumbView->sortThumbs(1, false);
-    thumbView->selectThumb(0);
 
 //    popUp->close();   // rgh is this needed
     updateStatus(false, "Collecting metadata for all images in folder(s)");
@@ -953,7 +955,22 @@ void MW::folderSelectionChange()
     While still initializing, the window show event has not happened yet, so the
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
-    metadataCacheThread->loadNewFolder();
+    if (isRefreshingDM) {
+        isRefreshingDM = false;
+        G::isNewFolderLoaded = true;
+        int dmRow = dm->fPathRow[refreshCurrentPath];
+        loadImageCacheForNewFolder();
+        QTime waitPeriod = QTime::currentTime().addMSecs(300);
+        while (QTime::currentTime() < waitPeriod) qApp->processEvents(QEventLoop::AllEvents, 50);
+        thumbView->selectThumb(dmRow);
+//        metadataCacheThread->refreshCurrent();
+    }
+    else {
+        // default sort by file name
+        thumbView->sortThumbs(1, false);
+        thumbView->selectThumb(0);
+        metadataCacheThread->loadNewFolder();
+    }
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -962,7 +979,7 @@ void MW::folderSelectionChange()
     G::isInitializing = false;
 }
 
-void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
+void MW:: fileSelectionChange(QModelIndex current, QModelIndex previous)
 {
 /*
 Triggered when file selection changes (folder change selects new image, so it also triggers
@@ -992,7 +1009,7 @@ delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-//    qDebug() << __FUNCTION__ << current << ignoreSelectionChange;
+    qDebug() << __FUNCTION__ << current << ignoreSelectionChange;
     if (ignoreSelectionChange) {
 //        ignoreSelectionChange = false;
         return;
@@ -1040,25 +1057,25 @@ delegate use of the current index must check the row.
 
     // don't scroll mouse click source (screws up double clicks and disorients users)
     if(G::source == "TableMouseClick") {
-        if (gridView->isVisible()) gridView->scrollToRow(currentRow);
-        if (thumbView->isVisible()) thumbView->scrollToRow(currentRow);
+        if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
+        if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
     }
 
     else if(G::source == "ThumbMouseClick") {
-        if (gridView->isVisible()) gridView->scrollToRow(currentRow);
+        if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
              QAbstractItemView::ScrollHint::PositionAtCenter);
     }
 
     else if(G::source == "GridMouseClick") {
-        if (thumbView->isVisible()) thumbView->scrollToRow(currentRow);
+        if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
              QAbstractItemView::ScrollHint::PositionAtCenter);
     }
 
     else {
-        if (gridView->isVisible()) gridView->scrollToRow(currentRow);
-        if (thumbView->isVisible()) thumbView->scrollToRow(currentRow);
+        if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
+        if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
              QAbstractItemView::ScrollHint::PositionAtCenter);
     }
@@ -1085,10 +1102,13 @@ delegate use of the current index must check the row.
         }
     }
 
-    // update caching
-    if (G::isNewFolderLoaded && !(isSlideShow && slideShowRandom)) {
+    // update caching when folder has been loaded, not a slideshow and not the same image
+    // which can happen when filtering or sorting
+    if (G::isNewFolderLoaded &&
+            !(isSlideShow && slideShowRandom)/* &&
+            current != previous*/) {
         updateMetadataCacheIconviewState();
-        metadataCacheThread->fileSelectionChange(currentRow);
+        metadataCacheThread->fileSelectionChange();
     }
 
     // initialize the thumbDock
@@ -1133,10 +1153,10 @@ a bookmark or ejects a drive and the resulting folder does not have any eligible
     metadataCacheThread->stopMetadateCache();
     G::allMetadataLoaded = false;
     dm->clear();
+    currentRow = 0;
     infoView->clearInfo();
     metadata->clear();
     imageView->clear();
-    currentRow = 0;
 //    progressLabel->setVisible(false);
     setThreadRunStatusInactive();                      // turn thread activity buttons gray
     isDragDrop = false;
@@ -1186,6 +1206,7 @@ visible.  This is used in the metadataCacheThread to determine the range of file
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if (thumbView->isVisible() && !gridView->isVisible()) {
         thumbView->setViewportParameters();
         metadataCacheThread->firstIconVisible = thumbView->firstVisibleRow;
@@ -1258,6 +1279,31 @@ void MW::loadMetadataCache2ndPass()
     updateIconBestFit();
     updateMetadataCacheIconviewState();
     metadataCacheThread->loadNewFolder2ndPass();
+    return;
+
+    if (isRefreshingDM) {
+        int dmRow = dm->fPathRow[refreshCurrentPath];
+        dmCurrentIndex = dm->index(dmRow, 0);
+
+        if (filters->isAnyFilter()) {
+            filterChange("loadMetadataCache2ndPass when refreshing dm");
+        }
+        else {
+            G::isNewFolderLoaded = true;
+            thumbView->selectThumb(dmRow);
+        }
+
+//        currentRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
+//        QModelIndex idx = dm->sf->index(currentRow, 0);
+
+//        // rgh temp fix 300ms delay before scroll to currentRow
+        QTime waitPeriod = QTime::currentTime().addMSecs(300);
+        while (QTime::currentTime() < waitPeriod) qApp->processEvents(QEventLoop::AllEvents, 50);
+//        thumbView->selectThumb(currentRow);
+//        updateMetadataCacheIconviewState();
+//        fileSelectionChange(idx, idx);
+        isRefreshingDM = false;
+    }
 }
 
 void MW::loadMetadataCacheAfterDelay()
@@ -1307,8 +1353,10 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
         G::track(__FUNCTION__);
 #endif
     }
+    qDebug() << __FUNCTION__ << "isFilterChange =" << isFilterChange
+             << "currentRow =" << currentRow;
     if (/*G::isInitializing || */dm->sf->rowCount() == 0/* || !G::isNewFolderLoaded*/) return;
-
+//    if (isFilterChange) return;
     updateMetadataCacheIconviewState();
     metadataCacheThread->loadMetadataIconChunk(currentRow);
 }
@@ -1640,6 +1688,12 @@ void MW::createActions()
     openAction->setShortcutVisibleInContextMenu(true);
     addAction(openAction);
     connect(openAction, &QAction::triggered, this, &MW::openFolder);
+
+    refreshCurrentAction = new QAction(tr("Refresh Current Folder"), this);
+    refreshCurrentAction->setObjectName("refreshFolder");
+    refreshCurrentAction->setShortcutVisibleInContextMenu(true);
+    addAction(refreshCurrentAction);
+    connect(refreshCurrentAction, &QAction::triggered, this, &MW::refreshCurrent);
 
     openUsbAction = new QAction(tr("Open Usb Folder"), this);
     openUsbAction->setObjectName("openUsbFolder");
@@ -2253,110 +2307,110 @@ void MW::createActions()
     sortFileNameAction->setShortcutVisibleInContextMenu(true);
     sortFileNameAction->setCheckable(true);
     addAction(sortFileNameAction);
-    connect(sortFileNameAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortFileNameAction, &QAction::triggered, this, &MW::sortChange);
 
     sortFileTypeAction = new QAction(tr("Sort by file type"), this);
     sortFileTypeAction->setShortcutVisibleInContextMenu(true);
     sortFileTypeAction->setCheckable(true);
     addAction(sortFileTypeAction);
-    connect(sortFileTypeAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortFileTypeAction, &QAction::triggered, this, &MW::sortChange);
 
     sortFileSizeAction = new QAction(tr("Sort by file size"), this);
     sortFileSizeAction->setShortcutVisibleInContextMenu(true);
     sortFileSizeAction->setCheckable(true);
     addAction(sortFileSizeAction);
-    connect(sortFileSizeAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortFileSizeAction, &QAction::triggered, this, &MW::sortChange);
 
     sortCreateAction = new QAction(tr("Sort by created time"), this);
     sortCreateAction->setShortcutVisibleInContextMenu(true);
     sortCreateAction->setCheckable(true);
     addAction(sortCreateAction);
-    connect(sortCreateAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortCreateAction, &QAction::triggered, this, &MW::sortChange);
 
     sortModifyAction = new QAction(tr("Sort by last modified time"), this);
     sortModifyAction->setShortcutVisibleInContextMenu(true);
     sortModifyAction->setCheckable(true);
     addAction(sortModifyAction);
-    connect(sortModifyAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortModifyAction, &QAction::triggered, this, &MW::sortChange);
 
     sortPickAction = new QAction(tr("Sort by picked status"), this);
     sortPickAction->setShortcutVisibleInContextMenu(true);
     sortPickAction->setCheckable(true);
     addAction(sortPickAction);
-    connect(sortPickAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortPickAction, &QAction::triggered, this, &MW::sortChange);
 
     sortLabelAction = new QAction(tr("Sort by label"), this);
     sortLabelAction->setShortcutVisibleInContextMenu(true);
     sortLabelAction->setCheckable(true);
     addAction(sortLabelAction);
-    connect(sortLabelAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortLabelAction, &QAction::triggered, this, &MW::sortChange);
 
     sortRatingAction = new QAction(tr("Sort by rating"), this);
     sortRatingAction->setShortcutVisibleInContextMenu(true);
     sortRatingAction->setCheckable(true);
     addAction(sortRatingAction);
-    connect(sortRatingAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortRatingAction, &QAction::triggered, this, &MW::sortChange);
 
     sortMegaPixelsAction = new QAction(tr("Sort by megapixels"), this);
     sortMegaPixelsAction->setShortcutVisibleInContextMenu(true);
     sortMegaPixelsAction->setCheckable(true);
     addAction(sortMegaPixelsAction);
-    connect(sortMegaPixelsAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortMegaPixelsAction, &QAction::triggered, this, &MW::sortChange);
 
     sortDimensionsAction = new QAction(tr("Sort by dimensions"), this);
     sortDimensionsAction->setShortcutVisibleInContextMenu(true);
     sortDimensionsAction->setCheckable(true);
     addAction(sortDimensionsAction);
-    connect(sortDimensionsAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortDimensionsAction, &QAction::triggered, this, &MW::sortChange);
 
     sortApertureAction = new QAction(tr("Sort by aperture"), this);
 //    sortApertureAction->setObjectName("SortAperture");
     sortApertureAction->setShortcutVisibleInContextMenu(true);
     sortApertureAction->setCheckable(true);
     addAction(sortApertureAction);
-    connect(sortApertureAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortApertureAction, &QAction::triggered, this, &MW::sortChange);
 
     sortShutterSpeedAction = new QAction(tr("Sort by shutter speed"), this);
     sortShutterSpeedAction->setShortcutVisibleInContextMenu(true);
     sortShutterSpeedAction->setCheckable(true);
     addAction(sortShutterSpeedAction);
-    connect(sortShutterSpeedAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortShutterSpeedAction, &QAction::triggered, this, &MW::sortChange);
 
     sortISOAction = new QAction(tr("Sort by ISO"), this);
     sortISOAction->setShortcutVisibleInContextMenu(true);
     sortISOAction->setCheckable(true);
     addAction(sortISOAction);
-    connect(sortISOAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortISOAction, &QAction::triggered, this, &MW::sortChange);
 
     sortModelAction = new QAction(tr("Sort by camera model"), this);
     sortModelAction->setShortcutVisibleInContextMenu(true);
     sortModelAction->setCheckable(true);
     addAction(sortModelAction);
-    connect(sortModelAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortModelAction, &QAction::triggered, this, &MW::sortChange);
 
     sortFocalLengthAction = new QAction(tr("Sort by focal length"), this);
     sortFocalLengthAction->setShortcutVisibleInContextMenu(true);
     sortFocalLengthAction->setCheckable(true);
     addAction(sortFocalLengthAction);
-    connect(sortFocalLengthAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortFocalLengthAction, &QAction::triggered, this, &MW::sortChange);
 
     sortTitleAction = new QAction(tr("Sort by title"), this);
     sortTitleAction->setShortcutVisibleInContextMenu(true);
     sortTitleAction->setCheckable(true);
     addAction(sortTitleAction);
-    connect(sortTitleAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortTitleAction, &QAction::triggered, this, &MW::sortChange);
 
     sortLensAction = new QAction(tr("Sort by lens"), this);
     sortLensAction->setShortcutVisibleInContextMenu(true);
     sortLensAction->setCheckable(true);
     addAction(sortLensAction);
-    connect(sortLensAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortLensAction, &QAction::triggered, this, &MW::sortChange);
 
     sortCreatorAction = new QAction(tr("Sort by creator"), this);
     sortCreatorAction->setShortcutVisibleInContextMenu(true);
     sortCreatorAction->setCheckable(true);
     addAction(sortCreatorAction);
-    connect(sortCreatorAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortCreatorAction, &QAction::triggered, this, &MW::sortChange);
 
     sortGroupAction = new QActionGroup(this);
     sortGroupAction->setExclusive(true);
@@ -2388,7 +2442,7 @@ void MW::createActions()
     sortReverseAction->setCheckable(true);
 //    sortReverseAction->setChecked(false);
     addAction(sortReverseAction);
-    connect(sortReverseAction, &QAction::triggered, this, &MW::sortThumbnails);
+    connect(sortReverseAction, &QAction::triggered, this, &MW::sortChange);
 
     // View menu
     slideShowAction = new QAction(tr("Slide Show"), this);
@@ -2836,6 +2890,7 @@ void MW::createMenus()
     QAction *fileGroupAct = new QAction("File", this);
     fileGroupAct->setMenu(fileMenu);
     fileMenu->addAction(openAction);
+    fileMenu->addAction(refreshCurrentAction);
     fileMenu->addAction(openUsbAction);
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
     openWithMenu->addAction(manageAppAction);
@@ -3498,8 +3553,13 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
             this, SLOT(updateMetadataCacheStatus(int,bool)));
 
-    connect(metadataCacheThread, SIGNAL(setIcon(int, QImage)),
-            thumbView, SLOT(setIcon(int, QImage)));
+    connect(metadataCacheThread, SIGNAL(resortImageCache()),
+            this, SLOT(resortImageCache()));
+
+    connect(metadataCacheThread, &MetadataCache::scrollToCurrent, this, &MW::scrollToCurrentRow);
+
+//    connect(metadataCacheThread, SIGNAL(setIcon(int, QImage)),
+//            thumbView, SLOT(setIcon(int, QImage)));
 
     /* Image caching is triggered from the metadataCacheThread to avoid the two threads
        running simultaneously and colliding */
@@ -3901,7 +3961,7 @@ void MW::createDocks()
     G::track(__FUNCTION__);
     #endif
     }
-    folderDock = new DockWidget(tr("  Folders  "), this);
+    folderDock = new DockWidget(tr(" Folders "), this);
     folderDock->setObjectName("File System");
     folderDock->setWidget(fsTree);
 
@@ -3913,7 +3973,7 @@ void MW::createDocks()
         setting->endGroup();
     }
 
-    favDock = new DockWidget(tr("  Fav  "), this);
+    favDock = new DockWidget(tr(" Favourites "), this);
     favDock->setObjectName("Bookmarks");
     favDock->setWidget(bookmarks);
 
@@ -3922,18 +3982,6 @@ void MW::createDocks()
         favDock->dw.screen = setting->value("screen").toInt();
         favDock->dw.pos = setting->value("pos").toPoint();
         favDock->dw.size = setting->value("size").toSize();
-        setting->endGroup();
-    }
-
-    metadataDock = new DockWidget(tr("  Metadata  "), this);
-    metadataDock->setObjectName("Image Info");
-    metadataDock->setWidget(infoView);
-
-    if (isSettings) {
-        setting->beginGroup(("MetadataDockFloat"));
-        metadataDock->dw.screen = setting->value("screen").toInt();
-        metadataDock->dw.pos = setting->value("pos").toPoint();
-        metadataDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
 
@@ -3946,6 +3994,18 @@ void MW::createDocks()
         filterDock->dw.screen = setting->value("screen").toInt();
         filterDock->dw.pos = setting->value("pos").toPoint();
         filterDock->dw.size = setting->value("size").toSize();
+        setting->endGroup();
+    }
+
+    metadataDock = new DockWidget(tr("  Metadata  "), this);
+    metadataDock->setObjectName("Image Info");
+    metadataDock->setWidget(infoView);
+
+    if (isSettings) {
+        setting->beginGroup(("MetadataDockFloat"));
+        metadataDock->dw.screen = setting->value("screen").toInt();
+        metadataDock->dw.pos = setting->value("pos").toPoint();
+        metadataDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
 
@@ -4344,7 +4404,7 @@ void MW::clearStatus()
     stateLabel->setText("");
 }
 
-void MW::updateFilterStatus(bool isFilter)
+void MW::updateFilterStatus()
 {
     /*
     The filter status is shown in the status bar.
@@ -4354,7 +4414,7 @@ void MW::updateFilterStatus(bool isFilter)
     G::track(__FUNCTION__);
     #endif
     }
-    if (!isFilter) {
+    if (dm->sf->rowCount() == dm->rowCount()) {
         filterStatusLabel->setText("");
         return;
     }
@@ -4486,15 +4546,9 @@ void MW::resortImageCache()
     #endif
     }
     if (!dm->sf->rowCount()) return;
-
-    if (!G::allMetadataLoaded) {
-        loadEntireMetadataCache();
-    }
-
     QString currentFilePath = dmCurrentIndex.data(G::PathRole).toString();
-    QModelIndex idx = dm->sf->mapFromSource(dmCurrentIndex);
-    fileSelectionChange(idx, idx);
-    imageCacheThread->resortImageCache(currentFilePath);
+    imageCacheThread->resortImageCache();
+    imageCacheThread->updateImageCachePosition();
 }
 
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
@@ -4587,7 +4641,7 @@ void MW::buildFilters()
     G::popUp->show("Filters completed");
 }
 
-void MW::filterChange(bool isFilter)
+void MW::filterChange(QString source)
 {
 /*
 All filter changes should be routed to here as a central clearing house. The datamodel
@@ -4604,23 +4658,23 @@ and icons are loaded if necessary.
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) return;
 
-    qDebug() << __FUNCTION__;
+//    isFilterChange = true;
+
+    qDebug() << "\n" << __FUNCTION__ << "called by " << source
+             << "allMetadataLoaded =" << G::allMetadataLoaded;
 
     // Need all metadata loaded before filtering
-    if (!G::allMetadataLoaded) loadEntireMetadataCache();
+    if (!G::allMetadataLoaded) dm->addAllMetadata(true);
 
-    G::track(__FUNCTION__, "START");
-
+    qDebug() << __FUNCTION__ << "dm->sf->filterChange()";
     // refresh the proxy sort/filter
     dm->sf->filterChange();
-    G::track(__FUNCTION__, "dm->sf->filterChange()");
 
     // update filter panel image count by filter item
     dm->filteredItemCount();
-    G::track(__FUNCTION__, "dm->filteredItemCount()");
 
     // update the status panel filtration status
-    updateFilterStatus(isFilter);
+    updateFilterStatus();
 
     // if filter has eliminated all rows so nothing to show
     if (!dm->sf->rowCount()) {
@@ -4629,6 +4683,10 @@ and icons are loaded if necessary.
     }
 
     // get the current selected item
+    qDebug() << __FUNCTION__
+             << "thumbView->currentIndex().row() =" << thumbView->currentIndex().row()
+             << "dmCurrentIndex).row() =" << dmCurrentIndex.row()
+             << "dm->sf->mapFromSource(dmCurrentIndex).row() =" << dm->sf->mapFromSource(dmCurrentIndex).row();
     currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
@@ -4638,27 +4696,23 @@ and icons are loaded if necessary.
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
 
+    qDebug() << __FUNCTION__ << "STATUS: "
+             << "currentRow =" << currentRow
+             << "dmCurrentIndex.row() =" << dmCurrentIndex.row();
+
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
     centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true);
 
-    // filter the image cache to sync with datamodel filter
+    // sync image cache with datamodel filtered proxy
     imageCacheThread->filterImageCache(fPath);
 
-    // update the icons to match the filtered view
-    updateMetadataCacheIconviewState();
-    metadataCacheThread->filterChange(currentRow);
-
-    // refit best aspect ??
-//    updateIconBestFit();            // not working
-
-//    thumbView->selectThumb(currentRow);
-//    gridView->selectThumb(currentRow);
-    if (gridView->isVisible()) gridView->scrollToRow(currentRow);
-    if (thumbView->isVisible()) thumbView->scrollToRow(currentRow);
-    if (tableView->isVisible()) tableView->scrollTo(idx,
-         QAbstractItemView::ScrollHint::PositionAtCenter);
+    // rgh temp fix 300ms delay before scroll to currentRow
+    QTime waitPeriod = QTime::currentTime().addMSecs(300);
+    while (QTime::currentTime() < waitPeriod) qApp->processEvents(QEventLoop::AllEvents, 50);
+    thumbView->selectThumb(currentRow);
+    fileSelectionChange(idx, idx);
 }
 
 void MW::quickFilter()
@@ -4692,7 +4746,7 @@ void MW::quickFilter()
     if (!filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Unchecked);
     if (!filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Unchecked);
 
-    filterChange();
+    filterChange("MW::quickFilter");
 }
 
 void MW::invertFilters()
@@ -4719,7 +4773,7 @@ void MW::invertFilters()
     }
     filters->invertFilters();
 
-    filterChange();
+    filterChange("MW::invertFilters");
 }
 
 void MW::uncheckAllFilters()
@@ -4756,7 +4810,7 @@ void MW::clearAllFilters()
     if (!G::allMetadataLoaded) loadEntireMetadataCache();
     uncheckAllFilters();
 
-    filterChange(false);
+    filterChange("MW::clearAllFilters");
 }
 
 void MW::filterLastDay()
@@ -4793,7 +4847,7 @@ void MW::filterLastDay()
         filters->days->child(last - 1)->setCheckState(0, Qt::Unchecked);
     }
 
-    filterChange();
+    filterChange("MW::filterLastDay");
 }
 
 void MW::refine()
@@ -4861,10 +4915,10 @@ void MW::refine()
     filters->uncheckAllFilters();
     filters->refineTrue->setCheckState(0, Qt::Checked);
 
-    filterChange(false);
+    filterChange("MW::refine");
 }
 
-void MW::sortThumbnails()
+void MW::sortChange()
 {
     {
     #ifdef ISDEBUG
@@ -4872,9 +4926,6 @@ void MW::sortThumbnails()
     #endif
     }
     if(sortMenuUpdateToMatchTable) return;
-    if (!G::allMetadataLoaded) loadEntireMetadataCache();
-
-    int sortColumn = 0;
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;
     if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;
@@ -4893,8 +4944,71 @@ void MW::sortThumbnails()
     if (sortFocalLengthAction->isChecked()) sortColumn = G::FocalLengthColumn;
     if (sortTitleAction->isChecked()) sortColumn = G::TitleColumn;
 
+    // Need all metadata loaded before sorting non-core metadata
+    if (!G::allMetadataLoaded && sortColumn > G::ModifiedColumn) loadEntireMetadataCache();
+
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
-    resortImageCache();
+
+    // get the current selected item
+    currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
+    thumbView->iconViewDelegate->currentRow = currentRow;
+    gridView->iconViewDelegate->currentRow = currentRow;
+    QModelIndex idx = dm->sf->index(currentRow, 0);
+    selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
+
+    // the file path is used as an index in ImageView
+    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+
+    // also update datamodel, used in MdCache
+    dm->currentFilePath = fPath;
+    centralLayout->setCurrentIndex(prevCentralView);
+    updateStatus(true);
+
+    // sync image cache with datamodel filtered proxy
+//    resortImageCache();
+    imageCacheThread->filterImageCache(fPath);
+
+//    // rgh temp fix 300ms delay before scroll to currentRow
+//    QTime waitPeriod = QTime::currentTime().addMSecs(300);
+//    while (QTime::currentTime() < waitPeriod) qApp->processEvents(QEventLoop::AllEvents, 50);
+//    thumbView->selectThumb(currentRow);
+//    fileSelectionChange(idx, idx);
+
+    scrollToCurrentRow();
+}
+
+void MW::scrollToCurrentRow()
+{
+/*
+Signalled from metadataCacheThread after metadata read
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
+    QModelIndex idx = dm->sf->index(currentRow, 0);
+    G::wait(100);
+//    if (thumbView->isVisible()) {
+//        int thresholdMax = 0.95 * thumbView->getHorizontalScrollBarMax();
+//        qDebug() << __FUNCTION__ << "thresholdMax =" << thresholdMax;
+//        while (thresholdMax < thumbView->horizontalScrollBar()->maximum()) {
+//            qDebug() << __FUNCTION__ << QTime::currentTime()
+//                     << "thumbView->horizontalScrollBar()->maximum()"
+//                     << thumbView->horizontalScrollBar()->maximum();
+//        }
+        // wait 100ms for double click issue
+//        G::wait(100);
+//        thumbView->scrollToRow(currentRow, __FUNCTION__);
+//    }
+    if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
+    if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
+    if (tableView->isVisible()) tableView->scrollTo(idx,
+         QAbstractItemView::ScrollHint::PositionAtCenter);
+
+    updateMetadataCacheIconviewState();
+    metadataCacheThread->loadMetadataIconChunk(currentRow);
 }
 
 void MW::showHiddenFiles()
@@ -4919,6 +5033,7 @@ void MW::thumbsEnlarge()
         if (thumbView->isWrapping()) thumbView->justify(IconView::JustifyAction::Enlarge);
         else thumbView->thumbsEnlarge();
     }
+    scrollToCurrentRow();
 }
 
 void MW::thumbsShrink()
@@ -4933,6 +5048,7 @@ void MW::thumbsShrink()
         if (thumbView->isWrapping()) thumbView->justify(IconView::JustifyAction::Shrink);
         else thumbView->thumbsShrink();
     }
+    scrollToCurrentRow();
     // may be more icons to cache
     loadMetadataCacheAfterDelay();
 }
@@ -6903,6 +7019,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
 
         // File
         openAction->setShortcut(QKeySequence("O"));
+        refreshCurrentAction->setShortcut(QKeySequence("Alt+F5"));
         openUsbAction->setShortcut(QKeySequence("Ctrl+O"));
         manageAppAction->setShortcut(QKeySequence("Alt+O"));
         ingestAction->setShortcut(QKeySequence("Q"));
@@ -8195,7 +8312,7 @@ void MW::setCombineRawJpg()
     updateRawJpgStatus();
 
     // trigger update to image list and update image cache
-    filterChange();
+    filterChange("MW::setCombineRawJpg");
 }
 
 void MW::setCachedStatus(QString fPath, bool isCached)
@@ -8882,6 +8999,22 @@ void MW::openFolder()
     fsTree->select(dirPath);
     folderSelectionChange();
 }
+
+void MW::refreshCurrent()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    isRefreshingDM = true;
+    refreshCurrentPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+    folderSelectionChange();
+}
+
 void MW::openUsbFolder()
 {
     struct  UsbInfo {
@@ -9100,7 +9233,7 @@ void MW::helpShortcuts()
     ui.setupUi(helpShortcuts);
 
     ui.treeWidget->setColumnWidth(0, 250);
-    ui.treeWidget->setColumnWidth(1, 100);
+    ui.treeWidget->setColumnWidth(1, 250);
     ui.treeWidget->setColumnWidth(2, 250);
 //    ui.treeWidget->headerItem()->setTextAlignment(0, Qt::AlignCenter);
 //    ui.treeWidget->header()->setMinimumHeight(16);
@@ -9136,9 +9269,23 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << "HorScrollCurrentMax / FinalMax:"
-             << thumbView->horizontalScrollBar()->maximum()
-             << thumbView->getHorizontalScrollBarMax();
+    thumbView->selectThumb(1500);
+    return;
+    scrollToCurrentRow();
+//    qDebug() << __FUNCTION__ << currentRow;
+
+//    QModelIndex idx = dm->sf->index(currentRow, 0);
+//    selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
+
+//    if (gridView->isVisible()) gridView->scrollToRow(currentRow);
+//    if (thumbView->isVisible()) thumbView->scrollToRow(currentRow);
+//    if (tableView->isVisible()) tableView->scrollTo(idx,
+//         QAbstractItemView::ScrollHint::PositionAtCenter);
+
+//    metadataCacheThread->filterChange();
+
+//    // sort the image cache to sync with datamodel filter
+//    resortImageCache();
 }
 
 // End MW

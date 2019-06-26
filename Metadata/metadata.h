@@ -214,7 +214,8 @@ public slots:
                            bool essential = true,
                            bool nonEssential = true,
                            bool isReport = false,
-                           bool isLoadXmp = false);
+                           bool isLoadXmp = false,
+                           QString source = "");
 
 private:
     void track(QString fPath, QString msg);

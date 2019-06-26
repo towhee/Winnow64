@@ -1,4 +1,7 @@
 BUGS
+- Unfiltered total not right justified
+- Image cache performance when filtered is wonky
+- color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Check usage of MW::loadFilteredImageCache
 - Cache progress bar can cover cache activity spots if window is small
 - Menu Go > Scroll actions not working (maybe rethink this)
@@ -15,6 +18,7 @@ BUGS
 PERFORMANCE
 - filteredItemCount and unfilteredItemCount slow
 CODE IMPROVEMENTS
+- Refresh current folder (keep filter/sort and position)
 - Change setPixelSize to setPointSize throughout app
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
@@ -23,6 +27,7 @@ ENHANCEMENTS
 - Filter by folder
 - Copy image
 - Refresh selected images
+- Refresh selected folder
 - Speed up Tiffs
 - Lock docks to a size, chk resize behavior as separate windows
 - tableView adjust to changing font size

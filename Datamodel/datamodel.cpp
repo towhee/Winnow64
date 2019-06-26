@@ -344,15 +344,6 @@ Steps:
                 }
             }
         }
-        // report folder progress
-//        if (folderCount % 100 == 0 && folderCount > 0) {
-//            QString s = escapeClause + "Scanning folder " +
-//                        QString::number(folderCount) +
-//                        " of parent " + root + currentFolderPath;
-//            emit msg(s);
-//            qApp->processEvents();
-//            if (timeToQuit) return false;
-//        }
     }
     // if images were found and added to data model
     if (imageCount) return addFileData();
@@ -394,6 +385,8 @@ bool DataModel::addFileData()
 
         // append hash index of datamodel row for fPath for fast lookups
         QString fPath = fileInfo.filePath();
+
+        // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
         fPathRow[fPath] = fileIndex;
 
         /* add icon as first column in new row
@@ -505,7 +498,7 @@ ImageMetadata DataModel::getMetadata(QString fPath)
     // check if metadata loaded for this row
     if (index(row, G::CreatedColumn).data().isNull()) {
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->imageMetadata.row = row;
             addMetadataItem(metadata->imageMetadata);
         }
@@ -591,7 +584,7 @@ to run as a separate thread and can be executed directly.
 
         QString fPath = index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->imageMetadata.row = row;
             addMetadataItem(metadata->imageMetadata, isShowCacheStatus);
             count++;
@@ -819,6 +812,7 @@ void DataModel::filteredItemCount()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
 
     QTreeWidgetItemIterator it(filters);
     while (*it) {
@@ -878,9 +872,9 @@ change.
             }
 //            G::track(__FUNCTION__, (*it)->text(1));
             (*it)->setData(3, Qt::EditRole, QString::number(tot));
-//            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
-//            (*it)->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
+            (*it)->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
         }
         ++it;
     }
@@ -994,5 +988,6 @@ filtration then the image cache needs to be reloaded to match the new proxy (sf)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     invalidateFilter();
 }

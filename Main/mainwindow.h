@@ -236,6 +236,7 @@ public:
     bool allIconsLoaded;
     bool modeChangeJustHappened;
     bool justUpdatedBestFit;
+    int sortColumn = 0;
 
     bool showImageCount = true;
     bool isCurrentFolderOkay;
@@ -305,13 +306,13 @@ private slots:
     void setRotation(int degrees);
     void metadataChanged(QStandardItem* item);
     void filterLastDay();
-    void filterChange(bool isFilter = true);
+    void filterChange(QString source = "");
     void quickFilter();
     void invertFilters();
     void refine();
     void uncheckAllFilters();
     void clearAllFilters();
-    void sortThumbnails();
+    void sortChange();
     void preferences(int page = -1);
     void externalAppManager();
     void toggleFullScreen();
@@ -334,13 +335,14 @@ private slots:
     void keyScrollUp();
     void keyScrollPageDown();
     void keyScrollPageUp();
+    void scrollToCurrentRow();
     void zoomToggle();
     void updateSubfolderStatus();
     void updateRawJpgStatus();
     // status functions
     void updateStatus(bool keepBase = true, QString s = "");
     void clearStatus();
-    void updateFilterStatus(bool isFilter = true);
+    void updateFilterStatus();
     // caching status functions
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();
@@ -441,6 +443,7 @@ private slots:
     void reportState();
 
     void openFolder();
+    void refreshCurrent();
     void openUsbFolder();
     void revealFile();
     void revealFileFromContext();
@@ -503,6 +506,7 @@ private:
 
     // File menu
     QAction *openAction;
+    QAction *refreshCurrentAction;
     QAction *openUsbAction;
     QAction *revealFileAction;
     QAction *revealFileActionFromContext;
@@ -782,6 +786,10 @@ private:
     bool ignoreDockResize;
     bool wasThumbDockVisible;
     bool isUpdatingState;
+
+    bool isFilterChange = false;        // rgh required?
+    bool isRefreshingDM = false;
+    QString refreshCurrentPath;
 
     bool simulateJustInstalled;
     bool isSettings;

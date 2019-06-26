@@ -4536,6 +4536,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << "path =" << path;
+
     report = isReport;
 
     if (report) {
@@ -4664,12 +4666,12 @@ void Metadata::clear()
 
 void Metadata::loadFromThread(QFileInfo &fileInfo)
 {
-    loadImageMetadata(fileInfo, true, true, false, true);
+    loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__);
 }
 
 bool Metadata:: loadImageMetadata(const QFileInfo &fileInfo,
                                  bool essential, bool nonEssential,
-                                 bool isReport, bool isLoadXmp)
+                                 bool isReport, bool isLoadXmp, QString source)
 {
     {
     #ifdef ISDEBUG
@@ -4678,6 +4680,11 @@ bool Metadata:: loadImageMetadata(const QFileInfo &fileInfo,
     }
     // check if already loaded
     fPath = fileInfo.filePath();
+    if (fPath == "") {
+        qDebug() << __FUNCTION__ << "NULL FILE REQUESTED FROM "
+                 << source;
+        return false;
+    }
 //    if (metaCache[fPath].metadataLoaded && !isReport) return true;
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load

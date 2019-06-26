@@ -55,6 +55,7 @@ Fav dock lock                F4      ⇧
 Filter dock                  F5
 Filter dock lock             F5      ⇧
 Refresh folders              F5   ⌘
+Refresh datamodel            F5          ⌥
 Metadata dock                F6
 Metadata dock lock           F6      ⇧
 Thumb dock                   F7
