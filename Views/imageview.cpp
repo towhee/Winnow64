@@ -109,7 +109,7 @@ ImageView::ImageView(QWidget *parent,
     firstImageLoaded = true;
 }
 
-bool ImageView::loadImage(QModelIndex idx, QString fPath)
+bool ImageView::loadImage(QString fPath)
 {
 /*
 There are two sources for the image (pixmap): a file or the cache.
@@ -149,7 +149,6 @@ to prevent jarring changes in perceived scale by the user.
     an image (when currentImagePath.isEmpty() == true) - for example when
     no folder has been chosen. */
     currentImagePath = fPath;
-    imageIndex = idx;
     bool isLoaded = false;
     pmItem->setVisible(true);
 
@@ -189,7 +188,7 @@ to prevent jarring changes in perceived scale by the user.
         int dmRow = dm->fPathRow[fPath];
         if (dm->index(dmRow, G::CreatedColumn).data().isNull()) {
             QFileInfo fileInfo(fPath);
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
                 metadata->imageMetadata.row = dmRow;
                 dm->addMetadataItem(metadata->imageMetadata);
             }

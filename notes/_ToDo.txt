@@ -1,5 +1,4 @@
 BUGS
-- Unfiltered total not right justified
 - Image cache performance when filtered is wonky
 - color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Check usage of MW::loadFilteredImageCache
@@ -18,7 +17,6 @@ BUGS
 PERFORMANCE
 - filteredItemCount and unfilteredItemCount slow
 CODE IMPROVEMENTS
-- Refresh current folder (keep filter/sort and position)
 - Change setPixelSize to setPointSize throughout app
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
@@ -27,7 +25,6 @@ ENHANCEMENTS
 - Filter by folder
 - Copy image
 - Refresh selected images
-- Refresh selected folder
 - Speed up Tiffs
 - Lock docks to a size, chk resize behavior as separate windows
 - tableView adjust to changing font size
@@ -45,6 +42,10 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Refresh current folder
+- Icon not loaded for dm row = 0 after sort and reload folder
+- Reset menu sort when new folder selected or sort as per menu
+- Unfiltered total not right justified
 - Update best aspect after filtering
 - Filter counts when raw+jpg include raw and jpg files
 - Help shortcutsform not updating

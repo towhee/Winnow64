@@ -197,6 +197,9 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     // use this to show thread activity
     G::isThreadTrackingOn = false;
 
+    // show all table fields for debugging
+    G::showAllTableColumns = true;
+
     isStressTest = false;
     // Global timer
     G::isTimer = true;
@@ -899,7 +902,11 @@ void MW::folderSelectionChange()
     this function has been executed by the load subfolders command then all the
     subfolders will be recursively loaded into the datamodel.
     */
-    if (!isRefreshingDM) uncheckAllFilters();
+
+    uncheckAllFilters();
+    qDebug() << __FUNCTION__;
+//    sortFileNameAction->setChecked(true);
+
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         qDebug() << "Datamodel Failed To Load for" << currentViewDir;
         clearAll();
@@ -956,18 +963,11 @@ void MW::folderSelectionChange()
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
     if (isRefreshingDM) {
-        isRefreshingDM = false;
-        G::isNewFolderLoaded = true;
-        int dmRow = dm->fPathRow[refreshCurrentPath];
-        loadImageCacheForNewFolder();
-        QTime waitPeriod = QTime::currentTime().addMSecs(300);
-        while (QTime::currentTime() < waitPeriod) qApp->processEvents(QEventLoop::AllEvents, 50);
-        thumbView->selectThumb(dmRow);
-//        metadataCacheThread->refreshCurrent();
+        refreshCurrentAfterReload();
     }
     else {
         // default sort by file name
-        thumbView->sortThumbs(1, false);
+//        thumbView->sortThumbs(1, false);
         thumbView->selectThumb(0);
         metadataCacheThread->loadNewFolder();
     }
@@ -1097,7 +1097,7 @@ delegate use of the current index must check the row.
 
     // update imageView, use cache if image loaded, else read it from file
     if (G::mode == "Loupe") {
-        if (imageView->loadImage(current, fPath)) {
+        if (imageView->loadImage(fPath)) {
             updateClassification();
         }
     }
@@ -1279,31 +1279,6 @@ void MW::loadMetadataCache2ndPass()
     updateIconBestFit();
     updateMetadataCacheIconviewState();
     metadataCacheThread->loadNewFolder2ndPass();
-    return;
-
-    if (isRefreshingDM) {
-        int dmRow = dm->fPathRow[refreshCurrentPath];
-        dmCurrentIndex = dm->index(dmRow, 0);
-
-        if (filters->isAnyFilter()) {
-            filterChange("loadMetadataCache2ndPass when refreshing dm");
-        }
-        else {
-            G::isNewFolderLoaded = true;
-            thumbView->selectThumb(dmRow);
-        }
-
-//        currentRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
-//        QModelIndex idx = dm->sf->index(currentRow, 0);
-
-//        // rgh temp fix 300ms delay before scroll to currentRow
-        QTime waitPeriod = QTime::currentTime().addMSecs(300);
-        while (QTime::currentTime() < waitPeriod) qApp->processEvents(QEventLoop::AllEvents, 50);
-//        thumbView->selectThumb(currentRow);
-//        updateMetadataCacheIconviewState();
-//        fileSelectionChange(idx, idx);
-        isRefreshingDM = false;
-    }
 }
 
 void MW::loadMetadataCacheAfterDelay()
@@ -1414,6 +1389,35 @@ the filter and sort operations cannot commence until all the metadata has been l
     QApplication::restoreOverrideCursor();
 //    popup("Metadata loaded.", 500, 0.75, true);
 //    QApplication::processEvents();
+}
+
+void MW::refreshCurrentAfterReload()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    G::isNewFolderLoaded = true;
+
+//    // check if filtration
+//    if (filters->isAnyFilter()) {
+//        filterChange(__FUNCTION__);
+//    }
+
+//    // check if nonstandard sort
+//    if (!sortFileNameAction->isChecked()) {
+//        sortChange();
+//    }
+
+    int dmRow = dm->fPathRow[refreshCurrentPath];
+    loadImageCacheForNewFolder();
+    G::wait(300);
+    thumbView->selectThumb(dmRow);
+    isRefreshingDM = false;
 }
 
 void MW::updateMetadataCacheStatus(int row, bool clear)
@@ -4925,7 +4929,8 @@ void MW::sortChange()
     G::track(__FUNCTION__);
     #endif
     }
-    if(sortMenuUpdateToMatchTable) return;
+    qDebug() << __FUNCTION__ << "G::isNewFolderLoaded =" << G::isNewFolderLoaded;
+    if(sortMenuUpdateToMatchTable/* || !G::isNewFolderLoaded*/) return;
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;
     if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;
@@ -4967,12 +4972,6 @@ void MW::sortChange()
     // sync image cache with datamodel filtered proxy
 //    resortImageCache();
     imageCacheThread->filterImageCache(fPath);
-
-//    // rgh temp fix 300ms delay before scroll to currentRow
-//    QTime waitPeriod = QTime::currentTime().addMSecs(300);
-//    while (QTime::currentTime() < waitPeriod) qApp->processEvents(QEventLoop::AllEvents, 50);
-//    thumbView->selectThumb(currentRow);
-//    fileSelectionChange(idx, idx);
 
     scrollToCurrentRow();
 }
@@ -7370,7 +7369,7 @@ around lack of notification when the QListView has finished painting itself.
     // update imageView, use cache if image loaded, else read it from file
     QString fPath = idx.data(G::PathRole).toString();
     if (imageView->isVisible()) {
-        if (imageView->loadImage(idx, fPath)) {
+        if (imageView->loadImage(fPath)) {
             updateClassification();
         }
     }
@@ -9269,23 +9268,19 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    thumbView->selectThumb(1500);
-    return;
-    scrollToCurrentRow();
-//    qDebug() << __FUNCTION__ << currentRow;
+    QModelIndex dmIdx = dm->index(0, 0);
+    QModelIndex idx = dm->sf->mapFromSource(dmIdx);
+    QString fPath = idx.data(G::PathRole).toString();
+    QImage image;
+    bool thumbLoaded = thumb->loadThumb(fPath, image);
+    if (thumbLoaded) {
+        QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+        dm->itemFromIndex(dmIdx)->setIcon(pm);
+    }
+    qDebug() << "thumbLoaded =" << thumbLoaded << fPath
+             << "dm->index(0, G::OffsetThumbJPGColumn).data().toString() ="
+             << dm->index(0, G::OffsetThumbJPGColumn).data().toString();
 
-//    QModelIndex idx = dm->sf->index(currentRow, 0);
-//    selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
-
-//    if (gridView->isVisible()) gridView->scrollToRow(currentRow);
-//    if (thumbView->isVisible()) thumbView->scrollToRow(currentRow);
-//    if (tableView->isVisible()) tableView->scrollTo(idx,
-//         QAbstractItemView::ScrollHint::PositionAtCenter);
-
-//    metadataCacheThread->filterChange();
-
-//    // sort the image cache to sync with datamodel filter
-//    resortImageCache();
 }
 
 // End MW
