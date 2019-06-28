@@ -305,8 +305,9 @@ void InfoView::updateInfo(const int &row)
 
     // make sure there is metadata for this image
     if (dm->sf->index(row, G::CreatedColumn).data().isNull()) {
-        metadata->loadImageMetadata(fPath, true, true, false, true);
-        metadata->imageMetadata.row = row;
+        metadata->loadImageMetadata(fPath, true, true, false, true, __FUNCTION__);
+        metadata->imageMetadata.row = dm->fPathRow[fPath];
+//        metadata->imageMetadata.row = row;
         dm->addMetadataItem(metadata->imageMetadata);
     }
 

@@ -132,7 +132,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
         QCheckBox *box1 = qobject_cast<QCheckBox*>(wid1);
         box1->setChecked(idx.data().toBool());
         // hide all datamodel columns after URL
-        if (row > G::UrlColumn - 1) ui->tableFieldsTable->setRowHidden(row, true);
+        if (!G::showAllTableColumns && row > G::UrlColumn - 1)
+            ui->tableFieldsTable->setRowHidden(row, true);
         connect(box1, SIGNAL(clicked(bool)), this, SLOT(on_tableField_changed()));
     }
     // NOTE: row heights controlled by vertical header height in design form

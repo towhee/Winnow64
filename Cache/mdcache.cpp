@@ -657,45 +657,69 @@ startRow and endRow.
     #endif
     }
     int count = 0;
-    for (int row = startRow; row < endRow; ++row) {
-        if (abort) {
-            emit updateIsRunning(false, true, __FUNCTION__);
-            return;
-        }
-
-        // file path and dm source row in case filtered or sorted
-        mutex.lock();
-        QModelIndex idx = dm->sf->index(row, 0);
-        int dmRow = dm->sf->mapToSource(idx).row();
-        QString fPath = idx.data(G::PathRole).toString();
-
-        // load metadata
-        if (dm->sf->index(row, G::CreatedColumn).data().isNull()) {
-            QFileInfo fileInfo(fPath);
-            /*
-               tried emit signal to metadata but really slow
-               emit loadImageMetadata(fileInfo, true, true, false);  */
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-                metadata->imageMetadata.row = dmRow;
-                dm->addMetadataItem(metadata->imageMetadata);
+    bool allRead = false;
+    while (!allRead && count < 1) {
+        allRead = true;
+        for (int row = startRow; row < endRow; ++row) {
+            if (abort) {
+                emit updateIsRunning(false, true, __FUNCTION__);
+                return;
             }
+
+            // file path and dm source row in case filtered or sorted
+            mutex.lock();
+            QModelIndex idx = dm->sf->index(row, 0);
+            int dmRow = dm->sf->mapToSource(idx).row();
+            QString fPath = idx.data(G::PathRole).toString();
+
+            // load metadata
+            qDebug() << __FUNCTION__
+                     << "count =" << count
+                     << fPath
+                     << "dm->sf->index(row, G::CreatedColumn).data().isNull() ="
+                     << dm->sf->index(row, G::CreatedColumn).data().isNull();
+            if (dm->sf->index(row, G::CreatedColumn).data().isNull()) {
+                QFileInfo fileInfo(fPath);
+                /*
+                   tried emit signal to metadata but really slow
+                   emit loadImageMetadata(fileInfo, true, true, false);  */
+                if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+                    metadata->imageMetadata.row = dmRow;
+                    dm->addMetadataItem(metadata->imageMetadata);
+                }
+                else {
+                    allRead = false;
+                    qDebug() << "XXX " << __FUNCTION__ << "Failed to load metadata for " << fPath;
+                }
+            }
+            mutex.unlock();
+
+            // load icon
+            mutex.lock();
+            if (idx.data(Qt::DecorationRole).isNull()) {
+                QImage image;
+                bool thumbLoaded = thumb->loadThumb(fPath, image);
+                if (thumbLoaded) {
+                    QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                    dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+                    iconMax(pm);
+                    iconsCached.append(dmRow);
+                }
+                else {
+                    allRead = false;
+//                    qDebug() << "XXX " << __FUNCTION__ << "Failed to load icon for " << fPath;
+                }
+            }
+            mutex.unlock();
         }
-        mutex.unlock();
         count++;
 
-        // load icon
-        mutex.lock();
-        if (idx.data(Qt::DecorationRole).isNull()) {
-            QImage image;
-            bool thumbLoaded = thumb->loadThumb(fPath, image);
-            if (thumbLoaded) {
-                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
-                iconMax(pm);
-                iconsCached.append(dmRow);
-            }
-        }
-        mutex.unlock();
+        // confirm all metadata and icons read.  If not try again
+//        allRead = true;
+//        for (int row = startRow; row < endRow; ++row) {
+//            if (dm->sf->index(row, G::CreatedColumn).data().isNull()) allRead = false;
+//            if (dm->sf->index(row, 0).data(Qt::DecorationRole).isNull()) allRead = false;
+//        }
     }
     /*
     qint64 ms = t.elapsed();

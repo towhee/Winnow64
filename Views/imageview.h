@@ -35,9 +35,8 @@ public:
 
     DropShadowLabel *infoOverlay;
     DropShadowLabel *titleDropShadow;
-    QModelIndex imageIndex;
 
-    bool loadImage(QModelIndex idx, QString imageFileName);
+    bool loadImage(QString imageFileName);
     void clear();
     void setCursorHiding(bool hide);
     bool isBusy;

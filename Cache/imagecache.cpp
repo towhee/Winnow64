@@ -274,7 +274,7 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
 
             // load metadata
             QFileInfo fileInfo(fPath);
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true)) {
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
                 metadata->imageMetadata.row = dmRow;
                 dm->addMetadataItem(metadata->imageMetadata);
                 ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();

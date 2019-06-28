@@ -4680,6 +4680,7 @@ bool Metadata:: loadImageMetadata(const QFileInfo &fileInfo,
     }
     // check if already loaded
     fPath = fileInfo.filePath();
+    qDebug() << __FUNCTION__ << "Source =" << source << fPath;
     if (fPath == "") {
         qDebug() << __FUNCTION__ << "NULL FILE REQUESTED FROM "
                  << source;

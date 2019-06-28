@@ -343,6 +343,7 @@ private slots:
     void updateStatus(bool keepBase = true, QString s = "");
     void clearStatus();
     void updateFilterStatus();
+    void refreshCurrentAfterReload();
     // caching status functions
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();

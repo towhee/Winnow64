@@ -120,10 +120,24 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::CameraModelColumn) return fm.width("Nikon D850============");
     if (column == G::LensColumn) return fm.width("Lens======================");
     if (column == G::FocalLengthColumn) return fm.width("=Focal length=");
-    if (column == G::TitleColumn) return fm.width("=Title=");
-    if (column == G::CopyrightColumn) return fm.width("=Copyright=");
+    if (column == G::TitleColumn) return fm.width("=Title======================================");
+    if (column == G::CopyrightColumn) return fm.width("=Copyright=======");
     if (column == G::EmailColumn) return fm.width("=Email=");
     if (column == G::UrlColumn) return fm.width("=Url=");
+    if (column == G::OffsetFullJPGColumn) return fm.width("=OffsetFullJPGColumn=");
+    if (column == G::LengthFullJPGColumn) return fm.width("=LengthFullJPGColumn=");
+    if (column == G::OffsetThumbJPGColumn) return fm.width("=OffsetThumbJPGColumn=");
+    if (column == G::LengthThumbJPGColumn) return fm.width("=LengthThumbJPGColumn=");
+    if (column == G::OffsetSmallJPGColumn) return fm.width("=OffsetSmallJPGColumn=");
+    if (column == G::LengthSmallJPGColumn) return fm.width("=LengthSmallJPGColumn=");
+    if (column == G::XmpSegmentOffsetColumn) return fm.width("=XmpSegmentOffsetColumn=");
+    if (column == G::XmpNextSegmentOffsetColumn) return fm.width("=XmpNextSegmentOffsetColumn=");
+    if (column == G::IsXMPColumn) return fm.width("=IsXMPColumn=");
+    if (column == G::OrientationOffsetColumn) return fm.width("=OrientationOffsetColumn=");
+    if (column == G::OrientationColumn) return fm.width("=OrientationColumn=");
+    if (column == G::RotationDegreesColumn) return fm.width("=RotationDegreesColumn=");
+    if (column == G::ErrColumn) return fm.width("=ErrColumn=");
+    if (column == G::ShootingInfoColumn) return fm.width("=ShootingInfoColumn======================");
     return 50;
 }
 
@@ -183,8 +197,12 @@ QSettings has been loaded.
         QString columnName = dm->horizontalHeaderItem(i)->text();
         ok->insertRow(i - 1);
         ok->setData(ok->index(i - 1, 0), columnName);
-        bool show = i <= G::UrlColumn;
-        ok->setData(ok->index(i - 1, 1), show);
+        if (G::showAllTableColumns) ok->setData(ok->index(i - 1, 1), true);
+        else {
+            bool show = i <= G::UrlColumn;
+            ok->setData(ok->index(i - 1, 1), show);
+        }
+
         /*
         qDebug() << __FUNCTION__
                  << i

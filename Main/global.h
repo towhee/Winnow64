@@ -140,6 +140,7 @@ namespace G
     extern bool buildingFilters;
 
     extern bool isThreadTrackingOn;
+    extern bool showAllTableColumns;
     extern bool isNewFolderLoaded;
     extern bool isInitializing;
     extern int scrollBarThickness;
