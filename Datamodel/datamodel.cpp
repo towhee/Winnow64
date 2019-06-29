@@ -500,7 +500,7 @@ ImageMetadata DataModel::getMetadata(QString fPath)
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->imageMetadata.row = row;
-            addMetadataItem(metadata->imageMetadata);
+            addMetadataForItem(metadata->imageMetadata);
         }
     }
 
@@ -586,7 +586,7 @@ to run as a separate thread and can be executed directly.
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->imageMetadata.row = row;
-            addMetadataItem(metadata->imageMetadata, isShowCacheStatus);
+            addMetadataForItem(metadata->imageMetadata, isShowCacheStatus);
             count++;
         }
     }
@@ -598,7 +598,7 @@ to run as a separate thread and can be executed directly.
              << currentFolderPath;
 }
 
-bool DataModel::addMetadataItem(ImageMetadata m, bool isShowCacheStatus)
+bool DataModel::addMetadataForItem(ImageMetadata m, bool isShowCacheStatus)
 {
     /*
     This function is called after the metadata for each eligible image in the selected

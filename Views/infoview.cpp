@@ -308,7 +308,7 @@ void InfoView::updateInfo(const int &row)
         metadata->loadImageMetadata(fPath, true, true, false, true, __FUNCTION__);
         metadata->imageMetadata.row = dm->fPathRow[fPath];
 //        metadata->imageMetadata.row = row;
-        dm->addMetadataItem(metadata->imageMetadata);
+        dm->addMetadataForItem(metadata->imageMetadata);
     }
 
     QString s;

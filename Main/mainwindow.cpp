@@ -198,7 +198,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     G::isThreadTrackingOn = false;
 
     // show all table fields for debugging
-    G::showAllTableColumns = true;
+    G::showAllTableColumns = false;
 
     isStressTest = false;
     // Global timer
@@ -904,7 +904,6 @@ void MW::folderSelectionChange()
     */
 
     uncheckAllFilters();
-    qDebug() << __FUNCTION__;
 //    sortFileNameAction->setChecked(true);
 
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
@@ -1009,7 +1008,7 @@ delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-    qDebug() << __FUNCTION__ << current << ignoreSelectionChange;
+//    qDebug() << __FUNCTION__ << current << ignoreSelectionChange;
     if (ignoreSelectionChange) {
 //        ignoreSelectionChange = false;
         return;
@@ -1206,7 +1205,6 @@ visible.  This is used in the metadataCacheThread to determine the range of file
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if (thumbView->isVisible() && !gridView->isVisible()) {
         thumbView->setViewportParameters();
         metadataCacheThread->firstIconVisible = thumbView->firstVisibleRow;
@@ -1328,10 +1326,8 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
         G::track(__FUNCTION__);
 #endif
     }
-    qDebug() << __FUNCTION__ << "isFilterChange =" << isFilterChange
-             << "currentRow =" << currentRow;
-    if (/*G::isInitializing || */dm->sf->rowCount() == 0/* || !G::isNewFolderLoaded*/) return;
-//    if (isFilterChange) return;
+//    if (/*G::isInitializing || */dm->sf->rowCount() == 0/* || !G::isNewFolderLoaded*/) return;
+    if (dm->sf->rowCount() == 0) return;
     updateMetadataCacheIconviewState();
     metadataCacheThread->loadMetadataIconChunk(currentRow);
 }
@@ -1403,19 +1399,14 @@ void MW::refreshCurrentAfterReload()
     }
     G::isNewFolderLoaded = true;
 
-//    // check if filtration
-//    if (filters->isAnyFilter()) {
-//        filterChange(__FUNCTION__);
-//    }
-
-//    // check if nonstandard sort
-//    if (!sortFileNameAction->isChecked()) {
-//        sortChange();
-//    }
-
     int dmRow = dm->fPathRow[refreshCurrentPath];
     loadImageCacheForNewFolder();
+
+    // wait for thumbView and gridView to be ready for selection and scrolling
     G::wait(300);
+
+    // return to selected image before refresh.  This triggers an update to the metadata and
+    // imageg caches
     thumbView->selectThumb(dmRow);
     isRefreshingDM = false;
 }
@@ -4293,10 +4284,11 @@ QString MW::getZoom()
     G::track(__FUNCTION__);
     #endif
     }
+    if (G::mode != "Loupe" && G::mode != "Compare") return "N/A";
     qreal zoom;
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
-    if (zoom < 0 || zoom > 4) return "";
+    if (zoom <= 0 || zoom > 4) return "";
     zoom *= G::actualDevicePixelRatio;
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
@@ -4664,13 +4656,13 @@ and icons are loaded if necessary.
 
 //    isFilterChange = true;
 
-    qDebug() << "\n" << __FUNCTION__ << "called by " << source
-             << "allMetadataLoaded =" << G::allMetadataLoaded;
+//    qDebug() << "\n" << __FUNCTION__ << "called by " << source
+//             << "allMetadataLoaded =" << G::allMetadataLoaded;
 
     // Need all metadata loaded before filtering
     if (!G::allMetadataLoaded) dm->addAllMetadata(true);
 
-    qDebug() << __FUNCTION__ << "dm->sf->filterChange()";
+//    qDebug() << __FUNCTION__ << "dm->sf->filterChange()";
     // refresh the proxy sort/filter
     dm->sf->filterChange();
 
@@ -4687,10 +4679,10 @@ and icons are loaded if necessary.
     }
 
     // get the current selected item
-    qDebug() << __FUNCTION__
-             << "thumbView->currentIndex().row() =" << thumbView->currentIndex().row()
-             << "dmCurrentIndex).row() =" << dmCurrentIndex.row()
-             << "dm->sf->mapFromSource(dmCurrentIndex).row() =" << dm->sf->mapFromSource(dmCurrentIndex).row();
+//    qDebug() << __FUNCTION__
+//             << "thumbView->currentIndex().row() =" << thumbView->currentIndex().row()
+//             << "dmCurrentIndex).row() =" << dmCurrentIndex.row()
+//             << "dm->sf->mapFromSource(dmCurrentIndex).row() =" << dm->sf->mapFromSource(dmCurrentIndex).row();
     currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
@@ -4700,9 +4692,9 @@ and icons are loaded if necessary.
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
 
-    qDebug() << __FUNCTION__ << "STATUS: "
-             << "currentRow =" << currentRow
-             << "dmCurrentIndex.row() =" << dmCurrentIndex.row();
+//    qDebug() << __FUNCTION__ << "STATUS: "
+//             << "currentRow =" << currentRow
+//             << "dmCurrentIndex.row() =" << dmCurrentIndex.row();
 
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
@@ -4713,8 +4705,7 @@ and icons are loaded if necessary.
     imageCacheThread->filterImageCache(fPath);
 
     // rgh temp fix 300ms delay before scroll to currentRow
-    QTime waitPeriod = QTime::currentTime().addMSecs(300);
-    while (QTime::currentTime() < waitPeriod) qApp->processEvents(QEventLoop::AllEvents, 50);
+    G::wait(300);
     thumbView->selectThumb(currentRow);
     fileSelectionChange(idx, idx);
 }

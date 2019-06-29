@@ -4669,7 +4669,7 @@ void Metadata::loadFromThread(QFileInfo &fileInfo)
     loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__);
 }
 
-bool Metadata:: loadImageMetadata(const QFileInfo &fileInfo,
+bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
                                  bool essential, bool nonEssential,
                                  bool isReport, bool isLoadXmp, QString source)
 {
@@ -4680,7 +4680,7 @@ bool Metadata:: loadImageMetadata(const QFileInfo &fileInfo,
     }
     // check if already loaded
     fPath = fileInfo.filePath();
-    qDebug() << __FUNCTION__ << "Source =" << source << fPath;
+//    qDebug() << __FUNCTION__ << "Source =" << source << fPath;
     if (fPath == "") {
         qDebug() << __FUNCTION__ << "NULL FILE REQUESTED FROM "
                  << source;

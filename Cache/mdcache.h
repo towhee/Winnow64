@@ -36,11 +36,8 @@ public:
 
     void loadNewFolder();
     void loadNewFolder2ndPass();
-    void refreshCurrent();
     void loadMetadataIconChunk(int row);
     void fileSelectionChange();
-    void filterChange();
-    void sortChange();
     void loadAllMetadata();
     void stopMetadateCache();
     bool isAllMetadataLoaded();

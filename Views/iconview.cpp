@@ -767,7 +767,7 @@ void IconView::selectThumb(int row)
     #endif
     }
     // some operations assign row = -1 if not found
-    qDebug() << __FUNCTION__ << "row =" << row;
+//    qDebug() << __FUNCTION__ << "row =" << row;
     if (row < 0) return;
     setFocus();
     QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
@@ -1308,8 +1308,8 @@ MW::mouseClickScroll == true.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << objectName() << "row =" << row
-             << "source =" << source;
+//    qDebug() << __FUNCTION__ << objectName() << "row =" << row
+//             << "source =" << source;
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 
@@ -1512,6 +1512,9 @@ different position than the current image.
         return;
     }
 
+    // must finish event to update current index in iconView
+    QListView::mousePressEvent(event);
+
     // capture mouse click position for imageView zoom/pan
     if (event->modifiers() == Qt::NoModifier) {
         // reqd for thumb resizing
@@ -1525,13 +1528,14 @@ different position than the current image.
         QPoint iconPt = mousePt - iconRect.topLeft();
         float xPct = (float)iconPt.x() / iconRect.width();
         float yPct = (float)iconPt.y() / iconRect.height();
+        /*
+        qDebug() << __FUNCTION__ << iconRect << mousePt << iconPt << xPct << yPct;*/
         if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
             //signal sent to ImageView
-            thumbClick(xPct, yPct);
+            emit thumbClick(xPct, yPct);
         }
     }
 
-    QListView::mousePressEvent(event);
 }
 
 void IconView::mouseMoveEvent(QMouseEvent *event)

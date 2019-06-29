@@ -119,11 +119,11 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::CameraMakeColumn) return fm.width("Nikon ========");
     if (column == G::CameraModelColumn) return fm.width("Nikon D850============");
     if (column == G::LensColumn) return fm.width("Lens======================");
-    if (column == G::FocalLengthColumn) return fm.width("=Focal length=");
+    if (column == G::FocalLengthColumn) return fm.width("=Focal length==");
     if (column == G::TitleColumn) return fm.width("=Title======================================");
-    if (column == G::CopyrightColumn) return fm.width("=Copyright=======");
-    if (column == G::EmailColumn) return fm.width("=Email=");
-    if (column == G::UrlColumn) return fm.width("=Url=");
+    if (column == G::CopyrightColumn) return fm.width("=Copyright=====");
+    if (column == G::EmailColumn) return fm.width("=Email================");
+    if (column == G::UrlColumn) return fm.width("=Url=======================");
     if (column == G::OffsetFullJPGColumn) return fm.width("=OffsetFullJPGColumn=");
     if (column == G::LengthFullJPGColumn) return fm.width("=LengthFullJPGColumn=");
     if (column == G::OffsetThumbJPGColumn) return fm.width("=OffsetThumbJPGColumn=");
@@ -222,6 +222,10 @@ The ok datamodel (table fields to show) is edited in the preferences dialog
 and this slot is then signalled to update which fields are visible.
 */
     for(int i = 0; i < ok->rowCount(); i++) {
+        if (!G::showAllTableColumns && i > G::UrlColumn) {
+            hideColumn(i + 1);
+            continue;
+        }
         bool showField = ok->index(i, 1).data().toBool();
         if (showField) showColumn(i + 1);
         else hideColumn(i + 1);

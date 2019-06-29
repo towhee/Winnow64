@@ -1,10 +1,10 @@
 BUGS
+- gridview icons sometimes too big
 - Image cache performance when filtered is wonky
 - color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Check usage of MW::loadFilteredImageCache
 - Cache progress bar can cover cache activity spots if window is small
 - Menu Go > Scroll actions not working (maybe rethink this)
-- Image cache GB used (infoview) keeps growing in size
 - Page up/down do not always work
 - Finish cache preferences
 - Problems with D:\Pictures\Prints
@@ -17,23 +17,23 @@ BUGS
 PERFORMANCE
 - filteredItemCount and unfilteredItemCount slow
 CODE IMPROVEMENTS
+- fix 300ms delay before scroll to currentRow on filterChange
 - Change setPixelSize to setPointSize throughout app
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Add progress bar to popup
-- Filter by folder
-- Copy image
 - Refresh selected images
+- Copy image
+- Remove Windows Registry settings during uninstall
+- Write xmp into eligible files ???
+- Add progress bar to popup
 - Speed up Tiffs
 - Lock docks to a size, chk resize behavior as separate windows
 - tableView adjust to changing font size
-- Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 - Check for updates on Mac
 - Detect drive mounting
 - Make all message boxes consistent (see runExternalApp)
-- Remove Windows Registry settings during uninstall
 - When ingesting confirm all files copied correctly (option)
 - Add completer for title in metadata
 - Get Sony image count, camera SN
@@ -42,6 +42,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- When zoomed clicking on another icon does not pan correctly on first click
+- Zoom % in infoView showing zero when in Grid/Table view - change to N/A
+- Image cache GB used (infoview) keeps growing in size
 - Refresh current folder
 - Icon not loaded for dm row = 0 after sort and reload folder
 - Reset menu sort when new folder selected or sort as per menu
