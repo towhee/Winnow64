@@ -190,7 +190,7 @@ to prevent jarring changes in perceived scale by the user.
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
                 metadata->imageMetadata.row = dmRow;
-                dm->addMetadataItem(metadata->imageMetadata);
+                dm->addMetadataForItem(metadata->imageMetadata);
             }
         }
         QPixmap  displayPixmap;

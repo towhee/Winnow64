@@ -104,7 +104,7 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     }
     /* thumbSpacing not being used at present.  It was initially meant to control the
     QListView->setSpacing(), which is outside of the delegate.  Using it makes it more
-    difficult to mange the gridView justification.  If it is decided another layer would be
+    difficult to manage the gridView justification.  If it is decided another layer would be
     useful it would be better to include the cellBorder and thumbPadding suggested in the
     diagram comments above.  */
 

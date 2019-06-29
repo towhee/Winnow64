@@ -70,7 +70,7 @@ public slots:
     void filteredItemCount();
     void unfilteredItemCount();
     void addAllMetadata(bool isShowCacheStatus = false);
-    bool addMetadataItem(ImageMetadata m, bool isShowCacheStatus = false);
+    bool addMetadataForItem(ImageMetadata m, bool isShowCacheStatus = false);
     void buildFilters();
 
 private:

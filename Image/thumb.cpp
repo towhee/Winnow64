@@ -101,7 +101,7 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
     // Check if metadata has been cached for this image
     if (dm->index(row, G::OffsetThumbJPGColumn).data().isNull()) {
         metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__);
-        dm->addMetadataItem(metadata->imageMetadata);
+        dm->addMetadataForItem(metadata->imageMetadata);
     }
     uint offsetThumb = dm->index(row, G::OffsetThumbJPGColumn).data().toUInt();
     uint lengthThumb = dm->index(row, G::LengthThumbJPGColumn).data().toUInt();
@@ -178,7 +178,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
     // Check if metadata has been cached for this image
     if (dm->index(row, G::OffsetThumbJPGColumn).data().isNull()) {
         metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__);
-        dm->addMetadataItem(metadata->imageMetadata);
+        dm->addMetadataForItem(metadata->imageMetadata);
     }
     uint offsetThumb = dm->index(row, G::OffsetThumbJPGColumn).data().toUInt();
     uint lengthThumb = dm->index(row, G::LengthThumbJPGColumn).data().toUInt();

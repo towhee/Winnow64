@@ -276,7 +276,7 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
                 metadata->imageMetadata.row = dmRow;
-                dm->addMetadataItem(metadata->imageMetadata);
+                dm->addMetadataForItem(metadata->imageMetadata);
                 ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
                 ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
                 cacheItemList[i].sizeMB = (float)w * h / 262144;
@@ -1013,7 +1013,7 @@ void ImageCache::run()
                      << "currMB" << cache.currMB
                      << "room =" << room
                      << "toCache =" << cache.toCacheKey
-                     << "roomRqd =" << roomRqd;  */
+                     << "roomRqd =" << roomRqd;*/
             while (room < roomRqd) {
                 // make some room by removing lowest priority cached image
                 if (nextToDecache()) {
@@ -1042,6 +1042,7 @@ void ImageCache::run()
         prevFileName = fPath;
     }
     checkForOrphans();
+    cache.currMB = getImCacheSize();
     if(cache.isShowCacheStatus)
         emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
 
