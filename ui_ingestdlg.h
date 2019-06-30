@@ -429,7 +429,7 @@ public:
         openIngestFolderChk->setFont(font);
         backupChk = new QCheckBox(IngestDlg);
         backupChk->setObjectName(QString::fromUtf8("backupChk"));
-        backupChk->setGeometry(QRect(20, 640, 311, 0));
+        backupChk->setGeometry(QRect(20, 640, 311, 20));
         backupChk->setFont(font);
 
         retranslateUi(IngestDlg);

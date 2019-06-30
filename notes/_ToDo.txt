@@ -1,10 +1,9 @@
 BUGS
-- gridview icons sometimes too big
-- Image cache performance when filtered is wonky
-- color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
-- Check usage of MW::loadFilteredImageCache
 - Cache progress bar can cover cache activity spots if window is small
 - Menu Go > Scroll actions not working (maybe rethink this)
+- gridview icons sometimes too big
+- color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
+- Check usage of MW::loadFilteredImageCache
 - Page up/down do not always work
 - Finish cache preferences
 - Problems with D:\Pictures\Prints
@@ -42,6 +41,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+ - F3-F7 (or menu alternatives) stopped working for a while
+- Image cache performance when filtered is wonky
+- Clear fav panel selected when new selection in Folders
 - When zoomed clicking on another icon does not pan correctly on first click
 - Zoom % in infoView showing zero when in Grid/Table view - change to N/A
 - Image cache GB used (infoview) keeps growing in size

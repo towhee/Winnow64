@@ -787,8 +787,9 @@ Apparently there needs to be a slight delay before calling.
     }
     // just in case stopImageCache not called before this
     if (isRunning()) pauseImageCache();
+    if (cacheItemList.count() == 0) return;
 
-    Q_ASSERT(cacheItemList.length() > 0);   // must be items cached
+//    Q_ASSERT(cacheItemList.length() > 0);   // must be items cached
     // get cache item key
     cache.key = 0;
     for (int i = 0; i < cacheItemList.count(); i++) {

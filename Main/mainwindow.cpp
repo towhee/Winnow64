@@ -4158,6 +4158,8 @@ void MW::createStatusBar()
     statusBar()->setObjectName("WinnowStatusBar");
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
 
+    // start pregressbar
+
     // label to hold QPixmap showing progress
     progressLabel = new QLabel();
 
@@ -4183,7 +4185,9 @@ void MW::createStatusBar()
     progressToolTip += "  • LightGreen: \tcurrent image";
     progressLabel->setToolTip(progressToolTip);
     progressLabel->setToolTipDuration(100000);
-    statusBar()->addPermanentWidget(progressLabel);
+    statusBar()->addPermanentWidget(progressLabel, 1);
+
+    // end progressbar
 
     QLabel *spacer = new QLabel;
     spacer->setText(" ");
@@ -4213,6 +4217,7 @@ void MW::createStatusBar()
     statusBar()->addWidget(subfolderStatusLabel);
     rawJpgStatusLabel->setStyleSheet("QLabel{color:red;}");
     statusBar()->addWidget(rawJpgStatusLabel);
+
 
     setThreadRunStatusInactive();
     stateLabel = new QLabel;
@@ -7154,6 +7159,8 @@ condition of actions sets the visibility of all window components. */
     // set flag so
     isUpdatingState = true;
 //    setWindowsTitleBarVisibility();   // problem with full screen toggling
+    // setCentralView has to precede setting visibility to docks
+    setCentralView();
     setMenuBarVisibility();
     setStatusBarVisibility();
     setCacheStatusVisibility();
@@ -7168,7 +7175,6 @@ condition of actions sets the visibility of all window components. */
     setMetadataDockLockMode();
     setThumbDockLockMode();
     setShootingInfoVisibility();
-    setCentralView();
     updateRawJpgStatus();
 //    setActualDevicePixelRation();
     isUpdatingState = false;
@@ -7611,6 +7617,11 @@ void MW::setCentralView()
 
 void MW::selectShootingInfo()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     infoString->editTemplates();
     // display new info
     QModelIndex idx = thumbView->currentIndex();
@@ -7635,35 +7646,61 @@ void MW::setRatingBadgeVisibility() {
 
 void MW::setShootingInfoVisibility() {
     {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
     }
+
     imageView->infoOverlay->setVisible(infoVisibleAction->isChecked());
 }
 
 void MW::setFolderDockVisibility()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     folderDock->setVisible(folderDockVisibleAction->isChecked());
 }
 
 void MW::setFavDockVisibility()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     favDock->setVisible(favDockVisibleAction->isChecked());
 }
 
 void MW::setFilterDockVisibility()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     filterDock->setVisible(filterDockVisibleAction->isChecked());
 }
 
 void MW::setMetadataDockVisibility()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     metadataDock->setVisible(metadataDockVisibleAction->isChecked());
 }
 
 void MW::setMetadataDockFixedSize()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (metadataFixedSizeAction->isChecked()) {
         qDebug() << "variable size";
         metadataDock->setMinimumSize(200, 125);
@@ -7677,10 +7714,18 @@ void MW::setMetadataDockFixedSize()
 
 void MW::setThumbDockVisibity()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__ << thumbDockVisibleAction->isChecked();
+//    G::wait(1000);
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
 }
 
-void MW::toggleFolderDockVisibility() {
+void MW::toggleFolderDockVisibility()
+{
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -7801,7 +7846,7 @@ void MW::toggleThumbDockVisibity()
     #endif
     }
     if (G::isInitializing) return;
-
+qDebug() << __FUNCTION__;
     if (thumbDock->isVisible() && thumbDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
     if (thumbDock->isVisible() && !thumbDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
     if (!thumbDock->isVisible()) dockToggle = SetVisible;
@@ -8002,6 +8047,11 @@ void MW::setStatus(QString state)
 
 void MW::setIngested()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     ignoreSelectionChange = true;
     int prevRow = currentRow;
     saveSelection();
@@ -9050,6 +9100,7 @@ void MW::openUsbFolder()
 
     }
 
+    bookmarks->selectionModel()->clear();
     subFoldersAction->setChecked(true);
     updateSubfolderStatus();
     QString fPath = usbMap[drive].rootPath;
@@ -9259,19 +9310,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QModelIndex dmIdx = dm->index(0, 0);
-    QModelIndex idx = dm->sf->mapFromSource(dmIdx);
-    QString fPath = idx.data(G::PathRole).toString();
-    QImage image;
-    bool thumbLoaded = thumb->loadThumb(fPath, image);
-    if (thumbLoaded) {
-        QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-        dm->itemFromIndex(dmIdx)->setIcon(pm);
-    }
-    qDebug() << "thumbLoaded =" << thumbLoaded << fPath
-             << "dm->index(0, G::OffsetThumbJPGColumn).data().toString() ="
-             << dm->index(0, G::OffsetThumbJPGColumn).data().toString();
+    thumbDock->setVisible(thumbDockVisibleAction->isChecked());
+    return;
 
+    qDebug() << "thumbDock->isVisible() =" << thumbDock->isVisible()
+             << "thumbDock->visibleRegion().isEmpty() =" << thumbDock->visibleRegion().isEmpty()
+             << "thumbDockVisibleAction->isChecked() =" << thumbDockVisibleAction->isChecked();
+    reportWorkspace(1);
 }
 
 // End MW

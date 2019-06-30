@@ -85,8 +85,8 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
     setStyleSheet(css);
 
-    isBackupChkBox = new QCheckBox;
-    ui->autoIngestTab->tabBar()->setTabButton(1, QTabBar::LeftSide, isBackupChkBox);
+//    isBackupChkBox = new QCheckBox;
+//    ui->autoIngestTab->tabBar()->setTabButton(1, QTabBar::LeftSide, isBackupChkBox);
 
     isInitializing = true;
     getPicks();
@@ -154,7 +154,7 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->ejectChk->setChecked(autoEjectUsb);
     // initialize use backup as well as primary ingest
     ui->backupChk->setChecked(isBackup);
-    isBackupChkBox->setChecked(isBackup);
+//    isBackupChkBox->setChecked(isBackup);
     // initialize open ingest folder after ingest
     ui->openIngestFolderChk->setChecked(gotoIngestFolder);
 
@@ -164,8 +164,8 @@ IngestDlg::IngestDlg(QWidget *parent,
     updateExistingSequence();
     buildFileNameSequence();
 
-    connect(isBackupChkBox, SIGNAL(stateChanged(int)),
-            this, SLOT(on_isBackupChkBox_stateChanged(int)));
+//    connect(isBackupChkBox, SIGNAL(stateChanged(int)),
+//            this, SLOT(on_isBackupChkBox_stateChanged(int)));
 }
 
 IngestDlg::~IngestDlg()
@@ -481,7 +481,8 @@ void IngestDlg::on_selectFolderBtn_clicked()
         (this, tr("Choose Ingest Primary Folder"), root,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (s.length() > 0) {
-        folderPath = s + "/";
+        if(s.right(1) != "/") s += "/";
+        folderPath = s;
         manualFolderPath = folderPath;
         ui->manualFolderLabel->setText(folderPath);
         ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
@@ -500,7 +501,8 @@ void IngestDlg::on_selectFolderBtn_2_clicked()
         (this, tr("Choose Ingest Backup Folder"), root,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (s.length() > 0) {
-        folderPath2 = s + "/";
+        if(s.right(1) != "/") s += "/";
+        folderPath2 = s;
         manualFolderPath2 = folderPath2;
         ui->manualFolderLabel_2->setText(folderPath2);
         ui->manualFolderLabel_2->setToolTip( ui->manualFolderLabel_2->text());
@@ -538,7 +540,7 @@ void IngestDlg::on_selectRootFolderBtn_2_clicked()
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
     if (rootFolderPath2.length() > 0) {
-        if(rootFolderPath.right(1) != "/") rootFolderPath2 += "/";
+        if(rootFolderPath2.right(1) != "/") rootFolderPath2 += "/";
         ui->rootFolderLabel_2->setText(rootFolderPath2);
         ui->rootFolderLabel_2->setToolTip(ui->rootFolderLabel_2->text());
     }
@@ -854,7 +856,7 @@ void IngestDlg::updateEnabledState()
         ui->descriptionLineEdit_2->setEnabled(true);
         ui->destinationFolderLabel_2->setEnabled(true);
         ui->folderLabel_2->setEnabled(true);
-        isBackupChkBox->setEnabled(true);
+//        isBackupChkBox->setEnabled(true);
 
         ui->selectFolderBtn->setEnabled(false);
         ui->selectFolderBtn_2->setEnabled(false);
@@ -882,7 +884,7 @@ void IngestDlg::updateEnabledState()
         ui->descriptionLineEdit_2->setEnabled(false);
         ui->destinationFolderLabel_2->setEnabled(false);
         ui->folderLabel_2->setEnabled(false);
-        isBackupChkBox->setEnabled(false);
+//        isBackupChkBox->setEnabled(false);
 
         ui->selectFolderBtn->setEnabled(true);
         ui->selectFolderBtn_2->setEnabled(true);
