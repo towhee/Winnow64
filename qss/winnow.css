@@ -1,6 +1,19 @@
 /*
 winnow.css contains the styling for Winnow, except for items that we desire
 to modify programmatically (font size).  Programmable items include:
+
+Colors:
+
+App background color            rgb(85,85,85)
+App text color                  rgb(211,211,211)    = lightgray
+App separator                   rgb(90,90,90)
+App separator hover             rgb(128,128,128     = gray
+App disabled item               rgb(128,128,128     = gray
+Menu background                 rgb(95,95,95)
+Menu bar item selected
+Menu item selected              rgb(68,95,118);
+Other selected item             rgb(76,90,102)      tab, list...
+
 */
 
 QWidget {
@@ -37,13 +50,10 @@ QMenu {
 }
 
 QMenuBar {
-    background-color: rgb(85,85,85);
-    color: lightgray;
     border: 0px solid rgb(99,99,99);
 }
 
 QMenu::item:selected {
-/*    background-color: gray;*/
     background-color: rgb(68,95,118);
 }
 
@@ -52,11 +62,11 @@ QMenu::item:disabled {
 }
 
 QMenuBar::item:selected {
-    background: rgb(168,168,168);
+    background-color: rgb(68,95,118);
 }
 
 QMenuBar::item:pressed {
-    background: rgb(136,136,136);
+    background-color: rgb(68,95,118);
 }
 
 QFrame {
@@ -101,8 +111,7 @@ QLabel {
 }
 
 QLabel:disabled {
-    color:gray;
-    /*color:gray;*/
+    color: gray;
 }
 
 QStatusbar::item {
@@ -157,7 +166,7 @@ QTabBar::tab {
 QTabBar::tab:selected {
     color:white;
     /* border: 1px solid red;   this woks for tabl only as expected */
-    background-color: rgb(80,80,80);
+    background-color: rgb(76,90,102);
 }
 
 QTabBar::tab:disabled {

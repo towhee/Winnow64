@@ -1577,7 +1577,7 @@
      <x>20</x>
      <y>640</y>
      <width>311</width>
-     <height>0</height>
+     <height>20</height>
     </rect>
    </property>
    <property name="font">

@@ -109,6 +109,9 @@ the FSTree folders view.
             setCurrentIndex(selectedIndexes().at(0));
         }
     }
+    else {
+        selectionModel()->clear();
+    }
 }
 
 void BookMarks::resizeEvent(QResizeEvent *event)

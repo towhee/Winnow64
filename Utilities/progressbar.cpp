@@ -35,6 +35,7 @@ ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)
 
     htOffset = 9;               // the offset from the top of pnt to the progress bar
     ht = 8;                     // the height of the progress bar
+    setMinimumWidth(1);
 }
 
 void ProgressBar::clearProgress()
