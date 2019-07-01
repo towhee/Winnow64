@@ -188,30 +188,24 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     setObjectName("WinnowMainWindow");
 
-    /* Note ISDEBUG is in globals.h
-       Deactivate debug reporting by commenting ISDEBUG  */
 
 //    qDebug() << G::t.restart() << "\t" << "isShift =" << isShift;
     isShift = false;
 
-    // use this to show thread activity
-    G::isThreadTrackingOn = false;
 
-    // show all table fields for debugging
-    G::showAllTableColumns = false;
-
+    /* testing/debugging
+       Note ISDEBUG is in globals.h
+       Deactivate debug reporting by commenting ISDEBUG  */
+    G::showAllTableColumns = false;     // show all table fields for debugging
+    simulateJustInstalled = false;
     isStressTest = false;
-    // Global timer
-    G::isTimer = true;
+    G::isTimer = true;                  // Global timer
 
     // Initialize some variables etc
     initialize();
 
     // platform specific settings
     setupPlatform();
-
-    // testing/debugging
-    simulateJustInstalled = false;
 
     // structure to hold persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
@@ -5275,7 +5269,8 @@ workspace with a matching name to the action is used.
     thumbView->setThumbParameters();
     gridView->setThumbParameters();
     updateState();
-    if(!gridView->isVisible()) wasThumbDockVisible = w.isThumbDockVisible;
+    // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
+    setThumbDockVisibity();
 }
 
 void MW::snapshotWorkspace(workspaceData &wsd)
@@ -7331,6 +7326,7 @@ around lack of notification when the QListView has finished painting itself.
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     G::mode = "Loupe";
 
     // save selection as tableView is hidden and not synced
@@ -7401,6 +7397,7 @@ around lack of notification when the QListView has finished painting itself.
         G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
     }
+    qDebug() << __FUNCTION__;
     G::mode = "Grid";
     updateStatus(true);
 
@@ -7461,6 +7458,7 @@ around lack of notification when the QListView has finished painting itself.
 
 void MW::tableDisplay()
 {
+    qDebug() << __FUNCTION__;
     {
     #ifdef ISDEBUG
         G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
@@ -7536,6 +7534,7 @@ void MW::compareDisplay()
         G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
     }
+    qDebug() << __FUNCTION__;
     updateStatus(true);
     int n = selectionModel->selectedRows().count();
     if (n < 2) {
@@ -7608,6 +7607,11 @@ void MW::setCentralView()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__
+             << "\nasLoupeAction->isChecked()" << asLoupeAction->isChecked()
+             << "\nasGridAction->isChecked()" << asGridAction->isChecked()
+             << "\nasTableAction->isChecked()" << asTableAction->isChecked()
+             << "\nasCompareAction->isChecked()" << asCompareAction->isChecked();
     if (!isSettings) return;
     if (asLoupeAction->isChecked()) loupeDisplay();
     if (asGridAction->isChecked()) gridDisplay();
@@ -7719,8 +7723,6 @@ void MW::setThumbDockVisibity()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << thumbDockVisibleAction->isChecked();
-//    G::wait(1000);
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
 }
 
@@ -9310,13 +9312,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    thumbDock->setVisible(thumbDockVisibleAction->isChecked());
-    return;
-
-    qDebug() << "thumbDock->isVisible() =" << thumbDock->isVisible()
-             << "thumbDock->visibleRegion().isEmpty() =" << thumbDock->visibleRegion().isEmpty()
-             << "thumbDockVisibleAction->isChecked() =" << thumbDockVisibleAction->isChecked();
-    reportWorkspace(1);
+    asTableAction->setChecked(true);
 }
 
 // End MW

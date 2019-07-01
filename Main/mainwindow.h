@@ -786,6 +786,7 @@ private:
     bool metadataLoaded;
     bool ignoreDockResize;
     bool wasThumbDockVisible;
+    bool workspaceChange;
     bool isUpdatingState;
 
     bool isFilterChange = false;        // rgh required?
