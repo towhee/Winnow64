@@ -48,12 +48,12 @@ class IconView : public QListView
 public:
     IconView(QWidget *parent, DataModel *dm, QString objName);
 
-    int thumbWidth;
-    int thumbHeight;
-    int thumbSpacing;
-    int thumbPadding;
+    int iconWidth;
+    int iconHeight;
+    int iconSpacing;
+    int iconPadding;
     int labelFontSize;
-    bool showThumbLabels;
+    bool showIconLabels;
 //    bool wrapThumbs;
     int badgeSize;
     QSize cellSize;
@@ -74,6 +74,7 @@ public:
     void selectThumb(QString &filePath);
     bool isThumb(int row);
     void reportThumb();                             //debugging thumb roles
+    QString diagnostics();
 
     QFileInfoList getPicks();
     bool isPick();
@@ -96,7 +97,7 @@ public:
 
      QItemSelectionModel *thumbViewSelection;
 
-    int thumbSize;
+    int iconSize;
     QString pickMemorySize;
     QString filterStr;
     bool pickFilter;
@@ -192,7 +193,7 @@ private:
     bool isMouseDrag;
 
     // used during gridView resize to keep close to beginning thumb size
-    int assignedThumbWidth;
+    int assignedIconWidth;
     bool skipResize;
 
 signals:

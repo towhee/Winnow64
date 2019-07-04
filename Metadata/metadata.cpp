@@ -2043,13 +2043,19 @@ void Metadata::reportMetadata()
         rpt << xmpStr;
     }
 
-    QDialog *dlg = new QDialog;
-    Ui::metadataReporttDlg md;
-    md.setupUi(dlg);
-    md.textBrowser->setText(reportString);
-    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-    dlg->show();
-    std::cout << reportString.toStdString() << std::flush;
+//    QDialog *dlg = new QDialog;
+//    Ui::metadataReporttDlg md;
+//    md.setupUi(dlg);
+//    md.textBrowser->setText(reportString);
+//    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+//    dlg->show();
+//    std::cout << reportString.toStdString() << std::flush;
+}
+
+QString Metadata::diagnostics(QString fPath)
+{
+    readMetadata(true, fPath);
+    return reportString;
 }
 
 void Metadata::reportMetadataHeader(QString title)
@@ -4544,6 +4550,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         rpt.flush();
         reportString = "";
         rpt.setString(&reportString);
+        rpt << Utilities::centeredRptHdr('=', "Metadata Diagnostics for Current Image");
+        rpt << "\n";
     }
     clearMetadata();
     file.setFileName(path);

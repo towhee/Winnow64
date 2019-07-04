@@ -154,7 +154,8 @@ QTabWidget::tab-bar {
 
 QTabBar::tab {
     color: silver;
-    background-color: rgb(85,85,85);
+    /*background-color: rgb(85,85,85);*/
+    background-color: rgb(95,95,95);
     border: 1px solid gray;
     padding: 4px 4px;
 }
@@ -166,7 +167,9 @@ QTabBar::tab {
 QTabBar::tab:selected {
     color:white;
     /* border: 1px solid red;   this woks for tabl only as expected */
+    border-bottom: 0px;
     background-color: rgb(76,90,102);
+    background-color: rgb(85,85,85);
 }
 
 QTabBar::tab:disabled {

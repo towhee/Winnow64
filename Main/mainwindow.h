@@ -497,6 +497,7 @@ private:
     QMenu *windowMenu;
         QMenu *workspaceMenu;
     QMenu *helpMenu;
+        QMenu *helpDiagnosticsMenu;
 
     QMenu *viewSubMenu;
     QMenu *imageFileSubMenu;
@@ -685,6 +686,28 @@ private:
     QAction *helpAction;
     QAction *helpShortcutsAction;
     QAction *helpWelcomeAction;
+
+    // Help Diagnostics Menu
+    QAction *diagnosticsAllAction;
+    QAction *diagnosticsMainAction;
+    QAction *diagnosticsGridViewAction;
+    QAction *diagnosticsThumbViewAction;
+    QAction *diagnosticsImageViewAction;
+    QAction *diagnosticsInfoViewAction;
+    QAction *diagnosticsTableViewAction;
+    QAction *diagnosticsCompareViewAction;
+    QAction *diagnosticsMetadataAction;
+    QAction *diagnosticsXMPAction;
+    QAction *diagnosticsMetadataCacheAction;
+    QAction *diagnosticsImageCacheAction;
+    QAction *diagnosticsDataModelAction;
+    QAction *diagnosticsFiltersAction;
+    QAction *diagnosticsFileTreeAction;
+    QAction *diagnosticsBookmarksAction;
+    QAction *diagnosticsPixmapAction;
+    QAction *diagnosticsThumbAction;
+    QAction *diagnosticsIngestAction;
+    QAction *diagnosticsZoomAction;
 
     // Context menus
     QList<QAction *> *fsTreeActions;
@@ -878,6 +901,32 @@ private:
 
     qulonglong memoryReqdForPicks();
     QString enquote(QString &s);
+
+    // Diagnostic functions
+
+//    QString d(QVariant x);
+    void diagnosticsAll();
+    QString diagnostics();
+    void diagnosticsMain();
+    void diagnosticsGridView();
+    void diagnosticsThumbView();
+    void diagnosticsImageView();
+    void diagnosticsInfoView();
+    void diagnosticsTableView();
+    void diagnosticsCompareView();
+    void diagnosticsMetadata();
+    void diagnosticsXMP();
+    void diagnosticsMetadataCache();
+    void diagnosticsImageCache();
+    void diagnosticsDataModel();
+    void diagnosticsFilters();
+    void diagnosticsFileTree();
+    void diagnosticsBookmarks();
+    void diagnosticsPixmap();
+    void diagnosticsThumb();
+    void diagnosticsIngest();
+    void diagnosticsZoom();
+    void diagnosticsReport(QString reportString);
 
     void stressTest();
 

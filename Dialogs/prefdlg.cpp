@@ -53,14 +53,14 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->fontSizeSlider->setTickInterval(1);
     ui->fontSizeSlider->setTickPosition(QSlider::TicksAbove);
     ui->fontSizeSlider->setValue(m0->thumbView->labelFontSize);
-    ui->showThumbLabelChk->setChecked(m0->thumbView->showThumbLabels);
+    ui->showThumbLabelChk->setChecked(m0->thumbView->showIconLabels);
 //    ui->wrapChk->setChecked(m0->thumbView->wrapThumbs);
 
     // grid
     ui->fontSizeSlider_2->setTickInterval(1);
     ui->fontSizeSlider_2->setTickPosition(QSlider::TicksAbove);
     ui->fontSizeSlider_2->setValue(m0->gridView->labelFontSize);
-    ui->showThumbLabelChk_2->setChecked(m0->gridView->showThumbLabels);
+    ui->showThumbLabelChk_2->setChecked(m0->gridView->showIconLabels);
 
     // slideshow
     ui->slideshowDelaySpinbox->setValue(m0->slideShowDelay);
@@ -331,7 +331,7 @@ void Prefdlg::on_thumbLargerBtn_pressed()
 void Prefdlg::on_showThumbLabelChk_clicked()
 {
     if (okToUpdate) {
-        m0->thumbView->showThumbLabels = ui->showThumbLabelChk->isChecked();
+        m0->thumbView->showIconLabels = ui->showThumbLabelChk->isChecked();
         m0->thumbView->setThumbParameters();
     }
 }
@@ -367,7 +367,7 @@ void Prefdlg::on_gridLargerBtn_pressed()
 void Prefdlg::on_showThumbLabelChk_2_clicked()
 {
     if (okToUpdate) {
-        m0->gridView->showThumbLabels = ui->showThumbLabelChk_2->isChecked();
+        m0->gridView->showIconLabels = ui->showThumbLabelChk_2->isChecked();
         m0->gridView->setThumbParameters();
     }
 }

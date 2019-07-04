@@ -1058,6 +1058,53 @@ void ImageView::dropEvent(QDropEvent *event)
     emit handleDrop(event->mimeData());
 }
 
+QString ImageView::diagnostics()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "ImageView Diagnostics");
+    rpt << "\n";
+    rpt << "\n" << "isBusy = " << G::s(isBusy);
+    rpt << "\n" << "useWheelToScroll = " << G::s(useWheelToScroll);
+    rpt << "\n" << "shootingInfo = " << G::s(shootingInfo);
+    rpt << "\n" << "infoOverlayFontSize = " << G::s(infoOverlayFontSize);
+    rpt << "\n" << "currentImagePath = " << G::s(currentImagePath);
+    rpt << "\n" << "firstImageLoaded = " << G::s(firstImageLoaded);
+    rpt << "\n" << "classificationBadgeDiam = " << G::s(classificationBadgeDiam);
+    rpt << "\n" << "isSlideshow = " << G::s(isSlideshow);
+    rpt << "\n" << "cursorIsHidden = " << G::s(cursorIsHidden);
+    rpt << "\n" << "moveImageLocked = " << G::s(moveImageLocked);
+    rpt << "\n" << "ignoreMousePress = " << G::s(ignoreMousePress);
+    rpt << "\n" << "isZoom = " << G::s(isZoom);
+    rpt << "\n" << "isFit = " << G::s(isFit);
+    rpt << "\n" << "wasZoomFit = " << G::s(wasZoomFit);
+    rpt << "\n" << "isMouseDrag = " << G::s(isMouseDrag);
+    rpt << "\n" << "isTrackpadScroll = " << G::s(isTrackpadScroll);
+    rpt << "\n" << "isLeftMouseBtnPressed = " << G::s(isLeftMouseBtnPressed);
+    rpt << "\n" << "isMouseDoubleClick = " << G::s(isMouseDoubleClick);
+    rpt << "\n" << "isPreview = " << G::s(isPreview);
+    rpt << "\n" << "scrollCount = " << G::s(scrollCount);
+    rpt << "\n" << "zoomFit = " << G::s(zoomFit);
+    rpt << "\n" << "zoomInc = " << G::s(zoomInc);
+    rpt << "\n" << "zoomMin = " << G::s(zoomMin);
+    rpt << "\n" << "scrl.hVal = " << G::s(scrl.hVal);
+    rpt << "\n" << "scrl.hMax = " << G::s(scrl.hMax);
+    rpt << "\n" << "scrl.hMin = " << G::s(scrl.hMin);
+    rpt << "\n" << "scrl.hPct = " << G::s(scrl.hPct);
+    rpt << "\n" << "scrl.vVal = " << G::s(scrl.vVal);
+    rpt << "\n" << "scrl.vMax = " << G::s(scrl.vMax);
+    rpt << "\n" << "scrl.vMin = " << G::s(scrl.vMin);
+    rpt << "\n" << "scrl.vPct = " << G::s(scrl.vPct);
+    rpt << "\n" << "scrollPct = " << G::s(scrollPct.x()) << "," << G::s(scrollPct.y());
+    rpt << "\n" << "mousePressPt = " << G::s(mousePressPt.x()) << "," << G::s(mousePressPt.y());
+    rpt << "\n" << "preview = " << G::s(preview.width()) << "," << G::s(preview.height());
+    rpt << "\n" << "full = " << G::s(full.width()) << "," << G::s(full.height());
+
+    rpt << "\n\n" ;
+    return reportString;
+}
+
 // COPY AND PASTE
 
 void ImageView::copyImage()

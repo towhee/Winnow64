@@ -46,6 +46,12 @@ namespace G
     QElapsedTimer t;
     bool isTimer;
 
+    QString s(QVariant x)
+    // helper function to convert variable values to a string for reporting
+    {
+        return QVariant(x).toString();
+    }
+
     void wait(int ms)
     {
         QTime t = QTime::currentTime().addMSecs(ms);

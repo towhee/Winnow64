@@ -30,7 +30,7 @@ public:
     int getCellWidthFromThumbWidth(int width);
     int getCellHeightFromThumbHeight(int height);
 
-    void reportThumbAttributes();
+    QString diagnostics();
 
     QModelIndex currentIndex;
     int currentRow;
@@ -104,17 +104,6 @@ private:
     QSize selectedSize;
     QSize cellSize;
     QSize cellSpace;
-
-
-    // For some weird reason cannot edit QRect declared in header
-//    QRect iconRect;
-//    QRect thumbRect;
-//    QRect frameRect;
-//    QRect cellRect;
-//    QRect selectedRect;
-//    QRect ratingTextRect;
-//    QRect cacheRect;
-//    QRect textRect;
 };
 
 #endif // THUMBVIEWDELEGATE_H

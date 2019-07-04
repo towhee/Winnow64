@@ -10,6 +10,7 @@
 //#include <QThread>
 
 #include "Main/global.h"
+#include "Utilities/utilities.h"
 #include "Cache/tshash.h"
 #include "Metadata/imagemetadata.h"
 #include "xmp.h"
@@ -33,6 +34,7 @@ class Metadata : public QObject
 public:
     Metadata(QObject *parent = nullptr);
     bool readMetadata(bool report, const QString &path);
+    QString diagnostics(QString fPath);
     void reportMetadata();
     void reportMetadataCache(const QString &imageFileName);
     void testNewFileFormat(const QString &path);
