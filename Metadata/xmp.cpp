@@ -425,3 +425,22 @@ void Xmp::report()
 //    msg.setText(xmpString);
     msg.exec();
 }
+
+QString Xmp::diagnostics()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "ImageView Diagnostics");
+    rpt << "\n";
+//    rpt << "\n" << "xmpSegmentOffset = " << G::s(xmpSegmentOffset);
+//    rpt << "\n" << "xmpmetaOffset = " << G::s(xmpmetaOffset);
+//    rpt << "\n" << "xmpLength = " << G::s(xmpLength);
+//    rpt << "\n" << "xmpmetaStart = " << G::s(xmpmetaStart);
+//    rpt << "\n" << "xmpmetaEnd = " << G::s(xmpmetaEnd);
+//    rpt << "\n" << "xmpPacketEnd = " << G::s(xmpPacketEnd);
+//    rpt << "\n" << "xmpmetaRoom = " << G::s(xmpmetaRoom);
+//    rpt << "\n" << "assignmentMethod = " << G::s(assignmentMethod);
+    rpt << "\n\n" ;
+    return reportString;
+}

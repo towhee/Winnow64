@@ -149,16 +149,48 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
 //    reportThumbAttributes();
 }
 
-void IconViewDelegate::reportThumbAttributes()
+QString IconViewDelegate::diagnostics()
 {
-   qDebug() << "\nthumbSize     =" << thumbSize
-            << "\nframeSize     =" << frameSize
-            << "\ncellSize      =" << cellSize
-            << "\nframePadding  =" << fPad
-            << "\nthumbPadding  =" << tPad
-            << "\nText height   =" << textHeight
-            << "\nText headroom =" << textHeadroom
-            << "\ndelegateShowThumbLabels =" << delegateShowThumbLabels;
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << "iconViewDelegate Diagnostics:\n";
+    rpt << "\n" << "currentRow = " << G::s(currentRow);
+    rpt << "\n" << "thumbSize = " << G::s(thumbSize.width()) << "," << G::s(thumbSize.height());
+    rpt << "\n" << "frameSize = " << G::s(frameSize.width()) << "," << G::s(frameSize.height());
+    rpt << "\n" << "selectedSize = " << G::s(selectedSize.width()) << "," << G::s(selectedSize.height());
+    rpt << "\n" << "cellSize = " << G::s(cellSize.width()) << "," << G::s(cellSize.height());
+    rpt << "\n" << "cellSpace = " << G::s(cellSpace.width()) << "," << G::s(cellSpace.height());
+    rpt << "\n" << "thumbSpacing = " << G::s(thumbSpacing);
+    rpt << "\n" << "textHeight = " << G::s(textHeight);
+    rpt << "\n" << "textHeadroom = " << G::s(textHeadroom);
+    rpt << "\n" << "fontHt = " << G::s(fontHt);
+    rpt << "\n" << "badgeSize = " << G::s(badgeSize);
+    rpt << "\n" << "cacheDiam = " << G::s(cacheDiam);
+    rpt << "\n" << "cacheOffset = " << G::s(cacheOffset);
+    rpt << "\n" << "ratingDiam = " << G::s(ratingDiam);
+    rpt << "\n" << "ratingTextSize = " << G::s(ratingTextSize);
+    rpt << "\n" << "alignVertPad = " << G::s(alignVertPad);
+    rpt << "\n" << "alignHorPad = " << G::s(alignHorPad);
+    rpt << "\n" << "delegateShowThumbLabels =" << G::s(delegateShowThumbLabels);
+    rpt << "\n" << "frame padding fPad = " << G::s(fPad);
+    rpt << "\n" << "thumb padding tPad = " << G::s(tPad);
+    rpt << "\n" << "pad = " << G::s(pad);
+    rpt << "\n" << "pad2 = " << G::s(pad2);
+    rpt << "\n" << "fPad2 = " << G::s(fPad2);
+    rpt << "\n" << "tPad2 = " << G::s(tPad2);
+    rpt << "\n" << "isRatingBadgeVisible = " << G::s(isRatingBadgeVisible);
+    rpt << "\n" << "delegateShowThumbLabels = " << G::s(delegateShowThumbLabels);
+    rpt << "\n" << "font = " << G::s(font);
+    rpt << "\n" << "Colors:";
+    rpt << "\n  " << "defaultBorderColor = " << G::s(defaultBorderColor);
+    rpt << "\n  " << "currentItemColor = " << G::s(currentItemColor);
+    rpt << "\n  " << "selectedColor = " << G::s(selectedColor);
+    rpt << "\n  " << "pickColor = " << G::s(pickColor);
+    rpt << "\n  " << "ingestedColor = " << G::s(ingestedColor);
+    rpt << "\n  " << "cacheColor = " << G::s(cacheColor);
+    rpt << "\n  " << "cacheBorderColor = " << G::s(cacheBorderColor);
+    return reportString;
 }
 
 QSize IconViewDelegate::getCellSize()

@@ -805,6 +805,84 @@ the sort or filter or toggles raw+jpg.
     }
 }
 
+QString DataModel::diagnostics()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "DataModel Diagnostics");
+    rpt << "\n";
+    rpt << "\n" << "currentFolderPath = " << G::s(currentFolderPath);
+    rpt << "\n" << "currentFilePath = " << G::s(currentFilePath);
+    rpt << "\n" << "currentRow = " << G::s(currentRow);
+    rpt << "\n" << "hasDupRawJpg = " << G::s(hasDupRawJpg);
+    rpt << "\n" << "filtersBuilt = " << G::s(filtersBuilt);
+    rpt << "\n" << "timeToQuit = " << G::s(timeToQuit);
+    rpt << "\n" << "imageCount = " << G::s(imageCount);
+    rpt << "\n" << "countInterval = " << G::s(countInterval);
+    for(int row = 0; row < sf->rowCount(); row++) {
+        rpt << "\n" << "DataModel row = " << G::s(row);
+        rpt << "\n  " << "File Name = " << G::s(sf->index(row, G::NameColumn).data());
+        rpt << "\n  " << "File Path = " << G::s(sf->index(row, 0).data(G::PathRole));
+        rpt << "\n  " << "dupHideRaw = " << G::s(sf->index(row, 0).data(G::DupHideRawRole));
+        rpt << "\n  " << "dupRawRow = " << G::s(qvariant_cast<QModelIndex>(sf->index(row, 0).data(G::DupRawIdxRole)).row());
+        rpt << "\n  " << "dupIsJpg = " << G::s(sf->index(row, 0).data(G::DupIsJpgRole));
+        rpt << "\n  " << "dupRawType = " << G::s(sf->index(row, 0).data(G::DupRawTypeRole));
+        rpt << "\n  " << "type = " << G::s(sf->index(row, G::TypeColumn).data());
+        rpt << "\n  " << "bytes = " << G::s(sf->index(row, G::SizeColumn).data());
+        rpt << "\n  " << "refine = " << G::s(sf->index(row, G::RefineColumn).data());
+        rpt << "\n  " << "pick = " << G::s(sf->index(row, G::PickColumn).data());
+        rpt << "\n  " << "ingested = " << G::s(sf->index(row, G::IngestedColumn).data());
+        rpt << "\n  " << "label = " << G::s(sf->index(row, G::LabelColumn).data());
+        rpt << "\n  " << "_label = " << G::s(sf->index(row, G::_LabelColumn).data());
+        rpt << "\n  " << "rating = " << G::s(sf->index(row, G::RatingColumn).data());
+        rpt << "\n  " << "_rating = " << G::s(sf->index(row, G::_RatingColumn).data());
+        rpt << "\n  " << "modifiedDate = " << G::s(sf->index(row, G::ModifiedColumn).data());
+        rpt << "\n  " << "createdDate = " << G::s(sf->index(row, G::CreatedColumn).data());
+        rpt << "\n  " << "year = " << G::s(sf->index(row, G::YearColumn).data());
+        rpt << "\n  " << "day = " << G::s(sf->index(row, G::DayColumn).data());
+        rpt << "\n  " << "megapixels = " << G::s(sf->index(row, G::MegaPixelsColumn).data());
+        rpt << "\n  " << "width = " << G::s(sf->index(row, G::WidthColumn).data());
+        rpt << "\n  " << "height = " << G::s(sf->index(row, G::HeightColumn).data());
+        rpt << "\n  " << "dimensions = " << G::s(sf->index(row, G::DimensionsColumn).data());
+        rpt << "\n  " << "rotation = " << G::s(sf->index(row, G::RotationColumn).data());
+        rpt << "\n  " << "apertureNum = " << G::s(sf->index(row, G::ApertureColumn).data());
+        rpt << "\n  " << "exposureTimeNum = " << G::s(sf->index(row, G::ShutterspeedColumn).data());
+        rpt << "\n  " << "iso = " << G::s(sf->index(row, G::ISOColumn).data());
+        rpt << "\n  " << "make = " << G::s(sf->index(row, G::CameraMakeColumn).data());
+        rpt << "\n  " << "model = " << G::s(sf->index(row, G::CameraModelColumn).data());
+        rpt << "\n  " << "lens = " << G::s(sf->index(row, G::LensColumn).data());
+        rpt << "\n  " << "focalLengthNum = " << G::s(sf->index(row, G::FocalLengthColumn).data());
+        rpt << "\n  " << "title = " << G::s(sf->index(row, G::TitleColumn).data());
+        rpt << "\n  " << "_title = " << G::s(sf->index(row, G::_TitleColumn).data());
+        rpt << "\n  " << "creator = " << G::s(sf->index(row, G::CreatorColumn).data());
+        rpt << "\n  " << "_creator = " << G::s(sf->index(row, G::_CreatorColumn).data());
+        rpt << "\n  " << "copyright = " << G::s(sf->index(row, G::CopyrightColumn).data());
+        rpt << "\n  " << "_copyright = " << G::s(sf->index(row, G::_CopyrightColumn).data());
+        rpt << "\n  " << "email = " << G::s(sf->index(row, G::EmailColumn).data());
+        rpt << "\n  " << "_email = " << G::s(sf->index(row, G::_EmailColumn).data());
+        rpt << "\n  " << "url = " << G::s(sf->index(row, G::UrlColumn).data());
+        rpt << "\n  " << "_url = " << G::s(sf->index(row, G::_UrlColumn).data());
+        rpt << "\n  " << "offsetFullJPG = " << G::s(sf->index(row, G::OffsetFullJPGColumn).data());
+        rpt << "\n  " << "lengthFullJPG = " << G::s(sf->index(row, G::LengthFullJPGColumn).data());
+        rpt << "\n  " << "offsetThumbJPG = " << G::s(sf->index(row, G::OffsetThumbJPGColumn).data());
+        rpt << "\n  " << "lengthThumbJPG = " << G::s(sf->index(row, G::LengthThumbJPGColumn).data());
+        rpt << "\n  " << "offsetSmallJPG = " << G::s(sf->index(row, G::OffsetSmallJPGColumn).data());
+        rpt << "\n  " << "lengthSmallJPG = " << G::s(sf->index(row, G::LengthSmallJPGColumn).data());
+        rpt << "\n  " << "xmpSegmentOffset = " << G::s(sf->index(row, G::XmpSegmentOffsetColumn).data());
+        rpt << "\n  " << "xmpNextSegmentOffset = " << G::s(sf->index(row, G::XmpNextSegmentOffsetColumn).data());
+
+        rpt << "\n  " << "isXmp = " << G::s(sf->index(row, G::IsXMPColumn).data());
+        rpt << "\n  " << "orientationOffset = " << G::s(sf->index(row, G::OrientationOffsetColumn).data());
+        rpt << "\n  " << "orientation = " << G::s(sf->index(row, G::OrientationColumn).data());
+        rpt << "\n  " << "rotationDegrees = " << G::s(sf->index(row, G::RotationDegreesColumn).data());
+        rpt << "\n  " << "err = " << G::s(sf->index(row, G::ErrColumn).data());
+        rpt << "\n  " << "shootingInfo = " << G::s(sf->index(row, G::ShootingInfoColumn).data());
+    }
+    rpt << "\n\n" ;
+    return reportString;
+}
+
 void DataModel::filteredItemCount()
 {
     {

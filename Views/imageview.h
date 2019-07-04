@@ -50,6 +50,8 @@ public:
     ClassificationLabel *classificationLabel;
     QPixmap *pickPixmap;
 
+    QString diagnostics();
+
 public slots:
     void monitorCursorState();
     void copyImage();

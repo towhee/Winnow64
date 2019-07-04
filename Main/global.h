@@ -152,6 +152,7 @@ namespace G
 
     extern void track(QString functionName = "", QString comment = "");
     extern void wait(int ms);
+    extern QString s(QVariant x);
 
     extern PopUp *popUp;
     extern void newPopUp(QWidget *widget);

@@ -47,7 +47,7 @@ public:
 
     void retranslateUi(QDialog *metadataReporttDlg)
     {
-        metadataReporttDlg->setWindowTitle(QApplication::translate("metadataReporttDlg", " Winnow Metadata Repot", nullptr));
+        metadataReporttDlg->setWindowTitle(QApplication::translate("metadataReporttDlg", " Winnow Diagnostics", nullptr));
     } // retranslateUi
 
 };

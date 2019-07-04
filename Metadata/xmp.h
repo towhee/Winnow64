@@ -6,6 +6,7 @@
 #include <QtWidgets>
 #include <QtXmlPatterns>
 #include "Main/global.h"
+#include "Utilities/utilities.h"
 
 class Xmp : public QObject
 {
@@ -18,6 +19,7 @@ public:
     QString metaAsString();
     bool writeJPG(QByteArray &buffer);
     bool writeSidecar(QByteArray &buffer);
+    QString diagnostics();
 
 signals:
 

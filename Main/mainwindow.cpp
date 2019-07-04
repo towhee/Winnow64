@@ -2833,6 +2833,50 @@ void MW::createActions()
     addAction(helpWelcomeAction);
     connect(helpWelcomeAction, &QAction::triggered, this, &MW::helpWelcome);
 
+    // Help Diagnostics
+
+    diagnosticsAllAction = new QAction(tr("Report All Diagnostics"), this);
+    diagnosticsAllAction->setObjectName("diagnosticsAll");
+    diagnosticsAllAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsAllAction);
+    connect(diagnosticsAllAction, &QAction::triggered, this, &MW::diagnosticsAll);
+
+    diagnosticsMainAction = new QAction(tr("Report Main Diagnostics"), this);
+    diagnosticsMainAction->setObjectName("diagnosticsMain");
+    diagnosticsMainAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsMainAction);
+    connect(diagnosticsMainAction, &QAction::triggered, this, &MW::diagnosticsMain);
+
+    diagnosticsGridViewAction = new QAction(tr("Report GridView Diagnostics"), this);
+    diagnosticsGridViewAction->setObjectName("diagnosticsGridView");
+    diagnosticsGridViewAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsGridViewAction);
+    connect(diagnosticsGridViewAction, &QAction::triggered, this, &MW::diagnosticsGridView);
+
+    diagnosticsThumbViewAction = new QAction(tr("Report ThumbView Diagnostics"), this);
+    diagnosticsThumbViewAction->setObjectName("diagnosticsThumbView");
+    diagnosticsThumbViewAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsThumbViewAction);
+    connect(diagnosticsThumbViewAction, &QAction::triggered, this, &MW::diagnosticsThumbView);
+
+    diagnosticsImageViewAction = new QAction(tr("Report ImageView Diagnostics"), this);
+    diagnosticsImageViewAction->setObjectName("diagnosticsImageView");
+    diagnosticsImageViewAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsImageViewAction);
+    connect(diagnosticsImageViewAction, &QAction::triggered, this, &MW::diagnosticsImageView);
+
+    diagnosticsMetadataAction = new QAction(tr("Report Metadata Diagnostics"), this);
+    diagnosticsMetadataAction->setObjectName("diagnosticsMetadata");
+    diagnosticsMetadataAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsMetadataAction);
+    connect(diagnosticsMetadataAction, &QAction::triggered, this, &MW::diagnosticsMetadata);
+
+    diagnosticsDataModelAction = new QAction(tr("Report DataModel Diagnostics"), this);
+    diagnosticsDataModelAction->setObjectName("diagnosticsDataModel");
+    diagnosticsDataModelAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsDataModelAction);
+    connect(diagnosticsDataModelAction, &QAction::triggered, this, &MW::diagnosticsDataModel);
+
     // Testing
 
     testAction = new QAction(tr("Test"), this);
@@ -3096,6 +3140,15 @@ void MW::createMenus()
     helpMenu->addAction(helpAction);
     helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpWelcomeAction);
+
+    helpDiagnosticsMenu = helpMenu->addMenu(tr("&Diagnostics"));
+    helpDiagnosticsMenu->addAction(diagnosticsAllAction);
+    helpDiagnosticsMenu->addAction(diagnosticsMainAction);
+    helpDiagnosticsMenu->addAction(diagnosticsGridViewAction);
+    helpDiagnosticsMenu->addAction(diagnosticsThumbViewAction);
+    helpDiagnosticsMenu->addAction(diagnosticsImageViewAction);
+    helpDiagnosticsMenu->addAction(diagnosticsMetadataAction);
+    helpDiagnosticsMenu->addAction(diagnosticsDataModelAction);
 
     // Separator Action
     QAction *separatorAction = new QAction(this);
@@ -3606,20 +3659,20 @@ void MW::createThumbView()
 
     if (isSettings) {
         // loadSettings has not run yet (dependencies, but QSettings has been opened
-        thumbView->thumbWidth = setting->value("thumbWidth").toInt();
-        thumbView->thumbHeight = setting->value("thumbHeight").toInt();
+        thumbView->iconWidth = setting->value("thumbWidth").toInt();
+        thumbView->iconHeight = setting->value("thumbHeight").toInt();
         thumbView->labelFontSize = setting->value("labelFontSize").toInt();
-        thumbView->showThumbLabels = setting->value("showThumbLabels").toBool();
+        thumbView->showIconLabels = setting->value("showThumbLabels").toBool();
         thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
         thumbView->thumbsPerPage = setting->value("thumbsPerPage").toInt();
     }
     else {
-        thumbView->thumbWidth = 100;
-        thumbView->thumbHeight = 100;
+        thumbView->iconWidth = 100;
+        thumbView->iconHeight = 100;
         thumbView->labelFontSize = 12;
-        thumbView->showThumbLabels = true;
+        thumbView->showIconLabels = true;
         thumbView->badgeSize = classificationBadgeInThumbDiameter;
-        thumbView->thumbsPerPage = width() / thumbView->thumbWidth;
+        thumbView->thumbsPerPage = width() / thumbView->iconWidth;
     }
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -3656,18 +3709,18 @@ void MW::createGridView()
     gridView->firstVisibleRow = 0;
 
     if (isSettings) {
-        gridView->thumbWidth = setting->value("thumbWidthGrid").toInt();
-        gridView->thumbHeight = setting->value("thumbHeightGrid").toInt();
+        gridView->iconWidth = setting->value("thumbWidthGrid").toInt();
+        gridView->iconHeight = setting->value("thumbHeightGrid").toInt();
         gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
-        gridView->showThumbLabels = setting->value("showThumbLabelsGrid").toBool();
+        gridView->showIconLabels = setting->value("showThumbLabelsGrid").toBool();
         gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
         gridView->thumbsPerPage = setting->value("thumbsPerPage").toInt();
     }
     else {
-        gridView->thumbWidth = 200;
-        gridView->thumbHeight = 200;
+        gridView->iconWidth = 200;
+        gridView->iconHeight = 200;
         gridView->labelFontSize = 10;
-        gridView->showThumbLabels = true;
+        gridView->showIconLabels = true;
         gridView->badgeSize = classificationBadgeInThumbDiameter;
         // rgh has window size been assigned yet
         gridView->thumbsPerPage = (width() / 200) * (height() / 200);
@@ -4237,7 +4290,6 @@ parameters.  Any visibility changes are executed.
     progressPixmap->scaled(progressWidth, 25);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
-    qDebug() << __FUNCTION__ << "calling imageCacheThread->updateImageCachePosition()";
     if (fPath.length())
         imageCacheThread->updateImageCachePosition(/*fPath*/);
 
@@ -5252,18 +5304,18 @@ workspace with a matching name to the action is used.
     asGridAction->setChecked(w.isGridDisplay);
     asTableAction->setChecked(w.isTableDisplay);
     asCompareAction->setChecked(w.isCompareDisplay);
-    thumbView->thumbWidth = w.thumbWidth;
-    thumbView->thumbHeight = w.thumbHeight;
-    thumbView->thumbSpacing = w.thumbSpacing;
-    thumbView->thumbPadding = w.thumbPadding;
+    thumbView->iconWidth = w.thumbWidth;
+    thumbView->iconHeight = w.thumbHeight;
+    thumbView->iconSpacing = w.thumbSpacing;
+    thumbView->iconPadding = w.thumbPadding;
     thumbView->labelFontSize = w.labelFontSize;
-    thumbView->showThumbLabels = w.showThumbLabels;
-    gridView->thumbWidth = w.thumbWidthGrid;
-    gridView->thumbHeight = w.thumbHeightGrid;
-    gridView->thumbSpacing = w.thumbSpacingGrid;
-    gridView->thumbPadding = w.thumbPaddingGrid;
+    thumbView->showIconLabels = w.showThumbLabels;
+    gridView->iconWidth = w.thumbWidthGrid;
+    gridView->iconHeight = w.thumbHeightGrid;
+    gridView->iconSpacing = w.thumbSpacingGrid;
+    gridView->iconPadding = w.thumbPaddingGrid;
     gridView->labelFontSize = w.labelFontSizeGrid;
-    gridView->showThumbLabels = w.showThumbLabelsGrid;
+    gridView->showIconLabels = w.showThumbLabelsGrid;
     thumbView->rejustify();
     gridView->rejustify();
     thumbView->setThumbParameters();
@@ -5302,20 +5354,20 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.isTableDisplay = asTableAction->isChecked();
     wsd.isCompareDisplay = asCompareAction->isChecked();
 
-    wsd.thumbSpacing = thumbView->thumbSpacing;
-    wsd.thumbPadding = thumbView->thumbPadding;
-    wsd.thumbWidth = thumbView->thumbWidth;
-    wsd.thumbHeight = thumbView->thumbHeight;
+    wsd.thumbSpacing = thumbView->iconSpacing;
+    wsd.thumbPadding = thumbView->iconPadding;
+    wsd.thumbWidth = thumbView->iconWidth;
+    wsd.thumbHeight = thumbView->iconHeight;
     wsd.labelFontSize = thumbView->labelFontSize;
-    wsd.showThumbLabels = thumbView->showThumbLabels;
+    wsd.showThumbLabels = thumbView->showIconLabels;
 //    wsd.wrapThumbs = thumbView->wrapThumbs;
 
-    wsd.thumbSpacingGrid = gridView->thumbSpacing;
-    wsd.thumbPaddingGrid = gridView->thumbPadding;
-    wsd.thumbWidthGrid = gridView->thumbWidth;
-    wsd.thumbHeightGrid = gridView->thumbHeight;
+    wsd.thumbSpacingGrid = gridView->iconSpacing;
+    wsd.thumbPaddingGrid = gridView->iconPadding;
+    wsd.thumbWidthGrid = gridView->iconWidth;
+    wsd.thumbHeightGrid = gridView->iconHeight;
     wsd.labelFontSizeGrid = gridView->labelFontSize;
-    wsd.showThumbLabelsGrid = gridView->showThumbLabels;
+    wsd.showThumbLabelsGrid = gridView->showIconLabels;
 
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
 }
@@ -5434,19 +5486,19 @@ app is "stranded" on secondary monitors that are not attached.
     metadataDockLockAction->setChecked(true);
     thumbDockLockAction->setChecked(false);
 
-    thumbView->thumbSpacing = 0;
-    thumbView->thumbPadding = 0;
-    thumbView->thumbWidth = 100;
-    thumbView->thumbHeight = 100;
+    thumbView->iconSpacing = 0;
+    thumbView->iconPadding = 0;
+    thumbView->iconWidth = 100;
+    thumbView->iconHeight = 100;
     thumbView->labelFontSize = 10;
-    thumbView->showThumbLabels = true;
+    thumbView->showIconLabels = true;
 
-    gridView->thumbSpacing = 0;
-    gridView->thumbPadding = 0;
-    gridView->thumbWidth = 160;
-    gridView->thumbHeight = 160;
+    gridView->iconSpacing = 0;
+    gridView->iconPadding = 0;
+    gridView->iconWidth = 160;
+    gridView->iconHeight = 160;
     gridView->labelFontSize = 10;
-    gridView->showThumbLabels = true;
+    gridView->showIconLabels = true;
 
     thumbView->setWrapping(false);
     thumbView->setThumbParameters();
@@ -5666,9 +5718,164 @@ void MW::reportMetadata()
     G::track(__FUNCTION__);
     #endif
     }
-    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
-    metadata->readMetadata(true, fPath);
+    diagnosticsMetadata();
+//    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+//    metadata->readMetadata(true, fPath);
 }
+
+// Diagnostic Reports
+
+//QString MW::d(QVariant x)
+//// helper function to convert variable values to a string for diagnostic reporting
+//{
+//    return QVariant(x).toString();
+//}
+
+void MW::diagnosticsAll()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << this->diagnostics();
+    rpt << gridView->diagnostics();
+    rpt << thumbView->diagnostics();
+    rpt << imageView->diagnostics();
+    rpt << metadata->diagnostics(dm->currentFilePath);
+    rpt << dm->diagnostics();
+    diagnosticsReport(reportString);
+}
+
+QString MW::diagnostics()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "MainWindow Diagnostics");
+    rpt << "\n";
+
+    rpt << "\n" << "version = " << G::s(version);
+    rpt << "\n" << "isShift = " << G::s(isShift);
+    rpt << "\n" << "ignoreSelectionChange = " << G::s(ignoreSelectionChange);
+    rpt << "\n" << "lastPrefPage = " << G::s(lastPrefPage);
+    rpt << "\n" << "mouseClickScroll = " << G::s(mouseClickScroll);
+    rpt << "\n" << "displayHorizontalPixels = " << G::s(displayHorizontalPixels);
+    rpt << "\n" << "displayVerticalPixels = " << G::s(displayVerticalPixels);
+    rpt << "\n" << "checkIfUpdate = " << G::s(checkIfUpdate);
+    rpt << "\n" << "isRatingBadgeVisible = " << G::s(isRatingBadgeVisible);
+    rpt << "\n" << "classificationBadgeInImageDiameter = " << G::s(classificationBadgeInImageDiameter);
+    rpt << "\n" << "classificationBadgeInThumbDiameter = " << G::s(classificationBadgeInThumbDiameter);
+    rpt << "\n" << "rememberLastDir = " << G::s(rememberLastDir);
+    rpt << "\n" << "lastDir = " << G::s(lastDir);
+    rpt << "\n" << "ingestRootFolder = " << G::s(ingestRootFolder);
+    rpt << "\n" << "ingestRootFolder2 = " << G::s(ingestRootFolder2);
+    rpt << "\n" << "pathTemplateSelected = " << G::s(pathTemplateSelected);
+    rpt << "\n" << "pathTemplateSelected2 = " << G::s(pathTemplateSelected2);
+    rpt << "\n" << "filenameTemplateSelected = " << G::s(filenameTemplateSelected);
+    rpt << "\n" << "manualFolderPath = " << G::s(manualFolderPath);
+    rpt << "\n" << "manualFolderPath2 = " << G::s(manualFolderPath2);
+    rpt << "\n" << "combineRawJpg = " << G::s(combineRawJpg);
+    rpt << "\n" << "autoIngestFolderPath = " << G::s(autoIngestFolderPath);
+    rpt << "\n" << "autoEjectUsb = " << G::s(autoEjectUsb);
+    rpt << "\n" << "backupIngest = " << G::s(backupIngest);
+    rpt << "\n" << "gotoIngestFolder = " << G::s(gotoIngestFolder);
+    rpt << "\n" << "lastIngestLocation = " << G::s(lastIngestLocation);
+    rpt << "\n" << "slideShowDelay = " << G::s(slideShowDelay);
+    rpt << "\n" << "slideShowRandom = " << G::s(slideShowRandom);
+    rpt << "\n" << "slideShowWrap = " << G::s(slideShowWrap);
+    rpt << "\n" << "cacheSizeMB = " << G::s(cacheSizeMB);
+    rpt << "\n" << "isShowCacheStatus = " << G::s(isShowCacheStatus);
+    rpt << "\n" << "cacheDelay = " << G::s(cacheDelay);
+    rpt << "\n" << "isShowCacheThreadActivity = " << G::s(isShowCacheThreadActivity);
+    rpt << "\n" << "progressWidth = " << G::s(progressWidth);
+    rpt << "\n" << "cacheWtAhead = " << G::s(cacheWtAhead);
+    rpt << "\n" << "isCachePreview = " << G::s(isCachePreview);
+    rpt << "\n" << "cachePreviewWidth = " << G::s(cachePreviewWidth);
+    rpt << "\n" << "cachePreviewHeight = " << G::s(cachePreviewHeight);
+    rpt << "\n" << "fullScreenDocks.isFolders = " << G::s(fullScreenDocks.isFolders);
+    rpt << "\n" << "fullScreenDocks.isFavs = " << G::s(fullScreenDocks.isFavs);
+    rpt << "\n" << "fullScreenDocks.isFilters = " << G::s(fullScreenDocks.isFilters);
+    rpt << "\n" << "fullScreenDocks.isMetadata = " << G::s(fullScreenDocks.isMetadata);
+    rpt << "\n" << "fullScreenDocks.isThumbs = " << G::s(fullScreenDocks.isThumbs);
+    rpt << "\n" << "fullScreenDocks.isStatusBar = " << G::s(fullScreenDocks.isStatusBar);
+    rpt << "\n" << "isNormalScreen = " << G::s(isNormalScreen);
+    rpt << "\n" << "currentViewDir = " << G::s(currentViewDir);
+    rpt << "\n" << "prevMode = " << G::s(prevMode);
+    rpt << "\n" << "currentRow = " << G::s(currentRow);
+    rpt << "\n" << "scrollRow = " << G::s(scrollRow);
+    rpt << "\n" << "dmCurrentIndex = row" << G::s(dmCurrentIndex.row()) << " col " << G::s(dmCurrentIndex.column());
+    rpt << "\n" << "allIconsLoaded = " << G::s(allIconsLoaded);
+    rpt << "\n" << "modeChangeJustHappened = " << G::s(modeChangeJustHappened);
+    rpt << "\n" << "justUpdatedBestFit = " << G::s(justUpdatedBestFit);
+    rpt << "\n" << "sortColumn = " << G::s(sortColumn);
+    rpt << "\n" << "showImageCount = " << G::s(showImageCount);
+    rpt << "\n" << "isCurrentFolderOkay = " << G::s(isCurrentFolderOkay);
+    rpt << "\n" << "isSlideShow = " << G::s(isSlideShow);
+    rpt << "\n" << "copyOp = " << G::s(copyOp);
+    rpt << "\n" << "isDragDrop = " << G::s(isDragDrop);
+    rpt << "\n" << "dragDropFilePath = " << G::s(dragDropFilePath);
+    rpt << "\n" << "dragDropFolderPath = " << G::s(dragDropFolderPath);
+    rpt << "\n" << "maxThumbSpaceHeight = " << G::s(maxThumbSpaceHeight);
+    rpt << "\n" << "pickMemSize = " << G::s(pickMemSize);
+    rpt << "\n" << "metadataLoaded = " << G::s(metadataLoaded);
+    rpt << "\n" << "ignoreDockResize = " << G::s(ignoreDockResize);
+    rpt << "\n" << "wasThumbDockVisible = " << G::s(wasThumbDockVisible);
+    rpt << "\n" << "workspaceChange = " << G::s(workspaceChange);
+    rpt << "\n" << "isUpdatingState = " << G::s(isUpdatingState);
+    rpt << "\n" << "isFilterChange = " << G::s(isFilterChange);
+    rpt << "\n" << "isRefreshingDM = " << G::s(isRefreshingDM);
+    rpt << "\n" << "refreshCurrentPath = " << G::s(refreshCurrentPath);
+    rpt << "\n" << "simulateJustInstalled = " << G::s(simulateJustInstalled);
+    rpt << "\n" << "isSettings = " << G::s(isSettings);
+    rpt << "\n" << "isStartSilentCheckForUpdates = " << G::s(isStartSilentCheckForUpdates);
+    rpt << "\n" << "isStressTest = " << G::s(isStressTest);
+    rpt << "\n" << "hasGridBeenActivated = " << G::s(hasGridBeenActivated);
+    rpt << "\n" << "isLeftMouseBtnPressed = " << G::s(isLeftMouseBtnPressed);
+    rpt << "\n" << "isMouseDrag = " << G::s(isMouseDrag);
+    rpt << "\n" << "timeToQuit = " << G::s(timeToQuit);
+    rpt << "\n" << "sortMenuUpdateToMatchTable = " << G::s(sortMenuUpdateToMatchTable);
+    rpt << "\n" << "imageCacheFilePath = " << G::s(imageCacheFilePath);
+    rpt << "\n" << "newScrollSignal = " << G::s(newScrollSignal);
+    rpt << "\n" << "prevCentralView = " << G::s(prevCentralView);
+    rpt << "\n" << "mouseOverFolder = " << G::s(mouseOverFolder);
+    rpt << "\n" << "rating = " << G::s(rating);
+    rpt << "\n" << "colorClass = " << G::s(colorClass);
+    rpt << "\n" << "isPick = " << G::s(isPick);
+
+    rpt << "\n\n" ;
+    return reportString;
+}
+
+void MW::diagnosticsMain() {diagnosticsReport(this->diagnostics());}
+void MW::diagnosticsGridView() {diagnosticsReport(gridView->diagnostics());}
+void MW::diagnosticsThumbView() {diagnosticsReport(thumbView->diagnostics());}
+void MW::diagnosticsImageView() {diagnosticsReport(imageView->diagnostics());}
+void MW::diagnosticsInfoView() {}
+void MW::diagnosticsTableView() {}
+void MW::diagnosticsCompareView() {}
+void MW::diagnosticsMetadata() {diagnosticsReport(metadata->diagnostics(dm->currentFilePath));}
+void MW::diagnosticsXMP() {}
+void MW::diagnosticsMetadataCache() {}
+void MW::diagnosticsImageCache() {}
+void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
+void MW::diagnosticsFilters() {}
+void MW::diagnosticsFileTree() {}
+void MW::diagnosticsBookmarks() {}
+void MW::diagnosticsPixmap() {}
+void MW::diagnosticsThumb() {}
+void MW::diagnosticsIngest() {}
+void MW::diagnosticsZoom() {}
+
+void MW::diagnosticsReport(QString reportString)
+{
+    QDialog *dlg = new QDialog;
+    Ui::metadataReporttDlg md;
+    md.setupUi(dlg);
+    md.textBrowser->setText(reportString);
+    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+    dlg->show();
+//    std::cout << reportString.toStdString() << std::flush;
+}
+
 
 void MW::about()
 {
@@ -6489,16 +6696,16 @@ re-established when the application is re-opened.
     setting->setValue("filenameTemplateSelected", filenameTemplateSelected);
 
     // thumbs
-    setting->setValue("thumbWidth", thumbView->thumbWidth);
-    setting->setValue("thumbHeight", thumbView->thumbHeight);
+    setting->setValue("thumbWidth", thumbView->iconWidth);
+    setting->setValue("thumbHeight", thumbView->iconHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
-    setting->setValue("showThumbLabels", thumbView->showThumbLabels);
+    setting->setValue("showThumbLabels", thumbView->showIconLabels);
 
     // grid
-    setting->setValue("thumbWidthGrid", gridView->thumbWidth);
-    setting->setValue("thumbHeightGrid", gridView->thumbHeight);
+    setting->setValue("thumbWidthGrid", gridView->iconWidth);
+    setting->setValue("thumbHeightGrid", gridView->iconHeight);
     setting->setValue("labelFontSizeGrid", gridView->labelFontSize);
-    setting->setValue("showThumbLabelsGrid", gridView->showThumbLabels);
+    setting->setValue("showThumbLabelsGrid", gridView->showIconLabels);
 
     setting->setValue("thumbsPerPage", metadataCacheThread->thumbsPerPage);
 
@@ -7276,7 +7483,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         if (maxHt <= minHt) maxHt = G::maxIconSize;
 
         // new cell height
-        int cellHt = thumbView->iconViewDelegate->getCellHeightFromThumbHeight(thumbView->thumbHeight);
+        int cellHt = thumbView->iconViewDelegate->getCellHeightFromThumbHeight(thumbView->iconHeight);
 
         //  new dock height based on new cell size
         int newThumbDockHeight = cellHt + G::scrollBarThickness;
@@ -7326,7 +7533,6 @@ around lack of notification when the QListView has finished painting itself.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     G::mode = "Loupe";
 
     // save selection as tableView is hidden and not synced
@@ -7397,7 +7603,6 @@ around lack of notification when the QListView has finished painting itself.
         G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
     }
-    qDebug() << __FUNCTION__;
     G::mode = "Grid";
     updateStatus(true);
 
@@ -7458,7 +7663,6 @@ around lack of notification when the QListView has finished painting itself.
 
 void MW::tableDisplay()
 {
-    qDebug() << __FUNCTION__;
     {
     #ifdef ISDEBUG
         G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
@@ -7534,7 +7738,6 @@ void MW::compareDisplay()
         G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
     }
-    qDebug() << __FUNCTION__;
     updateStatus(true);
     int n = selectionModel->selectedRows().count();
     if (n < 2) {
@@ -7607,11 +7810,6 @@ void MW::setCentralView()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__
-             << "\nasLoupeAction->isChecked()" << asLoupeAction->isChecked()
-             << "\nasGridAction->isChecked()" << asGridAction->isChecked()
-             << "\nasTableAction->isChecked()" << asTableAction->isChecked()
-             << "\nasCompareAction->isChecked()" << asCompareAction->isChecked();
     if (!isSettings) return;
     if (asLoupeAction->isChecked()) loupeDisplay();
     if (asGridAction->isChecked()) gridDisplay();
@@ -9312,7 +9510,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    asTableAction->setChecked(true);
+    diagnosticsAll();
 }
 
 // End MW

@@ -48,6 +48,7 @@ public:
     void updateImageList();
     void sortThumbs(int sortColumn, bool isReverse);
     QModelIndex proxyIndexFromPath(QString fPath);
+    QString diagnostics();
 
     SortFilter *sf;
     QHash<QString, int> fPathRow;
