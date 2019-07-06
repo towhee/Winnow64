@@ -79,6 +79,20 @@ void TableView::setViewportParameters()
     isCurrentVisible = (row >= firstVisibleRow && row <= lastVisibleRow);
 }
 
+void TableView::scrollToRow(int row, QString source)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__ << objectName() << "row =" << row
+             << "source =" << source;
+    QModelIndex idx = dm->sf->index(row, 0);
+    scrollTo(idx, QAbstractItemView::PositionAtCenter);
+    readyToScroll = false;
+}
+
 void TableView::scrollToCurrent()
 {
     {
@@ -175,7 +189,7 @@ void TableView::mousePressEvent(QMouseEvent *event)
 {
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) return;
-    G::source = "TableMouseClick";
+    G::fileSelectionChangeSource = "TableMouseClick";
     QTableView::mousePressEvent(event);
 }
 

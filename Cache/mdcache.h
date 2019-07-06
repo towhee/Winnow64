@@ -74,7 +74,7 @@ signals:
     void updateIconBestFit();
     void loadMetadataCache2ndPass();
     void selectFirst();
-    void scrollToCurrent();
+//    void scrollToCurrent();
     void showCacheStatus(int, bool);            // row, clear progress bar
 
 private:

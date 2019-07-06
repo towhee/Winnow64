@@ -1361,12 +1361,6 @@ MW::mouseClickScroll == true.
              << "source =" << source;
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
-
-//    if (!isWrapping())
-//        horizontalScrollBar()->setValue(getHorizontalScrollBarOffset(row));
-//    else
-//        verticalScrollBar()->setValue(getVerticalScrollBarOffset(row));
-
     readyToScroll = false;
 }
 
@@ -1546,8 +1540,8 @@ different position than the current image.
     if (event->button() == Qt::RightButton) return;
 
     // is this a grid or a thumb view
-    if(G::mode == "Grid") G::source =  "GridMouseClick";
-    else G::source =  "ThumbMouseClick";
+    if(G::mode == "Grid") G::fileSelectionChangeSource =  "GridMouseClick";
+    else G::fileSelectionChangeSource =  "ThumbMouseClick";
 
     // forward and back buttons
     if (event->button() == Qt::BackButton) {

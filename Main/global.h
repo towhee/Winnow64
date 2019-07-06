@@ -131,13 +131,14 @@ namespace G
     extern QColor progressImageCacheColor;
 
     extern QString mode;
-    extern QString source;
+    extern QString fileSelectionChangeSource;
 
     extern QString fontSize;
 
     extern int actualDevicePixelRatio;
     extern bool allMetadataLoaded;
     extern bool buildingFilters;
+    extern bool ignoreScrollSignal;
 
     extern bool isThreadTrackingOn;
     extern bool showAllTableColumns;

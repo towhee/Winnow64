@@ -82,7 +82,7 @@ Thread management
 
     Thread collisions and preformance degradation occur if metadataCacheThread and
     imageCacheThread run concurrently. The metadata cache thread is initiated from MW and the
-    image cache thread is always initiated from this thread - MdCache.
+    image cache thread is always initiated from this thread - metadataCacheThread.
 
     Both threads are initiated from singleShot timers.  If file selection is changing rapidly
     (user holding down arrow key) or rapid scrolling is occurring then the timer prevents
@@ -411,7 +411,7 @@ void MetadataCache::setRange()
     prevFirstIconVisible = firstIconVisible;
     prevLastIconVisible = lastIconVisible;
 
-/*    qDebug()  <<  __FUNCTION__
+    /*qDebug()  <<  __FUNCTION__
               << "source =" << actionList.at(action)
               << "firstIconVisible =" << firstIconVisible
               << "lastIconVisible =" << lastIconVisible

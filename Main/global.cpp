@@ -22,7 +22,7 @@ namespace G
     QColor progressImageCacheColor = QColor(108,150,108);        // Green
 
     QString mode;                       // In MW: Loupe, Grid, Table or Compare
-    QString source;                     // GridMouseClick, ThumbMouseClick, TableMouseClick
+    QString fileSelectionChangeSource;                     // GridMouseClick, ThumbMouseClick, TableMouseClick
 
     int maxIconSize;
     int minIconSize = 40;
@@ -34,6 +34,7 @@ namespace G
     int actualDevicePixelRatio;
     bool allMetadataLoaded;
     bool buildingFilters;
+    bool ignoreScrollSignal;
 
     // not persistent
     bool isThreadTrackingOn;

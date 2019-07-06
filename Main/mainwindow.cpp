@@ -2,6 +2,7 @@
 
 /*
 ***********************************************************************************************
+
 INITIALIZATION
 
 Persistant settings are saved between sessions using QSettings. Persistant settings form two
@@ -38,6 +39,7 @@ front and the rest are assigned as needed.
   • Update the image cache
 
 ***********************************************************************************************
+
 PROGRAM FLOW
 
 A new folder is selected which triggers folderSelectionChange:
@@ -83,6 +85,7 @@ A new image is selected which triggers fileSelectionChange
 • Update the cursor position on the image caching progress bar.
 
 ***********************************************************************************************
+
 CACHING
 
 • When a new folder or a new file is selected, or when a scroll event occurs in IconView
@@ -105,6 +108,7 @@ CACHING
 * see top of mdcache.cpp comments for more detail
 
 ***********************************************************************************************
+
 DATAMODEL CHANGES
 
 Folder change
@@ -163,6 +167,32 @@ Sort change
     thumbView->sortThumbs
     ImageCache::rebuildImageCacheParameters
     MW::scrollToCurrentRow
+
+***********************************************************************************************
+
+SCROLLING
+
+When the user scrolls a datamodel view (thumbView, gridView or tableView) the scrollbar change
+signal is received by thumbHasScrolled, gridHasScrolled or tableHasScrolled. The other views
+are scrolled to sync with the source view midVisibleRow.  The first and last visible items are
+determined in updateMetadataCacheIconviewState and the metadataCacheThread is called to update
+the metadata and icons in the range (chunk).
+
+However, when the program syncs the views this generates more scrollbar signals that would
+loop.  This is prevented by the G::ignoreScrollSignal flag.  This is also employed in
+fileSelectionChange, where visible views are centered on the current selection.
+
+When the user changes modes in MW (ie from Grid to Loupe) a IconView instance (either
+thumbView or gridView) can change state from hidden to visible. Since hidden widgets cannot be
+accessed we need to wait until the IconView becomes visible and fully repainted before
+attempting to scroll to the current index. MW::eventFilter monitors the IconView scrollBar
+paint event and when the last paint event occurs the scrollToCurrent function is called. The
+last paint event is identified by calculating the maximum of the scrollbar range and comparing
+it to the paint event, which updates the range each time. With larger datasets (ie 1500+
+thumbs) it can take a number of paint events and 100s of ms to complete. A flag is assigned
+(readyToScroll) to show when we need to monitor so not checking needlessly. Unfortunately
+there does not appear to be any signal or event when ListView is finished hence this cludge.
+
 */
 
 MW::MW(QWidget *parent) : QMainWindow(parent)
@@ -556,12 +586,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
          }
     }
 
-    if(event->type() == QEvent::Paint
-            && (obj->objectName() == "TableViewVerticalScrollBar"))
-    {
-        qDebug() << "TableViewVerticalScrollBar" << scrollRow;
-        thumbView->scrollToRow(scrollRow, __FUNCTION__);
-    }
+//    if(event->type() == QEvent::Paint
+//            && (obj->objectName() == "TableViewVerticalScrollBar"))
+//    {
+//        qDebug() << "TableViewVerticalScrollBar" << scrollRow;
+//        thumbView->scrollToRow(scrollRow, __FUNCTION__);
+//    }
 
     /* CONTEXT MENU **********************************************************************
 
@@ -1040,32 +1070,39 @@ delegate use of the current index must check the row.
     gridView->iconViewDelegate->currentRow = currentRow;
 
     // don't scroll mouse click source (screws up double clicks and disorients users)
-    if(G::source == "TableMouseClick") {
+    if(G::fileSelectionChangeSource == "TableMouseClick") {
+        G::ignoreScrollSignal = true;
         if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
     }
 
-    else if(G::source == "ThumbMouseClick") {
+    else if(G::fileSelectionChangeSource == "ThumbMouseClick") {
+        G::ignoreScrollSignal = true;
         if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
-        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
-             QAbstractItemView::ScrollHint::PositionAtCenter);
+        if (tableView->isVisible()) tableView->scrollToRow(currentRow, __FUNCTION__);
+//        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
+//                                                        QAbstractItemView::ScrollHint::PositionAtCenter);
     }
 
-    else if(G::source == "GridMouseClick") {
+    else if(G::fileSelectionChangeSource == "GridMouseClick") {
+        G::ignoreScrollSignal = true;
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
-        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
-             QAbstractItemView::ScrollHint::PositionAtCenter);
+        if (tableView->isVisible()) tableView->scrollToRow(currentRow, __FUNCTION__);
+//        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
+//                                                        QAbstractItemView::ScrollHint::PositionAtCenter);
     }
 
     else {
         if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
-        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
-             QAbstractItemView::ScrollHint::PositionAtCenter);
+        if (tableView->isVisible()) tableView->scrollToRow(currentRow, __FUNCTION__);
+//        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
+//                                                        QAbstractItemView::ScrollHint::PositionAtCenter);
     }
 
     // reset table, grid or thumb item clicked
-    G::source = "";
+    G::fileSelectionChangeSource = "";
+    G::ignoreScrollSignal = false;
 
     // updates
 
@@ -1190,45 +1227,31 @@ visible.  This is used in the metadataCacheThread to determine the range of file
     G::track(__FUNCTION__);
     #endif
     }
-    if (thumbView->isVisible() && !gridView->isVisible()) {
+    int first = dm->sf->rowCount();
+    int last = 0;
+
+    if (thumbView->isVisible()) {
         thumbView->setViewportParameters();
-        metadataCacheThread->firstIconVisible = thumbView->firstVisibleRow;
-        metadataCacheThread->midIconVisible = thumbView->midVisibleRow;
-        metadataCacheThread->lastIconVisible = thumbView->lastVisibleRow;
-        metadataCacheThread->thumbsPerPage = metadataCacheThread->lastIconVisible - metadataCacheThread->firstIconVisible + 1;
-        return;
+        if (thumbView->firstVisibleRow < first) first = thumbView->firstVisibleRow;
+        if (thumbView->lastVisibleRow > last) last = thumbView->lastVisibleRow;
     }
 
-    if (!thumbView->isVisible() && gridView->isVisible()) {
+    if (gridView->isVisible()) {
         gridView->setViewportParameters();
-        metadataCacheThread->firstIconVisible = gridView->firstVisibleRow;
-        metadataCacheThread->midIconVisible = gridView->midVisibleRow;
-        metadataCacheThread->lastIconVisible = gridView->lastVisibleRow;
-        metadataCacheThread->thumbsPerPage = metadataCacheThread->lastIconVisible - metadataCacheThread->firstIconVisible + 1;
-        return;
+        if (gridView->firstVisibleRow < first) first = gridView->firstVisibleRow;
+        if (gridView->lastVisibleRow > last) last = gridView->lastVisibleRow;
     }
 
-    if (thumbView->isVisible() && gridView->isVisible()) {
-        thumbView->setViewportParameters();
-        gridView->setViewportParameters();
-        if (thumbView->firstVisibleRow < gridView->firstVisibleRow)
-            metadataCacheThread->firstIconVisible = thumbView->firstVisibleRow;
-        else {
-            metadataCacheThread->firstIconVisible = gridView->firstVisibleRow;
-        }
-        if (thumbView->midVisibleRow < gridView->midVisibleRow)
-            metadataCacheThread->midIconVisible = thumbView->midVisibleRow;
-        else {
-            metadataCacheThread->midIconVisible = gridView->midVisibleRow;
-        }
-        if (thumbView->lastVisibleRow > gridView->lastVisibleRow)
-            metadataCacheThread->lastIconVisible = thumbView->lastVisibleRow;
-        else {
-            metadataCacheThread->lastIconVisible = gridView->lastVisibleRow;
-        }
-        metadataCacheThread->thumbsPerPage = metadataCacheThread->lastIconVisible - metadataCacheThread->firstIconVisible + 1;
-        return;
+    if (tableView->isVisible()) {
+        tableView->setViewportParameters();
+        if (tableView->firstVisibleRow < first) first = tableView->firstVisibleRow;
+        if (tableView->lastVisibleRow > last) last = tableView->lastVisibleRow;
     }
+
+    metadataCacheThread->firstIconVisible = first;
+    metadataCacheThread->midIconVisible = (first + last) / 2;
+    metadataCacheThread->lastIconVisible = last;
+    metadataCacheThread->thumbsPerPage = last - first + 1;
 }
 
 void MW::updateImageCachePositionAfterDelay()
@@ -1262,6 +1285,91 @@ void MW::loadMetadataCache2ndPass()
     updateIconBestFit();
     updateMetadataCacheIconviewState();
     metadataCacheThread->loadNewFolder2ndPass();
+}
+
+void MW::thumbHasScrolled()
+{
+/*
+This function is called after a thumbView scrollbar change signal.  The viewport midVisibleRow
+is determined in thumbView->setViewportParameters(), the other views, if visible, are scrolled
+to sync with thumbView, and the metadataCacheThread is called to update metadata and icons.
+
+If the change was caused by the user scrolling then we want to process it, as defined by
+G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
+another view then we do not want to process and getting into a loop.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (!G::ignoreScrollSignal) {
+        G::ignoreScrollSignal = true;
+        thumbView->setViewportParameters();
+        if (gridView->isVisible())
+            gridView->scrollToRow(thumbView->midVisibleRow, "Sync to ThumbView");
+        if (tableView->isVisible())
+            tableView->scrollToRow(thumbView->midVisibleRow, "Sync to GridView");
+        updateMetadataCacheIconviewState();
+        metadataCacheThread->loadMetadataIconChunk(currentRow);
+//        loadMetadataCacheAfterDelay();
+        G::ignoreScrollSignal = false;
+    }
+}
+
+void MW::gridHasScrolled()
+{
+/*
+This function is called after a gridView scrollbar change signal.  The viewport midVisibleRow
+is determined in gridView->setViewportParameters(), the other views, if visible, are scrolled
+to sync with gridView, and the metadataCacheThread is called to update metadata and icons.
+
+If the change was caused by the user scrolling then we want to process it, as defined by
+G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
+another view then we do not want to process and getting into a loop.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (!G::ignoreScrollSignal) {
+        G::ignoreScrollSignal = true;
+        gridView->setViewportParameters();
+        if (thumbView->isVisible())
+            thumbView->scrollToRow(gridView->midVisibleRow, "Sync to GridView");
+        updateMetadataCacheIconviewState();
+        metadataCacheThread->loadMetadataIconChunk(currentRow);
+//        loadMetadataCacheAfterDelay();
+        G::ignoreScrollSignal = false;
+    }
+}
+void MW::tableHasScrolled()
+{
+/*
+This function is called after a tableView scrollbar change signal.  The viewport midVisibleRow
+is determined in tableView->setViewportParameters(), the other views, if visible, are scrolled
+to sync with tableView, and the metadataCacheThread is called to update metadata and icons.
+
+If the change was caused by the user scrolling then we want to process it, as defined by
+G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
+another view then we do not want to process and getting into a loop.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (!G::ignoreScrollSignal) {
+        G::ignoreScrollSignal = true;
+        tableView->setViewportParameters();
+        if (thumbView->isVisible())
+            thumbView->scrollToRow(tableView->midVisibleRow, "Sync to TableView");
+        updateMetadataCacheIconviewState();
+        metadataCacheThread->loadMetadataIconChunk(currentRow);
+//        loadMetadataCacheAfterDelay();
+        G::ignoreScrollSignal = false;
+    }
 }
 
 void MW::loadMetadataCacheAfterDelay()
@@ -1307,9 +1415,9 @@ If there has not been another call to this function in cacheDelay ms then the
 metadataCacheThread is restarted at the row of the first visible thumb after the scrolling.
 */
     {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
     }
 //    if (/*G::isInitializing || */dm->sf->rowCount() == 0/* || !G::isNewFolderLoaded*/) return;
     if (dm->sf->rowCount() == 0) return;
@@ -3578,7 +3686,7 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
             this, SLOT(updateMetadataCacheStatus(int,bool)));
 
-    connect(metadataCacheThread, &MetadataCache::scrollToCurrent, this, &MW::scrollToCurrentRow);
+//    connect(metadataCacheThread, &MetadataCache::scrollToCurrent, this, &MW::scrollToCurrentRow);
 
     /* Image caching is triggered from the metadataCacheThread to avoid the two threads
        running simultaneously and colliding */
@@ -3665,10 +3773,16 @@ void MW::createThumbView()
             this, SLOT(updateStatus(bool, QString)));
 
     connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheAfterDelay()));
+            this, SLOT(thumbHasScrolled()));
 
     connect(thumbView->horizontalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheAfterDelay()));
+            this, SLOT(thumbHasScrolled()));
+
+//    connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
+//            this, SLOT(loadMetadataCacheAfterDelay()));
+
+//    connect(thumbView->horizontalScrollBar(), SIGNAL(valueChanged(int)),
+//            this, SLOT(loadMetadataCacheAfterDelay()));
 }
 
 void MW::createGridView()
@@ -3707,7 +3821,9 @@ void MW::createGridView()
     connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
     connect(gridView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(loadMetadataCacheAfterDelay()));
+            this, SLOT(gridHasScrolled()));
+//    connect(gridView->verticalScrollBar(), SIGNAL(valueChanged(int)),
+//            this, SLOT(loadMetadataCacheAfterDelay()));
 }
 
 void MW::createTableView()
@@ -3750,6 +3866,11 @@ dependent on datamodel and thumbView.
             this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
 
     connect(tableView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
+
+    connect(tableView->verticalScrollBar(), SIGNAL(valueChanged(int)),
+            this, SLOT(tableHasScrolled()));
+//    connect(tableView->verticalScrollBar(), SIGNAL(valueChanged(int)),
+//            this, SLOT(loadMetadataCacheAfterDelay()));
 }
 
 void MW::createImageView()
@@ -4993,7 +5114,8 @@ void MW::sortChange()
 void MW::scrollToCurrentRow()
 {
 /*
-Signalled from metadataCacheThread after metadata read
+Called after a sort or when thumbs shrink/enlarge.  The current image may no longer be visible
+hence need to scroll to the current row.
 */
     {
     #ifdef ISDEBUG
