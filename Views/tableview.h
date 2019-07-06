@@ -24,6 +24,8 @@ public:
 
 public slots:
     void showOrHide();
+    void selectPageUp();
+    void selectPageDown();
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;

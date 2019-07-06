@@ -20,14 +20,13 @@ class ImageCache : public QThread
 
 public:
     ImageCache(QObject *parent, DataModel *dm, Metadata *metadata);
-    ~ImageCache();
+    ~ImageCache() override;
 
     void initImageCache(int &cacheSizeMB,
              bool &isShowCacheStatus, int &cacheWtAhead,
              bool &usePreview, int &previewWidth, int &previewHeight);
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
-    void resortImageCache(/*QString &currentImageFullPath*/);
-    void filterImageCache(QString &currentImageFullPath);
+    void rebuildImageCacheParameters(QString &currentImageFullPath);
     void stopImageCache();
     void clearImageCache();
     void pauseImageCache();
@@ -74,7 +73,6 @@ public:
 
 signals:
     void showCacheStatus(QString instruction, int key = 0, QString source = "");
-//    void showCacheStatus(QImage imCacheStatus);
     void updateIsRunning(bool, bool);
     void updateCacheOnThumbs(QString fPath, bool isCached);
 

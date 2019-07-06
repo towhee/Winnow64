@@ -93,9 +93,8 @@ IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
     currOffset.setY(currentOffsetWidth);
 }
 
-void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
-         int thumbSpacing, int thumbPadding, int labelFontSize, bool showThumbLabels,
-          int badgeSize)
+void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight, int labelFontSize, bool showThumbLabels, int badgeSize)
+
 {
     {
     #ifdef ISDEBUG
@@ -137,7 +136,7 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight,
     cellSize.setWidth(thumbWidth + pad2);
     cellSize.setHeight(thumbHeight + pad2 + textHeight);
 
-    cellSpace = cellSize + QSize(thumbSpacing, thumbSpacing);
+//    cellSpace = cellSize + QSize(thumbSpacing, thumbSpacing);
 
     // define some offsets
     fPadOffset = QPoint(fPad, fPad);
@@ -160,7 +159,6 @@ QString IconViewDelegate::diagnostics()
     rpt << "\n" << "frameSize = " << G::s(frameSize.width()) << "," << G::s(frameSize.height());
     rpt << "\n" << "selectedSize = " << G::s(selectedSize.width()) << "," << G::s(selectedSize.height());
     rpt << "\n" << "cellSize = " << G::s(cellSize.width()) << "," << G::s(cellSize.height());
-    rpt << "\n" << "cellSpace = " << G::s(cellSpace.width()) << "," << G::s(cellSpace.height());
     rpt << "\n" << "thumbSpacing = " << G::s(thumbSpacing);
     rpt << "\n" << "textHeight = " << G::s(textHeight);
     rpt << "\n" << "textHeadroom = " << G::s(textHeadroom);

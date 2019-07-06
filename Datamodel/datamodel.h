@@ -24,7 +24,6 @@ protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
 
 signals:
-    void reloadImageCache();        // rgh do we need this?
 
 private:
     Filters *filters;

@@ -66,7 +66,6 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-//    void setIcon(int, QImage);
     void loadImageCache();
     void updateImageCachePositionAfterDelay();
     void pauseImageCache();
@@ -74,7 +73,6 @@ signals:
     void updateIsRunning(bool, bool, QString);
     void updateIconBestFit();
     void loadMetadataCache2ndPass();
-    void resortImageCache();
     void selectFirst();
     void scrollToCurrent();
     void showCacheStatus(int, bool);            // row, clear progress bar
