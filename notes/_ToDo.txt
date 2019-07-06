@@ -43,6 +43,7 @@ DONE/FIXED
 - Removed - Check usage of MW::loadFilteredImageCache
 - remove iconSpacing and iconPadding and thumbsFit (no longer used)
 - Menu Go > Scroll actions not working
+- Added diagnostic reporting
 - F3-F7 (or menu alternatives) stopped working for a while
 - Image cache performance when filtered is wonky
 - Clear fav panel selected when new selection in Folders

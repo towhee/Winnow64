@@ -363,6 +363,9 @@ private slots:
     void loadMetadataChunk();
 //    void loadMetadataChunkAfterScroll();
 //    void loadMetadataCacheThumbScrollEvent();
+    void thumbHasScrolled();
+    void gridHasScrolled();
+    void tableHasScrolled();
     void loadMetadataCacheAfterDelay();
 //    void loadMetadataCache(int startRow = 0);
     void loadEntireMetadataCache();

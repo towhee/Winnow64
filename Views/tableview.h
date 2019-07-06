@@ -12,8 +12,8 @@ class TableView : public QTableView
 
 public:
     TableView(DataModel *dm);
-    void setViewportParameters();
     void scrollToCurrent();
+    void scrollToRow(int row, QString source);
     bool readyToScroll;
     QStandardItemModel *ok;
 
@@ -26,6 +26,7 @@ public slots:
     void showOrHide();
     void selectPageUp();
     void selectPageDown();
+    void setViewportParameters();
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;

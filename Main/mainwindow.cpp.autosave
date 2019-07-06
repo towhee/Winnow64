@@ -180,7 +180,7 @@ the metadata and icons in the range (chunk).
 
 However, when the program syncs the views this generates more scrollbar signals that would
 loop.  This is prevented by the G::ignoreScrollSignal flag.  This is also employed in
-fileSelectionChange, where visible views are centered on the current selection.
+fileSelectionChange, where visible views are scrolled to center on the current selection.
 
 When the user changes modes in MW (ie from Grid to Loupe) a IconView instance (either
 thumbView or gridView) can change state from hidden to visible. Since hidden widgets cannot be
