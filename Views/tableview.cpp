@@ -34,10 +34,7 @@ TableView::TableView(DataModel *dm)
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setDefaultSectionSize(24);
 
-
-
-//    FileItemDelegate *fileItemDelegate = new FileItemDelegate;
-//    setItemDelegateForColumn(G::PathColumn, fileItemDelegate);
+    verticalScrollBar()->setObjectName("TableViewVerticalScrollBar");
 
     CreatedItemDelegate *createdItemDelegate = new CreatedItemDelegate;
     setItemDelegateForColumn(G::CreatedColumn, createdItemDelegate);
@@ -139,6 +136,28 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::ErrColumn) return fm.width("=ErrColumn=");
     if (column == G::ShootingInfoColumn) return fm.width("=ShootingInfoColumn======================");
     return 50;
+}
+
+void TableView::selectPageUp()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__;
+    setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
+}
+
+void TableView::selectPageDown()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__;
+    setCurrentIndex(moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier));
 }
 
 bool TableView::eventFilter(QObject *obj, QEvent *event)

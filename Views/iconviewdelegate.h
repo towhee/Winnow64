@@ -20,7 +20,7 @@ public:
     QSize sizeHint(const QStyleOptionViewItem &option,
                    const QModelIndex &index ) const;
 
-    void setThumbDimensions(int thumbWidth, int thumbHeight, int thumbSpacing, int thumbPadding,
+    void setThumbDimensions(int thumbWidth, int thumbHeight,
           int labelFontSize, bool showThumbLabels, int badgeSize);
 
     QSize getCellSize();

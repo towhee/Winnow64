@@ -329,6 +329,8 @@ private slots:
     void keyLeft();
     void keyUp();
     void keyDown();
+    void keyPageUp();
+    void keyPageDown();
     void keyHome();
     void keyEnd();
     void keyScrollDown();
@@ -366,14 +368,12 @@ private slots:
     void loadEntireMetadataCache();
     void loadImageCacheForNewFolder();
     void buildFilters();
-    void loadFilteredImageCache();
+//    void loadFilteredImageCache();
     void addNewBookmark();
     void addNewBookmarkFromContext();
     void reportMetadata();
     void checkDirState(const QModelIndex &, int, int);
     void bookmarkClicked(QTreeWidgetItem *item, int col);
-    void setThumbsFilter();
-    void clearThumbsFilter();
     void setRatingBadgeVisibility();
     void setShootingInfoVisibility();
     void selectShootingInfo();
@@ -560,6 +560,8 @@ private:
     QAction *keyDownAction;
     QAction *keyHomeAction;
     QAction *keyEndAction;
+    QAction *keyPageUpAction;
+    QAction *keyPageDownAction;
 
     QAction *keyScrollLeftAction;
     QAction *keyScrollRightAction;
@@ -902,9 +904,6 @@ private:
     qulonglong memoryReqdForPicks();
     QString enquote(QString &s);
 
-    // Diagnostic functions
-
-//    QString d(QVariant x);
     void diagnosticsAll();
     QString diagnostics();
     void diagnosticsMain();

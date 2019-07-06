@@ -2043,6 +2043,7 @@ void Metadata::reportMetadata()
         rpt << xmpStr;
     }
 
+    // moved to diagnostics()
 //    QDialog *dlg = new QDialog;
 //    Ui::metadataReporttDlg md;
 //    md.setupUi(dlg);

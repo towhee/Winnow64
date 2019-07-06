@@ -1,9 +1,9 @@
 #include "Views/iconview.h"
 #include "Main/mainwindow.h"
 
-/*  ThumbView Overview
+/*  IconView Overview
 
-ThumbView manages the list of images within a folder and it's children (optional). The
+IconView manages the list of images within a folder and it's children (optional). The
 thumbView can either be a QListView of file names or thumbnails. When a list item is selected
 the image is shown in imageView.
 
@@ -123,7 +123,6 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     // this works because ThumbView is a friend class of MW.  It is used in the
     // event filter to access the thumbDock
     m2 = qobject_cast<MW*>(parent);
-    pickFilter = false;
 
 //    ScrollBar *scrollBar = new ScrollBar;
 //    setVerticalScrollBar(scrollBar);
@@ -144,7 +143,6 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setSelectionRectVisible(true);
     setUniformItemSizes(true);
-//    setUniformItemSizes(false);
     setMaximumHeight(100000);
     setContentsMargins(0,0,0,0);
     setSpacing(0);
@@ -159,19 +157,14 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
 
     bestAspectRatio = 1;
 
-//    if (objName == "Thumbnails") {
-        horizontalScrollBar()->setObjectName("ThumbViewHorizontalScrollBar");
-        verticalScrollBar()->setObjectName("IconViewVerticalScrollBar");
-//    }
-//    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-//    setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
-//    setBatchSize(2);
+    horizontalScrollBar()->setObjectName("IconViewHorizontalScrollBar");
+    verticalScrollBar()->setObjectName("IconViewVerticalScrollBar");
 
     setModel(this->dm->sf);
 
     iconViewDelegate = new IconViewDelegate(this, m2->isRatingBadgeVisible);
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
-        iconSpacing, iconPadding, labelFontSize, showIconLabels, badgeSize);
+        labelFontSize, showIconLabels, badgeSize);
     setItemDelegate(iconViewDelegate);
 
     // used to provide iconRect info to zoom to point clicked on thumb
@@ -203,26 +196,23 @@ QString IconView::diagnostics()
     rpt << "\n" << "visible = " << G::s(isVisible());
     rpt << "\n" << "iconWidth = " << G::s(iconWidth);
     rpt << "\n" << "iconHeight = " << G::s(iconHeight);
-    rpt << "\n" << "iconSpacing = " << G::s(iconSpacing);
-    rpt << "\n" << "iconPadding = " << G::s(iconPadding);
     rpt << "\n" << "labelFontSize = " << G::s(labelFontSize);
     rpt << "\n" << "showIconLabels = " << G::s(showIconLabels);
     rpt << "\n" << "badgeSize = " << G::s(badgeSize);
-    rpt << "\n" << "pickMemorySize = " << G::s(pickMemorySize);
-    rpt << "\n" << "filterStr = " << G::s(filterStr);
-    rpt << "\n" << "pickFilter = " << G::s(pickFilter);
     rpt << "\n" << "readyToScroll = " << G::s(readyToScroll);
-    rpt << "\n" << "isLeftMouseBtnPressed = " << G::s(isLeftMouseBtnPressed);
-    rpt << "\n" << "isMouseDrag = " << G::s(isMouseDrag);
     rpt << "\n" << "assignedIconWidth = " << G::s(assignedIconWidth);
     rpt << "\n" << "skipResize = " << G::s(skipResize);
-    rpt << "\n" << "scrollPaintFound = " << G::s(scrollPaintFound);
     rpt << "\n" << "bestAspectRatio = " << G::s(bestAspectRatio);
-    rpt << "\n" << "treeViewSize = " << G::s(treeViewSize.width()) << "," << G::s(treeViewSize.height());
     rpt << "\n\n" ;
     rpt << iconViewDelegate->diagnostics();
     rpt << "\n\n" ;
     return reportString;
+}
+
+void IconView::move()
+{
+    qDebug() << __FUNCTION__;
+    moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
 }
 
 void IconView::refreshThumb(QModelIndex idx, int role)
@@ -282,16 +272,16 @@ possibly altered thumbnail dimensions.
     }
     setSpacing(0);
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
-        0, iconPadding, labelFontSize, showIconLabels, badgeSize);
+        labelFontSize, showIconLabels, badgeSize);
+
 //    if(objectName() == "Thumbnails") {
 //        if (!m2->thumbDock->isFloating())
 //            emit updateThumbDockHeight();
 //    }
 }
 
-void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight,
-        int _thumbSpacing, int _thumbPadding, int _labelFontSize,
-        bool _showThumbLabels, /*bool _wrapThumbs, */int _badgeSize)
+void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight, /*int _thumbPadding,*/
+                                  int _labelFontSize, bool _showThumbLabels, int _badgeSize)
 {
     {
     #ifdef ISDEBUG
@@ -300,11 +290,9 @@ void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight,
     }
     iconWidth = _thumbWidth;
     iconHeight = _thumbHeight;
-    iconSpacing = _thumbSpacing;
-    iconPadding = _thumbPadding;
+//    iconPadding = _thumbPadding;
     labelFontSize = _labelFontSize;
     showIconLabels = _showThumbLabels;
-//    wrapThumbs = _wrapThumbs;
     badgeSize = _badgeSize;
     setThumbParameters();
 }
@@ -829,6 +817,7 @@ void IconView::selectNext()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if(G::mode == "Compare") return;
     selectThumb(getNextRow());
 }
@@ -840,6 +829,7 @@ void IconView::selectPrev()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if(G::mode == "Compare") return;
     selectThumb(getPrevRow());
 }
@@ -851,6 +841,7 @@ void IconView::selectUp()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if (G::mode == "Table" || !isWrapping()) selectPrev();
     else setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
 }
@@ -862,8 +853,33 @@ void IconView::selectDown()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
+//    if (G::mode == "Table" || !isWrapping()) selectNext();
+    /*else */setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
+}
+
+void IconView::selectPageUp()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__;
+//    if (G::mode == "Table" || !isWrapping()) selectPrev();
+    /*else */setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
+}
+
+void IconView::selectPageDown()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__;
     if (G::mode == "Table" || !isWrapping()) selectNext();
-    else setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
+    else setCurrentIndex(moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier));
 }
 
 void IconView::selectFirst()
@@ -1137,70 +1153,69 @@ loaded.  Both thumbView and gridView have to be called.
              << "G::iconHMax =" << G::iconHMax;*/
 }
 
-void IconView::thumbsFit(Qt::DockWidgetArea area)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    if (G::mode == "Grid") {
-        return;
-    }
+//void IconView::thumbsFit(Qt::DockWidgetArea area)
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    qDebug() << __FUNCTION__;
+//    if (G::mode == "Grid") {
+//        return;
+//    }
+//    // all wrapping is row wrapping
+//    if (isWrapping()) {
+//        return;
 
-    // all wrapping is row wrapping
-    if (isWrapping()) {
-        return;
+//        // adjust thumb width
+//        int scrollWidth = G::scrollBarThickness;
+//        int width = viewport()->width() - scrollWidth - 2;
+//        int thumbCellWidth = iconViewDelegate->getCellSize().width() - iconPadding * 2;
+//        int rightSideGap = 99999;
+//        iconPadding = 0;
+//        int remain;
+//        int padding = 0;
+//        bool improving;
+//        do {
+//            improving = false;
+//            int cellWidth = thumbCellWidth + padding * 2;
+//            remain = width % cellWidth;
+//            if (remain < rightSideGap) {
+//                improving = true;
+//                rightSideGap = remain;
+//                iconPadding = padding;
+//            }
+//            padding++;
+//        } while (improving);
+//    }
+//    // no wrapping - must be bottom or top dock area
+//    else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea
+//             || !isWrapping()){
+//        // set target ht based on space with scrollbar (always on)
+//        int ht = height();
+//        int scrollHeight = G::scrollBarThickness;
+//        ht -= scrollHeight;
 
-        // adjust thumb width
-        int scrollWidth = G::scrollBarThickness;
-        int width = viewport()->width() - scrollWidth - 2;
-        int thumbCellWidth = iconViewDelegate->getCellSize().width() - iconPadding * 2;
-        int rightSideGap = 99999;
-        iconPadding = 0;
-        int remain;
-        int padding = 0;
-        bool improving;
-        do {
-            improving = false;
-            int cellWidth = thumbCellWidth + padding * 2;
-            remain = width % cellWidth;
-            if (remain < rightSideGap) {
-                improving = true;
-                rightSideGap = remain;
-                iconPadding = padding;
-            }
-            padding++;
-        } while (improving);
-    }
-    // no wrapping - must be bottom or top dock area
-    else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea
-             || !isWrapping()){
-        // set target ht based on space with scrollbar (always on)
-        int ht = height();
-        int scrollHeight = G::scrollBarThickness;
-        ht -= scrollHeight;
+//        // adjust thumb height
+//        float aspect = iconWidth / iconHeight;
 
-        // adjust thumb height
-        float aspect = iconWidth / iconHeight;
+//        // get the current thumb cell
+//        int cellHeight = iconViewDelegate->getCellSize().height();
 
-        // get the current thumb cell
-        int cellHeight = iconViewDelegate->getCellSize().height();
+//        // padding = noncell space is used to rebuild cell after thumb resize to fit
+//        int padding = cellHeight - iconHeight;
+//        int maxCellHeight = iconViewDelegate->getCellSize(QSize(G::iconWMax, G::iconHMax)).height();
+//        cellHeight = ht < maxCellHeight ? ht : maxCellHeight;
+//        iconHeight = cellHeight - padding;
+//        iconWidth = iconHeight * aspect;
 
-        // padding = nonthumb space is used to rebuild cell after thumb resize to fit
-        int padding = cellHeight - iconHeight;
-        int maxCellHeight = iconViewDelegate->getCellSize(QSize(G::iconWMax, G::iconHMax)).height();
-        cellHeight = ht < maxCellHeight ? ht : maxCellHeight;
-        iconHeight = cellHeight - padding;
-        iconWidth = iconHeight * aspect;
-
-        // change the thumbnail size in thumbViewDelegate
-        setSpacing(0);
-qDebug() << "thumbsFit   thumbHeight" << iconHeight << "thumbWidth" << iconWidth;
-        iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
-            iconSpacing, iconPadding, labelFontSize, showIconLabels, badgeSize);
-    }
-}
+//        // change the thumbnail size in thumbViewDelegate
+//        setSpacing(0);
+//        iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
+//            labelFontSize, showIconLabels, badgeSize);
+//    }
+//}
 
 void IconView::thumbsFitTopOrBottom()
 {
@@ -1208,7 +1223,7 @@ void IconView::thumbsFitTopOrBottom()
 Called by MW::eventFilter when a thumbDock resize event occurs triggered by the user resizing
 the thumbDock. Adjust the size of the thumbs to fit the new thumbDock height.
 
-For thumbSpace anatomy (see IconViewDelegate)
+For icon cell anatomy (see diagram at top of IconViewDelegate)
 */
     {
     #ifdef ISDEBUG
@@ -1245,7 +1260,7 @@ For thumbSpace anatomy (see IconViewDelegate)
     setSpacing(0);
 
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
-        iconSpacing, iconPadding, labelFontSize, showIconLabels, badgeSize);
+        labelFontSize, showIconLabels, badgeSize);
     scrollToRow(currentIndex().row(), __FUNCTION__);
 }
 
@@ -1269,10 +1284,10 @@ void IconView::scrollDown(int /*step*/)
     #endif
     }
     if(isWrapping()) {
-        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
+        verticalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
     }
     else {
-        verticalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
+        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
     }
 }
 
@@ -1284,10 +1299,10 @@ void IconView::scrollUp(int /*step*/)
     #endif
     }
     if(isWrapping()) {
-        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
+        verticalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
     }
     else {
-        verticalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
+        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
     }
 }
 
@@ -1298,11 +1313,12 @@ void IconView::scrollPageDown(int /*step*/)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if(isWrapping()) {
-        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
+        verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
     }
     else {
-        verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
+        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
     }
 }
 
@@ -1315,10 +1331,10 @@ void IconView::scrollPageUp(int /*step*/)
     }
     qDebug() << __FUNCTION__ << isWrapping();
     if(isWrapping()) {
-        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
+        verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
     }
     else {
-        verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
+        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
     }
 }
 
@@ -1341,8 +1357,8 @@ MW::mouseClickScroll == true.
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << objectName() << "row =" << row
-//             << "source =" << source;
+    qDebug() << __FUNCTION__ << objectName() << "row =" << row
+             << "source =" << source;
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 
@@ -1595,11 +1611,16 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
     QListView::mouseReleaseEvent(event);
 }
 
-//QModelIndex ThumbView::moveCursor(QAbstractItemView::CursorAction cursorAction,
+
+
+//QModelIndex IconView::moveCursor(QAbstractItemView::CursorAction cursorAction,
 //                                Qt::KeyboardModifiers modifiers)
 //{
-//    QModelIndex idx = QAbstractItemView::moveCursor(cursorAction, modifiers);
+//    QModelIndex idx = QListView::moveCursor(cursorAction, modifiers);
+//    qDebug() << __FUNCTION__ << cursorAction << modifiers << idx;
+////    QModelIndex idx = QAbstractItemView::moveCursor(cursorAction, modifiers);
 //    setCurrentIndex(idx);
+//    return idx;
 
 //}
 

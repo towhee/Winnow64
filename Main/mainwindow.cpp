@@ -154,28 +154,15 @@ Filter change
     DataModel::addAllMetadata               (instead of MetadataCache::loadAllMetadata)
     SortFilter::filterChange
     DataModel::filteredItemCount
-    ImageCache::filterImageCache
-    ImageCache::buildImageCacheList
-    ImageCache::setPriorities
-    ImageCache::setTargetRange
-    ImageCache::checkAlreadyCached
-    ImageCache::checkForSurplus
-    MW::updateMetadataCacheIconviewState
-    MetadataCache::filterChange
-    MetadataCache::setRange
-    MetadataCache::readIconChunk
-    MetadataCache::iconCleanup              should image change also do icon cleanup??
-    MW::updateImageCachePositionAfterDelay
-    ImageCache::updateImageCachePosition
-    ImageCache::updateImageCacheList
-    ImageCache::setPriorities
-    ImageCache::setTargetRange
-    ImageCache::run
+    ImageCache::rebuildImageCacheParameters
+    thumbView->selectThumb
+    fileSelectionChange                     (same as image change above)
 
 Sort change
     MW::sortThumbnails
     thumbView->sortThumbs
-    MW::resortImageCache
+    ImageCache::rebuildImageCacheParameters
+    MW::scrollToCurrentRow
 */
 
 MW::MW(QWidget *parent) : QMainWindow(parent)
@@ -187,11 +174,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     }
 
     setObjectName("WinnowMainWindow");
-
-
-//    qDebug() << G::t.restart() << "\t" << "isShift =" << isShift;
     isShift = false;
-
 
     /* testing/debugging
        Note ISDEBUG is in globals.h
@@ -520,14 +503,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     if(event->type() == QEvent::Paint
             && thumbView->readyToScroll
             && (obj->objectName() == "IconViewVerticalScrollBar"
-            || obj->objectName() == "ThumbViewHorizontalScrollBar"))
+            || obj->objectName() == "IconViewHorizontalScrollBar"))
     {
-        if (obj->objectName() == "ThumbViewHorizontalScrollBar") {
+        if (obj->objectName() == "IconViewHorizontalScrollBar") {
             /*
             qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
                      << thumbView->horizontalScrollBar()->maximum()
                      << thumbView->getHorizontalScrollBarMax();*/
-
             if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
                 /*
                 qDebug() << objectName()
@@ -535,7 +517,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                  << "horizontalScrollBarMax Qt vs Me"
                  << thumbView->horizontalScrollBar()->maximum()
                  << thumbView->getHorizontalScrollBarMax();*/
-
                 thumbView->scrollToRow(scrollRow, __FUNCTION__);
             }
         }
@@ -554,6 +535,9 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                  thumbView->scrollToRow(scrollRow, __FUNCTION__);
              }
          }
+        if (obj->objectName() == "TableViewHorizontalScrollBar") {
+            qDebug() << "TableViewHorizontalScrollBar";
+        }
     }
 
     if(event->type() == QEvent::Paint
@@ -570,6 +554,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
              */
              gridView->scrollToRow(scrollRow, __FUNCTION__);
          }
+    }
+
+    if(event->type() == QEvent::Paint
+            && (obj->objectName() == "TableViewVerticalScrollBar"))
+    {
+        qDebug() << "TableViewVerticalScrollBar" << scrollRow;
+        thumbView->scrollToRow(scrollRow, __FUNCTION__);
     }
 
     /* CONTEXT MENU **********************************************************************
@@ -1575,27 +1566,6 @@ memory has been consumed or all the images are cached.
     if (G::mode == "Table") tableView->setFocus();
 }
 
-void MW::loadFilteredImageCache()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    QModelIndex idx = thumbView->currentIndex();
-    QString fPath = idx.data(G::PathRole).toString();
-    thumbView->selectThumb(idx);
-
-    dm->updateImageList();
-
-    // imageChacheThread checks if already running and restarts
-    imageCacheThread->initImageCache(cacheSizeMB,
-        isShowCacheStatus, cacheWtAhead, isCachePreview,
-        cachePreviewWidth, cachePreviewHeight);
-    qDebug() << __FUNCTION__, "calling imageCacheThread->updateImageCachePosition(fPath)";
-    imageCacheThread->updateImageCachePosition(/*fPath*/);
-}
-
 // called by signal itemClicked in bookmark
 void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
 {
@@ -2089,7 +2059,7 @@ void MW::createActions()
 
     // Go menu
 
-    keyRightAction = new QAction(tr("Next Image"), this);
+    keyRightAction = new QAction(tr("Next"), this);
     keyRightAction->setObjectName("nextImage");
     keyRightAction->setShortcutVisibleInContextMenu(true);
     keyRightAction->setEnabled(true);
@@ -2102,17 +2072,29 @@ void MW::createActions()
     addAction(keyLeftAction);
     connect(keyLeftAction, &QAction::triggered, this, &MW::keyLeft);
 
-    keyUpAction = new QAction(tr("Move Up"), this);
+    keyUpAction = new QAction(tr("Up"), this);
     keyUpAction->setObjectName("moveUp");
     keyUpAction->setShortcutVisibleInContextMenu(true);
     addAction(keyUpAction);
     connect(keyUpAction, &QAction::triggered, this, &MW::keyUp);
 
-    keyDownAction = new QAction(tr("Move Down"), this);
+    keyDownAction = new QAction(tr("Down"), this);
     keyDownAction->setObjectName("moveDown");
     keyDownAction->setShortcutVisibleInContextMenu(true);
     addAction(keyDownAction);
     connect(keyDownAction, &QAction::triggered, this, &MW::keyDown);
+
+    keyPageUpAction = new QAction(tr("Page Up"), this);
+    keyPageUpAction->setObjectName("movePageUp");
+    keyPageUpAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyPageUpAction);
+    connect(keyPageUpAction, &QAction::triggered, this, &MW::keyPageUp);
+
+    keyPageDownAction = new QAction(tr("Page Down"), this);
+    keyPageDownAction->setObjectName("movePageDown");
+    keyPageDownAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyPageDownAction);
+    connect(keyPageDownAction, &QAction::triggered, this, &MW::keyPageDown);
 
     keyHomeAction = new QAction(tr("First"), this);
     keyHomeAction->setObjectName("firstImage");
@@ -2166,7 +2148,7 @@ void MW::createActions()
     keyScrollPageUpAction->setObjectName("scrollPageUp");
     keyScrollPageUpAction->setShortcutVisibleInContextMenu(true);
     addAction(keyScrollPageUpAction);
-    connect(keyScrollPageUpAction, &QAction::triggered, this, &MW::keyScrollPageDown);
+    connect(keyScrollPageUpAction, &QAction::triggered, this, &MW::keyScrollPageUp);
 
     keyScrollPageDownAction = new QAction(tr("Scroll Page down"), this);
     keyScrollPageDownAction->setObjectName("scrollPageDown");
@@ -2612,7 +2594,7 @@ void MW::createActions()
     addAction(folderDockVisibleAction);
     connect(folderDockVisibleAction, &QAction::triggered, this, &MW::toggleFolderDockVisibility);
 
-    favDockVisibleAction = new QAction(tr("Favourites"), this);
+    favDockVisibleAction = new QAction(tr("Bookmarks"), this);
     favDockVisibleAction->setObjectName("toggleFavs");
     favDockVisibleAction->setShortcutVisibleInContextMenu(true);
     favDockVisibleAction->setCheckable(true);
@@ -3007,6 +2989,8 @@ void MW::createMenus()
     goMenu->addAction(keyLeftAction);
     goMenu->addAction(keyUpAction);
     goMenu->addAction(keyDownAction);
+    goMenu->addAction(keyPageUpAction);
+    goMenu->addAction(keyPageDownAction);
     goMenu->addAction(keyHomeAction);
     goMenu->addAction(keyEndAction);
     goMenu->addSeparator();
@@ -3532,7 +3516,6 @@ void MW::createDataModel()
         filters->showColumn(3);
     }
 
-    connect(dm->sf, &SortFilter::reloadImageCache, this, &MW::loadFilteredImageCache);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::msg, this, &MW::setCentralMessage);
 }
@@ -3595,13 +3578,7 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
             this, SLOT(updateMetadataCacheStatus(int,bool)));
 
-    connect(metadataCacheThread, SIGNAL(resortImageCache()),
-            this, SLOT(resortImageCache()));
-
     connect(metadataCacheThread, &MetadataCache::scrollToCurrent, this, &MW::scrollToCurrentRow);
-
-//    connect(metadataCacheThread, SIGNAL(setIcon(int, QImage)),
-//            thumbView, SLOT(setIcon(int, QImage)));
 
     /* Image caching is triggered from the metadataCacheThread to avoid the two threads
        running simultaneously and colliding */
@@ -3703,7 +3680,7 @@ void MW::createGridView()
     }
     gridView = new IconView(this, dm, "Grid");
     gridView->setObjectName("Grid");
-//    gridView->setSpacing(0);                // gridView not visible without this
+    gridView->setSpacing(0);                // gridView not visible without this
     gridView->setWrapping(true);
     gridView->setAutoScroll(false);
     gridView->firstVisibleRow = 0;
@@ -4015,7 +3992,7 @@ void MW::createDocks()
         setting->endGroup();
     }
 
-    favDock = new DockWidget(tr(" Favourites "), this);
+    favDock = new DockWidget(tr(" Bookmarks  "), this);
     favDock->setObjectName("Bookmarks");
     favDock->setWidget(bookmarks);
 
@@ -4594,7 +4571,8 @@ void MW::resortImageCache()
     }
     if (!dm->sf->rowCount()) return;
     QString currentFilePath = dmCurrentIndex.data(G::PathRole).toString();
-    imageCacheThread->resortImageCache();
+    imageCacheThread->rebuildImageCacheParameters(currentFilePath);
+//    imageCacheThread->resortImageCache();
     imageCacheThread->updateImageCachePosition();
 }
 
@@ -4705,11 +4683,6 @@ and icons are loaded if necessary.
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) return;
 
-//    isFilterChange = true;
-
-//    qDebug() << "\n" << __FUNCTION__ << "called by " << source
-//             << "allMetadataLoaded =" << G::allMetadataLoaded;
-
     // Need all metadata loaded before filtering
     if (!G::allMetadataLoaded) dm->addAllMetadata(true);
 
@@ -4730,34 +4703,34 @@ and icons are loaded if necessary.
     }
 
     // get the current selected item
-//    qDebug() << __FUNCTION__
-//             << "thumbView->currentIndex().row() =" << thumbView->currentIndex().row()
-//             << "dmCurrentIndex).row() =" << dmCurrentIndex.row()
-//             << "dm->sf->mapFromSource(dmCurrentIndex).row() =" << dm->sf->mapFromSource(dmCurrentIndex).row();
+    /*
+    qDebug() << __FUNCTION__
+             << "thumbView->currentIndex().row() =" << thumbView->currentIndex().row()
+             << "dmCurrentIndex).row() =" << dmCurrentIndex.row()
+             << "dm->sf->mapFromSource(dmCurrentIndex).row() =" << dm->sf->mapFromSource(dmCurrentIndex).row();
+            */
     currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
     QModelIndex idx = dm->sf->index(currentRow, 0);
     selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
-
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
-
-//    qDebug() << __FUNCTION__ << "STATUS: "
-//             << "currentRow =" << currentRow
-//             << "dmCurrentIndex.row() =" << dmCurrentIndex.row();
-
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
+
     centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true);
 
     // sync image cache with datamodel filtered proxy
-    imageCacheThread->filterImageCache(fPath);
+    imageCacheThread->rebuildImageCacheParameters(fPath);
 
     // rgh temp fix 300ms delay before scroll to currentRow
     G::wait(300);
     thumbView->selectThumb(currentRow);
+    /* if the previous selected image is also part of the filtered datamodel then the
+    selected index does not change and fileSelectionChange will not be signalled.
+    Therefore we call it here to force the update to caching and icons */
     fileSelectionChange(idx, idx);
 }
 
@@ -5002,18 +4975,17 @@ void MW::sortChange()
     gridView->iconViewDelegate->currentRow = currentRow;
     QModelIndex idx = dm->sf->index(currentRow, 0);
     selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
-
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
-
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
+
     centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true);
 
     // sync image cache with datamodel filtered proxy
 //    resortImageCache();
-    imageCacheThread->filterImageCache(fPath);
+    imageCacheThread->rebuildImageCacheParameters(fPath);
 
     scrollToCurrentRow();
 }
@@ -5306,14 +5278,14 @@ workspace with a matching name to the action is used.
     asCompareAction->setChecked(w.isCompareDisplay);
     thumbView->iconWidth = w.thumbWidth;
     thumbView->iconHeight = w.thumbHeight;
-    thumbView->iconSpacing = w.thumbSpacing;
-    thumbView->iconPadding = w.thumbPadding;
+//    thumbView->iconSpacing = w.thumbSpacing;
+//    thumbView->iconPadding = w.thumbPadding;
     thumbView->labelFontSize = w.labelFontSize;
     thumbView->showIconLabels = w.showThumbLabels;
     gridView->iconWidth = w.thumbWidthGrid;
     gridView->iconHeight = w.thumbHeightGrid;
-    gridView->iconSpacing = w.thumbSpacingGrid;
-    gridView->iconPadding = w.thumbPaddingGrid;
+//    gridView->iconSpacing = w.thumbSpacingGrid;
+//    gridView->iconPadding = w.thumbPaddingGrid;
     gridView->labelFontSize = w.labelFontSizeGrid;
     gridView->showIconLabels = w.showThumbLabelsGrid;
     thumbView->rejustify();
@@ -5354,16 +5326,16 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.isTableDisplay = asTableAction->isChecked();
     wsd.isCompareDisplay = asCompareAction->isChecked();
 
-    wsd.thumbSpacing = thumbView->iconSpacing;
-    wsd.thumbPadding = thumbView->iconPadding;
+//    wsd.thumbSpacing = thumbView->iconSpacing;
+//    wsd.thumbPadding = thumbView->iconPadding;
     wsd.thumbWidth = thumbView->iconWidth;
     wsd.thumbHeight = thumbView->iconHeight;
     wsd.labelFontSize = thumbView->labelFontSize;
     wsd.showThumbLabels = thumbView->showIconLabels;
 //    wsd.wrapThumbs = thumbView->wrapThumbs;
 
-    wsd.thumbSpacingGrid = gridView->iconSpacing;
-    wsd.thumbPaddingGrid = gridView->iconPadding;
+//    wsd.thumbSpacingGrid = gridView->iconSpacing;
+//    wsd.thumbPaddingGrid = gridView->iconPadding;
     wsd.thumbWidthGrid = gridView->iconWidth;
     wsd.thumbHeightGrid = gridView->iconHeight;
     wsd.labelFontSizeGrid = gridView->labelFontSize;
@@ -5486,15 +5458,13 @@ app is "stranded" on secondary monitors that are not attached.
     metadataDockLockAction->setChecked(true);
     thumbDockLockAction->setChecked(false);
 
-    thumbView->iconSpacing = 0;
-    thumbView->iconPadding = 0;
+//    thumbView->iconPadding = 0;
     thumbView->iconWidth = 100;
     thumbView->iconHeight = 100;
     thumbView->labelFontSize = 10;
     thumbView->showIconLabels = true;
 
-    gridView->iconSpacing = 0;
-    gridView->iconPadding = 0;
+//    gridView->iconPadding = 0;
     gridView->iconWidth = 160;
     gridView->iconHeight = 160;
     gridView->labelFontSize = 10;
@@ -6611,37 +6581,8 @@ for each bookmark folder.
     G::track(__FUNCTION__);
     #endif
     }
-//    bookmarks->reloadBookmarks();
     bookmarks->count();
 }
-
-// rgh used?
-void MW::setThumbsFilter()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    thumbView->filterStr = filterBar->text();
-//    refreshThumbs(true);
-}
-
-// rgh used?
-void MW::clearThumbsFilter()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    if (filterBar->text() == "")
-    {
-        thumbView->filterStr = filterBar->text();
-//        refreshThumbs(true);
-    }
-}
-
 
 /*****************************************************************************************
  * READ/WRITE PREFERENCES
@@ -7261,6 +7202,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         keyEndAction->setShortcut(QKeySequence("End"));
         keyDownAction->setShortcut(QKeySequence("Down"));
         keyUpAction->setShortcut(QKeySequence("Up"));
+        keyPageUpAction->setShortcut(QKeySequence("PgUp"));
+        keyPageDownAction->setShortcut(QKeySequence("PgDown"));
 
         keyScrollLeftAction->setShortcut(QKeySequence("Alt+Left"));
         keyScrollRightAction->setShortcut(QKeySequence("Alt+Right"));
@@ -7414,7 +7357,7 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
                                QDockWidget::DockWidgetFloatable);
 //        thumbsWrapAction->setChecked(true);
         thumbView->setWrapping(true);
-        thumbView->isFloat = isFloat;
+//        thumbView->isFloat = isFloat;
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     }
 }
@@ -8873,6 +8816,7 @@ void MW::keyRight()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if (G::mode == "Compare") compareImages->go("Right");
     else thumbView->selectNext();
 }
@@ -8887,6 +8831,7 @@ void MW::keyLeft()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if (G::mode == "Compare") compareImages->go("Left");
     else thumbView->selectPrev();
 }
@@ -8901,6 +8846,7 @@ void MW::keyUp()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if (G::mode == "Loupe") thumbView->selectUp();
     if (G::mode == "Table") thumbView->selectUp();
     if (G::mode == "Grid") gridView->selectUp();
@@ -8916,9 +8862,36 @@ void MW::keyDown()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if (G::mode == "Loupe") thumbView->selectDown();
     if (G::mode == "Table") thumbView->selectDown();
     if (G::mode == "Grid") gridView->selectDown();
+}
+
+void MW::keyPageUp()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__;
+    if (G::mode == "Loupe") thumbView->selectPageUp();
+    if (G::mode == "Table") tableView->selectPageUp();
+    if (G::mode == "Grid") gridView->selectPageUp();
+}
+
+void MW::keyPageDown()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__;
+    if (G::mode == "Loupe") thumbView->selectPageDown();
+    if (G::mode == "Table") tableView->selectPageDown();
+    if (G::mode == "Grid") gridView->selectPageDown();
 }
 
 void MW::keyHome()
@@ -9472,19 +9445,11 @@ void MW::helpShortcuts()
     QScrollArea *helpShortcuts = new QScrollArea;
     Ui::shortcutsForm ui;
     ui.setupUi(helpShortcuts);
-
     ui.treeWidget->setColumnWidth(0, 250);
     ui.treeWidget->setColumnWidth(1, 250);
     ui.treeWidget->setColumnWidth(2, 250);
-//    ui.treeWidget->headerItem()->setTextAlignment(0, Qt::AlignCenter);
-//    ui.treeWidget->header()->setMinimumHeight(16);
     ui.treeWidget->expandAll();
-//    QFile fStyle(":/qss/winnow.css");
-//    fStyle.open(QIODevice::ReadOnly);
     ui.scrollAreaWidgetContents->setStyleSheet(css);
-//    ui.scrollAreaWidgetContents->setStyleSheet(fStyle.readAll());
-//    ui.scrollAreaWidgetContents->setStyleSheet("QTreeView::item { height: 20px;}");
-
     helpShortcuts->show();
 }
 
@@ -9510,7 +9475,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    diagnosticsAll();
+    gridView->move();
+//    diagnosticsAll();
 }
 
 // End MW

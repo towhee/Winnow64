@@ -50,17 +50,13 @@ public:
 
     int iconWidth;
     int iconHeight;
-    int iconSpacing;
-    int iconPadding;
     int labelFontSize;
     bool showIconLabels;
-//    bool wrapThumbs;
     int badgeSize;
     QSize cellSize;
 
-//    bool isTopOrBottomDock;
-    bool isFloat;       // set by MW ...
-    bool isBestAspect;
+//    bool isFloat;       // set by MW ...
+//    bool isBestAspect;
 
     int firstVisibleRow;
     int midVisibleRow;
@@ -75,6 +71,7 @@ public:
     bool isThumb(int row);
     void reportThumb();                             //debugging thumb roles
     QString diagnostics();
+    void move();
 
     QFileInfoList getPicks();
     bool isPick();
@@ -97,20 +94,13 @@ public:
 
      QItemSelectionModel *thumbViewSelection;
 
-    int iconSize;
-    QString pickMemorySize;
-    QString filterStr;
-    bool pickFilter;
     bool readyToScroll;
-    bool scrollPaintFound;
 
     enum JustifyAction {
         Shrink = 1,
         Enlarge = -1
     };
     double bestAspectRatio;
-//    int iconWMax;               // widest icon found in datamodel
-//    int iconHMax;               // highest icon found in datamodel
 
 public slots:
     void scrollDown(int);
@@ -123,7 +113,7 @@ public slots:
     void justify(JustifyAction action);
     void rejustify();
 //    void resizeRejustify();
-    void thumbsFit(Qt::DockWidgetArea area);
+//    void thumbsFit(Qt::DockWidgetArea area);
     void bestAspect();
     void thumbsFitTopOrBottom();
     void invertSelection();                         //in use
@@ -138,15 +128,16 @@ public slots:
 
     void refreshThumb(QModelIndex idx, int role);
     void refreshThumbs();
-    void setThumbParameters(int _thumbWidth, int _thumbHeight, int _thumbSpacing,
-             int _thumbPadding, int _labelFontSize, bool _showThumbLabels,
-             /*bool _wrapThumbs, */int _badgeSize);
+    void setThumbParameters(int _thumbWidth, int _thumbHeight,
+             int _labelFontSize, bool _showThumbLabels, int _badgeSize);
     void reportThumbs();
     void selectThumb(QModelIndex idx);
     void selectNext();
     void selectPrev();
     void selectUp();
     void selectDown();
+    void selectPageUp();
+    void selectPageDown();
     void selectFirst();
     void selectLast();
     void selectRandom();
@@ -156,7 +147,6 @@ public slots:
     void sortThumbs(int sortColumn, bool isReverse);
 
 private slots:
-//    void delaySelectCurrentThumb();
     void selectionChanged (const QItemSelection &selected, const QItemSelection &deselected);
 
 protected:
@@ -186,7 +176,6 @@ private:
     int getPrevPick();
 
     DataModel *dm;
-    QSize treeViewSize;
 
 
     bool isLeftMouseBtnPressed;
