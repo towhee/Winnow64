@@ -90,7 +90,6 @@ void TableView::scrollToRow(int row, QString source)
              << "source =" << source;
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
-    readyToScroll = false;
 }
 
 void TableView::scrollToCurrent()
@@ -100,7 +99,6 @@ void TableView::scrollToCurrent()
     G::track(__FUNCTION__);
     #endif
     }
-    // G::scrollToCenter needed?
     QModelIndex idx = dm->sf->index(currentIndex().row(), 1);
     scrollTo(idx, ScrollHint::PositionAtCenter);
 }
@@ -177,7 +175,7 @@ void TableView::selectPageDown()
 bool TableView::eventFilter(QObject *obj, QEvent *event)
 {
     if((event->type() == QEvent::Paint || event->type() == QEvent::Timer)
-            && readyToScroll
+            && scrollWhenReady
             && obj->objectName() == "QScrollBar")
     {
         scrollToCurrent();

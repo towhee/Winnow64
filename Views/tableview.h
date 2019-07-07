@@ -14,7 +14,7 @@ public:
     TableView(DataModel *dm);
     void scrollToCurrent();
     void scrollToRow(int row, QString source);
-    bool readyToScroll;
+    bool scrollWhenReady;
     QStandardItemModel *ok;
 
     int firstVisibleRow;

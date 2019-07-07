@@ -64,6 +64,7 @@ public:
     int thumbsPerPage;
 
     void updateLayout();
+    bool okToScroll();
 
     IconViewDelegate *iconViewDelegate;
     void selectThumb(int row);
@@ -94,7 +95,7 @@ public:
 
      QItemSelectionModel *thumbViewSelection;
 
-    bool readyToScroll;
+    bool scrollWhenReady;
 
     enum JustifyAction {
         Shrink = 1,
