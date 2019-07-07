@@ -157,7 +157,7 @@ bool MetadataCache::isAllMetadataLoaded()
     }
     G::allMetadataLoaded = true;
     for (int i = 0; i < dm->rowCount(); ++i) {
-        if (dm->index(i, G::CreatedColumn).data().isNull()) {
+        if (!dm->index(i, G::MetadataLoadedColumn).data().toBool()) {
             G::allMetadataLoaded = false;
             break;
         }
@@ -258,7 +258,7 @@ metadata and icons are loaded into the datamodel.
         for (int i = startRow; i < endRow; ++i) {
             if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
                 foundItemsToLoad = true;
-            if (dm->sf->index(i, G::CreatedColumn).data().isNull())
+            if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
                 foundItemsToLoad = true;
             if (foundItemsToLoad) break;
         }
@@ -334,7 +334,7 @@ A chunk of metadata and icons are added to the datamodel.
         for (int i = startRow; i < endRow; ++i) {
             if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
                 foundItemsToLoad = true;
-            if (dm->sf->index(i, G::CreatedColumn).data().isNull())
+            if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
                 foundItemsToLoad = true;
             if (foundItemsToLoad) break;
         }
@@ -362,20 +362,16 @@ added to the datamodel. The image cache is updated.
         wait();
     }
     abort = false;
-
-//    currentRow = row;
     action = Action::NewFileSelected;
     foundItemsToLoad = false;
-//    if (currentRow <= prevFirstIconVisible || currentRow >= prevLastIconVisible) {
-        setRange();
-        for (int i = startRow; i < endRow; ++i) {
-            if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
-                foundItemsToLoad = true;
-            if (dm->sf->index(i, G::CreatedColumn).data().isNull())
-                foundItemsToLoad = true;
-            if (foundItemsToLoad) break;
-        }
-//    }
+    setRange();
+    for (int i = startRow; i < endRow; ++i) {
+        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
+            foundItemsToLoad = true;
+        if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
+            foundItemsToLoad = true;
+        if (foundItemsToLoad) break;
+    }
     start(TimeCriticalPriority);
 }
 
@@ -479,7 +475,7 @@ Load the thumb (icon) for all the image files in the folder(s).
     int rows = dm->rowCount();
     for (int row = 0; row < rows; ++row) {
         // is metadata already cached
-        if (!dm->index(row, G::CreatedColumn).data().isNull()) continue;
+        if (dm->index(row, G::MetadataLoadedColumn).data().toBool()) continue;
 
         QString fPath = dm->index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
@@ -565,7 +561,7 @@ startRow and endRow.
 //                     << fPath
 //                     << "dm->sf->index(row, G::CreatedColumn).data().isNull() ="
 //                     << dm->sf->index(row, G::CreatedColumn).data().isNull();
-            if (dm->sf->index(row, G::CreatedColumn).data().isNull()) {
+            if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
                 QFileInfo fileInfo(fPath);
                 /*
                    tried emit signal to metadata but really slow
@@ -579,10 +575,10 @@ startRow and endRow.
 //                    qDebug() << "XXX " << __FUNCTION__ << "Failed to load metadata for " << fPath;
                 }
             }
-            mutex.unlock();
+//            mutex.unlock();
 
             // load icon
-            mutex.lock();
+//            mutex.lock();
             if (idx.data(Qt::DecorationRole).isNull()) {
                 QImage image;
                 bool thumbLoaded = thumb->loadThumb(fPath, image);
@@ -665,7 +661,7 @@ If there has been a file selection change and not a new folder then update image
             G::allMetadataLoaded = true;
             mutex.lock();
             for (int i = 0; i < rowCount; ++i) {
-                if (dm->sf->index(i, G::CreatedColumn).data().isNull()) {
+                if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool()) {
                     G::allMetadataLoaded = false;
                     break;
                 }

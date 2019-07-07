@@ -1328,7 +1328,7 @@ to sync with gridView, and the metadataCacheThread is called to update metadata 
 
 If the change was caused by the user scrolling then we want to process it, as defined by
 G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
-another view then we do not want to process and getting into a loop.
+another view then we do not want to process and get into a loop.
 */
     {
     #ifdef ISDEBUG
@@ -1460,7 +1460,7 @@ the filter and sort operations cannot commence until all the metadata has been l
     int rows = dm->rowCount();
     // update progress for already loaded metadata
     for (int row = 0; row < rows; ++row) {
-        if (!dm->index(row, G::CreatedColumn).data().isNull()) {
+        if (dm->index(row, G::MetadataLoadedColumn).data().toBool()) {
             progressBar->updateProgress(row, row + 1, rows, G::progressAddMetadataColor, "");
         }
     }
@@ -7649,12 +7649,14 @@ around lack of notification when the QListView has finished painting itself.
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
 
+//    fileSelectionChange(idx, idx);
+
     // when okToScroll scroll thumbView to current row
     G::ignoreScrollSignal = false;
     QTime t = QTime::currentTime().addMSecs(1000);
     while (QTime::currentTime() < t) {
         if (thumbView->okToScroll()) {
-            G::wait(100);
+            G::wait(250);
             thumbView->scrollToRow(currentRow, __FUNCTION__);
             break;
         }
@@ -9009,8 +9011,8 @@ void MW::keyDown()
     #endif
     }
     qDebug() << __FUNCTION__;
-    if (G::mode == "Loupe") thumbView->selectDown();
-    if (G::mode == "Table") thumbView->selectDown();
+    if (G::mode == "Loupe") thumbView->selectNext();
+    if (G::mode == "Table") thumbView->selectNext();
     if (G::mode == "Grid") gridView->selectDown();
 }
 
@@ -9621,8 +9623,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    gridView->move();
-//    diagnosticsAll();
+    bool test = dm->index(0, G::MetadataLoadedColumn).data().toBool();
+    qDebug() << __FUNCTION__ << test;
 }
 
 // End MW

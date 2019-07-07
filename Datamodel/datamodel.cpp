@@ -151,6 +151,7 @@ DataModel::DataModel(QWidget *parent,
     // must include all prior Global dataModelColumns (any order okay)
     setHorizontalHeaderItem(G::PathColumn, new QStandardItem(QString("Icon")));
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem(QString("File Name")));
+    setHorizontalHeaderItem(G::MetadataLoadedColumn, new QStandardItem("Meta Loaded"));
     setHorizontalHeaderItem(G::RefineColumn, new QStandardItem("Refine"));
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick"));
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested"));
@@ -436,6 +437,7 @@ bool DataModel::addFileData()
         setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::IngestedColumn), "false");
         setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        setData(index(row, G::MetadataLoadedColumn), "false");
 
         /* Save info for duplicated raw and jpg files, which generally are the result of
         setting raw+jpg in the camera. The datamodel is sorted by file path, except raw
@@ -496,7 +498,7 @@ ImageMetadata DataModel::getMetadata(QString fPath)
     int row = fPathRow[fPath];
 
     // check if metadata loaded for this row
-    if (index(row, G::CreatedColumn).data().isNull()) {
+    if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->imageMetadata.row = row;
@@ -559,6 +561,7 @@ ImageMetadata DataModel::getMetadata(QString fPath)
     m.orientationOffset = index(row, G::OrientationOffsetColumn).data().toUInt();
     m.isXmp = index(row, G::IsXMPColumn).data().toBool();
 //     = index(row, G::RotationDegreesColumn), m.rotationDegrees
+    m.metadataLoaded  = index(row, G::MetadataLoadedColumn).data().toBool();
     return m;
 }
 
@@ -580,7 +583,7 @@ to run as a separate thread and can be executed directly.
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
         // is metadata already cached
-        if (!index(row, G::CreatedColumn).data().isNull()) continue;
+        if (index(row, G::MetadataLoadedColumn).data().toBool()) continue;
 
         QString fPath = index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
@@ -668,6 +671,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
     setData(index(row, G::ErrColumn), m.err);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
+    setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
 
     if (G::buildingFilters) {
         if (row % 1000 == 0 || row == 0) {
