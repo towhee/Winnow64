@@ -186,7 +186,7 @@ to prevent jarring changes in perceived scale by the user.
     else {
         // check metadata loaded for image (might not be if random slideshow)
         int dmRow = dm->fPathRow[fPath];
-        if (dm->index(dmRow, G::CreatedColumn).data().isNull()) {
+        if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
                 metadata->imageMetadata.row = dmRow;

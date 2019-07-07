@@ -1,5 +1,4 @@
 BUGS
-- Update metadata when scroll tableView?
 - gridview icons sometimes too big
 - Cache progress bar can cover cache activity spots if window is small
 - color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
@@ -12,6 +11,7 @@ BUGS
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
 PERFORMANCE
+- progress slow when filtered
 - filteredItemCount and unfilteredItemCount slow
 CODE IMPROVEMENTS
 - fix 300ms delay before scroll to currentRow on filterChange
@@ -39,6 +39,9 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Use metadataLoaded instead of createdDate.isNull()
+- Redo scrolling, wait for views and syncing views
+- Update metadata when scroll tableView
 - Page up/down do not always work
 - Removed - Check usage of MW::loadFilteredImageCache
 - remove iconSpacing and iconPadding and thumbsFit (no longer used)

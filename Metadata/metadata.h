@@ -89,6 +89,7 @@ public:
     QString cameraSN;
     QString lensSN;
     uint shutterCount;
+    bool metadataLoaded;
 
     ImageMetadata imageMetadata;            // agregate for mdCacher
     // end variables used to hold data

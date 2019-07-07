@@ -4381,7 +4381,11 @@ bool Metadata::formatJPG()
         if (createdExif.length() == 0) {
             createdExif = getString(ifdDataHash.value(36867).tagValue + startOffset,
                 ifdDataHash.value(36867).tagCount);
-            if (createdExif.length() > 0) createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+            if (createdExif.length() > 0) {
+                createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+            }
+//            if(!createdDate.isValid())
+//                createdDate = QDateTime::fromString("2017:10:10 17:26:08", "yyyy:MM:dd hh:mm:ss");
         }
 
         // EXIF: shutter speed
@@ -4562,13 +4566,13 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     }
     QFileInfo fileInfo(path);
     QString ext = fileInfo.completeSuffix().toLower();
-//    if (G::isThreadTrackingOn) track(fPath, "Reading ");
     bool success = false;
     int totDelay = 50;
     int msDelay = 0;
-    int msInc = 1;
+    int msInc = 10;
     bool fileOpened = false;
-    do {
+    qDebug() << __FUNCTION__ << path;
+//    do {
         if (file.open(QIODevice::ReadOnly)) {
             if (ext == "cr2") formatCanon();
             if (ext == "dng") formatDNG();
@@ -4583,14 +4587,14 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
             file.close();
             success = true;
         }
-        else {
-            err = "Could not open file to read metadata";    // try again
-            QThread::msleep(msInc);
-            msDelay += msInc;
-//            if (G::isThreadTrackingOn) track(fPath, err);
-        }
-    }
-    while ((msDelay < totDelay) && !success);
+//        else {
+//            qDebug() << __FUNCTION__ << "Could not open " << path;
+//            err = "Could not open file to read metadata";    // try again
+//            QThread::msleep(msInc);
+//            msDelay += msInc;
+//        }
+//    }
+//    while ((msDelay < totDelay) && !success);
 
     // not all files have thumb or small jpg embedded
     if (offsetFullJPG == 0 && ext != "jpg" && fileOpened) {
@@ -4626,15 +4630,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     // initialize edited rotation
     rotationDegrees = 0;
 
-    if (success) track(fPath, "Success");
-    else {
-        track(fPath, "FAILED TO LOAD METADATA");
-        qDebug() << G::t.restart() << "\t" << "FAILED TO LOAD METADATA" << fPath;
-    }
-
-    #ifdef ISPROFILE
-    qDebug() << G::t.restart() << "\t" << "=> Metadata::readMetadata: End" << G::t.nsecsElapsed() << "\t\t\t" << fPath;  G::t.start();
-    #endif
     return success;
 }
 
@@ -4705,6 +4700,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
 //    ImageMetadata imageMetadata;
     bool result = readMetadata(isReport, fPath);
+    qDebug() << __FUNCTION__ << "result =" << result;
 
 //    if (fPath == "D:/Pictures/_ThumbTest/FujiXT2.RAF")
 //        qDebug() << G::t.restart() << "\t" << "Lets break here";
