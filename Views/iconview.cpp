@@ -199,7 +199,7 @@ QString IconView::diagnostics()
     rpt << "\n" << "labelFontSize = " << G::s(labelFontSize);
     rpt << "\n" << "showIconLabels = " << G::s(showIconLabels);
     rpt << "\n" << "badgeSize = " << G::s(badgeSize);
-    rpt << "\n" << "readyToScroll = " << G::s(readyToScroll);
+    rpt << "\n" << "scrollWhenReady = " << G::s(scrollWhenReady);
     rpt << "\n" << "assignedIconWidth = " << G::s(assignedIconWidth);
     rpt << "\n" << "skipResize = " << G::s(skipResize);
     rpt << "\n" << "bestAspectRatio = " << G::s(bestAspectRatio);
@@ -1359,9 +1359,30 @@ MW::mouseClickScroll == true.
     }
     qDebug() << __FUNCTION__ << objectName() << "row =" << row
              << "source =" << source;
-    QModelIndex idx = dm->sf->index(row, 0);
-    scrollTo(idx, QAbstractItemView::PositionAtCenter);
-    readyToScroll = false;
+//    QTime t = QTime::currentTime().addMSecs(1000);
+//    while (QTime::currentTime() < t) {
+//        if (okToScroll()) {
+//            G::wait(50);
+            QModelIndex idx = dm->sf->index(row, 0);
+            scrollTo(idx, QAbstractItemView::PositionAtCenter);
+//            return;
+//        }
+//        qApp->processEvents(QEventLoop::AllEvents, 50);
+//    }
+//    qDebug() << __FUNCTION__ << "FAILED TO SCROLL TO ROW " << row;
+}
+
+bool IconView::okToScroll()
+{
+    if (objectName() == "Thumbnails") {
+        qDebug() << __FUNCTION__ << objectName()
+                 << "horizontalScrollBar()->maximum() =" << horizontalScrollBar()->maximum()
+                 << "getHorizontalScrollBarMax() = " << getHorizontalScrollBarMax();
+        return horizontalScrollBar()->maximum() > 0.95 * getHorizontalScrollBarMax();
+    }
+    else {
+        return verticalScrollBar()->maximum() > 0.95 * getVerticalScrollBarMax();
+    }
 }
 
 int IconView::getHorizontalScrollBarOffset(int row)

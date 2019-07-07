@@ -180,7 +180,7 @@ the metadata and icons in the range (chunk).
 
 However, when the program syncs the views this generates more scrollbar signals that would
 loop.  This is prevented by the G::ignoreScrollSignal flag.  This is also employed in
-fileSelectionChange, where visible views are centered on the current selection.
+fileSelectionChange, where visible views are scrolled to center on the current selection.
 
 When the user changes modes in MW (ie from Grid to Loupe) a IconView instance (either
 thumbView or gridView) can change state from hidden to visible. Since hidden widgets cannot be
@@ -190,7 +190,7 @@ paint event and when the last paint event occurs the scrollToCurrent function is
 last paint event is identified by calculating the maximum of the scrollbar range and comparing
 it to the paint event, which updates the range each time. With larger datasets (ie 1500+
 thumbs) it can take a number of paint events and 100s of ms to complete. A flag is assigned
-(readyToScroll) to show when we need to monitor so not checking needlessly. Unfortunately
+(scrollWhenReady) to show when we need to monitor so not checking needlessly. Unfortunately
 there does not appear to be any signal or event when ListView is finished hence this cludge.
 
 */
@@ -525,72 +525,68 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     last paint event is identified by calculating the maximum of the scrollbar range and
     comparing it to the paint event, which updates the range each time. With larger datasets
     (ie 1500+ thumbs) it can take a number of paint events and 100s of ms to complete. A flag
-    is assigned (readyToScroll) to show when we need to monitor so not checking needlessly.
+    is assigned (scrollWhenReady) to show when we need to monitor so not checking needlessly.
     Unfortunately there does not appear to be any signal or event when ListView is finished
     hence this cludge.
     */
 
-    if(event->type() == QEvent::Paint
-            && thumbView->readyToScroll
-            && (obj->objectName() == "IconViewVerticalScrollBar"
-            || obj->objectName() == "IconViewHorizontalScrollBar"))
-    {
-        if (obj->objectName() == "IconViewHorizontalScrollBar") {
-            /*
-            qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
-                     << thumbView->horizontalScrollBar()->maximum()
-                     << thumbView->getHorizontalScrollBarMax();*/
-            if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
-                /*
-                qDebug() << objectName()
-                 << ": Event Filter sending row =" << currentRow
-                 << "horizontalScrollBarMax Qt vs Me"
-                 << thumbView->horizontalScrollBar()->maximum()
-                 << thumbView->getHorizontalScrollBarMax();*/
-                thumbView->scrollToRow(scrollRow, __FUNCTION__);
-            }
-        }
-        if (obj->objectName() == "IconViewVerticalScrollBar") {
-             /*
-             qDebug() << G::t.restart() << "\t" << objectName() << "VerScrollCurrentMax / FinalMax:"
-                      << thumbView->verticalScrollBar()->maximum()
-                      << thumbView->getVerticalScrollBarMax();*/
-             if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
-                /*
-                 qDebug() << G::t.restart() << "\t" << objectName()
-                          << ": Event Filter sending row =" << currentRow
-                          << "verticalScrollBarMax Qt vs Me"
-                          << thumbView->verticalScrollBar()->maximum()
-                          << thumbView->getVerticalScrollBarMax();*/
-                 thumbView->scrollToRow(scrollRow, __FUNCTION__);
-             }
-         }
-        if (obj->objectName() == "TableViewHorizontalScrollBar") {
-            qDebug() << "TableViewHorizontalScrollBar";
-        }
-    }
-
-    if(event->type() == QEvent::Paint
-            && gridView->readyToScroll
-            && (obj->objectName() == "IconViewVerticalScrollBar"))
-    {
-         if (gridView->verticalScrollBar()->maximum() > 0.95 * gridView->getVerticalScrollBarMax()){
-             /*
-             qDebug() << "XXXXXXXXXXXXXXX      " << objectName()
-                      << ": Event Filter sending row =" << currentRow
-                      << "verticalScrollBarMax Qt vs Me"
-                      << gridView->verticalScrollBar()->maximum()
-                      << gridView->getVerticalScrollBarMax();
-             */
-             gridView->scrollToRow(scrollRow, __FUNCTION__);
-         }
-    }
+//    if(event->type() == QEvent::Paint
+//            && thumbView->scrollWhenReady
+//            && (obj->objectName() == "IconViewVerticalScrollBar"
+//            || obj->objectName() == "IconViewHorizontalScrollBar"))
+//    {
+//        if (obj->objectName() == "IconViewHorizontalScrollBar") {
+//            /*
+//            qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
+//                     << thumbView->horizontalScrollBar()->maximum()
+//                     << thumbView->getHorizontalScrollBarMax();*/
+//            if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
+//                /*
+//                qDebug() << objectName()
+//                 << ": Event Filter sending row =" << currentRow
+//                 << "horizontalScrollBarMax Qt vs Me"
+//                 << thumbView->horizontalScrollBar()->maximum()
+//                 << thumbView->getHorizontalScrollBarMax();*/
+//                thumbView->scrollWhenReady = false;
+//                thumbView->scrollToRow(scrollRow, __FUNCTION__);
+//            }
+//        }
+//        if (obj->objectName() == "IconViewVerticalScrollBar") {
+//             /*
+//             qDebug() << G::t.restart() << "\t" << objectName() << "VerScrollCurrentMax / FinalMax:"
+//                      << thumbView->verticalScrollBar()->maximum()
+//                      << thumbView->getVerticalScrollBarMax();*/
+//             if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
+//                /*
+//                 qDebug() << G::t.restart() << "\t" << objectName()
+//                          << ": Event Filter sending row =" << currentRow
+//                          << "verticalScrollBarMax Qt vs Me"
+//                          << thumbView->verticalScrollBar()->maximum()
+//                          << thumbView->getVerticalScrollBarMax();*/
+//                 thumbView->scrollWhenReady = false;
+//                 thumbView->scrollToRow(scrollRow, __FUNCTION__);
+//             }
+//         }
+//        if (obj->objectName() == "TableViewHorizontalScrollBar") {
+//            qDebug() << "TableViewHorizontalScrollBar";
+//        }
+//    }
 
 //    if(event->type() == QEvent::Paint
-//            && (obj->objectName() == "TableViewVerticalScrollBar"))
+//            && gridView->scrollWhenReady
+//            && (obj->objectName() == "IconViewVerticalScrollBar"))
 //    {
-//        qDebug() << "TableViewVerticalScrollBar" << scrollRow;
-//        thumbView->scrollToRow(scrollRow, __FUNCTION__);
+//         if (gridView->verticalScrollBar()->maximum() > 0.95 * gridView->getVerticalScrollBarMax()){
+//             /*
+//             qDebug() << "XXXXXXXXXXXXXXX      " << objectName()
+//                      << ": Event Filter sending row =" << currentRow
+//                      << "verticalScrollBarMax Qt vs Me"
+//                      << gridView->verticalScrollBar()->maximum()
+//                      << gridView->getVerticalScrollBarMax();
+//             */
+//             gridView->scrollWhenReady = false;
+//             gridView->scrollToRow(scrollRow, __FUNCTION__);
+//         }
 //    }
 
     /* CONTEXT MENU **********************************************************************
@@ -920,6 +916,12 @@ void MW::folderSelectionChange()
 
     uncheckAllFilters();
 //    sortFileNameAction->setChecked(true);
+
+    /* When a new folder is loaded it takes time to update the views and they will not respond
+    to scroll commands until they are finished. Set flags that are updated in eventFilter.
+    */
+//    thumbView->scrollWhenReady = true;
+//    gridView->scrollWhenReady = true;
 
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         qDebug() << "Datamodel Failed To Load for" << currentViewDir;
@@ -7604,15 +7606,15 @@ around lack of notification when the QListView has finished painting itself.
     saveSelection();
 
     // sync scrolling between modes (loupe, grid and table)
-    if (prevMode == "Table") {
-        tableView->setViewportParameters();
-        if (tableView->isCurrentVisible) scrollRow = currentRow;
-        else scrollRow = tableView->midVisibleRow;
-    }
-    if (prevMode == "Grid") {
-        if (gridView->isRowVisible(currentRow)) scrollRow = currentRow;
-        else scrollRow = gridView->midVisibleRow;
-    }
+//    if (prevMode == "Table") {
+//        tableView->setViewportParameters();
+//        if (tableView->isCurrentVisible) scrollRow = currentRow;
+//        else scrollRow = tableView->midVisibleRow;
+//    }
+//    if (prevMode == "Grid") {
+//        if (gridView->isRowVisible(currentRow)) scrollRow = currentRow;
+//        else scrollRow = gridView->midVisibleRow;
+//    }
 
     /* show imageView in the central widget. This makes thumbView visible, and
     it updates the index to its previous state.  The index update triggers
@@ -7647,11 +7649,21 @@ around lack of notification when the QListView has finished painting itself.
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
 
-    /* flag to intercept scrollbar paint events in MW::eventFilter and
-       scroll to position when the painting is completed */
-    thumbView->readyToScroll = true;
+    // when okToScroll scroll thumbView to current row
+    G::ignoreScrollSignal = false;
+    QTime t = QTime::currentTime().addMSecs(1000);
+    while (QTime::currentTime() < t) {
+        if (thumbView->okToScroll()) {
+            G::wait(100);
+            thumbView->scrollToRow(currentRow, __FUNCTION__);
+            break;
+        }
+        qApp->processEvents(QEventLoop::AllEvents, 50);
+    }
+    G::ignoreScrollSignal = true;
 
     prevMode = "Loupe";
+
 }
 
 void MW::gridDisplay()
@@ -7681,17 +7693,17 @@ around lack of notification when the QListView has finished painting itself.
     }
 
     // sync scrolling between modes (loupe, grid and table)
-    if (prevMode == "Table") {
-        tableView->setViewportParameters();
-        qDebug() << "table  midVisible =" << tableView->midVisibleRow
-                 << "tableView->isCurrentVisible =" << tableView->isCurrentVisible;
-        if (tableView->isCurrentVisible) scrollRow = currentRow;
-        else scrollRow = tableView->midVisibleRow;
-    }
-    if (prevMode == "Loupe" && thumbView->isVisible() == true) {
-        if(thumbView->isRowVisible(currentRow)) scrollRow = currentRow;
-        else scrollRow = thumbView->midVisibleRow;
-    }
+//    if (prevMode == "Table") {
+//        tableView->setViewportParameters();
+//        qDebug() << "table  midVisible =" << tableView->midVisibleRow
+//                 << "tableView->isCurrentVisible =" << tableView->isCurrentVisible;
+//        if (tableView->isCurrentVisible) scrollRow = currentRow;
+//        else scrollRow = tableView->midVisibleRow;
+//    }
+//    if (prevMode == "Loupe" && thumbView->isVisible() == true) {
+//        if(thumbView->isRowVisible(currentRow)) scrollRow = currentRow;
+//        else scrollRow = thumbView->midVisibleRow;
+//    }
 
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
     thumbDock->setVisible(false);
@@ -7714,8 +7726,18 @@ around lack of notification when the QListView has finished painting itself.
     // selection has been lost while tableView and possibly thumbView were hidden
     recoverSelection();
 
-    // see MW::eventFilter (waits for IconView to finish painting after mode change)
-    gridView->readyToScroll = true;
+    // when okToScroll scroll thumbView to current row
+    G::ignoreScrollSignal = false;
+    QTime t = QTime::currentTime().addMSecs(1000);
+    while (QTime::currentTime() < t) {
+        if (gridView->okToScroll()) {
+            G::wait(100);
+            gridView->scrollToRow(currentRow, __FUNCTION__);
+            break;
+        }
+        qApp->processEvents(QEventLoop::AllEvents, 50);
+    }
+    G::ignoreScrollSignal = true;
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
@@ -7785,9 +7807,11 @@ void MW::tableDisplay()
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
 
-    tableView->scrollTo(dm->sf->index(scrollRow, 0), QAbstractItemView::PositionAtCenter);
+    G::ignoreScrollSignal = false;
+    tableView->scrollToRow(scrollRow, __FUNCTION__);
+//    tableView->scrollTo(dm->sf->index(scrollRow, 0), QAbstractItemView::PositionAtCenter);
 //    tableView->scrollToCurrent();
-    if (thumbView->isVisible()) thumbView->readyToScroll = true;
+//    if (thumbView->isVisible()) thumbView->scrollWhenReady = true;
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
