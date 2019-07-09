@@ -431,21 +431,29 @@ that have icons are tracked in the list iconsCached as the dm row (not dm->sf pr
     }
     QMutableListIterator<int> i(iconsCached);
     QPixmap nullPm;
-    mutex.lock();
+//    mutex.lock();
     while (i.hasNext()) {
+        if (abort) return;
         i.next();
         // the datamodel row dmRow
         int dmRow = i.value();
         // the filtered proxy row sfRow
-        // mapFromSource returns -1 if dm->index(dmRow, 0) is not in the filtered dataset
         int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
+        /* mapFromSource returns -1 if dm->index(dmRow, 0) is not in the filtered dataset
+        This can happen is the user switches folders and the datamodel is cleared before the
+        thread abort is processed.
+        */
+        if (sfRow == -1) return;
+
         // remove all loaded icons outside target range
         if (sfRow < startRow || sfRow > endRow) {
             i.remove();
-            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(nullPm);
+            if (!abort) dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(nullPm);
+//            qDebug() << __FUNCTION__ << dmRow << sfRow;
+//            qApp->processEvents();
         }
     }
-    mutex.unlock();
+//    mutex.unlock();
 }
 
 void MetadataCache::iconMax(QPixmap &thumb)
@@ -672,6 +680,7 @@ If there has been a file selection change and not a new folder then update image
         // clean up orphaned icons outside icon range   rgh what about other actions
         if (action >= Action::NewFileSelected) {
             iconCleanup();
+            if (abort) return;
         }
 
         if (action == Action::NewFolder) {

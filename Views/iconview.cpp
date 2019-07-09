@@ -410,7 +410,8 @@ int IconView::getRandomRow()
     G::track(__FUNCTION__);
     #endif
     }
-    return qrand() % (dm->sf->rowCount());
+    return QRandomGenerator::global()->generate() % (dm->sf->rowCount());
+//    return qrand() % (dm->sf->rowCount());
 }
 
 bool IconView::isSelectedItem()
@@ -1357,27 +1358,22 @@ MW::mouseClickScroll == true.
     G::track(__FUNCTION__);
     #endif
     }
+    /*
     qDebug() << __FUNCTION__ << objectName() << "row =" << row
-             << "source =" << source;
-//    QTime t = QTime::currentTime().addMSecs(1000);
-//    while (QTime::currentTime() < t) {
-//        if (okToScroll()) {
-//            G::wait(50);
-            QModelIndex idx = dm->sf->index(row, 0);
-            scrollTo(idx, QAbstractItemView::PositionAtCenter);
-//            return;
-//        }
-//        qApp->processEvents(QEventLoop::AllEvents, 50);
-//    }
-//    qDebug() << __FUNCTION__ << "FAILED TO SCROLL TO ROW " << row;
+//             << "source =" << source;
+*/
+    QModelIndex idx = dm->sf->index(row, 0);
+    scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
 bool IconView::okToScroll()
 {
     if (objectName() == "Thumbnails") {
+        /*
         qDebug() << __FUNCTION__ << objectName()
                  << "horizontalScrollBar()->maximum() =" << horizontalScrollBar()->maximum()
                  << "getHorizontalScrollBarMax() = " << getHorizontalScrollBarMax();
+        */
         return horizontalScrollBar()->maximum() > 0.95 * getHorizontalScrollBarMax();
     }
     else {

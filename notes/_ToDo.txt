@@ -1,5 +1,6 @@
 BUGS
-- gridview icons sometimes too big
+- MetadataCache range does not always include all visible icons
+- Gridview icons sometimes too big
 - Cache progress bar can cover cache activity spots if window is small
 - color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Finish cache preferences
@@ -39,6 +40,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Stop and restart image caching when running slideshow
 - Use metadataLoaded instead of createdDate.isNull()
 - Redo scrolling, wait for views and syncing views
 - Update metadata when scroll tableView

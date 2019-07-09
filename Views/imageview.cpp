@@ -304,6 +304,10 @@ If isSlideshow then hide mouse cursor unless is moves.
              */
 
     matrix.reset();
+    if (isSlideshow) {
+        zoom = zoomFit;
+        if (zoom > 1) zoom = 1;
+    }
     matrix.scale(zoom, zoom);
     setMatrix(matrix);
     emit zoomChange(zoom);

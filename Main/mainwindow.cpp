@@ -827,6 +827,7 @@ void MW::folderSelectionChange()
     metadataCacheThread->stopMetadateCache();
     G::allMetadataLoaded = false;
 
+//    qDebug() << __FUNCTION__ << "Stopped threads";
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
     qApp->processEvents();
 
@@ -995,7 +996,7 @@ void MW::folderSelectionChange()
     G::isInitializing = false;
 }
 
-void MW:: fileSelectionChange(QModelIndex current, QModelIndex previous)
+void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
 {
 /*
 Triggered when file selection changes (folder change selects new image, so it also triggers
@@ -1127,9 +1128,7 @@ delegate use of the current index must check the row.
 
     // update caching when folder has been loaded, not a slideshow and not the same image
     // which can happen when filtering or sorting
-    if (G::isNewFolderLoaded &&
-            !(isSlideShow && slideShowRandom)/* &&
-            current != previous*/) {
+    if (G::isNewFolderLoaded && !(isSlideShow/* && slideShowRandom*/)) {
         updateMetadataCacheIconviewState();
         metadataCacheThread->fileSelectionChange();
     }
@@ -1544,7 +1543,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     size in the info panel.
     */
 
-    if (isSlideShow && slideShowRandom) return;
+//    if (isSlideShow && slideShowRandom) return;
 
     source = "";    // suppress compiler warning
 /*    qDebug() << "MW::updateImageCacheStatus  Instruction ="
@@ -8964,7 +8963,6 @@ void MW::keyRight()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if (G::mode == "Compare") compareImages->go("Right");
     else thumbView->selectNext();
 }
@@ -8979,7 +8977,6 @@ void MW::keyLeft()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if (G::mode == "Compare") compareImages->go("Left");
     else thumbView->selectPrev();
 }
@@ -8994,7 +8991,6 @@ void MW::keyUp()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if (G::mode == "Loupe") thumbView->selectUp();
     if (G::mode == "Table") thumbView->selectUp();
     if (G::mode == "Grid") gridView->selectUp();
@@ -9010,7 +9006,6 @@ void MW::keyDown()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if (G::mode == "Loupe") thumbView->selectNext();
     if (G::mode == "Table") thumbView->selectNext();
     if (G::mode == "Grid") gridView->selectDown();
@@ -9023,7 +9018,6 @@ void MW::keyPageUp()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if (G::mode == "Loupe") thumbView->selectPageUp();
     if (G::mode == "Table") tableView->selectPageUp();
     if (G::mode == "Grid") gridView->selectPageUp();
@@ -9036,7 +9030,6 @@ void MW::keyPageDown()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if (G::mode == "Loupe") thumbView->selectPageDown();
     if (G::mode == "Table") tableView->selectPageDown();
     if (G::mode == "Grid") gridView->selectPageDown();
@@ -9088,7 +9081,6 @@ void MW::keyScrollUp()
 
 void MW::keyScrollPageDown()
 {
-    qDebug() << __FUNCTION__;
     if(G::mode == "Grid") gridView->scrollPageDown(0);
     if(thumbView->isVisible()) thumbView->scrollPageDown(0);
 }
@@ -9119,13 +9111,16 @@ void MW::slideShow()
     #endif
     }
     if (isSlideShow) {
+        // stop slideshow
         imageView->setCursor(Qt::ArrowCursor);
         isSlideShow = false;
         slideShowAction->setText(tr("Slide Show"));
         G::popUp->show("Stopping slideshow");
         slideShowTimer->stop();
         delete slideShowTimer;
+        imageCacheThread->updateImageCachePosition();
     } else {
+        // start slideshow
         imageView->setCursor(Qt::BlankCursor);
         isSlideShow = true;
         QString msg = "Starting slideshow";
@@ -9139,6 +9134,7 @@ void MW::slideShow()
         // No image caching if random slide show
         if (imageCacheThread->isRunning() && slideShowRandom) {
             imageCacheThread->pauseImageCache();
+            imageCacheThread->clearImageCache(isSlideShow);
         }
         progressBar->clearProgress();
 
