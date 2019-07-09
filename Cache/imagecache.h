@@ -28,7 +28,7 @@ public:
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
     void rebuildImageCacheParameters(QString &currentImageFullPath);
     void stopImageCache();
-    void clearImageCache();
+    void clearImageCache(bool isSlideShow = false);
     void pauseImageCache();
     void resumeImageCache();
     bool cacheUpToDate();           // target range all cached
@@ -69,7 +69,7 @@ public:
         float sizeMB;               // memory req'd to cache iamge
     } cacheItem;
 
-    QList<CacheItem> cacheItemList, cacheItemListCopy;
+    QList<CacheItem> cacheItemList;
 
 signals:
     void showCacheStatus(QString instruction, int key = 0, QString source = "");

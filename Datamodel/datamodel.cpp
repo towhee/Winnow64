@@ -894,8 +894,6 @@ void DataModel::filteredItemCount()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
-
     QTreeWidgetItemIterator it(filters);
     while (*it) {
         if ((*it)->parent()) {
@@ -1070,6 +1068,5 @@ filtration then the image cache needs to be reloaded to match the new proxy (sf)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     invalidateFilter();
 }

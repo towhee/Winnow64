@@ -110,14 +110,17 @@ respect potential thread collision issues.  The functions and objects are:
     Pixmap  (the class used to load embedded jpgs as QImage from the image files)
 
 */
-void ImageCache::clearImageCache()
+
+void ImageCache::clearImageCache(bool isSlideShow)
 {
     imCache.clear();
-    cacheItemList.clear();
-    cacheItemListCopy.clear();
     toCache.clear();
     toDecache.clear();
+    cache.currMB = 0;
+    emit showCacheStatus("Clear Image Cache", 0, __FUNCTION__);
+    if (isSlideShow) return;
     // do not clear cacheItemList as it might be still being used in MW::updateImageCacheStatus
+    cacheItemList.clear();
 }
 
 void ImageCache::stopImageCache()
@@ -821,13 +824,13 @@ Apparently there needs to be a slight delay before calling.
 
     // if all images are cached then we're done
     if (cacheUpToDate()) {
-//        qDebug() << __FUNCTION__ << "cache up-to-date - quitting image cache";
         /* instance where go from blank folder to one image folder.  The first image is
            directly loaded (and cached) in ImageView and the file selection position changes,
            so this function is called, but the cache is up-to-date.  Make sure the image cache
            activity light is turned off in the status bar, which is normally done at the end of
            ImageCache::run.
         */
+//        qDebug() << __FUNCTION__ << "cache up-to-date - quitting image cache";
         emit updateIsRunning(false, true);  // bool isRunning, bool showCacheLabel
         return;
     }

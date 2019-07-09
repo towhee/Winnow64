@@ -4571,8 +4571,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     int msDelay = 0;
     int msInc = 10;
     bool fileOpened = false;
-    qDebug() << __FUNCTION__ << path;
-//    do {
+    do {
         if (file.open(QIODevice::ReadOnly)) {
             if (ext == "cr2") formatCanon();
             if (ext == "dng") formatDNG();
@@ -4587,14 +4586,14 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
             file.close();
             success = true;
         }
-//        else {
-//            qDebug() << __FUNCTION__ << "Could not open " << path;
-//            err = "Could not open file to read metadata";    // try again
-//            QThread::msleep(msInc);
-//            msDelay += msInc;
-//        }
-//    }
-//    while ((msDelay < totDelay) && !success);
+        else {
+            qDebug() << __FUNCTION__ << "Could not open " << path;
+            err = "Could not open file to read metadata";    // try again
+            QThread::msleep(msInc);
+            msDelay += msInc;
+        }
+    }
+    while ((msDelay < totDelay) && !success);
 
     // not all files have thumb or small jpg embedded
     if (offsetFullJPG == 0 && ext != "jpg" && fileOpened) {
@@ -4690,7 +4689,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
                  << source;
         return false;
     }
-//    if (metaCache[fPath].metadataLoaded && !isReport) return true;
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load
     readEssentialMetadata = essential;
@@ -4698,9 +4696,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     okToReadXmp = isLoadXmp;
     okToReadXmp = true;
 
-//    ImageMetadata imageMetadata;
     bool result = readMetadata(isReport, fPath);
-    qDebug() << __FUNCTION__ << "result =" << result;
 
 //    if (fPath == "D:/Pictures/_ThumbTest/FujiXT2.RAF")
 //        qDebug() << G::t.restart() << "\t" << "Lets break here";
@@ -4761,9 +4757,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.err = err;
 
     imageMetadata.metadataLoaded = result;
-
-//    metaCache.insert(fileInfo.filePath(), imageMetadata);
-
     return result;
 }
 
