@@ -111,16 +111,16 @@ respect potential thread collision issues.  The functions and objects are:
 
 */
 
-void ImageCache::clearImageCache(bool isSlideShow)
+void ImageCache::clearImageCache()
 {
     imCache.clear();
     toCache.clear();
     toDecache.clear();
     cache.currMB = 0;
     emit showCacheStatus("Clear Image Cache", 0, __FUNCTION__);
-    if (isSlideShow) return;
-    // do not clear cacheItemList as it might be still being used in MW::updateImageCacheStatus
-    cacheItemList.clear();
+    // do not clear cacheItemList if called from start slideshow
+    if (!G::isSlideShow)
+        cacheItemList.clear();
 }
 
 void ImageCache::stopImageCache()
@@ -268,24 +268,24 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
     uint sumMB = 0;
     for (int i = 0; i < cache.totFiles; ++i) {
         // check if item metadata has been loaded and will be targeted
-        if (sumMB < cache.maxMB && !cacheItemList.at(i).isMetadata) {
-            // need to get metadata to calc memory req'd to cached
+//        if (sumMB < cache.maxMB && !cacheItemList.at(i).isMetadata) {
+//            // need to get metadata to calc memory req'd to cached
 
-            // file path and dm source row in case filtered or sorted
-            QString fPath = cacheItemList[i].fName;
-            int dmRow = dm->fPathRow[fPath];
+//            // file path and dm source row in case filtered or sorted
+//            QString fPath = cacheItemList[i].fName;
+//            int dmRow = dm->fPathRow[fPath];
 
-            // load metadata
-            QFileInfo fileInfo(fPath);
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-                metadata->imageMetadata.row = dmRow;
-                dm->addMetadataForItem(metadata->imageMetadata);
-                ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
-                ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
-                cacheItemList[i].sizeMB = (float)w * h / 262144;
-                cacheItemList[i].isMetadata = w > 0;
-            }
-        }
+//            // load metadata
+//            QFileInfo fileInfo(fPath);
+//            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+//                metadata->imageMetadata.row = dmRow;
+//                dm->addMetadataForItem(metadata->imageMetadata);
+//                ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
+//                ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
+//                cacheItemList[i].sizeMB = (float)w * h / 262144;
+//                cacheItemList[i].isMetadata = w > 0;
+//            }
+//        }
         sumMB += cacheItemList.at(i).sizeMB;
         if (sumMB < cache.maxMB) {
             cacheItemList[i].isTarget = true;
@@ -441,52 +441,6 @@ bool ImageCache::cacheUpToDate()
     return true;
 }
 
-void ImageCache::checkForSurplus()
-{
-/*
-If the user filters and the cache is being rebuilt check for images that are already cached
-and no longer needed (not in the target range). Make sure to call setTargetRange first.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    QStringList cachedList;
-    QHashIterator<QString, QImage> i(imCache);
-    while (i.hasNext()) {
-        i.next();
-        cachedList << i.key();
-    }
-
-    for(int i=0; i < cachedList.length(); i++) {
-        QString fPath = cachedList.at(i);
-        for (int i = 0; i < cache.totFiles; ++i) {
-            if(cacheItemList.at(i).fName == fPath && cacheItemList.at(i).isTarget) break;
-            imCache.remove(fPath);
-        }
-    }
-}
-
-void ImageCache::checkAlreadyCached()
-{
-/* If the user filters and the cache is being rebuilt check for images that are already
-cached and update cacheItemList status.  Make sure to call setTargetRange first.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    for (int i = 0; i < cache.totFiles; ++i) {
-        if (imCache.contains(cacheItemList.at(i).fName)) {
-            if (cacheItemList.at(i).isTarget) {
-                cacheItemList[i].isCached = true;
-            }
-        }
-    }
-}
-
 void ImageCache::checkForOrphans()
 {
 /*
@@ -511,7 +465,21 @@ cache buffer.
     }
 }
 
-void ImageCache::reportCache(QString title)
+QString ImageCache::diagnostics()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', objectName() + " ImageCache Diagnostics");
+    rpt << "\n" ;
+    rpt << reportCache("");
+    rpt << reportImCache();
+
+    rpt << "\n\n" ;
+    return reportString;
+}
+
+QString ImageCache::reportCache(QString title)
 {
     {
     #ifdef ISDEBUG
@@ -524,6 +492,7 @@ void ImageCache::reportCache(QString title)
     reportString = "";
     rpt.setString(&reportString);
 
+    rpt << "\ncacheItemList (used to manage image cache):";
     rpt  << "\n Title:" << title
          << "  Key:" << cache.key
          << "  cacheMB:" << cache.currMB
@@ -551,12 +520,12 @@ void ImageCache::reportCache(QString title)
     rpt << "File Name";
     rpt.setFieldWidth(0);
     rpt << "\n";
-    std::cout << reportString.toStdString() << std::flush;
+//    std::cout << reportString.toStdString() << std::flush;
 
     for (int i = 0; i < cache.totFiles; ++i) {
         int row = dm->fPathRow[cacheItemList.at(i).fName];
-        rpt.flush();
-        reportString = "";
+//        rpt.flush();
+//        reportString = "";
         rpt.setFieldWidth(9);
         rpt.setFieldAlignment(QTextStream::AlignRight);
         rpt << i
@@ -575,12 +544,13 @@ void ImageCache::reportCache(QString title)
         rpt << "   ";
         rpt.setFieldAlignment(QTextStream::AlignLeft);
         rpt.setFieldWidth(50);
-        rpt  << cacheItemList.at(i).fName;
+        rpt << cacheItemList.at(i).fName;
         rpt.setFieldWidth(0);
         rpt << "\n";
 
-        std::cout << reportString.toStdString() << std::flush;
+//        std::cout << reportString.toStdString() << std::flush;
     }
+    return reportString;
 }
 
 void ImageCache::reportToCache()
@@ -590,7 +560,28 @@ void ImageCache::reportToCache()
         qDebug() << toCache.at(i);
 }
 
-void ImageCache::reportCacheProgress(QString action)
+QString ImageCache::reportImCache()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.flush();
+    reportString = "";
+    rpt.setString(&reportString);
+    rpt << "\nimCache hash:";
+    QHash<QString, QImage>::iterator i;
+    for (i = imCache.begin(); i != imCache.end(); ++i) {
+        rpt << "\n";
+        rpt << G::s(i.key());
+        rpt << ": image width = " << G::s(i.value().width());
+        rpt << " height = " << G::s(i.value().height());
+    }
+    return reportString;
+//        qDebug() << i.key() << ": "
+//                 << "width =" << i.value().width()
+//                 << "height =" << i.value().height();
+}
+
+QString ImageCache::reportCacheProgress(QString action)
 {
     {
     #ifdef ISDEBUG
@@ -615,7 +606,7 @@ void ImageCache::reportCacheProgress(QString action)
         rpt.setFieldWidth(7); rpt << "nCache";
         rpt.setFieldWidth(9); rpt << "nDecache\n";
         qDebug() << G::t.restart() << "\t" << reportString;
-        return;
+        return reportString;
     }
 
     rpt.flush();
@@ -676,7 +667,6 @@ It is built from dm->sf (sorted and/or filtered datamodel).
 //            cacheItem.sizeMB += (float)w * h / 262144;
 //        }
         cacheItem.isMetadata = w > 0;
-//        cacheItem.isMetadata = !dm->sf->index(i, G::CreatedColumn).data().isNull();
         cacheItemList.append(cacheItem);
 
         folderMB += cacheItem.sizeMB;
@@ -843,11 +833,11 @@ Apparently there needs to be a slight delay before calling.
 void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath)
 {
 /*
-When the image list is filtered the image cache needs to be updated. The imageCacheList is
-rebuilt, the current image is set, the priorities are recalculated, the target range is
-redone, the imCache is checked and surplus items are removed and isCached in imageCacheList is
-updated for any images already cached and retargeted. The cache status is updated. Finally the
-image caching thread is restarted.
+When the datamodel is filtered the image cache needs to be updated. The cacheItemList is
+rebuilt for the filtered dataset and isCached updated, the current image is set, and any
+surplus cached images (not in the filtered dataset) are removed from imCache.
+
+The image cache is now ready to run by calling updateImageCachePosition().
 */
     {
     #ifdef ISDEBUG
@@ -860,26 +850,30 @@ image caching thread is restarted.
     // just in case stopImageCache not called before this
     if (isRunning()) pauseImageCache();
 
+    // build a new cacheItemList for the filtered/sorted dataset
     buildImageCacheList();
+
+    // update cacheItemList
     cache.key = 0;
+    // list of files in cacheItemList (all the filtered files) used to check for surplus
+    QStringList fList;
+
+    // assign cache.key and update isCached status in cacheItemList
     for(int row = 0; row < cache.totFiles; ++row) {
-        if(cacheItemList.at(row).fName == currentImageFullPath)
-            cache.key = row;
+        QString fPath = cacheItemList.at(row).fName;
+        fList.append(fPath);
+        // get key for current image
+        if (fPath == currentImageFullPath) cache.key = row;
+        // update cacheItemList for images already cached
+        if (imCache.contains(fPath)) cacheItemList[row].isCached = true;
     }
 
-    cache.prevKey = cache.key;
-    cache.currMB = getImCacheSize();
-
-    setPriorities(cache.key);
-    setTargetRange();
-    checkAlreadyCached();
-    checkForSurplus();
-
-//    reportCache("filterImageCache after setPriorities and setTargetRange");
-
-    if (cache.isShowCacheStatus) emit showCacheStatus("Update all rows", 0, "ImageCache::filterImageCache");
-
-//    start(IdlePriority);
+    // remove surplus cached images from imCache if they are not in the filtered dataset
+    QHashIterator<QString, QImage> i(imCache);
+    while (i.hasNext()) {
+        i.next();
+        if (!fList.contains(i.key())) imCache.remove(i.key());
+    }
 }
 
 void ImageCache::run()

@@ -29,11 +29,9 @@ ImageView::ImageView(QWidget *parent,
                      InfoString *infoString,
                      bool isShootingInfoVisible,
                      bool isRatingBadgeVisible,
-                     int classificationBadgeDiam,
-                     bool &isSlideshow):
+                     int classificationBadgeDiam):
 
-                     QGraphicsView(centralWidget),
-                     isSlideshow(isSlideshow)
+                     QGraphicsView(centralWidget)
 {
     {
     #ifdef ISDEBUG
@@ -49,7 +47,6 @@ ImageView::ImageView(QWidget *parent,
     this->thumbView = thumbView;
     this->infoString = infoString;
     this->classificationBadgeDiam = classificationBadgeDiam;
-    this->isSlideshow = isSlideshow;
     pixmap = new Pixmap(this, dm, metadata);
 
     scene = new QGraphicsScene();
@@ -304,7 +301,7 @@ If isSlideshow then hide mouse cursor unless is moves.
              */
 
     matrix.reset();
-    if (isSlideshow) {
+    if (G::isSlideShow) {
         zoom = zoomFit;
         if (zoom > 1) zoom = 1;
     }
@@ -316,7 +313,7 @@ If isSlideshow then hide mouse cursor unless is moves.
     if (isZoom) scrollPct = getScrollPct();
     wasZoomFit = zoom == zoomFit;
 
-    if (!isSlideshow) {
+    if (!G::isSlideShow) {
         if (isZoom) setCursor(Qt::OpenHandCursor);
         else setCursor(Qt::ArrowCursor);
     }
@@ -978,7 +975,7 @@ Set a delay to hide cursor if in slideshow mode
     static QPoint prevPos = event->pos();
 
     if (isLeftMouseBtnPressed && event->pos() != prevPos) {
-        if(isSlideshow) emit killSlideshow();
+        if(G::isSlideShow) emit killSlideshow();
         isMouseDrag = true;
         setCursor(Qt::ClosedHandCursor);
         horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
@@ -989,7 +986,7 @@ Set a delay to hide cursor if in slideshow mode
         mousePressPt.setY(event->y());
     }
     else{
-        if(isSlideshow) {
+        if(G::isSlideShow) {
             if(event->pos() != prevPos) {
                 setCursor(Qt::ArrowCursor);
                 QTimer::singleShot(500, this, SLOT(hideCursor()));
@@ -1076,7 +1073,6 @@ QString ImageView::diagnostics()
     rpt << "\n" << "currentImagePath = " << G::s(currentImagePath);
     rpt << "\n" << "firstImageLoaded = " << G::s(firstImageLoaded);
     rpt << "\n" << "classificationBadgeDiam = " << G::s(classificationBadgeDiam);
-    rpt << "\n" << "isSlideshow = " << G::s(isSlideshow);
     rpt << "\n" << "cursorIsHidden = " << G::s(cursorIsHidden);
     rpt << "\n" << "moveImageLocked = " << G::s(moveImageLocked);
     rpt << "\n" << "ignoreMousePress = " << G::s(ignoreMousePress);

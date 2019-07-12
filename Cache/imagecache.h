@@ -28,13 +28,15 @@ public:
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
     void rebuildImageCacheParameters(QString &currentImageFullPath);
     void stopImageCache();
-    void clearImageCache(bool isSlideShow = false);
+    void clearImageCache();
     void pauseImageCache();
     void resumeImageCache();
     bool cacheUpToDate();           // target range all cached
     QSize getPreviewSize();
-    void reportCache(QString title = "");
+    QString diagnostics();
+    QString reportCache(QString title = "");
     void reportToCache();
+    QString reportImCache();
 
     QHash<QString, QImage> imCache;
 
@@ -101,14 +103,12 @@ private:
     bool nextToCache();             // find highest priority not cached
     bool nextToDecache();           // find lowest priority cached - return -1 if none cached
     void checkForOrphans();         // check no strays in imageCache from jumping around
-    void checkAlreadyCached();      // after filtration check if image targeted and already cached
-    void checkForSurplus();         // after filtration get rid of cached images not needed
     static bool prioritySort(const CacheItem &p1, const CacheItem &p2);
     static bool keySort(const CacheItem &k1, const CacheItem &k2);
     void buildImageCacheList(); //
     void updateImageCacheList(); //
     QSize scalePreview(ulong w, ulong h);
-    void reportCacheProgress(QString action);
+    QString reportCacheProgress(QString action);
 };
 
 #endif // IMAGECACHE_H

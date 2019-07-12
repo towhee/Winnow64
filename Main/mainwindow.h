@@ -240,7 +240,6 @@ public:
 
     bool showImageCount = true;
     bool isCurrentFolderOkay;
-    bool isSlideShow;
     bool copyOp;
     bool isDragDrop;
     QString dragDropFilePath;
@@ -280,6 +279,9 @@ public slots:
     void resortImageCache();
     void setCentralMessage(QString message);
     void slideShow();
+    void slideShowResetDelay();
+    void slideShowResetSequence();
+    void slideshowHelpMsg();
 
     void test();                    // for debugging
     void test2();
@@ -351,7 +353,7 @@ private slots:
     void setCacheStatusVisibility();
     void updateIconBestFit();
 //    void updateImageCachePosition();  rgh trigger imageCache
-    void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy);
+    void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy = "");
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateMetadataCacheStatus(int row, bool clear = false);
     void updateImageCacheStatus(QString instruction, int row, QString source);
@@ -741,6 +743,7 @@ private:
     QLabel *filterStatusLabel;
     QLabel *subfolderStatusLabel;
     QLabel *rawJpgStatusLabel;
+    QLabel *slideShowStatusLabel;
     QLabel *cacheStatusLabel;
     ProgressBar *progressBar;
     QLabel *progressLabel;

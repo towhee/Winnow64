@@ -140,6 +140,7 @@ namespace G
     extern bool allMetadataLoaded;
     extern bool buildingFilters;
     extern bool ignoreScrollSignal;
+    extern bool isSlideShow;
 
     extern bool isThreadTrackingOn;
     extern bool showAllTableColumns;

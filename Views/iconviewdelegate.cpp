@@ -282,6 +282,7 @@ textRect         = a rectangle below itemRect
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
 
+
     // Make the item border rect smaller to accommodate the border.
     QRect cellRect(option.rect);
     QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
@@ -390,7 +391,7 @@ textRect         = a rectangle below itemRect
     }
 
     // draw the cache circle
-    if (!isCached) {
+    if (!isCached && !G::isSlideShow) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect);

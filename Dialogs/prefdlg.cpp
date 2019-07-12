@@ -385,6 +385,7 @@ void Prefdlg::on_slideshowDelaySpinbox_valueChanged(int value)
 {
     if (okToUpdate) {
         m0->slideShowDelay = value;
+        m0->slideShowResetDelay();
     }
 }
 
@@ -392,6 +393,7 @@ void Prefdlg::on_slideshowRandomChk_clicked()
 {
     if (okToUpdate) {
         m0->slideShowRandom = ui->slideshowRandomChk->isChecked();
+        m0->slideShowResetSequence();
     }
 }
 
