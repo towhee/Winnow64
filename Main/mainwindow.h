@@ -829,6 +829,7 @@ private:
     bool isStartSilentCheckForUpdates = true;    // flag true until startup check for updates has been completed
     bool isStressTest;
     bool hasGridBeenActivated;
+    bool isSlideshowPaused;
 
     bool isLeftMouseBtnPressed = false;
     bool isMouseDrag = false;
@@ -876,6 +877,7 @@ private:
     void createGridView();
     void createSelectionModel();
     void createStatusBar();
+    void updateStatusBar();
     void createMessageView();
     void createAppStyle();
     void setupCentralWidget();

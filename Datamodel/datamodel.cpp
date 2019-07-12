@@ -736,16 +736,16 @@ void DataModel::buildFilters()
         QString day = index(row, G::DayColumn).data().toString();
         if (!dayMap.contains(day)) dayMap[day] = day;
 
-        if (row % 1000 == 0 || row == 0) {
-            s = "Step 2 0f " + buildSteps + ":  Finding unique items ";
-            s += QString::number(row) + " of " + QString::number(rowCount());
-            G::popUp->setPopupText(buildMsg + s);
-            prev = row;
-        }
+//        if (row % 1000 == 0 || row == 0) {
+//            s = "Step 2 0f " + buildSteps + ":  Finding unique items ";
+//            s += QString::number(row) + " of " + QString::number(rowCount());
+//            G::popUp->setPopupText(buildMsg + s);
+//            prev = row;
+//        }
     }
 
     // build filter items
-    s = "Step 3 0f " + buildSteps + ":  Mapping filters ";
+    s = "Step 2 0f " + buildSteps + ":  Mapping filters ";
     G::popUp->setPopupText(buildMsg + s);
 
     filters->addCategoryFromData(modelMap, filters->models);
@@ -756,7 +756,7 @@ void DataModel::buildFilters()
     filters->addCategoryFromData(yearMap, filters->years);
     filters->addCategoryFromData(dayMap, filters->days);
 
-    s = "Step 4 0f " + buildSteps + ":  Tabulating filtered items ...";
+//    s = "Step 4 0f " + buildSteps + ":  Tabulating filtered items ...";
     G::popUp->setPopupText(buildMsg + s);
     qApp->processEvents();
     filteredItemCount();

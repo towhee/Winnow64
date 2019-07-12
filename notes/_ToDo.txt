@@ -44,6 +44,7 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Changed PopUp to rich text and added alignment parameter
 - Add Slideshow active to statusbar
 - Enable filter change when click of filter text as well as filter checkbox
 - Progress slow when filtered

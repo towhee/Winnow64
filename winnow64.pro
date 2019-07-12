@@ -107,8 +107,7 @@ SOURCES += Utilities/utilities.cpp
 #SOURCES += Test/readmdconcurrent.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/loadusbdlg.ui \
-    Help/testrichtext.ui
+    Dialogs/loadusbdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/ingestdlg.ui
@@ -133,7 +132,9 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/versions
+DISTFILES += Docs/versions \
+    Docs/test.html \
+    notes/scratch.html
 DISTFILES += notes/_Notes
 DISTFILES += notes/_ToDo.txt
 DISTFILES += notes/DeployInstall.txt
