@@ -26,6 +26,7 @@ datamodel.
     }
     setRootIsDecorated(true);
     setSelectionMode(QAbstractItemView::NoSelection);
+//    setSelectionBehavior(QAbstractItemView::SelectRows);
     setColumnCount(5);
     setHeaderHidden(false);
     setColumnWidth(0, 250);
@@ -480,12 +481,18 @@ void Filters::itemChangedSignal(QTreeWidgetItem *item, int column)
 
 void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
 {
+/* When the user clicks on a child item checkbox or text execute a filterChange, which filters
+the datamodel based on which filter items are checked.  If the user clicks on the text (ie
+"Purple" in the color class filters) then toggle the checkbox state.  If the user clicks the
+checkbox then the state toggles automatically.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     bool isChild = item->parent();
-    bool ok = isChild && column == 0
-              && G::isNewFolderLoaded
-              && !G::buildingFilters
-              && itemHasChanged;
-    if (ok) {
+    if (isChild && column == 0 && G::isNewFolderLoaded && !G::buildingFilters) {
         /*
         qDebug() << __FUNCTION__
              << "G::isNewFolderLoaded" << G::isNewFolderLoaded
@@ -497,6 +504,10 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
              << "itemHasChanged" << itemHasChanged
              << "result" << result;
              */
+        if (!itemHasChanged) {
+            if (item->checkState(0) == Qt::Unchecked) item->setCheckState(0, Qt::Checked);
+            else item->setCheckState(0, Qt::Unchecked);
+        }
         emit filterChange("Filters::itemClickedSignal");
     }
     itemHasChanged = false;

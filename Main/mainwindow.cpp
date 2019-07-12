@@ -299,7 +299,7 @@ void MW::initialize()
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     G::isInitializing = true;
     isNormalScreen = true;
-    isSlideShow = false;
+    G::isSlideShow = false;
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
     ingestHistoryFolders = new QStringList;
@@ -310,6 +310,7 @@ void MW::initialize()
     filterStatusLabel = new QLabel;
     subfolderStatusLabel = new QLabel;
     rawJpgStatusLabel = new QLabel;
+    slideShowStatusLabel = new QLabel;
     prevCentralView = 0;
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
     G::ratings << "1" << "2" << "3" << "4" << "5";
@@ -417,29 +418,30 @@ void MW::keyPressEvent(QKeyEvent *event)
 void MW::keyReleaseEvent(QKeyEvent *event)
 {
 
-    // cancel slideshow
     if (event->key() == Qt::Key_Escape) {
-        if (isSlideShow) slideShow();     // toggles slideshow off
+        // hide a popup message
+        if (G::popUp->isVisible()) {
+            G::popUp->hide();
+            return;
+        }
+        // cancel slideshow
+        if (G::isSlideShow) slideShow();     // toggles slideshow off
     }
     // toggle random / sequential slideshow next slide
-    if (isSlideShow && event->key() == Qt::Key_R) {
-        slideShowRandom = !slideShowRandom;
-        QString msg = "Setting slideshow progress to ";
-        slideShowRandom ? msg = msg + "random" : msg = msg + "sequential";
-        G::popUp->show(msg);
-        return;
-    }
-    // change slideshow delay 1 - 9 seconds
-    if (isSlideShow) {
+    if (G::isSlideShow) {
+        if (event->key() == Qt::Key_R) {
+            slideshowHelpMsg();
+        }
+        if (event->key() == Qt::Key_Question) {
+            slideShowRandom = !slideShowRandom;
+            slideShowResetSequence();
+        }
+        // change slideshow delay 1 - 9 seconds
         int n = event->key() - 48;
         if (n > 0 && n <= 9) {
             slideShowDelay = n;
-            slideShowTimer->setInterval(n * 1000);
-            QString msg = "Reset slideshow interval to ";
-            msg += QString::number(n) + " seconds";
-            G::popUp->show(msg);
+            slideShowResetDelay();
         }
-        return;
     }
 
     QMainWindow::keyReleaseEvent(event);
@@ -451,10 +453,10 @@ bool MW::event(QEvent *event)
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
 
         if (keyEvent->key() == Qt::Key_Escape) {
-            if (isSlideShow) slideShow();     // toggles slideshow off
+            if (G::isSlideShow) slideShow();     // toggles slideshow off
         }
         // change delay 1 - 9 seconds
-        if (isSlideShow) {
+        if (G::isSlideShow) {
             int n = keyEvent->key() - 48;
             if (n > 0 && n <=9) {
             }
@@ -761,7 +763,7 @@ bool MW::checkForUpdate()
     if(process.error() != QProcess::UnknownError)
     {
         QString msg = "Error checking for updates";
-        G::popUp->show(msg, 1500);
+        G::popUp->showPopup(msg, 1500);
         isStartSilentCheckForUpdates = false;
         return false;
     }
@@ -776,7 +778,7 @@ bool MW::checkForUpdate()
     if(data.isEmpty())
     {
         QString msg = "No updates available";
-        if(!isStartSilentCheckForUpdates) G::popUp->show(msg, 1500);
+        if(!isStartSilentCheckForUpdates) G::popUp->showPopup(msg, 1500);
         isStartSilentCheckForUpdates = false;
         return false;
     }
@@ -796,7 +798,7 @@ bool MW::checkForUpdate()
     // Close Winnow
     if (startMaintenanceTool) qApp->closeAllWindows();
     else if(!isStartSilentCheckForUpdates)
-        G::popUp->show("The maintenance tool failed to open", 2000);
+        G::popUp->showPopup("The maintenance tool failed to open", 2000);
 
     isStartSilentCheckForUpdates = false;
 
@@ -842,7 +844,7 @@ void MW::folderSelectionChange()
     setThreadRunStatusInactive();
 
     // stop slideshow if a new folder is selected
-    if (isSlideShow && !isStressTest) slideShow();
+    if (G::isSlideShow && !isStressTest) slideShow();
 
     // if previously in compare mode switch to loupe mode
     if (asCompareAction->isChecked()) {
@@ -1117,7 +1119,7 @@ delegate use of the current index must check the row.
 
     // updateStatus happens in IconView::selectionChanged
 
-    progressLabel->setVisible(isShowCacheStatus);
+    if (!G::isSlideShow) progressLabel->setVisible(isShowCacheStatus);
 
     // update imageView, use cache if image loaded, else read it from file
     if (G::mode == "Loupe") {
@@ -1128,7 +1130,7 @@ delegate use of the current index must check the row.
 
     // update caching when folder has been loaded, not a slideshow and not the same image
     // which can happen when filtering or sorting
-    if (G::isNewFolderLoaded && !(isSlideShow/* && slideShowRandom*/)) {
+    if (G::isNewFolderLoaded) {
         updateMetadataCacheIconviewState();
         metadataCacheThread->fileSelectionChange();
     }
@@ -1543,7 +1545,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     size in the info panel.
     */
 
-//    if (isSlideShow && slideShowRandom) return;
+//    if (G::isSlideShow && slideShowRandom) return;
 
     source = "";    // suppress compiler warning
 /*    qDebug() << "MW::updateImageCacheStatus  Instruction ="
@@ -2968,6 +2970,12 @@ void MW::createActions()
     addAction(diagnosticsDataModelAction);
     connect(diagnosticsDataModelAction, &QAction::triggered, this, &MW::diagnosticsDataModel);
 
+    diagnosticsImageCacheAction = new QAction(tr("Report ImageCache Diagnostics"), this);
+    diagnosticsImageCacheAction->setObjectName("diagnosticsImageCache");
+    diagnosticsImageCacheAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsImageCacheAction);
+    connect(diagnosticsImageCacheAction, &QAction::triggered, this, &MW::diagnosticsImageCache);
+
     // Testing
 
     testAction = new QAction(tr("Test"), this);
@@ -3242,6 +3250,7 @@ void MW::createMenus()
     helpDiagnosticsMenu->addAction(diagnosticsImageViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsMetadataAction);
     helpDiagnosticsMenu->addAction(diagnosticsDataModelAction);
+    helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
 
     // Separator Action
     QAction *separatorAction = new QAction(this);
@@ -3913,8 +3922,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
                               infoString,
                               setting->value("isImageInfoVisible").toBool(),
                               setting->value("isRatingBadgeVisible").toBool(),
-                              setting->value("classificationBadgeInImageDiameter").toInt(),
-                              isSlideShow);
+                              setting->value("classificationBadgeInImageDiameter").toInt());
 
     if (isSettings) {
         imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
@@ -4363,6 +4371,8 @@ void MW::createStatusBar()
     statusBar()->addWidget(subfolderStatusLabel);
     rawJpgStatusLabel->setStyleSheet("QLabel{color:red;}");
     statusBar()->addWidget(rawJpgStatusLabel);
+    slideShowStatusLabel->setStyleSheet("QLabel{color:red;}");
+    statusBar()->addWidget(slideShowStatusLabel);
 
 
     setThreadRunStatusInactive();
@@ -4624,9 +4634,6 @@ void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QStri
     G::track(__FUNCTION__);
     #endif
     }
-    // calledBy is present for debugging
-    calledBy = "";  // suppress compiler warning
-
     if (isRunning) {
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
         #ifdef Q_OS_WIN
@@ -4640,7 +4647,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QStri
         #endif
     }
     metadataThreadRunningLabel->setText("◉");
-    if (isShowCacheThreadActivity) progressLabel->setVisible(showCacheLabel);
+    if (isShowCacheThreadActivity && !G::isSlideShow) progressLabel->setVisible(showCacheLabel);
 }
 
 void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
@@ -4774,7 +4781,7 @@ void MW::buildFilters()
     G::buildingFilters = true;      // req'd for user messaging in load all metadata
     G::popUp->setPopUpSize(800, 100);
     QString msg = "Building filters.  This could take a while to complete.\n";
-    G::popUp->show(msg, 0);
+    G::popUp->showPopup(msg, 0);
     updateStatus(false, "Building filters: loading metadata for all images ...");
     if (!G::allMetadataLoaded) {
         loadEntireMetadataCache();
@@ -4785,7 +4792,7 @@ void MW::buildFilters()
 //    imageCacheThread->filterImageCache(dm->currentFilePath);
     updateStatus(true);
     G::buildingFilters = false;
-    G::popUp->show("Filters completed");
+    G::popUp->showPopup("Filters completed");
 }
 
 void MW::filterChange(QString source)
@@ -4903,12 +4910,12 @@ void MW::invertFilters()
     if (!G::allMetadataLoaded) loadEntireMetadataCache();
 
     if (dm->rowCount() == 0) {
-        G::popUp->show("No images available to invert filtration", 2000);
+        G::popUp->showPopup("No images available to invert filtration", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
     if (dm->rowCount() == dm->sf->rowCount()) {
-        G::popUp->show("No filters assigned - null inversion would result", 2000);
+        G::popUp->showPopup("No filters assigned - null inversion would result", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
@@ -4965,7 +4972,7 @@ void MW::filterLastDay()
     #endif
     }
     if (dm->rowCount() == 0) {
-        G::popUp->show("No images available to filter", 2000);
+        G::popUp->showPopup("No images available to filter", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
@@ -4976,7 +4983,7 @@ void MW::filterLastDay()
     // if there still are no days then tell user and return
     int last = filters->days->childCount();
     if (filters->days->childCount() == 0) {
-        G::popUp->show("No days are available to filter", 2000);
+        G::popUp->showPopup("No days are available to filter", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
@@ -5003,7 +5010,7 @@ void MW::refine()
     #endif
     }
     // if slideshow then do not refine
-    if (isSlideShow) return;
+    if (G::isSlideShow) return;
 
     // Are there any picks to refine?
     bool isPick = false;
@@ -5015,7 +5022,7 @@ void MW::refine()
     }
 
     if (!isPick) {
-        G::popUp->show("There are no picks to refine", 2000);
+        G::popUp->showPopup("There are no picks to refine", 2000);
         return;
     }
 
@@ -5902,7 +5909,7 @@ QString MW::diagnostics()
     rpt << "\n" << "sortColumn = " << G::s(sortColumn);
     rpt << "\n" << "showImageCount = " << G::s(showImageCount);
     rpt << "\n" << "isCurrentFolderOkay = " << G::s(isCurrentFolderOkay);
-    rpt << "\n" << "isSlideShow = " << G::s(isSlideShow);
+    rpt << "\n" << "G::isSlideShow = " << G::s(G::isSlideShow);
     rpt << "\n" << "copyOp = " << G::s(copyOp);
     rpt << "\n" << "isDragDrop = " << G::s(isDragDrop);
     rpt << "\n" << "dragDropFilePath = " << G::s(dragDropFilePath);
@@ -5948,7 +5955,7 @@ void MW::diagnosticsCompareView() {}
 void MW::diagnosticsMetadata() {diagnosticsReport(metadata->diagnostics(dm->currentFilePath));}
 void MW::diagnosticsXMP() {}
 void MW::diagnosticsMetadataCache() {}
-void MW::diagnosticsImageCache() {}
+void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
 void MW::diagnosticsFilters() {}
 void MW::diagnosticsFileTree() {}
@@ -6096,7 +6103,7 @@ void MW::runExternalApp()
     int nFiles = selectedIdxList.size();
 
     if (nFiles < 1) {
-        G::popUp->show("No images have been selected", 2000);
+        G::popUp->showPopup("No images have been selected", 2000);
         return;
     }
 
@@ -6202,7 +6209,7 @@ void MW::setShowImageCount()
     #endif
     }
     if (!fsTree->isVisible()) {
-        G::popUp->show("Show image count is only available when the Folders Panel is visible",
+        G::popUp->showPopup("Show image count is only available when the Folders Panel is visible",
               1500);
     }
     bool isShow = showImageCountAction->isChecked();
@@ -6489,7 +6496,7 @@ are not applicable.
     }
     // only makes sense to zoom when in loupe or compare view
     if (G::mode == "Table" || G::mode == "Grid") {
-        G::popUp->show("The zoom dialog is only available in loupe view", 2000);
+        G::popUp->showPopup("The zoom dialog is only available in loupe view", 2000);
         return;
     }
 
@@ -7831,13 +7838,13 @@ void MW::compareDisplay()
     updateStatus(true);
     int n = selectionModel->selectedRows().count();
     if (n < 2) {
-        G::popUp->show("Select more than one image to compare.");
+        G::popUp->showPopup("Select more than one image to compare.");
         return;
     }
     if (n > 9) {
         QString msg = QString::number(n);
         msg += " images have been selected.  Only the first 9 will be compared.";
-        G::popUp->show(msg, 2000);
+        G::popUp->showPopup(msg, 2000);
     }
 
     /* If thumbdock was visible and enter grid mode, make selection, and then
@@ -8319,7 +8326,8 @@ void MW::setCacheStatusVisibility()
     G::track(__FUNCTION__);
     #endif
     }
-    if (isShowCacheThreadActivity) progressLabel->setVisible(isShowCacheStatus);
+    if (isShowCacheThreadActivity && !G::isSlideShow)
+        progressLabel->setVisible(isShowCacheStatus);
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
 }
@@ -8580,16 +8588,16 @@ void MW::ejectUsb(QString path)
         refreshFolders();
         int result = Usb::eject(driveRoot);
         if(result < 2) {
-            G::popUp->show("Ejecting drive " + driveRoot, 2000);
+            G::popUp->showPopup("Ejecting drive " + driveRoot, 2000);
             folderSelectionChange();
 //            noFolderSelected();
 //            currentViewDir = "";
         }
         else
-            G::popUp->show("Failed to eject drive " + driveRoot, 2000);
+            G::popUp->showPopup("Failed to eject drive " + driveRoot, 2000);
     }
     else {
-        G::popUp->show("Drive " + currentViewDir[0]
+        G::popUp->showPopup("Drive " + currentViewDir[0]
               + " is not removable and cannot be ejected", 2000);
     }
 }
@@ -8738,7 +8746,7 @@ the rating for all the selected thumbs.
     #endif
     }
     // do not set rating if slideshow is on
-    if (isSlideShow) return;
+    if (G::isSlideShow) return;
 
     QObject* obj = sender();
     QString s = obj->objectName();
@@ -8815,7 +8823,7 @@ set the color class for all the selected thumbs.
     #endif
     }
     // do not set color class if slideshow is on
-    if (isSlideShow) return;
+    if (G::isSlideShow) return;
 
     QObject* obj = sender();
     QString s = obj->objectName();
@@ -9110,31 +9118,34 @@ void MW::slideShow()
     G::track(__FUNCTION__);
     #endif
     }
-    if (isSlideShow) {
+    if (G::isSlideShow) {
         // stop slideshow
         imageView->setCursor(Qt::ArrowCursor);
-        isSlideShow = false;
+        slideShowStatusLabel->setText("");
+        G::isSlideShow = false;
         slideShowAction->setText(tr("Slide Show"));
-        G::popUp->show("Stopping slideshow");
+        G::popUp->showPopup("Stopping slideshow");
         slideShowTimer->stop();
         delete slideShowTimer;
         imageCacheThread->updateImageCachePosition();
     } else {
         // start slideshow
         imageView->setCursor(Qt::BlankCursor);
-        isSlideShow = true;
-        QString msg = "Starting slideshow";
+        G::isSlideShow = true;
+        slideShowStatusLabel->setText("SLIDESHOW");
+        QString msg = "PRESS ? DURING SLIDESHOW FOR SHORTCUTS\n\nStarting slideshow";
         msg += "\nInterval = " + QString::number(slideShowDelay) + " second(s)";
         if (slideShowRandom)  msg += "\nRandom selection";
-        else msg += "\nLinear selection";
+        else msg += "\nSequential selection";
         if (slideShowWrap) msg += "\nWrap at end of slides";
         else msg += "\nStop at end of slides";
-        G::popUp->show(msg, 4000, true);
+        qDebug() << __FUNCTION__ << msg;
+        G::popUp->showPopup(msg, 4000, true, 0.75, Qt::AlignLeft);
 
         // No image caching if random slide show
         if (imageCacheThread->isRunning() && slideShowRandom) {
             imageCacheThread->pauseImageCache();
-            imageCacheThread->clearImageCache(isSlideShow);
+            imageCacheThread->clearImageCache();
         }
         progressBar->clearProgress();
 
@@ -9175,6 +9186,73 @@ void MW::nextSlide()
             folderSelectionChange();
         }
     }
+}
+
+void MW::slideShowResetDelay()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    slideShowTimer->setInterval(slideShowDelay * 1000);
+    QString msg = "Reset slideshow interval to ";
+    msg += QString::number(slideShowDelay) + " seconds";
+    G::popUp->showPopup(msg);
+}
+
+void MW::slideShowResetSequence()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString msg = "Setting slideshow progress to ";
+    slideShowRandom ? msg = msg + "random" : msg = msg + "sequential";
+    G::popUp->showPopup(msg);
+}
+
+void MW::slideshowHelpMsg()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString selection;
+    if (slideShowRandom)  selection = "random selection";
+    else selection = "Sequential selection";
+//    QString msg = "Slideshow Shortcuts:"
+//                  "<p>"
+//                  "S\t : toggle to start/end slideshow<br>"
+//                  "1 to 9\t : instantly change the interval (seconds)<br>"
+//                  "R\t : toggle between sequential and random selection<br>"
+//                  "P\t : pause slideshow<br>"
+//                  "←\t : go back to a previous slide<br>"
+//                  "</p>"
+//                  "Current settings:<p>"
+//                  "</p>"
+//                  "Interval  = " + QString::number(slideShowDelay) + " seconds<br>"
+//                  "Selection = " + selection;
+
+    QString msg =
+//        "<html><head/><body>"
+        "<p><b>Slideshow Shortcuts:</b><br/></p>"
+        "<table border=\"0\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\">"
+        "<tr><td width=\"100\"><p><font color=\"red\"><b>S</b></font></p></td><td><p>Toggle to start/end slideshow</p></td></tr>"
+        "<tr><td><p><font color=\"red\"><b>1 to 9</b></font></p></td><td><p>Change the slideshow interval (seconds)</p></td></tr>"
+        "<tr><td><p><font color=\"red\"><b>P</b></font></p></td><td><p>Pause the slideshow</p></td></tr>"
+        "<tr><td><p><font color=\"red\"><b>←</b></font></p></td><td><p>Go back to a previous slide</p></td></tr></table><p>"
+        "Current settings:<p>"
+        "<ul style=\"line-height:50%; list-style-type:none;\""
+//        "<ul style=\"list-style-type:none\"; \"line-height:50%\""
+        "<li>Interval  = "  + QString::number(slideShowDelay) + " seconds</li>"
+        "<li>Selection = " + selection + "</li>"
+        "</ul><p><p>"
+        "Press <font color=\"red\"><b>Esc</b></font> to close this message";
+//        "</body></html>";
+    G::popUp->showPopup(msg, 0, false, 0.75, Qt::AlignLeft);
 }
 
 void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
@@ -9610,7 +9688,8 @@ void MW::test2()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    thumbView->setWrapping(false);
+    qDebug() << G::popUp->isVisible();
+
     return;
 
     QString fPath = "D:/Pictures/_DNG/DngNikonD850FromLightroom.dng";
@@ -9619,8 +9698,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    bool test = dm->index(0, G::MetadataLoadedColumn).data().toBool();
-    qDebug() << __FUNCTION__ << test;
+    slideshowHelpMsg();
+    return;
+//    G::popUp->label.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    QString s = "This is a test\n"
+            "Second line, aligned to the left\n\n"
+            "Press Esc to close this message";
+    G::popUp->showPopup(s, 0, true, 0.75, Qt::AlignLeft);
 }
 
 // End MW

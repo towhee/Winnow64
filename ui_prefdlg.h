@@ -467,9 +467,10 @@ public:
         slideshowDelaySpinbox->setObjectName(QString::fromUtf8("slideshowDelaySpinbox"));
         slideshowDelaySpinbox->setGeometry(QRect(200, 40, 48, 18));
         slideshowDelaySpinbox->setFont(font);
+        slideshowDelaySpinbox->setMaximum(3600);
         label_11 = new QLabel(pageSlideshow);
         label_11->setObjectName(QString::fromUtf8("label_11"));
-        label_11->setGeometry(QRect(20, 40, 111, 18));
+        label_11->setGeometry(QRect(20, 40, 171, 18));
         label_11->setFont(font);
         stackedWidget->addWidget(pageSlideshow);
         pageThumbnails = new QWidget();
@@ -809,7 +810,7 @@ public:
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
         QObject::connect(fontSizeSlider_2, SIGNAL(valueChanged(int)), fontSizeLbl_2, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(0);
+        stackedWidget->setCurrentIndex(3);
         listContainer->setCurrentIndex(0);
 
 
@@ -936,7 +937,7 @@ public:
 #ifndef QT_NO_TOOLTIP
         label_11->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This sets the amount of time each image is displayed before the next image appears.  If set to zero then each image will be displayed until you manually move forward or backwards.  Note that you can also change this delay while the slideshow is active by pressing the zero to nine (0 - 9) keys.</p></body></html>", nullptr));
 #endif // QT_NO_TOOLTIP
-        label_11->setText(QApplication::translate("Prefdlg", "Delay (sec)", nullptr));
+        label_11->setText(QApplication::translate("Prefdlg", "Delay (1 - 3600 sec)", nullptr));
         groupBox->setTitle(QApplication::translate("Prefdlg", "Docked", nullptr));
         showThumbLabelChk->setText(QApplication::translate("Prefdlg", "Show thumbnail filename", nullptr));
         label_7->setText(QApplication::translate("Prefdlg", "Font size", nullptr));

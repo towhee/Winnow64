@@ -21,7 +21,7 @@ void RenameEdit::keyPressEvent(QKeyEvent *event)
     switch (event->key()) {
     case Qt::Key_Slash:
     case Qt::Key_Backslash:
-        G::popUp->show("The characters \"\\\" and \"/\" are not permitted");
+        G::popUp->showPopup("The characters \"\\\" and \"/\" are not permitted");
         return;
     }
     QLineEdit::keyPressEvent(event);

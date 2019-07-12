@@ -716,7 +716,7 @@ If there has been a file selection change and not a new folder then update image
                  << "previousRow" << previousRow
                  << "G::isNewFolderLoaded" << G::isNewFolderLoaded;
                  */
-        if (G::isNewFolderLoaded) {
+        if (G::isNewFolderLoaded && !G::isSlideShow) {
             emit updateImageCachePositionAfterDelay();
         }
     }

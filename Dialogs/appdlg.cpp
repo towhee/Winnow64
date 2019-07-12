@@ -139,7 +139,7 @@ void Appdlg::on_removeBtn_clicked()
 {
     int row = ui->appsTable->currentRow();
     if (row < 0 || ui->appsTable->currentRow() > 9) {
-        G::popUp->show("No row selected");
+        G::popUp->showPopup("No row selected");
         return;
     }
 

@@ -107,7 +107,8 @@ SOURCES += Utilities/utilities.cpp
 #SOURCES += Test/readmdconcurrent.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/loadusbdlg.ui
+    Dialogs/loadusbdlg.ui \
+    Help/testrichtext.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/ingestdlg.ui

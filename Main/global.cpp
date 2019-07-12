@@ -35,6 +35,7 @@ namespace G
     bool allMetadataLoaded;
     bool buildingFilters;
     bool ignoreScrollSignal;
+    bool isSlideShow;
 
     // not persistent
     bool isThreadTrackingOn;

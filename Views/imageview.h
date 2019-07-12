@@ -26,8 +26,7 @@ public:
               InfoString *infoString,
               bool isShootingInfoVisible,
               bool isRatingBadgeVisible,
-              int classificationBadgeDiam,
-              bool &isSlideshow);
+              int classificationBadgeDiam);
 
     qreal zoom;
     qreal refZoom;                      // adjusted to real screen pixels
@@ -173,7 +172,6 @@ private:
     bool firstImageLoaded;
     int classificationBadgeDiam;
 
-    bool &isSlideshow;
     bool cursorIsHidden;        // use for slideshow and full screen - review rgh
     bool moveImageLocked;       // control when con drag image around
     bool ignoreMousePress;

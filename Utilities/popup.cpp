@@ -31,11 +31,13 @@ PopUp::PopUp(QWidget *source, QWidget *parent) : QWidget(parent)
     animation.setPropertyName("popupOpacity");      //
     connect(&animation, &QAbstractAnimation::finished, this, &PopUp::hide);
 
-    label.setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+//    label.setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+//    label.setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    label.setTextFormat(Qt::RichText);
     label.setStyleSheet("QLabel { color : white; "
                         "font-size: 16px;"
-                        "margin-top: 0px;"
-                        "margin-bottom: 0px;"
+                        "margin-top: 10px;"
+                        "margin-bottom: 10px;"
                         "margin-left: 10px;"
                         "margin-right: 10px; }");
 
@@ -43,7 +45,8 @@ PopUp::PopUp(QWidget *source, QWidget *parent) : QWidget(parent)
     setLayout(&layout);
 
     timer = new QTimer();
-    connect(timer, &QTimer::timeout, this, &PopUp::hideAnimation);
+    connect(timer, &QTimer::timeout, this, &PopUp::hide);
+//    connect(timer, &QTimer::timeout, this, &PopUp::hideAnimation);
 }
 
 void PopUp::paintEvent(QPaintEvent *event)
@@ -65,20 +68,44 @@ void PopUp::paintEvent(QPaintEvent *event)
     painter.drawRoundedRect(roundedRect, 10, 10);
 }
 
-void PopUp::show(const QString &text, int msDuration, bool isAutoSize, float opacity)
+void PopUp::keyReleaseEvent(QKeyEvent *event)
 {
+    qDebug() << __FUNCTION__ << event;
+    QWidget::keyReleaseEvent(event);
+}
+
+void PopUp::focusOutEvent(QFocusEvent *event)
+{
+    qDebug() << __FUNCTION__ << event;
+}
+
+void PopUp::showPopup(const QString &text,
+                 int msDuration,
+                 bool isAutoSize,
+                 float opacity,
+                 Qt::Alignment alignment)
+{
+    timer->stop();
+
     popupDuration = msDuration;
     popupOpacity = opacity;
-    label.setText(text);
+    popupAlignment = alignment;
+    popupText = text;
+    qDebug() << __FUNCTION__
+             << "popupDuration =" << popupDuration
+             << alignment;
+    label.setAlignment(alignment/* | Qt::AlignVCenter*/);
+    label.setText(popupText);
     if (isAutoSize) adjustSize();               // With the recalculation notice sizes
 
-    if (popupDuration > 0) {
-        setWindowOpacity(0.0);                  // Set the transparency to zero
-        animation.setDuration(150);             // Configuring the duration of the animation
-        animation.setStartValue(0.0);           // The start value is 0 (fully transparent widget)
-        animation.setEndValue(popupOpacity);    // End - completely opaque widget
-    }
-    else setWindowOpacity(popupOpacity);
+//    if (popupDuration > 0) {
+//        setWindowOpacity(0.0);                  // Set the transparency to zero
+//        animation.setDuration(150);             // Configuring the duration of the animation
+//        animation.setStartValue(0.0);           // The start value is 0 (fully transparent widget)
+//        animation.setEndValue(popupOpacity);    // End - completely opaque widget
+//    }
+//    else setWindowOpacity(popupOpacity);
+    setWindowOpacity(popupOpacity);
 
     int pW = width();
     int pH = height();
@@ -95,9 +122,9 @@ void PopUp::show(const QString &text, int msDuration, bool isAutoSize, float opa
 
     QWidget::show();
 
-    if (popupDuration > 0) animation.start();
+//    if (popupDuration > 0) animation.start();
 
-    // set popupDuration = 0 to keep open and manually close like a msgbox
+//    // set popupDuration = 0 to keep open and manually close like a msgbox
     if (popupDuration > 0) timer->start(popupDuration);
 
     qApp->processEvents();
@@ -106,18 +133,26 @@ void PopUp::show(const QString &text, int msDuration, bool isAutoSize, float opa
 void PopUp::hideAnimation()
 {
     timer->stop();
-    animation.setDuration(500);
-    animation.setStartValue(popupOpacity);
-    animation.setEndValue(0.0);
-    animation.start();
+//    animation.setDuration(500);
+//    animation.setStartValue(popupOpacity);
+//    animation.setEndValue(0.0);
+//    animation.start();
+    popupOpacity = 0.0;
+    hide();
 }
 
 void PopUp::hide()
 {
+    QWidget::hide();
     // If the widget is transparent, then hide it
-    if (popupOpacity == 0.0) {
-        QWidget::hide();
-    }
+//    if (popupOpacity == 0.0) {
+//        QWidget::hide();
+//    }
+}
+
+void PopUp::setPopupAlignment(Qt::Alignment alignment)
+{
+    label.setAlignment(alignment/* | Qt::AlignVCenter*/);
 }
 
 void PopUp::setPopupText(const QString &text)
