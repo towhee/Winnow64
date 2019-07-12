@@ -309,8 +309,11 @@ void MW::initialize()
     setAcceptDrops(true);
     filterStatusLabel = new QLabel;
     subfolderStatusLabel = new QLabel;
+    subfolderStatusLabel->setToolTip("Showing contents of all subfolders");
     rawJpgStatusLabel = new QLabel;
+    rawJpgStatusLabel->setToolTip("Raw and Jpg files are combined for viewing");
     slideShowStatusLabel = new QLabel;
+    slideShowStatusLabel->setToolTip("Slideshow is active");
     prevCentralView = 0;
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
     G::ratings << "1" << "2" << "3" << "4" << "5";
@@ -429,10 +432,17 @@ void MW::keyReleaseEvent(QKeyEvent *event)
     }
     // toggle random / sequential slideshow next slide
     if (G::isSlideShow) {
-        if (event->key() == Qt::Key_R) {
+        if (event->key() == Qt::Key_H) {
             slideshowHelpMsg();
         }
-        if (event->key() == Qt::Key_Question) {
+        if (event->key() == Qt::Key_Space) {
+            isSlideshowPaused = !isSlideshowPaused;
+            QString msg;
+            if (isSlideshowPaused) msg = "Slideshow is paused";
+            else msg = "Slideshow is restarted";
+            G::popUp->showPopup(msg);
+        }
+        if (event->key() == Qt::Key_R) {
             slideShowRandom = !slideShowRandom;
             slideShowResetSequence();
         }
@@ -468,7 +478,7 @@ bool MW::event(QEvent *event)
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
 
-        // use to show all events being filtered - handy to figure out which to intercept
+// use to show all events being filtered - handy to figure out which to intercept
 /*    if (event->type()        != QEvent::Paint
             && event->type() != QEvent::UpdateRequest
             && event->type() != QEvent::ZeroTimerEvent
@@ -4364,20 +4374,49 @@ void MW::createStatusBar()
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateImageCachingThreadRunStatus(false, true);
 
-    // label to show metadataThreadRunning status
+    // labels to show various status
     filterStatusLabel->setStyleSheet("QLabel{color:red;}");
+    filterStatusLabel->setText("FILTERS");
     statusBar()->addWidget(filterStatusLabel);
     subfolderStatusLabel->setStyleSheet("QLabel{color:red;}");
+    subfolderStatusLabel->setText("📂");
     statusBar()->addWidget(subfolderStatusLabel);
     rawJpgStatusLabel->setStyleSheet("QLabel{color:red;}");
+    rawJpgStatusLabel->setText("☯");
     statusBar()->addWidget(rawJpgStatusLabel);
     slideShowStatusLabel->setStyleSheet("QLabel{color:red;}");
+    slideShowStatusLabel->setText("𝐒");
     statusBar()->addWidget(slideShowStatusLabel);
 
 
     setThreadRunStatusInactive();
     stateLabel = new QLabel;
     statusBar()->addWidget(stateLabel);
+
+//    updateStatusBar();
+}
+
+void MW::updateStatusBar()
+{
+    statusBar()->removeWidget(filterStatusLabel);
+    statusBar()->removeWidget(subfolderStatusLabel);
+    statusBar()->removeWidget(rawJpgStatusLabel);
+    statusBar()->removeWidget(slideShowStatusLabel);
+    statusBar()->removeWidget(stateLabel);
+    if (filters->isAnyFilter()) {
+        statusBar()->addWidget(filterStatusLabel);
+    }
+    if (subFoldersAction->isChecked()) {
+        statusBar()->addWidget(subfolderStatusLabel);
+    }
+    if (combineRawJpgAction->isChecked()) {
+        statusBar()->addWidget(rawJpgStatusLabel);
+    }
+    if (G::isSlideShow) {
+        statusBar()->addWidget(slideShowStatusLabel);
+    }
+    statusBar()->addWidget(stateLabel);
+    statusBar()->show();
 }
 
 void MW::setCacheParameters()
@@ -4536,6 +4575,8 @@ QString fileSym = "📷";
 
     status = " " + base + s;
     stateLabel->setText(status);
+    updateStatusBar();
+
 //    qDebug() << "Status:" << status;
 
     // update InfoView - flag updates so itemChanged be ignored in MW::metadataChanged
@@ -4570,12 +4611,14 @@ void MW::updateFilterStatus()
     G::track(__FUNCTION__);
     #endif
     }
+    updateStatusBar();
+    return;
     if (dm->sf->rowCount() == dm->rowCount()) {
         filterStatusLabel->setText("");
         return;
     }
     if (filters->isAnyFilter())
-        filterStatusLabel->setText("FILTERS ");
+        filterStatusLabel->setText("FILTERS");
     else
         filterStatusLabel->setText("");
 }
@@ -4590,10 +4633,20 @@ The include subfolder status is shown in the status bar.
     G::track(__FUNCTION__);
     #endif
     }
-    if (subFoldersAction->isChecked())
-        subfolderStatusLabel->setText("SUBFOLDERS ");
-    else
+    updateStatusBar();
+    return;
+    if (subFoldersAction->isChecked()) {
+//        statusBar()->addWidget(subfolderStatusLabel);
+        subfolderStatusLabel->setText("📂");
+//        statusBar()->show();
+//        subfolderStatusLabel->setStyleSheet("QLabel { width: 1px;}");
+    }
+//        subfolderStatusLabel->setText("SUBFOLDERS ");
+    else {
+//        statusBar()->removeWidget(subfolderStatusLabel);
         subfolderStatusLabel->setText("");
+//        subfolderStatusLabel->setStyleSheet("QLabel { width: 1px;color:red;}");
+    }
 }
 
 void MW::updateRawJpgStatus()
@@ -4606,8 +4659,11 @@ The include subfolder status is shown in the status bar.
     G::track(__FUNCTION__);
     #endif
     }
+    updateStatusBar();
+    return;
     if (combineRawJpgAction->isChecked())
-        rawJpgStatusLabel->setText("RAW/JPG ");
+        rawJpgStatusLabel->setText("☯");
+//    rawJpgStatusLabel->setText("RAW/JPG ");
     else
         rawJpgStatusLabel->setText("");
 }
@@ -9132,14 +9188,15 @@ void MW::slideShow()
         // start slideshow
         imageView->setCursor(Qt::BlankCursor);
         G::isSlideShow = true;
-        slideShowStatusLabel->setText("SLIDESHOW");
-        QString msg = "PRESS ? DURING SLIDESHOW FOR SHORTCUTS\n\nStarting slideshow";
-        msg += "\nInterval = " + QString::number(slideShowDelay) + " second(s)";
-        if (slideShowRandom)  msg += "\nRandom selection";
-        else msg += "\nSequential selection";
-        if (slideShowWrap) msg += "\nWrap at end of slides";
-        else msg += "\nStop at end of slides";
-        qDebug() << __FUNCTION__ << msg;
+        updateStatusBar();
+//        slideShowStatusLabel->setText("𝐒");
+        QString msg = "Press <font color=\"red\"><b>H</b></font> during slideshow for shortcuts"
+                      "<p>Starting slideshow";
+        msg += "<br>Interval = " + QString::number(slideShowDelay) + " second(s)";
+        if (slideShowRandom)  msg += "<br>Random selection";
+        else msg += "<br>Sequential selection";
+        if (slideShowWrap) msg += "<br>Wrap at end of slides";
+        else msg += "<br>Stop at end of slides";
         G::popUp->showPopup(msg, 4000, true, 0.75, Qt::AlignLeft);
 
         // No image caching if random slide show
@@ -9166,6 +9223,7 @@ void MW::nextSlide()
     G::track(__FUNCTION__);
     #endif
     }
+    if (isSlideshowPaused) return;
     static int counter = 0;
     int totSlides = dm->sf->rowCount();
     if (slideShowRandom) thumbView->selectRandom();
@@ -9175,7 +9233,8 @@ void MW::nextSlide()
         else thumbView->selectNext();
     }
     counter++;
-    updateStatus(true, "Slide # "+ QString::number(counter));
+    QString msg = "Slide # "+ QString::number(counter) + "     (press H for slideshow shortcuts)";
+    updateStatus(true, msg);
 
     if (isStressTest) {
         if (counter % 10 == 0) {
@@ -9223,36 +9282,21 @@ void MW::slideshowHelpMsg()
     QString selection;
     if (slideShowRandom)  selection = "random selection";
     else selection = "Sequential selection";
-//    QString msg = "Slideshow Shortcuts:"
-//                  "<p>"
-//                  "S\t : toggle to start/end slideshow<br>"
-//                  "1 to 9\t : instantly change the interval (seconds)<br>"
-//                  "R\t : toggle between sequential and random selection<br>"
-//                  "P\t : pause slideshow<br>"
-//                  "←\t : go back to a previous slide<br>"
-//                  "</p>"
-//                  "Current settings:<p>"
-//                  "</p>"
-//                  "Interval  = " + QString::number(slideShowDelay) + " seconds<br>"
-//                  "Selection = " + selection;
-
     QString msg =
-//        "<html><head/><body>"
         "<p><b>Slideshow Shortcuts:</b><br/></p>"
         "<table border=\"0\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\">"
-        "<tr><td width=\"100\"><p><font color=\"red\"><b>S</b></font></p></td><td><p>Toggle to start/end slideshow</p></td></tr>"
-        "<tr><td><p><font color=\"red\"><b>1 to 9</b></font></p></td><td><p>Change the slideshow interval (seconds)</p></td></tr>"
-        "<tr><td><p><font color=\"red\"><b>P</b></font></p></td><td><p>Pause the slideshow</p></td></tr>"
-        "<tr><td><p><font color=\"red\"><b>←</b></font></p></td><td><p>Go back to a previous slide</p></td></tr></table><p>"
-        "Current settings:<p>"
+        "<tr><td width=\"100\"><font color=\"red\"><b>S</b></font></td><td>Toggle to start/end slideshow</td></tr>"
+        "<tr><td><font color=\"red\"><b>1 to 9</b></font></td><td>Change the slideshow interval (seconds)</td></tr>"
+        "<tr><td><font color=\"red\"><b>🠈</b></font></td><td>Go back to a previous slide</td></tr>"
+        "<tr><td><font color=\"red\"><b>H</b></font></td><td>Show this popup message</td></tr>"
+        "</table>"
+        "<p>Current settings:<p>"
         "<ul style=\"line-height:50%; list-style-type:none;\""
-//        "<ul style=\"list-style-type:none\"; \"line-height:50%\""
         "<li>Interval  = "  + QString::number(slideShowDelay) + " seconds</li>"
         "<li>Selection = " + selection + "</li>"
         "</ul><p><p>"
         "Press <font color=\"red\"><b>Esc</b></font> to close this message";
-//        "</body></html>";
-    G::popUp->showPopup(msg, 0, false, 0.75, Qt::AlignLeft);
+    G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
 }
 
 void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
