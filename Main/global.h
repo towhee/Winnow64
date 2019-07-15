@@ -141,6 +141,7 @@ namespace G
     extern bool buildingFilters;
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;
+//    extern bool isSlideShowRandom;
 
     extern bool isThreadTrackingOn;
     extern bool showAllTableColumns;

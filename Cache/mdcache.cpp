@@ -342,7 +342,7 @@ A chunk of metadata and icons are added to the datamodel.
     if (foundItemsToLoad) start(TimeCriticalPriority);
 }
 
-void MetadataCache::fileSelectionChange()
+void MetadataCache::fileSelectionChange(bool okayToImageCache)
 {
 /*
 This function is called from MW::fileSelectionChange. A chunk of metadata and icons are
@@ -362,6 +362,7 @@ added to the datamodel. The image cache is updated.
         wait();
     }
     abort = false;
+    updateImageCache = okayToImageCache;
     action = Action::NewFileSelected;
     foundItemsToLoad = false;
     setRange();
@@ -716,7 +717,7 @@ If there has been a file selection change and not a new folder then update image
                  << "previousRow" << previousRow
                  << "G::isNewFolderLoaded" << G::isNewFolderLoaded;
                  */
-        if (G::isNewFolderLoaded && !G::isSlideShow) {
+        if (G::isNewFolderLoaded && updateImageCache) {
             emit updateImageCachePositionAfterDelay();
         }
     }

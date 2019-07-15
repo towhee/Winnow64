@@ -250,25 +250,12 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     handleStartupArgs();
 
-    if (isSettings) {
-        restoreGeometry(setting->value("Geometry").toByteArray());
-        // restoreState sets docks which triggers setThumbDockFeatures prematurely
-        restoreState(setting->value("WindowState").toByteArray());
-    }
-    else {
-        defaultWorkspace();
-    }
-
     loadShortcuts(true);            // dependent on createActions
     setupCentralWidget();
-//    createAppStyle();
     setActualDevicePixelRatio();
 
     // recall previous thumbDock state in case last closed in Grid mode
     thumbDockVisibleAction->setChecked(wasThumbDockVisible);
-
-    /*if (isSettings)*/ updateState();
-    // else defaultWorkspace();
 
     // intercept events to thumbView to monitor splitter resize of thumbDock
     qApp->installEventFilter(this);
@@ -277,8 +264,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     if (rememberLastDir && !isShift) folderSelectionChange();
 
     if (!isSettings) centralLayout->setCurrentIndex(StartTab);
-//    isSettings = true;
-//    G::isInitializing = false;
 
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
@@ -308,6 +293,7 @@ void MW::initialize()
     isDragDrop = false;
     setAcceptDrops(true);
     filterStatusLabel = new QLabel;
+    filterStatusLabel->setToolTip("The images have been filtered");
     subfolderStatusLabel = new QLabel;
     subfolderStatusLabel->setToolTip("Showing contents of all subfolders");
     rawJpgStatusLabel = new QLabel;
@@ -349,6 +335,16 @@ void MW::showEvent(QShowEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
+    if (isSettings) {
+        restoreGeometry(setting->value("Geometry").toByteArray());
+        // restoreState sets docks which triggers setThumbDockFeatures prematurely
+        restoreState(setting->value("WindowState").toByteArray());
+        updateState();
+    }
+    else {
+        defaultWorkspace();
+    }
+
     QMainWindow::showEvent(event);
 
     // check for updates
@@ -443,7 +439,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             G::popUp->showPopup(msg);
         }
         if (event->key() == Qt::Key_R) {
-            slideShowRandom = !slideShowRandom;
+            isSlideShowRandom = !isSlideShowRandom;
             slideShowResetSequence();
         }
         // change slideshow delay 1 - 9 seconds
@@ -1142,7 +1138,7 @@ delegate use of the current index must check the row.
     // which can happen when filtering or sorting
     if (G::isNewFolderLoaded) {
         updateMetadataCacheIconviewState();
-        metadataCacheThread->fileSelectionChange();
+        metadataCacheThread->fileSelectionChange(updateImageCacheWhenFileSelectionChange);
     }
 
     // initialize the thumbDock
@@ -1554,8 +1550,8 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     /* Displays a statusbar showing the metadata cache status.  Also shows the cache
     size in the info panel.
     */
-
-//    if (G::isSlideShow && slideShowRandom) return;
+//    qDebug() << __FUNCTION__;
+    if (G::isSlideShow && isSlideShowRandom) return;
 
     source = "";    // suppress compiler warning
 /*    qDebug() << "MW::updateImageCacheStatus  Instruction ="
@@ -1898,7 +1894,7 @@ void MW::createActions()
     subFoldersAction->setCheckable(true);
     subFoldersAction->setChecked(false);
     addAction(subFoldersAction);
-    connect(subFoldersAction, &QAction::triggered, this, &MW::updateSubfolderStatus);
+    connect(subFoldersAction, &QAction::triggered, this, &MW::updateStatusBar);
 
     refreshFoldersAction = new QAction(tr("Refresh folders"), this);
     refreshFoldersAction->setObjectName("refreshFolders");
@@ -4376,16 +4372,17 @@ void MW::createStatusBar()
 
     // labels to show various status
     filterStatusLabel->setStyleSheet("QLabel{color:red;}");
-    filterStatusLabel->setText("FILTERS");
+    filterStatusLabel->setText("⚙️");
     statusBar()->addWidget(filterStatusLabel);
     subfolderStatusLabel->setStyleSheet("QLabel{color:red;}");
     subfolderStatusLabel->setText("📂");
     statusBar()->addWidget(subfolderStatusLabel);
     rawJpgStatusLabel->setStyleSheet("QLabel{color:red;}");
-    rawJpgStatusLabel->setText("☯");
+    rawJpgStatusLabel->setText("🔗");
+//    rawJpgStatusLabel->setText("☯");
     statusBar()->addWidget(rawJpgStatusLabel);
     slideShowStatusLabel->setStyleSheet("QLabel{color:red;}");
-    slideShowStatusLabel->setText("𝐒");
+    slideShowStatusLabel->setText("🎥");
     statusBar()->addWidget(slideShowStatusLabel);
 
 
@@ -4405,18 +4402,24 @@ void MW::updateStatusBar()
     statusBar()->removeWidget(stateLabel);
     if (filters->isAnyFilter()) {
         statusBar()->addWidget(filterStatusLabel);
+        filterStatusLabel->show();
     }
     if (subFoldersAction->isChecked()) {
         statusBar()->addWidget(subfolderStatusLabel);
+        subfolderStatusLabel->show();
     }
     if (combineRawJpgAction->isChecked()) {
         statusBar()->addWidget(rawJpgStatusLabel);
+        rawJpgStatusLabel->show();
     }
     if (G::isSlideShow) {
         statusBar()->addWidget(slideShowStatusLabel);
+        slideShowStatusLabel->show();
     }
-    statusBar()->addWidget(stateLabel);
-    statusBar()->show();
+    statusBar()->addWidget(stateLabel);    
+    stateLabel->show();
+    if (updateImageCacheWhenFileSelectionChange) progressLabel->setVisible(true);
+    else progressLabel->setVisible(false);
 }
 
 void MW::setCacheParameters()
@@ -4599,73 +4602,6 @@ QString fileSym = "📷";
 void MW::clearStatus()
 {
     stateLabel->setText("");
-}
-
-void MW::updateFilterStatus()
-{
-    /*
-    The filter status is shown in the status bar.
-    */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    updateStatusBar();
-    return;
-    if (dm->sf->rowCount() == dm->rowCount()) {
-        filterStatusLabel->setText("");
-        return;
-    }
-    if (filters->isAnyFilter())
-        filterStatusLabel->setText("FILTERS");
-    else
-        filterStatusLabel->setText("");
-}
-
-void MW::updateSubfolderStatus()
-{
-/*
-The include subfolder status is shown in the status bar.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    updateStatusBar();
-    return;
-    if (subFoldersAction->isChecked()) {
-//        statusBar()->addWidget(subfolderStatusLabel);
-        subfolderStatusLabel->setText("📂");
-//        statusBar()->show();
-//        subfolderStatusLabel->setStyleSheet("QLabel { width: 1px;}");
-    }
-//        subfolderStatusLabel->setText("SUBFOLDERS ");
-    else {
-//        statusBar()->removeWidget(subfolderStatusLabel);
-        subfolderStatusLabel->setText("");
-//        subfolderStatusLabel->setStyleSheet("QLabel { width: 1px;color:red;}");
-    }
-}
-
-void MW::updateRawJpgStatus()
-{
-/*
-The include subfolder status is shown in the status bar.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    updateStatusBar();
-    return;
-    if (combineRawJpgAction->isChecked())
-        rawJpgStatusLabel->setText("☯");
-//    rawJpgStatusLabel->setText("RAW/JPG ");
-    else
-        rawJpgStatusLabel->setText("");
 }
 
 //void MW::updateImageCachePosition()
@@ -4879,7 +4815,7 @@ and icons are loaded if necessary.
     dm->filteredItemCount();
 
     // update the status panel filtration status
-    updateFilterStatus();
+    updateStatusBar();
 
     // if filter has eliminated all rows so nothing to show
     if (!dm->sf->rowCount()) {
@@ -5936,7 +5872,7 @@ QString MW::diagnostics()
     rpt << "\n" << "gotoIngestFolder = " << G::s(gotoIngestFolder);
     rpt << "\n" << "lastIngestLocation = " << G::s(lastIngestLocation);
     rpt << "\n" << "slideShowDelay = " << G::s(slideShowDelay);
-    rpt << "\n" << "slideShowRandom = " << G::s(slideShowRandom);
+    rpt << "\n" << "slideShowRandom = " << G::s(isSlideShowRandom);
     rpt << "\n" << "slideShowWrap = " << G::s(slideShowWrap);
     rpt << "\n" << "cacheSizeMB = " << G::s(cacheSizeMB);
     rpt << "\n" << "isShowCacheStatus = " << G::s(isShowCacheStatus);
@@ -6838,7 +6774,7 @@ re-established when the application is re-opened.
 
     // slideshow
     setting->setValue("slideShowDelay", slideShowDelay);
-    setting->setValue("slideShowRandom", slideShowRandom);
+    setting->setValue("slideShowRandom", isSlideShowRandom);
     setting->setValue("slideShowWrap", slideShowWrap);
 
     // cache
@@ -7118,7 +7054,7 @@ Preferences are located in the prefdlg class and updated here.
 
         // slideshow
         slideShowDelay = 5;
-        slideShowRandom = false;
+        isSlideShowRandom = false;
         slideShowWrap = true;
 
         // cache
@@ -7167,7 +7103,7 @@ Preferences are located in the prefdlg class and updated here.
 
     // slideshow
     slideShowDelay = setting->value("slideShowDelay").toInt();
-    slideShowRandom = setting->value("slideShowRandom").toBool();
+    isSlideShowRandom = setting->value("slideShowRandom").toBool();
     slideShowWrap = setting->value("slideShowWrap").toBool();
 
     // cache
@@ -7506,7 +7442,7 @@ condition of actions sets the visibility of all window components. */
     setMetadataDockLockMode();
     setThumbDockLockMode();
     setShootingInfoVisibility();
-    updateRawJpgStatus();
+    updateStatusBar();
 //    setActualDevicePixelRation();
     isUpdatingState = false;
 //    reportState();
@@ -8703,7 +8639,7 @@ void MW::setCombineRawJpg()
     tableView->resizeColumnToContents(G::TypeColumn);
 
     // update status bar
-    updateRawJpgStatus();
+    updateStatusBar();
 
     // trigger update to image list and update image cache
     filterChange("MW::setCombineRawJpg");
@@ -9183,28 +9119,31 @@ void MW::slideShow()
         G::popUp->showPopup("Stopping slideshow");
         slideShowTimer->stop();
         delete slideShowTimer;
+        updateImageCacheWhenFileSelectionChange = true;
+        progressBar->setVisible(true);
         imageCacheThread->updateImageCachePosition();
     } else {
         // start slideshow
         imageView->setCursor(Qt::BlankCursor);
         G::isSlideShow = true;
+        if (isSlideShowRandom) updateImageCacheWhenFileSelectionChange = false;
         updateStatusBar();
-//        slideShowStatusLabel->setText("𝐒");
         QString msg = "Press <font color=\"red\"><b>H</b></font> during slideshow for shortcuts"
                       "<p>Starting slideshow";
         msg += "<br>Interval = " + QString::number(slideShowDelay) + " second(s)";
-        if (slideShowRandom)  msg += "<br>Random selection";
+        if (isSlideShowRandom)  msg += "<br>Random selection";
         else msg += "<br>Sequential selection";
         if (slideShowWrap) msg += "<br>Wrap at end of slides";
         else msg += "<br>Stop at end of slides";
         G::popUp->showPopup(msg, 4000, true, 0.75, Qt::AlignLeft);
 
         // No image caching if random slide show
-        if (imageCacheThread->isRunning() && slideShowRandom) {
+        if (imageCacheThread->isRunning() && isSlideShowRandom) {
             imageCacheThread->pauseImageCache();
             imageCacheThread->clearImageCache();
+            progressBar->setVisible(false);
         }
-        progressBar->clearProgress();
+//        progressBar->clearProgress();
 
         if (isStressTest) getSubfolders("/users/roryhill/pictures");
 
@@ -9226,12 +9165,20 @@ void MW::nextSlide()
     if (isSlideshowPaused) return;
     static int counter = 0;
     int totSlides = dm->sf->rowCount();
-    if (slideShowRandom) thumbView->selectRandom();
+    if (isSlideShowRandom) {
+        thumbView->selectRandom();
+        // push next image path onto the slideshow history stack
+//        int row = thumbView->currentIndex().row();
+//        QString fPath = dm->sf->index(row, 0).data(G::PathRole).toString();
+//        slideshowRandomHistoryStack->push(fPath);
+    }
     else {
         if (thumbView->getCurrentRow() == totSlides - 1)
             thumbView->selectFirst();
         else thumbView->selectNext();
     }
+
+
     counter++;
     QString msg = "Slide # "+ QString::number(counter) + "     (press H for slideshow shortcuts)";
     updateStatus(true, msg);
@@ -9262,13 +9209,30 @@ void MW::slideShowResetDelay()
 
 void MW::slideShowResetSequence()
 {
+/*
+Called from MW::keyReleaseEvent when R is pressed and isSlideShow == true.
+The slideshow is toggled between sequential and random progress.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
     QString msg = "Setting slideshow progress to ";
-    slideShowRandom ? msg = msg + "random" : msg = msg + "sequential";
+    if (isSlideShowRandom) {
+        msg = msg + "random";
+        if (imageCacheThread->isRunning()) {
+            imageCacheThread->pauseImageCache();
+            imageCacheThread->clearImageCache();
+        }
+        updateImageCacheWhenFileSelectionChange = false;
+        progressLabel->setVisible(false);
+    }
+    else {
+        msg = msg + "sequential";
+        updateImageCacheWhenFileSelectionChange = true;
+        progressLabel->setVisible(true);
+    }
     G::popUp->showPopup(msg);
 }
 
@@ -9280,14 +9244,15 @@ void MW::slideshowHelpMsg()
     #endif
     }
     QString selection;
-    if (slideShowRandom)  selection = "random selection";
+    if (isSlideShowRandom)  selection = "random selection";
     else selection = "Sequential selection";
     QString msg =
         "<p><b>Slideshow Shortcuts:</b><br/></p>"
         "<table border=\"0\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\">"
-        "<tr><td width=\"100\"><font color=\"red\"><b>S</b></font></td><td>Toggle to start/end slideshow</td></tr>"
+        "<tr><td width=\"120\"><font color=\"red\"><b>S</b></font></td><td>Toggle to start/end slideshow</td></tr>"
         "<tr><td><font color=\"red\"><b>1 to 9</b></font></td><td>Change the slideshow interval (seconds)</td></tr>"
-        "<tr><td><font color=\"red\"><b>🠈</b></font></td><td>Go back to a previous slide</td></tr>"
+        "<tr><td><font color=\"red\"><b>Left Arrow</b></font></td><td>Go back to a previous random slide</td></tr>"
+        "<tr><td><font color=\"red\"><b>Right Arrow</b></font></td><td>Continue random slideshow after going back</td></tr>"
         "<tr><td><font color=\"red\"><b>H</b></font></td><td>Show this popup message</td></tr>"
         "</table>"
         "<p>Current settings:<p>"
@@ -9541,7 +9506,7 @@ void MW::openUsbFolder()
 
     bookmarks->selectionModel()->clear();
     subFoldersAction->setChecked(true);
-    updateSubfolderStatus();
+    updateStatusBar();
     QString fPath = usbMap[drive].rootPath;
     fsTree->select(fPath);
     isCurrentFolderOkay = isFolderValid(fPath, true, false);
@@ -9552,7 +9517,7 @@ void MW::openUsbFolder()
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
         subFoldersAction->setChecked(false);
-        updateSubfolderStatus();
+        updateStatusBar();
     }
 }
 
@@ -9742,13 +9707,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    slideshowHelpMsg();
-    return;
-//    G::popUp->label.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    QString s = "This is a test\n"
-            "Second line, aligned to the left\n\n"
-            "Press Esc to close this message";
-    G::popUp->showPopup(s, 0, true, 0.75, Qt::AlignLeft);
+    progressLabel->setVisible(false);
 }
 
 // End MW
