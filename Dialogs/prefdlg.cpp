@@ -64,7 +64,8 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
 
     // slideshow
     ui->slideshowDelaySpinbox->setValue(m0->slideShowDelay);
-    ui->slideshowRandomChk->setChecked(m0->slideShowRandom);
+    ui->slideshowRandomChk->setChecked(m0->isSlideShowRandom);
+//    ui->slideshowRandomChk->setChecked(m0->isSlideShowRandom);
 
     // cache
     ui->cacheSizeSpinbox->setValue(m0->cacheSizeMB / 1024);
@@ -392,7 +393,7 @@ void Prefdlg::on_slideshowDelaySpinbox_valueChanged(int value)
 void Prefdlg::on_slideshowRandomChk_clicked()
 {
     if (okToUpdate) {
-        m0->slideShowRandom = ui->slideshowRandomChk->isChecked();
+        m0->isSlideShowRandom = ui->slideshowRandomChk->isChecked();
         m0->slideShowResetSequence();
     }
 }

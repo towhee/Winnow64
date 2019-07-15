@@ -119,8 +119,7 @@ void ImageCache::clearImageCache()
     cache.currMB = 0;
     emit showCacheStatus("Clear Image Cache", 0, __FUNCTION__);
     // do not clear cacheItemList if called from start slideshow
-    if (!G::isSlideShow)
-        cacheItemList.clear();
+    if (!G::isSlideShow) cacheItemList.clear();
 }
 
 void ImageCache::stopImageCache()

@@ -192,8 +192,11 @@ public:
 
     // preferences: slideshow
     int slideShowDelay;
-    bool slideShowRandom;
+    bool isSlideShowRandom;
     bool slideShowWrap = true;
+    bool updateImageCacheWhenFileSelectionChange = true;
+    QStack<QString> *slideshowRandomHistoryStack;
+
 
     // preferences: cache
     int cacheSizeMB;
@@ -341,12 +344,9 @@ private slots:
     void keyScrollPageUp();
     void scrollToCurrentRow();
     void zoomToggle();
-    void updateSubfolderStatus();
-    void updateRawJpgStatus();
     // status functions
     void updateStatus(bool keepBase = true, QString s = "");
     void clearStatus();
-    void updateFilterStatus();
     void refreshCurrentAfterReload();
     // caching status functions
     void setThreadRunStatusInactive();

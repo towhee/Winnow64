@@ -36,6 +36,7 @@ namespace G
     bool buildingFilters;
     bool ignoreScrollSignal;
     bool isSlideShow;
+//    bool isSlideShowRandom;
 
     // not persistent
     bool isThreadTrackingOn;

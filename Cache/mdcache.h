@@ -37,7 +37,7 @@ public:
     void loadNewFolder();
     void loadNewFolder2ndPass();
     void loadMetadataIconChunk(int row);
-    void fileSelectionChange();
+    void fileSelectionChange(bool isRandomSlideShow);
     void loadAllMetadata();
     void stopMetadateCache();
     bool isAllMetadataLoaded();
@@ -94,6 +94,7 @@ private:
     QList<int> iconsCached;
 
     bool foundItemsToLoad;
+    bool updateImageCache;
     Action action;
 
     bool allIconsLoaded;
