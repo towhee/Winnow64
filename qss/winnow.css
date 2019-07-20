@@ -373,22 +373,6 @@ QSlider::handle:focus {
 }
 */
 
-QLineEdit {
-    background-color: gray;
-    border: 1px solid gray;
-    selection-background-color: darkgray;
-    padding: 0px;
-    border-radius: 2px;
-}
-
-QLineEdit:hover, QLineEdit:focus {
-    border-color: silver;
-}
-
-QLineEdit:disabled {
-    color:gray;
-}
-
 
 /*PushButton must be before ComboBox*/
 QPushButton {
@@ -519,6 +503,14 @@ QTextBrowser, QTextEdit {
     border: 1px solid gray;
 }
 
+/*QLineEdit {
+    background-color: gray;
+    border: 1px solid gray;
+    selection-background-color: darkgray;
+    padding: 0px;
+    border-radius: 2px;
+}*/
+
 QLineEdit {
     background-color: rgb(77,77,77);
     border: 1px solid gray;
@@ -535,7 +527,7 @@ QLineEdit:hover, QLineEdit:focus {
 }
 
 QLineEdit:disabled {
-    color: gray;
+    color:gray;
 }
 
 QRadioButton::indicator {
