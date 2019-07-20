@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'aligndlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -59,9 +59,9 @@ public:
 
     void retranslateUi(QDialog *Dialog)
     {
-        Dialog->setWindowTitle(QApplication::translate("Dialog", "Dialog", nullptr));
-        label->setText(QApplication::translate("Dialog", "Target", nullptr));
-        label_2->setText(QApplication::translate("Dialog", "Align", nullptr));
+        Dialog->setWindowTitle(QCoreApplication::translate("Dialog", "Dialog", nullptr));
+        label->setText(QCoreApplication::translate("Dialog", "Target", nullptr));
+        label_2->setText(QCoreApplication::translate("Dialog", "Align", nullptr));
     } // retranslateUi
 
 };

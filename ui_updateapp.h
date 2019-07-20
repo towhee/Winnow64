@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'updateapp.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -82,14 +82,14 @@ public:
 
     void retranslateUi(QDialog *UpdateApp)
     {
-        UpdateApp->setWindowTitle(QApplication::translate("UpdateApp", "Winnow Update", nullptr));
-        proceedLabel->setText(QApplication::translate("UpdateApp", "Do you want to proceed with the update?", nullptr));
-        titleLabel->setText(QApplication::translate("UpdateApp", "There is a Winnow update", nullptr));
-        currentVersionlabel_2->setText(QApplication::translate("UpdateApp", "You have version:", nullptr));
-        versionLabel->setText(QApplication::translate("UpdateApp", "You currently have version  0.9.5 released 2019-01-25", nullptr));
-        viewVersionLabel->setText(QApplication::translate("UpdateApp", "<html><head/><body><p>You can view version update notes <a href=\"http://165.227.46.158/winnow/versions.html\"><span style=\" text-decoration: underline; color:#ffffff;\">here</span></a>.</p></body></html>", nullptr));
-        cancelBtn->setText(QApplication::translate("UpdateApp", "Cancel", nullptr));
-        yesBtn->setText(QApplication::translate("UpdateApp", "Proceed", nullptr));
+        UpdateApp->setWindowTitle(QCoreApplication::translate("UpdateApp", "Winnow Update", nullptr));
+        proceedLabel->setText(QCoreApplication::translate("UpdateApp", "Do you want to proceed with the update?", nullptr));
+        titleLabel->setText(QCoreApplication::translate("UpdateApp", "There is a Winnow update", nullptr));
+        currentVersionlabel_2->setText(QCoreApplication::translate("UpdateApp", "You have version:", nullptr));
+        versionLabel->setText(QCoreApplication::translate("UpdateApp", "You currently have version  0.9.5 released 2019-01-25", nullptr));
+        viewVersionLabel->setText(QCoreApplication::translate("UpdateApp", "<html><head/><body><p>You can view version update notes <a href=\"http://165.227.46.158/winnow/versions.html\"><span style=\" text-decoration: underline; color:#ffffff;\">here</span></a>.</p></body></html>", nullptr));
+        cancelBtn->setText(QCoreApplication::translate("UpdateApp", "Cancel", nullptr));
+        yesBtn->setText(QCoreApplication::translate("UpdateApp", "Proceed", nullptr));
     } // retranslateUi
 
 };

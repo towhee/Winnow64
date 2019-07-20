@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'loadusbdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -56,8 +56,8 @@ public:
 
     void retranslateUi(QDialog *LoadUsbDlg)
     {
-        LoadUsbDlg->setWindowTitle(QApplication::translate("LoadUsbDlg", "USB Drives Available", nullptr));
-        label->setText(QApplication::translate("LoadUsbDlg", "Select USB drive to view images", nullptr));
+        LoadUsbDlg->setWindowTitle(QCoreApplication::translate("LoadUsbDlg", "USB Drives Available", nullptr));
+        label->setText(QCoreApplication::translate("LoadUsbDlg", "Select USB drive to view images", nullptr));
     } // retranslateUi
 
 };

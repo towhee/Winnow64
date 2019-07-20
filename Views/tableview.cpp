@@ -112,6 +112,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::IngestedColumn) return fm.width("=Ingested=");
     if (column == G::LabelColumn) return fm.width("=Colour=");
     if (column == G::RatingColumn) return fm.width("=Rating=");
+    if (column == G::SearchColumn) return fm.width("=false=");
     if (column == G::TypeColumn) return fm.width("=Type=");
     if (column == G::SizeColumn) return fm.width("=999,999,999=");
     if (column == G::CreatedColumn) return fm.width("=2019-09-09 09:09:09=");

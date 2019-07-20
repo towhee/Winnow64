@@ -91,9 +91,6 @@ void PopUp::showPopup(const QString &text,
     popupOpacity = opacity;
     popupAlignment = alignment;
     popupText = text;
-    qDebug() << __FUNCTION__
-             << "popupDuration =" << popupDuration
-             << alignment;
     label.setAlignment(alignment/* | Qt::AlignVCenter*/);
     label.setText(popupText);
     if (isAutoSize) adjustSize();               // With the recalculation notice sizes

@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'introduction.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -106,9 +106,9 @@ public:
 
     void retranslateUi(QWidget *introWidget)
     {
-        introWidget->setWindowTitle(QApplication::translate("introWidget", "Form", nullptr));
-        welcomeLabel->setText(QApplication::translate("introWidget", "<html><head/><body><p align=\"center\"><span style=\" font-size:24pt;\">Welcome to Winnow</span></p><p align=\"center\"><br/><span style=\" font-size:14pt;\">To get started select a folder with images from the Folders panel or from the menu: File &gt; Open</span></p></body></html>", nullptr));
-        tipslabel->setText(QApplication::translate("introWidget", "<html><head/><body><p><span style=\" font-size:18pt;\">Tips:</span></p><ul type=\"circle\" style=\"margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;\"><li style=\" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:14pt;\">You can view a </span><span style=\" font-size:14pt; color:#ffff0a;\">help document</span><span style=\" font-size:14pt;\"> from the menu: Help &gt; Winnow Help or just press ?</span></li>", nullptr));
+        introWidget->setWindowTitle(QCoreApplication::translate("introWidget", "Form", nullptr));
+        welcomeLabel->setText(QCoreApplication::translate("introWidget", "<html><head/><body><p align=\"center\"><span style=\" font-size:24pt;\">Welcome to Winnow</span></p><p align=\"center\"><br/><span style=\" font-size:14pt;\">To get started select a folder with images from the Folders panel or from the menu: File &gt; Open</span></p></body></html>", nullptr));
+        tipslabel->setText(QCoreApplication::translate("introWidget", "<html><head/><body><p><span style=\" font-size:18pt;\">Tips:</span></p><ul type=\"circle\" style=\"margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;\"><li style=\" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:14pt;\">You can view a </span><span style=\" font-size:14pt; color:#ffff0a;\">help document</span><span style=\" font-size:14pt;\"> from the menu: Help &gt; Winnow Help or just press ?</span></li>", nullptr));
     } // retranslateUi
 
 };

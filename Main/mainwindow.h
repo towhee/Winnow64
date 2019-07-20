@@ -21,6 +21,7 @@
 #include "Datamodel/filters.h"
 #include "File/bookmarks.h"
 #include "File/fstree.h"
+#include "PropertyEditor/propertyeditor.h"
 #include "Views/compareImages.h"
 #include "Views/iconview.h"
 #include "Views/tableview.h"
@@ -60,9 +61,10 @@ class MW : public QMainWindow
 {
     Q_OBJECT
 
-    friend class Prefdlg;       // m0
-    friend class ProgressBar;   // mw1
-    friend class IconView;     // mw2
+    friend class Prefdlg;           // m0
+    friend class ProgressBar;       // mw1
+    friend class IconView;          // mw2
+    friend class PropertyEditor;    // m;
 
 public:
     MW(QWidget *parent = nullptr);
@@ -156,7 +158,7 @@ public:
 
     // general
     int lastPrefPage;
-    bool mouseClickScroll;      // positionAtCenter scrolling when mouse click?
+//    bool mouseClickScroll;      // positionAtCenter scrolling when mouse click?
     int displayHorizontalPixels;
     int displayVerticalPixels;
     bool checkIfUpdate = true;
@@ -398,6 +400,7 @@ private slots:
     void setDisplayResolution();
     void setCombineRawJpg();
     void nextSlide();
+    void prevRandomSlide();
     void setCacheParameters();
     void selectAllThumbs();
     void removeBookmark();
@@ -756,6 +759,7 @@ private:
     DockWidget *favDock;
     DockWidget *filterDock;
     DockWidget *metadataDock;
+    DockWidget *propertiesDock;
     FSTree *fsTree;
     BookMarks *bookmarks;
     Filters *filters;
@@ -770,6 +774,7 @@ private:
     TableView *tableView;
     ImageView *imageView;
     InfoString *infoString;
+    PropertyEditor *propertyEditor;
     QHeaderView *headerView;
     CompareImages *compareImages;
 

@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'ingestdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -111,19 +111,25 @@ public:
         palette.setBrush(QPalette::Active, QPalette::ButtonText, brush);
         QBrush brush1(QColor(180, 180, 120, 128));
         brush1.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette.setBrush(QPalette::Active, QPalette::PlaceholderText, brush1);
+#endif
         palette.setBrush(QPalette::Inactive, QPalette::WindowText, brush);
         palette.setBrush(QPalette::Inactive, QPalette::Text, brush);
         palette.setBrush(QPalette::Inactive, QPalette::ButtonText, brush);
         QBrush brush2(QColor(180, 180, 120, 128));
         brush2.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette.setBrush(QPalette::Inactive, QPalette::PlaceholderText, brush2);
+#endif
         palette.setBrush(QPalette::Disabled, QPalette::WindowText, brush);
         palette.setBrush(QPalette::Disabled, QPalette::Text, brush);
         palette.setBrush(QPalette::Disabled, QPalette::ButtonText, brush);
         QBrush brush3(QColor(180, 180, 120, 128));
         brush3.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette.setBrush(QPalette::Disabled, QPalette::PlaceholderText, brush3);
+#endif
         folderPathLabel->setPalette(palette);
         folderPathLabel->setFont(font);
         folderPathLabel->setStyleSheet(QString::fromUtf8("color:rgb(180,180,120)"));
@@ -137,19 +143,25 @@ public:
         palette1.setBrush(QPalette::Active, QPalette::ButtonText, brush);
         QBrush brush4(QColor(180, 180, 120, 128));
         brush4.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette1.setBrush(QPalette::Active, QPalette::PlaceholderText, brush4);
+#endif
         palette1.setBrush(QPalette::Inactive, QPalette::WindowText, brush);
         palette1.setBrush(QPalette::Inactive, QPalette::Text, brush);
         palette1.setBrush(QPalette::Inactive, QPalette::ButtonText, brush);
         QBrush brush5(QColor(180, 180, 120, 128));
         brush5.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette1.setBrush(QPalette::Inactive, QPalette::PlaceholderText, brush5);
+#endif
         palette1.setBrush(QPalette::Disabled, QPalette::WindowText, brush);
         palette1.setBrush(QPalette::Disabled, QPalette::Text, brush);
         palette1.setBrush(QPalette::Disabled, QPalette::ButtonText, brush);
         QBrush brush6(QColor(180, 180, 120, 128));
         brush6.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette1.setBrush(QPalette::Disabled, QPalette::PlaceholderText, brush6);
+#endif
         folderPathLabel_2->setPalette(palette1);
         folderPathLabel_2->setFont(font);
         folderPathLabel_2->setStyleSheet(QString::fromUtf8("color:rgb(180,180,120)"));
@@ -163,17 +175,23 @@ public:
         palette2.setBrush(QPalette::Active, QPalette::Text, brush7);
         QBrush brush8(QColor(0, 0, 0, 128));
         brush8.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette2.setBrush(QPalette::Active, QPalette::PlaceholderText, brush8);
+#endif
         palette2.setBrush(QPalette::Inactive, QPalette::Text, brush7);
         QBrush brush9(QColor(0, 0, 0, 128));
         brush9.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette2.setBrush(QPalette::Inactive, QPalette::PlaceholderText, brush9);
+#endif
         QBrush brush10(QColor(120, 120, 120, 255));
         brush10.setStyle(Qt::SolidPattern);
         palette2.setBrush(QPalette::Disabled, QPalette::Text, brush10);
         QBrush brush11(QColor(0, 0, 0, 128));
         brush11.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette2.setBrush(QPalette::Disabled, QPalette::PlaceholderText, brush11);
+#endif
         folderPathLabel_3->setPalette(palette2);
         folderPathLabel_3->setFont(font);
         folderPathLabel_3->setFrameShape(QFrame::Box);
@@ -186,19 +204,25 @@ public:
         palette3.setBrush(QPalette::Active, QPalette::ButtonText, brush);
         QBrush brush12(QColor(180, 180, 120, 128));
         brush12.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette3.setBrush(QPalette::Active, QPalette::PlaceholderText, brush12);
+#endif
         palette3.setBrush(QPalette::Inactive, QPalette::WindowText, brush);
         palette3.setBrush(QPalette::Inactive, QPalette::Text, brush);
         palette3.setBrush(QPalette::Inactive, QPalette::ButtonText, brush);
         QBrush brush13(QColor(180, 180, 120, 128));
         brush13.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette3.setBrush(QPalette::Inactive, QPalette::PlaceholderText, brush13);
+#endif
         palette3.setBrush(QPalette::Disabled, QPalette::WindowText, brush);
         palette3.setBrush(QPalette::Disabled, QPalette::Text, brush);
         palette3.setBrush(QPalette::Disabled, QPalette::ButtonText, brush);
         QBrush brush14(QColor(180, 180, 120, 128));
         brush14.setStyle(Qt::NoBrush);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette3.setBrush(QPalette::Disabled, QPalette::PlaceholderText, brush14);
+#endif
         folderPathLabel_4->setPalette(palette3);
         folderPathLabel_4->setFont(font);
         folderPathLabel_4->setStyleSheet(QString::fromUtf8("color:rgb(180,180,120)"));
@@ -450,179 +474,179 @@ public:
 
     void retranslateUi(QDialog *IngestDlg)
     {
-        IngestDlg->setWindowTitle(QApplication::translate("IngestDlg", "Copy picked images to destination folder", nullptr));
-#ifndef QT_NO_TOOLTIP
+        IngestDlg->setWindowTitle(QCoreApplication::translate("IngestDlg", "Copy picked images to destination folder", nullptr));
+#if QT_CONFIG(tooltip)
         seqGroupBox->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        seqGroupBox->setTitle(QApplication::translate("IngestDlg", "Images will be copied and renamed to", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        seqGroupBox->setTitle(QCoreApplication::translate("IngestDlg", "Images will be copied and renamed to", nullptr));
+#if QT_CONFIG(tooltip)
         folderPathLabel->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         folderPathLabel->setText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         folderPathLabel_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         folderPathLabel_2->setText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         folderPathLabel_3->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        folderPathLabel_3->setText(QApplication::translate("IngestDlg", "...", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        folderPathLabel_3->setText(QCoreApplication::translate("IngestDlg", "...", nullptr));
+#if QT_CONFIG(tooltip)
         folderPathLabel_4->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         folderPathLabel_4->setText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         progressBar->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
         groupBox_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        groupBox_2->setTitle(QApplication::translate("IngestDlg", "Select destination folder", nullptr));
-#ifndef QT_NO_TOOLTIP
-        selectFolderBtn->setToolTip(QApplication::translate("IngestDlg", "Select and create the primary location for the files to be copied to", nullptr));
-#endif // QT_NO_TOOLTIP
-        selectFolderBtn->setText(QApplication::translate("IngestDlg", "Primary", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        groupBox_2->setTitle(QCoreApplication::translate("IngestDlg", "Select destination folder", nullptr));
+#if QT_CONFIG(tooltip)
+        selectFolderBtn->setToolTip(QCoreApplication::translate("IngestDlg", "Select and create the primary location for the files to be copied to", nullptr));
+#endif // QT_CONFIG(tooltip)
+        selectFolderBtn->setText(QCoreApplication::translate("IngestDlg", "Primary", nullptr));
+#if QT_CONFIG(tooltip)
         autoRadio->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        autoRadio->setText(QApplication::translate("IngestDlg", "Automatically generate destination folder from root folder", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        autoRadio->setText(QCoreApplication::translate("IngestDlg", "Automatically generate destination folder from root folder", nullptr));
+#if QT_CONFIG(tooltip)
         manualRadio->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        manualRadio->setText(QApplication::translate("IngestDlg", "Manually select destination folder", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        manualRadio->setText(QCoreApplication::translate("IngestDlg", "Manually select destination folder", nullptr));
+#if QT_CONFIG(tooltip)
         manualFolderLabel->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         manualFolderLabel->setText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         destinationFolderLabel->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        destinationFolderLabel->setText(QApplication::translate("IngestDlg", "Destination folder:", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        destinationFolderLabel->setText(QCoreApplication::translate("IngestDlg", "Destination folder:", nullptr));
+#if QT_CONFIG(tooltip)
         folderLabel->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         folderLabel->setText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         templateLabel1->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        templateLabel1->setText(QApplication::translate("IngestDlg", "Template:", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        templateLabel1->setText(QCoreApplication::translate("IngestDlg", "Template:", nullptr));
+#if QT_CONFIG(tooltip)
         selectRootFolderBtn->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        selectRootFolderBtn->setText(QApplication::translate("IngestDlg", "Root Folder", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        selectRootFolderBtn->setText(QCoreApplication::translate("IngestDlg", "Root Folder", nullptr));
+#if QT_CONFIG(tooltip)
         pathTemplatesCB->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         pathTemplatesCB->setCurrentText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         descriptionLineEdit->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
         folderDescription->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        folderDescription->setText(QApplication::translate("IngestDlg", "Append Description:", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        folderDescription->setText(QCoreApplication::translate("IngestDlg", "Append Description:", nullptr));
+#if QT_CONFIG(tooltip)
         rootFolderLabel->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         rootFolderLabel->setText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         pathTemplatesBtn->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        pathTemplatesBtn->setText(QApplication::translate("IngestDlg", "Edit template(s)", nullptr));
-        autoIngestTab->setTabText(autoIngestTab->indexOf(primaryTab), QApplication::translate("IngestDlg", "  Primary Location Parameters  ", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        pathTemplatesBtn->setText(QCoreApplication::translate("IngestDlg", "Edit template(s)", nullptr));
+        autoIngestTab->setTabText(autoIngestTab->indexOf(primaryTab), QCoreApplication::translate("IngestDlg", "  Primary Location Parameters  ", nullptr));
+#if QT_CONFIG(tooltip)
         folderLabel_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         folderLabel_2->setText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         templateLabel1_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        templateLabel1_2->setText(QApplication::translate("IngestDlg", "Template:", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        templateLabel1_2->setText(QCoreApplication::translate("IngestDlg", "Template:", nullptr));
+#if QT_CONFIG(tooltip)
         selectRootFolderBtn_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        selectRootFolderBtn_2->setText(QApplication::translate("IngestDlg", "Root Folder", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        selectRootFolderBtn_2->setText(QCoreApplication::translate("IngestDlg", "Root Folder", nullptr));
+#if QT_CONFIG(tooltip)
         pathTemplatesCB_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         pathTemplatesCB_2->setCurrentText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         descriptionLineEdit_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
         folderDescription_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        folderDescription_2->setText(QApplication::translate("IngestDlg", "Append Description:", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        folderDescription_2->setText(QCoreApplication::translate("IngestDlg", "Append Description:", nullptr));
+#if QT_CONFIG(tooltip)
         destinationFolderLabel_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        destinationFolderLabel_2->setText(QApplication::translate("IngestDlg", "Destination folder:", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        destinationFolderLabel_2->setText(QCoreApplication::translate("IngestDlg", "Destination folder:", nullptr));
+#if QT_CONFIG(tooltip)
         rootFolderLabel_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         rootFolderLabel_2->setText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         pathTemplatesBtn_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        pathTemplatesBtn_2->setText(QApplication::translate("IngestDlg", "Edit template(s)", nullptr));
-        autoIngestTab->setTabText(autoIngestTab->indexOf(backupTab), QApplication::translate("IngestDlg", "Backup Location Parameters", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        pathTemplatesBtn_2->setText(QCoreApplication::translate("IngestDlg", "Edit template(s)", nullptr));
+        autoIngestTab->setTabText(autoIngestTab->indexOf(backupTab), QCoreApplication::translate("IngestDlg", "Backup Location Parameters", nullptr));
+#if QT_CONFIG(tooltip)
         helpBtn->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        helpBtn->setText(QApplication::translate("IngestDlg", "How this works", nullptr));
-#ifndef QT_NO_TOOLTIP
-        selectFolderBtn_2->setToolTip(QApplication::translate("IngestDlg", "Select and create the backup location for the files to be copied to", nullptr));
-#endif // QT_NO_TOOLTIP
-        selectFolderBtn_2->setText(QApplication::translate("IngestDlg", "Backup", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        helpBtn->setText(QCoreApplication::translate("IngestDlg", "How this works", nullptr));
+#if QT_CONFIG(tooltip)
+        selectFolderBtn_2->setToolTip(QCoreApplication::translate("IngestDlg", "Select and create the backup location for the files to be copied to", nullptr));
+#endif // QT_CONFIG(tooltip)
+        selectFolderBtn_2->setText(QCoreApplication::translate("IngestDlg", "Backup", nullptr));
+#if QT_CONFIG(tooltip)
         manualFolderLabel_2->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         manualFolderLabel_2->setText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         groupBox_4->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        groupBox_4->setTitle(QApplication::translate("IngestDlg", "File naming and sequencing", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        groupBox_4->setTitle(QCoreApplication::translate("IngestDlg", "File naming and sequencing", nullptr));
+#if QT_CONFIG(tooltip)
         existingSequenceLabel->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
         existingSequenceLabel->setText(QString());
-#ifndef QT_NO_TOOLTIP
+#if QT_CONFIG(tooltip)
         startSeqLabel->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        startSeqLabel->setText(QApplication::translate("IngestDlg", "Start sequence from:", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        startSeqLabel->setText(QCoreApplication::translate("IngestDlg", "Start sequence from:", nullptr));
+#if QT_CONFIG(tooltip)
         spinBoxStartNumber->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
         label_5->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        label_5->setText(QApplication::translate("IngestDlg", "Template:", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        label_5->setText(QCoreApplication::translate("IngestDlg", "Template:", nullptr));
+#if QT_CONFIG(tooltip)
         filenameTemplatesCB->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
         filenameTemplatesBtn->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        filenameTemplatesBtn->setText(QApplication::translate("IngestDlg", "Edit template(s)", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        filenameTemplatesBtn->setText(QCoreApplication::translate("IngestDlg", "Edit template(s)", nullptr));
+#if QT_CONFIG(tooltip)
         statsLabel->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        statsLabel->setText(QApplication::translate("IngestDlg", "632 files using 830MB", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        statsLabel->setText(QCoreApplication::translate("IngestDlg", "632 files using 830MB", nullptr));
+#if QT_CONFIG(tooltip)
         layoutWidget->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
         cancelBtn->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        cancelBtn->setText(QApplication::translate("IngestDlg", "Cancel", nullptr));
-#ifndef QT_NO_TOOLTIP
+#endif // QT_CONFIG(tooltip)
+        cancelBtn->setText(QCoreApplication::translate("IngestDlg", "Cancel", nullptr));
+#if QT_CONFIG(tooltip)
         okBtn->setToolTip(QString());
-#endif // QT_NO_TOOLTIP
-        okBtn->setText(QApplication::translate("IngestDlg", "Ingest", nullptr));
-        combinedIncludeJpgChk->setText(QApplication::translate("IngestDlg", "If Raw+JPG also copy the JPG files", nullptr));
-        ejectChk->setText(QApplication::translate("IngestDlg", "Eject drive after ingesting", nullptr));
-        openIngestFolderChk->setText(QApplication::translate("IngestDlg", "Open ingest folder after ingest", nullptr));
-        backupChk->setText(QApplication::translate("IngestDlg", "Backup to second location while ingesting", nullptr));
+#endif // QT_CONFIG(tooltip)
+        okBtn->setText(QCoreApplication::translate("IngestDlg", "Ingest", nullptr));
+        combinedIncludeJpgChk->setText(QCoreApplication::translate("IngestDlg", "If Raw+JPG also copy the JPG files", nullptr));
+        ejectChk->setText(QCoreApplication::translate("IngestDlg", "Eject drive after ingesting", nullptr));
+        openIngestFolderChk->setText(QCoreApplication::translate("IngestDlg", "Open ingest folder after ingest", nullptr));
+        backupChk->setText(QCoreApplication::translate("IngestDlg", "Backup to second location while ingesting", nullptr));
     } // retranslateUi
 
 };

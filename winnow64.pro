@@ -11,9 +11,9 @@ QT += xmlpatterns
 
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/mdcache.h
-# HEADERS += Cache/mdcacher.h
-# HEADERS += Cache/mdcachemgr.h
 HEADERS += Cache/tshash.h
+HEADERS += Datamodel/datamodel.h
+HEADERS += Datamodel/filters.h
 HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/ingestdlg.h
@@ -25,19 +25,19 @@ HEADERS += Dialogs/workspacedlg.h
 HEADERS += Dialogs/tokendlg.h
 HEADERS += Dialogs/updateapp.h
 HEADERS += Dialogs/zoomdlg.h
+HEADERS += File/bookmarks.h
+HEADERS += File/fstree.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
 HEADERS += Image/thumb.h
-HEADERS += Datamodel/datamodel.h
-HEADERS += Datamodel/filters.h
-HEADERS += File/bookmarks.h
-HEADERS += File/fstree.h
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
 HEADERS += Main/mainwindow.h
 HEADERS += Metadata/imagemetadata.h
 HEADERS += Metadata/metadata.h
 HEADERS += Metadata/xmp.h
+HEADERS += PropertyEditor/propertyeditor.h
+HEADERS += PropertyEditor/propertysliderwidget.h
 HEADERS += Views/compareImages.h
 HEADERS += Views/compareview.h
 HEADERS += Views/iconview.h
@@ -53,14 +53,8 @@ HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
 
-#HEADERS += Test/readmdconcurrent.h
-#HEADERS += Test/readsync.h
-#HEADERS += Test/readasync.h
-#HEADERS += Test/asynctask.h
-
-SOURCES += Cache/imagecache.cpp
-# SOURCES += Cache/mdcacher.cpp
-# SOURCES += Cache/mdcachemgr.cpp
+SOURCES += Cache/imagecache.cpp \
+    PropertyEditor/propertysliderwidget.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
@@ -86,6 +80,8 @@ SOURCES += Main/main.cpp
 SOURCES += Main/mainwindow.cpp
 SOURCES += Metadata/metadata.cpp
 SOURCES += Metadata/xmp.cpp
+SOURCES += PropertyEditor/propertyeditor.cpp
+HEADERS += PropertyEditor/propertysliderwidget.cpp
 SOURCES += Views/compareImages.cpp
 SOURCES += Views/compareview.cpp
 SOURCES += Views/iconview.cpp
@@ -101,16 +97,11 @@ SOURCES += Utilities/progressbar.cpp
 SOURCES += Utilities/usb.cpp
 SOURCES += Utilities/utilities.cpp
 
-#SOURCES += Test/asynctask.cpp
-#SOURCES += Test/readsync.cpp
-#SOURCES += Test/readasync.cpp
-#SOURCES += Test/readmdconcurrent.cpp
-
-FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/loadusbdlg.ui
+FORMS += Dialogs/aboutdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/ingestdlg.ui
+FORMS += Dialogs/loadusbdlg.ui
 FORMS += Dialogs/prefdlg.ui
 FORMS += Dialogs/renamedlg.ui
 FORMS += Dialogs/testaligndlg.ui
@@ -133,8 +124,9 @@ ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
 DISTFILES += Docs/versions \
-    Docs/test.html \
-    notes/scratch.html
+    ../../kproperty-master/Notes
+DISTFILES += Docs/test.html
+DISTFILES += notes/scratch.html
 DISTFILES += notes/_Notes
 DISTFILES += notes/_ToDo.txt
 DISTFILES += notes/DeployInstall.txt

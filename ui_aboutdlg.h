@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'aboutdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -97,17 +97,17 @@ public:
 
     void retranslateUi(QDialog *About)
     {
-        About->setWindowTitle(QApplication::translate("About", "About", nullptr));
+        About->setWindowTitle(QCoreApplication::translate("About", "About", nullptr));
         label->setText(QString());
-        version->setText(QApplication::translate("About", "Version 0.9.7.5 updated 2019-02-03", nullptr));
-        title->setText(QApplication::translate("About", "Winnow Image Viewer and Ingester", nullptr));
-        webSite->setText(QApplication::translate("About", "<html><head/><body><p>Website:  <a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#e5e5e5;\">Winnow main page</span></a>", nullptr));
-        email->setText(QApplication::translate("About", "<html><head/><body><p>Email:  <a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#e5e5e5;\">winnowimageviewer@outlook.com</span></a>", nullptr));
-        Author->setText(QApplication::translate("About", "Author:  Rory Hill", nullptr));
-        license->setText(QApplication::translate("About", "Winnow is licensed under the GNU General Public License version 3", nullptr));
-        qtVersion->setText(QApplication::translate("About", "Qt 5.12", nullptr));
-        okButton->setText(QApplication::translate("About", "OK", nullptr));
-        comment->setText(QApplication::translate("About", "Includes links to download the application and video tutorials.", nullptr));
+        version->setText(QCoreApplication::translate("About", "Version 0.9.7.5 updated 2019-02-03", nullptr));
+        title->setText(QCoreApplication::translate("About", "Winnow Image Viewer and Ingester", nullptr));
+        webSite->setText(QCoreApplication::translate("About", "<html><head/><body><p>Website:  <a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#e5e5e5;\">Winnow main page</span></a>", nullptr));
+        email->setText(QCoreApplication::translate("About", "<html><head/><body><p>Email:  <a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#e5e5e5;\">winnowimageviewer@outlook.com</span></a>", nullptr));
+        Author->setText(QCoreApplication::translate("About", "Author:  Rory Hill", nullptr));
+        license->setText(QCoreApplication::translate("About", "Winnow is licensed under the GNU General Public License version 3", nullptr));
+        qtVersion->setText(QCoreApplication::translate("About", "Qt 5.12", nullptr));
+        okButton->setText(QCoreApplication::translate("About", "OK", nullptr));
+        comment->setText(QCoreApplication::translate("About", "Includes links to download the application and video tutorials.", nullptr));
     } // retranslateUi
 
 };

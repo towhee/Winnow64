@@ -157,6 +157,7 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested"));
     setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour"));
     setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating"));
+    setHorizontalHeaderItem(G::SearchColumn, new QStandardItem("🔎"));
     setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type"));
     setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size"));
     setHorizontalHeaderItem(G::WidthColumn, new QStandardItem("Width"));
@@ -203,6 +204,7 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees"));
     setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Err"));
     setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo"));
+    setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search"));
 
     sf = new SortFilter(this, filters, combineRawJpg);
     sf->setSourceModel(this);
@@ -245,6 +247,19 @@ when combined raw+jpg is activated.
         if (i2.suffix().toLower() == "jpg") s2.replace(".jpg", ".zzz");
     }
     return s1 < s2;
+}
+
+void DataModel::find(QString text)
+{
+    for (int row = 0; row < sf->rowCount(); ++row) {
+        QString searchableText = sf->index(row, G::SearchTextColumn).data().toString();
+        qDebug() << __FUNCTION__ << searchableText;
+        if (searchableText.contains(text.toLower())) {
+            QModelIndex idx = sf->mapToSource(sf->index(row, G::SearchColumn));
+            setData(idx, "true");
+            qDebug() << __FUNCTION__ << "Found";
+        }
+    }
 }
 
 bool DataModel::load(QString &folderPath, bool includeSubfolders)
@@ -390,6 +405,9 @@ bool DataModel::addFileData()
         // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
         fPathRow[fPath] = fileIndex;
 
+        // string to hold aggregated text for searching
+        QString search = fPath;
+
         /* add icon as first column in new row
 
         This can be done two ways:
@@ -430,7 +448,9 @@ bool DataModel::addFileData()
         setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
         setData(index(row, G::SizeColumn), fileInfo.size());
         setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        setData(index(row, G::ModifiedColumn), fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss"));
+        s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
+        search += s;
+        setData(index(row, G::ModifiedColumn), s);
         setData(index(row, G::RefineColumn), false);
         setData(index(row, G::RefineColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::PickColumn), "false");
@@ -438,6 +458,9 @@ bool DataModel::addFileData()
         setData(index(row, G::IngestedColumn), "false");
         setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::MetadataLoadedColumn), "false");
+        setData(index(row, G::SearchColumn), "false");
+        setData(index(row, G::SearchColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        setData(index(row, G::SearchTextColumn), search);
 
         /* Save info for duplicated raw and jpg files, which generally are the result of
         setting raw+jpg in the camera. The datamodel is sorted by file path, except raw
@@ -616,9 +639,11 @@ bool DataModel::addMetadataForItem(ImageMetadata m, bool isShowCacheStatus)
     }
     static int lastProgressRow = 0;
     int row = m.row;
+    QString search = index(row, G::SearchTextColumn).data().toString();
 
     setData(index(row, G::LabelColumn), m.label);
     setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+    search += m.label;
     setData(index(row, G::_LabelColumn), m._label);
     setData(index(row, G::RatingColumn), m.rating);
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -626,6 +651,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::CreatedColumn), m.createdDate);
     setData(index(row, G::YearColumn), m.createdDate.toString("yyyy"));
     setData(index(row, G::DayColumn), m.createdDate.toString("yyyy-MM-dd"));
+    search += m.createdDate.toString("yyyy-MM-dd");
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
     setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::WidthColumn), QString::number(m.width));
@@ -643,19 +669,27 @@ bool DataModel::addMetadataForItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::ISOColumn), m.ISONum);
     setData(index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::CameraMakeColumn), m.make);
+    search += m.make;
     setData(index(row, G::CameraModelColumn), m.model);
+    search += m.model;
     setData(index(row, G::LensColumn), m.lens);
+    search += m.lens;
     setData(index(row, G::FocalLengthColumn), m.focalLengthNum);
     setData(index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::TitleColumn), m.title);
+    search += m.title;
     setData(index(row, G::_TitleColumn), m._title);
     setData(index(row, G::CreatorColumn), m.creator);
+    search += m.creator;
     setData(index(row, G::_CreatorColumn), m._creator);
     setData(index(row, G::CopyrightColumn), m.copyright);
+    search += m.copyright;
     setData(index(row, G::_CopyrightColumn), m._copyright);
     setData(index(row, G::EmailColumn), m.email);
+    search += m.email;
     setData(index(row, G::_EmailColumn), m._email);
     setData(index(row, G::UrlColumn), m.url);
+    search += m.url;
     setData(index(row, G::_UrlColumn), m._url);
     setData(index(row, G::OffsetFullJPGColumn), m.offsetFullJPG);
     setData(index(row, G::LengthFullJPGColumn), m.lengthFullJPG);
@@ -671,7 +705,9 @@ bool DataModel::addMetadataForItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
     setData(index(row, G::ErrColumn), m.err);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
+    search += m.shootingInfo;
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
+    setData(index(row, G::SearchTextColumn), search.toLower());
 
     if (G::buildingFilters) {
         if (row % 1000 == 0 || row == 0) {
@@ -701,6 +737,7 @@ void DataModel::buildFilters()
     }
     if (filtersBuilt) return;
 //    filtersBuilt = true;
+    qDebug() << __FUNCTION__ << "1";
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
@@ -759,7 +796,9 @@ void DataModel::buildFilters()
 //    s = "Step 4 0f " + buildSteps + ":  Tabulating filtered items ...";
     G::popUp->setPopupText(buildMsg + s);
     qApp->processEvents();
+    qDebug() << __FUNCTION__ << "filteredItemCount()";
     filteredItemCount();
+    qDebug() << __FUNCTION__ << "unfilteredItemCount()";
     unfilteredItemCount();
 
     filtersBuilt = true;

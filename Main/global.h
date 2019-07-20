@@ -46,6 +46,7 @@ namespace G
         IngestedColumn,
         LabelColumn,
         RatingColumn,
+        SearchColumn,
         TypeColumn,
         SizeColumn,
         WidthColumn,
@@ -95,6 +96,7 @@ namespace G
         RotationDegreesColumn,
         ErrColumn,
         ShootingInfoColumn,
+        SearchTextColumn,
         TotalColumns    // insert additional columns before this
     };
 
