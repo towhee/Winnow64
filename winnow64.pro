@@ -9,7 +9,8 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h
+HEADERS += Cache/imagecache.h \
+    PropertyEditor/propertywidgets.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/datamodel.h
@@ -37,7 +38,7 @@ HEADERS += Metadata/imagemetadata.h
 HEADERS += Metadata/metadata.h
 HEADERS += Metadata/xmp.h
 HEADERS += PropertyEditor/propertyeditor.h
-HEADERS += PropertyEditor/propertysliderwidget.h
+HEADERS +=
 HEADERS += Views/compareImages.h
 HEADERS += Views/compareview.h
 HEADERS += Views/iconview.h
@@ -54,7 +55,7 @@ HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
 
 SOURCES += Cache/imagecache.cpp \
-    PropertyEditor/propertysliderwidget.cpp
+    PropertyEditor/propertywidgets.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
@@ -81,7 +82,7 @@ SOURCES += Main/mainwindow.cpp
 SOURCES += Metadata/metadata.cpp
 SOURCES += Metadata/xmp.cpp
 SOURCES += PropertyEditor/propertyeditor.cpp
-HEADERS += PropertyEditor/propertysliderwidget.cpp
+HEADERS +=
 SOURCES += Views/compareImages.cpp
 SOURCES += Views/compareview.cpp
 SOURCES += Views/iconview.cpp

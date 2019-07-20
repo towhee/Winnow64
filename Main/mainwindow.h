@@ -64,7 +64,7 @@ class MW : public QMainWindow
     friend class Prefdlg;           // m0
     friend class ProgressBar;       // mw1
     friend class IconView;          // mw2
-    friend class PropertyEditor;    // m;
+    friend class PropertyEditor;    // mw;
 
 public:
     MW(QWidget *parent = nullptr);
