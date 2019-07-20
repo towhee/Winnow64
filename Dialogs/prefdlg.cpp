@@ -46,7 +46,7 @@ Prefdlg::Prefdlg(QWidget *parent, int lastPrefPage) :
     ui->updateAppChk->setChecked(m0->checkIfUpdate);
     ui->trackpadIterateRadio->setChecked(!m0->imageView->useWheelToScroll);
     ui->trackpadScrollRadio->setChecked(m0->imageView->useWheelToScroll);
-    ui->mouseClickScrollChk->setChecked((m0->mouseClickScroll));
+//    ui->mouseClickScrollChk->setChecked((m0->mouseClickScroll));
 
     // thumbs
     ui->fontSizeSlider->setSingleStep(1);
@@ -291,12 +291,12 @@ void Prefdlg::on_updateAppChk_stateChanged(int /*value*/)
     }
 }
 
-void Prefdlg::on_mouseClickScrollChk_clicked()
-{
-    if (okToUpdate) {
-        m0->mouseClickScroll = ui->mouseClickScrollChk->isChecked();
-    }
-}
+//void Prefdlg::on_mouseClickScrollChk_clicked()
+//{
+//    if (okToUpdate) {
+//        m0->mouseClickScroll = ui->mouseClickScrollChk->isChecked();
+//    }
+//}
 
 void Prefdlg::on_trackpadIterateRadio_clicked()
 {

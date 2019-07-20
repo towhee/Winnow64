@@ -87,10 +87,10 @@ void Metadata::initSupportedFiles()
     internalXmpFormats << "notyetjpg";
     xmpWriteFormats << "jpg" << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2";
 
-    supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "dng" << "gif" <<
-    "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" <<
-    "orf" << "pbm" << "pgm" << "png" << "ppm" << "raf" << "rw2" << "sr2" << "svg" <<
-    "svgz" << "tga" << "tif" << "wbmp" << "webp" << "xbm" << "xpm";
+    supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "dng" << "gif" << "heic"
+    << "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" << "orf" <<
+    "pbm" << "pgm" << "png" << "ppm" << "raf" << "rw2" << "sr2" << "svg" << "svgz" << "tga" <<
+    "tif" << "wbmp" << "webp" << "xbm" << "xpm";
 }
 
 void Metadata::initSegCodeHash()

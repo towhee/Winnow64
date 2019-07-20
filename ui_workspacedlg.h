@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'workspacedlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -93,11 +93,11 @@ public:
 
     void retranslateUi(QDialog *Workspacedlg)
     {
-        Workspacedlg->setWindowTitle(QApplication::translate("Workspacedlg", "Manage Workspaces", nullptr));
-        workspaceLbl->setText(QApplication::translate("Workspacedlg", "Workspace:", nullptr));
-        deleteBtn->setText(QApplication::translate("Workspacedlg", "Delete", nullptr));
-        reassignBtn->setText(QApplication::translate("Workspacedlg", "Update to current layout", nullptr));
-        doneBtn->setText(QApplication::translate("Workspacedlg", "Done", nullptr));
+        Workspacedlg->setWindowTitle(QCoreApplication::translate("Workspacedlg", "Manage Workspaces", nullptr));
+        workspaceLbl->setText(QCoreApplication::translate("Workspacedlg", "Workspace:", nullptr));
+        deleteBtn->setText(QCoreApplication::translate("Workspacedlg", "Delete", nullptr));
+        reassignBtn->setText(QCoreApplication::translate("Workspacedlg", "Update to current layout", nullptr));
+        doneBtn->setText(QCoreApplication::translate("Workspacedlg", "Done", nullptr));
         status->setText(QString());
     } // retranslateUi
 

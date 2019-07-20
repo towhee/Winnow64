@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'appdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -56,8 +56,8 @@ public:
         appsTable->setColumnCount(3);
         appsTable->horizontalHeader()->setDefaultSectionSize(300);
         appsTable->verticalHeader()->setVisible(false);
-        appsTable->verticalHeader()->setDefaultSectionSize(26);
         appsTable->verticalHeader()->setMinimumSectionSize(24);
+        appsTable->verticalHeader()->setDefaultSectionSize(26);
 
         horizontalLayout->addWidget(appsTable);
 
@@ -117,34 +117,34 @@ public:
 
     void retranslateUi(QDialog *Appdlg)
     {
-        Appdlg->setWindowTitle(QApplication::translate("Appdlg", "External Program List", nullptr));
-#ifndef QT_NO_TOOLTIP
-        appsTable->setToolTip(QApplication::translate("Appdlg", "<html><head/><body><p>Select a row before moving or deleting.  Double click in the name field to edit the app name.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
-        moveDown->setToolTip(QApplication::translate("Appdlg", "Select a row and then click this button to move the row down", nullptr));
-#endif // QT_NO_TOOLTIP
-        moveDown->setText(QApplication::translate("Appdlg", "Move Down", nullptr));
-#ifndef QT_NO_TOOLTIP
-        moveUp->setToolTip(QApplication::translate("Appdlg", "Select a row and then click this button to move the row up", nullptr));
-#endif // QT_NO_TOOLTIP
-        moveUp->setText(QApplication::translate("Appdlg", "Move Up", nullptr));
-#ifndef QT_NO_TOOLTIP
-        addBtn->setToolTip(QApplication::translate("Appdlg", "Add a program to the table (up to 10 programs)", nullptr));
-#endif // QT_NO_TOOLTIP
-        addBtn->setText(QApplication::translate("Appdlg", "Add Program", nullptr));
-#ifndef QT_NO_TOOLTIP
-        removeBtn->setToolTip(QApplication::translate("Appdlg", "Remove the selected program form the table", nullptr));
-#endif // QT_NO_TOOLTIP
-        removeBtn->setText(QApplication::translate("Appdlg", "Remove Program", nullptr));
-#ifndef QT_NO_TOOLTIP
-        okBtn->setToolTip(QApplication::translate("Appdlg", "Save the changes, which will be reflected in the external applications available in \"Open with...\"", nullptr));
-#endif // QT_NO_TOOLTIP
-        okBtn->setText(QApplication::translate("Appdlg", "Save changes", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cancelBtn->setToolTip(QApplication::translate("Appdlg", "Exit without saving any changes", nullptr));
-#endif // QT_NO_TOOLTIP
-        cancelBtn->setText(QApplication::translate("Appdlg", "Cancel", nullptr));
+        Appdlg->setWindowTitle(QCoreApplication::translate("Appdlg", "External Program List", nullptr));
+#if QT_CONFIG(tooltip)
+        appsTable->setToolTip(QCoreApplication::translate("Appdlg", "<html><head/><body><p>Select a row before moving or deleting.  Double click in the name field to edit the app name.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        moveDown->setToolTip(QCoreApplication::translate("Appdlg", "Select a row and then click this button to move the row down", nullptr));
+#endif // QT_CONFIG(tooltip)
+        moveDown->setText(QCoreApplication::translate("Appdlg", "Move Down", nullptr));
+#if QT_CONFIG(tooltip)
+        moveUp->setToolTip(QCoreApplication::translate("Appdlg", "Select a row and then click this button to move the row up", nullptr));
+#endif // QT_CONFIG(tooltip)
+        moveUp->setText(QCoreApplication::translate("Appdlg", "Move Up", nullptr));
+#if QT_CONFIG(tooltip)
+        addBtn->setToolTip(QCoreApplication::translate("Appdlg", "Add a program to the table (up to 10 programs)", nullptr));
+#endif // QT_CONFIG(tooltip)
+        addBtn->setText(QCoreApplication::translate("Appdlg", "Add Program", nullptr));
+#if QT_CONFIG(tooltip)
+        removeBtn->setToolTip(QCoreApplication::translate("Appdlg", "Remove the selected program form the table", nullptr));
+#endif // QT_CONFIG(tooltip)
+        removeBtn->setText(QCoreApplication::translate("Appdlg", "Remove Program", nullptr));
+#if QT_CONFIG(tooltip)
+        okBtn->setToolTip(QCoreApplication::translate("Appdlg", "Save the changes, which will be reflected in the external applications available in \"Open with...\"", nullptr));
+#endif // QT_CONFIG(tooltip)
+        okBtn->setText(QCoreApplication::translate("Appdlg", "Save changes", nullptr));
+#if QT_CONFIG(tooltip)
+        cancelBtn->setToolTip(QCoreApplication::translate("Appdlg", "Exit without saving any changes", nullptr));
+#endif // QT_CONFIG(tooltip)
+        cancelBtn->setText(QCoreApplication::translate("Appdlg", "Cancel", nullptr));
     } // retranslateUi
 
 };

@@ -43,9 +43,10 @@ public:
 
     bool load(QString &dir, bool includeSubfolders);
     void clear();
+    void find(QString text);
     ImageMetadata getMetadata(QString fPath);
     void updateImageList();
-    void sortThumbs(int sortColumn, bool isReverse);
+//    void sortThumbs(int sortColumn, bool isReverse);
     QModelIndex proxyIndexFromPath(QString fPath);
     QString diagnostics();
 

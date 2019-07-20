@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'zoomdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -172,54 +172,54 @@ public:
 
     void retranslateUi(QDialog *ZoomDlg)
     {
-        ZoomDlg->setWindowTitle(QApplication::translate("ZoomDlg", "Select zoom percentage", nullptr));
-#ifndef QT_NO_TOOLTIP
-        ZoomDlg->setToolTip(QApplication::translate("ZoomDlg", "<html><head/><body><p><span style=\" font-size:18pt; font-weight:600;\">Zoom tips:</span></p><p><span style=\" font-weight:600;\">Z </span>opens and closes the zoom window.</p><p><span style=\" font-weight:600;\">Enter </span>or <span style=\" font-weight:600;\">Esc </span>will close this window.</p><p><span style=\" font-weight:600;\">1</span> - <span style=\" font-weight:600;\">6</span> to quick set zoom percentage.</p><p><span style=\" font-weight:600;\">Use toggle zoom buttom</span> to change the toggle zoom amount (when clicking on the main image).  The zoom will alternate between <span style=\" font-weight:600;\">fill</span> and the <span style=\" font-weight:600;\">toggle zoom amount</span> you have set here each time you mouse click on the image.</p><p>This window will stay-on-top so you can scroll the image, click zoom or pan to click point on a thumbnail.</p><p>Settings are sticky and will remain when you use Esc to exit.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
-        radio25Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 1", nullptr));
-#endif // QT_NO_TOOLTIP
-        radio25Button->setText(QApplication::translate("ZoomDlg", "25%", nullptr));
-#ifndef QT_NO_SHORTCUT
-        radio25Button->setShortcut(QApplication::translate("ZoomDlg", "1", nullptr));
-#endif // QT_NO_SHORTCUT
-#ifndef QT_NO_TOOLTIP
-        radio50Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 2", nullptr));
-#endif // QT_NO_TOOLTIP
-        radio50Button->setText(QApplication::translate("ZoomDlg", "50%", nullptr));
-#ifndef QT_NO_SHORTCUT
-        radio50Button->setShortcut(QApplication::translate("ZoomDlg", "2", nullptr));
-#endif // QT_NO_SHORTCUT
-#ifndef QT_NO_TOOLTIP
-        radio66Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 3", nullptr));
-#endif // QT_NO_TOOLTIP
-        radio66Button->setText(QApplication::translate("ZoomDlg", "67%", nullptr));
-#ifndef QT_NO_SHORTCUT
-        radio66Button->setShortcut(QApplication::translate("ZoomDlg", "3", nullptr));
-#endif // QT_NO_SHORTCUT
-#ifndef QT_NO_TOOLTIP
-        radio100Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 4", nullptr));
-#endif // QT_NO_TOOLTIP
-        radio100Button->setText(QApplication::translate("ZoomDlg", "100%", nullptr));
-#ifndef QT_NO_SHORTCUT
-        radio100Button->setShortcut(QApplication::translate("ZoomDlg", "4", nullptr));
-#endif // QT_NO_SHORTCUT
-#ifndef QT_NO_TOOLTIP
-        radio133Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 5", nullptr));
-#endif // QT_NO_TOOLTIP
-        radio133Button->setText(QApplication::translate("ZoomDlg", "133%", nullptr));
-#ifndef QT_NO_SHORTCUT
-        radio133Button->setShortcut(QApplication::translate("ZoomDlg", "5", nullptr));
-#endif // QT_NO_SHORTCUT
-#ifndef QT_NO_TOOLTIP
-        radio200Button->setToolTip(QApplication::translate("ZoomDlg", "Shortcut = 6", nullptr));
-#endif // QT_NO_TOOLTIP
-        radio200Button->setText(QApplication::translate("ZoomDlg", "200%", nullptr));
-#ifndef QT_NO_SHORTCUT
-        radio200Button->setShortcut(QApplication::translate("ZoomDlg", "6", nullptr));
-#endif // QT_NO_SHORTCUT
-        pctLabel->setText(QApplication::translate("ZoomDlg", "%", nullptr));
-        toggleZoomAmountBtn->setText(QApplication::translate("ZoomDlg", "Set as toggle \n"
+        ZoomDlg->setWindowTitle(QCoreApplication::translate("ZoomDlg", "Select zoom percentage", nullptr));
+#if QT_CONFIG(tooltip)
+        ZoomDlg->setToolTip(QCoreApplication::translate("ZoomDlg", "<html><head/><body><p><span style=\" font-size:18pt; font-weight:600;\">Zoom tips:</span></p><p><span style=\" font-weight:600;\">Z </span>opens and closes the zoom window.</p><p><span style=\" font-weight:600;\">Enter </span>or <span style=\" font-weight:600;\">Esc </span>will close this window.</p><p><span style=\" font-weight:600;\">1</span> - <span style=\" font-weight:600;\">6</span> to quick set zoom percentage.</p><p><span style=\" font-weight:600;\">Use toggle zoom buttom</span> to change the toggle zoom amount (when clicking on the main image).  The zoom will alternate between <span style=\" font-weight:600;\">fill</span> and the <span style=\" font-weight:600;\">toggle zoom amount</span> you have set here each time you mouse click on the image.</p><p>This window will stay-on-top so you can scroll the image, click zoom or pan to click point on a thumbnail.</p><p>Settings are sticky and will remain when you use Esc to exit.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        radio25Button->setToolTip(QCoreApplication::translate("ZoomDlg", "Shortcut = 1", nullptr));
+#endif // QT_CONFIG(tooltip)
+        radio25Button->setText(QCoreApplication::translate("ZoomDlg", "25%", nullptr));
+#if QT_CONFIG(shortcut)
+        radio25Button->setShortcut(QCoreApplication::translate("ZoomDlg", "1", nullptr));
+#endif // QT_CONFIG(shortcut)
+#if QT_CONFIG(tooltip)
+        radio50Button->setToolTip(QCoreApplication::translate("ZoomDlg", "Shortcut = 2", nullptr));
+#endif // QT_CONFIG(tooltip)
+        radio50Button->setText(QCoreApplication::translate("ZoomDlg", "50%", nullptr));
+#if QT_CONFIG(shortcut)
+        radio50Button->setShortcut(QCoreApplication::translate("ZoomDlg", "2", nullptr));
+#endif // QT_CONFIG(shortcut)
+#if QT_CONFIG(tooltip)
+        radio66Button->setToolTip(QCoreApplication::translate("ZoomDlg", "Shortcut = 3", nullptr));
+#endif // QT_CONFIG(tooltip)
+        radio66Button->setText(QCoreApplication::translate("ZoomDlg", "67%", nullptr));
+#if QT_CONFIG(shortcut)
+        radio66Button->setShortcut(QCoreApplication::translate("ZoomDlg", "3", nullptr));
+#endif // QT_CONFIG(shortcut)
+#if QT_CONFIG(tooltip)
+        radio100Button->setToolTip(QCoreApplication::translate("ZoomDlg", "Shortcut = 4", nullptr));
+#endif // QT_CONFIG(tooltip)
+        radio100Button->setText(QCoreApplication::translate("ZoomDlg", "100%", nullptr));
+#if QT_CONFIG(shortcut)
+        radio100Button->setShortcut(QCoreApplication::translate("ZoomDlg", "4", nullptr));
+#endif // QT_CONFIG(shortcut)
+#if QT_CONFIG(tooltip)
+        radio133Button->setToolTip(QCoreApplication::translate("ZoomDlg", "Shortcut = 5", nullptr));
+#endif // QT_CONFIG(tooltip)
+        radio133Button->setText(QCoreApplication::translate("ZoomDlg", "133%", nullptr));
+#if QT_CONFIG(shortcut)
+        radio133Button->setShortcut(QCoreApplication::translate("ZoomDlg", "5", nullptr));
+#endif // QT_CONFIG(shortcut)
+#if QT_CONFIG(tooltip)
+        radio200Button->setToolTip(QCoreApplication::translate("ZoomDlg", "Shortcut = 6", nullptr));
+#endif // QT_CONFIG(tooltip)
+        radio200Button->setText(QCoreApplication::translate("ZoomDlg", "200%", nullptr));
+#if QT_CONFIG(shortcut)
+        radio200Button->setShortcut(QCoreApplication::translate("ZoomDlg", "6", nullptr));
+#endif // QT_CONFIG(shortcut)
+        pctLabel->setText(QCoreApplication::translate("ZoomDlg", "%", nullptr));
+        toggleZoomAmountBtn->setText(QCoreApplication::translate("ZoomDlg", "Set as toggle \n"
 "zoom amount", nullptr));
     } // retranslateUi
 

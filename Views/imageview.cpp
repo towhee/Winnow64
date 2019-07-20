@@ -878,13 +878,14 @@ void ImageView::wheelEvent(QWheelEvent *event)
     }
 
     // if trackpad scrolling set in preferences then default behavior
-    if(useWheelToScroll) {
+    if(useWheelToScroll && isZoom) {
+        qDebug() << __FUNCTION__ << zoom << isZoom;
         QGraphicsView::wheelEvent(event);
         isTrackpadScroll = true;
         return;
     }
 
-    // otherwise trapckpad swiping = next/previous image
+    // otherwise trackpad swiping = next/previous image
     static int delta;
     delta += event->delta();
     int deltaThreshold = 40;

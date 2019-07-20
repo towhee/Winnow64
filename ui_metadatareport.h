@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'metadatareport.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -47,7 +47,7 @@ public:
 
     void retranslateUi(QDialog *metadataReporttDlg)
     {
-        metadataReporttDlg->setWindowTitle(QApplication::translate("metadataReporttDlg", " Winnow Diagnostics", nullptr));
+        metadataReporttDlg->setWindowTitle(QCoreApplication::translate("metadataReporttDlg", " Winnow Diagnostics", nullptr));
     } // retranslateUi
 
 };

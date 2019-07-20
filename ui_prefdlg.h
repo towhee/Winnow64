@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'prefdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -48,8 +48,6 @@ public:
     QVBoxLayout *verticalLayout_3;
     QRadioButton *trackpadIterateRadio;
     QRadioButton *trackpadScrollRadio;
-    QGroupBox *groupBoxFolders_2;
-    QCheckBox *mouseClickScrollChk;
     QLabel *label_23;
     QWidget *pageAppearance;
     QGroupBox *groupBoxFontSize;
@@ -221,13 +219,6 @@ public:
 
         verticalLayout_3->addWidget(trackpadScrollRadio);
 
-        groupBoxFolders_2 = new QGroupBox(scrollAreaWidgetContents);
-        groupBoxFolders_2->setObjectName(QString::fromUtf8("groupBoxFolders_2"));
-        groupBoxFolders_2->setGeometry(QRect(20, 270, 431, 71));
-        mouseClickScrollChk = new QCheckBox(groupBoxFolders_2);
-        mouseClickScrollChk->setObjectName(QString::fromUtf8("mouseClickScrollChk"));
-        mouseClickScrollChk->setGeometry(QRect(20, 30, 371, 20));
-        mouseClickScrollChk->setFont(font);
         label_23 = new QLabel(scrollAreaWidgetContents);
         label_23->setObjectName(QString::fromUtf8("label_23"));
         label_23->setGeometry(QRect(30, 580, 47, 13));
@@ -771,8 +762,8 @@ public:
         tableFieldsTable->setObjectName(QString::fromUtf8("tableFieldsTable"));
         tableFieldsTable->setMaximumSize(QSize(200, 16777215));
         tableFieldsTable->setIconSize(QSize(0, 0));
-        tableFieldsTable->verticalHeader()->setDefaultSectionSize(34);
         tableFieldsTable->verticalHeader()->setMinimumSectionSize(1);
+        tableFieldsTable->verticalHeader()->setDefaultSectionSize(34);
 
         verticalLayout_5->addWidget(tableFieldsTable);
 
@@ -810,7 +801,7 @@ public:
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
         QObject::connect(fontSizeSlider_2, SIGNAL(valueChanged(int)), fontSizeLbl_2, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(3);
+        stackedWidget->setCurrentIndex(0);
         listContainer->setCurrentIndex(0);
 
 
@@ -819,180 +810,178 @@ public:
 
     void retranslateUi(QDialog *Prefdlg)
     {
-        Prefdlg->setWindowTitle(QApplication::translate("Prefdlg", "Winnow Preferences", nullptr));
-#ifndef QT_NO_TOOLTIP
-        closeBtn->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>When closing the preferences dialog all changes will by retained.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        closeBtn->setText(QApplication::translate("Prefdlg", "Okay", nullptr));
-        groupBoxFolders->setTitle(QApplication::translate("Prefdlg", "When open program", nullptr));
-        rememberFolderChk->setText(QApplication::translate("Prefdlg", "Remember previous folder", nullptr));
-        updateAppChk->setText(QApplication::translate("Prefdlg", "Check for program updates", nullptr));
-        groupBoxTrackpadAction->setTitle(QApplication::translate("Prefdlg", "Trackpad Swipe / Mouse Wheel", nullptr));
-        trackpadIterateRadio->setText(QApplication::translate("Prefdlg", "Next / previous image", nullptr));
-        trackpadScrollRadio->setText(QApplication::translate("Prefdlg", "Scroll current image when zoomed", nullptr));
-        groupBoxFolders_2->setTitle(QApplication::translate("Prefdlg", "Mouse click selection", nullptr));
-        mouseClickScrollChk->setText(QApplication::translate("Prefdlg", "Scroll to position at center when mouse click", nullptr));
-        label_23->setText(QApplication::translate("Prefdlg", "Test", nullptr));
-        groupBoxFontSize->setTitle(QApplication::translate("Prefdlg", "Font size", nullptr));
-#ifndef QT_NO_TOOLTIP
-        globalFontSizeSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
+        Prefdlg->setWindowTitle(QCoreApplication::translate("Prefdlg", "Winnow Preferences", nullptr));
+#if QT_CONFIG(tooltip)
+        closeBtn->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>When closing the preferences dialog all changes will by retained.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        closeBtn->setText(QCoreApplication::translate("Prefdlg", "Okay", nullptr));
+        groupBoxFolders->setTitle(QCoreApplication::translate("Prefdlg", "When open program", nullptr));
+        rememberFolderChk->setText(QCoreApplication::translate("Prefdlg", "Remember previous folder", nullptr));
+        updateAppChk->setText(QCoreApplication::translate("Prefdlg", "Check for program updates", nullptr));
+        groupBoxTrackpadAction->setTitle(QCoreApplication::translate("Prefdlg", "Trackpad Swipe / Mouse Wheel", nullptr));
+        trackpadIterateRadio->setText(QCoreApplication::translate("Prefdlg", "Next / previous image", nullptr));
+        trackpadScrollRadio->setText(QCoreApplication::translate("Prefdlg", "Scroll current image when zoomed", nullptr));
+        label_23->setText(QCoreApplication::translate("Prefdlg", "Test", nullptr));
+        groupBoxFontSize->setTitle(QCoreApplication::translate("Prefdlg", "Font size", nullptr));
+#if QT_CONFIG(tooltip)
+        globalFontSizeSlider->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
         globalFontSizeLbl->setText(QString());
-#ifndef QT_NO_TOOLTIP
-        infoFontSizeSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label_21->setText(QApplication::translate("Prefdlg", "Global", nullptr));
-        label_22->setText(QApplication::translate("Prefdlg", "Info overlay", nullptr));
+#if QT_CONFIG(tooltip)
+        infoFontSizeSlider->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        label_21->setText(QCoreApplication::translate("Prefdlg", "Global", nullptr));
+        label_22->setText(QCoreApplication::translate("Prefdlg", "Info overlay", nullptr));
         infoFontSizeLbl->setText(QString());
-        groupBoxClassificationSize->setTitle(QApplication::translate("Prefdlg", "Classification badge diameter", nullptr));
-#ifndef QT_NO_TOOLTIP
-        classificationBadgeImageDiamSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
+        groupBoxClassificationSize->setTitle(QCoreApplication::translate("Prefdlg", "Classification badge diameter", nullptr));
+#if QT_CONFIG(tooltip)
+        classificationBadgeImageDiamSlider->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
         classificationBadgeImageDiamLbl->setText(QString());
-        label_13->setText(QApplication::translate("Prefdlg", "Loupe", nullptr));
-        label_20->setText(QApplication::translate("Prefdlg", "Thumb", nullptr));
+        label_13->setText(QCoreApplication::translate("Prefdlg", "Loupe", nullptr));
+        label_20->setText(QCoreApplication::translate("Prefdlg", "Thumb", nullptr));
         classificationBadgeThumbDiamLbl->setText(QString());
-#ifndef QT_NO_TOOLTIP
-        classificationBadgeThumbDiamSlider->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
-        label_9->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Caching images and rendering the selected image simultaneously can degrade performance when rapidly moving through images.  The delay allows the next image selected to be rendered without any caching activity.  Try experimenting with the delay value if you are experiencing hesitation rendering the selected image.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label_9->setText(QApplication::translate("Prefdlg", "Delay (ms)", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cacheDelaySpinbox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Caching images and rendering the selected image simultaneously can degrade performance when rapidly moving through images.  The delay allows the next image selected to be rendered without any caching activity.  Try experimenting with the delay value if you are experiencing hesitation rendering the selected image.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        groupBox_3->setTitle(QApplication::translate("Prefdlg", "Full size loupe image cache", nullptr));
-#ifndef QT_NO_TOOLTIP
-        showCacheStatusChk->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This will show the cache status in the status bar at the bottom of the application.  If you do not see the status bar you can enable it in the Windows menu or by pressing F10.  If you hover over the cache status another tooltip will explain the colour codes for the current file, target cache, current cache and total images.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        showCacheStatusChk->setText(QApplication::translate("Prefdlg", "Show cache progress bar", nullptr));
-#ifndef QT_NO_TOOLTIP
-        label_10->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This sets the width of the cache status shown on the application status bar.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label_10->setText(QApplication::translate("Prefdlg", "width", nullptr));
-#ifndef QT_NO_TOOLTIP
-        showCacheThreadActivityChk->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This will display two small activity lights on the status bar at the bottom of the application window. The activity lights turn green when there is caching activity for building metadata/thumbnails and full scale images.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        showCacheThreadActivityChk->setText(QApplication::translate("Prefdlg", "Show cache thread activity", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cachePreviewsChk->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>The largest preview embedded in the image file will be cached.  However, for large files this can take time.  This option tells the application to first create a smaller preview that will fit your monitor while the larger one is being built.  Try checking this option if you are experiencing some latency in loupe mode.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        cachePreviewsChk->setText(QApplication::translate("Prefdlg", "Cache previews scaled to monitor resolution", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cache100AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        cache100AheadRadio->setText(QApplication::translate("Prefdlg", "100% ahead", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cache70AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        cache70AheadRadio->setText(QApplication::translate("Prefdlg", "70% ahead", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cache90AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        cache90AheadRadio->setText(QApplication::translate("Prefdlg", "90% ahead", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cache50AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        cache50AheadRadio->setText(QApplication::translate("Prefdlg", "50% ahead", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cache60AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        cache60AheadRadio->setText(QApplication::translate("Prefdlg", "60% ahead", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cache80AheadRadio->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        cache80AheadRadio->setText(QApplication::translate("Prefdlg", "80% ahead", nullptr));
-#ifndef QT_NO_TOOLTIP
-        cacheSizeSpinbox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
-        label_8->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label_8->setText(QApplication::translate("Prefdlg", "Cache size (GB)", nullptr));
-#ifndef QT_NO_TOOLTIP
-        label->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label->setText(QApplication::translate("Prefdlg", "Cache strategy:", nullptr));
-        metadataCacheGroupBox->setTitle(QApplication::translate("Prefdlg", "Metadata cache", nullptr));
-        metadataCacheAllRadio->setText(QApplication::translate("Prefdlg", "Cache all items when open folder (could be a slight delay)", nullptr));
-        metadataCacheChunkRadio->setText(QApplication::translate("Prefdlg", "Cache", nullptr));
-#ifndef QT_NO_TOOLTIP
-        metadataCacheSizeSpinbox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label_14->setText(QApplication::translate("Prefdlg", "items at a time", nullptr));
-        thumbnailCacheGroupBoc->setTitle(QApplication::translate("Prefdlg", "Thumbnail cache", nullptr));
+#if QT_CONFIG(tooltip)
+        classificationBadgeThumbDiamSlider->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Changes the global font. The font size in the thumbnails for the file name is controlled independently in &quot;Thumbs in Dock&quot; and &quot;Thumbs in Grid View&quot;.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        label_9->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Caching images and rendering the selected image simultaneously can degrade performance when rapidly moving through images.  The delay allows the next image selected to be rendered without any caching activity.  Try experimenting with the delay value if you are experiencing hesitation rendering the selected image.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        label_9->setText(QCoreApplication::translate("Prefdlg", "Delay (ms)", nullptr));
+#if QT_CONFIG(tooltip)
+        cacheDelaySpinbox->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Caching images and rendering the selected image simultaneously can degrade performance when rapidly moving through images.  The delay allows the next image selected to be rendered without any caching activity.  Try experimenting with the delay value if you are experiencing hesitation rendering the selected image.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        groupBox_3->setTitle(QCoreApplication::translate("Prefdlg", "Full size loupe image cache", nullptr));
+#if QT_CONFIG(tooltip)
+        showCacheStatusChk->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>This will show the cache status in the status bar at the bottom of the application.  If you do not see the status bar you can enable it in the Windows menu or by pressing F10.  If you hover over the cache status another tooltip will explain the colour codes for the current file, target cache, current cache and total images.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        showCacheStatusChk->setText(QCoreApplication::translate("Prefdlg", "Show cache progress bar", nullptr));
+#if QT_CONFIG(tooltip)
+        label_10->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>This sets the width of the cache status shown on the application status bar.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        label_10->setText(QCoreApplication::translate("Prefdlg", "width", nullptr));
+#if QT_CONFIG(tooltip)
+        showCacheThreadActivityChk->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>This will display two small activity lights on the status bar at the bottom of the application window. The activity lights turn green when there is caching activity for building metadata/thumbnails and full scale images.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        showCacheThreadActivityChk->setText(QCoreApplication::translate("Prefdlg", "Show cache thread activity", nullptr));
+#if QT_CONFIG(tooltip)
+        cachePreviewsChk->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>The largest preview embedded in the image file will be cached.  However, for large files this can take time.  This option tells the application to first create a smaller preview that will fit your monitor while the larger one is being built.  Try checking this option if you are experiencing some latency in loupe mode.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        cachePreviewsChk->setText(QCoreApplication::translate("Prefdlg", "Cache previews scaled to monitor resolution", nullptr));
+#if QT_CONFIG(tooltip)
+        cache100AheadRadio->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        cache100AheadRadio->setText(QCoreApplication::translate("Prefdlg", "100% ahead", nullptr));
+#if QT_CONFIG(tooltip)
+        cache70AheadRadio->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        cache70AheadRadio->setText(QCoreApplication::translate("Prefdlg", "70% ahead", nullptr));
+#if QT_CONFIG(tooltip)
+        cache90AheadRadio->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        cache90AheadRadio->setText(QCoreApplication::translate("Prefdlg", "90% ahead", nullptr));
+#if QT_CONFIG(tooltip)
+        cache50AheadRadio->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        cache50AheadRadio->setText(QCoreApplication::translate("Prefdlg", "50% ahead", nullptr));
+#if QT_CONFIG(tooltip)
+        cache60AheadRadio->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        cache60AheadRadio->setText(QCoreApplication::translate("Prefdlg", "60% ahead", nullptr));
+#if QT_CONFIG(tooltip)
+        cache80AheadRadio->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        cache80AheadRadio->setText(QCoreApplication::translate("Prefdlg", "80% ahead", nullptr));
+#if QT_CONFIG(tooltip)
+        cacheSizeSpinbox->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        label_8->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        label_8->setText(QCoreApplication::translate("Prefdlg", "Cache size (GB)", nullptr));
+#if QT_CONFIG(tooltip)
+        label->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        label->setText(QCoreApplication::translate("Prefdlg", "Cache strategy:", nullptr));
+        metadataCacheGroupBox->setTitle(QCoreApplication::translate("Prefdlg", "Metadata cache", nullptr));
+        metadataCacheAllRadio->setText(QCoreApplication::translate("Prefdlg", "Cache all items when open folder (could be a slight delay)", nullptr));
+        metadataCacheChunkRadio->setText(QCoreApplication::translate("Prefdlg", "Cache", nullptr));
+#if QT_CONFIG(tooltip)
+        metadataCacheSizeSpinbox->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        label_14->setText(QCoreApplication::translate("Prefdlg", "items at a time", nullptr));
+        thumbnailCacheGroupBoc->setTitle(QCoreApplication::translate("Prefdlg", "Thumbnail cache", nullptr));
         thumbnailCachAllRadio->setText(QString());
-        thumbnailCacheChunkRadio->setText(QApplication::translate("Prefdlg", "Cache", nullptr));
-#ifndef QT_NO_TOOLTIP
-        thumbnailCacheSizeSpinbox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label_15->setText(QApplication::translate("Prefdlg", "viewports ahead", nullptr));
-        label_18->setText(QApplication::translate("Prefdlg", "Cache all thumbnails in folder(s).  This can cause an initial delay and consume a lot of memory.", nullptr));
+        thumbnailCacheChunkRadio->setText(QCoreApplication::translate("Prefdlg", "Cache", nullptr));
+#if QT_CONFIG(tooltip)
+        thumbnailCacheSizeSpinbox->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Experiment with different cache sizes.  2-8GB appear to work best.  Cache performance does not always improve with size.</p><p>If you tend to move back and forth between images then a 50% cache ahead strategy is best.  If you generally just move ahead through the images then weighting a higher percentage ahead makes sense.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        label_15->setText(QCoreApplication::translate("Prefdlg", "viewports ahead", nullptr));
+        label_18->setText(QCoreApplication::translate("Prefdlg", "Cache all thumbnails in folder(s).  This can cause an initial delay and consume a lot of memory.", nullptr));
         slideshowRandomChk->setText(QString());
-        label_12->setText(QApplication::translate("Prefdlg", "Show random order", nullptr));
-#ifndef QT_NO_TOOLTIP
-        slideshowDelaySpinbox->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This sets the amount of time each image is displayed before the next image appears.  If set to zero then each image will be displayed until you manually move forward or backwards.  Note that you can also change this delay while the slideshow is active by pressing the zero to nine (0 - 9) keys.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-#ifndef QT_NO_TOOLTIP
-        label_11->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>This sets the amount of time each image is displayed before the next image appears.  If set to zero then each image will be displayed until you manually move forward or backwards.  Note that you can also change this delay while the slideshow is active by pressing the zero to nine (0 - 9) keys.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label_11->setText(QApplication::translate("Prefdlg", "Delay (1 - 3600 sec)", nullptr));
-        groupBox->setTitle(QApplication::translate("Prefdlg", "Docked", nullptr));
-        showThumbLabelChk->setText(QApplication::translate("Prefdlg", "Show thumbnail filename", nullptr));
-        label_7->setText(QApplication::translate("Prefdlg", "Font size", nullptr));
-        thumbSmallerBtn->setText(QApplication::translate("Prefdlg", "<", nullptr));
+        label_12->setText(QCoreApplication::translate("Prefdlg", "Show random order", nullptr));
+#if QT_CONFIG(tooltip)
+        slideshowDelaySpinbox->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>This sets the amount of time each image is displayed before the next image appears.  If set to zero then each image will be displayed until you manually move forward or backwards.  Note that you can also change this delay while the slideshow is active by pressing the zero to nine (0 - 9) keys.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        label_11->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>This sets the amount of time each image is displayed before the next image appears.  If set to zero then each image will be displayed until you manually move forward or backwards.  Note that you can also change this delay while the slideshow is active by pressing the zero to nine (0 - 9) keys.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        label_11->setText(QCoreApplication::translate("Prefdlg", "Delay (1 - 3600 sec)", nullptr));
+        groupBox->setTitle(QCoreApplication::translate("Prefdlg", "Docked", nullptr));
+        showThumbLabelChk->setText(QCoreApplication::translate("Prefdlg", "Show thumbnail filename", nullptr));
+        label_7->setText(QCoreApplication::translate("Prefdlg", "Font size", nullptr));
+        thumbSmallerBtn->setText(QCoreApplication::translate("Prefdlg", "<", nullptr));
         fontSizeLbl->setText(QString());
-        label_2->setText(QApplication::translate("Prefdlg", "Thumbnail size", nullptr));
-        thumbLargerBtn->setText(QApplication::translate("Prefdlg", ">", nullptr));
-        groupBox_2->setTitle(QApplication::translate("Prefdlg", "Grid", nullptr));
+        label_2->setText(QCoreApplication::translate("Prefdlg", "Thumbnail size", nullptr));
+        thumbLargerBtn->setText(QCoreApplication::translate("Prefdlg", ">", nullptr));
+        groupBox_2->setTitle(QCoreApplication::translate("Prefdlg", "Grid", nullptr));
         fontSizeLbl_2->setText(QString());
-        label_17->setText(QApplication::translate("Prefdlg", "Thumbnail size", nullptr));
-        gridSmallerBtn->setText(QApplication::translate("Prefdlg", "<", nullptr));
-        label_19->setText(QApplication::translate("Prefdlg", "Font size", nullptr));
-        gridLargerBtn->setText(QApplication::translate("Prefdlg", ">", nullptr));
-        showThumbLabelChk_2->setText(QApplication::translate("Prefdlg", "Show thumbnail filename", nullptr));
-        label_3->setText(QApplication::translate("Prefdlg", "Maximum thumbnail size", nullptr));
+        label_17->setText(QCoreApplication::translate("Prefdlg", "Thumbnail size", nullptr));
+        gridSmallerBtn->setText(QCoreApplication::translate("Prefdlg", "<", nullptr));
+        label_19->setText(QCoreApplication::translate("Prefdlg", "Font size", nullptr));
+        gridLargerBtn->setText(QCoreApplication::translate("Prefdlg", ">", nullptr));
+        showThumbLabelChk_2->setText(QCoreApplication::translate("Prefdlg", "Show thumbnail filename", nullptr));
+        label_3->setText(QCoreApplication::translate("Prefdlg", "Maximum thumbnail size", nullptr));
         fontSizeLbl_21->setText(QString());
-        label_171->setText(QApplication::translate("Prefdlg", "Thumbnail size", nullptr));
-        gridSmallerBtn1->setText(QApplication::translate("Prefdlg", "<", nullptr));
-        label_191->setText(QApplication::translate("Prefdlg", "Font size", nullptr));
-        gridLargerBtn1->setText(QApplication::translate("Prefdlg", ">", nullptr));
-        showThumbLabelChk_21->setText(QApplication::translate("Prefdlg", "Show thumbnail filename", nullptr));
-        label_4->setText(QApplication::translate("Prefdlg", "<html><head/><body><p><span style=\" font-weight:600; color:#ff0000;\">WARNING</span><span style=\" color:#ff0000;\">: </span><span style=\" color:#e5e5e5;\">Larger thumbnail sizes can consume huge amounts of memory if you load a folder with a lot of images. </span></p></body></html>", nullptr));
-        label_5->setText(QApplication::translate("Prefdlg", "pixels (40 - 480)", nullptr));
-        fullScreenExplanationLbl->setText(QApplication::translate("Prefdlg", "<html><head/><body><p>When full screen is chosen, select which panels should be visible. Hiding all the docks will result in only the loupe view or grid of all the thumbnails being visible.  You can still show/hide panels in the usual way, so this is just a customization to shortcut to your usual full screen preference.</p><p>When you leave full screen view the application will return to its prior state.</p></body></html>", nullptr));
-        foldersChk->setText(QApplication::translate("Prefdlg", "Folders", nullptr));
-        favsChk->setText(QApplication::translate("Prefdlg", "Favourites", nullptr));
-        filtersChk->setText(QApplication::translate("Prefdlg", "Filters", nullptr));
-        metadataChk->setText(QApplication::translate("Prefdlg", "Metadata", nullptr));
-        thumbsChk->setText(QApplication::translate("Prefdlg", "Thumbnails", nullptr));
-        statusBarChk->setText(QApplication::translate("Prefdlg", "Status Bar", nullptr));
-#ifndef QT_NO_TOOLTIP
-        frame->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Select which items to show or hide in the metadata panel.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label_6->setText(QApplication::translate("Prefdlg", "Metadata Panel Items", nullptr));
-#ifndef QT_NO_TOOLTIP
-        frame_3->setToolTip(QApplication::translate("Prefdlg", "<html><head/><body><p>Select which items to show or hide in the table mode view.</p></body></html>", nullptr));
-#endif // QT_NO_TOOLTIP
-        label_16->setText(QApplication::translate("Prefdlg", "Table Mode Columns", nullptr));
+        label_171->setText(QCoreApplication::translate("Prefdlg", "Thumbnail size", nullptr));
+        gridSmallerBtn1->setText(QCoreApplication::translate("Prefdlg", "<", nullptr));
+        label_191->setText(QCoreApplication::translate("Prefdlg", "Font size", nullptr));
+        gridLargerBtn1->setText(QCoreApplication::translate("Prefdlg", ">", nullptr));
+        showThumbLabelChk_21->setText(QCoreApplication::translate("Prefdlg", "Show thumbnail filename", nullptr));
+        label_4->setText(QCoreApplication::translate("Prefdlg", "<html><head/><body><p><span style=\" font-weight:600; color:#ff0000;\">WARNING</span><span style=\" color:#ff0000;\">: </span><span style=\" color:#e5e5e5;\">Larger thumbnail sizes can consume huge amounts of memory if you load a folder with a lot of images. </span></p></body></html>", nullptr));
+        label_5->setText(QCoreApplication::translate("Prefdlg", "pixels (40 - 480)", nullptr));
+        fullScreenExplanationLbl->setText(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>When full screen is chosen, select which panels should be visible. Hiding all the docks will result in only the loupe view or grid of all the thumbnails being visible.  You can still show/hide panels in the usual way, so this is just a customization to shortcut to your usual full screen preference.</p><p>When you leave full screen view the application will return to its prior state.</p></body></html>", nullptr));
+        foldersChk->setText(QCoreApplication::translate("Prefdlg", "Folders", nullptr));
+        favsChk->setText(QCoreApplication::translate("Prefdlg", "Favourites", nullptr));
+        filtersChk->setText(QCoreApplication::translate("Prefdlg", "Filters", nullptr));
+        metadataChk->setText(QCoreApplication::translate("Prefdlg", "Metadata", nullptr));
+        thumbsChk->setText(QCoreApplication::translate("Prefdlg", "Thumbnails", nullptr));
+        statusBarChk->setText(QCoreApplication::translate("Prefdlg", "Status Bar", nullptr));
+#if QT_CONFIG(tooltip)
+        frame->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Select which items to show or hide in the metadata panel.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        label_6->setText(QCoreApplication::translate("Prefdlg", "Metadata Panel Items", nullptr));
+#if QT_CONFIG(tooltip)
+        frame_3->setToolTip(QCoreApplication::translate("Prefdlg", "<html><head/><body><p>Select which items to show or hide in the table mode view.</p></body></html>", nullptr));
+#endif // QT_CONFIG(tooltip)
+        label_16->setText(QCoreApplication::translate("Prefdlg", "Table Mode Columns", nullptr));
 
         const bool __sortingEnabled = listWidget->isSortingEnabled();
         listWidget->setSortingEnabled(false);
         QListWidgetItem *___qlistwidgetitem = listWidget->item(0);
-        ___qlistwidgetitem->setText(QApplication::translate("Prefdlg", "General", nullptr));
+        ___qlistwidgetitem->setText(QCoreApplication::translate("Prefdlg", "General", nullptr));
         QListWidgetItem *___qlistwidgetitem1 = listWidget->item(1);
-        ___qlistwidgetitem1->setText(QApplication::translate("Prefdlg", "Appearance", nullptr));
+        ___qlistwidgetitem1->setText(QCoreApplication::translate("Prefdlg", "Appearance", nullptr));
         QListWidgetItem *___qlistwidgetitem2 = listWidget->item(2);
-        ___qlistwidgetitem2->setText(QApplication::translate("Prefdlg", "Cache", nullptr));
+        ___qlistwidgetitem2->setText(QCoreApplication::translate("Prefdlg", "Cache", nullptr));
         QListWidgetItem *___qlistwidgetitem3 = listWidget->item(3);
-        ___qlistwidgetitem3->setText(QApplication::translate("Prefdlg", "Slideshow", nullptr));
+        ___qlistwidgetitem3->setText(QCoreApplication::translate("Prefdlg", "Slideshow", nullptr));
         QListWidgetItem *___qlistwidgetitem4 = listWidget->item(4);
-        ___qlistwidgetitem4->setText(QApplication::translate("Prefdlg", "Thumbnails", nullptr));
+        ___qlistwidgetitem4->setText(QCoreApplication::translate("Prefdlg", "Thumbnails", nullptr));
         QListWidgetItem *___qlistwidgetitem5 = listWidget->item(5);
-        ___qlistwidgetitem5->setText(QApplication::translate("Prefdlg", "Full screen default docks", nullptr));
+        ___qlistwidgetitem5->setText(QCoreApplication::translate("Prefdlg", "Full screen default docks", nullptr));
         QListWidgetItem *___qlistwidgetitem6 = listWidget->item(6);
-        ___qlistwidgetitem6->setText(QApplication::translate("Prefdlg", "Show or hide fields", nullptr));
+        ___qlistwidgetitem6->setText(QCoreApplication::translate("Prefdlg", "Show or hide fields", nullptr));
         listWidget->setSortingEnabled(__sortingEnabled);
 
     } // retranslateUi

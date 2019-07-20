@@ -1350,8 +1350,7 @@ completely repainted. It takes a while for the scrollbars to finish painting, so
 that is done, we want to scroll to the current position.
 
 It is also called from MW::delayScroll, which in turn, is called by MW::fileSelectionChange
-when a new image is selected and the selection was triggered by a mouse click and
-MW::mouseClickScroll == true.
+when a new image is selected and the selection was triggered by a mouse click.
 */
     {
     #ifdef ISDEBUG

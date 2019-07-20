@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>3</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QScrollArea" name="scrollArea">
@@ -179,37 +179,6 @@
           </widget>
          </item>
         </layout>
-       </widget>
-      </widget>
-      <widget class="QGroupBox" name="groupBoxFolders_2">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>270</y>
-         <width>431</width>
-         <height>71</height>
-        </rect>
-       </property>
-       <property name="title">
-        <string>Mouse click selection</string>
-       </property>
-       <widget class="QCheckBox" name="mouseClickScrollChk">
-        <property name="geometry">
-         <rect>
-          <x>20</x>
-          <y>30</y>
-          <width>371</width>
-          <height>20</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>12</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Scroll to position at center when mouse click</string>
-        </property>
        </widget>
       </widget>
       <widget class="QLabel" name="label_23">

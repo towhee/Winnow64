@@ -304,6 +304,7 @@ void MW::initialize()
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
     G::ratings << "1" << "2" << "3" << "4" << "5";
     pickStack = new QStack<Pick>;
+    slideshowRandomHistoryStack = new QStack<QString>;
     scrollRow = 0;
 //    G::newPopUp();
 }
@@ -428,7 +429,13 @@ void MW::keyReleaseEvent(QKeyEvent *event)
     }
     // toggle random / sequential slideshow next slide
     if (G::isSlideShow) {
+        qDebug() << __FUNCTION__ << event->key();
+        if (event->key() == Qt::Key_Backspace) {
+            isSlideshowPaused = false;
+            prevRandomSlide();
+        }
         if (event->key() == Qt::Key_H) {
+            isSlideshowPaused = true;
             slideshowHelpMsg();
         }
         if (event->key() == Qt::Key_Space) {
@@ -437,14 +444,17 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             if (isSlideshowPaused) msg = "Slideshow is paused";
             else msg = "Slideshow is restarted";
             G::popUp->showPopup(msg);
+            qDebug() << __FUNCTION__ << "isSlideshowPaused =" << isSlideshowPaused;
         }
         if (event->key() == Qt::Key_R) {
             isSlideShowRandom = !isSlideShowRandom;
+            isSlideshowPaused = false;
             slideShowResetSequence();
         }
         // change slideshow delay 1 - 9 seconds
         int n = event->key() - 48;
         if (n > 0 && n <= 9) {
+            isSlideshowPaused = false;
             slideShowDelay = n;
             slideShowResetDelay();
         }
@@ -507,7 +517,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
        - the ChildRemoved event fires for the filters widget
     */
 
-    if (!dm->filtersBuilt && !G::isInitializing) {
+    if (!dm->filtersBuilt && !G::buildingFilters && !G::isInitializing) {
         if (!filterDock->visibleRegion().isNull()) {
             if(obj->objectName() == "Filters") {
                 if (event->type() == QEvent::ChildRemoved) {
@@ -880,6 +890,7 @@ void MW::folderSelectionChange()
                QModelIndex idx = fsTree->fsModel->index(currentViewDir);
                if (fsTree->fsModel->hasIndex(idx.row(), idx.column(), idx.parent()))
                     fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(idx));
+               G::isInitializing = false;
                return;
             }
         }
@@ -896,6 +907,7 @@ void MW::folderSelectionChange()
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(currentViewDir, true, false)) {
         clearAll();
+        G::isInitializing = false;
         return;
     }
 
@@ -950,6 +962,7 @@ void MW::folderSelectionChange()
             updateStatus(false, "No supported images in this folder");
             setCentralMessage("The folder \"" + currentViewDir + "\" does not have any eligible images");
         }
+        G::isInitializing = false;
         return;
     }
     centralLayout->setCurrentIndex(prevCentralView);    // rgh req'd?
@@ -1242,12 +1255,16 @@ visible.  This is used in the metadataCacheThread to determine the range of file
     if (thumbView->isVisible()) {
         thumbView->setViewportParameters();
         if (thumbView->firstVisibleRow < first) first = thumbView->firstVisibleRow;
+        // calc thumbsPerPage in case IconView is still being populated
+        thumbView->lastVisibleRow = thumbView->getThumbsPerPage() + thumbView->firstVisibleRow;
         if (thumbView->lastVisibleRow > last) last = thumbView->lastVisibleRow;
     }
 
     if (gridView->isVisible()) {
         gridView->setViewportParameters();
         if (gridView->firstVisibleRow < first) first = gridView->firstVisibleRow;
+        // calc thumbsPerPage in case IconView is still being populated
+        gridView->lastVisibleRow = gridView->getThumbsPerPage() + gridView->firstVisibleRow;
         if (gridView->lastVisibleRow > last) last = gridView->lastVisibleRow;
     }
 
@@ -1256,6 +1273,9 @@ visible.  This is used in the metadataCacheThread to determine the range of file
         if (tableView->firstVisibleRow < first) first = tableView->firstVisibleRow;
         if (tableView->lastVisibleRow > last) last = tableView->lastVisibleRow;
     }
+
+    qDebug() << __FUNCTION__ << "gridView->lastVisibleRow =" << gridView->lastVisibleRow
+             << "gridView->getThumbsPerPage() =" << gridView->getThumbsPerPage();
 
     metadataCacheThread->firstIconVisible = first;
     metadataCacheThread->midIconVisible = (first + last) / 2;
@@ -3934,7 +3954,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
         imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
         imageView->infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
         lastPrefPage = setting->value("lastPrefPage").toInt();
-        mouseClickScroll = setting->value("mouseClickScroll").toBool();
+//        mouseClickScroll = setting->value("mouseClickScroll").toBool();
         qreal tempZoom = setting->value("toggleZoomValue").toReal();
         if (tempZoom > 3) tempZoom = 1;
         if (tempZoom < 0.25) tempZoom = 1;
@@ -3971,7 +3991,7 @@ void MW::createCompareView()
 
     if (isSettings) {
         lastPrefPage = setting->value("lastPrefPage").toInt();
-        mouseClickScroll = setting->value("mouseClickScroll").toBool();
+//        mouseClickScroll = setting->value("mouseClickScroll").toBool();
         qreal tempZoom = setting->value("toggleZoomValue").toReal();
         if (tempZoom > 3) tempZoom = 1;
         if (tempZoom < 0.25) tempZoom = 1;
@@ -4206,6 +4226,12 @@ void MW::createDocks()
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, metadataDock);
     MW::tabifyDockWidget(metadataDock, filterDock);
+
+//    propertiesDock = new DockWidget(tr("  Properties  "), this);
+//    propertiesDock->setObjectName("Properties");
+//    propertiesDock->setWidget(infoView);
+//    propertiesDock->setFloating(true);
+//    propertiesDock->setVisible(false);
 }
 
 void MW::createFSTree()
@@ -5849,7 +5875,7 @@ QString MW::diagnostics()
     rpt << "\n" << "isShift = " << G::s(isShift);
     rpt << "\n" << "ignoreSelectionChange = " << G::s(ignoreSelectionChange);
     rpt << "\n" << "lastPrefPage = " << G::s(lastPrefPage);
-    rpt << "\n" << "mouseClickScroll = " << G::s(mouseClickScroll);
+//    rpt << "\n" << "mouseClickScroll = " << G::s(mouseClickScroll);
     rpt << "\n" << "displayHorizontalPixels = " << G::s(displayHorizontalPixels);
     rpt << "\n" << "displayVerticalPixels = " << G::s(displayVerticalPixels);
     rpt << "\n" << "checkIfUpdate = " << G::s(checkIfUpdate);
@@ -6725,7 +6751,7 @@ re-established when the application is re-opened.
     }
     // general
     setting->setValue("lastPrefPage", lastPrefPage);
-    setting->setValue("mouseClickScroll", mouseClickScroll);
+//    setting->setValue("mouseClickScroll", mouseClickScroll);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
 
     // datamodel
@@ -7029,7 +7055,7 @@ Preferences are located in the prefdlg class and updated here.
 
         // general
         lastPrefPage = 0;
-        mouseClickScroll = true;
+//        mouseClickScroll = true;
         combineRawJpg = true;
         prevMode = "Loupe";
         G::mode = "Loupe";
@@ -9114,6 +9140,7 @@ void MW::slideShow()
         // stop slideshow
         imageView->setCursor(Qt::ArrowCursor);
         slideShowStatusLabel->setText("");
+        updateStatus(true);
         G::isSlideShow = false;
         slideShowAction->setText(tr("Slide Show"));
         G::popUp->showPopup("Stopping slideshow");
@@ -9166,18 +9193,18 @@ void MW::nextSlide()
     static int counter = 0;
     int totSlides = dm->sf->rowCount();
     if (isSlideShowRandom) {
+        // push previous image path onto the slideshow history stack
+        int row = thumbView->currentIndex().row();
+        QString fPath = dm->sf->index(row, 0).data(G::PathRole).toString();
+        slideshowRandomHistoryStack->push(fPath);
+        // get next random slide
         thumbView->selectRandom();
-        // push next image path onto the slideshow history stack
-//        int row = thumbView->currentIndex().row();
-//        QString fPath = dm->sf->index(row, 0).data(G::PathRole).toString();
-//        slideshowRandomHistoryStack->push(fPath);
     }
     else {
         if (thumbView->getCurrentRow() == totSlides - 1)
             thumbView->selectFirst();
         else thumbView->selectNext();
     }
-
 
     counter++;
     QString msg = "Slide # "+ QString::number(counter) + "     (press H for slideshow shortcuts)";
@@ -9192,6 +9219,22 @@ void MW::nextSlide()
             folderSelectionChange();
         }
     }
+}
+
+void MW::prevRandomSlide()
+{
+    if (slideshowRandomHistoryStack->isEmpty()) {
+        G::popUp->showPopup("End of random slide history");
+        return;
+    }
+    isSlideshowPaused = true;
+    QString prevPath = slideshowRandomHistoryStack->pop();
+    thumbView->selectThumb(prevPath);
+    updateStatus(false, "Slideshow random history."
+                        "  Press <font color=\"white\"><b>Spacebar</b></font> to continue slideshow, "
+                        "press <font color=\"white\"><b>Esc</b></font> to quit slideshow.");
+    // hide popup if showing
+    G::popUp->hide();
 }
 
 void MW::slideShowResetDelay()
@@ -9251,8 +9294,8 @@ void MW::slideshowHelpMsg()
         "<table border=\"0\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\">"
         "<tr><td width=\"120\"><font color=\"red\"><b>S</b></font></td><td>Toggle to start/end slideshow</td></tr>"
         "<tr><td><font color=\"red\"><b>1 to 9</b></font></td><td>Change the slideshow interval (seconds)</td></tr>"
-        "<tr><td><font color=\"red\"><b>Left Arrow</b></font></td><td>Go back to a previous random slide</td></tr>"
-        "<tr><td><font color=\"red\"><b>Right Arrow</b></font></td><td>Continue random slideshow after going back</td></tr>"
+        "<tr><td><font color=\"red\"><b>Backspace</b></font></td><td>Go back to a previous random slide</td></tr>"
+        "<tr><td><font color=\"red\"><b>Spacebar</b></font></td><td>Pause/Continue slideshow</td></tr>"
         "<tr><td><font color=\"red\"><b>H</b></font></td><td>Show this popup message</td></tr>"
         "</table>"
         "<p>Current settings:<p>"
@@ -9261,7 +9304,7 @@ void MW::slideshowHelpMsg()
         "<li>Selection = " + selection + "</li>"
         "</ul><p><p>"
         "Press <font color=\"red\"><b>Esc</b></font> to close this message";
-    G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
+    G::popUp->showPopup(msg, 0, true, 1.0, Qt::AlignLeft);
 }
 
 void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
@@ -9707,7 +9750,20 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    progressLabel->setVisible(false);
+    propertyEditor = new PropertyEditor(this);
+    propertiesDock = new DockWidget(tr("  Properties  "), this);
+    propertiesDock->setObjectName("Properties");
+    propertiesDock->setWidget(propertyEditor);
+    propertiesDock->setFloating(true);
+    qDebug() << __FUNCTION__ << geometry();
+    propertiesDock->setGeometry(2000,1000,600,200);
+    propertiesDock->setVisible(true);
+//    propertiesDock->setVisible(!propertiesDock->isVisible());
+    return;
+
+    dm->find("lower");
+    return;
+    qDebug() << __FUNCTION__ << slideshowRandomHistoryStack->pop();
 }
 
 // End MW
