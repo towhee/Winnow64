@@ -64,7 +64,7 @@ public:
 class RefineItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit RefineItemDelegate(QObject* parent = 0);
+    explicit RefineItemDelegate(QObject* parent = nullptr);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 //    virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 };
@@ -121,7 +121,7 @@ public:
 class FileSizeItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit FileSizeItemDelegate(QObject* parent = 0);
+    explicit FileSizeItemDelegate(QObject* parent = nullptr);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const;
 };
 

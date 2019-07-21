@@ -232,10 +232,10 @@ void Prefdlg::on_classificationBadgeThumbDiamSlider_valueChanged(int value)
 {
     if (okToUpdate) {
         m0->classificationBadgeInThumbDiameter = value;
-        m0->thumbView->badgeSize = value;
-        m0->gridView->badgeSize = value;
-        m0->thumbView->setThumbParameters();
-        m0->gridView->setThumbParameters();
+//        m0->thumbView->badgeSize = value;
+//        m0->gridView->badgeSize = value;
+//        m0->thumbView->setThumbParameters();
+//        m0->gridView->setThumbParameters();
     }
 }
 

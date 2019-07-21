@@ -408,14 +408,14 @@ void MetadataCache::setRange()
     prevFirstIconVisible = firstIconVisible;
     prevLastIconVisible = lastIconVisible;
 
-    qDebug()  <<  __FUNCTION__
+    /*qDebug()  <<  __FUNCTION__
               << "source =" << actionList.at(action)
               << "firstIconVisible =" << firstIconVisible
               << "lastIconVisible =" << lastIconVisible
               << "tpp =" << tpp
               << "metadataChunkSize =" << metadataChunkSize
               << "startRow =" << startRow
-              << "endRow =" << endRow;
+              << "endRow =" << endRow;*/
 }
 
 void MetadataCache::iconCleanup()

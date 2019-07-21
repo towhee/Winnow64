@@ -2,34 +2,29 @@
 
 SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    this->idx = idx;
-    int lineEditWidth = 50;
+    isInitializing = true;
+//    qDebug() << __FUNCTION__ << parent;
+//    if (parent->is) parentObjectName = parent->objectName();
+
+    int lineEditWidth = idx.data(UR_LabelFixedWidth).toInt();
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
+    source = idx.data(UR_Source).toString();
+
     slider = new QSlider(Qt::Horizontal);
     slider->setMinimum(min);
     slider->setMaximum(max);
-    slider->setStyleSheet("QSlider::groove:horizontal {"
-                         "border: 1px solid gray;"
-                          "height: 1px;"
-                         "}"
-                         "QSlider::handle:horizontal {"
-                         "background: silver;"
-                         "width: 4px;"
-                         "margin: -4px 0;"
-                         "height: 10px;"
-                         "}"
-                         "QSlider::handle:focus {"
-                         "background: yellow;"
-                         "}"
-                          );
+    slider->setStyleSheet("QSlider {background: transparent;}"
+         "QSlider::groove:horizontal {border:1px solid gray; height:1px;}"
+         "QSlider::handle:horizontal {background:silver; width:4px; margin:-4px 0; height:10px;}"
+         "QSlider::handle:focus {background:yellow;}");
+    slider->setWindowFlags(Qt::FramelessWindowHint);
+    slider->setAttribute(Qt::WA_TranslucentBackground);
 
     label = new QLabel;
-    label->setStyleSheet("QLabel {"
-                         "background-color:rgb(77,77,77);"
-                         "}"
-                         );
     label->setMaximumWidth(lineEditWidth);
+    label->setWindowFlags(Qt::FramelessWindowHint);
+    label->setAttribute(Qt::WA_TranslucentBackground);
 
     connect(slider, &QSlider::valueChanged, this, &SliderEditor::change);
 
@@ -40,6 +35,7 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     layout->setContentsMargins(0,0,0,0);
     setLayout(layout);
 
+    isInitializing = false;
     slider->setValue(idx.data(Qt::EditRole).toInt());
 }
 
@@ -55,8 +51,8 @@ void SliderEditor::setValue(QVariant value)
 
 void SliderEditor::change(int value)
 {
-    QString source = idx.data(UR_Source).toString();
     QVariant v = value;
-    emit update(v, source);
+//    qDebug() << __FUNCTION__ /*<< parentObjectName*/ << isInitializing << v << source;
+    emit editorValueChanged(v, source);
     label->setText(QString::number(value));
 }
