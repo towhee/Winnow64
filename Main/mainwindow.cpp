@@ -353,6 +353,9 @@ void MW::showEvent(QShowEvent *event)
 
     // show image count in folder panel if no folder selected
     if (!rememberLastDir) QTimer::singleShot(50, fsTree, SLOT(getImageCount()));
+
+    test();
+
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -1274,8 +1277,8 @@ visible.  This is used in the metadataCacheThread to determine the range of file
         if (tableView->lastVisibleRow > last) last = tableView->lastVisibleRow;
     }
 
-    qDebug() << __FUNCTION__ << "gridView->lastVisibleRow =" << gridView->lastVisibleRow
-             << "gridView->getThumbsPerPage() =" << gridView->getThumbsPerPage();
+//    qDebug() << __FUNCTION__ << "gridView->lastVisibleRow =" << gridView->lastVisibleRow
+//             << "gridView->getThumbsPerPage() =" << gridView->getThumbsPerPage();
 
     metadataCacheThread->firstIconVisible = first;
     metadataCacheThread->midIconVisible = (first + last) / 2;
@@ -6268,10 +6271,9 @@ void MW::setClassificationBadgeImageDiam(int d)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << d;
     classificationBadgeInImageDiameter = d;
     imageView->setClassificationBadgeImageDiam(d);
-//    placeClassificationBadge();
-//    qDebug() << "ImageView::setClassificationBadgeImageDiam =" << classificationBadgeDiam;
 }
 
 void MW::setClassificationBadgeThumbDiam(int d)
@@ -6281,9 +6283,12 @@ void MW::setClassificationBadgeThumbDiam(int d)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << d;
     classificationBadgeInThumbDiameter = d;
-//    placeClassificationBadge();
-//    qDebug() << "ImageView::setClassificationBadgeImageDiam =" << classificationBadgeInThumbDiameter;
+    thumbView->badgeSize = d;
+    gridView->badgeSize = d;
+    thumbView->setThumbParameters();
+    gridView->setThumbParameters();
 }
 
 
@@ -9755,9 +9760,11 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     propertiesDock->setObjectName("Properties");
     propertiesDock->setWidget(propertyEditor);
     propertiesDock->setFloating(true);
-    qDebug() << __FUNCTION__ << geometry();
+//    qDebug() << __FUNCTION__ << geometry();
     propertiesDock->setGeometry(2000,1000,600,200);
     propertiesDock->setVisible(true);
+    propertiesDock->raise();
+    propertiesDock->setFocus();
 //    propertiesDock->setVisible(!propertiesDock->isVisible());
     return;
 

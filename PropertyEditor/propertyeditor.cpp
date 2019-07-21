@@ -12,27 +12,33 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     mw = qobject_cast<MW*>(parent);
 
     setRootIsDecorated(true);
+    setAlternatingRowColors(true);
 //    setIndentation(4);
-    setSelectionMode(QAbstractItemView::NoSelection);
-//    setSelectionBehavior(QAbstractItemView::SelectRows);
+//    setSelectionMode(QAbstractItemView::NoSelection);
+    setSelectionBehavior(QAbstractItemView::SelectRows);
 //    setHeaderHidden(false);
-//    setStyleSheet("QTreeView {"
-//                  "alternate-background-color: rgb(90,90,90);"
-//                  "border: 2px solid rgb(95,95,95);"
-//                  "color: lightgray;"
-//                  "}"
-//                  "QTreeView::item { "
-//                  "height: 24px;"
-////                  "border: 1px solid gray;"
-//                  "}");
+    /*setStyleSheet("QTreeView {"
+                  "alternate-background-color: rgb(90,90,90);"
+                  "border: 2px solid rgb(95,95,95);"
+                  "color: lightgray;"
+                  "}"
+                  "QTreeView::item { "
+                  "height: 24px;"
+                  "border: 1px solid gray;"
+                  "}");*/
 //    setEditTriggers(QAbstractItemView::DoubleClicked);
-//    setEditTriggers(QAbstractItemView::AllEditTriggers);
+    setEditTriggers(QAbstractItemView::AllEditTriggers);
 
     QStandardItemModel *m = new QStandardItemModel;
     setModel(m);
-    PropertyDelegate *propertyDelegate = new PropertyDelegate;
-    setItemDelegate(propertyDelegate);
-    connect(propertyDelegate, &PropertyDelegate::update, this, &PropertyEditor::editorUpdate);
+    propertyDelegate = new PropertyDelegate(this);
+    setItemDelegateForColumn(1, propertyDelegate);
+    const QStyleOptionViewItem *styleOptionViewItem = new QStyleOptionViewItem;
+
+    connect(propertyDelegate, &PropertyDelegate::editorValueChanged,
+            this, &PropertyEditor::editorValueChange);
+    connect(propertyDelegate, &PropertyDelegate::editorWidgetToDisplay,
+            this, &PropertyEditor::editorWidgetToDisplay);
 
 //    connect(this, &PropertyEditor::, this, &PropertyEditor::editCheck);
 //    connect(this, &PropertyEditor::itemDoubleClicked, this, &PropertyEditor::editCheck);
@@ -55,35 +61,84 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     m->insertColumns(1, 1);
     idxCat = generalItem->index();
 //    m->setData(m->index(0, 1), "Column 1");
-    setColumnWidth(0, 250);
-    setColumnWidth(1, 250);
+    setColumnWidth(0, 350);
+    setColumnWidth(1, 200);
+    row = -1;
 
-    QStandardItem *gridCellSizeCaption = new QStandardItem;
-    gridCellSizeCaption->setText("Grid cell size");
-    QStandardItem *gridCellSizeValue = new QStandardItem;
-    gridCellSizeValue->setText("Grid cell value");
-    gridCellSizeValue->setData(mw->classificationBadgeInImageDiameter, Qt::EditRole);
-    gridCellSizeValue->setData(DT_Slider, UR_DelegateType);
-    gridCellSizeValue->setData("classificationBadgeInImageDiameter", UR_Source);
-    gridCellSizeValue->setData("int", UR_Type);
-    gridCellSizeValue->setData(10, UR_Min);
-    gridCellSizeValue->setData(100, UR_Max);
-//    m->insertRow(1, gridCellSizeItem);      // adds another top level item
-    generalItem->setChild(0, 0, gridCellSizeCaption);
-    generalItem->setChild(0, 1, gridCellSizeValue);
+    row++;
+    // name = thumbBadgeSize (for search and replace)
+    QStandardItem *imBadgeSizeCaption = new QStandardItem;
+    imBadgeSizeCaption->setText("Loupe view classification badge size");
+    QStandardItem *imageBadgeSizeValue = new QStandardItem;
+    imageBadgeSizeValue->setToolTip("The image badge is a circle showing the colour classification, rating and pick status.  It is located in the lower right corner of the image.  This property allows you to adjust its size.");
+    imageBadgeSizeValue->setData(mw->classificationBadgeInImageDiameter, Qt::EditRole);
+    imageBadgeSizeValue->setData(DT_Slider, UR_DelegateType);
+    imageBadgeSizeValue->setData("classificationBadgeInImageDiameter", UR_Source);
+    imageBadgeSizeValue->setData("int", UR_Type);
+    imageBadgeSizeValue->setData(10, UR_Min);
+    imageBadgeSizeValue->setData(100, UR_Max);
+    imageBadgeSizeValue->setData(50, UR_LabelFixedWidth);
+    generalItem->setChild(row, 0, imBadgeSizeCaption);
+    generalItem->setChild(row, 1, imageBadgeSizeValue);
+    idxVal = imageBadgeSizeValue->index();
+    qDebug() << __FUNCTION__ << "Add to model: classificationBadgeInImageDiameter"
+             << idxVal;
+//    edit(idxVal);
+    propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+
+    row++;
+    // name = thumbBadgeSize (for search and replace)
+    QStandardItem *thumbBadgeSizeCaption = new QStandardItem;
+    thumbBadgeSizeCaption->setText("Grid/Thumb view classification badge size");
+    QStandardItem *thumbBadgeSizeValue = new QStandardItem;
+    thumbBadgeSizeValue->setData(mw->classificationBadgeInThumbDiameter, Qt::EditRole);
+    thumbBadgeSizeValue->setData(DT_Slider, UR_DelegateType);
+    thumbBadgeSizeValue->setData("classificationBadgeInThumbDiameter", UR_Source);
+    thumbBadgeSizeValue->setData("int", UR_Type);
+    thumbBadgeSizeValue->setData(10, UR_Min);
+    thumbBadgeSizeValue->setData(100, UR_Max);
+    thumbBadgeSizeValue->setData(50, UR_LabelFixedWidth);
+    generalItem->setChild(row, 0, thumbBadgeSizeCaption);
+    generalItem->setChild(row, 1, thumbBadgeSizeValue);
+    idxVal = thumbBadgeSizeValue->index();
+//    setCurrentIndex(idxVal);
+    qDebug() << __FUNCTION__ << "Add to model: classificationBadgeInThumbDiameter"
+             << thumbBadgeSizeValue->index();
+//    edit(idxVal);
+    propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
 
     expandAll();
 }
 
-void PropertyEditor::editorUpdate(QVariant v, QString source)
+void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
+/*
+
+*/
+{
+    int widgetType = idx.data(UR_DelegateType).toInt();
+    qDebug() << __FUNCTION__ << idx << editor << widgetType;
+    switch (widgetType) {
+        case DT_Slider:  {
+            setIndexWidget(idx, editor);
+            emit propertyDelegate->closeEditor(editor);
+//            propertyDelegate->commitData(editor);
+        }
+    }
+}
+
+void PropertyEditor::editorValueChange(QVariant v, QString source)
 {
     qDebug() << __FUNCTION__ << v << source;
     if (source == "classificationBadgeInImageDiameter") {
         int value = v.toInt();
-        mw->classificationBadgeInImageDiameter = value;
-        mw->imageView->setClassificationBadgeImageDiam(value);
+        mw->setClassificationBadgeImageDiam(value);
+    }
+    if (source == "classificationBadgeInThumbDiameter") {
+        int value = v.toInt();
+        mw->setClassificationBadgeThumbDiam(value);
     }
 }
+
 //void PropertyEditor::editCheck(QTreeWidgetItem *item, int column)
 //{
 //    if (column == 1) editItem(item, column);
@@ -101,7 +156,9 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
                                               const QModelIndex &index ) const
 {
     int type = index.data(UR_DelegateType).toInt();
-    qDebug() << __FUNCTION__ << index << type;
+    qDebug() << __FUNCTION__ << "parent =" << parent
+             << "option " << option
+             << "index =" << index;
 
     switch (type)
     {
@@ -114,7 +171,9 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
 //        return new QComboBox;
     case DT_Slider: {
         SliderEditor *sliderEditor = new SliderEditor(index, parent);
-        connect(sliderEditor, &SliderEditor::update, this, &PropertyDelegate::editorUpdate);
+        connect(sliderEditor, &SliderEditor::editorValueChanged,
+                this, &PropertyDelegate::editorValueChanged);
+        emit editorWidgetToDisplay(index, sliderEditor);
         return sliderEditor;
 //        return new SliderEditor(index, parent);
     }
@@ -123,14 +182,22 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
     }
 }
 
+QString PropertyDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+//    qDebug() << __FUNCTION__ << value;
+    return "";
+}
+
 QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
+//    qDebug() << __FUNCTION__ << index;
     return SliderEditor(index, nullptr).sizeHint();
 }
 
 void PropertyDelegate::setEditorData(QWidget *editor,
                                     const QModelIndex &index) const
 {
+//    qDebug() << __FUNCTION__ << index;
     int value = index.model()->data(index, Qt::EditRole).toInt();
     static_cast<SliderEditor*>(editor)->setValue(value);
 //    SliderLineEdit *w = static_cast<SliderLineEdit*>(editor);
@@ -140,161 +207,30 @@ void PropertyDelegate::setEditorData(QWidget *editor,
 void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
                                    const QModelIndex &index) const
 {
+//    qDebug() << __FUNCTION__ << index;
     SliderEditor *sliderEditor = static_cast<SliderEditor*>(editor);
 //    spinBox->interpretText();
     int value = sliderEditor->value();
-    qDebug() << __FUNCTION__ << value;
+//    qDebug() << __FUNCTION__ << value << index;
     model->setData(index, value, Qt::EditRole);
 }
 
-void PropertyDelegate::updateEditorGeometry(QWidget *editor,
-    const QStyleOptionViewItem &option, const QModelIndex &/* index */) const
+bool PropertyDelegate::eventFilter(QObject *editor, QEvent *event)
 {
+    qDebug() << __FUNCTION__ << editor << event;
+    qApp->processEvents();
+    return event;
+}
+
+void PropertyDelegate::updateEditorGeometry(QWidget *editor,
+    const QStyleOptionViewItem &option, const QModelIndex &index ) const
+{
+//    qDebug() << __FUNCTION__ << index;
     editor->setGeometry(option.rect);
 }
 
-void PropertyDelegate::editorUpdate(QVariant v, QString source)
+void PropertyDelegate::editorValueChange(QVariant v, QString source)
 {
-    emit update(v, source);
+//    qDebug() << __FUNCTION__ << v << source;
+    emit editorValueChanged(v, source);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//#include "propertyeditor.h"
-//#include "Main/mainwindow.h"
-//#include "Main/global.h"
-//#include <QDebug>
-
-//// this works because propertyeditor is a friend class of MW
-//MW *m;
-
-//PropertyEditor::PropertyEditor(QWidget *parent) : QTreeWidget(parent)
-//{
-//    // this works because propertyeditor is a friend class of MW
-//    m = qobject_cast<MW*>(parent);
-
-//    setRootIsDecorated(true);
-////    setIndentation(4);
-////    setSelectionMode(QAbstractItemView::NoSelection);
-////    setSelectionBehavior(QAbstractItemView::SelectRows);
-//    setColumnCount(2);
-////    setHeaderHidden(false);
-//    setColumnWidth(0, 250);
-//    setColumnWidth(1, 250);
-//    setHeaderLabels({"Property", "Value"});
-////    this->model->headerData();
-////    header()->setDefaultAlignment(Qt::AlignLeft);
-//    header()->setVisible(true);
-////    setStyleSheet("QTreeWidget {"
-////                  "alternate-background-color: rgb(90,90,90);"
-////                  "border: 2px solid rgb(95,95,95);"
-////                  "color: lightgray;"
-////                  "}"
-////                  "QTreeView::item { "
-////                  "height: 24px;"
-//////                  "border: 1px solid gray;"
-////                  "}");
-////    setEditTriggers(QAbstractItemView::DoubleClicked);
-////    setEditTriggers(QAbstractItemView::AllEditTriggers);
-
-//    connect(this, &PropertyEditor::itemClicked, this, &PropertyEditor::editCheck);
-//    connect(this, &PropertyEditor::itemDoubleClicked, this, &PropertyEditor::editCheck);
-
-//    int row;
-//    QModelIndex idx;
-
-//    general = new QTreeWidgetItem(this);
-//    general->setText(0, "General");
-
-////    setItemDelegateForRow(row, new SliderLineEditDelegate);
-//    generalFontSize = new QTreeWidgetItem(general);
-//    generalFontSize->setFlags(Qt::ItemIsEditable|Qt::ItemIsEnabled);
-//    generalFontSize->setText(0, "Font size");
-//    generalFontSize->setData(1, Qt::EditRole, 14);
-//    idx = indexFromItem(generalFontSize, 1);
-//    SliderEditor *customControl = new SliderEditor(idx, nullptr);
-//    setItemWidget(generalFontSize, 1, customControl);
-
-//    setItemDelegate(new PropertyDelegate/*(idx, 50)*/);
-
-
-//    expandAll();
-//}
-
-//void PropertyEditor::editCheck(QTreeWidgetItem *item, int column)
-//{
-//    if (column == 1) editItem(item, column);
-//}
-
-///* DELEGATE **********************************************************************************/
-
-//PropertyDelegate::PropertyDelegate(QObject *parent): QStyledItemDelegate(parent)
-//{
-//}
-
-//QWidget *PropertyDelegate::createEditor(QWidget *parent,
-//                                              const QStyleOptionViewItem &option,
-//                                              const QModelIndex &index ) const
-//{
-////    int type = index.data(MyTypeRole).toInt();
-
-////    switch (type)
-////    {
-////    case DT_Text:
-////        return new QLinedEdit;
-////    case DT_Checkbox:
-////        return new QCheckBox;
-////    case DT_Combo:
-////        return new QComboBox;
-////    default:
-////        return QItemDelegate::createEditor(parent, option, index);
-////    }
-
-//    return new SliderEditor(index, parent);
-//}
-
-//QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
-//{
-//    return SliderEditor(index, nullptr).sizeHint();
-//}
-
-//void PropertyDelegate::setEditorData(QWidget *editor,
-//                                    const QModelIndex &index) const
-//{
-//    int value = index.model()->data(index, Qt::EditRole).toInt();
-//    static_cast<SliderEditor*>(editor)->setValue(value);
-////    SliderLineEdit *w = static_cast<SliderLineEdit*>(editor);
-////    w->setValue(value);
-//}
-
-//void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
-//                                   const QModelIndex &index) const
-//{
-////    QSpinBox *spinBox = static_cast<QSpinBox*>(editor);
-////    spinBox->interpretText();
-////    int value = spinBox->value();
-
-//    int value = 17;
-
-//    model->setData(index, value, Qt::EditRole);
-//}
-
-//void PropertyDelegate::updateEditorGeometry(QWidget *editor,
-//    const QStyleOptionViewItem &option, const QModelIndex &/* index */) const
-//{
-//    editor->setGeometry(option.rect);
-//}
-

@@ -433,7 +433,7 @@ bool IconView::isSelectedItem()
 int IconView::getThumbsPerPage()
 {
 /*
-This is not being used.  It has been replaced with setViewportParameters.
+
 */
     {
     #ifdef ISDEBUG
@@ -464,7 +464,7 @@ This is not being used.  It has been replaced with setViewportParameters.
 
     // thumbs per page
     thumbsPerPage = tpr * rpp;
-    qDebug() << __FUNCTION__ << objectName()
+    /*qDebug() << __FUNCTION__ << objectName()
              << "G::isInitializing" << G::isInitializing
              << "| G::isNewFolderLoaded" << G::isNewFolderLoaded
              << "| isVisible = " << isVisible()
@@ -473,7 +473,7 @@ This is not being used.  It has been replaced with setViewportParameters.
              << "| tpr =" << tpr
              << "| rpp =" << rpp
              << "| thumbsPerPage" << thumbsPerPage;
-    return thumbsPerPage;
+    return thumbsPerPage;*/
 }
 
 int IconView::getFirstVisible()

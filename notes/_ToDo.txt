@@ -10,6 +10,7 @@ BUGS
 PERFORMANCE
 - filteredItemCount and unfilteredItemCount slow
 CODE IMPROVEMENTS
+- Tableview sizeHintForColumn "width" is deprecated
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - fix 300ms delay before scroll to currentRow on filterChange
 - Change setPixelSize to setPointSize throughout app
