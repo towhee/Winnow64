@@ -24,7 +24,7 @@ public:
     virtual QString displayText(const QVariant &value, const QLocale &locale) const override;
 
 protected:
-    bool eventFilter(QObject *editor, QEvent *event) override;
+//    bool eventFilter(QObject *editor, QEvent *event) override;
 
 signals:
     void editorValueChanged(QVariant value, QString source);
@@ -40,7 +40,10 @@ class PropertyEditor : public QTreeView
 public:
     explicit PropertyEditor(QWidget *parent);
 
-signals:
+protected:
+    void mousePressEvent(QMouseEvent *event);
+
+signals:   
 
 public slots:
     void editorValueChange(QVariant v, QString source);
@@ -48,7 +51,10 @@ public slots:
 
 //    void editCheck(QTreeWidgetItem *item, int column);
 private:
+    QStandardItemModel *model;
     PropertyDelegate *propertyDelegate;
+    const QStyleOptionViewItem *styleOptionViewItem;
+    void addItems();
 };
 
 

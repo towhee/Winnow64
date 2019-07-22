@@ -353,9 +353,6 @@ void MW::showEvent(QShowEvent *event)
 
     // show image count in folder panel if no folder selected
     if (!rememberLastDir) QTimer::singleShot(50, fsTree, SLOT(getImageCount()));
-
-    test();
-
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -420,7 +417,6 @@ void MW::keyPressEvent(QKeyEvent *event)
 
 void MW::keyReleaseEvent(QKeyEvent *event)
 {
-
     if (event->key() == Qt::Key_Escape) {
         // hide a popup message
         if (G::popUp->isVisible()) {
@@ -708,6 +704,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 
     return QWidget::eventFilter(obj, event);
+}
+
+void MW::focusChange(QWidget *previous, QWidget *current)
+{
+    if (current == nullptr) return;
+    if (current->objectName() == "DisableGoActions") enableGoKeyActions(false);
+    else enableGoKeyActions(true);
 }
 
 // DRAG AND DROP
@@ -1776,7 +1779,8 @@ void MW::createActions()
     #endif
     }
 
-//    QAction::setShortcutVisibleInContextMenu(true);
+    // disable go keys when property editors have focus
+    connect(qApp, &QApplication::focusChanged, this, &MW::focusChange);
 
     int n;          // used to populate action lists
 
@@ -8984,6 +8988,36 @@ void MW::getSubfolders(QString fPath)
     }
 }
 
+void MW::enableGoKeyActions(bool ok)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__ << ok;
+    if (ok) {
+        keyRightAction->setEnabled(true);
+        keyLeftAction->setEnabled(true);
+        keyUpAction->setEnabled(true);
+        keyDownAction->setEnabled(true);
+        keyHomeAction->setEnabled(true);
+        keyEndAction->setEnabled(true);
+        keyPageUpAction->setEnabled(true);
+        keyPageDownAction->setEnabled(true);
+    }
+    else {
+        keyRightAction->setEnabled(false);
+        keyLeftAction->setEnabled(false);
+        keyUpAction->setEnabled(false);
+        keyDownAction->setEnabled(false);
+        keyHomeAction->setEnabled(false);
+        keyEndAction->setEnabled(false);
+        keyPageUpAction->setEnabled(false);
+        keyPageDownAction->setEnabled(false);
+    }
+}
+
 void MW::keyRight()
 {
 /*
@@ -9758,6 +9792,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     propertyEditor = new PropertyEditor(this);
     propertiesDock = new DockWidget(tr("  Properties  "), this);
     propertiesDock->setObjectName("Properties");
+//    propertiesDock->setFeatures( QDockWidget::DockWidgetMovable |
+//        QDockWidget::DockWidgetFloatable );
     propertiesDock->setWidget(propertyEditor);
     propertiesDock->setFloating(true);
 //    qDebug() << __FUNCTION__ << geometry();

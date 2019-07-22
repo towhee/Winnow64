@@ -298,6 +298,7 @@ signals:
     void aSyncGo(int);
 
 private slots:
+    void focusChange(QWidget *previous, QWidget *current);
     bool checkForUpdate();
     void setShowImageCount();
     void about();
@@ -332,6 +333,7 @@ private slots:
     void zoomOut();
     void zoomIn();
     void zoomToFit();
+    void enableGoKeyActions(bool ok);
     void keyRight();
     void keyLeft();
     void keyUp();

@@ -388,63 +388,6 @@ void InfoView::updateInfo(const int &row)
     showOrHide();
 
     isNewImageDataChange = false;
-
-
-//    // flag updates so itemChanged be ignored in MW::metadataChanged
-//    isNewImageDataChange = true;
-
-//    QFileInfo imageInfo = QFileInfo(fPath);
-
-//    // make sure there is metadata for this image
-//    if (!metadata->isLoaded(fPath)) {
-//        metadata->loadImageMetadata(fPath, true, true);
-//    }
-
-//    uint width = metadata->getWidth(fPath);
-//    uint height = metadata->getHeight(fPath);
-//    QString modified = imageInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
-
-//    // update items
-//    ok->setData(ok->index(FolderRow, 1, fileInfoIdx), imageInfo.dir().dirName());
-//    ok->setData(ok->index(FileNameRow, 1, fileInfoIdx), imageInfo.fileName());
-//    ok->setData(ok->index(LocationRow, 1, fileInfoIdx), imageInfo.path());
-//    ok->setData(ok->index(SizeRow, 1, fileInfoIdx), QString::number(imageInfo.size() / 1024000.0, 'f', 2) + " MB");
-//    ok->setData(ok->index(CreatedRow, 1, fileInfoIdx), metadata->getCreatedDate(fPath).toString("yyyy-MM-dd hh:mm:ss"));
-//    ok->setData(ok->index(ModifiedRow, 1, fileInfoIdx), modified);
-//    ok->setData(ok->index(DimensionsRow, 1, fileInfoIdx), metadata->getDimensions(fPath));
-//    ok->setData(ok->index(MegaPixelsRow, 1, fileInfoIdx), QString::number((width * height) / 1000000.0, 'f', 1));
-//    ok->setData(ok->index(ModelRow, 1, imageInfoIdx), metadata->getModel(fPath));
-//    ok->setData(ok->index(LensRow, 1, imageInfoIdx), metadata->getLens(fPath));
-//    ok->setData(ok->index(ShutterSpeedRow, 1, imageInfoIdx), metadata->getExposureTime(fPath));
-//    ok->setData(ok->index(ApertureRow, 1, imageInfoIdx), metadata->getAperture(fPath));
-//    ok->setData(ok->index(ISORow, 1, imageInfoIdx), metadata->getISO(fPath));
-//    ok->setData(ok->index(FocalLengthRow, 1, imageInfoIdx), metadata->getFocalLength(fPath));
-//    ok->setData(ok->index(TitleRow, 1, tagInfoIdx), metadata->getTitle(fPath));
-//    ok->setData(ok->index(CreatorRow, 1, tagInfoIdx), metadata->getCreator(fPath));
-//    ok->setData(ok->index(CopyrightRow, 1, tagInfoIdx), metadata->getCopyright(fPath));
-//    ok->setData(ok->index(EmailRow, 1, tagInfoIdx), metadata->getEmail(fPath));
-//    ok->setData(ok->index(UrlRow, 1, tagInfoIdx), metadata->getUrl(fPath));
-
-//    this->fPath = fPath;        // not used, convenience value for future use
-
-//    // set tooltips
-//    for(int row = 0; row < ok->rowCount(); row++) {
-//        QModelIndex parentIdx = ok->index(row, 0);
-//        for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
-//            QModelIndex idx = ok->index(childRow, 1, parentIdx);
-//            QString value = qvariant_cast<QString>(idx.data());
-//            ok->setData(idx, value, Qt::ToolTipRole);
-//        }
-//    }
-
-//    if (G::isThreadTrackingOn) qDebug()
-//        << "ThumbView::updateExifInfo - loaded metadata display info for"
-//        << fPath;
-
-//    tweakHeaders();
-//    showOrHide();
-
-//    isNewImageDataChange = false;
 }
 
 void InfoView::mousePressEvent(QMouseEvent *event)

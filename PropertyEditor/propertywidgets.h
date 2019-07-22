@@ -20,7 +20,8 @@ enum UserRole
     UR_Min,                             // validate minimum value
     UR_Max,                             // validate maximum value
     UR_LabelFixedWidth,                 // fixed label width in custom widget
-    UR_LineEditFixedWidth               // fixed lineedit width in custom widget
+    UR_LineEditFixedWidth,              // fixed lineedit width in custom widget
+    UR_StringList                       // list of items for comboBox
 };
 
 class SliderEditor : public QWidget
@@ -30,17 +31,55 @@ public:
     SliderEditor(const QModelIndex &idx, QWidget *parent = nullptr);
     void setValue(QVariant value);
     int value();
-    QString parentObjectName;
 
 signals:
     void editorValueChanged(QVariant value, QString source);
+    void enableGoKeyActions(bool ok);
 
 private:
     void change(int value);
+    void updateSliderWhenLineEdited(QString value);
     QSlider *slider;
-    QLabel *label;
+    QLineEdit *lineEdit;
     QString source;
-    bool isInitializing;
+};
+
+class CheckEditor : public QWidget
+{
+    Q_OBJECT
+public:
+    CheckEditor(const QModelIndex &idx, QWidget *parent = nullptr);
+    void setValue(QVariant value);
+    bool value();
+
+signals:
+    void editorValueChanged(QVariant value, QString source);
+    void enableGoKeyActions(bool ok);
+
+private:
+    void change(int value);
+//    void updateSliderWhenLineEdited(QString value);
+    QCheckBox *checkBox;
+    QString source;
+};
+
+class ComboBoxEditor : public QWidget
+{
+    Q_OBJECT
+public:
+    ComboBoxEditor(const QModelIndex &idx, QWidget *parent = nullptr);
+    void setValue(QVariant value);
+    QString value();
+
+signals:
+    void editorValueChanged(QVariant value, QString source);
+    void enableGoKeyActions(bool ok);
+
+private:
+    void change(QString value);
+//    void updateSliderWhenLineEdited(QString value);
+    QComboBox *comboBox;
+    QString source;
 };
 
 #endif // PROPERTYWIDGETS_H

@@ -1,4 +1,5 @@
 BUGS
+- Closing floating dock crashes
 - Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Finish cache preferences
