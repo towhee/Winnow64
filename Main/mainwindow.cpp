@@ -9796,7 +9796,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     propertiesDock->setWidget(propertyEditor);
     propertiesDock->setFloating(true);
 //    qDebug() << __FUNCTION__ << geometry();
-    propertiesDock->setGeometry(2000,1000,400,600);
+    propertiesDock->setGeometry(2000,600,400,1000);
     propertiesDock->setVisible(true);
     propertiesDock->raise();
     propertiesDock->setFocus();
