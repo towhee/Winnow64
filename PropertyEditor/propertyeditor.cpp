@@ -492,36 +492,35 @@ void PropertyEditor::addItems()
     thumbnailCatItem->setEditable(false);
     thumbnailCatItem->setData(DT_None, UR_DelegateType);
     model->appendRow(thumbnailCatItem);
-//    model->insertColumns(1, 1);
     setColumnWidth(0, col0width);
     setColumnWidth(1, col1width);
     secondGenerationCount = -1;
 
-        secondGenerationCount++;
-        // Type = SPINBOX
-        // name = maximumIconSize
-        // parent = thumbnailCatItem
-        tooltip = "Enter the maximum size in pixel width for thumbnails.  Icons will be \nt"
-                  "created a this size.  The memory requirements increase at the square of \n"
-                  "the size, and folders can contain thousands of images.\n\n"
-                  "WARNING: Larger thumbnail sizes can consume huge amounts of memory.  The\n"
-                  "default size is 256 pixels to a side.";
-        QStandardItem *maximumIconSizeCaption = new QStandardItem;
-        maximumIconSizeCaption->setToolTip(tooltip);
-        maximumIconSizeCaption->setText("Maximum size");
-        maximumIconSizeCaption->setEditable(false);
-        QStandardItem *maximumIconSizeValue = new QStandardItem;
-        maximumIconSizeValue->setToolTip(tooltip);
-        maximumIconSizeValue->setData(G::maxIconSize, Qt::EditRole);
-        maximumIconSizeValue->setData(DT_Spinbox, UR_DelegateType);
-        maximumIconSizeValue->setData("maxIconSize", UR_Source);
-        maximumIconSizeValue->setData("int", UR_Type);
-        maximumIconSizeValue->setData(40, UR_Min);
-        maximumIconSizeValue->setData(640, UR_Max);
-        thumbnailCatItem->setChild(secondGenerationCount, 0, maximumIconSizeCaption);
-        thumbnailCatItem->setChild(secondGenerationCount, 1, maximumIconSizeValue);
-        idxVal = maximumIconSizeValue->index();
-        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+//        secondGenerationCount++;
+//        // Type = SPINBOX
+//        // name = maximumIconSize
+//        // parent = thumbnailCatItem
+//        tooltip = "Enter the maximum size in pixel width for thumbnails.  Icons will be \nt"
+//                  "created a this size.  The memory requirements increase at the square of \n"
+//                  "the size, and folders can contain thousands of images.\n\n"
+//                  "WARNING: Larger thumbnail sizes can consume huge amounts of memory.  The\n"
+//                  "default size is 256 pixels to a side.";
+//        QStandardItem *maximumIconSizeCaption = new QStandardItem;
+//        maximumIconSizeCaption->setToolTip(tooltip);
+//        maximumIconSizeCaption->setText("Maximum size");
+//        maximumIconSizeCaption->setEditable(false);
+//        QStandardItem *maximumIconSizeValue = new QStandardItem;
+//        maximumIconSizeValue->setToolTip(tooltip);
+//        maximumIconSizeValue->setData(G::maxIconSize, Qt::EditRole);
+//        maximumIconSizeValue->setData(DT_Spinbox, UR_DelegateType);
+//        maximumIconSizeValue->setData("maxIconSize", UR_Source);
+//        maximumIconSizeValue->setData("int", UR_Type);
+//        maximumIconSizeValue->setData(40, UR_Min);
+//        maximumIconSizeValue->setData(640, UR_Max);
+//        thumbnailCatItem->setChild(secondGenerationCount, 0, maximumIconSizeCaption);
+//        thumbnailCatItem->setChild(secondGenerationCount, 1, maximumIconSizeValue);
+//        idxVal = maximumIconSizeValue->index();
+//        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
 
         // HEADER
         // Thumbnails:: film strip subcategory
@@ -765,7 +764,7 @@ void PropertyEditor::addItems()
                       "best.  250 is the default amount.";
             QStandardItem *metadataChunkSizeCaption = new QStandardItem;
             metadataChunkSizeCaption->setToolTip(tooltip);
-            metadataChunkSizeCaption->setText("Chunk size");
+            metadataChunkSizeCaption->setText("Number to load");
             metadataChunkSizeCaption->setEditable(false);
             QStandardItem *metadataChunkSizeValue = new QStandardItem;
             metadataChunkSizeValue->setToolTip(tooltip);
@@ -779,6 +778,159 @@ void PropertyEditor::addItems()
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 1, metadataChunkSizeValue);
             idxVal = metadataChunkSizeValue->index();
             propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+
+            thirdGenerationCount++;
+            // Type = SPINBOX
+            // name = maximumIconSize
+            // parent = cacheThumbnailCatItem
+            tooltip = "Enter the maximum size in pixel width for thumbnails.  Icons will be \nt"
+                      "created a this size.  The memory requirements increase at the square of \n"
+                      "the size, and folders can contain thousands of images.\n\n"
+                      "WARNING: Larger thumbnail sizes can consume huge amounts of memory.  The\n"
+                      "default size is 256 pixels to a side.";
+            QStandardItem *maximumIconSizeCaption = new QStandardItem;
+            maximumIconSizeCaption->setToolTip(tooltip);
+            maximumIconSizeCaption->setText("Maximum icon size");
+            maximumIconSizeCaption->setEditable(false);
+            QStandardItem *maximumIconSizeValue = new QStandardItem;
+            maximumIconSizeValue->setToolTip(tooltip);
+            maximumIconSizeValue->setData(G::maxIconSize, Qt::EditRole);
+            maximumIconSizeValue->setData(DT_Spinbox, UR_DelegateType);
+            maximumIconSizeValue->setData("maxIconSize", UR_Source);
+            maximumIconSizeValue->setData("int", UR_Type);
+            maximumIconSizeValue->setData(40, UR_Min);
+            maximumIconSizeValue->setData(640, UR_Max);
+            cacheThumbnailCatItem->setChild(thirdGenerationCount, 0, maximumIconSizeCaption);
+            cacheThumbnailCatItem->setChild(thirdGenerationCount, 1, maximumIconSizeValue);
+            idxVal = maximumIconSizeValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+
+    firstGenerationCount++;
+    // HEADER
+    // Full screen category
+    QStandardItem *fullScreenCatItem = new QStandardItem;
+    fullScreenCatItem->setText("Full screen defaults");
+    fullScreenCatItem->setEditable(false);
+    fullScreenCatItem->setData(DT_None, UR_DelegateType);
+    model->appendRow(fullScreenCatItem);
+    setColumnWidth(0, col0width);
+    setColumnWidth(1, col1width);
+    secondGenerationCount = -1;
+
+        secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = fullScreenShowFolders
+        tooltip = "When you switch to full screen show the folders dock.";
+        QStandardItem *fullScreenShowFoldersCaption = new QStandardItem;
+        fullScreenShowFoldersCaption->setToolTip(tooltip);
+        fullScreenShowFoldersCaption->setText("Show folders");
+        fullScreenShowFoldersCaption->setEditable(false);
+        QStandardItem *fullScreenShowFoldersValue = new QStandardItem;
+        fullScreenShowFoldersValue->setToolTip(tooltip);
+        fullScreenShowFoldersValue->setData(mw->fullScreenDocks.isFolders, Qt::EditRole);
+        fullScreenShowFoldersValue->setData(DT_Checkbox, UR_DelegateType);
+        fullScreenShowFoldersValue->setData("fullScreenShowFolders", UR_Source);
+        fullScreenShowFoldersValue->setData("bool", UR_Type);
+        fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowFoldersCaption);
+        fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowFoldersValue);
+        idxVal = fullScreenShowFoldersValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+
+        secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = fullScreenShowBookmarks
+        tooltip = "When you switch to full screen show the Bookmarks dock.";
+        QStandardItem *fullScreenShowBookmarksCaption = new QStandardItem;
+        fullScreenShowBookmarksCaption->setToolTip(tooltip);
+        fullScreenShowBookmarksCaption->setText("Show bookmarks");
+        fullScreenShowBookmarksCaption->setEditable(false);
+        QStandardItem *fullScreenShowBookmarksValue = new QStandardItem;
+        fullScreenShowBookmarksValue->setToolTip(tooltip);
+        fullScreenShowBookmarksValue->setData(mw->fullScreenDocks.isFavs, Qt::EditRole);
+        fullScreenShowBookmarksValue->setData(DT_Checkbox, UR_DelegateType);
+        fullScreenShowBookmarksValue->setData("fullScreenShowBookmarks", UR_Source);
+        fullScreenShowBookmarksValue->setData("bool", UR_Type);
+        fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowBookmarksCaption);
+        fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowBookmarksValue);
+        idxVal = fullScreenShowBookmarksValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+
+        secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = fullScreenShowFilters
+        tooltip = "When you switch to full screen show the Filters dock.";
+        QStandardItem *fullScreenShowFiltersCaption = new QStandardItem;
+        fullScreenShowFiltersCaption->setToolTip(tooltip);
+        fullScreenShowFiltersCaption->setText("Show filters");
+        fullScreenShowFiltersCaption->setEditable(false);
+        QStandardItem *fullScreenShowFiltersValue = new QStandardItem;
+        fullScreenShowFiltersValue->setToolTip(tooltip);
+        fullScreenShowFiltersValue->setData(mw->fullScreenDocks.isFilters, Qt::EditRole);
+        fullScreenShowFiltersValue->setData(DT_Checkbox, UR_DelegateType);
+        fullScreenShowFiltersValue->setData("fullScreenShowFilters", UR_Source);
+        fullScreenShowFiltersValue->setData("bool", UR_Type);
+        fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowFiltersCaption);
+        fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowFiltersValue);
+        idxVal = fullScreenShowFiltersValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+
+        secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = fullScreenShowMetadata
+        tooltip = "When you switch to full screen show the Metadata dock.";
+        QStandardItem *fullScreenShowMetadataCaption = new QStandardItem;
+        fullScreenShowMetadataCaption->setToolTip(tooltip);
+        fullScreenShowMetadataCaption->setText("Show metadata");
+        fullScreenShowMetadataCaption->setEditable(false);
+        QStandardItem *fullScreenShowMetadataValue = new QStandardItem;
+        fullScreenShowMetadataValue->setToolTip(tooltip);
+        fullScreenShowMetadataValue->setData(mw->fullScreenDocks.isMetadata, Qt::EditRole);
+        fullScreenShowMetadataValue->setData(DT_Checkbox, UR_DelegateType);
+        fullScreenShowMetadataValue->setData("fullScreenShowMetadata", UR_Source);
+        fullScreenShowMetadataValue->setData("bool", UR_Type);
+        fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowMetadataCaption);
+        fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowMetadataValue);
+        idxVal = fullScreenShowMetadataValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+
+        secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = fullScreenShowThumbs
+        tooltip = "When you switch to full screen show the Thumbs dock.";
+        QStandardItem *fullScreenShowThumbsCaption = new QStandardItem;
+        fullScreenShowThumbsCaption->setToolTip(tooltip);
+        fullScreenShowThumbsCaption->setText("Show film strip");
+        fullScreenShowThumbsCaption->setEditable(false);
+        QStandardItem *fullScreenShowThumbsValue = new QStandardItem;
+        fullScreenShowThumbsValue->setToolTip(tooltip);
+        fullScreenShowThumbsValue->setData(mw->fullScreenDocks.isThumbs, Qt::EditRole);
+        fullScreenShowThumbsValue->setData(DT_Checkbox, UR_DelegateType);
+        fullScreenShowThumbsValue->setData("fullScreenShowThumbs", UR_Source);
+        fullScreenShowThumbsValue->setData("bool", UR_Type);
+        fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowThumbsCaption);
+        fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowThumbsValue);
+        idxVal = fullScreenShowThumbsValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+
+        secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = fullScreenShowStatusBar
+        tooltip = "When you switch to full screen show the StatusBar dock.";
+        QStandardItem *fullScreenShowStatusBarCaption = new QStandardItem;
+        fullScreenShowStatusBarCaption->setToolTip(tooltip);
+        fullScreenShowStatusBarCaption->setText("Show status bar");
+        fullScreenShowStatusBarCaption->setEditable(false);
+        QStandardItem *fullScreenShowStatusBarValue = new QStandardItem;
+        fullScreenShowStatusBarValue->setToolTip(tooltip);
+        fullScreenShowStatusBarValue->setData(mw->fullScreenDocks.isStatusBar, Qt::EditRole);
+        fullScreenShowStatusBarValue->setData(DT_Checkbox, UR_DelegateType);
+        fullScreenShowStatusBarValue->setData("fullScreenShowStatusBar", UR_Source);
+        fullScreenShowStatusBarValue->setData("bool", UR_Type);
+        fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowStatusBarCaption);
+        fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowStatusBarValue);
+        idxVal = fullScreenShowStatusBarValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+
 
 
 }
