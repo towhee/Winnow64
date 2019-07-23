@@ -1,5 +1,5 @@
 BUGS
-- Closing floating dock crashes
+- Drag and drop thumb in removes all picks and classification
 - Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Finish cache preferences

@@ -44,7 +44,7 @@ public:
     bool isAllIconLoaded();
     void setRange();
 
-    int metadataChunkSize;
+    int metadataChunkSize = 250;
     int defaultMetadataChunkSize = 250;
 
     // not being used at present

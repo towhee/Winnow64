@@ -86,8 +86,8 @@ void TableView::scrollToRow(int row, QString source)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << objectName() << "row =" << row
-             << "source =" << source;
+//    qDebug() << __FUNCTION__ << objectName() << "row =" << row
+//             << "source =" << source;
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }

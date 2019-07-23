@@ -19,6 +19,8 @@ public:
     void setEditorData(QWidget *editor, const QModelIndex &index) const override;
     void setModelData(QWidget *editor, QAbstractItemModel *model,
                       const QModelIndex &index) const override;
+    void paint(QPainter *painter, const QStyleOptionViewItem &option,
+               const QModelIndex &index) const override;
     void updateEditorGeometry(QWidget *editor,
         const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     virtual QString displayText(const QVariant &value, const QLocale &locale) const override;
@@ -42,6 +44,7 @@ public:
 
 protected:
     void mousePressEvent(QMouseEvent *event);
+    void drawRow(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
 
 signals:   
 
@@ -54,6 +57,7 @@ private:
     QStandardItemModel *model;
     PropertyDelegate *propertyDelegate;
     const QStyleOptionViewItem *styleOptionViewItem;
+    int indentation;
     void addItems();
 };
 

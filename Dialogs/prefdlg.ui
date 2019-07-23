@@ -59,7 +59,7 @@
     <enum>QFrame::Panel</enum>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>4</number>
    </property>
    <widget class="QWidget" name="pageGeneral">
     <widget class="QScrollArea" name="scrollArea">
@@ -2177,11 +2177,11 @@
             <height>0</height>
            </size>
           </property>
-          <attribute name="verticalHeaderDefaultSectionSize">
-           <number>34</number>
-          </attribute>
           <attribute name="verticalHeaderMinimumSectionSize">
            <number>1</number>
+          </attribute>
+          <attribute name="verticalHeaderDefaultSectionSize">
+           <number>34</number>
           </attribute>
          </widget>
         </item>

@@ -801,7 +801,7 @@ public:
         QObject::connect(globalFontSizeSlider, SIGNAL(valueChanged(int)), globalFontSizeLbl, SLOT(setNum(int)));
         QObject::connect(fontSizeSlider_2, SIGNAL(valueChanged(int)), fontSizeLbl_2, SLOT(setNum(int)));
 
-        stackedWidget->setCurrentIndex(0);
+        stackedWidget->setCurrentIndex(4);
         listContainer->setCurrentIndex(0);
 
 
