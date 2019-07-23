@@ -8995,7 +8995,6 @@ void MW::enableGoKeyActions(bool ok)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << ok;
     if (ok) {
         keyRightAction->setEnabled(true);
         keyLeftAction->setEnabled(true);
@@ -9797,7 +9796,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     propertiesDock->setWidget(propertyEditor);
     propertiesDock->setFloating(true);
 //    qDebug() << __FUNCTION__ << geometry();
-    propertiesDock->setGeometry(2000,1000,600,200);
+    propertiesDock->setGeometry(2000,1000,400,600);
     propertiesDock->setVisible(true);
     propertiesDock->raise();
     propertiesDock->setFocus();

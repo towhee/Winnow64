@@ -7,6 +7,7 @@ enum DelegateType
 {
     DT_None,
     DT_Text,
+    DT_Spinbox,
     DT_Checkbox,
     DT_Combo,
     DT_Slider
@@ -44,11 +45,29 @@ private:
     QString source;
 };
 
-class CheckEditor : public QWidget
+class SpinBoxEditor : public QWidget
 {
     Q_OBJECT
 public:
-    CheckEditor(const QModelIndex &idx, QWidget *parent = nullptr);
+    SpinBoxEditor(const QModelIndex &idx, QWidget *parent = nullptr);
+    void setValue(QVariant value);
+    int value();
+
+signals:
+    void editorValueChanged(QVariant value, QString source);
+    void enableGoKeyActions(bool ok);
+
+private:
+    void change(int value);
+    QSpinBox *spinBox;
+    QString source;
+};
+
+class CheckBoxEditor : public QWidget
+{
+    Q_OBJECT
+public:
+    CheckBoxEditor(const QModelIndex &idx, QWidget *parent = nullptr);
     void setValue(QVariant value);
     bool value();
 
@@ -74,10 +93,9 @@ public:
 signals:
     void editorValueChanged(QVariant value, QString source);
     void enableGoKeyActions(bool ok);
-
+    
 private:
-    void change(QString value);
-//    void updateSliderWhenLineEdited(QString value);
+    void change(int index);
     QComboBox *comboBox;
     QString source;
 };

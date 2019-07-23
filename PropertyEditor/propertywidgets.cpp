@@ -2,6 +2,8 @@
 #include "Main/mainwindow.h"
 #include "Main/global.h"
 
+CONST int propertyWidgetMargin = 10;
+
 /*
 Slider
 Combo
@@ -45,8 +47,7 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(slider, Qt::AlignLeft);
     layout->addWidget(lineEdit, Qt::AlignRight);
-    layout->addSpacing(15);
-    layout->setContentsMargins(0,0,0,0);
+    layout->setContentsMargins(propertyWidgetMargin,0,propertyWidgetMargin,0);
     setLayout(layout);
 
     slider->setValue(idx.data(Qt::EditRole).toInt());
@@ -74,9 +75,52 @@ void SliderEditor::updateSliderWhenLineEdited(QString value)
     slider->setValue(value.toInt());
 }
 
+/* SPINBOX EDITOR ****************************************************************************/
+
+SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
+{
+    int min = idx.data(UR_Min).toInt();
+    int max = idx.data(UR_Max).toInt();
+    source = idx.data(UR_Source).toString();
+
+    spinBox = new QSpinBox;
+    spinBox->setObjectName("DisableGoActions");  // used in MW::focusChange
+    spinBox->setMinimum(min);
+    spinBox->setMaximum(max);
+    spinBox->setStyleSheet("QSpinBox {background:transparent; border:none;"
+                           "padding:0px;border-radius:0px;}");
+    spinBox->setWindowFlags(Qt::FramelessWindowHint);
+    spinBox->setAttribute(Qt::WA_TranslucentBackground);
+
+    connect(spinBox, QOverload<int>::of(&QSpinBox::valueChanged), [=](int i){change(i);});
+
+    QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->addWidget(spinBox, Qt::AlignLeft);
+    layout->setContentsMargins(propertyWidgetMargin - 2, 0, propertyWidgetMargin, 0);
+    setLayout(layout);
+
+    spinBox->setValue(idx.data(Qt::EditRole).toInt());
+}
+
+int SpinBoxEditor::value()
+{
+    return spinBox->value();
+}
+
+void SpinBoxEditor::setValue(QVariant value)
+{
+    spinBox->setValue(value.toInt());
+}
+
+void SpinBoxEditor::change(int value)
+{
+    QVariant v = value;
+    emit editorValueChanged(v, source);
+}
+
 /* CHECKBOX EDITOR ***************************************************************************/
 
-CheckEditor::CheckEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
+CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
     source = idx.data(UR_Source).toString();
 
@@ -86,28 +130,28 @@ CheckEditor::CheckEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
     checkBox->setWindowFlags(Qt::FramelessWindowHint);
     checkBox->setAttribute(Qt::WA_TranslucentBackground);
 
-    connect(checkBox, &QCheckBox::stateChanged, this, &CheckEditor::change);
+    connect(checkBox, &QCheckBox::stateChanged, this, &CheckBoxEditor::change);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(checkBox, Qt::AlignLeft);
-    layout->setContentsMargins(0,0,0,0);
+    layout->setContentsMargins(propertyWidgetMargin,0,propertyWidgetMargin,0);
     setLayout(layout);
 
     checkBox->setChecked(idx.data(Qt::EditRole).toBool());
 }
 
-bool CheckEditor::value()
+bool CheckBoxEditor::value()
 {
     if (checkBox->checkState() == Qt::Checked) return true;
     else return false;
 }
 
-void CheckEditor::setValue(QVariant value)
+void CheckBoxEditor::setValue(QVariant value)
 {
     checkBox->setChecked(value.toBool());
 }
 
-void CheckEditor::change(int value)
+void CheckBoxEditor::change(int value)
 {
     QVariant v;
     if (value == Qt::Checked) v = true;
@@ -123,18 +167,21 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
 
     comboBox = new QComboBox;
     comboBox->setObjectName("DisableGoActions");  // used in MW::focusChange
-    comboBox->setStyleSheet("QComboBox {background: transparent; border:none;}");
+    comboBox->setStyleSheet("QComboBox {background: transparent;"
+                            "border:none; padding: 0px 0px 0px 0px;}"
+                            "QComboBox::drop-down {border:none;}");
     comboBox->setWindowFlags(Qt::FramelessWindowHint);
     comboBox->setAttribute(Qt::WA_TranslucentBackground);
 
-//    connect(comboBox, &QComboBox::currentIndexChanged, this, &ComboBoxEditor::change);
+    connect(comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            [=](int index){change(index);});
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(comboBox, Qt::AlignLeft);
-    layout->setContentsMargins(0,0,0,0);
+    layout->setContentsMargins(propertyWidgetMargin,0,propertyWidgetMargin,0);
     setLayout(layout);
 
-    comboBox->addItems(idx.data(Qt::EditRole).toStringList());
+    comboBox->addItems(idx.data(UR_StringList).toStringList());
 }
 
 QString ComboBoxEditor::value()
@@ -148,8 +195,8 @@ void ComboBoxEditor::setValue(QVariant value)
     comboBox->setCurrentIndex(i);
 }
 
-void ComboBoxEditor::change(QString value)
-{
-    QVariant v = value;
+void ComboBoxEditor::change(int index)
+{    
+    QVariant v = comboBox->itemText(index);
     emit editorValueChanged(v, source);
 }
