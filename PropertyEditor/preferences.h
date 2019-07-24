@@ -12,7 +12,7 @@ public:
     Preferences(QWidget *parent);
 
 public slots:
-    void editorValueChange(QVariant v, QString source);
+    void editorValueChange(QVariant v, QString source, QModelIndex index);
 
 private:
     void addItems();

@@ -11,13 +11,17 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
     mw = qobject_cast<MW*>(parent);
     connect(this, &PropertyEditor::editorValueChanged, this, &Preferences::editorValueChange);
     addItems();
-    expandAll();
+//    expandAll();
 }
 
-void Preferences::editorValueChange(QVariant v, QString source)
+void Preferences::editorValueChange(QVariant v, QString source, QModelIndex index)
 {
 
-    qDebug() << __FUNCTION__ << v << source;
+    qDebug() << __FUNCTION__ << v << source << index;
+    if (source == "infoView->ok") {
+        QModelIndex okIdx = index.data(UR_QModelIndex).toModelIndex();
+        mw->infoView->ok->setData(okIdx, v.toBool());
+    }
     if (source == "classificationBadgeInImageDiameter") {
         int value = v.toInt();
         mw->setClassificationBadgeImageDiam(value);
@@ -669,25 +673,70 @@ void Preferences::addItems()
 
         // InfoView fields to show
         QStandardItemModel *okInfo = mw->infoView->ok;
-        QString name;
+        QStandardItem *okCaption;
+        QStandardItem *okValue;
+        QStandardItem *okChildCaption;
+        QStandardItem *okChildValue;
+        QString caption;
         bool isShow;
+        // iterate through infoView data, adding it to the property editor
         for(int row = 0; row < okInfo->rowCount(); row++) {
             QModelIndex parentIdx = okInfo->index(row, 0);
-            name = okInfo->index(row, 0).data().toString();
-            QModelIndex idx = okInfo->index(row, 2);
-            isShow = idx.data().toBool();
+            caption = okInfo->index(row, 0).data().toString();
+            QModelIndex isShowIdx = okInfo->index(row, 2);
+            isShow = isShowIdx.data().toBool();
+            tooltip = "Show or hide the category " + caption + " in the metadata panel";
             // Add okInfo category to the property editor
-
-            qDebug() << name << isShow;
+            secondGenerationCount++;
+            okCaption = new QStandardItem;
+            okCaption->setToolTip(tooltip);
+            okCaption->setText("Show " + caption);
+            okCaption->setEditable(false);
+            okValue = new QStandardItem;
+            okValue->setToolTip(tooltip);
+            okValue->setData(isShow, Qt::EditRole);
+            okValue->setData(isShowIdx, UR_QModelIndex);
+            okValue->setData(DT_Checkbox, UR_DelegateType);
+            okValue->setData("infoView->ok", UR_Source);
+            okValue->setData("bool", UR_Type);
+            metadataPanelCatItem->setChild(secondGenerationCount, 0, okCaption);
+            metadataPanelCatItem->setChild(secondGenerationCount, 1, okValue);
+            idxVal = okValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            thirdGenerationCount = -1;
             for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
-                name = okInfo->index(childRow, 0, parentIdx).data().toString();
-                QModelIndex idx = okInfo->index(childRow, 2, parentIdx);
-                isShow = idx.data().toBool();
-                qDebug() << "\t" << name << isShow;
-//                okInfo->setData(idx, box->isChecked());
+                caption = okInfo->index(childRow, 0, parentIdx).data().toString();
+                QModelIndex isShowIdx = okInfo->index(childRow, 2, parentIdx);
+                isShow = isShowIdx.data().toBool();
+                tooltip = "Show or hide the field " + caption + " in the metadata panel";
+                // Add okInfo child to the property editor
+                thirdGenerationCount++;
+                okChildCaption = new QStandardItem;
+                okChildCaption->setToolTip(tooltip);
+                okChildCaption->setText("Show " + caption);
+                okChildCaption->setEditable(false);
+                okChildValue = new QStandardItem;
+                okChildValue->setToolTip(tooltip);
+                okChildValue->setData(isShow, Qt::EditRole);
+
+//                QModelIndex test = okInfo->index(childRow, 0, parentIdx);
+//                okChildValue->setData(test, UR_QModelIndex);
+//                qDebug() << "Test : " << mw->infoView->ok->data(test).toString();
+//                QModelIndex test1 = okChildValue->index().data(UR_QModelIndex).toModelIndex();
+//                qDebug() << "Test1: " << mw->infoView->ok->data(test1).toString();
+//                qDebug() << __FUNCTION__ << "test =" << test << "test1 =" << test1;
+                okChildValue->setData(isShowIdx, UR_QModelIndex);
+
+                okChildValue->setData(DT_Checkbox, UR_DelegateType);
+                okChildValue->setData("infoView->ok", UR_Source);
+                okChildValue->setData("bool", UR_Type);
+                okCaption->setChild(thirdGenerationCount, 0, okChildCaption);
+                okCaption->setChild(thirdGenerationCount, 1, okChildValue);
+                idxVal = okChildValue->index();
+                propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
             }
-
+            expand(okCaption->index());
         }
-
+    expand(metadataPanelCatItem->index());
 }
 

@@ -20,10 +20,10 @@ protected:
     void drawRow(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
 
 signals:
-    void editorValueChanged(QVariant v, QString source);
+    void editorValueChanged(QVariant v, QString source, QModelIndex index);
 
 public slots:
-    void editorValueChange(QVariant v, QString source);
+    void editorValueChange(QVariant v, QString source, QModelIndex index);
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor);
 
 //    void editCheck(QTreeWidgetItem *item, int column);

@@ -16,6 +16,7 @@ Text
 
 SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    this->idx = idx;
     int lineEditWidth = idx.data(UR_LabelFixedWidth).toInt();
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
@@ -66,7 +67,7 @@ void SliderEditor::setValue(QVariant value)
 void SliderEditor::change(int value)
 {
     QVariant v = value;
-    emit editorValueChanged(v, source);
+    emit editorValueChanged(v, source, idx);
     lineEdit->setText(QString::number(value));
 }
 
@@ -79,6 +80,7 @@ void SliderEditor::updateSliderWhenLineEdited(QString value)
 
 SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    this->idx = idx;
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
     source = idx.data(UR_Source).toString();
@@ -124,13 +126,14 @@ void SpinBoxEditor::setValue(QVariant value)
 void SpinBoxEditor::change(int value)
 {
     QVariant v = value;
-    emit editorValueChanged(v, source);
+    emit editorValueChanged(v, source, idx);
 }
 
 /* CHECKBOX EDITOR ***************************************************************************/
 
 CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    this->idx = idx;
     source = idx.data(UR_Source).toString();
 
     checkBox = new QCheckBox;
@@ -165,13 +168,14 @@ void CheckBoxEditor::change(int value)
     QVariant v;
     if (value == Qt::Checked) v = true;
     else v = false;
-    emit editorValueChanged(v, source);
+    emit editorValueChanged(v, source, idx);
 }
 
 /* COMBOBOX EDITOR ***************************************************************************/
 
 ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    this->idx = idx;
     source = idx.data(UR_Source).toString();
 
     comboBox = new QComboBox;
@@ -207,5 +211,5 @@ void ComboBoxEditor::setValue(QVariant value)
 void ComboBoxEditor::change(int index)
 {    
     QVariant v = comboBox->itemText(index);
-    emit editorValueChanged(v, source);
+    emit editorValueChanged(v, source, idx);
 }

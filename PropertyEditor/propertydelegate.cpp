@@ -147,10 +147,10 @@ void PropertyDelegate::updateEditorGeometry(QWidget *editor,
     editor->setGeometry(option.rect);
 }
 
-void PropertyDelegate::editorValueChange(QVariant v, QString source)
+void PropertyDelegate::editorValueChange(QVariant v, QString source, QModelIndex index)
 {
 //    qDebug() << __FUNCTION__ << v << source;
-    emit editorValueChanged(v, source);
+    emit editorValueChanged(v, source, index);
 }
 
 

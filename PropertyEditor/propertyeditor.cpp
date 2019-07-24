@@ -41,9 +41,9 @@ void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
     emit propertyDelegate->closeEditor(editor);
 }
 
-void PropertyEditor::editorValueChange(QVariant v, QString source)
+void PropertyEditor::editorValueChange(QVariant v, QString source, QModelIndex index)
 {
-    emit editorValueChanged(v, source);
+    emit editorValueChanged(v, source, index);
 }
 
 void PropertyEditor::drawRow(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const

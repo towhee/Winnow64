@@ -17,6 +17,7 @@ enum UserRole
 {
     UR_DelegateType = Qt::UserRole + 1, // the PropertyWidget (custom widget)
     UR_Source,                          // name of property/variable being edited
+    UR_QModelIndex,                     // index from another model ie infoView->ok
     UR_Type,                            // the data type required by the delegate
     UR_Min,                             // validate minimum value
     UR_Max,                             // validate maximum value
@@ -34,7 +35,7 @@ public:
     int value();
 
 signals:
-    void editorValueChanged(QVariant value, QString source);
+    void editorValueChanged(QVariant value, QString source, QModelIndex idx);
     void enableGoKeyActions(bool ok);
 
 private:
@@ -43,6 +44,7 @@ private:
     QSlider *slider;
     QLineEdit *lineEdit;
     QString source;
+    QModelIndex idx;
 };
 
 class SpinBoxEditor : public QWidget
@@ -54,13 +56,14 @@ public:
     int value();
 
 signals:
-    void editorValueChanged(QVariant value, QString source);
+    void editorValueChanged(QVariant value, QString source, QModelIndex idx);
     void enableGoKeyActions(bool ok);
 
 private:
     void change(int value);
     QSpinBox *spinBox;
     QString source;
+    QModelIndex idx;
 };
 
 class CheckBoxEditor : public QWidget
@@ -72,14 +75,14 @@ public:
     bool value();
 
 signals:
-    void editorValueChanged(QVariant value, QString source);
+    void editorValueChanged(QVariant value, QString source, QModelIndex idx);
     void enableGoKeyActions(bool ok);
 
 private:
     void change(int value);
-//    void updateSliderWhenLineEdited(QString value);
     QCheckBox *checkBox;
     QString source;
+    QModelIndex idx;
 };
 
 class ComboBoxEditor : public QWidget
@@ -91,13 +94,14 @@ public:
     QString value();
 
 signals:
-    void editorValueChanged(QVariant value, QString source);
+    void editorValueChanged(QVariant value, QString source, QModelIndex idx);
     void enableGoKeyActions(bool ok);
     
 private:
     void change(int index);
     QComboBox *comboBox;
     QString source;
+    QModelIndex idx;
 };
 
 #endif // PROPERTYWIDGETS_H
