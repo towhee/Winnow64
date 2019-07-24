@@ -655,5 +655,39 @@ void Preferences::addItems()
         idxVal = fullScreenShowStatusBarValue->index();
         propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
 
+    firstGenerationCount++;
+    // HEADER
+    // Metadata panel category
+    QStandardItem *metadataPanelCatItem = new QStandardItem;
+    metadataPanelCatItem->setText("Metadata panel");
+    metadataPanelCatItem->setEditable(false);
+    metadataPanelCatItem->setData(DT_None, UR_DelegateType);
+    model->appendRow(metadataPanelCatItem);
+    setColumnWidth(0, col0width);
+    setColumnWidth(1, col1width);
+    secondGenerationCount = -1;
+
+        // InfoView fields to show
+        QStandardItemModel *okInfo = mw->infoView->ok;
+        QString name;
+        bool isShow;
+        for(int row = 0; row < okInfo->rowCount(); row++) {
+            QModelIndex parentIdx = okInfo->index(row, 0);
+            name = okInfo->index(row, 0).data().toString();
+            QModelIndex idx = okInfo->index(row, 2);
+            isShow = idx.data().toBool();
+            // Add okInfo category to the property editor
+
+            qDebug() << name << isShow;
+            for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
+                name = okInfo->index(childRow, 0, parentIdx).data().toString();
+                QModelIndex idx = okInfo->index(childRow, 2, parentIdx);
+                isShow = idx.data().toBool();
+                qDebug() << "\t" << name << isShow;
+//                okInfo->setData(idx, box->isChecked());
+            }
+
+        }
+
 }
 
