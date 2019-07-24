@@ -22,6 +22,7 @@
 #include "File/bookmarks.h"
 #include "File/fstree.h"
 #include "PropertyEditor/propertyeditor.h"
+#include "PropertyEditor/preferences.h"
 #include "Views/compareImages.h"
 #include "Views/iconview.h"
 #include "Views/tableview.h"
@@ -64,6 +65,7 @@ class MW : public QMainWindow
     friend class Prefdlg;           // m0
     friend class ProgressBar;       // mw1
     friend class IconView;          // mw2
+    friend class Preferences;       // mw;
     friend class PropertyEditor;    // mw;
 
 public:

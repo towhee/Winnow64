@@ -1,83 +1,51 @@
-#include "propertyeditor.h"
+#include "preferences.h"
 #include "Main/mainwindow.h"
 #include "Main/global.h"
 #include <QDebug>
 
-//// this works because propertyeditor is a friend class of MW
-//MW *mw;
+// this works because propertyeditor is a friend class of MW
+MW *mw;
 
-PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
+Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
 {
-    // this works because propertyeditor is a friend class of MW
-//    mw = qobject_cast<MW*>(parent);
-
-    setRootIsDecorated(true);
-    setAlternatingRowColors(true);
-    setSelectionBehavior(QAbstractItemView::SelectRows);
-    setEditTriggers(QAbstractItemView::AllEditTriggers);
-    indentation = 15;
-    setIndentation(indentation);
-//    setStyleSheet("QTreeView::item {border:1px solid rgb(75,75,75)}");
-
-    model = new QStandardItemModel;
-    setModel(model);
-    propertyDelegate = new PropertyDelegate(this);
-    setItemDelegate(propertyDelegate);
-//    setItemDelegateForColumn(1, propertyDelegate);
-    styleOptionViewItem = new QStyleOptionViewItem;
-
-    connect(propertyDelegate, &PropertyDelegate::editorValueChanged,
-            this, &PropertyEditor::editorValueChange);
-    connect(propertyDelegate, &PropertyDelegate::editorWidgetToDisplay,
-            this, &PropertyEditor::editorWidgetToDisplay);
+    mw = qobject_cast<MW*>(parent);
+    connect(this, &PropertyEditor::editorValueChanged, this, &Preferences::editorValueChange);
+    addItems();
+    expandAll();
 }
 
-void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
-/*
-
-*/
+void Preferences::editorValueChange(QVariant v, QString source)
 {
-    setIndexWidget(idx, editor);
-    emit propertyDelegate->closeEditor(editor);
-}
 
-void PropertyEditor::editorValueChange(QVariant v, QString source)
-{
-    emit editorValueChanged(v, source);
-}
-
-void PropertyEditor::drawRow(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
-{
-    QTreeView::drawRow(painter, option, index);
-//    painter->save();
-//    painter->setPen(QColor(75,75,75));
-//    painter->drawRect(option.rect);
-//    painter->restore();
-}
-
-void PropertyEditor::mousePressEvent(QMouseEvent *event)
-{
-    if (event->button() == Qt::RightButton) return;
-    QTreeView::mousePressEvent(event);
-    if (event->modifiers() == Qt::NoModifier) {
-        QModelIndex idx = indexAt(event->pos());
-        if (idx.isValid()) {
-            // setCurrentIndex for the value cell (col 1) if user clicked on the caption cell (col 0)
-            QModelIndex idxVal = model->index(idx.row(), 1, idx.parent());
-            setCurrentIndex(idxVal);
-
-            // try to expand / collapse if click on any part of the row
-            // might have clicked on column 1
-            if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
-            QPoint p = event->pos();
-            if (p.x() >= indentation) isExpanded(idx) ? collapse(idx) : expand(idx);
-        }
+    qDebug() << __FUNCTION__ << v << source;
+    if (source == "classificationBadgeInImageDiameter") {
+        int value = v.toInt();
+        mw->setClassificationBadgeImageDiam(value);
     }
+    if (source == "classificationBadgeInThumbDiameter") {
+        int value = v.toInt();
+        mw->setClassificationBadgeThumbDiam(value);
+    }
+    if (source == "rememberLastDir") {
+        mw->rememberLastDir = v.toBool();
+    }
+    if (source == "useWheelToScroll") {
+        if (v.toString() == "Next/previous image") mw->imageView->useWheelToScroll = false;
+        else mw->imageView->useWheelToScroll = true;
+    }
+    if (source == "globalFontSize") {
+        mw->setFontSize(v.toInt());
+    }
+    if (source == "infoOverlayFontSize") {
+        qDebug() << __FUNCTION__ << v;
+        mw->imageView->infoOverlayFontSize = v.toInt();
+        mw->setInfoFontSize();
+    }
+
 }
 
-void PropertyEditor::addItems1()
+void Preferences::addItems()
 {
-    /*
     int col0width = 200;
     int col1width = 200;
     int firstGenerationCount = -1;        // top items
@@ -687,6 +655,5 @@ void PropertyEditor::addItems1()
         idxVal = fullScreenShowStatusBarValue->index();
         propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
 
-*/
-
 }
+
