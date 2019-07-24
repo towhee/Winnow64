@@ -92,10 +92,19 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
     spinBox->setWindowFlags(Qt::FramelessWindowHint);
     spinBox->setAttribute(Qt::WA_TranslucentBackground);
 
+    QLabel *label = new QLabel;
+    label->setStyleSheet("QLabel {}");
+    label->setText("(" + QString::number(min) + "-" + QString::number(max) + ")");
+    label->setDisabled(true);
+    label->setWindowFlags(Qt::FramelessWindowHint);
+    label->setAttribute(Qt::WA_TranslucentBackground);
+
     connect(spinBox, QOverload<int>::of(&QSpinBox::valueChanged), [=](int i){change(i);});
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(spinBox, Qt::AlignLeft);
+    layout->addSpacing(20);
+    layout->addWidget(label);
     layout->setContentsMargins(propertyWidgetMargin - 2, 0, propertyWidgetMargin, 0);
     setLayout(layout);
 

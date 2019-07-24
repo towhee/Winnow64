@@ -9788,12 +9788,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    propertyEditor = new PropertyEditor(this);
-    propertiesDock = new DockWidget(tr("  Properties  "), this);
-    propertiesDock->setObjectName("Properties");
+    Preferences *pref = new Preferences(this);
+//    propertyEditor = new PropertyEditor(this);
+    propertiesDock = new DockWidget(tr("  Preferencess  "), this);
+    propertiesDock->setObjectName("Preferences");
 //    propertiesDock->setFeatures( QDockWidget::DockWidgetMovable |
 //        QDockWidget::DockWidgetFloatable );
-    propertiesDock->setWidget(propertyEditor);
+    propertiesDock->setWidget(pref);
     propertiesDock->setFloating(true);
 //    qDebug() << __FUNCTION__ << geometry();
     propertiesDock->setGeometry(2000,600,400,1000);

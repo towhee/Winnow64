@@ -3,224 +3,20 @@
 #include "Main/global.h"
 #include <QDebug>
 
-/* DELEGATE **********************************************************************************/
-
-PropertyDelegate::PropertyDelegate(QObject *parent): QStyledItemDelegate(parent)
-{
-
-}
-
-QWidget *PropertyDelegate::createEditor(QWidget *parent,
-                                              const QStyleOptionViewItem &option,
-                                              const QModelIndex &index ) const
-{
-    int type = index.data(UR_DelegateType).toInt();
-    switch (type) {
-        case 0: return nullptr;
-    //    case DT_Text:
-    //        return new QLinedEdit;
-        case DT_Checkbox: {
-            CheckBoxEditor *checkEditor = new CheckBoxEditor(index, parent);
-            connect(checkEditor, &CheckBoxEditor::editorValueChanged,
-                    this, &PropertyDelegate::editorValueChanged);
-            emit editorWidgetToDisplay(index, checkEditor);
-            return checkEditor;
-        }
-        case DT_Spinbox: {
-            SpinBoxEditor *spinBoxEditor = new SpinBoxEditor(index, parent);
-            connect(spinBoxEditor, &SpinBoxEditor::editorValueChanged,
-                    this, &PropertyDelegate::editorValueChanged);
-            emit editorWidgetToDisplay(index, spinBoxEditor);
-            return spinBoxEditor;
-        }
-        case DT_Combo: {
-            ComboBoxEditor *comboBoxEditor = new ComboBoxEditor(index, parent);
-            connect(comboBoxEditor, &ComboBoxEditor::editorValueChanged,
-                    this, &PropertyDelegate::editorValueChanged);
-            emit editorWidgetToDisplay(index, comboBoxEditor);
-            return comboBoxEditor;
-        }
-        case DT_Slider: {
-            SliderEditor *sliderEditor = new SliderEditor(index, parent);
-            connect(sliderEditor, &SliderEditor::editorValueChanged,
-                    this, &PropertyDelegate::editorValueChanged);
-            emit editorWidgetToDisplay(index, sliderEditor);
-            return sliderEditor;
-    //        return new SliderEditor(index, parent);
-        }
-        default:
-            return QStyledItemDelegate::createEditor(parent, option, index);
-    }
-}
-
-QString PropertyDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
-{
-//    qDebug() << __FUNCTION__ << value;
-    return "";
-}
-
-QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
-{
-    int height = G::fontSize.toInt() + 10;
-    return QSize(option.rect.width(), height);  // rgh perhaps change 24 to function of font size + 10
-
-    int type = index.data(UR_DelegateType).toInt();
-    switch (type) {
-        case 0:
-        case DT_Text:
-    //        return new QLinedEdit;
-        case DT_Checkbox: return CheckBoxEditor(index, nullptr).sizeHint();
-        case DT_Spinbox: return SpinBoxEditor(index, nullptr).sizeHint();
-        case DT_Combo: return ComboBoxEditor(index, nullptr).sizeHint();
-        case DT_Slider: return SliderEditor(index, nullptr).sizeHint();
-    }
-
-}
-
-void PropertyDelegate::setEditorData(QWidget *editor,
-                                    const QModelIndex &index) const
-{
-    int type = index.data(UR_DelegateType).toInt();
-    switch (type) {
-        case 0:
-        case DT_Text:
-    //        return new QLinedEdit;
-        case DT_Checkbox: {
-            int value = index.model()->data(index, Qt::EditRole).toBool();
-            static_cast<CheckBoxEditor*>(editor)->setValue(value);
-        }
-        case DT_Spinbox: {
-            int value = index.model()->data(index, Qt::EditRole).toBool();
-            static_cast<SpinBoxEditor*>(editor)->setValue(value);
-        }
-        case DT_Combo: {
-            int value = index.model()->data(index, Qt::EditRole).toInt();
-            static_cast<ComboBoxEditor*>(editor)->setValue(value);
-        }
-        case DT_Slider: {
-            int value = index.model()->data(index, Qt::EditRole).toInt();
-            static_cast<SliderEditor*>(editor)->setValue(value);
-        }
-    }
-}
-
-void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
-                                   const QModelIndex &index) const
-{
-//    qDebug() << __FUNCTION__ << index;
-    int type = index.data(UR_DelegateType).toInt();
-    switch (type) {
-        case 0:
-        case DT_Text:
-//        return new QLinedEdit;
-        case DT_Checkbox: {
-            CheckBoxEditor *checkEditor = static_cast<CheckBoxEditor*>(editor);
-            bool value = checkEditor->value();
-            model->setData(index, value, Qt::EditRole);
-        }
-        case DT_Spinbox: {
-            SpinBoxEditor *spinBoxEditor = static_cast<SpinBoxEditor*>(editor);
-            bool value = spinBoxEditor->value();
-            model->setData(index, value, Qt::EditRole);
-        }
-        case DT_Combo: {
-            ComboBoxEditor *comboBoxEditor = static_cast<ComboBoxEditor*>(editor);
-            QString value = comboBoxEditor->value();
-            model->setData(index, value, Qt::EditRole);
-        }
-        case DT_Slider: {
-            SliderEditor *sliderEditor = static_cast<SliderEditor*>(editor);
-            int value = sliderEditor->value();
-            model->setData(index, value, Qt::EditRole);
-        }
-    }
-}
-
-//bool PropertyDelegate::eventFilter(QObject *editor, QEvent *event)
-//{
-////    qDebug() << __FUNCTION__ << editor << event;
-//    qApp->processEvents();
-//    return event;
-//}
-
-void PropertyDelegate::updateEditorGeometry(QWidget *editor,
-    const QStyleOptionViewItem &option, const QModelIndex &index ) const
-{
-//    qDebug() << __FUNCTION__ << index;
-    editor->setGeometry(option.rect);
-}
-
-void PropertyDelegate::editorValueChange(QVariant v, QString source)
-{
-//    qDebug() << __FUNCTION__ << v << source;
-    emit editorValueChanged(v, source);
-}
-
-
-void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const
-{
-    painter->save();
-
-    QRect r = option.rect;
-    QRect r0 = QRect(0, r.y(), r.x() + r.width(), r.height());
-
-    QLinearGradient categoryBackground;
-    categoryBackground.setStart(0, r.top());
-    categoryBackground.setFinalStop(0, r.bottom());
-    categoryBackground.setColorAt(0, QColor(88,88,88));
-    categoryBackground.setColorAt(1, QColor(66,66,66));
-
-    QPen catPen(Qt::white);
-    QPen regPen(QColor(190,190,190));
-
-//    qDebug() << __FUNCTION__ << index.data().toString();
-
-    if (index.parent() == QModelIndex()) {
-        qDebug() << __FUNCTION__ << "col =" << index.column() << "r =" << r << "\tr0 =" << r0
-                 << index.data().toString();
-        if (index.column() == 0) painter->fillRect(r0, categoryBackground);
-        if (index.column() == 1) painter->fillRect(r, categoryBackground);
-//        painter->fillRect(r, categoryBackground);
-//        painter->fillRect(row, categoryBackground);
-        painter->setPen(catPen);
-    }
-    else if (index.column() == 0) painter->setPen(regPen);
-
-    if (index.column() == 0) {
-        QString text = index.data().toString();
-        QString elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, r.width());
-        painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
-        painter->setPen(QColor(75,75,75));
-        painter->drawRect(r0);
-//        painter->drawLine(0, r0.bottom() + 1, r0.width(), r0.bottom() + 1);
-    }
-    if (index.column() == 1) {
-        painter->setPen(QColor(75,75,75));
-        painter->drawRect(r);
-//        painter->drawLine(r.x(), r.bottom() + 1, r.width(), r0.bottom() + 1);
-    }
-    painter->restore();
-
-//        QStyledItemDelegate::paint(painter, option, index);
-}
-
-
-/* PROPERTY EDITOR ***************************************************************************/
-
-// this works because propertyeditor is a friend class of MW
-MW *mw;
+//// this works because propertyeditor is a friend class of MW
+//MW *mw;
 
 PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 {
     // this works because propertyeditor is a friend class of MW
-    mw = qobject_cast<MW*>(parent);
+//    mw = qobject_cast<MW*>(parent);
 
     setRootIsDecorated(true);
     setAlternatingRowColors(true);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setEditTriggers(QAbstractItemView::AllEditTriggers);
-    indentation = -10;
-//    setIndentation(indentation);
+    indentation = 15;
+    setIndentation(indentation);
 //    setStyleSheet("QTreeView::item {border:1px solid rgb(75,75,75)}");
 
     model = new QStandardItemModel;
@@ -234,9 +30,6 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
             this, &PropertyEditor::editorValueChange);
     connect(propertyDelegate, &PropertyDelegate::editorWidgetToDisplay,
             this, &PropertyEditor::editorWidgetToDisplay);
-
-    addItems();
-    expandAll();
 }
 
 void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
@@ -250,30 +43,7 @@ void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
 
 void PropertyEditor::editorValueChange(QVariant v, QString source)
 {
-    qDebug() << __FUNCTION__ << v << source;
-    if (source == "classificationBadgeInImageDiameter") {
-        int value = v.toInt();
-        mw->setClassificationBadgeImageDiam(value);
-    }
-    if (source == "classificationBadgeInThumbDiameter") {
-        int value = v.toInt();
-        mw->setClassificationBadgeThumbDiam(value);
-    }
-    if (source == "rememberLastDir") {
-        mw->rememberLastDir = v.toBool();
-    }
-    if (source == "useWheelToScroll") {
-        if (v.toString() == "Next/previous image") mw->imageView->useWheelToScroll = false;
-        else mw->imageView->useWheelToScroll = true;
-    }
-    if (source == "globalFontSize") {
-        mw->setFontSize(v.toInt());
-    }
-    if (source == "infoOverlayFontSize") {
-        qDebug() << __FUNCTION__ << v;
-        mw->imageView->infoOverlayFontSize = v.toInt();
-        mw->setInfoFontSize();
-    }
+    emit editorValueChanged(v, source);
 }
 
 void PropertyEditor::drawRow(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
@@ -295,14 +65,19 @@ void PropertyEditor::mousePressEvent(QMouseEvent *event)
             // setCurrentIndex for the value cell (col 1) if user clicked on the caption cell (col 0)
             QModelIndex idxVal = model->index(idx.row(), 1, idx.parent());
             setCurrentIndex(idxVal);
+
+            // try to expand / collapse if click on any part of the row
+            // might have clicked on column 1
+            if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
             QPoint p = event->pos();
             if (p.x() >= indentation) isExpanded(idx) ? collapse(idx) : expand(idx);
         }
     }
 }
 
-void PropertyEditor::addItems()
+void PropertyEditor::addItems1()
 {
+    /*
     int col0width = 200;
     int col1width = 200;
     int firstGenerationCount = -1;        // top items
@@ -496,40 +271,17 @@ void PropertyEditor::addItems()
     setColumnWidth(1, col1width);
     secondGenerationCount = -1;
 
-//        secondGenerationCount++;
-//        // Type = SPINBOX
-//        // name = maximumIconSize
-//        // parent = thumbnailCatItem
-//        tooltip = "Enter the maximum size in pixel width for thumbnails.  Icons will be \nt"
-//                  "created a this size.  The memory requirements increase at the square of \n"
-//                  "the size, and folders can contain thousands of images.\n\n"
-//                  "WARNING: Larger thumbnail sizes can consume huge amounts of memory.  The\n"
-//                  "default size is 256 pixels to a side.";
-//        QStandardItem *maximumIconSizeCaption = new QStandardItem;
-//        maximumIconSizeCaption->setToolTip(tooltip);
-//        maximumIconSizeCaption->setText("Maximum size");
-//        maximumIconSizeCaption->setEditable(false);
-//        QStandardItem *maximumIconSizeValue = new QStandardItem;
-//        maximumIconSizeValue->setToolTip(tooltip);
-//        maximumIconSizeValue->setData(G::maxIconSize, Qt::EditRole);
-//        maximumIconSizeValue->setData(DT_Spinbox, UR_DelegateType);
-//        maximumIconSizeValue->setData("maxIconSize", UR_Source);
-//        maximumIconSizeValue->setData("int", UR_Type);
-//        maximumIconSizeValue->setData(40, UR_Min);
-//        maximumIconSizeValue->setData(640, UR_Max);
-//        thumbnailCatItem->setChild(secondGenerationCount, 0, maximumIconSizeCaption);
-//        thumbnailCatItem->setChild(secondGenerationCount, 1, maximumIconSizeValue);
-//        idxVal = maximumIconSizeValue->index();
-//        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
-
         // HEADER
         // Thumbnails:: film strip subcategory
+        // Parent = thumbnailCatItem
         secondGenerationCount++;
         QStandardItem *thumbnailFilmStripCatItem = new QStandardItem;
+        QStandardItem *thumbnailFilmStripCatItem1 = new QStandardItem;  //req'd to paint alt background on all siblings with children
         thumbnailFilmStripCatItem->setText("Film strip");
         thumbnailFilmStripCatItem->setEditable(false);
         thumbnailFilmStripCatItem->setData(DT_None, UR_DelegateType);
         thumbnailCatItem->setChild(secondGenerationCount, 0, thumbnailFilmStripCatItem);
+        thumbnailCatItem->setChild(secondGenerationCount, 1, thumbnailFilmStripCatItem1);
         thirdGenerationCount = -1;
 
             thirdGenerationCount++;
@@ -688,11 +440,13 @@ void PropertyEditor::addItems()
         // HEADER
         // Cache:: Metadata subcategory
         secondGenerationCount++;
-        QStandardItem *MetadataCatItem = new QStandardItem;
-        MetadataCatItem->setText("Metadata");
-        MetadataCatItem->setEditable(false);
-        MetadataCatItem->setData(DT_None, UR_DelegateType);
-        cacheCatItem->setChild(secondGenerationCount, 0, MetadataCatItem);
+        QStandardItem *metadataCatItem = new QStandardItem;
+        QStandardItem *metadataCatItem1 = new QStandardItem;
+        metadataCatItem->setText("Metadata");
+        metadataCatItem->setEditable(false);
+        metadataCatItem->setData(DT_None, UR_DelegateType);
+        cacheCatItem->setChild(secondGenerationCount, 0, metadataCatItem);
+        cacheCatItem->setChild(secondGenerationCount, 1, metadataCatItem1);
         thirdGenerationCount = -1;
 
             thirdGenerationCount++;
@@ -714,8 +468,8 @@ void PropertyEditor::addItems()
             metadataCacheStrategyValue->setData("QString", UR_Type);
             QStringList list1 = {"All", "Incremental"};
             metadataCacheStrategyValue->setData(list1, UR_StringList);
-            MetadataCatItem->setChild(thirdGenerationCount, 0, metadataCacheStrategyCaption);
-            MetadataCatItem->setChild(thirdGenerationCount, 1, metadataCacheStrategyValue);
+            metadataCatItem->setChild(thirdGenerationCount, 0, metadataCacheStrategyCaption);
+            metadataCatItem->setChild(thirdGenerationCount, 1, metadataCacheStrategyValue);
             idxVal = metadataCacheStrategyValue->index();
             propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
 
@@ -774,6 +528,7 @@ void PropertyEditor::addItems()
             metadataChunkSizeValue->setData("int", UR_Type);
             metadataChunkSizeValue->setData(1, UR_Min);
             metadataChunkSizeValue->setData(3000, UR_Max);
+            metadataChunkSizeValue->setData(50, UR_LineEditFixedWidth);
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 0, metadataChunkSizeCaption);
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 1, metadataChunkSizeValue);
             idxVal = metadataChunkSizeValue->index();
@@ -800,6 +555,7 @@ void PropertyEditor::addItems()
             maximumIconSizeValue->setData("int", UR_Type);
             maximumIconSizeValue->setData(40, UR_Min);
             maximumIconSizeValue->setData(640, UR_Max);
+            maximumIconSizeValue->setData(50, UR_LineEditFixedWidth);
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 0, maximumIconSizeCaption);
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 1, maximumIconSizeValue);
             idxVal = maximumIconSizeValue->index();
@@ -931,6 +687,6 @@ void PropertyEditor::addItems()
         idxVal = fullScreenShowStatusBarValue->index();
         propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
 
-
+*/
 
 }
