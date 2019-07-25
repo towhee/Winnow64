@@ -11,7 +11,7 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
     mw = qobject_cast<MW*>(parent);
     connect(this->propertyDelegate, &PropertyDelegate::itemChanged, this, &Preferences::itemChange);
     addItems();
-//    expandAll();
+    expandAll();
 }
 
 void Preferences::itemChange(QModelIndex idx/*QStandardItem *item*/)
@@ -40,6 +40,16 @@ void Preferences::itemChange(QModelIndex idx/*QStandardItem *item*/)
         }
     }
 
+    if (source == "gridViewShowLabel") {
+        mw->gridView->showIconLabels = v.toBool();
+        mw->gridView->setThumbParameters();
+    }
+
+    if (source == "gridViewLabelSize") {
+        mw->gridView->labelFontSize = v.toInt();
+        mw->gridView->setThumbParameters();
+    }
+
     if (source == "thumbViewIconSize") {
         if (v == 1) {
             if (mw->thumbView->isWrapping())
@@ -53,17 +63,57 @@ void Preferences::itemChange(QModelIndex idx/*QStandardItem *item*/)
         }
     }
 
-    if (source == "tableView->ok") {
-        mw->tableView->ok->setData(index, v.toBool());
+    if (source == "thumbViewShowLabel") {
+        mw->thumbView->showIconLabels = v.toBool();
+        mw->thumbView->setThumbParameters();
     }
 
-    if (source == "infoView->ok") {
-        mw->infoView->ok->setData(index, v.toBool());
+    if (source == "thumbViewLabelSize") {
+        mw->thumbView->labelFontSize = v.toInt();
+        mw->thumbView->setThumbParameters();
     }
 
     if (source == "classificationBadgeInImageDiameter") {
         int value = v.toInt();
         mw->setClassificationBadgeImageDiam(value);
+    }
+
+    if (source == "showThreadActivity") {
+        mw->isShowCacheThreadActivity = v.toBool();
+        mw->setCacheParameters();
+    }
+
+    if (source == "metadataChunkSize") {
+        mw->metadataCacheThread->metadataChunkSize = v.toInt();
+    }
+
+    if (source == "maximumIconSize") {
+        G::maxIconSize = v.toInt();
+    }
+
+    if (source == "cacheSizeMB") {
+        mw->cacheSizeMB = v.toInt() * 1024;
+        mw->setCacheParameters();
+    }
+
+    if (source == "cacheWtAhead") {
+        if (v.toString() == "50% ahead") mw->cacheWtAhead = 5;
+        if (v.toString() == "60% ahead") mw->cacheWtAhead = 6;
+        if (v.toString() == "70% ahead") mw->cacheWtAhead = 7;
+        if (v.toString() == "80% ahead") mw->cacheWtAhead = 8;
+        if (v.toString() == "90% ahead") mw->cacheWtAhead = 9;
+        if (v.toString() == "100% ahead") mw->cacheWtAhead = 10;
+         mw->setCacheParameters();
+    }
+
+    if (source == "progressWidthSlider") {
+        mw->progressWidth = v.toInt();
+        mw->setCacheParameters();
+    }
+
+    if (source == "showCacheStatus") {
+        mw->isShowCacheStatus = v.toInt();
+        mw->setCacheParameters();
     }
 
     if (source == "classificationBadgeInThumbDiameter") {
@@ -88,6 +138,14 @@ void Preferences::itemChange(QModelIndex idx/*QStandardItem *item*/)
         qDebug() << __FUNCTION__ << v;
         mw->imageView->infoOverlayFontSize = v.toInt();
         mw->setInfoFontSize();
+    }
+
+    if (source == "tableView->ok") {
+        mw->tableView->ok->setData(index, v.toBool());
+    }
+
+    if (source == "infoView->ok") {
+        mw->infoView->ok->setData(index, v.toBool());
     }
 
 }
@@ -190,8 +248,8 @@ void Preferences::addItems()
         useWheelToScrollValue->setData(DT_Combo, UR_DelegateType);
         useWheelToScrollValue->setData("useWheelToScroll", UR_Source);
         useWheelToScrollValue->setData("QString", UR_Type);
-        QStringList list = {"Next/previous image", "Scroll current image when zoomed"};
-        useWheelToScrollValue->setData(list, UR_StringList);
+        QStringList scrollList = {"Next/previous image", "Scroll current image when zoomed"};
+        useWheelToScrollValue->setData(scrollList, UR_StringList);
         generalItem->setChild(secondGenerationCount, 0, useWheelToScrollCaption);
         generalItem->setChild(secondGenerationCount, 1, useWheelToScrollValue);
         valIdx = useWheelToScrollValue->index();
@@ -485,6 +543,29 @@ void Preferences::addItems()
     setColumnWidth(1, col1width);
     secondGenerationCount = -1;
 
+        secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = showThreadActivity
+        // parent = cacheCatItem
+        tooltip = "Two small indicators on the extreme right side of the status bar turn red\n"
+                  "when there is caching activity.  The left indicator is for matadata caching\n"
+                  "activity, while the right indicator shows image caching activity.  This\n"
+                  "preference shows or hides the indicators.";
+        QStandardItem *showThreadActivityCaption = new QStandardItem;
+        showThreadActivityCaption->setToolTip(tooltip);
+        showThreadActivityCaption->setText("Show caching activity");
+        showThreadActivityCaption->setEditable(false);
+        QStandardItem *showThreadActivityValue = new QStandardItem;
+        showThreadActivityValue->setToolTip(tooltip);
+        showThreadActivityValue->setData(mw->isShowCacheThreadActivity, Qt::EditRole);
+        showThreadActivityValue->setData(DT_Checkbox, UR_DelegateType);
+        showThreadActivityValue->setData("showThreadActivity", UR_Source);
+        showThreadActivityValue->setData("bool", UR_Type);
+        cacheCatItem->setChild(secondGenerationCount, 0, showThreadActivityCaption);
+        cacheCatItem->setChild(secondGenerationCount, 1, showThreadActivityValue);
+        valIdx = showThreadActivityValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
         // HEADER
         // Cache:: Metadata subcategory
         secondGenerationCount++;
@@ -607,6 +688,118 @@ void Preferences::addItems()
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 0, maximumIconSizeCaption);
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 1, maximumIconSizeValue);
             valIdx = maximumIconSizeValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+        // HEADER
+        // Cache:: Full image subcategory
+        secondGenerationCount++;
+        QStandardItem *imageCatItem = new QStandardItem;
+        QStandardItem *imageCatItem1 = new QStandardItem;
+        imageCatItem->setText("Full size images");
+        imageCatItem->setEditable(false);
+        imageCatItem->setData(DT_None, UR_DelegateType);
+        cacheCatItem->setChild(secondGenerationCount, 0, imageCatItem);
+        cacheCatItem->setChild(secondGenerationCount, 1, imageCatItem1);
+        thirdGenerationCount = -1;
+
+            thirdGenerationCount++;
+            // Type = SPINBOX
+            // name = cacheSizeMB
+            // parent = imageCatItem
+            tooltip = "<html><head/><body><p>Experiment with different cache sizes.  2-8GB "
+                      "appear to work best.  Cache performance does not always improve with "
+                      "size.</p><p>If you tend to move back and forth between images then a "
+                      "50% cache ahead strategy is best.  If you generally just move ahead "
+                      "through the images then weighting a higher percentage ahead makes "
+                      "sense.</p></body></html>";
+            QStandardItem *cacheSizeMBCaption = new QStandardItem;
+            cacheSizeMBCaption->setToolTip(tooltip);
+            cacheSizeMBCaption->setText("Image cache size (GB)");
+            cacheSizeMBCaption->setEditable(false);
+            QStandardItem *cacheSizeMBValue = new QStandardItem;
+            cacheSizeMBValue->setToolTip(tooltip);
+            cacheSizeMBValue->setData(mw->cacheSizeMB / 1024, Qt::EditRole);
+            cacheSizeMBValue->setData(DT_Spinbox, UR_DelegateType);
+            cacheSizeMBValue->setData("cacheSizeMB", UR_Source);
+            cacheSizeMBValue->setData("int", UR_Type);
+            cacheSizeMBValue->setData(1, UR_Min);
+            cacheSizeMBValue->setData(32, UR_Max);
+            cacheSizeMBValue->setData(50, UR_LineEditFixedWidth);
+            imageCatItem->setChild(thirdGenerationCount, 0, cacheSizeMBCaption);
+            imageCatItem->setChild(thirdGenerationCount, 1, cacheSizeMBValue);
+            valIdx = cacheSizeMBValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+            thirdGenerationCount++;
+            // Type = COMBOBOX
+            // name = cacheWtAhead
+            // parent = imageCatItem
+            tooltip = "<html><head/><body><p>Experiment with different cache sizes.  2-8GB "
+                      "appear to work best.  Cache performance does not always improve with "
+                      "size.</p><p>If you tend to move back and forth between images then a "
+                      "50% cache ahead strategy is best.  If you generally just move ahead "
+                      "through the images then weighting a higher percentage ahead makes "
+                      "sense.</p></body></html>";
+            QStandardItem *cacheWtAheadCaption = new QStandardItem;
+            cacheWtAheadCaption->setToolTip(tooltip);
+            cacheWtAheadCaption->setText("Image cache strategy");
+            cacheWtAheadCaption->setEditable(false);
+            QStandardItem *cacheWtAheadValue = new QStandardItem;
+            cacheWtAheadValue->setToolTip(tooltip);
+            cacheWtAheadValue->setData(mw->cacheWtAhead, Qt::EditRole);
+            cacheWtAheadValue->setData(DT_Combo, UR_DelegateType);
+            cacheWtAheadValue->setData("cacheWtAhead", UR_Source);
+            cacheWtAheadValue->setData("QString", UR_Type);
+            QStringList cacheWtList = {"50% ahead", "60% ahead", "70% ahead", "80% ahead", "90% ahead", "100% ahead"};
+            cacheWtAheadValue->setData(cacheWtList, UR_StringList);
+            imageCatItem->setChild(thirdGenerationCount, 0, cacheWtAheadCaption);
+            imageCatItem->setChild(thirdGenerationCount, 1, cacheWtAheadValue);
+            valIdx = cacheWtAheadValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+            thirdGenerationCount++;
+            // Type = CHECKBOX
+            // name = showCacheStatus
+            // parent = imageCatItem
+            tooltip = "The image cache status shows the current state of the images targeted to\n"
+                      "cache and images already cached.  This can be helpful in understanding\n"
+                      "what Winnow is doing and making decisions on the image cache size.";
+            QStandardItem *showCacheStatusCaption = new QStandardItem;
+            showCacheStatusCaption->setToolTip(tooltip);
+            showCacheStatusCaption->setText("Show image cache status");
+            showCacheStatusCaption->setEditable(false);
+            QStandardItem *showCacheStatusValue = new QStandardItem;
+            showCacheStatusValue->setToolTip(tooltip);
+            showCacheStatusValue->setData(mw->isShowCacheStatus, Qt::EditRole);
+            showCacheStatusValue->setData(DT_Checkbox, UR_DelegateType);
+            showCacheStatusValue->setData("showCacheStatus", UR_Source);
+            showCacheStatusValue->setData("bool", UR_Type);
+            imageCatItem->setChild(thirdGenerationCount, 0, showCacheStatusCaption);
+            imageCatItem->setChild(thirdGenerationCount, 1, showCacheStatusValue);
+            valIdx = showCacheStatusValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+            thirdGenerationCount++;
+            // Type = SLIDER
+            // name = progressWidthSlider
+            // parent = imageCatItem
+            tooltip = "Change the font size throughout the application.";
+            QStandardItem *progressWidthSliderCaption = new QStandardItem;
+            progressWidthSliderCaption->setToolTip(tooltip);
+            progressWidthSliderCaption->setText("Cache status width");
+            progressWidthSliderCaption->setEditable(false);
+            QStandardItem *progressWidthSliderValue = new QStandardItem;
+            progressWidthSliderValue->setToolTip(tooltip);
+            progressWidthSliderValue->setData(mw->progressWidth, Qt::EditRole);
+            progressWidthSliderValue->setData(DT_Slider, UR_DelegateType);
+            progressWidthSliderValue->setData("progressWidthSlider", UR_Source);
+            progressWidthSliderValue->setData("int", UR_Type);
+            progressWidthSliderValue->setData(100, UR_Min);
+            progressWidthSliderValue->setData(800, UR_Max);
+            progressWidthSliderValue->setData(50, UR_LabelFixedWidth);
+            imageCatItem->setChild(thirdGenerationCount, 0, progressWidthSliderCaption);
+            imageCatItem->setChild(thirdGenerationCount, 1, progressWidthSliderValue);
+            valIdx = progressWidthSliderValue->index();
             propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
     firstGenerationCount++;

@@ -1,4 +1,8 @@
 BUGS
+- MdCache option incremental vs all
+- Esc from preferences
+- Preferences main categories covering decoration
+- Film strip dock does not resize when thumb labels turned on/off in preferences
 - Drag and drop thumb in removes all picks and classification
 - Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
