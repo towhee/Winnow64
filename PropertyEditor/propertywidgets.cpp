@@ -67,7 +67,7 @@ void SliderEditor::setValue(QVariant value)
 void SliderEditor::change(int value)
 {
     QVariant v = value;
-    emit editorValueChanged(v, source, idx);
+    emit editorValueChanged(this);
     lineEdit->setText(QString::number(value));
 }
 
@@ -126,7 +126,7 @@ void SpinBoxEditor::setValue(QVariant value)
 void SpinBoxEditor::change(int value)
 {
     QVariant v = value;
-    emit editorValueChanged(v, source, idx);
+    emit editorValueChanged(this);
 }
 
 /* CHECKBOX EDITOR ***************************************************************************/
@@ -154,8 +154,7 @@ CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
 
 bool CheckBoxEditor::value()
 {
-    if (checkBox->checkState() == Qt::Checked) return true;
-    else return false;
+    return checkBox->isChecked();
 }
 
 void CheckBoxEditor::setValue(QVariant value)
@@ -163,12 +162,9 @@ void CheckBoxEditor::setValue(QVariant value)
     checkBox->setChecked(value.toBool());
 }
 
-void CheckBoxEditor::change(int value)
+void CheckBoxEditor::change()
 {
-    QVariant v;
-    if (value == Qt::Checked) v = true;
-    else v = false;
-    emit editorValueChanged(v, source, idx);
+    emit editorValueChanged(this);
 }
 
 /* COMBOBOX EDITOR ***************************************************************************/
@@ -211,5 +207,53 @@ void ComboBoxEditor::setValue(QVariant value)
 void ComboBoxEditor::change(int index)
 {    
     QVariant v = comboBox->itemText(index);
-    emit editorValueChanged(v, source, idx);
+    emit editorValueChanged(this);
+}
+
+/* PLUSMINUS EDITOR **************************************************************************/
+
+PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
+{
+    this->idx = idx;
+    source = idx.data(UR_Source).toString();
+
+    minusBtn = new QPushButton;
+    minusBtn->setStyleSheet("QPushButton {color: white;}");
+    minusBtn->setObjectName("DisableGoActions");  // used in MW::focusChange
+    minusBtn->setText("-");
+
+    plusBtn = new QPushButton;
+    plusBtn->setObjectName("DisableGoActions");  // used in MW::focusChange
+    plusBtn->setText("+");
+
+    connect(minusBtn, &QPushButton::clicked, this, &PlusMinusEditor::minusChange);
+    connect(plusBtn, &QPushButton::clicked, this, &PlusMinusEditor::plusChange);
+
+    QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->addWidget(minusBtn, Qt::AlignLeft);
+    layout->addWidget(plusBtn, Qt::AlignLeft);
+    layout->addSpacing(55);
+    layout->setContentsMargins(propertyWidgetMargin,2,propertyWidgetMargin,2);
+    setLayout(layout);
+}
+
+int PlusMinusEditor::value()
+{
+    return plusMinus;
+}
+
+void PlusMinusEditor::setValue(QVariant value)
+{
+}
+
+void PlusMinusEditor::minusChange()
+{
+    plusMinus = -1;
+    emit editorValueChanged(this);
+}
+
+void PlusMinusEditor::plusChange()
+{
+    plusMinus = 1;
+    emit editorValueChanged(this);
 }

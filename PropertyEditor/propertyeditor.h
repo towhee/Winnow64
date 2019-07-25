@@ -17,18 +17,19 @@ public:
 
 protected:
     void mousePressEvent(QMouseEvent *event);
-    void drawRow(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+//    void drawRow(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
 
 signals:
-    void editorValueChanged(QVariant v, QString source, QModelIndex index);
+//    void editorValueChanged(QVariant v, QString source, QModelIndex index);
+//    void itemChanged(QStandardItem *item);
 
 public slots:
-    void editorValueChange(QVariant v, QString source, QModelIndex index);
+//    void editorValueChange(QVariant v, QString source, QModelIndex index);
+//    void itemChange(QStandardItem *item);
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor);
 
 //    void editCheck(QTreeWidgetItem *item, int column);
 private:
-    void addItems1();
 };
 
 

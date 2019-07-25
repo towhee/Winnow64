@@ -28,11 +28,13 @@ protected:
 //    bool eventFilter(QObject *editor, QEvent *event) override;
 
 signals:
-    void editorValueChanged(QVariant value, QString source, QModelIndex index);
+    void itemChanged(QModelIndex idx) const;
+//    void editorValueChanged(QVariant value, QString source, QModelIndex index);
+//    void commitAndCloseEditor();
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor) const;
 
 private slots:
-    void editorValueChange(QVariant value, QString source, QModelIndex index);
+//    void editorValueChange(QVariant value, QString source, QModelIndex index);
 };
 
 
