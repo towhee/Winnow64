@@ -28,7 +28,8 @@ namespace G
         DupRawIdxRole,
         DupHideRawRole,
         DupRawTypeRole,
-        ColumnRole
+        ColumnRole,
+        GeekRole
     };
 
     /*

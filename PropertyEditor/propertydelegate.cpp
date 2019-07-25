@@ -14,45 +14,52 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0: return nullptr;
+                break;
     //    case DT_Text:
     //        return new QLinedEdit;
         case DT_Checkbox: {
             CheckBoxEditor *checkEditor = new CheckBoxEditor(index, parent);
             connect(checkEditor, &CheckBoxEditor::editorValueChanged,
-                    this, &PropertyDelegate::editorValueChanged);
+                    this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, checkEditor);
             return checkEditor;
         }
+
         case DT_Spinbox: {
             SpinBoxEditor *spinBoxEditor = new SpinBoxEditor(index, parent);
             connect(spinBoxEditor, &SpinBoxEditor::editorValueChanged,
-                    this, &PropertyDelegate::editorValueChanged);
+                    this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, spinBoxEditor);
             return spinBoxEditor;
         }
         case DT_Combo: {
             ComboBoxEditor *comboBoxEditor = new ComboBoxEditor(index, parent);
             connect(comboBoxEditor, &ComboBoxEditor::editorValueChanged,
-                    this, &PropertyDelegate::editorValueChanged);
+                    this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, comboBoxEditor);
             return comboBoxEditor;
         }
         case DT_Slider: {
             SliderEditor *sliderEditor = new SliderEditor(index, parent);
             connect(sliderEditor, &SliderEditor::editorValueChanged,
-                    this, &PropertyDelegate::editorValueChanged);
+                    this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, sliderEditor);
             return sliderEditor;
-    //        return new SliderEditor(index, parent);
         }
+    case DT_PlusMinus: {
+        PlusMinusEditor *plusMinusEditor = new PlusMinusEditor(index, parent);
+        connect(plusMinusEditor, &PlusMinusEditor::editorValueChanged,
+                this, &PropertyDelegate::commitData);
+        emit editorWidgetToDisplay(index, plusMinusEditor);
+        return plusMinusEditor;
+    }
         default:
             return QStyledItemDelegate::createEditor(parent, option, index);
     }
 }
 
-QString PropertyDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+QString PropertyDelegate::displayText(const QVariant& /*value*/, const QLocale& /*locale*/) const
 {
-//    qDebug() << __FUNCTION__ << value;
     return "";
 }
 
@@ -70,6 +77,7 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
         case DT_Spinbox: return SpinBoxEditor(index, nullptr).sizeHint();
         case DT_Combo: return ComboBoxEditor(index, nullptr).sizeHint();
         case DT_Slider: return SliderEditor(index, nullptr).sizeHint();
+        case DT_PlusMinus: return PlusMinusEditor(index, nullptr).sizeHint();
     }
 
 }
@@ -85,18 +93,26 @@ void PropertyDelegate::setEditorData(QWidget *editor,
         case DT_Checkbox: {
             int value = index.model()->data(index, Qt::EditRole).toBool();
             static_cast<CheckBoxEditor*>(editor)->setValue(value);
+            break;
         }
         case DT_Spinbox: {
             int value = index.model()->data(index, Qt::EditRole).toBool();
             static_cast<SpinBoxEditor*>(editor)->setValue(value);
+            break;
         }
         case DT_Combo: {
             int value = index.model()->data(index, Qt::EditRole).toInt();
             static_cast<ComboBoxEditor*>(editor)->setValue(value);
+            break;
         }
         case DT_Slider: {
             int value = index.model()->data(index, Qt::EditRole).toInt();
             static_cast<SliderEditor*>(editor)->setValue(value);
+            break;
+        }
+        case DT_PlusMinus: {
+            // nothing to set
+            break;
         }
     }
 }
@@ -111,48 +127,69 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
         case DT_Text:
 //        return new QLinedEdit;
         case DT_Checkbox: {
-            CheckBoxEditor *checkEditor = static_cast<CheckBoxEditor*>(editor);
-            bool value = checkEditor->value();
+            CheckBoxEditor *checkBoxEditor = static_cast<CheckBoxEditor*>(editor);
+            bool value = checkBoxEditor->value();
+//            qDebug() << __FUNCTION__ << value;
             model->setData(index, value, Qt::EditRole);
+            qDebug() << __FUNCTION__ << index << index.data(Qt::EditRole).toBool();
+            emit itemChanged(index);
+            break;
         }
         case DT_Spinbox: {
             SpinBoxEditor *spinBoxEditor = static_cast<SpinBoxEditor*>(editor);
-            bool value = spinBoxEditor->value();
+            int value = spinBoxEditor->value();
             model->setData(index, value, Qt::EditRole);
+            emit itemChanged(index);
+            break;
+
         }
         case DT_Combo: {
             ComboBoxEditor *comboBoxEditor = static_cast<ComboBoxEditor*>(editor);
             QString value = comboBoxEditor->value();
             model->setData(index, value, Qt::EditRole);
+            emit itemChanged(index);
+            break;
         }
         case DT_Slider: {
             SliderEditor *sliderEditor = static_cast<SliderEditor*>(editor);
             int value = sliderEditor->value();
             model->setData(index, value, Qt::EditRole);
+            emit itemChanged(index);
+            break;
+        }
+        case DT_PlusMinus: {
+            PlusMinusEditor *plusMinusEditor = static_cast<PlusMinusEditor*>(editor);
+            int value = plusMinusEditor->value();
+            model->setData(index, value, Qt::EditRole);
+            emit itemChanged(index);
+            break;
         }
     }
 }
 
 //bool PropertyDelegate::eventFilter(QObject *editor, QEvent *event)
 //{
-////    qDebug() << __FUNCTION__ << editor << event;
-//    qApp->processEvents();
-//    return event;
 //}
 
 void PropertyDelegate::updateEditorGeometry(QWidget *editor,
-    const QStyleOptionViewItem &option, const QModelIndex &index ) const
+    const QStyleOptionViewItem &option, const QModelIndex &/*index*/ ) const
 {
-//    qDebug() << __FUNCTION__ << index;
     editor->setGeometry(option.rect);
 }
 
-void PropertyDelegate::editorValueChange(QVariant v, QString source, QModelIndex index)
-{
-//    qDebug() << __FUNCTION__ << v << source;
-    emit editorValueChanged(v, source, index);
-}
+//void PropertyDelegate::editorValueChange(QVariant v, QString source, QModelIndex index)
+//{
+////    qDebug() << __FUNCTION__ << v << source;
+//    emit editorValueChanged(v, source, index);
+//}
 
+//void PropertyDelegate::commitAndCloseEditor()
+//{
+//    QWidget *editor = qobject_cast<QWidget *>(sender());
+////    QWidget *editor = qobject_cast<StarEditor *>(sender());
+//    emit commitData(editor);
+//    emit closeEditor(editor);
+//}
 
 void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const
 {

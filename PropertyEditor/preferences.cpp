@@ -3,15 +3,93 @@
 #include "Main/global.h"
 #include <QDebug>
 
-// this works because propertyeditor is a friend class of MW
+// this works because propertyeditor and preferences are friend classes of MW
 MW *mw;
 
 Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
 {
     mw = qobject_cast<MW*>(parent);
-    connect(this, &PropertyEditor::editorValueChanged, this, &Preferences::editorValueChange);
+    connect(this->propertyDelegate, &PropertyDelegate::itemChanged, this, &Preferences::itemChange);
     addItems();
 //    expandAll();
+}
+
+void Preferences::itemChange(QModelIndex idx/*QStandardItem *item*/)
+{
+    QVariant v = idx.data(Qt::EditRole);
+    QString source = idx.data(UR_Source).toString();
+    QString dataType = idx.data(UR_Type).toString();
+    int delegateType = idx.data(UR_DelegateType).toInt();
+    QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
+    qDebug() << __FUNCTION__ << idx
+             << "value =" << v
+             << "source =" << source
+             << "dataType =" << dataType
+             << "delegateType =" << delegateType;
+
+    if (source == "gridViewIconSize") {
+        if (v == 1) {
+            if (mw->gridView->isWrapping())
+                mw->gridView->justify(IconView::JustifyAction::Enlarge);
+            else mw->gridView->thumbsEnlarge();
+        }
+        else {
+            if (mw->gridView->isWrapping())
+                mw->gridView->justify(IconView::JustifyAction::Shrink);
+            else mw->gridView->thumbsShrink();
+        }
+    }
+
+    if (source == "thumbViewIconSize") {
+        if (v == 1) {
+            if (mw->thumbView->isWrapping())
+                mw->thumbView->justify(IconView::JustifyAction::Enlarge);
+            else mw->thumbView->thumbsEnlarge();
+        }
+        else {
+            if (mw->thumbView->isWrapping())
+                mw->thumbView->justify(IconView::JustifyAction::Shrink);
+            else mw->thumbView->thumbsShrink();
+        }
+    }
+
+    if (source == "tableView->ok") {
+        mw->tableView->ok->setData(index, v.toBool());
+    }
+
+    if (source == "infoView->ok") {
+        mw->infoView->ok->setData(index, v.toBool());
+    }
+
+    if (source == "classificationBadgeInImageDiameter") {
+        int value = v.toInt();
+        mw->setClassificationBadgeImageDiam(value);
+    }
+
+    if (source == "classificationBadgeInThumbDiameter") {
+        int value = v.toInt();
+        mw->setClassificationBadgeThumbDiam(value);
+    }
+
+    if (source == "rememberLastDir") {
+        mw->rememberLastDir = v.toBool();
+    }
+
+    if (source == "useWheelToScroll") {
+        if (v.toString() == "Next/previous image") mw->imageView->useWheelToScroll = false;
+        else mw->imageView->useWheelToScroll = true;
+    }
+
+    if (source == "globalFontSize") {
+        mw->setFontSize(v.toInt());
+    }
+
+    if (source == "infoOverlayFontSize") {
+        qDebug() << __FUNCTION__ << v;
+        mw->imageView->infoOverlayFontSize = v.toInt();
+        mw->setInfoFontSize();
+    }
+
 }
 
 void Preferences::editorValueChange(QVariant v, QString source, QModelIndex index)
@@ -53,11 +131,15 @@ void Preferences::addItems()
     int col0width = 200;
     int col1width = 200;
     int firstGenerationCount = -1;        // top items
-    int secondGenerationCount;       // child items
-    int thirdGenerationCount;  // child child items
+    int secondGenerationCount;            // child items
+    int thirdGenerationCount;             // child child items
     QString tooltip;
-    QModelIndex idxVal;
-    QModelIndex idxCat;
+    QString caption;
+    bool isShow;
+    QModelIndex catIdx;
+    QModelIndex valIdx;
+    QStandardItem *captionItem;
+    QStandardItem *valueItem;
 
     firstGenerationCount++;
     // HEADER
@@ -69,7 +151,7 @@ void Preferences::addItems()
     generalItem->setEditable(false);
     model->appendRow(generalItem);
     model->insertColumns(1, 1);
-    idxCat = generalItem->index();
+    catIdx = generalItem->index();
     setColumnWidth(0, col0width);
     setColumnWidth(1, col1width);
     secondGenerationCount = -1;
@@ -90,8 +172,8 @@ void Preferences::addItems()
         rememberFolderValue->setData("bool", UR_Type);
         generalItem->setChild(secondGenerationCount, 0, rememberFolderCaption);
         generalItem->setChild(secondGenerationCount, 1, rememberFolderValue);
-        idxVal = rememberFolderValue->index();
-        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+        valIdx = rememberFolderValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         secondGenerationCount++;
         // Type = COMBOBOX
@@ -112,8 +194,8 @@ void Preferences::addItems()
         useWheelToScrollValue->setData(list, UR_StringList);
         generalItem->setChild(secondGenerationCount, 0, useWheelToScrollCaption);
         generalItem->setChild(secondGenerationCount, 1, useWheelToScrollValue);
-        idxVal = useWheelToScrollValue->index();
-        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+        valIdx = useWheelToScrollValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         // HEADER
         // General category::Font size subcategory
@@ -145,8 +227,8 @@ void Preferences::addItems()
             globalFontSizeValue->setData(50, UR_LabelFixedWidth);
             fontSizeItem->setChild(thirdGenerationCount, 0, globalFontSizeCaption);
             fontSizeItem->setChild(thirdGenerationCount, 1, globalFontSizeValue);
-            idxVal = globalFontSizeValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = globalFontSizeValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
             thirdGenerationCount++;
             // Type = SLIDER
@@ -168,8 +250,8 @@ void Preferences::addItems()
             infoOverlayFontSizeValue->setData(50, UR_LabelFixedWidth);
             fontSizeItem->setChild(thirdGenerationCount, 0, infoOverlayFontSizeCaption);
             fontSizeItem->setChild(thirdGenerationCount, 1, infoOverlayFontSizeValue);
-            idxVal = infoOverlayFontSizeValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = infoOverlayFontSizeValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
     // HEADER
     // General category::Badge size subcategory
@@ -203,8 +285,8 @@ void Preferences::addItems()
             imageBadgeSizeValue->setData(50, UR_LabelFixedWidth);
             badgeSizeItem->setChild(thirdGenerationCount, 0, imBadgeSizeCaption);
             badgeSizeItem->setChild(thirdGenerationCount, 1, imageBadgeSizeValue);
-            idxVal = imageBadgeSizeValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = imageBadgeSizeValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
             thirdGenerationCount++;
             // Type = SLIDER
@@ -228,8 +310,8 @@ void Preferences::addItems()
             thumbBadgeSizeValue->setData(50, UR_LabelFixedWidth);
             badgeSizeItem->setChild(thirdGenerationCount, 0, thumbBadgeSizeCaption);
             badgeSizeItem->setChild(thirdGenerationCount, 1, thumbBadgeSizeValue);
-            idxVal = thumbBadgeSizeValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = thumbBadgeSizeValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
     firstGenerationCount++;
     // HEADER
@@ -257,7 +339,7 @@ void Preferences::addItems()
         thirdGenerationCount = -1;
 
             thirdGenerationCount++;
-            // Type = SLIDER
+            // Type = PLUSMINUS
             // name = thumbViewIconSize (for search and replace)
             // parent = thumbnailFilmStripCatItem
             tooltip = "Change the display size of the thumbnails in the film strip.";
@@ -268,16 +350,13 @@ void Preferences::addItems()
             QStandardItem *thumbViewIconSizeValue = new QStandardItem;
             thumbViewIconSizeValue->setToolTip(tooltip);
             thumbViewIconSizeValue->setData(120, Qt::EditRole);  // figure this out
-            thumbViewIconSizeValue->setData(DT_Slider, UR_DelegateType);
+            thumbViewIconSizeValue->setData(DT_PlusMinus, UR_DelegateType);
             thumbViewIconSizeValue->setData("thumbViewIconSize", UR_Source);
             thumbViewIconSizeValue->setData("int", UR_Type);
-            thumbViewIconSizeValue->setData(6, UR_Min);
-            thumbViewIconSizeValue->setData(16, UR_Max);
-            thumbViewIconSizeValue->setData(50, UR_LabelFixedWidth);
             thumbnailFilmStripCatItem->setChild(thirdGenerationCount, 0, thumbViewIconSizeCaption);
             thumbnailFilmStripCatItem->setChild(thirdGenerationCount, 1, thumbViewIconSizeValue);
-            idxVal = thumbViewIconSizeValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = thumbViewIconSizeValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
             thirdGenerationCount++;
             // Type = SLIDER
@@ -299,8 +378,8 @@ void Preferences::addItems()
             thumbViewLabelSizeValue->setData(50, UR_LabelFixedWidth);
             thumbnailFilmStripCatItem->setChild(thirdGenerationCount, 0, thumbViewLabelSizeCaption);
             thumbnailFilmStripCatItem->setChild(thirdGenerationCount, 1, thumbViewLabelSizeValue);
-            idxVal = thumbViewLabelSizeValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = thumbViewLabelSizeValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
             thirdGenerationCount++;
             // Type = CHECKBOX
@@ -318,8 +397,8 @@ void Preferences::addItems()
             thumbViewShowLabelValue->setData("bool", UR_Type);
             thumbnailFilmStripCatItem->setChild(thirdGenerationCount, 0, thumbViewShowLabelCaption);
             thumbnailFilmStripCatItem->setChild(thirdGenerationCount, 1, thumbViewShowLabelValue);
-            idxVal = thumbViewShowLabelValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = thumbViewShowLabelValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
             // HEADER
             // Thumbnails:: grid subcategory
@@ -332,7 +411,7 @@ void Preferences::addItems()
             thirdGenerationCount = -1;
 
                 thirdGenerationCount++;
-                // Type = SLIDER
+                // Type = PLUSMINUS
                 // name = gridViewIconSize (for search and replace)
                 // parent = thumbnailGridCatItem
                 tooltip = "Change the display size of the thumbnails in the film strip.";
@@ -343,16 +422,13 @@ void Preferences::addItems()
                 QStandardItem *gridViewIconSizeValue = new QStandardItem;
                 gridViewIconSizeValue->setToolTip(tooltip);
                 gridViewIconSizeValue->setData(120, Qt::EditRole);  // figure this out
-                gridViewIconSizeValue->setData(DT_Slider, UR_DelegateType);
+                gridViewIconSizeValue->setData(DT_PlusMinus, UR_DelegateType);
                 gridViewIconSizeValue->setData("gridViewIconSize", UR_Source);
                 gridViewIconSizeValue->setData("int", UR_Type);
-                gridViewIconSizeValue->setData(6, UR_Min);
-                gridViewIconSizeValue->setData(16, UR_Max);
-                gridViewIconSizeValue->setData(50, UR_LabelFixedWidth);
                 thumbnailGridCatItem->setChild(thirdGenerationCount, 0, gridViewIconSizeCaption);
                 thumbnailGridCatItem->setChild(thirdGenerationCount, 1, gridViewIconSizeValue);
-                idxVal = gridViewIconSizeValue->index();
-                propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+                valIdx = gridViewIconSizeValue->index();
+                propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
                 thirdGenerationCount++;
                 // Type = SLIDER
@@ -374,8 +450,8 @@ void Preferences::addItems()
                 gridViewLabelSizeValue->setData(50, UR_LabelFixedWidth);
                 thumbnailGridCatItem->setChild(thirdGenerationCount, 0, gridViewLabelSizeCaption);
                 thumbnailGridCatItem->setChild(thirdGenerationCount, 1, gridViewLabelSizeValue);
-                idxVal = gridViewLabelSizeValue->index();
-                propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+                valIdx = gridViewLabelSizeValue->index();
+                propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
                 thirdGenerationCount++;
                 // Type = CHECKBOX
@@ -393,8 +469,8 @@ void Preferences::addItems()
                 gridViewShowLabelValue->setData("bool", UR_Type);
                 thumbnailGridCatItem->setChild(thirdGenerationCount, 0, gridViewShowLabelCaption);
                 thumbnailGridCatItem->setChild(thirdGenerationCount, 1, gridViewShowLabelValue);
-                idxVal = gridViewShowLabelValue->index();
-                propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+                valIdx = gridViewShowLabelValue->index();
+                propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
     firstGenerationCount++;
     // HEADER
@@ -442,8 +518,8 @@ void Preferences::addItems()
             metadataCacheStrategyValue->setData(list1, UR_StringList);
             metadataCatItem->setChild(thirdGenerationCount, 0, metadataCacheStrategyCaption);
             metadataCatItem->setChild(thirdGenerationCount, 1, metadataCacheStrategyValue);
-            idxVal = metadataCacheStrategyValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = metadataCacheStrategyValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         // HEADER
         // Cache:: CacheThumbnail subcategory
@@ -477,8 +553,8 @@ void Preferences::addItems()
             thumbnailCacheStrategyValue->setData(list1, UR_StringList);
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 0, thumbnailCacheStrategyCaption);
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 1, thumbnailCacheStrategyValue);
-            idxVal = thumbnailCacheStrategyValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = thumbnailCacheStrategyValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
             thirdGenerationCount++;
             // Type = SPINBOX
@@ -503,8 +579,8 @@ void Preferences::addItems()
             metadataChunkSizeValue->setData(50, UR_LineEditFixedWidth);
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 0, metadataChunkSizeCaption);
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 1, metadataChunkSizeValue);
-            idxVal = metadataChunkSizeValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = metadataChunkSizeValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
             thirdGenerationCount++;
             // Type = SPINBOX
@@ -530,8 +606,8 @@ void Preferences::addItems()
             maximumIconSizeValue->setData(50, UR_LineEditFixedWidth);
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 0, maximumIconSizeCaption);
             cacheThumbnailCatItem->setChild(thirdGenerationCount, 1, maximumIconSizeValue);
-            idxVal = maximumIconSizeValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = maximumIconSizeValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
     firstGenerationCount++;
     // HEADER
@@ -561,8 +637,8 @@ void Preferences::addItems()
         fullScreenShowFoldersValue->setData("bool", UR_Type);
         fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowFoldersCaption);
         fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowFoldersValue);
-        idxVal = fullScreenShowFoldersValue->index();
-        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+        valIdx = fullScreenShowFoldersValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         secondGenerationCount++;
         // Type = CHECKBOX
@@ -580,8 +656,8 @@ void Preferences::addItems()
         fullScreenShowBookmarksValue->setData("bool", UR_Type);
         fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowBookmarksCaption);
         fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowBookmarksValue);
-        idxVal = fullScreenShowBookmarksValue->index();
-        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+        valIdx = fullScreenShowBookmarksValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         secondGenerationCount++;
         // Type = CHECKBOX
@@ -599,8 +675,8 @@ void Preferences::addItems()
         fullScreenShowFiltersValue->setData("bool", UR_Type);
         fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowFiltersCaption);
         fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowFiltersValue);
-        idxVal = fullScreenShowFiltersValue->index();
-        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+        valIdx = fullScreenShowFiltersValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         secondGenerationCount++;
         // Type = CHECKBOX
@@ -618,8 +694,8 @@ void Preferences::addItems()
         fullScreenShowMetadataValue->setData("bool", UR_Type);
         fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowMetadataCaption);
         fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowMetadataValue);
-        idxVal = fullScreenShowMetadataValue->index();
-        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+        valIdx = fullScreenShowMetadataValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         secondGenerationCount++;
         // Type = CHECKBOX
@@ -637,8 +713,8 @@ void Preferences::addItems()
         fullScreenShowThumbsValue->setData("bool", UR_Type);
         fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowThumbsCaption);
         fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowThumbsValue);
-        idxVal = fullScreenShowThumbsValue->index();
-        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+        valIdx = fullScreenShowThumbsValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         secondGenerationCount++;
         // Type = CHECKBOX
@@ -656,14 +732,14 @@ void Preferences::addItems()
         fullScreenShowStatusBarValue->setData("bool", UR_Type);
         fullScreenCatItem->setChild(secondGenerationCount, 0, fullScreenShowStatusBarCaption);
         fullScreenCatItem->setChild(secondGenerationCount, 1, fullScreenShowStatusBarValue);
-        idxVal = fullScreenShowStatusBarValue->index();
-        propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+        valIdx = fullScreenShowStatusBarValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
     firstGenerationCount++;
     // HEADER
     // Metadata panel category
     QStandardItem *metadataPanelCatItem = new QStandardItem;
-    metadataPanelCatItem->setText("Metadata panel");
+    metadataPanelCatItem->setText("Metadata panel items");
     metadataPanelCatItem->setEditable(false);
     metadataPanelCatItem->setData(DT_None, UR_DelegateType);
     model->appendRow(metadataPanelCatItem);
@@ -677,14 +753,12 @@ void Preferences::addItems()
         QStandardItem *okValue;
         QStandardItem *okChildCaption;
         QStandardItem *okChildValue;
-        QString caption;
-        bool isShow;
         // iterate through infoView data, adding it to the property editor
         for(int row = 0; row < okInfo->rowCount(); row++) {
             QModelIndex parentIdx = okInfo->index(row, 0);
             caption = okInfo->index(row, 0).data().toString();
-            QModelIndex isShowIdx = okInfo->index(row, 2);
-            isShow = isShowIdx.data().toBool();
+            QModelIndex isShowInfoIdx = okInfo->index(row, 2);
+            isShow = isShowInfoIdx.data().toBool();
             tooltip = "Show or hide the category " + caption + " in the metadata panel";
             // Add okInfo category to the property editor
             secondGenerationCount++;
@@ -695,19 +769,19 @@ void Preferences::addItems()
             okValue = new QStandardItem;
             okValue->setToolTip(tooltip);
             okValue->setData(isShow, Qt::EditRole);
-            okValue->setData(isShowIdx, UR_QModelIndex);
+            okValue->setData(isShowInfoIdx, UR_QModelIndex);
             okValue->setData(DT_Checkbox, UR_DelegateType);
             okValue->setData("infoView->ok", UR_Source);
             okValue->setData("bool", UR_Type);
             metadataPanelCatItem->setChild(secondGenerationCount, 0, okCaption);
             metadataPanelCatItem->setChild(secondGenerationCount, 1, okValue);
-            idxVal = okValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+            valIdx = okValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
             thirdGenerationCount = -1;
             for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
                 caption = okInfo->index(childRow, 0, parentIdx).data().toString();
-                QModelIndex isShowIdx = okInfo->index(childRow, 2, parentIdx);
-                isShow = isShowIdx.data().toBool();
+                QModelIndex isShowInfoIdx = okInfo->index(childRow, 2, parentIdx);
+                isShow = isShowInfoIdx.data().toBool();
                 tooltip = "Show or hide the field " + caption + " in the metadata panel";
                 // Add okInfo child to the property editor
                 thirdGenerationCount++;
@@ -718,25 +792,112 @@ void Preferences::addItems()
                 okChildValue = new QStandardItem;
                 okChildValue->setToolTip(tooltip);
                 okChildValue->setData(isShow, Qt::EditRole);
-
-//                QModelIndex test = okInfo->index(childRow, 0, parentIdx);
-//                okChildValue->setData(test, UR_QModelIndex);
-//                qDebug() << "Test : " << mw->infoView->ok->data(test).toString();
-//                QModelIndex test1 = okChildValue->index().data(UR_QModelIndex).toModelIndex();
-//                qDebug() << "Test1: " << mw->infoView->ok->data(test1).toString();
-//                qDebug() << __FUNCTION__ << "test =" << test << "test1 =" << test1;
-                okChildValue->setData(isShowIdx, UR_QModelIndex);
-
+                okChildValue->setData(isShowInfoIdx, UR_QModelIndex);
                 okChildValue->setData(DT_Checkbox, UR_DelegateType);
                 okChildValue->setData("infoView->ok", UR_Source);
                 okChildValue->setData("bool", UR_Type);
                 okCaption->setChild(thirdGenerationCount, 0, okChildCaption);
                 okCaption->setChild(thirdGenerationCount, 1, okChildValue);
-                idxVal = okChildValue->index();
-                propertyDelegate->createEditor(this, *styleOptionViewItem, idxVal);
+                valIdx = okChildValue->index();
+                propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
             }
-            expand(okCaption->index());
         }
-    expand(metadataPanelCatItem->index());
+
+    firstGenerationCount++;
+    // HEADER
+    // Tableview show/hide fields category
+    QStandardItem *tableViewCatItem = new QStandardItem;
+    tableViewCatItem->setText("TableView columns");
+    tableViewCatItem->setEditable(false);
+    tableViewCatItem->setData(DT_None, UR_DelegateType);
+    model->appendRow(tableViewCatItem);
+    setColumnWidth(0, col0width);
+    setColumnWidth(1, col1width);
+    secondGenerationCount = -1;
+
+        // TableView conventional fields to show
+        QStandardItemModel *tv = mw->tableView->ok;
+        int geekStartRow;
+        for(int row = 0; row < tv->rowCount(); row++) {
+            // do not show if is a geek column
+            if (tv->index(row, 2).data().toBool()) continue;
+            caption = tv->index(row, 0).data().toString();
+            valIdx = tv->index(row, 1);
+            isShow = valIdx.data().toBool();
+            tooltip = "Show or hide the column " + caption + " in the table view.";
+            // Add tableview column to the property editor
+            secondGenerationCount++;
+            captionItem = new QStandardItem;
+            captionItem = new QStandardItem;
+            captionItem->setToolTip(tooltip);
+            captionItem->setText("Show " + caption);
+            captionItem->setEditable(false);
+            valueItem = new QStandardItem;
+            valueItem->setToolTip(tooltip);
+            valueItem->setData(isShow, Qt::EditRole);
+            valueItem->setData(valIdx, UR_QModelIndex);
+            valueItem->setData(DT_Checkbox, UR_DelegateType);
+            valueItem->setData("tableView->ok", UR_Source);
+            valueItem->setData("bool", UR_Type);
+            tableViewCatItem->setChild(secondGenerationCount, 0, captionItem);
+            tableViewCatItem->setChild(secondGenerationCount, 1, valueItem);
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valueItem->index());
+            qDebug() << __FUNCTION__ << caption;
+//            if (caption == "Url") {
+//                geekStartRow = row + 1;
+//                break;
+//            }
+        }
+
+        // HEADER
+        // TableView:: Geek Columns subcategory
+        secondGenerationCount++;
+        QStandardItem *tableViewGeekCatItem = new QStandardItem;
+        tableViewGeekCatItem->setText("Geek columns");
+        tableViewGeekCatItem->setEditable(false);
+        tableViewGeekCatItem->setData(DT_None, UR_DelegateType);
+        tableViewCatItem->setChild(secondGenerationCount, 0, tableViewGeekCatItem);
+        thirdGenerationCount = -1;
+
+            // TableView geek fields to show
+//            for(int row = geekStartRow; row < tv->rowCount(); row++) {
+            for(int row = 0; row < tv->rowCount(); row++) {
+                // do not show if is a not a geek column
+                if (!tv->index(row, 2).data().toBool()) continue;
+                caption = tv->index(row, 0).data().toString();
+                valIdx = tv->index(row, 1);
+                isShow = valIdx.data().toBool();
+                tooltip = "Show or hide the column " + caption + " in the table view.";
+                // Add tableview column to the property editor
+                thirdGenerationCount++;
+                captionItem = new QStandardItem;
+                captionItem = new QStandardItem;
+                captionItem->setToolTip(tooltip);
+                captionItem->setText("Show " + caption);
+                captionItem->setEditable(false);
+                valueItem = new QStandardItem;
+                valueItem->setToolTip(tooltip);
+                valueItem->setData(isShow, Qt::EditRole);
+                valueItem->setData(valIdx, UR_QModelIndex);
+                valueItem->setData(DT_Checkbox, UR_DelegateType);
+                valueItem->setData("tableView->ok", UR_Source);
+                valueItem->setData("bool", UR_Type);
+                tableViewGeekCatItem->setChild(thirdGenerationCount, 0, captionItem);
+                tableViewGeekCatItem->setChild(thirdGenerationCount, 1, valueItem);
+                propertyDelegate->createEditor(this, *styleOptionViewItem, valueItem->index());
+
+//                bool isGeek = tv->index(row, 2).data().toBool();
+//                qDebug() << __FUNCTION__ << caption << "isGeek =" << isGeek;
+            }
 }
+
+
+
+
+
+
+
+
+
+
 

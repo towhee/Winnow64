@@ -213,6 +213,10 @@ holds significant information about all images in the current folder.
 
 Assign a default show flag = true to each column. This will be updated when
 QSettings has been loaded.
+
+Column 0 = TableView column name
+Column 1 = Show/hide TableView column
+Column 2 = Geek role for the TableView column
 */
     {
     #ifdef ISDEBUG
@@ -223,23 +227,17 @@ QSettings has been loaded.
 
     ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
     ok->setHorizontalHeaderItem(1, new QStandardItem(QString("Show")));
+    ok->setHorizontalHeaderItem(2, new QStandardItem(QString("Geek")));
 
     // do not include column 0 as it is used to index tableView
-    for(int i = 1; i < dm->columnCount(); i++) {
+    for (int i = 1; i < dm->columnCount(); i++) {
         QString columnName = dm->horizontalHeaderItem(i)->text();
         ok->insertRow(i - 1);
         ok->setData(ok->index(i - 1, 0), columnName);
+        bool isGeek = dm->horizontalHeaderItem(i)->data(G::GeekRole).toBool();
+        ok->setData(ok->index(i - 1, 2), isGeek);
         if (G::showAllTableColumns) ok->setData(ok->index(i - 1, 1), true);
-        else {
-            bool show = i <= G::UrlColumn;
-            ok->setData(ok->index(i - 1, 1), show);
-        }
-
-        /*
-        qDebug() << __FUNCTION__
-                 << i
-                 << columnName
-                 << show;  */
+        else ok->setData(ok->index(i - 1, 1), !isGeek);
     }
     showOrHide();
 

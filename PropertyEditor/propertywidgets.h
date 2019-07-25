@@ -5,12 +5,13 @@
 
 enum DelegateType
 {
-    DT_None,
-    DT_Text,
-    DT_Spinbox,
-    DT_Checkbox,
-    DT_Combo,
-    DT_Slider
+    DT_None,        // 0
+    DT_Text,        // 1
+    DT_Spinbox,     // 2
+    DT_Checkbox,    // 3
+    DT_Combo,       // 4
+    DT_Slider,      // 5
+    DT_PlusMinus    // 6
 };
 
 enum UserRole
@@ -35,7 +36,7 @@ public:
     int value();
 
 signals:
-    void editorValueChanged(QVariant value, QString source, QModelIndex idx);
+    void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
 
 private:
@@ -56,7 +57,7 @@ public:
     int value();
 
 signals:
-    void editorValueChanged(QVariant value, QString source, QModelIndex idx);
+    void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
 
 private:
@@ -75,11 +76,11 @@ public:
     bool value();
 
 signals:
-    void editorValueChanged(QVariant value, QString source, QModelIndex idx);
+    void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
 
 private:
-    void change(int value);
+    void change();
     QCheckBox *checkBox;
     QString source;
     QModelIndex idx;
@@ -94,12 +95,34 @@ public:
     QString value();
 
 signals:
-    void editorValueChanged(QVariant value, QString source, QModelIndex idx);
+    void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
     
 private:
     void change(int index);
     QComboBox *comboBox;
+    QString source;
+    QModelIndex idx;
+};
+
+class PlusMinusEditor : public QWidget
+{
+    Q_OBJECT
+public:
+    PlusMinusEditor(const QModelIndex &idx, QWidget *parent = nullptr);
+    void setValue(QVariant value);
+    int value();
+
+signals:
+    void editorValueChanged(QWidget *);
+    void enableGoKeyActions(bool ok);
+
+private:
+    void minusChange();
+    void plusChange();
+    int plusMinus;
+    QPushButton *minusBtn;
+    QPushButton *plusBtn;
     QString source;
     QModelIndex idx;
 };

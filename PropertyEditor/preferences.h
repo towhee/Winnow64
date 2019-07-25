@@ -13,6 +13,8 @@ public:
 
 public slots:
     void editorValueChange(QVariant v, QString source, QModelIndex index);
+    void itemChange(QModelIndex idx);
+//    void itemChange(QStandardItem *item);
 
 private:
     void addItems();
