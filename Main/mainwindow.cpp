@@ -6219,6 +6219,16 @@ void MW::preferences(int page)
     G::track(__FUNCTION__);
     #endif
     }
+    Preferences *pref = new Preferences(this);
+    propertiesDock = new DockWidget(tr("  Preferencess  "), this);
+    propertiesDock->setObjectName("Preferences");
+    propertiesDock->setWidget(pref);
+    propertiesDock->setFloating(true);
+    propertiesDock->setGeometry(2000,600,400,800);
+    propertiesDock->setVisible(true);
+    propertiesDock->raise();
+    return;
+
     if(page == -1) page = lastPrefPage;
     Prefdlg *prefdlg = new Prefdlg(this, page);
     connect(prefdlg, SIGNAL(updatePage(int)),
@@ -9789,19 +9799,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     Preferences *pref = new Preferences(this);
-//    propertyEditor = new PropertyEditor(this);
     propertiesDock = new DockWidget(tr("  Preferencess  "), this);
     propertiesDock->setObjectName("Preferences");
-//    propertiesDock->setFeatures( QDockWidget::DockWidgetMovable |
-//        QDockWidget::DockWidgetFloatable );
     propertiesDock->setWidget(pref);
     propertiesDock->setFloating(true);
-//    qDebug() << __FUNCTION__ << geometry();
-    propertiesDock->setGeometry(2000,600,400,1000);
-    propertiesDock->setVisible(true);
+    propertiesDock->setGeometry(2000,600,420,1000);
+    propertiesDock->setVisible(false);
     propertiesDock->raise();
-    propertiesDock->setFocus();
-//    propertiesDock->setVisible(!propertiesDock->isVisible());
     return;
 
     dm->find("lower");
