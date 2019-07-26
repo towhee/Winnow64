@@ -17,6 +17,8 @@ public:
 
 protected:
     void mousePressEvent(QMouseEvent *event);
+    void keyReleaseEvent(QKeyEvent *event);
+//    void drawBranches(QPainter *painter, const QRect &rect, const QModelIndex &index) const;
 //    void drawRow(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
 
 signals:
@@ -30,6 +32,7 @@ public slots:
 
 //    void editCheck(QTreeWidgetItem *item, int column);
 private:
+    QLinearGradient categoryBackground;
 };
 
 

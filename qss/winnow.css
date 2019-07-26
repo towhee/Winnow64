@@ -219,12 +219,14 @@ QTreeView
 QTreeView::branch:has-children:!has-siblings:closed,
 QTreeView::branch:closed:has-children:has-siblings {
         border-image: none;
+        /*image: url(:/images/branch_closed_gradient.png);*/
         image: url(:/images/branch-closed.png);
 }
 
 QTreeView::branch:open:has-children:!has-siblings,
 QTreeView::branch:open:has-children:has-siblings  {
         border-image: none;
+        /*image: url(:/images/branch_open_gradient.png);*/
         image: url(:/images/branch-open.png);
 }
 

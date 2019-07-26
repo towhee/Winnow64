@@ -418,10 +418,15 @@ void MW::keyPressEvent(QKeyEvent *event)
 void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape) {
+        qDebug() << __FUNCTION__ << "preferencesHasFocus =" << preferencesHasFocus;
         // hide a popup message
         if (G::popUp->isVisible()) {
             G::popUp->hide();
             return;
+        }
+        // hide preferences
+        if (preferencesHasFocus) {
+            propertiesDock->setVisible(false);
         }
         // cancel slideshow
         if (G::isSlideShow) slideShow();     // toggles slideshow off
@@ -493,8 +498,21 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                  << event->type() << "\t"
                  << obj << "\t"
                  << obj->objectName();
+    }*/
+    if (event->type() == QEvent::FocusIn)
+        qDebug() << event << "\t"
+                 << event->type() << "\t"
+                 << obj << "\t"
+                 << obj->objectName();
+    if (event->type() == QEvent::FocusIn && obj->objectName() == "PreferencesWindow") {
+        preferencesHasFocus = true;
+        qDebug() << __FUNCTION__ << "preferencesHasFocus =" << preferencesHasFocus;
     }
-    */
+    if (event->type() == QEvent::FocusOut && obj->objectName() == "PreferencesWindow") {
+        preferencesHasFocus = false;
+        qDebug() << __FUNCTION__ << "preferencesHasFocus =" << preferencesHasFocus;
+    }
+
 
     // figure out key presses
 /*    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
@@ -6220,20 +6238,22 @@ void MW::preferences(int page)
     #endif
     }
     Preferences *pref = new Preferences(this);
-    propertiesDock = new DockWidget(tr("  Preferencess  "), this);
-    propertiesDock->setObjectName("Preferences");
-    propertiesDock->setWidget(pref);
-    propertiesDock->setFloating(true);
-    propertiesDock->setGeometry(2000,600,400,800);
-    propertiesDock->setVisible(true);
-    propertiesDock->raise();
-    return;
+    PreferencesDlg *preferencesDlg = new PreferencesDlg(pref, css, this);
+    preferencesDlg->exec();
+//    propertiesDock = new DockWidget(tr("  Preferencess  "), this);
+//    propertiesDock->setObjectName("Preferences");
+//    propertiesDock->setWidget(pref);
+//    propertiesDock->setFloating(true);
+//    propertiesDock->setGeometry(2000,600,400,800);
+//    propertiesDock->setVisible(true);
+//    propertiesDock->raise();
+//    return;
 
-    if(page == -1) page = lastPrefPage;
-    Prefdlg *prefdlg = new Prefdlg(this, page);
-    connect(prefdlg, SIGNAL(updatePage(int)),
-            this, SLOT(setPrefPage(int)));
-    prefdlg->exec();
+//    if(page == -1) page = lastPrefPage;
+//    Prefdlg *prefdlg = new Prefdlg(this, page);
+//    connect(prefdlg, SIGNAL(updatePage(int)),
+//            this, SLOT(setPrefPage(int)));
+//    prefdlg->exec();
 }
 
 void MW::setShowImageCount()
@@ -9798,6 +9818,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+//    Preferences *pref1 = new Preferences(this);
+//    PreferencesDlg *preferencesDlg = new PreferencesDlg(pref1);
+//    preferencesDlg->exec();
+//    return;
+
+
     Preferences *pref = new Preferences(this);
     propertiesDock = new DockWidget(tr("  Preferencess  "), this);
     propertiesDock->setObjectName("Preferences");
@@ -9806,6 +9832,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     propertiesDock->setGeometry(2000,600,420,1000);
     propertiesDock->setVisible(false);
     propertiesDock->raise();
+
     return;
 
     dm->find("lower");
