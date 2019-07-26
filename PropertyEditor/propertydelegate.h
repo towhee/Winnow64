@@ -32,6 +32,7 @@ signals:
 //    void editorValueChanged(QVariant value, QString source, QModelIndex index);
 //    void commitAndCloseEditor();
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor) const;
+    void drawBranchesAgain(QPainter *painter, QRect rect, QModelIndex index) const;
 
 private slots:
 //    void editorValueChange(QVariant value, QString source, QModelIndex index);

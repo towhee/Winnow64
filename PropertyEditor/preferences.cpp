@@ -9,12 +9,14 @@ MW *mw;
 Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
 {
     mw = qobject_cast<MW*>(parent);
-    connect(this->propertyDelegate, &PropertyDelegate::itemChanged, this, &Preferences::itemChange);
+    connect(this->propertyDelegate, &PropertyDelegate::itemChanged,
+            this, &Preferences::itemChange);
+    captionColumnWidth = 250;
+    valueColumnWidth = 200;
     addItems();
-    expandAll();
 }
 
-void Preferences::itemChange(QModelIndex idx/*QStandardItem *item*/)
+void Preferences::itemChange(QModelIndex idx)
 {
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
@@ -147,47 +149,12 @@ void Preferences::itemChange(QModelIndex idx/*QStandardItem *item*/)
     if (source == "infoView->ok") {
         mw->infoView->ok->setData(index, v.toBool());
     }
-
-}
-
-void Preferences::editorValueChange(QVariant v, QString source, QModelIndex index)
-{
-
-    qDebug() << __FUNCTION__ << v << source << index;
-    if (source == "infoView->ok") {
-        QModelIndex okIdx = index.data(UR_QModelIndex).toModelIndex();
-        mw->infoView->ok->setData(okIdx, v.toBool());
-    }
-    if (source == "classificationBadgeInImageDiameter") {
-        int value = v.toInt();
-        mw->setClassificationBadgeImageDiam(value);
-    }
-    if (source == "classificationBadgeInThumbDiameter") {
-        int value = v.toInt();
-        mw->setClassificationBadgeThumbDiam(value);
-    }
-    if (source == "rememberLastDir") {
-        mw->rememberLastDir = v.toBool();
-    }
-    if (source == "useWheelToScroll") {
-        if (v.toString() == "Next/previous image") mw->imageView->useWheelToScroll = false;
-        else mw->imageView->useWheelToScroll = true;
-    }
-    if (source == "globalFontSize") {
-        mw->setFontSize(v.toInt());
-    }
-    if (source == "infoOverlayFontSize") {
-        qDebug() << __FUNCTION__ << v;
-        mw->imageView->infoOverlayFontSize = v.toInt();
-        mw->setInfoFontSize();
-    }
-
 }
 
 void Preferences::addItems()
 {
-    int col0width = 200;
-    int col1width = 200;
+    int captionColumnWidth = 250;
+    int valueColumnWidth = 200;
     int firstGenerationCount = -1;        // top items
     int secondGenerationCount;            // child items
     int thirdGenerationCount;             // child child items
@@ -210,8 +177,8 @@ void Preferences::addItems()
     model->appendRow(generalItem);
     model->insertColumns(1, 1);
     catIdx = generalItem->index();
-    setColumnWidth(0, col0width);
-    setColumnWidth(1, col1width);
+    setColumnWidth(0, captionColumnWidth);
+    setColumnWidth(1, valueColumnWidth);
     secondGenerationCount = -1;
 
         secondGenerationCount++;
@@ -379,8 +346,8 @@ void Preferences::addItems()
     thumbnailCatItem->setEditable(false);
     thumbnailCatItem->setData(DT_None, UR_DelegateType);
     model->appendRow(thumbnailCatItem);
-    setColumnWidth(0, col0width);
-    setColumnWidth(1, col1width);
+    setColumnWidth(0, captionColumnWidth);
+    setColumnWidth(1, valueColumnWidth);
     secondGenerationCount = -1;
 
         // HEADER
@@ -539,8 +506,8 @@ void Preferences::addItems()
     cacheCatItem->setData(DT_None, UR_DelegateType);
     model->appendRow(cacheCatItem);
     //    model->insertColumns(1, 1);
-    setColumnWidth(0, col0width);
-    setColumnWidth(1, col1width);
+    setColumnWidth(0, captionColumnWidth);
+    setColumnWidth(1, valueColumnWidth);
     secondGenerationCount = -1;
 
         secondGenerationCount++;
@@ -810,8 +777,8 @@ void Preferences::addItems()
     fullScreenCatItem->setEditable(false);
     fullScreenCatItem->setData(DT_None, UR_DelegateType);
     model->appendRow(fullScreenCatItem);
-    setColumnWidth(0, col0width);
-    setColumnWidth(1, col1width);
+    setColumnWidth(0, captionColumnWidth);
+    setColumnWidth(1, valueColumnWidth);
     secondGenerationCount = -1;
 
         secondGenerationCount++;
@@ -936,8 +903,8 @@ void Preferences::addItems()
     metadataPanelCatItem->setEditable(false);
     metadataPanelCatItem->setData(DT_None, UR_DelegateType);
     model->appendRow(metadataPanelCatItem);
-    setColumnWidth(0, col0width);
-    setColumnWidth(1, col1width);
+    setColumnWidth(0, captionColumnWidth);
+    setColumnWidth(1, valueColumnWidth);
     secondGenerationCount = -1;
 
         // InfoView fields to show
@@ -1004,8 +971,8 @@ void Preferences::addItems()
     tableViewCatItem->setEditable(false);
     tableViewCatItem->setData(DT_None, UR_DelegateType);
     model->appendRow(tableViewCatItem);
-    setColumnWidth(0, col0width);
-    setColumnWidth(1, col1width);
+    setColumnWidth(0, captionColumnWidth);
+    setColumnWidth(1, valueColumnWidth);
     secondGenerationCount = -1;
 
         // TableView conventional fields to show
@@ -1035,11 +1002,6 @@ void Preferences::addItems()
             tableViewCatItem->setChild(secondGenerationCount, 0, captionItem);
             tableViewCatItem->setChild(secondGenerationCount, 1, valueItem);
             propertyDelegate->createEditor(this, *styleOptionViewItem, valueItem->index());
-            qDebug() << __FUNCTION__ << caption;
-//            if (caption == "Url") {
-//                geekStartRow = row + 1;
-//                break;
-//            }
         }
 
         // HEADER

@@ -14,7 +14,6 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0: return nullptr;
-                break;
     //    case DT_Text:
     //        return new QLinedEdit;
         case DT_Checkbox: {
@@ -24,7 +23,6 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
             emit editorWidgetToDisplay(index, checkEditor);
             return checkEditor;
         }
-
         case DT_Spinbox: {
             SpinBoxEditor *spinBoxEditor = new SpinBoxEditor(index, parent);
             connect(spinBoxEditor, &SpinBoxEditor::editorValueChanged,
@@ -177,12 +175,6 @@ void PropertyDelegate::updateEditorGeometry(QWidget *editor,
     editor->setGeometry(option.rect);
 }
 
-//void PropertyDelegate::editorValueChange(QVariant v, QString source, QModelIndex index)
-//{
-////    qDebug() << __FUNCTION__ << v << source;
-//    emit editorValueChanged(v, source, index);
-//}
-
 //void PropertyDelegate::commitAndCloseEditor()
 //{
 //    QWidget *editor = qobject_cast<QWidget *>(sender());
@@ -193,6 +185,7 @@ void PropertyDelegate::updateEditorGeometry(QWidget *editor,
 
 void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const
 {
+//    qDebug() << __FUNCTION__ << index;
     painter->save();
 
     QRect r = option.rect;
@@ -208,8 +201,9 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QPen regPen(QColor(190,190,190));
 
     if (index.parent() == QModelIndex()) {
-        if (index.column() == 0) painter->fillRect(r0, categoryBackground);
-        if (index.column() == 1) painter->fillRect(r, categoryBackground);
+        if (index.column() == 0) painter->fillRect(r, categoryBackground);
+//        if (index.column() == 0) painter->fillRect(r0, categoryBackground);
+        else painter->fillRect(r, categoryBackground);
         painter->setPen(catPen);
     }
     else if (index.column() == 0) painter->setPen(regPen);

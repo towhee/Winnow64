@@ -39,7 +39,8 @@
 #include "aboutdlg.h"
 #include "Image/thumb.h"
 //#include "dircompleter.h"
-#include "prefdlg.h"
+//#include "prefdlg.h"
+#include "preferencesdlg.h"
 #include "updateapp.h"
 #include "workspacedlg.h"
 #include "zoomdlg.h"
@@ -62,7 +63,7 @@ class MW : public QMainWindow
 {
     Q_OBJECT
 
-    friend class Prefdlg;           // m0
+//    friend class Prefdlg;           // m0
     friend class ProgressBar;       // mw1
     friend class IconView;          // mw2
     friend class Preferences;       // mw;
@@ -244,6 +245,7 @@ public:
     bool modeChangeJustHappened;
     bool justUpdatedBestFit;
     int sortColumn = 0;
+    bool preferencesHasFocus = false;
 
     bool showImageCount = true;
     bool isCurrentFolderOkay;
