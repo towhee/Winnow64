@@ -150,6 +150,8 @@ namespace G
     extern bool isNewFolderLoaded;
     extern bool isInitializing;
     extern int scrollBarThickness;
+    extern int propertyWidgetMarginLeft;
+    extern int propertyWidgetMarginRight;
 //    extern qreal devicePixelRatio;
     extern QModelIndexList copyCutIdxList;  // req'd?
     extern QStringList copyCutFileList;     // req'd?

@@ -27,8 +27,8 @@ enum UserRole
     UR_StringList                       // list of items for comboBox
 };
 
-int propertyWidgetMarginLeft = 10;
-int propertyWidgetMarginRight = 15;
+//int propertyWidgetMarginLeft = 10;
+//int propertyWidgetMarginRight = 15;
 
 class SliderEditor : public QWidget
 {
