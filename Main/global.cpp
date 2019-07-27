@@ -43,6 +43,8 @@ namespace G
     bool isNewFolderLoaded;
     bool isInitializing;
     int scrollBarThickness = 14;        // Also set in winnowstyle.css for vertical and horizontal
+    int propertyWidgetMarginLeft;
+    int propertyWidgetMarginRight;
     QModelIndexList copyCutIdxList;
     QStringList copyCutFileList;
     QElapsedTimer t;

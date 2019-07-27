@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'renamedlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.13.0
+** Created by: Qt User Interface Compiler version 5.12.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -69,11 +69,11 @@ public:
 
     void retranslateUi(QDialog *RenameDlg)
     {
-        RenameDlg->setWindowTitle(QCoreApplication::translate("RenameDlg", "Rename", nullptr));
-        nameLbl->setText(QCoreApplication::translate("RenameDlg", "Name:", nullptr));
+        RenameDlg->setWindowTitle(QApplication::translate("RenameDlg", "Rename", nullptr));
+        nameLbl->setText(QApplication::translate("RenameDlg", "Name:", nullptr));
         statusLbl->setText(QString());
-        cancelBtn->setText(QCoreApplication::translate("RenameDlg", "Cancel", nullptr));
-        okBtn->setText(QCoreApplication::translate("RenameDlg", "OK", nullptr));
+        cancelBtn->setText(QApplication::translate("RenameDlg", "Cancel", nullptr));
+        okBtn->setText(QApplication::translate("RenameDlg", "OK", nullptr));
     } // retranslateUi
 
 };

@@ -23,9 +23,6 @@ PropertyEditor subclass ie Preferences.  All the property items are defined and 
     called.
 */
 
-CONST int propertyWidgetMarginLeft = 10;
-CONST int propertyWidgetMarginRight = 15;
-
 /* SLIDER EDITOR *****************************************************************************/
 
 SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
@@ -62,7 +59,7 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(slider, Qt::AlignLeft);
     layout->addWidget(lineEdit, Qt::AlignRight);
-    layout->setContentsMargins(propertyWidgetMarginLeft,0,propertyWidgetMarginRight,0);
+    layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
     setLayout(layout);
 
     slider->setValue(idx.data(Qt::EditRole).toInt());
@@ -121,7 +118,7 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
     layout->addWidget(spinBox, Qt::AlignLeft);
     layout->addSpacing(20);
     layout->addWidget(label);
-    layout->setContentsMargins(propertyWidgetMarginLeft - 2, 0, propertyWidgetMarginRight, 0);
+    layout->setContentsMargins(G::propertyWidgetMarginLeft - 2, 0, G::propertyWidgetMarginRight, 0);
     setLayout(layout);
 
     spinBox->setValue(idx.data(Qt::EditRole).toInt());
@@ -160,7 +157,7 @@ CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(checkBox, Qt::AlignLeft);
-    layout->setContentsMargins(propertyWidgetMarginLeft,0,propertyWidgetMarginRight,0);
+    layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
     setLayout(layout);
 
     checkBox->setChecked(idx.data(Qt::EditRole).toBool());
@@ -201,7 +198,7 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(comboBox, Qt::AlignLeft);
-    layout->setContentsMargins(propertyWidgetMarginLeft,0,propertyWidgetMarginRight,0);
+    layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
     setLayout(layout);
 
     comboBox->addItems(idx.data(UR_StringList).toStringList());
@@ -248,7 +245,7 @@ PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWid
     layout->addWidget(minusBtn, Qt::AlignLeft);
     layout->addWidget(plusBtn, Qt::AlignLeft);
     layout->addSpacing(55);
-    layout->setContentsMargins(propertyWidgetMarginLeft,2,propertyWidgetMarginRight,2);
+    layout->setContentsMargins(G::propertyWidgetMarginLeft,2,G::propertyWidgetMarginRight,2);
     setLayout(layout);
 }
 
