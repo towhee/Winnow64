@@ -274,10 +274,10 @@ possibly altered thumbnail dimensions.
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
         labelFontSize, showIconLabels, badgeSize);
 
-//    if(objectName() == "Thumbnails") {
-//        if (!m2->thumbDock->isFloating())
-//            emit updateThumbDockHeight();
-//    }
+    if(objectName() == "Thumbnails") {
+        if (!m2->thumbDock->isFloating())
+            emit updateThumbDockHeight();
+    }
 }
 
 void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight, /*int _thumbPadding,*/

@@ -12,7 +12,11 @@ class PreferencesDlg  : public QDialog
 
 public:
     PreferencesDlg(Preferences *pref, QString &css, QWidget *parent = nullptr);
+
 private:
+    void expand();
+    void collapse();
+    PropertyEditor *tree;
 };
 
 #endif // PREFERENCESDLG_H

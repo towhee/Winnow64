@@ -118,5 +118,7 @@
         <file>Docs/winnow.html</file>
         <file>Docs/versions.html</file>
         <file>Docs/_template.html</file>
+        <file>images/branch-closed-small.png</file>
+        <file>images/branch-open-small.png</file>
     </qresource>
 </RCC>

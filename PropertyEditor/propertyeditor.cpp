@@ -3,8 +3,31 @@
 #include "Main/global.h"
 #include <QDebug>
 
+/*
+The property editor has four components:
+
+PropertyEditor - A subclass of QTreeView, with a data model that holds the property
+    information.
+
+PropertyDelegate - Creates the editor widgets, sets the editor and model data and does some
+    custom painting to each row in the treeview.
+
+PropertyWidgets - A collection of custom widget editors (slider, combobox etc) that are
+    inserted into column 1 in the treeview (PropertyEditor) by PropertyDelegate.  The editors
+    are built based on information passed in the datamodel UserRole such as the DelegateType
+    (Spinbox, Checkbox, Combo, Slider, PlusMinusBtns etc).  Other information includes the
+    source, datamodel index, mim value, max value, a stringlist for combos etc).
+
+PropertyEditor subclass ie Preferences.  All the property items are defined and added to the
+    treeview in addItems().  When an item value has been changed in an editor itemChanged(idx)
+    is signaled and the variable is updated in Winnow and any necessary actions are executed.
+    For example, if the thumbnail size is increased then the IconView function to do this is
+    called.
+*/
+
 PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 {
+
     setRootIsDecorated(true);
     setAlternatingRowColors(true);
     setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -24,12 +47,18 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 
 
 void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
+/*
+Sets the custom editor widget for the value column (column 1).  The
+*/
 {
     setIndexWidget(idx, editor);
     emit propertyDelegate->closeEditor(editor);
 }
 
 void PropertyEditor::mousePressEvent(QMouseEvent *event)
+/*
+Set the current index and expand/collapse when click anywhere on a row that has children.
+*/
 {
     if (event->button() == Qt::RightButton) return;
     QTreeView::mousePressEvent(event);
@@ -40,87 +69,24 @@ void PropertyEditor::mousePressEvent(QMouseEvent *event)
             QModelIndex idxVal = model->index(idx.row(), 1, idx.parent());
             setCurrentIndex(idxVal);
 
-            // try to expand / collapse if click on any part of the row
-            // might have clicked on column 1
-            if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
+            /* try to expand / collapse if click on any part of the row.  This will occur
+            automatically if the user clicks on the decoration, so those clicks have to be
+            ignored.  For root items the Qt decoration has been covered by our painting the
+            gradient across the row, so any clicks after the indentation amount should be
+            acted upon.  For non-root rows, the decoration is after the indentation amount
+            and is 14 pixels wide (I believe this is hard coded in Qt).
+            */
             QPoint p = event->pos();
-            if (p.x() >= indentation) isExpanded(idx) ? collapse(idx) : expand(idx);
+            if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
+            // if root item any click after indentation should
+            if (idx.parent() == QModelIndex()) {
+                // root item
+                if (p.x() > indentation)
+                    isExpanded(idx) ? collapse(idx) : expand(idx);
+            }
+            else if (p.x() < indentation || p.x() > indentation + 14)
+                    isExpanded(idx) ? collapse(idx) : expand(idx);
         }
     }
 }
-
-void PropertyEditor::keyReleaseEvent(QKeyEvent *event)
-{
-    if (event->key() == Qt::Key_Escape) {
-        qDebug() << __FUNCTION__ << "Esc key";
-    }
-}
-
-//void PropertyEditor::drawRow(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
-//{
-
-//    QTreeView::drawRow(painter, option, index);
-/*
-    bool isAlt = option.features & QStyleOptionViewItem::Alternate;
-    qDebug() << __FUNCTION__ << isAlt;
-    bool isAlternateRow = (option.features & QStyleOptionViewItem::Alternate);
-
-    if ( const QStyleOptionViewItem* opt = qstyleoption_cast<const QStyleOptionViewItem*>(&option) )
-    {
-        if (opt->features & QStyleOptionViewItem::Alternate)
-            painter->fillRect(option.rect, option.palette.alternateBase());
-        else
-            QTreeView::drawRow(painter, option, index);
-            painter->fillRect(option.rect,painter->background());
-    }
-
-    QRect r = option.rect;
-    QLinearGradient categoryBackground;
-    categoryBackground.setStart(0, r.top());
-    categoryBackground.setFinalStop(0, r.bottom());
-    categoryBackground.setColorAt(0, QColor(88,88,88));
-    categoryBackground.setColorAt(1, QColor(66,66,66));
-    QBrush brush(categoryBackground);
-
-    QStyleOptionViewItem newOption(option);
-    option.palette.alternateBase();
-    newOption.palette.setColor( QPalette::Base, QColor(177,177,77) );
-    newOption.palette.setColor( QPalette::AlternateBase, QColor(177,77,77) );
-
-    qDebug() << __FUNCTION__ << "option" << "Alternate" << option.palette.alternateBase()
-                << "newption" << "Alternate" << option.palette.alternateBase();
-
-
-    if (index.parent() == QModelIndex())
-    {
-      QTreeView::drawRow(painter, newOption, index);
-    }
-    else
-    {
-      QTreeView::drawRow(painter, option, index);
-    }
-
-    painter->save();
-    painter->setPen(QColor(75,75,75));
-    painter->drawRect(option.rect);
-    painter->restore();*/
-//}
-
-//void PropertyEditor::drawBranches(QPainter *painter, const QRect &rect, const QModelIndex &index) const
-//{
-//    qDebug() << __FUNCTION__ << index;
-//    QRect r = rect;
-//    QLinearGradient categoryBackground;
-//    categoryBackground.setStart(0, r.top());
-//    categoryBackground.setFinalStop(0, r.bottom());
-//    categoryBackground.setColorAt(0, QColor(88,88,88));
-//    categoryBackground.setColorAt(1, QColor(66,66,66));
-
-////    painter->fillRect(r, QColor(Qt::green));
-//    if (index.parent() == QModelIndex()) {
-////        painter->fillRect(r, QColor(77,77,77));
-//        painter->fillRect(r, categoryBackground);
-//    }
-//    QTreeView::drawBranches(painter, rect, index);
-//}
 
