@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tokendlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.12.0
+** Created by: Qt User Interface Compiler version 5.13.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -339,17 +339,17 @@ public:
 
     void retranslateUi(QDialog *TokenDlg)
     {
-        TokenDlg->setWindowTitle(QApplication::translate("TokenDlg", "Token Editor", nullptr));
-        label->setText(QApplication::translate("TokenDlg", "Tokens", nullptr));
-        label_4->setText(QApplication::translate("TokenDlg", "Templates", nullptr));
-        label_2->setText(QApplication::translate("TokenDlg", "Token string", nullptr));
-        label_3->setText(QApplication::translate("TokenDlg", "Example result:", nullptr));
-        label_5->setText(QApplication::translate("TokenDlg", "<html><head/><body><p>Edits to the token string are automatically saved to the currently selected template.</p></body></html>", nullptr));
-        uniqueWarningLabel->setText(QApplication::translate("TokenDlg", "<html><head/><body><p><span style=\" font-weight:600; color:#ffff00;\">Warning:</span> The tokenized file name is unlikely to produce unique file names. Consider including the ORIGINAL FILENAME, time MINUTE and SECOND or a sequence XX... </p></body></html>", nullptr));
-        renameBtn->setText(QApplication::translate("TokenDlg", "Rename", nullptr));
-        newBtn->setText(QApplication::translate("TokenDlg", "New", nullptr));
-        deleteBtn->setText(QApplication::translate("TokenDlg", "Delete", nullptr));
-        okBtn->setText(QApplication::translate("TokenDlg", "Select", nullptr));
+        TokenDlg->setWindowTitle(QCoreApplication::translate("TokenDlg", "Token Editor", nullptr));
+        label->setText(QCoreApplication::translate("TokenDlg", "Tokens", nullptr));
+        label_4->setText(QCoreApplication::translate("TokenDlg", "Templates", nullptr));
+        label_2->setText(QCoreApplication::translate("TokenDlg", "Token string", nullptr));
+        label_3->setText(QCoreApplication::translate("TokenDlg", "Example result:", nullptr));
+        label_5->setText(QCoreApplication::translate("TokenDlg", "<html><head/><body><p>Edits to the token string are automatically saved to the currently selected template.</p></body></html>", nullptr));
+        uniqueWarningLabel->setText(QCoreApplication::translate("TokenDlg", "<html><head/><body><p><span style=\" font-weight:600; color:#ffff00;\">Warning:</span> The tokenized file name is unlikely to produce unique file names. Consider including the ORIGINAL FILENAME, time MINUTE and SECOND or a sequence XX... </p></body></html>", nullptr));
+        renameBtn->setText(QCoreApplication::translate("TokenDlg", "Rename", nullptr));
+        newBtn->setText(QCoreApplication::translate("TokenDlg", "New", nullptr));
+        deleteBtn->setText(QCoreApplication::translate("TokenDlg", "Delete", nullptr));
+        okBtn->setText(QCoreApplication::translate("TokenDlg", "Select", nullptr));
     } // retranslateUi
 
 };

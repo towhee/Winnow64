@@ -14,6 +14,7 @@ public:
     PropertyDelegate *propertyDelegate;
     const QStyleOptionViewItem *styleOptionViewItem;
     int indentation;
+    void setSolo(bool isSolo);
 
 protected:
     void mousePressEvent(QMouseEvent *event);
@@ -23,6 +24,7 @@ public slots:
 
 private:
     QLinearGradient categoryBackground;
+    bool isSolo;
 };
 
 

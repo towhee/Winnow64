@@ -1731,10 +1731,11 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
 //    QString fPath = item->text(0);
     const QString fPath =  item->toolTip(col);
     isCurrentFolderOkay = isFolderValid(fPath, true, false);
-//    qDebug() << QTime::currentTime() << "isCurrentFolderOkay" << isCurrentFolderOkay << __FUNCTION__;
+    qDebug() << __FUNCTION__ << fPath;
 
     if (isCurrentFolderOkay) {
-        QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
+        QModelIndex idx = fsTree->fsModel->index(fPath);
+//        QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
@@ -3714,6 +3715,9 @@ void MW::createCaching()
     imageCacheThread = new ImageCache(this, dm, metadata);
     metadataCacheThread = new MetadataCache(this, dm, metadata, imageCacheThread);
 
+    metadataCacheThread->cacheAllMetadata = setting->value("cacheAllMetadata").toBool();
+    metadataCacheThread->cacheAllIcons = setting->value("cacheAllIcons").toBool();
+
     /* When a new folder is selected the metadataCacheThread is started to load all the
     metadata and thumbs for each image. If the user scrolls during the cache process then the
     metadataCacheThread is restarted at the first visible thumb to speed up the display of the
@@ -4478,8 +4482,8 @@ parameters.  Any visibility changes are executed.
     #endif
     }
 
-    imageCacheThread->updateImageCacheParam(cacheSizeMB, isShowCacheStatus,
-             cacheWtAhead, isCachePreview, displayHorizontalPixels, displayVerticalPixels);
+    imageCacheThread->updateImageCacheParam(cacheSizeMB, isShowCacheStatus, cacheWtAhead,
+             isCachePreview, displayHorizontalPixels, displayVerticalPixels);
 
     progressLabel->setFixedWidth(progressWidth);
     progressPixmap->scaled(progressWidth, 25);
@@ -6231,7 +6235,7 @@ void MW::preferences(int page)
     #endif
     }
     Preferences *pref = new Preferences(this);
-    PreferencesDlg *preferencesDlg = new PreferencesDlg(pref, css, this);
+    preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
     preferencesDlg->exec();
 //    propertiesDock = new DockWidget(tr("  Preferencess  "), this);
 //    propertiesDock->setObjectName("Preferences");
@@ -6835,7 +6839,11 @@ re-established when the application is re-opened.
     setting->setValue("slideShowRandom", isSlideShowRandom);
     setting->setValue("slideShowWrap", slideShowWrap);
 
-    // cache
+    // metadata and icon cache
+    setting->setValue("cacheAllMetadata", metadataCacheThread->cacheAllMetadata);
+    setting->setValue("cacheAllIcons", metadataCacheThread->cacheAllIcons);
+
+    // image cache
     setting->setValue("cacheSizeMB", cacheSizeMB);
     setting->setValue("isShowCacheStatus", isShowCacheStatus);
     setting->setValue("cacheDelay", cacheDelay);
@@ -6879,6 +6887,9 @@ re-established when the application is re-opened.
     setting->setValue("isMetadataDockLocked", metadataDockLockAction->isChecked());
     setting->setValue("isThumbDockLocked", thumbDockLockAction->isChecked());
     setting->setValue("wasThumbDockVisible", wasThumbDockVisible);
+
+    /* Property Editor */
+    setting->setValue("isSoloPrefDlg", isSoloPrefDlg);
 
      /* FolderDock floating info */
     setting->beginGroup(("FolderDock"));
@@ -7110,12 +7121,15 @@ Preferences are located in the prefdlg class and updated here.
         autoIngestFolderPath = false;
         autoEjectUsb = false;
 
+        // preferences
+        isSoloPrefDlg = true;
+
         // slideshow
         slideShowDelay = 5;
         isSlideShowRandom = false;
         slideShowWrap = true;
 
-        // cache
+        // cache        
         cacheSizeMB = 4000;
         isShowCacheStatus = true;
 //        cacheDelay = 0;
@@ -7159,12 +7173,15 @@ Preferences are located in the prefdlg class and updated here.
     manualFolderPath = setting->value("manualFolderPath").toString();
     manualFolderPath2 = setting->value("manualFolderPath2").toString();
 
+    // preferences
+    isSoloPrefDlg = setting->value("isSoloPrefDlg").toBool();
+
     // slideshow
     slideShowDelay = setting->value("slideShowDelay").toInt();
     isSlideShowRandom = setting->value("slideShowRandom").toBool();
     slideShowWrap = setting->value("slideShowWrap").toBool();
 
-    // cache
+    // image cache
     cacheSizeMB = setting->value("cacheSizeMB").toInt();
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
 //    cacheDelay = setting->value("cacheDelay").toInt();
@@ -9007,6 +9024,7 @@ void MW::getSubfolders(QString fPath)
         fPath = iterator.filePath();
         if (iterator.fileInfo().isDir() && iterator.fileName() != "." && iterator.fileName() != "..") {
             subfolders->append(fPath);
+//            qDebug() << __FUNCTION__ << fPath;
         }
     }
 }
@@ -9250,10 +9268,47 @@ void MW::nextSlide()
     G::track(__FUNCTION__);
     #endif
     }
-    if (isSlideshowPaused) return;
     static int counter = 0;
+    counter++;
+    qDebug() << __FUNCTION__ << "counter =" << counter;
+
+    if (isStressTest) {
+//        slideShowTimer->stop();
+        int waitTime = 0;
+        while (!G::isNewFolderLoaded) {
+            slideShowTimer->stop();
+            G::wait(1000);
+            waitTime += 1000;
+            if (waitTime > 15000) {
+                slideShow();
+                return;
+            }
+        }
+        if (counter % 2 == 0) {
+            getSubfolders("D:/Pictures");                     // on PC
+//            getSubfolders("/users/roryhill/pictures");        // on mac
+            uint r = QRandomGenerator::global()->generate();
+            uint n = subfolders->count();
+            uint x = r % n;
+            QString fPath = subfolders->at(x);
+//            fsTree->setCurrentIndex(fsTree->fsModel->index(fPath));
+            QModelIndex idx = fsTree->fsModel->index(fPath);
+            QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
+            fsTree->setCurrentIndex(filterIdx);
+            fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
+            qDebug() << "STRESS TEST NEW FOLDER:"
+                     << "r =" << r
+                     << "n =" << n
+                     << "x =" << x
+                     << fPath;
+            folderSelectionChange();
+//            slideShowTimer->start(slideShowDelay * 1000);
+        }
+    }
+
+    if (isSlideshowPaused) return;
     int totSlides = dm->sf->rowCount();
-    if (isSlideShowRandom) {
+    if (isSlideShowRandom || isStressTest) {
         // push previous image path onto the slideshow history stack
         int row = thumbView->currentIndex().row();
         QString fPath = dm->sf->index(row, 0).data(G::PathRole).toString();
@@ -9267,19 +9322,9 @@ void MW::nextSlide()
         else thumbView->selectNext();
     }
 
-    counter++;
     QString msg = "Slide # "+ QString::number(counter) + "     (press H for slideshow shortcuts)";
     updateStatus(true, msg);
 
-    if (isStressTest) {
-        if (counter % 10 == 0) {
-            int n = qrand() % (subfolders->count());
-            QString fPath = subfolders->at(n);
-            fsTree->setCurrentIndex(fsTree->fsModel->index(fPath));
-//            qDebug() << G::t.restart() << "\t" << "STRESS TEST NEW FOLDER:" << fPath;
-            folderSelectionChange();
-        }
-    }
 }
 
 void MW::prevRandomSlide()
