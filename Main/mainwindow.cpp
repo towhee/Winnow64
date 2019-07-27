@@ -499,19 +499,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                  << obj << "\t"
                  << obj->objectName();
     }*/
-    if (event->type() == QEvent::FocusIn)
-        qDebug() << event << "\t"
-                 << event->type() << "\t"
-                 << obj << "\t"
-                 << obj->objectName();
-    if (event->type() == QEvent::FocusIn && obj->objectName() == "PreferencesWindow") {
-        preferencesHasFocus = true;
-        qDebug() << __FUNCTION__ << "preferencesHasFocus =" << preferencesHasFocus;
-    }
-    if (event->type() == QEvent::FocusOut && obj->objectName() == "PreferencesWindow") {
-        preferencesHasFocus = false;
-        qDebug() << __FUNCTION__ << "preferencesHasFocus =" << preferencesHasFocus;
-    }
 
 
     // figure out key presses
@@ -740,7 +727,13 @@ void MW::dragEnterEvent(QDragEnterEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    event->acceptProposedAction();
+//    QString dir = event->mimeData()->urls().at(0).toLocalFile();
+    QFileInfo info(event->mimeData()->urls().at(0).toLocalFile());
+    QDir incoming = info.dir();
+    QDir current(currentViewDir);
+    bool isSameFolder = incoming == current;
+    qDebug() << __FUNCTION__ << incoming << current;
+    if (!isSameFolder) event->acceptProposedAction();
 }
 
 void MW::dropEvent(QDropEvent *event)
@@ -7549,7 +7542,7 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
     }
 }
 
-void MW::setThumbDockHeight()
+void MW:: setThumbDockHeight()
 {
 /*
 Helper slot to call setThumbDockFeatures when the dockWidgetArea is not known,

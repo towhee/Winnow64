@@ -11,7 +11,7 @@ class PropertyDelegate : public QStyledItemDelegate
     Q_OBJECT
 
 public:
-    PropertyDelegate(QObject *parent = nullptr);
+    PropertyDelegate(QWidget *parent = nullptr);
     QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
                           const QModelIndex &index) const override;
     QSize sizeHint(const QStyleOptionViewItem & option, const QModelIndex & index) const override;
@@ -22,20 +22,11 @@ public:
                const QModelIndex &index) const override;
     void updateEditorGeometry(QWidget *editor,
         const QStyleOptionViewItem &option, const QModelIndex &index) const override;
-    virtual QString displayText(const QVariant &value, const QLocale &locale) const override;
-
-protected:
-//    bool eventFilter(QObject *editor, QEvent *event) override;
 
 signals:
     void itemChanged(QModelIndex idx) const;
-//    void editorValueChanged(QVariant value, QString source, QModelIndex index);
-//    void commitAndCloseEditor();
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor) const;
     void drawBranchesAgain(QPainter *painter, QRect rect, QModelIndex index) const;
-
-private slots:
-//    void editorValueChange(QVariant value, QString source, QModelIndex index);
 };
 
 

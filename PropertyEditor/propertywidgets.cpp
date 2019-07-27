@@ -1,17 +1,30 @@
 #include "propertywidgets.h"
-#include "Main/mainwindow.h"
 #include "Main/global.h"
+
+/*
+The property editor has four components:
+
+PropertyEditor - A subclass of QTreeView, with a data model that holds the property
+    information.
+
+PropertyDelegate - Creates the editor widgets, sets the editor and model data and does some
+    custom painting to each row in the treeview.
+
+PropertyWidgets - A collection of custom widget editors (slider, combobox etc) that are
+    inserted into column 1 in the treeview (PropertyEditor) by PropertyDelegate.  The editors
+    are built based on information passed in the datamodel UserRole such as the DelegateType
+    (Spinbox, Checkbox, Combo, Slider, PlusMinusBtns etc).  Other information includes the
+    source, datamodel index, mim value, max value, a stringlist for combos etc).
+
+PropertyEditor subclass ie Preferences.  All the property items are defined and added to the
+    treeview in addItems().  When an item value has been changed in an editor itemChanged(idx)
+    is signaled and the variable is updated in Winnow and any necessary actions are executed.
+    For example, if the thumbnail size is increased then the IconView function to do this is
+    called.
+*/
 
 CONST int propertyWidgetMarginLeft = 10;
 CONST int propertyWidgetMarginRight = 15;
-
-/*
-Slider
-Combo
-LineEdit
-Check
-Text
-*/
 
 /* SLIDER EDITOR *****************************************************************************/
 
@@ -192,6 +205,7 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     setLayout(layout);
 
     comboBox->addItems(idx.data(UR_StringList).toStringList());
+    comboBox->setCurrentText(idx.data(Qt::EditRole).toString());
 }
 
 QString ComboBoxEditor::value()

@@ -387,6 +387,7 @@ void MetadataCache::setRange()
     #endif
     }
     int rowCount = dm->sf->rowCount();
+
     // default total per page (prev, curr and next pages)
     int dtpp = metadataChunkSize / 3;
 
@@ -512,6 +513,8 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
     #endif
     }
     qDebug() << __FUNCTION__ << "startRow =" << startRow << "endRow =" << endRow;
+
+    if (cacheAllIcons) endRow = dm->sf->rowCount();
     for (int row = startRow; row <= endRow; ++row) {
         if (abort) {
             emit updateIsRunning(false, true, __FUNCTION__);
@@ -552,6 +555,7 @@ startRow and endRow.
     bool allRead = false;
     while (!allRead && count < 1) {
         allRead = true;
+        if (cacheAllMetadata) endRow = dm->sf->rowCount();
         for (int row = startRow; row < endRow; ++row) {
             if (abort) {
                 emit updateIsRunning(false, true, __FUNCTION__);
@@ -584,10 +588,10 @@ startRow and endRow.
 //                    qDebug() << "XXX " << __FUNCTION__ << "Failed to load metadata for " << fPath;
                 }
             }
-//            mutex.unlock();
+
+            if (!cacheAllIcons && row > metadataChunkSize) continue;
 
             // load icon
-//            mutex.lock();
             if (idx.data(Qt::DecorationRole).isNull()) {
                 QImage image;
                 bool thumbLoaded = thumb->loadThumb(fPath, image);
@@ -679,7 +683,7 @@ If there has been a file selection change and not a new folder then update image
         }
 
         // clean up orphaned icons outside icon range   rgh what about other actions
-        if (action >= Action::NewFileSelected) {
+        if (action >= Action::NewFileSelected && !cacheAllIcons) {
             iconCleanup();
             if (abort) return;
         }

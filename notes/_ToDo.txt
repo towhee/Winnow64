@@ -1,12 +1,6 @@
 BUGS
-- MdCache option incremental vs all
-- Esc from preferences
-- Preferences main categories covering decoration
-- Film strip dock does not resize when thumb labels turned on/off in preferences
-- Drag and drop thumb in removes all picks and classification
 - Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
-- Finish cache preferences
 - Add / update tool tips in preferences and throughout program
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
@@ -15,6 +9,8 @@ BUGS
 PERFORMANCE
 - filteredItemCount and unfilteredItemCount slow
 CODE IMPROVEMENTS
+- PropertyEditor main categories covered decoration for alternate rows
+- Preferences main categories covering decoration
 - Tableview sizeHintForColumn "width" is deprecated
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - fix 300ms delay before scroll to currentRow on filterChange
@@ -44,6 +40,11 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- MdCache option incremental vs all
+- Finish cache preferences
+- Preferences context menu expand/collapse all
+- Film strip dock does not resize when thumb labels turned on/off in preferences
+- Drag and drop thumb in removes all picks and classification
 - Scroll next page when zoomed not going to next page when not zoomed
 - Slideshow: separate menu, slide stack, slidehow history, slidehow help
 - Gridview icons sometimes too big

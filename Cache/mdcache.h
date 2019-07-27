@@ -46,6 +46,8 @@ public:
 
     int metadataChunkSize = 250;
     int defaultMetadataChunkSize = 250;
+    bool cacheAllMetadata;
+    bool cacheAllIcons;
 
     // not being used at present
     int metadataCacheAllIfLessThan = 250;

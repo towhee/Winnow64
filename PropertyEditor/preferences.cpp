@@ -11,9 +11,10 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
     mw = qobject_cast<MW*>(parent);
     connect(this->propertyDelegate, &PropertyDelegate::itemChanged,
             this, &Preferences::itemChange);
-    captionColumnWidth = 250;
+    captionColumnWidth = 225;
     valueColumnWidth = 200;
     addItems();
+    expandAll();
 }
 
 void Preferences::itemChange(QModelIndex idx)
@@ -93,6 +94,16 @@ void Preferences::itemChange(QModelIndex idx)
         G::maxIconSize = v.toInt();
     }
 
+    if (source == "metadataCacheStrategy") {
+        if (v.toString() == "All") mw->metadataCacheThread->cacheAllMetadata = true;
+        else mw->metadataCacheThread->cacheAllMetadata = false;
+    }
+
+    if (source == "thumbnailCacheStrategy") {
+        if (v.toString() == "All") mw->metadataCacheThread->cacheAllIcons = true;
+        else mw->metadataCacheThread->cacheAllIcons = false;
+    }
+
     if (source == "cacheSizeMB") {
         mw->cacheSizeMB = v.toInt() * 1024;
         mw->setCacheParameters();
@@ -153,13 +164,13 @@ void Preferences::itemChange(QModelIndex idx)
 
 void Preferences::addItems()
 {
-    int captionColumnWidth = 250;
-    int valueColumnWidth = 200;
     int firstGenerationCount = -1;        // top items
     int secondGenerationCount;            // child items
     int thirdGenerationCount;             // child child items
     QString tooltip;
     QString caption;
+    QString s;                            // general purpose
+    int n;                                // general purpose
     bool isShow;
     QModelIndex catIdx;
     QModelIndex valIdx;
@@ -547,7 +558,7 @@ void Preferences::addItems()
 
             thirdGenerationCount++;
             // Type = COMBO
-            // name = metadataCacheStrategy (for search and replace)
+            // name = metadataCacheStrategy
             tooltip = "If you cache the metadata for all the images in the folder(s) it will take\n"
                       "longer to initially to get started but performance might be better.  Alternatively\n"
                       "you can incrementally load the metadata as needed, and for larger folders with\n"
@@ -558,7 +569,10 @@ void Preferences::addItems()
             metadataCacheStrategyCaption->setEditable(false);
             QStandardItem *metadataCacheStrategyValue = new QStandardItem;
             metadataCacheStrategyValue->setToolTip(tooltip);
-            metadataCacheStrategyValue->setData("Incremental", Qt::EditRole); // ** no MW variable yet
+            qDebug() << __FUNCTION__ << "metadataCacheStrategy:  mw->metadataCacheThread->cacheAllMetadata =" << mw->metadataCacheThread->cacheAllMetadata;
+            s = "Incremental";
+            if (mw->metadataCacheThread->cacheAllMetadata) s = "All";
+            metadataCacheStrategyValue->setData(s, Qt::EditRole);
             metadataCacheStrategyValue->setData(DT_Combo, UR_DelegateType);
             metadataCacheStrategyValue->setData("metadataCacheStrategy", UR_Source);
             metadataCacheStrategyValue->setData("QString", UR_Type);
@@ -593,7 +607,9 @@ void Preferences::addItems()
             thumbnailCacheStrategyCaption->setEditable(false);
             QStandardItem *thumbnailCacheStrategyValue = new QStandardItem;
             thumbnailCacheStrategyValue->setToolTip(tooltip);
-            thumbnailCacheStrategyValue->setData("Incremental", Qt::EditRole); // ** no MW variable yet
+            s = "Incremental";
+            if (mw->metadataCacheThread->cacheAllIcons) s = "All";
+            thumbnailCacheStrategyValue->setData(s, Qt::EditRole);
             thumbnailCacheStrategyValue->setData(DT_Combo, UR_DelegateType);
             thumbnailCacheStrategyValue->setData("thumbnailCacheStrategy", UR_Source);
             thumbnailCacheStrategyValue->setData("QString", UR_Type);
@@ -614,7 +630,7 @@ void Preferences::addItems()
                       "best.  250 is the default amount.";
             QStandardItem *metadataChunkSizeCaption = new QStandardItem;
             metadataChunkSizeCaption->setToolTip(tooltip);
-            metadataChunkSizeCaption->setText("Number to load");
+            metadataChunkSizeCaption->setText("Incremental amount to load");
             metadataChunkSizeCaption->setEditable(false);
             QStandardItem *metadataChunkSizeValue = new QStandardItem;
             metadataChunkSizeValue->setToolTip(tooltip);
