@@ -11,12 +11,20 @@ class PreferencesDlg  : public QDialog
     Q_OBJECT
 
 public:
-    PreferencesDlg(Preferences *pref, QString &css, QWidget *parent = nullptr);
+    PreferencesDlg(QWidget *parent, bool &isSolo, Preferences *pref, QString &css);
+
+protected:
+    void closeEvent(QCloseEvent *event);
+
+public slots:
+    void solo();
 
 private:
     void expand();
     void collapse();
     PropertyEditor *tree;
+    QAction *soloAction;
+    bool &isSolo;
 };
 
 #endif // PREFERENCESDLG_H

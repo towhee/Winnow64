@@ -46,9 +46,26 @@ a:active {color: RGB(175,175,175); text-decoration:none;}       /* selected link
 <body>
 <h1>Winnow Version History</h1>
 <br>
-<h2>Current version:</h2>
 
-<!-- Current versions go here -->
+Version 1.0  2019-07-30
+<ul>
+<li>Zoom % was not always updating on the status bar.</li>
+<li>Dragging between monitors sometimes caused thumbnail best fit to fail.</li>
+<li>Sorting and filtering was not being reset when new folder selected.</li>
+<li>Architecture redesigned to include all metadata in the datamodel.</li>
+<li>Incremental metadata caching implemented to deal with very large folders (100,000+ images).</li>
+<li>Caching was not working properly after a filter change.</li>
+<li>Click on title bars in filter panel expands and collapes.</li>
+<li>Up and donw keys not always working in grid view.</li>
+<li>Can now refresh the current folder instead of manually reloading it.</li>
+<li>Added diagnostic reporting in help menu.</li>
+<li>Scrolling shortcuts were not working.</li>
+<li>Added slideshow history when in random mode and improved popus messages.</li>
+<li>Prevent drag and drop to the same folder.</li>
+<li>Moved preferences to a property editor.</li>
+<li>.</li>
+
+</ul>
 
 Version 0.9.7.3  2019-02-25
 <ul>
@@ -56,14 +73,6 @@ Version 0.9.7.3  2019-02-25
 <li>Move backup checkbox in ingest dialog.</li>
 <li>Irregular resizing behavior in grid view.</li>
 </ul>
-
-<!-- End of current version -->
-
-<br><hr><br>
-
-<!-- Previous versions go here -->
-
-<h2>Previous versions:</h2>
 
 Version 0.9.7.2  2019-02-21
 <ul>
@@ -73,7 +82,7 @@ Also, the thumbnail cells are trimmed to a best fit for the images in the folder
 
 Version 0.9.7.1  2019-02-16
 <ul>
-<li>The ingest dialog ws not remembering the auto setting.</li>
+<li>The ingest dialog was not remembering the auto setting.</li>
 <li>If switch from blank folder to one with only 1 image the image cache does not update indicator.</li>
 <li>RAM memory was not being recovered when a folder with no images was selected.</li>
 <li>Justification to the right margin has been implemented in the grid view.</li>

@@ -14,7 +14,7 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
     captionColumnWidth = 225;
     valueColumnWidth = 200;
     addItems();
-    expandAll();
+//    expandAll();
 }
 
 void Preferences::itemChange(QModelIndex idx)
@@ -24,11 +24,11 @@ void Preferences::itemChange(QModelIndex idx)
     QString dataType = idx.data(UR_Type).toString();
     int delegateType = idx.data(UR_DelegateType).toInt();
     QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
-    qDebug() << __FUNCTION__ << idx
+/*    qDebug() << __FUNCTION__ << idx
              << "value =" << v
              << "source =" << source
              << "dataType =" << dataType
-             << "delegateType =" << delegateType;
+             << "delegateType =" << delegateType;*/
 
     if (source == "gridViewIconSize") {
         if (v == 1) {

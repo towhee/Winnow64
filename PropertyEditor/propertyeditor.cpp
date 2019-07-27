@@ -77,12 +77,32 @@ Set the current index and expand/collapse when click anywhere on a row that has 
             and is 14 pixels wide (I believe this is hard coded in Qt).
             */
             QPoint p = event->pos();
+            qDebug() << __FUNCTION__ << p.x();
             if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
             // if root item any click after indentation should
             if (idx.parent() == QModelIndex()) {
                 // root item
-                if (p.x() > indentation)
-                    isExpanded(idx) ? collapse(idx) : expand(idx);
+                bool wasExpanded = false;
+                if (p.x() >= indentation) {
+                    if (isSolo) {
+                        wasExpanded = isExpanded(idx);
+                        collapseAll();
+                    }
+                    if (wasExpanded) collapse(idx);
+                    else {
+                        expandRecursively(idx);
+                    }
+                }
+                if (p.x() <= indentation) {
+                    if (isSolo) {
+                        wasExpanded = !isExpanded(idx);
+                        collapseAll();
+                    }
+                    if (wasExpanded) collapse(idx);
+                    else {
+                        expandRecursively(idx);
+                    }
+                }
             }
             else if (p.x() < indentation || p.x() > indentation + 14)
                     isExpanded(idx) ? collapse(idx) : expand(idx);
@@ -90,3 +110,7 @@ Set the current index and expand/collapse when click anywhere on a row that has 
     }
 }
 
+void PropertyEditor::setSolo(bool isSolo)
+{
+    this->isSolo = isSolo;
+}

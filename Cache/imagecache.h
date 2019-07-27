@@ -25,7 +25,8 @@ public:
     void initImageCache(int &cacheSizeMB,
              bool &isShowCacheStatus, int &cacheWtAhead,
              bool &usePreview, int &previewWidth, int &previewHeight);
-    void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus, int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
+    void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
+             int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
     void rebuildImageCacheParameters(QString &currentImageFullPath);
     void stopImageCache();
     void clearImageCache();

@@ -41,11 +41,13 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Added solo mode to property editor
 - MdCache option incremental vs all
 - Finish cache preferences
 - Preferences context menu expand/collapse all
+- Property editor added (first use is new preferences)
 - Film strip dock does not resize when thumb labels turned on/off in preferences
-- Drag and drop thumb in removes all picks and classification
+- Drag and drop thumb in same folder removes all picks and classification
 - Scroll next page when zoomed not going to next page when not zoomed
 - Slideshow: separate menu, slide stack, slidehow history, slidehow help
 - Gridview icons sometimes too big
@@ -105,6 +107,7 @@ DONE/FIXED
 - Reset sorting and filtering when new folder selected
 - Dragging between monitors sometimes loses thumb best fit
 - Zoom % not updating on status bar
+
 - Not remembering mode correctly when opening
 - if current visible in grid should also be visible in loupe when switch
 - Preferences show infoView items missing scrollbar

@@ -23,7 +23,9 @@ PropertyEditor subclass ie Preferences.  All the property items are defined and 
     called.
 */
 
-PreferencesDlg::PreferencesDlg(Preferences *pref, QString &css, QWidget *parent) : QDialog(parent)
+PreferencesDlg::PreferencesDlg(QWidget *parent, bool &isSolo, Preferences *pref, QString &css)
+                             : QDialog(parent),
+                               isSolo(isSolo)
 {
     tree = pref;
 
@@ -47,6 +49,14 @@ PreferencesDlg::PreferencesDlg(Preferences *pref, QString &css, QWidget *parent)
     addAction(collapseAllAction);
     connect(collapseAllAction, &QAction::triggered, this, &PreferencesDlg::collapse);
 
+    soloAction = new QAction(tr(" Solo "), this);
+    soloAction->setShortcutVisibleInContextMenu(true);
+    soloAction->setShortcut(QKeySequence("Ctrl+*"));
+    soloAction->setCheckable(true);
+    addAction(soloAction);
+    soloAction->setChecked(isSolo);
+    connect(soloAction, &QAction::triggered, this, &PreferencesDlg::solo);
+
     setContextMenuPolicy(Qt::ActionsContextMenu);
 }
 
@@ -54,7 +64,19 @@ void PreferencesDlg::expand()
 {
     tree->expandAll();
 }
+
 void PreferencesDlg::collapse()
 {
     tree->collapseAll();
+}
+
+void PreferencesDlg::solo()
+{
+    tree->setSolo(soloAction->isChecked());
+    isSolo = soloAction->isChecked();
+}
+
+void PreferencesDlg::closeEvent(QCloseEvent *event)
+{
+
 }

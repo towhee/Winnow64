@@ -746,7 +746,7 @@ void ImageCache::initImageCache(int &cacheSizeMB,
 }
 
 void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
-         int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight)
+               int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight)
 {
 /*
 When various image cache parameters are changed in preferences they are updated here.

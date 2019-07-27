@@ -63,16 +63,15 @@ class MW : public QMainWindow
 {
     Q_OBJECT
 
-//    friend class Prefdlg;           // m0
-    friend class ProgressBar;       // mw1
-    friend class IconView;          // mw2
     friend class Preferences;       // mw;
     friend class PropertyEditor;    // mw;
+    friend class ProgressBar;       // mw1
+    friend class IconView;          // mw2
 
 public:
     MW(QWidget *parent = nullptr);
 
-    QString version = "Version: 0.9.7.3.5 released 2019-02-27";
+    QString version = "Version: 1.0 unreleased 2019-02-27";
     QString website = "Website: "
             "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"
@@ -88,7 +87,6 @@ public:
     // QSettings
     QSettings *setting;
     QMap<QString, QAction *> actionKeys;
-//    QMap<QString, QString> externalApps;
 
     QMap<QString, QString> pathTemplates;
     QMap<QString, QString> filenameTemplates;
@@ -192,8 +190,10 @@ public:
     bool autoEjectUsb;
     bool backupIngest;
     bool gotoIngestFolder;
-
     QString lastIngestLocation;     // used when exit ingest to show is gotoIngestFolder == true
+
+    // preference dialog
+    bool isSoloPrefDlg;
 
     // preferences: slideshow
     int slideShowDelay;
@@ -795,6 +795,7 @@ private:
     LoadUsbDlg *loadUsbDlg;
     AboutDlg *aboutDlg;
     WorkspaceDlg *workspaceDlg;
+    PreferencesDlg *preferencesDlg;
     UpdateApp *updateAppDlg;
     ZoomDlg *zoomDlg = nullptr;
     QTimer *slideShowTimer;
