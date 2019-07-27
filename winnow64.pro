@@ -128,8 +128,7 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/versions \
-    ../../kproperty-master/Notes
+DISTFILES += Docs/versions
 DISTFILES += Docs/test.html
 DISTFILES += notes/scratch.html
 DISTFILES += notes/_Notes
