@@ -410,6 +410,7 @@ int IconView::getRandomRow()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     return QRandomGenerator::global()->generate() % (dm->sf->rowCount());
 //    return qrand() % (dm->sf->rowCount());
 }
@@ -428,6 +429,127 @@ bool IconView::isSelectedItem()
         return true;
     else
         return false;
+}
+
+bool IconView::viewportRange(int sfRow, int &first, int &last)
+{
+/*
+Determine the first and last visible icons in the IconView viewport for any item in the
+datamodel. Scrolling is set to center the current item in the viewport. There are three
+scenarios to consider:
+
+1.  At the start the top of the viewport = the top of the fisrt thumbnail.
+
+2.  At the end the bottom = the bottom of the last thumbnail.
+
+3.  In between the start and end the top of the viewport can = a fractional part of a thumbnail
+    and the same for the bottom of the viewport.
+
+Scenario 3 occurs when the viewport has to scroll to center the current thumbnail.
+
+So we have to determine when scrolling will first occur, how many rows of icons will be
+visible in the viewport, how many icons are visible and the first/last icons visible.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int i = sfRow;
+    QSize vp = viewport()->size();
+    int rowWidth = vp.width() - G::scrollBarThickness;
+    QSize thumb(iconWidth, iconHeight);
+    QSize cell = iconViewDelegate->getCellSize(thumb);
+    if (cell.width() == 0) return false;
+    if (cell.height() == 0) return false;
+
+    int tCells = dm->sf->rowCount();
+    int cellsPerVPRow = qCeil((qreal) rowWidth / cell.width());
+
+    int firstVisibleCell;
+    int lastVisibleCell;
+
+    if (!isWrapping()) {
+        // simple approach, will report more than visible, does not consider scroll alignment
+        firstVisibleCell = i - cellsPerVPRow;
+        if (firstVisibleCell < 0) firstVisibleCell = 0;
+        lastVisibleCell = i + cellsPerVPRow;
+        if (lastVisibleCell > tCells - 1) lastVisibleCell = tCells - 1;
+
+        first = firstVisibleCell;
+        last = lastVisibleCell;
+
+        qDebug()
+    //             << __FUNCTION__
+                 << "i:" << i
+                 << "firstVisibleCell =" << firstVisibleCell
+                 << "lastVisibleCell =" << lastVisibleCell;
+        return true;
+    }
+
+    int rowInView = i / cellsPerVPRow;  //qCeil(i / cellsPerVPRow);
+    int posInVPRow = i % cellsPerVPRow;
+    int rowsInView = qCeil((qreal)tCells / cellsPerVPRow);
+    int lastVPRow = qCeil(tCells / cellsPerVPRow);
+
+    // rows per viewport
+    qreal rowsPerVPDbl = 1.0;
+    rowsPerVPDbl = (qreal)vp.height() / cell.height();
+    if (rowsPerVPDbl < 1.0) rowsPerVPDbl = 1.0;
+    int firstVPRowScrollReq = qCeil(rowsPerVPDbl / 2);
+    int lastVRowReqScroll = lastVPRow - firstVPRowScrollReq;
+    int rowsPerVP = qCeil(rowsPerVPDbl);
+    if (rowInView >= firstVPRowScrollReq && rowInView <= lastVRowReqScroll)
+        rowsPerVP += 1;
+
+    int visibleCells = cellsPerVPRow * rowsPerVP;
+    int visibleRowsAbove = qCeil((rowsPerVP - 1) / 2);
+
+    // vertical alignment is centered, first cell requiring the view to scroll
+    int firstCellReqScroll = qCeil((qreal)rowsPerVP / 2) * cellsPerVPRow;
+
+    // last cell requiring the view to scroll
+    int lastCellReqScroll = lastVRowReqScroll * cellsPerVPRow;
+
+    // first visible cell
+    int firstVisibleVPRow = 0;
+    if (i < firstCellReqScroll) {
+         firstVisibleVPRow = 0;
+    }
+    if (i > lastCellReqScroll) {
+        firstVisibleVPRow = rowsInView - rowsPerVP;
+    }
+    if (i >= firstCellReqScroll && i <= lastCellReqScroll) {
+        firstVisibleVPRow = rowInView - visibleRowsAbove;
+    }
+
+    firstVisibleCell = firstVisibleVPRow * cellsPerVPRow;
+    lastVisibleCell = firstVisibleCell + visibleCells - 1;
+
+    first = firstVisibleCell;
+    last = lastVisibleCell;
+
+    qDebug()
+//             << __FUNCTION__
+             << "i:" << i
+             << "row =" << rowInView
+             << "rows =" << rowsInView
+//             << "viewport:" << vp << "cell:" << cell
+             << "firstVisibleVPRow =" << firstVisibleVPRow
+             << "firstVisibleCell =" << firstVisibleCell
+             << "lastVisibleCell =" << lastVisibleCell
+             << "cellsPerVPRow =" << cellsPerVPRow
+             << "rowsPerVP =" << rowsPerVPDbl << rowsPerVP
+             << "visibleCells ="  << visibleCells
+             << "posInVPRow =" << posInVPRow
+             << "rowInView =" << rowInView
+             << "firstVPRowScrollReq =" << firstVPRowScrollReq
+             << "lastVRowReqScroll =" << lastVRowReqScroll
+             << "firstCellReqScroll =" << firstCellReqScroll
+             << "lastCellReqScroll =" << lastCellReqScroll
+                ;
+
+    return true;
 }
 
 int IconView::getThumbsPerPage()
@@ -549,7 +671,7 @@ justification happens.
     G::track(__FUNCTION__);
     #endif
     }
-    int row;
+    int row;    // an item, not a row in the grid
     firstVisibleRow = 0;
     QRect vRect = visualRect(dm->sf->index(0, 0));
     QRect iconViewRect = viewport()->rect();
@@ -560,23 +682,24 @@ justification happens.
         }
     }
     for (row = firstVisibleRow; row < dm->sf->rowCount(); ++row) {
-        if (visualRect(dm->sf->index(row, 0)).intersects(iconViewRect)) {
-            lastVisibleRow = row;
+        if (!visualRect(dm->sf->index(row, 0)).intersects(iconViewRect)) {
+            lastVisibleRow = row - 1;
+            break;
         }
-        else break;
+        lastVisibleRow = dm->sf->rowCount() - 1;
     }
     thumbsPerPage = lastVisibleRow - firstVisibleRow + 1;
     midVisibleRow = firstVisibleRow + thumbsPerPage / 2;
 
-    /*
-    qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
+
+/*    qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
              << "isInitializing =" << G::isInitializing
              << "isVisible =" << isVisible()
              << "firstVisibleRow =" << firstVisibleRow
              << "lastVisibleRow =" << lastVisibleRow
              << "midVisibleRow =" << midVisibleRow
              << "thumbsPerPage =" << thumbsPerPage;
-    */
+*/
 }
 
 bool IconView::isRowVisible(int row)
@@ -818,7 +941,6 @@ void IconView::selectNext()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if(G::mode == "Compare") return;
     selectThumb(getNextRow());
 }
@@ -830,7 +952,6 @@ void IconView::selectPrev()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if(G::mode == "Compare") return;
     selectThumb(getPrevRow());
 }
@@ -910,6 +1031,7 @@ void IconView::selectRandom()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     selectThumb(getRandomRow());
 }
 
@@ -1357,10 +1479,10 @@ when a new image is selected and the selection was triggered by a mouse click.
     G::track(__FUNCTION__);
     #endif
     }
-    /*
+
     qDebug() << __FUNCTION__ << objectName() << "row =" << row
-//             << "source =" << source;
-*/
+             << "source =" << source;
+
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }

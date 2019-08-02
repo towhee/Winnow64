@@ -24,11 +24,11 @@ void Preferences::itemChange(QModelIndex idx)
     QString dataType = idx.data(UR_Type).toString();
     int delegateType = idx.data(UR_DelegateType).toInt();
     QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
-/*    qDebug() << __FUNCTION__ << idx
+    qDebug() << __FUNCTION__ << idx
              << "value =" << v
              << "source =" << source
              << "dataType =" << dataType
-             << "delegateType =" << delegateType;*/
+             << "delegateType =" << delegateType;
 
     if (source == "gridViewIconSize") {
         if (v == 1) {
@@ -105,6 +105,7 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "cacheSizeMB") {
+        qDebug() << __FUNCTION__ << v << source;
         mw->cacheSizeMB = v.toInt() * 1024;
         mw->setCacheParameters();
     }
@@ -127,6 +128,20 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "showCacheStatus") {
         mw->isShowCacheStatus = v.toInt();
         mw->setCacheParameters();
+    }
+
+    if (source == "slideShowDelay") {
+        qDebug() << __FUNCTION__ << v << source;
+        mw->slideShowDelay = v.toInt();
+    }
+
+    if (source == "isSlideShowRandom") {
+        mw->isSlideShowRandom = v.toBool();
+        mw->slideShowResetSequence();
+    }
+
+    if (source == "isSlideShowWrap") {
+        mw->isSlideShowWrap = v.toBool();
     }
 
     if (source == "classificationBadgeInThumbDiameter") {
@@ -222,7 +237,9 @@ void Preferences::addItems()
         useWheelToScrollCaption->setEditable(false);
         QStandardItem *useWheelToScrollValue = new QStandardItem;
         useWheelToScrollValue->setToolTip(tooltip);
-        useWheelToScrollValue->setData(mw->imageView->useWheelToScroll, Qt::EditRole);
+        if (mw->imageView->useWheelToScroll) s = "Scroll current image when zoomed";
+        if (!mw->imageView->useWheelToScroll) s = "Next/previous image";
+        useWheelToScrollValue->setData(s, Qt::EditRole);
         useWheelToScrollValue->setData(DT_Combo, UR_DelegateType);
         useWheelToScrollValue->setData("useWheelToScroll", UR_Source);
         useWheelToScrollValue->setData("QString", UR_Type);
@@ -569,7 +586,6 @@ void Preferences::addItems()
             metadataCacheStrategyCaption->setEditable(false);
             QStandardItem *metadataCacheStrategyValue = new QStandardItem;
             metadataCacheStrategyValue->setToolTip(tooltip);
-            qDebug() << __FUNCTION__ << "metadataCacheStrategy:  mw->metadataCacheThread->cacheAllMetadata =" << mw->metadataCacheThread->cacheAllMetadata;
             s = "Incremental";
             if (mw->metadataCacheThread->cacheAllMetadata) s = "All";
             metadataCacheStrategyValue->setData(s, Qt::EditRole);
@@ -729,7 +745,13 @@ void Preferences::addItems()
             cacheWtAheadCaption->setEditable(false);
             QStandardItem *cacheWtAheadValue = new QStandardItem;
             cacheWtAheadValue->setToolTip(tooltip);
-            cacheWtAheadValue->setData(mw->cacheWtAhead, Qt::EditRole);
+            if (mw->cacheWtAhead == 5) s = "50% ahead";
+            if (mw->cacheWtAhead == 6) s = "60% ahead";
+            if (mw->cacheWtAhead == 7) s = "70% ahead";
+            if (mw->cacheWtAhead == 8) s = "80% ahead";
+            if (mw->cacheWtAhead == 9) s = "90% ahead";
+            if (mw->cacheWtAhead == 10) s = "100% ahead";
+            cacheWtAheadValue->setData(s, Qt::EditRole);
             cacheWtAheadValue->setData(DT_Combo, UR_DelegateType);
             cacheWtAheadValue->setData("cacheWtAhead", UR_Source);
             cacheWtAheadValue->setData("QString", UR_Type);
@@ -766,10 +788,10 @@ void Preferences::addItems()
             // Type = SLIDER
             // name = progressWidthSlider
             // parent = imageCatItem
-            tooltip = "Change the font size throughout the application.";
+            tooltip = "Change the width of the cache status in the status bar.";
             QStandardItem *progressWidthSliderCaption = new QStandardItem;
             progressWidthSliderCaption->setToolTip(tooltip);
-            progressWidthSliderCaption->setText("Cache status width");
+            progressWidthSliderCaption->setText("Cache status bar width");
             progressWidthSliderCaption->setEditable(false);
             QStandardItem *progressWidthSliderValue = new QStandardItem;
             progressWidthSliderValue->setToolTip(tooltip);
@@ -784,6 +806,79 @@ void Preferences::addItems()
             imageCatItem->setChild(thirdGenerationCount, 1, progressWidthSliderValue);
             valIdx = progressWidthSliderValue->index();
             propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+    firstGenerationCount++;
+    // HEADER
+    // Slideshow category
+    QStandardItem *slideshowCatItem = new QStandardItem;
+    slideshowCatItem->setText("Slideshow");
+    slideshowCatItem->setEditable(false);
+    slideshowCatItem->setData(DT_None, UR_DelegateType);
+    model->appendRow(slideshowCatItem);
+    setColumnWidth(0, captionColumnWidth);
+    setColumnWidth(1, valueColumnWidth);
+    secondGenerationCount = -1;
+
+        secondGenerationCount++;
+        // Type = SPINBOX
+        // name = slideshowDelay
+        tooltip = "Enter the slideshow delay in seconds.";
+        QStandardItem *slideshowDelayCaption = new QStandardItem;
+        slideshowDelayCaption->setToolTip(tooltip);
+        slideshowDelayCaption->setText("Slideshow delay (sec)");
+        slideshowDelayCaption->setEditable(false);
+        QStandardItem *slideshowDelayValue = new QStandardItem;
+        slideshowDelayValue->setToolTip(tooltip);
+        slideshowDelayValue->setData(mw->slideShowDelay, Qt::EditRole);
+        slideshowDelayValue->setData(DT_Spinbox, UR_DelegateType);
+        slideshowDelayValue->setData("slideShowDelay", UR_Source);
+        slideshowDelayValue->setData("int", UR_Type);
+        slideshowDelayValue->setData(1, UR_Min);
+        slideshowDelayValue->setData(300, UR_Max);
+        slideshowDelayValue->setData(50, UR_LineEditFixedWidth);
+        slideshowCatItem->setChild(secondGenerationCount, 0, slideshowDelayCaption);
+        slideshowCatItem->setChild(secondGenerationCount, 1, slideshowDelayValue);
+        valIdx = slideshowDelayValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+        secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = randomSlideshow
+        tooltip = "Selects random slides if checked.  Otherwise the slide selection is \n"
+                  "sequential, based on the sort order.";
+        QStandardItem *randomSlideshowCaption = new QStandardItem;
+        randomSlideshowCaption->setToolTip(tooltip);
+        randomSlideshowCaption->setText("Random slide selection");
+        randomSlideshowCaption->setEditable(false);
+        QStandardItem *randomSlideshowValue = new QStandardItem;
+        randomSlideshowValue->setToolTip(tooltip);
+        randomSlideshowValue->setData(mw->isSlideShowRandom, Qt::EditRole);
+        randomSlideshowValue->setData(DT_Checkbox, UR_DelegateType);
+        randomSlideshowValue->setData("isSlideShowRandom", UR_Source);
+        randomSlideshowValue->setData("bool", UR_Type);
+        slideshowCatItem->setChild(secondGenerationCount, 0, randomSlideshowCaption);
+        slideshowCatItem->setChild(secondGenerationCount, 1, randomSlideshowValue);
+        valIdx = randomSlideshowValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+        secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = wrapSlideshow
+        tooltip = "If not in wrap mode when the slideshow it wraps back to the start.";
+        QStandardItem *wrapSlideshowCaption = new QStandardItem;
+        wrapSlideshowCaption->setToolTip(tooltip);
+        wrapSlideshowCaption->setText("Wrap slide selection");
+        wrapSlideshowCaption->setEditable(false);
+        QStandardItem *wrapSlideshowValue = new QStandardItem;
+        wrapSlideshowValue->setToolTip(tooltip);
+        wrapSlideshowValue->setData(mw->isSlideShowWrap, Qt::EditRole);
+        wrapSlideshowValue->setData(DT_Checkbox, UR_DelegateType);
+        wrapSlideshowValue->setData("isSlideShowWrap", UR_Source);
+        wrapSlideshowValue->setData("bool", UR_Type);
+        slideshowCatItem->setChild(secondGenerationCount, 0, wrapSlideshowCaption);
+        slideshowCatItem->setChild(secondGenerationCount, 1, wrapSlideshowValue);
+        valIdx = wrapSlideshowValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
     firstGenerationCount++;
     // HEADER

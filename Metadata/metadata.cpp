@@ -4541,7 +4541,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, path);
     #endif
     #ifdef ISPROFILE
     G::track(__FUNCTION__);

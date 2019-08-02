@@ -141,7 +141,6 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
             CheckBoxEditor *checkBoxEditor = static_cast<CheckBoxEditor*>(editor);
             bool value = checkBoxEditor->value();
             model->setData(index, value, Qt::EditRole);
-            qDebug() << __FUNCTION__ << index << index.data(Qt::EditRole).toBool();
             emit itemChanged(index);
             break;
         }

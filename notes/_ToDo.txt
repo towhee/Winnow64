@@ -1,5 +1,8 @@
 BUGS
-- Save cache strategies to settings
+- MDCache::readIconChunk - If no read thumb set pixmap to bad file png
+- MDCache icon cleanup not working when scroll (update startRow/endRow)
+- MDCache read meta and icons separately
+- Move tableView col metaLoaded to geek
 - Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Add / update tool tips in preferences and throughout program
@@ -41,6 +44,10 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Save cache strategies to settings
+- Cleanup slideshow after fixing read violation issue incl iconChunKSize vs readAllMetadata
+- Add slideshow parameters to preferences
+- Read violation when go to images at random and MdCache not built for next image)
 - Added solo mode to property editor
 - MdCache option incremental vs all
 - Finish cache preferences

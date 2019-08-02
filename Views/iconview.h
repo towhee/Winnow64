@@ -63,6 +63,8 @@ public:
     int lastVisibleRow;
     int thumbsPerPage;
 
+    bool viewportRange(int row, int &first, int &last);
+
     void updateLayout();
     bool okToScroll();
 

@@ -98,10 +98,11 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
 
     spinBox = new QSpinBox;
     spinBox->setObjectName("DisableGoActions");  // used in MW::focusChange
+    spinBox->setAlignment(Qt::AlignLeft);
     spinBox->setMinimum(min);
     spinBox->setMaximum(max);
     spinBox->setStyleSheet("QSpinBox {background:transparent; border:none;"
-                           "padding:0px;border-radius:0px;}");
+                           "padding:0px; border-radius:0px;}");
     spinBox->setWindowFlags(Qt::FramelessWindowHint);
     spinBox->setAttribute(Qt::WA_TranslucentBackground);
 
@@ -200,7 +201,7 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     layout->addWidget(comboBox, Qt::AlignLeft);
     layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
     setLayout(layout);
-
+    qDebug() << __FUNCTION__ << idx.data(Qt::EditRole).toString();
     comboBox->addItems(idx.data(UR_StringList).toStringList());
     comboBox->setCurrentText(idx.data(Qt::EditRole).toString());
 }

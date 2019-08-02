@@ -23,22 +23,20 @@ public:
     ~MetadataCache();
 
     enum Action {
-        NewFolder = 0,
-        NewFolder2ndPass = 1,
-        RefreshCurrent = 2,
-        FilterChange = 3,       // if action >= FilterChange then iconCleanup is run
-        SortChange = 4,
-        NewFileSelected = 5,
-        Scroll = 6,
-        AllMetadata = 7
+        NewFolder,
+        NewFolder2ndPass,
+        NewFileSelected,
+        Scroll,
+        AllMetadata
     };
     QStringList actionList;
 
     void loadNewFolder();
     void loadNewFolder2ndPass();
-    void loadMetadataIconChunk(int row);
+    void scrollChange(int row);
     void fileSelectionChange(bool isRandomSlideShow);
     void loadAllMetadata();
+    void readMetadataIcon(const QModelIndex &idx);
     void stopMetadateCache();
     bool isAllMetadataLoaded();
     bool isAllIconLoaded();
@@ -108,6 +106,7 @@ private:
     void readMetadataIconChunk();
     void readAllMetadata();
     void readIconChunk();
+    void readMetadataChunk();
     void iconCleanup();
     void iconMax(QPixmap &thumb);
 

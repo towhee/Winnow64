@@ -1,4 +1,0 @@
-The problem was that I "forgot" to add the following to the beginning of the headerData() function:
-
-if (role != Qt::DisplayRole)
-    return QVariant();

@@ -1,3 +1,12 @@
+// disable QAction shortcuts
+QList<QAction*> actions = findChildren<QAction*>();
+for (QAction *a : actions) a->setShortcutContext(Qt::WidgetShortcut);
+
+// enable QAction shortcuts
+QList<QAction*> actions = findChildren<QAction*>();
+for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);
+
+
 // delete windows registry in installer
 "installscript.js"
 ...
