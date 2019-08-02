@@ -100,7 +100,7 @@ CACHING
   any additional full size images.
 
 • If the user scrolls in the thumbView or gridView scroll events are sent to
-  MW::loadMetadataCacheAfterDelay.  The delay insures that is the user is rapidly scrolling
+  MW::thumbHasScrolled.  The delay insures that is the user is rapidly scrolling
   then the next scroll event supercedes the prior and the metadataCacheThread is only
   restarted when there is a pause or the scrolling is slow.  In this scenario the
   imageCacheThread is not restarted because a new image has not been selected.
@@ -438,6 +438,14 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             isSlideshowPaused = false;
             prevRandomSlide();
         }
+        if (event->key() == Qt::Key_W) {
+            isSlideShowWrap = !isSlideShowWrap;
+            isSlideshowPaused = false;
+            QString msg;
+            if (isSlideShowWrap) msg = "Slide wrapping is on.";
+            else msg = "Slide wrapping is off.";
+            G::popUp->showPopup(msg);
+        }
         if (event->key() == Qt::Key_H) {
             isSlideshowPaused = true;
             slideshowHelpMsg();
@@ -448,12 +456,15 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             if (isSlideshowPaused) msg = "Slideshow is paused";
             else msg = "Slideshow is restarted";
             G::popUp->showPopup(msg);
-            qDebug() << __FUNCTION__ << "isSlideshowPaused =" << isSlideshowPaused;
         }
         if (event->key() == Qt::Key_R) {
             isSlideShowRandom = !isSlideShowRandom;
             isSlideshowPaused = false;
             slideShowResetSequence();
+            QString msg;
+            if (isSlideShowRandom) msg = "Random selection enabled.";
+            else msg = "Sequential selection enabled.";
+            G::popUp->showPopup(msg);
         }
         // change slideshow delay 1 - 9 seconds
         int n = event->key() - 48;
@@ -1040,7 +1051,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
 Triggered when file selection changes (folder change selects new image, so it also triggers
 this function). The new image is loaded, the pick status is updated and the infoView metadata
 is updated. The imageCache is updated if necessary. The imageCache will not be updated if
-triggered by folderSelectionChange since a new one will be Update.
+triggered by folderSelectionChange since a new one will be Update.  The metadataCache is
+updated to include metadata and icons for all the visible thumbnails.
 
 It has proven quite difficult to sync the thumbView, tableView and gridView, keeping the
 currentIndex in the center position (scrolling). The issue is timing as it can take the
@@ -1064,15 +1076,8 @@ delegate use of the current index must check the row.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-//    qDebug() << __FUNCTION__ << current << ignoreSelectionChange;
-    if (ignoreSelectionChange) {
-//        ignoreSelectionChange = false;
-        return;
-    }
     bool isStart = false;
-
     if(!isCurrentFolderOkay) return;
-
     // if starting program, set first image to display
     if (current.row() == -1) {
         isStart = true;
@@ -1098,11 +1103,14 @@ delegate use of the current index must check the row.
     // record current row as it is used to sync everything
     currentRow = current.row();
     // also record in datamodel so can be accessed by MdCache
+    // proxy index for col 0
+    QModelIndex sfIdx = dm->sf->index(currentRow, 0);
     dm->currentRow = currentRow;
     int dmCurrentRow = dm->sf->mapToSource(current).row();
     dmCurrentIndex = dm->index(dmCurrentRow, 0);
     // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+    QString fPath = sfIdx.data(G::PathRole).toString();
+//    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
 
@@ -1113,47 +1121,42 @@ delegate use of the current index must check the row.
     // don't scroll mouse click source (screws up double clicks and disorients users)
     if(G::fileSelectionChangeSource == "TableMouseClick") {
         G::ignoreScrollSignal = true;
+        qDebug() << __FUNCTION__ <<  G::ignoreScrollSignal << G::fileSelectionChangeSource;
         if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
     }
 
     else if(G::fileSelectionChangeSource == "ThumbMouseClick") {
         G::ignoreScrollSignal = true;
+        qDebug() << __FUNCTION__ <<  G::ignoreScrollSignal << G::fileSelectionChangeSource;
         if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollToRow(currentRow, __FUNCTION__);
-//        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
-//                                                        QAbstractItemView::ScrollHint::PositionAtCenter);
     }
 
     else if(G::fileSelectionChangeSource == "GridMouseClick") {
         G::ignoreScrollSignal = true;
+        qDebug() << __FUNCTION__ <<  G::ignoreScrollSignal << G::fileSelectionChangeSource;
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollToRow(currentRow, __FUNCTION__);
-//        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
-//                                                        QAbstractItemView::ScrollHint::PositionAtCenter);
     }
 
     else {
         if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollToRow(currentRow, __FUNCTION__);
-//        if (tableView->isVisible()) tableView->scrollTo(thumbView->currentIndex(),
-//                                                        QAbstractItemView::ScrollHint::PositionAtCenter);
     }
 
     // reset table, grid or thumb item clicked
     G::fileSelectionChangeSource = "";
     G::ignoreScrollSignal = false;
 
-    // updates
+    // updates ******************************************************************************
 
     // new file name appended to window title
     setWindowTitle("Winnow - " + fPath);
 
     // update the metadata panel
     infoView->updateInfo(currentRow);
-
-    // updateStatus happens in IconView::selectionChanged
 
     if (!G::isSlideShow) progressLabel->setVisible(isShowCacheStatus);
 
@@ -1163,15 +1166,13 @@ delegate use of the current index must check the row.
             updateClassification();
         }
     }
-
-    // update caching when folder has been loaded, not a slideshow and not the same image
-    // which can happen when filtering or sorting
-    if (G::isNewFolderLoaded) {
+    // update caching when folder has been loaded
+    if (G::isNewFolderLoaded ) {
         updateMetadataCacheIconviewState();
         metadataCacheThread->fileSelectionChange(updateImageCacheWhenFileSelectionChange);
     }
 
-    // initialize the thumbDock
+    // initialize the thumbDock if just opened app
     if (G::isInitializing) {
         if (dockWidgetArea(thumbDock) == Qt::BottomDockWidgetArea ||
             dockWidgetArea(thumbDock) == Qt::TopDockWidgetArea)
@@ -1268,6 +1269,13 @@ visible.  This is used in the metadataCacheThread to determine the range of file
     }
     int first = dm->sf->rowCount();
     int last = 0;
+//    int _first;
+//    int _last;
+
+//    thumbView->viewportRange(currentRow, _first, _last);
+//    if (_first < first) first = _first;
+//    gridView->viewportRange(currentRow, _first, _last);
+//    if (_first < first) first = _first;
 
     if (thumbView->isVisible()) {
         thumbView->setViewportParameters();
@@ -1280,8 +1288,8 @@ visible.  This is used in the metadataCacheThread to determine the range of file
     if (gridView->isVisible()) {
         gridView->setViewportParameters();
         if (gridView->firstVisibleRow < first) first = gridView->firstVisibleRow;
-        // calc thumbsPerPage in case IconView is still being populated
-        gridView->lastVisibleRow = gridView->getThumbsPerPage() + gridView->firstVisibleRow;
+//        // calc thumbsPerPage in case IconView is still being populated
+//        gridView->lastVisibleRow = gridView->getThumbsPerPage() + gridView->firstVisibleRow;
         if (gridView->lastVisibleRow > last) last = gridView->lastVisibleRow;
     }
 
@@ -1291,9 +1299,9 @@ visible.  This is used in the metadataCacheThread to determine the range of file
         if (tableView->lastVisibleRow > last) last = tableView->lastVisibleRow;
     }
 
-//    qDebug() << __FUNCTION__ << "gridView->lastVisibleRow =" << gridView->lastVisibleRow
-//             << "gridView->getThumbsPerPage() =" << gridView->getThumbsPerPage();
-
+/*    qDebug() << __FUNCTION__ << "first =" << first
+             << "last =" << last;
+*/
     metadataCacheThread->firstIconVisible = first;
     metadataCacheThread->midIconVisible = (first + last) / 2;
     metadataCacheThread->lastIconVisible = last;
@@ -1336,29 +1344,41 @@ void MW::loadMetadataCache2ndPass()
 void MW::thumbHasScrolled()
 {
 /*
-This function is called after a thumbView scrollbar change signal.  The viewport midVisibleRow
-is determined in thumbView->setViewportParameters(), the other views, if visible, are scrolled
-to sync with thumbView, and the metadataCacheThread is called to update metadata and icons.
+This function is called after a thumbView scrollbar change signal.
 
 If the change was caused by the user scrolling then we want to process it, as defined by
 G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
-another view then we do not want to process and getting into a loop.
+another view then we do not want to process again and get into a loop.
+
+MW::updateMetadataCacheIconviewState polls setViewportParameters() in all visible views
+(thumbView, gridView and tableView) to assign the firstVisibleRow, midVisibleRow and
+lastVisibleRow in metadataCacheThread.
+
+The gridView and tableView, if visible, are scrolled to sync with gridView.
+
+Finally metadataCacheThread->scrollChange is called to load any necessary metadata and icons
+within the cache range.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    /*
+       Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
+    to call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread.
+    This was to prevent many scroll calls from bunching up.  The new approach just aborts an
+    existing thread and starts over.  It is simpler and faster.  Keeping the old process until
+    the new one is proven to work all the time.
+      */
     if (!G::ignoreScrollSignal) {
         G::ignoreScrollSignal = true;
-        thumbView->setViewportParameters();
+        updateMetadataCacheIconviewState();
         if (gridView->isVisible())
             gridView->scrollToRow(thumbView->midVisibleRow, "Sync to ThumbView");
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleRow, "Sync to GridView");
-        updateMetadataCacheIconviewState();
-        metadataCacheThread->loadMetadataIconChunk(currentRow);
-//        loadMetadataCacheAfterDelay();
+        metadataCacheThread->scrollChange(currentRow);
         G::ignoreScrollSignal = false;
     }
 }
@@ -1366,26 +1386,40 @@ another view then we do not want to process and getting into a loop.
 void MW::gridHasScrolled()
 {
 /*
-This function is called after a gridView scrollbar change signal.  The viewport midVisibleRow
-is determined in gridView->setViewportParameters(), the other views, if visible, are scrolled
-to sync with gridView, and the metadataCacheThread is called to update metadata and icons.
+This function is called after a gridView scrollbar change signal.
 
 If the change was caused by the user scrolling then we want to process it, as defined by
 G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
-another view then we do not want to process and get into a loop.
+another view then we do not want to process again and get into a loop.
+
+MW::updateMetadataCacheIconviewState polls setViewportParameters() in all visible views
+(thumbView, gridView and tableView) to assign the firstVisibleRow, midVisibleRow and
+lastVisibleRow in metadataCacheThread.
+
+The thumbView, if visible, is scrolled to sync with gridView.
+
+Finally metadataCacheThread->scrollChange is called to load any necessary metadata and icons
+within the cache range.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    /*
+       Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
+    to call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread.
+    This was to prevent many scroll calls from bunching up.  The new approach just aborts an
+    existing thread and starts over.  It is simpler and faster.  Keeping the old process until
+    the new one is proven to work all the time.
+      */
     if (!G::ignoreScrollSignal) {
         G::ignoreScrollSignal = true;
-        gridView->setViewportParameters();
+        updateMetadataCacheIconviewState();
         if (thumbView->isVisible())
             thumbView->scrollToRow(gridView->midVisibleRow, "Sync to GridView");
-        updateMetadataCacheIconviewState();
-        metadataCacheThread->loadMetadataIconChunk(currentRow);
+        metadataCacheThread->scrollChange(currentRow);
+//        metadataCacheScrollTimer->start(cacheDelay);
 //        loadMetadataCacheAfterDelay();
         G::ignoreScrollSignal = false;
     }
@@ -1393,27 +1427,39 @@ another view then we do not want to process and get into a loop.
 void MW::tableHasScrolled()
 {
 /*
-This function is called after a tableView scrollbar change signal.  The viewport midVisibleRow
-is determined in tableView->setViewportParameters(), the other views, if visible, are scrolled
-to sync with tableView, and the metadataCacheThread is called to update metadata and icons.
+This function is called after a tableView scrollbar change signal.
 
 If the change was caused by the user scrolling then we want to process it, as defined by
 G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
-another view then we do not want to process and getting into a loop.
+another view then we do not want to process again and get into a loop.
+
+MW::updateMetadataCacheIconviewState polls setViewportParameters() in all visible views
+(thumbView, gridView and tableView) to assign the firstVisibleRow, midVisibleRow and
+lastVisibleRow in metadataCacheThread.
+
+The thumbView, if visible, is scrolled to sync with gridView.
+
+Finally metadataCacheThread->scrollChange is called to load any necessary metadata and icons
+within the cache range.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    /*
+       Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
+    to call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread.
+    This was to prevent many scroll calls from bunching up.  The new approach just aborts an
+    existing thread and starts over.  It is simpler and faster.  Keeping the old process until
+    the new one is proven to work all the time.
+      */
     if (!G::ignoreScrollSignal) {
         G::ignoreScrollSignal = true;
-        tableView->setViewportParameters();
+        updateMetadataCacheIconviewState();
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, "Sync to TableView");
-        updateMetadataCacheIconviewState();
-        metadataCacheThread->loadMetadataIconChunk(currentRow);
-//        loadMetadataCacheAfterDelay();
+        metadataCacheThread->scrollChange(currentRow);
         G::ignoreScrollSignal = false;
     }
 }
@@ -1466,9 +1512,9 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     #endif
     }
 //    if (/*G::isInitializing || */dm->sf->rowCount() == 0/* || !G::isNewFolderLoaded*/) return;
-    if (dm->sf->rowCount() == 0) return;
-    updateMetadataCacheIconviewState();
-    metadataCacheThread->loadMetadataIconChunk(currentRow);
+//    if (dm->sf->rowCount() == 0) return;
+//    updateMetadataCacheIconviewState();
+    metadataCacheThread->scrollChange(currentRow);
 }
 
 void MW::loadEntireMetadataCache()
@@ -3717,6 +3763,7 @@ void MW::createCaching()
 
     metadataCacheThread->cacheAllMetadata = setting->value("cacheAllMetadata").toBool();
     metadataCacheThread->cacheAllIcons = setting->value("cacheAllIcons").toBool();
+    metadataCacheThread->metadataChunkSize = setting->value("metadataChunkSize").toInt();
 
     /* When a new folder is selected the metadataCacheThread is started to load all the
     metadata and thumbs for each image. If the user scrolls during the cache process then the
@@ -3927,6 +3974,7 @@ dependent on datamodel and thumbView.
 
     connect(tableView->verticalScrollBar(), SIGNAL(valueChanged(int)),
             this, SLOT(tableHasScrolled()));
+
 //    connect(tableView->verticalScrollBar(), SIGNAL(valueChanged(int)),
 //            this, SLOT(loadMetadataCacheAfterDelay()));
 }
@@ -4443,11 +4491,11 @@ void MW::createStatusBar()
 
 void MW::updateStatusBar()
 {
-    statusBar()->removeWidget(filterStatusLabel);
-    statusBar()->removeWidget(subfolderStatusLabel);
-    statusBar()->removeWidget(rawJpgStatusLabel);
-    statusBar()->removeWidget(slideShowStatusLabel);
-    statusBar()->removeWidget(stateLabel);
+    if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel);
+    if (!subfolderStatusLabel->isHidden()) statusBar()->removeWidget(subfolderStatusLabel);
+    if (!rawJpgStatusLabel->isHidden()) statusBar()->removeWidget(rawJpgStatusLabel);
+    if (!slideShowStatusLabel->isHidden()) statusBar()->removeWidget(slideShowStatusLabel);
+    if (!stateLabel->isHidden()) statusBar()->removeWidget(stateLabel);
     if (filters->isAnyFilter()) {
         statusBar()->addWidget(filterStatusLabel);
         filterStatusLabel->show();
@@ -5191,7 +5239,7 @@ hence need to scroll to the current row.
          QAbstractItemView::ScrollHint::PositionAtCenter);
 
     updateMetadataCacheIconviewState();
-    metadataCacheThread->loadMetadataIconChunk(currentRow);
+    metadataCacheThread->scrollChange(currentRow);
 }
 
 void MW::showHiddenFiles()
@@ -5921,7 +5969,7 @@ QString MW::diagnostics()
     rpt << "\n" << "lastIngestLocation = " << G::s(lastIngestLocation);
     rpt << "\n" << "slideShowDelay = " << G::s(slideShowDelay);
     rpt << "\n" << "slideShowRandom = " << G::s(isSlideShowRandom);
-    rpt << "\n" << "slideShowWrap = " << G::s(slideShowWrap);
+    rpt << "\n" << "slideShowWrap = " << G::s(isSlideShowWrap);
     rpt << "\n" << "cacheSizeMB = " << G::s(cacheSizeMB);
     rpt << "\n" << "isShowCacheStatus = " << G::s(isShowCacheStatus);
     rpt << "\n" << "cacheDelay = " << G::s(cacheDelay);
@@ -6836,12 +6884,13 @@ re-established when the application is re-opened.
 
     // slideshow
     setting->setValue("slideShowDelay", slideShowDelay);
-    setting->setValue("slideShowRandom", isSlideShowRandom);
-    setting->setValue("slideShowWrap", slideShowWrap);
+    setting->setValue("isSlideShowRandom", isSlideShowRandom);
+    setting->setValue("isSlideShowWrap", isSlideShowWrap);
 
     // metadata and icon cache
     setting->setValue("cacheAllMetadata", metadataCacheThread->cacheAllMetadata);
     setting->setValue("cacheAllIcons", metadataCacheThread->cacheAllIcons);
+    setting->setValue("metadataChunkSize", metadataCacheThread->metadataChunkSize);
 
     // image cache
     setting->setValue("cacheSizeMB", cacheSizeMB);
@@ -7127,14 +7176,18 @@ Preferences are located in the prefdlg class and updated here.
         // slideshow
         slideShowDelay = 5;
         isSlideShowRandom = false;
-        slideShowWrap = true;
+        isSlideShowWrap = true;
 
         // cache        
+        metadataCacheThread->cacheAllMetadata = true;
+        metadataCacheThread->cacheAllIcons = false;
+        metadataCacheThread->metadataChunkSize = 250;
+
         cacheSizeMB = 4000;
         isShowCacheStatus = true;
 //        cacheDelay = 0;
         isShowCacheThreadActivity = true;
-        progressWidth = 400;
+        progressWidth = 200;
         cacheWtAhead = 7;
         isCachePreview = false;
         cachePreviewWidth = 2000;
@@ -7178,8 +7231,10 @@ Preferences are located in the prefdlg class and updated here.
 
     // slideshow
     slideShowDelay = setting->value("slideShowDelay").toInt();
-    isSlideShowRandom = setting->value("slideShowRandom").toBool();
-    slideShowWrap = setting->value("slideShowWrap").toBool();
+    isSlideShowRandom = setting->value("isSlideShowRandom").toBool();
+    isSlideShowWrap = setting->value("isSlideShowWrap").toBool();
+
+    // metadata and icon cache loaded when metadataCacheThread created in MW::createCaching
 
     // image cache
     cacheSizeMB = setting->value("cacheSizeMB").toInt();
@@ -7735,7 +7790,7 @@ around lack of notification when the QListView has finished painting itself.
         }
         qApp->processEvents(QEventLoop::AllEvents, 50);
     }
-    G::ignoreScrollSignal = true;
+//    G::ignoreScrollSignal = true;
 
     prevMode = "Loupe";
 
@@ -7812,7 +7867,7 @@ around lack of notification when the QListView has finished painting itself.
         }
         qApp->processEvents(QEventLoop::AllEvents, 50);
     }
-    G::ignoreScrollSignal = true;
+//    G::ignoreScrollSignal = true;
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
@@ -9228,19 +9283,24 @@ void MW::slideShow()
         updateImageCacheWhenFileSelectionChange = true;
         progressBar->setVisible(true);
         imageCacheThread->updateImageCachePosition();
+        // enable main window QAction shortcuts
+        QList<QAction*> actions = findChildren<QAction*>();
+        for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);
     } else {
         // start slideshow
         imageView->setCursor(Qt::BlankCursor);
         G::isSlideShow = true;
         if (isSlideShowRandom) updateImageCacheWhenFileSelectionChange = false;
         updateStatusBar();
-        QString msg = "Press <font color=\"red\"><b>H</b></font> during slideshow for shortcuts"
+        QString msg = "<h2>Press <font color=\"red\"><b>Esc</b></font> to exit slideshow</h2><p>";
+        msg += "Press <font color=\"red\"><b>H</b></font> during slideshow for tips"
                       "<p>Starting slideshow";
         msg += "<br>Interval = " + QString::number(slideShowDelay) + " second(s)";
         if (isSlideShowRandom)  msg += "<br>Random selection";
         else msg += "<br>Sequential selection";
-        if (slideShowWrap) msg += "<br>Wrap at end of slides";
+        if (isSlideShowWrap) msg += "<br>Wrap at end of slides";
         else msg += "<br>Stop at end of slides";
+
         G::popUp->showPopup(msg, 4000, true, 0.75, Qt::AlignLeft);
 
         // No image caching if random slide show
@@ -9249,14 +9309,16 @@ void MW::slideShow()
             imageCacheThread->clearImageCache();
             progressBar->setVisible(false);
         }
-//        progressBar->clearProgress();
+
+        // disable main window QAction shortcuts
+        QList<QAction*> actions = findChildren<QAction*>();
+        for (QAction *a : actions) a->setShortcutContext(Qt::WidgetShortcut);
 
         if (isStressTest) getSubfolders("/users/roryhill/pictures");
 
         slideShowAction->setText(tr("Stop Slide Show"));
         slideShowTimer = new QTimer(this);
         connect(slideShowTimer, SIGNAL(timeout()), this, SLOT(nextSlide()));
-//        if (isStressTest) slideShowDelay = 0.9;
         slideShowTimer->start(slideShowDelay * 1000);
     }
 }
@@ -9269,7 +9331,6 @@ void MW::nextSlide()
     #endif
     }
     static int counter = 0;
-    counter++;
     qDebug() << __FUNCTION__ << "counter =" << counter;
 
     if (isStressTest) {
@@ -9307,22 +9368,28 @@ void MW::nextSlide()
     }
 
     if (isSlideshowPaused) return;
-    int totSlides = dm->sf->rowCount();
-    if (isSlideShowRandom || isStressTest) {
+
+    counter++;
+    if (isSlideShowRandom) {
         // push previous image path onto the slideshow history stack
         int row = thumbView->currentIndex().row();
+        qDebug() << __FUNCTION__ << "1" << "row =" << row;
         QString fPath = dm->sf->index(row, 0).data(G::PathRole).toString();
+        qDebug() << __FUNCTION__ << "2" << "path =" << fPath;
         slideshowRandomHistoryStack->push(fPath);
-        // get next random slide
+        qDebug() << __FUNCTION__ <<  "3  Pushed, now select random slide";      // get next random slide
         thumbView->selectRandom();
     }
     else {
-        if (thumbView->getCurrentRow() == totSlides - 1)
-            thumbView->selectFirst();
+        if (currentRow == dm->sf->rowCount() - 1) {
+            if (isSlideShowWrap) thumbView->selectFirst();
+            else slideShow();
+        }
         else thumbView->selectNext();
     }
 
     QString msg = "Slide # "+ QString::number(counter) + "     (press H for slideshow shortcuts)";
+    qDebug() << __FUNCTION__ << "4" << msg;
     updateStatus(true, msg);
 
 }
@@ -9393,21 +9460,27 @@ void MW::slideshowHelpMsg()
     #endif
     }
     QString selection;
-    if (isSlideShowRandom)  selection = "random selection";
+    if (isSlideShowRandom)  selection = "Random selection";
     else selection = "Sequential selection";
+    QString wrap;
+    if (isSlideShowWrap)  wrap = "Wrap at end of slides";
+    else wrap = "Stop at end of slides";
     QString msg =
         "<p><b>Slideshow Shortcuts:</b><br/></p>"
         "<table border=\"0\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\">"
-        "<tr><td width=\"120\"><font color=\"red\"><b>S</b></font></td><td>Toggle to start/end slideshow</td></tr>"
-        "<tr><td><font color=\"red\"><b>1 to 9</b></font></td><td>Change the slideshow interval (seconds)</td></tr>"
-        "<tr><td><font color=\"red\"><b>Backspace</b></font></td><td>Go back to a previous random slide</td></tr>"
-        "<tr><td><font color=\"red\"><b>Spacebar</b></font></td><td>Pause/Continue slideshow</td></tr>"
-        "<tr><td><font color=\"red\"><b>H</b></font></td><td>Show this popup message</td></tr>"
+        "<tr><td width=\"120\"><font color=\"red\"><b>Esc</b></font></td><td>Exit slideshow</td></tr>"
+        "<tr><td><font color=\"red\"><b>  1 to 9  </b></font></td><td>Change the slideshow interval (seconds)</td></tr>"
+        "<tr><td><font color=\"red\"><b>  W       </b></font></td><td>Toggle wrapping on and off.</td></tr>"
+        "<tr><td><font color=\"red\"><b>  R       </b></font></td><td>Toggle random vs sequential slide selection.</td></tr>"
+        "<tr><td><font color=\"red\"><b>Backspace </b></font></td><td>Go back to a previous random slide</td></tr>"
+        "<tr><td><font color=\"red\"><b>Spacebar  </b></font></td><td>Pause/Continue slideshow</td></tr>"
+        "<tr><td><font color=\"red\"><b>  H       </b></font></td><td>Show this popup message</td></tr>"
         "</table>"
         "<p>Current settings:<p>"
         "<ul style=\"line-height:50%; list-style-type:none;\""
         "<li>Interval  = "  + QString::number(slideShowDelay) + " seconds</li>"
         "<li>Selection = " + selection + "</li>"
+        "<li>Wrap      = " + wrap + "</li>"
         "</ul><p><p>"
         "Press <font color=\"red\"><b>Esc</b></font> to close this message";
     G::popUp->showPopup(msg, 0, true, 1.0, Qt::AlignLeft);
@@ -9846,36 +9919,28 @@ void MW::test2()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    qDebug() << G::popUp->isVisible();
-
-    return;
-
     QString fPath = "D:/Pictures/_DNG/DngNikonD850FromLightroom.dng";
     metadata->testNewFileFormat(fPath);
 }
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    Preferences *pref1 = new Preferences(this);
-//    PreferencesDlg *preferencesDlg = new PreferencesDlg(pref1);
-//    preferencesDlg->exec();
-//    return;
-
-
-    Preferences *pref = new Preferences(this);
-    propertiesDock = new DockWidget(tr("  Preferencess  "), this);
-    propertiesDock->setObjectName("Preferences");
-    propertiesDock->setWidget(pref);
-    propertiesDock->setFloating(true);
-    propertiesDock->setGeometry(2000,600,420,1000);
-    propertiesDock->setVisible(false);
-    propertiesDock->raise();
-
-    return;
-
-    dm->find("lower");
-    return;
-    qDebug() << __FUNCTION__ << slideshowRandomHistoryStack->pop();
+    int i /*= 200*/;
+    bool ic;
+    bool md;
+    QString s;
+    for (i = 0; i < dm->sf->rowCount(); ++i) {
+        s = "";
+        ic =dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull();
+        md = !dm->sf->index(i, G::MetadataLoadedColumn).data().toBool();
+        if (ic) s = "no icon";
+        if (md) s += " no metadata";
+        if (ic || md) {
+            qDebug() << i << s;
+            break;
+        }
+    }
+    qDebug() << __FUNCTION__ << ic << md;
 }
 
 // End MW

@@ -198,7 +198,7 @@ public:
     // preferences: slideshow
     int slideShowDelay;
     bool isSlideShowRandom;
-    bool slideShowWrap = true;
+    bool isSlideShowWrap = true;
     bool updateImageCacheWhenFileSelectionChange = true;
     QStack<QString> *slideshowRandomHistoryStack;
 

@@ -77,7 +77,7 @@ Set the current index and expand/collapse when click anywhere on a row that has 
             and is 14 pixels wide (I believe this is hard coded in Qt).
             */
             QPoint p = event->pos();
-            qDebug() << __FUNCTION__ << p.x();
+//            qDebug() << __FUNCTION__ << p.x();
             if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
             // if root item any click after indentation should
             if (idx.parent() == QModelIndex()) {
