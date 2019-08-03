@@ -59,7 +59,7 @@ namespace G
     void wait(int ms)
     {
         QTime t = QTime::currentTime().addMSecs(ms);
-        while (QTime::currentTime() < t) qApp->processEvents(QEventLoop::AllEvents, 50);
+        while (QTime::currentTime() < t) qApp->processEvents(QEventLoop::AllEvents, 10);
     }
 
     void track(QString functionName, QString comment)

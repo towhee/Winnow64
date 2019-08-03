@@ -203,6 +203,10 @@ QString IconView::diagnostics()
     rpt << "\n" << "assignedIconWidth = " << G::s(assignedIconWidth);
     rpt << "\n" << "skipResize = " << G::s(skipResize);
     rpt << "\n" << "bestAspectRatio = " << G::s(bestAspectRatio);
+    rpt << "\n" << "firstVisibleRow = " << G::s(firstVisibleRow);
+    rpt << "\n" << "midVisibleRow = " << G::s(midVisibleRow);
+    rpt << "\n" << "lastVisibleRow = " << G::s(lastVisibleRow);
+    rpt << "\n" << "thumbsPerPage = " << G::s(thumbsPerPage);
     rpt << "\n\n" ;
     rpt << iconViewDelegate->diagnostics();
     rpt << "\n\n" ;
@@ -1217,17 +1221,26 @@ void IconView::resizeEvent(QResizeEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    QListView::resizeEvent(event);
-//    qDebug() << __FUNCTION__ << objectName() << viewport()->size();
-//    getThumbsPerPage();
-    if (!G::isInitializing) setViewportParameters();
-
-    m2->loadMetadataCacheAfterDelay();
+    qDebug() << __FUNCTION__ << isFitTopOrBottom << G::isInitializing << G::isNewFolderLoaded;
+    int mid = midVisibleRow;
+//    if (!isFitTopOrBottom) QListView::resizeEvent(event);
+    if (G::isInitializing || !G::isNewFolderLoaded) return;
+/*
+   qDebug() << __FUNCTION__ << objectName() << viewport()->size() << G::isNewFolderLoaded;
+   */
     static int prevWidth = 0;
     if (isWrapping() && width() != prevWidth) {
-        QTimer::singleShot(500, this, SLOT(rejustify()));
+        QTimer::singleShot(500, this, SLOT(rejustify()));   // calls setViewportParameters
     }
     prevWidth = width();
+    if (isFitTopOrBottom) {
+        G::ignoreScrollSignal = true;
+        qDebug() << __FUNCTION__ << mid << midVisibleRow;
+        scrollToRow(mid, __FUNCTION__);
+        isFitTopOrBottom = false;
+        setViewportParameters();
+    }
+    else m2->loadMetadataCacheAfterDelay();
 }
 
 void IconView::bestAspect()
@@ -1344,7 +1357,9 @@ void IconView::thumbsFitTopOrBottom()
 {
 /*
 Called by MW::eventFilter when a thumbDock resize event occurs triggered by the user resizing
-the thumbDock. Adjust the size of the thumbs to fit the new thumbDock height.
+the thumbDock. The thumb size is adjusted to fit the new thumbDock height and scrolled to keep
+the midVisibleThumb in the middle. Other objects visible (docks and central widget) are
+resized.
 
 For icon cell anatomy (see diagram at top of IconViewDelegate)
 */
@@ -1353,16 +1368,18 @@ For icon cell anatomy (see diagram at top of IconViewDelegate)
     G::track(__FUNCTION__);
     #endif
     }
+    isFitTopOrBottom = true;
+
     float aspect = (float)iconWidth / iconHeight;
 
     // viewport available height
-    int netViewportHt = height() - G::scrollBarThickness;
-
+    int newViewportHt = height() - G::scrollBarThickness;
+    qDebug() << "\n" << __FUNCTION__ << "viewportHeight =" << newViewportHt;
     int hMax = iconViewDelegate->getCellHeightFromThumbHeight(G::maxIconSize * bestAspectRatio);
     int hMin = iconViewDelegate->getCellHeightFromThumbHeight(ICON_MIN);
 
     // restrict icon cell height within limits
-    int newThumbSpaceHt = netViewportHt > hMax ? hMax : netViewportHt;
+    int newThumbSpaceHt = newViewportHt > hMax ? hMax : newViewportHt;
     newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
 
     // derive new thumbsize from new thumbSpace
@@ -1384,7 +1401,6 @@ For icon cell anatomy (see diagram at top of IconViewDelegate)
 
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
         labelFontSize, showIconLabels, badgeSize);
-    scrollToRow(currentIndex().row(), __FUNCTION__);
 }
 
 void IconView::updateLayout()
@@ -1485,6 +1501,19 @@ when a new image is selected and the selection was triggered by a mouse click.
 
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
+}
+
+bool IconView::whenOkToScroll()
+{
+    QTime t = QTime::currentTime().addMSecs(1000);
+    while (QTime::currentTime() < t) {
+        if (okToScroll()) {
+//            G::wait(250);
+            return true;
+        }
+        qApp->processEvents(QEventLoop::AllEvents, 50);
+    }
+    return false;
 }
 
 bool IconView::okToScroll()
