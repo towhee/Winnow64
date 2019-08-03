@@ -1,0 +1,22 @@
+"        190,100"   "IconView::thumbsFitTopOrBottom...................."   ""
+
+ IconView::thumbsFitTopOrBottom viewportHeight = 85
+QFont::setPixelSize: Pixel size <= 0 (0)
+"        338,400"   "ImageView::resizeEvent............................"   ""
+"        107,300"   "ImageView::getFitScaleFactor......................"   ""
+"         41,300"   "ImageView::sceneBiggerThanView...................."   ""
+"         37,500"   "ImageView::scale.................................."   ""
+"         48,900"   "ImageView::placeClassificationBadge..............."   ""
+"         44,100"   "ImageView::moveShootingInfo......................."   ""
+"      1,308,900"   "MW::updateStatus.................................."   ""
+"         55,200"   "IconView::getCurrentFilePath......................"   ""
+"         54,600"   "MW::getZoom......................................."   ""
+"         44,100"   "MW::getPosition..................................."   ""
+"         45,300"   "IconView::getSelectedCount........................"   ""
+"        114,600"   "MW::getPicked....................................."   ""
+"        752,400"   "Filters::isAnyFilter.............................."   ""
+"      1,081,900"   "MW::getPosition..................................."   ""
+"         67,200"   "MW::getZoom......................................."   ""
+"         47,600"   "MW::getPicked....................................."   ""
+"        373,100"   "ImageView::placeClassificationBadge..............."   ""
+"         43,300"   "ImageView::moveShootingInfo......................."   ""

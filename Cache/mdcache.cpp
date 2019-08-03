@@ -247,6 +247,7 @@ metadata and icons are loaded into the datamodel.
         mutex.unlock();
         wait();
     }
+    qDebug() << "\nXXXXXXXXXXXXXX " << __FUNCTION__;
     abort = false;
     action = Action::NewFolder2ndPass;
     setRange();
@@ -346,8 +347,6 @@ limits are removed (not visible and not with chunk range)
 //    }
 //    qDebug() << __FUNCTION__ << startRow << endRow << "foundItemsToLoad =" << foundItemsToLoad;
     if (foundItemsToLoad) start(TimeCriticalPriority);
-//      foundItemsToLoad = true;
-//      start(TimeCriticalPriority);
 }
 
 void MetadataCache::fileSelectionChange(bool okayToImageCache)
@@ -420,7 +419,7 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
     prevLastIconVisible = lastIconVisible;
 
 //    G::track(__FUNCTION__);
-    qDebug()  <<  __FUNCTION__
+/*    qDebug()  <<  __FUNCTION__
               << "source =" << actionList.at(action)
               << "first =" << firstIconVisible
               << "mid =" << midIconVisible
@@ -430,7 +429,7 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
               << "metadataChunkSize =" << metadataChunkSize
               << "startRow =" << startRow
               << "endRow =" << endRow;
-
+*/
 }
 
 void MetadataCache::iconCleanup()
@@ -564,7 +563,7 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
     }
     for (int row = start; row <= end; ++row) {
         if (abort) {
-            qDebug() << __FUNCTION__ << "ABORTING AT ROW" << row;
+//            qDebug() << __FUNCTION__ << "ABORTING AT ROW" << row;
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
@@ -577,13 +576,20 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
             QImage image;
             QString fPath = idx.data(G::PathRole).toString();
             bool thumbLoaded = thumb->loadThumb(fPath, image);
+            QPixmap pm;
             if (thumbLoaded) {
-                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
                 dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
                 iconMax(pm);
                 iconsCached.append(dmRow);
-//                qDebug() << __FUNCTION__ << "loaded icon for row" << row;
             }
+//            else {
+//                pm = QPixmap(":/images/badImage1.png");
+//            }
+//            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+//            iconMax(pm);
+//            iconsCached.append(dmRow);
+//            qDebug() << __FUNCTION__ << "loaded icon for row" << row;
         }
         mutex.unlock();
 //        qApp->processEvents();

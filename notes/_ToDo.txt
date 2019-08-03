@@ -1,8 +1,9 @@
-BUGS
-- MDCache::readIconChunk - If no read thumb set pixmap to bad file png
-- MDCache icon cleanup not working when scroll (update startRow/endRow)
-- MDCache read meta and icons separately
-- Move tableView col metaLoaded to geek
+BUG
+- When size thumbdock it scrolls to zero
+- Ingested images not shown in blue
+- Home not working in gridView
+- Image cache not always running at start
+- gridView > Full screen > gridview > loupe filmstrip has blank icons
 - Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Add / update tool tips in preferences and throughout program
@@ -11,10 +12,8 @@ BUGS
 - Open with ... (doesn't work on macOS)
 - Toggle zoom wrong place when using preview size cached image
 PERFORMANCE
-- filteredItemCount and unfilteredItemCount slow
+- filteredItemCount and unfilteredItemCount slow - try treeView instead of treeWidget
 CODE IMPROVEMENTS
-- PropertyEditor main categories covered decoration for alternate rows
-- Preferences main categories covering decoration
 - Tableview sizeHintForColumn "width" is deprecated
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - fix 300ms delay before scroll to currentRow on filterChange
@@ -44,6 +43,10 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- PropertyEditor main categories covered decoration for alternate rows
+- MDCache::readIconChunk - If no read thumb set pixmap to bad file png
+- MDCache icon cleanup not working when scroll (update startRow/endRow)
+- MDCache read meta and icons separately
 - Save cache strategies to settings
 - Cleanup slideshow after fixing read violation issue incl iconChunKSize vs readAllMetadata
 - Add slideshow parameters to preferences

@@ -66,6 +66,7 @@ public:
     bool viewportRange(int row, int &first, int &last);
 
     void updateLayout();
+    bool whenOkToScroll();
     bool okToScroll();
 
     IconViewDelegate *iconViewDelegate;
@@ -183,6 +184,7 @@ private:
 
     bool isLeftMouseBtnPressed;
     bool isMouseDrag;
+    bool isFitTopOrBottom = false;
 
     // used during gridView resize to keep close to beginning thumb size
     int assignedIconWidth;

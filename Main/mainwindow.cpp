@@ -712,6 +712,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     if (area == Qt::BottomDockWidgetArea
                     || area == Qt::TopDockWidgetArea
                     || !thumbView->isWrapping()) {
+//                        QTimer::singleShot(250, thumbView, SLOT(thumbsFitTopOrBottom()));
                         thumbView->thumbsFitTopOrBottom();
                     }
                 }
@@ -1104,12 +1105,12 @@ delegate use of the current index must check the row.
     currentRow = current.row();
     // also record in datamodel so can be accessed by MdCache
     // proxy index for col 0
-    QModelIndex sfIdx = dm->sf->index(currentRow, 0);
+    currentSfIdx = dm->sf->index(currentRow, 0);
     dm->currentRow = currentRow;
-    int dmCurrentRow = dm->sf->mapToSource(current).row();
-    dmCurrentIndex = dm->index(dmCurrentRow, 0);
+    currentDmIdx = dm->sf->mapToSource(currentSfIdx);
+    int dmCurrentRow = currentDmIdx.row();
     // the file path is used as an index in ImageView
-    QString fPath = sfIdx.data(G::PathRole).toString();
+    QString fPath = currentSfIdx.data(G::PathRole).toString();
 //    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
@@ -1269,13 +1270,17 @@ visible.  This is used in the metadataCacheThread to determine the range of file
     }
     int first = dm->sf->rowCount();
     int last = 0;
-//    int _first;
-//    int _last;
 
-//    thumbView->viewportRange(currentRow, _first, _last);
-//    if (_first < first) first = _first;
-//    gridView->viewportRange(currentRow, _first, _last);
-//    if (_first < first) first = _first;
+    /*
+    Alternate where calculate first / last for case where you need to know in advance what
+    they will be, not what they are now.
+    int _first;
+    int _last;
+    thumbView->viewportRange(currentRow, _first, _last);
+    if (_first < first) first = _first;
+    gridView->viewportRange(currentRow, _first, _last);
+    if (_first < first) first = _first;
+    */
 
     if (thumbView->isVisible()) {
         thumbView->setViewportParameters();
@@ -1336,6 +1341,7 @@ void MW::loadMetadataCache2ndPass()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     updateIconBestFit();
     updateMetadataCacheIconviewState();
     metadataCacheThread->loadNewFolder2ndPass();
@@ -1371,7 +1377,11 @@ within the cache range.
     existing thread and starts over.  It is simpler and faster.  Keeping the old process until
     the new one is proven to work all the time.
       */
-    if (!G::ignoreScrollSignal) {
+
+    if (G::isInitializing || !G::isNewFolderLoaded) return;
+
+    qDebug() << __FUNCTION__ << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
+    if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateMetadataCacheIconviewState();
         if (gridView->isVisible())
@@ -1379,8 +1389,8 @@ within the cache range.
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleRow, "Sync to GridView");
         metadataCacheThread->scrollChange(currentRow);
-        G::ignoreScrollSignal = false;
     }
+    G::ignoreScrollSignal = false;
 }
 
 void MW::gridHasScrolled()
@@ -1413,6 +1423,9 @@ within the cache range.
     existing thread and starts over.  It is simpler and faster.  Keeping the old process until
     the new one is proven to work all the time.
       */
+
+    if (G::isInitializing || !G::isNewFolderLoaded) return;
+
     if (!G::ignoreScrollSignal) {
         G::ignoreScrollSignal = true;
         updateMetadataCacheIconviewState();
@@ -1421,8 +1434,8 @@ within the cache range.
         metadataCacheThread->scrollChange(currentRow);
 //        metadataCacheScrollTimer->start(cacheDelay);
 //        loadMetadataCacheAfterDelay();
-        G::ignoreScrollSignal = false;
     }
+    G::ignoreScrollSignal = false;
 }
 void MW::tableHasScrolled()
 {
@@ -1454,14 +1467,17 @@ within the cache range.
     existing thread and starts over.  It is simpler and faster.  Keeping the old process until
     the new one is proven to work all the time.
       */
+
+    if (G::isInitializing || !G::isNewFolderLoaded) return;
+
     if (!G::ignoreScrollSignal) {
         G::ignoreScrollSignal = true;
         updateMetadataCacheIconviewState();
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, "Sync to TableView");
         metadataCacheThread->scrollChange(currentRow);
-        G::ignoreScrollSignal = false;
     }
+    G::ignoreScrollSignal = false;
 }
 
 void MW::loadMetadataCacheAfterDelay()
@@ -1721,6 +1737,7 @@ memory has been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
@@ -3019,49 +3036,49 @@ void MW::createActions()
 
     // Help Diagnostics
 
-    diagnosticsAllAction = new QAction(tr("Report All Diagnostics"), this);
+    diagnosticsAllAction = new QAction(tr("All Diagnostics"), this);
     diagnosticsAllAction->setObjectName("diagnosticsAll");
     diagnosticsAllAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsAllAction);
     connect(diagnosticsAllAction, &QAction::triggered, this, &MW::diagnosticsAll);
 
-    diagnosticsMainAction = new QAction(tr("Report Main Diagnostics"), this);
+    diagnosticsMainAction = new QAction(tr("Main"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
     diagnosticsMainAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsMainAction);
     connect(diagnosticsMainAction, &QAction::triggered, this, &MW::diagnosticsMain);
 
-    diagnosticsGridViewAction = new QAction(tr("Report GridView Diagnostics"), this);
+    diagnosticsGridViewAction = new QAction(tr("GridView"), this);
     diagnosticsGridViewAction->setObjectName("diagnosticsGridView");
     diagnosticsGridViewAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsGridViewAction);
     connect(diagnosticsGridViewAction, &QAction::triggered, this, &MW::diagnosticsGridView);
 
-    diagnosticsThumbViewAction = new QAction(tr("Report ThumbView Diagnostics"), this);
+    diagnosticsThumbViewAction = new QAction(tr("ThumbView"), this);
     diagnosticsThumbViewAction->setObjectName("diagnosticsThumbView");
     diagnosticsThumbViewAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsThumbViewAction);
     connect(diagnosticsThumbViewAction, &QAction::triggered, this, &MW::diagnosticsThumbView);
 
-    diagnosticsImageViewAction = new QAction(tr("Report ImageView Diagnostics"), this);
+    diagnosticsImageViewAction = new QAction(tr("ImageView"), this);
     diagnosticsImageViewAction->setObjectName("diagnosticsImageView");
     diagnosticsImageViewAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsImageViewAction);
     connect(diagnosticsImageViewAction, &QAction::triggered, this, &MW::diagnosticsImageView);
 
-    diagnosticsMetadataAction = new QAction(tr("Report Metadata Diagnostics"), this);
+    diagnosticsMetadataAction = new QAction(tr("Metadata"), this);
     diagnosticsMetadataAction->setObjectName("diagnosticsMetadata");
     diagnosticsMetadataAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsMetadataAction);
     connect(diagnosticsMetadataAction, &QAction::triggered, this, &MW::diagnosticsMetadata);
 
-    diagnosticsDataModelAction = new QAction(tr("Report DataModel Diagnostics"), this);
+    diagnosticsDataModelAction = new QAction(tr("DataModel"), this);
     diagnosticsDataModelAction->setObjectName("diagnosticsDataModel");
     diagnosticsDataModelAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsDataModelAction);
     connect(diagnosticsDataModelAction, &QAction::triggered, this, &MW::diagnosticsDataModel);
 
-    diagnosticsImageCacheAction = new QAction(tr("Report ImageCache Diagnostics"), this);
+    diagnosticsImageCacheAction = new QAction(tr("ImageCache"), this);
     diagnosticsImageCacheAction->setObjectName("diagnosticsImageCache");
     diagnosticsImageCacheAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsImageCacheAction);
@@ -4787,7 +4804,7 @@ void MW::resortImageCache()
     #endif
     }
     if (!dm->sf->rowCount()) return;
-    QString currentFilePath = dmCurrentIndex.data(G::PathRole).toString();
+    QString currentFilePath = currentDmIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(currentFilePath);
 //    imageCacheThread->resortImageCache();
     imageCacheThread->updateImageCachePosition();
@@ -4923,10 +4940,10 @@ and icons are loaded if necessary.
     /*
     qDebug() << __FUNCTION__
              << "thumbView->currentIndex().row() =" << thumbView->currentIndex().row()
-             << "dmCurrentIndex).row() =" << dmCurrentIndex.row()
-             << "dm->sf->mapFromSource(dmCurrentIndex).row() =" << dm->sf->mapFromSource(dmCurrentIndex).row();
+             << "currentDmIdx).row() =" << currentDmIdx.row()
+             << "dm->sf->mapFromSource(currentDmIdx).row() =" << dm->sf->mapFromSource(currentDmIdx).row();
             */
-    currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
+    currentRow = dm->sf->mapFromSource(currentDmIdx).row();
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
     QModelIndex idx = dm->sf->index(currentRow, 0);
@@ -5187,7 +5204,7 @@ void MW::sortChange()
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
 
     // get the current selected item
-    currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
+    currentRow = dm->sf->mapFromSource(currentDmIdx).row();
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
     QModelIndex idx = dm->sf->index(currentRow, 0);
@@ -5218,7 +5235,7 @@ hence need to scroll to the current row.
     G::track(__FUNCTION__);
     #endif
     }
-    currentRow = dm->sf->mapFromSource(dmCurrentIndex).row();
+    currentRow = dm->sf->mapFromSource(currentDmIdx).row();
     QModelIndex idx = dm->sf->index(currentRow, 0);
     G::wait(100);
 //    if (thumbView->isVisible()) {
@@ -5233,10 +5250,12 @@ hence need to scroll to the current row.
 //        G::wait(100);
 //        thumbView->scrollToRow(currentRow, __FUNCTION__);
 //    }
+    G::ignoreScrollSignal = true;
     if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
     if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
     if (tableView->isVisible()) tableView->scrollTo(idx,
          QAbstractItemView::ScrollHint::PositionAtCenter);
+    G::ignoreScrollSignal = false;
 
     updateMetadataCacheIconviewState();
     metadataCacheThread->scrollChange(currentRow);
@@ -5281,7 +5300,7 @@ void MW::thumbsShrink()
     }
     scrollToCurrentRow();
     // may be more icons to cache
-    loadMetadataCacheAfterDelay();
+//    loadMetadataCacheAfterDelay();
 }
 
 void MW::addRecentFolder(QString fPath)
@@ -5990,7 +6009,7 @@ QString MW::diagnostics()
     rpt << "\n" << "prevMode = " << G::s(prevMode);
     rpt << "\n" << "currentRow = " << G::s(currentRow);
     rpt << "\n" << "scrollRow = " << G::s(scrollRow);
-    rpt << "\n" << "dmCurrentIndex = row" << G::s(dmCurrentIndex.row()) << " col " << G::s(dmCurrentIndex.column());
+    rpt << "\n" << "currentDmIdx = row" << G::s(currentDmIdx.row()) << " col " << G::s(currentDmIdx.column());
     rpt << "\n" << "allIconsLoaded = " << G::s(allIconsLoaded);
     rpt << "\n" << "modeChangeJustHappened = " << G::s(modeChangeJustHappened);
     rpt << "\n" << "justUpdatedBestFit = " << G::s(justUpdatedBestFit);
@@ -6543,16 +6562,22 @@ void MW::toggleFullScreen()
         metadataDock->setVisible(fullScreenDocks.isMetadata);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
         thumbDock->setVisible(fullScreenDocks.isThumbs);
+//        thumbView->selectThumb(currentRow);
+//        gridView->selectThumb(currentRow);
         menuBarVisibleAction->setChecked(false);
         setMenuBarVisibility();
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
         setStatusBarVisibility();
+//        fileSelectionChange(currentSfIdx, currentSfIdx);
     }
     else
     {
         isNormalScreen = true;
         showNormal();
         invokeWorkspace(ws);
+//        fileSelectionChange(currentSfIdx, currentSfIdx);
+//        thumbView->selectThumb(currentRow);
+//        gridView->selectThumb(currentRow);
 //        imageView->setCursorHiding(false);
     }
 }
@@ -7752,7 +7777,10 @@ around lack of notification when the QListView has finished painting itself.
 
     // recover thumbdock if it was visible before as gridView and full screen can
     // hide the thumbdock
-    if(isNormalScreen && wasThumbDockVisible) thumbDock->setVisible(true);
+    if(isNormalScreen && wasThumbDockVisible) {
+        thumbDock->setVisible(true);
+        thumbView->selectThumb(currentRow);
+    }
 
     if (thumbView->isVisible()) thumbView->setFocus();
     else imageView->setFocus();
@@ -7785,7 +7813,8 @@ around lack of notification when the QListView has finished painting itself.
     while (QTime::currentTime() < t) {
         if (thumbView->okToScroll()) {
             G::wait(250);
-            thumbView->scrollToRow(currentRow, __FUNCTION__);
+//            thumbView->scrollToRow(currentRow, __FUNCTION__);
+            fileSelectionChange(currentSfIdx, currentSfIdx);
             break;
         }
         qApp->processEvents(QEventLoop::AllEvents, 50);
@@ -7856,18 +7885,18 @@ around lack of notification when the QListView has finished painting itself.
     // selection has been lost while tableView and possibly thumbView were hidden
     recoverSelection();
 
-    // when okToScroll scroll thumbView to current row
+    // when okToScroll scroll gridView to current row
     G::ignoreScrollSignal = false;
     QTime t = QTime::currentTime().addMSecs(1000);
     while (QTime::currentTime() < t) {
         if (gridView->okToScroll()) {
             G::wait(100);
-            gridView->scrollToRow(currentRow, __FUNCTION__);
+//            gridView->scrollToRow(currentRow, __FUNCTION__);
+            fileSelectionChange(currentSfIdx, currentSfIdx);
             break;
         }
         qApp->processEvents(QEventLoop::AllEvents, 50);
     }
-//    G::ignoreScrollSignal = true;
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
@@ -7923,7 +7952,10 @@ void MW::tableDisplay()
     // recover thumbdock if it was visible before as gridView and full screen can
     // hide the thumbdock
     if(isNormalScreen){
-        if(wasThumbDockVisible && !thumbDock->isVisible()) thumbDock->setVisible(true);
+        if(wasThumbDockVisible && !thumbDock->isVisible()) {
+            thumbDock->setVisible(true);
+            thumbView->selectThumb(currentRow);
+        }
         if(!wasThumbDockVisible && thumbDock->isVisible()) thumbDock->setVisible(false);
     }
 
@@ -7977,6 +8009,7 @@ void MW::compareDisplay()
     */
     thumbDock->setVisible(true);
     thumbDock->raise();
+    thumbView->selectThumb(currentRow);
 
     G::mode = "Compare";
     // centralLayout->setCurrentIndex clears selectionModel
@@ -8141,6 +8174,7 @@ void MW::setThumbDockVisibity()
     #endif
     }
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
+    thumbView->selectThumb(currentRow);
 }
 
 void MW::toggleFolderDockVisibility()
@@ -8283,10 +8317,13 @@ qDebug() << __FUNCTION__;
         thumbDock->setVisible(true);
         thumbDock->raise();
         thumbDockVisibleAction->setChecked(true);
+        fileSelectionChange(currentSfIdx, currentSfIdx);
     }
 
-    if (G::mode != "Grid" && isNormalScreen)
+    qDebug() << __FUNCTION__ << "isNormalScreen =" << isNormalScreen;
+    if (G::mode != "Grid" && isNormalScreen) {
         wasThumbDockVisible = thumbDock->isVisible();
+    }
 }
 
 void MW::setMenuBarVisibility() {
@@ -9925,22 +9962,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    int i /*= 200*/;
-    bool ic;
-    bool md;
-    QString s;
-    for (i = 0; i < dm->sf->rowCount(); ++i) {
-        s = "";
-        ic =dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull();
-        md = !dm->sf->index(i, G::MetadataLoadedColumn).data().toBool();
-        if (ic) s = "no icon";
-        if (md) s += " no metadata";
-        if (ic || md) {
-            qDebug() << i << s;
-            break;
-        }
-    }
-    qDebug() << __FUNCTION__ << ic << md;
+    gridView->setViewportParameters();
+    return;
+    QModelIndex sfIdx = dm->sf->index(currentRow, 0);
+    fileSelectionChange(currentSfIdx, currentSfIdx);
 }
 
 // End MW
