@@ -369,7 +369,7 @@ private slots:
     // caching
     void updateImageCachePositionAfterDelay();
     void loadMetadataCache2ndPass();
-    void updateMetadataCacheIconviewState();
+    void updateMetadataCacheIconviewState(bool useCurrentRow);
     bool isCurrentThumbVisible();
     void numberIconsVisibleChange();
     void loadMetadataChunk();
