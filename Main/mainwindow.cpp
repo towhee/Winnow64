@@ -1169,7 +1169,7 @@ delegate use of the current index must check the row.
     }
     // update caching when folder has been loaded
     if (G::isNewFolderLoaded ) {
-        updateMetadataCacheIconviewState();
+        updateMetadataCacheIconviewState(true);
         metadataCacheThread->fileSelectionChange(updateImageCacheWhenFileSelectionChange);
     }
 
@@ -1252,12 +1252,12 @@ metadata caching.
     G::track(__FUNCTION__);
     #endif
     }
-    updateMetadataCacheIconviewState();
+    updateMetadataCacheIconviewState(false);
     return (currentRow > metadataCacheThread->firstIconVisible &&
             metadataCacheThread->lastIconVisible);
 }
 
-void MW::updateMetadataCacheIconviewState()
+void MW::updateMetadataCacheIconviewState(bool useCurrentRow)
 {
 /*
 This function polls both thumbView and gridView to determine the first, mid and last thumbnail
@@ -1283,13 +1283,15 @@ visible.  This is used in the metadataCacheThread to determine the range of file
     */
 
     if (thumbView->isVisible()) {
-        thumbView->viewportRange(currentRow);
+        if (useCurrentRow) thumbView->calcViewportRange(currentRow);
+        else thumbView->scannedViewportRange();
         if (thumbView->firstVisibleCell < first) first = thumbView->firstVisibleCell;
         if (thumbView->lastVisibleCell > last) last = thumbView->lastVisibleCell;
     }
 
     if (gridView->isVisible()) {
-        gridView->viewportRange(currentRow);
+        if (useCurrentRow) gridView->calcViewportRange(currentRow);
+        else gridView->scannedViewportRange();
         if (gridView->firstVisibleCell < first) first = gridView->firstVisibleCell;
         if (gridView->lastVisibleCell > last) last = gridView->lastVisibleCell;
     }
@@ -1338,7 +1340,7 @@ void MW::loadMetadataCache2ndPass()
     #endif
     }
     updateIconBestFit();
-    updateMetadataCacheIconviewState();
+    updateMetadataCacheIconviewState(true);
     metadataCacheThread->loadNewFolder2ndPass();
 }
 
@@ -1378,7 +1380,7 @@ within the cache range.
     qDebug() << __FUNCTION__ << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateMetadataCacheIconviewState();
+        updateMetadataCacheIconviewState(false);
         if (gridView->isVisible())
             gridView->scrollToRow(thumbView->midVisibleCell, "Sync to ThumbView");
         if (tableView->isVisible())
@@ -1424,7 +1426,7 @@ within the cache range.
 
     if (!G::ignoreScrollSignal) {
         G::ignoreScrollSignal = true;
-        updateMetadataCacheIconviewState();
+        updateMetadataCacheIconviewState(false);
         if (thumbView->isVisible())
             thumbView->scrollToRow(gridView->midVisibleCell, "Sync to GridView");
         metadataCacheThread->scrollChange(currentRow);
@@ -1468,7 +1470,7 @@ within the cache range.
 
     if (!G::ignoreScrollSignal) {
         G::ignoreScrollSignal = true;
-        updateMetadataCacheIconviewState();
+        updateMetadataCacheIconviewState(false);
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, "Sync to TableView");
         metadataCacheThread->scrollChange(currentRow);
@@ -1489,7 +1491,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     }
     qDebug() << __FUNCTION__;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-    updateMetadataCacheIconviewState();
+    updateMetadataCacheIconviewState(true);
     metadataCacheThread->sizeChange();
 }
 
@@ -1561,7 +1563,7 @@ the filter and sort operations cannot commence until all the metadata has been l
     if (G::isInitializing) return;
     if (metadataCacheThread->isAllMetadataLoaded()) return;
 
-    updateMetadataCacheIconviewState();
+    updateMetadataCacheIconviewState(true);
 
     bool resumeImageCaching = false;
     if (imageCacheThread->isRunning()) {
@@ -5263,7 +5265,7 @@ hence need to scroll to the current row.
          QAbstractItemView::ScrollHint::PositionAtCenter);
     G::ignoreScrollSignal = false;
 
-    updateMetadataCacheIconviewState();
+    updateMetadataCacheIconviewState(true);
     metadataCacheThread->scrollChange(currentRow);
 }
 
@@ -9971,8 +9973,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    gridView->setViewportParameters();
-    gridView->viewportRange(currentRow);
+    gridView->scannedViewportRange();
+    gridView->calcViewportRange(currentRow);
     return;
     QModelIndex sfIdx = dm->sf->index(currentRow, 0);
     fileSelectionChange(currentSfIdx, currentSfIdx);

@@ -63,7 +63,7 @@ public:
     int lastVisibleCell;
     int visibleCells;
 
-    bool viewportRange(int row);
+    bool calcViewportRange(int row);
 
     void updateLayout();
     bool whenOkToScroll();
@@ -125,7 +125,7 @@ public slots:
 
     int getFirstVisible();
     int getLastVisible();
-    void setViewportParameters();
+    void scannedViewportRange();
     bool allPageIconsLoaded();
     bool isRowVisible(int row);
     int getThumbsPerPage();

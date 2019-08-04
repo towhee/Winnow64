@@ -435,7 +435,7 @@ bool IconView::isSelectedItem()
         return false;
 }
 
-bool IconView::viewportRange(int sfRow)
+bool IconView::calcViewportRange(int sfRow)
 {
 /*
 Determine the first and last visible icons in the IconView viewport for any item in the
@@ -662,7 +662,7 @@ bool IconView::allPageIconsLoaded()
     return true;
 }
 
-void IconView::setViewportParameters()
+void IconView::scannedViewportRange()
 {
 /*
 Set the firstVisibleRow, midVisible, RowlastVisibleRow and thumbsPerPage. This is called when
@@ -707,7 +707,7 @@ justification happens.
 bool IconView::isRowVisible(int row)
 {
 //    setViewportParameters();
-    viewportRange(row);
+    calcViewportRange(row);
     return row >= firstVisibleCell && row <= lastVisibleCell;
 }
 
@@ -1149,7 +1149,7 @@ resize and preference adjustment operations.
 
     setThumbParameters();
 //    setViewportParameters();
-    viewportRange(currentIndex().row());
+    calcViewportRange(currentIndex().row());
 
 //    qDebug() << objectName() << "::rejustify   "
 //             << "firstVisibleRow" << firstVisibleRow
@@ -1193,7 +1193,7 @@ void IconView::justify(JustifyAction action)
 
     setThumbParameters();
 //    setViewportParameters();
-    viewportRange(currentIndex().row());
+    calcViewportRange(currentIndex().row());
 
 //    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -1242,7 +1242,7 @@ which isn't pretty at all.
         scrollToRow(mid, __FUNCTION__);
         isFitTopOrBottom = false;
 //        setViewportParameters();
-        viewportRange(mid);
+        calcViewportRange(mid);
     }
     else {
         m2->numberIconsVisibleChange();
