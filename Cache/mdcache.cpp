@@ -112,6 +112,7 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
                << "NewFolder2ndPass"
                 << "NewFileSelected"
                << "Scroll"
+               << "SizeChange"
                << "AllMetadata";
 
     qRegisterMetaType<QVector<int>>();
@@ -247,7 +248,6 @@ metadata and icons are loaded into the datamodel.
         mutex.unlock();
         wait();
     }
-    qDebug() << "\nXXXXXXXXXXXXXX " << __FUNCTION__;
     abort = false;
     action = Action::NewFolder2ndPass;
     setRange();
@@ -310,18 +310,12 @@ limits are removed (not visible and not with chunk range)
     #endif
     }
     if (isRunning()) {
-        /* Check if still on the same page, which can happen when a fileSelectionChange
-           triggers a scroll event.  Both call the metaCacheThread and one can stop the
-           other.  Example, when user selects goto first image or goto last image.  */
-//        if (row < firstIconVisible || row > lastIconVisible) {
             mutex.lock();
             abort = true;
             qDebug() << "abort = true   row =" << row << __FUNCTION__;
             condition.wakeOne();
             mutex.unlock();
             wait();
-//        }
-//        else return;
     }
     abort = false;
 //    qDebug() << __FUNCTION__
@@ -349,6 +343,40 @@ limits are removed (not visible and not with chunk range)
     if (foundItemsToLoad) start(TimeCriticalPriority);
 }
 
+void MetadataCache::sizeChange()
+{
+/*
+This function is called when the number of icons visible in the viewport changes when the icon
+size or the viewport change size.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (isRunning()) {
+        mutex.lock();
+        abort = true;
+        qDebug() << "abort = true : " << __FUNCTION__;
+        condition.wakeOne();
+        mutex.unlock();
+        wait();
+    }
+    qDebug() << __FUNCTION__;
+    abort = false;
+    action = Action::Resize;
+    foundItemsToLoad = false;
+    setRange();
+    for (int i = startRow; i < endRow; ++i) {
+        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
+            foundItemsToLoad = true;
+        if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
+            foundItemsToLoad = true;
+        if (foundItemsToLoad) break;
+    }
+    start(TimeCriticalPriority);
+}
+
 void MetadataCache::fileSelectionChange(bool okayToImageCache)
 {
 /*
@@ -368,7 +396,6 @@ added to the datamodel. The image cache is updated.
         mutex.unlock();
         wait();
     }
-    qDebug() << __FUNCTION__ << okayToImageCache;
     abort = false;
     updateImageCache = okayToImageCache;
     action = Action::NewFileSelected;
@@ -400,7 +427,7 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
     int dtpp = metadataChunkSize / 3;
 
     // total per page (tpp)
-    tpp = thumbsPerPage;
+    tpp = visibleIcons;
     if (dtpp > tpp) tpp = dtpp;
 
     // if icons visible greater than chunk size then increase chunk size
@@ -419,17 +446,17 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
     prevLastIconVisible = lastIconVisible;
 
 //    G::track(__FUNCTION__);
-/*    qDebug()  <<  __FUNCTION__
+    qDebug()  <<  __FUNCTION__
               << "source =" << actionList.at(action)
               << "first =" << firstIconVisible
               << "mid =" << midIconVisible
               << "last =" << lastIconVisible
-              << "thumbsPerPage =" << thumbsPerPage
+              << "visibleIcons =" << visibleIcons
               << "tpp =" << tpp
               << "metadataChunkSize =" << metadataChunkSize
               << "startRow =" << startRow
               << "endRow =" << endRow;
-*/
+
 }
 
 void MetadataCache::iconCleanup()
@@ -444,7 +471,6 @@ that have icons are tracked in the list iconsCached as the dm row (not dm->sf pr
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << "Entering...";
     QMutableListIterator<int> i(iconsCached);
     QPixmap nullPm;
 //    mutex.lock();
@@ -757,6 +783,7 @@ If there has been a file selection change and not a new folder then update image
         // read next metadata and icon chunk
         if (action == Action::NewFileSelected ||
             action == Action::Scroll ||
+            action == Action::Resize ||
             action == Action::NewFolder ||
             Action::NewFolder2ndPass)
             if (!G::allMetadataLoaded) readMetadataChunk();

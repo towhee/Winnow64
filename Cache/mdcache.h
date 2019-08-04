@@ -27,6 +27,7 @@ public:
         NewFolder2ndPass,
         NewFileSelected,
         Scroll,
+        Resize,
         AllMetadata
     };
     QStringList actionList;
@@ -34,6 +35,7 @@ public:
     void loadNewFolder();
     void loadNewFolder2ndPass();
     void scrollChange(int row);
+    void sizeChange();
     void fileSelectionChange(bool isRandomSlideShow);
     void loadAllMetadata();
     void readMetadataIcon(const QModelIndex &idx);
@@ -57,7 +59,7 @@ public:
     int firstIconVisible;
     int midIconVisible;
     int lastIconVisible;
-    int thumbsPerPage;
+    int visibleIcons;
 
     int prevFirstIconVisible;
     int prevLastIconVisible;

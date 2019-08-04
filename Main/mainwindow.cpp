@@ -1283,19 +1283,15 @@ visible.  This is used in the metadataCacheThread to determine the range of file
     */
 
     if (thumbView->isVisible()) {
-        thumbView->setViewportParameters();
-        if (thumbView->firstVisibleRow < first) first = thumbView->firstVisibleRow;
-        // calc thumbsPerPage in case IconView is still being populated
-        thumbView->lastVisibleRow = thumbView->getThumbsPerPage() + thumbView->firstVisibleRow;
-        if (thumbView->lastVisibleRow > last) last = thumbView->lastVisibleRow;
+        thumbView->viewportRange(currentRow);
+        if (thumbView->firstVisibleCell < first) first = thumbView->firstVisibleCell;
+        if (thumbView->lastVisibleCell > last) last = thumbView->lastVisibleCell;
     }
 
     if (gridView->isVisible()) {
-        gridView->setViewportParameters();
-        if (gridView->firstVisibleRow < first) first = gridView->firstVisibleRow;
-//        // calc thumbsPerPage in case IconView is still being populated
-//        gridView->lastVisibleRow = gridView->getThumbsPerPage() + gridView->firstVisibleRow;
-        if (gridView->lastVisibleRow > last) last = gridView->lastVisibleRow;
+        gridView->viewportRange(currentRow);
+        if (gridView->firstVisibleCell < first) first = gridView->firstVisibleCell;
+        if (gridView->lastVisibleCell > last) last = gridView->lastVisibleCell;
     }
 
     if (tableView->isVisible()) {
@@ -1304,13 +1300,13 @@ visible.  This is used in the metadataCacheThread to determine the range of file
         if (tableView->lastVisibleRow > last) last = tableView->lastVisibleRow;
     }
 
-/*    qDebug() << __FUNCTION__ << "first =" << first
-             << "last =" << last;
-*/
+//    qDebug() << __FUNCTION__ << "first =" << first
+//             << "last =" << last;
+
     metadataCacheThread->firstIconVisible = first;
-    metadataCacheThread->midIconVisible = (first + last) / 2;
+    metadataCacheThread->midIconVisible = (first + last) / 2;// rgh qCeil ??
     metadataCacheThread->lastIconVisible = last;
-    metadataCacheThread->thumbsPerPage = last - first + 1;
+    metadataCacheThread->visibleIcons = last - first + 1;
 }
 
 void MW::updateImageCachePositionAfterDelay()
@@ -1341,7 +1337,6 @@ void MW::loadMetadataCache2ndPass()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     updateIconBestFit();
     updateMetadataCacheIconviewState();
     metadataCacheThread->loadNewFolder2ndPass();
@@ -1385,9 +1380,9 @@ within the cache range.
         G::ignoreScrollSignal = true;
         updateMetadataCacheIconviewState();
         if (gridView->isVisible())
-            gridView->scrollToRow(thumbView->midVisibleRow, "Sync to ThumbView");
+            gridView->scrollToRow(thumbView->midVisibleCell, "Sync to ThumbView");
         if (tableView->isVisible())
-            tableView->scrollToRow(thumbView->midVisibleRow, "Sync to GridView");
+            tableView->scrollToRow(thumbView->midVisibleCell, "Sync to GridView");
         metadataCacheThread->scrollChange(currentRow);
     }
     G::ignoreScrollSignal = false;
@@ -1424,13 +1419,14 @@ within the cache range.
     the new one is proven to work all the time.
       */
 
+    qDebug() << __FUNCTION__;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (!G::ignoreScrollSignal) {
         G::ignoreScrollSignal = true;
         updateMetadataCacheIconviewState();
         if (thumbView->isVisible())
-            thumbView->scrollToRow(gridView->midVisibleRow, "Sync to GridView");
+            thumbView->scrollToRow(gridView->midVisibleCell, "Sync to GridView");
         metadataCacheThread->scrollChange(currentRow);
 //        metadataCacheScrollTimer->start(cacheDelay);
 //        loadMetadataCacheAfterDelay();
@@ -1478,6 +1474,23 @@ within the cache range.
         metadataCacheThread->scrollChange(currentRow);
     }
     G::ignoreScrollSignal = false;
+}
+
+void MW::numberIconsVisibleChange()
+{
+/*
+If there has not been another call to this function in cacheDelay ms then the
+metadataCacheThread is restarted at the row of the first visible thumb after the scrolling.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__;
+    if (G::isInitializing || !G::isNewFolderLoaded) return;
+    updateMetadataCacheIconviewState();
+    metadataCacheThread->sizeChange();
 }
 
 void MW::loadMetadataCacheAfterDelay()
@@ -1737,15 +1750,9 @@ memory has been consumed or all the images are cached.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
-
-//    // update filter item counts for rating and colour labels, plus other filters if
-//    // all metadata has been loaded
-//    dm->filteredItemCount();
-//    dm->unfilteredItemCount();
 
     updateIconBestFit();
 
@@ -1772,7 +1779,6 @@ memory has been consumed or all the images are cached.
     metadataLoaded = true;
 
     // tell image cache new position
-//    qDebug() << __FUNCTION__ << "calling imageCacheThread->updateImageCachePosition";
     imageCacheThread->updateImageCachePosition(/*fPath*/);
 
     G::isNewFolderLoaded = true;
@@ -3862,7 +3868,7 @@ void MW::createThumbView()
 //    thumbView->setSpacing(0);                // thumbView not visible without this
     thumbView->setAutoScroll(false);
 //    thumbView->setWrapping(false);
-    thumbView->firstVisibleRow = 0;
+    thumbView->firstVisibleCell = 0;
 
     if (isSettings) {
         // loadSettings has not run yet (dependencies, but QSettings has been opened
@@ -3871,7 +3877,7 @@ void MW::createThumbView()
         thumbView->labelFontSize = setting->value("labelFontSize").toInt();
         thumbView->showIconLabels = setting->value("showThumbLabels").toBool();
         thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
-        thumbView->thumbsPerPage = setting->value("thumbsPerPage").toInt();
+        thumbView->visibleCells = setting->value("thumbsPerPage").toInt();
     }
     else {
         thumbView->iconWidth = 100;
@@ -3879,7 +3885,7 @@ void MW::createThumbView()
         thumbView->labelFontSize = 12;
         thumbView->showIconLabels = true;
         thumbView->badgeSize = classificationBadgeInThumbDiameter;
-        thumbView->thumbsPerPage = width() / thumbView->iconWidth;
+        thumbView->visibleCells = width() / thumbView->iconWidth;
     }
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -3919,7 +3925,7 @@ void MW::createGridView()
     gridView->setSpacing(0);                // gridView not visible without this
     gridView->setWrapping(true);
     gridView->setAutoScroll(false);
-    gridView->firstVisibleRow = 0;
+    gridView->firstVisibleCell = 0;
 
     if (isSettings) {
         gridView->iconWidth = setting->value("thumbWidthGrid").toInt();
@@ -3927,7 +3933,7 @@ void MW::createGridView()
         gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
         gridView->showIconLabels = setting->value("showThumbLabelsGrid").toBool();
         gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
-        gridView->thumbsPerPage = setting->value("thumbsPerPage").toInt();
+        gridView->visibleCells = setting->value("thumbsPerPage").toInt();
     }
     else {
         gridView->iconWidth = 200;
@@ -3936,7 +3942,7 @@ void MW::createGridView()
         gridView->showIconLabels = true;
         gridView->badgeSize = classificationBadgeInThumbDiameter;
         // rgh has window size been assigned yet
-        gridView->thumbsPerPage = (width() / 200) * (height() / 200);
+        gridView->visibleCells = (width() / 200) * (height() / 200);
     }
 
     // double mouse click fires displayLoupe
@@ -5284,6 +5290,8 @@ void MW::thumbsEnlarge()
         else thumbView->thumbsEnlarge();
     }
     scrollToCurrentRow();
+    // may be less icons to cache
+    numberIconsVisibleChange();
 }
 
 void MW::thumbsShrink()
@@ -5300,6 +5308,7 @@ void MW::thumbsShrink()
     }
     scrollToCurrentRow();
     // may be more icons to cache
+    numberIconsVisibleChange();
 //    loadMetadataCacheAfterDelay();
 }
 
@@ -5625,7 +5634,7 @@ void MW::deleteWorkspace(int n)
     // remove workspace from list of workspaces
     workspaces->removeAt(n);
 
-    // sync menus by reUpdateing.  Tried to use indexes but had problems so
+    // sync menus by re-updating.  Tried to use indexes but had problems so
     // resorted to brute force solution
     syncWorkspaceMenu();
 }
@@ -6905,7 +6914,7 @@ re-established when the application is re-opened.
     setting->setValue("labelFontSizeGrid", gridView->labelFontSize);
     setting->setValue("showThumbLabelsGrid", gridView->showIconLabels);
 
-    setting->setValue("thumbsPerPage", metadataCacheThread->thumbsPerPage);
+    setting->setValue("thumbsPerPage", metadataCacheThread->visibleIcons);
 
     // slideshow
     setting->setValue("slideShowDelay", slideShowDelay);
@@ -7923,11 +7932,11 @@ void MW::tableDisplay()
     // sync scrolling between modes (loupe, grid and table)
     if (prevMode == "Grid") {
         if(gridView->isRowVisible(currentRow)) scrollRow = currentRow;
-        else scrollRow = gridView->midVisibleRow;
+        else scrollRow = gridView->midVisibleCell;
     }
     if (prevMode == "Loupe" && thumbView->isVisible() == true) {
         if(thumbView->isRowVisible(currentRow)) scrollRow = currentRow;
-        else scrollRow = thumbView->midVisibleRow;
+        else scrollRow = thumbView->midVisibleCell;
     }
 
     // change to the table view
@@ -9963,6 +9972,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     gridView->setViewportParameters();
+    gridView->viewportRange(currentRow);
     return;
     QModelIndex sfIdx = dm->sf->index(currentRow, 0);
     fileSelectionChange(currentSfIdx, currentSfIdx);
