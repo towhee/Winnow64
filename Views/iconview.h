@@ -58,12 +58,12 @@ public:
 //    bool isFloat;       // set by MW ...
 //    bool isBestAspect;
 
-    int firstVisibleRow;
-    int midVisibleRow;
-    int lastVisibleRow;
-    int thumbsPerPage;
+    int firstVisibleCell;
+    int midVisibleCell;
+    int lastVisibleCell;
+    int visibleCells;
 
-    bool viewportRange(int row, int &first, int &last);
+    bool viewportRange(int row);
 
     void updateLayout();
     bool whenOkToScroll();

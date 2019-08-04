@@ -371,6 +371,7 @@ private slots:
     void loadMetadataCache2ndPass();
     void updateMetadataCacheIconviewState();
     bool isCurrentThumbVisible();
+    void numberIconsVisibleChange();
     void loadMetadataChunk();
 //    void loadMetadataChunkAfterScroll();
 //    void loadMetadataCacheThumbScrollEvent();
