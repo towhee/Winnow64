@@ -851,6 +851,21 @@ the sort or filter or toggles raw+jpg.
     }
 }
 
+void DataModel::clearPicks()
+{
+/*
+reset all the picks to false.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    for(int row = 0; row < sf->rowCount(); row++) {
+        setData(index(row, G::PickColumn), "false");
+    }
+}
+
 QString DataModel::diagnostics()
 {
     QString reportString;
