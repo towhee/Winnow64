@@ -1,9 +1,4 @@
 BUG
-- When size thumbdock it scrolls to zero
-- Ingested images not shown in blue
-- Home not working in gridView
-- Image cache not always running at start
-- gridView > Full screen > gridview > loupe filmstrip has blank icons
 - Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Add / update tool tips in preferences and throughout program
@@ -43,6 +38,13 @@ ENHANCEMENTS
 - Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- gridView > Full screen > gridview > loupe filmstrip has blank icons
+- Image cache not always running at start
+- Ingested images not shown in blue
+- If classification badge not visible and set call then make badges visible
+- Home not working in gridView
+- When size thumbdock it scrolls to zero
+- When go to end sometimes scrolls just short of the end
 - PropertyEditor main categories covered decoration for alternate rows
 - MDCache::readIconChunk - If no read thumb set pixmap to bad file png
 - MDCache icon cleanup not working when scroll (update startRow/endRow)

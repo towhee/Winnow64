@@ -5542,7 +5542,7 @@ workspace with a matching name to the action is used.
     gridView->setThumbParameters();
     updateState();
     // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
-    setThumbDockVisibity();
+//    setThumbDockVisibity();
 }
 
 void MW::snapshotWorkspace(workspaceData &wsd)
@@ -7769,17 +7769,6 @@ around lack of notification when the QListView has finished painting itself.
     // save selection as tableView is hidden and not synced
     saveSelection();
 
-    // sync scrolling between modes (loupe, grid and table)
-//    if (prevMode == "Table") {
-//        tableView->setViewportParameters();
-//        if (tableView->isCurrentVisible) scrollRow = currentRow;
-//        else scrollRow = tableView->midVisibleRow;
-//    }
-//    if (prevMode == "Grid") {
-//        if (gridView->isRowVisible(currentRow)) scrollRow = currentRow;
-//        else scrollRow = gridView->midVisibleRow;
-//    }
-
     /* show imageView in the central widget. This makes thumbView visible, and
     it updates the index to its previous state.  The index update triggers
     fileSelectionChange  */
@@ -7830,7 +7819,6 @@ around lack of notification when the QListView has finished painting itself.
         }
         qApp->processEvents(QEventLoop::AllEvents, 50);
     }
-//    G::ignoreScrollSignal = true;
 
     prevMode = "Loupe";
 
@@ -7855,25 +7843,6 @@ around lack of notification when the QListView has finished painting itself.
 
     // save selection as gridView is hidden and not synced
     saveSelection();
-
-    // remember thumbView visibility so can re-establish if change mode again
-    if (!G::isInitializing) {
-        if (thumbView->isVisible()) wasThumbDockVisible = true;
-        else wasThumbDockVisible = false;
-    }
-
-    // sync scrolling between modes (loupe, grid and table)
-//    if (prevMode == "Table") {
-//        tableView->setViewportParameters();
-//        qDebug() << "table  midVisible =" << tableView->midVisibleRow
-//                 << "tableView->isCurrentVisible =" << tableView->isCurrentVisible;
-//        if (tableView->isCurrentVisible) scrollRow = currentRow;
-//        else scrollRow = tableView->midVisibleRow;
-//    }
-//    if (prevMode == "Loupe" && thumbView->isVisible() == true) {
-//        if(thumbView->isRowVisible(currentRow)) scrollRow = currentRow;
-//        else scrollRow = thumbView->midVisibleRow;
-//    }
 
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
     thumbDock->setVisible(false);
@@ -7914,8 +7883,6 @@ around lack of notification when the QListView has finished painting itself.
 
     gridView->setFocus();
     prevMode = "Grid";
-
-//    qDebug() << prevMode << "wasThumbDockVisible" << wasThumbDockVisible;
 }
 
 void MW::tableDisplay()
@@ -7982,9 +7949,6 @@ void MW::tableDisplay()
 
     G::ignoreScrollSignal = false;
     tableView->scrollToRow(scrollRow, __FUNCTION__);
-//    tableView->scrollTo(dm->sf->index(scrollRow, 0), QAbstractItemView::PositionAtCenter);
-//    tableView->scrollToCurrent();
-//    if (thumbView->isVisible()) thumbView->scrollWhenReady = true;
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
@@ -8016,7 +7980,7 @@ void MW::compareDisplay()
        compare the thumbdock gets frozen (cannot use splitter) at about 1/2 ht.
        Not sure what causes this, but by making the thumbdock visible before
        entered compare mode avoids this.  After enter compare mode revert
-       thumbdoc to prior visibility (wasThumbDockVisible).
+       thumbdocK to prior visibility (wasThumbDockVisible).
     */
     thumbDock->setVisible(true);
     thumbDock->raise();
@@ -8310,7 +8274,6 @@ void MW::toggleThumbDockVisibity()
     #endif
     }
     if (G::isInitializing) return;
-qDebug() << __FUNCTION__;
     if (thumbDock->isVisible() && thumbDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
     if (thumbDock->isVisible() && !thumbDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
     if (!thumbDock->isVisible()) dockToggle = SetVisible;
@@ -8331,10 +8294,14 @@ qDebug() << __FUNCTION__;
         fileSelectionChange(currentSfIdx, currentSfIdx);
     }
 
-    qDebug() << __FUNCTION__ << "isNormalScreen =" << isNormalScreen;
     if (G::mode != "Grid" && isNormalScreen) {
         wasThumbDockVisible = thumbDock->isVisible();
     }
+    qDebug() << __FUNCTION__
+             << "wasThumbDockVisible =" << wasThumbDockVisible
+             << "G::mode =" << G::mode
+             << "isNormalScreen =" << isNormalScreen
+             << "thumbDock->isVisible() =" << thumbDock->isVisible();
 }
 
 void MW::setMenuBarVisibility() {
@@ -8520,21 +8487,24 @@ void MW::setIngested()
     G::track(__FUNCTION__);
     #endif
     }
-    ignoreSelectionChange = true;
-    int prevRow = currentRow;
-    saveSelection();
-    selectionModel->clear();
+//    ignoreSelectionChange = true;
+//    int prevRow = currentRow;
+//    saveSelection();
+//    selectionModel->clear();
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         if (dm->sf->index(row, G::PickColumn).data().toString() == "true") {
-            QModelIndex idx = dm->sf->index(row, G::IngestedColumn);
-            dm->sf->setData(idx, "true");
-            selectionModel->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+//            QModelIndex idx = dm->sf->index(row, G::IngestedColumn);
+//            dm->sf->setData(idx, "true");
+            dm->sf->setData(dm->sf->index(row, G::IngestedColumn), "true");
+            dm->sf->setData(dm->sf->index(row, G::PickColumn), "false");
+//            QModelIndex idx = dm->sf->index(row, 0);
+//            selectionModel->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
     }
-    togglePick();
-    recoverSelection();
-    thumbView->selectThumb(prevRow);
-    ignoreSelectionChange = false;
+//    togglePick();
+//    recoverSelection();
+//    thumbView->selectThumb(prevRow);
+//    ignoreSelectionChange = false;
 }
 
 void MW::togglePick()
@@ -8918,6 +8888,14 @@ the rating for all the selected thumbs.
     // do not set rating if slideshow is on
     if (G::isSlideShow) return;
 
+    // make sure classification badges are visible
+    if (!isRatingBadgeVisible) {
+        ratingBadgeVisibleAction->setChecked(true);
+        isRatingBadgeVisible = true;
+        thumbView->refreshThumbs();
+        gridView->refreshThumbs();
+    }
+
     QObject* obj = sender();
     QString s = obj->objectName();
     if (s == "Rate0") rating = "";
@@ -8994,6 +8972,14 @@ set the color class for all the selected thumbs.
     }
     // do not set color class if slideshow is on
     if (G::isSlideShow) return;
+
+    // make sure classification badges are visible
+    if (!isRatingBadgeVisible) {
+        ratingBadgeVisibleAction->setChecked(true);
+        isRatingBadgeVisible = true;
+        thumbView->refreshThumbs();
+        gridView->refreshThumbs();
+    }
 
     QObject* obj = sender();
     QString s = obj->objectName();
@@ -9254,7 +9240,10 @@ void MW::keyHome()
     #endif
     }
     if (G::mode == "Compare") compareImages->go("Home");
-    else thumbView->selectFirst();
+    if (G::mode == "Grid") gridView->selectFirst();
+    else {
+        thumbView->selectFirst();
+    }
 }
 
 void MW::keyEnd()
@@ -9268,10 +9257,9 @@ void MW::keyEnd()
     #endif
     }
     if (G::mode == "Compare") compareImages->go("End");
+    if (G::mode == "Grid") gridView->selectLast();
     else {
         thumbView->selectLast();
-        gridView->setVisible(true);
-        gridView->selectLast();
     }
 }
 
@@ -9973,11 +9961,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    gridView->scannedViewportRange();
-    gridView->calcViewportRange(currentRow);
-    return;
-    QModelIndex sfIdx = dm->sf->index(currentRow, 0);
-    fileSelectionChange(currentSfIdx, currentSfIdx);
+    qDebug() << __FUNCTION__
+             << "wasThumbDockVisible =" << wasThumbDockVisible
+             << "G::mode =" << G::mode
+             << "isNormalScreen =" << isNormalScreen
+             << "thumbDock->isVisible() =" << thumbDock->isVisible();
 }
 
 // End MW
