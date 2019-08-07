@@ -4492,18 +4492,14 @@ void MW::createStatusBar()
     updateImageCachingThreadRunStatus(false, true);
 
     // labels to show various status
-    filterStatusLabel->setStyleSheet("QLabel{color:red;}");
-    filterStatusLabel->setText("⚙️");
+    filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
+    filterStatusLabel->setAlignment(Qt::AlignVCenter);
     statusBar()->addWidget(filterStatusLabel);
-    subfolderStatusLabel->setStyleSheet("QLabel{color:red;}");
-    subfolderStatusLabel->setText("📂");
+    subfolderStatusLabel->setPixmap(QPixmap(":/images/icon16/subfolders.png"));
     statusBar()->addWidget(subfolderStatusLabel);
-    rawJpgStatusLabel->setStyleSheet("QLabel{color:red;}");
-    rawJpgStatusLabel->setText("🔗");
-//    rawJpgStatusLabel->setText("☯");
+    rawJpgStatusLabel->setPixmap(QPixmap(":/images/icon16/link.png"));
     statusBar()->addWidget(rawJpgStatusLabel);
-    slideShowStatusLabel->setStyleSheet("QLabel{color:red;}");
-    slideShowStatusLabel->setText("🎥");
+    slideShowStatusLabel->setPixmap(QPixmap(":/images/icon16/slideshow.png"));
     statusBar()->addWidget(slideShowStatusLabel);
 
 
@@ -9310,8 +9306,9 @@ void MW::slideShow()
         // stop slideshow
         imageView->setCursor(Qt::ArrowCursor);
         slideShowStatusLabel->setText("");
-        updateStatus(true);
         G::isSlideShow = false;
+        updateStatus(true);
+        updateStatusBar();
         slideShowAction->setText(tr("Slide Show"));
         G::popUp->showPopup("Stopping slideshow");
         slideShowTimer->stop();

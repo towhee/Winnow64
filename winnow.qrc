@@ -120,5 +120,10 @@
         <file>Docs/_template.html</file>
         <file>images/branch-closed-small.png</file>
         <file>images/branch-open-small.png</file>
+        <file>images/icon16/filter.png</file>
+        <file>images/icon16/link.png</file>
+        <file>images/icon16/subfolders.png</file>
+        <file>images/icon16/slideshow.png</file>
+        <file>images/icon16/rawjpeg.png</file>
     </qresource>
 </RCC>

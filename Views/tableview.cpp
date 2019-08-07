@@ -106,48 +106,50 @@ void TableView::scrollToCurrent()
 int TableView::sizeHintForColumn(int column) const
 {
     QFontMetrics fm(this->font());
-    if (column == G::NameColumn) return fm.width("2019-02-25_0001.jpg========");
-    if (column == G::RefineColumn) return fm.width("=Refine=");
-    if (column == G::PickColumn) return fm.width("=Pick=");
-    if (column == G::IngestedColumn) return fm.width("=Ingested=");
-    if (column == G::LabelColumn) return fm.width("=Colour=");
-    if (column == G::RatingColumn) return fm.width("=Rating=");
-    if (column == G::SearchColumn) return fm.width("=false=");
-    if (column == G::TypeColumn) return fm.width("=Type=");
-    if (column == G::SizeColumn) return fm.width("=999,999,999=");
-    if (column == G::CreatedColumn) return fm.width("=2019-09-09 09:09:09=");
-    if (column == G::ModifiedColumn) return fm.width("=2019-09-09 09:09:09=");
-    if (column == G::YearColumn) return fm.width("=2000=");
-    if (column == G::DayColumn) return fm.width("=2000-00-00=");
-    if (column == G::CreatorColumn) return fm.width("Rory Hill=====");
-    if (column == G::MegaPixelsColumn) return fm.width("=999.99=");
-    if (column == G::DimensionsColumn) return fm.width("=99999x99999=");
-    if (column == G::RotationColumn) return fm.width("=Rot=");
-    if (column == G::ApertureColumn) return fm.width("=Aperture=");
-    if (column == G::ShutterspeedColumn) return fm.width("=1/8000 sec=");
-    if (column == G::ISOColumn) return fm.width("999999");
-    if (column == G::CameraMakeColumn) return fm.width("Nikon ========");
-    if (column == G::CameraModelColumn) return fm.width("Nikon D850============");
-    if (column == G::LensColumn) return fm.width("Lens======================");
-    if (column == G::FocalLengthColumn) return fm.width("=Focal length==");
-    if (column == G::TitleColumn) return fm.width("=Title======================================");
-    if (column == G::CopyrightColumn) return fm.width("=Copyright=====");
-    if (column == G::EmailColumn) return fm.width("=Email================");
-    if (column == G::UrlColumn) return fm.width("=Url=======================");
-    if (column == G::OffsetFullJPGColumn) return fm.width("=OffsetFullJPGColumn=");
-    if (column == G::LengthFullJPGColumn) return fm.width("=LengthFullJPGColumn=");
-    if (column == G::OffsetThumbJPGColumn) return fm.width("=OffsetThumbJPGColumn=");
-    if (column == G::LengthThumbJPGColumn) return fm.width("=LengthThumbJPGColumn=");
-    if (column == G::OffsetSmallJPGColumn) return fm.width("=OffsetSmallJPGColumn=");
-    if (column == G::LengthSmallJPGColumn) return fm.width("=LengthSmallJPGColumn=");
-    if (column == G::XmpSegmentOffsetColumn) return fm.width("=XmpSegmentOffsetColumn=");
-    if (column == G::XmpNextSegmentOffsetColumn) return fm.width("=XmpNextSegmentOffsetColumn=");
-    if (column == G::IsXMPColumn) return fm.width("=IsXMPColumn=");
-    if (column == G::OrientationOffsetColumn) return fm.width("=OrientationOffsetColumn=");
-    if (column == G::OrientationColumn) return fm.width("=OrientationColumn=");
-    if (column == G::RotationDegreesColumn) return fm.width("=RotationDegreesColumn=");
-    if (column == G::ErrColumn) return fm.width("=ErrColumn=");
-    if (column == G::ShootingInfoColumn) return fm.width("=ShootingInfoColumn======================");
+    if (column == G::NameColumn) return fm.boundingRect("2019-02-25_0001.jpg========").width();
+    if (column == G::RefineColumn) return fm.boundingRect("=Refine=").width();
+    if (column == G::PickColumn) return fm.boundingRect("=Pick=").width();
+    if (column == G::IngestedColumn) return fm.boundingRect("=Ingested=").width();
+    if (column == G::LabelColumn) return fm.boundingRect("=Colour=").width();
+    if (column == G::RatingColumn) return fm.boundingRect("=Rating=").width();
+    if (column == G::SearchColumn) return fm.boundingRect("=false=").width();
+    if (column == G::TypeColumn) return fm.boundingRect("=Type=").width();
+    if (column == G::SizeColumn) return fm.boundingRect("=999,999,999=").width();
+    if (column == G::CreatedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
+    if (column == G::ModifiedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
+    if (column == G::YearColumn) return fm.boundingRect("=2000=").width();
+    if (column == G::DayColumn) return fm.boundingRect("=2000-00-00=").width();
+    if (column == G::CreatorColumn) return fm.boundingRect("Rory Hill=====").width();
+    if (column == G::MegaPixelsColumn) return fm.boundingRect("=999.99=").width();
+    if (column == G::DimensionsColumn) return fm.boundingRect("=99999x99999=").width();
+    if (column == G::RotationColumn) return fm.boundingRect("=Rot=").width();
+    if (column == G::ApertureColumn) return fm.boundingRect("=Aperture=").width();
+    if (column == G::ShutterspeedColumn) return fm.boundingRect("=1/8000 sec=").width();
+    if (column == G::ISOColumn) return fm.boundingRect("999999").width();
+    if (column == G::CameraMakeColumn) return fm.boundingRect("Nikon ========").width();
+    if (column == G::CameraModelColumn) return fm.boundingRect("Nikon D850============").width();
+    if (column == G::LensColumn) return fm.boundingRect("Lens======================").width();
+    if (column == G::FocalLengthColumn) return fm.boundingRect("=Focal length==").width();
+    if (column == G::TitleColumn) return fm.boundingRect("=Title======================================").width();
+    if (column == G::CopyrightColumn) return fm.boundingRect("=Copyright=====").width();
+    if (column == G::EmailColumn) return fm.boundingRect("=Email================").width();
+    if (column == G::UrlColumn) return fm.boundingRect("=Url=======================").width();
+    if (column == G::OffsetFullJPGColumn) return fm.boundingRect("=OffsetFullJPGColumn=").width();
+    if (column == G::LengthFullJPGColumn) return fm.boundingRect("=LengthFullJPGColumn=").width();
+    if (column == G::OffsetThumbJPGColumn) return fm.boundingRect("=OffsetThumbJPGColumn=").width();
+    if (column == G::LengthThumbJPGColumn) return fm.boundingRect("=LengthThumbJPGColumn=").width();
+    if (column == G::OffsetSmallJPGColumn) return fm.boundingRect("=OffsetSmallJPGColumn=").width();
+    if (column == G::LengthSmallJPGColumn) return fm.boundingRect("=LengthSmallJPGColumn=").width();
+    if (column == G::XmpSegmentOffsetColumn) return fm.boundingRect("=XmpSegmentOffsetColumn=").width();
+    if (column == G::XmpNextSegmentOffsetColumn) return fm.boundingRect("=XmpNextSegmentOffsetColumn=").width();
+    if (column == G::IsXMPColumn) return fm.boundingRect("=IsXMPColumn=").width();
+    if (column == G::OrientationOffsetColumn) return fm.boundingRect("=OrientationOffsetColumn=").width();
+    if (column == G::OrientationColumn) return fm.boundingRect("=OrientationColumn=").width();
+    if (column == G::RotationDegreesColumn) return fm.boundingRect("=RotationDegreesColumn=").width();
+    if (column == G::ErrColumn) return fm.boundingRect("=ErrColumn=").width();
+    if (column == G::ShootingInfoColumn) return fm.boundingRect("=ShootingInfoColumn======================").width();
+    if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Meta Loaded=").width();
+    if (column == G::SearchTextColumn) return fm.boundingRect("=SearchText=====================================================================================").width();
     return 50;
 }
 
@@ -252,10 +254,10 @@ The ok datamodel (table fields to show) is edited in the preferences dialog
 and this slot is then signalled to update which fields are visible.
 */
     for(int i = 0; i < ok->rowCount(); i++) {
-        if (!G::showAllTableColumns && i > G::UrlColumn) {
-            hideColumn(i + 1);
-            continue;
-        }
+//        if (!G::showAllTableColumns && i > G::UrlColumn) {
+//            hideColumn(i + 1);
+//            continue;
+//        }
         bool showField = ok->index(i, 1).data().toBool();
         if (showField) showColumn(i + 1);
         else hideColumn(i + 1);

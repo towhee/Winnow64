@@ -41,7 +41,6 @@ namespace G
         // items read when new folder (core fields)
         PathColumn,
         NameColumn,
-        MetadataLoadedColumn,
         RefineColumn,
         PickColumn,
         IngestedColumn,
@@ -73,6 +72,7 @@ namespace G
         EmailColumn,
         UrlColumn,
         // unavailable for TableView from here on (move items above to show and below to hide)
+        MetadataLoadedColumn,
         // original values
         _RatingColumn,
         _LabelColumn,
