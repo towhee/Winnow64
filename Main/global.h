@@ -37,10 +37,11 @@ namespace G
     not in the same order!
     */
     enum dataModelColumns {
-        // items available for TableView
+        // items available for TableView in order
         // items read when new folder (core fields)
         PathColumn,
         NameColumn,
+        ErrColumn,
         RefineColumn,
         PickColumn,
         IngestedColumn,
@@ -95,7 +96,6 @@ namespace G
         OrientationOffsetColumn,
         OrientationColumn,
         RotationDegreesColumn,
-        ErrColumn,
         ShootingInfoColumn,
         SearchTextColumn,
         TotalColumns    // insert additional columns before this

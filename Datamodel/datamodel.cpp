@@ -462,9 +462,10 @@ bool DataModel::addFileData()
         setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::MetadataLoadedColumn), "false");
         setData(index(row, G::SearchColumn), "false");
-        setData(index(row, G::SearchColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+        setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
         setData(index(row, G::SearchTextColumn), search);
         setData(index(row, G::SearchTextColumn), search, Qt::ToolTipRole);
+        setData(index(row, G::ErrColumn), "");
 
         /* Save info for duplicated raw and jpg files, which generally are the result of
         setting raw+jpg in the camera. The datamodel is sorted by file path, except raw
@@ -480,8 +481,8 @@ bool DataModel::addFileData()
         */
 
         if (fileIndex > 0) {
-            QString s1 = fileInfoList.at(fileIndex - 1).baseName();
-            QString s2 = fileInfoList.at(fileIndex).baseName();
+            QString s1 = fileInfoList.at(fileIndex - 1).completeBaseName();
+            QString s2 = fileInfoList.at(fileIndex).completeBaseName();
             if (s1 == s2) {
                 if (fileInfoList.at(fileIndex).suffix().toLower() == "jpg") {
                     QModelIndex prevIdx = index(row - 1, 0);
@@ -522,18 +523,35 @@ bool DataModel::addFileData()
 
 ImageMetadata DataModel::getMetadata(QString fPath)
 {
+/*
+Used by InfoString and IngestDlg
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int row = fPathRow[fPath];
+    bool success = false;
 
     // check if metadata loaded for this row
-    if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
+    if (index(row, G::MetadataLoadedColumn).data().toBool()) {
+        success = true;
+    }
+    else {
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->imageMetadata.row = row;
             addMetadataForItem(metadata->imageMetadata);
+            success = true;
         }
     }
 
     ImageMetadata m;
+    if (!success) {
+        return m;
+        // rgh to finish err proofing this
+    }
 
     m.row = row;
     m.label = index(row, G::LabelColumn).data().toString();
@@ -619,6 +637,9 @@ to run as a separate thread and can be executed directly.
             addMetadataForItem(metadata->imageMetadata, isShowCacheStatus);
             count++;
         }
+        else {
+            // rgh add error proofing
+        }
     }
     G::allMetadataLoaded = true;
     qint64 ms = G::t.elapsed();
@@ -645,6 +666,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, bool isShowCacheStatus)
     int row = m.row;
     QString search = index(row, G::SearchTextColumn).data().toString();
 
+    setData(index(row, G::SearchColumn), m.isSearch);
+    setData(index(row, G::SearchColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::LabelColumn), m.label);
     setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     search += m.label;
@@ -708,6 +731,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, bool isShowCacheStatus)
     setData(index(row, G::OrientationColumn), m.orientation);
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
     setData(index(row, G::ErrColumn), m.err);
+    setData(index(row, G::ErrColumn), m.err, Qt::ToolTipRole);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     search += m.shootingInfo;
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);

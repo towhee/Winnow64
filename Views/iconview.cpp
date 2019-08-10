@@ -414,7 +414,7 @@ int IconView::getRandomRow()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     return QRandomGenerator::global()->generate() % (dm->sf->rowCount());
 //    return qrand() % (dm->sf->rowCount());
 }
@@ -694,14 +694,14 @@ justification happens.
     midVisibleCell = firstVisibleCell + visibleCells / 2;
 
 
-    qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
+/*    qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
              << "isInitializing =" << G::isInitializing
              << "isVisible =" << isVisible()
              << "firstVisibleRow =" << firstVisibleCell
              << "lastVisibleRow =" << lastVisibleCell
              << "midVisibleRow =" << midVisibleCell
              << "thumbsPerPage =" << visibleCells;
-
+*/
 }
 
 bool IconView::isRowVisible(int row)
@@ -1034,7 +1034,7 @@ void IconView::selectRandom()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
+//    qDebug() << "\n***************************************************************************\n" << __FUNCTION__;
     selectThumb(getRandomRow());
 }
 

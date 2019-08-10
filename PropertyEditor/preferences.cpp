@@ -106,7 +106,7 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "cacheSizeMB") {
         qDebug() << __FUNCTION__ << v << source;
-        mw->cacheSizeMB = v.toInt() * 1024;
+        mw->cacheSizeMB = v.toInt() /** 1024*/;
         mw->setCacheParameters();
     }
 
@@ -713,16 +713,16 @@ void Preferences::addItems()
                       "sense.</p></body></html>";
             QStandardItem *cacheSizeMBCaption = new QStandardItem;
             cacheSizeMBCaption->setToolTip(tooltip);
-            cacheSizeMBCaption->setText("Image cache size (GB)");
+            cacheSizeMBCaption->setText("Image cache size (MB)");
             cacheSizeMBCaption->setEditable(false);
             QStandardItem *cacheSizeMBValue = new QStandardItem;
             cacheSizeMBValue->setToolTip(tooltip);
-            cacheSizeMBValue->setData(mw->cacheSizeMB / 1024, Qt::EditRole);
+            cacheSizeMBValue->setData(mw->cacheSizeMB /*/ 1024*/, Qt::EditRole);
             cacheSizeMBValue->setData(DT_Spinbox, UR_DelegateType);
             cacheSizeMBValue->setData("cacheSizeMB", UR_Source);
             cacheSizeMBValue->setData("int", UR_Type);
             cacheSizeMBValue->setData(1, UR_Min);
-            cacheSizeMBValue->setData(32, UR_Max);
+            cacheSizeMBValue->setData(32000, UR_Max);
             cacheSizeMBValue->setData(50, UR_LineEditFixedWidth);
             imageCatItem->setChild(thirdGenerationCount, 0, cacheSizeMBCaption);
             imageCatItem->setChild(thirdGenerationCount, 1, cacheSizeMBValue);

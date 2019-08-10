@@ -135,6 +135,7 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
                 success = true;
             }
             else {
+                imFile.close();
                 err = "Could not read thumb from buffer";
                 if (G::isThreadTrackingOn) track(fPath, err);
 //                emit updateLoadThumb(fPath, err);
@@ -142,6 +143,7 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
             }
         }
         else {
+            imFile.close();
             err = "Illegal offset to thumb";
             if (G::isThreadTrackingOn) track(fPath, err);
 //            emit updateLoadThumb(fPath, err);
@@ -151,6 +153,7 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
     else {
         // file busy, wait a bit and try again
         err = "Could not open file for thumb - try again";
+        qDebug() << __FUNCTION__ << err;
         if (G::isThreadTrackingOn) track(fPath, err);
 //        emit updateLoadThumb(fPath, err);
     }

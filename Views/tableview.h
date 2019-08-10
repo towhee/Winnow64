@@ -72,49 +72,56 @@ public:
 class PickItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit PickItemDelegate(QObject* parent = 0);
+    explicit PickItemDelegate(QObject* parent = nullptr);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
+};
+
+class SearchItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit SearchItemDelegate(QObject* parent = nullptr);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
 class IngestedItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit IngestedItemDelegate(QObject* parent = 0);
+    explicit IngestedItemDelegate(QObject* parent = nullptr);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
 class DimensionItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit DimensionItemDelegate(QObject* parent = 0);
+    explicit DimensionItemDelegate(QObject* parent = nullptr);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const;
 };
 
 class ApertureItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit ApertureItemDelegate(QObject* parent = 0);
+    explicit ApertureItemDelegate(QObject* parent = nullptr);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const;
 };
 
 class ExposureTimeItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit ExposureTimeItemDelegate(QObject* parent = 0);
+    explicit ExposureTimeItemDelegate(QObject* parent = nullptr);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const;
 };
 
 class FocalLengthItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit FocalLengthItemDelegate(QObject* parent = 0);
+    explicit FocalLengthItemDelegate(QObject* parent = nullptr);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const;
 };
 
 class ISOItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit ISOItemDelegate(QObject* parent = 0);
+    explicit ISOItemDelegate(QObject* parent = nullptr);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const;
 };
 

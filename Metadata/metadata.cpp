@@ -2799,7 +2799,7 @@ checked to make sure there is valid data.
     length = 0;
 }
 
-void Metadata::formatNikon()
+bool Metadata::formatNikon()
 {
     {
     #ifdef ISDEBUG
@@ -3019,10 +3019,10 @@ void Metadata::formatNikon()
     }
 
     if (report) reportMetadata();
-
+    return true;
 }
 
-void Metadata::formatCanon()
+bool Metadata::formatCanon()
 {
     {
     #ifdef ISDEBUG
@@ -3196,9 +3196,10 @@ void Metadata::formatCanon()
     }
 
     if (report) reportMetadata();
+    return true;
 }
 
-void Metadata::formatOlympus()
+bool Metadata::formatOlympus()
 {
     {
     #ifdef ISDEBUG
@@ -3332,9 +3333,10 @@ void Metadata::formatOlympus()
     }
 
     if (report) reportMetadata();
+    return true;
 }
 
-void Metadata::formatSony()
+bool Metadata::formatSony()
 {
     {
     #ifdef ISDEBUG
@@ -3476,7 +3478,7 @@ void Metadata::formatSony()
 //    }
 
     if (report) reportMetadata();
-
+    return true;
 }
 
 bool Metadata::formatFuji()
@@ -4294,7 +4296,11 @@ bool Metadata::formatJPG()
     //file.open happens in readMetadata
     order = 0x4D4D;
     ulong startOffset = 0;
-    if (get2(file.read(2)) != 0xFFD8) return 0;
+    if (get2(file.read(2)) != 0xFFD8) {
+        err = "JPG does not start with 0xFFD8";
+        qDebug() << __FUNCTION__ << err;
+        return false;
+    }
 
     // build a hash of jpg segment offsets
     getSegments(file.pos());
@@ -4310,7 +4316,11 @@ bool Metadata::formatJPG()
 
     // read the EXIF data
     if (segmentHash.contains("EXIF")) file.seek(segmentHash["EXIF"]);
-    else return false;
+    else {
+        err = "JPG does not contain EXIF information";
+        qDebug() << __FUNCTION__ << err;
+        return false;
+    }
 
     bool foundEndian = false;
     while (!foundEndian) {
@@ -4543,9 +4553,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     #ifdef ISDEBUG
     G::track(__FUNCTION__, path);
     #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
     }
 //    qDebug() << __FUNCTION__ << "path =" << path;
 
@@ -4560,40 +4567,52 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     }
     clearMetadata();
     file.setFileName(path);
-
+    if (file.isOpen()) {
+        err = "File is already open";
+        qDebug() << __FUNCTION__ << err;
+        return false;
+    }
     if (report) {
         rpt << "\nFile name = " << path << "\n";
     }
     QFileInfo fileInfo(path);
-    QString ext = fileInfo.completeSuffix().toLower();
+    QString ext = fileInfo.suffix().toLower();
     bool success = false;
     int totDelay = 50;
     int msDelay = 0;
-    int msInc = 10;
+    uint msInc = 10;
     bool fileOpened = false;
-    do {
+//    do {
         if (file.open(QIODevice::ReadOnly)) {
-            if (ext == "cr2") formatCanon();
-            if (ext == "dng") formatDNG();
-            if (ext == "raf") formatFuji();
-            if (ext == "jpg") formatJPG();
-            if (ext == "nef") formatNikon();
-            if (ext == "orf") formatOlympus();
-            if (ext == "rw2") formatPanasonic();
-            if (ext == "arw") formatSony();
-            if (ext == "tif") formatTIF();
-            fileOpened = true;
+            if (ext == "cr2") fileOpened = formatCanon();
+            if (ext == "dng") fileOpened = formatDNG();
+            if (ext == "raf") fileOpened = formatFuji();
+            if (ext == "jpg") fileOpened = formatJPG();
+            if (ext == "nef") fileOpened = formatNikon();
+            if (ext == "orf") fileOpened = formatOlympus();
+            if (ext == "rw2") fileOpened = formatPanasonic();
+            if (ext == "arw") fileOpened = formatSony();
+            if (ext == "tif") fileOpened = formatTIF();
             file.close();
-            success = true;
+//            qDebug() << __FUNCTION__ << "fileOpened = " << fileOpened << path;
+            if (fileOpened) success = true;
+            else {
+                err = "Unable to read format for " + path;
+                qDebug() << __FUNCTION__ << err;
+            }
         }
         else {
             qDebug() << __FUNCTION__ << "Could not open " << path;
             err = "Could not open file to read metadata";    // try again
             QThread::msleep(msInc);
-            msDelay += msInc;
         }
+        msDelay += msInc;
+//    }
+//    while ((msDelay < totDelay) && !success);
+
+    if (!success) {
+        return false;
     }
-    while ((msDelay < totDelay) && !success);
 
     // not all files have thumb or small jpg embedded
     if (offsetFullJPG == 0 && ext != "jpg" && fileOpened) {
@@ -4619,11 +4638,11 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     thumbUnavailable = imageUnavailable = false;
     if (lengthFullJPG == 0) {
         imageUnavailable = true;
-        err = "No embedded preview found or file is corrupted";
+        err = "No embedded preview found";
     }
     if (lengthThumbJPG == 0) {
         thumbUnavailable = true;
-        err = "No embedded thumbnail or preview found or file is corrupted";
+        err = "No embedded thumbnail or preview found";
     }
 
     // initialize edited rotation
@@ -4678,7 +4697,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, fileInfo.filePath());
     #endif
     }
     // check if already loaded
@@ -4697,9 +4716,12 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     okToReadXmp = true;
 
     bool result = readMetadata(isReport, fPath);
-
-//    if (fPath == "D:/Pictures/_ThumbTest/FujiXT2.RAF")
-//        qDebug() << G::t.restart() << "\t" << "Lets break here";
+    if (!result) {
+        qDebug() << __FUNCTION__ << err << source;
+        imageMetadata.metadataLoaded = result;
+        imageMetadata.err = err;
+        return false;
+    }
 
     imageMetadata.isPicked = false;
     imageMetadata.offsetFullJPG = offsetFullJPG;
