@@ -64,7 +64,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
     if (metadata->rawFormats.contains(ext)) {
         // raw files handled by Qt
         do {
-            qDebug() << __FUNCTION__ << "start do loop";
+//            qDebug() << __FUNCTION__ << "start do loop";
             // Check if metadata has been cached for this image
             if (dm->index(row, G::OffsetFullJPGColumn).data().isNull()) {
                 if (metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__))

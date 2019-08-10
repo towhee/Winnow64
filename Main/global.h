@@ -41,7 +41,6 @@ namespace G
         // items read when new folder (core fields)
         PathColumn,
         NameColumn,
-        ErrColumn,
         RefineColumn,
         PickColumn,
         IngestedColumn,
@@ -97,6 +96,7 @@ namespace G
         OrientationColumn,
         RotationDegreesColumn,
         ShootingInfoColumn,
+        ErrColumn,
         SearchTextColumn,
         TotalColumns    // insert additional columns before this
     };
