@@ -418,7 +418,7 @@ void MW::keyPressEvent(QKeyEvent *event)
 void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape) {
-        qDebug() << __FUNCTION__ << "preferencesHasFocus =" << preferencesHasFocus;
+//        qDebug() << __FUNCTION__ << "preferencesHasFocus =" << preferencesHasFocus;
         // hide a popup message
         if (G::popUp->isVisible()) {
             G::popUp->hide();
@@ -433,7 +433,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
     }
     // toggle random / sequential slideshow next slide
     if (G::isSlideShow) {
-        qDebug() << __FUNCTION__ << event->key();
+//        qDebug() << __FUNCTION__ << event->key();
         if (event->key() == Qt::Key_Backspace) {
             isSlideshowPaused = false;
             prevRandomSlide();
@@ -1069,7 +1069,7 @@ delay the scrolling to after QAbstractItemView is finished.
 
 Note that the datamodel includes multiple columns for each row and the index sent to
 fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo and
-delegate use of the current index must check the row.
+delegate use of the current index must check the column.
 */
     {
     #ifdef ISDEBUG
@@ -1108,7 +1108,6 @@ delegate use of the current index must check the row.
     currentSfIdx = dm->sf->index(currentRow, 0);
     dm->currentRow = currentRow;
     currentDmIdx = dm->sf->mapToSource(currentSfIdx);
-    int dmCurrentRow = currentDmIdx.row();
     // the file path is used as an index in ImageView
     QString fPath = currentSfIdx.data(G::PathRole).toString();
 //    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
@@ -1151,13 +1150,25 @@ delegate use of the current index must check the row.
     G::fileSelectionChangeSource = "";
     G::ignoreScrollSignal = false;
 
-    // updates ******************************************************************************
+    metadataCacheThread->stopMetadateCache();
+
+    // check and load metadata for the current image ******************************************
+
+    /* check metadata loaded for current image (might not be if random slideshow)
+       to prevent a conflict with the metadataCacheThread*/
+    int dmRow = dm->fPathRow[fPath];
+    if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
+        QFileInfo fileInfo(fPath);
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+            metadata->imageMetadata.row = dmRow;
+            dm->addMetadataForItem(metadata->imageMetadata);
+        }
+    }
+
+    // updates ********************************************************************************
 
     // new file name appended to window title
     setWindowTitle("Winnow - " + fPath);
-
-    // update the metadata panel
-    infoView->updateInfo(currentRow);
 
     if (!G::isSlideShow) progressLabel->setVisible(isShowCacheStatus);
 
@@ -1172,6 +1183,9 @@ delegate use of the current index must check the row.
         updateMetadataCacheIconviewState(true);
         metadataCacheThread->fileSelectionChange(updateImageCacheWhenFileSelectionChange);
     }
+
+    // update the metadata panel
+    infoView->updateInfo(currentRow);
 
     // initialize the thumbDock if just opened app
     if (G::isInitializing) {
@@ -1377,7 +1391,7 @@ within the cache range.
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
-    qDebug() << __FUNCTION__ << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
+//    qDebug() << __FUNCTION__ << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateMetadataCacheIconviewState(false);
@@ -1489,7 +1503,6 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
     updateMetadataCacheIconviewState(true);
     metadataCacheThread->sizeChange();
@@ -9364,7 +9377,7 @@ void MW::nextSlide()
     #endif
     }
     static int counter = 0;
-    qDebug() << __FUNCTION__ << "counter =" << counter;
+//    qDebug() << "\n" << __FUNCTION__ << "\ncounter =" << counter;
 
     if (isStressTest) {
 //        slideShowTimer->stop();
@@ -9406,11 +9419,8 @@ void MW::nextSlide()
     if (isSlideShowRandom) {
         // push previous image path onto the slideshow history stack
         int row = thumbView->currentIndex().row();
-        qDebug() << __FUNCTION__ << "1" << "row =" << row;
         QString fPath = dm->sf->index(row, 0).data(G::PathRole).toString();
-        qDebug() << __FUNCTION__ << "2" << "path =" << fPath;
         slideshowRandomHistoryStack->push(fPath);
-        qDebug() << __FUNCTION__ <<  "3  Pushed, now select random slide";      // get next random slide
         thumbView->selectRandom();
     }
     else {
@@ -9422,7 +9432,6 @@ void MW::nextSlide()
     }
 
     QString msg = "Slide # "+ QString::number(counter) + "     (press H for slideshow shortcuts)";
-    qDebug() << __FUNCTION__ << "4" << msg;
     updateStatus(true, msg);
 
 }
@@ -9958,11 +9967,22 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__
-             << "wasThumbDockVisible =" << wasThumbDockVisible
-             << "G::mode =" << G::mode
-             << "isNormalScreen =" << isNormalScreen
-             << "thumbDock->isVisible() =" << thumbDock->isVisible();
+    QString err = "";
+    bool test = err.length();
+    qDebug() << __FUNCTION__ << test;
+    return;
+
+    int x = 5;
+    try {
+        if (x==4) throw 42;
+        if (x==5) throw "BAD";
+    }
+    catch (int exception) {
+        qDebug() << __FUNCTION__ << exception;
+    }
+    catch (QString strException) {
+        qDebug() << __FUNCTION__ << strException;
+    }
 }
 
 // End MW

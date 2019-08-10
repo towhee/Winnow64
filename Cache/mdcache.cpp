@@ -137,7 +137,7 @@ void MetadataCache::stopMetadateCache()
     if (isRunning()) {
         mutex.lock();
         abort = true;
-        qDebug() << "abort = true : " << __FUNCTION__;
+//        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
@@ -330,12 +330,10 @@ limits are removed (not visible and not with chunk range)
 //    if (firstIconVisible < prevFirstIconVisible || lastIconVisible > prevLastIconVisible) {
         setRange();
         for (int i = startRow; i <= endRow; ++i) {
-            if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull()) {
+            if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
                 foundItemsToLoad = true;
-            }
-            if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool()) {
+            if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
                 foundItemsToLoad = true;
-            }
             if (foundItemsToLoad) break;
         }
 //    }
@@ -446,7 +444,7 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
     prevLastIconVisible = lastIconVisible;
 
 //    G::track(__FUNCTION__);
-    qDebug()  <<  __FUNCTION__
+/*    qDebug()  <<  __FUNCTION__
               << "source =" << actionList.at(action)
               << "first =" << firstIconVisible
               << "mid =" << midIconVisible
@@ -456,7 +454,7 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
               << "metadataChunkSize =" << metadataChunkSize
               << "startRow =" << startRow
               << "endRow =" << endRow;
-
+*/
 }
 
 void MetadataCache::iconCleanup()
@@ -635,20 +633,23 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-    qDebug() << __FUNCTION__ << "startRow =" << startRow << "endRow =" << endRow;
 
     int start = startRow;
     int end = endRow;
-        if (cacheAllMetadata) {
+    if (cacheAllMetadata) {
         start = 0;
         end = dm->sf->rowCount();
     }
     for (int row = start; row < end; ++row) {
         if (abort) {
+//            qDebug() << __FUNCTION__ << "Aborting on row" << row;
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
-
+/*        qDebug() << __FUNCTION__ << "startRow =" << startRow
+                 << "endRow =" << endRow
+                 << "row =" << row;
+*/
         // file path and dm source row in case filtered or sorted
         mutex.lock();
         QModelIndex idx = dm->sf->index(row, 0);
@@ -661,6 +662,9 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
                 metadata->imageMetadata.row = dmRow;
                 dm->addMetadataForItem(metadata->imageMetadata);
+            }
+            else {
+                qDebug() << __FUNCTION__ << "Failed to load metadata for" << fPath;
             }
         }
         mutex.unlock();

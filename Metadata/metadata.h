@@ -199,10 +199,10 @@ private:
     void reportMetadataHeader(QString title);
     void reportIfdDataHash();
 
-    void formatNikon();
-    void formatCanon();
-    void formatOlympus();
-    void formatSony();
+    bool formatNikon();
+    bool formatCanon();
+    bool formatOlympus();
+    bool formatSony();
     bool formatFuji();
     bool formatPanasonic();
     bool formatJPG();

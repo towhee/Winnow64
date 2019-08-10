@@ -45,6 +45,9 @@ TableView::TableView(DataModel *dm)
     PickItemDelegate *pickItemDelegate = new PickItemDelegate;
     setItemDelegateForColumn(G::PickColumn, pickItemDelegate);
 
+    SearchItemDelegate *searchItemDelegate = new SearchItemDelegate;
+    setItemDelegateForColumn(G::SearchColumn, searchItemDelegate);
+
     IngestedItemDelegate *ingestedItemDelegate = new IngestedItemDelegate;
     setItemDelegateForColumn(G::IngestedColumn, ingestedItemDelegate);
 
@@ -146,7 +149,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::OrientationOffsetColumn) return fm.boundingRect("=OrientationOffsetColumn=").width();
     if (column == G::OrientationColumn) return fm.boundingRect("=OrientationColumn=").width();
     if (column == G::RotationDegreesColumn) return fm.boundingRect("=RotationDegreesColumn=").width();
-    if (column == G::ErrColumn) return fm.boundingRect("=ErrColumn=").width();
+    if (column == G::ErrColumn) return fm.boundingRect("=ErrColumn===========================================================").width();
     if (column == G::ShootingInfoColumn) return fm.boundingRect("=ShootingInfoColumn======================").width();
     if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Meta Loaded=").width();
     if (column == G::SearchTextColumn) return fm.boundingRect("=SearchText=====================================================================================").width();
@@ -160,7 +163,7 @@ void TableView::selectPageUp()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
 }
 
@@ -312,6 +315,15 @@ PickItemDelegate::PickItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 }
 
 QString PickItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+    return (value == "true") ? "✓" : "";
+}
+
+SearchItemDelegate::SearchItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString SearchItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
     return (value == "true") ? "✓" : "";
 }

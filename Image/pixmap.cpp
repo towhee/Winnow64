@@ -44,18 +44,15 @@ bool Pixmap::load(QString &fPath, QImage &image)
     #ifdef ISDEBUG
     G::track(__FUNCTION__, fPath);
     #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
     }
 //    qDebug() << __FUNCTION__ << "fPath =" << fPath;
 
     bool success = false;
+    QString err = "";            // type of error
+
     int totDelay = 500;     // milliseconds
     int msDelay = 0;        // total incremented delay
     int msInc = 10;         // amount to increment each try
-
-    QString err;            // type of error
 
     uint offsetFullJpg = 0;
     uint lengthFullJpg = 0;
@@ -67,10 +64,15 @@ bool Pixmap::load(QString &fPath, QImage &image)
     if (metadata->rawFormats.contains(ext)) {
         // raw files handled by Qt
         do {
+            qDebug() << __FUNCTION__ << "start do loop";
             // Check if metadata has been cached for this image
             if (dm->index(row, G::OffsetFullJPGColumn).data().isNull()) {
-                metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__);
-                dm->addMetadataForItem(metadata->imageMetadata);
+                if (metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__))
+                    dm->addMetadataForItem(metadata->imageMetadata);
+                else {
+                    err = "Could not load";
+                    break;
+                }
             }
             offsetFullJpg = dm->index(row, G::OffsetFullJPGColumn).data().toUInt();
             lengthFullJpg = dm->index(row, G::LengthFullJPGColumn).data().toUInt();
@@ -78,6 +80,11 @@ bool Pixmap::load(QString &fPath, QImage &image)
 //            lengthFullJpg = metadata->lengthFullJPG;
             // try to read the file
             if (offsetFullJpg > 0 && lengthFullJpg > 0) {
+                if (imFile.isOpen()) {
+                    err = "File already open";
+                    qDebug() << __FUNCTION__ << err;
+                    break;
+                }
                 if (imFile.open(QIODevice::ReadOnly)) {
                     bool seekSuccess = imFile.seek(offsetFullJpg);
                     if (seekSuccess) {
@@ -85,24 +92,31 @@ bool Pixmap::load(QString &fPath, QImage &image)
                         if (image.loadFromData(buf, "JPEG")) {
                             imFile.close();
                             success = true;
+                            break;
                         }
                         else {
                             err = "Could not read image from buffer";
+                            imFile.close();
                             break;
                         }
                     }
                     else {
                         err = "Illegal offset to image";
+                        imFile.close();
                         break;
                     }
                 }
                 else {
                     err = "Could not open file for image";    // try again
-                    QThread::msleep(msInc);
-                    msDelay += msInc;
                 }
             }
-            err = "Illegal offset to image or no length available";
+            else {
+                err = "Illegal offset to image or no length available";
+                break;
+            }
+
+            QThread::msleep(msInc);
+            msDelay += msInc;
             break;
         }
         while (msDelay < totDelay && !success);
@@ -162,7 +176,10 @@ bool Pixmap::load(QString &fPath, QImage &image)
     }
 
     // record any errors
-    if (!success) dm->setData(dm->index(row, G::ErrColumn), err);
+    if (!success) {
+        dm->setData(dm->index(row, G::ErrColumn), err);
+        qDebug() << __FUNCTION__ << fPath << err;
+    }
 //    if (!success) metadata->setErr(fPath, err);
 
     #ifdef ISDEBUG
