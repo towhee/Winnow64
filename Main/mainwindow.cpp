@@ -1929,7 +1929,9 @@ void MW::createActions()
                 which is defined in the vector xAppShortcut.
                 */
                 QString name = names.at(i);
+//                externalApp.name = name;
                 externalApp.name = name.remove(0, 1);
+                qDebug() << __FUNCTION__ << externalApp.name;
                 externalApp.path = setting->value(names.at(i)).toString();
                 externalApps.append(externalApp);
             }
@@ -7084,9 +7086,10 @@ re-established when the application is re-opened.
     setting->beginGroup("ExternalApps");
     setting->remove("");
 //    QMapIterator<QString, QString> eaIter(externalApps);
-    for(int i = 0; i < externalApps.length(); ++i) {
+    for (int i = 0; i < externalApps.length(); ++i) {
         QString sortPrefix = xAppShortcut[i];
         if(sortPrefix == "0") sortPrefix = "X";
+        qDebug() << __FUNCTION__ << externalApps.at(i).name;
         setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).path);
     }
     setting->endGroup();

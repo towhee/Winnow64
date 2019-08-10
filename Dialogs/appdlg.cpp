@@ -68,8 +68,12 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
     // second pass to enter the existing external apps
     int rows = xApps.length();
     for(int row = 0; row < rows; ++row) {
-        ui->appsTable->item(row, 1)->setText(xApps.at(row).name);
-        ui->appsTable->item(row, 2)->setText(xApps.at(row).path);
+        QString name = xApps.at(row).name;
+        QString path = xApps.at(row).path;
+        QFileInfo info(path);
+        if (name == "") name = info.baseName();
+        ui->appsTable->item(row, 1)->setText(name);
+        ui->appsTable->item(row, 2)->setText(path);
         setFlags(row);
     }
 
