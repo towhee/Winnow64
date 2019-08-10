@@ -1,7 +1,6 @@
 BUG
 - Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
-- Add / update tool tips in preferences and throughout program
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
@@ -9,7 +8,6 @@ BUG
 PERFORMANCE
 - filteredItemCount and unfilteredItemCount slow - try treeView instead of treeWidget
 CODE IMPROVEMENTS
-- Tableview sizeHintForColumn "width" is deprecated
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - fix 300ms delay before scroll to currentRow on filterChange
 - Change setPixelSize to setPointSize throughout app
@@ -17,14 +15,10 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
 - Search
-- Convert status text to icons for FOLDERS, RAW/JPG etc
 - Refresh selected images
 - Copy image
 - Remove Windows Registry settings during uninstall
 - Write xmp into eligible files ???
-- Add progress bar to popup
-- Speed up Tiffs
-- Lock docks to a size, chk resize behavior as separate windows
 - tableView adjust to changing font size
 - Read xmp sidecars when open folder
 - Check for updates on Mac
@@ -35,9 +29,13 @@ ENHANCEMENTS
 - Get Sony image count, camera SN
 - Add zoom increment amount to preferences
 - Zoom rect in thumbnail to show zoom and pan in imageView
-- Hide/show cursor in slideshow, always show if ESC
 
 DONE/FIXED
+- Add / update tool tips in preferences and throughout program
+- Tableview sizeHintForColumn "width" is deprecated
+- Hide/show cursor in slideshow, always show if ESC
+- Convert status text to icons for FOLDERS, RAW/JPG etc
+- When new folder only showing metadataChunk icons ie 250 even if many more cells visible
 - gridView > Full screen > gridview > loupe filmstrip has blank icons
 - Image cache not always running at start
 - Ingested images not shown in blue

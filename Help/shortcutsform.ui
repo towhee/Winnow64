@@ -61,11 +61,11 @@
       <property name="columnCount">
        <number>3</number>
       </property>
-      <attribute name="headerDefaultSectionSize">
-       <number>300</number>
-      </attribute>
       <attribute name="headerMinimumSectionSize">
        <number>150</number>
+      </attribute>
+      <attribute name="headerDefaultSectionSize">
+       <number>300</number>
       </attribute>
       <column>
        <property name="text">
@@ -979,13 +979,21 @@
        </property>
        <item>
         <property name="text">
-         <string>Start/Stop</string>
+         <string>Start</string>
         </property>
         <property name="text">
          <string>S</string>
         </property>
         <property name="text">
-         <string>Toggles</string>
+         <string/>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Exit</string>
+        </property>
+        <property name="text">
+         <string>Esc</string>
         </property>
        </item>
        <item>
@@ -1001,21 +1009,51 @@
        </item>
        <item>
         <property name="text">
-         <string>Manual Progression</string>
+         <string>Wrap at end of folder</string>
         </property>
         <property name="text">
-         <string>0</string>
+         <string>W</string>
         </property>
         <property name="text">
-         <string>Only while slideshow active</string>
+         <string>Only while slideshow active (Toggles)</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Exit Slideshow</string>
+         <string>Random / Sequential progress</string>
         </property>
         <property name="text">
-         <string>Esc</string>
+         <string>R</string>
+        </property>
+        <property name="text">
+         <string>Toggles</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Go back to previous random slide</string>
+        </property>
+        <property name="text">
+         <string>Backspace</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Pause / continue</string>
+        </property>
+        <property name="text">
+         <string>Spacebar</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Display shortcuts during slideshow</string>
+        </property>
+        <property name="text">
+         <string>H</string>
         </property>
        </item>
       </item>

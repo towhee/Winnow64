@@ -1150,7 +1150,7 @@ delegate use of the current index must check the column.
     G::fileSelectionChangeSource = "";
     G::ignoreScrollSignal = false;
 
-    metadataCacheThread->stopMetadateCache();
+    if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stopMetadateCache();
 
     // check and load metadata for the current image ******************************************
 
@@ -1354,6 +1354,7 @@ void MW::loadMetadataCache2ndPass()
     #endif
     }
     updateIconBestFit();
+//    currentRow = 0;
     updateMetadataCacheIconviewState(true);
     metadataCacheThread->loadNewFolder2ndPass();
 }
@@ -9940,7 +9941,7 @@ void MW::helpShortcuts()
     QScrollArea *helpShortcuts = new QScrollArea;
     Ui::shortcutsForm ui;
     ui.setupUi(helpShortcuts);
-    ui.treeWidget->setColumnWidth(0, 250);
+    ui.treeWidget->setColumnWidth(0, 300);
     ui.treeWidget->setColumnWidth(1, 250);
     ui.treeWidget->setColumnWidth(2, 250);
     ui.treeWidget->expandAll();

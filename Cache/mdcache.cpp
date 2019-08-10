@@ -252,14 +252,12 @@ metadata and icons are loaded into the datamodel.
     action = Action::NewFolder2ndPass;
     setRange();
     foundItemsToLoad = false;
-    if (!G::allMetadataLoaded) {
-        for (int i = startRow; i < endRow; ++i) {
-            if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
-                foundItemsToLoad = true;
-            if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
-                foundItemsToLoad = true;
-            if (foundItemsToLoad) break;
-        }
+    for (int i = startRow; i < endRow; ++i) {
+        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
+            foundItemsToLoad = true;
+        if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
+            foundItemsToLoad = true;
+        if (foundItemsToLoad) break;
     }
     start(TimeCriticalPriority);
 }
@@ -444,7 +442,7 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
     prevLastIconVisible = lastIconVisible;
 
 //    G::track(__FUNCTION__);
-/*    qDebug()  <<  __FUNCTION__
+    qDebug()  <<  __FUNCTION__
               << "source =" << actionList.at(action)
               << "first =" << firstIconVisible
               << "mid =" << midIconVisible
@@ -454,7 +452,7 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
               << "metadataChunkSize =" << metadataChunkSize
               << "startRow =" << startRow
               << "endRow =" << endRow;
-*/
+
 }
 
 void MetadataCache::iconCleanup()
@@ -585,6 +583,7 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
         start = 0;
         end = dm->sf->rowCount();
     }
+    qDebug() << __FUNCTION__ << "start =" << start << "end =" << end;
     for (int row = start; row <= end; ++row) {
         if (abort) {
 //            qDebug() << __FUNCTION__ << "ABORTING AT ROW" << row;

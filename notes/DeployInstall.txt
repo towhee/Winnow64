@@ -125,3 +125,12 @@ http://165.227.46.158/winnow/winnow.html
 
 winnow download
 http://165.227.46.158/winnow_win/winnowinstalleronline.exe
+
+How to delete registry entry:
+"installscript.js"
+...
+Component.prototype.createOperations = function()
+{
+if (installer.value("os") == "win")
+{
+component.addElevatedOperation("Execute","echo do nothing","UNDOEXECUTE","cmd /C reg delete "HKEY_CURRENT_USER\Software\Company" /f")
