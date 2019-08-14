@@ -116,7 +116,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::LabelColumn) return fm.boundingRect("=Colour=").width();
     if (column == G::RatingColumn) return fm.boundingRect("=Rating=").width();
     if (column == G::SearchColumn) return fm.boundingRect("=false=").width();
-    if (column == G::TypeColumn) return fm.boundingRect("=Type=").width();
+    if (column == G::TypeColumn) return fm.boundingRect("=JPG+NEF=").width();
     if (column == G::SizeColumn) return fm.boundingRect("=999,999,999=").width();
     if (column == G::CreatedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
     if (column == G::ModifiedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();

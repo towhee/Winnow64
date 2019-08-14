@@ -5,6 +5,8 @@
 //#define ISPROFILE      // Uncomment this line to show profiling output
 //#define ISTEST         // Uncomment this line to show testing output
 
+#define TRACK
+
 #include <QtWidgets>
 #include <QColor>
 #include <QModelIndexList>

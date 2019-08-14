@@ -1,3 +1,11 @@
+Located at D:\Programs\ExifTool\exiftool(-k).exe
+Drag file onto exiftool(-k).exe
+Does not work if directory has non-ascaii characters like √
+
+Verbose output to txt file:
+Drag image file onto D:\Pictures\_Exiftool\exiftool(-a -v3 -u -g1 -w txt).exe
+A txt file with the same basename will be created
+
 Use Exiftool example:
 D:\Pictures\_Exiftool\exiftool -title="This is a test title" D:\Pictures\_xmptest\Canon xmptest_exiftool.JPG
 

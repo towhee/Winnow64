@@ -245,7 +245,7 @@ when combined raw+jpg is activated.
     QString s1 = i1.absoluteFilePath().toLower();
     QString s2 = i2.absoluteFilePath().toLower();
     // check if combined raw+jpg duplicates
-    if(i1.baseName() == i2.baseName()) {
+    if(i1.completeBaseName() == i2.completeBaseName()) {
         if (i1.suffix().toLower() == "jpg") s1.replace(".jpg", ".zzz");
         if (i2.suffix().toLower() == "jpg") s2.replace(".jpg", ".zzz");
     }
@@ -381,6 +381,7 @@ bool DataModel::addFileData()
 
     progressBar->clearProgress();
 
+    // make sure if raw+jpg pair that raw file is first to make combining easier
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 
     static QStandardItem *item;
@@ -496,7 +497,8 @@ bool DataModel::addFileData()
                     QString prevType = fileInfoList.at(fileIndex - 1).suffix().toUpper();
                     setData(index(row, 0), prevType, G::DupRawTypeRole);
                     if (combineRawJpg)
-                        setData(index(row, G::TypeColumn), s + "+" + prevType);
+                        setData(index(row, G::TypeColumn), "JPG+" + prevType);
+//                      setData(index(row, G::TypeColumn), s + "+" + prevType);
                     else
                         setData(index(row, G::TypeColumn), "JPG");
                 }
