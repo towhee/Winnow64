@@ -50,6 +50,7 @@ TIF data types:
     10      signed rational
     11      single float
     12      double float
+    13      long (used for tiff IFD offsets)
 
 Source:  D:\My Projects\Winnow Project\IFD.xlsx in status tab
 
@@ -2532,6 +2533,7 @@ the embedded jpg preview is found (irbID == 1036)
     // Get the IRB ID (we're looking for 1036 = thumb)
     uint irbID = get2(file.read(2));
     if (irbID == 1036) foundTifThumb = true;
+//    qDebug() << __FUNCTION__ << fPath << "irbID =" << irbID;
 
     // read the pascal string which we don't care about
     uint pascalStringLength = get2(file.read(2));
@@ -2576,13 +2578,15 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
     file.seek(offset);
     int tags = get2(file.read(2));
 
+//    qDebug() << __FUNCTION__ << "tags =" << tags;
+
     // iterate through IFD0, looking for the subIFD tag
     if (report) {
         reportMetadataHeader(hdr);
         rpt << "IFDOffset  Hex: "
             << QString::number(offset, 16).toUpper()
             << "   Dec: " << offset << "\n"
-            << "Num  Offset     hex  tagId   hex  tagType  tagCount  tagValue   tagDescription\n";
+            << "Num    Offset   /   hex  tagId   hex  tagType  tagCount    tagValue   tagDescription\n";
     }
     ulong pos;
     QString tagDescription;
@@ -2634,23 +2638,36 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
 //                (ifdHash.contains(tagId)) ? tagDescription = ifdHash.value(tagId)
 //                    : tagDescription = "Undefined tag";
 
+
+            // Num    Offset (dec/hex)  tagId   hex  tagType  tagCount    tagValue   tagDescription
+
+            // Num
             rpt.setFieldWidth(3);
             rpt.setFieldAlignment(QTextStream::AlignRight);
             rpt << QString::number(i, 10).toUpper();
-            rpt.setFieldWidth(8);
+            // Offset (dec/hex)
+            rpt.setFieldWidth(10);
             rpt.setFieldAlignment(QTextStream::AlignRight);
             rpt << QString::number(pos, 10).toUpper();
             rpt << QString::number(pos, 16).toUpper();
+            // tagID
             rpt.setFieldWidth(7);
             rpt << tagId;
+            // tagID in hex
             rpt.setFieldWidth(6);
             rpt << QString::number(tagId, 16).toUpper();
+            // tagType
             rpt.setFieldWidth(9);
             rpt << tagType;
+            // tagCount
             rpt.setFieldWidth(10);
-            rpt << tagCount << tagValue;
+            rpt << tagCount;
+            // tagValue
+            rpt.setFieldWidth(12);
+            rpt << tagValue;
             rpt.setFieldWidth(3);
             rpt << "   ";
+            // tagDescription
             rpt.setFieldWidth(50);
             rpt.setFieldAlignment(QTextStream::AlignLeft);
             rpt << tagDescription;
@@ -2663,7 +2680,7 @@ ulong Metadata::readIFD(QString hdr, ulong offset)
     }
     ulong nextIFDOffset = get4(file.read(4));
     if (report) {
-        rpt.setFieldWidth(8);
+        rpt.setFieldWidth(10);
         rpt.setFieldAlignment(QTextStream::AlignRight);
         rpt << QString::number(file.pos(), 10).toUpper();
         rpt << QString::number(file.pos(), 16).toUpper();
@@ -2780,6 +2797,8 @@ JPEGs start with FFD8 and end with FFD9.  This function confirms the embedded
 JPEG is correct.  If it is not then the function sets the offset and length
 to zero.  At the end of the readMetadata function the offsets and lengths are
 checked to make sure there is valid data.
+
+** Not being used **
 */
     {
     #ifdef ISDEBUG
@@ -3925,7 +3944,8 @@ bool Metadata::formatTIF()
     // read offset to first IFD
     ulong ifdOffset = get4(file.read(4));
     ulong nextIFDOffset = readIFD("IFD0", ifdOffset);
-    nextIFDOffset = 0;  // suppress compiler warning
+//    qDebug() << __FUNCTION__ << nextIFDOffset;
+//    nextIFDOffset = 0;  // suppress compiler warning
 
     lengthFullJPG = 1;  // set arbitrary length to avoid error msg as tif do not
                          // have full size embedded jpg
@@ -3983,6 +4003,11 @@ bool Metadata::formatTIF()
     if (ifdDataHash.contains(34377))
         ifdPhotoshopOffset = ifdDataHash.value(34377).tagValue;
 
+    // IFD0: subIFD offset
+    ulong ifdsubIFDOffset = 0;
+    if (ifdDataHash.contains(330))
+        ifdsubIFDOffset = ifdDataHash.value(330).tagValue;
+
     // IFD0: IPTC offset
     ulong ifdIPTCOffset = 0;
     if (ifdDataHash.contains(33723))
@@ -3995,6 +4020,46 @@ bool Metadata::formatTIF()
         xmpSegmentOffset = ifdXMPOffset;
         int xmpSegmentLength = ifdDataHash.value(700).tagCount;
         xmpNextSegmentOffset = xmpSegmentOffset + xmpSegmentLength;
+    }
+
+    // subIFDs: ****************************************************************
+
+    /* If save tiff with save pyramid in photoshop then subIFDs created. Iterate to report and
+    possibly read smallest for thumbnail if not a thumb in the photoshop IRB. */
+           uint thumbWidth = width;
+    if (ifdsubIFDOffset) {
+//        startOffset = 4;
+        ulong nextIFDOffset;
+        nextIFDOffset = readIFD("SubIFD 1", ifdsubIFDOffset) + startOffset;
+        if(ifdDataHash.contains(256)) {
+            if (ifdDataHash.value(256).tagValue < thumbWidth) {
+                thumbWidth = ifdDataHash.value(256).tagValue;
+                // not a jpg so this is not correct!  It is offset to a tif directory
+//                if(ifdDataHash.contains(273))
+//                    offsetThumbJPG = ifdDataHash.value(273).tagValue;
+//                if(ifdDataHash.contains(279))
+//                    lengthThumbJPG = ifdDataHash.value(279).tagValue;
+//                qDebug() << __FUNCTION__ << thumbWidth;
+            }
+        }
+        int count = 2;
+        while (nextIFDOffset && count < 5) {
+            QString hdr = "SubIFD " + QString::number(count);
+            nextIFDOffset = readIFD(hdr, nextIFDOffset) + startOffset;
+            if(ifdDataHash.contains(256)) {
+                if (ifdDataHash.value(256).tagValue < thumbWidth) {
+                    thumbWidth = ifdDataHash.value(256).tagValue;
+//                    if(ifdDataHash.contains(273))
+//                        offsetThumbJPG = ifdDataHash.value(273).tagValue;
+//                    if(ifdDataHash.contains(279))
+//                        lengthThumbJPG = ifdDataHash.value(279).tagValue;
+//                    qDebug() << __FUNCTION__ << thumbWidth;
+                }
+            }
+            count ++;
+
+//            qDebug() << __FUNCTION__ << "nextIFDOffset =" << nextIFDOffset;
+        }
     }
 
     // EXIF: *******************************************************************
@@ -4566,6 +4631,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         rpt << "\n";
     }
     clearMetadata();
+
     file.setFileName(path);
     if (file.isOpen()) {
         err = "File is already open";
@@ -4617,8 +4683,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     // not all files have thumb or small jpg embedded
     if (offsetFullJPG == 0 && ext != "jpg" && fileOpened) {
         err = "No embedded JPG found";
-//        qDebug() << G::t.restart() << "\t" << "No embedded JPG found for" << fPath;
-//        if (G::isThreadTrackingOn) track(fPath, err);
     }
 
     if (lengthFullJPG == 0) {

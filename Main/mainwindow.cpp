@@ -869,6 +869,11 @@ void MW::folderSelectionChange()
     G::track(__FUNCTION__);
     #endif
     }
+    {
+    #ifdef ISTEST
+    G::track(__FUNCTION__, "This is a test");
+    #endif
+    }
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
@@ -943,8 +948,10 @@ void MW::folderSelectionChange()
     // add to recent folders
     addRecentFolder(currentViewDir);
 
+    // sync the folders tree with the current folder
+    fsTree->scrollToCurrent();
+
     // show image count in Folders (fsTree) if showImageCountAction isChecked
-//    if (showImageCountAction->isChecked()) {
     if (showImageCount) {
         fsTree->setShowImageCount(true);
     }
@@ -1436,7 +1443,7 @@ within the cache range.
     the new one is proven to work all the time.
       */
 
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (!G::ignoreScrollSignal) {
@@ -1929,9 +1936,7 @@ void MW::createActions()
                 which is defined in the vector xAppShortcut.
                 */
                 QString name = names.at(i);
-//                externalApp.name = name;
                 externalApp.name = name.remove(0, 1);
-                qDebug() << __FUNCTION__ << externalApp.name;
                 externalApp.path = setting->value(names.at(i)).toString();
                 externalApps.append(externalApp);
             }
@@ -7085,11 +7090,9 @@ re-established when the application is re-opened.
     /* External apps */
     setting->beginGroup("ExternalApps");
     setting->remove("");
-//    QMapIterator<QString, QString> eaIter(externalApps);
     for (int i = 0; i < externalApps.length(); ++i) {
         QString sortPrefix = xAppShortcut[i];
         if(sortPrefix == "0") sortPrefix = "X";
-        qDebug() << __FUNCTION__ << externalApps.at(i).name;
         setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).path);
     }
     setting->endGroup();
@@ -9683,6 +9686,7 @@ void MW::addNewBookmarkFromContext()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << mouseOverFolder;
     addBookmark(mouseOverFolder);
 }
 
@@ -9971,22 +9975,19 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString err = "";
-    bool test = err.length();
-    qDebug() << __FUNCTION__ << test;
-    return;
+//    TiffHandler tiffHandler;
+//    tiffHandler.test(dm->currentFilePath.toLocal8Bit().constData());
+//    return;
 
-    int x = 5;
-    try {
-        if (x==4) throw 42;
-        if (x==5) throw "BAD";
-    }
-    catch (int exception) {
-        qDebug() << __FUNCTION__ << exception;
-    }
-    catch (QString strException) {
-        qDebug() << __FUNCTION__ << strException;
-    }
+
+    QModelIndex idx = fsTree->selectionModel()->selectedRows().at(0);
+
+    QString path = idx.data().toString();
+//    QString path = idx.data(QFileSystemModel::FilePathRole).toString();
+    qDebug() << __FUNCTION__ << path << currentViewDir;
+
+//    QString x = getSelectedPath();
+//    qDebug() << __FUNCTION__ << x;
 }
 
 // End MW

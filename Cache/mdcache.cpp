@@ -327,7 +327,7 @@ limits are removed (not visible and not with chunk range)
     foundItemsToLoad = false;
 //    if (firstIconVisible < prevFirstIconVisible || lastIconVisible > prevLastIconVisible) {
         setRange();
-        for (int i = startRow; i <= endRow; ++i) {
+        for (int i = startRow; i < endRow; ++i) {
             if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
                 foundItemsToLoad = true;
             if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
@@ -554,6 +554,7 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
     // load icon
     if (idx.data(Qt::DecorationRole).isNull()) {
         QImage image;
+        qDebug() << __FUNCTION__ << "row =" << sfRow << fPath;
         bool thumbLoaded = thumb->loadThumb(fPath, image);
         if (thumbLoaded) {
             QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
@@ -583,8 +584,9 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
         start = 0;
         end = dm->sf->rowCount();
     }
-    qDebug() << __FUNCTION__ << "start =" << start << "end =" << end;
-    for (int row = start; row <= end; ++row) {
+//    qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
+//             << "rowCount =" << dm->sf->rowCount();
+    for (int row = start; row < end; ++row) {
         if (abort) {
 //            qDebug() << __FUNCTION__ << "ABORTING AT ROW" << row;
             emit updateIsRunning(false, true, __FUNCTION__);
@@ -598,6 +600,7 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
             int dmRow = dm->sf->mapToSource(idx).row();
             QImage image;
             QString fPath = idx.data(G::PathRole).toString();
+//            qDebug() << __FUNCTION__ << "row =" << row << fPath;
             bool thumbLoaded = thumb->loadThumb(fPath, image);
             QPixmap pm;
             if (thumbLoaded) {
@@ -720,6 +723,7 @@ startRow and endRow.
             // load icon
             if (idx.data(Qt::DecorationRole).isNull()) {
                 QImage image;
+                qDebug() << __FUNCTION__ << "row =" << row << fPath;
                 bool thumbLoaded = thumb->loadThumb(fPath, image);
                 if (thumbLoaded) {
                     QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));

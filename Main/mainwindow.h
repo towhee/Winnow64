@@ -38,8 +38,6 @@
 #include "ingestdlg.h"
 #include "aboutdlg.h"
 #include "Image/thumb.h"
-//#include "dircompleter.h"
-//#include "prefdlg.h"
 #include "preferencesdlg.h"
 #include "updateapp.h"
 #include "workspacedlg.h"
@@ -54,10 +52,7 @@
 #include "ui_welcome.h"
 #include "ui_message.h"
 
-//#include "Test/readasync.h"
-//#include "Test/readsync.h"
-//#include "Test/readmdconcurrent.h"
-//#include "Test/asynctask.h"
+//#include "Image/tiffhandler.h";
 
 class MW : public QMainWindow
 {
