@@ -1185,8 +1185,13 @@ void IconView::justify(JustifyAction action)
    and also a "margin". The width of the QListView (width()) is reduced by the width of the
    scrollbar and and additional "margin", determined by experimentation, to be 8 pixels.
 
-   The variable assignedThumbWidth remebers the current grid cell size as a reference to
+   The variable assignedThumbWidth remembers the current grid cell size as a reference to
    maintain the grid size during resizing and pad size changes in preferences.
+
+   JustifyAction:
+        Shrink = 1,
+        Enlarge = -1
+
 */
     {
     #ifdef ISDEBUG
@@ -1244,15 +1249,17 @@ which isn't pretty at all.
     #endif
     }
     int mid = midVisibleCell;
-    if (G::isInitializing || !G::isNewFolderLoaded) return;
-/*
-   qDebug() << __FUNCTION__ << objectName() << viewport()->size() << G::isNewFolderLoaded;
-   */
+
     static int prevWidth = 0;
-    if (isWrapping() && width() != prevWidth) {
+    prevWidth = width();
+
+    // must come after width parameters
+    if (G::isInitializing || !G::isNewFolderLoaded) return;
+
+    // only rejustify when user resizes
+    if (isWrapping() && width() != prevWidth && prevWidth > 0) {
         QTimer::singleShot(500, this, SLOT(rejustify()));   // calls setViewportParameters
     }
-    prevWidth = width();
     if (isFitTopOrBottom) {
         G::ignoreScrollSignal = true;
         qDebug() << __FUNCTION__ << mid << midVisibleCell;
