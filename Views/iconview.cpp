@@ -215,7 +215,11 @@ QString IconView::diagnostics()
 
 void IconView::move()
 {
-    qDebug() << __FUNCTION__;
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
 }
 
@@ -706,8 +710,13 @@ justification happens.
 
 bool IconView::isRowVisible(int row)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
 //    setViewportParameters();
-    calcViewportRange(row);
+//    calcViewportRange(row);
     return row >= firstVisibleCell && row <= lastVisibleCell;
 }
 
@@ -1145,6 +1154,14 @@ resize and preference adjustment operations.
     iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
     iconHeight = iconWidth * bestAspectRatio;
 
+    qDebug() << __FUNCTION__ << objectName()
+             << "assignedIconWidth =" << assignedIconWidth
+             << "wRow =" << wRow
+             << "wCell =" << wCell
+             << "tpr =" << tpr
+             << "iconWidth =" << iconWidth
+             << "iconHeight =" << iconHeight;
+
     skipResize = true;      // prevent feedback loop
 
     setThumbParameters();
@@ -1462,7 +1479,6 @@ void IconView::scrollPageDown(int /*step*/)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if(isWrapping()) {
         verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
     }
@@ -1478,7 +1494,6 @@ void IconView::scrollPageUp(int /*step*/)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << isWrapping();
     if(isWrapping()) {
         verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
     }
@@ -1490,15 +1505,14 @@ void IconView::scrollPageUp(int /*step*/)
 void IconView::scrollToRow(int row, QString source)
 {
 /*
-This is called from MW::eventFilter after the eventFilter intercepts the last scrollbar
-paint event for the newly visible ThumbView. ThumbView is newly visible because in a mode
-change in MW (ie from Grid to Loupe) thumbView was hidden in Grid but visible in Loupe.
-Widgets will not respond while hidden so we must wait until ThumbView is visible and
-completely repainted. It takes a while for the scrollbars to finish painting, so when
-that is done, we want to scroll to the current position.
+This is called to scroll to the current image or to sync the other views (thumbView, gridView
+and tableView). When the user switches views (loupe, grid and table) the thumbView, gridView
+or tableView is made visible. Hidden widgets cannot be updated. It takes time for the view to
+be rendered, so we have to query it to make sure it is ready to accept a scrollto request.
+This is done by testing the actual maximum size of the scrollbars compared to a calculated
+amount in the okToScroll function.
 
-It is also called from MW::delayScroll, which in turn, is called by MW::fileSelectionChange
-when a new image is selected and the selection was triggered by a mouse click.
+source is the calling function and is used for debugging.
 */
     {
     #ifdef ISDEBUG
@@ -1506,17 +1520,17 @@ when a new image is selected and the selection was triggered by a mouse click.
     #endif
     }
 
-//    qDebug() << __FUNCTION__ << objectName() << "row =" << row
-//             << "source =" << source;
+    qDebug() << __FUNCTION__ << objectName() << "row =" << row
+             << "requested by" << source;
 
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
-bool IconView::whenOkToScroll()
+bool IconView::waitUntilOkToScroll()
 {
 /*
-Trial for now
+Returns true when the scrollbars have been fully rendered.
 */
     {
     #ifdef ISDEBUG
@@ -1526,7 +1540,7 @@ Trial for now
     QTime t = QTime::currentTime().addMSecs(1000);
     while (QTime::currentTime() < t) {
         if (okToScroll()) {
-//            G::wait(250);
+            G::wait(250);
             return true;
         }
         qApp->processEvents(QEventLoop::AllEvents, 50);

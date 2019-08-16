@@ -310,12 +310,13 @@ limits are removed (not visible and not with chunk range)
     if (isRunning()) {
             mutex.lock();
             abort = true;
-            qDebug() << "abort = true   row =" << row << __FUNCTION__;
+//            qDebug() << "abort = true   row =" << row << __FUNCTION__;
             condition.wakeOne();
             mutex.unlock();
             wait();
     }
     abort = false;
+    qDebug() << __FUNCTION__ << "row =" << row;
 //    qDebug() << __FUNCTION__
 //             << "firstIconVisible" << firstIconVisible
 //             << "prevFirstIconVisible" << prevFirstIconVisible
@@ -417,7 +418,7 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
     G::track(__FUNCTION__);
     #endif
     }
-    int rowCount = dm->sf->rowCount() - 1;
+    int rowCount = dm->sf->rowCount();
 
     // default total per page (prev, curr and next pages)
     int dtpp = metadataChunkSize / 3;
@@ -496,6 +497,11 @@ that have icons are tracked in the list iconsCached as the dm row (not dm->sf pr
 
 void MetadataCache::iconMax(QPixmap &thumb)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
 
     // for best aspect calc
@@ -539,6 +545,11 @@ Load the thumb (icon) for all the image files in the folder(s).
 
 void MetadataCache::readMetadataIcon(const QModelIndex &idx)
 {
+    {
+    #ifdef ISDEBUG
+//    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
+    #endif
+    }
     int sfRow = idx.row();
     int dmRow = dm->sf->mapToSource(idx).row();
     QString fPath = idx.data(G::PathRole).toString();
@@ -584,8 +595,8 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
         start = 0;
         end = dm->sf->rowCount();
     }
-//    qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
-//             << "rowCount =" << dm->sf->rowCount();
+    qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
+             << "rowCount =" << dm->sf->rowCount();
     for (int row = start; row < end; ++row) {
         if (abort) {
 //            qDebug() << __FUNCTION__ << "ABORTING AT ROW" << row;

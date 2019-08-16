@@ -74,6 +74,11 @@ TableView::TableView(DataModel *dm)
 
 void TableView::setViewportParameters()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     firstVisibleRow = rowAt(0);
     midVisibleRow = rowAt(height() / 2);
     lastVisibleRow = rowAt(height());
@@ -93,6 +98,11 @@ void TableView::scrollToRow(int row, QString source)
 //             << "source =" << source;
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
+}
+
+bool TableView::isRowVisible(int row)
+{
+    return (row >= firstVisibleRow && row <= lastVisibleRow);
 }
 
 void TableView::scrollToCurrent()

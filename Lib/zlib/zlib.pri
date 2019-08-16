@@ -1,0 +1,25 @@
+HEADERS += Lib/zlib/crc32.h
+HEADERS += Lib/zlib/deflate.h
+HEADERS += Lib/zlib/gzguts.h
+HEADERS += Lib/zlib/inffast.h
+HEADERS += Lib/zlib/inffixed.h
+HEADERS += Lib/zlib/inflate.h
+HEADERS += Lib/zlib/inftrees.h
+HEADERS += Lib/zlib/trees.h
+HEADERS += Lib/zlib/zutil.h
+
+SOURCES += Lib/zlib/adler32.c
+SOURCES += Lib/zlib/compress.c
+SOURCES += Lib/zlib/crc32.c
+SOURCES += Lib/zlib/deflate.c
+SOURCES += Lib/zlib/gzclose.c
+SOURCES += Lib/zlib/gzlib.c
+SOURCES += Lib/zlib/gzread.c
+SOURCES += Lib/zlib/gzwrite.c
+SOURCES += Lib/zlib/inflate.c
+SOURCES += Lib/zlib/infback.c
+SOURCES += Lib/zlib/inftrees.c
+SOURCES += Lib/zlib/inffast.c
+SOURCES += Lib/zlib/trees.c
+SOURCES += Lib/zlib/uncompr.c
+SOURCES += Lib/zlib/zutil.c
