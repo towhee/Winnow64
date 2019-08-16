@@ -254,6 +254,11 @@ when combined raw+jpg is activated.
 
 void DataModel::find(QString text)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int row = 0; row < sf->rowCount(); ++row) {
         QString searchableText = sf->index(row, G::SearchTextColumn).data().toString();
         qDebug() << __FUNCTION__ << searchableText;
@@ -895,6 +900,11 @@ reset all the picks to false.
 
 QString DataModel::diagnostics()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -1046,9 +1056,9 @@ change.
     G::track(__FUNCTION__, "End");
 }
 
-// -----------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 // SortFilter Class used to filter by row
-// -----------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 
 SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
     QSortFilterProxyModel(parent),

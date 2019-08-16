@@ -66,7 +66,7 @@ public:
     bool calcViewportRange(int row);
 
     void updateLayout();
-    bool whenOkToScroll();
+    bool waitUntilOkToScroll();
     bool okToScroll();
 
     IconViewDelegate *iconViewDelegate;

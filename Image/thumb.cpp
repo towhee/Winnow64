@@ -21,10 +21,7 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, fPath);
     #endif
     }
     // check orientation and rotate if portrait
@@ -51,7 +48,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, fPath);
     #endif
     }
     thumbMax.setWidth(G::maxIconSize);
@@ -147,7 +144,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
 */
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, fPath);
     #endif
     }
 //    qDebug() << __FUNCTION__ << "fPath =" << fPath;

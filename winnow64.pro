@@ -4,6 +4,8 @@ INCLUDEPATH += .
 INCLUDEPATH += Dialogs
 INCLUDEPATH += Utilities
 INCLUDEPATH += MacOS
+#INCLUDEPATH += Lib/libtiff
+#INCLUDEPATH += Lib/zlib
 
 QT += widgets
 QT += concurrent
@@ -18,7 +20,6 @@ HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/ingestdlg.h
 HEADERS += Dialogs/loadusbdlg.h
-#HEADERS += Dialogs/prefdlg.h
 HEADERS += Dialogs/preferencesdlg.h
 HEADERS += Dialogs/renamedlg.h
 HEADERS += Dialogs/testaligndlg.h
@@ -31,6 +32,7 @@ HEADERS += File/fstree.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
 HEADERS += Image/thumb.h
+#HEADERS += Image/tiffhandler.h
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
 HEADERS += Main/mainwindow.h
@@ -64,7 +66,6 @@ SOURCES += Dialogs/aboutdlg.cpp
 SOURCES += Dialogs/appdlg.cpp
 SOURCES += Dialogs/ingestdlg.cpp
 SOURCES += Dialogs/loadusbdlg.cpp
-#SOURCES += Dialogs/prefdlg.cpp
 SOURCES += Dialogs/preferencesdlg.cpp
 SOURCES += Dialogs/renamedlg.cpp
 SOURCES += Dialogs/testaligndlg.cpp
@@ -77,6 +78,7 @@ SOURCES += File/fstree.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
 SOURCES += Image/thumb.cpp
+#SOURCES += Image/tiffhandler.cpp
 SOURCES += Main/dockwidget.cpp
 SOURCES += Main/global.cpp
 SOURCES += Main/main.cpp
@@ -107,7 +109,6 @@ FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/ingestdlg.ui
 FORMS += Dialogs/loadusbdlg.ui
-#FORMS += Dialogs/prefdlg.ui
 FORMS += Dialogs/renamedlg.ui
 FORMS += Dialogs/testaligndlg.ui
 FORMS += Dialogs/tokendlg.ui
@@ -143,16 +144,8 @@ DISTFILES += notes/Shortcuts.txt
 DISTFILES += notes/snippets.txt
 DISTFILES += notes/xmp.txt
 
-#macx {
-#    QMAKE_MAC_SDK = macosx10.12
-#}
+#include(Lib/zlib/zlib.pri)
+#include(Lib/libtiff/libtiff.pri)
 
-# OBJECTIVE_SOURCES += MacOS/macscale.mm
-
-#HEADERS += MacOS/macscale.h
-#HEADERS += MacOS/macScale_p.h
-
-#QT += macextras
 mac:LIBS += -framework ApplicationServices
 mac:LIBS += -framework AppKit
-#mac:LIBS += -v

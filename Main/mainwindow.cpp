@@ -274,6 +274,11 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
 void MW::initialize()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     this->setWindowTitle("Winnow");
 
     qDebug() << "font" << font().family();
@@ -725,6 +730,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
 void MW::focusChange(QWidget *previous, QWidget *current)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (current == nullptr) return;
     if (current->objectName() == "DisableGoActions") enableGoKeyActions(false);
     else enableGoKeyActions(true);
@@ -750,6 +760,11 @@ void MW::dragEnterEvent(QDragEnterEvent *event)
 
 void MW::dropEvent(QDropEvent *event)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     handleDrop(event->mimeData());
 }
 
@@ -867,11 +882,6 @@ void MW::folderSelectionChange()
     #ifdef ISDEBUG
     G::track("\n======================================================================================================");
     G::track(__FUNCTION__);
-    #endif
-    }
-    {
-    #ifdef ISTEST
-    G::track(__FUNCTION__, "This is a test");
     #endif
     }
     // Stop any threads that might be running.
@@ -1187,7 +1197,7 @@ delegate use of the current index must check the column.
     }
     // update caching when folder has been loaded
     if (G::isNewFolderLoaded ) {
-        updateMetadataCacheIconviewState(true);
+        updateIconsVisible(true);
         metadataCacheThread->fileSelectionChange(updateImageCacheWhenFileSelectionChange);
     }
 
@@ -1273,12 +1283,12 @@ metadata caching.
     G::track(__FUNCTION__);
     #endif
     }
-    updateMetadataCacheIconviewState(false);
+    updateIconsVisible(false);
     return (currentRow > metadataCacheThread->firstIconVisible &&
             metadataCacheThread->lastIconVisible);
 }
 
-void MW::updateMetadataCacheIconviewState(bool useCurrentRow)
+void MW::updateIconsVisible(bool useCurrentRow)
 {
 /*
 This function polls both thumbView and gridView to determine the first, mid and last thumbnail
@@ -1323,8 +1333,15 @@ visible.  This is used in the metadataCacheThread to determine the range of file
         if (tableView->lastVisibleRow > last) last = tableView->lastVisibleRow;
     }
 
-//    qDebug() << __FUNCTION__ << "first =" << first
-//             << "last =" << last;
+    qDebug() << __FUNCTION__
+             << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
+             << "thumbView->lastVisibleCell =" << thumbView->lastVisibleCell
+             << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
+             << "gridView->lastVisibleCell =" << gridView->lastVisibleCell
+             << "\n\ttableView->firstVisibleCell =" << tableView->firstVisibleRow
+             << "tableView->lastVisibleCell =" << tableView->lastVisibleRow
+             << "\n\tfirst =" << first
+             << "last =" << last;
 
     metadataCacheThread->firstIconVisible = first;
     metadataCacheThread->midIconVisible = (first + last) / 2;// rgh qCeil ??
@@ -1362,7 +1379,7 @@ void MW::loadMetadataCache2ndPass()
     }
     updateIconBestFit();
 //    currentRow = 0;
-    updateMetadataCacheIconviewState(true);
+    updateIconsVisible(true);
     metadataCacheThread->loadNewFolder2ndPass();
 }
 
@@ -1397,16 +1414,16 @@ within the cache range.
     the new one is proven to work all the time.
       */
 
+    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
-//    qDebug() << __FUNCTION__ << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateMetadataCacheIconviewState(false);
+        updateIconsVisible(false);
         if (gridView->isVisible())
-            gridView->scrollToRow(thumbView->midVisibleCell, "Sync to ThumbView");
+            gridView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         if (tableView->isVisible())
-            tableView->scrollToRow(thumbView->midVisibleCell, "Sync to GridView");
+            tableView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         metadataCacheThread->scrollChange(currentRow);
     }
     G::ignoreScrollSignal = false;
@@ -1443,17 +1460,15 @@ within the cache range.
     the new one is proven to work all the time.
       */
 
-//    qDebug() << __FUNCTION__;
+    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
-    if (!G::ignoreScrollSignal) {
+    if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateMetadataCacheIconviewState(false);
+        updateIconsVisible(false);
         if (thumbView->isVisible())
-            thumbView->scrollToRow(gridView->midVisibleCell, "Sync to GridView");
+            thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
         metadataCacheThread->scrollChange(currentRow);
-//        metadataCacheScrollTimer->start(cacheDelay);
-//        loadMetadataCacheAfterDelay();
     }
     G::ignoreScrollSignal = false;
 }
@@ -1488,13 +1503,14 @@ within the cache range.
     the new one is proven to work all the time.
       */
 
+    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
-    if (!G::ignoreScrollSignal) {
+    if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateMetadataCacheIconviewState(false);
+        updateIconsVisible(false);
         if (thumbView->isVisible())
-            thumbView->scrollToRow(tableView->midVisibleRow, "Sync to TableView");
+            thumbView->scrollToRow(tableView->midVisibleRow, __FUNCTION__);
         metadataCacheThread->scrollChange(currentRow);
     }
     G::ignoreScrollSignal = false;
@@ -1512,7 +1528,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     #endif
     }
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-    updateMetadataCacheIconviewState(true);
+    updateIconsVisible(true);
     metadataCacheThread->sizeChange();
 }
 
@@ -1584,7 +1600,7 @@ the filter and sort operations cannot commence until all the metadata has been l
     if (G::isInitializing) return;
     if (metadataCacheThread->isAllMetadataLoaded()) return;
 
-    updateMetadataCacheIconviewState(true);
+    updateIconsVisible(true);
 
     bool resumeImageCaching = false;
     if (imageCacheThread->isRunning()) {
@@ -3577,6 +3593,11 @@ void MW::addMenuSeparator(QWidget *widget)
 
 void MW::enableEjectUsbMenu(QString path)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if(Usb::isUsb(path)) ejectAction->setEnabled(true);
     else ejectAction->setEnabled(false);
 }
@@ -4533,6 +4554,11 @@ void MW::createStatusBar()
 
 void MW::updateStatusBar()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel);
     if (!subfolderStatusLabel->isHidden()) statusBar()->removeWidget(subfolderStatusLabel);
     if (!rawJpgStatusLabel->isHidden()) statusBar()->removeWidget(rawJpgStatusLabel);
@@ -4739,6 +4765,11 @@ QString fileSym = "📷";
 
 void MW::clearStatus()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     stateLabel->setText("");
 }
 
@@ -5084,7 +5115,6 @@ void MW::clearAllFilters()
     #endif
     }
 
-    qDebug() << __FUNCTION__;
     if (!G::allMetadataLoaded) loadEntireMetadataCache();
     uncheckAllFilters();
 
@@ -5282,7 +5312,7 @@ hence need to scroll to the current row.
          QAbstractItemView::ScrollHint::PositionAtCenter);
     G::ignoreScrollSignal = false;
 
-    updateMetadataCacheIconviewState(true);
+    updateIconsVisible(true);
     metadataCacheThread->scrollChange(currentRow);
 }
 
@@ -5478,11 +5508,6 @@ with "_1" appended also might exist.
     G::track(__FUNCTION__);
     #endif
     }
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == name) {
             name += "_1";
@@ -5614,11 +5639,6 @@ void MW::manageWorkspaces()
 /*
 Delete, rename and reassign workspaces.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -5982,6 +6002,11 @@ void MW::diagnosticsAll()
 
 QString MW::diagnostics()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -6102,6 +6127,11 @@ void MW::diagnosticsZoom() {}
 
 void MW::diagnosticsReport(QString reportString)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QDialog *dlg = new QDialog;
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
@@ -6124,18 +6154,6 @@ void MW::about()
     qtVersion.prepend("Qt: ");
     aboutDlg = new AboutDlg(this, version, qtVersion, website);
     aboutDlg->exec();
-
-//    QString aboutString = "<h1>Winnow version " + version + "</h1>"
-//        + "<h3>"
-//        + tr("<p>Image viewer and ingester</p>")
-//        + "Qt v" + QT_VERSION_STR
-//        + "<p></p>"
-//        + "<p>Author: Rory Hill."
-//        + "<p>Latest change: " + versionDetail
-//        + "<p>Winnow is licensed under the GNU General Public License version 3</p>"
-//        + "<p></p></h3";
-
-//    QMessageBox::about(this, tr("About") + " Winnow", aboutString);
 }
 
 void MW::externalAppManager()
@@ -7777,10 +7795,13 @@ around lack of notification when the QListView has finished painting itself.
 */
     {
     #ifdef ISDEBUG
+    qDebug() << "\n\n\n";
     G::track(__FUNCTION__);
     #endif
     }
     G::mode = "Loupe";
+    updateStatus(true);
+    updateIconsVisible(false);
 
     // save selection as tableView is hidden and not synced
     saveSelection();
@@ -7821,20 +7842,20 @@ around lack of notification when the QListView has finished painting itself.
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
 
-//    fileSelectionChange(idx, idx);
-
-    // when okToScroll scroll thumbView to current row
-    G::ignoreScrollSignal = false;
-    QTime t = QTime::currentTime().addMSecs(1000);
-    while (QTime::currentTime() < t) {
-        if (thumbView->okToScroll()) {
-            G::wait(250);
-//            thumbView->scrollToRow(currentRow, __FUNCTION__);
-            fileSelectionChange(currentSfIdx, currentSfIdx);
-            break;
-        }
-        qApp->processEvents(QEventLoop::AllEvents, 50);
+    // sync scrolling between modes (loupe, grid and table)
+    updateIconsVisible(false);
+    if (prevMode == "Table") {
+        if(tableView->isRowVisible(currentRow)) scrollRow = currentRow;
+        else scrollRow = tableView->midVisibleRow;
     }
+    if (prevMode == "Grid") {
+        if(gridView->isRowVisible(currentRow)) scrollRow = currentRow;
+        else scrollRow = gridView->midVisibleCell;
+    }
+    G::ignoreScrollSignal = false;
+    thumbView->waitUntilOkToScroll();
+    thumbView->scrollToRow(scrollRow, __FUNCTION__);
+//    updateIconsVisible(false);
 
     prevMode = "Loupe";
 
@@ -7851,11 +7872,13 @@ around lack of notification when the QListView has finished painting itself.
 */
     {
     #ifdef ISDEBUG
-        G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+    qDebug() << "\n\n\n";
+    G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
     }
     G::mode = "Grid";
     updateStatus(true);
+    updateIconsVisible(false);
 
     // save selection as gridView is hidden and not synced
     saveSelection();
@@ -7867,6 +7890,7 @@ around lack of notification when the QListView has finished painting itself.
     // show gridView in central widget
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
+    qDebug() << __FUNCTION__ << "gridView->isVisible() =" << gridView->isVisible();
 
     QModelIndex idx = dm->sf->index(currentRow, 0);
     gridView->setCurrentIndex(idx);
@@ -7881,18 +7905,24 @@ around lack of notification when the QListView has finished painting itself.
     // selection has been lost while tableView and possibly thumbView were hidden
     recoverSelection();
 
+    // sync scrolling between modes (loupe, grid and table)
+    if (prevMode == "Table") {
+        if(tableView->isRowVisible(currentRow)) scrollRow = currentRow;
+        else scrollRow = tableView->midVisibleRow;
+    }
+    if (prevMode == "Loupe" /*&& thumbView->isVisible() == true*/) {
+        if(thumbView->isRowVisible(currentRow)) scrollRow = currentRow;
+        else scrollRow = thumbView->midVisibleCell;
+    }
+
     // when okToScroll scroll gridView to current row
     G::ignoreScrollSignal = false;
-    QTime t = QTime::currentTime().addMSecs(1000);
-    while (QTime::currentTime() < t) {
-        if (gridView->okToScroll()) {
-            G::wait(100);
-//            gridView->scrollToRow(currentRow, __FUNCTION__);
-            fileSelectionChange(currentSfIdx, currentSfIdx);
-            break;
-        }
-        qApp->processEvents(QEventLoop::AllEvents, 50);
-    }
+    gridView->waitUntilOkToScroll();
+     gridView->scrollToRow(scrollRow, __FUNCTION__);
+    updateIconsVisible(false);
+    qDebug() << __FUNCTION__
+             << "scrollRow =" << scrollRow
+             << "gridView->midVisibleRow =" << gridView->midVisibleCell;
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
@@ -7905,24 +7935,16 @@ void MW::tableDisplay()
 {
     {
     #ifdef ISDEBUG
+        qDebug() << "\n\n\n";
         G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
-    }
+    }    
     G::mode = "Table";
     updateStatus(true);
+    updateIconsVisible(false);
 
     // save selection as tableView is hidden and not synced
     saveSelection();
-
-    // sync scrolling between modes (loupe, grid and table)
-    if (prevMode == "Grid") {
-        if(gridView->isRowVisible(currentRow)) scrollRow = currentRow;
-        else scrollRow = gridView->midVisibleCell;
-    }
-    if (prevMode == "Loupe" && thumbView->isVisible() == true) {
-        if(thumbView->isRowVisible(currentRow)) scrollRow = currentRow;
-        else scrollRow = thumbView->midVisibleCell;
-    }
 
     // change to the table view
     centralLayout->setCurrentIndex(TableTab);
@@ -7963,8 +7985,22 @@ void MW::tableDisplay()
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
 
+    // sync scrolling between modes (loupe, grid and table)
+//    updateMetadataCacheIconviewState(false);
+    if (prevMode == "Grid") {
+        if (gridView->isRowVisible(currentRow)) scrollRow = currentRow;
+        else scrollRow = gridView->midVisibleCell;
+    }
+    if (prevMode == "Loupe") {
+        if(thumbView->isRowVisible(currentRow)) scrollRow = currentRow;
+        else scrollRow = thumbView->midVisibleCell;
+    }
     G::ignoreScrollSignal = false;
+    G::wait(100);
     tableView->scrollToRow(scrollRow, __FUNCTION__);
+    if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, __FUNCTION__);
+    updateIconsVisible(false);
+    qDebug() << __FUNCTION__ << scrollRow << tableView->midVisibleRow;
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
@@ -8760,11 +8796,21 @@ void MW::ejectUsb(QString path)
 
 void MW::ejectUsbFromMainMenu()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     ejectUsb(currentViewDir);
 }
 
 void MW::ejectUsbFromContextMenu()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     ejectUsb(mouseOverFolder);
 }
 
@@ -8836,16 +8882,6 @@ folder has been selected but the image cache has not been rebuilt.
         gridView->refreshThumb(idx, G::CachedRole);
     }
     return;
-
-//    QModelIndexList idxList = dm->match(dm->index(0, 0), G::PathRole, fPath);
-//    if (idxList.length()) {
-//        QModelIndex idx = idxList[0];
-//        if (idx.isValid()) {
-//            dm->setData(idx, isCached, G::CachedRole);
-//            thumbView->refreshThumb(idx, G::CachedRole);
-//            gridView->refreshThumb(idx, G::CachedRole);
-//        }
-//    }
 }
 
 void MW::updateClassification()
@@ -9073,9 +9109,6 @@ internally or as a sidecar when ingesting.
 */
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISPROFILE
     G::track(__FUNCTION__);
     #endif
     }
@@ -9733,6 +9766,11 @@ void MW::refreshCurrent()
 
 void MW::openUsbFolder()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     struct  UsbInfo {
         QString rootPath;
         QString name;
@@ -9795,12 +9833,22 @@ void MW::openUsbFolder()
 
 void MW::revealFile()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
     revealInFileBrowser(fPath);
 }
 
 void MW::revealFileFromContext()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     revealInFileBrowser(mouseOverFolder);
 }
 
@@ -9843,17 +9891,32 @@ for details
 
 void MW::collapseAllFolders()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     fsTree->collapseAll();
 }
 
 void MW::openInFinder()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     takeCentralWidget();
     setCentralWidget(imageView);
 }
 
 void MW::openInExplorer()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString path = "C:/exampleDir/example.txt";
 
     QStringList args;
@@ -9937,6 +10000,11 @@ void MW::setCentralMessage(QString message)
 
 void MW::help()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QWidget *helpDoc = new QWidget;
     Ui::helpForm ui;
     ui.setupUi(helpDoc);
@@ -9945,6 +10013,11 @@ void MW::help()
 
 void MW::helpShortcuts()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QScrollArea *helpShortcuts = new QScrollArea;
     Ui::shortcutsForm ui;
     ui.setupUi(helpShortcuts);
@@ -9958,6 +10031,11 @@ void MW::helpShortcuts()
 
 void MW::helpWelcome()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     centralLayout->setCurrentIndex(StartTab);
 }
 
@@ -9975,6 +10053,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qDebug() << __FUNCTION__ << thumbView->firstVisibleCell
+             << thumbView->isRowVisible(15);
+    return;
+
 //    TiffHandler tiffHandler;
 //    tiffHandler.test(dm->currentFilePath.toLocal8Bit().constData());
 //    return;
