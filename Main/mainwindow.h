@@ -239,6 +239,7 @@ public:
     QModelIndex currentDmIdx;   // the datamodel index for the current proxy index
     bool allIconsLoaded;
     bool modeChangeJustHappened;
+    bool gridDisplayFirstOpen = true;
     bool justUpdatedBestFit;
     int sortColumn = 0;
     bool preferencesHasFocus = false;

@@ -131,7 +131,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setTabKeyNavigation(true);  // not working
     setResizeMode(QListView::Adjust);
-    setLayoutMode(QListView::Batched);
+//    setLayoutMode(QListView::Batched);    // causes delay that makes scrollTo a headache
 
     setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
 //    setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -1251,21 +1251,24 @@ which isn't pretty at all.
     int mid = midVisibleCell;
 
     static int prevWidth = 0;
-    prevWidth = width();
 
     // must come after width parameters
-    if (G::isInitializing || !G::isNewFolderLoaded) return;
+    if (G::isInitializing || !G::isNewFolderLoaded || m2->gridDisplayFirstOpen) {
+        prevWidth = width();
+        return;
+    }
 
     // only rejustify when user resizes
-    if (isWrapping() && width() != prevWidth && prevWidth > 0) {
-        QTimer::singleShot(500, this, SLOT(rejustify()));   // calls setViewportParameters
+    if (isWrapping() && width() != prevWidth) {
+        QTimer::singleShot(500, this, SLOT(rejustify()));   // calls calcViewportParameters
     }
+    prevWidth = width();
+
     if (isFitTopOrBottom) {
         G::ignoreScrollSignal = true;
-        qDebug() << __FUNCTION__ << mid << midVisibleCell;
+//        qDebug() << __FUNCTION__ << mid << midVisibleCell;
         scrollToRow(mid, __FUNCTION__);
         isFitTopOrBottom = false;
-//        setViewportParameters();
         calcViewportRange(mid);
     }
     else {
@@ -1527,8 +1530,8 @@ source is the calling function and is used for debugging.
     #endif
     }
 
-    qDebug() << __FUNCTION__ << objectName() << "row =" << row
-             << "requested by" << source;
+//    qDebug() << __FUNCTION__ << objectName() << "row =" << row
+//             << "requested by" << source;
 
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
