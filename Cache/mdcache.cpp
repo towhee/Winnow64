@@ -316,7 +316,6 @@ limits are removed (not visible and not with chunk range)
             wait();
     }
     abort = false;
-    qDebug() << __FUNCTION__ << "row =" << row;
 //    qDebug() << __FUNCTION__
 //             << "firstIconVisible" << firstIconVisible
 //             << "prevFirstIconVisible" << prevFirstIconVisible
@@ -443,7 +442,7 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
     prevLastIconVisible = lastIconVisible;
 
 //    G::track(__FUNCTION__);
-    qDebug()  <<  __FUNCTION__
+/*    qDebug()  <<  __FUNCTION__
               << "source =" << actionList.at(action)
               << "first =" << firstIconVisible
               << "mid =" << midIconVisible
@@ -453,7 +452,7 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
               << "metadataChunkSize =" << metadataChunkSize
               << "startRow =" << startRow
               << "endRow =" << endRow;
-
+*/
 }
 
 void MetadataCache::iconCleanup()
@@ -587,7 +586,6 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-//    qDebug() << __FUNCTION__ << "startRow =" << startRow << "endRow =" << endRow;
 
     int start = startRow;
     int end = endRow;
@@ -595,8 +593,8 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
         start = 0;
         end = dm->sf->rowCount();
     }
-    qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
-             << "rowCount =" << dm->sf->rowCount();
+//    qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
+//             << "rowCount =" << dm->sf->rowCount();
     for (int row = start; row < end; ++row) {
         if (abort) {
 //            qDebug() << __FUNCTION__ << "ABORTING AT ROW" << row;

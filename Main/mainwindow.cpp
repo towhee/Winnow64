@@ -1333,7 +1333,7 @@ visible.  This is used in the metadataCacheThread to determine the range of file
         if (tableView->lastVisibleRow > last) last = tableView->lastVisibleRow;
     }
 
-    qDebug() << __FUNCTION__
+/*    qDebug() << __FUNCTION__
              << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
              << "thumbView->lastVisibleCell =" << thumbView->lastVisibleCell
              << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
@@ -1342,7 +1342,7 @@ visible.  This is used in the metadataCacheThread to determine the range of file
              << "tableView->lastVisibleCell =" << tableView->lastVisibleRow
              << "\n\tfirst =" << first
              << "last =" << last;
-
+*/
     metadataCacheThread->firstIconVisible = first;
     metadataCacheThread->midIconVisible = (first + last) / 2;// rgh qCeil ??
     metadataCacheThread->lastIconVisible = last;
@@ -1414,13 +1414,13 @@ within the cache range.
     the new one is proven to work all the time.
       */
 
-    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
+//    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconsVisible(false);
-        if (gridView->isVisible())
+//        if (gridView->isVisible())
             gridView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
@@ -1460,13 +1460,13 @@ within the cache range.
     the new one is proven to work all the time.
       */
 
-    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
+//    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconsVisible(false);
-        if (thumbView->isVisible())
+//        if (thumbView->isVisible())
             thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
         metadataCacheThread->scrollChange(currentRow);
     }
@@ -1503,7 +1503,7 @@ within the cache range.
     the new one is proven to work all the time.
       */
 
-    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
+//    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
@@ -7853,7 +7853,7 @@ around lack of notification when the QListView has finished painting itself.
         else scrollRow = gridView->midVisibleCell;
     }
     G::ignoreScrollSignal = false;
-    thumbView->waitUntilOkToScroll();
+//    thumbView->waitUntilOkToScroll();
     thumbView->scrollToRow(scrollRow, __FUNCTION__);
 //    updateIconsVisible(false);
 
@@ -7890,7 +7890,6 @@ around lack of notification when the QListView has finished painting itself.
     // show gridView in central widget
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
-    qDebug() << __FUNCTION__ << "gridView->isVisible() =" << gridView->isVisible();
 
     QModelIndex idx = dm->sf->index(currentRow, 0);
     gridView->setCurrentIndex(idx);
@@ -7917,18 +7916,19 @@ around lack of notification when the QListView has finished painting itself.
 
     // when okToScroll scroll gridView to current row
     G::ignoreScrollSignal = false;
-    gridView->waitUntilOkToScroll();
+//    gridView->waitUntilOkToScroll();
      gridView->scrollToRow(scrollRow, __FUNCTION__);
     updateIconsVisible(false);
-    qDebug() << __FUNCTION__
-             << "scrollRow =" << scrollRow
-             << "gridView->midVisibleRow =" << gridView->midVisibleCell;
+//    qDebug() << __FUNCTION__
+//             << "scrollRow =" << scrollRow
+//             << "gridView->midVisibleRow =" << gridView->midVisibleCell;
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
 
     gridView->setFocus();
     prevMode = "Grid";
+    gridDisplayFirstOpen = false;
 }
 
 void MW::tableDisplay()
