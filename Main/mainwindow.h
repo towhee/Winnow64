@@ -53,6 +53,7 @@
 #include "ui_message.h"
 
 //#include "Image/tiffhandler.h";
+#include "Lib/zlib/zlib.h"
 
 class MW : public QMainWindow
 {

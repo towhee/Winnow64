@@ -10053,23 +10053,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << thumbView->firstVisibleCell
-             << thumbView->isRowVisible(15);
-    return;
+
 
 //    TiffHandler tiffHandler;
 //    tiffHandler.test(dm->currentFilePath.toLocal8Bit().constData());
 //    return;
-
-
-    QModelIndex idx = fsTree->selectionModel()->selectedRows().at(0);
-
-    QString path = idx.data().toString();
-//    QString path = idx.data(QFileSystemModel::FilePathRole).toString();
-    qDebug() << __FUNCTION__ << path << currentViewDir;
-
-//    QString x = getSelectedPath();
-//    qDebug() << __FUNCTION__ << x;
 }
 
 // End MW
