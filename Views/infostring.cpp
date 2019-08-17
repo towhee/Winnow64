@@ -154,7 +154,7 @@ void InfoString::initExampleMap()
     exampleMap["Rotation"] = "0";
     exampleMap["Orientation"] = "0";
     exampleMap["ShootingInfo"] = "Canon EOS-1D X Mark II 840mm 1/250 sec at f/5.6, ISO 400";
-    exampleMap["Aperture"] = "5.6";
+    exampleMap["Aperture"] = "f/5.6";
     exampleMap["ShutterSpeed"] = "1/250";
     exampleMap["ISO"] = "400";
     exampleMap["Model"] = "Canon EOS-1D X Mark II";

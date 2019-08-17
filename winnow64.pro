@@ -149,3 +149,14 @@ DISTFILES += notes/xmp.txt
 
 mac:LIBS += -framework ApplicationServices
 mac:LIBS += -framework AppKit
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/release/ -lzlib
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/zlib/debug/ -lzlib
+
+INCLUDEPATH += $$PWD/Lib/zlib
+DEPENDPATH += $$PWD/Lib/zlib
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/release/libzlib.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/debug/libzlib.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/release/zlib.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/debug/zlib.lib
