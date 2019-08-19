@@ -11,7 +11,7 @@ App separator hover             rgb(128,128,128     = gray
 App disabled item               rgb(128,128,128     = gray
 Menu background                 rgb(95,95,95)
 Menu bar item selected
-Menu item selected              rgb(68,95,118);
+Menu item selected              rgb(68,95,118);     = dull blue
 Other selected item             rgb(76,90,102)      tab, list...
 
 */
@@ -418,7 +418,7 @@ QPushButton:disabled {
 QComboBox {
     background-color: rgb(77,77,77);
     border: 1px solid gray;
-    selection-background-color: darkgray;
+    /*selection-background-color: darkgray;*/
     border-radius: 2px;
     padding: 0px 10px 1px 8px;  /*text  top, right, bottom, left*/
     min-width: 6em;

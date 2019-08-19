@@ -188,11 +188,32 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
 
     comboBox = new QComboBox;
     comboBox->setObjectName("DisableGoActions");  // used in MW::focusChange
-    comboBox->setStyleSheet("QComboBox {background: transparent;"
-                            "border:none; padding: 0px 0px 0px 0px;}"
-                            "QComboBox::drop-down {border:none;}");
+//    comboBox->setView(new QListView);
+
+    comboBox->setStyleSheet("QComboBox {"
+                                "background: transparent;"
+                                "border:none; "
+                                "padding: 0px 0px 0px 0px;"
+                            "}"
+                            "QComboBox::item:selected {"
+                                "background-color: rgb(68,95,118);"
+                            "}"
+//                            "QComboBox QAbstractItemView::item {"
+//                                "height: 20px;"
+//                                "background-color: rgb(77,77,77);"
+//                            "}"
+                            "QComboBox::drop-down {"
+                                "border:none;"
+                            "}"
+                            );
+
+    QPalette palette = comboBox->palette();
+    QPalette view_palette = comboBox->view()->palette();
+    view_palette.setColor(QPalette::Active, QPalette::Background, QColor(77,77,77));
+    comboBox->view()->setPalette(view_palette);
+
     comboBox->setWindowFlags(Qt::FramelessWindowHint);
-    comboBox->setAttribute(Qt::WA_TranslucentBackground);
+//    comboBox->setAttribute(Qt::WA_TranslucentBackground);
 
     connect(comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             [=](int index){change(index);});

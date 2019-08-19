@@ -87,6 +87,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     count = 0;
     selection = selectionModel->selectedRows();
     count = selection.count();
+    qDebug() << __FUNCTION__ << selectionModel->selectedRows().count() << count;
     if (count > 9) count = 9;
 
     for (int i = 0; i < count; ++i) {

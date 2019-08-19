@@ -1,5 +1,5 @@
 BUGS
-- TableView not scroll syncing with IconView and vice versa
+- Mac fn right arrow caused crash
 - Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - ImageView::scale comparing floats potentially bad
@@ -11,7 +11,6 @@ PERFORMANCE
 - Tif load slowly
 CODE IMPROVEMENTS
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
-- fix 300ms delay before scroll to currentRow on filterChange
 - Change setPixelSize to setPointSize throughout app
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
@@ -19,10 +18,10 @@ ENHANCEMENTS
 - Search
 - Refresh selected images
 - Copy image
-- REad keywords
+- Read keywords
 - Remove Windows Registry settings during uninstall
 - Write xmp into eligible files ???
-- tableView adjust to changing font size
+- TableView adjust to changing font size
 - Read xmp sidecars when open folder
 - Check for updates on Mac
 - Detect drive mounting
@@ -34,6 +33,9 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Fix 300ms delay before scroll to currentRow on filterChange
+- TableView not scroll syncing with IconView and vice versa
+- Combobox popup background and selection colors in propertywidgets.cpp
 - Combine raw+jpg error showing date instead
 - Add / update tool tips in preferences and throughout program
 - Tableview sizeHintForColumn "width" is deprecated

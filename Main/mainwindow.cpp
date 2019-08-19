@@ -9305,6 +9305,7 @@ void MW::keyEnd()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if (G::mode == "Compare") compareImages->go("End");
     if (G::mode == "Grid") gridView->selectLast();
     else {
