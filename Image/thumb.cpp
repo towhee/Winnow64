@@ -54,6 +54,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
     bool success = false;
+    err = "";
     QFile imFile(fPath);
     QImageReader thumbReader;
     if (imFile.open(QIODevice::ReadOnly)) {
@@ -87,6 +88,7 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
     bool success = false;
+    err = "";
     QFile imFile(fPath);
     int row = dm->fPathRow[fPath];
 
@@ -153,6 +155,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
     QString ext = fileInfo.suffix().toLower();
 
     bool success = false;
+    err = "";
     int row = dm->fPathRow[fPath];
 
     // Check if metadata has been cached for this image
@@ -178,7 +181,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
     if (thumbFound) {
         success = loadFromData(fPath, image);
         if (!success) {
-            err = "Failed to load thumb for " + fPath;
+//            err = "Failed to load thumb for " + fPath;
         }
     }
     else  {
@@ -188,8 +191,8 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
         }
         // check if file is locked by another process
         else {
-            err = "Could not open file for image";    // try again
-            if (G::isThreadTrackingOn) track(fPath, err);
+//            err = "Could not open file for image";    // try again
+//            if (G::isThreadTrackingOn) track(fPath, err);
         }
     }
     if (err != "") {

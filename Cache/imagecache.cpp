@@ -685,11 +685,11 @@ Update the width, height, size and isMetadata fields in the imageCacheList.
     }
     for (int i = 0; i < dm->sf->rowCount(); ++i) {
         if (i >= cacheItemList.length()) {
-            qDebug() << __FUNCTION__
+/*            qDebug() << __FUNCTION__
                      << "cacheItemList[0].fName" << cacheItemList[0].fName
                      << "ITEM" << i
                      << "EXCEEDS CACHEITEMLIST LENGTH" << cacheItemList.length()
-                     << dm->currentFilePath;
+                     << dm->currentFilePath;*/
             return;
         }
         if (!cacheItemList[i].isMetadata) {

@@ -933,7 +933,8 @@ void MW::folderSelectionChange()
             else {
                QModelIndex idx = fsTree->fsModel->index(currentViewDir);
                if (fsTree->fsModel->hasIndex(idx.row(), idx.column(), idx.parent()))
-                    fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(idx));
+                   qDebug() << __FUNCTION__;
+                   fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(idx));
                G::isInitializing = false;
                return;
             }
@@ -1839,11 +1840,11 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
 //    QString fPath = item->text(0);
     const QString fPath =  item->toolTip(col);
     isCurrentFolderOkay = isFolderValid(fPath, true, false);
-    qDebug() << __FUNCTION__ << fPath;
 
     if (isCurrentFolderOkay) {
         QModelIndex idx = fsTree->fsModel->index(fPath);
 //        QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
+        qDebug() << __FUNCTION__;
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
@@ -5292,19 +5293,8 @@ hence need to scroll to the current row.
     }
     currentRow = dm->sf->mapFromSource(currentDmIdx).row();
     QModelIndex idx = dm->sf->index(currentRow, 0);
-    G::wait(100);
-//    if (thumbView->isVisible()) {
-//        int thresholdMax = 0.95 * thumbView->getHorizontalScrollBarMax();
-//        qDebug() << __FUNCTION__ << "thresholdMax =" << thresholdMax;
-//        while (thresholdMax < thumbView->horizontalScrollBar()->maximum()) {
-//            qDebug() << __FUNCTION__ << QTime::currentTime()
-//                     << "thumbView->horizontalScrollBar()->maximum()"
-//                     << thumbView->horizontalScrollBar()->maximum();
-//        }
-        // wait 100ms for double click issue
-//        G::wait(100);
-//        thumbView->scrollToRow(currentRow, __FUNCTION__);
-//    }
+//    G::wait(100);
+
     G::ignoreScrollSignal = true;
     if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
     if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
@@ -6415,7 +6405,6 @@ void MW::setClassificationBadgeImageDiam(int d)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << d;
     classificationBadgeInImageDiameter = d;
     imageView->setClassificationBadgeImageDiam(d);
 }
@@ -6427,7 +6416,6 @@ void MW::setClassificationBadgeThumbDiam(int d)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << d;
     classificationBadgeInThumbDiameter = d;
     thumbView->badgeSize = d;
     gridView->badgeSize = d;
@@ -7671,7 +7659,6 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << "isFloat" << isFloat;
     if (isFloat) {
         thumbView->setMaximumHeight(100000);
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -7919,9 +7906,6 @@ around lack of notification when the QListView has finished painting itself.
 //    gridView->waitUntilOkToScroll();
      gridView->scrollToRow(scrollRow, __FUNCTION__);
     updateIconsVisible(false);
-//    qDebug() << __FUNCTION__
-//             << "scrollRow =" << scrollRow
-//             << "gridView->midVisibleRow =" << gridView->midVisibleCell;
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
@@ -8000,7 +7984,7 @@ void MW::tableDisplay()
     tableView->scrollToRow(scrollRow, __FUNCTION__);
     if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, __FUNCTION__);
     updateIconsVisible(false);
-    qDebug() << __FUNCTION__ << scrollRow << tableView->midVisibleRow;
+//    qDebug() << __FUNCTION__ << scrollRow << tableView->midVisibleRow;
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
@@ -8349,11 +8333,11 @@ void MW::toggleThumbDockVisibity()
     if (G::mode != "Grid" && isNormalScreen) {
         wasThumbDockVisible = thumbDock->isVisible();
     }
-    qDebug() << __FUNCTION__
+/*    qDebug() << __FUNCTION__
              << "wasThumbDockVisible =" << wasThumbDockVisible
              << "G::mode =" << G::mode
              << "isNormalScreen =" << isNormalScreen
-             << "thumbDock->isVisible() =" << thumbDock->isVisible();
+             << "thumbDock->isVisible() =" << thumbDock->isVisible();*/
 }
 
 void MW::setMenuBarVisibility() {
@@ -9162,7 +9146,6 @@ void MW::getSubfolders(QString fPath)
         fPath = iterator.filePath();
         if (iterator.fileInfo().isDir() && iterator.fileName() != "." && iterator.fileName() != "..") {
             subfolders->append(fPath);
-//            qDebug() << __FUNCTION__ << fPath;
         }
     }
 }
@@ -9305,7 +9288,6 @@ void MW::keyEnd()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if (G::mode == "Compare") compareImages->go("End");
     if (G::mode == "Grid") gridView->selectLast();
     else {
@@ -9720,7 +9702,6 @@ void MW::addNewBookmarkFromContext()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << mouseOverFolder;
     addBookmark(mouseOverFolder);
 }
 

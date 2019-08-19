@@ -1,5 +1,6 @@
 BUGS
-- Mac fn right arrow caused crash
+- FSTree::getCurrentIndex index from wrong model passed to mapFromSource
+- Run multiple instances of Winnow?? Mac touchpad single click issues
 - Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - ImageView::scale comparing floats potentially bad

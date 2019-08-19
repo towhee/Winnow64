@@ -358,7 +358,6 @@ size or the viewport change size.
         mutex.unlock();
         wait();
     }
-    qDebug() << __FUNCTION__;
     abort = false;
     action = Action::Resize;
     foundItemsToLoad = false;
@@ -564,7 +563,7 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
     // load icon
     if (idx.data(Qt::DecorationRole).isNull()) {
         QImage image;
-        qDebug() << __FUNCTION__ << "row =" << sfRow << fPath;
+//        qDebug() << __FUNCTION__ << "row =" << sfRow << fPath;
         bool thumbLoaded = thumb->loadThumb(fPath, image);
         if (thumbLoaded) {
             QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
@@ -732,7 +731,7 @@ startRow and endRow.
             // load icon
             if (idx.data(Qt::DecorationRole).isNull()) {
                 QImage image;
-                qDebug() << __FUNCTION__ << "row =" << row << fPath;
+//                qDebug() << __FUNCTION__ << "row =" << row << fPath;
                 bool thumbLoaded = thumb->loadThumb(fPath, image);
                 if (thumbLoaded) {
                     QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));

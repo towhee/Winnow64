@@ -265,7 +265,6 @@ void DataModel::find(QString text)
         if (searchableText.contains(text.toLower())) {
             QModelIndex idx = sf->mapToSource(sf->index(row, G::SearchColumn));
             setData(idx, "true");
-            qDebug() << __FUNCTION__ << "Found";
         }
     }
 }
@@ -772,7 +771,6 @@ void DataModel::buildFilters()
     }
     if (filtersBuilt) return;
 //    filtersBuilt = true;
-    qDebug() << __FUNCTION__ << "1";
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> modelMap;
@@ -831,9 +829,9 @@ void DataModel::buildFilters()
 //    s = "Step 4 0f " + buildSteps + ":  Tabulating filtered items ...";
     G::popUp->setPopupText(buildMsg + s);
     qApp->processEvents();
-    qDebug() << __FUNCTION__ << "filteredItemCount()";
+//    qDebug() << __FUNCTION__ << "filteredItemCount()";
     filteredItemCount();
-    qDebug() << __FUNCTION__ << "unfilteredItemCount()";
+//    qDebug() << __FUNCTION__ << "unfilteredItemCount()";
     unfilteredItemCount();
 
     filtersBuilt = true;
