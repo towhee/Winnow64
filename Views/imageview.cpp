@@ -111,7 +111,7 @@ bool ImageView::loadImage(QString fPath)
 /*
 There are two sources for the image (pixmap): a file or the cache.
 
-The first choice is the cache.  In the cache two versions of the image are
+The first choice is the image cache.  In the cache two versions of the image are
 stored: the full scale and a preview scaled to dimensions defined in
 the preferences.  The preview is used if it is large enough to fit in the
 window (viewport) without scaling larger than 1.  If the preview is too
@@ -1115,9 +1115,13 @@ void ImageView::copyImage()
     G::track(__FUNCTION__);
     #endif
     }
-    //    QApplication::clipboard()->setImage(displayImage);
+    QApplication::clipboard()->setPixmap(pmItem->pixmap(), QClipboard::Clipboard);
+//    QClipboard *clipboard = QApplication::clipboard();
+//    clipboard->setPixmap(pmItem->pixmap(), QClipboard::Clipboard);
+//    QMimeData *data = new QMimeData;
+//    data->setImageData(displayImage);
+//    QApplication::clipboard()->setMimeData(data, QClipboard::Clipboard);
 }
-
 
 // not being used, but maybe in the future
 static inline int bound0To255(int val)

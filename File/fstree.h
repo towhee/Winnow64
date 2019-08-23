@@ -73,7 +73,7 @@ protected:
 	void dragMoveEvent(QDragMoveEvent *event);
 	void dropEvent(QDropEvent *event);
     void paintEvent(QPaintEvent *event);
-    void focusInEvent(QFocusEvent *event);
+    void focusInEvent(QFocusEvent */*event*/);
 
 signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);

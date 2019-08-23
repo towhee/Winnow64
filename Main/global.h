@@ -5,6 +5,11 @@
 //#define ISPROFILE      // Uncomment this line to show profiling output
 //#define ISTEST         // Uncomment this line to show testing output
 
+#define INT static_cast<int>
+#define UINT static_cast<uint>
+#define FLOAT static_cast<float>
+#define DOUBLE static_cast<double>
+
 #define TRACK
 
 #include <QtWidgets>

@@ -48,6 +48,7 @@ public:
         uint toCacheKey;            // next file to cache
         uint toDecacheKey;          // next file to remove from cache
         bool isForward;             // direction of travel in folder
+        int countAfterDirectionChange; // # images viewed after direction change
         float wtAhead;              // ratio cache ahead vs behind
         int totFiles;               // number of images available
         uint currMB;                // the current MB consumed by the cache

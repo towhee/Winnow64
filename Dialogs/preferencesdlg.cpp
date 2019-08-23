@@ -75,8 +75,3 @@ void PreferencesDlg::solo()
     tree->setSolo(soloAction->isChecked());
     isSolo = soloAction->isChecked();
 }
-
-void PreferencesDlg::closeEvent(QCloseEvent *event)
-{
-
-}

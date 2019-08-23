@@ -107,6 +107,7 @@ Loading icons
     is more than the number already read then the additional icons are read in a second pass.
 */
 
+extern MW *m2;
 MW *m2;
 
 IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
@@ -481,8 +482,6 @@ visible in the viewport, how many icons are visible and the first/last icons vis
         lastVisibleCell = i + cellsPerVPRow;
         if (lastVisibleCell > tCells - 1) lastVisibleCell = tCells - 1;
 
-        firstVisibleCell = firstVisibleCell;
-        lastVisibleCell = lastVisibleCell;
         visibleCells = lastVisibleCell - firstVisibleCell + 1;
         midVisibleCell = firstVisibleCell + visibleCells / 2;
 
@@ -496,7 +495,7 @@ visible in the viewport, how many icons are visible and the first/last icons vis
     }
 
     int rowInView = i / cellsPerVPRow;  //qCeil(i / cellsPerVPRow);
-    int posInVPRow = i % cellsPerVPRow;
+//    int posInVPRow = i % cellsPerVPRow;
     int rowsInView = qCeil((qreal)tCells / cellsPerVPRow);
     int lastVPRow = qCeil(tCells / cellsPerVPRow);
 
@@ -601,8 +600,8 @@ int IconView::getThumbsPerPage()
              << "| cell size =" << cell
              << "| tpr =" << tpr
              << "| rpp =" << rpp
-             << "| thumbsPerPage" << thumbsPerPage;
-    return thumbsPerPage;*/
+             << "| thumbsPerPage" << thumbsPerPage;*/
+    return visibleCells;
 }
 
 int IconView::getFirstVisible()
@@ -658,7 +657,6 @@ bool IconView::allPageIconsLoaded()
     G::track(__FUNCTION__);
     #endif
     }
-    bool isLoaded = true;
     for (int row = firstVisibleCell; row < dm->sf->rowCount(); ++row) {
         if (dm->index(row, G::PathColumn).data(Qt::DecorationRole).isNull())
             return false;
@@ -1233,7 +1231,7 @@ click position that is then sent to imageView to zoom to the same spot
     dm->sf->setData(index, iconRect, G::ThumbRectRole);
 }
 
-void IconView::resizeEvent(QResizeEvent *event)
+void IconView::resizeEvent(QResizeEvent */*event*/)
 {
 /*
 The resizeEvent can be triggered by a change in the gridView cell size (thumbWidth) that
@@ -1913,7 +1911,7 @@ Drag and drop thumbs to another program.
     QMimeData *mimeData = new QMimeData;
     QList<QUrl> urls;
 
-    for(int i = 0; i < selection.count(); ++i) {
+    for (int i = 0; i < selection.count(); ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
     }

@@ -1,5 +1,5 @@
 BUGS
-- FSTree::getCurrentIndex index from wrong model passed to mapFromSource
+- Mac check for updates not done yet
 - Run multiple instances of Winnow?? Mac touchpad single click issues
 - Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
@@ -34,6 +34,9 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Require 2 images before change caching direction
+- Escape slideshow when in full screen
+- FSTree::getCurrentIndex index from wrong model passed to mapFromSource
 - Fix 300ms delay before scroll to currentRow on filterChange
 - TableView not scroll syncing with IconView and vice versa
 - Combobox popup background and selection colors in propertywidgets.cpp

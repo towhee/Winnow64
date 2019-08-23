@@ -53,7 +53,7 @@ public:
     uint xmpNextSegmentOffset;
     bool isXmp;
     uint orientationOffset;
-    int orientation;
+    uint orientation;
     int rotationDegrees;            // additional rotation from edit
     uint width;
     uint height;
@@ -159,7 +159,8 @@ private:
     ulong xmpmetaRoom;
     QString reportString;
     QTextStream rpt;
-    long order;
+    ulong order;
+//    long order;
 
     void initSupportedFiles();
     void initSegCodeHash();

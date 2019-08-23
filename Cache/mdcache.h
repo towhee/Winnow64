@@ -34,7 +34,7 @@ public:
 
     void loadNewFolder();
     void loadNewFolder2ndPass();
-    void scrollChange(int row);
+    void scrollChange();
     void sizeChange();
     void fileSelectionChange(bool isRandomSlideShow);
     void loadAllMetadata();

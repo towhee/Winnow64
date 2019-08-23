@@ -3,19 +3,13 @@
 
 AboutDlg::AboutDlg(QWidget *parent,
                    QString &version,
-                   QString &qtVersion,
-                   QString &website) :
+                   QString &qtVersion) :
     QDialog(parent),
     ui(new Ui::About)
 {
     ui->setupUi(this);
-//    ui->webSite->setText(website);
     ui->qtVersion->setText(qtVersion);
     ui->version->setText(version);
-//    ui->version->setTextFormat(Qt::RichText);
-//    ui->version->setTextInteractionFlags(Qt::TextBrowserInteraction);
-//    ui->version->setOpenExternalLinks(true);
-//    QDesktopServices::openUrl(QUrl("http://165.227.46.158/winnow/winnow.html"));
 }
 
 AboutDlg::~AboutDlg()

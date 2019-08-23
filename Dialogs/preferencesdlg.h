@@ -13,9 +13,6 @@ class PreferencesDlg  : public QDialog
 public:
     PreferencesDlg(QWidget *parent, bool &isSolo, Preferences *pref, QString &css);
 
-protected:
-    void closeEvent(QCloseEvent *event);
-
 public slots:
     void solo();
 

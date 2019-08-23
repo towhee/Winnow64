@@ -405,10 +405,17 @@ void MW::keyPressEvent(QKeyEvent *event)
 //    dm->timeToQuit = true;
 
     QMainWindow::keyPressEvent(event);
+
     if (event->key() == Qt::Key_Return) {
         loupeDisplay();
     }
     if (event->key() == Qt::Key_Escape) {
+        // cancel slideshow
+        if (G::isSlideShow) {
+            slideShow();     // toggles slideshow off
+            return;
+        }
+
         if(fullScreenAction->isChecked()) {
             escapeFullScreen();
         }
@@ -423,7 +430,6 @@ void MW::keyPressEvent(QKeyEvent *event)
 void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape) {
-//        qDebug() << __FUNCTION__ << "preferencesHasFocus =" << preferencesHasFocus;
         // hide a popup message
         if (G::popUp->isVisible()) {
             G::popUp->hide();
@@ -433,12 +439,9 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         if (preferencesHasFocus) {
             propertiesDock->setVisible(false);
         }
-        // cancel slideshow
-        if (G::isSlideShow) slideShow();     // toggles slideshow off
     }
-    // toggle random / sequential slideshow next slide
+
     if (G::isSlideShow) {
-//        qDebug() << __FUNCTION__ << event->key();
         if (event->key() == Qt::Key_Backspace) {
             isSlideshowPaused = false;
             prevRandomSlide();
@@ -728,7 +731,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     return QWidget::eventFilter(obj, event);
 }
 
-void MW::focusChange(QWidget *previous, QWidget *current)
+void MW::focusChange(QWidget */*previous*/, QWidget *current)
 {
     {
     #ifdef ISDEBUG
@@ -806,6 +809,7 @@ bool MW::checkForUpdate()
     G::track(__FUNCTION__);
     #endif
     }
+
 #ifdef Q_OS_MAC
     return false;
 #endif
@@ -813,6 +817,8 @@ bool MW::checkForUpdate()
 #ifdef Q_OS_LINIX
     rerurn false;
 #endif
+
+#ifdef Q_OS_WIN
     QProcess process;
     process.start("maintenancetool --checkupdates");
 
@@ -864,6 +870,7 @@ bool MW::checkForUpdate()
 
     // prevent compiler warning
     return false;
+#endif
 }
 
 // Do we need this?  rgh
@@ -1064,26 +1071,27 @@ void MW::folderSelectionChange()
     G::isInitializing = false;
 }
 
-void MW::fileSelectionChange(QModelIndex current, QModelIndex previous)
+void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 {
 /*
-Triggered when file selection changes (folder change selects new image, so it also triggers
-this function). The new image is loaded, the pick status is updated and the infoView metadata
-is updated. The imageCache is updated if necessary. The imageCache will not be updated if
-triggered by folderSelectionChange since a new one will be Update.  The metadataCache is
-updated to include metadata and icons for all the visible thumbnails.
+Triggered when file selection changes (folder change selects new image, so it also
+triggers this function). The new image is loaded, the pick status is updated and the
+infoView metadata is updated. The imageCache is updated if necessary. The imageCache will
+not be updated if triggered by folderSelectionChange since a new one will be Update. The
+metadataCache is updated to include metadata and icons for all the visible thumbnails.
 
 It has proven quite difficult to sync the thumbView, tableView and gridView, keeping the
 currentIndex in the center position (scrolling). The issue is timing as it can take the
-scrollbars a while to finish painting and there isn't an event to notify the view is ready for
-action. One to many scrollbar paint events are fired, and the scrollbar->maximum() value is
-tested against a calculated maximum to determine when the last paint event has fired. The
-scrollToCurrent function is called. It has also been necessary to write custom scrollbar
-functions because the scrollTo(idx, positionAtCenter) does not always work. Finally, when
-QAbstractItemView accepts a mouse press it adds a 100ms delay to avoid double clicks but this
-plays havoc with the scrolling, so a flag is used to track which actions are triggering
-changes in the datamodel index. If it is a mouse press then a singeShot timer in invoked to
-delay the scrolling to after QAbstractItemView is finished.
+scrollbars a while to finish painting and there isn't an event to notify the view is
+ready for action. One to many scrollbar paint events are fired, and the
+scrollbar->maximum() value is tested against a calculated maximum to determine when the
+last paint event has fired. The scrollToCurrent function is called. It has also been
+necessary to write custom scrollbar functions because the scrollTo(idx, positionAtCenter)
+does not always work. Finally, when QAbstractItemView accepts a mouse press it adds a
+100ms delay to avoid double clicks but this plays havoc with the scrolling, so a flag is
+used to track which actions are triggering changes in the datamodel index. If it is a
+mouse press then a singeShot timer in invoked to delay the scrolling to after
+QAbstractItemView is finished.
 
 Note that the datamodel includes multiple columns for each row and the index sent to
 fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo and
@@ -1425,7 +1433,7 @@ within the cache range.
             gridView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
-        metadataCacheThread->scrollChange(currentRow);
+        metadataCacheThread->scrollChange();
     }
     G::ignoreScrollSignal = false;
 }
@@ -1469,7 +1477,7 @@ within the cache range.
         updateIconsVisible(false);
 //        if (thumbView->isVisible())
             thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
-        metadataCacheThread->scrollChange(currentRow);
+        metadataCacheThread->scrollChange();
     }
     G::ignoreScrollSignal = false;
 }
@@ -1512,7 +1520,7 @@ within the cache range.
         updateIconsVisible(false);
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, __FUNCTION__);
-        metadataCacheThread->scrollChange(currentRow);
+        metadataCacheThread->scrollChange();
     }
     G::ignoreScrollSignal = false;
 }
@@ -1583,7 +1591,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
 //    if (/*G::isInitializing || */dm->sf->rowCount() == 0/* || !G::isNewFolderLoaded*/) return;
 //    if (dm->sf->rowCount() == 0) return;
 //    updateMetadataCacheIconviewState();
-    metadataCacheThread->scrollChange(currentRow);
+    metadataCacheThread->scrollChange();
 }
 
 void MW::loadEntireMetadataCache()
@@ -2219,12 +2227,12 @@ void MW::createActions()
     connect(popPickHistoryAction, &QAction::triggered, this, &MW::popPick);
 
     // Place keeper for now
-    copyImagesAction = new QAction(tr("Copy to clipboard"), this);
-    copyImagesAction->setObjectName("copyImages");
-    copyImagesAction->setShortcutVisibleInContextMenu(true);
-    copyImagesAction->setShortcut(QKeySequence("Ctrl+C"));
-    addAction(copyImagesAction);
-    connect(copyImagesAction, &QAction::triggered, thumbView, &IconView::copyThumbs);
+    copyAction = new QAction(tr("Copy to clipboard"), this);
+    copyAction->setObjectName("copyImages");
+    copyAction->setShortcutVisibleInContextMenu(true);
+    copyAction->setShortcut(QKeySequence("Ctrl+C"));
+    addAction(copyAction);
+    connect(copyAction, &QAction::triggered, this, &MW::copy);
 
     rate0Action = new QAction(tr("Clear rating"), this);
     rate0Action->setObjectName("Rate0");
@@ -3224,6 +3232,8 @@ void MW::createMenus()
     editMenu->addAction(selectAllAction);
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
+    editMenu->addAction(copyAction);
+    editMenu->addSeparator();
     editMenu->addAction(refineAction);
     editMenu->addAction(pickAction);
 //    editMenu->addAction(filterPickAction);
@@ -3624,7 +3634,7 @@ void MW::enableSelectionDependentMenus()
         pickAction->setEnabled(true);
         filterPickAction->setEnabled(true);
         popPickHistoryAction->setEnabled(true);
-        copyImagesAction->setEnabled(true);
+        copyAction->setEnabled(true);
         rate0Action->setEnabled(true);
         rate1Action->setEnabled(true);
         rate2Action->setEnabled(true);
@@ -3683,7 +3693,7 @@ void MW::enableSelectionDependentMenus()
         pickAction->setEnabled(false);
         filterPickAction->setEnabled(false);
         popPickHistoryAction->setEnabled(false);
-        copyImagesAction->setEnabled(false);
+        copyAction->setEnabled(false);
         rate0Action->setEnabled(false);
         rate1Action->setEnabled(false);
         rate2Action->setEnabled(false);
@@ -4793,7 +4803,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QStri
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, calledby);
     #endif
     }
     if (isRunning) {
@@ -5303,7 +5313,7 @@ hence need to scroll to the current row.
     G::ignoreScrollSignal = false;
 
     updateIconsVisible(true);
-    metadataCacheThread->scrollChange(currentRow);
+    metadataCacheThread->scrollChange();
 }
 
 void MW::showHiddenFiles()
@@ -6142,7 +6152,7 @@ void MW::about()
 
     QString qtVersion = QT_VERSION_STR;
     qtVersion.prepend("Qt: ");
-    aboutDlg = new AboutDlg(this, version, qtVersion, website);
+    aboutDlg = new AboutDlg(this, version, qtVersion);
     aboutDlg->exec();
 }
 
@@ -6472,15 +6482,15 @@ resolution is used to calculate and report the zoom in ImageView.
     auto modes = CGDisplayCopyAllDisplayModes(displayID, nullptr);
     auto count = CFArrayGetCount(modes);
     CGDisplayModeRef mode;
-    displayHorizontalPixels, displayVerticalPixels = 0;
+//    displayHorizontalPixels, displayVerticalPixels = 0;
 
     // the native resolution is the largest display mode
-    for(auto c = count; c--;) {
+    for (auto c = count; c--;) {
         mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(modes, c);
-        auto w = CGDisplayModeGetWidth(mode);
-        auto h = CGDisplayModeGetHeight(mode);
-        if (w > displayHorizontalPixels) displayHorizontalPixels = (int)w;
-        if (h > displayVerticalPixels) displayVerticalPixels = (int)h;
+        int w = INT(CGDisplayModeGetWidth(mode));
+        int h = INT(CGDisplayModeGetHeight(mode));
+        if (w > displayHorizontalPixels) displayHorizontalPixels = w;
+        if (h > displayVerticalPixels) displayVerticalPixels = h;
     }
 #endif
 
@@ -9746,6 +9756,12 @@ void MW::refreshCurrent()
     folderSelectionChange();
 }
 
+void MW::copy()
+{
+    thumbView->copyThumbs();
+//    imageView->copyImage();
+}
+
 void MW::openUsbFolder()
 {
     {
@@ -10035,7 +10051,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    float x = 6.25;
+    int n = INT(x);
+    qDebug() << __FUNCTION__ << n;
+//    imageView->copyImage();
+    return;
 
+//    fsTree
 
 //    TiffHandler tiffHandler;
 //    tiffHandler.test(dm->currentFilePath.toLocal8Bit().constData());
