@@ -24,7 +24,7 @@ public:
     uint xmpNextSegmentOffset = 0;
     bool isXmp = false;
     uint orientationOffset = 0;
-    int orientation = 0;
+    uint orientation = 0;
     int rotationDegrees = 0;            // additional rotation from edit
     uint width = 0;
     uint height = 0;

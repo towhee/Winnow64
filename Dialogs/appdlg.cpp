@@ -152,7 +152,7 @@ void Appdlg::on_removeBtn_clicked()
     QString name;
     QString path;
     int rows = getAppCount() - 1;
-    for(row; row < rows; ++row) {
+    for (row = 0; row < rows; ++row) {
         if(row == 9) {
             name = "";
             path = "";

@@ -16,8 +16,7 @@ class AboutDlg : public QDialog
 public:
     explicit AboutDlg(QWidget *parent,
                       QString &version,
-                      QString &qtVersion,
-                      QString &website);
+                      QString &qtVersion);
     ~AboutDlg();
 
 private slots:

@@ -24,12 +24,12 @@ void Preferences::itemChange(QModelIndex idx)
     QString dataType = idx.data(UR_Type).toString();
     int delegateType = idx.data(UR_DelegateType).toInt();
     QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
-    qDebug() << __FUNCTION__ << idx
+/*    qDebug() << __FUNCTION__ << idx
              << "value =" << v
              << "source =" << source
              << "dataType =" << dataType
              << "delegateType =" << delegateType;
-
+*/
     if (source == "gridViewIconSize") {
         if (v == 1) {
             if (mw->gridView->isWrapping())
@@ -1088,8 +1088,7 @@ void Preferences::addItems()
 
         // TableView conventional fields to show
         QStandardItemModel *tv = mw->tableView->ok;
-        int geekStartRow;
-        for(int row = 0; row < tv->rowCount(); row++) {
+        for (int row = 0; row < tv->rowCount(); row++) {
             // do not show if is a geek column
             if (tv->index(row, 2).data().toBool()) continue;
             caption = tv->index(row, 0).data().toString();

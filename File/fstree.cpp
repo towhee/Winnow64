@@ -284,7 +284,8 @@ QModelIndex FSTree::getCurrentIndex()
     }
     QModelIndex idx;
     if (selectedIndexes().size() > 0)
-        idx = fsFilter->mapFromSource(selectedIndexes().first());
+//        idx = fsFilter->mapFromSource(selectedIndexes().first());
+        idx = selectedIndexes().first();
     else idx = fsModel->index(-1, -1, QModelIndex());
     return idx;
 }
@@ -343,7 +344,7 @@ void FSTree::paintEvent(QPaintEvent *event)
     QTreeView::paintEvent(event);
 }
 
-void FSTree::focusInEvent(QFocusEvent *event)
+void FSTree::focusInEvent(QFocusEvent */*event*/)
 {
     qDebug() << __FUNCTION__ << "Acquired focus";
 }
@@ -356,15 +357,13 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
 void FSTree::mouseReleaseEvent(QMouseEvent *event)
 {
-//    qDebug()  << "FSTree::mouseReleaseEvent";
     QTreeView::mouseReleaseEvent(event);
 }
 
 void FSTree::mouseMoveEvent(QMouseEvent *event)
 {
-//    qDebug() << "FSTree::mouseMoveEvent";
     QTreeView::mouseMoveEvent(event);
-    QModelIndex idx = indexAt(event->pos());
+//    QModelIndex idx = indexAt(event->pos());
 }
 
 void FSTree::dragEnterEvent(QDragEnterEvent *event)

@@ -19,12 +19,13 @@ class DockWidget : public QDockWidget
             QSize size;
         };
         DWLoc dw;
+
         bool ignore;
 
 protected:
         bool event(QEvent *event);
         void resizeEvent(QResizeEvent *event);
-        void moveEvent(QMoveEvent);
+        void moveEvent(QMoveEvent */*event*/);
     };
 
 #endif // DOCKWIDGET_H

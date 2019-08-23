@@ -640,7 +640,7 @@ to run as a separate thread and can be executed directly.
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->imageMetadata.row = row;
-            addMetadataForItem(metadata->imageMetadata, isShowCacheStatus);
+            addMetadataForItem(metadata->imageMetadata);
             count++;
         }
         else {
@@ -655,7 +655,7 @@ to run as a separate thread and can be executed directly.
              << currentFolderPath;
 }
 
-bool DataModel::addMetadataForItem(ImageMetadata m, bool isShowCacheStatus)
+bool DataModel::addMetadataForItem(ImageMetadata m)
 {
     /*
     This function is called after the metadata for each eligible image in the selected
@@ -782,7 +782,6 @@ void DataModel::buildFilters()
     QMap<QVariant, QString> dayMap;
 
     QString s;
-    int prev = 0;
     int rows = sf->rowCount();
     for(int row = 0; row < rows; row++) {
         QString model = index(row, G::CameraModelColumn).data().toString();

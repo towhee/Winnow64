@@ -28,8 +28,9 @@ bool DockWidget::event(QEvent *event)
         setFloating(!isFloating());
         if (isFloating()) {
             // move and size to previous state
-            QRect screenres = QApplication::desktop()->screenGeometry(dw.screen);
-            move(QPoint(screenres.x() + dw.pos.x(), screenres.y() + dw.pos.y()));
+//            QRect screenRect = QGuiApplication::screens(dw.screen);
+            QRect screenRect = QApplication::desktop()->screenGeometry(dw.screen);
+            move(QPoint(screenRect.x() + dw.pos.x(), screenRect.y() + dw.pos.y()));
             ignore = false;
             adjustSize();
         }
@@ -59,7 +60,7 @@ QSize DockWidget::sizeHint() const
     return dw.size;
 }
 
-void DockWidget::moveEvent(QMoveEvent /**event*/)
+void DockWidget::moveEvent(QMoveEvent */*event*/)
 {
     if (ignore || !isFloating()) return;
     dw.screen = QApplication::desktop()->screenNumber(this);

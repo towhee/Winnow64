@@ -294,7 +294,7 @@ progress bar update is more important then use the datamodel function dm::addAll
     start(TimeCriticalPriority);
 }
 
-void MetadataCache::scrollChange(int row)
+void MetadataCache::scrollChange()
 {
 /*
 This function is called when there is a scroll event in a view of the datamodel.
@@ -310,32 +310,21 @@ limits are removed (not visible and not with chunk range)
     if (isRunning()) {
             mutex.lock();
             abort = true;
-//            qDebug() << "abort = true   row =" << row << __FUNCTION__;
             condition.wakeOne();
             mutex.unlock();
             wait();
     }
     abort = false;
-//    qDebug() << __FUNCTION__
-//             << "firstIconVisible" << firstIconVisible
-//             << "prevFirstIconVisible" << prevFirstIconVisible
-//             << "lastIconVisible" << lastIconVisible
-//             << "prevLastIconVisible" << prevLastIconVisible
-                ;
-
     action = Action::Scroll;
     foundItemsToLoad = false;
-//    if (firstIconVisible < prevFirstIconVisible || lastIconVisible > prevLastIconVisible) {
-        setRange();
-        for (int i = startRow; i < endRow; ++i) {
-            if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
-                foundItemsToLoad = true;
-            if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
-                foundItemsToLoad = true;
-            if (foundItemsToLoad) break;
-        }
-//    }
-//    qDebug() << __FUNCTION__ << startRow << endRow << "foundItemsToLoad =" << foundItemsToLoad;
+    setRange();
+    for (int i = startRow; i < endRow; ++i) {
+        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
+            foundItemsToLoad = true;
+        if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
+            foundItemsToLoad = true;
+        if (foundItemsToLoad) break;
+    }
     if (foundItemsToLoad) start(TimeCriticalPriority);
 }
 
@@ -531,7 +520,7 @@ Load the thumb (icon) for all the image files in the folder(s).
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->imageMetadata.row = row;
-            dm->addMetadataForItem(metadata->imageMetadata, isShowCacheStatus);
+            dm->addMetadataForItem(metadata->imageMetadata);
             count++;
         }
     }

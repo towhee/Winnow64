@@ -2838,11 +2838,11 @@ bool Metadata::formatNikon()
     // pull data reqd from IFD0
     make = getString(ifdDataHash.value(271).tagValue, ifdDataHash.value(271).tagCount);
     model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
-    orientation = ifdDataHash.value(274).tagValue;
+    orientation = UINT(ifdDataHash.value(274).tagValue);
     creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount);
 
     // xmp offset
-    xmpSegmentOffset = ifdDataHash.value(700).tagValue;
+    xmpSegmentOffset = UINT(ifdDataHash.value(700).tagValue);
     // xmpNextSegmentOffset used to later calc available room in xmp
     xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
     if (xmpSegmentOffset) isXmp = true;
@@ -2853,8 +2853,8 @@ bool Metadata::formatNikon()
 
 //    reportMetadata();
 
-    /* NIkon provides an offset in IFD0 to the offsets for all the subIFDs
-    in subIFD0.   Models including the D2H and before have a different structure
+    /* Nikon provides an offset in IFD0 to the offsets for all the subIFDs
+    in subIFD0.  Models including the D2H and before have a different structure
     with only one subIFD and an additional preview IFD identified in maker
     notes */
     QList<ulong> ifdOffsets;
@@ -2911,11 +2911,11 @@ bool Metadata::formatNikon()
     if (ifdDataHash.contains(33434)) {
         float x = getReal(ifdDataHash.value(33434).tagValue);
         if (x < 1 ) {
-            uint t = qRound(1/x);
+            int t = qRound(1/x);
             exposureTime = "1/" + QString::number(t);
             exposureTimeNum = x;
         } else {
-            uint t = (uint)x;
+            int t = INT(x);
             exposureTime = QString::number(t);
             exposureTimeNum = t;
         }
@@ -3842,8 +3842,10 @@ bool Metadata::formatDNG()
             uint t = qRound(1 / x);
             exposureTime = "1/" + QString::number(t);
             exposureTimeNum = x;
-        } else {
-            uint t = (uint)x;
+        }
+        else {
+            uint t = static_cast<uint>(x);
+//            uint t = (uint)x;
             exposureTime = QString::number(t);
             exposureTimeNum = t;
         }

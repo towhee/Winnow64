@@ -300,7 +300,7 @@ signals:
     void aSyncGo(int);
 
 private slots:
-    void focusChange(QWidget *previous, QWidget *current);
+    void focusChange(QWidget */*previous*/, QWidget *current);
     bool checkForUpdate();
     void setShowImageCount();
     void about();
@@ -554,7 +554,7 @@ private:
     // Edit menu
     QAction *selectAllAction;
     QAction *invertSelectionAction;
-    QAction *copyImagesAction;
+    QAction *copyAction;
     QAction *refineAction;
     QAction *pickAction;                // shortcut "`"
     QAction *pick1Action;               // added for shortcut "P"
@@ -905,11 +905,10 @@ private:
     QString getSelectedPath();
     void wheelEvent(QWheelEvent *event);
     bool event(QEvent *event);
-    void copyOrCutThumbs(bool copy);
+    void copy();
     void showNewImageWarning(QWidget *parent);
     bool removeDirOp(QString dirToDelete);
     void addBookmark(QString path);
-    void copyMoveImages(bool move);
     void populateWorkspace(int n, QString name);
     void syncWorkspaceMenu();
     void getSubfolders(QString fPath);

@@ -618,6 +618,7 @@ QString ImageCache::reportCacheProgress(QString action)
     rpt.setFieldWidth(8);  rpt << cache.targetLast;
 //    rpt.setFieldWidth(7);  rpt << currMB;
 //    rpt.setFieldWidth(9);  rpt << currMB;
+    return reportString;
 }
 
 void ImageCache::buildImageCacheList()
@@ -730,6 +731,7 @@ void ImageCache::initImageCache(int &cacheSizeMB,
     cache.prevKey = -1;
     // the cache defaults to the first image and a forward selection direction
     cache.isForward = true;
+    cache.countAfterDirectionChange = 0;
     // the amount of memory to allocate to the cache
     cache.maxMB = cacheSizeMB;
     cache.isShowCacheStatus = isShowCacheStatus;
@@ -781,7 +783,8 @@ Apparently there needs to be a slight delay before calling.
     if (isRunning()) pauseImageCache();
     if (cacheItemList.count() == 0) return;
 
-//    Q_ASSERT(cacheItemList.length() > 0);   // must be items cached
+//    Q_ASSERT(cacheItemList.length() > 0);   // must be items cached    
+
     // get cache item key
     cache.key = 0;
     for (int i = 0; i < cacheItemList.count(); i++) {
@@ -792,10 +795,28 @@ Apparently there needs to be a slight delay before calling.
     }
     Q_ASSERT(cache.key < cacheItemList.length());
 
+    /* if the direction of travel changes then delay reversing the caching direction
+       until a second image is selected in the new direction of travel.  This prevents
+       needless caching if the user justs reverses direction to check out the previous
+       image */
+    if ( cache.isForward && cache.key <= cache.prevKey) cache.countAfterDirectionChange++;
+    if (!cache.isForward && cache.key >= cache.prevKey) cache.countAfterDirectionChange++;
 
-    cache.isForward = (cache.key >= cache.prevKey);
+    if (cache.countAfterDirectionChange > 1) {
+        cache.isForward = !cache.isForward;
+        cache.countAfterDirectionChange = 0;
+    }
+
+/*    qDebug() << __FUNCTION__ << "cache.isForward ="
+             << cache.isForward
+             << "cache.prevKey =" << cache.prevKey
+             << "cache.key =" << cache.key
+             << "directionChangeProgressCount =" << cache.countAfterDirectionChange;
+*/
+
     // reverse if at end of list
     if (cache.key == cacheItemList.count() - 1) cache.isForward = false;
+
     cache.prevKey = cache.key;
 
     // may be new metadata for image size
