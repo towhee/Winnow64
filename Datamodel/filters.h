@@ -55,6 +55,7 @@ public slots:
     void invertFilters();
     void clearAll();
     void uncheckAllFilters();
+    void uncheckTypesFilters();
     void expandAllFilters();
     void collapseAllFilters();
     void checkPicks(bool check);

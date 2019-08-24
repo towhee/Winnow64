@@ -300,7 +300,7 @@ signals:
     void aSyncGo(int);
 
 private slots:
-    void focusChange(QWidget */*previous*/, QWidget *current);
+    void focusChange(QWidget *previous, QWidget *current);
     bool checkForUpdate();
     void setShowImageCount();
     void about();

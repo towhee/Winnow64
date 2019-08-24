@@ -731,7 +731,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     return QWidget::eventFilter(obj, event);
 }
 
-void MW::focusChange(QWidget */*previous*/, QWidget *current)
+void MW::focusChange(QWidget *previous, QWidget *current)
 {
     {
     #ifdef ISDEBUG
@@ -1147,21 +1147,18 @@ delegate use of the current index must check the column.
     // don't scroll mouse click source (screws up double clicks and disorients users)
     if(G::fileSelectionChangeSource == "TableMouseClick") {
         G::ignoreScrollSignal = true;
-        qDebug() << __FUNCTION__ <<  G::ignoreScrollSignal << G::fileSelectionChangeSource;
         if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
     }
 
     else if(G::fileSelectionChangeSource == "ThumbMouseClick") {
         G::ignoreScrollSignal = true;
-        qDebug() << __FUNCTION__ <<  G::ignoreScrollSignal << G::fileSelectionChangeSource;
         if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollToRow(currentRow, __FUNCTION__);
     }
 
     else if(G::fileSelectionChangeSource == "GridMouseClick") {
         G::ignoreScrollSignal = true;
-        qDebug() << __FUNCTION__ <<  G::ignoreScrollSignal << G::fileSelectionChangeSource;
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollToRow(currentRow, __FUNCTION__);
     }
@@ -4994,6 +4991,7 @@ and icons are loaded if necessary.
 
     // update filter panel image count by filter item
     dm->filteredItemCount();
+    dm->unfilteredItemCount();
 
     // update the status panel filtration status
     updateStatusBar();
@@ -6463,9 +6461,9 @@ resolution is used to calculate and report the zoom in ImageView.
     #endif
     }
     QPoint loc = centralWidget->window()->geometry().center();
-//    QScreen *screen = qApp->screenAt(loc);
 
 #ifdef Q_OS_WIN
+    QScreen *screen = qApp->screenAt(loc);
     // make sure the centroid is on a screen
     if(screen != nullptr) {
         displayHorizontalPixels = screen->geometry().width();
@@ -6494,8 +6492,8 @@ resolution is used to calculate and report the zoom in ImageView.
     for (auto c = count; c--;) {
 //        mode = *(static_cast<const CGDisplayModeRef>(CFArrayGetValueAtIndex(modes, c)));
         mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(modes, c);
-        int w = INT(CGDisplayModeGetWidth(mode));
-        int h = INT(CGDisplayModeGetHeight(mode));
+        int w = static_cast<int>(CGDisplayModeGetWidth(mode));
+        int h = static_cast<int>(CGDisplayModeGetHeight(mode));
         qDebug() << __FUNCTION__ << w << h;
         if (w > displayHorizontalPixels) displayHorizontalPixels = w;
         if (h > displayVerticalPixels) displayVerticalPixels = h;
@@ -8846,15 +8844,27 @@ void MW::setCombineRawJpg()
             else dm->setData(typeIdx, "JPG");
         }
     }
+    filters->uncheckTypesFilters();
+    dm->sf->filterChange();
+
+    // rebuild filter for types
+    QMap<QVariant, QString> typesMap;
+    filters->types->takeChildren();
+    for (int row = 0; row < dm->sf->rowCount(); ++row) {
+        QString type = dm->sf->index(row, G::TypeColumn).data().toString();
+        if (!typesMap.contains(type)) typesMap[type] = type;
+    }
+    qDebug() << __FUNCTION__ << typesMap;
+    filters->addCategoryFromData(typesMap, filters->types);
+
+    // trigger update to image list and update image cache
+    filterChange("MW::setCombineRawJpg");
 
     // resize TableView columns to accomodate new types
     tableView->resizeColumnToContents(G::TypeColumn);
 
     // update status bar
     updateStatusBar();
-
-    // trigger update to image list and update image cache
-    filterChange("MW::setCombineRawJpg");
 }
 
 void MW::setCachedStatus(QString fPath, bool isCached)
@@ -9094,6 +9104,7 @@ set the color class for all the selected thumbs.
 
     // update filter counts
     dm->filteredItemCount();
+    dm->unfilteredItemCount();
 }
 
 void MW::metadataChanged(QStandardItem* item)
@@ -9437,7 +9448,7 @@ void MW::nextSlide()
 //            getSubfolders("/users/roryhill/pictures");        // on mac
             uint r = QRandomGenerator::global()->generate();
             int n = subfolders->count();
-            int x = INT(r) % n;
+            int x = static_cast<int>(r) % n;
             QString fPath = subfolders->at(x);
 //            fsTree->setCurrentIndex(fsTree->fsModel->index(fPath));
             QModelIndex idx = fsTree->fsModel->index(fPath);
@@ -10059,6 +10070,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    filters->uncheckTypesFilters();
+    dm->sf->filterChange();
+    return;
+
     defaultWorkspace();
 //    imageView->copyImage();
     return;

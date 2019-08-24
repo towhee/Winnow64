@@ -1,4 +1,6 @@
 BUGS
+- Filters not always updating correctly
+- InfoView monitor not showing if winnow opened as full screen
 - Mac check for updates not done yet
 - Run multiple instances of Winnow?? Mac touchpad single click issues
 - Problems with D:\Programming\Icons\16x16\actions
@@ -19,6 +21,7 @@ ENHANCEMENTS
 - Search
 - Refresh selected images
 - Copy image
+- TableView freeze columns https://doc.qt.io/qt-5/qtwidgets-itemviews-frozencolumn-example.html
 - Read keywords
 - Remove Windows Registry settings during uninstall
 - Write xmp into eligible files ???
@@ -34,6 +37,7 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Ingest only filtered items
 - Require 2 images before change caching direction
 - Escape slideshow when in full screen
 - FSTree::getCurrentIndex index from wrong model passed to mapFromSource
