@@ -65,9 +65,11 @@ bool Usb::isUsb(QString path)
     WCHAR wDrive[] = L"?:\\"; // use as a drive letter template
     wDrive[0] = driveLetter;
     type = GetDriveType(wDrive);
+    path = ""; // suppress compiler warning;
     return (type == DRIVE_REMOVABLE);
 #elif defined(Q_OS_MAC)
     // ADD MAC CODE HERE
+    path = ""; // suppress compiler warning;
     return true;
 #endif
 }

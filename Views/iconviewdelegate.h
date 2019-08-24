@@ -18,7 +18,7 @@ public:
                const QModelIndex &index) const;
 
     QSize sizeHint(const QStyleOptionViewItem &option,
-                   const QModelIndex &index ) const;
+                   const QModelIndex &/*index*/ ) const;
 
     void setThumbDimensions(int thumbWidth, int thumbHeight,
           int labelFontSize, bool showThumbLabels, int badgeSize);

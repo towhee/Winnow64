@@ -98,7 +98,7 @@ void ClassificationLabel::paintEvent(QPaintEvent *event)
         QRect textRect(0, -1, diameter, diameter);
         QPen ratingTextPen(textColor);
         QFont font = painter.font();
-        if ((rating == "" && colorClass == "" && isPick) || isPick && !showRatingAndColor) {
+        if ((rating == "" && colorClass == "" && isPick) || (isPick && !showRatingAndColor)) {
             ratingTextPen.setColor(pickColor);
             setText("√");
         }

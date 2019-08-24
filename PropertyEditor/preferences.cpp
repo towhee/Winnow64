@@ -30,6 +30,8 @@ void Preferences::itemChange(QModelIndex idx)
              << "dataType =" << dataType
              << "delegateType =" << delegateType;
 */
+    delegateType = 0;   // suppress compiler warning
+
     if (source == "gridViewIconSize") {
         if (v == 1) {
             if (mw->gridView->isWrapping())
@@ -186,6 +188,7 @@ void Preferences::addItems()
     QString caption;
     QString s;                            // general purpose
     int n;                                // general purpose
+    n = 0;  // suppress compiler warning as not used yet
     bool isShow;
     QModelIndex catIdx;
     QModelIndex valIdx;

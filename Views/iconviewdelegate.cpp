@@ -230,7 +230,7 @@ void IconViewDelegate::setCurrentIndex(QModelIndex current)
 }
 
 QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
-                              const QModelIndex& index) const
+                              const QModelIndex& /*index*/) const
 {
     {
     #ifdef ISDEBUG
@@ -312,7 +312,8 @@ textRect         = a rectangle below itemRect
     QRect cacheRect(cacheTopLeft, cacheBottomRight);
 
     QPainterPath iconPath;
-    iconPath.addRoundRect(iconRect, 12, 12);
+    iconPath.addRoundedRect(iconRect, 12, 12);
+//    iconPath.addRoundRect(iconRect, 12, 12);
 
     QRect textRect(frameRect.bottomLeft() - textHtOffset, frameRect.bottomRight());
     QPainterPath textPath;

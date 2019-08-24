@@ -1,5 +1,6 @@
 #include "File/fstree.h"
 
+extern QStringList mountedDrives;
 QStringList mountedDrives;
 
 /*------------------------------------------------------------------------------
@@ -29,7 +30,9 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
     if (!sourceParent.isValid()) return true;
 
     QString fParentPath = sourceParent.data(QFileSystemModel::FilePathRole).toString();
-    QString fPath = sourceParent.child(sourceRow, 0).data(QFileSystemModel::FilePathRole).toString();
+    QString fPath = sourceParent.model()->index(sourceRow, 0, sourceParent).data(QFileSystemModel::FilePathRole).toString();
+//    QString fPath = sourceParent.child(sourceRow, 0).data(QFileSystemModel::FilePathRole).toString();
+//    qDebug() << __FUNCTION__ << fPath << fPath2;
     QFileInfo info(fPath);
     /*
     qDebug() << G::t.restart() << "\t" << "fPath" << fPath
@@ -48,8 +51,6 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
     return true;
 //   return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
 #endif
-
-    return true;
 }
 
 /*------------------------------------------------------------------------------

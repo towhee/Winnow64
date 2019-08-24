@@ -113,7 +113,6 @@ class PlusMinusEditor : public QWidget
     Q_OBJECT
 public:
     PlusMinusEditor(const QModelIndex &idx, QWidget *parent = nullptr);
-    void setValue(QVariant value);
     int value();
 
 signals:
