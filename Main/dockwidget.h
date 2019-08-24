@@ -25,7 +25,7 @@ class DockWidget : public QDockWidget
 protected:
         bool event(QEvent *event);
         void resizeEvent(QResizeEvent *event);
-        void moveEvent(QMoveEvent */*event*/);
+        void moveEvent(QMoveEvent *event);
     };
 
 #endif // DOCKWIDGET_H

@@ -89,6 +89,8 @@ IngestDlg::IngestDlg(QWidget *parent,
 //    ui->autoIngestTab->tabBar()->setTabButton(1, QTabBar::LeftSide, isBackupChkBox);
 
     isInitializing = true;
+
+    // populate the pick list
     getPicks();
 
     if (!combineRawJpg) {
@@ -193,10 +195,13 @@ void IngestDlg::renameIfExists(QString &destination,
 void IngestDlg::getPicks()
 {
 /*
-The datamodel is sorted by file path. Raw files with the same path precede jpg
-files with duplicate names. Two roles track duplicates: G::DupHideRawRole flags
-jpg files with duplicate raws and G::DupRawIdxRole points to the duplicate raw
-file from the jpg data row.  For example:
+This function generates a list of picked images to ingest from the filtered data. The
+datamodel dm, not the proxy dm->sf, is used, as the user may have sorted the view, and we need
+the original datamodel dm order to efficiently deal with the combined raw/jpg scenario.
+
+The datamodel is sorted by file path. Raw files with the same path precede jpg files with
+duplicate names. Two roles track duplicates: G::DupHideRawRole flags jpg files with duplicate
+raws and G::DupRawIdxRole points to the duplicate raw file from the jpg data row. For example:
 
 Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
 Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(0,0))
@@ -211,23 +216,27 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
         // only picks
         if (pickIdx.data(Qt::EditRole).toString() == "true") {
             QModelIndex idx = dm->index(row, 0);
-
-            // if raw+jpg files have been combined
-            if (combineRawJpg) {
-                // append if combined jpg and include combined jpgs
-                if (inclDupJpg && idx.data(G::DupIsJpgRole).toBool()) {
-                    fPath = idx.data(G::PathRole).toString();
-                    QFileInfo fileInfo(fPath);
-                    pickList.append(fileInfo);
+            // only filtered
+            if (dm->sf->mapFromSource(idx).isValid()) {
+                // if raw+jpg files have been combined
+                if (combineRawJpg) {
+                    // append if combined jpg and include combined jpgs
+                    if (inclDupJpg && idx.data(G::DupIsJpgRole).toBool()) {
+                        fPath = idx.data(G::PathRole).toString();
+                        QFileInfo fileInfo(fPath);
+                        pickList.append(fileInfo);
+                        qDebug() << __FUNCTION__ << "appending" << fPath;
+                    }
+                    // append combined raw file
+                    if (idx.data(G::DupIsJpgRole).toBool()) {
+                        idx = qvariant_cast<QModelIndex>(dm->index(row, 0).data(G::DupRawIdxRole));
+                    }
                 }
-                // append combined raw file
-                if (idx.data(G::DupIsJpgRole).toBool()) {
-                    idx = qvariant_cast<QModelIndex>(dm->index(row, 0).data(G::DupRawIdxRole));
-                }
+                fPath = idx.data(G::PathRole).toString();
+                QFileInfo fileInfo(fPath);
+                pickList.append(fileInfo);
+                qDebug() << __FUNCTION__ << "appending" << fPath;
             }
-            fPath = idx.data(G::PathRole).toString();
-            QFileInfo fileInfo(fPath);
-            pickList.append(fileInfo);
         }
     }
 

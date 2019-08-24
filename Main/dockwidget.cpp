@@ -63,7 +63,7 @@ QSize DockWidget::sizeHint() const
     return dw.size;
 }
 
-void DockWidget::moveEvent(QMoveEvent */*event*/)
+void DockWidget::moveEvent(QMoveEvent *event)
 {
     if (ignore || !isFloating()) return;
     dw.screen = QApplication::desktop()->screenNumber(this);

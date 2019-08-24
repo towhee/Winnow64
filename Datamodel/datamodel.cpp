@@ -393,7 +393,7 @@ bool DataModel::addFileData()
     static QPixmap emptyPixMap;
 
     // collect all unique instances of file type for filtration (use QMap to maintain order)
-    QMap<QVariant, QString> typesMap;
+//    QMap<QVariant, QString> typesMap;
 
     imageFilePathList.clear();
 
@@ -451,7 +451,7 @@ bool DataModel::addFileData()
         setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
         QString s = fileInfo.suffix().toUpper();
         // build list for filters->addCategoryFromData
-        typesMap[s] = s;
+//        typesMap[s] = s;
         setData(index(row, G::TypeColumn), s);
         setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
         setData(index(row, G::SizeColumn), fileInfo.size());
@@ -523,7 +523,7 @@ bool DataModel::addFileData()
         /* the rest of the data model columns are added when the metadata
         has been loaded on demand.  see addMetadataItem and mdCache    */
     }
-    filters->addCategoryFromData(typesMap, filters->types);
+//    filters->addCategoryFromData(typesMap, filters->types);
     return true;
 }
 
@@ -649,7 +649,7 @@ to run as a separate thread and can be executed directly.
     }
     G::allMetadataLoaded = true;
     qint64 ms = G::t.elapsed();
-    qreal msperfile = (float)ms / count;
+    qreal msperfile = static_cast<double>(ms) / count;
     qDebug() << "DataModel::addAllMetadata for" << count << "files"
              << ms << "ms" << msperfile << "ms per file;"
              << currentFolderPath;
@@ -773,6 +773,7 @@ void DataModel::buildFilters()
 //    filtersBuilt = true;
 
     // collect all unique instances for filtration (use QMap to maintain order)
+    QMap<QVariant, QString> typesMap;
     QMap<QVariant, QString> modelMap;
     QMap<QVariant, QString> lensMap;
     QMap<QVariant, QString> titleMap;
@@ -784,25 +785,28 @@ void DataModel::buildFilters()
     QString s;
     int rows = sf->rowCount();
     for(int row = 0; row < rows; row++) {
-        QString model = index(row, G::CameraModelColumn).data().toString();
+        QString type = sf->index(row, G::TypeColumn).data().toString();
+        if (!typesMap.contains(type)) typesMap[type] = type;
+
+        QString model = sf->index(row, G::CameraModelColumn).data().toString();
         if (!modelMap.contains(model)) modelMap[model] = model;
 
-        QString lens = index(row, G::LensColumn).data().toString();
+        QString lens = sf->index(row, G::LensColumn).data().toString();
         if (!lensMap.contains(lens)) lensMap[lens] = lens;
 
-        QString title = index(row, G::TitleColumn).data().toString();
+        QString title = sf->index(row, G::TitleColumn).data().toString();
         if (!titleMap.contains(title)) titleMap[title] = title;
 
-        QString flNum = index(row, G::FocalLengthColumn).data().toString();
+        QString flNum = sf->index(row, G::FocalLengthColumn).data().toString();
         if (!flMap.contains(flNum)) flMap[flNum] = flNum;
 
-        QString creator = index(row, G::CreatorColumn).data().toString();
+        QString creator = sf->index(row, G::CreatorColumn).data().toString();
         if (!creatorMap.contains(creator)) creatorMap[creator] = creator;
 
-        QString year = index(row, G::YearColumn).data().toString();
+        QString year = sf->index(row, G::YearColumn).data().toString();
         if (!yearMap.contains(year)) yearMap[year] = year;
 
-        QString day = index(row, G::DayColumn).data().toString();
+        QString day = sf->index(row, G::DayColumn).data().toString();
         if (!dayMap.contains(day)) dayMap[day] = day;
 
 //        if (row % 1000 == 0 || row == 0) {
@@ -813,10 +817,13 @@ void DataModel::buildFilters()
 //        }
     }
 
+    qDebug() << __FUNCTION__ << "dayMap =" << dayMap;
+
     // build filter items
     s = "Step 2 0f " + buildSteps + ":  Mapping filters ";
     G::popUp->setPopupText(buildMsg + s);
 
+    filters->addCategoryFromData(typesMap, filters->types);
     filters->addCategoryFromData(modelMap, filters->models);
     filters->addCategoryFromData(lensMap, filters->lenses);
     filters->addCategoryFromData(flMap, filters->focalLengths);
@@ -1020,8 +1027,8 @@ change.
     #endif
     }
     // do not run if already totalled
-    bool isUnfilteredItemCount = filters->refineTrue->text(3)!= "" || filters->refineFalse->text(3) != "";
-    if (isUnfilteredItemCount) return;
+//    bool isUnfilteredItemCount = filters->refineTrue->text(3)!= "" || filters->refineFalse->text(3) != "";
+//    if (isUnfilteredItemCount) return;
 
     G::track(__FUNCTION__, "Start");
 
@@ -1035,13 +1042,19 @@ change.
 //            G::track(__FUNCTION__, "Start " + (*it)->text(1));
             for (int row = 0; row < rowCount(); ++row) {
                 bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
-//                QString value = index(row, col).data().toString();
-                if (sf->index(row, col).data().toString() == searchValue) {
+                QString value = index(row, col).data().toString();
+                if (index(row, col).data().toString() == searchValue) {
                     tot++;
                     if (combineRawJpg && !hideRaw) totRawJpgCombined++;
                 }
             }
-//            G::track(__FUNCTION__, (*it)->text(1));
+            qDebug() << __FUNCTION__
+                     << (*it)->parent()->text(0)
+                     << (*it)->text(1)
+                     << "Tot Count = " << QString::number(tot)
+                     << "Combined Count = " << QString::number(totRawJpgCombined);
+//            G::track(__FUNCTION__, (*it)->text(1) + " count = " + QString::number(tot)
+//                     + " combined count = " + QString::number(totRawJpgCombined));
             (*it)->setData(3, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
@@ -1050,7 +1063,7 @@ change.
         ++it;
     }
 
-    G::track(__FUNCTION__, "End");
+    G::track(__FUNCTION__, "End\n");
 }
 
 // --------------------------------------------------------------------------------------------

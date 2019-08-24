@@ -403,9 +403,9 @@ void Filters::uncheckAllFilters()
     /* Uncheck all the filter items
 */
     {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
     }
     QTreeWidgetItemIterator it(this);
     while (*it) {
@@ -420,6 +420,28 @@ void Filters::uncheckAllFilters()
 //    emit filterChange("Filters::uncheckAllFilters");
 }
 
+void Filters::uncheckTypesFilters()
+{
+/*
+Uncheck types.  This is required when raw + jpg are either combined or not combined.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        if ((*it)->parent() == types) {
+            (*it)->setCheckState(0, Qt::Unchecked);
+            (*it)->setData(2, Qt::EditRole, "");
+            (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+        }
+        ++it;
+    }
+}
+
 void Filters::expandAllFilters()
 {
     expandAll();
@@ -432,12 +454,11 @@ void Filters::collapseAllFilters()
 
 void Filters::addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category)
 {
-/* All the values for a category are collected into a QMap object in DataModel
-as the model data is added from the images in the folder.  The list is passed
-here, where unique values are extracted and added to the category.  For example,
-there could be multiple file types in the folder like JPG and NEF.  A QMap
-object is used so the items can be sorted by key in the same order as the
-tableView.  This function should only be used for dynamic categories - see
+/* All the values for a category are collected into a QMap object in DataModel as the model
+data is added from the images in the folder. The list is passed here, where unique values are
+extracted and added to the category. For example, there could be multiple file types in the
+folder like JPG and NEF. A QMap object is used so the items can be sorted by key in the same
+order as the tableView. This function should only be used for dynamic categories - see
 createDynamicFilters;
 */
     {
