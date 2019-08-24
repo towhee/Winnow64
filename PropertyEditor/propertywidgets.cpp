@@ -276,10 +276,6 @@ int PlusMinusEditor::value()
     return plusMinus;
 }
 
-void PlusMinusEditor::setValue(QVariant value)
-{
-}
-
 void PlusMinusEditor::minusChange()
 {
     plusMinus = -1;

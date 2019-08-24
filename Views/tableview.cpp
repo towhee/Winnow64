@@ -98,6 +98,7 @@ void TableView::scrollToRow(int row, QString source)
 //             << "source =" << source;
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
+    source = "";    // suppress compiler warning
 }
 
 bool TableView::isRowVisible(int row)

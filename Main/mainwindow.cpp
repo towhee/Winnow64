@@ -4820,6 +4820,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QStri
     }
     metadataThreadRunningLabel->setText("◉");
     if (isShowCacheThreadActivity && !G::isSlideShow) progressLabel->setVisible(showCacheLabel);
+    calledBy = "";  // suppress compiler warning
 }
 
 void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
@@ -5033,6 +5034,8 @@ and icons are loaded if necessary.
     selected index does not change and fileSelectionChange will not be signalled.
     Therefore we call it here to force the update to caching and icons */
     fileSelectionChange(idx, idx);
+
+    source = "";    // suppress compiler warning
 }
 
 void MW::quickFilter()
@@ -5723,7 +5726,9 @@ app is "stranded" on secondary monitors that are not attached.
     G::track(__FUNCTION__);
     #endif
     }
+    QRect desktop1 = qApp->desktop()->geometry();
     QRect desktop = qApp->desktop()->availableGeometry();
+    qDebug() << __FUNCTION__ << desktop << desktop1;
     resize(static_cast<int>(0.75 * desktop.width()),
            static_cast<int>(0.75 * desktop.height()));
     setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
@@ -6347,6 +6352,7 @@ void MW::preferences(int page)
     G::track(__FUNCTION__);
     #endif
     }
+    page = 0;   // suppress compiler warning
     Preferences *pref = new Preferences(this);
     preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
     preferencesDlg->exec();
@@ -6457,7 +6463,7 @@ resolution is used to calculate and report the zoom in ImageView.
     #endif
     }
     QPoint loc = centralWidget->window()->geometry().center();
-    QScreen *screen = qApp->screenAt(loc);
+//    QScreen *screen = qApp->screenAt(loc);
 
 #ifdef Q_OS_WIN
     // make sure the centroid is on a screen
@@ -6486,9 +6492,11 @@ resolution is used to calculate and report the zoom in ImageView.
 
     // the native resolution is the largest display mode
     for (auto c = count; c--;) {
+//        mode = *(static_cast<const CGDisplayModeRef>(CFArrayGetValueAtIndex(modes, c)));
         mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(modes, c);
         int w = INT(CGDisplayModeGetWidth(mode));
         int h = INT(CGDisplayModeGetHeight(mode));
+        qDebug() << __FUNCTION__ << w << h;
         if (w > displayHorizontalPixels) displayHorizontalPixels = w;
         if (h > displayVerticalPixels) displayVerticalPixels = h;
     }
@@ -9428,8 +9436,8 @@ void MW::nextSlide()
             getSubfolders("D:/Pictures");                     // on PC
 //            getSubfolders("/users/roryhill/pictures");        // on mac
             uint r = QRandomGenerator::global()->generate();
-            uint n = subfolders->count();
-            uint x = r % n;
+            int n = subfolders->count();
+            int x = INT(r) % n;
             QString fPath = subfolders->at(x);
 //            fsTree->setCurrentIndex(fsTree->fsModel->index(fPath));
             QModelIndex idx = fsTree->fsModel->index(fPath);
@@ -10051,9 +10059,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    float x = 6.25;
-    int n = INT(x);
-    qDebug() << __FUNCTION__ << n;
+    defaultWorkspace();
 //    imageView->copyImage();
     return;
 

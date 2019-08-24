@@ -5,7 +5,8 @@
 #include <QApplication>
 
 #define CLIPBOARD_IMAGE_NAME		"clipboard.png"
-#define ROUND(x) ((int) ((x) + 0.5))
+#define ROUND(x) (static_cast<int>((x) + 0.5))
+//#define ROUND(x) ((int) ((x) + 0.5))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -1124,15 +1125,15 @@ void ImageView::copyImage()
 }
 
 // not being used, but maybe in the future
-static inline int bound0To255(int val)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    return ((val > 255)? 255 : (val < 0)? 0 : val);
-}
+//static inline int bound0To255(int val)
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    return ((val > 255)? 255 : (val < 0)? 0 : val);
+//}
 
 static inline int hslValue(double n1, double n2, double hue)
 {

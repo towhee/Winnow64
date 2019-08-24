@@ -1531,6 +1531,7 @@ source is the calling function and is used for debugging.
 //    qDebug() << __FUNCTION__ << objectName() << "row =" << row
 //             << "requested by" << source;
 
+    source = "";    // suppress compiler warning
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }

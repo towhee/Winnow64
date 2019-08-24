@@ -1972,9 +1972,9 @@ QByteArray Metadata::nikonDecrypt(QByteArray bData, uint32_t count, uint32_t ser
    // 1st 4 bytes not encrypted
    for (int i = 4; i < bData.size(); ++i) {
        cj += ci * ck++;
-       quint8 x = bData[i];
+       quint8 x = static_cast<quint8>(bData[i]);
        x ^= cj;
-       bData[i] = x;
+       bData[i] = CHAR(x);
    }
    return bData;
 }
