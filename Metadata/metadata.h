@@ -19,9 +19,9 @@
 class IFDData
 {
 public:
-    long tagType;
-    long tagCount;
-    long tagValue;
+    quint32 tagType;
+    quint32 tagCount;
+    quint32 tagValue;
     short tagReal;
 };
 
@@ -41,17 +41,17 @@ public:
     // variables used to hold data before insertion into QMap metaCache
     int row;                // datamodel row
     bool isPicked;
-    uint offsetFullJPG;
-    uint lengthFullJPG;
-    uint offsetThumbJPG;
-    uint lengthThumbJPG;
-    uint offsetSmallJPG;
-    uint lengthSmallJPG;
+    quint32 offsetFullJPG;
+    quint32 lengthFullJPG;
+    quint32 offsetThumbJPG;
+    quint32 lengthThumbJPG;
+    quint32 offsetSmallJPG;
+    quint32 lengthSmallJPG;
 
-    uint xmpSegmentOffset;
-    uint xmpNextSegmentOffset;
+    quint32 xmpSegmentOffset;
+    quint32 xmpNextSegmentOffset;
     bool isXmp;
-    uint orientationOffset;
+    quint32 orientationOffset;
     int orientation;
     int rotationDegrees;            // additional rotation from edit
     uint width;
@@ -110,12 +110,12 @@ public:
         "uchar",
         "string",
         "ushort",
-        "long",
+        "quint32",
         "urational",
         "char",
         "bytes",
         "short",
-        "long",
+        "quint32",
         "rational",
         "float4",
         "float8"
@@ -139,10 +139,10 @@ private:
     QFile file;
     QHash<uint, IFDData> ifdDataHash;
     QHash<uint, IFDData>::iterator ifdIter;
-    QHash<long, QString> exifHash, ifdHash, gpsHash, segCodeHash,
+    QHash<quint32, QString> exifHash, ifdHash, gpsHash, segCodeHash,
         nikonMakerHash, sonyMakerHash, fujiMakerHash, canonMakerHash,
         panasonicMakerHash, canonFileInfoHash;
-    QHash<QString, long> segmentHash;
+    QHash<QString, quint32> segmentHash;
 //    QHash<QByteArray, QString> nikonLensHash;
     QHash<QString, QString> nikonLensHash;
     QHash<int, QString> orientationDescription;
@@ -154,11 +154,10 @@ private:
 
     bool report;
     QString xmpString;
-    long xmpmetaRoom;
+    quint32 xmpmetaRoom;
     QString reportString;
     QTextStream rpt;
-    long order;
-//    long order;
+    quint32 order;
 
     void initSupportedFiles();
     void initSegCodeHash();
@@ -173,23 +172,23 @@ private:
     void initNikonLensHash();
 
     uint get1(QByteArray c);
-    long get2(QByteArray c);
-    long get2(long offset);
-    long get4(QByteArray c);
-    long get4(long offset);
-    double getReal(long offset);
-    long findInFile(QString s, long offset, long range);
-    bool readXMP(long offset);
-    void readIPTC(long offset);
-    long readIFD(QString hdr, long offset);
-    bool readIRB(long offset);
-    void verifyEmbeddedJpg(long &offset, long &length);
-    QList<long> getSubIfdOffsets(long subIFDaddr, int count);
-//    long getExifOffset(long offsetIfd0);      //update to use ifdDataHash
-    QString getString(long offset, long length);
-    QByteArray getByteArray(long offset, long length);
-    void getSegments(long offset);
-    bool getDimensions(long jpgOffset);
+    quint16 get2(QByteArray c);
+    quint16 get2(quint32 offset);
+    quint32 get4(QByteArray c);
+    quint32 get4(quint32 offset);
+    double getReal(quint32 offset);
+    quint32 findInFile(QString s, quint32 offset, quint32 range);
+    bool readXMP(quint32 offset);
+    void readIPTC(quint32 offset);
+    quint32 readIFD(QString hdr, quint32 offset);
+    bool readIRB(quint32 offset);
+    void verifyEmbeddedJpg(quint32 &offset, quint32 &length);
+    QList<quint32> getSubIfdOffsets(quint32 subIFDaddr, int count);
+//    quint32 getExifOffset(quint32 offsetIfd0);      //update to use ifdDataHash
+    QString getString(quint32 offset, quint32 length);
+    QByteArray getByteArray(quint32 offset, quint32 length);
+    void getSegments(qint64 offset);
+    bool getDimensions(quint32 jpgOffset);
     int getNewOrientation(int orientation, int rotation);
 
 
