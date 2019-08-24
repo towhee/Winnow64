@@ -41,16 +41,16 @@ TIF data types:
     1       unsigned byte
     2       ascii strings
     3       unsigned short
-    4       unsigned long
+    4       unsigned quint32
     5       unsigned rational
     6       signed byte
     7       undefined
     8       signed short
-    9       signed long
+    9       signed quint32
     10      signed rational
     11      single float
     12      double float
-    13      long (used for tiff IFD offsets)
+    13      quint32 (used for tiff IFD offsets)
 
 Source:  D:\My Projects\Winnow Project\IFD.xlsx in status tab
 
@@ -2095,8 +2095,8 @@ void Metadata::reportIfdDataHash()
     for (ifdIter=ifdDataHash.begin(); ifdIter!=ifdDataHash.end(); ++ifdIter) {
          uint tagId = ifdIter.key();
          uint tagType = static_cast<uint>(ifdIter.value().tagType);
-         long tagCount = ifdIter.value().tagCount;
-         long tagValue = ifdIter.value().tagValue;
+         quint32 tagCount = ifdIter.value().tagCount;
+         quint32 tagValue = ifdIter.value().tagValue;
          std::cout << std::setw(8) << std::setfill(' ') << std::right << "N/A"
                    << std::setw(7) << std::setfill(' ') << std::right << tagId
                    << std::setw(9) << std::setfill(' ') << std::right << tagType
@@ -2111,64 +2111,74 @@ uint Metadata::get1(QByteArray c)
     return static_cast<unsigned int>(c[0]&0xFF);
 }
 
-long Metadata::get2(QByteArray c)
+quint16 Metadata::get2(QByteArray c)
 {
-     if (order == 0x4D4D) return LONG(((c[0]&0xFF) << 8 | (c[1]&0xFF)));
-     else return static_cast<unsigned int>
-             ((c[0]&0xFF) | (c[1]&0xFF) << 8);
+     if (order == 0x4D4D)
+         return static_cast<quint16>(((c[0]&0xFF) << 8 | (c[1]&0xFF)));
+     else
+         return static_cast<quint16>((c[0]&0xFF) | (c[1]&0xFF) << 8);
 }
 
-long Metadata::get4(QByteArray c)
+quint32 Metadata::get4(QByteArray c)
+{
+    if (order == 0x4D4D)
+        return static_cast<quint32>((c[0]&0xFF) << 24 | (c[1]&0xFF) << 16 | (c[2]&0xFF) << 8 | (c[3]&0xFF));
+    else
+        return static_cast<quint32>(((c[0]&0xFF) | (c[1]&0xFF) << 8 | (c[2]&0xFF) << 16 | (c[3]&0xFF) << 24));
+}
+
+/*  Less old version requiring lots of static_cast<uint>
+quint32 Metadata::get4(QByteArray c)
 {
     if (order == 0x4D4D)
         return LONG(((c[0]&0xFF) << 24 | (c[1]&0xFF) << 16 | (c[2]&0xFF) << 8 | (c[3]&0xFF)));
     else
         return LONG(((c[0]&0xFF) | (c[1]&0xFF) << 8 | (c[2]&0xFF) << 16 | (c[3]&0xFF) << 24));
 }
-
+*/
 /*  Old version with compiler type conversion warnings
-long Metadata::get2(QByteArray c)
+quint32 Metadata::get2(QByteArray c)
 {
-    if (order == 0x4D4D) return static_cast<unsigned long>
+    if (order == 0x4D4D) return static_cast<unsigned quint32>
             ((c[0]&0xFF) << 8 | (c[1]&0xFF));
     else return static_cast<unsigned int>
             ((c[0]&0xFF) | (c[1]&0xFF) << 8);
 }
 
-long Metadata::get4(QByteArray c)
+quint32 Metadata::get4(QByteArray c)
 {
-    if (order == 0x4D4D) return static_cast<unsigned long>
+    if (order == 0x4D4D) return static_cast<unsigned quint32>
             ((c[0]&0xFF) << 24 | (c[1]&0xFF) << 16 | (c[2]&0xFF) << 8 | (c[3]&0xFF));
-    else return static_cast<unsigned long>
+    else return static_cast<unsigned quint32>
             ((c[0]&0xFF) | (c[1]&0xFF) << 8 | (c[2]&0xFF) << 16 | (c[3]&0xFF) << 24);
 }
 */
 
-long Metadata::get2(long offset)
+quint16 Metadata::get2(quint32 offset)
 {
     file.seek(offset);
     return get2(file.read(2));
 }
 
-long Metadata::get4(long offset)
+quint32 Metadata::get4(quint32 offset)
 {
     file.seek(offset);
     return get4(file.read(4));
 }
 
-double Metadata::getReal(long offset)
+double Metadata::getReal(quint32 offset)
 {
 /*
 In IFD type 5, 10, 11, 12 = rational = real/float
 */
     file.seek(offset);
-    long a = get4(file.read(4));
-    long b = get4(file.read(4));
+    quint32 a = get4(file.read(4));
+    quint32 b = get4(file.read(4));
     if (b == 0) return 0;
     return DOUBLE(a) / b;
 }
 
-QString Metadata::getString(long offset, long length)
+QString Metadata::getString(quint32 offset, quint32 length)
 {
 /*
 In IFD type 2 = string
@@ -2177,7 +2187,7 @@ In IFD type 2 = string
     return(file.read(length));
 }
 
-QByteArray Metadata::getByteArray(long offset, long length)
+QByteArray Metadata::getByteArray(quint32 offset, quint32 length)
 {
     file.seek(offset);
     return(file.read(length));
@@ -2279,7 +2289,7 @@ metadata is written to buffer and the original image file is copied unchanged.
     return true;
 }
 
-long Metadata::findInFile(QString s, long offset, long range)
+quint32 Metadata::findInFile(QString s, quint32 offset, quint32 range)
 {
 /*
 Returns the file offset to the start of the search string. If not
@@ -2289,7 +2299,7 @@ QFile file must be assigned and open.
 */
     uint firstCharCode = static_cast<unsigned int>(s[0].unicode());
     file.seek(offset);
-    for (long i = offset; i < offset + range; i++) {
+    for (quint32 i = offset; i < offset + range; i++) {
         if (get1(file.read(1)) == firstCharCode) {
             bool rejected = false;
             for (int j = 1; j < s.length(); j++) {
@@ -2298,13 +2308,13 @@ QFile file must be assigned and open.
                 if (byte != nextCharCode) rejected = true;
                 if (rejected) break;
             }
-            if (!rejected) return file.pos() - s.length();
+            if (!rejected) return static_cast<quint32>(file.pos() - s.length());
         }
     }
-    return -1;
+    return 0;
 }
 
-bool Metadata::readXMP(long offset)
+bool Metadata::readXMP(quint32 offset)
 {
 /*
 
@@ -2318,7 +2328,7 @@ bool Metadata::readXMP(long offset)
 
     // skip over APP FFE1 bytes
     file.seek(offset);
-    long xmpOffsetStart;
+    quint32 xmpOffsetStart;
     // find endo of XMP block at next FF
     bool xmpFound = false;
     QByteArray xmpByteArray;
@@ -2327,12 +2337,12 @@ bool Metadata::readXMP(long offset)
     // look for the start of XMP block = "<?xpacket begin" ...
     QString s = "<?xpacket begin";
     xmpOffsetStart = findInFile(s, offset, 200);
-    if (xmpOffsetStart == -1) return false;
+    if (xmpOffsetStart == 0) return false;
     s = "<?xpacket end";
-    long xmpOffsetEnd = findInFile(s, xmpOffsetStart, 64555);
-    if (xmpOffsetEnd == -1) return false;
+    quint32 xmpOffsetEnd = findInFile(s, xmpOffsetStart, 64555);
+    if (xmpOffsetEnd == 0) return false;
     xmpOffsetEnd = findInFile(">", xmpOffsetEnd, 100) + 2;  // 38306
-    long xmpLength = xmpOffsetEnd - xmpOffsetStart;
+    quint32 xmpLength = xmpOffsetEnd - xmpOffsetStart;
     if (xmpLength > 64555) return false;
     file.seek(xmpOffsetStart);
     xmpByteArray = file.read(xmpLength);
@@ -2432,7 +2442,7 @@ bool Metadata::readXMP(long offset)
 }
 
 
-void Metadata::readIPTC(long offset)
+void Metadata::readIPTC(quint32 offset)
 {
 /*
 If the IPTC data is in a JPG segment then there is some header info to get
@@ -2446,12 +2456,12 @@ to the first IPTC data block so we can skip the search req'd if it was JPG.
     file.seek(offset);
 
     // check to see if the offset is a JPG segment
-    long marker = get2(file.peek(2));
+    quint32 marker = get2(file.peek(2));
     if (marker == 0xFFED) {
         // skip the APP marker FFED and length bytes
         file.seek(offset + 2);
-        long segmentLength = get2(file.read(2));
-        long count = 0;
+        quint32 segmentLength = get2(file.read(2));
+        quint32 count = 0;
         while (!foundIPTC && count < segmentLength) {
             count +=2;
             // find "8BIM" = 0x3842 0x494D
@@ -2469,7 +2479,7 @@ to the first IPTC data block so we can skip the search req'd if it was JPG.
         pasStrLen = (pasStrLen % 2) ? pasStrLen + 1: pasStrLen;
         file.seek(file.pos() + pasStrLen - 1);
         // read size of resource data
-//        long resourceDataSize = get4(file.read(4));
+//        quint32 resourceDataSize = get4(file.read(4));
 //        qint64 endResourceData = file.pos() + resourceDataSize - 4;
     }
 
@@ -2492,7 +2502,7 @@ to the first IPTC data block so we can skip the search req'd if it was JPG.
     }
 }
 
-bool Metadata::readIRB(long offset)
+bool Metadata::readIRB(quint32 offset)
 {
 /*
 Read a Image Resource Block looking for embedded thumb
@@ -2507,7 +2517,7 @@ the embedded jpg preview is found (irbID == 1036)
     }
 
     // Photoshop IRBs use big endian
-    long oldOrder = order;
+    quint32 oldOrder = order;
     order = 0x4D4D;
 
     // check signature to make sure this is the start of an IRB
@@ -2529,7 +2539,7 @@ the embedded jpg preview is found (irbID == 1036)
     if (pascalStringLength > 0) file.read(pascalStringLength);
 
     // get the length of the IRB data block
-    long dataBlockLength = get4(file.read(4));
+    quint32 dataBlockLength = get4(file.read(4));
     // round to even 2 bytes
     dataBlockLength % 2 == 0 ? dataBlockLength : dataBlockLength++;
 
@@ -2538,21 +2548,21 @@ the embedded jpg preview is found (irbID == 1036)
 
     // found the thumb, collect offsets and return
     if (foundTifThumb) {
-        offsetThumbJPG = static_cast<uint>(file.pos()) + 28;
-        lengthThumbJPG = static_cast<uint>(dataBlockLength) - 28;
+        offsetThumbJPG = static_cast<quint32>(file.pos()) + 28;
+        lengthThumbJPG = dataBlockLength - 28;
         return foundTifThumb;
     }
 
     // did not find the thumb, try again
     file.read(dataBlockLength);
-    offset = file.pos();
+    offset = static_cast<quint32>(file.pos());
     readIRB(offset);
 
     // make the compiler happy
     return false;
 }
 
-long Metadata::readIFD(QString hdr, long offset)
+quint32 Metadata::readIFD(QString hdr, quint32 offset)
 {
     {
 //    #ifdef ISDEBUG
@@ -2560,7 +2570,7 @@ long Metadata::readIFD(QString hdr, long offset)
 //    #endif
     }
     uint tagId, tagType = 0;
-    long tagCount, tagValue = 0;
+    quint32 tagCount, tagValue = 0;
     IFDData ifdData;
     ifdDataHash.clear();
 
@@ -2577,13 +2587,13 @@ long Metadata::readIFD(QString hdr, long offset)
             << "   Dec: " << offset << "\n"
             << "Num    Offset   /   hex  tagId   hex  tagType  tagCount    tagValue   tagDescription\n";
     }
-    long pos;
+    quint32 pos;
     QString tagDescription;
     for (int i = 0; i < tags; i++){
 //        if (report) pos = QString::number(file.pos(), 16).toUpper();
-        pos = file.pos();
-        tagId = static_cast<uint>(get2(file.read(2)));
-        tagType = static_cast<uint>(get2(file.read(2)));
+        pos = static_cast<quint32>(file.pos());
+        tagId = get2(file.read(2));
+        tagType = get2(file.read(2));
         tagCount = get4(file.read(4));
         // check for orientation and save offset for subsequent writing
         if (hdr == "IFD0" && tagId == 274) orientationOffset = static_cast<uint>(file.pos());
@@ -2667,7 +2677,7 @@ long Metadata::readIFD(QString hdr, long offset)
         // quit if more than 200 tags - prob error
         if (i>200) break;
     }
-    long nextIFDOffset = get4(file.read(4));
+    quint32 nextIFDOffset = get4(file.read(4));
     if (report) {
         rpt.setFieldWidth(10);
         rpt.setFieldAlignment(QTextStream::AlignRight);
@@ -2682,14 +2692,14 @@ long Metadata::readIFD(QString hdr, long offset)
     return(nextIFDOffset);
 }
 
-QList<long> Metadata::getSubIfdOffsets(long subIFDaddr, int count)
+QList<quint32> Metadata::getSubIfdOffsets(quint32 subIFDaddr, int count)
 {
     {
         #ifdef ISDEBUG
         G::track(__FUNCTION__);
         #endif
     }
-    QList<long> offsets;
+    QList<quint32> offsets;
     file.seek(subIFDaddr);
     for (int i = 0; i < count; i++) {
         offsets.append(get4(file.read(4)));
@@ -2697,7 +2707,7 @@ QList<long> Metadata::getSubIfdOffsets(long subIFDaddr, int count)
     return offsets;
 }
 
-void Metadata::getSegments(long offset)
+void Metadata::getSegments(qint64 offset)
 {
 /*
 The JPG file structure is based around a series of file segments.  The marker at
@@ -2718,22 +2728,22 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
         file.seek(offset);           // APP1 FFE*
         marker = static_cast<uint>(get2(file.read(2)));
         if (marker < 0xFFC0) break;
-        long pos = file.pos();
-        long nex = get2(file.read(2));
-        long nextOffset = pos + nex;
+        quint32 pos = static_cast<quint32>(file.pos());
+        quint16 nex = get2(file.read(2));
+        quint32 nextOffset = pos + nex;
         if (marker == 0xFFE1) {
             QString segName = file.read(4);
-            if (segName == "Exif") segmentHash["EXIF"] = offset;
+            if (segName == "Exif") segmentHash["EXIF"] = static_cast<quint32>(offset);
             if (segName == "http") segName += file.read(15);
             if (segName == "http://ns.adobe.com") {
-                segmentHash["XMP"] = offset;
-                xmpSegmentOffset = static_cast<uint>(offset);
-                xmpNextSegmentOffset = static_cast<uint>(nextOffset);
+                segmentHash["XMP"] = static_cast<quint32>(offset);
+                xmpSegmentOffset = static_cast<quint32>(offset);
+                xmpNextSegmentOffset = static_cast<quint32>(nextOffset);
                 isXmp = true;
             }
         }
         else if (segCodeHash.contains(marker)) {
-            segmentHash[segCodeHash[marker]] = offset;
+            segmentHash[segCodeHash[marker]] = static_cast<quint32>(offset);
         }
         offset = nextOffset;
     }
@@ -2741,7 +2751,7 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
         reportMetadataHeader("JPG Segment Hash");
         rpt << "Segment\tOffset\t\tHex\n";
 
-        QHashIterator<QString, long> i(segmentHash);
+        QHashIterator<QString, quint32> i(segmentHash);
         while (i.hasNext()) {
             i.next();
             rpt << i.key() << ":\t\t" << i.value() << "\t\t"
@@ -2750,17 +2760,17 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
     }
 }
 
-bool Metadata::getDimensions(long jpgOffset)
+bool Metadata::getDimensions(quint32 jpgOffset)
 {
     {
 //    #ifdef ISDEBUG
 //    G::track(__FUNCTION__);
 //    #endif
     }
-    long order1 = order;
+    quint32 order1 = order;
     order = 0x4D4D;                  // only IFD/EXIF can be little endian
-    long marker = 0;
-    long offset = jpgOffset + 2;
+    quint32 marker = 0;
+    quint32 offset = jpgOffset + 2;
     while (marker != 0xFFC0) {
         file.seek(offset);           // APP1 FFE*
         marker = get2(file.read(2));
@@ -2768,18 +2778,16 @@ bool Metadata::getDimensions(long jpgOffset)
             order = order1;
             return false;
         }
-        offset = get2(file.peek(2)) + file.pos();
+        offset = get2(file.peek(2)) + static_cast<quint32>(file.pos());
     }
     file.seek(file.pos()+3);
-    height = static_cast<uint>(get2(file.read(2)));
-    width = static_cast<uint>(get2(file.read(2)));
-//    width = get2(file.read(2));
-//    height = get2(file.read(2));
+    height = get2(file.read(2));
+    width = get2(file.read(2));
     order = order1;
     return true;
 }
 
-void Metadata::verifyEmbeddedJpg(long &offset, long &length)
+void Metadata::verifyEmbeddedJpg(quint32 &offset, quint32 &length)
 {
 /*
 JPEGs start with FFD8 and end with FFD9.  This function confirms the embedded
@@ -2819,7 +2827,7 @@ bool Metadata::formatNikon()
     // get endian
     order = get2(file.read(4));
     // get offset to first IFD and read it
-    long offsetIfd0 = get4(file.read(4));
+    quint32 offsetIfd0 = get4(file.read(4));
 
     // Nikon does not chain IFDs
     readIFD("IFD0", offsetIfd0);
@@ -2831,13 +2839,13 @@ bool Metadata::formatNikon()
     creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount);
 
     // xmp offset
-    xmpSegmentOffset = static_cast<uint>(ifdDataHash.value(700).tagValue);
+    xmpSegmentOffset = ifdDataHash.value(700).tagValue;
     // xmpNextSegmentOffset used to later calc available room in xmp
-    xmpNextSegmentOffset = static_cast<uint>(ifdDataHash.value(700).tagCount) + xmpSegmentOffset;
+    xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
     if (xmpSegmentOffset) isXmp = true;
     else isXmp = false;
 
-    long offsetEXIF = 0;
+    quint32 offsetEXIF = 0;
     offsetEXIF = ifdDataHash.value(34665).tagValue;
 
 //    reportMetadata();
@@ -2846,11 +2854,11 @@ bool Metadata::formatNikon()
     in subIFD0.  Models including the D2H and before have a different structure
     with only one subIFD and an additional preview IFD identified in maker
     notes */
-    QList<long> ifdOffsets;
+    QList<quint32> ifdOffsets;
     if(ifdDataHash.contains(330)) {
         if (ifdDataHash.value(330).tagCount > 1)
             ifdOffsets = getSubIfdOffsets(ifdDataHash.value(330).tagValue,
-                                      static_cast<int>(ifdDataHash.value(330).tagCount));
+                             static_cast<int>(ifdDataHash.value(330).tagCount));
         else ifdOffsets.append(ifdDataHash.value(330).tagValue);
 
         QString hdr;
@@ -2859,12 +2867,12 @@ bool Metadata::formatNikon()
             hdr = "SubIFD1";
             readIFD(hdr, ifdOffsets[0]);
             // pull data reqd from SubIFD1
-            offsetFullJPG = static_cast<uint>(ifdDataHash.value(513).tagValue);
-            lengthFullJPG = static_cast<uint>(ifdDataHash.value(514).tagValue);
+            offsetFullJPG = ifdDataHash.value(513).tagValue;
+            lengthFullJPG = ifdDataHash.value(514).tagValue;
 //            if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
             // D2H and older
-            width = static_cast<uint>(ifdDataHash.value(256).tagValue);
-            height = static_cast<uint>(ifdDataHash.value(257).tagValue);
+            width = ifdDataHash.value(256).tagValue;
+            height = ifdDataHash.value(257).tagValue;
         }
 
         // pull data reqd from SubIFD2
@@ -2873,16 +2881,16 @@ bool Metadata::formatNikon()
         if (ifdOffsets.count() > 1) {
             hdr = "SubIFD2";
             readIFD(hdr, ifdOffsets[1]);
-            width = static_cast<uint>(ifdDataHash.value(256).tagValue);
-            height = static_cast<uint>(ifdDataHash.value(257).tagValue);
+            width = ifdDataHash.value(256).tagValue;
+            height = ifdDataHash.value(257).tagValue;
         }
 
         // SubIFD3 contains small size jpg offset and length
         if (ifdOffsets.count() > 2) {
             hdr = "SubIFD3";
             readIFD(hdr, ifdOffsets[2]);
-            offsetSmallJPG = static_cast<uint>(ifdDataHash.value(513).tagValue);
-            lengthSmallJPG = static_cast<uint>(ifdDataHash.value(514).tagValue);
+            offsetSmallJPG = ifdDataHash.value(513).tagValue;
+            lengthSmallJPG = ifdDataHash.value(514).tagValue;
 //            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
         }
     }
@@ -2923,7 +2931,7 @@ bool Metadata::formatNikon()
     }
     // Exif: ISO
     if (ifdDataHash.contains(34855)) {
-        long x = ifdDataHash.value(34855).tagValue;
+        quint32 x = ifdDataHash.value(34855).tagValue;
         ISONum = static_cast<int>(x);
         ISO = QString::number(ISONum);
     } else {
@@ -2941,7 +2949,7 @@ bool Metadata::formatNikon()
     }
 
     // Exif: read makernoteIFD
-    long makerOffset = ifdDataHash.value(37500).tagValue;
+    quint32 makerOffset = ifdDataHash.value(37500).tagValue;
     if (ifdDataHash.contains(37500)) {
 
         /* The makerOffsetBase starts 10 or 12 bits after the offset at endian
@@ -2949,7 +2957,7 @@ bool Metadata::formatNikon()
         4D4D.  All offsets in the makernoteIFD are relative to makerOffsetBase.
         */
 
-        long endian;
+        quint32 endian;
         bool foundEndian = false;
         file.seek(makerOffset);
         while (!foundEndian) {
@@ -2958,7 +2966,7 @@ bool Metadata::formatNikon()
             order = endian;
 //            if (get2(file.read(2)) == 0x4949) foundEndian = true;
         }
-        long makerOffsetBase = file.pos() - 2;
+        quint32 makerOffsetBase = static_cast<quint32>(file.pos()) - 2;
 
         if (report) {
             rpt << "\nMaker Offset = "
@@ -2973,9 +2981,9 @@ bool Metadata::formatNikon()
         // Get serial number, shutter count and lens type to decrypt the lens info
         cameraSN = getString(ifdDataHash.value(29).tagValue + makerOffsetBase,
                                        ifdDataHash.value(29).tagCount);
-        shutterCount = static_cast<uint>(ifdDataHash.value(167).tagValue);
+        shutterCount = ifdDataHash.value(167).tagValue;
         uint lensType = 0;
-        lensType = static_cast<uint>(ifdDataHash.value(131).tagValue);
+        lensType = ifdDataHash.value(131).tagValue;
 
         uint32_t serial = static_cast<uint32_t>(cameraSN.toInt());
         uint32_t count = shutterCount;
@@ -2998,8 +3006,8 @@ bool Metadata::formatNikon()
             readIFD("IFD Nikon Maker Note: PreviewIFD",
                     ifdDataHash.value(17).tagValue + makerOffsetBase);
 
-            offsetSmallJPG = static_cast<uint>(ifdDataHash.value(513).tagValue + makerOffsetBase);
-            lengthSmallJPG = static_cast<uint>(ifdDataHash.value(514).tagValue); // + makerOffsetBase;
+            offsetSmallJPG = ifdDataHash.value(513).tagValue + makerOffsetBase;
+            lengthSmallJPG = ifdDataHash.value(514).tagValue; // + makerOffsetBase;
 //            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
         }
     }
@@ -3041,12 +3049,12 @@ bool Metadata::formatCanon()
     // get endian
     order = get2(file.read(4));
     // is canon always offset 16 to IFD0 ???
-    long offsetIfd0 = 16;
-    long nextIFDOffset = readIFD("IFD0", offsetIfd0);
+    quint32 offsetIfd0 = 16;
+    quint32 nextIFDOffset = readIFD("IFD0", offsetIfd0);
 
     // pull data reqd from IFD0
-    offsetFullJPG = static_cast<uint>(ifdDataHash.value(273).tagValue);
-    lengthFullJPG = static_cast<uint>(ifdDataHash.value(279).tagValue);
+    offsetFullJPG = ifdDataHash.value(273).tagValue;
+    lengthFullJPG = ifdDataHash.value(279).tagValue;
 //    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
 
     model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
@@ -3055,28 +3063,28 @@ bool Metadata::formatCanon()
     copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount);
 
     // xmp offset
-    xmpSegmentOffset = static_cast<uint>(ifdDataHash.value(700).tagValue);
+    xmpSegmentOffset = ifdDataHash.value(700).tagValue;
     // xmpNextSegmentOffset used to later calc available room in xmp
-    xmpNextSegmentOffset = static_cast<uint>(ifdDataHash.value(700).tagCount) + xmpSegmentOffset;
+    xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
     if (xmpSegmentOffset) isXmp = true;
     else isXmp = false;
 
     // EXIF IFD offset (to be used in a little)
-    long offsetEXIF = 0;
+    quint32 offsetEXIF = 0;
     offsetEXIF = ifdDataHash.value(34665).tagValue;
 
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
 
     // pull data reqd from IFD1
-    offsetThumbJPG = static_cast<uint>(ifdDataHash.value(513).tagValue);
-    lengthThumbJPG = static_cast<uint>(ifdDataHash.value(514).tagValue);
+    offsetThumbJPG = ifdDataHash.value(513).tagValue;
+    lengthThumbJPG = ifdDataHash.value(514).tagValue;
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD2", nextIFDOffset);
 
     // pull small size jpg from IFD2
-    offsetSmallJPG = static_cast<uint>(ifdDataHash.value(273).tagValue);
-    lengthSmallJPG = static_cast<uint>(ifdDataHash.value(279).tagValue);
+    offsetSmallJPG = ifdDataHash.value(273).tagValue;
+    lengthSmallJPG = ifdDataHash.value(279).tagValue;
 
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD3", nextIFDOffset);
 
@@ -3106,12 +3114,12 @@ bool Metadata::formatCanon()
         exposureTime = "";
     }
     if (ifdDataHash.contains(40962)) {
-        width = static_cast<uint>(ifdDataHash.value(40962).tagValue);
+        width = ifdDataHash.value(40962).tagValue;
     } else {
         width = 0;
     }
     // height
-    height = static_cast<uint>(ifdDataHash.value(40963).tagValue);
+    height = ifdDataHash.value(40963).tagValue;
     // aperture
     if (ifdDataHash.contains(33437)) {
         double x = getReal(ifdDataHash.value(33437).tagValue);
@@ -3123,7 +3131,7 @@ bool Metadata::formatCanon()
     }
     //ISO
     if (ifdDataHash.contains(34855)) {
-        long x = ifdDataHash.value(34855).tagValue;
+        quint32 x = ifdDataHash.value(34855).tagValue;
         ISONum = static_cast<int>(x);
         ISO = QString::number(ISONum);
 //        ISO = "ISO " + QString::number(x);
@@ -3155,13 +3163,13 @@ bool Metadata::formatCanon()
     // Exif: read makernoteIFD
 
     if (ifdDataHash.contains(37500)) {
-        long makerOffset = ifdDataHash.value(37500).tagValue;
+        quint32 makerOffset = ifdDataHash.value(37500).tagValue;
         readIFD("IFD Canon Maker Note", makerOffset);
     }
 
 //    // Maker tag:  FileInfo IFD
 //    if (ifdDataHash.contains(147)) {
-//        long makerOffset = ifdDataHash.value(147).tagValue;
+//        quint32 makerOffset = ifdDataHash.value(147).tagValue;
 //        readIFD("IFD Canon FileInfo", makerOffset);
 //    }
 
@@ -3218,7 +3226,7 @@ bool Metadata::formatOlympus()
     // get endian
     order = get2(file.read(4));
     // get offset to first IFD and read it
-    long offsetIfd0 = get4(file.read(4));
+    quint32 offsetIfd0 = get4(file.read(4));
 
     readIFD("IFD0", offsetIfd0);
 
@@ -3229,7 +3237,7 @@ bool Metadata::formatOlympus()
     copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount);
 
     // get the offset for ExifIFD and read it
-    long offsetEXIF;
+    quint32 offsetEXIF;
     offsetEXIF = ifdDataHash.value(34665).tagValue;
     readIFD("IFD Exif", offsetEXIF);
 
@@ -3266,7 +3274,7 @@ bool Metadata::formatOlympus()
     }
     //ISO
     if (ifdDataHash.contains(34855)) {
-        long x = ifdDataHash.value(34855).tagValue;
+        quint32 x = ifdDataHash.value(34855).tagValue;
         ISONum = static_cast<int>(x);
         ISO = QString::number(ISONum);
 //        ISO = "ISO " + QString::number(x);
@@ -3289,22 +3297,22 @@ bool Metadata::formatOlympus()
 
     // read makernoteIFD
     // Offsets in makernote are relative to the start of the makernotes
-    long makerOffset = ifdDataHash.value(37500).tagValue;
+    quint32 makerOffset = ifdDataHash.value(37500).tagValue;
     if (ifdDataHash.contains(37500)) {
         // The IFD starts 10 or 12 bits after the offset to make room for the
         // string "OLYMPUS II  "
         readIFD("IFD Olympus Maker Note", makerOffset + 12);
         // Get the thumbnail Jpg offset and length
-        offsetThumbJPG = static_cast<uint>(ifdDataHash.value(256).tagValue + makerOffset);
-        lengthThumbJPG = static_cast<uint>(ifdDataHash.value(256).tagCount);
+        offsetThumbJPG = ifdDataHash.value(256).tagValue + makerOffset;
+        lengthThumbJPG = ifdDataHash.value(256).tagCount;
 //        if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
         // read CameraSettingsIFD
         if (ifdDataHash.contains(8224)) {
             readIFD("IFD Olympus Maker Note: CameraSettingsIFD",
                     ifdDataHash.value(8224).tagValue + makerOffset);
-            offsetFullJPG = static_cast<uint>(ifdDataHash.value(257).tagValue + makerOffset);
-            lengthFullJPG = static_cast<uint>(ifdDataHash.value(258).tagValue);
+            offsetFullJPG = ifdDataHash.value(257).tagValue + makerOffset;
+            lengthFullJPG = ifdDataHash.value(258).tagValue;
 //            if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
             getDimensions(offsetFullJPG);
         }
@@ -3355,34 +3363,34 @@ bool Metadata::formatSony()
     // get endian
     order = get2(file.read(4));
     // get offset to first IFD and read it
-    long offsetIfd0 = get4(file.read(4));
+    quint32 offsetIfd0 = get4(file.read(4));
 
-    long nextIFDOffset = readIFD("IFD0", offsetIfd0);
+    quint32 nextIFDOffset = readIFD("IFD0", offsetIfd0);
 
     // pull data reqd from IFD0
-    offsetFullJPG = static_cast<uint>(ifdDataHash.value(513).tagValue);
-    lengthFullJPG = static_cast<uint>(ifdDataHash.value(514).tagValue);
+    offsetFullJPG = ifdDataHash.value(513).tagValue;
+    lengthFullJPG = ifdDataHash.value(514).tagValue;
 //    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
-    offsetThumbJPG = static_cast<uint>(ifdDataHash.value(273).tagValue);
-    lengthThumbJPG = static_cast<uint>(ifdDataHash.value(279).tagValue);
+    offsetThumbJPG = ifdDataHash.value(273).tagValue;
+    lengthThumbJPG = ifdDataHash.value(279).tagValue;
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
     model = getString(ifdDataHash.value(272).tagValue, ifdDataHash.value(272).tagCount);
     orientation = static_cast<int>(ifdDataHash.value(274).tagValue);
 
-    long offsetEXIF;
+    quint32 offsetEXIF;
     offsetEXIF = ifdDataHash.value(34665).tagValue;
 
     if (nextIFDOffset) readIFD("IFD1", nextIFDOffset);
 
     // IFD 1:
-    offsetThumbJPG = static_cast<uint>(ifdDataHash.value(513).tagValue);
-    lengthThumbJPG = static_cast<uint>(ifdDataHash.value(514).tagValue);
+    offsetThumbJPG = ifdDataHash.value(513).tagValue;
+    lengthThumbJPG = ifdDataHash.value(514).tagValue;
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     // Sony provides an offset in IFD0 to the offsets for
     // all the subIFDs
     // get the offsets for the subIFD and read them
-    QList<long> ifdOffsets;
+    QList<quint32> ifdOffsets;
     ifdOffsets = getSubIfdOffsets(ifdDataHash.value(330).tagValue,
                                   static_cast<int>(ifdDataHash.value(330).tagCount));
 
@@ -3394,8 +3402,8 @@ bool Metadata::formatSony()
     readIFD("IFD Exif", offsetEXIF);
 
     // IFD EXIF: dimensions
-    width = static_cast<uint>(ifdDataHash.value(40962).tagValue);
-    height = static_cast<uint>(ifdDataHash.value(40963).tagValue);
+    width = ifdDataHash.value(40962).tagValue;
+    height = ifdDataHash.value(40963).tagValue;
 
     // EXIF: created datetime
     QString createdExif;
@@ -3432,7 +3440,7 @@ bool Metadata::formatSony()
 
     //Exif: ISO
     if (ifdDataHash.contains(34855)) {
-        long x = ifdDataHash.value(34855).tagValue;
+        quint32 x = ifdDataHash.value(34855).tagValue;
         ISONum = static_cast<int>(x);
         ISO = QString::number(ISONum);
 //        ISO = "ISO " + QString::number(x);
@@ -3458,7 +3466,7 @@ bool Metadata::formatSony()
     // Exif: read makernoteIFD
 
     if (ifdDataHash.contains(37500)) {
-        long makerOffset = ifdDataHash.value(37500).tagValue;
+        quint32 makerOffset = ifdDataHash.value(37500).tagValue;
         readIFD("IFD Sony Maker Note", makerOffset);
     }
 
@@ -3527,15 +3535,15 @@ bool Metadata::formatFuji()
 
     // Fuji is big endian
     order = 0x4D4D;
-    long startOffset = 0;
+    quint32 startOffset = 0;
 
     // read first 16 bytes to confirm it is a fuji file
     if (file.read(16) != "FUJIFILMCCD-RAW ") return false;
 
     // seek JPEG image offset
     file.seek(84);
-    offsetFullJPG = static_cast<uint>(get4(file.read(4)));
-    lengthFullJPG = static_cast<uint>(get4(file.read(4)));
+    offsetFullJPG = get4(file.read(4));
+    lengthFullJPG = get4(file.read(4));
 //    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
     file.seek(offsetFullJPG);
 
@@ -3551,12 +3559,12 @@ bool Metadata::formatFuji()
 
     bool foundEndian = false;
     while (!foundEndian) {
-        long a = get2(file.read(2));
+        quint32 a = get2(file.read(2));
         if (a == 0x4949 || a == 0x4D4D) {
             order = a;
             // offsets are from the endian position in JPEGs
             // therefore must adjust all offsets found in tagValue
-            startOffset = file.pos() - 2;
+            startOffset = static_cast<quint32>(file.pos()) - 2;
             foundEndian = true;
         }
         // add condition to check for EOF
@@ -3564,15 +3572,15 @@ bool Metadata::formatFuji()
 
     if (report) rpt << "\n startOffset = " << startOffset;
 
-    long a = get2(file.read(2));  // magic 42
+    quint32 a = get2(file.read(2));  // magic 42
     a = get4(file.read(4));
-    long offsetIfd0 = a + startOffset;
+    quint32 offsetIfd0 = a + startOffset;
 
 //    getDimensions(offsetFullJPG);
 
     // read IFD0:
-    long nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
-    long offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset;
+    quint32 nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
+    quint32 offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset;
     orientation = static_cast<int>(ifdDataHash.value(274).tagValue);
     make = getString(ifdDataHash.value(271).tagValue + startOffset,
                      ifdDataHash.value(271).tagCount);
@@ -3583,14 +3591,14 @@ bool Metadata::formatFuji()
 
     // read IFD1
     if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
-    offsetThumbJPG = static_cast<uint>(ifdDataHash.value(513).tagValue + startOffset);
-    lengthThumbJPG = static_cast<uint>(ifdDataHash.value(514).tagValue + startOffset);
+    offsetThumbJPG = ifdDataHash.value(513).tagValue + startOffset;
+    lengthThumbJPG = ifdDataHash.value(514).tagValue + startOffset;
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     // read EXIF IFD
     readIFD("IFD Exif", offsetEXIF);
-    width = static_cast<uint>(ifdDataHash.value(40962).tagValue);
-    height = static_cast<uint>(ifdDataHash.value(40963).tagValue);
+    width = ifdDataHash.value(40962).tagValue;
+    height = ifdDataHash.value(40963).tagValue;
     if (!width || !height) getDimensions(offsetFullJPG);
 
     // EXIF: shutter speed
@@ -3622,7 +3630,7 @@ bool Metadata::formatFuji()
 
     // EXIF: ISO
     if (ifdDataHash.contains(34855)) {
-        long x = ifdDataHash.value(34855).tagValue;
+        quint32 x = ifdDataHash.value(34855).tagValue;
         ISONum = static_cast<int>(x);
         ISO = QString::number(ISONum);
     } else {
@@ -3646,7 +3654,7 @@ bool Metadata::formatFuji()
 
     // Exif: read makernoteIFD
     if (ifdDataHash.contains(37500)) {
-        long makerOffset = ifdDataHash.value(37500).tagValue + startOffset + 12;
+        quint32 makerOffset = ifdDataHash.value(37500).tagValue + startOffset + 12;
         readIFD("IFD Fuji Maker Note", makerOffset);
     }
 
@@ -3660,7 +3668,7 @@ bool Metadata::formatDNG()
 
     // set arbitrary order
     order = 0x4D4D;
-    long startOffset = 0;
+    quint32 startOffset = 0;
 
     // first two bytes is the endian order
     order = get2(file.read(2));
@@ -3670,8 +3678,8 @@ bool Metadata::formatDNG()
     if (get2(file.read(2)) != 42) return false;
 
     // read offset to first IFD
-    long ifdOffset = get4(file.read(4));
-    long nextIFDOffset = readIFD("IFD0", ifdOffset);
+    quint32 ifdOffset = get4(file.read(4));
+    quint32 nextIFDOffset = readIFD("IFD0", ifdOffset);
     nextIFDOffset = 0;  // suppress compiler warning
 
     lengthFullJPG = 1;  // set arbitrary length to avoid error msg as tif do not
@@ -3710,37 +3718,37 @@ bool Metadata::formatDNG()
 
     // IFD0: width
     (ifdDataHash.contains(256))
-        ? width = static_cast<uint>(ifdDataHash.value(256).tagValue)
+        ? width = ifdDataHash.value(256).tagValue
         : width = 0;
 
     // IFD0: height
     (ifdDataHash.contains(257))
-        ? height = static_cast<uint>(ifdDataHash.value(257).tagValue)
+        ? height = ifdDataHash.value(257).tagValue
         : height = 0;
 
     if (!width || !height) getDimensions(0);
 
     // IFD0: EXIF offset
-    long ifdEXIFOffset = 0;
+    quint32 ifdEXIFOffset = 0;
     if (ifdDataHash.contains(34665))
         ifdEXIFOffset = ifdDataHash.value(34665).tagValue;
 
     // IFD0: Photoshop offset
-    long ifdPhotoshopOffset = 0;
+    quint32 ifdPhotoshopOffset = 0;
     if (ifdDataHash.contains(34377))
         ifdPhotoshopOffset = ifdDataHash.value(34377).tagValue;
 
     // IFD0: IPTC offset
-    long ifdIPTCOffset = 0;
+    quint32 ifdIPTCOffset = 0;
     if (ifdDataHash.contains(33723))
         ifdIPTCOffset = ifdDataHash.value(33723).tagValue;
 
     // IFD0: XMP offset
-    long ifdXMPOffset = 0;
+    quint32 ifdXMPOffset = 0;
     if (ifdDataHash.contains(700)) {
         isXmp = true;
         ifdXMPOffset = ifdDataHash.value(700).tagValue;
-        xmpSegmentOffset = static_cast<uint>(ifdXMPOffset);
+        xmpSegmentOffset = ifdXMPOffset;
         int xmpSegmentLength = static_cast<int>(ifdDataHash.value(700).tagCount);
         xmpNextSegmentOffset = xmpSegmentOffset + static_cast<uint>(xmpSegmentLength);
     }
@@ -3751,14 +3759,14 @@ bool Metadata::formatDNG()
        and tghe largest as the full size preview JPG.
        */
     struct JpgInfo {
-        long width;
-        long height;
-        long offset;
-        long length;
+        quint32 width;
+        quint32 height;
+        quint32 offset;
+        quint32 length;
     } jpgInfo;
 
     QList<JpgInfo> jpgs;
-    QList<long> ifdOffsets;
+    QList<quint32> ifdOffsets;
     if(ifdDataHash.contains(330)) {
         if (ifdDataHash.value(330).tagCount > 1)
             ifdOffsets = getSubIfdOffsets(ifdDataHash.value(330).tagValue,
@@ -3767,8 +3775,8 @@ bool Metadata::formatDNG()
 
         QString hdr;
         int count = 0;
-        long smallest = 999999;
-        long largest = 0;
+        quint32 smallest = 999999;
+        quint32 largest = 0;
         int smallJpg = 0;
         int largeJpg = 0;
 
@@ -3779,9 +3787,9 @@ bool Metadata::formatDNG()
             // look for embedded image offset
             if (ifdDataHash.contains(273)) {
                 // is it a JPG
-                long offset = ifdDataHash.value(273).tagValue;
+                quint32 offset = ifdDataHash.value(273).tagValue;
                 file.seek(offset);
-//                long x = get2(file.read(2));
+//                quint32 x = get2(file.read(2));
                 if (get2(file.read(2)) != 0xD8FF) break;  // order = 4949 so reverse
                 // yes it is a JPG
                 jpgInfo.offset = offset;
@@ -3855,7 +3863,7 @@ bool Metadata::formatDNG()
 
     // EXIF: ISO
     if (ifdDataHash.contains(34855)) {
-        long x = ifdDataHash.value(34855).tagValue;
+        quint32 x = ifdDataHash.value(34855).tagValue;
         ISONum = static_cast<int>(x);
         ISO = QString::number(ISONum);
     } else {
@@ -3923,7 +3931,7 @@ bool Metadata::formatTIF()
 
     // set arbitrary order
     order = 0x4D4D;
-    long startOffset = 0;
+    quint32 startOffset = 0;
 
     // first two bytes is the endian order
     order = get2(file.read(2));
@@ -3933,8 +3941,8 @@ bool Metadata::formatTIF()
     if (get2(file.read(2)) != 42) return false;
 
     // read offset to first IFD
-    long ifdOffset = get4(file.read(4));
-    /*long nextIFDOffset = */readIFD("IFD0", ifdOffset);
+    quint32 ifdOffset = get4(file.read(4));
+    /*quint32 nextIFDOffset = */readIFD("IFD0", ifdOffset);
 
     lengthFullJPG = 1;  // set arbitrary length to avoid error msg as tif do not
                          // have full size embedded jpg
@@ -3983,27 +3991,27 @@ bool Metadata::formatTIF()
     if (!width || !height) getDimensions(0);
 
     // IFD0: EXIF offset
-    long ifdEXIFOffset = 0;
+    quint32 ifdEXIFOffset = 0;
     if (ifdDataHash.contains(34665))
         ifdEXIFOffset = ifdDataHash.value(34665).tagValue;
 
     // IFD0: Photoshop offset
-    long ifdPhotoshopOffset = 0;
+    quint32 ifdPhotoshopOffset = 0;
     if (ifdDataHash.contains(34377))
         ifdPhotoshopOffset = ifdDataHash.value(34377).tagValue;
 
     // IFD0: subIFD offset
-    long ifdsubIFDOffset = 0;
+    quint32 ifdsubIFDOffset = 0;
     if (ifdDataHash.contains(330))
         ifdsubIFDOffset = ifdDataHash.value(330).tagValue;
 
     // IFD0: IPTC offset
-    long ifdIPTCOffset = 0;
+    quint32 ifdIPTCOffset = 0;
     if (ifdDataHash.contains(33723))
         ifdIPTCOffset = ifdDataHash.value(33723).tagValue;
 
     // IFD0: XMP offset
-    long ifdXMPOffset = 0;
+    quint32 ifdXMPOffset = 0;
     if (ifdDataHash.contains(700)) {
         ifdXMPOffset = ifdDataHash.value(700).tagValue;
         xmpSegmentOffset = static_cast<uint>(ifdXMPOffset);
@@ -4015,14 +4023,14 @@ bool Metadata::formatTIF()
 
     /* If save tiff with save pyramid in photoshop then subIFDs created. Iterate to report and
     possibly read smallest for thumbnail if not a thumb in the photoshop IRB. */
-           uint thumbWidth = width;
+    uint thumbWidth = width;
     if (ifdsubIFDOffset) {
 //        startOffset = 4;
-        long nextIFDOffset;
+        quint32 nextIFDOffset;
         nextIFDOffset = readIFD("SubIFD 1", ifdsubIFDOffset) + startOffset;
         if(ifdDataHash.contains(256)) {
             if (ifdDataHash.value(256).tagValue < thumbWidth) {
-                thumbWidth = static_cast<uint>(ifdDataHash.value(256).tagValue);
+                thumbWidth = ifdDataHash.value(256).tagValue;
                 // not a jpg so this is not correct!  It is offset to a tif directory
 //                if(ifdDataHash.contains(273))
 //                    offsetThumbJPG = ifdDataHash.value(273).tagValue;
@@ -4037,7 +4045,7 @@ bool Metadata::formatTIF()
             nextIFDOffset = readIFD(hdr, nextIFDOffset) + startOffset;
             if(ifdDataHash.contains(256)) {
                 if (ifdDataHash.value(256).tagValue < thumbWidth) {
-                    thumbWidth = static_cast<uint>(ifdDataHash.value(256).tagValue);
+                    thumbWidth = ifdDataHash.value(256).tagValue;
 //                    if(ifdDataHash.contains(273))
 //                        offsetThumbJPG = ifdDataHash.value(273).tagValue;
 //                    if(ifdDataHash.contains(279))
@@ -4092,7 +4100,7 @@ bool Metadata::formatTIF()
 
     // EXIF: ISO
     if (ifdDataHash.contains(34855)) {
-        long x = ifdDataHash.value(34855).tagValue;
+        quint32 x = ifdDataHash.value(34855).tagValue;
         ISONum = static_cast<int>(x);
         ISO = QString::number(ISONum);
     } else {
@@ -4178,7 +4186,7 @@ bool Metadata::formatPanasonic()
     // get endian
     order = get2(file.read(4));
     // get offset to first IFD and read it
-    long offsetIfd0 = get4(file.read(4));
+    quint32 offsetIfd0 = get4(file.read(4));
 
     readIFD("IFD0", offsetIfd0);
 
@@ -4188,14 +4196,14 @@ bool Metadata::formatPanasonic()
     orientation = static_cast<int>(ifdDataHash.value(274).tagValue);
     creator = getString(ifdDataHash.value(315).tagValue, ifdDataHash.value(315).tagCount);
     copyright = getString(ifdDataHash.value(33432).tagValue, ifdDataHash.value(33432).tagCount);
-    offsetFullJPG = static_cast<uint>(ifdDataHash.value(46).tagValue);
-    lengthFullJPG = static_cast<uint>(ifdDataHash.value(46).tagCount);
-    xmpSegmentOffset = static_cast<uint>(ifdDataHash.value(700).tagValue);
-    xmpNextSegmentOffset = static_cast<uint>(ifdDataHash.value(700).tagCount + xmpSegmentOffset);
-    height = static_cast<uint>(ifdDataHash.value(49).tagValue);
-    width = static_cast<uint>(ifdDataHash.value(50).tagValue);
+    offsetFullJPG = ifdDataHash.value(46).tagValue;
+    lengthFullJPG = ifdDataHash.value(46).tagCount;
+    xmpSegmentOffset = ifdDataHash.value(700).tagValue;
+    xmpNextSegmentOffset = ifdDataHash.value(700).tagCount + xmpSegmentOffset;
+    height = ifdDataHash.value(49).tagValue;
+    width = ifdDataHash.value(50).tagValue;
     if (ifdDataHash.contains(23)) {
-        long x = ifdDataHash.value(23).tagValue;
+        quint32 x = ifdDataHash.value(23).tagValue;
         ISONum = static_cast<int>(x);
         ISO = QString::number(ISONum);
     } else {
@@ -4204,7 +4212,7 @@ bool Metadata::formatPanasonic()
     }
 
     // get the offset for ExifIFD and read it
-    long offsetEXIF;
+    quint32 offsetEXIF;
     offsetEXIF = ifdDataHash.value(34665).tagValue;
     readIFD("IFD Exif", offsetEXIF);
 
@@ -4251,7 +4259,7 @@ bool Metadata::formatPanasonic()
 
     // check embedded JPG for more metadata (IFD0, IFD1, Exit IFD and Maker notes IFD)
     order = 0x4D4D;
-    long startOffset = offsetFullJPG;
+    quint32 startOffset = offsetFullJPG;
     file.seek(offsetFullJPG);
 
     if (get2(file.read(2)) != 0xFFD8) return 0;
@@ -4265,12 +4273,12 @@ bool Metadata::formatPanasonic()
         bool foundEndian = false;
         int counter = 0;
         while (!foundEndian) {
-            long a = get2(file.read(2));
+            quint32 a = get2(file.read(2));
             if (a == 0x4949 || a == 0x4D4D) {
                 order = a;
                 // offsets are from the endian position in JPEGs
                 // therefore must adjust all offsets found in tagValue
-                startOffset = file.pos() - 2;
+                startOffset = static_cast<quint32>(file.pos()) - 2;
                 foundEndian = true;
             }
             // break out if not finding endian
@@ -4279,20 +4287,20 @@ bool Metadata::formatPanasonic()
 
         if (report) rpt << "\n startOffset = " << startOffset;
 
-        long a = get2(file.read(2));  // magic 42
+        quint32 a = get2(file.read(2));  // magic 42
         a = get4(file.read(4));
-        long offsetIfd0 = a + startOffset;
+        quint32 offsetIfd0 = a + startOffset;
 
         // read JPG IFD0
-        long nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
+        quint32 nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
 
         offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset;
 
         // read JPG IFD1
         if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
 
-        offsetThumbJPG = static_cast<uint>(ifdDataHash.value(513).tagValue + startOffset);
-        lengthThumbJPG = static_cast<uint>(ifdDataHash.value(514).tagValue);
+        offsetThumbJPG = ifdDataHash.value(513).tagValue + startOffset;
+        lengthThumbJPG = ifdDataHash.value(514).tagValue;
 
         // read JPG Exif IFD
         readIFD("IFD Exif", offsetEXIF);
@@ -4300,8 +4308,8 @@ bool Metadata::formatPanasonic()
         // maker note
         if (ifdDataHash.contains(37500)) {
             // get offset from the IFD EXIF in embedded JPG
-//            long makerOffset = 5948;
-            long makerOffset = ifdDataHash.value(37500).tagValue;
+//            quint32 makerOffset = 5948;
+            quint32 makerOffset = ifdDataHash.value(37500).tagValue;
             readIFD("IFD Panasonic Maker Note", makerOffset + startOffset + 12);
             // get lens
             lens = getString(ifdDataHash.value(81).tagValue + startOffset, ifdDataHash.value(81).tagCount);
@@ -4349,7 +4357,7 @@ bool Metadata::formatJPG()
     }
     //file.open happens in readMetadata
     order = 0x4D4D;
-    long startOffset = 0;
+    quint32 startOffset = 0;
     if (get2(file.read(2)) != 0xFFD8) {
         err = "JPG does not start with 0xFFD8";
         qDebug() << __FUNCTION__ << err;
@@ -4378,12 +4386,12 @@ bool Metadata::formatJPG()
 
     bool foundEndian = false;
     while (!foundEndian) {
-        long a = get2(file.read(2));
+        quint32 a = get2(file.read(2));
         if (a == 0x4949 || a == 0x4D4D) {
             order = a;
             // offsets are from the endian position in JPEGs
             // therefore must adjust all offsets found in tagValue
-            startOffset = file.pos() - 2;
+            startOffset = static_cast<quint32>(file.pos()) - 2;
             foundEndian = true;
         }
         // add condition to check for EOF
@@ -4391,17 +4399,17 @@ bool Metadata::formatJPG()
 
     if (report) rpt << "\n startOffset = " << startOffset;
 
-    long a = get2(file.read(2));  // magic 42
+    quint32 a = get2(file.read(2));  // magic 42
     a = get4(file.read(4));
-    long offsetIfd0 = a + startOffset;
+    quint32 offsetIfd0 = a + startOffset;
 
     // it's a jpg so the whole thing is the full length jpg
     offsetFullJPG = 0;
     lengthFullJPG = static_cast<uint>(file.size());
 
     // read IFD0
-    long nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
-    long offsetEXIF;
+    quint32 nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
+    quint32 offsetEXIF;
     offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset;
     orientation = static_cast<int>(ifdDataHash.value(274).tagValue);
 
@@ -4421,16 +4429,16 @@ bool Metadata::formatJPG()
 
     if (readEssentialMetadata) {
         // IFD1: thumbnail offset and length
-        offsetThumbJPG = static_cast<uint>(ifdDataHash.value(513).tagValue) + 12;
-        lengthThumbJPG = static_cast<uint>(ifdDataHash.value(514).tagValue);
+        offsetThumbJPG = ifdDataHash.value(513).tagValue + 12;
+        lengthThumbJPG = ifdDataHash.value(514).tagValue;
     }
 
     // read EXIF
     readIFD("IFD Exif", offsetEXIF);
 
     if (readEssentialMetadata) {
-        width = static_cast<uint>(ifdDataHash.value(40962).tagValue);
-        height = static_cast<uint>(ifdDataHash.value(40963).tagValue);
+        width = ifdDataHash.value(40962).tagValue;
+        height = ifdDataHash.value(40963).tagValue;
         if (!width || !height) getDimensions(0);
     }
 
@@ -4481,7 +4489,7 @@ bool Metadata::formatJPG()
 
         // EXIF: ISO
         if (ifdDataHash.contains(34855)) {
-            long x = ifdDataHash.value(34855).tagValue;
+            quint32 x = ifdDataHash.value(34855).tagValue;
             ISONum = static_cast<int>(x);
             ISO = QString::number(ISONum);
         } else {

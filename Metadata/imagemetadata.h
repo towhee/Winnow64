@@ -13,17 +13,17 @@ public:
     int row = 0;                // datamodel row
     bool isPicked = false;          //rgh required?
     bool isSearch = false;
-    uint offsetFullJPG = 0;
-    uint lengthFullJPG = 0;
-    uint offsetThumbJPG = 0;
-    uint lengthThumbJPG = 0;
-    uint offsetSmallJPG = 0;
-    uint lengthSmallJPG = 0;
+    quint32 offsetFullJPG = 0;
+    quint32 lengthFullJPG = 0;
+    quint32 offsetThumbJPG = 0;
+    quint32 lengthThumbJPG = 0;
+    quint32 offsetSmallJPG = 0;
+    quint32 lengthSmallJPG = 0;
 
-    uint xmpSegmentOffset = 0;
-    uint xmpNextSegmentOffset = 0;
+    quint32 xmpSegmentOffset = 0;
+    quint32 xmpNextSegmentOffset = 0;
     bool isXmp = false;
-    uint orientationOffset = 0;
+    quint32 orientationOffset = 0;
     int orientation = 0;
     int rotationDegrees = 0;            // additional rotation from edit
     uint width = 0;
