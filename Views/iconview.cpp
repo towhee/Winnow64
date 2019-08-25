@@ -337,7 +337,7 @@ changes height to determine whether a scrollbar is required.
     // Difference between thumbSpace and thumbHeight
     int margin = iconViewDelegate->getCellSize().height() - iconHeight;
     int newThumbHeight = thumbSpaceHeight - margin;
-    int newThumbWidth = newThumbHeight * aspect;
+    int newThumbWidth = static_cast<int>(newThumbHeight * aspect);
     return newThumbWidth + margin - 1;
 }
 
@@ -412,18 +412,17 @@ int IconView::getLastRow()
     return dm->sf->rowCount() - 1;
 }
 
-int IconView::getRandomRow()
+uint IconView::getRandomRow()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__;
-    return QRandomGenerator::global()->generate() % (dm->sf->rowCount());
-//    return qrand() % (dm->sf->rowCount());
+    return QRandomGenerator::global()->generate() % static_cast<uint>(dm->sf->rowCount());
 }
 
+// rgh not being used
 bool IconView::isSelectedItem()
 {
     // call before getting current row or index
@@ -432,8 +431,6 @@ bool IconView::isSelectedItem()
     G::track(__FUNCTION__);
     #endif
     }
-    return true;
-//    qDebug() << G::t.restart() << "\t" << "selectionModel()->selectedRows().size()" << selectionModel()->selectedRows().size();
     if (selectionModel()->selectedRows().size() > 0)
         return true;
     else
@@ -473,7 +470,7 @@ visible in the viewport, how many icons are visible and the first/last icons vis
     if (cell.height() == 0) return false;
 
     int tCells = dm->sf->rowCount();
-    int cellsPerVPRow = qCeil((qreal) rowWidth / cell.width());
+    int cellsPerVPRow = qCeil(static_cast<qreal>(rowWidth) / cell.width());
 
     if (!isWrapping()) {
         // simple approach, will report more than visible, does not consider scroll alignment
@@ -496,12 +493,12 @@ visible in the viewport, how many icons are visible and the first/last icons vis
 
     int rowInView = i / cellsPerVPRow;  //qCeil(i / cellsPerVPRow);
 //    int posInVPRow = i % cellsPerVPRow;
-    int rowsInView = qCeil((qreal)tCells / cellsPerVPRow);
+    int rowsInView = qCeil(static_cast<qreal>(tCells) / cellsPerVPRow);
     int lastVPRow = qCeil(tCells / cellsPerVPRow);
 
     // rows per viewport
     qreal rowsPerVPDbl = 1.0;
-    rowsPerVPDbl = (qreal)vp.height() / cell.height();
+    rowsPerVPDbl = static_cast<qreal>(vp.height()) / cell.height();
     if (rowsPerVPDbl < 1.0) rowsPerVPDbl = 1.0;
     int firstVPRowScrollReq = qCeil(rowsPerVPDbl / 2);
     int lastVRowReqScroll = lastVPRow - firstVPRowScrollReq;
@@ -513,7 +510,7 @@ visible in the viewport, how many icons are visible and the first/last icons vis
     int visibleRowsAbove = qCeil((rowsPerVP - 1) / 2);
 
     // vertical alignment is centered, first cell requiring the view to scroll
-    int firstCellReqScroll = qCeil((qreal)rowsPerVP / 2) * cellsPerVPRow;
+    int firstCellReqScroll = qCeil(static_cast<qreal>(rowsPerVP) / 2) * cellsPerVPRow;
 
     // last cell requiring the view to scroll
     int lastCellReqScroll = lastVRowReqScroll * cellsPerVPRow;
@@ -578,16 +575,16 @@ int IconView::getThumbsPerPage()
 
     // thumbs per row
     if (cell.width() == 0) return 0;
-    double tprDbl = (double) rowWidth / cell.width();
+    double tprDbl = static_cast<double>(rowWidth) / cell.width();
     int tpr = rowWidth / cell.width();
     if (tprDbl > tpr + .05) tpr += 1;
 
     // rows per page (page = viewport)
     if (cell.height() == 0) return 0;
-    double rppDbl = (double)vp.height() / cell.height();
+    double rppDbl = static_cast<double>(vp.height()) / cell.height();
     if (rppDbl < 1) rppDbl = 1;
     // get the remainder, if significant add possibility of 2 extra rows
-    int rpp = (int)rppDbl;
+    int rpp = static_cast<int>(rppDbl);
     if (rpp - rppDbl < -0.05) rpp += 2;
 
     // thumbs per page
@@ -1231,7 +1228,7 @@ click position that is then sent to imageView to zoom to the same spot
     dm->sf->setData(index, iconRect, G::ThumbRectRole);
 }
 
-void IconView::resizeEvent(QResizeEvent */*event*/)
+void IconView::resizeEvent(QResizeEvent *event)
 {
 /*
 The resizeEvent can be triggered by a change in the gridView cell size (thumbWidth) that
@@ -1241,6 +1238,7 @@ if the ThumbView width has changed or skipResize has been set.
 This event is not forwarded to QListView::resize.  This would cause multiple scroll events
 which isn't pretty at all.
 */
+    event->ignore();    // suppress compiler warning
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);

@@ -312,7 +312,7 @@ textRect         = a rectangle below itemRect
     QRect cacheRect(cacheTopLeft, cacheBottomRight);
 
     QPainterPath iconPath;
-    iconPath.addRoundedRect(iconRect, 12, 12);
+    iconPath.addRoundedRect(iconRect, 4, 4);
 //    iconPath.addRoundRect(iconRect, 12, 12);
 
     QRect textRect(frameRect.bottomLeft() - textHtOffset, frameRect.bottomRight());
@@ -336,6 +336,7 @@ textRect         = a rectangle below itemRect
     // default thumb border
     painter->setPen(border);
     painter->drawRoundedRect(frameRect, 8, 8);
+//    painter->drawRoundedRect(frameRect, 8, 8);
 
     // current index item
     if (row == currentRow) {

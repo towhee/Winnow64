@@ -392,9 +392,6 @@ bool DataModel::addFileData()
     static int fileIndex;
     static QPixmap emptyPixMap;
 
-    // collect all unique instances of file type for filtration (use QMap to maintain order)
-//    QMap<QVariant, QString> typesMap;
-
     imageFilePathList.clear();
 
     // rgh not working
@@ -430,12 +427,11 @@ bool DataModel::addFileData()
         item = new QStandardItem();
         item->setData("", Qt::DisplayRole);
         appendRow(item);
-*/
+        */
 
         item = new QStandardItem();
         item->setData("", Qt::DisplayRole);             // column 0 just displays icon
         item->setData(fPath, G::PathRole);
-//        item->setData(fileInfo.filePath(), G::PathRole);
         QString tip = QString::number(fileIndex) + ": " + fileInfo.absoluteFilePath();
         item->setData(tip, Qt::ToolTipRole);
         item->setData(QRect(), G::ThumbRectRole);     // define later when read
@@ -450,8 +446,6 @@ bool DataModel::addFileData()
         setData(index(row, G::NameColumn), fileInfo.fileName());
         setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
         QString s = fileInfo.suffix().toUpper();
-        // build list for filters->addCategoryFromData
-//        typesMap[s] = s;
         setData(index(row, G::TypeColumn), s);
         setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
         setData(index(row, G::SizeColumn), fileInfo.size());
@@ -502,7 +496,6 @@ bool DataModel::addFileData()
                     setData(index(row, 0), prevType, G::DupRawTypeRole);
                     if (combineRawJpg)
                         setData(index(row, G::TypeColumn), "JPG+" + prevType);
-//                      setData(index(row, G::TypeColumn), s + "+" + prevType);
                     else
                         setData(index(row, G::TypeColumn), "JPG");
                 }
@@ -517,13 +510,13 @@ bool DataModel::addFileData()
             s = "Adding " + QString::number(row) + " of " +
                 QString::number(fileInfoList.count()) + " images";
             emit msg(s);
-//            qApp->processEvents();        // causes thumb dock to flicker
+            /*
+            qApp->processEvents();        // causes thumb dock to flicker  */
         }
 
         /* the rest of the data model columns are added when the metadata
         has been loaded on demand.  see addMetadataItem and mdCache    */
     }
-//    filters->addCategoryFromData(typesMap, filters->types);
     return true;
 }
 
@@ -770,7 +763,6 @@ void DataModel::buildFilters()
     #endif
     }
     if (filtersBuilt) return;
-//    filtersBuilt = true;
 
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> typesMap;
@@ -808,16 +800,7 @@ void DataModel::buildFilters()
 
         QString day = sf->index(row, G::DayColumn).data().toString();
         if (!dayMap.contains(day)) dayMap[day] = day;
-
-//        if (row % 1000 == 0 || row == 0) {
-//            s = "Step 2 0f " + buildSteps + ":  Finding unique items ";
-//            s += QString::number(row) + " of " + QString::number(rowCount());
-//            G::popUp->setPopupText(buildMsg + s);
-//            prev = row;
-//        }
     }
-
-    qDebug() << __FUNCTION__ << "dayMap =" << dayMap;
 
     // build filter items
     s = "Step 2 0f " + buildSteps + ":  Mapping filters ";

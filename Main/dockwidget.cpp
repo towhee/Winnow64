@@ -73,6 +73,7 @@ void DockWidget::moveEvent(QMoveEvent *event)
 //    qDebug() << __FUNCTION__ << a << screenRect1;
     dw.pos = QPoint(r.x() - a.x(), r.y() - a.y());
     dw.size = QSize(r.width(), r.height());
+    QDockWidget::moveEvent(event);  // suppress compiler warning
 }
 
 void DockWidget::rpt(QString s)

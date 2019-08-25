@@ -741,6 +741,7 @@ void MW::focusChange(QWidget *previous, QWidget *current)
     if (current == nullptr) return;
     if (current->objectName() == "DisableGoActions") enableGoKeyActions(false);
     else enableGoKeyActions(true);
+    if (previous == nullptr) return;    // suppress compiler warning
 }
 
 // DRAG AND DROP
@@ -5724,9 +5725,9 @@ app is "stranded" on secondary monitors that are not attached.
     G::track(__FUNCTION__);
     #endif
     }
-    QRect desktop1 = qApp->desktop()->geometry();
-    QRect desktop = qApp->desktop()->availableGeometry();
-    qDebug() << __FUNCTION__ << desktop << desktop1;
+    QRect desktop = QGuiApplication::screens().first()->geometry();
+//    QRect desktop = qApp->desktop()->availableGeometry();
+//    qDebug() << __FUNCTION__ << desktop << desktop1;
     resize(static_cast<int>(0.75 * desktop.width()),
            static_cast<int>(0.75 * desktop.height()));
     setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
@@ -6522,7 +6523,7 @@ void MW::setActualDevicePixelRatio()
        desktop */
     if (screen == nullptr && G::isInitializing) {
         G::actualDevicePixelRatio = 1;
-        QRect desktop = qApp->desktop()->availableGeometry();
+        QRect desktop = QGuiApplication::screens().first()->geometry();
         resize(static_cast<int>(0.75 * desktop.width()),
                static_cast<int>(0.75 * desktop.height()));
         setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
@@ -10073,16 +10074,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     filters->uncheckTypesFilters();
     dm->sf->filterChange();
     return;
-
-    defaultWorkspace();
-//    imageView->copyImage();
-    return;
-
-//    fsTree
-
-//    TiffHandler tiffHandler;
-//    tiffHandler.test(dm->currentFilePath.toLocal8Bit().constData());
-//    return;
 }
 
 // End MW
