@@ -160,7 +160,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
-    void resizeEvent(QResizeEvent* /*event*/);
+    void resizeEvent(QResizeEvent* event);
 //    QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction,
 //                           Qt::KeyboardModifiers modifiers);
 //    bool event(QEvent* event);      // key capture
@@ -173,7 +173,7 @@ private:
     int getNextRow();
     int getPrevRow();
     int getLastRow();                           //not used? Seems handy
-    int getRandomRow();                         //not used? Seems handy
+    uint getRandomRow();                         //not used? Seems handy
 
     int getNearestPick();
     int getNextPick();

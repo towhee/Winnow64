@@ -345,10 +345,10 @@ void FSTree::paintEvent(QPaintEvent *event)
     QTreeView::paintEvent(event);
 }
 
-void FSTree::focusInEvent(QFocusEvent *event)
-{
-    qDebug() << __FUNCTION__ << "Acquired focus";
-}
+//void FSTree::focusInEvent(QFocusEvent *event)
+//{
+//    qDebug() << __FUNCTION__ << "Acquired focus";
+//}
 
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
