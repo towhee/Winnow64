@@ -1974,7 +1974,7 @@ QByteArray Metadata::nikonDecrypt(QByteArray bData, uint32_t count, uint32_t ser
        cj += ci * ck++;
        quint8 x = static_cast<quint8>(bData[i]);
        x ^= cj;
-       bData[i] = CHAR(x);
+       bData[i] = static_cast<char>(x);
    }
    return bData;
 }
@@ -2175,7 +2175,7 @@ In IFD type 5, 10, 11, 12 = rational = real/float
     quint32 a = get4(file.read(4));
     quint32 b = get4(file.read(4));
     if (b == 0) return 0;
-    return DOUBLE(a) / b;
+    return static_cast<double>(a) / b;
 }
 
 QString Metadata::getString(quint32 offset, quint32 length)
@@ -2994,7 +2994,7 @@ bool Metadata::formatNikon()
         // the byte array code is in the middle of the lensInfo byte stream
         lensInfo.remove(0, 12);
         lensInfo.remove(7, lensInfo.size() - 7);
-        lensInfo.append(CHAR(lensType));
+        lensInfo.append(static_cast<char>(lensType));
         nikonLensCode = lensInfo.toHex().toUpper();
         lens = nikonLensHash.value(nikonLensCode);
         /*
