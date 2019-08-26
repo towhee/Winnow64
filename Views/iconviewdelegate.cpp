@@ -312,7 +312,7 @@ textRect         = a rectangle below itemRect
     QRect cacheRect(cacheTopLeft, cacheBottomRight);
 
     QPainterPath iconPath;
-    iconPath.addRoundedRect(iconRect, 4, 4);
+    iconPath.addRoundedRect(iconRect, 6, 6);
 //    iconPath.addRoundRect(iconRect, 12, 12);
 
     QRect textRect(frameRect.bottomLeft() - textHtOffset, frameRect.bottomRight());
