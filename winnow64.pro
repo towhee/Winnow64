@@ -129,7 +129,8 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/versions
+DISTFILES += Docs/versions \
+    notes/help_videos_on_mac.txt
 DISTFILES += Docs/test.html
 DISTFILES += notes/scratch.html
 DISTFILES += notes/_Notes
