@@ -1,5 +1,4 @@
 BUGS
-- Filters not always updating correctly
 - InfoView monitor not showing if winnow opened as full screen
 - Mac check for updates not done yet
 - Run multiple instances of Winnow?? Mac touchpad single click issues
@@ -37,6 +36,7 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Filters not always updating correctly
 - Ingest only filtered items
 - Require 2 images before change caching direction
 - Escape slideshow when in full screen
