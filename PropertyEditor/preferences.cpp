@@ -279,7 +279,7 @@ void Preferences::addItems()
             globalFontSizeValue->setData("globalFontSize", UR_Source);
             globalFontSizeValue->setData("int", UR_Type);
             globalFontSizeValue->setData(6, UR_Min);
-            globalFontSizeValue->setData(16, UR_Max);
+            globalFontSizeValue->setData(32, UR_Max);
             globalFontSizeValue->setData(50, UR_LabelFixedWidth);
             fontSizeItem->setChild(thirdGenerationCount, 0, globalFontSizeCaption);
             fontSizeItem->setChild(thirdGenerationCount, 1, globalFontSizeValue);

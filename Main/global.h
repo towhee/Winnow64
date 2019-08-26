@@ -125,6 +125,7 @@ namespace G
     extern int iconWMax;
     extern int iconHMax;
 
+    extern int transparency;
     extern QColor labelNoneColor;
     extern QColor labelRedColor;
     extern QColor labelYellowColor;
@@ -137,6 +138,7 @@ namespace G
 
     extern QColor progressCurrentColor;
     extern QColor progressBgColor;
+    extern QColor progressAppBgColor;
     extern QColor progressAddFileInfoColor;
     extern QColor progressAddMetadataColor;
     extern QColor progressBuildFiltersColor;

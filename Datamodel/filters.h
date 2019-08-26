@@ -63,9 +63,11 @@ public slots:
 
 protected:
     void resizeEvent(QResizeEvent *event);
+    void paintEvent(QPaintEvent *event);
     void mousePressEvent(QMouseEvent *event);
 
 private:
+    void resizeColumns();
     QLinearGradient categoryBackground;
     QFont categoryFont;
     int indentation;

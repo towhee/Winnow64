@@ -12,27 +12,27 @@ TableView::TableView(DataModel *dm)
     }
 
     this->dm = dm;
-    int ht = G::fontSize.toInt();
+//    int ht = G::fontSize.toInt();
 
     setModel(dm->sf);
     setSortingEnabled(true);
     setAlternatingRowColors(true);
-    horizontalHeader()->setFixedHeight(22);
+//    horizontalHeader()->setFixedHeight(22);
     horizontalHeader()->setSortIndicatorShown(false);
     horizontalHeader()->setSectionsMovable(true);
     horizontalHeader()->setStretchLastSection(true);
 //    horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     verticalHeader()->setVisible(false);
+    verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setTabKeyNavigation(false);
     setWordWrap(false);
-    setIconSize(QSize(ht + 10, ht + 22));
+//    setIconSize(QSize(ht + 10, ht + 22));
 //    setIconSize(QSize(24, 24 + 12));
-    verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
-    verticalHeader()->setDefaultSectionSize(24);
+//    verticalHeader()->setDefaultSectionSize(24);
 
     verticalScrollBar()->setObjectName("TableViewVerticalScrollBar");
 
@@ -120,6 +120,7 @@ void TableView::scrollToCurrent()
 int TableView::sizeHintForColumn(int column) const
 {
     QFontMetrics fm(this->font());
+    if (column == G::PathColumn) return fm.boundingRect("Icon").width();
     if (column == G::NameColumn) return fm.boundingRect("2019-02-25_0001.jpg========").width();
     if (column == G::RefineColumn) return fm.boundingRect("=Refine=").width();
     if (column == G::PickColumn) return fm.boundingRect("=Pick=").width();
@@ -198,6 +199,24 @@ bool TableView::eventFilter(QObject *obj, QEvent *event)
         scrollToCurrent();
     }
     return QWidget::eventFilter(obj, event);
+}
+
+void TableView::resizeColumns()
+{
+    for (int column = 0; column < G::TotalColumns; ++column) {
+        setColumnWidth(column, sizeHintForColumn(column));
+    }
+}
+
+void TableView::paintEvent(QPaintEvent *event)
+{
+    resizeColumns();
+    int d = qRound(G::fontSize.toInt() * 1.7);
+    setIconSize(QSize(d, d));
+//    setColumnWidth(0, ht + 10);
+    verticalHeader()->setDefaultSectionSize(d);
+    horizontalHeader()->setFixedHeight(d);
+    QTableView::paintEvent(event);
 }
 
 void TableView::mousePressEvent(QMouseEvent *event)

@@ -1,5 +1,20 @@
 #include "File/bookmarks.h"
 
+class BookDelegate : public QStyledItemDelegate
+{
+public:
+    explicit BookDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
+
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const
+    {
+        static int count = 0;
+        count++;
+        index.isValid();          // suppress compiler warning
+        int height = qRound(G::fontSize.toInt() * 1.5);
+        return QSize(option.rect.width(), height);
+    }
+};
+
 /* A QStringList of paths to bookmarked folders is displayed as top level items
 in a QWidgetTree in column 0.  Column 1 holds a count of the readable image files
 in the folder.
@@ -46,6 +61,8 @@ BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount)
     setHeaderHidden(true);
     setSortingEnabled(true);
     sortByColumn(0, Qt::AscendingOrder);
+
+    setItemDelegate(new BookDelegate(this));
 }
 
 void BookMarks::reloadBookmarks()
@@ -74,6 +91,10 @@ void BookMarks::addBookmark(QString itemPath)
     int count = dir->entryInfoList().size();
     item->setText(1, QString::number(count));
     item->setToolTip(1, itemPath);
+//    QFont font = item->font(0);
+//    font.setPixelSize(G::fontSize.toInt());
+//    item->setFont(0, font);
+//    item->setFont(1, font);
     item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
 }
 
@@ -114,15 +135,15 @@ the FSTree folders view.
     }
 }
 
-void BookMarks::resizeEvent(QResizeEvent *event)
+void BookMarks::resizeColumns()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    int w = width();
     if (showImageCount) {
-        imageCountColumnWidth = 45;
+//        imageCountColumnWidth = 45;
+        QFont font = this->font();
+        font.setPixelSize(G::fontSize.toInt());
+        QFontMetrics fm(font);
+        imageCountColumnWidth = fm.boundingRect("99999").width();
         showColumn(1);
         setColumnWidth(1, imageCountColumnWidth);
     }
@@ -130,7 +151,18 @@ void BookMarks::resizeEvent(QResizeEvent *event)
         imageCountColumnWidth = 0;
         hideColumn(1);
     }
-    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth);
+    setColumnWidth(0, w - G::scrollBarThickness - imageCountColumnWidth -10);
+//    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth);
+}
+
+void BookMarks::resizeEvent(QResizeEvent *event)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    resizeColumns();
     QTreeWidget::resizeEvent(event);
 }
 
@@ -145,6 +177,12 @@ void BookMarks::removeBookmark()
         bookmarkPaths.remove(selectedItems().at(0)->toolTip(0));
 		reloadBookmarks();
 	}
+}
+
+void BookMarks::paintEvent(QPaintEvent *event)
+{
+    resizeColumns();
+    QTreeWidget::paintEvent(event);
 }
 
 void BookMarks::mousePressEvent(QMouseEvent *event)

@@ -4,14 +4,15 @@
 class InfoDelegate : public QStyledItemDelegate
 {
 public:
-    explicit InfoDelegate(QObject *parent = 0) : QStyledItemDelegate(parent) { }
+    explicit InfoDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
 
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const
     {
+        static int count = 0;
+        count++;
         index.isValid();          // suppress compiler warning
-        int height = G::fontSize.toInt() + 10;
-        return QSize(option.rect.width(), height);  // rgh perhaps change 24 to function of font size + 10
-//        return QSize(option.rect.width(), 24);  // rgh perhaps change 24 to function of font size + 10
+        int height = qRound(G::fontSize.toInt() * 1.7);
+        return QSize(option.rect.width(), height);
     }
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const
@@ -40,8 +41,15 @@ public:
             painter->setPen(catPen);
         }
         QString text = index.data().toString();
+        QFont font = painter->font();
+        font.setPixelSize(G::fontSize.toInt());
+        painter->setFont(font);
 
-        QString elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
+        QString elidedText;
+        if (index.column() == 0)
+            elidedText = text;
+        else
+            elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
         painter->drawText(textRect, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
 
         painter->setPen(QColor(75,75,75));
@@ -119,14 +127,17 @@ void InfoView::showInfoViewMenu(QPoint pt)
     	infoMenu->popup(viewport()->mapToGlobal(pt));
 }
 
-void InfoView::tweakHeaders()
+void InfoView::tweak()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-//    horizontalHeader()->setFixedHeight(1);
+    QFont font = this->font();
+    font.setPixelSize(G::fontSize.toInt());
+    QFontMetrics fm(font);
+    setColumnWidth(0, fm.boundingRect("--Shutter Speed-").width());
 }
 
 void InfoView::setupOk()
@@ -384,7 +395,7 @@ void InfoView::updateInfo(const int &row)
         << "ThumbView::updateExifInfo - loaded metadata display info for"
         << row;
 
-    tweakHeaders();
+    tweak();
     showOrHide();
 
     isNewImageDataChange = false;
