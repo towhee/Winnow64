@@ -83,6 +83,7 @@ public slots:
     void showOrHide();
 	void showInfoViewMenu(QPoint pt);
 	void copyEntry();
+    void tweak();
 
 private slots:
 
@@ -91,7 +92,6 @@ protected:
 
 private:
     void setupOk();
-    void tweakHeaders();
 
     QModelIndex selectedEntry;
 	QMenu *infoMenu;

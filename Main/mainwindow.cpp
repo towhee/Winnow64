@@ -4478,6 +4478,7 @@ void MW::createAppStyle()
     css1 = "QWidget {font-size: " + G::fontSize + "px;}";
     css = css1 + css2;
     this->setStyleSheet(css);
+    //    QApplication::setStyle(QStyleFactory::create("fusion"));
 }
 
 void MW::createStatusBar()
@@ -6389,16 +6390,30 @@ void MW::setShowImageCount()
     if (isShow) fsTree->fsModel->fetchMore(fsTree->rootIndex());
 }
 
-void MW::setFontSize(int pixels)
+void MW::setFontSize(int fontPixelSize)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    G::fontSize = QString::number(pixels);
-    QString s = "QWidget {font-size: " + G::fontSize + "px;}";
-    this->setStyleSheet(s + css2);
+    G::fontSize = QString::number(fontPixelSize);
+    QString s = "QWidget {font-size: " + G::fontSize + "px;}" + css2;
+    this->setStyleSheet(s);
+/*
+    infoView->resize(infoView->width(), infoView->height());    // does not trigger sizeHint
+    infoView->layout()->update();                               // does not trigger sizeHint
+    infoView->tweakHeaders();                                   // does not trigger sizeHint
+    infoView->repaint();                                        // does not trigger sizeHint
+    infoView->updateGeometry();
+*/
+    infoView->updateInfo(currentRow);                           // triggers sizehint!
+//    bookmarks->reloadBookmarks();
+    bookmarks->setStyleSheet(s);
+    fsTree->setStyleSheet(s);
+    filters->setStyleSheet(s);
+    tableView->setStyleSheet(s);
+//    tableView->repaint();   // nope
 }
 
 void MW::setInfoFontSize()
@@ -10071,9 +10086,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    filters->uncheckTypesFilters();
-    dm->sf->filterChange();
-    return;
+
 }
 
 // End MW

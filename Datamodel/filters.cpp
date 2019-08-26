@@ -534,13 +534,28 @@ checkbox then the state toggles automatically.
     itemHasChanged = false;
 }
 
+void Filters::resizeColumns()
+{
+    QFont font = this->font();
+    font.setPixelSize(G::fontSize.toInt());
+    QFontMetrics fm(font);
+    int countColumnWidth = fm.boundingRect("99999").width();
+    setColumnWidth(4, countColumnWidth);
+    setColumnWidth(3, countColumnWidth);
+    setColumnWidth(2, countColumnWidth);
+    setColumnWidth(0, width() - G::scrollBarThickness - 2 * countColumnWidth);
+}
+
 void Filters::resizeEvent(QResizeEvent *event)
 {
-    setColumnWidth(4, 45);
-    setColumnWidth(3, 45);
-    setColumnWidth(2, 45);
-    setColumnWidth(0, width() - G::scrollBarThickness - 90);
+    resizeColumns();
     QTreeWidget::resizeEvent(event);
+}
+
+void Filters::paintEvent(QPaintEvent *event)
+{
+    resizeColumns();
+    QTreeWidget::paintEvent(event);
 }
 
 void Filters::mousePressEvent(QMouseEvent *event)

@@ -294,7 +294,11 @@ QModelIndex FSTree::getCurrentIndex()
 void FSTree::resizeColumns()
 {
     if (fsModel->showImageCount) {
-        imageCountColumnWidth = 45;
+//        imageCountColumnWidth = 45;
+        QFont font = this->font();
+        font.setPixelSize(G::fontSize.toInt());
+        QFontMetrics fm(font);
+        imageCountColumnWidth = fm.boundingRect("99999").width();
         showColumn(4);
         setColumnWidth(4, imageCountColumnWidth);
     }

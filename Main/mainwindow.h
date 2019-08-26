@@ -397,7 +397,7 @@ private slots:
     void updatePickFromHistory(QString fPath, QString status);
     void updateClassification();
     void refreshFolders();
-    void setFontSize(int pixels);
+    void setFontSize(int fontPixelSize);
     void setInfoFontSize();
     void setClassificationBadgeImageDiam(int d);
     void setClassificationBadgeThumbDiam(int d);

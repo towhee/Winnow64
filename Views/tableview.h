@@ -31,11 +31,13 @@ public slots:
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     int sizeHintForColumn(int column) const override;
 
 private:
+    void resizeColumns();
     IconView *thumbView;
     DataModel *dm;
     void createOkToShow();
