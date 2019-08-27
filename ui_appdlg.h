@@ -40,7 +40,12 @@ public:
     {
         if (Appdlg->objectName().isEmpty())
             Appdlg->setObjectName(QString::fromUtf8("Appdlg"));
-        Appdlg->resize(948, 400);
+        Appdlg->resize(948, 362);
+        QSizePolicy sizePolicy(QSizePolicy::Maximum, QSizePolicy::MinimumExpanding);
+        sizePolicy.setHorizontalStretch(0);
+        sizePolicy.setVerticalStretch(0);
+        sizePolicy.setHeightForWidth(Appdlg->sizePolicy().hasHeightForWidth());
+        Appdlg->setSizePolicy(sizePolicy);
         verticalLayout = new QVBoxLayout(Appdlg);
         verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
         horizontalLayout = new QHBoxLayout();
@@ -49,6 +54,14 @@ public:
         if (appsTable->columnCount() < 3)
             appsTable->setColumnCount(3);
         appsTable->setObjectName(QString::fromUtf8("appsTable"));
+        QSizePolicy sizePolicy1(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        sizePolicy1.setHorizontalStretch(0);
+        sizePolicy1.setVerticalStretch(0);
+        sizePolicy1.setHeightForWidth(appsTable->sizePolicy().hasHeightForWidth());
+        appsTable->setSizePolicy(sizePolicy1);
+        QFont font;
+        font.setPointSize(20);
+        appsTable->setFont(font);
         appsTable->setFrameShape(QFrame::Box);
         appsTable->setEditTriggers(QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked);
         appsTable->setAlternatingRowColors(true);
@@ -64,7 +77,7 @@ public:
 
         verticalLayout->addLayout(horizontalLayout);
 
-        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalSpacer = new QSpacerItem(10, 10, QSizePolicy::Minimum, QSizePolicy::Fixed);
 
         verticalLayout->addItem(horizontalSpacer);
 

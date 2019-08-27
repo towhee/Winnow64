@@ -6174,6 +6174,7 @@ the appdlg, which modifies it and then after the dialog is closed the appActions
     #endif
     }
     Appdlg *appdlg = new Appdlg(externalApps, this);
+
     if(appdlg->exec()) {
         /*
         Menus cannot be added/deleted at runtime in MacOS so 10 menu items are created
@@ -6408,12 +6409,10 @@ void MW::setFontSize(int fontPixelSize)
     infoView->updateGeometry();
 */
     infoView->updateInfo(currentRow);                           // triggers sizehint!
-//    bookmarks->reloadBookmarks();
     bookmarks->setStyleSheet(s);
     fsTree->setStyleSheet(s);
     filters->setStyleSheet(s);
     tableView->setStyleSheet(s);
-//    tableView->repaint();   // nope
 }
 
 void MW::setInfoFontSize()

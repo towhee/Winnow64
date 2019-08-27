@@ -29,6 +29,7 @@ private slots:
 private:
     Ui::Appdlg *ui;
 
+    int rowHeight;
     G::Pair app;
     QList<G::Pair> &xApps;
     QString modifier;
