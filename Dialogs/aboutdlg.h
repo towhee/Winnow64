@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QtWidgets>
 #include <QDesktopServices>
+#include "Main/global.h"
 
 namespace Ui {
 class About;

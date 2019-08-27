@@ -35,13 +35,23 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
 #endif
 
     }
+    qDebug() << __FUNCTION__ << this->font().pixelSize() << G::fontSize;
+    QFont fnt = this->font();
+    int textHeight = G::fontSize.toInt();
+    fnt.setPixelSize(textHeight);
+    rowHeight = static_cast<int>(textHeight * 1.5);
+    QFontMetrics fm(fnt);
+    int hdr0Width = fm.boundingRect("==Shortcut==").width();
+    int hdr1Width = fm.boundingRect("---Display name------").width();
+    ui->appsTable->setColumnWidth(0, hdr0Width);
+    ui->appsTable->setColumnWidth(1, hdr1Width);
     QStringList hdrs;
-    hdrs << "Shortcut" << "Program display name" << "Program path";
+    hdrs << "Shortcut" << "Display name" << "Program path";
     ui->appsTable->setHorizontalHeaderLabels(hdrs);
-    ui->appsTable->horizontalHeader()->resizeSection(0, 100);
-    ui->appsTable->horizontalHeader()->resizeSection(1, 200);
+    ui->appsTable->horizontalHeader()->resizeSection(0, hdr0Width);
+    ui->appsTable->horizontalHeader()->resizeSection(1, hdr1Width);
     ui->appsTable->horizontalHeader()->setStretchLastSection(true);
-    ui->appsTable->horizontalHeader()->setFixedHeight(24);
+    ui->appsTable->horizontalHeader()->setFixedHeight(rowHeight);
     ui->appsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->appsTable->verticalHeader()->setSectionsClickable(false);
 
@@ -74,6 +84,7 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
         if (name == "") name = info.baseName();
         ui->appsTable->item(row, 1)->setText(name);
         ui->appsTable->item(row, 2)->setText(path);
+        ui->appsTable->setRowHeight(row, rowHeight);
         setFlags(row);
     }
 
