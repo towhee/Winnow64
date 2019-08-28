@@ -24,7 +24,7 @@ PropertyEditor subclass ie Preferences.  All the property items are defined and 
 
 PropertyDelegate::PropertyDelegate(QWidget *parent): QStyledItemDelegate(parent)
 {
- }
+}
 
 QWidget *PropertyDelegate::createEditor(QWidget *parent,
                                               const QStyleOptionViewItem &option,
@@ -77,8 +77,8 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
 
 QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-    int height = G::fontSize.toInt() + 10;
-    return QSize(option.rect.width(), height);  // rgh perhaps change 24 to function of font size + 10
+    int height = static_cast<int>(G::fontSize.toInt() * 1.5);
+    return QSize(option.rect.width(), height);
 
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {

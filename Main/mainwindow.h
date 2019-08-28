@@ -255,7 +255,7 @@ public:
     QString pickMemSize;
     QString css;                // stylesheet text
     QString css1;               // stylesheet text
-    QString css2;               // stylesheet text
+    QString cssBase;               // stylesheet text
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event);

@@ -11,8 +11,18 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
     mw = qobject_cast<MW*>(parent);
     connect(this->propertyDelegate, &PropertyDelegate::itemChanged,
             this, &Preferences::itemChange);
-    captionColumnWidth = 225;
-    valueColumnWidth = 200;
+
+    QFont fnt = this->font();
+    fnt.setPixelSize(G::fontSize.toInt());
+    QFontMetrics fm(fnt);
+    captionColumnWidth = fm.boundingRect("==Incremental amount to load==").width();
+    valueColumnWidth = fm.boundingRect("==Next / Previous Image==").width();
+//    setColumnWidth(0, 400);
+//    setColumnWidth(1, col1Width);
+
+
+//    captionColumnWidth = 225;
+//    valueColumnWidth = 200;
     addItems();
 //    expandAll();
 }
@@ -155,6 +165,10 @@ void Preferences::itemChange(QModelIndex idx)
         mw->rememberLastDir = v.toBool();
     }
 
+    if (source == "checkIfUpdate") {
+        mw->checkIfUpdate = v.toBool();
+    }
+
     if (source == "useWheelToScroll") {
         if (v.toString() == "Next/previous image") mw->imageView->useWheelToScroll = false;
         else mw->imageView->useWheelToScroll = true;
@@ -230,6 +244,25 @@ void Preferences::addItems()
         propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = checkIfUpdate
+        tooltip = "At startup check if there is an update to Winnow.";
+        QStandardItem *checkIfUpdateCaption = new QStandardItem;
+        checkIfUpdateCaption->setToolTip(tooltip);
+        checkIfUpdateCaption->setText("Check for program update");
+        checkIfUpdateCaption->setEditable(false);
+        QStandardItem *checkIfUpdateValue = new QStandardItem;
+        checkIfUpdateValue->setToolTip(tooltip);
+        checkIfUpdateValue->setData(mw->checkIfUpdate, Qt::EditRole);
+        checkIfUpdateValue->setData(DT_Checkbox, UR_DelegateType);
+        checkIfUpdateValue->setData("checkIfUpdate", UR_Source);
+        checkIfUpdateValue->setData("bool", UR_Type);
+        generalItem->setChild(secondGenerationCount, 0, checkIfUpdateCaption);
+        generalItem->setChild(secondGenerationCount, 1, checkIfUpdateValue);
+        valIdx = checkIfUpdateValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+        secondGenerationCount++;
         // Type = COMBOBOX
         // name = useWheelToScroll
         tooltip = "Use the trackpad or mouse wheel to either scroll when zoomed into an image\n"
@@ -278,8 +311,8 @@ void Preferences::addItems()
             globalFontSizeValue->setData(DT_Slider, UR_DelegateType);
             globalFontSizeValue->setData("globalFontSize", UR_Source);
             globalFontSizeValue->setData("int", UR_Type);
-            globalFontSizeValue->setData(6, UR_Min);
-            globalFontSizeValue->setData(32, UR_Max);
+            globalFontSizeValue->setData(10, UR_Min);
+            globalFontSizeValue->setData(20, UR_Max);
             globalFontSizeValue->setData(50, UR_LabelFixedWidth);
             fontSizeItem->setChild(thirdGenerationCount, 0, globalFontSizeCaption);
             fontSizeItem->setChild(thirdGenerationCount, 1, globalFontSizeValue);

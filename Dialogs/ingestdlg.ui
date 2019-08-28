@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>732</width>
+    <width>796</width>
     <height>783</height>
    </rect>
   </property>
@@ -15,6 +15,11 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="font">
+   <font>
+    <pointsize>16</pointsize>
+   </font>
   </property>
   <property name="windowTitle">
    <string>Copy picked images to destination folder</string>
@@ -27,7 +32,7 @@
     <rect>
      <x>20</x>
      <y>510</y>
-     <width>691</width>
+     <width>761</width>
      <height>111</height>
     </rect>
    </property>
@@ -39,7 +44,7 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>10</pointsize>
+     <pointsize>13</pointsize>
     </font>
    </property>
    <property name="toolTip">
@@ -53,7 +58,7 @@
      <rect>
       <x>20</x>
       <y>20</y>
-      <width>651</width>
+      <width>721</width>
       <height>20</height>
      </rect>
     </property>
@@ -198,7 +203,7 @@
      <rect>
       <x>20</x>
       <y>40</y>
-      <width>651</width>
+      <width>721</width>
       <height>20</height>
      </rect>
     </property>
@@ -343,7 +348,7 @@
      <rect>
       <x>20</x>
       <y>60</y>
-      <width>651</width>
+      <width>721</width>
       <height>20</height>
      </rect>
     </property>
@@ -431,7 +436,7 @@
      <rect>
       <x>20</x>
       <y>80</y>
-      <width>651</width>
+      <width>721</width>
       <height>20</height>
      </rect>
     </property>
@@ -601,13 +606,13 @@
     <rect>
      <x>20</x>
      <y>20</y>
-     <width>691</width>
+     <width>761</width>
      <height>351</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>10</pointsize>
+     <pointsize>16</pointsize>
     </font>
    </property>
    <property name="toolTip">
@@ -630,7 +635,7 @@
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <pointsize>13</pointsize>
       <weight>50</weight>
       <bold>false</bold>
      </font>
@@ -657,12 +662,12 @@
       <x>20</x>
       <y>30</y>
       <width>471</width>
-      <height>17</height>
+      <height>21</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <pointsize>13</pointsize>
       <weight>50</weight>
       <bold>false</bold>
      </font>
@@ -685,7 +690,7 @@
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <pointsize>13</pointsize>
       <weight>50</weight>
       <bold>false</bold>
      </font>
@@ -708,7 +713,7 @@
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <pointsize>13</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -727,11 +732,16 @@
    <widget class="QTabWidget" name="autoIngestTab">
     <property name="geometry">
      <rect>
-      <x>50</x>
+      <x>40</x>
       <y>60</y>
-      <width>631</width>
+      <width>701</width>
       <height>181</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
     </property>
     <property name="currentIndex">
      <number>1</number>
@@ -743,15 +753,15 @@
      <widget class="QLabel" name="destinationFolderLabel">
       <property name="geometry">
        <rect>
-        <x>0</x>
+        <x>9</x>
         <y>120</y>
-        <width>140</width>
+        <width>161</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -767,15 +777,15 @@
      <widget class="QLabel" name="folderLabel">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>190</x>
         <y>120</y>
-        <width>460</width>
+        <width>491</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -794,7 +804,7 @@
      <widget class="QLabel" name="templateLabel1">
       <property name="geometry">
        <rect>
-        <x>0</x>
+        <x>30</x>
         <y>50</y>
         <width>140</width>
         <height>20</height>
@@ -802,7 +812,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -818,7 +828,7 @@
      <widget class="QPushButton" name="selectRootFolderBtn">
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>50</x>
         <y>16</y>
         <width>120</width>
         <height>25</height>
@@ -826,7 +836,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
         <weight>50</weight>
         <bold>false</bold>
        </font>
@@ -850,11 +860,16 @@
      <widget class="QComboBox" name="pathTemplatesCB">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>190</x>
         <y>50</y>
         <width>320</width>
         <height>26</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>13</pointsize>
+       </font>
       </property>
       <property name="toolTip">
        <string/>
@@ -866,15 +881,15 @@
      <widget class="QLineEdit" name="descriptionLineEdit">
       <property name="geometry">
        <rect>
-        <x>155</x>
+        <x>185</x>
         <y>90</y>
-        <width>325</width>
+        <width>491</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -884,15 +899,15 @@
      <widget class="QLabel" name="folderDescription">
       <property name="geometry">
        <rect>
-        <x>0</x>
+        <x>-1</x>
         <y>91</y>
-        <width>140</width>
+        <width>171</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -908,15 +923,15 @@
      <widget class="QLabel" name="rootFolderLabel">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>190</x>
         <y>20</y>
-        <width>460</width>
+        <width>491</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -932,15 +947,15 @@
      <widget class="QPushButton" name="pathTemplatesBtn">
       <property name="geometry">
        <rect>
-        <x>500</x>
+        <x>530</x>
         <y>50</y>
-        <width>120</width>
+        <width>151</width>
         <height>25</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
         <weight>50</weight>
         <bold>false</bold>
        </font>
@@ -972,15 +987,15 @@
      <widget class="QLabel" name="folderLabel_2">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>190</x>
         <y>120</y>
-        <width>461</width>
+        <width>491</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -999,7 +1014,7 @@
      <widget class="QLabel" name="templateLabel1_2">
       <property name="geometry">
        <rect>
-        <x>0</x>
+        <x>30</x>
         <y>50</y>
         <width>140</width>
         <height>20</height>
@@ -1007,7 +1022,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1023,7 +1038,7 @@
      <widget class="QPushButton" name="selectRootFolderBtn_2">
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>50</x>
         <y>16</y>
         <width>120</width>
         <height>25</height>
@@ -1031,7 +1046,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
         <weight>50</weight>
         <bold>false</bold>
        </font>
@@ -1055,11 +1070,16 @@
      <widget class="QComboBox" name="pathTemplatesCB_2">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>190</x>
         <y>50</y>
         <width>320</width>
         <height>26</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>13</pointsize>
+       </font>
       </property>
       <property name="toolTip">
        <string/>
@@ -1071,15 +1091,15 @@
      <widget class="QLineEdit" name="descriptionLineEdit_2">
       <property name="geometry">
        <rect>
-        <x>155</x>
+        <x>185</x>
         <y>90</y>
-        <width>325</width>
+        <width>491</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1089,7 +1109,7 @@
      <widget class="QLabel" name="folderDescription_2">
       <property name="geometry">
        <rect>
-        <x>0</x>
+        <x>30</x>
         <y>91</y>
         <width>140</width>
         <height>20</height>
@@ -1097,7 +1117,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1113,7 +1133,7 @@
      <widget class="QLabel" name="destinationFolderLabel_2">
       <property name="geometry">
        <rect>
-        <x>0</x>
+        <x>30</x>
         <y>120</y>
         <width>140</width>
         <height>20</height>
@@ -1121,7 +1141,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1137,15 +1157,15 @@
      <widget class="QLabel" name="rootFolderLabel_2">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>190</x>
         <y>20</y>
-        <width>461</width>
+        <width>491</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1161,15 +1181,15 @@
      <widget class="QPushButton" name="pathTemplatesBtn_2">
       <property name="geometry">
        <rect>
-        <x>500</x>
+        <x>530</x>
         <y>50</y>
-        <width>120</width>
+        <width>151</width>
         <height>25</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
         <weight>50</weight>
         <bold>false</bold>
        </font>
@@ -1198,11 +1218,22 @@
    <widget class="QPushButton" name="helpBtn">
     <property name="geometry">
      <rect>
-      <x>560</x>
+      <x>510</x>
       <y>30</y>
-      <width>111</width>
+      <width>161</width>
       <height>25</height>
      </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
     </property>
     <property name="toolTip">
      <string/>
@@ -1228,7 +1259,7 @@
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <pointsize>13</pointsize>
       <weight>50</weight>
       <bold>false</bold>
      </font>
@@ -1260,7 +1291,7 @@
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <pointsize>13</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -1282,13 +1313,13 @@
     <rect>
      <x>20</x>
      <y>390</y>
-     <width>691</width>
+     <width>761</width>
      <height>101</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>10</pointsize>
+     <pointsize>13</pointsize>
     </font>
    </property>
    <property name="toolTip">
@@ -1302,9 +1333,14 @@
      <rect>
       <x>270</x>
       <y>70</y>
-      <width>401</width>
+      <width>471</width>
       <height>20</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
     </property>
     <property name="toolTip">
      <string/>
@@ -1330,7 +1366,7 @@
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <pointsize>13</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -1354,7 +1390,7 @@
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <pointsize>13</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -1378,7 +1414,7 @@
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <pointsize>13</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -1400,6 +1436,11 @@
       <height>26</height>
      </rect>
     </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
+    </property>
     <property name="toolTip">
      <string/>
     </property>
@@ -1407,15 +1448,15 @@
    <widget class="QPushButton" name="filenameTemplatesBtn">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>570</x>
       <y>30</y>
-      <width>120</width>
+      <width>171</width>
       <height>25</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <pointsize>13</pointsize>
       <weight>50</weight>
       <bold>false</bold>
      </font>
@@ -1442,13 +1483,13 @@
     <rect>
      <x>20</x>
      <y>740</y>
-     <width>241</width>
+     <width>351</width>
      <height>16</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>10</pointsize>
+     <pointsize>13</pointsize>
     </font>
    </property>
    <property name="toolTip">
@@ -1461,10 +1502,10 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>460</x>
+     <x>520</x>
      <y>730</y>
      <width>251</width>
-     <height>32</height>
+     <height>43</height>
     </rect>
    </property>
    <property name="toolTip">
@@ -1478,6 +1519,11 @@
         <width>93</width>
         <height>0</height>
        </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>13</pointsize>
+       </font>
       </property>
       <property name="toolTip">
        <string/>
@@ -1497,6 +1543,11 @@
         <width>93</width>
         <height>0</height>
        </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>13</pointsize>
+       </font>
       </property>
       <property name="focusPolicy">
        <enum>Qt::StrongFocus</enum>
@@ -1528,7 +1579,7 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>10</pointsize>
+     <pointsize>13</pointsize>
     </font>
    </property>
    <property name="text">
@@ -1546,7 +1597,7 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>10</pointsize>
+     <pointsize>13</pointsize>
     </font>
    </property>
    <property name="text">
@@ -1564,7 +1615,7 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>10</pointsize>
+     <pointsize>13</pointsize>
     </font>
    </property>
    <property name="text">
@@ -1582,7 +1633,7 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>10</pointsize>
+     <pointsize>13</pointsize>
     </font>
    </property>
    <property name="text">
