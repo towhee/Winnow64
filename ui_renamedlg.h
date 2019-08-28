@@ -42,6 +42,11 @@ public:
         name = new RenameEdit(RenameDlg);
         name->setObjectName(QString::fromUtf8("name"));
         name->setGeometry(QRect(30, 50, 381, 22));
+        QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        sizePolicy.setHorizontalStretch(0);
+        sizePolicy.setVerticalStretch(0);
+        sizePolicy.setHeightForWidth(name->sizePolicy().hasHeightForWidth());
+        name->setSizePolicy(sizePolicy);
         statusLbl = new QLabel(RenameDlg);
         statusLbl->setObjectName(QString::fromUtf8("statusLbl"));
         statusLbl->setGeometry(QRect(30, 100, 381, 16));

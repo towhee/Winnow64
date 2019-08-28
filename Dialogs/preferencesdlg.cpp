@@ -30,12 +30,20 @@ PreferencesDlg::PreferencesDlg(QWidget *parent, bool &isSolo, Preferences *pref,
     tree = pref;
 
     setWindowTitle("Winnow Preferences");
-    setMinimumSize(470, 500);
+
+    QFont fnt = this->font();
+    fnt.setPixelSize(G::fontSize.toInt());
+    QFontMetrics fm(fnt);
+    int w0= fm.boundingRect("==Incremental amount to load==").width();
+    int w1 = fm.boundingRect("==Next / Previous Image==").width();
+    setMinimumSize(w0 + w1 + 10, 600);
+//    setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
+    setStyleSheet(css);
+    setStyleSheet("QTreeView {border: none}");
+
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(pref);
     layout->setContentsMargins(0,0,0,0);
-    setStyleSheet(css);
-    setStyleSheet("QTreeView {border: none}");
 
     QAction *expandAllAction = new QAction(tr("Expand all"), this);
     expandAllAction->setShortcutVisibleInContextMenu(true);

@@ -48,11 +48,8 @@ public:
     QFrame *frame_6;
     QVBoxLayout *verticalLayout_5;
     QTextBrowser *resultText;
-    QFrame *frame_7;
-    QVBoxLayout *verticalLayout_3;
     QLabel *label_5;
     QLabel *uniqueWarningLabel;
-    QSpacerItem *verticalSpacer;
     QFrame *frame_8;
     QHBoxLayout *horizontalLayout;
     QSpacerItem *horizontalSpacer_2;
@@ -66,7 +63,7 @@ public:
     {
         if (TokenDlg->objectName().isEmpty())
             TokenDlg->setObjectName(QString::fromUtf8("TokenDlg"));
-        TokenDlg->resize(843, 475);
+        TokenDlg->resize(843, 555);
         QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
@@ -84,6 +81,7 @@ public:
         sizePolicy1.setVerticalStretch(0);
         sizePolicy1.setHeightForWidth(frame_2->sizePolicy().hasHeightForWidth());
         frame_2->setSizePolicy(sizePolicy1);
+        frame_2->setMinimumSize(QSize(200, 0));
         frame_2->setMaximumSize(QSize(175, 16777215));
         frame_2->setFrameShape(QFrame::StyledPanel);
         frame_2->setFrameShadow(QFrame::Raised);
@@ -118,7 +116,6 @@ public:
         frame->setFrameShadow(QFrame::Raised);
         verticalLayout = new QVBoxLayout(frame);
         verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
-        verticalLayout->setContentsMargins(-1, 0, 0, 0);
         frame_4 = new QFrame(frame);
         frame_4->setObjectName(QString::fromUtf8("frame_4"));
         sizePolicy.setHeightForWidth(frame_4->sizePolicy().hasHeightForWidth());
@@ -166,7 +163,7 @@ public:
         label_2->setMinimumSize(QSize(0, 0));
         label_2->setMaximumSize(QSize(16777215, 16777215));
 
-        verticalLayout->addWidget(frame_9, 0, Qt::AlignTop);
+        verticalLayout->addWidget(frame_9);
 
         frame_3 = new QFrame(frame);
         frame_3->setObjectName(QString::fromUtf8("frame_3"));
@@ -236,36 +233,24 @@ public:
 
         verticalLayout->addWidget(frame_6);
 
-        frame_7 = new QFrame(frame);
-        frame_7->setObjectName(QString::fromUtf8("frame_7"));
-        sizePolicy3.setHeightForWidth(frame_7->sizePolicy().hasHeightForWidth());
-        frame_7->setSizePolicy(sizePolicy3);
-        frame_7->setMinimumSize(QSize(0, 60));
-        frame_7->setMaximumSize(QSize(16777215, 90));
-        frame_7->setFrameShape(QFrame::StyledPanel);
-        frame_7->setFrameShadow(QFrame::Raised);
-        verticalLayout_3 = new QVBoxLayout(frame_7);
-        verticalLayout_3->setObjectName(QString::fromUtf8("verticalLayout_3"));
-        verticalLayout_3->setContentsMargins(0, 0, -1, 0);
-        label_5 = new QLabel(frame_7);
+        label_5 = new QLabel(frame);
         label_5->setObjectName(QString::fromUtf8("label_5"));
-        label_5->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
+        QFont font1;
+        font1.setPointSize(13);
+        label_5->setFont(font1);
+        label_5->setWordWrap(true);
 
-        verticalLayout_3->addWidget(label_5);
+        verticalLayout->addWidget(label_5);
 
-        uniqueWarningLabel = new QLabel(frame_7);
+        uniqueWarningLabel = new QLabel(frame);
         uniqueWarningLabel->setObjectName(QString::fromUtf8("uniqueWarningLabel"));
+        sizePolicy.setHeightForWidth(uniqueWarningLabel->sizePolicy().hasHeightForWidth());
+        uniqueWarningLabel->setSizePolicy(sizePolicy);
+        uniqueWarningLabel->setFont(font1);
         uniqueWarningLabel->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
         uniqueWarningLabel->setWordWrap(true);
 
-        verticalLayout_3->addWidget(uniqueWarningLabel);
-
-        verticalSpacer = new QSpacerItem(20, 12, QSizePolicy::Minimum, QSizePolicy::Expanding);
-
-        verticalLayout_3->addItem(verticalSpacer);
-
-
-        verticalLayout->addWidget(frame_7);
+        verticalLayout->addWidget(uniqueWarningLabel);
 
         frame_8 = new QFrame(frame);
         frame_8->setObjectName(QString::fromUtf8("frame_8"));
@@ -344,8 +329,9 @@ public:
         label_4->setText(QCoreApplication::translate("TokenDlg", "Templates", nullptr));
         label_2->setText(QCoreApplication::translate("TokenDlg", "Token string", nullptr));
         label_3->setText(QCoreApplication::translate("TokenDlg", "Example result:", nullptr));
-        label_5->setText(QCoreApplication::translate("TokenDlg", "<html><head/><body><p>Edits to the token string are automatically saved to the currently selected template.</p></body></html>", nullptr));
-        uniqueWarningLabel->setText(QCoreApplication::translate("TokenDlg", "<html><head/><body><p><span style=\" font-weight:600; color:#ffff00;\">Warning:</span> The tokenized file name is unlikely to produce unique file names. Consider including the ORIGINAL FILENAME, time MINUTE and SECOND or a sequence XX... </p></body></html>", nullptr));
+        label_5->setText(QCoreApplication::translate("TokenDlg", "Edits to the token string are automatically saved to the currently selected template.\n"
+"", nullptr));
+        uniqueWarningLabel->setText(QCoreApplication::translate("TokenDlg", "<html><head/><body><p><span style=\" font-weight:600; color:#ffff00;\">Warning:</span> The tokenized file name is unlikely to produce unique file names. Consider including the ORIGINAL FILENAME, time MINUTE and SECOND or a sequence XXXX</p></body></html>", nullptr));
         renameBtn->setText(QCoreApplication::translate("TokenDlg", "Rename", nullptr));
         newBtn->setText(QCoreApplication::translate("TokenDlg", "New", nullptr));
         deleteBtn->setText(QCoreApplication::translate("TokenDlg", "Delete", nullptr));

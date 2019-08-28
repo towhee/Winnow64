@@ -4467,7 +4467,7 @@ void MW::createAppStyle()
     // add error trapping for file io  rgh todo
     QFile fStyle(":/qss/winnow.css");
     fStyle.open(QIODevice::ReadOnly);
-    css2 += fStyle.readAll();
+    cssBase += fStyle.readAll();
 
     if (isSettings) {
         G::fontSize = setting->value("fontSize").toString();
@@ -4476,7 +4476,7 @@ void MW::createAppStyle()
         G::fontSize = "13";
     }
     css1 = "QWidget {font-size: " + G::fontSize + "px;}";
-    css = css1 + css2;
+    css = css1 + cssBase;
     this->setStyleSheet(css);
     //    QApplication::setStyle(QStyleFactory::create("fusion"));
 }
@@ -6399,8 +6399,8 @@ void MW::setFontSize(int fontPixelSize)
     #endif
     }
     G::fontSize = QString::number(fontPixelSize);
-    QString s = "QWidget {font-size: " + G::fontSize + "px;}" + css2;
-    this->setStyleSheet(s);
+    css = "QWidget {font-size: " + G::fontSize + "px;}" + cssBase;
+    this->setStyleSheet(css);
 /*
     infoView->resize(infoView->width(), infoView->height());    // does not trigger sizeHint
     infoView->layout()->update();                               // does not trigger sizeHint
@@ -6409,10 +6409,10 @@ void MW::setFontSize(int fontPixelSize)
     infoView->updateGeometry();
 */
     infoView->updateInfo(currentRow);                           // triggers sizehint!
-    bookmarks->setStyleSheet(s);
-    fsTree->setStyleSheet(s);
-    filters->setStyleSheet(s);
-    tableView->setStyleSheet(s);
+    bookmarks->setStyleSheet(css);
+    fsTree->setStyleSheet(css);
+    filters->setStyleSheet(css);
+    tableView->setStyleSheet(css);
 }
 
 void MW::setInfoFontSize()
@@ -8749,6 +8749,13 @@ void MW::ingest()
 
         connect(ingestDlg, SIGNAL(revealIngestLocation(QString)),
                 this, SLOT(revealInFileBrowser(QString)));
+
+        // make sure the font is not too big for the ingest dialof
+        int n = G::fontSize.toInt();
+        if (n > 17) {
+            QString s = "QWidget {font-size: 17px;}" + cssBase;
+            ingestDlg->setStyleSheet(s);
+        }
 
         bool ingested = ingestDlg->exec();
         delete ingestDlg;

@@ -34,11 +34,13 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     setEditTriggers(QAbstractItemView::AllEditTriggers);
     indentation = 15;
     setIndentation(indentation);
+
     model = new QStandardItemModel;
     setModel(model);
     propertyDelegate = new PropertyDelegate(this);
     setItemDelegate(propertyDelegate);
     styleOptionViewItem = new QStyleOptionViewItem;
+
     connect(propertyDelegate, &PropertyDelegate::editorWidgetToDisplay,
             this, &PropertyEditor::editorWidgetToDisplay);
 

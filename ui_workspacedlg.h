@@ -55,7 +55,7 @@ public:
         workspaceCB->setIconSize(QSize(16, 24));
         workspaceLbl = new QLabel(Workspacedlg);
         workspaceLbl->setObjectName(QString::fromUtf8("workspaceLbl"));
-        workspaceLbl->setGeometry(QRect(32, 30, 91, 16));
+        workspaceLbl->setGeometry(QRect(32, 30, 421, 16));
         layoutWidget = new QWidget(Workspacedlg);
         layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
         layoutWidget->setGeometry(QRect(24, 120, 431, 32));
