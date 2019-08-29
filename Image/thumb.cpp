@@ -63,7 +63,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
         // let thumbReader do its thing
         thumbReader.setFileName(fPath);
         QSize size = thumbReader.size();
-        qDebug() << __FUNCTION__ << fPath << "thumbReader.imageCount =" << thumbReader.imageCount();
+//        qDebug() << __FUNCTION__ << fPath << "thumbReader.imageCount =" << thumbReader.imageCount();
         size.scale(thumbMax, Qt::KeepAspectRatio);
         thumbReader.setScaledSize(size);
         image = thumbReader.read();
@@ -142,7 +142,9 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
 bool Thumb::loadThumb(QString &fPath, QImage &image)
 {
 /*
-
+Load a thumbnail preview as a decoration icon in the datamodel dm in column 0. Raw files, jpg
+and tif files can contain smaller previews. Check if they do and load the smaller preview as
+that is faster than loading the entire full resolution image just to get a thumbnail.
 */
     {
     #ifdef ISDEBUG
@@ -157,6 +159,11 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
     bool success = false;
     err = "";
     int row = dm->fPathRow[fPath];
+
+    // The image type might not have metadata we can read
+    if (!metadata->getMetadataFormats.contains(ext)) {
+        return loadFromEntireFile(fPath, image);
+    }
 
     // Check if metadata has been cached for this image
     if (dm->index(row, G::MetadataLoadedColumn).data().isNull()) {

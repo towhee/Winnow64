@@ -102,6 +102,7 @@ public:
 
     QStringList rawFormats;
     QStringList sidecarFormats;
+    QStringList getMetadataFormats;
     QStringList internalXmpFormats;
     QStringList xmpWriteFormats;
     QStringList supportedFormats;

@@ -1183,16 +1183,19 @@ delegate use of the current index must check the column.
     int dmRow = dm->fPathRow[fPath];
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-            metadata->imageMetadata.row = dmRow;
-            dm->addMetadataForItem(metadata->imageMetadata);
+        QString ext = fileInfo.suffix().toLower();
+        if (metadata->getMetadataFormats.contains(ext)) {
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+                metadata->imageMetadata.row = dmRow;
+                dm->addMetadataForItem(metadata->imageMetadata);
+            }
         }
     }
 
     // updates ********************************************************************************
 
     // new file name appended to window title
-    setWindowTitle("Winnow - " + fPath);
+    setWindowTitle(winnowWithVersion + "   " + fPath);
 
     if (!G::isSlideShow) progressLabel->setVisible(isShowCacheStatus);
 
@@ -4619,7 +4622,8 @@ parameters.  Any visibility changes are executed.
         imageCacheThread->updateImageCachePosition(/*fPath*/);
 
     // update visibility if preferences have been changed
-    progressLabel->setVisible(isShowCacheStatus);
+    progressLabel->setVisible(isShowCacheThreadActivity);
+//    progressLabel->setVisible(isShowCacheStatus);
 
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
@@ -4802,7 +4806,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QStri
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__, calledby);
+    G::track(__FUNCTION__, calledBy);
     #endif
     }
     if (isRunning) {
@@ -10092,7 +10096,17 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-
+    int a = 10;
+    int b = 5;
+    qDebug() << __FUNCTION__ << "a =" << a << "b =" << b << "a/b =" << a / b;
+    a = 10;
+    b = 3;
+    qDebug() << __FUNCTION__ << "a =" << a << "b =" << b << "a/b =" << a / b;
+    a = 10;
+    b = 11;
+    qDebug() << __FUNCTION__ << "a =" << a << "b =" << b << "a/b =" << a / b;
+    a = 10;
+    b = 11;
 }
 
 // End MW

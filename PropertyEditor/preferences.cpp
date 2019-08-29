@@ -17,14 +17,8 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
     QFontMetrics fm(fnt);
     captionColumnWidth = fm.boundingRect("==Incremental amount to load==").width();
     valueColumnWidth = fm.boundingRect("==Next / Previous Image==").width();
-//    setColumnWidth(0, 400);
-//    setColumnWidth(1, col1Width);
 
-
-//    captionColumnWidth = 225;
-//    valueColumnWidth = 200;
     addItems();
-//    expandAll();
 }
 
 void Preferences::itemChange(QModelIndex idx)

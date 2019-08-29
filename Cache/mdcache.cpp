@@ -585,7 +585,6 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
 //             << "rowCount =" << dm->sf->rowCount();
     for (int row = start; row < end; ++row) {
         if (abort) {
-//            qDebug() << __FUNCTION__ << "ABORTING AT ROW" << row;
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
@@ -658,12 +657,18 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
         // load metadata
         if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
             QFileInfo fileInfo(fPath);
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-                metadata->imageMetadata.row = dmRow;
-                dm->addMetadataForItem(metadata->imageMetadata);
-            }
-            else {
-                qDebug() << __FUNCTION__ << "Failed to load metadata for" << fPath;
+
+            // only read metadata from files that we know how to
+            QString ext = fileInfo.suffix().toLower();
+            if (metadata->getMetadataFormats.contains(ext)) {
+                qDebug() << __FUNCTION__ << fPath << ext;
+                if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+                    metadata->imageMetadata.row = dmRow;
+                    dm->addMetadataForItem(metadata->imageMetadata);
+                }
+                else {
+                    qDebug() << __FUNCTION__ << "Failed to load metadata for" << fPath;
+                }
             }
         }
         mutex.unlock();
