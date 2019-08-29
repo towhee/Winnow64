@@ -68,6 +68,7 @@ public:
     MW(QWidget *parent = nullptr);
 
     QString version = "Version: 1.0 released 2019-08-25";
+    QString winnowWithVersion = "Winnow 1.0";
     QString website = "Website: "
             "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"

@@ -1,18 +1,7 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
-//#define ISDEBUG        // Uncomment this line to show debugging output
-//#define ISPROFILE      // Uncomment this line to show profiling output
-//#define ISTEST         // Uncomment this line to show testing output
-
-//#define CHAR static_cast<char>
-//#define INT static_cast<int>
-//#define UINT static_cast<uint>
-//#define LONG static_cast<long>
-//#define FLOAT static_cast<float>
-//#define DOUBLE static_cast<double>
-
-#define TRACK
+#define ISDEBUG        // Uncomment this line to show debugging output
 
 #include <QtWidgets>
 #include <QColor>
@@ -25,7 +14,7 @@
 #include "popup.h"
 
 #define ICON_MIN	40
-#define ICON_MAX	480  // 256
+#define ICON_MAX	480  // 256 is default
 
 namespace G
 {

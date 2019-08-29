@@ -84,9 +84,13 @@ void Metadata::initSupportedFiles()
     }
     // add raw file types here as they are supported
     rawFormats << "arw" << "cr2" << "dng" << "nef" << "orf" << "raf" << "sr2" << "rw2";
-    sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2" << "jpg";
+    getMetadataFormats << "arw" << "cr2" << "dng" << "nef" << "orf" << "raf" << "sr2" << "rw2"
+                       << "jpg" << "jpeg" << "tif";
+    sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2"
+                   << "jpg" << "jpeg";
     internalXmpFormats << "notyetjpg";
-    xmpWriteFormats << "jpg" << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2";
+    xmpWriteFormats << "jpg" << "jpeg" << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2"
+                    << "rw2";
 
     supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "dng" << "gif" << "heic"
     << "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" << "orf" <<

@@ -1,9 +1,5 @@
 BUGS
-- Reinstate check for updates
-- InfoView monitor not showing if winnow opened as full screen
 - Mac check for updates not done yet
-- Run multiple instances of Winnow?? Mac touchpad single click issues
-- Problems with D:\Programming\Icons\16x16\actions
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
@@ -18,6 +14,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Check available memory vs cache size
 - Search
 - Refresh selected images
 - Copy image
@@ -25,11 +22,9 @@ ENHANCEMENTS
 - Read keywords
 - Remove Windows Registry settings during uninstall
 - Write xmp into eligible files ???
-- TableView adjust to changing font size
 - Read xmp sidecars when open folder
 - Check for updates on Mac
 - Detect drive mounting
-- Make all message boxes consistent (see runExternalApp)
 - When ingesting confirm all files copied correctly (option)
 - Add completer for title in metadata
 - Get Sony image count, camera SN
@@ -37,6 +32,11 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Trying to read metadata from an ICO file
+- Make all message boxes consistent (see runExternalApp)
+- TableView adjust to changing font size
+- Hide cache status bar in preferences
+- Reinstate check for updates
 - Scale text size
 - Filters not always updating correctly
 - Ingest only filtered items

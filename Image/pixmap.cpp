@@ -52,7 +52,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     int totDelay = 500;     // milliseconds
     int msDelay = 0;        // total incremented delay
-    int msInc = 10;         // amount to increment each try
+    uint msInc = 10;         // amount to increment each try
 
     uint offsetFullJpg = 0;
     uint lengthFullJpg = 0;
@@ -145,31 +145,32 @@ bool Pixmap::load(QString &fPath, QImage &image)
     #ifdef ISDEBUG
     G::track(__FUNCTION__, "Loaded " + fPath);
     #endif
-    QTransform trans;
-    int orientation = dm->index(row, G::OrientationColumn).data().toInt();
-    int rotationDegrees = dm->index(row, G::RotationDegreesColumn).data().toInt();
-//    int orientation = metadata->getOrientation(fPath);
-//    int rotationDegrees = metadata->getRotation(fPath);
-    int degrees;
-    if (orientation) {
-        switch(orientation) {
-            case 6:
-                degrees = rotationDegrees + 90;
-                if (degrees > 360) degrees = degrees - 360;
-                trans.rotate(degrees);
-                image = image.transformed(trans, Qt::SmoothTransformation);
-                break;
-            case 8:
-                degrees = rotationDegrees + 270;
-                if (degrees > 360) degrees = degrees - 360;
-                trans.rotate(degrees);
-                image = image.transformed(trans, Qt::SmoothTransformation);
-                break;
+
+    if (metadata->getMetadataFormats.contains(ext)) {
+        QTransform trans;
+        int orientation = dm->index(row, G::OrientationColumn).data().toInt();
+        int rotationDegrees = dm->index(row, G::RotationDegreesColumn).data().toInt();
+        int degrees;
+        if (orientation) {
+            switch(orientation) {
+                case 6:
+                    degrees = rotationDegrees + 90;
+                    if (degrees > 360) degrees = degrees - 360;
+                    trans.rotate(degrees);
+                    image = image.transformed(trans, Qt::SmoothTransformation);
+                    break;
+                case 8:
+                    degrees = rotationDegrees + 270;
+                    if (degrees > 360) degrees = degrees - 360;
+                    trans.rotate(degrees);
+                    image = image.transformed(trans, Qt::SmoothTransformation);
+                    break;
+            }
         }
-    }
-    else if (rotationDegrees){
-        trans.rotate(rotationDegrees);
-        image = image.transformed(trans, Qt::SmoothTransformation);
+        else if (rotationDegrees){
+            trans.rotate(rotationDegrees);
+            image = image.transformed(trans, Qt::SmoothTransformation);
+        }
     }
 
     // record any errors

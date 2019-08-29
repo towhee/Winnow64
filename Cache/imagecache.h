@@ -45,15 +45,15 @@ public:
     struct Cache {
         int key;                    // current image
         int prevKey;                // used to establish directionof travel
-        uint toCacheKey;            // next file to cache
-        uint toDecacheKey;          // next file to remove from cache
+        int toCacheKey;             // next file to cache
+        int toDecacheKey;           // next file to remove from cache
         bool isForward;             // direction of travel in folder
         int countAfterDirectionChange; // # images viewed after direction change
-        float wtAhead;              // ratio cache ahead vs behind
+        int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
         int totFiles;               // number of images available
-        uint currMB;                // the current MB consumed by the cache
-        uint maxMB;                 // maximum MB available to cache
-        uint folderMB;              // MB required for all files in folder
+        int currMB;                 // the current MB consumed by the cache
+        int maxMB;                  // maximum MB available to cache
+        int folderMB;               // MB required for all files in folder
         int targetFirst;            // beginning of target range to cache
         int targetLast;             // end of the target range to cache
         bool isShowCacheStatus;     // show in app status bar
@@ -70,7 +70,7 @@ public:
         bool isCached;              // has image been cached
         bool isTarget;              // is this image targeted to be cached
         int priority;               // priority to cache image
-        float sizeMB;               // memory req'd to cache iamge
+        int sizeMB;                 // memory req'd to cache iamge
     } cacheItem;
 
     QList<CacheItem> cacheItemList;
@@ -96,10 +96,10 @@ private:
     Metadata *metadata;
     Pixmap *getImage;
 
-    QList<uint>toCache;
-    QList<uint>toDecache;
+    QList<int>toCache;
+    QList<int>toDecache;
 
-    ulong getImCacheSize();         // add up total MB cached
+    int getImCacheSize();           // add up total MB cached
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
     bool nextToCache();             // find highest priority not cached
@@ -109,7 +109,7 @@ private:
     static bool keySort(const CacheItem &k1, const CacheItem &k2);
     void buildImageCacheList(); //
     void updateImageCacheList(); //
-    QSize scalePreview(ulong w, ulong h);
+    QSize scalePreview(int w, int h);
     QString reportCacheProgress(QString action);
 };
 

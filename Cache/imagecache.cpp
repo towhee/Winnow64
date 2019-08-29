@@ -72,7 +72,7 @@ cache: cache management parameters
         uint toCacheKey;            // next file to cache
         uint toDecacheKey;          // next file to remove from cache
         bool isForward;             // direction of travel in folder
-        float wtAhead;              // ratio cache ahead vs behind
+        int wtAhead;                // ratio cache ahead vs behind
         int totFiles;               // number of images available
         uint currMB;                // the current MB consumed by the cache
         uint maxMB;                 // maximum MB available to cache
@@ -182,7 +182,7 @@ scroll events and the imageCacheThread has been paused to resume loading the ima
     if (!isRunning()) start(IdlePriority);
 }
 
-QSize ImageCache::scalePreview(ulong w, ulong h)
+QSize ImageCache::scalePreview(int w, int h)
 {
     {
     #ifdef ISDEBUG
@@ -205,7 +205,7 @@ QSize ImageCache::getPreviewSize()
     return cache.previewSize;
 }
 
-ulong ImageCache::getImCacheSize()
+int ImageCache::getImCacheSize()
 {
     // return the current size of the cache
     {
@@ -213,7 +213,7 @@ ulong ImageCache::getImCacheSize()
     G::track(__FUNCTION__);
     #endif
     }
-    ulong cacheMB = 0;
+    int cacheMB = 0;
     for (int i = 0; i < cacheItemList.size(); ++i) {
         if (cacheItemList.at(i).isCached)
             cacheMB += cacheItemList.at(i).sizeMB;
@@ -264,7 +264,7 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
 
     // assign target files to cache and build a list by priority
     // also build a list of files to decache
-    uint sumMB = 0;
+    int sumMB = 0;
     for (int i = 0; i < cache.totFiles; ++i) {
         // check if item metadata has been loaded and will be targeted
 //        if (sumMB < cache.maxMB && !cacheItemList.at(i).isMetadata) {
@@ -657,9 +657,9 @@ It is built from dm->sf (sorted and/or filtered datamodel).
         cacheItem.isTarget = false;
         cacheItem.priority = i;
         // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024
-        ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
-        ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
-        cacheItem.sizeMB = (float)w * h / 262144;
+        float w = dm->sf->index(i, G::WidthColumn).data().toFloat();
+        int h = dm->sf->index(i, G::HeightColumn).data().toInt();
+        cacheItem.sizeMB = static_cast<int>(w * h / 262144);
 //        if (cache.usePreview) {
 //            QSize p = scalePreview(w, h);
 //            w = p.width();
@@ -925,8 +925,8 @@ void ImageCache::run()
         QImage im;
         if (getImage->load(fPath, im)) {
             // is there room in cache?
-            uint room = cache.maxMB - cache.currMB;
-            uint roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
+            int room = cache.maxMB - cache.currMB;
+            int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
             /*
             qDebug() << __FUNCTION__
                      << "maxMB =" << cache.maxMB
@@ -949,10 +949,11 @@ void ImageCache::run()
             }
             imCache.insert(fPath, im);
             emit updateCacheOnThumbs(fPath, true);
-//            if (cache.usePreview) {
-//                imCache.insert(fPath + "_Preview", im.scaled(cache.previewSize,
-//                   Qt::KeepAspectRatio, Qt::FastTransformation));
-//            }
+/*            if (cache.usePreview) {
+                imCache.insert(fPath + "_Preview", im.scaled(cache.previewSize,
+                   Qt::KeepAspectRatio, Qt::FastTransformation));
+            }
+*/
         }
         cacheItemList[cache.toCacheKey].isCached = true;
         if (!toCache.isEmpty()) toCache.removeFirst();
@@ -966,7 +967,7 @@ void ImageCache::run()
     if(cache.isShowCacheStatus)
         emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
 
-    emit updateIsRunning(false, true);
+    emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
 //    reportCache("Image cache updated for " + cache.dir);
 //    reportCacheManager("Image cache updated for " + cache.dir);
 }
