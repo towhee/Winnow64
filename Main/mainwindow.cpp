@@ -1853,7 +1853,6 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     if (isCurrentFolderOkay) {
         QModelIndex idx = fsTree->fsModel->index(fPath);
 //        QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
-        qDebug() << __FUNCTION__;
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
@@ -10096,17 +10095,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    int a = 10;
-    int b = 5;
-    qDebug() << __FUNCTION__ << "a =" << a << "b =" << b << "a/b =" << a / b;
-    a = 10;
-    b = 3;
-    qDebug() << __FUNCTION__ << "a =" << a << "b =" << b << "a/b =" << a / b;
-    a = 10;
-    b = 11;
-    qDebug() << __FUNCTION__ << "a =" << a << "b =" << b << "a/b =" << a / b;
-    a = 10;
-    b = 11;
+    QVariant x = cmsMagicNumber;
+    qDebug() << __FUNCTION__ << x;
 }
 
 // End MW

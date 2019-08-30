@@ -1,0 +1,13 @@
+prefix=D:/My Projects/Winnow Project/Winnow64/Lib/zlib-1.2.11/out/install/x64-Release
+exec_prefix=D:/My Projects/Winnow Project/Winnow64/Lib/zlib-1.2.11/out/install/x64-Release
+libdir=D:/My Projects/Winnow Project/Winnow64/Lib/zlib-1.2.11/out/install/x64-Release/lib
+sharedlibdir=D:/My Projects/Winnow Project/Winnow64/Lib/zlib-1.2.11/out/install/x64-Release/lib
+includedir=D:/My Projects/Winnow Project/Winnow64/Lib/zlib-1.2.11/out/install/x64-Release/include
+
+Name: zlib
+Description: zlib compression library
+Version: 1.2.11
+
+Requires:
+Libs: -L${libdir} -L${sharedlibdir} -lz
+Cflags: -I${includedir}

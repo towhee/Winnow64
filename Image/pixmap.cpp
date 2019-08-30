@@ -54,6 +54,15 @@ bool Pixmap::load(QString &fPath, QImage &image)
     int msDelay = 0;        // total incremented delay
     uint msInc = 10;         // amount to increment each try
 
+//    QString inProfilePath = "D:/Programming/ICC Profiles/AdobeRGB1998.icc";
+    QString inProfilePath = "C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm";
+    QString outProfilePath = "C:/Windows/System32/spool/drivers/color/BenQ SW320.icm";
+    cmsHPROFILE hInProfile = cmsOpenProfileFromFile(QFile::encodeName(inProfilePath).constData(), "r");;
+    cmsHPROFILE hOutProfile = cmsOpenProfileFromFile(QFile::encodeName(outProfilePath).constData(), "r");;
+//    cmsHPROFILE hOutProfile = cmsCreate_sRGBProfile();
+    cmsHTRANSFORM hTransform;
+    cmsUInt8Number RGB[3];
+
     uint offsetFullJpg = 0;
     uint lengthFullJpg = 0;
     QFileInfo fileInfo(fPath);
@@ -86,6 +95,15 @@ bool Pixmap::load(QString &fPath, QImage &image)
                     bool seekSuccess = imFile.seek(offsetFullJpg);
                     if (seekSuccess) {
                         QByteArray buf = imFile.read(lengthFullJpg);
+
+                        // get icc profile
+                        hInProfile = cmsOpenProfileFromMem(buf, lengthFullJpg);
+                        if (hInProfile == nullptr)
+                            qDebug() << __FUNCTION__ << "No ICC profile available";
+                        else {
+                            qDebug() << __FUNCTION__ << "ICC profile loaded";
+                        }
+
                         if (image.loadFromData(buf, "JPEG")) {
                             imFile.close();
                             success = true;
@@ -125,12 +143,36 @@ bool Pixmap::load(QString &fPath, QImage &image)
             if (imFile.open(QIODevice::ReadOnly)) {
                 // close it to allow qt load to work
                 imFile.close();
+
+                // ICC profile
+//                hInProfile = cmsOpenProfileFromFile(QFile::encodeName(fPath).constData(), "r");
+//                if (hInProfile == nullptr)
+//                    qDebug() << __FUNCTION__ << "No ICC profile available";
+//                else {
+//                    qDebug() << __FUNCTION__ << "ICC profile loaded";
+//                }
+
                 // directly load the image using qt library
                 success = image.load(fPath);
                 if (!success) {
                     err = "Could not read image" + fPath;
                     break;
                 }
+
+                // convert profile
+
+                hTransform = cmsCreateTransform(hInProfile,
+                                                TYPE_BGRA_8,
+                                                hOutProfile,
+                                                TYPE_BGRA_8,
+                                                INTENT_PERCEPTUAL, 0);
+                if (hTransform == NULL) qDebug() << __FUNCTION__ << "NULL return";
+                cmsCloseProfile(hInProfile);
+                cmsCloseProfile(hOutProfile);
+                cmsDoTransform(hTransform, image.constBits(),
+                               image.bits(), image.width()*image.height());
+                cmsDeleteTransform(hTransform);
+
             }
             else {
                 err = "Could not open file for image" + fPath;    // try again

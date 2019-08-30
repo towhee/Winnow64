@@ -54,6 +54,7 @@
 
 //#include "Image/tiffhandler.h";
 #include "Lib/zlib/zlib.h"
+#include "lcms2.h"
 
 class MW : public QMainWindow
 {

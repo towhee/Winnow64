@@ -12,6 +12,8 @@ QT += concurrent
 QT += xmlpatterns
 
 HEADERS += Cache/imagecache.h
+#    Image/colorprofile.h \
+#    Image/colorprofile_p.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/datamodel.h
@@ -59,6 +61,7 @@ HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
 
 SOURCES += Cache/imagecache.cpp
+#    Image/colorprofile.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
@@ -151,13 +154,21 @@ DISTFILES += notes/xmp.txt
 mac:LIBS += -framework ApplicationServices
 mac:LIBS += -framework AppKit
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/release/ -lzlib
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/zlib/debug/ -lzlib
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib
 
 INCLUDEPATH += $$PWD/Lib/zlib
 DEPENDPATH += $$PWD/Lib/zlib
 
-win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/release/libzlib.a
-else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/debug/libzlib.a
-else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/release/zlib.lib
-else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/debug/zlib.lib
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/x64-Release/libzlib.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/x64-Release/zlib.lib
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_static
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
+
+INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
+DEPENDPATH += $$PWD/Lib/lcms2-2.9/include
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/liblcms2_static.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/liblcms2_staticd.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/lcms2_static.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/lcms2_staticd.lib
