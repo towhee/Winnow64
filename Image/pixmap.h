@@ -6,6 +6,7 @@
 #include <QHash>
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
+#include "lcms2.h"                      // little color management system
 
 class Pixmap : public QObject
 {
@@ -18,6 +19,8 @@ public:
 private:
     DataModel *dm;
     Metadata *metadata;
+
+
 };
 
 #endif // PIXMAP_H

@@ -911,6 +911,7 @@ void ImageCache::run()
     }
     emit updateIsRunning(true, true);
     static QString prevFileName = "";
+    QTime t = QTime::currentTime().addMSecs(500);
 
     while (nextToCache()) {
         if (abort) {
@@ -958,8 +959,11 @@ void ImageCache::run()
         cacheItemList[cache.toCacheKey].isCached = true;
         if (!toCache.isEmpty()) toCache.removeFirst();
         cache.currMB = getImCacheSize();
-        if(cache.isShowCacheStatus)
+        // only update
+        if(cache.isShowCacheStatus && QTime::currentTime() > t) {
             emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
+            t = QTime::currentTime().addMSecs(500);
+        }
         prevFileName = fPath;
     }
     checkForOrphans();
