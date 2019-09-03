@@ -47,10 +47,12 @@ public:
     quint32 lengthThumbJPG;
     quint32 offsetSmallJPG;
     quint32 lengthSmallJPG;
-
     quint32 xmpSegmentOffset;
     quint32 xmpNextSegmentOffset;
     bool isXmp;
+    quint32 iccSegmentOffset;
+    quint32 iccSegmentLength;
+    QByteArray iccBuf;
     quint32 orientationOffset;
     int orientation;
     int rotationDegrees;            // additional rotation from edit
@@ -103,6 +105,7 @@ public:
     QStringList rawFormats;
     QStringList sidecarFormats;
     QStringList getMetadataFormats;
+    QStringList embeddedICCFormats;
     QStringList internalXmpFormats;
     QStringList xmpWriteFormats;
     QStringList supportedFormats;
@@ -188,7 +191,8 @@ private:
 //    quint32 getExifOffset(quint32 offsetIfd0);      //update to use ifdDataHash
     QString getString(quint32 offset, quint32 length);
     QByteArray getByteArray(quint32 offset, quint32 length);
-    void getSegments(qint64 offset);
+    void getJpgSegments(qint64 offset);
+    void getJpgICC(qint64 offset);
     bool getDimensions(quint32 jpgOffset);
     int getNewOrientation(int orientation, int rotation);
 

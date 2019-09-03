@@ -69,7 +69,6 @@ namespace G
         TitleColumn,
         EmailColumn,
         UrlColumn,
-        // unavailable for TableView from here on (move items above to show and below to hide)
         MetadataLoadedColumn,
         // original values
         _RatingColumn,
@@ -90,6 +89,9 @@ namespace G
         XmpSegmentOffsetColumn,
         XmpNextSegmentOffsetColumn,
         IsXMPColumn,
+        ICCSegmentOffsetColumn,
+        ICCSegmentLengthColumn,
+        ICCBufColumn,
         OrientationOffsetColumn,
         OrientationColumn,
         RotationDegreesColumn,
@@ -108,6 +110,17 @@ namespace G
         int row;
         QImage image;
     };
+
+    struct WinScreen {
+        QString adaptor;
+        QString device;
+        QString profile;
+    };
+    extern QHash<QString, WinScreen> winScreenHash;
+    extern QString winOutProfilePath;
+    extern QByteArray iccBuf;
+    extern quint32 iccLen;
+    extern char* iccData;
 
     extern int maxIconSize;
     extern int minIconSize;

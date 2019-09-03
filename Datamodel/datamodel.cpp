@@ -200,6 +200,9 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::XmpSegmentOffsetColumn, new QStandardItem("XmpSegmentOffset")); horizontalHeaderItem(G::XmpSegmentOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::XmpNextSegmentOffsetColumn, new QStandardItem("XmpNextSegmentOffset")); horizontalHeaderItem(G::XmpNextSegmentOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IsXMPColumn, new QStandardItem("IsXMP")); horizontalHeaderItem(G::IsXMPColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ICCSegmentOffsetColumn, new QStandardItem("ICCSegmentOffsetColumn")); horizontalHeaderItem(G::ICCSegmentOffsetColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ICCSegmentLengthColumn, new QStandardItem("ICCSegmentOffsetColumn")); horizontalHeaderItem(G::ICCSegmentLengthColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ICCBufColumn, new QStandardItem("ICCSegmentOffsetColumn")); horizontalHeaderItem(G::ICCBufColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OrientationOffsetColumn, new QStandardItem("OrientationOffset")); horizontalHeaderItem(G::OrientationOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OrientationColumn, new QStandardItem("Orientation")); horizontalHeaderItem(G::OrientationColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees")); horizontalHeaderItem(G::RotationDegreesColumn)->setData(true, G::GeekRole);
@@ -726,6 +729,9 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::XmpSegmentOffsetColumn), m.xmpSegmentOffset);
     setData(index(row, G::XmpNextSegmentOffsetColumn), m.xmpNextSegmentOffset);
     setData(index(row, G::IsXMPColumn), m.isXmp);
+    setData(index(row, G::ICCSegmentOffsetColumn), m.iccSegmentOffset);
+    setData(index(row, G::ICCSegmentLengthColumn), m.iccSegmentLength);
+    setData(index(row, G::ICCBufColumn), m.iccBuf);
     setData(index(row, G::OrientationOffsetColumn), m.orientationOffset);
     setData(index(row, G::OrientationColumn), m.orientation);
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);

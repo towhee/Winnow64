@@ -7,11 +7,11 @@ class ImageMetadata
 {
 /*
 This structure of all the fields in metadata is used to insert a new item
-into "QMap<QString, ImageMetadata> metaCache" in Metadata::loadImageMetadata.
+into the datamodel dm->addMetadataForItem(ImageMetadata m).
 */
 public:
-    int row = 0;                // datamodel row
-    bool isPicked = false;          //rgh required?
+    int row = 0;                            // datamodel row
+    bool isPicked = false;                  //rgh required?
     bool isSearch = false;
     quint32 offsetFullJPG = 0;
     quint32 lengthFullJPG = 0;
@@ -19,13 +19,15 @@ public:
     quint32 lengthThumbJPG = 0;
     quint32 offsetSmallJPG = 0;
     quint32 lengthSmallJPG = 0;
-
     quint32 xmpSegmentOffset = 0;
     quint32 xmpNextSegmentOffset = 0;
     bool isXmp = false;
+    quint32 iccSegmentOffset;
+    quint32 iccSegmentLength;
+    QByteArray iccBuf;
     quint32 orientationOffset = 0;
     int orientation = 0;
-    int rotationDegrees = 0;            // additional rotation from edit
+    int rotationDegrees = 0;                // additional rotation from edit
     uint width = 0;
     uint height = 0;
     QString dimensions = "";

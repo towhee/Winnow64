@@ -11,9 +11,9 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h
-#    Image/colorprofile.h \
-#    Image/colorprofile_p.h
+HEADERS += Cache/imagecache.h \
+    Utilities/enumeratewinscreens.h \
+    Utilities/icc.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/datamodel.h
@@ -60,8 +60,9 @@ HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
 
-SOURCES += Cache/imagecache.cpp
-#    Image/colorprofile.cpp
+SOURCES += Cache/imagecache.cpp \
+    Utilities/enumeratewinscreens.cpp \
+    Utilities/icc.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
@@ -153,6 +154,9 @@ DISTFILES += notes/xmp.txt
 
 mac:LIBS += -framework ApplicationServices
 mac:LIBS += -framework AppKit
+
+#QMAKE_CXXFLAGS += /MT
+#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../LIBRARYNAME/Lib/ -lLIBRARY /NODEFAULTLIB:library
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib
 

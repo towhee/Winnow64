@@ -21,8 +21,14 @@ namespace G
     QColor progressTargetColor = QColor(125,125,125);            // Gray
     QColor progressImageCacheColor = QColor(108,150,108);        // Green
 
+    QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitor
+    QString winOutProfilePath;
+    QByteArray iccBuf;
+    quint32 iccLen;
+    char* iccData;
+
     QString mode;                       // In MW: Loupe, Grid, Table or Compare
-    QString fileSelectionChangeSource;                     // GridMouseClick, ThumbMouseClick, TableMouseClick
+    QString fileSelectionChangeSource;  // GridMouseClick, ThumbMouseClick, TableMouseClick
 
     int maxIconSize;
     int minIconSize = 40;

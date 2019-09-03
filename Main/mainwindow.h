@@ -34,6 +34,7 @@
 
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
+#include "Utilities/icc.h"
 
 #include "ingestdlg.h"
 #include "aboutdlg.h"
@@ -53,8 +54,14 @@
 #include "ui_message.h"
 
 //#include "Image/tiffhandler.h";
-#include "Lib/zlib/zlib.h"
-#include "lcms2.h"
+//#include "Lib/zlib/zlib.h"
+//#include "lcms2.h"
+
+// windows api
+//#include "Icm.h"                    // Color management (Mscms.lib or Mscma.dll)
+//#include "Windows.h"
+//#include "WinUser.h"                // req'd for EnumDisplayDevicesW
+#include "Utilities/enumeratewinscreens.h"
 
 class MW : public QMainWindow
 {
@@ -826,6 +833,8 @@ private:
 
     // used in visibility and focus setting for docks
     enum {SetFocus, SetVisible, SetInvisible} dockToggle;
+
+    QString prevScreen;                 // the monitor being used be winnow
 
     bool metadataLoaded;
     bool ignoreDockResize;

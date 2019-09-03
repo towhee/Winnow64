@@ -21,7 +21,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
     QImage.
 
     This function is dependent on metadata being updated first.  Metadata is
-    updated by the mdCache thread that runs every time a new folder is
+    updated by the mdCache metadataCacheThread that runs every time a new folder is
     selected. This function is used in the imageCache thread that stores
     pixmaps on the heap.
 
@@ -38,7 +38,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
     If it succeeds in opening the file it still has to read the embedded jpg and
     convert it to a QImage.  If this fails then either the file format is not
     being properly read or the file is corrupted.  In this case the metadata
-    will be updated to show file not readable.
+    will be updated to show the file is not readable.
 */
     {
     #ifdef ISDEBUG
@@ -54,15 +54,6 @@ bool Pixmap::load(QString &fPath, QImage &image)
     int msDelay = 0;        // total incremented delay
     uint msInc = 10;         // amount to increment each try
 
-//    QString inProfilePath = "D:/Programming/ICC Profiles/AdobeRGB1998.icc";
-    QString inProfilePath = "C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm";
-    QString outProfilePath = "C:/Windows/System32/spool/drivers/color/BenQ SW320.icm";
-    cmsHPROFILE hInProfile = cmsOpenProfileFromFile(QFile::encodeName(inProfilePath).constData(), "r");;
-    cmsHPROFILE hOutProfile = cmsOpenProfileFromFile(QFile::encodeName(outProfilePath).constData(), "r");;
-//    cmsHPROFILE hOutProfile = cmsCreate_sRGBProfile();
-    cmsHTRANSFORM hTransform;
-    cmsUInt8Number RGB[3];
-
     uint offsetFullJpg = 0;
     uint lengthFullJpg = 0;
     QFileInfo fileInfo(fPath);
@@ -73,7 +64,6 @@ bool Pixmap::load(QString &fPath, QImage &image)
     if (metadata->rawFormats.contains(ext)) {
         // raw files handled by Qt
         do {
-//            qDebug() << __FUNCTION__ << "start do loop";
             // Check if metadata has been cached for this image
             if (dm->index(row, G::OffsetFullJPGColumn).data().isNull()) {
                 if (metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__))
@@ -95,17 +85,11 @@ bool Pixmap::load(QString &fPath, QImage &image)
                     bool seekSuccess = imFile.seek(offsetFullJpg);
                     if (seekSuccess) {
                         QByteArray buf = imFile.read(lengthFullJpg);
-
-                        // get icc profile
-                        hInProfile = cmsOpenProfileFromMem(buf, lengthFullJpg);
-                        if (hInProfile == nullptr)
-                            qDebug() << __FUNCTION__ << "No ICC profile available";
-                        else {
-                            qDebug() << __FUNCTION__ << "ICC profile loaded";
-                        }
-
                         if (image.loadFromData(buf, "JPEG")) {
                             imFile.close();
+                            #ifdef Q_OS_WIN
+                                ICC::transform(image);
+                            #endif
                             success = true;
                             break;
                         }
@@ -118,6 +102,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
                     else {
                         err = "Illegal offset to image" + fPath;
                         imFile.close();
+
                         break;
                     }
                 }
@@ -143,36 +128,16 @@ bool Pixmap::load(QString &fPath, QImage &image)
             if (imFile.open(QIODevice::ReadOnly)) {
                 // close it to allow qt load to work
                 imFile.close();
-
-                // ICC profile
-//                hInProfile = cmsOpenProfileFromFile(QFile::encodeName(fPath).constData(), "r");
-//                if (hInProfile == nullptr)
-//                    qDebug() << __FUNCTION__ << "No ICC profile available";
-//                else {
-//                    qDebug() << __FUNCTION__ << "ICC profile loaded";
-//                }
-
                 // directly load the image using qt library
                 success = image.load(fPath);
                 if (!success) {
                     err = "Could not read image" + fPath;
                     break;
                 }
-
-                // convert profile
-
-                hTransform = cmsCreateTransform(hInProfile,
-                                                TYPE_BGRA_8,
-                                                hOutProfile,
-                                                TYPE_BGRA_8,
-                                                INTENT_PERCEPTUAL, 0);
-                if (hTransform == NULL) qDebug() << __FUNCTION__ << "NULL return";
-                cmsCloseProfile(hInProfile);
-                cmsCloseProfile(hOutProfile);
-                cmsDoTransform(hTransform, image.constBits(),
-                               image.bits(), image.width()*image.height());
-                cmsDeleteTransform(hTransform);
-
+                #ifdef Q_OS_WIN
+                    ICC::setInProfile(dm->index(row, G::ICCBufColumn).data().toByteArray());
+                    ICC::transform(image);
+                #endif
             }
             else {
                 err = "Could not open file for image" + fPath;    // try again
