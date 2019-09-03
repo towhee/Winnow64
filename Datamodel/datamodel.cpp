@@ -201,8 +201,9 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::XmpNextSegmentOffsetColumn, new QStandardItem("XmpNextSegmentOffset")); horizontalHeaderItem(G::XmpNextSegmentOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IsXMPColumn, new QStandardItem("IsXMP")); horizontalHeaderItem(G::IsXMPColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ICCSegmentOffsetColumn, new QStandardItem("ICCSegmentOffsetColumn")); horizontalHeaderItem(G::ICCSegmentOffsetColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ICCSegmentLengthColumn, new QStandardItem("ICCSegmentOffsetColumn")); horizontalHeaderItem(G::ICCSegmentLengthColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ICCBufColumn, new QStandardItem("ICCSegmentOffsetColumn")); horizontalHeaderItem(G::ICCBufColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ICCSegmentLengthColumn, new QStandardItem("ICCSegmentLengthColumn")); horizontalHeaderItem(G::ICCSegmentLengthColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ICCBufColumn, new QStandardItem("ICCBuf")); horizontalHeaderItem(G::ICCBufColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ICCSpaceColumn, new QStandardItem("ICCSpace")); horizontalHeaderItem(G::ICCSpaceColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OrientationOffsetColumn, new QStandardItem("OrientationOffset")); horizontalHeaderItem(G::OrientationOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OrientationColumn, new QStandardItem("Orientation")); horizontalHeaderItem(G::OrientationColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees")); horizontalHeaderItem(G::RotationDegreesColumn)->setData(true, G::GeekRole);
@@ -607,6 +608,10 @@ Used by InfoString and IngestDlg
     m.xmpNextSegmentOffset = index(row, G::XmpNextSegmentOffsetColumn).data().toUInt();
     m.orientationOffset = index(row, G::OrientationOffsetColumn).data().toUInt();
     m.isXmp = index(row, G::IsXMPColumn).data().toBool();
+    m.iccSegmentOffset = index(row, G::ICCSegmentOffsetColumn).data().toUInt();
+    m.iccSegmentLength = index(row, G::ICCSegmentLengthColumn).data().toUInt();
+    m.iccBuf = index(row, G::ICCBufColumn).data().toByteArray();
+    m.iccSpace = index(row, G::ICCSegmentOffsetColumn).data().toString();
 //     = index(row, G::RotationDegreesColumn), m.rotationDegrees
     m.metadataLoaded  = index(row, G::MetadataLoadedColumn).data().toBool();
     return m;
@@ -732,6 +737,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::ICCSegmentOffsetColumn), m.iccSegmentOffset);
     setData(index(row, G::ICCSegmentLengthColumn), m.iccSegmentLength);
     setData(index(row, G::ICCBufColumn), m.iccBuf);
+    setData(index(row, G::ICCSpaceColumn), m.iccSpace);
     setData(index(row, G::OrientationOffsetColumn), m.orientationOffset);
     setData(index(row, G::OrientationColumn), m.orientation);
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);

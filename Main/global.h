@@ -92,6 +92,7 @@ namespace G
         ICCSegmentOffsetColumn,
         ICCSegmentLengthColumn,
         ICCBufColumn,
+        ICCSpaceColumn,
         OrientationOffsetColumn,
         OrientationColumn,
         RotationDegreesColumn,

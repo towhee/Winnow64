@@ -135,6 +135,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
                     break;
                 }
                 #ifdef Q_OS_WIN
+                    qDebug() << __FUNCTION__ << fPath + "buf length =" << dm->index(row, G::ICCBufColumn).data().toByteArray().length();
                     ICC::setInProfile(dm->index(row, G::ICCBufColumn).data().toByteArray());
                     ICC::transform(image);
                 #endif

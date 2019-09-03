@@ -1,6 +1,5 @@
 BUGS
 - Mac check for updates not done yet
-- Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
@@ -32,6 +31,7 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Trying to read metadata from an ICO file
 - Make all message boxes consistent (see runExternalApp)
 - TableView adjust to changing font size
