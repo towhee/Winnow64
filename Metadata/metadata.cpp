@@ -4539,12 +4539,16 @@ bool Metadata::formatJPG()
                          ifdDataHash.value(42036).tagCount);
     }
 
-    // read ICC
+    /* Read embedded ICC. The default color space is sRGB. If there is an embedded icc profile
+    and it is sRGB then no point in saving the byte array of the profile since we already have
+    it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
     if (segmentHash.contains("ICC")) {
         if (iccSegmentOffset && iccSegmentLength) {
-            file.seek(iccSegmentOffset);
-            iccBuf = file.read(iccSegmentLength);
-//            qDebug() << __FUNCTION__ << iccBuf;
+            iccSpace = getString(iccSegmentOffset + 52, 4);
+            if (iccSpace != "sRGB") {
+                file.seek(iccSegmentOffset);
+                iccBuf = file.read(iccSegmentLength);
+            }
         }
     }
 
@@ -4836,6 +4840,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.iccSegmentOffset = iccSegmentOffset;
     imageMetadata.iccSegmentLength = iccSegmentLength;
     imageMetadata.iccBuf = iccBuf;
+    imageMetadata.iccSpace = iccSpace;
     imageMetadata.orientationOffset = orientationOffset;
     imageMetadata.width = width;
     imageMetadata.height = height;

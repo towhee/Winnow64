@@ -158,6 +158,10 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::XmpSegmentOffsetColumn) return fm.boundingRect("=XmpSegmentOffsetColumn=").width();
     if (column == G::XmpNextSegmentOffsetColumn) return fm.boundingRect("=XmpNextSegmentOffsetColumn=").width();
     if (column == G::IsXMPColumn) return fm.boundingRect("=IsXMPColumn=").width();
+    if (column == G::ICCSegmentOffsetColumn) return fm.boundingRect("=ICCSegmentOffsetColumn=").width();
+    if (column == G::ICCSegmentLengthColumn) return fm.boundingRect("=ICCSegmentLengthColumn=").width();
+    if (column == G::ICCBufColumn) return fm.boundingRect("=ICCBuf=").width();
+    if (column == G::ICCSpaceColumn) return fm.boundingRect("=ICCSpaceColumn=").width();
     if (column == G::OrientationOffsetColumn) return fm.boundingRect("=OrientationOffsetColumn=").width();
     if (column == G::OrientationColumn) return fm.boundingRect("=OrientationColumn=").width();
     if (column == G::RotationDegreesColumn) return fm.boundingRect("=RotationDegreesColumn=").width();

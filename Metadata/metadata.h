@@ -53,6 +53,7 @@ public:
     quint32 iccSegmentOffset;
     quint32 iccSegmentLength;
     QByteArray iccBuf;
+    QString iccSpace;
     quint32 orientationOffset;
     int orientation;
     int rotationDegrees;            // additional rotation from edit
