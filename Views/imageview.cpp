@@ -176,6 +176,7 @@ to prevent jarring changes in perceived scale by the user.
         }
         // otherwise load full size image from cache
         else {
+//            ICC::transform(imageCacheThread->imCache[fPath]);
             pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
             isPreview = false;
             isLoaded = true;
@@ -191,10 +192,14 @@ to prevent jarring changes in perceived scale by the user.
                 dm->addMetadataForItem(metadata->imageMetadata);
             }
         }
+//        QImage image;
         QPixmap  displayPixmap;
         isLoaded = pixmap->load(fPath, displayPixmap);
+//        isLoaded = pixmap->load(fPath, image);
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
+//            ICC::transform(image);
+//            pmItem->setPixmap(QPixmap::fromImage(image));
             isPreview = false;
         }
         else {

@@ -20,7 +20,7 @@ Metadata::Metadata(QObject *parent) : QObject(parent)
     initFujiMakerHash();
     initPanasonicMakerHash();
     initNikonLensHash();
-    initSupportedFiles();
+    initSupportedFiles();    
     report = false;
 }
 
@@ -86,6 +86,7 @@ void Metadata::initSupportedFiles()
     rawFormats << "arw" << "cr2" << "dng" << "nef" << "orf" << "raf" << "sr2" << "rw2";
     getMetadataFormats << "arw" << "cr2" << "dng" << "nef" << "orf" << "raf" << "sr2" << "rw2"
                        << "jpg" << "jpeg" << "tif";
+    embeddedICCFormats << "jpg" << "jpeg";
     sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2"
                    << "jpg" << "jpeg";
     internalXmpFormats << "notyetjpg";
@@ -2711,7 +2712,7 @@ QList<quint32> Metadata::getSubIfdOffsets(quint32 subIFDaddr, int count)
     return offsets;
 }
 
-void Metadata::getSegments(qint64 offset)
+void Metadata::getJpgSegments(qint64 offset)
 {
 /*
 The JPG file structure is based around a series of file segments.  The marker at
@@ -2746,6 +2747,19 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
                 isXmp = true;
             }
         }
+        // icc
+        else if (marker == 0xFFE2) {
+            segmentHash["ICC"] = static_cast<quint32>(offset);
+            iccSegmentOffset = static_cast<quint32>(offset) + 18;
+            iccSegmentLength = static_cast<quint32>(nextOffset) - iccSegmentOffset;
+            /*qDebug() << __FUNCTION__ << fPath
+                     << "offset =" << offset
+                     << "pos = " << pos
+                     << "length =" << nex
+                     << "next offset =" << nextOffset
+                     << "iccSegmentOffset" << iccSegmentOffset
+                     << "iccSegmentLength" << iccSegmentLength;*/
+        }
         else if (segCodeHash.contains(marker)) {
             segmentHash[segCodeHash[marker]] = static_cast<quint32>(offset);
         }
@@ -2753,7 +2767,7 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
     }
     if (report) {
         reportMetadataHeader("JPG Segment Hash");
-        rpt << "Segment\tOffset\t\tHex\n";
+        rpt << "Segment\t\tOffset\t\tHex\n";
 
         QHashIterator<QString, quint32> i(segmentHash);
         while (i.hasNext()) {
@@ -2762,6 +2776,12 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
                 << QString::number(i.value(), 16).toUpper() << "\n";
         }
     }
+}
+
+void Metadata::getJpgICC(qint64 offset)
+{
+    file.seek(offset);
+
 }
 
 bool Metadata::getDimensions(quint32 jpgOffset)
@@ -3555,7 +3575,7 @@ bool Metadata::formatFuji()
     if (get2(file.read(2)) != 0xFFD8) return false;
 
     // build a hash of jpg segment offsets
-    getSegments(file.pos());
+    getJpgSegments(file.pos());
 
     // read the EXIF data
     if (segmentHash.contains("EXIF")) file.seek(segmentHash["EXIF"]);
@@ -4269,7 +4289,7 @@ bool Metadata::formatPanasonic()
     if (get2(file.read(2)) != 0xFFD8) return 0;
 
     // build a hash of jpg segment offsets
-    getSegments(file.pos());
+    getJpgSegments(file.pos());
 
     // read the embedded JPG EXIF data
     if (segmentHash.contains("EXIF")) {
@@ -4359,6 +4379,9 @@ bool Metadata::formatJPG()
     G::track(__FUNCTION__);
     #endif
     }
+    // init
+    iccSegmentOffset = 0;
+
     //file.open happens in readMetadata
     order = 0x4D4D;
     quint32 startOffset = 0;
@@ -4369,7 +4392,7 @@ bool Metadata::formatJPG()
     }
 
     // build a hash of jpg segment offsets
-    getSegments(file.pos());
+    getJpgSegments(file.pos());
 
     // check if JFIF
     if (segmentHash.contains("JFIF")) {
@@ -4516,6 +4539,15 @@ bool Metadata::formatJPG()
                          ifdDataHash.value(42036).tagCount);
     }
 
+    // read ICC
+    if (segmentHash.contains("ICC")) {
+        if (iccSegmentOffset && iccSegmentLength) {
+            file.seek(iccSegmentOffset);
+            iccBuf = file.read(iccSegmentLength);
+//            qDebug() << __FUNCTION__ << iccBuf;
+        }
+    }
+
     // read IPTC
     if (readNonEssentialMetadata)
         if (segmentHash.contains("IPTC")) readIPTC(segmentHash["IPTC"]);
@@ -4564,6 +4596,9 @@ void Metadata::clearMetadata()
     lengthSmallJPG = 0;
     xmpSegmentOffset = 0;
     orientationOffset = 0;
+    iccSegmentOffset = 0;
+    iccSegmentLength = 0;
+    iccBuf.clear();
     width = 0;
     height = 0;
     orientation = 1;
@@ -4798,6 +4833,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     imageMetadata.xmpSegmentOffset = xmpSegmentOffset;
     imageMetadata.xmpNextSegmentOffset = xmpNextSegmentOffset;
     imageMetadata.isXmp = isXmp;
+    imageMetadata.iccSegmentOffset = iccSegmentOffset;
+    imageMetadata.iccSegmentLength = iccSegmentLength;
+    imageMetadata.iccBuf = iccBuf;
     imageMetadata.orientationOffset = orientationOffset;
     imageMetadata.width = width;
     imageMetadata.height = height;

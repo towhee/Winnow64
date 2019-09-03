@@ -17,7 +17,7 @@ private:
     DataModel *dm;
     Metadata *metadata;
     QString err;
-    QSize thumbMax;         // rgh review hard coding thumb size
+    QSize thumbMax;
 
     bool loadFromData(QString &fPath, QImage &image);
     bool loadFromEntireFile(QString &fPath, QImage &image);

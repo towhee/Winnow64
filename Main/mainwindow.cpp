@@ -311,6 +311,7 @@ void MW::initialize()
     pickStack = new QStack<Pick>;
     slideshowRandomHistoryStack = new QStack<QString>;
     scrollRow = 0;
+    ICC::setInProfile(nullptr);
 //    G::newPopUp();
 }
 
@@ -326,6 +327,7 @@ void MW::setupPlatform()
     #endif
     #ifdef Q_OS_WIN
         setWindowIcon(QIcon(":/images/winnow.png"));
+        EnumerateWinScreens::collectScreensInfo();
     #endif
     #ifdef Q_OS_MAC
         setWindowIcon(QIcon(":/images/winnow.icns"));
@@ -358,6 +360,10 @@ void MW::showEvent(QShowEvent *event)
 
     // show image count in folder panel if no folder selected
     if (!rememberLastDir) QTimer::singleShot(50, fsTree, SLOT(getImageCount()));
+
+    // get the monitor screen for testing against movement to an new screen in setDisplayResolution()
+    QPoint loc = centralWidget->window()->geometry().center();
+    prevScreen = qApp->screenAt(loc)->name();
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -380,6 +386,11 @@ void MW::closeEvent(QCloseEvent *event)
 
 void MW::moveEvent(QMoveEvent *event)
 {
+/*
+When the main winnow window is moved the zoom dialog, if it is open, must be moved as well.
+Also we need to know if the app has been dragged onto another monitor, which may have different
+dimensions and a different icc profile (win only).
+*/
     QMainWindow::moveEvent(event);
     emit resizeMW(this->geometry(), centralWidget->geometry());
     setDisplayResolution();
@@ -6480,14 +6491,22 @@ resolution is used to calculate and report the zoom in ImageView.
     }
     QPoint loc = centralWidget->window()->geometry().center();
 
-#ifdef Q_OS_WIN
+//#ifdef Q_OS_WIN
     QScreen *screen = qApp->screenAt(loc);
     // make sure the centroid is on a screen
-    if(screen != nullptr) {
+    if(screen != nullptr && screen->name() != prevScreen) {
+        prevScreen = screen->name();
         displayHorizontalPixels = screen->geometry().width();
         displayVerticalPixels = screen->geometry().height();
-    }
+#ifdef Q_OS_WIN
+        if (G::winScreenHash.contains(screen->name()))
+            G::winOutProfilePath = "C:/Windows/System32/spool/drivers/color/" +
+                G::winScreenHash[screen->name()].profile;
+        ICC::setOutProfile();
+        qDebug() << __FUNCTION__ << G::winOutProfilePath;
 #endif
+    }
+//#endif
 
 #ifdef Q_OS_MAC
     CGPoint point = loc.toCGPoint();
@@ -6521,7 +6540,6 @@ resolution is used to calculate and report the zoom in ImageView.
     cachePreviewWidth = displayHorizontalPixels;
     cachePreviewHeight = displayVerticalPixels;
     setActualDevicePixelRatio();
-//    updateIconBestFit();            // not helping
 }
 
 void MW::setActualDevicePixelRatio()
@@ -10095,8 +10113,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QVariant x = cmsMagicNumber;
-    qDebug() << __FUNCTION__ << x;
+    const QByteArray &test = dm->index(0, G::ICCBufColumn).data().toByteArray();
 }
 
 // End MW

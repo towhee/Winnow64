@@ -10,6 +10,7 @@
 #include "Views/infostring.h"
 #include "Utilities/dropshadowlabel.h"
 #include "Utilities/classificationlabel.h"
+#include "Utilities/icc.h"
 #include "Image/pixmap.h"
 
 class ImageView : public QGraphicsView
