@@ -6503,7 +6503,6 @@ resolution is used to calculate and report the zoom in ImageView.
             G::winOutProfilePath = "C:/Windows/System32/spool/drivers/color/" +
                 G::winScreenHash[screen->name()].profile;
         ICC::setOutProfile();
-        qDebug() << __FUNCTION__ << G::winOutProfilePath;
 #endif
     }
 //#endif
@@ -8072,7 +8071,7 @@ void MW::compareDisplay()
     */
     thumbDock->setVisible(true);
     thumbDock->raise();
-    thumbView->selectThumb(currentRow);
+//    thumbView->selectThumb(currentRow);
 
     G::mode = "Compare";
     // centralLayout->setCurrentIndex clears selectionModel
@@ -8080,7 +8079,6 @@ void MW::compareDisplay()
     centralLayout->setCurrentIndex(CompareTab);
     recoverSelection();
     prevCentralView = CompareTab;
-
     compareImages->load(centralWidget->size(), isRatingBadgeVisible, selectionModel);
 
     // restore thumbdock to previous state
@@ -8091,7 +8089,7 @@ void MW::compareDisplay()
 void MW::saveSelection()
 {
 /* This function saves the current selection.  This is required, even though the three
-   views (thumbView, gridView and tableVies) share the same selection model, becasue
+   views (thumbView, gridView and tableViews) share the same selection model, because
    when a view is hidden it loses the current index and selection, which has to be
    re-established each time it is made visible.
 */
@@ -9874,6 +9872,7 @@ void MW::openUsbFolder()
 
     }
 
+    refreshFolders();
     bookmarks->selectionModel()->clear();
     subFoldersAction->setChecked(true);
     updateStatusBar();
@@ -10113,7 +10112,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    const QByteArray &test = dm->index(0, G::ICCBufColumn).data().toByteArray();
+    qDebug() << __FUNCTION__ << selectionModel->selectedRows().count();
 }
-
 // End MW

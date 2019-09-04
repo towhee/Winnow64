@@ -209,7 +209,7 @@ private:
     bool formatSony();
     bool formatFuji();
     bool formatPanasonic();
-    bool formatJPG();
+    bool formatJPG(quint32 startOffset);
     bool formatTIF();
     bool formatDNG();
 
