@@ -7,11 +7,11 @@ central diget.
 */
 
 CompareImages::CompareImages(QWidget *parent,
-                         QWidget *centralWidget,
-                         Metadata *metadata,
-                         DataModel *dm,
-                         IconView *thumbView,
-                         ImageCache *imageCacheThread)
+                             QWidget *centralWidget,
+                             Metadata *metadata,
+                             DataModel *dm,
+                             IconView *thumbView,
+                             ImageCache *imageCacheThread)
     : QWidget(parent)
 {
     {
@@ -59,7 +59,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     bool okToClearGrid = !(gridLayout->rowCount() == 1 && gridLayout->columnCount() == 1);
     if(okToClearGrid) {
         QLayoutItem *item;
-        while ((item = gridLayout->takeAt(0)) != 0) {
+        while ((item = gridLayout->takeAt(0)) != nullptr) {
             gridLayout->removeWidget(item->widget());
             delete item->widget();
             delete item;
@@ -87,7 +87,6 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     count = 0;
     selection = selectionModel->selectedRows();
     count = selection.count();
-    qDebug() << __FUNCTION__ << selectionModel->selectedRows().count() << count;
     if (count > 9) count = 9;
 
     for (int i = 0; i < count; ++i) {
@@ -236,6 +235,7 @@ void CompareImages::configureGrid()
         }
         break;
     case 4:
+        qDebug() << __FUNCTION__ << "1";
         area1 = area(2, 2);
         area2 = area(1, 4);
         area3 = area(4, 1);

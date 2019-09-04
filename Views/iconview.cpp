@@ -125,17 +125,12 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     // event filter to access the thumbDock
     m2 = qobject_cast<MW*>(parent);
 
-//    ScrollBar *scrollBar = new ScrollBar;
-//    setVerticalScrollBar(scrollBar);
-
     setViewMode(QListView::IconMode);
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setTabKeyNavigation(true);  // not working
     setResizeMode(QListView::Adjust);
 //    setLayoutMode(QListView::Batched);    // causes delay that makes scrollTo a headache
-
     setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
-//    setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     verticalScrollBar()->setObjectName("VerticalScrollBar");
     horizontalScrollBar()->setObjectName("HorizontalScrollBar");
     setWordWrap(true);
@@ -150,8 +145,6 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setLineWidth(0);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-
-    qDebug() << "iconview font" << font().family() << font().pixelSize();
     QFont f = font();
     f.setPixelSize(13);
     setFont(f);

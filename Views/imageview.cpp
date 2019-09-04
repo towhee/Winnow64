@@ -99,7 +99,6 @@ ImageView::ImageView(QWidget *parent,
     loadFullSizeTimer->setInterval(500);
     connect(loadFullSizeTimer, SIGNAL(timeout()), this, SLOT(upgradeToFullSize()));
 
-
 //    mouseZoomFit = true;
     isMouseDrag = false;
     isLeftMouseBtnPressed = false;
@@ -192,14 +191,10 @@ to prevent jarring changes in perceived scale by the user.
                 dm->addMetadataForItem(metadata->imageMetadata);
             }
         }
-//        QImage image;
         QPixmap  displayPixmap;
         isLoaded = pixmap->load(fPath, displayPixmap);
-//        isLoaded = pixmap->load(fPath, image);
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
-//            ICC::transform(image);
-//            pmItem->setPixmap(QPixmap::fromImage(image));
             isPreview = false;
         }
         else {
@@ -312,12 +307,14 @@ If isSlideshow then hide mouse cursor unless is moves.
         if (zoom > 1) zoom = 1;
     }
     matrix.scale(zoom, zoom);
+    // when resize before first image zoom == inf
+    if (zoom > 10) return;
     setMatrix(matrix);
     emit zoomChange(zoom);
     isZoom = (zoom > zoomFit);
-    isFit = (zoom == zoomFit);
+    isFit = qFuzzyCompare(zoom, zoomFit);
     if (isZoom) scrollPct = getScrollPct();
-    wasZoomFit = zoom == zoomFit;
+    wasZoomFit = qFuzzyCompare(zoom, zoomFit);
 
     if (!G::isSlideShow) {
         if (isZoom) setCursor(Qt::OpenHandCursor);
@@ -513,7 +510,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
             viewPortIsExpanding = true;
         bool sceneClipped = sceneBiggerThanView();
         if ((sceneClipped && !isZoom) ||
-                (zoom == zoomFit) ||
+                qFuzzyCompare(zoom, zoomFit) ||
                 ((viewPortIsExpanding && !sceneClipped) && wasZoomFit) ||
                 (wasSceneClipped && !sceneClipped)) {
             zoom = zoomFit;
@@ -634,7 +631,7 @@ defaults to 1.0
     #endif
     }
     if (zoom < zoomFit) zoom = zoomFit;
-    else if (zoom == zoomFit) zoom = toggleZoom;
+    else if (qFuzzyCompare(zoom, zoomFit)) zoom = toggleZoom;
     else if (isZoom) zoom = zoomFit;
     scale();
 }
@@ -958,7 +955,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         mousePressPt.setY(event->y());
 
         QGraphicsView::mousePressEvent(event);
-        if (zoom == zoomFit) {
+        if (qFuzzyCompare(zoom, zoomFit)) {
             zoom = toggleZoom;
             scale();
             ignoreMousePress = true;

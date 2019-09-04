@@ -1,15 +1,13 @@
 BUGS
+- Confirm check for updates still working on Win
 - Mac check for updates not done yet
-- ImageView::scale comparing floats potentially bad
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
-- Toggle zoom wrong place when using preview size cached image
 PERFORMANCE
 - filteredItemCount and unfilteredItemCount slow - try treeView instead of treeWidget
 - Tif load slowly
 CODE IMPROVEMENTS
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
-- Change setPixelSize to setPointSize throughout app
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
@@ -31,6 +29,7 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- ImageView::scale comparing floats potentially bad
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Trying to read metadata from an ICO file
 - Make all message boxes consistent (see runExternalApp)

@@ -4372,7 +4372,7 @@ bool Metadata::formatPanasonic()
     return true;
 }
 
-bool Metadata::formatJPG()
+bool Metadata::formatJPG(quint32 startOffset)
 {
     {
     #ifdef ISDEBUG
@@ -4384,7 +4384,7 @@ bool Metadata::formatJPG()
 
     //file.open happens in readMetadata
     order = 0x4D4D;
-    quint32 startOffset = 0;
+//    quint32 startOffset = 0;
     if (get2(file.read(2)) != 0xFFD8) {
         err = "JPG does not start with 0xFFD8";
         qDebug() << __FUNCTION__ << err;
@@ -4693,7 +4693,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
             if (ext == "cr2") fileOpened = formatCanon();
             if (ext == "dng") fileOpened = formatDNG();
             if (ext == "raf") fileOpened = formatFuji();
-            if (ext == "jpg") fileOpened = formatJPG();
+            if (ext == "jpg") fileOpened = formatJPG(0);
             if (ext == "nef") fileOpened = formatNikon();
             if (ext == "orf") fileOpened = formatOlympus();
             if (ext == "rw2") fileOpened = formatPanasonic();

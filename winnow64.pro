@@ -11,9 +11,7 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h \
-    Utilities/enumeratewinscreens.h \
-    Utilities/icc.h
+HEADERS += Cache/imagecache.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/datamodel.h
@@ -45,6 +43,14 @@ HEADERS += PropertyEditor/preferences.h
 HEADERS += PropertyEditor/propertyeditor.h
 HEADERS += PropertyEditor/propertydelegate.h
 HEADERS += PropertyEditor/propertywidgets.h
+HEADERS += Utilities/classificationlabel.h
+HEADERS += Utilities/dropshadowlabel.h
+HEADERS += Utilities/enumeratewinscreens.h
+HEADERS += Utilities/icc.h
+HEADERS += Utilities/popup.h
+HEADERS += Utilities/progressbar.h
+HEADERS += Utilities/usb.h
+HEADERS += Utilities/utilities.h
 HEADERS += Views/compareImages.h
 HEADERS += Views/compareview.h
 HEADERS += Views/iconview.h
@@ -53,16 +59,8 @@ HEADERS += Views/imageview.h
 HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
-HEADERS += Utilities/classificationlabel.h
-HEADERS += Utilities/dropshadowlabel.h
-HEADERS += Utilities/popup.h
-HEADERS += Utilities/progressbar.h
-HEADERS += Utilities/usb.h
-HEADERS += Utilities/utilities.h
 
-SOURCES += Cache/imagecache.cpp \
-    Utilities/enumeratewinscreens.cpp \
-    Utilities/icc.cpp
+SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
@@ -93,6 +91,14 @@ SOURCES += PropertyEditor/preferences.cpp
 SOURCES += PropertyEditor/propertyeditor.cpp
 SOURCES += PropertyEditor/propertydelegate.cpp
 SOURCES += PropertyEditor/propertywidgets.cpp
+SOURCES += Utilities/classificationlabel.cpp
+SOURCES += Utilities/dropshadowlabel.cpp
+SOURCES += Utilities/enumeratewinscreens.cpp
+SOURCES += Utilities/icc.cpp
+SOURCES += Utilities/popup.cpp
+SOURCES += Utilities/progressbar.cpp
+SOURCES += Utilities/usb.cpp
+SOURCES += Utilities/utilities.cpp
 SOURCES += Views/compareImages.cpp
 SOURCES += Views/compareview.cpp
 SOURCES += Views/iconview.cpp
@@ -101,12 +107,6 @@ SOURCES += Views/imageview.cpp
 SOURCES += Views/infoview.cpp
 SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
-SOURCES += Utilities/classificationlabel.cpp
-SOURCES += Utilities/dropshadowlabel.cpp
-SOURCES += Utilities/popup.cpp
-SOURCES += Utilities/progressbar.cpp
-SOURCES += Utilities/usb.cpp
-SOURCES += Utilities/utilities.cpp
 
 FORMS += Dialogs/aboutdlg.ui
 FORMS += Dialogs/aligndlg.ui
@@ -133,13 +133,13 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/versions \
-    notes/help_videos_on_mac.txt
+DISTFILES += Docs/versions
 DISTFILES += Docs/test.html
 DISTFILES += notes/scratch.html
 DISTFILES += notes/_Notes
 DISTFILES += notes/_ToDo.txt
 DISTFILES += notes/DeployInstall.txt
+DISTFILES += notes/help_videos_on_mac.txt
 DISTFILES += notes/ExiftoolCommands.txt
 DISTFILES += notes/git.txt
 DISTFILES += notes/HelpDocCreation.txt
@@ -163,16 +163,13 @@ win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzl
 INCLUDEPATH += $$PWD/Lib/zlib
 DEPENDPATH += $$PWD/Lib/zlib
 
-win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/x64-Release/libzlib.a
-else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/zlib/x64-Release/zlib.lib
-
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_static
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
 
 INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
 DEPENDPATH += $$PWD/Lib/lcms2-2.9/include
 
-win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/liblcms2_static.a
-else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/liblcms2_staticd.a
-else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/lcms2_static.lib
-else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/lcms2_staticd.lib
+#win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/liblcms2_static.a
+#else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/liblcms2_staticd.a
+#else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/lcms2_static.lib
+#else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/lcms2_staticd.lib
