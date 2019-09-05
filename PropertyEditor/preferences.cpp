@@ -4,6 +4,7 @@
 #include <QDebug>
 
 // this works because propertyeditor and preferences are friend classes of MW
+extern MW *mw;
 MW *mw;
 
 Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
@@ -15,8 +16,9 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
     QFont fnt = this->font();
     fnt.setPixelSize(G::fontSize.toInt());
     QFontMetrics fm(fnt);
-    captionColumnWidth = fm.boundingRect("==Incremental amount to load==").width();
-    valueColumnWidth = fm.boundingRect("==Next / Previous Image==").width();
+    captionColumnWidth = fm.boundingRect("==Incremental amount to load plus lots more room ;*) ==").width();
+    valueColumnWidth = fm.boundingRect("==Next / Previous Image plus==").width();
+
 
     addItems();
 }
@@ -110,9 +112,44 @@ void Preferences::itemChange(QModelIndex idx)
         else mw->metadataCacheThread->cacheAllIcons = false;
     }
 
+    if (source == "imageCacheSizeMethod") {
+        QString s = v.toString();
+        int mb = 0;
+        if (s == "Thrifty") mb = static_cast<int>(G::availableMemoryMB * 0.10);
+        if (s == "Moderate") mb = static_cast<int>(G::availableMemoryMB * 0.50);
+        if (s == "Greedy") mb = static_cast<int>(G::availableMemoryMB * 0.90);
+        if (mb > 0 && mb < 1000) mb = 1000;
+        if (s == "Percent of available") {
+            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(true);
+            int pct = static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->value();
+            mb = static_cast<int>((G::availableMemoryMB * static_cast<uint>(pct)) / 100);
+        }
+        else {
+            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(false);
+        }
+        if (s == "MB") {
+            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(true);
+            mb = static_cast<SpinBoxEditor*>(cacheSizeMB)->value();
+        }
+        else {
+            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(false);
+            static_cast<SpinBoxEditor*>(cacheSizeMB)->setValue(mb);
+        }
+        mw->cacheSizeMethod = s;
+        mw->cacheSizeMB = mb;
+        mw->setCacheParameters();
+    }
+
+    if (source == "cacheSizePercentOfAvailable") {
+        mw->cacheSizePercentOfAvailable = v.toInt();
+        mw->cacheSizeMB = (G::availableMemoryMB * v.toUInt()) / 100;
+        static_cast<SpinBoxEditor*>(cacheSizeMB)->setValue(mw->cacheSizeMB);
+        mw->setCacheParameters();
+    }
+
     if (source == "cacheSizeMB") {
         qDebug() << __FUNCTION__ << v << source;
-        mw->cacheSizeMB = v.toInt() /** 1024*/;
+        mw->cacheSizeMB = v.toInt();
         mw->setCacheParameters();
     }
 
@@ -194,7 +231,8 @@ void Preferences::addItems()
     int thirdGenerationCount;             // child child items
     QString tooltip;
     QString caption;
-    QString s;                            // general purpose
+    QString s;
+    // general purpose
     int n;                                // general purpose
     n = 0;  // suppress compiler warning as not used yet
     bool isShow;
@@ -273,8 +311,8 @@ void Preferences::addItems()
         useWheelToScrollValue->setData(DT_Combo, UR_DelegateType);
         useWheelToScrollValue->setData("useWheelToScroll", UR_Source);
         useWheelToScrollValue->setData("QString", UR_Type);
-        QStringList scrollList = {"Next/previous image", "Scroll current image when zoomed"};
-        useWheelToScrollValue->setData(scrollList, UR_StringList);
+        QStringList list0 = {"Next/previous image", "Scroll current image when zoomed"};
+        useWheelToScrollValue->setData(list0, UR_StringList);
         generalItem->setChild(secondGenerationCount, 0, useWheelToScrollCaption);
         generalItem->setChild(secondGenerationCount, 1, useWheelToScrollValue);
         valIdx = useWheelToScrollValue->index();
@@ -732,6 +770,59 @@ void Preferences::addItems()
         thirdGenerationCount = -1;
 
             thirdGenerationCount++;
+            // Type = COMBOBOX
+            // name = imageCacheSizeMethod
+            // parent = imageCatItem
+            tooltip = "Select method of determining the size of the image cache\n"
+                      "Thrifty  = larger of 10% of available memory\n"
+                      "Moderate = 50% of available memory\n"
+                      "Greedy = 90% of available memory\n"
+                      "Percent of available = use assigned amount\n"
+                      "MB of available =  use assigned amount";
+            QStandardItem *imageCacheSizeMethodCaption = new QStandardItem;
+            imageCacheSizeMethodCaption->setToolTip(tooltip);
+            imageCacheSizeMethodCaption->setText("Cache size method");
+            imageCacheSizeMethodCaption->setEditable(false);
+            QStandardItem *imageCacheSizeMethodValue = new QStandardItem;
+            imageCacheSizeMethodValue->setToolTip(tooltip);
+            imageCacheSizeMethodValue->setData(mw->cacheSizeMethod, Qt::EditRole);
+            imageCacheSizeMethodValue->setData(DT_Combo, UR_DelegateType);
+            imageCacheSizeMethodValue->setData("imageCacheSizeMethod", UR_Source);
+            imageCacheSizeMethodValue->setData("QString", UR_Type);
+            QStringList list3 = {"Thrifty", "Moderate", "Greedy", "Percent of available","MB"};
+            imageCacheSizeMethodValue->setData(list3, UR_StringList);
+            imageCatItem->setChild(thirdGenerationCount, 0, imageCacheSizeMethodCaption);
+            imageCatItem->setChild(thirdGenerationCount, 1, imageCacheSizeMethodValue);
+            valIdx = imageCacheSizeMethodValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+            thirdGenerationCount++;
+            // Type = SPINBOX
+            // name = cacheSizePercentOfAvailable
+            // parent = imageCatItem
+            tooltip = "Enter the percent (10% - 90%) of the available memory to assign to\n."
+                      "the image cache.";
+            QStandardItem *cacheSizePercentOfAvailableCaption = new QStandardItem;
+            cacheSizePercentOfAvailableCaption->setToolTip(tooltip);
+            cacheSizePercentOfAvailableCaption->setText("Image cache size (% of available)");
+            cacheSizePercentOfAvailableCaption->setEditable(false);
+            QStandardItem *cacheSizePercentOfAvailableValue = new QStandardItem;
+            cacheSizePercentOfAvailableValue->setToolTip(tooltip);
+            n = static_cast<int>(mw->cacheSizePercentOfAvailable);
+            cacheSizePercentOfAvailableValue->setData(n, Qt::EditRole);
+            cacheSizePercentOfAvailableValue->setData(DT_Spinbox, UR_DelegateType);
+            cacheSizePercentOfAvailableValue->setData("cacheSizePercentOfAvailable", UR_Source);
+            cacheSizePercentOfAvailableValue->setData("int", UR_Type);
+            cacheSizePercentOfAvailableValue->setData(10, UR_Min);
+            cacheSizePercentOfAvailableValue->setData(90, UR_Max);
+            cacheSizePercentOfAvailableValue->setData(50, UR_LineEditFixedWidth);
+            imageCatItem->setChild(thirdGenerationCount, 0, cacheSizePercentOfAvailableCaption);
+            imageCatItem->setChild(thirdGenerationCount, 1, cacheSizePercentOfAvailableValue);
+            valIdx = cacheSizePercentOfAvailableValue->index();
+            cacheSizePercentOfAvailable = propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+            if (mw->cacheSizeMethod != "Percent of available") static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(false);
+
+            thirdGenerationCount++;
             // Type = SPINBOX
             // name = cacheSizeMB
             // parent = imageCatItem
@@ -757,7 +848,8 @@ void Preferences::addItems()
             imageCatItem->setChild(thirdGenerationCount, 0, cacheSizeMBCaption);
             imageCatItem->setChild(thirdGenerationCount, 1, cacheSizeMBValue);
             valIdx = cacheSizeMBValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+            cacheSizeMB = propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+            if (mw->cacheSizeMethod != "MB") static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(false);
 
             thirdGenerationCount++;
             // Type = COMBOBOX

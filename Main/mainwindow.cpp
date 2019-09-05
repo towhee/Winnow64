@@ -327,7 +327,8 @@ void MW::setupPlatform()
     #endif
     #ifdef Q_OS_WIN
         setWindowIcon(QIcon(":/images/winnow.png"));
-        EnumerateWinScreens::collectScreensInfo();
+        Win::collectScreensInfo();
+        Win::availableMemory();
     #endif
     #ifdef Q_OS_MAC
         setWindowIcon(QIcon(":/images/winnow.icns"));
@@ -903,7 +904,7 @@ void MW::folderSelectionChange()
     G::track(__FUNCTION__);
     #endif
     }
-    // Stop any threads that might be running.
+     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
     G::allMetadataLoaded = false;
@@ -7003,6 +7004,8 @@ re-established when the application is re-opened.
     setting->setValue("metadataChunkSize", metadataCacheThread->metadataChunkSize);
 
     // image cache
+    setting->setValue("cacheSizeMethod", cacheSizeMethod);
+    setting->setValue("cacheSizePercentOfAvailable", cacheSizePercentOfAvailable);
     setting->setValue("cacheSizeMB", cacheSizeMB);
     setting->setValue("isShowCacheStatus", isShowCacheStatus);
     setting->setValue("cacheDelay", cacheDelay);
@@ -7292,7 +7295,9 @@ Preferences are located in the prefdlg class and updated here.
         metadataCacheThread->cacheAllIcons = false;
         metadataCacheThread->metadataChunkSize = 250;
 
-        cacheSizeMB = 4000;
+        cacheSizeMethod = "Moderate";
+        cacheSizePercentOfAvailable = 0.5;
+        cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.5);
         isShowCacheStatus = true;
 //        cacheDelay = 0;
         isShowCacheThreadActivity = true;
@@ -7346,7 +7351,14 @@ Preferences are located in the prefdlg class and updated here.
     // metadata and icon cache loaded when metadataCacheThread created in MW::createCaching
 
     // image cache
-    cacheSizeMB = setting->value("cacheSizeMB").toInt();
+    cacheSizeMethod = setting->value("cacheSizeMethod").toString();
+    cacheSizePercentOfAvailable = setting->value("cacheSizePercentOfAvailable").toFloat();
+    if (cacheSizeMethod == "Thrifty") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.10);
+    if (cacheSizeMethod == "Moderate") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.50);
+    if (cacheSizeMethod == "Greedy") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.90);
+    if (cacheSizeMethod == "Percent of available")
+        cacheSizeMB = static_cast<int>((G::availableMemoryMB * cacheSizePercentOfAvailable) / 100);
+    if (cacheSizeMethod == "MB") cacheSizeMB = setting->value("cacheSizeMB").toInt();
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
 //    cacheDelay = setting->value("cacheDelay").toInt();
     isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
@@ -10112,6 +10124,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << selectionModel->selectedRows().count();
+    Win::availableMemory();
 }
 // End MW

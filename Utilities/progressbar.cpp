@@ -3,7 +3,6 @@
 #include "Main/global.h"
 #include "Main/mainwindow.h"
 
-//extrn MW *m1;
 
 /* Displays a statusbar showing the metadata cache status.
 
@@ -26,6 +25,7 @@ Then paint in the cache status progress in the middle of the bitmap.
 
 */
 
+extern MW *m1;
 MW *m1;
 
 ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)

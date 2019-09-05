@@ -63,13 +63,13 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
         // let thumbReader do its thing
         thumbReader.setFileName(fPath);
         QSize size = thumbReader.size();
-//        qDebug() << __FUNCTION__ << fPath << "thumbReader.imageCount =" << thumbReader.imageCount();
+
         size.scale(thumbMax, Qt::KeepAspectRatio);
         thumbReader.setScaledSize(size);
         image = thumbReader.read();
         success = !image.isNull();
         if (!success) {
-            err = "Could not read thumb using thumbReader";
+            err = "Could not read thumb using thumbReader:" + fPath;
             if (G::isThreadTrackingOn) track(fPath, err);
         }
     }

@@ -1,7 +1,7 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
-#define ISDEBUG        // Uncomment this line to show debugging output
+//#define ISDEBUG        // Uncomment this line to show debugging output
 
 #include <QtWidgets>
 #include <QColor>
@@ -112,6 +112,9 @@ namespace G
         QImage image;
     };
 
+    extern quint32 availableMemoryMB;
+    extern quint32 winnowMemoryBeforeCacheMB;
+
     struct WinScreen {
         QString adaptor;
         QString device;
@@ -119,9 +122,6 @@ namespace G
     };
     extern QHash<QString, WinScreen> winScreenHash;
     extern QString winOutProfilePath;
-    extern QByteArray iccBuf;
-    extern quint32 iccLen;
-    extern char* iccData;
 
     extern int maxIconSize;
     extern int minIconSize;

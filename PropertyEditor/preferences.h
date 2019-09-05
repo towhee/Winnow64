@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "Main/global.h"
 #include "propertyeditor.h"
+#include "propertywidgets.h"
 
 class Preferences : public PropertyEditor
 {
@@ -18,6 +19,10 @@ private:
     void addItems();
     int captionColumnWidth;
     int valueColumnWidth;
+
+    // items we will want to modify
+    QWidget *cacheSizePercentOfAvailable;
+    QWidget *cacheSizeMB;
 };
 
 #endif // PREFERENCES_H

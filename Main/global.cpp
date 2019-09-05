@@ -21,11 +21,11 @@ namespace G
     QColor progressTargetColor = QColor(125,125,125);            // Gray
     QColor progressImageCacheColor = QColor(108,150,108);        // Green
 
+    quint32 availableMemoryMB;
+    quint32 winnowMemoryBeforeCacheMB;
+
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitor
     QString winOutProfilePath;
-    QByteArray iccBuf;
-    quint32 iccLen;
-    char* iccData;
 
     QString mode;                       // In MW: Loupe, Grid, Table or Compare
     QString fileSelectionChangeSource;  // GridMouseClick, ThumbMouseClick, TableMouseClick
