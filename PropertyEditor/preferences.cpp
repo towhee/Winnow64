@@ -91,6 +91,7 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "showThreadActivity") {
         mw->isShowCacheThreadActivity = v.toBool();
+        mw->isShowCacheStatus = v.toBool();
         mw->setCacheParameters();
     }
 
@@ -168,10 +169,10 @@ void Preferences::itemChange(QModelIndex idx)
         mw->setCacheParameters();
     }
 
-    if (source == "showCacheStatus") {
-        mw->isShowCacheStatus = v.toInt();
-        mw->setCacheParameters();
-    }
+//    if (source == "showCacheStatus") {
+//        mw->isShowCacheStatus = v.toInt();
+//        mw->setCacheParameters();
+//    }
 
     if (source == "slideShowDelay") {
         qDebug() << __FUNCTION__ << v << source;
@@ -629,6 +630,29 @@ void Preferences::addItems()
         valIdx = showThreadActivityValue->index();
         propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
+        secondGenerationCount++;
+        // Type = SLIDER
+        // name = progressWidthSlider
+        // parent = cacheCatItem
+        tooltip = "Change the width of the cache status in the status bar.";
+        QStandardItem *progressWidthSliderCaption = new QStandardItem;
+        progressWidthSliderCaption->setToolTip(tooltip);
+        progressWidthSliderCaption->setText("Cache status bar width");
+        progressWidthSliderCaption->setEditable(false);
+        QStandardItem *progressWidthSliderValue = new QStandardItem;
+        progressWidthSliderValue->setToolTip(tooltip);
+        progressWidthSliderValue->setData(mw->progressWidth, Qt::EditRole);
+        progressWidthSliderValue->setData(DT_Slider, UR_DelegateType);
+        progressWidthSliderValue->setData("progressWidthSlider", UR_Source);
+        progressWidthSliderValue->setData("int", UR_Type);
+        progressWidthSliderValue->setData(100, UR_Min);
+        progressWidthSliderValue->setData(800, UR_Max);
+        progressWidthSliderValue->setData(50, UR_LabelFixedWidth);
+        cacheCatItem->setChild(secondGenerationCount, 0, progressWidthSliderCaption);
+        cacheCatItem->setChild(secondGenerationCount, 1, progressWidthSliderValue);
+        valIdx = progressWidthSliderValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
         // HEADER
         // Cache:: Metadata subcategory
         secondGenerationCount++;
@@ -884,50 +908,27 @@ void Preferences::addItems()
             valIdx = cacheWtAheadValue->index();
             propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
-            thirdGenerationCount++;
-            // Type = CHECKBOX
-            // name = showCacheStatus
-            // parent = imageCatItem
-            tooltip = "The image cache status shows the current state of the images targeted to\n"
-                      "cache and images already cached.  This can be helpful in understanding\n"
-                      "what Winnow is doing and making decisions on the image cache size.";
-            QStandardItem *showCacheStatusCaption = new QStandardItem;
-            showCacheStatusCaption->setToolTip(tooltip);
-            showCacheStatusCaption->setText("Show image cache status");
-            showCacheStatusCaption->setEditable(false);
-            QStandardItem *showCacheStatusValue = new QStandardItem;
-            showCacheStatusValue->setToolTip(tooltip);
-            showCacheStatusValue->setData(mw->isShowCacheStatus, Qt::EditRole);
-            showCacheStatusValue->setData(DT_Checkbox, UR_DelegateType);
-            showCacheStatusValue->setData("showCacheStatus", UR_Source);
-            showCacheStatusValue->setData("bool", UR_Type);
-            imageCatItem->setChild(thirdGenerationCount, 0, showCacheStatusCaption);
-            imageCatItem->setChild(thirdGenerationCount, 1, showCacheStatusValue);
-            valIdx = showCacheStatusValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
-
-            thirdGenerationCount++;
-            // Type = SLIDER
-            // name = progressWidthSlider
-            // parent = imageCatItem
-            tooltip = "Change the width of the cache status in the status bar.";
-            QStandardItem *progressWidthSliderCaption = new QStandardItem;
-            progressWidthSliderCaption->setToolTip(tooltip);
-            progressWidthSliderCaption->setText("Cache status bar width");
-            progressWidthSliderCaption->setEditable(false);
-            QStandardItem *progressWidthSliderValue = new QStandardItem;
-            progressWidthSliderValue->setToolTip(tooltip);
-            progressWidthSliderValue->setData(mw->progressWidth, Qt::EditRole);
-            progressWidthSliderValue->setData(DT_Slider, UR_DelegateType);
-            progressWidthSliderValue->setData("progressWidthSlider", UR_Source);
-            progressWidthSliderValue->setData("int", UR_Type);
-            progressWidthSliderValue->setData(100, UR_Min);
-            progressWidthSliderValue->setData(800, UR_Max);
-            progressWidthSliderValue->setData(50, UR_LabelFixedWidth);
-            imageCatItem->setChild(thirdGenerationCount, 0, progressWidthSliderCaption);
-            imageCatItem->setChild(thirdGenerationCount, 1, progressWidthSliderValue);
-            valIdx = progressWidthSliderValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+//            thirdGenerationCount++;
+//            // Type = CHECKBOX
+//            // name = showCacheStatus
+//            // parent = imageCatItem
+//            tooltip = "The image cache status shows the current state of the images targeted to\n"
+//                      "cache and images already cached.  This can be helpful in understanding\n"
+//                      "what Winnow is doing and making decisions on the image cache size.";
+//            QStandardItem *showCacheStatusCaption = new QStandardItem;
+//            showCacheStatusCaption->setToolTip(tooltip);
+//            showCacheStatusCaption->setText("Show image cache status");
+//            showCacheStatusCaption->setEditable(false);
+//            QStandardItem *showCacheStatusValue = new QStandardItem;
+//            showCacheStatusValue->setToolTip(tooltip);
+//            showCacheStatusValue->setData(mw->isShowCacheStatus, Qt::EditRole);
+//            showCacheStatusValue->setData(DT_Checkbox, UR_DelegateType);
+//            showCacheStatusValue->setData("showCacheStatus", UR_Source);
+//            showCacheStatusValue->setData("bool", UR_Type);
+//            imageCatItem->setChild(thirdGenerationCount, 0, showCacheStatusCaption);
+//            imageCatItem->setChild(thirdGenerationCount, 1, showCacheStatusValue);
+//            valIdx = showCacheStatusValue->index();
+//            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
     firstGenerationCount++;
     // HEADER

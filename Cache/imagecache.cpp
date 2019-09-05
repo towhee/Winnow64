@@ -912,7 +912,6 @@ void ImageCache::run()
     emit updateIsRunning(true, true);
     static QString prevFileName = "";
     QTime t = QTime::currentTime().addMSecs(500);
-
     while (nextToCache()) {
         if (abort) {
             emit updateIsRunning(false, false);

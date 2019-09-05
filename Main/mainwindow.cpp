@@ -1814,7 +1814,6 @@ memory has been consumed or all the images are cached.
     // now that metadata is loaded populate the data model
     if(isShowCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
-
     updateIconBestFit();
 
     // had to wait for the data before resize table columns
