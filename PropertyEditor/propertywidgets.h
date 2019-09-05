@@ -24,7 +24,9 @@ enum UserRole
     UR_Max,                             // validate maximum value
     UR_LabelFixedWidth,                 // fixed label width in custom widget
     UR_LineEditFixedWidth,              // fixed lineedit width in custom widget
-    UR_StringList                       // list of items for comboBox
+    UR_StringList,                      // list of items for comboBox
+    UR_IsBtn,                           // button to run a secondary widget or help
+    UR_BtnText                          // button text
 };
 
 //int propertyWidgetMarginLeft = 10;

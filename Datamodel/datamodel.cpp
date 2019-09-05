@@ -1021,12 +1021,6 @@ change.
     G::track(__FUNCTION__);
     #endif
     }
-    // do not run if already totalled
-//    bool isUnfilteredItemCount = filters->refineTrue->text(3)!= "" || filters->refineFalse->text(3) != "";
-//    if (isUnfilteredItemCount) return;
-
-    G::track(__FUNCTION__, "Start");
-
     QTreeWidgetItemIterator it(filters);
     while (*it) {
         if ((*it)->parent()) {
@@ -1034,7 +1028,6 @@ change.
             QString searchValue = (*it)->text(1);
             int tot = 0;
             int totRawJpgCombined = 0;
-//            G::track(__FUNCTION__, "Start " + (*it)->text(1));
             for (int row = 0; row < rowCount(); ++row) {
                 bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
                 QString value = index(row, col).data().toString();
@@ -1043,13 +1036,12 @@ change.
                     if (combineRawJpg && !hideRaw) totRawJpgCombined++;
                 }
             }
-            qDebug() << __FUNCTION__
+/*            qDebug() << __FUNCTION__
                      << (*it)->parent()->text(0)
                      << (*it)->text(1)
                      << "Tot Count = " << QString::number(tot)
                      << "Combined Count = " << QString::number(totRawJpgCombined);
-//            G::track(__FUNCTION__, (*it)->text(1) + " count = " + QString::number(tot)
-//                     + " combined count = " + QString::number(totRawJpgCombined));
+                     */
             (*it)->setData(3, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));

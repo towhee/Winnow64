@@ -61,7 +61,7 @@
 //#include "Icm.h"                    // Color management (Mscms.lib or Mscma.dll)
 //#include "Windows.h"
 //#include "WinUser.h"                // req'd for EnumDisplayDevicesW
-#include "Utilities/enumeratewinscreens.h"
+#include "Utilities/win.h"
 
 class MW : public QMainWindow
 {
@@ -209,6 +209,8 @@ public:
 
 
     // preferences: cache
+    QString cacheSizeMethod;
+    int cacheSizePercentOfAvailable;
     int cacheSizeMB;
     bool isShowCacheStatus;
     int cacheDelay = 100;

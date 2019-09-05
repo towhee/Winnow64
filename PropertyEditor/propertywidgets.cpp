@@ -102,7 +102,8 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
     spinBox->setMinimum(min);
     spinBox->setMaximum(max);
     spinBox->setStyleSheet("QSpinBox {background:transparent; border:none;"
-                           "padding:0px; border-radius:0px;}");
+                           "padding:0px; border-radius:0px;}"
+                           "QSpinBox:disabled {color:gray}");
     spinBox->setWindowFlags(Qt::FramelessWindowHint);
     spinBox->setAttribute(Qt::WA_TranslucentBackground);
 
@@ -113,12 +114,17 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
     label->setWindowFlags(Qt::FramelessWindowHint);
     label->setAttribute(Qt::WA_TranslucentBackground);
 
+    QPushButton *btn = new QPushButton;
+    btn->setText("...");
+    btn->setVisible(false);
+
     connect(spinBox, QOverload<int>::of(&QSpinBox::valueChanged), [=](int i){change(i);});
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(spinBox, Qt::AlignLeft);
     layout->addSpacing(20);
     layout->addWidget(label);
+    layout->addWidget(btn);
     layout->setContentsMargins(G::propertyWidgetMarginLeft - 2, 0, G::propertyWidgetMarginRight, 0);
     setLayout(layout);
 

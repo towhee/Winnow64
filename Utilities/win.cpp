@@ -1,7 +1,56 @@
-#include "enumeratewinscreens.h"
+#include "win.h"
 
-void EnumerateWinScreens::collectScreensInfo()
+void Win::availableMemory()
 {
+    /*
+    Sets G::availableMemoryMB to the amount of free memory in windows. This is used to
+    advise the user on how much memory to allocate to the image cache.
+
+    The statex struct includes:
+        DWORDLONG ullTotalPhys;
+        DWORDLONG ullAvailPhys;
+        DWORDLONG ullTotalPageFile;
+        DWORDLONG ullAvailPageFile;
+        DWORDLONG ullTotalVirtual;
+        DWORDLONG ullAvailVirtual;
+        DWORDLONG ullAvailExtendedVirtual;
+
+        Really good resource for getting memory info for various OS
+        https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
+    */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    quint32 mb = 1024 *1024;
+    MEMORYSTATUSEX statex;
+    statex.dwLength = sizeof(statex);
+    GlobalMemoryStatusEx (&statex);
+    /*
+    qDebug() << __FUNCTION__
+             << "Physical memory:" << statex.ullTotalPhys / mb
+             << "Available memory:" << statex.ullAvailPhys / mb;
+    */
+    // allocate 100MB for datamodel memory usage (mostly thumbnails)
+    G::availableMemoryMB = static_cast<quint32>(statex.ullAvailPhys / mb) - 100;
+
+    PROCESS_MEMORY_COUNTERS pmc;
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    SIZE_T virtualMemUsedByMe = pmc.PagefileUsage;
+    qDebug() << __FUNCTION__ << virtualMemUsedByMe;
+}
+
+void Win::collectScreensInfo()
+{
+    /*
+    Populates G::winScreenHash with the attached adaptors, monitors and icc profiles.
+    */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     DISPLAY_DEVICE displayDevice = {};
     displayDevice.cb = sizeof(DISPLAY_DEVICE);
 
@@ -27,7 +76,7 @@ void EnumerateWinScreens::collectScreensInfo()
             std::wstring deviceString;
             LPCWSTR deviceStringW;
             DWORD deviceIndex = 0;
-            while (/*::*/EnumDisplayDevicesW(adaptorNameW, deviceIndex++, &displayDevice, EDD_GET_DEVICE_INTERFACE_NAME))
+            while (EnumDisplayDevicesW(adaptorNameW, deviceIndex++, &displayDevice, EDD_GET_DEVICE_INTERFACE_NAME))
             {
                 if (displayDevice.StateFlags & DISPLAY_DEVICE_ACTIVE &&
                     displayDevice.StateFlags & DISPLAY_DEVICE_ATTACHED)
@@ -50,11 +99,11 @@ void EnumerateWinScreens::collectScreensInfo()
                     wchar_t *const profileName = new wchar_t[profileNameLength / sizeof(wchar_t)];
                     WcsGetDefaultColorProfile(scope, deviceNameW, CPT_ICC, CPST_RGB_WORKING_SPACE, 0, profileNameLength, profileName);
 
-                    // Save the screen data - for example:
-//                    tadaptorName = "\\\\.\\DISPLAY1" :: adaptorStringW = "NVIDIA GeForce GTX 1050  " tdeviceStringW =  "BenQ SW320           " tprofileName = "BenQ SW320.icm"
-//                    tadaptorName = "\\\\.\\DISPLAY5" :: adaptorStringW = "NVIDIA GeForce GT 740    " tdeviceStringW =  "Dell U3011 (Digital) " tprofileName = "DELL 3007WFP_i1_2018-01-10.icm"
-//                    tadaptorName = "\\\\.\\DISPLAY6" :: adaptorStringW = "NVIDIA GeForce GT 740    " tdeviceStringW =  "Dell 3007WFP         " tprofileName = "3007WFP.icm"
-
+                    /* Save the screen data - for example:
+                    tadaptorName = "\\\\.\\DISPLAY1" :: adaptorStringW = "NVIDIA GeForce GTX 1050  " tdeviceStringW =  "BenQ SW320           " tprofileName = "BenQ SW320.icm"
+                    tadaptorName = "\\\\.\\DISPLAY5" :: adaptorStringW = "NVIDIA GeForce GT 740    " tdeviceStringW =  "Dell U3011 (Digital) " tprofileName = "DELL 3007WFP_i1_2018-01-10.icm"
+                    tadaptorName = "\\\\.\\DISPLAY6" :: adaptorStringW = "NVIDIA GeForce GT 740    " tdeviceStringW =  "Dell 3007WFP         " tprofileName = "3007WFP.icm"
+                    */
                     G::WinScreen winScreen;
                     winScreen.device = QString::fromUtf16((const ushort *)(deviceStringW));
                     winScreen.adaptor = QString::fromUtf16((const ushort *)(adaptorStringW));
