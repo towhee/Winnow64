@@ -30,8 +30,9 @@ public:
     QVBoxLayout *verticalLayout;
     QSpacerItem *verticalSpacer_2;
     QFrame *frame_2;
-    QHBoxLayout *horizontalLayout_3;
+    QVBoxLayout *verticalLayout_2;
     QLabel *welcomeLabel;
+    QLabel *getStartedLabel;
     QFrame *frame;
     QHBoxLayout *horizontalLayout_2;
     QLabel *tipsLabel;
@@ -49,7 +50,7 @@ public:
         welcomeScrollArea->setWidgetResizable(true);
         scrollAreaWidgetContents = new QWidget();
         scrollAreaWidgetContents->setObjectName(QString::fromUtf8("scrollAreaWidgetContents"));
-        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 1319, 1837));
+        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 1326, 1781));
         horizontalLayout = new QHBoxLayout(scrollAreaWidgetContents);
         horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
         horizontalLayout->setContentsMargins(-1, -1, -1, 1100);
@@ -68,17 +69,22 @@ public:
         frame_2->setMaximumSize(QSize(16777215, 16777215));
         frame_2->setFrameShape(QFrame::NoFrame);
         frame_2->setFrameShadow(QFrame::Raised);
-        horizontalLayout_3 = new QHBoxLayout(frame_2);
-        horizontalLayout_3->setObjectName(QString::fromUtf8("horizontalLayout_3"));
+        verticalLayout_2 = new QVBoxLayout(frame_2);
+        verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
         welcomeLabel = new QLabel(frame_2);
         welcomeLabel->setObjectName(QString::fromUtf8("welcomeLabel"));
         welcomeLabel->setMinimumSize(QSize(500, 0));
-        welcomeLabel->setMaximumSize(QSize(1500, 16777215));
+        welcomeLabel->setMaximumSize(QSize(16777215, 16777215));
         welcomeLabel->setFrameShape(QFrame::Box);
         welcomeLabel->setAlignment(Qt::AlignCenter);
         welcomeLabel->setWordWrap(true);
 
-        horizontalLayout_3->addWidget(welcomeLabel);
+        verticalLayout_2->addWidget(welcomeLabel);
+
+        getStartedLabel = new QLabel(frame_2);
+        getStartedLabel->setObjectName(QString::fromUtf8("getStartedLabel"));
+
+        verticalLayout_2->addWidget(getStartedLabel);
 
 
         verticalLayout->addWidget(frame_2);
@@ -91,8 +97,8 @@ public:
         horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
         tipsLabel = new QLabel(frame);
         tipsLabel->setObjectName(QString::fromUtf8("tipsLabel"));
-        tipsLabel->setMinimumSize(QSize(900, 0));
-        tipsLabel->setMaximumSize(QSize(1500, 16777215));
+        tipsLabel->setMinimumSize(QSize(500, 0));
+        tipsLabel->setMaximumSize(QSize(1000, 16777215));
         tipsLabel->setFrameShape(QFrame::Box);
         tipsLabel->setLineWidth(1);
         tipsLabel->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
@@ -124,9 +130,10 @@ public:
     void retranslateUi(QScrollArea *welcomeScrollArea)
     {
         welcomeScrollArea->setWindowTitle(QCoreApplication::translate("welcomeScrollArea", "ScrollArea", nullptr));
-        welcomeLabel->setText(QCoreApplication::translate("welcomeScrollArea", "<html><head/><body><p align=\"center\"><span style=\" color:#cccccc;\"><br/></span><span style=\" font-size:24pt; color:#ffffff;\">Welcome to Winnow</span></p><p align=\"center\"><span style=\" color:#cccccc;\"><br/></span><span style=\" font-size:10pt; color:#cccccc;\">To get started select a folder with images from the Folders panel <br/>or from the menu: </span><span style=\" font-size:10pt; font-style:italic; color:#cccccc;\">File &gt; Open Folder</span><span style=\" font-size:10pt; color:#cccccc;\"> (Shortcut &quot;O&quot;)</span><span style=\" color:#cccccc;\"><br/></span></p></body></html>", nullptr));
-        tipsLabel->setText(QCoreApplication::translate("welcomeScrollArea", "<html><head/><body><p align=\"center\"><br/></p><p><span style=\" font-size:10pt; font-weight:600; color:#ffffff;\">Help</span><span style=\" font-size:10pt; color:#cccccc;\">: <br/>There is a help document you can access via the menu: </span><span style=\" font-size:10pt; font-style:italic; color:#cccccc;\">Help &gt; Winnow Help</span><span style=\" font-size:10pt; color:#cccccc;\"> or you can press &quot;?&quot;.</span></p><p><span style=\" font-size:10pt; font-weight:600; color:#ffffff;\">Shortcuts</span><span style=\" font-size:10pt; color:#cccccc;\">: <br/>Most of the shortcuts are shown in the menus. You can see a complete list via the menu: </span><span style=\" font-size:10pt; font-style:italic; color:#cccccc;\">Help &gt; Shortcuts</span><span style=\" font-size:10pt; color:#cccccc;\">.</span></p><p><span style=\" font-size:10pt; font-weight:600; color:#ffffff;\">Workspaces</span><span style=\" font-size:10pt; color:#cccccc;\">: <br/>Check out workspaces to change to a different layout instantly. You c"
-                        "an create workspaces and access them via Ctrl/Cmd 0-9.</span></p><p><span style=\" font-size:10pt; font-weight:600; color:#ffffff;\">Panels</span><span style=\" font-size:10pt; color:#cccccc;\">: <br/>The panels will float or dock to the top, bottom, right or left sides of the main window. The panel titlebar must be visible to move panels.</span></p><p><span style=\" font-size:10pt; font-weight:600; color:#ffffff;\">Context Menus</span><span style=\" font-size:10pt; color:#cccccc;\">: <br/>Right mouse click to see context menus. This is handy when the main menu is hidden in full screen mode.</span></p><p><span style=\" font-size:10pt; font-weight:600; color:#ffffff;\">Tool tips</span><span style=\" font-size:10pt; color:#cccccc;\">: <br/>Hover over an item with the mouse to see a tool tip. Try this in the preferences dialog to see explanations for different settings.</span></p></body></html>", nullptr));
+        welcomeLabel->setText(QCoreApplication::translate("welcomeScrollArea", "<html><head/><body><p align=\"center\"><span style=\" color:#cccccc;\"><br/></span><span style=\" font-size:24pt; color:#ffffff;\">Welcome to Winnow</span><span style=\" color:#cccccc;\"><br/></span></p></body></html>", nullptr));
+        getStartedLabel->setText(QCoreApplication::translate("welcomeScrollArea", "<html><head/><body><p align=\"center\"><span style=\" font-size:13pt; color:#cccccc;\">To get started select a folder with images from the Folders panel <br/>or from the menu: </span><span style=\" font-size:10pt; font-style:italic; color:#cccccc;\">File &gt; Open Folder</span><span style=\" font-size:13pt; color:#cccccc;\"> (Shortcut &quot;O&quot;)</span></p></body></html>", nullptr));
+        tipsLabel->setText(QCoreApplication::translate("welcomeScrollArea", "<html><head/><body><p align=\"center\"><br/></p><p><span style=\" font-size:13pt; font-weight:600; color:#ffffff;\">Help</span><span style=\" font-size:13pt; color:#cccccc;\">: <br/>There is a help document you can access via the menu: </span><span style=\" font-size:13pt; font-style:italic; color:#cccccc;\">Help &gt; Winnow Help</span><span style=\" font-size:13pt; color:#cccccc;\"> or you can press &quot;?&quot;.</span></p><p><span style=\" font-size:13pt; font-weight:600; color:#ffffff;\">Shortcuts</span><span style=\" font-size:13pt; color:#cccccc;\">: <br/>Most of the shortcuts are shown in the menus. You can see a complete list via the menu: </span><span style=\" font-size:13pt; font-style:italic; color:#cccccc;\">Help &gt; Shortcuts</span><span style=\" font-size:13pt; color:#cccccc;\">.</span></p><p><span style=\" font-size:13pt; font-weight:600; color:#ffffff;\">Workspaces</span><span style=\" font-size:13pt; color:#cccccc;\">: <br/>Check out workspaces to change to a different layout instantly. You c"
+                        "an create workspaces and access them via Ctrl/Cmd 0-9.</span></p><p><span style=\" font-size:13pt; font-weight:600; color:#ffffff;\">Panels</span><span style=\" font-size:13pt; color:#cccccc;\">: <br/>The panels will float or dock to the top, bottom, right or left sides of the main window. The panel titlebar must be visible to move panels.</span></p><p><span style=\" font-size:13pt; font-weight:600; color:#ffffff;\">Context Menus</span><span style=\" font-size:13pt; color:#cccccc;\">: <br/>Right mouse click to see context menus. This is handy when the main menu is hidden in full screen mode.</span></p><p><span style=\" font-size:13pt; font-weight:600; color:#ffffff;\">Tool tips</span><span style=\" font-size:13pt; color:#cccccc;\">: <br/>Hover over an item with the mouse to see a tool tip. Try this in the preferences dialog to see explanations for different settings.<", nullptr));
     } // retranslateUi
 
 };
