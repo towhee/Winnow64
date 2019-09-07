@@ -170,8 +170,10 @@ public:
     bool checkIfUpdate = true;
 
     // appearance
+    bool isImageInfoVisible;
     bool isRatingBadgeVisible;
 //    QString fontSize;
+    int infoOverlayFontSize;
     int classificationBadgeInImageDiameter;
     int classificationBadgeInThumbDiameter;
 
@@ -849,7 +851,7 @@ private:
     QString refreshCurrentPath;
 
     bool simulateJustInstalled;
-    bool isSettings;
+    bool isSettings = false;
     bool isStartSilentCheckForUpdates = true;    // flag true until startup check for updates has been completed
     bool isStressTest;
     bool hasGridBeenActivated;

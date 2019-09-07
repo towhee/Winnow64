@@ -49,6 +49,7 @@ public:
     int infoOverlayFontSize;
     ClassificationLabel *classificationLabel;
     QPixmap *pickPixmap;
+    bool isFirstImageNewFolder;              // new folder, first image, set zoom = fit
 
     QString diagnostics();
 
@@ -170,7 +171,6 @@ private:
     QSize full;
 
     QString currentImagePath;
-    bool firstImageLoaded;
     int classificationBadgeDiam;
 
     bool cursorIsHidden;        // use for slideshow and full screen - review rgh

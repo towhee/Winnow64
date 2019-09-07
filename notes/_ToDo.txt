@@ -1,6 +1,14 @@
 BUGS
+- ImageView not showing first image after new user start
+- set cacheSizeMB in loadSettings is premature
+- statusbar font size not matching global font
+- infoOverlay not working
+- createMessageView
+- is mouseMovementTimer in imageView req'd
+- Count not showing in bookmarks
 - Confirm check for updates still working on Win
 - Mac check for updates not done yet
+- Mac available memory
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
 PERFORMANCE
@@ -11,7 +19,6 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Check available memory vs cache size
 - Search
 - Refresh selected images
 - Copy image
@@ -29,6 +36,7 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Check available memory vs cache size
 - ImageView::scale comparing floats potentially bad
 - Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
 - Trying to read metadata from an ICO file
