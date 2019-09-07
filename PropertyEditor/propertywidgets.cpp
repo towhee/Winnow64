@@ -87,6 +87,89 @@ void SliderEditor::updateSliderWhenLineEdited(QString value)
     slider->setValue(value.toInt());
 }
 
+/* LABEL EDITOR ******************************************************************************/
+
+LabelEditor::LabelEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
+{
+    this->idx = idx;
+    source = idx.data(UR_Source).toString();
+
+    label = new QLabel;
+
+    label->setObjectName("DisableGoActions");  // used in MW::focusChange
+    label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    QString clr = idx.data(UR_Color).toString();
+    label->setStyleSheet("QLabel {background:transparent; border:none;"
+                            "padding:0px; border-radius:0px; color:" + clr +"}" +
+                            "Qlabel:disabled {color:gray}");
+    label->setWindowFlags(Qt::FramelessWindowHint);
+    label->setAttribute(Qt::WA_TranslucentBackground);
+
+//    connect(label, &Qlabel::textChanged, this, &labelor::change);
+
+    QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->addWidget(label, Qt::AlignLeft);
+    layout->setContentsMargins(G::propertyWidgetMarginLeft - 2, 0, G::propertyWidgetMarginRight, 0);
+    setLayout(layout);
+
+    label->setText(idx.data(Qt::EditRole).toString());
+}
+
+QString LabelEditor::value()
+{
+    return label->text();
+}
+
+void LabelEditor::setValue(QVariant value)
+{
+    label->setText(value.toString());
+}
+
+
+/* LINEEDIT EDITOR ***************************************************************************/
+
+LineEditor::LineEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
+{
+    this->idx = idx;
+    source = idx.data(UR_Source).toString();
+
+    lineEdit = new QLineEdit;
+
+    lineEdit->setObjectName("DisableGoActions");  // used in MW::focusChange
+    lineEdit->setAlignment(Qt::AlignLeft);
+    QString clr = idx.data(UR_Color).toString();
+    lineEdit->setStyleSheet("QLineEdit {background:transparent; border:none;"
+                            "padding:0px; border-radius:0px; color:" + clr +"}" +
+                            "QlineEdit:disabled {color:gray}");
+    lineEdit->setWindowFlags(Qt::FramelessWindowHint);
+    lineEdit->setAttribute(Qt::WA_TranslucentBackground);
+
+    connect(lineEdit, &QLineEdit::textChanged, this, &LineEditor::change);
+
+    QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->addWidget(lineEdit, Qt::AlignLeft);
+    layout->setContentsMargins(G::propertyWidgetMarginLeft - 2, 0, G::propertyWidgetMarginRight, 0);
+    setLayout(layout);
+
+    lineEdit->setText(idx.data(Qt::EditRole).toString());
+}
+
+QString LineEditor::value()
+{
+    return lineEdit->text();
+}
+
+void LineEditor::setValue(QVariant value)
+{
+    lineEdit->setText(value.toString());
+}
+
+void LineEditor::change(QString value)
+{
+    QVariant v = value;
+    emit editorValueChanged(this);
+}
+
 /* SPINBOX EDITOR ****************************************************************************/
 
 SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)

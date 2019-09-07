@@ -33,8 +33,20 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0: return nullptr;
-    //    case DT_Text:
-    //        return new QLinedEdit;
+        case DT_Label: {
+            LabelEditor *label = new LabelEditor(index, parent);
+//            connect(label, &LabelEditor::editorValueChanged,
+//                    this, &PropertyDelegate::commitData);
+            emit editorWidgetToDisplay(index, label);
+            return label;
+        }
+        case DT_LineEdit: {
+            LineEditor *lineEditor = new LineEditor(index, parent);
+            connect(lineEditor, &LineEditor::editorValueChanged,
+                    this, &PropertyDelegate::commitData);
+            emit editorWidgetToDisplay(index, lineEditor);
+            return lineEditor;
+        }
         case DT_Checkbox: {
             CheckBoxEditor *checkEditor = new CheckBoxEditor(index, parent);
             connect(checkEditor, &CheckBoxEditor::editorValueChanged,
@@ -77,14 +89,14 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
 
 QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-    int height = static_cast<int>(G::fontSize.toInt() * 1.5);
+    int height = static_cast<int>(G::fontSize.toInt() * 1.7);
     return QSize(option.rect.width(), height);
 
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0:
-        case DT_Text:
-    //        return new QLinedEdit;
+        case DT_Label: return LabelEditor(index, nullptr).sizeHint();
+        case DT_LineEdit: return LineEditor(index, nullptr).sizeHint();
         case DT_Checkbox: return CheckBoxEditor(index, nullptr).sizeHint();
         case DT_Spinbox: return SpinBoxEditor(index, nullptr).sizeHint();
         case DT_Combo: return ComboBoxEditor(index, nullptr).sizeHint();
@@ -100,8 +112,16 @@ void PropertyDelegate::setEditorData(QWidget *editor,
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0:
-        case DT_Text:
-    //        return new QLinedEdit;
+    case DT_Label: {
+            QString value = index.model()->data(index, Qt::EditRole).toString();
+            static_cast<LabelEditor*>(editor)->setValue(value);
+            break;
+        }
+        case DT_LineEdit: {
+            QString value = index.model()->data(index, Qt::EditRole).toString();
+            static_cast<LineEditor*>(editor)->setValue(value);
+            break;
+        }
         case DT_Checkbox: {
             int value = index.model()->data(index, Qt::EditRole).toBool();
             static_cast<CheckBoxEditor*>(editor)->setValue(value);
@@ -135,8 +155,20 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0:
-        case DT_Text:
-//        return new QLinedEdit;
+        case DT_Label: {
+            LabelEditor *label = static_cast<LabelEditor*>(editor);
+            QString value = label->value();
+            model->setData(index, value, Qt::EditRole);
+            emit itemChanged(index);
+            break;
+        }
+        case DT_LineEdit: {
+            LineEditor *lineEditor = static_cast<LineEditor*>(editor);
+            QString value = lineEditor->value();
+            model->setData(index, value, Qt::EditRole);
+            emit itemChanged(index);
+            break;
+        }
         case DT_Checkbox: {
             CheckBoxEditor *checkBoxEditor = static_cast<CheckBoxEditor*>(editor);
             bool value = checkBoxEditor->value();

@@ -794,13 +794,36 @@ void Preferences::addItems()
         thirdGenerationCount = -1;
 
             thirdGenerationCount++;
+            // Type = LABEL
+            // name = availableMBToCache (for user information only)
+            // parent = imageCatItem
+            tooltip = "The total amount of available memory in MB.";
+            QStandardItem *availableMBToCacheCaption = new QStandardItem;
+            availableMBToCacheCaption->setToolTip(tooltip);
+            s = QString::number(G::availableMemoryMB) + " MB";
+            availableMBToCacheCaption->setText("Available memory");
+            availableMBToCacheCaption->setEditable(false);
+            QStandardItem *availableMBToCacheValue = new QStandardItem;
+            availableMBToCacheValue->setToolTip(tooltip);
+            availableMBToCacheValue->setData(s, Qt::EditRole);
+            availableMBToCacheValue->setData(DT_Label, UR_DelegateType);
+            availableMBToCacheValue->setData("availableMBToCache", UR_Source);
+            availableMBToCacheValue->setData("QString", UR_Type);
+            availableMBToCacheValue->setData("#1b8a83", UR_Color);
+            availableMBToCacheValue->setEditable(false);
+            imageCatItem->setChild(thirdGenerationCount, 0, availableMBToCacheCaption);
+            imageCatItem->setChild(thirdGenerationCount, 1, availableMBToCacheValue);
+            valIdx = availableMBToCacheValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+            thirdGenerationCount++;
             // Type = COMBOBOX
             // name = imageCacheSizeMethod
             // parent = imageCatItem
             tooltip = "Select method of determining the size of the image cache\n"
                       "Thrifty  = larger of 10% of available memory\n"
                       "Moderate = 50% of available memory\n"
-                      "Greedy = 90% of available memory\n"
+                      "Greedy   = 90% of available memory\n"
                       "Percent of available = use assigned amount\n"
                       "MB of available =  use assigned amount";
             QStandardItem *imageCacheSizeMethodCaption = new QStandardItem;
@@ -825,7 +848,8 @@ void Preferences::addItems()
             // name = cacheSizePercentOfAvailable
             // parent = imageCatItem
             tooltip = "Enter the percent (10% - 90%) of the available memory to assign to\n."
-                      "the image cache.";
+                      "the image cache.  The result will be shown in the Image cache size (MB) \n"
+                      "row below.";
             QStandardItem *cacheSizePercentOfAvailableCaption = new QStandardItem;
             cacheSizePercentOfAvailableCaption->setToolTip(tooltip);
             cacheSizePercentOfAvailableCaption->setText("Image cache size (% of available)");
@@ -850,12 +874,10 @@ void Preferences::addItems()
             // Type = SPINBOX
             // name = cacheSizeMB
             // parent = imageCatItem
-            tooltip = "<html><head/><body><p>Experiment with different cache sizes.  2-8GB "
-                      "appear to work best.  Cache performance does not always improve with "
-                      "size.</p><p>If you tend to move back and forth between images then a "
-                      "50% cache ahead strategy is best.  If you generally just move ahead "
-                      "through the images then weighting a higher percentage ahead makes "
-                      "sense.</p></body></html>";
+            tooltip = "The number of megabytes (MB) to allocate to the iamge cache.  You can \n"
+                      "edit this number directly by setting the cache method to MB.  If you \n"
+                      "select another method then the MB will be calculated and displayed here \n"
+                      "and the cell will be disabled.";
             QStandardItem *cacheSizeMBCaption = new QStandardItem;
             cacheSizeMBCaption->setToolTip(tooltip);
             cacheSizeMBCaption->setText("Image cache size (MB)");

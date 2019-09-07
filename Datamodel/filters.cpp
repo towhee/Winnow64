@@ -543,7 +543,7 @@ void Filters::resizeColumns()
     setColumnWidth(4, countColumnWidth);
     setColumnWidth(3, countColumnWidth);
     setColumnWidth(2, countColumnWidth);
-    setColumnWidth(0, width() - G::scrollBarThickness - 2 * countColumnWidth);
+    setColumnWidth(0, width() - G::scrollBarThickness - (2 * countColumnWidth) - 10);
 }
 
 void Filters::resizeEvent(QResizeEvent *event)

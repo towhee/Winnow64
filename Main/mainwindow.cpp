@@ -210,7 +210,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
        Note ISDEBUG is in globals.h
        Deactivate debug reporting by commenting ISDEBUG  */
     G::showAllTableColumns = false;     // show all table fields for debugging
-    simulateJustInstalled = true;
+    simulateJustInstalled = false;
     isStressTest = false;
     G::isTimer = true;                  // Global timer
 
@@ -221,7 +221,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     setupPlatform();
 
     // structure to hold persistant settings between sessions
-    setting = new QSettings("Winnow", "winnow_100");
+    setting = new QSettings("Winnow", "winnow_101");
     if (setting->contains("cacheSizeMB") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
     loadSettings();    //dependent on bookmarks and actions, infoView
@@ -266,6 +266,11 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     if (rememberLastDir && !isShift) folderSelectionChange();
 
     if (!isSettings) centralLayout->setCurrentIndex(StartTab);
+    else {
+        QString msg = "Select a folder or bookmark to get started.";
+        setCentralMessage(msg);
+        prevMode = "Loupe";
+    }
 
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
@@ -3803,9 +3808,10 @@ void MW::setupCentralWidget()
     welcome = new QScrollArea;
     Ui::welcomeScrollArea ui;
     ui.setupUi(welcome);
-    QString style = "QLabel {font-size: {" + G::fontSize + "; color:red;}";
+//    QString style = "font-size: " + G::fontSize + "pt; color:red;";
 //    ui.frame->setStyleSheet(style)
 //    ui.welcomeLabel->setStyleSheet(style);
+//    qDebug() << __FUNCTION__ << ui.tipsLabel->text();
 
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
@@ -4490,7 +4496,7 @@ void MW::createBookmarks()
     G::track(__FUNCTION__);
     #endif
     }
-    bookmarks = new BookMarks(this, metadata, setting->value("showImageCount").toBool());
+    bookmarks = new BookMarks(this, metadata, true /*setting->value("showImageCount").toBool()*/);
 
     if (isSettings) {
         setting->beginGroup("Bookmarks");
@@ -4621,8 +4627,8 @@ void MW::createStatusBar()
 
 
     setThreadRunStatusInactive();
-    stateLabel = new QLabel;
-    statusBar()->addWidget(stateLabel);
+    statusLabel = new QLabel;
+    statusBar()->addWidget(statusLabel);
 
 //    updateStatusBar();
 }
@@ -4638,7 +4644,7 @@ void MW::updateStatusBar()
     if (!subfolderStatusLabel->isHidden()) statusBar()->removeWidget(subfolderStatusLabel);
     if (!rawJpgStatusLabel->isHidden()) statusBar()->removeWidget(rawJpgStatusLabel);
     if (!slideShowStatusLabel->isHidden()) statusBar()->removeWidget(slideShowStatusLabel);
-    if (!stateLabel->isHidden()) statusBar()->removeWidget(stateLabel);
+    if (!statusLabel->isHidden()) statusBar()->removeWidget(statusLabel);
     if (filters->isAnyFilter()) {
         statusBar()->addWidget(filterStatusLabel);
         filterStatusLabel->show();
@@ -4655,8 +4661,8 @@ void MW::updateStatusBar()
         statusBar()->addWidget(slideShowStatusLabel);
         slideShowStatusLabel->show();
     }
-    statusBar()->addWidget(stateLabel);    
-    stateLabel->show();
+    statusBar()->addWidget(statusLabel);
+    statusLabel->show();
     if (updateImageCacheWhenFileSelectionChange) progressLabel->setVisible(true);
     else progressLabel->setVisible(false);
 }
@@ -4768,7 +4774,7 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
 
     // check if null filter
     if (dm->sf->rowCount() == 0) {
-        stateLabel->setText("");
+        statusLabel->setText("");
         QStandardItemModel *k = infoView->ok;
         k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
         k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
@@ -4784,7 +4790,7 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
     if (imageUnavailable || thumbUnavailable) {
         // rgh may want to set the error here as well as report
         QString err = dm->index(row, G::ErrColumn).data().toString();
-        stateLabel->setText(err);
+        statusLabel->setText(err);
         return;
     }
 
@@ -4817,7 +4823,7 @@ QString fileSym = "📷";
     }
 
     status = " " + base + s;
-    stateLabel->setText(status);
+    statusLabel->setText(status);
     updateStatusBar();
 
 //    qDebug() << "Status:" << status;
@@ -4846,7 +4852,7 @@ void MW::clearStatus()
     G::track(__FUNCTION__);
     #endif
     }
-    stateLabel->setText("");
+    statusLabel->setText("");
 }
 
 //void MW::updateImageCachePosition()
@@ -6479,6 +6485,7 @@ void MW::setFontSize(int fontPixelSize)
     fsTree->setStyleSheet(css);
     filters->setStyleSheet(css);
     tableView->setStyleSheet(css);
+    statusLabel->setStyleSheet(css);
 }
 
 void MW::setInfoFontSize()
@@ -7345,7 +7352,7 @@ Preferences are located in the prefdlg class and updated here.
         // cache        
         cacheSizeMethod = "Moderate";
         cacheSizePercentOfAvailable = 50;
-        cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.5); // rgh do we know yet
+        cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.5);
         isShowCacheStatus = true;
         isShowCacheThreadActivity = true;
         progressWidth = 200;
@@ -7399,15 +7406,14 @@ Preferences are located in the prefdlg class and updated here.
 
     // image cache
     cacheSizeMethod = setting->value("cacheSizeMethod").toString();
-    cacheSizePercentOfAvailable = setting->value("cacheSizePercentOfAvailable").toFloat();
+    cacheSizePercentOfAvailable = setting->value("cacheSizePercentOfAvailable").toInt();
     if (cacheSizeMethod == "Thrifty") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.10);
     if (cacheSizeMethod == "Moderate") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.50);
     if (cacheSizeMethod == "Greedy") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.90);
     if (cacheSizeMethod == "Percent of available")
-        cacheSizeMB = static_cast<int>((G::availableMemoryMB * cacheSizePercentOfAvailable) / 100);
+        cacheSizeMB = (static_cast<int>(G::availableMemoryMB) * cacheSizePercentOfAvailable) / 100;
     if (cacheSizeMethod == "MB") cacheSizeMB = setting->value("cacheSizeMB").toInt();
     isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
-//    cacheDelay = setting->value("cacheDelay").toInt();
     isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
     progressWidth = setting->value("cacheStatusWidth").toInt();
     cacheWtAhead = setting->value("cacheWtAhead").toInt();
@@ -8191,7 +8197,7 @@ void MW::setCentralView()
     if (currentViewDir == "") {
         QString msg = "Select a folder or bookmark to get started.";
         setCentralMessage(msg);
-        prevMode = "loupe";
+        prevMode = "Loupe";
     }
 }
 
@@ -8627,7 +8633,7 @@ void MW::setStatus(QString state)
     G::track(__FUNCTION__);
     #endif
     }
-    stateLabel->setText("    " + state + "    ");
+    statusLabel->setText("    " + state + "    ");
 }
 
 void MW::setIngested()
@@ -10062,7 +10068,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     if (fPath.length() == 0) {
         if (report) {
             msg = "No folder selected.";
-            stateLabel->setText("");
+            statusLabel->setText("");
             setCentralMessage(msg);
         }
         return false;
@@ -10078,7 +10084,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
             else
                 msg = "The folder (" + fPath + ") does not exist or is not available";
 
-            stateLabel->setText("");
+            statusLabel->setText("");
             setCentralMessage(msg);
         }
         return false;
@@ -10088,7 +10094,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     if (!testDir.isReadable()) {
         if (report) {
             msg = "The folder (" + fPath + ") is not readable.  Perhaps it was a USB drive that is not currently mounted or that has been ejected.";
-            stateLabel->setText("");
+            statusLabel->setText("");
             setCentralMessage(msg);
         }
         return false;
@@ -10176,6 +10182,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << "imageView->isFirstImageNewFolder =" << imageView->isFirstImageNewFolder;
+    qDebug() << G::availableMemoryMB;
 }
 // End MW

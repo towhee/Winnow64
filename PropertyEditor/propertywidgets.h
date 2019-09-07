@@ -6,12 +6,13 @@
 enum DelegateType
 {
     DT_None,        // 0
-    DT_Text,        // 1
-    DT_Spinbox,     // 2
-    DT_Checkbox,    // 3
-    DT_Combo,       // 4
-    DT_Slider,      // 5
-    DT_PlusMinus    // 6
+    DT_Label,       // 1
+    DT_LineEdit,    // 2
+    DT_Spinbox,     // 3
+    DT_Checkbox,    // 4
+    DT_Combo,       // 5
+    DT_Slider,      // 6
+    DT_PlusMinus    // 7
 };
 
 enum UserRole
@@ -26,7 +27,8 @@ enum UserRole
     UR_LineEditFixedWidth,              // fixed lineedit width in custom widget
     UR_StringList,                      // list of items for comboBox
     UR_IsBtn,                           // button to run a secondary widget or help
-    UR_BtnText                          // button text
+    UR_BtnText,                         // button text
+    UR_Color                            // QColor for text in LineEdit, LabelEdit
 };
 
 //int propertyWidgetMarginLeft = 10;
@@ -68,6 +70,42 @@ signals:
 private:
     void change(int value);
     QSpinBox *spinBox;
+    QString source;
+    QModelIndex idx;
+};
+
+class LineEditor : public QWidget
+{
+    Q_OBJECT
+public:
+    LineEditor(const QModelIndex &idx, QWidget *parent = nullptr);
+    void setValue(QVariant value);
+    QString value();
+
+signals:
+    void editorValueChanged(QWidget *);
+    void enableGoKeyActions(bool ok);
+
+private:
+    void change(QString value);
+    QLineEdit *lineEdit;
+    QString source;
+    QModelIndex idx;
+};
+
+class LabelEditor : public QWidget
+{
+    Q_OBJECT
+public:
+    LabelEditor(const QModelIndex &idx, QWidget *parent = nullptr);
+    void setValue(QVariant value);
+    QString value();
+
+signals:
+    void enableGoKeyActions(bool ok);
+
+private:
+    QLabel *label;
     QString source;
     QModelIndex idx;
 };

@@ -151,7 +151,7 @@ void BookMarks::resizeColumns()
         imageCountColumnWidth = 0;
         hideColumn(1);
     }
-    setColumnWidth(0, w - G::scrollBarThickness - imageCountColumnWidth -10);
+    setColumnWidth(0, w - G::scrollBarThickness - imageCountColumnWidth - 10);
 //    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth);
 }
 

@@ -760,7 +760,7 @@ private:
     QWidget *messageView;
     Ui::message msg;
     QLineEdit *filterBar;
-    QLabel *stateLabel;
+    QLabel *statusLabel;
     QLabel *filterStatusLabel;
     QLabel *subfolderStatusLabel;
     QLabel *rawJpgStatusLabel;
