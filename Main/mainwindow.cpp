@@ -210,7 +210,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
        Note ISDEBUG is in globals.h
        Deactivate debug reporting by commenting ISDEBUG  */
     G::showAllTableColumns = false;     // show all table fields for debugging
-    simulateJustInstalled = false;
+    simulateJustInstalled = true;
     isStressTest = false;
     G::isTimer = true;                  // Global timer
 
@@ -222,7 +222,9 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     // structure to hold persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
-    isSettings = loadSettings();    //dependent on bookmarks and actions, infoView
+    if (setting->contains("cacheSizeMB") && !simulateJustInstalled) isSettings = true;
+    else isSettings = false;
+    loadSettings();    //dependent on bookmarks and actions, infoView
 
     // app stylesheet and QSetting font size from last session
     createAppStyle();
@@ -281,10 +283,10 @@ void MW::initialize()
     }
     this->setWindowTitle("Winnow");
 
-    qDebug() << "font" << font().family();
-    QFont f = font();
-    f.setPixelSize(13);
-    QGuiApplication::setFont(f);
+//    qDebug() << "font" << font().family();
+//    QFont f = font();
+//    f.setPointSize(16);
+//    QGuiApplication::setFont(f);
 
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     G::isInitializing = true;
@@ -365,6 +367,8 @@ void MW::showEvent(QShowEvent *event)
     // get the monitor screen for testing against movement to an new screen in setDisplayResolution()
     QPoint loc = centralWidget->window()->geometry().center();
     prevScreen = qApp->screenAt(loc)->name();
+
+    G::isInitializing = false;
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -916,6 +920,9 @@ void MW::folderSelectionChange()
     // used by SortFilter, set true when ImageCacheThread starts
     G::isNewFolderLoaded = false;
 
+    // ImageView set zoom = fit for the first image of a new folder
+    imageView->isFirstImageNewFolder = true;
+
     // used by updateStatus
     isCurrentFolderOkay = false;
     pickMemSize = "";
@@ -962,14 +969,20 @@ void MW::folderSelectionChange()
     }
 
     // folder selected from Folders or Bookmarks(Favs)
-    if (!G::isInitializing || !rememberLastDir) {
+    if (!rememberLastDir) {
         currentViewDir = getSelectedPath();
     }
+
+//    // folder selected from Folders or Bookmarks(Favs)
+//    if (!G::isInitializing || !rememberLastDir) {
+//        currentViewDir = getSelectedPath();
+//    }
 
     // sync the favs / bookmarks with the folders view fsTree
     bookmarks->select(currentViewDir);
 
     // confirm folder exists and is readable, report if not and do not process
+    qDebug() << __FUNCTION__ << "currentViewDir =" << currentViewDir;
     if (!isFolderValid(currentViewDir, true, false)) {
         clearAll();
         G::isInitializing = false;
@@ -1116,10 +1129,19 @@ delegate use of the current index must check the column.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
+    qDebug() << __FUNCTION__
+             << "G::isInitializing =" << G::isInitializing
+             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder;
+
     bool isStart = false;
     if(!isCurrentFolderOkay) return;
+
+    if (imageView->isFirstImageNewFolder) thumbView->selectThumb(0);
+
     // if starting program, set first image to display
     if (current.row() == -1) {
+        qDebug() << __FUNCTION__ << "isStart";
         isStart = true;
         thumbView->selectThumb(0);
     }
@@ -1213,10 +1235,14 @@ delegate use of the current index must check the column.
 
     // update imageView, use cache if image loaded, else read it from file
     if (G::mode == "Loupe") {
+        qDebug() << __FUNCTION__
+                 << "imageView->loadImage(fPath)   imageView->isFirstImageNewFolder ="
+                 << imageView->isFirstImageNewFolder;
         if (imageView->loadImage(fPath)) {
             updateClassification();
         }
     }
+
     // update caching when folder has been loaded
     if (G::isNewFolderLoaded ) {
         updateIconsVisible(true);
@@ -3777,6 +3803,9 @@ void MW::setupCentralWidget()
     welcome = new QScrollArea;
     Ui::welcomeScrollArea ui;
     ui.setupUi(welcome);
+    QString style = "QLabel {font-size: {" + G::fontSize + "; color:red;}";
+//    ui.frame->setStyleSheet(style)
+//    ui.welcomeLabel->setStyleSheet(style);
 
     centralLayout->addWidget(imageView);
     centralLayout->addWidget(compareImages);
@@ -3850,9 +3879,16 @@ void MW::createCaching()
     imageCacheThread = new ImageCache(this, dm, metadata);
     metadataCacheThread = new MetadataCache(this, dm, metadata, imageCacheThread);
 
-    metadataCacheThread->cacheAllMetadata = setting->value("cacheAllMetadata").toBool();
-    metadataCacheThread->cacheAllIcons = setting->value("cacheAllIcons").toBool();
-    metadataCacheThread->metadataChunkSize = setting->value("metadataChunkSize").toInt();
+    if (isSettings) {
+        metadataCacheThread->cacheAllMetadata = setting->value("cacheAllMetadata").toBool();
+        metadataCacheThread->cacheAllIcons = setting->value("cacheAllIcons").toBool();
+        metadataCacheThread->metadataChunkSize = setting->value("metadataChunkSize").toInt();
+    }
+    else {
+        metadataCacheThread->cacheAllMetadata = true;
+        metadataCacheThread->cacheAllIcons = false;
+        metadataCacheThread->metadataChunkSize = 250;
+    }
 
     /* When a new folder is selected the metadataCacheThread is started to load all the
     metadata and thumbs for each image. If the user scrolls during the cache process then the
@@ -4094,8 +4130,22 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
         }
         setting->endGroup();
         if (!infoString->infoTemplates.contains(" Default"))
-            infoString->infoTemplates[" Default"] =
-            "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}";
+            if (!infoString->infoTemplates.contains("Default"))
+                infoString->infoTemplates["Default"] =
+                    "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}";
+    }
+    else {
+        infoString->currentInfoTemplate = "Default";
+    }
+
+    // prep pass values: first use of program vs settings have been saved
+    if (isSettings) {
+        isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
+        isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
+        classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
+    }
+    else {
+        // parameters already defined in loadSettings
     }
 
     imageView = new ImageView(this,
@@ -4122,6 +4172,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
     else {
         imageView->useWheelToScroll = false;
         imageView->toggleZoom = 1;
+        imageView->infoOverlayFontSize = infoOverlayFontSize;   // defined in loadSettings
     }
 
     connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
@@ -4486,9 +4537,10 @@ void MW::createAppStyle()
         G::fontSize = setting->value("fontSize").toString();
     }
     else {
-        G::fontSize = "13";
+        G::fontSize = "16";
     }
-    css1 = "QWidget {font-size: " + G::fontSize + "px;}";
+    qDebug() << __FUNCTION__ << "G::fontSize =" << G::fontSize;
+    css1 = "QWidget {font-size: " + G::fontSize + "px;}";       // rgh px or pt
     css = css1 + cssBase;
     this->setStyleSheet(css);
     //    QApplication::setStyle(QStyleFactory::create("fusion"));
@@ -7254,7 +7306,7 @@ Preferences are located in the prefdlg class and updated here.
     #endif
     }
     // default values for first time use (settings does not yet exist)
-    if (!setting->contains("cacheSizeMB") || simulateJustInstalled) {
+    if (!isSettings || simulateJustInstalled) {
 
         // general
         lastPrefPage = 0;
@@ -7264,7 +7316,8 @@ Preferences are located in the prefdlg class and updated here.
         G::mode = "Loupe";
 
         // appearance
-        G::fontSize = "13";
+        G::fontSize = "16";
+        infoOverlayFontSize = 24;
         classificationBadgeInImageDiameter = 32;
         classificationBadgeInThumbDiameter = 16;
         isRatingBadgeVisible = true;
@@ -7290,15 +7343,10 @@ Preferences are located in the prefdlg class and updated here.
         isSlideShowWrap = true;
 
         // cache        
-        metadataCacheThread->cacheAllMetadata = true;
-        metadataCacheThread->cacheAllIcons = false;
-        metadataCacheThread->metadataChunkSize = 250;
-
         cacheSizeMethod = "Moderate";
-        cacheSizePercentOfAvailable = 0.5;
-        cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.5);
+        cacheSizePercentOfAvailable = 50;
+        cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.5); // rgh do we know yet
         isShowCacheStatus = true;
-//        cacheDelay = 0;
         isShowCacheThreadActivity = true;
         progressWidth = 200;
         cacheWtAhead = 7;
@@ -7876,7 +7924,8 @@ around lack of notification when the QListView has finished painting itself.
 
     // update imageView, use cache if image loaded, else read it from file
     QString fPath = idx.data(G::PathRole).toString();
-    if (imageView->isVisible()) {
+    qDebug() << __FUNCTION__ << "fPath =" << fPath;
+    if (imageView->isVisible() && fPath.length() > 0) {
         if (imageView->loadImage(fPath)) {
             updateClassification();
         }
@@ -8139,6 +8188,11 @@ void MW::setCentralView()
     if (asGridAction->isChecked()) gridDisplay();
     if (asTableAction->isChecked()) tableDisplay();
     if (asCompareAction->isChecked()) compareDisplay();
+    if (currentViewDir == "") {
+        QString msg = "Select a folder or bookmark to get started.";
+        setCentralMessage(msg);
+        prevMode = "loupe";
+    }
 }
 
 void MW::selectShootingInfo()
@@ -8176,7 +8230,6 @@ void MW::setShootingInfoVisibility() {
     G::track(__FUNCTION__);
     #endif
     }
-
     imageView->infoOverlay->setVisible(infoVisibleAction->isChecked());
 }
 
@@ -10061,7 +10114,7 @@ void MW::setCentralMessage(QString message)
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, message);
     #endif
     }
     msg.msgLabel->setText(message);
@@ -10123,6 +10176,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    Win::availableMemory();
+    qDebug() << "imageView->isFirstImageNewFolder =" << imageView->isFirstImageNewFolder;
 }
 // End MW

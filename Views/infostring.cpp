@@ -23,7 +23,7 @@ InfoString::InfoString(QWidget *parent, DataModel *dm) :
     this->dm = dm;
     initTokenList();
     initExampleMap();
-    infoTemplates[" Default"] = "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}";
+    infoTemplates["Default"] = "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}";
 }
 
 void InfoString::editTemplates()

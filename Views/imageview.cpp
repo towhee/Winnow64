@@ -103,7 +103,7 @@ ImageView::ImageView(QWidget *parent,
     isMouseDrag = false;
     isLeftMouseBtnPressed = false;
     isMouseDoubleClick = false;
-    firstImageLoaded = true;
+    isFirstImageNewFolder = true;
 }
 
 bool ImageView::loadImage(QString fPath)
@@ -138,7 +138,8 @@ to prevent jarring changes in perceived scale by the user.
     G::track(__FUNCTION__);
     #endif
     }
-
+    qDebug() << __FUNCTION__ << fPath
+             << "isFirstImageNewFolder =" << isFirstImageNewFolder;
     // No folder selected yet
     if (!fPath.length()) return false;
 
@@ -212,14 +213,16 @@ to prevent jarring changes in perceived scale by the user.
                                                     currentImagePath, idx);
 
         zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
-        if (!firstImageLoaded) {
+        if (isFirstImageNewFolder) isFit = true;
+//        if (!isFirstImageNewFolder) {
             // check if last image was a zoomFit - if so zoomFit this one too
             // otherwise keep zoom same as previous
             if (isFit) {
                 zoom = zoomFit;
             }
             scale();
-        }
+            isFirstImageNewFolder = false;
+//        }
     }
     return isLoaded;
 }
@@ -492,15 +495,20 @@ void ImageView::resizeEvent(QResizeEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__
+             << "G::isInitializing =" << G::isInitializing
+             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "isFirstImageNewFolder =" << isFirstImageNewFolder;
+    if (G::isInitializing) return;
     QGraphicsView::resizeEvent(event);
     zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
     static QRect prevRect;
     static bool wasSceneClipped;
 
-    if (firstImageLoaded) {
+    if (isFirstImageNewFolder) {
         zoom = zoomFit;
         scale();
-        firstImageLoaded = false;
+//        isFirstImageNewFolder = false;
         wasZoomFit = true;
         wasSceneClipped = false;
     }
@@ -751,13 +759,12 @@ to help make it visible against different coloured backgrounds. */
         y = sceneOrigin.y() + offset;
     else y = offset;
 
-    QFont font( "Tahoma", infoOverlayFontSize);
+    QFont font("Tahoma", infoOverlayFontSize);
     font.setKerning(true);
 
     infoOverlay->setFont(font);      // not working
-//    int fontSize = 13;          // rgh make this a preference
 
-    infoOverlay->setStyleSheet("font: " + QString::number(infoOverlayFontSize) + "pt;");
+    infoOverlay->setStyleSheet("font-size: " + QString::number(infoOverlayFontSize) + "pt;");
     infoOverlay->setText(infoString);
     infoOverlay->adjustSize();
     // make a little wider to account for the drop shadow
@@ -1075,7 +1082,7 @@ QString ImageView::diagnostics()
     rpt << "\n" << "shootingInfo = " << G::s(shootingInfo);
     rpt << "\n" << "infoOverlayFontSize = " << G::s(infoOverlayFontSize);
     rpt << "\n" << "currentImagePath = " << G::s(currentImagePath);
-    rpt << "\n" << "firstImageLoaded = " << G::s(firstImageLoaded);
+    rpt << "\n" << "firstImageLoaded = " << G::s(isFirstImageNewFolder);
     rpt << "\n" << "classificationBadgeDiam = " << G::s(classificationBadgeDiam);
     rpt << "\n" << "cursorIsHidden = " << G::s(cursorIsHidden);
     rpt << "\n" << "moveImageLocked = " << G::s(moveImageLocked);

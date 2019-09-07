@@ -145,9 +145,9 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setLineWidth(0);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-    QFont f = font();
-    f.setPixelSize(13);
-    setFont(f);
+//    QFont f = font();
+//    f.setPixelSize(13);
+//    setFont(f);
 
     bestAspectRatio = 1;
 
@@ -1140,15 +1140,15 @@ resize and preference adjustment operations.
     wCell = wRow / tpr;
 
     iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
-    iconHeight = iconWidth * bestAspectRatio;
-
+    iconHeight = static_cast<int>(iconWidth * bestAspectRatio);
+    /*
     qDebug() << __FUNCTION__ << objectName()
              << "assignedIconWidth =" << assignedIconWidth
              << "wRow =" << wRow
              << "wCell =" << wCell
              << "tpr =" << tpr
              << "iconWidth =" << iconWidth
-             << "iconHeight =" << iconHeight;
+             << "iconHeight =" << iconHeight;*/
 
     skipResize = true;      // prevent feedback loop
 
