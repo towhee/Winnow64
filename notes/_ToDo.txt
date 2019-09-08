@@ -1,4 +1,6 @@
 BUGS
+- Update from inside Winnow does not create a new folder in c:\program Files\Winnow.
+- GridView does not always justify and size properly.
 - Open in Grid, no folder selected, switch Loupe, Class icon showng
 - Ingest if image does not have metadata req'd
 - Ingest "how this works" text is black

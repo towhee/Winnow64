@@ -221,7 +221,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     setupPlatform();
 
     // structure to hold persistant settings between sessions
-    setting = new QSettings("Winnow", "winnow_101");
+    setting = new QSettings("Winnow", "winnow_100");
     if (setting->contains("cacheSizeMB") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
     loadSettings();    //dependent on bookmarks and actions, infoView
