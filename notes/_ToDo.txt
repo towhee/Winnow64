@@ -1,6 +1,8 @@
 BUGS
+- Open in Grid, no folder selected, switch Loupe, Class icon showng
+- Ingest if image does not have metadata req'd
+- Ingest "how this works" text is black
 - is mouseMovementTimer in imageView req'd
-- Count not showing in bookmarks
 - Confirm check for updates still working on Win
 - Mac check for updates not done yet
 - Mac available memory
@@ -31,6 +33,7 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Count not showing in bookmarks
 - Filters column 0 width needs tweaking
 - statusbar font size not matching global font
 - ImageView not showing first image after new user start

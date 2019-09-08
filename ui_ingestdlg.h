@@ -477,7 +477,7 @@ public:
         retranslateUi(IngestDlg);
 
         selectFolderBtn->setDefault(false);
-        autoIngestTab->setCurrentIndex(1);
+        autoIngestTab->setCurrentIndex(0);
         selectRootFolderBtn->setDefault(false);
         pathTemplatesBtn->setDefault(false);
         selectRootFolderBtn_2->setDefault(false);

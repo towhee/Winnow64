@@ -78,6 +78,11 @@ IngestDlg::IngestDlg(QWidget *parent,
                      manualFolderPath2(manualFolderPath2),
                      filenameTemplateSelected(filenameTemplateSelected)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     this->dm = dm;
 
     ui->setupUi(this);
@@ -102,9 +107,9 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->rootFolderLabel_2->setText(rootFolderPath2);
     ui->rootFolderLabel_2->setToolTip(ui->rootFolderLabel_2->text());
     ui->manualFolderLabel->setText(manualFolderPath);
-    ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
+    ui->manualFolderLabel->setToolTip(ui->manualFolderLabel->text());
     ui->manualFolderLabel_2->setText(manualFolderPath2);
-    ui->manualFolderLabel_2->setToolTip( ui->manualFolderLabel_2->text());
+    ui->manualFolderLabel_2->setToolTip(ui->manualFolderLabel_2->text());
 
     ui->descriptionLineEdit->setText(baseFolderDescription);
 
@@ -120,8 +125,8 @@ IngestDlg::IngestDlg(QWidget *parent,
         ui->pathTemplatesCB->addItem(i.key());
         ui->pathTemplatesCB_2->addItem(i.key());
     }
-     ui->pathTemplatesCB->setCurrentIndex(pathTemplateSelected);
-     ui->pathTemplatesCB_2->setCurrentIndex(pathTemplateSelected2);
+    ui->pathTemplatesCB->setCurrentIndex(pathTemplateSelected);
+    ui->pathTemplatesCB_2->setCurrentIndex(pathTemplateSelected2);
 
     if (filenameTemplatesMap.count() == 0) {
         filenameTemplatesMap["YYYY-MM-DD_XXXX"] = "{YYYY}-{MM}-{DD}_{XXXX}";
@@ -179,6 +184,11 @@ void IngestDlg::renameIfExists(QString &destination,
                                QString &baseName,
                                QString dotSuffix)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int count = 0;
     bool fileAlreadyExists = true;
     QString newBaseName = baseName + "_";
@@ -208,6 +218,11 @@ Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
 Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
 Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(2,0)
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     bool inclDupJpg = ui->combinedIncludeJpgChk->isChecked();
     QString fPath;
     pickList.clear();
@@ -280,6 +295,11 @@ Each picked image is copied from the source to the destination.
 
     Finally the source file is copied to the renamed destination.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
 //    bool backup = ui->backupChk->isChecked();
 
     // get rid of "/" at end of path for history (in file menu)
@@ -382,6 +402,11 @@ Each picked image is copied from the source to the destination.
 
 bool IngestDlg::parametersOk()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString errStr;
     bool err = false;
     bool backup = ui->backupChk->isChecked();
@@ -442,6 +467,11 @@ bool IngestDlg::parametersOk()
 
 void IngestDlg::updateExistingSequence()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (isInitializing) return;
 
     QString tokenKey = ui->filenameTemplatesCB->currentText();
@@ -484,6 +514,11 @@ void IngestDlg::updateExistingSequence()
 
 void IngestDlg::on_selectFolderBtn_clicked()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     QString s;
     s = QFileDialog::getExistingDirectory
@@ -504,6 +539,11 @@ void IngestDlg::on_selectFolderBtn_clicked()
 
 void IngestDlg::on_selectFolderBtn_2_clicked()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     QString s;
     s = QFileDialog::getExistingDirectory
@@ -524,6 +564,11 @@ void IngestDlg::on_selectFolderBtn_2_clicked()
 
 void IngestDlg::on_selectRootFolderBtn_clicked()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     rootFolderPath = QFileDialog::getExistingDirectory
         (this, tr("Choose Root Folder for Primary Ingest Location"), root,
@@ -543,6 +588,11 @@ void IngestDlg::on_selectRootFolderBtn_clicked()
 
 void IngestDlg::on_selectRootFolderBtn_2_clicked()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     rootFolderPath2 = QFileDialog::getExistingDirectory
         (this, tr("Choose Root Folder for Backup Location"), root,
@@ -562,6 +612,11 @@ void IngestDlg::on_selectRootFolderBtn_2_clicked()
 
 bool IngestDlg::isToken(QString tokenString, int pos)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QChar ch = tokenString.at(pos);
     if (ch.unicode() == 8233) return false;  // Paragraph Separator
     if (ch == "{") return false;
@@ -604,6 +659,11 @@ bool IngestDlg::isToken(QString tokenString, int pos)
 
 QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString fPath = info.absoluteFilePath();
     ImageMetadata m = dm->getMetadata(fPath);
     createdDate = m.createdDate;
@@ -685,16 +745,25 @@ QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
 
 void IngestDlg::updateFolderPath()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (ui->autoRadio->isChecked() || isInitializing) {
         baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
                 ? ui->descriptionLineEdit->text() : "";
-        baseFolderDescription2 = (ui->descriptionLineEdit_2->text().length() > 0)
-                ? ui->descriptionLineEdit_2->text() : "";
-
+        qDebug() << __FUNCTION__
+                 << "rootFolderPath =" << rootFolderPath
+                 << "fromRootToBaseFolder =" << fromRootToBaseFolder
+                 << "baseFolderDescription =" << baseFolderDescription;
         folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
+
         ui->folderLabel->setText(folderPath);
         ui->folderLabel->setToolTip(ui->folderLabel->text());
 
+        baseFolderDescription2 = (ui->descriptionLineEdit_2->text().length() > 0)
+                ? ui->descriptionLineEdit_2->text() : "";
         folderPath2 = rootFolderPath2 + fromRootToBaseFolder2 + baseFolderDescription2 + "/";
         ui->folderLabel_2->setText(folderPath2);
         ui->folderLabel_2->setToolTip(ui->folderLabel_2->text());
@@ -713,8 +782,12 @@ void IngestDlg::buildFileNameSequence()
 last file.  If the primary location tab is selected the paths to the primary location
 are shown.  If the backup location tab is chosen then the backup location paths are
 shown.
-
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (isInitializing) return;
     // build filename from tokenString
     QString key = ui->filenameTemplatesCB->currentText();
@@ -775,6 +848,11 @@ shown.
 
 void IngestDlg::on_descriptionLineEdit_textChanged(const QString& arg1)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     static QString prevText = "";
     updateFolderPath();
     // copy primary description to backup description unless it is already different
@@ -788,12 +866,22 @@ void IngestDlg::on_descriptionLineEdit_textChanged(const QString& arg1)
 
 void IngestDlg::on_descriptionLineEdit_2_textChanged(const QString/* &arg1*/)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     updateFolderPath();
 //    ui->folderLabel_2->setText(arg1);
 }
 
 void IngestDlg::on_spinBoxStartNumber_valueChanged(const QString /* &arg1 */)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // updateFolderPath();
     int sequenceNum = getSequenceStart(folderPath);
     if(ui->spinBoxStartNumber->value() < sequenceNum)
@@ -803,6 +891,11 @@ void IngestDlg::on_spinBoxStartNumber_valueChanged(const QString /* &arg1 */)
 
 int IngestDlg::getSequenceStart(const QString &path)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QDir dir(path);
     if (!dir.exists()) return 0;
 
@@ -844,6 +937,11 @@ int IngestDlg::getSequenceStart(const QString &path)
 
 void IngestDlg::updateEnabledState()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (isAuto) {
         ui->autoIngestTab->tabBar()->setTabEnabled(0, true);
         ui->autoIngestTab->tabBar()->setTabEnabled(1, true);
@@ -904,6 +1002,11 @@ void IngestDlg::updateEnabledState()
 
 void IngestDlg::on_autoRadio_toggled(bool checked)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     isAuto = checked;
     updateEnabledState();
     if (isAuto) {
@@ -926,6 +1029,11 @@ void IngestDlg::on_autoRadio_toggled(bool checked)
 
 void IngestDlg::on_manualRadio_toggled(bool /*checked*/)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     isAuto = false;
     if (ui->manualFolderLabel->text().length() > 0) {
         folderPath = ui->manualFolderLabel->text();
@@ -943,6 +1051,11 @@ void IngestDlg::initTokenList()
 /*
 The list of tokens in the token editor will appear in this order.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     tokens  << "ORIGINAL FILENAME"
             << "YYYY"
             << "YY"
@@ -981,6 +1094,11 @@ The list of tokens in the token editor will appear in this order.
 
 void IngestDlg::initExampleMap()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     exampleMap["ORIGINAL FILENAME"] = "_C8I0024";
     exampleMap["YYYY"] = "2018";
     exampleMap["YY"] = "18";
@@ -1018,6 +1136,11 @@ void IngestDlg::initExampleMap()
 
 void IngestDlg::on_pathTemplatesCB_currentIndexChanged(const QString &arg1)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (arg1 == "") return;
     QString tokenString = pathTemplatesMap[arg1];
     fromRootToBaseFolder = parseTokenString(pickList.at(0), tokenString);
@@ -1029,6 +1152,11 @@ void IngestDlg::on_pathTemplatesCB_currentIndexChanged(const QString &arg1)
 
 void IngestDlg::on_pathTemplatesCB_2_currentIndexChanged(const QString &arg1)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (arg1 == "") return;
     QString tokenString = pathTemplatesMap[arg1];
     fromRootToBaseFolder2 = parseTokenString(pickList.at(0), tokenString);
@@ -1040,6 +1168,11 @@ void IngestDlg::on_pathTemplatesCB_2_currentIndexChanged(const QString &arg1)
 
 void IngestDlg::on_filenameTemplatesCB_currentIndexChanged(const QString &arg1)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (arg1 == "") return;
     QString tokenString = filenameTemplatesMap[arg1];
     if (!isInitializing) filenameTemplateSelected = ui->filenameTemplatesCB->currentIndex();
@@ -1051,6 +1184,11 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
 /*
 
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // setup TokenDlg
     QString title = "Token Editor - Path from Root to Destination Folder";
     int index = ui->pathTemplatesCB->currentIndex();
@@ -1077,11 +1215,21 @@ void IngestDlg::on_pathTemplatesBtn_2_clicked()
 /* Performs same function as button on primary tab - just here for convenience and to
 make the ui more intuitive
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     on_pathTemplatesBtn_clicked();
 }
 
 void IngestDlg::on_filenameTemplatesBtn_clicked()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // setup TokenDlg
     // title is also used to filter warnings, so if you change it here also change
     // it in TokenDlg::updateUniqueFileNameWarning
@@ -1106,29 +1254,53 @@ void IngestDlg::on_filenameTemplatesBtn_clicked()
 }
 
 void IngestDlg::on_combinedIncludeJpgChk_clicked()
-
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     getPicks();
 }
 
 void IngestDlg::on_ejectChk_stateChanged(int /*arg1*/)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     autoEjectUsb = ui->ejectChk->isChecked();
 }
 
 void IngestDlg::on_backupChk_stateChanged(int arg1)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     isBackup = arg1;
 }
 
 void IngestDlg::on_isBackupChkBox_stateChanged(int arg1)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     isBackup = arg1;
     qDebug() << "IngestDlg::on_isBackupChkBox_stateChanged  isBackup =" << isBackup;
 }
 
 void IngestDlg::on_helpBtn_clicked()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QWidget *helpDoc = new QWidget;
     Ui::helpIngest ui;
     ui.setupUi(helpDoc);
@@ -1137,13 +1309,21 @@ void IngestDlg::on_helpBtn_clicked()
 
 void IngestDlg::on_cancelBtn_clicked()
 {
-    qDebug() << "isAuto" << isAuto;
-
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     reject();
 }
 
 void IngestDlg::on_okBtn_clicked()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // check parameters
     if(!parametersOk()) return;
 
@@ -1174,10 +1354,20 @@ void IngestDlg::on_okBtn_clicked()
 
 void IngestDlg::on_autoIngestTab_currentChanged(int /*index*/)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     buildFileNameSequence();
 }
 
 void IngestDlg::on_openIngestFolderChk_stateChanged(int arg1)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
      gotoIngestFolder = arg1;
 }

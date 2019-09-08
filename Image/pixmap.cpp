@@ -88,7 +88,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
                         if (image.loadFromData(buf, "JPEG")) {
                             imFile.close();
                             #ifdef Q_OS_WIN
-                                ICC::transform(image);
+                            if (buf.length() > 0) ICC::transform(image);
                             #endif
                             success = true;
                             break;
@@ -135,9 +135,11 @@ bool Pixmap::load(QString &fPath, QImage &image)
                     break;
                 }
                 #ifdef Q_OS_WIN
-//                    qDebug() << __FUNCTION__ << fPath + "buf length =" << dm->index(row, G::ICCBufColumn).data().toByteArray().length();
+                QByteArray ba = dm->index(row, G::ICCBufColumn).data().toByteArray();
+                if (ba.length() > 0) {
                     ICC::setInProfile(dm->index(row, G::ICCBufColumn).data().toByteArray());
                     ICC::transform(image);
+                }
                 #endif
             }
             else {

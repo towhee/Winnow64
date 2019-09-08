@@ -138,8 +138,6 @@ to prevent jarring changes in perceived scale by the user.
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << fPath
-             << "isFirstImageNewFolder =" << isFirstImageNewFolder;
     // No folder selected yet
     if (!fPath.length()) return false;
 
@@ -495,10 +493,11 @@ void ImageView::resizeEvent(QResizeEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
+    /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
-             << "isFirstImageNewFolder =" << isFirstImageNewFolder;
+             << "isFirstImageNewFolder =" << isFirstImageNewFolder;*/
     if (G::isInitializing) return;
     QGraphicsView::resizeEvent(event);
     zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
@@ -508,7 +507,6 @@ void ImageView::resizeEvent(QResizeEvent *event)
     if (isFirstImageNewFolder) {
         zoom = zoomFit;
         scale();
-//        isFirstImageNewFolder = false;
         wasZoomFit = true;
         wasSceneClipped = false;
     }

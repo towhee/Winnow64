@@ -215,8 +215,13 @@ int ImageCache::getImCacheSize()
     }
     int cacheMB = 0;
     for (int i = 0; i < cacheItemList.size(); ++i) {
-        if (cacheItemList.at(i).isCached)
+        if (cacheItemList.at(i).isCached) {
+            /*
+            qDebug() << __FUNCTION__
+                     << cacheItemList.at(i).fName
+                     << cacheItemList.at(i).sizeMB;*/
             cacheMB += cacheItemList.at(i).sizeMB;
+        }
     }
     return cacheMB;
 }
