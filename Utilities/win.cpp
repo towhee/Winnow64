@@ -38,7 +38,7 @@ void Win::availableMemory()
     PROCESS_MEMORY_COUNTERS pmc;
     GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
     SIZE_T virtualMemUsedByMe = pmc.PagefileUsage;
-    qDebug() << __FUNCTION__ << virtualMemUsedByMe;
+//    qDebug() << __FUNCTION__ << virtualMemUsedByMe;
 }
 
 void Win::collectScreensInfo()

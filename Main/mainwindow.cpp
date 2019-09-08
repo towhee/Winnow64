@@ -918,7 +918,6 @@ void MW::folderSelectionChange()
     metadataCacheThread->stopMetadateCache();
     G::allMetadataLoaded = false;
 
-//    qDebug() << __FUNCTION__ << "Stopped threads";
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
     qApp->processEvents();
 
@@ -963,12 +962,12 @@ void MW::folderSelectionChange()
                 fsTree->select(currentViewDir);
             }
             else {
-               QModelIndex idx = fsTree->fsModel->index(currentViewDir);
-               if (fsTree->fsModel->hasIndex(idx.row(), idx.column(), idx.parent()))
-                   qDebug() << __FUNCTION__;
-                   fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(idx));
-               G::isInitializing = false;
-               return;
+                QModelIndex idx = fsTree->fsModel->index(currentViewDir);
+                if (fsTree->fsModel->hasIndex(idx.row(), idx.column(), idx.parent())) {
+                    fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(idx));
+                }
+                G::isInitializing = false;
+                return;
             }
         }
     }
@@ -978,16 +977,10 @@ void MW::folderSelectionChange()
         currentViewDir = getSelectedPath();
     }
 
-//    // folder selected from Folders or Bookmarks(Favs)
-//    if (!G::isInitializing || !rememberLastDir) {
-//        currentViewDir = getSelectedPath();
-//    }
-
     // sync the favs / bookmarks with the folders view fsTree
     bookmarks->select(currentViewDir);
 
     // confirm folder exists and is readable, report if not and do not process
-    qDebug() << __FUNCTION__ << "currentViewDir =" << currentViewDir;
     if (!isFolderValid(currentViewDir, true, false)) {
         clearAll();
         G::isInitializing = false;
@@ -1021,13 +1014,6 @@ void MW::folderSelectionChange()
     */
 
     uncheckAllFilters();
-//    sortFileNameAction->setChecked(true);
-
-    /* When a new folder is loaded it takes time to update the views and they will not respond
-    to scroll commands until they are finished. Set flags that are updated in eventFilter.
-    */
-//    thumbView->scrollWhenReady = true;
-//    gridView->scrollWhenReady = true;
 
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         qDebug() << "Datamodel Failed To Load for" << currentViewDir;
@@ -1072,8 +1058,6 @@ void MW::folderSelectionChange()
         thumbView->selectThumb(0);
     }
 
-
-//    popUp->close();   // rgh is this needed
     updateStatus(false, "Collecting metadata for all images in folder(s)");
 
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
@@ -1134,10 +1118,11 @@ delegate use of the current index must check the column.
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
+    /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
-             << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder;
+             << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder;*/
 
     bool isStart = false;
     if(!isCurrentFolderOkay) return;
@@ -1240,9 +1225,6 @@ delegate use of the current index must check the column.
 
     // update imageView, use cache if image loaded, else read it from file
     if (G::mode == "Loupe") {
-        qDebug() << __FUNCTION__
-                 << "imageView->loadImage(fPath)   imageView->isFirstImageNewFolder ="
-                 << imageView->isFirstImageNewFolder;
         if (imageView->loadImage(fPath)) {
             updateClassification();
         }
@@ -4543,9 +4525,8 @@ void MW::createAppStyle()
         G::fontSize = setting->value("fontSize").toString();
     }
     else {
-        G::fontSize = "16";
+        G::fontSize = "14";
     }
-    qDebug() << __FUNCTION__ << "G::fontSize =" << G::fontSize;
     css1 = "QWidget {font-size: " + G::fontSize + "px;}";       // rgh px or pt
     css = css1 + cssBase;
     this->setStyleSheet(css);
@@ -7340,6 +7321,12 @@ Preferences are located in the prefdlg class and updated here.
         // ingest
         autoIngestFolderPath = false;
         autoEjectUsb = false;
+        gotoIngestFolder = false;
+        backupIngest = false;
+        pathTemplateSelected = 0;
+        pathTemplateSelected2 = 0;
+        filenameTemplateSelected = 0;
+
 
         // preferences
         isSoloPrefDlg = true;
@@ -7930,7 +7917,6 @@ around lack of notification when the QListView has finished painting itself.
 
     // update imageView, use cache if image loaded, else read it from file
     QString fPath = idx.data(G::PathRole).toString();
-    qDebug() << __FUNCTION__ << "fPath =" << fPath;
     if (imageView->isVisible() && fPath.length() > 0) {
         if (imageView->loadImage(fPath)) {
             updateClassification();
