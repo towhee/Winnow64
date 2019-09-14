@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<!--<link rel="stylesheet" type="text/css" href=":/qss/winnow.css">-->
+<!--<link rel="stylesheet" type="text/css" href="/Users/roryhill/Projects/Winnow64/qss/winnow.css">-->
+</head>
+<!--<body style="background-color: rgb(85,85,85);color: silver">-->
+<body style="color:silver;margin-left:9px">
+
+
+<h3 style="color: white">Overview</h3>
+
+<p>This tool automates the process of creating a folder in a specific
+folder structure where the images will be copied. The folder structure comprises of a
+<span style="background-color: blue">root</span>, a
+<span style="background-color: green">template path</span> and a
+<span style="background-color:purple">description</span>.
+The files can also be renamed as they are copied.</p>
+
+<h3 style="color: white">Creating a path to the destination folder</h3>
+
+<p>Windows example:</p>
+   <p style="margin-left:25px">
+   <span style="background-color: blue">e:\</span>
+   <span style="background-color: green">2018\2018-02\2018-02-23</span>
+   <span style="background-color: purple">_Spring in Paris</span></p>
+
+<p>Mac example:</p>
+<p style="margin-left:25px">
+<span style="background-color: blue">/users/pictures/</span>
+<span style="background-color: green">Feb/23</span>
+<span style="background-color: purple"> Paris<span></p>
+
+<p><span style="background-color: blue">Root:</span>&nbsp;&nbsp;
+This is the base location where your images are stored.  The root is entered in the
+“Ingest Picks” dialog.</p>
+
+<p><span style="background-color: green">Template path:</span>&nbsp;&nbsp;
+The path from the root to the destination folder that can be defined by metadata from
+an image.  It is based on a template in “Edit Template(s)” accessed from the
+“Ingest Picks” dialog.  The template for the windows example is {YYYY}/{YYYY}-{MM}-{DD}
+and the mac example is {MMM}/{DD}.  The templates are based on tokens inside curly
+brackets {}.
+</p>
+
+<p><span style="background-color: purple">Description:</span>&nbsp;&nbsp;
+An optional description that is appended to the template path. It is entered in the
+“Ingest Picks” dialog.</p>
+
+<h3 style="color: white">Tokens</h3>
+
+<p>Tokens are place holders and the values for the tokens are inserted from the metadata
+in the images. Tokens are surrounded with curly brackets like this: {YYYY}.  In this case
+the year is found in the image metadata and formatted as 2019.  If the token {YY} was
+chosen then the result would be formatted as 19 if the year was 2019.  Tokens are
+listed in the "Token editor", which is accessed from the "Ingest dialog".  Some other
+examples of tokens include: {TITLE} {ORIGINAL FILENAME} {HOUR} {SECOND} {CREATOR} etc.</p>
+
+<h3 style="color: white">Templates</h3>
+
+<p>A template is a structure used to build a file path or a file name.  You create
+templates using tokens and text in the "Template Editor". For example, to build the
+folder structure</p>
+
+<p style="margin-left:25px">Weddings/2019/Hill wedding/</p>
+
+<p>we would build the template</p>
+
+<p style="margin-left:25px">Weddings{2019}/{TITLE}/</p>
+
+<p>assuming we had put the description "Hill wedding" in the Title metadata for the images.</p>
+
+<h3 style="color: white">File names</h3>
+
+<p>You can also create new file names using templates and tokens.  For example, if you
+want file names in the format 2019-09-18_0187.NEF you would build the template</p>
+
+<p style="margin-left:25px">{YYYY}-{MM}-{DD}_{XXXX}</p>
+
+<p>The .NEF will automatically be appended.</p>
+
+<h3 style="color: white">Slashes and back slashes</h3>
+
+<p>Do not use “/” or “\” in the template name.  The template name is used as a key to save
+the templates between sessions.  Slashes do terrible things to the windows registry.</p>
+
+<p>In the template itself, Windows uses the “\” in file paths while MacOS and Linux use
+“/”.  Since the “\” is also used for escape sequences I suggest you use the “/”.  Winnow
+will automatically convert this to a “\” when creating the path to the destination folder
+in windows. </p>
+
+<p>For example, if the image was taken on Feb 23, 2018:</p>
+
+<p style="margin-left:25px">Template = {YYYY}/{YYYY}-{MM}-{DD} will become
+“2018\2018-02\2018-02-23” in windows.</p>
+
+</body>
+</html>
+

@@ -15,3 +15,6 @@ Resources
         or drag file onto executable
     https://sno.phy.queensu.ca/~phil/exiftool/TagNames/
     http://www.exiv2.org/metadata.html
+
+MacOS trackpad single tap click - change the trackpad options setting in accessibility
+to 'enable dragging' with "three finger drag" makes single tap work properly.

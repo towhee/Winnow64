@@ -84,6 +84,7 @@ IngestDlg::IngestDlg(QWidget *parent,
     #endif
     }
     this->dm = dm;
+    this->css = css;
 
     ui->setupUi(this);
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
@@ -1301,10 +1302,20 @@ void IngestDlg::on_helpBtn_clicked()
     G::track(__FUNCTION__);
     #endif
     }
-    QWidget *helpDoc = new QWidget;
-    Ui::helpIngest ui;
-    ui.setupUi(helpDoc);
-    helpDoc->show();
+    QFile f(":/Docs/ingestautopath.html");
+    f.open(QIODevice::ReadOnly);
+    QDialog *dlg = new QDialog;
+    QTextBrowser *text = new QTextBrowser;
+    QString style = "background-color: rgb(55,55,55); font-size:" + G::fontSize + "px;";
+    text->setStyleSheet(style);
+    text->setMinimumWidth(600);
+    text->setMinimumHeight(600);
+    text->setContentsMargins(9,9,9,9);
+    text->setHtml(f.readAll());
+    dlg->setLayout(new QHBoxLayout);
+    dlg->layout()->setContentsMargins(0,0,0,0);
+    dlg->layout()->addWidget(text);
+    dlg->exec();
 }
 
 void IngestDlg::on_cancelBtn_clicked()

@@ -1,13 +1,11 @@
 BUGS
+- Test with corrupted image files
 - Update from inside Winnow does not create a new folder in c:\program Files\Winnow.
 - GridView does not always justify and size properly.
-- Open in Grid, no folder selected, switch Loupe, Class icon showng
 - Ingest if image does not have metadata req'd
-- Ingest "how this works" text is black
 - is mouseMovementTimer in imageView req'd
 - Confirm check for updates still working on Win
 - Mac check for updates not done yet
-- Mac available memory
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
 PERFORMANCE
@@ -35,6 +33,11 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Mac available memory
+- Ingest "how this works" text is black
+- Mac single tap to click not working.  Change the trackpad options setting in accessibility
+  to 'enable dragging' with "three finger drag"
+- Open in Grid, no folder selected, switch Loupe, Class icon showng
 - Count not showing in bookmarks
 - Filters column 0 width needs tweaking
 - statusbar font size not matching global font

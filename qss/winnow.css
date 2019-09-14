@@ -14,10 +14,27 @@ Menu bar item selected
 Menu item selected              rgb(68,95,118);     = dull blue
 Other selected item             rgb(76,90,102)      tab, list...
 
+Changing font size does not work for h1 - h5 html headers in Qt
 */
 
+h1 {
+    color: red;                 /*works*/
+}
+
+h2 {
+    color: green;               /*works*/
+}
+
+h3 {
+    color: white;
+}
+
+body {
+    background-color: rgb(85,85,85);
+    color: silver;
+}
+
 QWidget {
-    /*font-size: 14px;*/
     background-color: rgb(85,85,85);
     color: lightgray;
     border-width: 0px;
@@ -29,7 +46,11 @@ QGraphicsView {
 
 StatusBar::QLabel {
     color: rgb(190,190,190);
-    background-color:red;
+
+}
+
+QMenuBar {
+    border: 0px solid rgb(99,99,99);
 }
 
 QMenuBar::item {
@@ -39,9 +60,12 @@ QMenuBar::item {
     border-radius: 4px;
 }
 
-QMenu::item {
-    color: white;
-    background-color: transparent;
+QMenuBar::item:selected {
+    background-color: rgb(68,95,118);
+}
+
+QMenuBar::item:pressed {
+    background-color: rgb(68,95,118);
 }
 
 QMenu {
@@ -49,8 +73,9 @@ QMenu {
     border: 1px solid gray;
 }
 
-QMenuBar {
-    border: 0px solid rgb(99,99,99);
+QMenu::item {
+    color: white;
+    background-color: transparent;
 }
 
 QMenu::item:selected {
@@ -59,14 +84,6 @@ QMenu::item:selected {
 
 QMenu::item:disabled {
     color: gray;
-}
-
-QMenuBar::item:selected {
-    background-color: rgb(68,95,118);
-}
-
-QMenuBar::item:pressed {
-    background-color: rgb(68,95,118);
 }
 
 QFrame {
@@ -176,14 +193,14 @@ QTabBar::tab:disabled {
     color: gray;
 }
 
-QListView {
-    border: 1px solid rgb(85,85,85);
-}
-
 QStackedWidget {
     border: 1px solid gray;
     /*border: 1px solid rgb(95,95,95);*/
     border-radius: 5px;
+}
+
+QListView {
+    border: 1px solid rgb(85,85,85);
 }
 
 QListWidget {
@@ -256,15 +273,11 @@ QHeaderView
 QHeaderView::section {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                 stop: 0 rgb(88,88,88), stop: 1 rgb(66,66,66));
-/*    background-color: rgb(95,95,95);  */
     border-style: solid;
     border: 1px solid rgb(85,85,85);
     border-bottom: 1px solid rgb(85,85,85);
     color: rgb(225,225,225);
     max-height: 24px;
-    /*text-align: center left;   does not work */
-/*    font: 13px;       */
-
 }
 
 QAbstractScrollArea {

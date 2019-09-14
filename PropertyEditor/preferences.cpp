@@ -801,7 +801,7 @@ void Preferences::addItems()
             QStandardItem *availableMBToCacheCaption = new QStandardItem;
             availableMBToCacheCaption->setToolTip(tooltip);
             s = QString::number(G::availableMemoryMB) + " MB";
-            availableMBToCacheCaption->setText("Available memory");
+            availableMBToCacheCaption->setText("Available memory for caching");
             availableMBToCacheCaption->setEditable(false);
             QStandardItem *availableMBToCacheValue = new QStandardItem;
             availableMBToCacheValue->setToolTip(tooltip);
@@ -828,7 +828,7 @@ void Preferences::addItems()
                       "MB of available =  use assigned amount";
             QStandardItem *imageCacheSizeMethodCaption = new QStandardItem;
             imageCacheSizeMethodCaption->setToolTip(tooltip);
-            imageCacheSizeMethodCaption->setText("Cache size method");
+            imageCacheSizeMethodCaption->setText("Choose cache size method");
             imageCacheSizeMethodCaption->setEditable(false);
             QStandardItem *imageCacheSizeMethodValue = new QStandardItem;
             imageCacheSizeMethodValue->setToolTip(tooltip);
@@ -852,7 +852,7 @@ void Preferences::addItems()
                       "row below.";
             QStandardItem *cacheSizePercentOfAvailableCaption = new QStandardItem;
             cacheSizePercentOfAvailableCaption->setToolTip(tooltip);
-            cacheSizePercentOfAvailableCaption->setText("Image cache size (% of available)");
+            cacheSizePercentOfAvailableCaption->setText("Calc cache size based on % of available");
             cacheSizePercentOfAvailableCaption->setEditable(false);
             QStandardItem *cacheSizePercentOfAvailableValue = new QStandardItem;
             cacheSizePercentOfAvailableValue->setToolTip(tooltip);
@@ -880,7 +880,7 @@ void Preferences::addItems()
                       "and the cell will be disabled.";
             QStandardItem *cacheSizeMBCaption = new QStandardItem;
             cacheSizeMBCaption->setToolTip(tooltip);
-            cacheSizeMBCaption->setText("Image cache size (MB)");
+            cacheSizeMBCaption->setText("Image cache size (MB) allocated");
             cacheSizeMBCaption->setEditable(false);
             QStandardItem *cacheSizeMBValue = new QStandardItem;
             cacheSizeMBValue->setToolTip(tooltip);

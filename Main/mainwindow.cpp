@@ -294,6 +294,7 @@ void MW::initialize()
 //    QGuiApplication::setFont(f);
 
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+//    QGuiApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTouchEvents);
     G::isInitializing = true;
     isNormalScreen = true;
     G::isSlideShow = false;
@@ -318,7 +319,9 @@ void MW::initialize()
     pickStack = new QStack<Pick>;
     slideshowRandomHistoryStack = new QStack<QString>;
     scrollRow = 0;
+    #ifdef Q_OS_WIN
     ICC::setInProfile(nullptr);
+    #endif
 //    G::newPopUp();
 }
 
@@ -339,6 +342,7 @@ void MW::setupPlatform()
     #endif
     #ifdef Q_OS_MAC
         setWindowIcon(QIcon(":/images/winnow.icns"));
+        Mac::availableMemory();
     #endif
 }
 
@@ -4528,7 +4532,19 @@ void MW::createAppStyle()
         G::fontSize = "14";
     }
     css1 = "QWidget {font-size: " + G::fontSize + "px;}";       // rgh px or pt
-    css = css1 + cssBase;
+
+    widgetCSS.fontSize = 16;
+    widgetCSS.widgetBackgroundColor = QColor(65,65,65);
+    widgetCSS.selectionColor = QColor(68,95,118);
+    widgetCSS.textColor = QColor(190,190,190);
+    widgetCSS.scrollBarHandleBackgroundColor = QColor(90,130,100);
+    css = widgetCSS.css();
+//    css = widgetCSS.widget() + cssBase;
+//    css = css1 + cssBase;
+
+/*
+
+  */
     this->setStyleSheet(css);
     //    QApplication::setStyle(QStyleFactory::create("fusion"));
 }
@@ -4556,7 +4572,8 @@ void MW::createStatusBar()
     progressPixmap->scaled(progressWidth, 25);
     QColor cacheBGColor = QColor(85,85,85);
 //    QColor cacheBGColor = QColor(85,85,85);
-    progressPixmap->fill(cacheBGColor);
+    progressPixmap->fill(widgetCSS.widgetBackgroundColor);
+//    progressPixmap->fill(cacheBGColor);
     progressLabel->setPixmap(*progressPixmap);
     progressLabel->setFixedWidth(progressWidth);
 
@@ -6562,15 +6579,13 @@ resolution is used to calculate and report the zoom in ImageView.
     auto modes = CGDisplayCopyAllDisplayModes(displayID, nullptr);
     auto count = CFArrayGetCount(modes);
     CGDisplayModeRef mode;
-//    displayHorizontalPixels, displayVerticalPixels = 0;
 
     // the native resolution is the largest display mode
-    for (auto c = count; c--;) {
+    for (long c = count; c--;) {
 //        mode = *(static_cast<const CGDisplayModeRef>(CFArrayGetValueAtIndex(modes, c)));
-        mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(modes, c);
+        mode = static_cast<CGDisplayModeRef>(const_cast<void *>(CFArrayGetValueAtIndex(modes, c)));
         int w = static_cast<int>(CGDisplayModeGetWidth(mode));
         int h = static_cast<int>(CGDisplayModeGetHeight(mode));
-        qDebug() << __FUNCTION__ << w << h;
         if (w > displayHorizontalPixels) displayHorizontalPixels = w;
         if (h > displayVerticalPixels) displayVerticalPixels = h;
     }
@@ -7918,10 +7933,10 @@ around lack of notification when the QListView has finished painting itself.
     // update imageView, use cache if image loaded, else read it from file
     QString fPath = idx.data(G::PathRole).toString();
     if (imageView->isVisible() && fPath.length() > 0) {
-        if (imageView->loadImage(fPath)) {
-            updateClassification();
-        }
+        imageView->loadImage(fPath);
     }
+    // do not show classification badge if no folder or nothing selected
+    updateClassification();
 
     // req'd after compare mode to re-enable extended selection
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -10168,6 +10183,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << G::availableMemoryMB;
+//    qDebug() << CSS::textColor;
 }
 // End MW

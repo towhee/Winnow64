@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ingestAutoPath</class>
+ <widget class="QDialog" name="ingestAutoPath">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_2">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QFrame" name="frame">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;h3 style=&quot; margin-top:14px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:large; font-weight:600;&quot;&gt;Creating a path to the destination folder&lt;/span&gt;&lt;/h3&gt;&lt;p&gt;Example: &lt;/p&gt;&lt;p&gt;Windows: e:\2018\2018-02\2018-02-23_Spring in Paris &lt;/p&gt;&lt;p&gt;Mac: /users/pictures/Feb/23 Paris Root: &lt;/p&gt;&lt;p&gt;This is the base location where your images are stored. &lt;/p&gt;&lt;p&gt;The root is entered in the “Ingest Picks” dialog. = e:\2018\2018-02\2018-02-23_Spring in Paris = /users/pictures/Feb/23 Paris Template path: The path from the root to the destination folder that can be defined by metadata from an image. It is based on a template in “Edit Template(s)” accessed from the “Ingest Picks” dialog. = e:\2018\2018-02\2018-02-23_Spring in Paris = /users/pictures/Feb/23 Paris Description: An optional description appended to the template path, entered in the “Ingest Picks” dialog. = e:\2018\2018-02\2018-02-23_Spring in Paris = /users/pictures/Feb/23 Paris The path = Root + Template path + Description Creating the file names File names are created in the template editor, based on tokens, including sequence tokens that append digits. For example, if the image was taken with a Canon camera on Feb 23, 2018 and was the 36th image picked: Template = {YYYY}-{MM}-{DD}_{XXX} will become 2018-02-23_036.CR2 What is a template and what are tokens A template is a structure to use to build a file path or a file name. You can create templates using any descriptive name and create the template using tokens. Tokens are place holders and the values for the tokens are inserted from the metadata in the images. &lt;/p&gt;&lt;p&gt;For example: Template name = “Rory template” Template = {YYYY}/{YYYY}-{MM}-{DD} {YYYY} = a token (dragged from token list in token editor) Where does the metadata come from The metadata is sourced from the first image picked and all the picked images will be copied to one destination folder. &lt;/p&gt;&lt;h3 style=&quot; margin-top:14px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:large; font-weight:600;&quot;&gt;Slashes and back slashes &lt;/span&gt;&lt;/h3&gt;&lt;p&gt;Do not use “/” or “\” in the template name. The template name is used as a key to save the templates between sessions. Slashes do terrible things to the windows registry. In the template itself, Windows uses the “\” in file paths while MacOS and Linux use “/”. Since the “\” is also used for escape sequences I suggest you use the “/”. Winnow will automatically convert this to a “\” when creating the path to the destination folder in windows. &lt;/p&gt;&lt;p&gt;For example, if the image was taken on Feb 23, 2018: Template = {YYYY}/{YYYY}-{MM}-{DD} will become “2018\2018-02\2018-02-23” in windows. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

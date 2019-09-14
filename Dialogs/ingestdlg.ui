@@ -1218,9 +1218,9 @@
    <widget class="QPushButton" name="helpBtn">
     <property name="geometry">
      <rect>
-      <x>510</x>
+      <x>570</x>
       <y>30</y>
-      <width>161</width>
+      <width>151</width>
       <height>25</height>
      </rect>
     </property>
@@ -1450,7 +1450,7 @@
      <rect>
       <x>570</x>
       <y>30</y>
-      <width>171</width>
+      <width>161</width>
       <height>25</height>
      </rect>
     </property>

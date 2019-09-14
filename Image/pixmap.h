@@ -6,7 +6,9 @@
 #include <QHash>
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
+#ifdef Q_OS_WIN
 #include "Utilities/icc.h"
+#endif
 
 class Pixmap : public QObject
 {
