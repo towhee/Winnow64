@@ -125,5 +125,6 @@
         <file>images/icon16/subfolders.png</file>
         <file>images/icon16/slideshow.png</file>
         <file>images/icon16/rawjpeg.png</file>
+        <file>Docs/ingestautopath.html</file>
     </qresource>
 </RCC>

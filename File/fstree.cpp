@@ -333,7 +333,7 @@ added as column 4.
     while (idx.isValid())
     {
         QString path = idx.data(QFileSystemModel::FilePathRole).toString();
-        if(!count.contains(path)) {
+        if (!count.contains(path)) {
             dir->setPath(path);
             int n = dir->entryInfoList().size();
             count[path] = QString::number(n, 'f', 0);

@@ -373,7 +373,7 @@ public:
         autoIngestTab->addTab(backupTab, QString());
         helpBtn = new QPushButton(groupBox_2);
         helpBtn->setObjectName(QString::fromUtf8("helpBtn"));
-        helpBtn->setGeometry(QRect(510, 30, 161, 25));
+        helpBtn->setGeometry(QRect(570, 30, 151, 25));
         QSizePolicy sizePolicy1(QSizePolicy::Preferred, QSizePolicy::Preferred);
         sizePolicy1.setHorizontalStretch(0);
         sizePolicy1.setVerticalStretch(0);
@@ -426,7 +426,7 @@ public:
         filenameTemplatesCB->setFont(font1);
         filenameTemplatesBtn = new QPushButton(groupBox_4);
         filenameTemplatesBtn->setObjectName(QString::fromUtf8("filenameTemplatesBtn"));
-        filenameTemplatesBtn->setGeometry(QRect(570, 30, 171, 25));
+        filenameTemplatesBtn->setGeometry(QRect(570, 30, 161, 25));
         filenameTemplatesBtn->setFont(font3);
         filenameTemplatesBtn->setAutoDefault(false);
         filenameTemplatesBtn->setFlat(false);

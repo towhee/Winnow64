@@ -17,8 +17,8 @@
 class Win
 {
 public:
-    static void collectScreensInfo();
     static void availableMemory();
+    static void collectScreensInfo();
 };
 
 #endif // WIN_H

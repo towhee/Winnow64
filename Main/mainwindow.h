@@ -16,6 +16,7 @@
 #endif
 
 #include "Main/global.h"
+#include "Main/widgetcss.h"
 #include "appdlg.h"
 #include "Datamodel/datamodel.h"
 #include "Datamodel/filters.h"
@@ -34,7 +35,9 @@
 
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
+#ifdef Q_OS_WIN
 #include "Utilities/icc.h"
+#endif
 
 #include "ingestdlg.h"
 #include "aboutdlg.h"
@@ -57,11 +60,16 @@
 //#include "Lib/zlib/zlib.h"
 //#include "lcms2.h"
 
-// windows api
-//#include "Icm.h"                    // Color management (Mscms.lib or Mscma.dll)
-//#include "Windows.h"
-//#include "WinUser.h"                // req'd for EnumDisplayDevicesW
+//#if defined(Q_OS_WIN)
+#ifdef Q_OS_WIN
 #include "Utilities/win.h"
+#endif
+
+#ifdef Q_OS_MAC
+#include "Utilities/mac.h"
+#endif
+
+
 
 class MW : public QMainWindow
 {
@@ -266,6 +274,7 @@ public:
     QString dragDropFolderPath;
     int maxThumbSpaceHeight;
     QString pickMemSize;
+    WidgetCSS widgetCSS;
     QString css;                // stylesheet text
     QString css1;               // stylesheet text
     QString cssBase;               // stylesheet text

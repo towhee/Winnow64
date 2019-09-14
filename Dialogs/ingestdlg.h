@@ -6,7 +6,8 @@
 #include "Datamodel/datamodel.h"
 #include "tokendlg.h"
 
-#include "ui_helpingest.h"
+#include "ui_ingestautopath.h"
+//#include "ui_helpingest.h"
 #include "Utilities/utilities.h"
 
 namespace Ui {
@@ -93,6 +94,7 @@ private:
     bool parametersOk();
 
     bool isInitializing;
+    QString css;
 
     QFileSystemModel fileSystemModel;
     Metadata *metadata;

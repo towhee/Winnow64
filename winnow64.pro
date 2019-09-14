@@ -7,6 +7,8 @@ INCLUDEPATH += MacOS
 #INCLUDEPATH += Lib/libtiff
 #INCLUDEPATH += Lib/zlib
 
+UI_DIR = $$PWD
+
 QT += widgets
 QT += concurrent
 QT += xmlpatterns
@@ -36,6 +38,7 @@ HEADERS += Image/thumb.h
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
 HEADERS += Main/mainwindow.h
+HEADERS += Main/widgetcss.h
 HEADERS += Metadata/imagemetadata.h
 HEADERS += Metadata/metadata.h
 HEADERS += Metadata/xmp.h
@@ -45,12 +48,13 @@ HEADERS += PropertyEditor/propertydelegate.h
 HEADERS += PropertyEditor/propertywidgets.h
 HEADERS += Utilities/classificationlabel.h
 HEADERS += Utilities/dropshadowlabel.h
-HEADERS += Utilities/icc.h
+win32:HEADERS += Utilities/icc.h
+mac:HEADERS += Utilities/mac.h
 HEADERS += Utilities/popup.h
 HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
-HEADERS += Utilities/win.h
+win32:HEADERS += Utilities/win.h
 HEADERS += Views/compareImages.h
 HEADERS += Views/compareview.h
 HEADERS += Views/iconview.h
@@ -85,6 +89,7 @@ SOURCES += Main/dockwidget.cpp
 SOURCES += Main/global.cpp
 SOURCES += Main/main.cpp
 SOURCES += Main/mainwindow.cpp
+SOURCES += Main/widgetcss.cpp
 SOURCES += Metadata/metadata.cpp
 SOURCES += Metadata/xmp.cpp
 SOURCES += PropertyEditor/preferences.cpp
@@ -93,12 +98,13 @@ SOURCES += PropertyEditor/propertydelegate.cpp
 SOURCES += PropertyEditor/propertywidgets.cpp
 SOURCES += Utilities/classificationlabel.cpp
 SOURCES += Utilities/dropshadowlabel.cpp
-SOURCES += Utilities/icc.cpp
+win32:SOURCES += Utilities/icc.cpp
+mac:SOURCES += Utilities/mac.cpp
 SOURCES += Utilities/popup.cpp
 SOURCES += Utilities/progressbar.cpp
 SOURCES += Utilities/usb.cpp
 SOURCES += Utilities/utilities.cpp
-SOURCES += Utilities/win.cpp
+win32:SOURCES += Utilities/win.cpp
 SOURCES += Views/compareImages.cpp
 SOURCES += Views/compareview.cpp
 SOURCES += Views/iconview.cpp
@@ -108,7 +114,8 @@ SOURCES += Views/infoview.cpp
 SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
 
-FORMS += Dialogs/aboutdlg.ui
+FORMS += Dialogs/aboutdlg.ui \
+    Help/ingestautopath.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/ingestdlg.ui
@@ -120,6 +127,7 @@ FORMS += Dialogs/updateapp.ui
 FORMS += Dialogs/workspacedlg.ui
 FORMS += Dialogs/zoomdlg.ui
 FORMS += Help/helpform.ui
+FORMS +=
 FORMS += Help/helpingest.ui
 FORMS += Help/introduction.ui
 FORMS += Help/message.ui
@@ -133,7 +141,10 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/versions
+DISTFILES += Docs/versions \
+    Docs/ingestautopath \
+    Docs/ingestautopath.html \
+    notes/scratch.css
 DISTFILES += Docs/test.html
 DISTFILES += notes/scratch.html
 DISTFILES += notes/_Notes
@@ -166,8 +177,8 @@ DEPENDPATH += $$PWD/Lib/zlib
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_static
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
 
-INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
-DEPENDPATH += $$PWD/Lib/lcms2-2.9/include
+win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
+win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/include
 
 #win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/liblcms2_static.a
 #else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/liblcms2_staticd.a
