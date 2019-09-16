@@ -1306,8 +1306,9 @@ void IngestDlg::on_helpBtn_clicked()
     f.open(QIODevice::ReadOnly);
     QDialog *dlg = new QDialog;
     QTextBrowser *text = new QTextBrowser;
-    QString style = "background-color: rgb(55,55,55); font-size:" + G::fontSize + "px;";
-    text->setStyleSheet(style);
+//    QString style = "background-color: rgb(55,55,55); font-size:" + G::fontSize + "px;";
+    text->setStyleSheet(css);
+//    text->setStyleSheet(style);
     text->setMinimumWidth(600);
     text->setMinimumHeight(600);
     text->setContentsMargins(9,9,9,9);

@@ -44,6 +44,7 @@ public:
     void setCursorHiding(bool hide);
     bool isBusy;
     bool useWheelToScroll;
+    void setBackgroundColor(QColor bg);
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void rotate(int degrees);

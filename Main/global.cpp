@@ -36,6 +36,7 @@ namespace G
     int iconHMax;                       // highest icon found in datamodel
 
     QString fontSize;
+    int backgroundShade;
 
     int actualDevicePixelRatio;
     bool allMetadataLoaded;

@@ -48,6 +48,26 @@ void ProgressBar::clearProgress()
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
 
+void ProgressBar::setBackgroundColor(QColor bg)
+{
+/*
+The pixmap showing progress includes background with the progress bar in the middle. When
+the app background is changed this function selectively paints the non-progressbar part
+of the pixmap the new background shade.
+*/
+
+    int w = m1->progressLabel->pixmap()->width();
+    int h = m1->progressLabel->pixmap()->height();
+    QPainter pnt(m1->progressPixmap);
+    // above progress bar
+    QRect bgRect(0, 0, w, htOffset - 1);
+//    QRect bgRect(0, 0, m1->progressWidth, htOffset - 1);
+    pnt.fillRect(bgRect, bg);
+    // below progress bar
+    QRect bgRect1(0, h - ht, m1->progressWidth, h);
+    pnt.fillRect(bgRect1, bg);
+}
+
 void ProgressBar::saveProgressState()
 {
     int w = m1->progressLabel->pixmap()->width();
@@ -71,9 +91,9 @@ void ProgressBar::updateCursor(int item,
 
     QPainter pnt(m1->progressPixmap);
     int barWidth = m1->progressWidth;
-    float itemWidth = (float)barWidth / items;
+    float itemWidth = static_cast<float>(barWidth) / items;
     int pxStartOld = qRound(pos * itemWidth);
-    int pxWidth = itemWidth + 1;
+    int pxWidth = static_cast<int>(itemWidth) + 1;
     if(pxWidth < minCursorWidth) pxWidth = minCursorWidth;
 
 
