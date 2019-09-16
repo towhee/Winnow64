@@ -210,6 +210,10 @@ void Preferences::itemChange(QModelIndex idx)
         mw->setFontSize(v.toInt());
     }
 
+    if (source == "globalBackgroundShade") {
+        mw->setBackgroundShade(v.toInt());
+    }
+
     if (source == "infoOverlayFontSize") {
         qDebug() << __FUNCTION__ << v;
         mw->imageView->infoOverlayFontSize = v.toInt();
@@ -298,6 +302,7 @@ void Preferences::addItems()
         secondGenerationCount++;
         // Type = COMBOBOX
         // name = useWheelToScroll
+        // parent = generalItem
         tooltip = "Use the trackpad or mouse wheel to either scroll when zoomed into an image\n"
                   "or to progress forward and backward through the images.";
         QStandardItem *useWheelToScrollCaption = new QStandardItem;
@@ -317,6 +322,29 @@ void Preferences::addItems()
         generalItem->setChild(secondGenerationCount, 0, useWheelToScrollCaption);
         generalItem->setChild(secondGenerationCount, 1, useWheelToScrollValue);
         valIdx = useWheelToScrollValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+        secondGenerationCount++;
+        // Type = SLIDER
+        // name = globalBackgroundShade
+        // parent = generalItem
+        tooltip = "Change the background shade throughout the application.";
+        QStandardItem *globalBackgroundShadeCaption = new QStandardItem;
+        globalBackgroundShadeCaption->setToolTip(tooltip);
+        globalBackgroundShadeCaption->setText("Application background shade");
+        globalBackgroundShadeCaption->setEditable(false);
+        QStandardItem *globalBackgroundShadeValue = new QStandardItem;
+        globalBackgroundShadeValue->setToolTip(tooltip);
+        globalBackgroundShadeValue->setData(G::backgroundShade, Qt::EditRole);
+        globalBackgroundShadeValue->setData(DT_Slider, UR_DelegateType);
+        globalBackgroundShadeValue->setData("globalBackgroundShade", UR_Source);
+        globalBackgroundShadeValue->setData("int", UR_Type);
+        globalBackgroundShadeValue->setData(10, UR_Min);
+        globalBackgroundShadeValue->setData(100, UR_Max);
+        globalBackgroundShadeValue->setData(50, UR_LabelFixedWidth);
+        generalItem->setChild(secondGenerationCount, 0, globalBackgroundShadeCaption);
+        generalItem->setChild(secondGenerationCount, 1, globalBackgroundShadeValue);
+        valIdx = globalBackgroundShadeValue->index();
         propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         // HEADER
@@ -536,7 +564,7 @@ void Preferences::addItems()
                 // Type = PLUSMINUS
                 // name = gridViewIconSize (for search and replace)
                 // parent = thumbnailGridCatItem
-                tooltip = "Change the display size of the thumbnails in the film strip.";
+                tooltip = "Change the display size of the thumbnails in the grid.";
                 QStandardItem *gridViewIconSizeCaption = new QStandardItem;
                 gridViewIconSizeCaption->setToolTip(tooltip);
                 gridViewIconSizeCaption->setText("Size");
@@ -556,7 +584,7 @@ void Preferences::addItems()
                 // Type = SLIDER
                 // name = gridViewLabelSize (for search and replace)
                 // parent = thumbnailGridCatItem
-                tooltip = "Change the display size of the thumbnails in the film strip.";
+                tooltip = "Change the display size of the thumbnails in the grid.";
                 QStandardItem *gridViewLabelSizeCaption = new QStandardItem;
                 gridViewLabelSizeCaption->setToolTip(tooltip);
                 gridViewLabelSizeCaption->setText("Label size");

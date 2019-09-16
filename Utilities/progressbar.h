@@ -13,6 +13,7 @@ public:
     explicit ProgressBar(QWidget *parent);
 
     void clearProgress();
+    void setBackgroundColor(QColor bg);
     void updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString comment);
     void updateCursor(int item, int items, QColor currentColor, QColor imageCacheColor);
     void saveProgressState();

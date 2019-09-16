@@ -226,7 +226,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     else isSettings = false;
     loadSettings();    //dependent on bookmarks and actions, infoView
 
-    // app stylesheet and QSetting font size from last session
+    // app stylesheet and QSetting font size and background from last session
     createAppStyle();
 
     createCentralWidget();      // req'd by ImageView, CompareView
@@ -4516,10 +4516,16 @@ void MW::createAppStyle()
     G::track(__FUNCTION__);
     #endif
     }
+    widgetCSS.fontSize = G::fontSize.toInt();
+    int bg = G::backgroundShade;
+    widgetCSS.widgetBackgroundColor = QColor(bg,bg,bg);
+    css = widgetCSS.css();
+    this->setStyleSheet(css);
+    return;
 /*
    All the stylesheet text is saved in "/qss/winnow.css" except parameters we want
    to change programmatically, which is formulated in css1.
-*/
+ */
     // add error trapping for file io  rgh todo
     QFile fStyle(":/qss/winnow.css");
     fStyle.open(QIODevice::ReadOnly);
@@ -4532,21 +4538,8 @@ void MW::createAppStyle()
         G::fontSize = "14";
     }
     css1 = "QWidget {font-size: " + G::fontSize + "px;}";       // rgh px or pt
-
-    widgetCSS.fontSize = 16;
-    widgetCSS.widgetBackgroundColor = QColor(65,65,65);
-    widgetCSS.selectionColor = QColor(68,95,118);
-    widgetCSS.textColor = QColor(190,190,190);
-    widgetCSS.scrollBarHandleBackgroundColor = QColor(90,130,100);
-    css = widgetCSS.css();
-//    css = widgetCSS.widget() + cssBase;
-//    css = css1 + cssBase;
-
-/*
-
-  */
+    css = css1 + cssBase;
     this->setStyleSheet(css);
-    //    QApplication::setStyle(QStyleFactory::create("fusion"));
 }
 
 void MW::createStatusBar()
@@ -4571,7 +4564,6 @@ void MW::createStatusBar()
     progressPixmap = new QPixmap(1000, 25);
     progressPixmap->scaled(progressWidth, 25);
     QColor cacheBGColor = QColor(85,85,85);
-//    QColor cacheBGColor = QColor(85,85,85);
     progressPixmap->fill(widgetCSS.widgetBackgroundColor);
 //    progressPixmap->fill(cacheBGColor);
     progressLabel->setPixmap(*progressPixmap);
@@ -6469,21 +6461,45 @@ void MW::setFontSize(int fontPixelSize)
     #endif
     }
     G::fontSize = QString::number(fontPixelSize);
-    css = "QWidget {font-size: " + G::fontSize + "px;}" + cssBase;
+//    css = "QWidget {font-size: " + G::fontSize + "px;}" + cssBase;
+    widgetCSS.fontSize = G::fontSize.toInt();
+    css = widgetCSS.css();
     this->setStyleSheet(css);
-/*
-    infoView->resize(infoView->width(), infoView->height());    // does not trigger sizeHint
-    infoView->layout()->update();                               // does not trigger sizeHint
-    infoView->tweakHeaders();                                   // does not trigger sizeHint
-    infoView->repaint();                                        // does not trigger sizeHint
-    infoView->updateGeometry();
-*/
+
     infoView->updateInfo(currentRow);                           // triggers sizehint!
     bookmarks->setStyleSheet(css);
     fsTree->setStyleSheet(css);
     filters->setStyleSheet(css);
     tableView->setStyleSheet(css);
     statusLabel->setStyleSheet(css);
+}
+
+void MW::setBackgroundShade(int shade)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    G::backgroundShade = shade;
+//    css = "QWidget {font-size: " + G::fontSize + "px;}" + cssBase;
+    widgetCSS.widgetBackgroundColor = QColor(shade,shade,shade);
+    css = widgetCSS.css();
+    this->setStyleSheet(css);
+
+    infoView->updateInfo(currentRow);                           // triggers sizehint!
+    bookmarks->setStyleSheet(css);
+    fsTree->setStyleSheet(css);
+    filters->setStyleSheet(css);
+    imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
+    thumbView->setStyleSheet(css);
+    gridView->setStyleSheet(css);
+    tableView->setStyleSheet(css);
+    statusLabel->setStyleSheet(css);
+    progressLabel->setStyleSheet(css);
+    messageView->setStyleSheet(css);
+    welcome->setStyleSheet(css);
+    progressBar->setBackgroundColor(widgetCSS.widgetBackgroundColor);
 }
 
 void MW::setInfoFontSize()
@@ -7007,6 +7023,7 @@ re-established when the application is re-opened.
     setting->setValue("maxIconSize", G::maxIconSize);
 
     // appearance
+    setting->setValue("backgroundShade", G::backgroundShade);
     setting->setValue("fontSize", G::fontSize);
     setting->setValue("classificationBadgeInImageDiameter", classificationBadgeInImageDiameter);
     setting->setValue("classificationBadgeInThumbDiameter", thumbView->badgeSize);
@@ -7319,6 +7336,7 @@ Preferences are located in the prefdlg class and updated here.
         G::mode = "Loupe";
 
         // appearance
+        G::backgroundShade = 65;
         G::fontSize = "16";
         infoOverlayFontSize = 24;
         classificationBadgeInImageDiameter = 32;
@@ -7369,6 +7387,7 @@ Preferences are located in the prefdlg class and updated here.
     // general
 
     // appearance
+    G::backgroundShade = setting->value("backgroundShade").toInt();
     G::fontSize = setting->value("fontSize").toString();
     // load imageView->infoOverlayFontSize later as imageView has not been created yet
     classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();

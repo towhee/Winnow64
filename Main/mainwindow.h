@@ -420,6 +420,7 @@ private slots:
     void updateClassification();
     void refreshFolders();
     void setFontSize(int fontPixelSize);
+    void setBackgroundShade(int shade);
     void setInfoFontSize();
     void setClassificationBadgeImageDiam(int d);
     void setClassificationBadgeThumbDiam(int d);

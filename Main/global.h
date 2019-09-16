@@ -152,6 +152,7 @@ namespace G
     extern QString fileSelectionChangeSource;
 
     extern QString fontSize;
+    extern int backgroundShade;
 
     extern int actualDevicePixelRatio;
     extern bool allMetadataLoaded;

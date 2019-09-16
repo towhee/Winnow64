@@ -794,6 +794,11 @@ void ImageView::monitorCursorState()
     }
 }
 
+void ImageView::setBackgroundColor(QColor bg)
+{
+    scene->setBackgroundBrush(bg);
+}
+
 void ImageView::setCursorHiding(bool hide)
 {
     {
