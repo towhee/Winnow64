@@ -208,10 +208,12 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "globalFontSize") {
         mw->setFontSize(v.toInt());
+        setStyleSheet(mw->css);
     }
 
     if (source == "globalBackgroundShade") {
         mw->setBackgroundShade(v.toInt());
+        setStyleSheet(mw->css);
     }
 
     if (source == "infoOverlayFontSize") {

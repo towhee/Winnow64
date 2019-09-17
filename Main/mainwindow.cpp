@@ -4563,9 +4563,7 @@ void MW::createStatusBar()
     if (isSettings) progressWidth = setting->value("cacheStatusWidth").toInt();
     progressPixmap = new QPixmap(1000, 25);
     progressPixmap->scaled(progressWidth, 25);
-    QColor cacheBGColor = QColor(85,85,85);
     progressPixmap->fill(widgetCSS.widgetBackgroundColor);
-//    progressPixmap->fill(cacheBGColor);
     progressLabel->setPixmap(*progressPixmap);
     progressLabel->setFixedWidth(progressWidth);
 
@@ -4575,7 +4573,6 @@ void MW::createStatusBar()
     progressToolTip += "  • DarkGray:   \timages targeted to be cached\n";
     progressToolTip += "  • Green:      \timages cache progress\n";
     progressToolTip += "  • Purple:     \tmetadata cache progress\n";
-    progressToolTip += "  • Torquois:   \tmetadata incorporation progress\n";
     progressToolTip += "  • LightGreen: \tcurrent image";
     progressLabel->setToolTip(progressToolTip);
     progressLabel->setToolTipDuration(100000);
@@ -6482,24 +6479,44 @@ void MW::setBackgroundShade(int shade)
     #endif
     }
     G::backgroundShade = shade;
+    int a = shade + 5;
+    int b = shade - 15;
 //    css = "QWidget {font-size: " + G::fontSize + "px;}" + cssBase;
     widgetCSS.widgetBackgroundColor = QColor(shade,shade,shade);
     css = widgetCSS.css();
     this->setStyleSheet(css);
 
     infoView->updateInfo(currentRow);                           // triggers sizehint!
+    infoView->verticalScrollBar()->setStyleSheet(css);                           // triggers sizehint!
     bookmarks->setStyleSheet(css);
+    bookmarks->verticalScrollBar()->setStyleSheet(css);
     fsTree->setStyleSheet(css);
+    fsTree->verticalScrollBar()->setStyleSheet(css);
     filters->setStyleSheet(css);
+    filters->verticalScrollBar()->setStyleSheet(css);
+    filters->setCategoryBackground(a, b);
+    infoView->setStyleSheet(css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     thumbView->setStyleSheet(css);
+    thumbView->horizontalScrollBar()->setStyleSheet(css);
+    thumbView->verticalScrollBar()->setStyleSheet(css);
     gridView->setStyleSheet(css);
     tableView->setStyleSheet(css);
-    statusLabel->setStyleSheet(css);
-    progressLabel->setStyleSheet(css);
+    gridView->verticalScrollBar()->setStyleSheet(css);
     messageView->setStyleSheet(css);
     welcome->setStyleSheet(css);
     progressBar->setBackgroundColor(widgetCSS.widgetBackgroundColor);
+    statusBar()->setStyleSheet(css);
+    statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
+    /*
+    statusLabel->setStyleSheet(css);
+    progressLabel->setStyleSheet(css);
+    metadataThreadRunningLabel->setStyleSheet(css);
+    imageThreadRunningLabel->setStyleSheet(css);
+    filterStatusLabel->setStyleSheet(css);
+    subfolderStatusLabel->setStyleSheet(css);
+    rawJpgStatusLabel->setStyleSheet(css);
+    slideShowStatusLabel->setStyleSheet(css);  */
 }
 
 void MW::setInfoFontSize()

@@ -23,7 +23,10 @@ PropertyEditor subclass ie Preferences.  All the property items are defined and 
     called.
 */
 
-PreferencesDlg::PreferencesDlg(QWidget *parent, bool &isSolo, Preferences *pref, QString &css)
+PreferencesDlg::PreferencesDlg(QWidget *parent,
+                               bool &isSolo,
+                               Preferences *pref,
+                               QString &css)
                              : QDialog(parent),
                                isSolo(isSolo)
 {
@@ -39,7 +42,7 @@ PreferencesDlg::PreferencesDlg(QWidget *parent, bool &isSolo, Preferences *pref,
     setMinimumSize(w0 + w1 + 10, 600);
 //    setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
     setStyleSheet(css);
-    setStyleSheet("QTreeView {border: none}");
+    tree->setStyleSheet(css);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(pref);

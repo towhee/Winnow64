@@ -45,6 +45,7 @@ public:
     void createDynamicFilters();
     void removeChildrenDynamicFilters();
     void addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category);
+    void setCategoryBackground(const int &a, const int &b);
 
 signals:
     void filterChange(QString source);
