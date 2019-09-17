@@ -7,16 +7,18 @@ QString WidgetCSS::css()
     fm = bg + 35;
     g0 = bg - 10;
     if (g0 < 0) g0 = 0;
-    g1 = g0 + 20;
+    g1 = g0 + 30;
 
     // darker than background
-    d5 = bg - 5;
+    d5  = bg - 5;
     d10 = bg - 10;
     d15 = bg - 15;
     d20 = bg - 20;
+    if (d15 < 0) d15 = 0;
+    if (d20 < 0) d20 = 0;
 
     // lighter than background
-    l5 = bg + 5;
+    l5  = bg + 5;
     l10 = bg + 10;
     l15 = bg + 15;
     l20 = bg + 20;
@@ -111,7 +113,7 @@ QString WidgetCSS::menuBar()
        "border: 0px solid " + QColor(mb,mb,mb).name() + ";"
     "}"
     "QMenuBar::item {"
-        "spacing: 3px;"
+        "spacing: 2px;"
         "padding: 6px 6px;"
         "background: transparent;"
         "border-radius: 4px;"
@@ -267,6 +269,7 @@ QString WidgetCSS::treeWidget()
 {
     return
     "QTreeWidget {"
+//        "background-color: " + QColor(bg,bg,bg).name() + ";"
         "alternate-background-color: " + QColor(l5,l5,l5).name() + ";"
         "border: 2px solid " + QColor(l10,l10,l10).name() + ";"
         "color: lightgray;"
@@ -281,6 +284,7 @@ QString WidgetCSS::treeView()
 {
     return
     "QTreeView {"
+//        "background-color: " + QColor(bg,bg,bg).name() + ";"
         "alternate-background-color: " + QColor(l5,l5,l5).name() + ";"
         "color: " + textColor.name() + ";"
         "selection-background-color: " + selectionColor.name() + ";"
@@ -308,7 +312,7 @@ QString WidgetCSS::tableView()
     return
     "QTableView {"
         "alternate-background-color: " + QColor(l5,l5,l5).name() + ";"
-        "gridline-color: " + QColor(d10,d10,d10).name() + ";"
+        "gridline-color: " + QColor(l10,l10,l10).name() + ";"
         "color: " + textColor.name() + ";"
         "selection-color: " + textColor.name() + ";"
         "selection-background-color: " + selectionColor.name() + ";"
@@ -335,15 +339,16 @@ QString WidgetCSS::scrollBar()
 {
     return
     "QScrollBar:vertical {"
-        "border: 2px solid " + QColor(l10,l10,l10).name() + ";"
-        "background-color: " + QColor(d10,d10,d10).name() + ";"
+        "border: 1px solid " + QColor(l10,l10,l10).name() + ";"
+        "background: " + QColor(l10,l10,l10).name() + ";"
         "margin-top: 0px;"
         "margin-bottom: 0px;"
         "width: " + QString::number(scrollBarWidth) + "px;"       /* also set for QScrollBar:horizontal and global.cpp */
     "}"
 
     "QScrollBar::handle:vertical {"
-        "border-right: 0px solid " + QColor(l10,l10,l10).name() + ";"
+        "border: 1px solid " + QColor(l40,l40,l40).name() + ";"
+//        "border-right: 0px solid " + QColor(l10,l10,l10).name() + ";"
         "min-height: 20px;"
         "border-radius: 2px;"  /*not working, border=0, maybe if pad*/
     "}"
@@ -353,56 +358,56 @@ QString WidgetCSS::scrollBar()
     "}"
 
     "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical{"
-        "background-color: " + QColor(d10,d10,d10).name() + ";"
+        "background-color: " + QColor(bg,bg,bg).name() + ";"
     "}"
 
     "QScrollBar::add-line:vertical {"
-        "border: 0px solid " + QColor(l10,l10,l10).name() + ";"
-        "height: 0px;"
+        "border: 1px solid " + QColor(l10,l10,l10).name() + ";"
+        "height: 1px;"
         "subcontrol-position: bottom;"
         "subcontrol-origin: margin;"
     "}"
 
     "QScrollBar::sub-line:vertical {"
-        "border: 0px solid " + QColor(l10,l10,l10).name() + ";"
-        "height: 0px;"
+        "border: 1px solid " + QColor(l10,l10,l10).name() + ";"
+        "height: 1px;"
         "subcontrol-position: top;"
         "subcontrol-origin: margin;"
     "}"
 
     "QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {"
-        "width: 0px;"
-        "height: 0px;"
+        "width: 1px;"
+        "height: 1px;"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
     "}"
 
     "QScrollBar:horizontal {"
-        "border: 1px solid gray;"
-        "background-color: " + QColor(d10,d10,d10).name() + ";"
+        "border: 1px solid " + QColor(l10,l10,l10).name() + ";"
+        "background: " + QColor(l10,l10,l10).name() + ";"
         "margin-left: 0px;"
         "margin-right: 0px;"
         "height: " + QString::number(scrollBarWidth) + "px;"
     "}"
 
     "QScrollBar::handle:horizontal {"
-        "border: 0px solid " + QColor(l10,l10,l10).name() + ";"
+        "border: 1px solid " + QColor(l40,l40,l40).name() + ";"
         "min-width: 20px;"
     "}"
 
     "QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal{"
-        "background-color: rgb(95,95,95);"
+        "background-color: " + QColor(bg,bg,bg).name() + ";"
     "}"
 
     "QScrollBar::add-line:horizontal {"
-        "border: 0px solid " + QColor(bg,bg,bg).name() + ";"
-        "width: 0px;"
+        "border: 1px solid " + QColor(l10,l10,l10).name() + ";"
+        "width: 1px;"
         "subcontrol-position: right;"
         "subcontrol-origin: margin;"
     "}"
 
     "QScrollBar::sub-line:horizontal {"
-        "border: 0px solid " + QColor(bg,bg,bg).name() + ";"
-        "width: 0px;"
+        "border: 1px solid " + QColor(l10,l10,l10).name() + ";"
+        "width: 1px;"
         "subcontrol-position: left;"
         "subcontrol-origin: margin;"
     "}"
@@ -410,7 +415,7 @@ QString WidgetCSS::scrollBar()
     "QScrollBar::up-arrow:horizontal, QScrollBar::down-arrow:horizontal {"
         "width: 0px;"
         "height: 0px;"
-        "background: " + QColor(bg,bg,bg).name() + ";"
+        "background: " + QColor(d10,d10,d10).name() + ";"
     "}";
 }
 

@@ -48,24 +48,28 @@ void ProgressBar::clearProgress()
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
 
-void ProgressBar::setBackgroundColor(QColor bg)
+void ProgressBar::setBackgroundColor(const QColor &bg)
 {
 /*
 The pixmap showing progress includes background with the progress bar in the middle. When
 the app background is changed this function selectively paints the non-progressbar part
 of the pixmap the new background shade.
 */
-
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int w = m1->progressLabel->pixmap()->width();
     int h = m1->progressLabel->pixmap()->height();
     QPainter pnt(m1->progressPixmap);
     // above progress bar
-    QRect bgRect(0, 0, w, htOffset - 1);
-//    QRect bgRect(0, 0, m1->progressWidth, htOffset - 1);
+    QRect bgRect(0, 0, w, htOffset);
     pnt.fillRect(bgRect, bg);
     // below progress bar
-    QRect bgRect1(0, h - ht, m1->progressWidth, h);
+    QRect bgRect1(0, h - ht, w, h);
     pnt.fillRect(bgRect1, bg);
+    m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
 
 void ProgressBar::saveProgressState()

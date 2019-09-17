@@ -1,4 +1,6 @@
 BUGS
+- Best fit in grid view when open
+- Global font size change not working
 - Test with corrupted image files
 - Update from inside Winnow does not create a new folder in c:\program Files\Winnow.
 - GridView does not always justify and size properly.

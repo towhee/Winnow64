@@ -41,15 +41,19 @@ datamodel.
     indentation = 10;
     setIndentation(indentation);
 
+    int a = G::backgroundShade + 5;
+    int b = G::backgroundShade - 15;
+
     categoryBackground.setStart(0, 0);
     categoryBackground.setFinalStop(0, 18);
-    categoryBackground.setColorAt(0, QColor(88,88,88));
-    categoryBackground.setColorAt(1, QColor(66,66,66));
+    categoryBackground.setColorAt(0, QColor(a,a,a));
+    categoryBackground.setColorAt(1, QColor(b,b,b));
     categoryFont = this->font();
 //    categoryFont.setBold(true);
 
     createPredefinedFilters();
     createDynamicFilters();
+    setCategoryBackground(a, b);
 
     setStyleSheet("QTreeView::item { height: 20px;}");
 
@@ -82,10 +86,6 @@ void Filters::createPredefinedFilters()
     refine = new QTreeWidgetItem(this);
     refine->setText(0, "Refine");
     refine->setFont(0, categoryFont);
-    refine->setBackground(0, categoryBackground);
-    refine->setBackground(2, categoryBackground);
-    refine->setBackground(3, categoryBackground);
-    refine->setBackground(4, categoryBackground);
     refine->setData(0, G::ColumnRole, G::RefineColumn);
     refineFalse = new QTreeWidgetItem(refine);
     refineFalse->setText(0, "False");
@@ -99,10 +99,6 @@ void Filters::createPredefinedFilters()
     picks = new QTreeWidgetItem(this);
     picks->setText(0, "Picks");
     picks->setFont(0, categoryFont);
-    picks->setBackground(0, categoryBackground);
-    picks->setBackground(2, categoryBackground);
-    picks->setBackground(3, categoryBackground);
-    picks->setBackground(4, categoryBackground);
     picks->setData(0, G::ColumnRole, G::PickColumn);
     picksFalse = new QTreeWidgetItem(picks);
     picksFalse->setText(0, "Not Picked");
@@ -117,10 +113,6 @@ void Filters::createPredefinedFilters()
     ratings = new QTreeWidgetItem(this);
     ratings->setText(0, "Ratings");
     ratings->setFont(0, categoryFont);
-    ratings->setBackground(0, categoryBackground);
-    ratings->setBackground(2, categoryBackground);
-    ratings->setBackground(3, categoryBackground);
-    ratings->setBackground(4, categoryBackground);
     ratings->setData(0, G::ColumnRole, G::RatingColumn);
 
     ratingsNone = new QTreeWidgetItem(ratings);
@@ -151,10 +143,6 @@ void Filters::createPredefinedFilters()
     labels = new QTreeWidgetItem(this);
     labels->setText(0, "Color class");
     labels->setFont(0, categoryFont);
-    labels->setBackground(0, categoryBackground);
-    labels->setBackground(2, categoryBackground);
-    labels->setBackground(3, categoryBackground);
-    labels->setBackground(4, categoryBackground);
     labels->setData(0, G::ColumnRole, G::LabelColumn);
 
     labelsNone = new QTreeWidgetItem(labels);
@@ -198,74 +186,117 @@ by addCategoryFromData.
     types = new QTreeWidgetItem(this);
     types->setText(0, "File type");
     types->setFont(0, categoryFont);
-    types->setBackground(0, categoryBackground);
-    types->setBackground(2, categoryBackground);
-    types->setBackground(3, categoryBackground);
-    types->setBackground(4, categoryBackground);
     types->setData(0, G::ColumnRole, G::TypeColumn);
 
     years = new QTreeWidgetItem(this);
     years->setText(0, "Years");
     years->setFont(0, categoryFont);
-    years->setBackground(0, categoryBackground);
-    years->setBackground(2, categoryBackground);
-    years->setBackground(3, categoryBackground);
-    years->setBackground(4, categoryBackground);
     years->setData(0, G::ColumnRole, G::YearColumn);
 
     days = new QTreeWidgetItem(this);
     days->setText(0, "Days");
     days->setFont(0, categoryFont);
-    days->setBackground(0, categoryBackground);
-    days->setBackground(2, categoryBackground);
-    days->setBackground(3, categoryBackground);
-    days->setBackground(4, categoryBackground);
     days->setData(0, G::ColumnRole, G::DayColumn);
 
     models = new QTreeWidgetItem(this);
     models->setText(0, "Camera model");
     models->setFont(0, categoryFont);
-    models->setBackground(0, categoryBackground);
-    models->setBackground(2, categoryBackground);
-    models->setBackground(3, categoryBackground);
-    models->setBackground(4, categoryBackground);
     models->setData(0, G::ColumnRole, G::CameraModelColumn);
 
     lenses = new QTreeWidgetItem(this);
     lenses->setText(0, "Lenses");
     lenses->setFont(0, categoryFont);
-    lenses->setBackground(0, categoryBackground);
-    lenses->setBackground(2, categoryBackground);
-    lenses->setBackground(3, categoryBackground);
-    lenses->setBackground(4, categoryBackground);
     lenses->setData(0, G::ColumnRole, G::LensColumn);
 
     focalLengths = new QTreeWidgetItem(this);
     focalLengths->setText(0, "FocalLengths");
     focalLengths->setFont(0, categoryFont);
-    focalLengths->setBackground(0, categoryBackground);
-    focalLengths->setBackground(2, categoryBackground);
-    focalLengths->setBackground(3, categoryBackground);
-    focalLengths->setBackground(4, categoryBackground);
     focalLengths->setData(0, G::ColumnRole, G::FocalLengthColumn);
 
     titles = new QTreeWidgetItem(this);
     titles->setText(0, "Title");
     titles->setFont(0, categoryFont);
-    titles->setBackground(0, categoryBackground);
-    titles->setBackground(2, categoryBackground);
-    titles->setBackground(3, categoryBackground);
-    titles->setBackground(4, categoryBackground);
     titles->setData(0, G::ColumnRole, G::TitleColumn);
 
     creators = new QTreeWidgetItem(this);
     creators->setText(0, "Creators");
     creators->setFont(0, categoryFont);
+    creators->setData(0, G::ColumnRole, G::CreatorColumn);
+}
+
+void Filters::setCategoryBackground(const int &a, const int &b)
+{
+/*
+Sets the background gradient for the category items.  This function is also called when the
+user changes the background shade in preferences.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    categoryBackground.setColorAt(0, QColor(a,a,a));
+    categoryBackground.setColorAt(1, QColor(b,b,b));
+
+    refine->setBackground(0, categoryBackground);
+    refine->setBackground(2, categoryBackground);
+    refine->setBackground(3, categoryBackground);
+    refine->setBackground(4, categoryBackground);
+
+    picks->setBackground(0, categoryBackground);
+    picks->setBackground(2, categoryBackground);
+    picks->setBackground(3, categoryBackground);
+    picks->setBackground(4, categoryBackground);
+
+    ratings->setBackground(0, categoryBackground);
+    ratings->setBackground(2, categoryBackground);
+    ratings->setBackground(3, categoryBackground);
+    ratings->setBackground(4, categoryBackground);
+
+    labels->setBackground(0, categoryBackground);
+    labels->setBackground(2, categoryBackground);
+    labels->setBackground(3, categoryBackground);
+    labels->setBackground(4, categoryBackground);
+
+    types->setBackground(0, categoryBackground);
+    types->setBackground(2, categoryBackground);
+    types->setBackground(3, categoryBackground);
+    types->setBackground(4, categoryBackground);
+
+    years->setBackground(0, categoryBackground);
+    years->setBackground(2, categoryBackground);
+    years->setBackground(3, categoryBackground);
+    years->setBackground(4, categoryBackground);
+
+    days->setBackground(0, categoryBackground);
+    days->setBackground(2, categoryBackground);
+    days->setBackground(3, categoryBackground);
+    days->setBackground(4, categoryBackground);
+
+    models->setBackground(0, categoryBackground);
+    models->setBackground(2, categoryBackground);
+    models->setBackground(3, categoryBackground);
+    models->setBackground(4, categoryBackground);
+
+    lenses->setBackground(0, categoryBackground);
+    lenses->setBackground(2, categoryBackground);
+    lenses->setBackground(3, categoryBackground);
+    lenses->setBackground(4, categoryBackground);
+
+    focalLengths->setBackground(0, categoryBackground);
+    focalLengths->setBackground(2, categoryBackground);
+    focalLengths->setBackground(3, categoryBackground);
+    focalLengths->setBackground(4, categoryBackground);
+
+    titles->setBackground(0, categoryBackground);
+    titles->setBackground(2, categoryBackground);
+    titles->setBackground(3, categoryBackground);
+    titles->setBackground(4, categoryBackground);
+
     creators->setBackground(0, categoryBackground);
     creators->setBackground(2, categoryBackground);
     creators->setBackground(3, categoryBackground);
     creators->setBackground(4, categoryBackground);
-    creators->setData(0, G::ColumnRole, G::CreatorColumn);
 }
 
 void Filters::removeChildrenDynamicFilters()

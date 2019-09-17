@@ -60,7 +60,8 @@ IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
     int pickWidth = 2;
 
     // define colors
-    defaultBorderColor = QColor(108,108,108);
+    int l20 = G::backgroundShade + 20;
+    defaultBorderColor = QColor(l20,l20,l20);
 //    defaultBorderColor = QColor(118,118,118);
 //    defaultBorderColor = QColor(128,128,128);
 //    defaultBorderColor = QColor(Qt::gray);
@@ -73,8 +74,6 @@ IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
     cacheBorderColor = QColor(Qt::lightGray);
 
     // define pens
-    border.setColor(defaultBorderColor);
-    border.setWidth(1);
     currentPen.setColor(currentItemColor);
     currentPen.setWidth(currentWidth);
     selectedPen.setColor(selectedColor);
@@ -264,10 +263,16 @@ textRect         = a rectangle below itemRect
     #endif
     }
     painter->save();
+    /*
+    qDebug() << "IconViewDelegate::paint  "
+             << "option =" << option.rect
+             << "row =" << index.row();  */
 
-//qDebug() << "IconViewDelegate::paint  "
-//         << "option =" << option.rect
-//         << "row =" << index.row();
+    // make default border relative to background
+    int l40 = G::backgroundShade + 40;
+    QPen border;
+    border.setWidth(1);
+    border.setColor(QColor(l40,l40,l40));
 
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     QSize iconsize = icon.actualSize(thumbSize);

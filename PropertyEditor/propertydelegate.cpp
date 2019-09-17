@@ -216,22 +216,31 @@ void PropertyDelegate::updateEditorGeometry(QWidget *editor,
 
 void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const
 {
+
     painter->save();
 
-    /* Root rows are highlighted with a darker gradient and the docarion, which gets covered
+    /* Root rows are highlighted with a darker gradient and the decoration, which gets covered
     up, is repainted */
     QRect r = option.rect;
     // r0 extends the rect over the decoration to the left margin
     QRect r0 = QRect(0, r.y(), r.x() + r.width(), r.height());
 
+    int a = G::backgroundShade + 5;
+    int b = G::backgroundShade - 15;
+    int c = G::backgroundShade + 40;
+
     QLinearGradient categoryBackground;
     categoryBackground.setStart(0, r.top());
     categoryBackground.setFinalStop(0, r.bottom());
-    categoryBackground.setColorAt(0, QColor(88,88,88));
-    categoryBackground.setColorAt(1, QColor(66,66,66));
+    categoryBackground.setColorAt(0, QColor(a,a,a));
+    categoryBackground.setColorAt(1, QColor(b,b,b));
 
     QPen catPen(Qt::white);             // root items have white text
     QPen regPen(QColor(190,190,190));   // other items have silver text
+    QPen brdPen(QColor(c,c,c));         // border color
+
+    QString text = index.data().toString();
+    QString elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, r.width());
 
     // replacement decorations
     QPixmap branchClosed(":/images/branch-closed-small.png");
@@ -251,25 +260,31 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             else {
                 painter->drawPixmap(x, y, 9, 9, branchClosed);
             }
+            // caption text and no borders for root item
+            painter->setPen(catPen);
+            painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
         }
         // root row, but value column, so no decoration to deal with
-        else painter->fillRect(r, categoryBackground);
-        painter->setPen(catPen);
+        else {
+            painter->fillRect(r, categoryBackground);
+        }
     }
-    else if (index.column() == 0) painter->setPen(regPen);
+    else {
+        // Not a root item
+        painter->setPen(regPen);
 
-    // caption text and cell borders
-    if (index.column() == 0) {
-        QString text = index.data().toString();
-        QString elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, r.width());
-        painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
-        painter->setPen(QColor(75,75,75));
-        painter->drawRect(r0);
+        // caption text and cell borders
+        if (index.column() == 0) {
+            painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+            painter->setPen(brdPen);
+            painter->drawRect(r0);
+        }
+        if (index.column() == 1) {
+            painter->setPen(brdPen);
+            painter->drawRect(r);
+        }
     }
-    if (index.column() == 1) {
-        painter->setPen(QColor(75,75,75));
-        painter->drawRect(r);
-    }
+
     painter->restore();
 }
 

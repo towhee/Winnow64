@@ -241,7 +241,7 @@ public:
         groupBox_2 = new QGroupBox(IngestDlg);
         groupBox_2->setObjectName(QString::fromUtf8("groupBox_2"));
         groupBox_2->setGeometry(QRect(20, 20, 761, 351));
-        groupBox_2->setFont(font);
+        groupBox_2->setFont(font1);
         selectFolderBtn = new QPushButton(groupBox_2);
         selectFolderBtn->setObjectName(QString::fromUtf8("selectFolderBtn"));
         selectFolderBtn->setEnabled(true);

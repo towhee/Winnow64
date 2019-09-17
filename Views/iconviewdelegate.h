@@ -67,7 +67,6 @@ private:
     QColor cacheColor;
     QColor cacheBorderColor;
 
-    QPen border;
     QPen pick;
     QPen ingested;
     QPen notPick;
