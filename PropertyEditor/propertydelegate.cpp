@@ -235,6 +235,12 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     categoryBackground.setColorAt(0, QColor(a,a,a));
     categoryBackground.setColorAt(1, QColor(b,b,b));
 
+    QFont font;
+    font = painter->font();
+    int fontSize = G::fontSize.toInt();
+    font.setPointSize(fontSize);
+    painter->setFont(font);
+
     QPen catPen(Qt::white);             // root items have white text
     QPen regPen(QColor(190,190,190));   // other items have silver text
     QPen brdPen(QColor(c,c,c));         // border color

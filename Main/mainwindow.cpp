@@ -8061,6 +8061,8 @@ around lack of notification when the QListView has finished painting itself.
      gridView->scrollToRow(scrollRow, __FUNCTION__);
     updateIconsVisible(false);
 
+    if (G::isInitializing) gridView->justify(IconView::JustifyAction::Enlarge);
+
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
 
