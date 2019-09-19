@@ -161,6 +161,9 @@ QString WidgetCSS::groupBox()
     "QGroupBox::title {"
         "subcontrol-origin: margin;"
         "subcontrol-position: top left;"
+        "padding: 0 0px;"
+        "right: -20px;"
+        "up: -10px;"
     "}";
 }
 
