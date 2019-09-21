@@ -11,7 +11,7 @@ public:
         static int count = 0;
         count++;
         index.isValid();          // suppress compiler warning
-        int height = qRound(G::fontSize.toInt() * 1.7);
+        int height = qRound(G::fontSize.toInt() * 1.7 * G::ptToPx);
         return QSize(option.rect.width(), height);
     }
 
@@ -44,7 +44,7 @@ public:
         }
         QString text = index.data().toString();
         QFont font = painter->font();
-        font.setPixelSize(G::fontSize.toInt());
+        font.setPointSize(G::fontSize.toInt());
         painter->setFont(font);
 
         QString elidedText;
@@ -52,6 +52,9 @@ public:
             elidedText = text;
         else
             elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
+
+//        painter->drawText(textRect, Qt::AlignBaseline|Qt::TextSingleLine, elidedText);
+        painter->setPen(QColor(G::textShade,G::textShade,G::textShade));
         painter->drawText(textRect, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
 
         painter->setPen(QColor(75,75,75));
@@ -89,7 +92,7 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata) : QTreeVi
     setModel(ok);
 
     setRootIsDecorated(true);
-    setColumnWidth(0, 100);
+//    setColumnWidth(0, 100);
     setIndentation(0);
     setExpandsOnDoubleClick(true);
     setHeaderHidden(true);
@@ -102,6 +105,7 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata) : QTreeVi
     setFirstColumnSpanned(3, QModelIndex(), true);
     expandAll();
     hideColumn(2);
+    setColumn0Width();
     setTabKeyNavigation(false);
 
     setItemDelegate(new InfoDelegate(this));
@@ -129,17 +133,17 @@ void InfoView::showInfoViewMenu(QPoint pt)
     	infoMenu->popup(viewport()->mapToGlobal(pt));
 }
 
-void InfoView::tweak()
+void InfoView::setColumn0Width()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QFont font = this->font();
-    font.setPixelSize(G::fontSize.toInt());
-    QFontMetrics fm(font);
-    setColumnWidth(0, fm.boundingRect("--Shutter Speed-").width());
+    QFont ft = this->font();
+    ft.setPixelSize(static_cast<int>(G::fontSize.toInt() * 1.333/* * G::ptToPx*/));
+    QFontMetrics fm(ft);
+    setColumnWidth(0, fm.boundingRect("--Shutter Speed--").width());
 }
 
 void InfoView::setupOk()
@@ -397,7 +401,7 @@ void InfoView::updateInfo(const int &row)
         << "ThumbView::updateExifInfo - loaded metadata display info for"
         << row;
 
-    tweak();
+    setColumn0Width();
     showOrHide();
 
     isNewImageDataChange = false;

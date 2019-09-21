@@ -83,7 +83,7 @@ public slots:
     void showOrHide();
 	void showInfoViewMenu(QPoint pt);
 	void copyEntry();
-    void tweak();
+    void setColumn0Width();
 
 private slots:
 

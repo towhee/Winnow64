@@ -35,12 +35,13 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
     setWindowTitle("Winnow Preferences");
 
     QFont fnt = this->font();
-    fnt.setPixelSize(G::fontSize.toInt());
+    int px = static_cast<int>(G::fontSize.toInt() * G::ptToPx);
+    fnt.setPixelSize(px);
     QFontMetrics fm(fnt);
-    int w0= fm.boundingRect("==Incremental amount to load plus lots more room ;*) ==").width();
-    int w1 = fm.boundingRect("==Next / Previous Image plus==").width();
+    int w0 = fm.boundingRect("==Incremental amount to load plus more room==").width();
+    int w1 = fm.boundingRect("===Next / Previous Image plus===").width();
     setMinimumSize(w0 + w1 + 10, 600);
-//    setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     setStyleSheet(css);
     tree->setStyleSheet(css);
 

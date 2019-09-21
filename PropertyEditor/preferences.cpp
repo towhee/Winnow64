@@ -13,14 +13,26 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
     connect(this->propertyDelegate, &PropertyDelegate::itemChanged,
             this, &Preferences::itemChange);
 
-    QFont fnt = this->font();
-    fnt.setPixelSize(G::fontSize.toInt());
-    QFontMetrics fm(fnt);
-    captionColumnWidth = fm.boundingRect("==Incremental amount to load plus lots more room ;*) ==").width();
-    valueColumnWidth = fm.boundingRect("==Next / Previous Image plus==").width();
-
+    resizeColumns();
+//    QFont fnt = this->font();
+//    fnt.setPixelSize(G::fontSize.toInt());
+//    QFontMetrics fm(fnt);
+//    captionColumnWidth = fm.boundingRect("==Incremental amount to load plus lots more room ;*) ==").width();
+//    valueColumnWidth = fm.boundingRect("==Next / Previous Image plus==").width();
 
     addItems();
+}
+
+void Preferences::resizeColumns()
+{
+    QFont fnt = this->font();
+    int px = static_cast<int>(G::fontSize.toInt() * G::ptToPx);
+    fnt.setPixelSize(px);
+    QFontMetrics fm(fnt);
+    captionColumnWidth = fm.boundingRect("==Incremental amount to load plus more room==").width();
+    valueColumnWidth = fm.boundingRect("===Next / Previous Image plus===").width();
+    setColumnWidth(0, captionColumnWidth);
+    setColumnWidth(1, valueColumnWidth);
 }
 
 void Preferences::itemChange(QModelIndex idx)
@@ -209,6 +221,7 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "globalFontSize") {
         mw->setFontSize(v.toInt());
         setStyleSheet(mw->css);
+//        resizeColumns();
     }
 
     if (source == "globalBackgroundShade") {
@@ -374,7 +387,7 @@ void Preferences::addItems()
             globalFontSizeValue->setData(DT_Slider, UR_DelegateType);
             globalFontSizeValue->setData("globalFontSize", UR_Source);
             globalFontSizeValue->setData("int", UR_Type);
-            globalFontSizeValue->setData(10, UR_Min);
+            globalFontSizeValue->setData(6, UR_Min);
             globalFontSizeValue->setData(20, UR_Max);
             globalFontSizeValue->setData(50, UR_LabelFixedWidth);
             fontSizeItem->setChild(thirdGenerationCount, 0, globalFontSizeCaption);

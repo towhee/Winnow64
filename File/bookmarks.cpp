@@ -10,7 +10,7 @@ public:
         static int count = 0;
         count++;
         index.isValid();          // suppress compiler warning
-        int height = qRound(G::fontSize.toInt() * 1.5);
+        int height = qRound(G::fontSize.toInt() * 1.7 * G::ptToPx);
         return QSize(option.rect.width(), height);
     }
 };
@@ -139,9 +139,8 @@ void BookMarks::resizeColumns()
 {
     int w = width();
     if (showImageCount) {
-//        imageCountColumnWidth = 45;
         QFont font = this->font();
-        font.setPixelSize(G::fontSize.toInt());
+        font.setPointSize(G::fontSize.toInt());
         QFontMetrics fm(font);
         imageCountColumnWidth = fm.boundingRect("99999").width();
         showColumn(1);

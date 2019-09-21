@@ -35,8 +35,11 @@ namespace G
     int iconWMax;                       // widest icon found in datamodel
     int iconHMax;                       // highest icon found in datamodel
 
-    QString fontSize;
-    int backgroundShade;
+    QString fontSize;                   // app font point size
+    qreal dpi;                          // current logical screen dots per inch
+    qreal ptToPx;                       // font points to pixels conversion factor
+    int textShade = 190;                // text default luminousity
+    int backgroundShade;                // app background luminousity
 
     int actualDevicePixelRatio;
     bool allMetadataLoaded;

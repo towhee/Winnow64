@@ -568,7 +568,7 @@ checkbox then the state toggles automatically.
 void Filters::resizeColumns()
 {
     QFont font = this->font();
-    font.setPixelSize(G::fontSize.toInt());
+    font.setPointSize(G::fontSize.toInt());
     QFontMetrics fm(font);
     int countColumnWidth = fm.boundingRect("99999").width();
     setColumnWidth(4, countColumnWidth);

@@ -30,10 +30,17 @@ public:
     int l20;
     int l30;
     int l40;
+    int l50;
+    int l60;
+
+    // height factors
+    QString h15;    // 1.5x font height
+    QString h17;    // 1.7x font height
+    QString h20;    // 2.0x font height
 
     int fontSize;
     int scrollBarWidth = 14;
-    QColor textColor = QColor(190,190,190);
+    QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
     QColor widgetBackgroundColor ;
     QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
     QColor selectionColor = QColor(68,95,118);
