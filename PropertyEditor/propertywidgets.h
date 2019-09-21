@@ -2,6 +2,7 @@
 #define PROPERTYWIDGETS_H
 
 #include <QtWidgets>
+#include "Main/global.h"
 
 enum DelegateType
 {
@@ -42,6 +43,9 @@ public:
     void setValue(QVariant value);
     int value();
 
+protected:
+    void paintEvent(QPaintEvent *event);
+
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
@@ -63,6 +67,9 @@ public:
     void setValue(QVariant value);
     int value();
 
+protected:
+    void paintEvent(QPaintEvent *event);
+
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
@@ -81,6 +88,9 @@ public:
     LineEditor(const QModelIndex &idx, QWidget *parent = nullptr);
     void setValue(QVariant value);
     QString value();
+
+protected:
+    void paintEvent(QPaintEvent *event);
 
 signals:
     void editorValueChanged(QWidget *);
@@ -101,6 +111,9 @@ public:
     void setValue(QVariant value);
     QString value();
 
+protected:
+    void paintEvent(QPaintEvent *event);
+
 signals:
     void enableGoKeyActions(bool ok);
 
@@ -117,6 +130,9 @@ public:
     CheckBoxEditor(const QModelIndex &idx, QWidget *parent = nullptr);
     void setValue(QVariant value);
     bool value();
+
+protected:
+    void paintEvent(QPaintEvent *event);
 
 signals:
     void editorValueChanged(QWidget *);
@@ -137,6 +153,9 @@ public:
     void setValue(QVariant value);
     QString value();
 
+protected:
+    void paintEvent(QPaintEvent *event);
+
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
@@ -154,6 +173,9 @@ class PlusMinusEditor : public QWidget
 public:
     PlusMinusEditor(const QModelIndex &idx, QWidget *parent = nullptr);
     int value();
+
+protected:
+    void paintEvent(QPaintEvent *event);
 
 signals:
     void editorValueChanged(QWidget *);

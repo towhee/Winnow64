@@ -145,10 +145,6 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setLineWidth(0);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-//    QFont f = font();
-//    f.setPixelSize(13);
-//    setFont(f);
-
     bestAspectRatio = 1;
 
     horizontalScrollBar()->setObjectName("IconViewHorizontalScrollBar");
@@ -160,6 +156,8 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
         labelFontSize, showIconLabels, badgeSize);
     setItemDelegate(iconViewDelegate);
+
+    assignedIconWidth = iconWidth;
 
     // used to provide iconRect info to zoom to point clicked on thumb
     // in imageView
@@ -1098,14 +1096,24 @@ void IconView::thumbsShrink()
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
-//void IconView::resizeRejustify()
-//{
-////    qDebug() << "IconView::resizeRejustify";
-//    static int prevWidth = 0;
-//    if (width() == prevWidth) return;
-//    prevWidth = width();
-//    rejustify();
-//}
+int IconView::justifyMargin()
+{
+/*
+The ListView can hold x amount of icons in a row before it wraps to the next row.  There will
+be a right margin where there was not enough room for another icon.  This function returns the
+right margin amount.  It is used in MW::gridDisplay to determine if a rejustify is req'd.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int wCell = iconViewDelegate->getCellSize().width();
+    int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
+
+    // right margin
+    return wRow % wCell;
+}
 
 void IconView::rejustify()
 {
@@ -1189,14 +1197,15 @@ void IconView::justify(JustifyAction action)
     int wCell = iconViewDelegate->getCellSize().width();
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
 
-    int tpr = wRow / wCell + action;                        // thumbs per row
+    // thumbs per row
+    int tpr = wRow / wCell + action;
     if (tpr < 1) return;
     wCell = wRow / tpr;
 
     if (wCell > G::maxIconSize) wCell = wRow / ++tpr;
 
     iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
-    iconHeight = iconWidth * bestAspectRatio;
+    iconHeight = static_cast<int>(iconWidth * bestAspectRatio);
 
     assignedIconWidth = iconWidth;
     skipResize = true;      // prevent feedback loop

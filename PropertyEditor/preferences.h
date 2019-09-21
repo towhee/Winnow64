@@ -11,6 +11,7 @@ class Preferences : public PropertyEditor
     Q_OBJECT
 public:
     Preferences(QWidget *parent);
+    void resizeColumns();
 
 public slots:
     void itemChange(QModelIndex idx);

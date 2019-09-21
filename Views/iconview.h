@@ -114,6 +114,7 @@ public slots:
     void scrollToRow(int row, QString source);
     void thumbsEnlarge();
     void thumbsShrink();
+    int justifyMargin();
     void justify(JustifyAction action);
     void rejustify();
 //    void resizeRejustify();

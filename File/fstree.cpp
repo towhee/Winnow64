@@ -58,8 +58,7 @@ CLASS FSModel subclassing QFileSystemModel
 ------------------------------------------------------------------------------*/
 
 /* We are subclassing QFileSystemModel in order to add a column for imageCount
-   to the model in order to display the image count beside each folder in the
-   TreeView.
+   to the model and display the image count beside each folder in the TreeView.
 */
 
 FSModel::FSModel(QWidget *parent, Metadata *metadata, QHash<QString, QString> &count)
@@ -296,7 +295,7 @@ void FSTree::resizeColumns()
     if (fsModel->showImageCount) {
 //        imageCountColumnWidth = 45;
         QFont font = this->font();
-        font.setPixelSize(G::fontSize.toInt());
+        font.setPointSize(G::fontSize.toInt());
         QFontMetrics fm(font);
         imageCountColumnWidth = fm.boundingRect("99999").width();
         showColumn(4);

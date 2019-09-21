@@ -24,6 +24,13 @@ QString WidgetCSS::css()
     l20 = bg + 20;
     l30 = bg + 30;
     l40 = bg + 40;
+    l50 = bg + 50;
+    l60 = bg + 60;
+
+    // heights (mostly used for rows in TreeView etc)
+    h15 = QString::number(fontSize * 1.5 * G::ptToPx);
+    h17 = QString::number(fontSize * 1.7 * G::ptToPx);
+    h20 = QString::number(fontSize * 2.0 * G::ptToPx);
 
     return  widget() +
             mainWindow() +
@@ -54,7 +61,7 @@ QString WidgetCSS::widget()
 {
     return
     "QWidget {"
-       "font-size:" + QString::number(fontSize) + ";"
+       "font-size:" + QString::number(fontSize) + "pt;"
        "background-color:" + widgetBackgroundColor.name() + ";"
        "color:" + textColor.name() + ";"
        "border-width: 0px;" +
@@ -153,7 +160,7 @@ QString WidgetCSS::groupBox()
 {
     return
     "QGroupBox {"
-        "border: 1px solid rgb(199,199,199);"
+        "border: 1px solid " + QColor(l60,l60,l60).name() + ";"
         "border-radius: 5px;"
         "margin-top: 6px;"/* leave space at the top for the title */
     "}"
@@ -161,9 +168,9 @@ QString WidgetCSS::groupBox()
     "QGroupBox::title {"
         "subcontrol-origin: margin;"
         "subcontrol-position: top left;"
-        "padding: 0 0px;"
+        "margin-top: 5;"
         "right: -20px;"
-        "up: -10px;"
+        "top: -10px;"
     "}";
 }
 
@@ -211,7 +218,7 @@ QString WidgetCSS::tabWidget()
     return
     "QTabWidget::tab-bar {"
         "alignment: left;"
-        "border: 1px solid red;   "                     /* nada */
+/*        "border: 1px solid red;"                      nada */
     "}"
 
     "QTabBar::tab {"
@@ -227,7 +234,6 @@ QString WidgetCSS::tabWidget()
 
     "QTabBar::tab:selected {"
         "color:white;"
-        /* border: 1px solid red;   this woks for tabl only as expected */
         "border-bottom: 0px;"
         "background-color: " + QColor(bg,bg,bg).name() + ";"
    " }"
@@ -307,6 +313,7 @@ QString WidgetCSS::treeView()
     "}"
 
     "QTreeView::item {"
+//        "height: " + h17 + "px;"      // this works but delegates and defaults working for now
     "}";
 }
 

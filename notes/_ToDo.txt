@@ -1,6 +1,4 @@
 BUGS
-- Best fit in grid view when open
-- Global font size change not working
 - Test with corrupted image files
 - Update from inside Winnow does not create a new folder in c:\program Files\Winnow.
 - GridView does not always justify and size properly.
@@ -35,6 +33,9 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Global font size change not working
+- Error when remember last folder but lastDir is not valid
+- Best fit in grid view when open
 - Mac available memory
 - Ingest "how this works" text is black
 - Mac single tap to click not working.  Change the trackpad options setting in accessibility

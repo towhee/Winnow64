@@ -89,7 +89,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
 
 QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-    int height = static_cast<int>(G::fontSize.toInt() * 1.7);
+    int height = static_cast<int>(G::fontSize.toInt() * 1.7 * G::ptToPx);
     return QSize(option.rect.width(), height);
 
     int type = index.data(UR_DelegateType).toInt();
@@ -103,7 +103,6 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
         case DT_Slider: return SliderEditor(index, nullptr).sizeHint();
         case DT_PlusMinus: return PlusMinusEditor(index, nullptr).sizeHint();
     }
-
 }
 
 void PropertyDelegate::setEditorData(QWidget *editor,

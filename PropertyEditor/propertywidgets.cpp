@@ -87,6 +87,12 @@ void SliderEditor::updateSliderWhenLineEdited(QString value)
     slider->setValue(value.toInt());
 }
 
+void SliderEditor::paintEvent(QPaintEvent *event)
+{
+    setStyleSheet("font-size: " + G::fontSize + "pt;");
+    QWidget::paintEvent(event);
+}
+
 /* LABEL EDITOR ******************************************************************************/
 
 LabelEditor::LabelEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
@@ -123,6 +129,12 @@ QString LabelEditor::value()
 void LabelEditor::setValue(QVariant value)
 {
     label->setText(value.toString());
+}
+
+void LabelEditor::paintEvent(QPaintEvent *event)
+{
+    setStyleSheet("font-size: " + G::fontSize + "pt;");
+    QWidget::paintEvent(event);
 }
 
 
@@ -168,6 +180,12 @@ void LineEditor::change(QString value)
 {
     QVariant v = value;
     emit editorValueChanged(this);
+}
+
+void LineEditor::paintEvent(QPaintEvent *event)
+{
+    setStyleSheet("font-size: " + G::fontSize + "pt;");
+    QWidget::paintEvent(event);
 }
 
 /* SPINBOX EDITOR ****************************************************************************/
@@ -230,6 +248,12 @@ void SpinBoxEditor::change(int value)
     emit editorValueChanged(this);
 }
 
+void SpinBoxEditor::paintEvent(QPaintEvent *event)
+{
+    setStyleSheet("font-size: " + G::fontSize + "pt;");
+    QWidget::paintEvent(event);
+}
+
 /* CHECKBOX EDITOR ***************************************************************************/
 
 CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
@@ -266,6 +290,12 @@ void CheckBoxEditor::setValue(QVariant value)
 void CheckBoxEditor::change()
 {
     emit editorValueChanged(this);
+}
+
+void CheckBoxEditor::paintEvent(QPaintEvent *event)
+{
+    setStyleSheet("font-size: " + G::fontSize + "pt;");
+    QWidget::paintEvent(event);
 }
 
 /* COMBOBOX EDITOR ***************************************************************************/
@@ -332,6 +362,12 @@ void ComboBoxEditor::change(int index)
     emit editorValueChanged(this);
 }
 
+void ComboBoxEditor::paintEvent(QPaintEvent *event)
+{
+    setStyleSheet("font-size: " + G::fontSize + "pt;");
+    QWidget::paintEvent(event);
+}
+
 /* PLUSMINUS EDITOR **************************************************************************/
 
 PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
@@ -375,3 +411,10 @@ void PlusMinusEditor::plusChange()
     plusMinus = 1;
     emit editorValueChanged(this);
 }
+
+void PlusMinusEditor::paintEvent(QPaintEvent *event)
+{
+    setStyleSheet("font-size: " + G::fontSize + "pt;");
+    QWidget::paintEvent(event);
+}
+

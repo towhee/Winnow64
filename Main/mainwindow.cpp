@@ -263,7 +263,12 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     qApp->installEventFilter(this);
 
     // process the persistant folder if available
-    if (rememberLastDir && !isShift) folderSelectionChange();
+    if (rememberLastDir && !isShift) {
+        if (isFolderValid(lastDir, true, true)) {
+            fsTree->select(lastDir);
+            folderSelectionChange();
+        }
+    }
 
     if (!isSettings) centralLayout->setCurrentIndex(StartTab);
     else {
@@ -851,7 +856,7 @@ bool MW::checkForUpdate()
     // Wait until the update tool is finished
     process.waitForFinished();
 
-//    qDebug() << "process.error() =" << process.error();
+    qDebug() << "process.error() =" << process.error();
     if(process.error() != QProcess::UnknownError)
     {
         QString msg = "Error checking for updates";
@@ -951,45 +956,27 @@ void MW::folderSelectionChange()
     // if at welcome or message screen and then select a folder
     if (centralLayout->currentIndex() == StartTab
             || centralLayout->currentIndex() == MessageTab) {
-        if (prevMode == "Loupe") asGridAction->setChecked(true);
-        if (prevMode == "Grid") asLoupeAction->setChecked(true);
-        if (prevMode == "Table") asTableAction->setChecked(true);
-        if (prevMode == "Compare") asLoupeAction->setChecked(true);
-    }
-
-    // If just opened application
-    if (G::isInitializing) {
-        if (rememberLastDir) {
-            // lastDir is from QSettings for persistent memory between sessions
-            if (isFolderValid(lastDir, true, true)) {
-                currentViewDir = lastDir;
-                fsTree->select(currentViewDir);
-            }
-            else {
-                QModelIndex idx = fsTree->fsModel->index(currentViewDir);
-                if (fsTree->fsModel->hasIndex(idx.row(), idx.column(), idx.parent())) {
-                    fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(idx));
-                }
-                G::isInitializing = false;
-                return;
-            }
+        if (prevMode == "Loupe") asLoupeAction->setChecked(true);
+        else if (prevMode == "Grid") asGridAction->setChecked(true);
+        else if (prevMode == "Table") asTableAction->setChecked(true);
+        else if (prevMode == "Compare") asLoupeAction->setChecked(true);
+        else {
+            prevMode = "Loupe";
+            asLoupeAction->setChecked(true);
         }
     }
 
-    // folder selected from Folders or Bookmarks(Favs)
-    if (!rememberLastDir) {
-        currentViewDir = getSelectedPath();
-    }
-
-    // sync the favs / bookmarks with the folders view fsTree
-    bookmarks->select(currentViewDir);
+    currentViewDir = getSelectedPath();
 
     // confirm folder exists and is readable, report if not and do not process
-    if (!isFolderValid(currentViewDir, true, false)) {
+    if (!isFolderValid(currentViewDir, true /*report*/, false /*isRemembered*/)) {
         clearAll();
         G::isInitializing = false;
         return;
     }
+
+    // sync the favs / bookmarks with the folders view fsTree
+    bookmarks->select(currentViewDir);
 
     // add to recent folders
     addRecentFolder(currentViewDir);
@@ -1098,19 +1085,6 @@ triggers this function). The new image is loaded, the pick status is updated and
 infoView metadata is updated. The imageCache is updated if necessary. The imageCache will
 not be updated if triggered by folderSelectionChange since a new one will be Update. The
 metadataCache is updated to include metadata and icons for all the visible thumbnails.
-
-It has proven quite difficult to sync the thumbView, tableView and gridView, keeping the
-currentIndex in the center position (scrolling). The issue is timing as it can take the
-scrollbars a while to finish painting and there isn't an event to notify the view is
-ready for action. One to many scrollbar paint events are fired, and the
-scrollbar->maximum() value is tested against a calculated maximum to determine when the
-last paint event has fired. The scrollToCurrent function is called. It has also been
-necessary to write custom scrollbar functions because the scrollTo(idx, positionAtCenter)
-does not always work. Finally, when QAbstractItemView accepts a mouse press it adds a
-100ms delay to avoid double clicks but this plays havoc with the scrolling, so a flag is
-used to track which actions are triggering changes in the datamodel index. If it is a
-mouse press then a singeShot timer in invoked to delay the scrolling to after
-QAbstractItemView is finished.
 
 Note that the datamodel includes multiple columns for each row and the index sent to
 fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo and
@@ -6458,10 +6432,9 @@ void MW::setFontSize(int fontPixelSize)
     #endif
     }
     G::fontSize = QString::number(fontPixelSize);
-//    css = "QWidget {font-size: " + G::fontSize + "px;}" + cssBase;
-    widgetCSS.fontSize = G::fontSize.toInt();
+    widgetCSS.fontSize = fontPixelSize;
     css = widgetCSS.css();
-    this->setStyleSheet(css);
+    setStyleSheet(css);
 
     infoView->updateInfo(currentRow);                           // triggers sizehint!
     bookmarks->setStyleSheet(css);
@@ -6667,6 +6640,11 @@ void MW::setActualDevicePixelRatio()
         G::actualDevicePixelRatio = QPaintDevice::devicePixelRatio();
 
     if (G::actualDevicePixelRatio == 0) G::actualDevicePixelRatio = 1;
+
+    // get dpi and font pixels to points conversion factor
+//    G::dpi = screen->physicalDotsPerInch();
+    G::dpi = screen->logicalDotsPerInch();
+    G::ptToPx = G::dpi / 72;
 
 /*  MacOS Screen information
 #if defined(Q_OS_MAC)
@@ -8061,7 +8039,7 @@ around lack of notification when the QListView has finished painting itself.
      gridView->scrollToRow(scrollRow, __FUNCTION__);
     updateIconsVisible(false);
 
-    if (G::isInitializing) gridView->justify(IconView::JustifyAction::Enlarge);
+    if (gridView->justifyMargin() > 3) gridView->rejustify();
 
     // if the zoom dialog was open then close it as no image visible to zoom
     emit closeZoomDlg();
@@ -10106,7 +10084,11 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
 
     if (fPath.length() == 0) {
         if (report) {
-            msg = "No folder selected.";
+            if (isRemembered)
+                msg = "The last folder from your previous session is null";
+            else
+                msg = "The folder (" + fPath + ") does not exist or is not available";
+
             statusLabel->setText("");
             setCentralMessage(msg);
         }
@@ -10221,6 +10203,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    qDebug() << CSS::textColor;
+    fsTree->select(lastDir);
+    qDebug() << __FUNCTION__ << getSelectedPath();
+//    qDebug() << __FUNCTION__ << gridView->justifyMargin();
+//    gridView->rejustify();
 }
 // End MW
