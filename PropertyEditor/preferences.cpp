@@ -251,11 +251,12 @@ void Preferences::addItems()
     int thirdGenerationCount;             // child child items
     QString tooltip;
     QString caption;
-    QString s;
+
     // general purpose
-    int n;                                // general purpose
-    n = 0;  // suppress compiler warning as not used yet
+    QString s;
+    int n;
     bool isShow;
+
     QModelIndex catIdx;
     QModelIndex valIdx;
     QStandardItem *captionItem;

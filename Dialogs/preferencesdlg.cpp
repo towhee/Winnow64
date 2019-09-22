@@ -68,6 +68,7 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
     addAction(soloAction);
     soloAction->setChecked(isSolo);
     connect(soloAction, &QAction::triggered, this, &PreferencesDlg::solo);
+    solo();
 
     setContextMenuPolicy(Qt::ActionsContextMenu);
 }

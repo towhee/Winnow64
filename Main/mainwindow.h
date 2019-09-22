@@ -180,12 +180,11 @@ public:
     // appearance
     bool isImageInfoVisible;
     bool isRatingBadgeVisible;
-//    QString fontSize;
     int infoOverlayFontSize;
     int classificationBadgeInImageDiameter;
     int classificationBadgeInThumbDiameter;
 
-    // preferences: files
+    // files
     bool rememberLastDir;
     QString lastDir;
 //    bool inclSubfolders;
