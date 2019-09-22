@@ -1,6 +1,3 @@
---- CMakeLists.txt	1970-01-01 01:00:00.000000000 +0100
-+++ CMakeLists.txt	2015-03-12 00:52:50.095773400 +0100
-@@ -0,0 +1,51 @@
 +project(lcms2)
 +
 +cmake_minimum_required(VERSION 2.8)

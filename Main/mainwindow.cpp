@@ -856,7 +856,6 @@ bool MW::checkForUpdate()
     // Wait until the update tool is finished
     process.waitForFinished();
 
-    qDebug() << "process.error() =" << process.error();
     if(process.error() != QProcess::UnknownError)
     {
         QString msg = "Error checking for updates";

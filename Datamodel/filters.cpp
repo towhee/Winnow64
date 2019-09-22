@@ -1,5 +1,18 @@
 #include "Datamodel/filters.h"
 
+class FiltersDelegate : public QStyledItemDelegate
+{
+public:
+    explicit FiltersDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
+
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const
+    {
+        index.isValid();          // suppress compiler warning
+        int height = qRound(G::fontSize.toInt() * 1.7 * G::ptToPx);
+        return QSize(option.rect.width(), height);
+    }
+};
+
 Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 {
 /*
@@ -26,7 +39,6 @@ datamodel.
     }
     setRootIsDecorated(true);
     setSelectionMode(QAbstractItemView::NoSelection);
-//    setSelectionBehavior(QAbstractItemView::SelectRows);
     setColumnCount(5);
     setHeaderHidden(false);
     setColumnWidth(0, 250);
@@ -49,13 +61,12 @@ datamodel.
     categoryBackground.setColorAt(0, QColor(a,a,a));
     categoryBackground.setColorAt(1, QColor(b,b,b));
     categoryFont = this->font();
-//    categoryFont.setBold(true);
 
     createPredefinedFilters();
     createDynamicFilters();
     setCategoryBackground(a, b);
 
-    setStyleSheet("QTreeView::item { height: 20px;}");
+    setItemDelegate(new FiltersDelegate(this));
 
     filterCategoryToDmColumn["Refine"] = G::RefineColumn;
     filterCategoryToDmColumn["Picks"] = G::PickColumn;
