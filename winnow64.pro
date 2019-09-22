@@ -114,47 +114,46 @@ SOURCES += Views/infoview.cpp
 SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
 
-FORMS += Dialogs/aboutdlg.ui \
-    Help/ingestautopath.ui
+FORMS += Dialogs/aboutdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/ingestdlg.ui
 FORMS += Dialogs/loadusbdlg.ui
 FORMS += Dialogs/renamedlg.ui
 FORMS += Dialogs/testaligndlg.ui
+FORMS += Dialogs/testdlg.ui
+FORMS += Dialogs/test1.ui
 FORMS += Dialogs/tokendlg.ui
 FORMS += Dialogs/updateapp.ui
 FORMS += Dialogs/workspacedlg.ui
 FORMS += Dialogs/zoomdlg.ui
 FORMS += Help/helpform.ui
-FORMS +=
 FORMS += Help/helpingest.ui
+FORMS += Help/ingestautopath.ui
 FORMS += Help/introduction.ui
 FORMS += Help/message.ui
 FORMS += Help/shortcutsform.ui
 FORMS += Help/welcome.ui
 FORMS += Metadata/metadatareport.ui
-FORMS += Dialogs/testdlg.ui
-FORMS += Dialogs/test1.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/versions \
-    Docs/ingestautopath \
-    Docs/ingestautopath.html \
-    notes/scratch.css
+DISTFILES += Docs/ingestautopath
+DISTFILES += Docs/ingestautopath.html
+DISTFILES += Docs/versions
 DISTFILES += Docs/test.html
-DISTFILES += notes/scratch.html
 DISTFILES += notes/_Notes
 DISTFILES += notes/_ToDo.txt
 DISTFILES += notes/DeployInstall.txt
-DISTFILES += notes/help_videos_on_mac.txt
 DISTFILES += notes/ExiftoolCommands.txt
 DISTFILES += notes/git.txt
+DISTFILES += notes/help_videos_on_mac.txt
 DISTFILES += notes/HelpDocCreation.txt
 DISTFILES += notes/Menu.txt
+DISTFILES += notes/scratch.css
+DISTFILES += notes/scratch.html
 DISTFILES += notes/Scratch.txt
 DISTFILES += notes/Shortcuts.txt
 DISTFILES += notes/snippets.txt
@@ -166,7 +165,7 @@ DISTFILES += notes/xmp.txt
 mac:LIBS += -framework ApplicationServices
 mac:LIBS += -framework AppKit
 
-#QMAKE_CXXFLAGS += /MT
+QMAKE_CXXFLAGS += /MD
 #win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../LIBRARYNAME/Lib/ -lLIBRARY /NODEFAULTLIB:library
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib
@@ -177,10 +176,10 @@ DEPENDPATH += $$PWD/Lib/zlib
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_static
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
 
-win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
-win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/include
+# attempt to use dll
+#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/bin/ -llcms2
+#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/bin/ -llcms2d
 
-#win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/liblcms2_static.a
-#else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/liblcms2_staticd.a
-#else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/lcms2_static.lib
-#else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/Lib/lcms2-2.9/Lib/MS/lcms2_staticd.lib
+INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
+DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
+#DEPENDPATH += $$PWD/Lib/lcms2-2.9/bin

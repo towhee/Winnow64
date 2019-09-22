@@ -1,10 +1,8 @@
 BUGS
 - Test with corrupted image files
 - Update from inside Winnow does not create a new folder in c:\program Files\Winnow.
-- GridView does not always justify and size properly.
 - Ingest if image does not have metadata req'd
 - is mouseMovementTimer in imageView req'd
-- Confirm check for updates still working on Win
 - Mac check for updates not done yet
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
@@ -33,6 +31,8 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Confirm check for updates still working on Win
+- GridView does not always justify and size properly.
 - Global font size change not working
 - Error when remember last folder but lastDir is not valid
 - Best fit in grid view when open

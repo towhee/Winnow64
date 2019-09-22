@@ -136,10 +136,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 }
                 #ifdef Q_OS_WIN
                 QByteArray ba = dm->index(row, G::ICCBufColumn).data().toByteArray();
-                if (ba.length() > 0) {
-                    ICC::setInProfile(dm->index(row, G::ICCBufColumn).data().toByteArray());
-                    ICC::transform(image);
-                }
+                ICC::setInProfile(dm->index(row, G::ICCBufColumn).data().toByteArray());
+                ICC::transform(image);
                 #endif
             }
             else {
