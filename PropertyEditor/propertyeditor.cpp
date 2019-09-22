@@ -33,7 +33,7 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setEditTriggers(QAbstractItemView::AllEditTriggers);
     indentation = 15;
-    setIndentation(indentation);
+    setIndentation(indentation);  
 
     model = new QStandardItemModel;
     setModel(model);
@@ -60,54 +60,25 @@ Sets the custom editor widget for the value column (column 1).  The
 void PropertyEditor::mousePressEvent(QMouseEvent *event)
 /*
 Set the current index and expand/collapse when click anywhere on a row that has children.
+Do not pass on to QTreeView as this will enable QTreeView expanding and collapsing when the
+decoration is clicked.
 */
 {
+    // ignore right mouse clicks for context menu
     if (event->button() == Qt::RightButton) return;
-    QTreeView::mousePressEvent(event);
-    if (event->modifiers() == Qt::NoModifier) {
-        QModelIndex idx = indexAt(event->pos());
-        if (idx.isValid()) {
-            // setCurrentIndex for the value cell (col 1) if user clicked on the caption cell (col 0)
-            QModelIndex idxVal = model->index(idx.row(), 1, idx.parent());
-            setCurrentIndex(idxVal);
 
-            /* try to expand / collapse if click on any part of the row.  This will occur
-            automatically if the user clicks on the decoration, so those clicks have to be
-            ignored.  For root items the Qt decoration has been covered by our painting the
-            gradient across the row, so any clicks after the indentation amount should be
-            acted upon.  For non-root rows, the decoration is after the indentation amount
-            and is 14 pixels wide (I believe this is hard coded in Qt).
-            */
-            QPoint p = event->pos();
-//            qDebug() << __FUNCTION__ << p.x();
-            if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
-            // if root item any click after indentation should
-            if (idx.parent() == QModelIndex()) {
-                // root item
-                bool wasExpanded = false;
-                if (p.x() >= indentation) {
-                    if (isSolo) {
-                        wasExpanded = isExpanded(idx);
-                        collapseAll();
-                    }
-                    if (wasExpanded) collapse(idx);
-                    else {
-                        expandRecursively(idx);
-                    }
-                }
-                if (p.x() <= indentation) {
-                    if (isSolo) {
-                        wasExpanded = !isExpanded(idx);
-                        collapseAll();
-                    }
-                    if (wasExpanded) collapse(idx);
-                    else {
-                        expandRecursively(idx);
-                    }
-                }
-            }
-            else if (p.x() < indentation || p.x() > indentation + 14)
-                    isExpanded(idx) ? collapse(idx) : expand(idx);
+    QModelIndex idx = indexAt(event->pos());
+    if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
+    QStandardItem *item = model->itemFromIndex(idx);
+    if (idx.isValid() && item->hasChildren()) {
+        bool isRoot = idx.parent() == QModelIndex();
+        bool wasExpanded = isExpanded(idx);
+        if (isRoot) {
+            if (isSolo) collapseAll();
+            wasExpanded ? collapse(idx) : expandRecursively(idx);
+        }
+        else {
+            isExpanded(idx) ? collapse(idx) : expand(idx);
         }
     }
 }
