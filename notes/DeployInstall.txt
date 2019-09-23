@@ -53,10 +53,10 @@ then copy files and folders to D:\My Projects\Winnow Project\WinnowInstallOnline
 and D:\My Projects\Winnow Project\WinnowInstallLocal\packages\com.rh.prod\data
 
 Win Installation Update:
--  Update deploy if new dlls required and when new version of Qt!!  (See above)
+-  Update deploy if new dlls required and when using a new version of Qt!!  (See above)
 -  Update version in mainwindow.h
 -  Update winnow.exe by compiling in release mode without shadow build
--  Copy in winSCP the prior version in current to an archive folder.
+-  Copy in winSCP the prior version in current to an archive folder.  DO NOT DELETE repository in current folder.
 -  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
 -  Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
    download url for the archived version.
@@ -77,7 +77,7 @@ Win Installation Update:
   "Help > Check for updates" to confirm that the update works.
   Or run C:\Program Files\Winnow\maintenancetool.exe to update Winnow on local machine.
 
-Run 165.227.46.158/winnow_win/winnowinstalleronline.exe for new installation of Winnow.
+Run 165.227.46.158/winnow_win/current/winnowinstalleronline.exe for new installation of Winnow.
 This is available on the Winnow Main Page at http://165.227.46.158/winnow/winnow.html
 
 Clean up orphaned entries in Apps and Features by deleting registry entries at

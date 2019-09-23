@@ -31,6 +31,7 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Save as implemented
 - Confirm check for updates still working on Win
 - GridView does not always justify and size properly.
 - Global font size change not working

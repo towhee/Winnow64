@@ -347,7 +347,7 @@ void Preferences::addItems()
         tooltip = "Change the background shade throughout the application.";
         QStandardItem *globalBackgroundShadeCaption = new QStandardItem;
         globalBackgroundShadeCaption->setToolTip(tooltip);
-        globalBackgroundShadeCaption->setText("Application background shade");
+        globalBackgroundShadeCaption->setText("Application background luminousity");
         globalBackgroundShadeCaption->setEditable(false);
         QStandardItem *globalBackgroundShadeValue = new QStandardItem;
         globalBackgroundShadeValue->setToolTip(tooltip);

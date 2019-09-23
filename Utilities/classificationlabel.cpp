@@ -103,7 +103,7 @@ void ClassificationLabel::paintEvent(QPaintEvent *event)
             setText("√");
         }
         painter.setPen(ratingTextPen);
-        int fontHeight = (int)diameter - 6;
+        int fontHeight = static_cast<int>(diameter - 6);
         font.setPixelSize(fontHeight);
     //    font.setBold(true);
         painter.setFont(font);
