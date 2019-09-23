@@ -40,6 +40,7 @@
 #endif
 
 #include "ingestdlg.h"
+#include "saveasdlg.h"
 #include "aboutdlg.h"
 #include "Image/thumb.h"
 #include "preferencesdlg.h"
@@ -83,8 +84,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = nullptr);
 
-    QString version = "Version: 1.03 released 2019-09-??";
-    QString winnowWithVersion = "Winnow 1.03";
+    QString version = "Version: 1.04 released 2019-09-23";
+    QString winnowWithVersion = "Winnow 1.04";
     QString website = "Website: "
             "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"
@@ -481,6 +482,7 @@ private slots:
     void openFolder();
     void refreshCurrent();
     void openUsbFolder();
+    void saveAsFile();
     void revealFile();
     void revealFileFromContext();
     void revealInFileBrowser(QString path);
@@ -546,6 +548,7 @@ private:
     QAction *refreshCurrentAction;
     QAction *openUsbAction;
     QAction *revealFileAction;
+    QAction *saveAsFileAction;
     QAction *revealFileActionFromContext;
     QAction *openWithMenuAction;
         QAction *manageAppAction;
@@ -813,6 +816,7 @@ private:
     Thumb *thumb;
     InfoView *infoView;
     IngestDlg *ingestDlg;
+    SaveAsDlg *saveAsDlg;
     LoadUsbDlg *loadUsbDlg;
     AboutDlg *aboutDlg;
     WorkspaceDlg *workspaceDlg;

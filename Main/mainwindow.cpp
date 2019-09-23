@@ -1108,7 +1108,6 @@ delegate use of the current index must check the column.
 
     // if starting program, set first image to display
     if (current.row() == -1) {
-        qDebug() << __FUNCTION__ << "isStart";
         isStart = true;
         thumbView->selectThumb(0);
     }
@@ -2032,6 +2031,12 @@ void MW::createActions()
     #ifdef Q_OS_MAC
         revealText = "Reveal in Finder";
     #endif
+
+    saveAsFileAction = new QAction("Save Preview as...", this);
+    saveAsFileAction->setObjectName("saveAs");
+    saveAsFileAction->setShortcutVisibleInContextMenu(true);
+    addAction(saveAsFileAction);
+    connect(saveAsFileAction, &QAction::triggered, this, &MW::saveAsFile);
 
     revealFileAction = new QAction(revealText, this);
     revealFileAction->setObjectName("openInFinder");
@@ -3216,6 +3221,8 @@ void MW::createMenus()
     fileMenu->addAction(combineRawJpgAction);
     fileMenu->addAction(subFoldersAction);
      fileMenu->addAction(addBookmarkAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(saveAsFileAction);
     fileMenu->addSeparator();
     fileMenu->addAction(revealFileAction);
     fileMenu->addAction(refreshFoldersAction);
@@ -5817,7 +5824,7 @@ app is "stranded" on secondary monitors that are not attached.
 
     folderDock->show();
     folderDock->raise();
-    resizeDocks({folderDock}, {275}, Qt::Horizontal);
+    resizeDocks({folderDock}, {350}, Qt::Horizontal);
 
 /*    enable the folder dock (first one in tab)
     QList<QTabBar *> tabList = findChildren<QTabBar *>();
@@ -7331,7 +7338,7 @@ Preferences are located in the prefdlg class and updated here.
 
         // appearance
         G::backgroundShade = 65;
-        G::fontSize = "16";
+        G::fontSize = "10";
         infoOverlayFontSize = 24;
         classificationBadgeInImageDiameter = 32;
         classificationBadgeInThumbDiameter = 16;
@@ -9890,7 +9897,8 @@ void MW::openFolder()
 void MW::refreshCurrent()
 {
 /*
-
+Reloads the current folder and returns to the same image.  This is handy when some of the
+folder images have changed.
 */
     {
     #ifdef ISDEBUG
@@ -9900,6 +9908,18 @@ void MW::refreshCurrent()
     isRefreshingDM = true;
     refreshCurrentPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
     folderSelectionChange();
+}
+
+void MW::saveAsFile()
+{
+    QModelIndexList selection = selectionModel->selectedRows();
+    if (selection.length() == 0) {
+        G::popUp->showPopup("No images selected for save as operation", 1500);
+        return;
+    }
+    saveAsDlg = new SaveAsDlg(selection, metadata, dm);
+    saveAsDlg->setStyleSheet(css);
+    saveAsDlg->exec();
 }
 
 void MW::copy()
@@ -10202,9 +10222,36 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    fsTree->select(lastDir);
-    qDebug() << __FUNCTION__ << getSelectedPath();
-//    qDebug() << __FUNCTION__ << gridView->justifyMargin();
-//    gridView->rejustify();
+    QModelIndexList selection = selectionModel->selectedRows();
+
+    for (int i = 0; i < selection.count(); ++i) {
+        QString fPath = selection.at(i).data(G::PathRole).toString();
+        QFileInfo info(fPath);
+        QString path = info.path() + "/";
+        QString baseName = info.baseName();
+        QString dotSuffix = ".jpg";
+        QString newFilePath = path + baseName + dotSuffix;
+        int count = 0;
+        bool fileAlreadyExists = true;
+        QString newBaseName = baseName + "_";
+        do {
+            QFile testFile(newFilePath);
+            if (testFile.exists()) {
+                newFilePath = path + newBaseName + QString::number(++count) + dotSuffix;
+                baseName = newBaseName;
+            }
+            else fileAlreadyExists = false;
+        } while (fileAlreadyExists);
+
+        qDebug() << __FUNCTION__ << fPath << newFilePath;
+//        qDebug() << __FUNCTION__ << path;
+//        qDebug() << __FUNCTION__ << baseName;
+//        qDebug() << __FUNCTION__ << newFilePath;
+
+        Pixmap *getImage = new Pixmap(this, dm, metadata);
+        QImage im;
+        getImage->load(fPath, im);
+        im.save(newFilePath, "JPG", 100);
+    }
 }
 // End MW

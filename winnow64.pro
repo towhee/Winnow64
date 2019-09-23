@@ -24,6 +24,7 @@ HEADERS += Dialogs/ingestdlg.h
 HEADERS += Dialogs/loadusbdlg.h
 HEADERS += Dialogs/preferencesdlg.h
 HEADERS += Dialogs/renamedlg.h
+HEADERS += Dialogs/saveasdlg.h
 HEADERS += Dialogs/testaligndlg.h
 HEADERS += Dialogs/workspacedlg.h
 HEADERS += Dialogs/tokendlg.h
@@ -74,6 +75,7 @@ SOURCES += Dialogs/ingestdlg.cpp
 SOURCES += Dialogs/loadusbdlg.cpp
 SOURCES += Dialogs/preferencesdlg.cpp
 SOURCES += Dialogs/renamedlg.cpp
+SOURCES += Dialogs/saveasdlg.cpp
 SOURCES += Dialogs/testaligndlg.cpp
 SOURCES += Dialogs/tokendlg.cpp
 SOURCES += Dialogs/updateapp.cpp
@@ -114,7 +116,8 @@ SOURCES += Views/infoview.cpp
 SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
 
-FORMS += Dialogs/aboutdlg.ui
+FORMS += Dialogs/aboutdlg.ui \
+    Dialogs/saveasdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/ingestdlg.ui
@@ -180,6 +183,6 @@ else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -
 #win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/bin/ -llcms2
 #else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/bin/ -llcms2d
 
-INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
-DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
+win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
+win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
 #DEPENDPATH += $$PWD/Lib/lcms2-2.9/bin
