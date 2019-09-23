@@ -1,3 +1,4 @@
+CONFIG +=sdk_no_version_check
 TEMPLATE = app
 TARGET = Winnow
 INCLUDEPATH += .
@@ -168,13 +169,13 @@ DISTFILES += notes/xmp.txt
 mac:LIBS += -framework ApplicationServices
 mac:LIBS += -framework AppKit
 
-QMAKE_CXXFLAGS += /MD
+win32:QMAKE_CXXFLAGS += /MD
 #win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../LIBRARYNAME/Lib/ -lLIBRARY /NODEFAULTLIB:library
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib
 
-INCLUDEPATH += $$PWD/Lib/zlib
-DEPENDPATH += $$PWD/Lib/zlib
+win32:INCLUDEPATH += $$PWD/Lib/zlib
+win32:DEPENDPATH += $$PWD/Lib/zlib
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_static
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
