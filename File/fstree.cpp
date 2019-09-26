@@ -355,7 +355,7 @@ void FSTree::paintEvent(QPaintEvent *event)
 
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
-//    qDebug() << "FSTree::mousePressEvent";
+    qDebug() << "FSTree::mousePressEvent";
     QTreeView::mousePressEvent(event);
 }
 
