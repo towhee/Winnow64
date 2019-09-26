@@ -184,15 +184,15 @@ void BookMarks::paintEvent(QPaintEvent *event)
     QTreeWidget::paintEvent(event);
 }
 
-void BookMarks::mousePressEvent(QMouseEvent *event)
-{
-    QTreeView::mousePressEvent(event);
-}
+//void BookMarks::mousePressEvent(QMouseEvent *event)
+//{
+//    QTreeView::mousePressEvent(event);
+//}
 
-void BookMarks::mouseReleaseEvent(QMouseEvent *event)
-{
-    QTreeView::mouseReleaseEvent(event);
-}
+//void BookMarks::mouseReleaseEvent(QMouseEvent *event)
+//{
+//    QTreeView::mouseReleaseEvent(event);
+//}
 
 void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 {

@@ -538,16 +538,17 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 {
 
 // use to show all events being filtered - handy to figure out which to intercept
-/*    if (event->type()        != QEvent::Paint
+    if (event->type()        != QEvent::Paint
             && event->type() != QEvent::UpdateRequest
             && event->type() != QEvent::ZeroTimerEvent
-            && event->type() != QEvent::Timer)
+            && event->type() != QEvent::Timer
+            && event->type() == QEvent::MouseButtonPress)
     {
         qDebug() << event << "\t"
                  << event->type() << "\t"
                  << obj << "\t"
                  << obj->objectName();
-    }*/
+    }
 
 
     // figure out key presses
@@ -4429,7 +4430,10 @@ void MW::createFSTree()
     fsTree->setShowImageCount(true);
 //    fsTree->setShowImageCount(setting->value("showImageCount").toBool());
 
-    connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
+    // this works for touchpad tap
+    connect(fsTree, SIGNAL(pressed(const QModelIndex&)), this, SLOT(folderSelectionChange()));
+    // this does not work for touchpad tap
+//    connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
 
 //    connect(fsTree->fsModel, SIGNAL(rowsRemoved(const QModelIndex &, int, int)),
 //            this, SLOT(checkDirState(const QModelIndex &, int, int)));
@@ -4479,8 +4483,13 @@ void MW::createBookmarks()
 
     bookmarks->setMaximumWidth(folderMaxWidth);
 
-    connect(bookmarks, SIGNAL(itemClicked(QTreeWidgetItem *, int)),
+    // this does work for touchpad tap
+    connect(bookmarks, SIGNAL(itemPressed(QTreeWidgetItem *, int)),
             this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
+
+   // this not working for touchpad tap
+//    connect(bookmarks, SIGNAL(itemClicked(QTreeWidgetItem *, int)),
+//            this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
 
 //    connect(removeBookmarkAction, SIGNAL(triggered()),
 //            bookmarks, SLOT(removeBookmark()));
