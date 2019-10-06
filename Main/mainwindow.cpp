@@ -7341,8 +7341,8 @@ Preferences are located in the prefdlg class and updated here.
         G::mode = "Loupe";
 
         // appearance
-        G::backgroundShade = 65;
-        G::fontSize = "10";
+        G::backgroundShade = 50;
+        G::fontSize = "12";
         infoOverlayFontSize = 24;
         classificationBadgeInImageDiameter = 32;
         classificationBadgeInThumbDiameter = 16;
@@ -7393,7 +7393,10 @@ Preferences are located in the prefdlg class and updated here.
 
     // appearance
     G::backgroundShade = setting->value("backgroundShade").toInt();
+    if (G::backgroundShade < 20) G::backgroundShade = 50;
     G::fontSize = setting->value("fontSize").toString();
+    if (G::fontSize == "") G::fontSize = "12";
+
     // load imageView->infoOverlayFontSize later as imageView has not been created yet
     classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
     classificationBadgeInThumbDiameter = setting->value("classificationBadgeInThumbDiameter").toInt();
