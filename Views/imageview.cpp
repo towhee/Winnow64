@@ -1000,7 +1000,7 @@ Set a delay to hide cursor if in slideshow mode
         mousePressPt.setY(event->y());
     }
     else{
-        if(G::isSlideShow) {
+        if (G::isSlideShow) {
             if(event->pos() != prevPos) {
                 setCursor(Qt::ArrowCursor);
                 QTimer::singleShot(500, this, SLOT(hideCursor()));
