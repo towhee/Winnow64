@@ -174,7 +174,6 @@ to prevent jarring changes in perceived scale by the user.
         }
         // otherwise load full size image from cache
         else {
-//            ICC::transform(imageCacheThread->imCache[fPath]);
             pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
             isPreview = false;
             isLoaded = true;
@@ -198,6 +197,7 @@ to prevent jarring changes in perceived scale by the user.
         }
         else {
             pmItem->setPixmap(QPixmap(":/images/error_image.png"));
+            isLoaded = true;
         }
     }
 

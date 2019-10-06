@@ -1,6 +1,4 @@
 BUGS
-- Test with corrupted image files
-- Update from inside Winnow does not create a new folder in c:\program Files\Winnow.
 - Ingest if image does not have metadata req'd
 - is mouseMovementTimer in imageView req'd
 - Mac check for updates not done yet
@@ -31,6 +29,8 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Update from inside Winnow does not create a new folder in c:\program Files\Winnow.
+- Test with corrupted image files
 - Save as implemented
 - Confirm check for updates still working on Win
 - GridView does not always justify and size properly.
@@ -44,7 +44,7 @@ DONE/FIXED
 - Open in Grid, no folder selected, switch Loupe, Class icon showng
 - Count not showing in bookmarks
 - Filters column 0 width needs tweaking
-- statusbar font size not matching global font
+- Statusbar font size not matching global font
 - ImageView not showing first image after new user start
 - InfoOverlay not working
 - Check available memory vs cache size
