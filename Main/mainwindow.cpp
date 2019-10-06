@@ -3433,6 +3433,8 @@ void MW::createMenus()
     separatorAction2->setSeparator(true);
     QAction *separatorAction3 = new QAction(this);
     separatorAction3->setSeparator(true);
+    QAction *separatorAction4 = new QAction(this);
+    separatorAction4->setSeparator(true);
 
     // FSTree context menu
     fsTreeActions = new QList<QAction *>;
@@ -3499,6 +3501,8 @@ void MW::createMenus()
     thumbViewActions->append(thumbsEnlargeAction);
     thumbViewActions->append(thumbsShrinkAction);
     thumbViewActions->append(separatorAction3);
+    thumbViewActions->append(saveAsFileAction);
+    thumbViewActions->append(separatorAction4);
     thumbViewActions->append(reportMetadataAction);
 
 //    // imageview/tableview/gridview/compareview context menu

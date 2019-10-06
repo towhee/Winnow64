@@ -605,12 +605,12 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
                 iconMax(pm);
                 iconsCached.append(dmRow);
             }
-//            else {
-//                pm = QPixmap(":/images/badImage1.png");
-//            }
-//            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
-//            iconMax(pm);
-//            iconsCached.append(dmRow);
+            else {
+                pm = QPixmap(":/images/badImage1.png");
+            }
+            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+            iconMax(pm);
+            iconsCached.append(dmRow);
 //            qDebug() << __FUNCTION__ << "loaded icon for row" << row;
         }
         mutex.unlock();
