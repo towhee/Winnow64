@@ -63,13 +63,15 @@ private:
     QColor currentItemColor;
     QColor selectedColor;
     QColor pickColor;
+    QColor rejectColor;
     QColor ingestedColor;
     QColor cacheColor;
     QColor cacheBorderColor;
 
-    QPen pick;
-    QPen ingested;
-    QPen notPick;
+    QPen pickPen;
+    QPen rejectPen;
+    QPen ingestedPen;
+    QPen notPickPen;
     QPen backPen;
     QPen currentPen;
     QPen selectedPen;

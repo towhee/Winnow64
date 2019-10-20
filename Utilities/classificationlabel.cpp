@@ -11,10 +11,12 @@ ClassificationLabel::ClassificationLabel(QWidget *parent)
 
     // defaults
     pickColor = QColor(Qt::green);
+    rejectColor = QColor(Qt::red);
     pickBackgroundColor = QColor(Qt::green);
     textColor = QColor(Qt::white);
     diameter = 20;
     isPick = true;
+    borderPen.setWidth(3);
 }
 
 void ClassificationLabel::setRatingColorVisibility(bool showRatingAndColor)
@@ -25,6 +27,11 @@ void ClassificationLabel::setRatingColorVisibility(bool showRatingAndColor)
 void ClassificationLabel::setPick(bool isPick)
 {
     this->isPick = isPick;
+}
+
+void ClassificationLabel::setReject(bool isReject)
+{
+    this->isReject = isReject;
 }
 
 void ClassificationLabel::setRating(QString rating)
@@ -55,7 +62,7 @@ void ClassificationLabel::setDiameter(int diameter)
 
 void ClassificationLabel::refresh()
 {
-    if (isPick)
+    if (isPick || isReject)
         setVisible(true);
     else {
         if ((G::labelColors.contains(colorClass) || G::ratings.contains(rating))
@@ -80,20 +87,29 @@ void ClassificationLabel::paintEvent(QPaintEvent *event)
 
     // draw the pick circle
     if (isPick) {
-        QRect pickRect(0, 0, diameter, diameter);
-        painter.setPen(pickColor);
-//        painter.setBrush(pickBackgroundColor);
+        QRect pickRect(1, 1, diameter-2, diameter-2);
+//        QPen pickPen(pickColor, 3);
+        borderPen.setColor(pickColor);
+        painter.setPen(borderPen);
         painter.drawEllipse(pickRect);
     }
 
-    if (showRatingAndColor || isPick) {
+    if (isReject) {
+        QRect pickRect(1, 1, diameter-2, diameter-2);
+        borderPen.setColor(rejectColor);
+        painter.setPen(borderPen);
+        painter.drawEllipse(pickRect);
+    }
+
+    if (showRatingAndColor || isPick || isReject) {
         // draw the color class circle
-        QRect colorRect(2, 2, diameter-4, diameter-4);
+        QRect colorRect(3, 3, diameter-6, diameter-6);
         painter.setBrush(backgroundColor);
         painter.setPen(backgroundColor);
         painter.drawEllipse(colorRect);
     }
-    if (showRatingAndColor || isPick) {
+    if (rating == "1" || rating == "2" || rating == "3" || rating == "4" || rating == "5") {
+//    if (showRatingAndColor || isPick || isReject) {
         // rating text
         QRect textRect(0, -1, diameter, diameter);
         QPen ratingTextPen(textColor);

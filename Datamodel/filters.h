@@ -16,6 +16,7 @@ public:
     QTreeWidgetItem *picks;
     QTreeWidgetItem *picksFalse;
     QTreeWidgetItem *picksTrue;
+    QTreeWidgetItem *picksReject;
     QTreeWidgetItem *ratings;
     QTreeWidgetItem *ratingsNone;
     QTreeWidgetItem *ratings1;

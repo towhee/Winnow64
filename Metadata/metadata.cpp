@@ -4582,6 +4582,50 @@ bool Metadata::formatJPG(quint32 startOffset)
     return true;
 }
 
+bool Metadata::formatHEIF()
+{
+    file.setFileName("D:/Pictures/_HEIC/iphone.HEIC");
+    file.open(QIODevice::ReadOnly);
+
+    order = 0x4D4D;
+
+    /*
+    Source: Part 12: ISO base media file format (ISO/IEC 14496-12)
+    size is an integer that specifies the number of bytes in this box, including all its
+    fields and contained boxes; if size is 1 then the actual size is in the field largesize;
+    if size is 0, then this box is the last one in the file, and its contents extend to the
+    end of the file (normally only used for a Media Data Box)
+
+    type identifies the box type; standard boxes use a compact type, which is normally four
+    printable characters, to permit ease of identification, and is shown so in the boxes
+    below. User extensions use an extended type; in this case, the type field is set to
+    ‘uuid’.
+    */
+    int ftypBoxLength = get4(file.read(4));
+    if (!ftypBoxLength) {
+        // err
+        return false;
+    }
+
+    if (file.read(4) != "ftyp") {
+        // err
+        return false;
+    }
+
+    QString fType = file.read(4);
+    if (fType != "heic" && fType != "HEIC") {
+        return false;
+    }
+
+    file.seek(ftypBoxLength);
+    quint32 nextBoxLength = get4(file.read(4));
+    QString nextBoxType = file.read(4);
+
+
+    qDebug() << __FUNCTION__ << nextBoxLength << nextBoxType;
+    return true;
+}
+
 void Metadata::clearMetadata()
 {
     {
