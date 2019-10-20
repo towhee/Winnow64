@@ -84,8 +84,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = nullptr);
 
-    QString version = "Version: 1.04 released 2019-09-23";
-    QString winnowWithVersion = "Winnow 1.04";
+    QString version = "Version: 1.05 released 2019-10-15";
+    QString winnowWithVersion = "Winnow 1.05";
     QString website = "Website: "
             "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"
@@ -341,6 +341,7 @@ private slots:
     void filterChange(QString source = "");
     void quickFilter();
     void invertFilters();
+    void toggleReject();
     void refine();
     void uncheckAllFilters();
     void clearAllFilters();
@@ -414,6 +415,7 @@ private slots:
 //    void toggleThumbWrap();
     void setIngested();
     void togglePick();
+    void togglePickUnlessRejected();
     void pushPick(QString fPath, QString status = "true");
     void popPick();
     void updatePickFromHistory(QString fPath, QString status);
@@ -580,10 +582,12 @@ private:
     QAction *selectAllAction;
     QAction *invertSelectionAction;
     QAction *copyAction;
+    QAction *rejectAction;
     QAction *refineAction;
     QAction *pickAction;                // shortcut "`"
     QAction *pick1Action;               // added for shortcut "P"
     QAction *popPickHistoryAction;
+    QAction *pickUnlessRejectedAction;
     QAction *filterPickAction;
     QAction *rotateLeftAction;
     QAction *rotateRightAction;
@@ -892,6 +896,7 @@ private:
     QString rating = "";
     QString colorClass = "";
     bool isPick;
+    bool isReject;
 
     void createDocks();
     void updateState();

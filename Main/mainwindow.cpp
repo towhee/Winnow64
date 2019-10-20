@@ -542,12 +542,14 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             && event->type() != QEvent::UpdateRequest
             && event->type() != QEvent::ZeroTimerEvent
             && event->type() != QEvent::Timer
-            && event->type() == QEvent::MouseButtonPress)
+            && event->type() == QEvent::MouseButtonPress
+            )
     {
-        qDebug() << event << "\t"
-                 << event->type() << "\t"
-                 << obj << "\t"
-                 << obj->objectName();
+//        qDebug() << __FUNCTION__
+//                 << event << "\t"
+//                 << event->type() << "\t"
+//                 << obj << "\t"
+//                 << obj->objectName();
     }
 
 
@@ -1105,7 +1107,7 @@ delegate use of the current index must check the column.
     bool isStart = false;
     if(!isCurrentFolderOkay) return;
 
-    if (imageView->isFirstImageNewFolder) thumbView->selectThumb(0);
+    if (imageView->isFirstImageNewFolder && G::mode == "Loupe") thumbView->selectThumb(0);
 
     // if starting program, set first image to display
     if (current.row() == -1) {
@@ -2203,6 +2205,12 @@ void MW::createActions()
     connect(invertSelectionAction, &QAction::triggered,
             thumbView, &IconView::invertSelection);
 
+    rejectAction = new QAction(tr("Reject"), this);
+    rejectAction->setObjectName("Reject");
+    rejectAction->setShortcutVisibleInContextMenu(true);
+    addAction(rejectAction);
+    connect(rejectAction, &QAction::triggered, this, &MW::toggleReject);
+
     refineAction = new QAction(tr("Refine"), this);
     refineAction->setObjectName("Refine");
     refineAction->setShortcutVisibleInContextMenu(true);
@@ -2218,6 +2226,12 @@ void MW::createActions()
     pick1Action = new QAction(tr("Pick"), this);
     addAction(pick1Action);
     connect(pick1Action, &QAction::triggered, this, &MW::togglePick);
+
+    pickUnlessRejectedAction = new QAction(tr("Pick unless rejected"), this);
+    pickUnlessRejectedAction->setObjectName("pickUnlessRejected");
+    pickUnlessRejectedAction->setShortcutVisibleInContextMenu(true);
+    addAction(pickUnlessRejectedAction);
+    connect(pickUnlessRejectedAction, &QAction::triggered, this, &MW::togglePickUnlessRejected);
 
     filterPickAction = new QAction(tr("Filter picks only"), this);
     filterPickAction->setObjectName("toggleFilterPick");
@@ -3243,8 +3257,11 @@ void MW::createMenus()
     editMenu->addSeparator();
     editMenu->addAction(copyAction);
     editMenu->addSeparator();
+    editMenu->addAction(rejectAction);
+    editMenu->addSeparator();
     editMenu->addAction(refineAction);
     editMenu->addAction(pickAction);
+    editMenu->addAction(pickUnlessRejectedAction);
 //    editMenu->addAction(filterPickAction);
     editMenu->addAction(popPickHistoryAction);
     editMenu->addSeparator();
@@ -5047,6 +5064,9 @@ and icons are loaded if necessary.
     dm->filteredItemCount();
     dm->unfilteredItemCount();
 
+    // recover sort after filtration
+    sortChange();
+
     // update the status panel filtration status
     updateStatusBar();
 
@@ -5275,11 +5295,12 @@ void MW::refine()
     pushPick("Begin multiple select");
     for (int row = 0; row < dm->rowCount(); ++row) {
         if (dm->index(row, G::PickColumn).data() == "true") {
-            dm->setData(dm->index(row, G::RefineColumn), true);
-            dm->setData(dm->index(row, G::PickColumn), "false");
             // save pick history
             QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
-            pushPick(fPath, "false");
+            pushPick(fPath, "true");
+            // clear picks
+            dm->setData(dm->index(row, G::RefineColumn), true);
+            dm->setData(dm->index(row, G::PickColumn), "false");
         }
         else dm->setData(dm->index(row, G::RefineColumn), false);
     }
@@ -6351,27 +6372,29 @@ void MW::runExternalApp()
         QString suffix = fInfo.suffix().toLower();
         QString destinationPath = fPath;
 
-        // buffer to hold file with edited xmp data
-        QByteArray buffer;
+        // Sidecar being overwritten if it already exists!!  Cancel for now.
 
-        if (metadata->writeMetadata(fPath, dm->getMetadata(fPath), buffer)
-        && metadata->sidecarFormats.contains(suffix)) {
+//        // buffer to hold file with edited xmp data
+//        QByteArray buffer;
 
-            if (metadata->internalXmpFormats.contains(suffix)) {
-                // write xmp data into image file
-                QFile newFile(destinationPath);
-                newFile.open(QIODevice::WriteOnly);
-                newFile.write(buffer);
-                newFile.close();
-            }
-            else {
-                // write the sidecar xmp file
-                QFile sidecarFile(folderPath + destBaseName + ".xmp");
-                sidecarFile.open(QIODevice::WriteOnly);
-                sidecarFile.write(buffer);
-                sidecarFile.close();
-            }
-        }
+//        if (metadata->writeMetadata(fPath, dm->getMetadata(fPath), buffer)
+//        && metadata->sidecarFormats.contains(suffix)) {
+
+//            if (metadata->internalXmpFormats.contains(suffix)) {
+//                // write xmp data into image file
+//                QFile newFile(destinationPath);
+//                newFile.open(QIODevice::WriteOnly);
+//                newFile.write(buffer);
+//                newFile.close();
+//            }
+//            else {
+//                // write the sidecar xmp file
+//                QFile sidecarFile(folderPath + destBaseName + ".xmp");
+//                sidecarFile.open(QIODevice::WriteOnly);
+//                sidecarFile.write(buffer);
+//                sidecarFile.close();
+//            }
+//        }
     }
 
     QProcess *process = new QProcess();
@@ -7637,8 +7660,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
         // Edit
         selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
         invertSelectionAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
+        rejectAction->setShortcut(QKeySequence("X"));
         refineAction->setShortcut(QKeySequence("R"));
         pickAction->setShortcut(QKeySequence("`"));
+        pickUnlessRejectedAction->setShortcut(QKeySequence("Shift+Ctrl+`"));
         pick1Action->setShortcut(QKeySequence("P"));
         popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
 
@@ -7986,7 +8011,7 @@ around lack of notification when the QListView has finished painting itself.
     // sync scrolling between modes (loupe, grid and table)
     updateIconsVisible(false);
     if (prevMode == "Table") {
-        if(tableView->isRowVisible(currentRow)) scrollRow = currentRow;
+        if (tableView->isRowVisible(currentRow)) scrollRow = currentRow;
         else scrollRow = tableView->midVisibleRow;
     }
     if (prevMode == "Grid") {
@@ -8047,11 +8072,11 @@ around lack of notification when the QListView has finished painting itself.
 
     // sync scrolling between modes (loupe, grid and table)
     if (prevMode == "Table") {
-        if(tableView->isRowVisible(currentRow)) scrollRow = currentRow;
+        if (tableView->isRowVisible(currentRow)) scrollRow = currentRow;
         else scrollRow = tableView->midVisibleRow;
     }
     if (prevMode == "Loupe" /*&& thumbView->isVisible() == true*/) {
-        if(thumbView->isRowVisible(currentRow)) scrollRow = currentRow;
+        if (thumbView->isRowVisible(currentRow)) scrollRow = currentRow;
         else scrollRow = thumbView->midVisibleCell;
     }
 
@@ -8702,6 +8727,115 @@ void MW::setIngested()
 //    ignoreSelectionChange = false;
 }
 
+void MW::toggleReject()
+{
+    /*
+    If the selection has any images that are not rejected then reject them all.
+    If the entire selection was already rejected then unreject them all.
+    If the entire selection is nor rejected then reject them all.
+    */
+        {
+        #ifdef ISDEBUG
+        G::track(__FUNCTION__);
+        #endif
+        }
+        QModelIndex idx;
+        QModelIndexList idxList = selectionModel->selectedRows();
+        QString pickStatus;
+
+        // add multiple selection flag to pick history
+        if (idxList.length() > 1) pushPick("Begin multiple select");
+
+        bool foundFalse = false;
+        // check if any images are not rejected in the selection
+        foreach (idx, idxList) {
+            QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+            pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
+            foundFalse = (pickStatus != "reject");
+            if (foundFalse) break;
+        }
+        foundFalse ? pickStatus = "reject" : pickStatus = "false";
+
+        // set pick status for selection
+        foreach (idx, idxList) {
+            // save pick history
+            QString fPath = dm->sf->index(idx.row(), G::PathColumn).data(G::PathRole).toString();
+            QString priorPickStatus = dm->sf->index(idx.row(), G::PickColumn).data().toString();
+            pushPick(fPath, priorPickStatus);
+            // set pick status
+            QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+            dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
+        }
+        if (idxList.length() > 1) pushPick("End multiple select");
+
+        updateClassification();
+        thumbView->refreshThumbs();
+        gridView->refreshThumbs();
+
+        pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+        updateStatus(true, "");
+
+        // update filter counts
+        dm->filteredItemCount();
+}
+
+void MW::togglePickUnlessRejected()
+{
+    /*
+    If the selection has any images that are not picked then pick them all.
+    If the entire selection was already picked then unpick them all.
+    If the entire selection is unpicked then pick them all.
+    Push the changes onto the pick history stack.
+    */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QModelIndex idx;
+    QModelIndexList idxList = selectionModel->selectedRows();
+    QString pickStatus;
+    QString newPickStatus;
+
+    bool foundFalse = false;
+    // check if any images are not picked in the selection
+    foreach (idx, idxList) {
+        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+        pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
+        foundFalse = (pickStatus == "false");
+        if (foundFalse) break;
+    }
+    foundFalse ? newPickStatus = "true" : newPickStatus = "false";
+
+    // add multiple selection flag to pick history
+    if (idxList.length() > 1) pushPick("Begin multiple select");
+
+    // set pick status for selection
+    foreach (idx, idxList) {
+        // save pick history
+        QString fPath = dm->sf->index(idx.row(), G::PathColumn).data(G::PathRole).toString();
+        QString priorPickStatus = dm->sf->index(idx.row(), G::PickColumn).data().toString();
+        pushPick(fPath, priorPickStatus);
+        // set pick status
+        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+        pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
+        if (pickStatus != "reject") {
+            dm->sf->setData(pickIdx, newPickStatus, Qt::EditRole);
+        }
+    }
+    if (idxList.length() > 1) pushPick("End multiple select");
+
+    updateClassification();
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+
+    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updateStatus(true, "");
+
+    // update filter counts
+        dm->filteredItemCount();
+}
+
 void MW::togglePick()
 {
 /*
@@ -8724,7 +8858,7 @@ Push the changes onto the pick history stack.
     foreach (idx, idxList) {
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
-        foundFalse = (pickStatus == "false");
+        foundFalse = (pickStatus != "true");
         if (foundFalse) break;
     }
     foundFalse ? pickStatus = "true" : pickStatus = "false";
@@ -8734,11 +8868,13 @@ Push the changes onto the pick history stack.
 
     // set pick status for selection
     foreach (idx, idxList) {
-        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
-        dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
         // save pick history
         QString fPath = dm->sf->index(idx.row(), G::PathColumn).data(G::PathRole).toString();
-        pushPick(fPath, pickStatus);
+        QString priorPickStatus = dm->sf->index(idx.row(), G::PickColumn).data().toString();
+        pushPick(fPath, priorPickStatus);
+        // set pick status
+        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+        dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
     }
     if (idxList.length() > 1) pushPick("End multiple select");
 
@@ -8798,14 +8934,14 @@ void MW::updatePickFromHistory(QString fPath, QString status)
     G::track(__FUNCTION__, fPath + ": " + status);
     #endif
     }
-    QString pickStatus;
-    status == "true" ? pickStatus = "false" : pickStatus = "true";
+    /*
     QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath);
     if (idxList.length() == 0) return;
-    QModelIndex idx = idxList[0];
-    if(idx.isValid()) {
-        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
-        dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
+    QModelIndex idx = idxList[0]; */
+    if (dm->fPathRow.contains(fPath)) {
+        int row = dm->fPathRow[fPath];
+        QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
+        dm->sf->setData(pickIdx, status, Qt::EditRole);
 //        dm->sf->filterChange();
         thumbView->refreshThumbs();
         gridView->refreshThumbs();
@@ -8890,7 +9026,7 @@ void MW::ingest()
 
         if (!ingested) return;
 
-        if (autoEjectUsb) ejectUsb(currentViewDir);;
+        if (autoEjectUsb) ejectUsb(currentViewDir);
 
         prevSourceFolder = currentViewDir;
 
@@ -9073,10 +9209,12 @@ sure the classification label is not visible.
     }
     int row = thumbView->currentIndex().row();
     isPick = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
+    isReject = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "reject";
     rating = dm->sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     colorClass = dm->sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     if (rating == "0") rating = "";
     imageView->classificationLabel->setPick(isPick);
+    imageView->classificationLabel->setReject(isReject);
     imageView->classificationLabel->setColorClass(colorClass);
     imageView->classificationLabel->setRating(rating);
     imageView->classificationLabel->setRatingColorVisibility(isRatingBadgeVisible);
@@ -10238,36 +10376,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QModelIndexList selection = selectionModel->selectedRows();
-
-    for (int i = 0; i < selection.count(); ++i) {
-        QString fPath = selection.at(i).data(G::PathRole).toString();
-        QFileInfo info(fPath);
-        QString path = info.path() + "/";
-        QString baseName = info.baseName();
-        QString dotSuffix = ".jpg";
-        QString newFilePath = path + baseName + dotSuffix;
-        int count = 0;
-        bool fileAlreadyExists = true;
-        QString newBaseName = baseName + "_";
-        do {
-            QFile testFile(newFilePath);
-            if (testFile.exists()) {
-                newFilePath = path + newBaseName + QString::number(++count) + dotSuffix;
-                baseName = newBaseName;
-            }
-            else fileAlreadyExists = false;
-        } while (fileAlreadyExists);
-
-        qDebug() << __FUNCTION__ << fPath << newFilePath;
-//        qDebug() << __FUNCTION__ << path;
-//        qDebug() << __FUNCTION__ << baseName;
-//        qDebug() << __FUNCTION__ << newFilePath;
-
-        Pixmap *getImage = new Pixmap(this, dm, metadata);
-        QImage im;
-        getImage->load(fPath, im);
-        im.save(newFilePath, "JPG", 100);
+    int x = 12;
+    if (x) {
+        qDebug() << __FUNCTION__ << "x =" << x;
+        int y = x < 7;
+        qDebug() << __FUNCTION__ << "x < 7 =" << y;
     }
+//    metadata->formatHEIF();
 }
 // End MW

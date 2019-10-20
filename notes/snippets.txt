@@ -125,3 +125,26 @@ void forEach(QAbstractItemModel* model, QModelIndex parent = QModelIndex()) {
     }
 }
 
+// convert Magick Image to QPixmap
+void ITMagickGraphic::convertImageToPixmap()
+{
+Blob imageBlob;
+image.magick("XPM");
+image.write(&imageBlob);
+const QByteArray imageData((char*)(imageBlob.data()),
+imageBlob.length());
+pixmapGraphic.loadFromData(imageData);
+}
+
+void ITMagickGraphic::convertPixmapToImage()
+{
+QByteArray newImageData;
+QBuffer imageBuffer(&newImageData);
+imageBuffer.open(QIODevice::WriteOnly);
+pixmapGraphic.save(&imageBuffer,"JPEG");
+Blob newImageBlob(newImageData.data(),newImageData.size());
+Image
+newImage(newImageBlob,Geometry(pixmapGraphic.width(),pixmapGraphic.height()),"jpeg");
+
+image = newImage;
+}

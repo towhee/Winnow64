@@ -212,10 +212,12 @@ private:
     bool formatJPG(quint32 startOffset);
     bool formatTIF();
     bool formatDNG();
+//    bool formatHEIF();
 
 signals:
 
 public slots:
+    bool formatHEIF();
     void loadFromThread(QFileInfo &fileInfo);
     bool loadImageMetadata(const QFileInfo &fileInfo,
                            bool essential = true,

@@ -13,6 +13,7 @@ public:
     void setColorClass(QString colorClass);
     void setRating(QString rating);
     void setPick(bool isPick);
+    void setReject(bool isReject);
     void setRatingColorVisibility(bool showRatingAndColor);
     void refresh();
 
@@ -23,12 +24,15 @@ private:
     int diameter;
     bool showRatingAndColor;
     bool isPick;
+    bool isReject;
     QString rating;
     QString colorClass;
     QColor pickColor;
+    QColor rejectColor;
     QColor pickBackgroundColor;
     QColor textColor;
     QColor backgroundColor;
+    QPen borderPen;
 };
 
 #endif // CLASSIFICATIONLABEL_H

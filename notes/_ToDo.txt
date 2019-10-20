@@ -1,4 +1,8 @@
 BUGS
+- Open with xmp sidecar over-writing old car
+- Ingest date when different dates in ingest file list
+- Losing red setting
+- Filter last day crashing
 - Ingest if image does not have metadata req'd
 - is mouseMovementTimer in imageView req'd
 - Mac check for updates not done yet
@@ -29,6 +33,9 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Recover sort after clear all filters
+- Pick unless rejected
+- Add rejects option
 - Update from inside Winnow does not create a new folder in c:\program Files\Winnow.
 - Test with corrupted image files
 - Save as implemented

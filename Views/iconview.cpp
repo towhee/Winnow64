@@ -897,7 +897,6 @@ void IconView::selectThumb(QModelIndex idx)
     }
     if (idx.isValid()) {
         setCurrentIndex(idx);
-//        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::SelectCurrent);
         scrollTo(idx, ScrollHint::PositionAtCenter);
     }
 }
@@ -910,7 +909,6 @@ void IconView::selectThumb(int row)
     #endif
     }
     // some operations assign row = -1 if not found
-//    qDebug() << __FUNCTION__ << "row =" << row;
     if (row < 0) return;
     setFocus();
     QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
@@ -939,7 +937,7 @@ void IconView::selectNext()
     G::track(__FUNCTION__);
     #endif
     }
-    if(G::mode == "Compare") return;
+    if (G::mode == "Compare") return;
     selectThumb(getNextRow());
 }
 
@@ -1812,7 +1810,6 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "🔎🔎🔎 ThumbView::mouseReleaseEvent ";
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
     QListView::mouseReleaseEvent(event);

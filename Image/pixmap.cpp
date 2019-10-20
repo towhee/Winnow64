@@ -88,7 +88,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
                         if (image.loadFromData(buf, "JPEG")) {
                             imFile.close();
                             #ifdef Q_OS_WIN
-                            if (buf.length() > 0) ICC::transform(image);
+                            if (buf.length() > 0 && G::colorManage) ICC::transform(image);
                             #endif
                             success = true;
                             break;
@@ -135,9 +135,11 @@ bool Pixmap::load(QString &fPath, QImage &image)
                     break;
                 }
                 #ifdef Q_OS_WIN
-                QByteArray ba = dm->index(row, G::ICCBufColumn).data().toByteArray();
-                ICC::setInProfile(dm->index(row, G::ICCBufColumn).data().toByteArray());
-                ICC::transform(image);
+                if (G::colorManage) {
+                    QByteArray ba = dm->index(row, G::ICCBufColumn).data().toByteArray();
+                    ICC::setInProfile(dm->index(row, G::ICCBufColumn).data().toByteArray());
+                    ICC::transform(image);
+                    }
                 #endif
             }
             else {

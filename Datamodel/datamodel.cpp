@@ -22,6 +22,7 @@ The data is structured in columns:
     ● Year:             from metadata       createdDate
     ● Day:              from metadata       createdDate
     ● Creator:          from metadata       EditRole
+    ● Rejected:         reject function     EditRole
     ● Refined:          refine function     EditRole
     ● Picked:           user edited         EditRole
     ● Rating:           user edited         EditRole
