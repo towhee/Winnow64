@@ -39,6 +39,7 @@ public:
     QString h20;    // 2.0x font height
 
     int fontSize;
+    int halfFontSize;
     int scrollBarWidth = 14;
     QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
     QColor widgetBackgroundColor ;

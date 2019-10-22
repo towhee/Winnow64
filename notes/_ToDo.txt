@@ -1,5 +1,5 @@
 BUGS
-- Open with xmp sidecar over-writing old car
+- Open with xmp sidecar over-writing old car - cancel for now
 - Ingest date when different dates in ingest file list
 - Losing red setting
 - Filter last day crashing
@@ -16,6 +16,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Reset to defaults
 - Search
 - Refresh selected images
 - Copy image
@@ -33,6 +34,8 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Color management slowing image loading now - try rebuilding runtime library
+- New settings cause problems for users with existing settings
 - Recover sort after clear all filters
 - Pick unless rejected
 - Add rejects option

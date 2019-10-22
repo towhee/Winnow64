@@ -56,6 +56,7 @@
 #include "ui_shortcutsform.h"
 #include "ui_welcome.h"
 #include "ui_message.h"
+#include "ui_test12.h"
 
 //#include "Image/tiffhandler.h";
 //#include "Lib/zlib/zlib.h"
@@ -84,8 +85,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = nullptr);
 
-    QString version = "Version: 1.05 released 2019-10-15";
-    QString winnowWithVersion = "Winnow 1.05";
+    QString version = "Version: 1.07 released 2019-10-22";
+    QString winnowWithVersion = "Winnow 1.07";
     QString website = "Website: "
             "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"

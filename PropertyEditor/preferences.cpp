@@ -205,6 +205,10 @@ void Preferences::itemChange(QModelIndex idx)
         mw->setClassificationBadgeThumbDiam(value);
     }
 
+    if (source == "colorManage") {
+        G::colorManage = v.toBool();
+    }
+
     if (source == "rememberLastDir") {
         mw->rememberLastDir = v.toBool();
     }
@@ -276,6 +280,27 @@ void Preferences::addItems()
     setColumnWidth(0, captionColumnWidth);
     setColumnWidth(1, valueColumnWidth);
     secondGenerationCount = -1;
+
+        secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = manageColor
+        tooltip = "Turning on color management will ensure consistent color, especially for\n"
+                  "files that have been converted to a color profile other than sRGB.  Color \n"
+                  "management has a small impact on image caching performance.";
+        QStandardItem *manageColorCaption = new QStandardItem;
+        manageColorCaption->setToolTip(tooltip);
+        manageColorCaption->setText("Color manage");
+        manageColorCaption->setEditable(false);
+        QStandardItem *manageColorValue = new QStandardItem;
+        manageColorValue->setToolTip(tooltip);
+        manageColorValue->setData(G::colorManage, Qt::EditRole);
+        manageColorValue->setData(DT_Checkbox, UR_DelegateType);
+        manageColorValue->setData("colorManage", UR_Source);
+        manageColorValue->setData("bool", UR_Type);
+        generalItem->setChild(secondGenerationCount, 0, manageColorCaption);
+        generalItem->setChild(secondGenerationCount, 1, manageColorValue);
+        valIdx = manageColorValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         secondGenerationCount++;
         // Type = CHECKBOX

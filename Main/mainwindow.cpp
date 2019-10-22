@@ -2157,7 +2157,7 @@ void MW::createActions()
     combineRawJpgAction->setObjectName("combineRawJpg");
     combineRawJpgAction->setShortcutVisibleInContextMenu(true);
     combineRawJpgAction->setCheckable(true);
-    if (isSettings) combineRawJpgAction->setChecked(setting->value("combineRawJpg").toBool());
+    if (isSettings && setting->contains("combineRawJpg")) combineRawJpgAction->setChecked(setting->value("combineRawJpg").toBool());
     else combineRawJpgAction->setChecked(true);
     addAction(combineRawJpgAction);
     connect(combineRawJpgAction, &QAction::triggered, this, &MW::setCombineRawJpg);
@@ -2720,7 +2720,7 @@ void MW::createActions()
     fullScreenAction->setObjectName("fullScreenAct");
     fullScreenAction->setShortcutVisibleInContextMenu(true);
     fullScreenAction->setCheckable(true);
-    if (isSettings) fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
+    if (isSettings && setting->contains("isFullScreen")) fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
     else fullScreenAction->setChecked(false);
     addAction(fullScreenAction);
     connect(fullScreenAction, &QAction::triggered, this, &MW::toggleFullScreen);
@@ -2735,7 +2735,7 @@ void MW::createActions()
     ratingBadgeVisibleAction->setObjectName("toggleRatingBadge");
     ratingBadgeVisibleAction->setShortcutVisibleInContextMenu(true);
     ratingBadgeVisibleAction->setCheckable(true);
-    if (isSettings) ratingBadgeVisibleAction->setChecked(setting->value("isRatingBadgeVisible").toBool());
+    if (isSettings && setting->contains("isRatingBadgeVisible")) ratingBadgeVisibleAction->setChecked(setting->value("isRatingBadgeVisible").toBool());
     else ratingBadgeVisibleAction->setChecked(true);
     addAction(ratingBadgeVisibleAction);
     connect(ratingBadgeVisibleAction, &QAction::triggered, this, &MW::setRatingBadgeVisibility);
@@ -2750,7 +2750,7 @@ void MW::createActions()
     infoSelectAction = new QAction(tr("Select or edit Shooting Info"), this);
     infoSelectAction->setShortcutVisibleInContextMenu(true);
     infoSelectAction->setObjectName("selectInfo");
-    if (isSettings) infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());
+    if (isSettings && setting->contains("isImageInfoVisible")) infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());
     else infoVisibleAction->setChecked(false);
     addAction(infoSelectAction);
     connect(infoSelectAction, &QAction::triggered, this, &MW::selectShootingInfo);
@@ -2758,8 +2758,8 @@ void MW::createActions()
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setShortcutVisibleInContextMenu(true);
     asLoupeAction->setCheckable(true);
-    if (isSettings) asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool() ||
-                              setting->value("isCompareDisplay").toBool());
+    if (isSettings && setting->contains("isLoupeDisplay"))
+        asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool() || setting->value("isCompareDisplay").toBool());
     else asLoupeAction->setChecked(false);
     addAction(asLoupeAction);
     connect(asLoupeAction, &QAction::triggered, this, &MW::loupeDisplay);
@@ -2767,7 +2767,7 @@ void MW::createActions()
     asGridAction = new QAction(tr("Grid"), this);
     asGridAction->setShortcutVisibleInContextMenu(true);
     asGridAction->setCheckable(true);
-    if (isSettings) asGridAction->setChecked(setting->value("isGridDisplay").toBool());
+    if (isSettings && setting->contains("isGridDisplay")) asGridAction->setChecked(setting->value("isGridDisplay").toBool());
     else asGridAction->setChecked(true);
     addAction(asGridAction);
     connect(asGridAction, &QAction::triggered, this, &MW::gridDisplay);
@@ -2775,7 +2775,7 @@ void MW::createActions()
     asTableAction = new QAction(tr("Table"), this);
     asTableAction->setShortcutVisibleInContextMenu(true);
     asTableAction->setCheckable(true);
-    if (isSettings) asTableAction->setChecked(setting->value("isTableDisplay").toBool());
+    if (isSettings && setting->contains("isTableDisplay")) asTableAction->setChecked(setting->value("isTableDisplay").toBool());
     else asTableAction->setChecked(false);
     addAction(asTableAction);
     connect(asTableAction, &QAction::triggered, this, &MW::tableDisplay);
@@ -2864,7 +2864,7 @@ void MW::createActions()
     menuBarVisibleAction->setObjectName("toggleMenuBar");
     menuBarVisibleAction->setShortcutVisibleInContextMenu(true);
     menuBarVisibleAction->setCheckable(true);
-    if (isSettings) menuBarVisibleAction->setChecked(setting->value("isMenuBarVisible").toBool());
+    if (isSettings && setting->contains("isMenuBarVisible")) menuBarVisibleAction->setChecked(setting->value("isMenuBarVisible").toBool());
     else menuBarVisibleAction->setChecked(true);
     addAction(menuBarVisibleAction);
     connect(menuBarVisibleAction, &QAction::triggered, this, &MW::setMenuBarVisibility);
@@ -2874,7 +2874,7 @@ void MW::createActions()
     statusBarVisibleAction->setObjectName("toggleStatusBar");
     statusBarVisibleAction->setShortcutVisibleInContextMenu(true);
     statusBarVisibleAction->setCheckable(true);
-    if (isSettings) statusBarVisibleAction->setChecked(setting->value("isStatusBarVisible").toBool());
+    if (isSettings && setting->contains("isStatusBarVisible")) statusBarVisibleAction->setChecked(setting->value("isStatusBarVisible").toBool());
     else statusBarVisibleAction->setChecked(true);
     addAction(statusBarVisibleAction);
     connect(statusBarVisibleAction, &QAction::triggered, this, &MW::setStatusBarVisibility);
@@ -2883,7 +2883,7 @@ void MW::createActions()
     folderDockVisibleAction->setObjectName("toggleFiless");
     folderDockVisibleAction->setShortcutVisibleInContextMenu(true);
     folderDockVisibleAction->setCheckable(true);
-    if (isSettings) folderDockVisibleAction->setChecked(setting->value("isFolderDockVisible").toBool());
+    if (isSettings && setting->contains("isFolderDockVisible")) folderDockVisibleAction->setChecked(setting->value("isFolderDockVisible").toBool());
     else folderDockVisibleAction->setChecked(true);
     addAction(folderDockVisibleAction);
     connect(folderDockVisibleAction, &QAction::triggered, this, &MW::toggleFolderDockVisibility);
@@ -2892,7 +2892,7 @@ void MW::createActions()
     favDockVisibleAction->setObjectName("toggleFavs");
     favDockVisibleAction->setShortcutVisibleInContextMenu(true);
     favDockVisibleAction->setCheckable(true);
-    if (isSettings) favDockVisibleAction->setChecked(setting->value("isFavDockVisible").toBool());
+    if (isSettings && setting->contains("isFavDockVisible")) favDockVisibleAction->setChecked(setting->value("isFavDockVisible").toBool());
     else favDockVisibleAction->setChecked(true);
     addAction(favDockVisibleAction);
     connect(favDockVisibleAction, &QAction::triggered, this, &MW::toggleFavDockVisibility);
@@ -2901,7 +2901,7 @@ void MW::createActions()
     filterDockVisibleAction->setObjectName("toggleFilters");
     filterDockVisibleAction->setShortcutVisibleInContextMenu(true);
     filterDockVisibleAction->setCheckable(true);
-    if (isSettings) filterDockVisibleAction->setChecked(setting->value("isFilterDockVisible").toBool());
+    if (isSettings && setting->contains("isFilterDockVisible")) filterDockVisibleAction->setChecked(setting->value("isFilterDockVisible").toBool());
     else filterDockVisibleAction->setChecked(true);
     addAction(filterDockVisibleAction);
     connect(filterDockVisibleAction, &QAction::triggered, this, &MW::toggleFilterDockVisibility);
@@ -2910,7 +2910,7 @@ void MW::createActions()
     metadataDockVisibleAction->setObjectName("toggleMetadata");
     metadataDockVisibleAction->setShortcutVisibleInContextMenu(true);
     metadataDockVisibleAction->setCheckable(true);
-    if (isSettings) metadataDockVisibleAction->setChecked(setting->value("isMetadataDockVisible").toBool());
+    if (isSettings && setting->contains("isMetadataDockVisible")) metadataDockVisibleAction->setChecked(setting->value("isMetadataDockVisible").toBool());
     else metadataDockVisibleAction->setChecked(true);
     addAction(metadataDockVisibleAction);
     connect(metadataDockVisibleAction, &QAction::triggered, this, &MW::toggleMetadataDockVisibility);
@@ -2919,7 +2919,7 @@ void MW::createActions()
     thumbDockVisibleAction->setObjectName("toggleThumbs");
     thumbDockVisibleAction->setShortcutVisibleInContextMenu(true);
     thumbDockVisibleAction->setCheckable(true);
-    if (isSettings) thumbDockVisibleAction->setChecked(setting->value("isThumbDockVisible").toBool());
+    if (isSettings && setting->contains("isThumbDockVisible")) thumbDockVisibleAction->setChecked(setting->value("isThumbDockVisible").toBool());
     else thumbDockVisibleAction->setChecked(true);
     addAction(thumbDockVisibleAction);
     connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::toggleThumbDockVisibity);
@@ -2962,7 +2962,7 @@ void MW::createActions()
     folderDockLockAction->setObjectName("lockDockFiles");
     folderDockLockAction->setShortcutVisibleInContextMenu(true);
     folderDockLockAction->setCheckable(true);
-    if (isSettings) folderDockLockAction->setChecked(setting->value("isFolderDockLocked").toBool());
+    if (isSettings && setting->contains("isFolderDockLocked")) folderDockLockAction->setChecked(setting->value("isFolderDockLocked").toBool());
     else folderDockLockAction->setChecked(false);
     addAction(folderDockLockAction);
     connect(folderDockLockAction, &QAction::triggered, this, &MW::setFolderDockLockMode);
@@ -2971,7 +2971,7 @@ void MW::createActions()
     favDockLockAction->setObjectName("lockDockFavs");
     favDockLockAction->setShortcutVisibleInContextMenu(true);
     favDockLockAction->setCheckable(true);
-    if (isSettings) favDockLockAction->setChecked(setting->value("isFavDockLocked").toBool());
+    if (isSettings && setting->contains("isFavDockLocked")) favDockLockAction->setChecked(setting->value("isFavDockLocked").toBool());
     else favDockLockAction->setChecked(false);
     addAction(favDockLockAction);
     connect(favDockLockAction, &QAction::triggered, this, &MW::setFavDockLockMode);
@@ -2980,7 +2980,7 @@ void MW::createActions()
     filterDockLockAction->setObjectName("lockDockFilters");
     filterDockLockAction->setShortcutVisibleInContextMenu(true);
     filterDockLockAction->setCheckable(true);
-    if (isSettings) filterDockLockAction->setChecked(setting->value("isFilterDockLocked").toBool());
+    if (isSettings && setting->contains("isFilterDockLocked")) filterDockLockAction->setChecked(setting->value("isFilterDockLocked").toBool());
     else filterDockLockAction->setChecked(false);
     addAction(filterDockLockAction);
     connect(filterDockLockAction, &QAction::triggered, this, &MW::setFilterDockLockMode);
@@ -2989,7 +2989,7 @@ void MW::createActions()
     metadataDockLockAction->setObjectName("lockDockMetadata");
     metadataDockLockAction->setShortcutVisibleInContextMenu(true);
     metadataDockLockAction->setCheckable(true);
-    if (isSettings) metadataDockLockAction->setChecked(setting->value("isMetadataDockLocked").toBool());
+    if (isSettings && setting->contains("isMetadataDockLocked")) metadataDockLockAction->setChecked(setting->value("isMetadataDockLocked").toBool());
     else metadataDockLockAction->setChecked(false);
     addAction(metadataDockLockAction);
     connect(metadataDockLockAction, &QAction::triggered, this, &MW::setMetadataDockLockMode);
@@ -2998,7 +2998,8 @@ void MW::createActions()
     thumbDockLockAction->setObjectName("lockDockThumbs");
     thumbDockLockAction->setShortcutVisibleInContextMenu(true);
     thumbDockLockAction->setCheckable(true);
-    if (isSettings) thumbDockLockAction->setChecked(setting->value("isThumbDockLocked").toBool());
+    if (isSettings && setting->contains("isThumbDockLocked"))
+        thumbDockLockAction->setChecked(setting->value("isThumbDockLocked").toBool());
     else thumbDockLockAction->setChecked(true);
     addAction(thumbDockLockAction);
     connect(thumbDockLockAction, &QAction::triggered, this, &MW::setThumbDockLockMode);
@@ -3016,7 +3017,8 @@ void MW::createActions()
         metadataDockLockAction->isChecked() &&
         thumbDockLockAction->isChecked())
         allDocksLockAction->setChecked(true);
-    if (isSettings) wasThumbDockVisible = setting->value("wasThumbDockVisible").toBool();
+    if (isSettings && setting->contains("wasThumbDockVisible"))
+        wasThumbDockVisible = setting->value("wasThumbDockVisible").toBool();
     else wasThumbDockVisible = true;
 
     metadataFixedSizeAction = new QAction(tr("Metadata Panel Fix Size"), this);
@@ -3822,7 +3824,7 @@ void MW::createDataModel()
     progressBar = new ProgressBar(this);
 
     // loadSettings not run yet
-    if (isSettings) combineRawJpg = setting->value("combineRawJpg").toBool();
+    if (isSettings && setting->contains("combineRawJpg")) combineRawJpg = setting->value("combineRawJpg").toBool();
     else combineRawJpg = true;
     dm = new DataModel(this, metadata, progressBar, filters, combineRawJpg);
     thumb = new Thumb(this, dm, metadata);
@@ -3874,9 +3876,9 @@ void MW::createCaching()
     metadataCacheThread = new MetadataCache(this, dm, metadata, imageCacheThread);
 
     if (isSettings) {
-        metadataCacheThread->cacheAllMetadata = setting->value("cacheAllMetadata").toBool();
-        metadataCacheThread->cacheAllIcons = setting->value("cacheAllIcons").toBool();
-        metadataCacheThread->metadataChunkSize = setting->value("metadataChunkSize").toInt();
+        if (setting->contains("cacheAllMetadata")) metadataCacheThread->cacheAllMetadata = setting->value("cacheAllMetadata").toBool();
+        if (setting->contains("cacheAllIcons")) metadataCacheThread->cacheAllIcons = setting->value("cacheAllIcons").toBool();
+        if (setting->contains("metadataChunkSize")) metadataCacheThread->metadataChunkSize = setting->value("metadataChunkSize").toInt();
     }
     else {
         metadataCacheThread->cacheAllMetadata = true;
@@ -3968,12 +3970,12 @@ void MW::createThumbView()
 
     if (isSettings) {
         // loadSettings has not run yet (dependencies, but QSettings has been opened
-        thumbView->iconWidth = setting->value("thumbWidth").toInt();
-        thumbView->iconHeight = setting->value("thumbHeight").toInt();
-        thumbView->labelFontSize = setting->value("labelFontSize").toInt();
-        thumbView->showIconLabels = setting->value("showThumbLabels").toBool();
-        thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
-        thumbView->visibleCells = setting->value("thumbsPerPage").toInt();
+        if (setting->contains("thumbWidth")) thumbView->iconWidth = setting->value("thumbWidth").toInt();
+        if (setting->contains("thumbHeight")) thumbView->iconHeight = setting->value("thumbHeight").toInt();
+        if (setting->contains("labelFontSize")) thumbView->labelFontSize = setting->value("labelFontSize").toInt();
+        if (setting->contains("showThumbLabels")) thumbView->showIconLabels = setting->value("showThumbLabels").toBool();
+        if (setting->contains("classificationBadgeInThumbDiameter")) thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
+        if (setting->contains("thumbsPerPage")) thumbView->visibleCells = setting->value("thumbsPerPage").toInt();
     }
     else {
         thumbView->iconWidth = 100;
@@ -4024,12 +4026,12 @@ void MW::createGridView()
     gridView->firstVisibleCell = 0;
 
     if (isSettings) {
-        gridView->iconWidth = setting->value("thumbWidthGrid").toInt();
-        gridView->iconHeight = setting->value("thumbHeightGrid").toInt();
-        gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
-        gridView->showIconLabels = setting->value("showThumbLabelsGrid").toBool();
-        gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
-        gridView->visibleCells = setting->value("thumbsPerPage").toInt();
+        if (setting->contains("thumbWidthGrid")) gridView->iconWidth = setting->value("thumbWidthGrid").toInt();
+        if (setting->contains("thumbHeightGrid")) gridView->iconHeight = setting->value("thumbHeightGrid").toInt();
+        if (setting->contains("labelFontSizeGrid")) gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
+        if (setting->contains("showThumbLabelsGrid")) gridView->showIconLabels = setting->value("showThumbLabelsGrid").toBool();
+        if (setting->contains("classificationBadgeInThumbDiameter")) gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
+        if (setting->contains("thumbsPerPage")) gridView->visibleCells = setting->value("thumbsPerPage").toInt();
     }
     else {
         gridView->iconWidth = 200;
@@ -4115,7 +4117,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
     infoString = new InfoString(this, dm);
 
     if (isSettings) {
-        infoString->currentInfoTemplate = setting->value("currentInfoTemplate").toString();
+        if (setting->contains("currentInfoTemplate")) infoString->currentInfoTemplate = setting->value("currentInfoTemplate").toString();
         setting->beginGroup("InfoTokens");
         QStringList keys = setting->childKeys();
         for (int i = 0; i < keys.size(); ++i) {
@@ -4134,9 +4136,9 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
 
     // prep pass values: first use of program vs settings have been saved
     if (isSettings) {
-        isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-        isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
-        classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
+        if (setting->contains("isImageInfoVisible")) isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
+        if (setting->contains("isRatingBadgeVisible")) isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
+        if (setting->contains("classificationBadgeInImageDiameter")) classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
     }
     else {
         // parameters already defined in loadSettings
@@ -4154,9 +4156,9 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
                               setting->value("classificationBadgeInImageDiameter").toInt());
 
     if (isSettings) {
-        imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
-        imageView->infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
-        lastPrefPage = setting->value("lastPrefPage").toInt();
+        if (setting->contains("useWheelToScroll")) imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
+        if (setting->contains("infoOverlayFontSize")) imageView->infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
+        if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
 //        mouseClickScroll = setting->value("mouseClickScroll").toBool();
         qreal tempZoom = setting->value("toggleZoomValue").toReal();
         if (tempZoom > 3) tempZoom = 1;
@@ -4194,7 +4196,7 @@ void MW::createCompareView()
     compareImages = new CompareImages(this, centralWidget, metadata, dm, thumbView, imageCacheThread);
 
     if (isSettings) {
-        lastPrefPage = setting->value("lastPrefPage").toInt();
+        if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
 //        mouseClickScroll = setting->value("mouseClickScroll").toBool();
         qreal tempZoom = setting->value("toggleZoomValue").toReal();
         if (tempZoom > 3) tempZoom = 1;
@@ -4345,10 +4347,10 @@ void MW::createDocks()
     folderDock->setWidget(fsTree);
 
     if (isSettings) {
-        setting->beginGroup(("FolderDockFloat"));
-        folderDock->dw.screen = setting->value("screen").toInt();
-        folderDock->dw.pos = setting->value("pos").toPoint();
-        folderDock->dw.size = setting->value("size").toSize();
+        setting->beginGroup(("FolderDock"));
+        if (setting->contains("screen")) folderDock->dw.screen = setting->value("screen").toInt();
+        if (setting->contains("pos")) folderDock->dw.pos = setting->value("pos").toPoint();
+        if (setting->contains("size")) folderDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
 
@@ -4357,10 +4359,10 @@ void MW::createDocks()
     favDock->setWidget(bookmarks);
 
     if (isSettings) {
-        setting->beginGroup(("FavDockFloat"));
-        favDock->dw.screen = setting->value("screen").toInt();
-        favDock->dw.pos = setting->value("pos").toPoint();
-        favDock->dw.size = setting->value("size").toSize();
+        setting->beginGroup(("FavDock"));
+        if (setting->contains("screen")) favDock->dw.screen = setting->value("screen").toInt();
+        if (setting->contains("pos")) favDock->dw.pos = setting->value("pos").toPoint();
+        if (setting->contains("size")) favDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
 
@@ -4370,9 +4372,9 @@ void MW::createDocks()
 
     if (isSettings) {
         setting->beginGroup(("FilterDock"));
-        filterDock->dw.screen = setting->value("screen").toInt();
-        filterDock->dw.pos = setting->value("pos").toPoint();
-        filterDock->dw.size = setting->value("size").toSize();
+        if (setting->contains("screen")) filterDock->dw.screen = setting->value("screen").toInt();
+        if (setting->contains("pos")) filterDock->dw.pos = setting->value("pos").toPoint();
+        if (setting->contains("size")) filterDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
 
@@ -4381,10 +4383,10 @@ void MW::createDocks()
     metadataDock->setWidget(infoView);
 
     if (isSettings) {
-        setting->beginGroup(("MetadataDockFloat"));
-        metadataDock->dw.screen = setting->value("screen").toInt();
-        metadataDock->dw.pos = setting->value("pos").toPoint();
-        metadataDock->dw.size = setting->value("size").toSize();
+        setting->beginGroup(("MetadataDock"));
+        if (setting->contains("screen")) metadataDock->dw.screen = setting->value("screen").toInt();
+        if (setting->contains("pos")) metadataDock->dw.pos = setting->value("pos").toPoint();
+        if (setting->contains("size")) metadataDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
 
@@ -4396,9 +4398,9 @@ void MW::createDocks()
 
     if (isSettings) {
         setting->beginGroup(("ThumbDockFloat"));
-        thumbDock->dw.screen = setting->value("screen").toInt();
-        thumbDock->dw.pos = setting->value("pos").toPoint();
-        thumbDock->dw.size = setting->value("size").toSize();
+        if (setting->contains("screen")) thumbDock->dw.screen = setting->value("screen").toInt();
+        if (setting->contains("pos")) thumbDock->dw.pos = setting->value("pos").toPoint();
+        if (setting->contains("size")) thumbDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
 //    else thumbDock->dw.size = QSize(600, 600);
@@ -4542,10 +4544,10 @@ void MW::createAppStyle()
     cssBase += fStyle.readAll();
 
     if (isSettings) {
-        G::fontSize = setting->value("fontSize").toString();
+        if (setting->contains("fontSize")) G::fontSize = setting->value("fontSize").toString();
     }
     else {
-        G::fontSize = "14";
+        // set in defaults in loadSettings  G::fontSize = "14";
     }
     css1 = "QWidget {font-size: " + G::fontSize + "px;}";       // rgh px or pt
     css = css1 + cssBase;
@@ -4570,7 +4572,7 @@ void MW::createStatusBar()
     // progressBar created in MW::createDataModel, where it is first req'd
 
     // set up pixmap that shows progress in the cache
-    if (isSettings) progressWidth = setting->value("cacheStatusWidth").toInt();
+    if (isSettings && setting->contains("cacheStatusWidth")) progressWidth = setting->value("cacheStatusWidth").toInt();
     progressPixmap = new QPixmap(1000, 25);
     progressPixmap->scaled(progressWidth, 25);
     progressPixmap->fill(widgetCSS.widgetBackgroundColor);
@@ -7067,6 +7069,7 @@ re-established when the application is re-opened.
     setting->setValue("infoOverlayFontSize", imageView->infoOverlayFontSize);
 
     // files
+    setting->setValue("colorManage", G::colorManage);
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("checkIfUpdate", checkIfUpdate);
     setting->setValue("lastDir", currentViewDir);
@@ -7362,133 +7365,146 @@ Preferences are located in the prefdlg class and updated here.
     G::track(__FUNCTION__);
     #endif
     }
-    // default values for first time use (settings does not yet exist)
-    if (!isSettings || simulateJustInstalled) {
+    /* Default values for first time use (settings does not yet exist).  Apply defaults even
+       when there are settings in case a new setting has been added to the application to make
+       sure the default value is assigned for first time use of the new setting.
+    */
 
-        // general
-        lastPrefPage = 0;
+    // general
+    lastPrefPage = 0;   // rgh not used anymore
 //        mouseClickScroll = true;
-        combineRawJpg = true;
-        prevMode = "Loupe";
-        G::mode = "Loupe";
+    combineRawJpg = true;
+    prevMode = "Loupe";
+    G::mode = "Loupe";
 
-        // appearance
-        G::backgroundShade = 50;
-        G::fontSize = "12";
-        infoOverlayFontSize = 24;
-        classificationBadgeInImageDiameter = 32;
-        classificationBadgeInThumbDiameter = 16;
-        isRatingBadgeVisible = true;
+    // appearance
+    G::backgroundShade = 50;
+    G::fontSize = "12";
+    infoOverlayFontSize = 24;
+    classificationBadgeInImageDiameter = 32;
+    classificationBadgeInThumbDiameter = 16;
+    isRatingBadgeVisible = true;
 
-        // datamodel
-        G::maxIconSize = 256;
+    // datamodel
+    G::maxIconSize = 256;
 
-        // files
-        rememberLastDir = false;
-        checkIfUpdate = true;
-        lastDir = "";
+    // files
+    G::colorManage = true;
+    rememberLastDir = false;
+    checkIfUpdate = true;
+    lastDir = "";
 
-        // ingest
-        autoIngestFolderPath = false;
-        autoEjectUsb = false;
-        gotoIngestFolder = false;
-        backupIngest = false;
-        pathTemplateSelected = 0;
-        pathTemplateSelected2 = 0;
-        filenameTemplateSelected = 0;
+    // ingest
+    autoIngestFolderPath = false;
+    autoEjectUsb = false;
+    gotoIngestFolder = false;
+    backupIngest = false;
+    pathTemplateSelected = 0;
+    pathTemplateSelected2 = 0;
+    filenameTemplateSelected = 0;
 
 
-        // preferences
-        isSoloPrefDlg = true;
+    // preferences
+    isSoloPrefDlg = true;
 
-        // slideshow
-        slideShowDelay = 5;
-        isSlideShowRandom = false;
-        isSlideShowWrap = true;
+    // slideshow
+    slideShowDelay = 5;
+    isSlideShowRandom = false;
+    isSlideShowWrap = true;
 
-        // cache        
-        cacheSizeMethod = "Moderate";
-        cacheSizePercentOfAvailable = 50;
-        cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.5);
-        isShowCacheStatus = true;
-        isShowCacheThreadActivity = true;
-        progressWidth = 200;
-        cacheWtAhead = 7;
-        isCachePreview = false;
-        cachePreviewWidth = 2000;
-        cachePreviewHeight = 1600;
+    // cache
+    cacheSizeMethod = "Moderate";
+    cacheSizePercentOfAvailable = 50;
+    cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.5);
+    isShowCacheStatus = true;
+    isShowCacheThreadActivity = true;
+    progressWidth = 200;
+    cacheWtAhead = 7;
+    isCachePreview = false;
+    cachePreviewWidth = 2000;
+    cachePreviewHeight = 1600;
 
-        return false;
-    }
+    if (!isSettings || simulateJustInstalled) return true;
+
+    // end default settings
+
+    // Get settings saved from last session
 
     // general
 
     // appearance
-    G::backgroundShade = setting->value("backgroundShade").toInt();
-    if (G::backgroundShade < 20) G::backgroundShade = 50;
-    G::fontSize = setting->value("fontSize").toString();
-    if (G::fontSize == "") G::fontSize = "12";
+    if (setting->contains("backgroundShade")) {
+        G::backgroundShade = setting->value("backgroundShade").toInt();
+        if (G::backgroundShade < 20) G::backgroundShade = 50;
+    }
+    if (setting->contains("fontSize")) {
+        G::fontSize = setting->value("fontSize").toString();
+        if (G::fontSize == "") G::fontSize = "12";
+    }
 
     // load imageView->infoOverlayFontSize later as imageView has not been created yet
-    classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
-    classificationBadgeInThumbDiameter = setting->value("classificationBadgeInThumbDiameter").toInt();
-    isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
+    if (setting->contains("classificationBadgeInImageDiameter")) classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
+    if (setting->contains("classificationBadgeInThumbDiameter")) classificationBadgeInThumbDiameter = setting->value("classificationBadgeInThumbDiameter").toInt();
+    if (setting->contains("isRatingBadgeVisible")) isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
 
     // datamodel
-    G::maxIconSize = setting->value("maxIconSize").toInt();
+    if (setting->contains("maxIconSize")) G::maxIconSize = setting->value("maxIconSize").toInt();
 
     // files
-    rememberLastDir = setting->value("rememberLastDir").toBool();
-    checkIfUpdate = setting->value("checkIfUpdate").toBool();
-    lastDir = setting->value("lastDir").toString();
+    if (setting->contains("colorManage")) G::colorManage = setting->value("colorManage").toBool();
+    if (setting->contains("rememberLastDir")) rememberLastDir = setting->value("rememberLastDir").toBool();
+    if (setting->contains("checkIfUpdate")) checkIfUpdate = setting->value("checkIfUpdate").toBool();
+    if (setting->contains("lastDir")) lastDir = setting->value("lastDir").toString();
 
     // ingest
-    autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
-    autoEjectUsb = setting->value("autoEjectUSB").toBool();
-    backupIngest = setting->value("backupIngest").toBool();
-    gotoIngestFolder = setting->value("gotoIngestFolder").toBool();
-    ingestRootFolder = setting->value("ingestRootFolder").toString();
-    ingestRootFolder2 = setting->value("ingestRootFolder2").toString();
-    pathTemplateSelected = setting->value("pathTemplateSelected").toInt();
-    pathTemplateSelected2 = setting->value("pathTemplateSelected2").toInt();
-    filenameTemplateSelected = setting->value("filenameTemplateSelected").toInt();
-    manualFolderPath = setting->value("manualFolderPath").toString();
-    manualFolderPath2 = setting->value("manualFolderPath2").toString();
+    if (setting->contains("autoIngestFolderPath")) autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
+    if (setting->contains("autoEjectUSB")) autoEjectUsb = setting->value("autoEjectUSB").toBool();
+    if (setting->contains("backupIngest")) backupIngest = setting->value("backupIngest").toBool();
+    if (setting->contains("gotoIngestFolder")) gotoIngestFolder = setting->value("gotoIngestFolder").toBool();
+    if (setting->contains("ingestRootFolder")) ingestRootFolder = setting->value("ingestRootFolder").toString();
+    if (setting->contains("ingestRootFolder2")) ingestRootFolder2 = setting->value("ingestRootFolder2").toString();
+    if (setting->contains("pathTemplateSelected")) pathTemplateSelected = setting->value("pathTemplateSelected").toInt();
+    if (setting->contains("pathTemplateSelected2")) pathTemplateSelected2 = setting->value("pathTemplateSelected2").toInt();
+    if (setting->contains("filenameTemplateSelected")) filenameTemplateSelected = setting->value("filenameTemplateSelected").toInt();
+    if (setting->contains("manualFolderPath")) manualFolderPath = setting->value("manualFolderPath").toString();
+    if (setting->contains("manualFolderPath2")) manualFolderPath2 = setting->value("manualFolderPath2").toString();
 
     // preferences
-    isSoloPrefDlg = setting->value("isSoloPrefDlg").toBool();
+    if (setting->contains("isSoloPrefDlg")) isSoloPrefDlg = setting->value("isSoloPrefDlg").toBool();
 
     // slideshow
-    slideShowDelay = setting->value("slideShowDelay").toInt();
-    isSlideShowRandom = setting->value("isSlideShowRandom").toBool();
-    isSlideShowWrap = setting->value("isSlideShowWrap").toBool();
+    if (setting->contains("slideShowDelay")) slideShowDelay = setting->value("slideShowDelay").toInt();
+    if (setting->contains("isSlideShowRandom")) isSlideShowRandom = setting->value("isSlideShowRandom").toBool();
+    if (setting->contains("isSlideShowWrap")) isSlideShowWrap = setting->value("isSlideShowWrap").toBool();
 
     // metadata and icon cache loaded when metadataCacheThread created in MW::createCaching
 
     // image cache
-    cacheSizeMethod = setting->value("cacheSizeMethod").toString();
-    cacheSizePercentOfAvailable = setting->value("cacheSizePercentOfAvailable").toInt();
-    if (cacheSizeMethod == "Thrifty") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.10);
-    if (cacheSizeMethod == "Moderate") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.50);
-    if (cacheSizeMethod == "Greedy") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.90);
-    if (cacheSizeMethod == "Percent of available")
-        cacheSizeMB = (static_cast<int>(G::availableMemoryMB) * cacheSizePercentOfAvailable) / 100;
-    if (cacheSizeMethod == "MB") cacheSizeMB = setting->value("cacheSizeMB").toInt();
-    isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
-    isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
-    progressWidth = setting->value("cacheStatusWidth").toInt();
-    cacheWtAhead = setting->value("cacheWtAhead").toInt();
-    isCachePreview = setting->value("isCachePreview").toBool();
-    cachePreviewWidth = setting->value("cachePreviewWidth").toInt();
-    cachePreviewHeight = setting->value("cachePreviewHeight").toInt();
+    if (setting->contains("cacheSizePercentOfAvailable")) cacheSizePercentOfAvailable = setting->value("cacheSizePercentOfAvailable").toInt();
+    if (setting->contains("cacheSizeMethod")) {
+        cacheSizeMethod = setting->value("cacheSizeMethod").toString();
+        if (cacheSizeMethod == "Thrifty") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.10);
+        if (cacheSizeMethod == "Moderate") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.50);
+        if (cacheSizeMethod == "Greedy") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.90);
+        if (cacheSizeMethod == "Percent of available")
+            cacheSizeMB = (static_cast<int>(G::availableMemoryMB) * cacheSizePercentOfAvailable) / 100;
+        if (cacheSizeMethod == "MB") cacheSizeMB = setting->value("cacheSizeMB").toInt();
+    }
+    if (setting->contains("isShowCacheStatus")) isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
+    if (setting->contains("isShowCacheThreadActivity")) isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
+    if (setting->contains("cacheStatusWidth")) progressWidth = setting->value("cacheStatusWidth").toInt();
+    if (setting->contains("cacheWtAhead")) cacheWtAhead = setting->value("cacheWtAhead").toInt();
+    if (setting->contains("isCachePreview")) isCachePreview = setting->value("isCachePreview").toBool();
+    if (setting->contains("cachePreviewWidth")) cachePreviewWidth = setting->value("cachePreviewWidth").toInt();
+    if (setting->contains("cachePreviewHeight")) cachePreviewHeight = setting->value("cachePreviewHeight").toInt();
 
     // full screen
-    fullScreenDocks.isFolders = setting->value("isFullScreenFolders").toBool();
-    fullScreenDocks.isFavs = setting->value("isFullScreenFavs").toBool();
-    fullScreenDocks.isFilters = setting->value("isFullScreenFilters").toBool();
-    fullScreenDocks.isMetadata = setting->value("isFullScreenMetadata").toBool();
-    fullScreenDocks.isThumbs = setting->value("isFullScreenThumbs").toBool();
-    fullScreenDocks.isStatusBar = setting->value("isFullScreenStatusBar").toBool();
+    if (setting->contains("isFullScreenFolders")) fullScreenDocks.isFolders = setting->value("isFullScreenFolders").toBool();
+    if (setting->contains("isFullScreenFavs")) fullScreenDocks.isFavs = setting->value("isFullScreenFavs").toBool();
+    if (setting->contains("isFullScreenFilters")) fullScreenDocks.isFilters = setting->value("isFullScreenFilters").toBool();
+    if (setting->contains("isFullScreenMetadata")) fullScreenDocks.isMetadata = setting->value("isFullScreenMetadata").toBool();
+    if (setting->contains("isFullScreenThumbs")) fullScreenDocks.isThumbs = setting->value("isFullScreenThumbs").toBool();
+    if (setting->contains("isFullScreenStatusBar")) fullScreenDocks.isStatusBar = setting->value("isFullScreenStatusBar").toBool();
 
 
     /* read external apps */
@@ -9014,13 +9030,6 @@ void MW::ingest()
         connect(ingestDlg, SIGNAL(revealIngestLocation(QString)),
                 this, SLOT(revealInFileBrowser(QString)));
 
-        // make sure the font is not too big for the ingest dialof
-        int n = G::fontSize.toInt();
-        if (n > 17) {
-            QString s = "QWidget {font-size: 17px;}" + cssBase;
-            ingestDlg->setStyleSheet(s);
-        }
-
         bool ingested = ingestDlg->exec();
         delete ingestDlg;
 
@@ -10370,18 +10379,25 @@ void MW::test2()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+
     QString fPath = "D:/Pictures/_DNG/DngNikonD850FromLightroom.dng";
     metadata->testNewFileFormat(fPath);
 }
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    int x = 12;
-    if (x) {
-        qDebug() << __FUNCTION__ << "x =" << x;
-        int y = x < 7;
-        qDebug() << __FUNCTION__ << "x < 7 =" << y;
-    }
-//    metadata->formatHEIF();
+    QPoint loc = centralWidget->window()->geometry().center();
+    QScreen *screen = qApp->screenAt(loc);
+    qDebug() << __FUNCTION__
+             << "logicalDotsPerInch()" << screen->logicalDotsPerInch()
+             << "physicalDotsPerInch()" << screen->physicalDotsPerInch()
+             << "G::dpi" << G::dpi
+             << "G::ptToPx" << G::ptToPx;
+
+//    QDialog *dlg = new QDialog;
+//    Ui::test12 ui;
+//    ui.setupUi(dlg);
+//    dlg->adjustSize();
+//    dlg->exec();
 }
 // End MW

@@ -32,6 +32,8 @@ QString WidgetCSS::css()
     h17 = QString::number(fontSize * 1.7 * G::ptToPx);
     h20 = QString::number(fontSize * 2.0 * G::ptToPx);
 
+    halfFontSize = fontSize / 2;
+
     return  widget() +
             mainWindow() +
             graphicsView() +
@@ -162,15 +164,15 @@ QString WidgetCSS::groupBox()
     "QGroupBox {"
         "border: 1px solid " + QColor(l60,l60,l60).name() + ";"
         "border-radius: 5px;"
-        "margin-top: 6px;"/* leave space at the top for the title */
+        "margin-top: 0.5em;"/* leave space at the top for the title */
     "}"
 
     "QGroupBox::title {"
         "subcontrol-origin: margin;"
         "subcontrol-position: top left;"
-        "margin-top: 5;"
+        "margin-top: " + QString::number(halfFontSize) + ";"
         "right: -20px;"
-        "top: -10px;"
+        "top: -" + QString::number(halfFontSize) + "px;"
     "}";
 }
 
