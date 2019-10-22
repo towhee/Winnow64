@@ -89,7 +89,32 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->setupUi(this);
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
-    setStyleSheet(css);
+
+    //    setStyleSheet(css);
+    // make sure the font is not too big for the ingest dialog
+//    if (G::fontSize.toInt() > 14) {
+//        setStyleSheet("QWidget {font-size: 14pt;}");
+        // widgets inside tab widget not inheriting font-size
+//        ui->descriptionLineEdit->setStyleSheet("{font-size: 14pt;}");
+//        ui->descriptionLineEdit_2->setStyleSheet("{font-size: 14pt;}");
+//        ui->destinationFolderLabel->setStyleSheet("{font-size: 14pt;}");
+//        ui->destinationFolderLabel_2->setStyleSheet("{font-size: 14pt;}");
+//        ui->folderDescription->setStyleSheet("{font-size: 14pt;}");
+//        ui->folderDescription_2->setStyleSheet("{font-size: 14pt;}");
+//        ui->folderLabel->setStyleSheet("{font-size: 14pt;}");
+//        ui->folderLabel_2->setStyleSheet("{font-size: 14pt;}");
+//        ui->pathTemplatesCB->setStyleSheet("{font-size: 14pt;}");
+//        ui->pathTemplatesCB_2->setStyleSheet("{font-size: 14pt;}");
+//        ui->pathTemplatesBtn->setStyleSheet("{font-size: 14pt;}");
+//        ui->pathTemplatesBtn_2->setStyleSheet("{font-size: 14pt;}");
+//        ui->rootFolderLabel->setStyleSheet("{font-size: 14pt;}");
+//        ui->rootFolderLabel_2->setStyleSheet("{font-size: 14pt;}");
+//        ui->selectRootFolderBtn->setStyleSheet("{font-size: 14pt;}");
+//        ui->selectRootFolderBtn_2->setStyleSheet("{font-size: 14pt;}");
+//        ui->templateLabel1->setStyleSheet("QLabel {font-size: 14pt;}");
+//        ui->templateLabel1_2->setStyleSheet("QLabel {font-size: 14pt;}");
+//                                            "{font-size: 11pt;}"
+//    }
 
 //    isBackupChkBox = new QCheckBox;
 //    ui->autoIngestTab->tabBar()->setTabButton(1, QTabBar::LeftSide, isBackupChkBox);
@@ -1382,4 +1407,87 @@ void IngestDlg::on_openIngestFolderChk_stateChanged(int arg1)
     #endif
     }
      gotoIngestFolder = arg1;
+}
+
+void IngestDlg::getScreenParameters()
+{
+    QScreen *screen = qApp->screenAt(geometry().center());
+    if (screen == nullptr) return;
+    qreal screenScaling = screen->logicalDotsPerInch() / 96;
+    int fontPtSize = static_cast<int>(G::fontSize.toInt() / screenScaling);
+    int fontPxSize = static_cast<int>(fontPtSize * G::ptToPx);
+    QString titleShift = QString::number(fontPxSize * screenScaling / 2);
+
+    QString fs = "QWidget {font-size: " + QString::number(fontPtSize) + "pt;}";
+    /*
+    qDebug() << __FUNCTION__
+             << "G::fontSize" << G::fontSize
+             << "screenScaling" << screenScaling
+             << "adjustedFontPtSize" << adjustedFontPtSize
+             << "fs" << fs;  */
+
+    QString titlePlacement =
+         "QGroupBox {margin-top: " + titleShift + "px;}"
+         "QGroupBox::title {top: -"  + titleShift + "px;}";
+
+    setStyleSheet(fs + titlePlacement);
+    ui->helpBtn->setStyleSheet(fs);
+    ui->autoRadio->setStyleSheet(fs);
+
+    ui->autoIngestTab->setStyleSheet(fs);
+    ui->descriptionLineEdit->setStyleSheet(fs);
+    ui->descriptionLineEdit_2->setStyleSheet(fs);
+    ui->destinationFolderLabel->setStyleSheet(fs);
+    ui->destinationFolderLabel_2->setStyleSheet(fs);
+    ui->folderDescription->setStyleSheet(fs);
+    ui->folderDescription_2->setStyleSheet(fs);
+    ui->folderLabel->setStyleSheet(fs);
+    ui->folderLabel_2->setStyleSheet(fs);
+    ui->pathTemplatesCB->setStyleSheet(fs);
+    ui->pathTemplatesCB_2->setStyleSheet(fs);
+    ui->pathTemplatesBtn->setStyleSheet(fs);
+    ui->pathTemplatesBtn_2->setStyleSheet(fs);
+    ui->rootFolderLabel->setStyleSheet(fs);
+    ui->rootFolderLabel_2->setStyleSheet(fs);
+    ui->selectRootFolderBtn->setStyleSheet(fs);
+    ui->selectRootFolderBtn_2->setStyleSheet(fs);
+    ui->templateLabel1->setStyleSheet(fs);
+    ui->templateLabel1_2->setStyleSheet(fs);
+
+    ui->manualRadio->setStyleSheet(fs);
+    ui->manualFolderLabel->setStyleSheet(fs);
+    ui->manualFolderLabel_2->setStyleSheet(fs);
+    ui->selectFolderBtn->setStyleSheet(fs);
+    ui->selectFolderBtn_2->setStyleSheet(fs);
+
+    ui->filenameGroupBox->setStyleSheet(fs);
+    ui->templateLabel2->setStyleSheet(fs);
+    ui->existingSequenceLabel->setStyleSheet(fs);
+    ui->filenameTemplatesBtn->setStyleSheet(fs);
+    ui->filenameTemplatesCB->setStyleSheet(fs);
+    ui->spinBoxStartNumber->setStyleSheet(fs);
+    ui->startSeqLabel->setStyleSheet(fs);
+
+    ui->seqGroupBox->setStyleSheet(fs);
+    ui->folderPathLabel->setStyleSheet(fs);
+    ui->folderPathLabel_2->setStyleSheet(fs);
+    ui->folderPathLabel_3->setStyleSheet(fs);
+    ui->folderPathLabel_4->setStyleSheet(fs);
+
+    ui->cancelBtn->setStyleSheet(fs);
+    ui->okBtn->setStyleSheet(fs);
+
+    adjustSize();
+}
+
+void IngestDlg::resizeEvent(QResizeEvent *event)
+{
+    getScreenParameters();
+    QDialog::resizeEvent(event);
+}
+
+void IngestDlg::moveEvent(QMoveEvent *event)
+{
+    getScreenParameters();
+    QDialog::moveEvent(event);
 }

@@ -74,6 +74,10 @@ private slots:
 
     void on_openIngestFolderChk_stateChanged(int arg1);
 
+protected:
+    void resizeEvent(QResizeEvent *event);
+    void moveEvent(QMoveEvent *event);
+
 signals:
     void updateIngestHistory(QString folderPath);
     void revealIngestLocation(QString fPath);
@@ -92,6 +96,7 @@ private:
     void renameIfExists(QString &destination, QString &baseName, QString dotSuffix);
     void getPicks();
     bool parametersOk();
+    void getScreenParameters();
 
     bool isInitializing;
     QString css;

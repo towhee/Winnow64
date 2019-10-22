@@ -118,7 +118,9 @@ SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/saveasdlg.ui
+    Dialogs/ingestdlg_copy.ui \
+    Dialogs/saveasdlg.ui \
+    Dialogs/test12.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/ingestdlg.ui
@@ -127,6 +129,7 @@ FORMS += Dialogs/renamedlg.ui
 FORMS += Dialogs/testaligndlg.ui
 FORMS += Dialogs/testdlg.ui
 FORMS += Dialogs/test1.ui
+FORMS += Dialogs/test12.ui
 FORMS += Dialogs/tokendlg.ui
 FORMS += Dialogs/updateapp.ui
 FORMS += Dialogs/workspacedlg.ui
@@ -177,7 +180,7 @@ win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzl
 win32:INCLUDEPATH += $$PWD/Lib/zlib
 win32:DEPENDPATH += $$PWD/Lib/zlib
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -lCORE_RL_lcms_
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
 
 # attempt to use dll

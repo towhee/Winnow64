@@ -47,7 +47,7 @@ namespace G
     bool ignoreScrollSignal;
     bool isSlideShow;
 
-    bool colorManage = false;
+    bool colorManage;
 
     // not persistent
     bool isThreadTrackingOn;

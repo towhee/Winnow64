@@ -11,7 +11,7 @@ ignoring Qt's attempts to impose its size and location "suggestions. The screen,
 window size and stored in a struct, which in turn is saved in QSettings for persistence
 between sessions.
 
-When a mouse bouble click occurs in the docked state, the stored screen, postion and size are
+When a mouse double click occurs in the docked state, the stored screen, postion and size are
 used to re-establish the prior state.
 */
 
@@ -29,8 +29,6 @@ bool DockWidget::event(QEvent *event)
         if (isFloating()) {
             // move and size to previous state
             QRect screenRect = QGuiApplication::screens().at(dw.screen)->geometry();
-//            QRect screenRect = QApplication::desktop()->screenGeometry(dw.screen);
-//            qDebug() << __FUNCTION__ << screenRect << screenRect1;
             move(QPoint(screenRect.x() + dw.pos.x(), screenRect.y() + dw.pos.y()));
             ignore = false;
             adjustSize();
@@ -51,8 +49,6 @@ void DockWidget::resizeEvent(QResizeEvent *event)
         dw.screen = QApplication::desktop()->screenNumber(this);
         QRect r = geometry();
         QRect a = QGuiApplication::screens().at(dw.screen)->geometry();
-//        QRect a = QApplication::desktop()->screen(dw.screen)->geometry();
-//        qDebug() << __FUNCTION__ << a << screenRect1;
         dw.pos = QPoint(r.x() - a.x(), r.y() - a.y());
         dw.size = event->size();
     }
@@ -69,8 +65,6 @@ void DockWidget::moveEvent(QMoveEvent *event)
     dw.screen = QApplication::desktop()->screenNumber(this);
     QRect r = geometry();
     QRect a = QGuiApplication::screens().at(dw.screen)->geometry();
-//    QRect a = QApplication::desktop()->screen(dw.screen)->geometry();
-//    qDebug() << __FUNCTION__ << a << screenRect1;
     dw.pos = QPoint(r.x() - a.x(), r.y() - a.y());
     dw.size = QSize(r.width(), r.height());
     QDockWidget::moveEvent(event);  // suppress compiler warning
