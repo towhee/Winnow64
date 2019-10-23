@@ -16,11 +16,13 @@ LoadUsbDlg::LoadUsbDlg(QWidget *parent, QStringList &usbDrives, QString &selecte
     }
     ui->usbList->setCurrentRow(0);
 
-    // set row height
-    for (int i = 0; i < ui->usbList->count(); ++i) {
-        QListWidgetItem *item = ui->usbList->item(i);
-        item->setSizeHint(QSize(item->sizeHint().width(), 30));
-    }
+    setScreenDependencies();
+
+//    // set row height
+//    for (int i = 0; i < ui->usbList->count(); ++i) {
+//        QListWidgetItem *item = ui->usbList->item(i);
+//        item->setSizeHint(QSize(item->sizeHint().width(), 30));
+//    }
 }
 
 LoadUsbDlg::~LoadUsbDlg()
@@ -41,4 +43,32 @@ void LoadUsbDlg::keyPressEvent(QKeyEvent *event)
         selectedDrive = ui->usbList->currentItem()->text();
         accept();
     }
+}
+
+void LoadUsbDlg::paintEvent(QPaintEvent *event)
+{
+    setScreenDependencies();
+//    QDialog::paintEvent(event);
+}
+
+void LoadUsbDlg::setScreenDependencies()
+{
+    QFontMetrics fm(this->font());
+    int w = fm.boundingRect("==Select USB drive to view images=====").width();
+    int h = fm.boundingRect("X").height();
+
+    qDebug() << __FUNCTION__ << "w =" << w;
+
+    // set row width/height
+    for (int i = 0; i < ui->usbList->count(); ++i) {
+        QListWidgetItem *item = ui->usbList->item(i);
+        item->setSizeHint(QSize(w, h));
+    }
+
+    QRect r = ui->label->geometry();
+    r.setWidth(w);
+    ui->label->setGeometry(r);
+
+//    resize(w, this->height());
+//    adjustSize();
 }

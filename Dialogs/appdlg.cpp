@@ -35,23 +35,14 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
 #endif
 
     }
-    qDebug() << __FUNCTION__ << this->font().pixelSize() << G::fontSize;
-    QFont fnt = this->font();
-    int textHeight = G::fontSize.toInt();
-    fnt.setPixelSize(textHeight);
-    rowHeight = static_cast<int>(textHeight * 1.5);
-    QFontMetrics fm(fnt);
-    int hdr0Width = fm.boundingRect("==Shortcut==").width();
-    int hdr1Width = fm.boundingRect("---Display name------").width();
-    ui->appsTable->setColumnWidth(0, hdr0Width);
-    ui->appsTable->setColumnWidth(1, hdr1Width);
+    /* set widths and heights that are dependent on the display screen settings in case the
+    user drags the dialog to another screen/monitor.  */
+    setScreenDependencies();
+
     QStringList hdrs;
     hdrs << "Shortcut" << "Display name" << "Program path";
     ui->appsTable->setHorizontalHeaderLabels(hdrs);
-    ui->appsTable->horizontalHeader()->resizeSection(0, hdr0Width);
-    ui->appsTable->horizontalHeader()->resizeSection(1, hdr1Width);
     ui->appsTable->horizontalHeader()->setStretchLastSection(true);
-    ui->appsTable->horizontalHeader()->setFixedHeight(rowHeight);
     ui->appsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->appsTable->verticalHeader()->setSectionsClickable(false);
 
@@ -84,7 +75,6 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
         if (name == "") name = info.baseName();
         ui->appsTable->item(row, 1)->setText(name);
         ui->appsTable->item(row, 2)->setText(path);
-        ui->appsTable->setRowHeight(row, rowHeight);
         setFlags(row);
     }
 
@@ -242,4 +232,23 @@ void Appdlg::on_moveUp_clicked()
     ui->appsTable->setItem(row - 1, 2, srcPath);
 
     ui->appsTable->selectRow(row - 1);
+}
+
+void Appdlg::paintEvent(QPaintEvent *event)
+{
+    setScreenDependencies();
+    QDialog::paintEvent(event);
+}
+
+void Appdlg::setScreenDependencies()
+{
+    QFontMetrics fm(this->font());
+    int rowHeight = static_cast<int>(fm.boundingRect("X").height() * 1.5);
+    ui->appsTable->horizontalHeader()->setFixedHeight(rowHeight);
+    ui->appsTable->verticalHeader()->setDefaultSectionSize(rowHeight);
+
+    int hdr0Width = fm.boundingRect("==Shortcut==").width();
+    int hdr1Width = fm.boundingRect("---Display name------").width();
+    ui->appsTable->setColumnWidth(0, hdr0Width);
+    ui->appsTable->setColumnWidth(1, hdr1Width);
 }

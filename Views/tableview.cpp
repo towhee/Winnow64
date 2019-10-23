@@ -17,7 +17,6 @@ TableView::TableView(DataModel *dm)
     setModel(dm->sf);
     setSortingEnabled(true);
     setAlternatingRowColors(true);
-//    horizontalHeader()->setFixedHeight(22);
     horizontalHeader()->setSortIndicatorShown(false);
     horizontalHeader()->setSectionsMovable(true);
     horizontalHeader()->setStretchLastSection(true);
@@ -217,7 +216,7 @@ void TableView::resizeColumns()
 void TableView::paintEvent(QPaintEvent *event)
 {
     resizeColumns();
-    int d = qRound(G::fontSize.toInt() * 1.7);
+    int d = static_cast<int>(G::fontSize.toInt() * G::ptToPx * 1.5);
     setIconSize(QSize(d, d));
 //    setColumnWidth(0, ht + 10);
     verticalHeader()->setDefaultSectionSize(d);

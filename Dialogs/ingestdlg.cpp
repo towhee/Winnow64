@@ -90,35 +90,6 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
 
-    //    setStyleSheet(css);
-    // make sure the font is not too big for the ingest dialog
-//    if (G::fontSize.toInt() > 14) {
-//        setStyleSheet("QWidget {font-size: 14pt;}");
-        // widgets inside tab widget not inheriting font-size
-//        ui->descriptionLineEdit->setStyleSheet("{font-size: 14pt;}");
-//        ui->descriptionLineEdit_2->setStyleSheet("{font-size: 14pt;}");
-//        ui->destinationFolderLabel->setStyleSheet("{font-size: 14pt;}");
-//        ui->destinationFolderLabel_2->setStyleSheet("{font-size: 14pt;}");
-//        ui->folderDescription->setStyleSheet("{font-size: 14pt;}");
-//        ui->folderDescription_2->setStyleSheet("{font-size: 14pt;}");
-//        ui->folderLabel->setStyleSheet("{font-size: 14pt;}");
-//        ui->folderLabel_2->setStyleSheet("{font-size: 14pt;}");
-//        ui->pathTemplatesCB->setStyleSheet("{font-size: 14pt;}");
-//        ui->pathTemplatesCB_2->setStyleSheet("{font-size: 14pt;}");
-//        ui->pathTemplatesBtn->setStyleSheet("{font-size: 14pt;}");
-//        ui->pathTemplatesBtn_2->setStyleSheet("{font-size: 14pt;}");
-//        ui->rootFolderLabel->setStyleSheet("{font-size: 14pt;}");
-//        ui->rootFolderLabel_2->setStyleSheet("{font-size: 14pt;}");
-//        ui->selectRootFolderBtn->setStyleSheet("{font-size: 14pt;}");
-//        ui->selectRootFolderBtn_2->setStyleSheet("{font-size: 14pt;}");
-//        ui->templateLabel1->setStyleSheet("QLabel {font-size: 14pt;}");
-//        ui->templateLabel1_2->setStyleSheet("QLabel {font-size: 14pt;}");
-//                                            "{font-size: 11pt;}"
-//    }
-
-//    isBackupChkBox = new QCheckBox;
-//    ui->autoIngestTab->tabBar()->setTabButton(1, QTabBar::LeftSide, isBackupChkBox);
-
     isInitializing = true;
 
     // populate the pick list
@@ -1409,8 +1380,14 @@ void IngestDlg::on_openIngestFolderChk_stateChanged(int arg1)
      gotoIngestFolder = arg1;
 }
 
-void IngestDlg::getScreenParameters()
+void IngestDlg::fontSize()
 {
+/*
+    The font size is determined by the assigned size G::fontsize in combination with the
+    display screen viewing percentage.  This function is called by the resize and move
+    events in case the user drags the dialog from one screen to another with different
+    settings.
+*/
     QScreen *screen = qApp->screenAt(geometry().center());
     if (screen == nullptr) return;
     qreal screenScaling = screen->logicalDotsPerInch() / 96;
@@ -1482,12 +1459,12 @@ void IngestDlg::getScreenParameters()
 
 void IngestDlg::resizeEvent(QResizeEvent *event)
 {
-    getScreenParameters();
+    fontSize();
     QDialog::resizeEvent(event);
 }
 
 void IngestDlg::moveEvent(QMoveEvent *event)
 {
-    getScreenParameters();
+    fontSize();
     QDialog::moveEvent(event);
 }

@@ -18,6 +18,7 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent *event);
+    void paintEvent(QPaintEvent *event) override;
 
 private slots:
     void on_usbList_itemClicked(QListWidgetItem *item);
@@ -26,6 +27,7 @@ private:
     Ui::LoadUsbDlg *ui;
     QStringList &usbDrives;
     QString &selectedDrive;
+    void setScreenDependencies();
 };
 
 #endif // LOADUSBDLG_H

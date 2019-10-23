@@ -96,7 +96,7 @@ private:
     void renameIfExists(QString &destination, QString &baseName, QString dotSuffix);
     void getPicks();
     bool parametersOk();
-    void getScreenParameters();
+    void fontSize();
 
     bool isInitializing;
     QString css;
