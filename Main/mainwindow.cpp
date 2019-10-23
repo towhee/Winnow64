@@ -6475,6 +6475,7 @@ void MW::setFontSize(int fontPixelSize)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     G::fontSize = QString::number(fontPixelSize);
     widgetCSS.fontSize = fontPixelSize;
     css = widgetCSS.css();
@@ -6686,7 +6687,6 @@ void MW::setActualDevicePixelRatio()
     if (G::actualDevicePixelRatio == 0) G::actualDevicePixelRatio = 1;
 
     // get dpi and font pixels to points conversion factor
-//    G::dpi = screen->physicalDotsPerInch();
     G::dpi = screen->logicalDotsPerInch();
     G::ptToPx = G::dpi / 72;
 
