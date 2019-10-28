@@ -2111,12 +2111,22 @@ void Metadata::reportIfdDataHash()
     }
 }
 
-uint Metadata::get1(QByteArray c)
+int Metadata::get4_1st(QByteArray c)
+{
+    return static_cast<int>(c[0] >> 4);
+}
+
+int Metadata::get4_2nd(QByteArray c)
+{
+    return static_cast<int>(c[0]&0xF);
+}
+
+uint Metadata::get8(QByteArray c)
 {
     return static_cast<unsigned int>(c[0]&0xFF);
 }
 
-quint16 Metadata::get2(QByteArray c)
+quint16 Metadata::get16(QByteArray c)
 {
      if (order == 0x4D4D)
          return static_cast<quint16>(((c[0]&0xFF) << 8 | (c[1]&0xFF)));
@@ -2124,7 +2134,7 @@ quint16 Metadata::get2(QByteArray c)
          return static_cast<quint16>((c[0]&0xFF) | (c[1]&0xFF) << 8);
 }
 
-quint32 Metadata::get4(QByteArray c)
+quint32 Metadata::get32(QByteArray c)
 {
     if (order == 0x4D4D)
         return static_cast<quint32>((c[0]&0xFF) << 24 | (c[1]&0xFF) << 16 | (c[2]&0xFF) << 8 | (c[3]&0xFF));
@@ -2159,16 +2169,16 @@ quint32 Metadata::get4(QByteArray c)
 }
 */
 
-quint16 Metadata::get2(quint32 offset)
+quint16 Metadata::get16(quint32 offset)
 {
     file.seek(offset);
-    return get2(file.read(2));
+    return get16(file.read(2));
 }
 
-quint32 Metadata::get4(quint32 offset)
+quint32 Metadata::get32(quint32 offset)
 {
     file.seek(offset);
-    return get4(file.read(4));
+    return get32(file.read(4));
 }
 
 double Metadata::getReal(quint32 offset)
@@ -2177,8 +2187,8 @@ double Metadata::getReal(quint32 offset)
 In IFD type 5, 10, 11, 12 = rational = real/float
 */
     file.seek(offset);
-    quint32 a = get4(file.read(4));
-    quint32 b = get4(file.read(4));
+    quint32 a = get32(file.read(4));
+    quint32 b = get32(file.read(4));
     if (b == 0) return 0;
     return static_cast<double>(a) / b;
 }
@@ -2190,6 +2200,31 @@ In IFD type 2 = string
 */
     file.seek(offset);
     return(file.read(length));
+}
+
+QString Metadata::getCString(quint32 offset)
+{
+    file.seek(offset);
+    return getCString();
+}
+
+QString Metadata::getCString()
+{
+    quint32 offset = static_cast<quint32>(file.pos());
+    uint byte = 1;
+    int length = -1;
+    while (byte) {
+        byte = get8(file.read(1));
+        length++;
+    }
+    if (length) {
+        file.seek(offset);
+        return(file.read(length));
+    }
+    else {
+        file.seek(offset + 1);
+        return "";
+    }
 }
 
 QByteArray Metadata::getByteArray(quint32 offset, quint32 length)
@@ -2305,11 +2340,11 @@ QFile file must be assigned and open.
     uint firstCharCode = static_cast<unsigned int>(s[0].unicode());
     file.seek(offset);
     for (quint32 i = offset; i < offset + range; i++) {
-        if (get1(file.read(1)) == firstCharCode) {
+        if (get8(file.read(1)) == firstCharCode) {
             bool rejected = false;
             for (int j = 1; j < s.length(); j++) {
                 uint nextCharCode = static_cast<unsigned int>(s[j].unicode());
-                uint byte = get1(file.read(1));
+                uint byte = get8(file.read(1));
                 if (byte != nextCharCode) rejected = true;
                 if (rejected) break;
             }
@@ -2461,19 +2496,19 @@ to the first IPTC data block so we can skip the search req'd if it was JPG.
     file.seek(offset);
 
     // check to see if the offset is a JPG segment
-    quint32 marker = get2(file.peek(2));
+    quint32 marker = get16(file.peek(2));
     if (marker == 0xFFED) {
         // skip the APP marker FFED and length bytes
         file.seek(offset + 2);
-        quint32 segmentLength = get2(file.read(2));
+        quint32 segmentLength = get16(file.read(2));
         quint32 count = 0;
         while (!foundIPTC && count < segmentLength) {
             count +=2;
             // find "8BIM" = 0x3842 0x494D
-            if (get2(file.read(2)) == 0x3842) {
-                if (get2(file.read(2)) == 0x494D) {
+            if (get16(file.read(2)) == 0x3842) {
+                if (get16(file.read(2)) == 0x494D) {
                     // is it IPTC data?
-                    if (get2(file.read(2)) == 0x0404) foundIPTC = true;
+                    if (get16(file.read(2)) == 0x0404) foundIPTC = true;
                 }
             }
         }
@@ -2492,11 +2527,11 @@ to the first IPTC data block so we can skip the search req'd if it was JPG.
     bool foundTitle = false;
     while (!foundTitle) {
         // every block starts with tag marker 0x1C
-        uint tagMarker = get1(file.read(1));
+        uint tagMarker = get8(file.read(1));
         if (tagMarker != 0x1C) break;
-        uint recordNumber = get1(file.read(1));
-        uint tag = get1(file.read(1));
-        uint dataLength = static_cast<uint>(get2(file.read(2)));
+        uint recordNumber = get8(file.read(1));
+        uint tag = get8(file.read(1));
+        uint dataLength = static_cast<uint>(get16(file.read(2)));
         if (recordNumber == 2 && tag == 5) {
             title = file.read(dataLength);
 //            qDebug() << G::t.restart() << "\t" << "IPTC title length =" << dataLength
@@ -2535,16 +2570,16 @@ the embedded jpg preview is found (irbID == 1036)
     }
 
     // Get the IRB ID (we're looking for 1036 = thumb)
-    uint irbID = static_cast<uint>(get2(file.read(2)));
+    uint irbID = static_cast<uint>(get16(file.read(2)));
     if (irbID == 1036) foundTifThumb = true;
 //    qDebug() << __FUNCTION__ << fPath << "irbID =" << irbID;
 
     // read the pascal string which we don't care about
-    uint pascalStringLength = static_cast<uint>(get2(file.read(2)));
+    uint pascalStringLength = static_cast<uint>(get16(file.read(2)));
     if (pascalStringLength > 0) file.read(pascalStringLength);
 
     // get the length of the IRB data block
-    quint32 dataBlockLength = get4(file.read(4));
+    quint32 dataBlockLength = get32(file.read(4));
     // round to even 2 bytes
     dataBlockLength % 2 == 0 ? dataBlockLength : dataBlockLength++;
 
@@ -2580,7 +2615,7 @@ quint32 Metadata::readIFD(QString hdr, quint32 offset)
     ifdDataHash.clear();
 
     file.seek(offset);
-    int tags = static_cast<int>(get2(file.read(2)));
+    int tags = static_cast<int>(get16(file.read(2)));
 
 //    qDebug() << __FUNCTION__ << "tags =" << tags;
 
@@ -2597,13 +2632,13 @@ quint32 Metadata::readIFD(QString hdr, quint32 offset)
     for (int i = 0; i < tags; i++){
 //        if (report) pos = QString::number(file.pos(), 16).toUpper();
         pos = static_cast<quint32>(file.pos());
-        tagId = get2(file.read(2));
-        tagType = get2(file.read(2));
-        tagCount = get4(file.read(4));
+        tagId = get16(file.read(2));
+        tagType = get16(file.read(2));
+        tagCount = get32(file.read(4));
         // check for orientation and save offset for subsequent writing
         if (hdr == "IFD0" && tagId == 274) orientationOffset = static_cast<uint>(file.pos());
-        if (tagType == 3) tagValue = get2(file.read(4));
-        else tagValue = get4(file.read(4));
+        if (tagType == 3) tagValue = get16(file.read(4));
+        else tagValue = get32(file.read(4));
 
         ifdData.tagType = tagType;
         ifdData.tagCount = tagCount;
@@ -2682,7 +2717,7 @@ quint32 Metadata::readIFD(QString hdr, quint32 offset)
         // quit if more than 200 tags - prob error
         if (i>200) break;
     }
-    quint32 nextIFDOffset = get4(file.read(4));
+    quint32 nextIFDOffset = get32(file.read(4));
     if (report) {
         rpt.setFieldWidth(10);
         rpt.setFieldAlignment(QTextStream::AlignRight);
@@ -2707,7 +2742,7 @@ QList<quint32> Metadata::getSubIfdOffsets(quint32 subIFDaddr, int count)
     QList<quint32> offsets;
     file.seek(subIFDaddr);
     for (int i = 0; i < count; i++) {
-        offsets.append(get4(file.read(4)));
+        offsets.append(get32(file.read(4)));
     }
     return offsets;
 }
@@ -2731,10 +2766,10 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
     uint marker = 0xFFFF;
     while (marker > 0xFFBF) {
         file.seek(offset);           // APP1 FFE*
-        marker = static_cast<uint>(get2(file.read(2)));
+        marker = static_cast<uint>(get16(file.read(2)));
         if (marker < 0xFFC0) break;
         quint32 pos = static_cast<quint32>(file.pos());
-        quint16 nex = get2(file.read(2));
+        quint16 nex = get16(file.read(2));
         quint32 nextOffset = pos + nex;
         if (marker == 0xFFE1) {
             QString segName = file.read(4);
@@ -2797,16 +2832,16 @@ bool Metadata::getDimensions(quint32 jpgOffset)
     quint32 offset = jpgOffset + 2;
     while (marker != 0xFFC0) {
         file.seek(offset);           // APP1 FFE*
-        marker = get2(file.read(2));
+        marker = get16(file.read(2));
         if (marker < 0xFF01) {
             order = order1;
             return false;
         }
-        offset = get2(file.peek(2)) + static_cast<quint32>(file.pos());
+        offset = get16(file.peek(2)) + static_cast<quint32>(file.pos());
     }
     file.seek(file.pos()+3);
-    height = get2(file.read(2));
-    width = get2(file.read(2));
+    height = get16(file.read(2));
+    width = get16(file.read(2));
     order = order1;
     return true;
 }
@@ -2827,9 +2862,9 @@ checked to make sure there is valid data.
     #endif
     }
     file.seek(offset);
-    if (get2(file.peek(2)) == 0xFFD8) {
+    if (get16(file.peek(2)) == 0xFFD8) {
         file.seek(offset + length - 2);
-        if (get2(file.peek(2)) == 0xFFD9) {
+        if (get16(file.peek(2)) == 0xFFD9) {
             // all is well
             return;
         }
@@ -2849,9 +2884,9 @@ bool Metadata::formatNikon()
     // moved file.open to readMetadata
 
     // get endian
-    order = get2(file.read(4));
+    order = get16(file.read(4));
     // get offset to first IFD and read it
-    quint32 offsetIfd0 = get4(file.read(4));
+    quint32 offsetIfd0 = get32(file.read(4));
 
     // Nikon does not chain IFDs
     readIFD("IFD0", offsetIfd0);
@@ -2985,7 +3020,7 @@ bool Metadata::formatNikon()
         bool foundEndian = false;
         file.seek(makerOffset);
         while (!foundEndian) {
-            endian = get2(file.read(2));
+            endian = get16(file.read(2));
             if (endian == 0x4949 || endian == 0x4D4D) foundEndian = true;
             order = endian;
 //            if (get2(file.read(2)) == 0x4949) foundEndian = true;
@@ -3071,7 +3106,7 @@ bool Metadata::formatCanon()
     }
     //file.open in readMetadata
     // get endian
-    order = get2(file.read(4));
+    order = get16(file.read(4));
     // is canon always offset 16 to IFD0 ???
     quint32 offsetIfd0 = 16;
     quint32 nextIFDOffset = readIFD("IFD0", offsetIfd0);
@@ -3248,9 +3283,9 @@ bool Metadata::formatOlympus()
     }
     //file.open in readMetadata
     // get endian
-    order = get2(file.read(4));
+    order = get16(file.read(4));
     // get offset to first IFD and read it
-    quint32 offsetIfd0 = get4(file.read(4));
+    quint32 offsetIfd0 = get32(file.read(4));
 
     readIFD("IFD0", offsetIfd0);
 
@@ -3385,9 +3420,9 @@ bool Metadata::formatSony()
     }
     //file.open in readMetadata
     // get endian
-    order = get2(file.read(4));
+    order = get16(file.read(4));
     // get offset to first IFD and read it
-    quint32 offsetIfd0 = get4(file.read(4));
+    quint32 offsetIfd0 = get32(file.read(4));
 
     quint32 nextIFDOffset = readIFD("IFD0", offsetIfd0);
 
@@ -3566,13 +3601,13 @@ bool Metadata::formatFuji()
 
     // seek JPEG image offset
     file.seek(84);
-    offsetFullJPG = get4(file.read(4));
-    lengthFullJPG = get4(file.read(4));
+    offsetFullJPG = get32(file.read(4));
+    lengthFullJPG = get32(file.read(4));
 //    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
     file.seek(offsetFullJPG);
 
     // start on embedded JPEG
-    if (get2(file.read(2)) != 0xFFD8) return false;
+    if (get16(file.read(2)) != 0xFFD8) return false;
 
     // build a hash of jpg segment offsets
     getJpgSegments(file.pos());
@@ -3583,7 +3618,7 @@ bool Metadata::formatFuji()
 
     bool foundEndian = false;
     while (!foundEndian) {
-        quint32 a = get2(file.read(2));
+        quint32 a = get16(file.read(2));
         if (a == 0x4949 || a == 0x4D4D) {
             order = a;
             // offsets are from the endian position in JPEGs
@@ -3596,8 +3631,8 @@ bool Metadata::formatFuji()
 
     if (report) rpt << "\n startOffset = " << startOffset;
 
-    quint32 a = get2(file.read(2));  // magic 42
-    a = get4(file.read(4));
+    quint32 a = get16(file.read(2));  // magic 42
+    a = get32(file.read(4));
     quint32 offsetIfd0 = a + startOffset;
 
 //    getDimensions(offsetFullJPG);
@@ -3695,14 +3730,14 @@ bool Metadata::formatDNG()
     quint32 startOffset = 0;
 
     // first two bytes is the endian order
-    order = get2(file.read(2));
+    order = get16(file.read(2));
     if (order != 0x4D4D && order != 0x4949) return false;
 
     // should be magic number 42 next
-    if (get2(file.read(2)) != 42) return false;
+    if (get16(file.read(2)) != 42) return false;
 
     // read offset to first IFD
-    quint32 ifdOffset = get4(file.read(4));
+    quint32 ifdOffset = get32(file.read(4));
     quint32 nextIFDOffset = readIFD("IFD0", ifdOffset);
     nextIFDOffset = 0;  // suppress compiler warning
 
@@ -3814,7 +3849,7 @@ bool Metadata::formatDNG()
                 quint32 offset = ifdDataHash.value(273).tagValue;
                 file.seek(offset);
 //                quint32 x = get2(file.read(2));
-                if (get2(file.read(2)) != 0xD8FF) break;  // order = 4949 so reverse
+                if (get16(file.read(2)) != 0xD8FF) break;  // order = 4949 so reverse
                 // yes it is a JPG
                 jpgInfo.offset = offset;
                 jpgInfo.length = ifdDataHash.value(279).tagValue;;
@@ -3958,14 +3993,14 @@ bool Metadata::formatTIF()
     quint32 startOffset = 0;
 
     // first two bytes is the endian order
-    order = get2(file.read(2));
+    order = get16(file.read(2));
     if (order != 0x4D4D && order != 0x4949) return false;
 
     // should be magic number 42 next
-    if (get2(file.read(2)) != 42) return false;
+    if (get16(file.read(2)) != 42) return false;
 
     // read offset to first IFD
-    quint32 ifdOffset = get4(file.read(4));
+    quint32 ifdOffset = get32(file.read(4));
     /*quint32 nextIFDOffset = */readIFD("IFD0", ifdOffset);
 
     lengthFullJPG = 1;  // set arbitrary length to avoid error msg as tif do not
@@ -4208,9 +4243,9 @@ bool Metadata::formatPanasonic()
     */
     //file.open in readMetadata
     // get endian
-    order = get2(file.read(4));
+    order = get16(file.read(4));
     // get offset to first IFD and read it
-    quint32 offsetIfd0 = get4(file.read(4));
+    quint32 offsetIfd0 = get32(file.read(4));
 
     readIFD("IFD0", offsetIfd0);
 
@@ -4286,7 +4321,7 @@ bool Metadata::formatPanasonic()
     quint32 startOffset = offsetFullJPG;
     file.seek(offsetFullJPG);
 
-    if (get2(file.read(2)) != 0xFFD8) return 0;
+    if (get16(file.read(2)) != 0xFFD8) return 0;
 
     // build a hash of jpg segment offsets
     getJpgSegments(file.pos());
@@ -4297,7 +4332,7 @@ bool Metadata::formatPanasonic()
         bool foundEndian = false;
         int counter = 0;
         while (!foundEndian) {
-            quint32 a = get2(file.read(2));
+            quint32 a = get16(file.read(2));
             if (a == 0x4949 || a == 0x4D4D) {
                 order = a;
                 // offsets are from the endian position in JPEGs
@@ -4311,8 +4346,8 @@ bool Metadata::formatPanasonic()
 
         if (report) rpt << "\n startOffset = " << startOffset;
 
-        quint32 a = get2(file.read(2));  // magic 42
-        a = get4(file.read(4));
+        quint32 a = get16(file.read(2));  // magic 42
+        a = get32(file.read(4));
         quint32 offsetIfd0 = a + startOffset;
 
         // read JPG IFD0
@@ -4385,7 +4420,7 @@ bool Metadata::formatJPG(quint32 startOffset)
     //file.open happens in readMetadata
     order = 0x4D4D;
 //    quint32 startOffset = 0;
-    if (get2(file.read(2)) != 0xFFD8) {
+    if (get16(file.read(2)) != 0xFFD8) {
         err = "JPG does not start with 0xFFD8";
         qDebug() << __FUNCTION__ << err;
         return false;
@@ -4413,7 +4448,7 @@ bool Metadata::formatJPG(quint32 startOffset)
 
     bool foundEndian = false;
     while (!foundEndian) {
-        quint32 a = get2(file.read(2));
+        quint32 a = get16(file.read(2));
         if (a == 0x4949 || a == 0x4D4D) {
             order = a;
             // offsets are from the endian position in JPEGs
@@ -4426,8 +4461,8 @@ bool Metadata::formatJPG(quint32 startOffset)
 
     if (report) rpt << "\n startOffset = " << startOffset;
 
-    quint32 a = get2(file.read(2));  // magic 42
-    a = get4(file.read(4));
+    quint32 a = get16(file.read(2));  // magic 42
+    a = get32(file.read(4));
     quint32 offsetIfd0 = a + startOffset;
 
     // it's a jpg so the whole thing is the full length jpg
@@ -4584,11 +4619,15 @@ bool Metadata::formatJPG(quint32 startOffset)
 
 bool Metadata::formatHEIF()
 {
-    file.setFileName("D:/Pictures/_HEIC/iphone.HEIC");
+//    file.setFileName("D:/Pictures/_HEIC/iphone.HEIC");
+    file.setFileName("D:/Pictures/_HEIC/example.HEIC");
     file.open(QIODevice::ReadOnly);
 
     order = 0x4D4D;
 
+    quint32 offset = 0;
+    quint32 length;
+    QString type;
     /*
     Source: Part 12: ISO base media file format (ISO/IEC 14496-12)
     size is an integer that specifies the number of bytes in this box, including all its
@@ -4601,30 +4640,276 @@ bool Metadata::formatHEIF()
     below. User extensions use an extended type; in this case, the type field is set to
     ‘uuid’.
     */
-    int ftypBoxLength = get4(file.read(4));
-    if (!ftypBoxLength) {
-        // err
-        return false;
-    }
 
-    if (file.read(4) != "ftyp") {
-        // err
-        return false;
-    }
+    // ftyp
+    nextHeifBox(length, type);
+    getHeifBox(type, offset, length);
 
-    QString fType = file.read(4);
-    if (fType != "heic" && fType != "HEIC") {
-        return false;
-    }
+    // meta
+    file.seek(offset);
+    nextHeifBox(length, type);
+    getHeifBox(type, offset, length);
 
-    file.seek(ftypBoxLength);
-    quint32 nextBoxLength = get4(file.read(4));
-    QString nextBoxType = file.read(4);
+    // hdlr
+    file.seek(offset);
+    nextHeifBox(length, type);
+    getHeifBox(type, offset, length);
 
+    // pitm
+    file.seek(offset);
+    nextHeifBox(length, type);
+    getHeifBox(type, offset, length);
 
-    qDebug() << __FUNCTION__ << nextBoxLength << nextBoxType;
+    // iloc
+    file.seek(offset);
+    nextHeifBox(length, type);
+    getHeifBox(type, offset, length);
+
+    // iinf
+    file.seek(offset);
+    nextHeifBox(length, type);
+    getHeifBox(type, offset, length);
+
+    // iref
+    file.seek(offset);
+    nextHeifBox(length, type);
+    getHeifBox(type, offset, length);
+
+    //
+    file.seek(offset);
+    nextHeifBox(length, type);
+//    getHeifBox(type, offset, length);
+
     return true;
 }
+
+bool Metadata::nextHeifBox(quint32 &length, QString &type)
+{
+    length = get32(file.read(4));
+    type = file.read(4);
+    qDebug() << __FUNCTION__ << length << type;
+    return (length > 0);
+}
+
+bool Metadata::getHeifBox(QString &type, quint32 &offset, quint32 &length)
+{
+    if (type == "ftyp") return ftypBox(offset, length);
+    if (type == "meta") return metaBox(offset, length);
+    if (type == "hdlr") return hdlrBox(offset, length);
+    if (type == "pitm") return pitmBox(offset, length);
+    if (type == "iloc") return ilocBox(offset, length);
+    if (type == "iinf") return iinfBox(offset, length);
+    if (type == "iref") return irefBox(offset, length);
+
+    // err
+    qDebug() << __FUNCTION__ << "Failed to get box for type =" << type;
+    return false;
+}
+
+bool Metadata::ftypBox(quint32 &offset, quint32 &length)
+{
+    if (length == 0) {
+        // err
+        qDebug() << __FUNCTION__ << "ftyp not found";
+        return false;
+    }
+
+    bool isHeic = false;
+    /* compatible brands 32bits each to end of ftype box
+       ftyp box = length + type + major brand + minor version + compatible brands (each 4 bytes) */
+    int compatibleBrands = static_cast<int>(length) - 16;
+    file.seek(16);
+    for (int i = 0; i < compatibleBrands; i++) {
+        QString brand = file.read(4);
+        if (brand == "heic" || brand == "HEIC") {
+            isHeic = true;
+            break;
+        }
+    }
+    if (!isHeic) {
+        // err
+        qDebug() << __FUNCTION__ << "heic not found";
+        return false;
+    }
+    offset += length;
+    return true;
+}
+
+bool Metadata::metaBox(quint32 &offset, quint32 &length)
+{
+    heif.metaOffset = offset;
+    heif.metaLength = length;
+    offset += 12;
+    qDebug() << __FUNCTION__
+             << "offset =" << heif.metaOffset
+             << "length =" << heif.metaLength;
+    return true;
+}
+
+bool Metadata::hdlrBox(quint32 &offset, quint32 &length)
+{
+    file.seek(offset + 16);
+    QString hdlrType = file.read(4);
+    qDebug() << __FUNCTION__
+             << "hdlrType =" << hdlrType;
+    if (hdlrType != "pict") {
+        // err
+        return false;
+    }
+
+    offset += length;
+    return true;
+}
+
+bool Metadata::pitmBox(quint32 &offset, quint32 &length)
+{
+
+    file.seek(offset + 16);
+    heif.pitmId = get16(file.read(2));
+    qDebug() << __FUNCTION__
+             << "heif.pitmId =" << heif.pitmId;
+//    if (hdlrType != "pict") {
+//        // err
+//        return false;
+//    }
+
+    offset += length;
+    return true;
+}
+
+bool Metadata::ilocBox(quint32 &offset, quint32 &length)
+{
+
+    file.seek(offset + 12);
+    QByteArray c = file.read(1);
+    heif.ilocOffsetSize = get4_1st(c);
+    heif.ilocLengthSize = get4_2nd(c);
+    c = file.read(1);
+    heif.ilocBaseOffsetSize = get4_1st(c);
+    heif.ilocExtentCount = get16(file.read(2));
+    qDebug() << __FUNCTION__
+             << "heif.ilocOffsetSize =" << heif.ilocOffsetSize
+             << "heif.ilocLengthSize =" << heif.ilocLengthSize
+             << "heif.ilocBaseOffsetSize =" << heif.ilocBaseOffsetSize
+             << "heif.ilocExtentCount =" << heif.ilocExtentCount;
+    for (int i = 0; i < heif.ilocExtentCount; i++) {
+        quint16 item_ID = get16(file.read(2));
+        quint16 data_reference_index = get16(file.read(2));
+        quint32 base_offset = get16(file.read(4));
+        quint16 extent_count = get16(file.read(2));
+        qDebug() << __FUNCTION__ << "Item:" << i
+                 << "itemId" << item_ID
+                 << "data_reference_index" << data_reference_index
+                 << "base_offset" << base_offset
+                 << "extent_count" << extent_count;
+        for (int j = 0; j < extent_count; j++) {
+            quint32 extent_offset = get16(file.read(4));
+            quint32 extent_length = get16(file.read(4));
+            qDebug() << __FUNCTION__ << "  Extent:" << i
+                     << "extent_offset" << extent_offset
+                     << "extent_length" << extent_length;
+        }
+    }
+    qDebug() << __FUNCTION__ << "file.pos()" << file.pos();
+    //    if (hdlrType != "pict") {
+    //        // err
+    //        return false;
+    //    }
+
+    offset += length;
+    return true;
+}
+
+bool Metadata::infeBox(quint32 &offset, quint32 &length)
+{
+
+    file.seek(offset + 12);
+    quint16 item_ID = get16(file.read(2));
+    quint16 item_protection_index = get16(file.read(2));
+    QString item_name = getCString();
+    QString content_type = getCString();
+    QString content_encoding;
+    if (content_type.length()) content_encoding = getCString();
+    else content_encoding = "";
+
+    qDebug() << "   " << __FUNCTION__
+             << "item_ID =" << item_ID
+             << "item_protection_index =" << item_protection_index
+             << "item_name =" << item_name
+             << "content_type =" << content_type
+             << "content_encoding =" << content_encoding;
+
+    return true;
+}
+
+bool Metadata::iinfBox(quint32 &offset, quint32 &length)
+{
+    file.seek(offset + 14);
+    quint16 entry_count = get16(file.read(2));
+    qDebug() << __FUNCTION__ << "iint entry count =" << entry_count << file.pos();
+    if (entry_count == 0) {
+        // err
+        qDebug() << __FUNCTION__ << "No iint entries found";
+        return false;
+    }
+
+    quint32 infeOffset = static_cast<quint32>(file.pos());
+    quint32 infeLength;
+    for (int i = 0; i < entry_count; i++) {
+        QString infeType;
+        nextHeifBox(infeLength, infeType);
+        qDebug() << __FUNCTION__ << "   Item Info Entry " << i;
+        infeBox(infeOffset, infeLength);
+        infeOffset += infeLength;
+    }
+
+    offset += length;
+    return true;
+}
+
+bool Metadata::sitrBox(quint32 &offset, quint32 &length)
+{
+    file.seek(offset + 8);
+    quint16 from_item_ID = get16(file.read(2));
+    quint16 reference_count = get16(file.read(2));
+
+    qDebug() << __FUNCTION__
+             << "from_item_ID =" << from_item_ID
+             << "reference_count =" << reference_count;
+
+    for (int i = 0; i < reference_count; i++) {
+        quint32 to_item_ID = get32(file.read(4));
+        qDebug() << __FUNCTION__ << i << ": to_item_ID =" << to_item_ID;
+    }
+    offset += length;
+    return true;
+}
+
+bool Metadata::irefBox(quint32 &offset, quint32 &length)
+{
+    heif.irefOffset = offset;
+    heif.irefLength = length;
+    quint32 irefEndOffset = offset + length;
+    file.seek(offset + 8);
+    uint version = get8(file.read(1));
+    quint32 sitrOffset = offset + 12;
+    qDebug() << __FUNCTION__ << "offset =" << offset
+             << "length =" << length << "sitrOffset" << sitrOffset;
+    while (sitrOffset < irefEndOffset) {
+        quint32 sitrLength;
+        QString type;
+        file.seek(sitrOffset);
+        nextHeifBox(sitrLength, type);
+        if (version == 0) sitrBox(sitrOffset, sitrLength);
+//        else sitrBoxL(sitrOffset, sitrLength);
+        qDebug() << __FUNCTION__ << "irefEndOffset =" << irefEndOffset << "sitrOffset" << sitrOffset;
+    }
+
+    offset += length;
+    return true;
+}
+
+
 
 void Metadata::clearMetadata()
 {

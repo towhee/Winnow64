@@ -10386,18 +10386,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QPoint loc = centralWidget->window()->geometry().center();
-    QScreen *screen = qApp->screenAt(loc);
-    qDebug() << __FUNCTION__
-             << "logicalDotsPerInch()" << screen->logicalDotsPerInch()
-             << "physicalDotsPerInch()" << screen->physicalDotsPerInch()
-             << "G::dpi" << G::dpi
-             << "G::ptToPx" << G::ptToPx;
-
-//    QDialog *dlg = new QDialog;
-//    Ui::test12 ui;
-//    ui.setupUi(dlg);
-//    dlg->adjustSize();
-//    dlg->exec();
+    metadata->formatHEIF();
 }
 // End MW
