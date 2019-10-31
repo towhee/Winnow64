@@ -329,3 +329,15 @@ Views/iconview.cpp.autosave
 Makefile.Debug
 Makefile.Release
 ð»ÙIö
+debug/Winnow.exe
+debug/Winnow.pdb
+ImageFormats/heic.cpp
+ImageFormats/heic.h
+Lib/lcms2-2.9/CMakeSettings.json
+Lib/lcms2-2.9/out/build/x64-Release/.cmake/api/v1/query/client-MicrosoftVS/query.json
+Lib/lcms2-2.9/out/build/x64-Release/CMakeCache.txt
+Lib/lcms2-2.9/out/build/x64-Release/CMakeFiles/cmake.check_cache
+Lib/lcms2-2.9/out/build/x64-Release/VSInheritEnvironments.txt
+Makefile.Debug
+Makefile.Release
+winnow64.pro.user.4.10-pre1
