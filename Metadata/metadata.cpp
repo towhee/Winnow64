@@ -2142,6 +2142,14 @@ quint32 Metadata::get32(QByteArray c)
         return static_cast<quint32>(((c[0]&0xFF) | (c[1]&0xFF) << 8 | (c[2]&0xFF) << 16 | (c[3]&0xFF) << 24));
 }
 
+LONGLONG Metadata::get64(QByteArray c)
+{
+    if (order == 0x4D4D)
+        return static_cast<LONGLONG>((c[0]&0xFF) << 48 | (c[1]&0xFF) << 24 | (c[2]&0xFF) << 16 | (c[3]&0xFF) << 8 | (c[4]&0xFF));
+    else
+        return static_cast<LONGLONG>(((c[0]&0xFF) | (c[1]&0xFF) << 8 | (c[2]&0xFF) << 16 | (c[3]&0xFF) << 24 | (c[4]&0xFF) << 48));
+}
+
 /*  Less old version requiring lots of static_cast<uint>
 quint32 Metadata::get4(QByteArray c)
 {
@@ -4641,6 +4649,15 @@ bool Metadata::formatHEIF()
     ‘uuid’.
     */
 
+    quint32 eof = file.size();
+    while (offset < eof) {
+        file.seek(offset);
+        nextHeifBox(length, type);
+        getHeifBox(type, offset, length);
+    }
+
+    return true;
+
     // ftyp
     nextHeifBox(length, type);
     getHeifBox(type, offset, length);
@@ -4650,35 +4667,71 @@ bool Metadata::formatHEIF()
     nextHeifBox(length, type);
     getHeifBox(type, offset, length);
 
-    // hdlr
-    file.seek(offset);
-    nextHeifBox(length, type);
-    getHeifBox(type, offset, length);
+        // hdlr
+        file.seek(offset);
+        nextHeifBox(length, type);
+        getHeifBox(type, offset, length);
 
-    // pitm
-    file.seek(offset);
-    nextHeifBox(length, type);
-    getHeifBox(type, offset, length);
+        // pitm
+        file.seek(offset);
+        nextHeifBox(length, type);
+        getHeifBox(type, offset, length);
 
-    // iloc
-    file.seek(offset);
-    nextHeifBox(length, type);
-    getHeifBox(type, offset, length);
+        // iloc
+        file.seek(offset);
+        nextHeifBox(length, type);
+        getHeifBox(type, offset, length);
 
-    // iinf
-    file.seek(offset);
-    nextHeifBox(length, type);
-    getHeifBox(type, offset, length);
+        // iinf
+        file.seek(offset);
+        nextHeifBox(length, type);
+        getHeifBox(type, offset, length);
 
-    // iref
-    file.seek(offset);
-    nextHeifBox(length, type);
-    getHeifBox(type, offset, length);
+        // iref
+        file.seek(offset);
+        nextHeifBox(length, type);
+        getHeifBox(type, offset, length);
 
-    //
-    file.seek(offset);
-    nextHeifBox(length, type);
-//    getHeifBox(type, offset, length);
+        // iprp
+        file.seek(offset);
+        nextHeifBox(length, type);
+        getHeifBox(type, offset, length);
+
+            // hvvC
+            file.seek(offset);
+            nextHeifBox(length, type);
+            getHeifBox(type, offset, length);
+
+            //  ISPE
+            file.seek(offset);
+            nextHeifBox(length, type);
+            getHeifBox(type, offset, length);
+
+            // hvvC
+            file.seek(offset);
+            nextHeifBox(length, type);
+            getHeifBox(type, offset, length);
+
+            //  ISPE
+            file.seek(offset);
+            nextHeifBox(length, type);
+            getHeifBox(type, offset, length);
+
+            // hvvC
+            file.seek(offset);
+            nextHeifBox(length, type);
+            getHeifBox(type, offset, length);
+
+            // hvvC
+            file.seek(offset);
+            nextHeifBox(length, type);
+            getHeifBox(type, offset, length);
+
+        // ipma
+        file.seek(offset);
+        nextHeifBox(length, type);
+        getHeifBox(type, offset, length);
+
 
     return true;
 }
@@ -4700,6 +4753,11 @@ bool Metadata::getHeifBox(QString &type, quint32 &offset, quint32 &length)
     if (type == "iloc") return ilocBox(offset, length);
     if (type == "iinf") return iinfBox(offset, length);
     if (type == "iref") return irefBox(offset, length);
+    if (type == "iprp") return iprpBox(offset, length);
+    if (type == "hvcC") return hvcCBox(offset, length);
+    if (type == "ispe") return ispeBox(offset, length);
+    if (type == "ipma") return ipmaBox(offset, length);
+    if (type == "mdat") return mdatBox(offset, length);
 
     // err
     qDebug() << __FUNCTION__ << "Failed to get box for type =" << type;
@@ -4737,12 +4795,24 @@ bool Metadata::ftypBox(quint32 &offset, quint32 &length)
 
 bool Metadata::metaBox(quint32 &offset, quint32 &length)
 {
+    QString type;
     heif.metaOffset = offset;
     heif.metaLength = length;
+    quint32 metaEnd = offset + length;
     offset += 12;
+
     qDebug() << __FUNCTION__
              << "offset =" << heif.metaOffset
              << "length =" << heif.metaLength;
+
+    while (offset < metaEnd) {
+        file.seek(offset);
+        nextHeifBox(length, type);
+        getHeifBox(type, offset, length);
+    }
+
+    offset = metaEnd;
+
     return true;
 }
 
@@ -4786,16 +4856,16 @@ bool Metadata::ilocBox(quint32 &offset, quint32 &length)
     heif.ilocLengthSize = get4_2nd(c);
     c = file.read(1);
     heif.ilocBaseOffsetSize = get4_1st(c);
-    heif.ilocExtentCount = get16(file.read(2));
+    heif.ilocItemCount = get16(file.read(2));
     qDebug() << __FUNCTION__
              << "heif.ilocOffsetSize =" << heif.ilocOffsetSize
              << "heif.ilocLengthSize =" << heif.ilocLengthSize
              << "heif.ilocBaseOffsetSize =" << heif.ilocBaseOffsetSize
-             << "heif.ilocExtentCount =" << heif.ilocExtentCount;
-    for (int i = 0; i < heif.ilocExtentCount; i++) {
+             << "heif.ilocItemCount =" << heif.ilocItemCount;
+    for (int i = 0; i < heif.ilocItemCount; i++) {
         quint16 item_ID = get16(file.read(2));
         quint16 data_reference_index = get16(file.read(2));
-        quint32 base_offset = get16(file.read(4));
+        quint32 base_offset = get32(file.read(4));
         quint16 extent_count = get16(file.read(2));
         qDebug() << __FUNCTION__ << "Item:" << i
                  << "itemId" << item_ID
@@ -4803,9 +4873,9 @@ bool Metadata::ilocBox(quint32 &offset, quint32 &length)
                  << "base_offset" << base_offset
                  << "extent_count" << extent_count;
         for (int j = 0; j < extent_count; j++) {
-            quint32 extent_offset = get16(file.read(4));
-            quint32 extent_length = get16(file.read(4));
-            qDebug() << __FUNCTION__ << "  Extent:" << i
+            quint32 extent_offset = get32(file.read(4));
+            quint32 extent_length = get32(file.read(4));
+            qDebug() << "   " << __FUNCTION__ << "  Extent:" << i
                      << "extent_offset" << extent_offset
                      << "extent_length" << extent_length;
         }
@@ -4867,6 +4937,7 @@ bool Metadata::iinfBox(quint32 &offset, quint32 &length)
     return true;
 }
 
+// add a large version sitrBoxL
 bool Metadata::sitrBox(quint32 &offset, quint32 &length)
 {
     file.seek(offset + 8);
@@ -4909,7 +4980,193 @@ bool Metadata::irefBox(quint32 &offset, quint32 &length)
     return true;
 }
 
+bool Metadata::hvcCBox(quint32 &offset, quint32 &length)
+{
+    qDebug() << __FUNCTION__ << "file position:" << file.pos();
+    uint configurationVersion = get8(file.read(1));
+    quint8 x = Utilities::get8(file.read(1));
+    int general_profile_space = (x & 0b11000000) >> 6;             // first 2 bits
+    int general_tier_flag =     (x & 0b00100000) >> 5;             // 3rd bit
+    int general_profile_idc =   (x & 0b00011111);                  // last 5 bits
+    quint32 general_profile_compatibility_flags = Utilities::get32(file.read(4));
+    auto general_constraint_indicator_flags = Utilities::get48(file.read(6));
+    quint8 general_level_idc  = Utilities::get8(file.read(1));
+    quint16 min_spatial_segmentation_idc = Utilities::get16(file.read(2));
+    // 4 bits reserved, last 12 = min_spatial_segmentation_idc
+    min_spatial_segmentation_idc = min_spatial_segmentation_idc & 0b0000111111111111;
 
+    quint8 parallelismType = Utilities::get8(file.read(1));
+    // 6 bits reserved, last 2 = parallelismType
+    parallelismType = parallelismType & 0b00000011;
+
+    quint8 chroma_format_idc = Utilities::get8(file.read(1));
+    // 6 bits reserved, last 2 = chroma_format_idc
+    chroma_format_idc = chroma_format_idc & 0b00000011;
+
+    quint8 bit_depth_luma_minus8 = Utilities::get8(file.read(1));
+    // 5 bits reserved, last 3 = bit_depth_luma_minus8
+    bit_depth_luma_minus8 = bit_depth_luma_minus8 & 0b00000111;
+    quint8 bit_depth_chroma_minus8 = Utilities::get8(file.read(1));
+    // 5 bits reserved, last 3 = bit_depth_chroma_minus8
+    bit_depth_chroma_minus8 = bit_depth_chroma_minus8 & 0b00000111;
+
+    quint16 avgFrameRate = Utilities::get16(file.read(2));
+
+    x = Utilities::get8(file.read(1));
+    int constantFrameRate = (x & 0b11000000) >> 6;             // first 2 bits
+    int numTemporalLayers =     (x & 0b00111000) >> 3;         // next 3 bits
+    int temporalIdNested =     (x & 0b00000100) >> 5;          // next bit
+    int lengthSizeMinusOne =   (x & 0b00000011);               // last 2 bits
+
+    quint8 numOfArrays = Utilities::get8(file.read(1));
+
+    qDebug() << __FUNCTION__ << "configurationVersion =" << configurationVersion;
+    qDebug() << __FUNCTION__ << "general_profile_space =" << general_profile_space;
+    qDebug() << __FUNCTION__ << "general_tier_flag =" << general_tier_flag;
+    qDebug() << __FUNCTION__ << "general_profile_idc =" << general_profile_idc;
+    qDebug() << __FUNCTION__ << "general_profile_compatibility_flags =" << general_profile_compatibility_flags;
+    qDebug() << __FUNCTION__ << "general_constraint_indicator_flags =" << general_constraint_indicator_flags;
+    qDebug() << __FUNCTION__ << "general_level_idc =" << general_level_idc;
+    qDebug() << __FUNCTION__ << "min_spatial_segmentation_idc =" << min_spatial_segmentation_idc;
+    qDebug() << __FUNCTION__ << "parallelismType =" << parallelismType;
+    qDebug() << __FUNCTION__ << "chroma_format_idc =" << chroma_format_idc;
+    qDebug() << __FUNCTION__ << "bit_depth_luma_minus8 =" << bit_depth_luma_minus8;
+    qDebug() << __FUNCTION__ << "bit_depth_chroma_minus8 =" << bit_depth_chroma_minus8;
+    qDebug() << __FUNCTION__ << "avgFrameRate =" << avgFrameRate;
+    qDebug() << __FUNCTION__ << "constantFrameRate =" << constantFrameRate;
+    qDebug() << __FUNCTION__ << "numTemporalLayers =" << numTemporalLayers;
+    qDebug() << __FUNCTION__ << "temporalIdNested =" << temporalIdNested;
+    qDebug() << __FUNCTION__ << "lengthSizeMinusOne =" << lengthSizeMinusOne;
+    qDebug() << __FUNCTION__ << "numOfArrays =" << numOfArrays;
+
+    for (int i = 0; i < numOfArrays; i++) {
+        x = Utilities::get8(file.read(1));
+        int array_completeness = (x & 0b10000000) >> 6;             // first bit
+                                                                    // 2nd bit reserved
+        int NAL_unit_type = (x & 0b00111111);                         // last 6 bits
+        quint16 numNalus = Utilities::get16(file.read(2));
+        qDebug() << __FUNCTION__ << "    array # =" << i;
+        qDebug() << __FUNCTION__ << "    array_completeness =" << array_completeness;
+        qDebug() << __FUNCTION__ << "    NAL_unit_type =" << NAL_unit_type;
+        qDebug() << __FUNCTION__ << "    numNalus =" << numNalus;
+
+        for (quint16 j = 0; j < numNalus; j++) {
+            quint16 nalUnitLength = Utilities::get16(file.read(2));
+            QByteArray nalUnit = file.read(nalUnitLength);
+            qDebug() << __FUNCTION__ << "        nalUnitLength =" << nalUnitLength;
+        }
+    }
+
+    qDebug() << __FUNCTION__
+             << "offset:" << offset
+             << "length:" << length
+             << "offset + length" << offset + length
+             << "file position:" << file.pos();
+
+    offset += length;
+    return true;
+}
+
+bool Metadata::ispeBox(quint32 &offset, quint32 &length)
+{
+    file.seek(offset + 12);
+    quint32 image_width = Utilities::get32(file.read(4));
+    quint32 image_height = Utilities::get32(file.read(4));
+    qDebug() << __FUNCTION__ << "image_width =" << image_width;
+    qDebug() << __FUNCTION__ << "image_height =" << image_height << "\n";
+
+    offset += length;       // temp for testing
+    return true;
+}
+
+bool Metadata::ipmaBox(quint32 &offset, quint32 &length)
+{
+    file.seek(offset + 8);
+    quint16 x = Utilities::get16(file.read(2));
+    auto version = (x & 0b1111000000000000) >> 12;             // first 4 bits
+    auto flags =   (x & 0b0000111111111111);             // first 4 bits
+
+    file.seek(offset + 12);
+    quint32 entry_count = Utilities::get32(file.read(4));
+    qDebug() << __FUNCTION__ << "entry_count =" << entry_count;
+
+    for (quint16 i = 0; i < entry_count; i++ ) {
+        quint32 item_ID;
+        if (version < 1) {
+            item_ID = Utilities::get16(file.read(2));
+        }
+        else {
+            item_ID = Utilities::get32(file.read(4));
+        }
+        qDebug() << __FUNCTION__ << "    entry #" << i;
+        qDebug() << __FUNCTION__ << "    item_ID =" << item_ID;
+        quint8 association_count = Utilities::get8(file.read(1));
+        qDebug() << __FUNCTION__ << "    association_count =" << association_count;
+
+        for (int j = 0; j < association_count; j++) {
+            int x = Utilities::get8(file.peek(1));
+            int essential =  (x & 0b10000000) >> 7;
+            quint16 property_index;
+            if (flags & 1) {
+                property_index = Utilities::get16(file.read(2));
+                property_index  = property_index & 0b0111111111111111;
+            }
+            else {
+                property_index = Utilities::get16(file.read(1));
+                property_index  = property_index & 0b01111111;
+            }
+            qDebug() << __FUNCTION__ << "        association #" << j;
+            qDebug() << __FUNCTION__ << "        essential =" << essential;
+            qDebug() << __FUNCTION__ << "        property_index =" << property_index;
+        }
+    }
+
+    qDebug() << __FUNCTION__
+             << "offset:" << offset
+             << "length:" << length
+             << "offset + length" << offset + length
+             << "file position:" << file.pos();
+
+    offset += length;       // temp for testing
+    return true;
+}
+
+bool Metadata::iprpBox(quint32 &offset, quint32 &length)
+{
+    QString type;
+    quint32 iprpEnd = offset + length;
+    file.seek(offset + 8);
+
+    // should be an ipco box next
+    quint32 ipcoLength;
+    QString ipcoType;
+    nextHeifBox(ipcoLength, ipcoType);
+
+    if (ipcoType != "ipco") {
+        // err
+        qDebug() << __FUNCTION__ << "ipco not found in iprp box";
+        return false;
+    }
+
+    offset += 16;
+
+    while (offset < iprpEnd) {
+        file.seek(offset);
+        nextHeifBox(length, type);
+        getHeifBox(type, offset, length);
+    }
+
+    offset = iprpEnd;
+
+    return true;
+}
+
+bool Metadata::mdatBox(quint32 &offset, quint32 &length)
+{
+    qDebug() << __FUNCTION__ << "offset =" << offset;
+    offset += length;       // temp for testing
+    return true;
+}
 
 void Metadata::clearMetadata()
 {

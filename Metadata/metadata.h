@@ -183,6 +183,7 @@ private:
     quint16 get16(quint32 offset);
     quint32 get32(QByteArray c);
     quint32 get32(quint32 offset);
+    LONGLONG get64(QByteArray c);
     double getReal(quint32 offset);
     quint32 findInFile(QString s, quint32 offset, quint32 range);
     bool readXMP(quint32 offset);
@@ -213,6 +214,11 @@ private:
     bool irefBox(quint32 &offset, quint32 &length);
     bool sitrBox(quint32 &offset, quint32 &length);  // Single Item Type Reference Box
     bool sitrBoxL(quint32 &offset, quint32 &length); // Single Item Type Reference Box Large
+    bool iprpBox(quint32 &offset, quint32 &length);
+    bool hvcCBox(quint32 &offset, quint32 &length);
+    bool ispeBox(quint32 &offset, quint32 &length);
+    bool ipmaBox(quint32 &offset, quint32 &length);
+    bool mdatBox(quint32 &offset, quint32 &length);
 
     QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
 
@@ -238,6 +244,7 @@ private:
         int ilocOffsetSize;
         int ilocLengthSize;
         int ilocBaseOffsetSize;
+        int ilocItemCount;
         int ilocExtentCount;
         quint32 irefOffset;
         quint32 irefLength;

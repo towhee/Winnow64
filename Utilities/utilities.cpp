@@ -61,3 +61,125 @@ QString Utilities::centeredRptHdr(QChar padChar, QString title)
     rpt << padChar;
     return hdr;
 }
+
+quint8 Utilities::get8(QByteArray c)
+{
+    return c[0]&0xFF;
+}
+
+quint16 Utilities::get16(QByteArray c, bool bigEndian)
+{
+    if (bigEndian) {
+        quint16 x = c[0]&0xFF;
+        x = static_cast<quint16>((x << 8) | (c[1]&0xFF));
+        return x;
+    }
+    else {
+        quint16 x = c[1]&0xFF;
+        x = static_cast<quint16>((x << 8) | (c[0]&0xFF));
+        return x;
+    }
+}
+
+quint32 Utilities::get24(QByteArray c, bool bigEndian)
+{
+    if (bigEndian) {
+        quint32 x = c[0]&0xFF;
+        x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
+        x = static_cast<quint32>((x << 8) | (c[2]&0xFF));
+        return x;
+    }
+    else {
+        quint32 x = c[2]&0xFF;
+        x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
+        x = static_cast<quint32>((x << 8) | (c[0]&0xFF));
+        return x;
+    }
+}
+
+quint32 Utilities::get32(QByteArray c, bool bigEndian)
+{
+    if (bigEndian) {
+        quint32 x = c[0]&0xFF;
+        x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
+        x = static_cast<quint32>((x << 8) | (c[2]&0xFF));
+        x = static_cast<quint32>((x << 8) | (c[3]&0xFF));
+        return x;
+    }
+    else {
+        quint32 x = c[3]&0xFF;
+        x = static_cast<quint32>((x << 8) | (c[2]&0xFF));
+        x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
+        x = static_cast<quint32>((x << 8) | (c[0]&0xFF));
+        return x;
+    }
+}
+
+quint64 Utilities::get40(QByteArray c, bool bigEndian)
+{
+    if (bigEndian) {
+        quint64 x = c[0]&0xFF;
+        x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[2]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[3]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[4]&0xFF));
+        return x;
+    }
+    else {
+        quint64 x = c[4]&0xFF;
+        x = static_cast<quint64>((x << 8) | (c[3]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[2]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[0]&0xFF));
+        return x;
+    }
+}
+
+quint64 Utilities::get48(QByteArray c, bool bigEndian)
+{
+    if (bigEndian) {
+        quint64 x = c[0]&0xFF;
+        x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[2]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[3]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[4]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[5]&0xFF));
+        return x;
+    }
+    else {
+        quint64 x = c[5]&0xFF;
+        x = static_cast<quint64>((x << 8) | (c[4]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[3]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[2]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[0]&0xFF));
+        return x;
+    }
+}
+
+quint64 Utilities::get64(QByteArray c, bool bigEndian)
+{
+    if (bigEndian) {
+        quint64 x = c[0]&0xFF;
+        x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[2]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[3]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[4]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[5]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[6]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[7]&0xFF));
+        return x;
+    }
+    else {
+        quint64 x = c[7]&0xFF;
+        x = static_cast<quint64>((x << 8) | (c[6]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[5]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[4]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[3]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[2]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
+        x = static_cast<quint64>((x << 8) | (c[0]&0xFF));
+        return x;
+    }
+}
+
