@@ -4627,112 +4627,12 @@ bool Metadata::formatJPG(quint32 startOffset)
 
 bool Metadata::formatHEIF()
 {
-//    file.setFileName("D:/Pictures/_HEIC/iphone.HEIC");
-    file.setFileName("D:/Pictures/_HEIC/example.HEIC");
+    file.setFileName("D:/Pictures/_HEIC/iphone.HEIC");
+//    file.setFileName("D:/Pictures/_HEIC/example.HEIC");
     file.open(QIODevice::ReadOnly);
-
-    order = 0x4D4D;
-
-    quint32 offset = 0;
-    quint32 length;
-    QString type;
-    /*
-    Source: Part 12: ISO base media file format (ISO/IEC 14496-12)
-    size is an integer that specifies the number of bytes in this box, including all its
-    fields and contained boxes; if size is 1 then the actual size is in the field largesize;
-    if size is 0, then this box is the last one in the file, and its contents extend to the
-    end of the file (normally only used for a Media Data Box)
-
-    type identifies the box type; standard boxes use a compact type, which is normally four
-    printable characters, to permit ease of identification, and is shown so in the boxes
-    below. User extensions use an extended type; in this case, the type field is set to
-    ‘uuid’.
-    */
-
-    quint32 eof = file.size();
-    while (offset < eof) {
-        file.seek(offset);
-        nextHeifBox(length, type);
-        getHeifBox(type, offset, length);
-    }
-
-    return true;
-
-    // ftyp
-    nextHeifBox(length, type);
-    getHeifBox(type, offset, length);
-
-    // meta
-    file.seek(offset);
-    nextHeifBox(length, type);
-    getHeifBox(type, offset, length);
-
-        // hdlr
-        file.seek(offset);
-        nextHeifBox(length, type);
-        getHeifBox(type, offset, length);
-
-        // pitm
-        file.seek(offset);
-        nextHeifBox(length, type);
-        getHeifBox(type, offset, length);
-
-        // iloc
-        file.seek(offset);
-        nextHeifBox(length, type);
-        getHeifBox(type, offset, length);
-
-        // iinf
-        file.seek(offset);
-        nextHeifBox(length, type);
-        getHeifBox(type, offset, length);
-
-        // iref
-        file.seek(offset);
-        nextHeifBox(length, type);
-        getHeifBox(type, offset, length);
-
-        // iprp
-        file.seek(offset);
-        nextHeifBox(length, type);
-        getHeifBox(type, offset, length);
-
-            // hvvC
-            file.seek(offset);
-            nextHeifBox(length, type);
-            getHeifBox(type, offset, length);
-
-            //  ISPE
-            file.seek(offset);
-            nextHeifBox(length, type);
-            getHeifBox(type, offset, length);
-
-            // hvvC
-            file.seek(offset);
-            nextHeifBox(length, type);
-            getHeifBox(type, offset, length);
-
-            //  ISPE
-            file.seek(offset);
-            nextHeifBox(length, type);
-            getHeifBox(type, offset, length);
-
-            // hvvC
-            file.seek(offset);
-            nextHeifBox(length, type);
-            getHeifBox(type, offset, length);
-
-            // hvvC
-            file.seek(offset);
-            nextHeifBox(length, type);
-            getHeifBox(type, offset, length);
-
-        // ipma
-        file.seek(offset);
-        nextHeifBox(length, type);
-        getHeifBox(type, offset, length);
-
-
+    Heic *heic = new Heic(file);
+    // do some stuff
+    delete heic;
     return true;
 }
 

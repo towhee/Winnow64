@@ -62,6 +62,16 @@ QString Utilities::centeredRptHdr(QChar padChar, QString title)
     return hdr;
 }
 
+int Utilities::get4_1st(QByteArray c)
+{
+    return static_cast<int>(c[0] >> 4);
+}
+
+int Utilities::get4_2nd(QByteArray c)
+{
+    return static_cast<int>(c[0]&0xF);
+}
+
 quint8 Utilities::get8(QByteArray c)
 {
     return c[0]&0xFF;
@@ -183,3 +193,21 @@ quint64 Utilities::get64(QByteArray c, bool bigEndian)
     }
 }
 
+QString Utilities::getCString(QFile &file)
+{
+    quint32 offset = static_cast<quint32>(file.pos());
+    uint byte = 1;
+    int length = -1;
+    while (byte) {
+        byte = get8(file.read(1));
+        length++;
+    }
+    if (length) {
+        file.seek(offset);
+        return(file.read(length));
+    }
+    else {
+        file.seek(offset + 1);
+        return "";
+    }
+}

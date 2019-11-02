@@ -16,6 +16,8 @@
 #include "xmp.h"
 #include "ui_metadatareport.h"
 
+#include "ImageFormats/Heic/heic.h"
+
 class IFDData
 {
 public:
@@ -133,6 +135,7 @@ public:
 
     bool writeMetadata(const QString &imageFileName, ImageMetadata m, QByteArray &buffer);
 
+    QFile file;
     bool okToReadXmp;
     bool readEssentialMetadata;
     bool readNonEssentialMetadata;
@@ -141,7 +144,6 @@ public:
     QString nikonLensCode;
 
 private:
-    QFile file;
     QHash<uint, IFDData> ifdDataHash;
     QHash<uint, IFDData>::iterator ifdIter;
     QHash<quint32, QString> exifHash, ifdHash, gpsHash, segCodeHash,
@@ -236,19 +238,19 @@ private:
     bool formatDNG();
 //    bool formatHEIF();
 
-    // heif variables
-    struct Heif {
-        quint32 metaOffset;
-        quint32 metaLength;
-        quint16 pitmId;
-        int ilocOffsetSize;
-        int ilocLengthSize;
-        int ilocBaseOffsetSize;
-        int ilocItemCount;
-        int ilocExtentCount;
-        quint32 irefOffset;
-        quint32 irefLength;
-    } heif;
+//    // heif variables
+//    struct Heif {
+//        quint32 metaOffset;
+//        quint32 metaLength;
+//        quint16 pitmId;
+//        int ilocOffsetSize;
+//        int ilocLengthSize;
+//        int ilocBaseOffsetSize;
+//        int ilocItemCount;
+//        int ilocExtentCount;
+//        quint32 irefOffset;
+//        quint32 irefLength;
+//    } heif;
 
 signals:
 
