@@ -73,6 +73,6 @@ public:
     QString err = "";
     QString searchStr = "";
 };
-
 Q_DECLARE_METATYPE(ImageMetadata)
+
 #endif // IMAGEMETADATA_H

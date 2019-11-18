@@ -10,6 +10,10 @@
 //#include <QThread>
 
 #include "Main/global.h"
+#include "Metadata/exif.h"
+#include "Metadata/ifd.h"
+#include "Metadata/iptc.h"
+#include "Metadata/metareport.h"
 #include "Utilities/utilities.h"
 #include "Cache/tshash.h"
 #include "Metadata/imagemetadata.h"
@@ -17,6 +21,7 @@
 #include "ui_metadatareport.h"
 
 #include "ImageFormats/Heic/heic.h"
+#include "ImageFormats/Jpeg/jpeg.h"
 
 class IFDData
 {
@@ -142,8 +147,18 @@ public:
     bool foundTifThumb;
 
     QString nikonLensCode;
+    Jpeg *jpeg = nullptr;
 
 private:
+    // Exif
+    Exif *exif = nullptr;
+    IFD *ifd = nullptr;
+    IPTC *iptc = nullptr;
+
+    // formats
+//    Heic *heic = nullptr;
+
+    // hash
     QHash<uint, IFDData> ifdDataHash;
     QHash<uint, IFDData>::iterator ifdIter;
     QHash<quint32, QString> exifHash, ifdHash, gpsHash, segCodeHash,
@@ -152,6 +167,7 @@ private:
     QHash<QString, quint32> segmentHash;
 //    QHash<QByteArray, QString> nikonLensHash;
     QHash<QString, QString> nikonLensHash;
+    QHash<int, QString> sonyAFAreaModeHash;
     QHash<int, QString> orientationDescription;
     QHash<int,int> orientationToDegrees;
     QHash<int,int> orientationFromDegrees;
@@ -177,6 +193,7 @@ private:
     void initFujiMakerHash();
     void initPanasonicMakerHash();
     void initNikonLensHash();
+    void initSonyAFAreaModeHash();
 
     int get4_1st(QByteArray c);
     int get4_2nd(QByteArray c);

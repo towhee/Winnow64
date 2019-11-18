@@ -1,4 +1,7 @@
 BUGS
+- Combine Raw+Jpg can crash
+- Navigating thumbs in large folders while still opening can crash
+- Not ingesting all jpgs with raws
 - Open with xmp sidecar over-writing old car - cancel for now
 - Ingest date when different dates in ingest file list
 - Losing red setting

@@ -235,6 +235,7 @@ status information, such as number of items picked or current item selected.
     }
 
     // set editable fields
+//    ok->itemFromIndex(ok->index(ModelRow, 1, imageInfoIdx))->setEditable(true);
     ok->itemFromIndex(ok->index(TitleRow, 1, tagInfoIdx))->setEditable(true);
     ok->itemFromIndex(ok->index(CreatorRow, 1, tagInfoIdx))->setEditable(true);
     ok->itemFromIndex(ok->index(CopyrightRow, 1, tagInfoIdx))->setEditable(true);

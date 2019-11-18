@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'ingestdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.13.0
+** Created by: Qt User Interface Compiler version 5.13.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -23,6 +23,7 @@
 #include <QtWidgets/QRadioButton>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QTabWidget>
+#include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -31,12 +32,13 @@ class Ui_IngestDlg
 {
 public:
     QGroupBox *seqGroupBox;
+    QVBoxLayout *verticalLayout;
     QLabel *folderPathLabel;
     QLabel *folderPathLabel_2;
     QLabel *folderPathLabel_3;
     QLabel *folderPathLabel_4;
     QProgressBar *progressBar;
-    QGroupBox *groupBox_2;
+    QGroupBox *ingestToGroupBox;
     QPushButton *selectFolderBtn;
     QRadioButton *autoRadio;
     QRadioButton *manualRadio;
@@ -65,11 +67,11 @@ public:
     QPushButton *helpBtn;
     QPushButton *selectFolderBtn_2;
     QLabel *manualFolderLabel_2;
-    QGroupBox *groupBox_4;
+    QGroupBox *filenameGroupBox;
     QLabel *existingSequenceLabel;
     QLabel *startSeqLabel;
     QSpinBox *spinBoxStartNumber;
-    QLabel *label_5;
+    QLabel *templateLabel2;
     QComboBox *filenameTemplatesCB;
     QPushButton *filenameTemplatesBtn;
     QLabel *statsLabel;
@@ -86,26 +88,27 @@ public:
     {
         if (IngestDlg->objectName().isEmpty())
             IngestDlg->setObjectName(QString::fromUtf8("IngestDlg"));
-        IngestDlg->resize(796, 783);
-        QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        IngestDlg->resize(873, 861);
+        QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(IngestDlg->sizePolicy().hasHeightForWidth());
         IngestDlg->setSizePolicy(sizePolicy);
         QFont font;
-        font.setPointSize(16);
+        font.setPointSize(14);
         IngestDlg->setFont(font);
         IngestDlg->setModal(false);
         seqGroupBox = new QGroupBox(IngestDlg);
         seqGroupBox->setObjectName(QString::fromUtf8("seqGroupBox"));
-        seqGroupBox->setGeometry(QRect(20, 510, 761, 111));
+        seqGroupBox->setGeometry(QRect(20, 550, 831, 131));
         seqGroupBox->setMinimumSize(QSize(381, 0));
-        QFont font1;
-        font1.setPointSize(13);
-        seqGroupBox->setFont(font1);
+        seqGroupBox->setFont(font);
+        verticalLayout = new QVBoxLayout(seqGroupBox);
+        verticalLayout->setSpacing(0);
+        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+        verticalLayout->setContentsMargins(-1, 9, -1, 9);
         folderPathLabel = new QLabel(seqGroupBox);
         folderPathLabel->setObjectName(QString::fromUtf8("folderPathLabel"));
-        folderPathLabel->setGeometry(QRect(20, 20, 721, 20));
         QPalette palette;
         QBrush brush(QColor(180, 180, 120, 255));
         brush.setStyle(Qt::SolidPattern);
@@ -134,14 +137,14 @@ public:
         palette.setBrush(QPalette::Disabled, QPalette::PlaceholderText, brush3);
 #endif
         folderPathLabel->setPalette(palette);
-        QFont font2;
-        font2.setPointSize(10);
-        folderPathLabel->setFont(font2);
+        folderPathLabel->setFont(font);
         folderPathLabel->setStyleSheet(QString::fromUtf8("color:rgb(180,180,120)"));
         folderPathLabel->setFrameShape(QFrame::Box);
+
+        verticalLayout->addWidget(folderPathLabel);
+
         folderPathLabel_2 = new QLabel(seqGroupBox);
         folderPathLabel_2->setObjectName(QString::fromUtf8("folderPathLabel_2"));
-        folderPathLabel_2->setGeometry(QRect(20, 40, 721, 20));
         QPalette palette1;
         palette1.setBrush(QPalette::Active, QPalette::WindowText, brush);
         palette1.setBrush(QPalette::Active, QPalette::Text, brush);
@@ -168,12 +171,14 @@ public:
         palette1.setBrush(QPalette::Disabled, QPalette::PlaceholderText, brush6);
 #endif
         folderPathLabel_2->setPalette(palette1);
-        folderPathLabel_2->setFont(font2);
+        folderPathLabel_2->setFont(font);
         folderPathLabel_2->setStyleSheet(QString::fromUtf8("color:rgb(180,180,120)"));
         folderPathLabel_2->setFrameShape(QFrame::Box);
+
+        verticalLayout->addWidget(folderPathLabel_2);
+
         folderPathLabel_3 = new QLabel(seqGroupBox);
         folderPathLabel_3->setObjectName(QString::fromUtf8("folderPathLabel_3"));
-        folderPathLabel_3->setGeometry(QRect(20, 60, 721, 20));
         QPalette palette2;
         QBrush brush7(QColor(0, 0, 0, 255));
         brush7.setStyle(Qt::SolidPattern);
@@ -198,11 +203,13 @@ public:
         palette2.setBrush(QPalette::Disabled, QPalette::PlaceholderText, brush11);
 #endif
         folderPathLabel_3->setPalette(palette2);
-        folderPathLabel_3->setFont(font2);
+        folderPathLabel_3->setFont(font);
         folderPathLabel_3->setFrameShape(QFrame::Box);
+
+        verticalLayout->addWidget(folderPathLabel_3);
+
         folderPathLabel_4 = new QLabel(seqGroupBox);
         folderPathLabel_4->setObjectName(QString::fromUtf8("folderPathLabel_4"));
-        folderPathLabel_4->setGeometry(QRect(20, 80, 721, 20));
         QPalette palette3;
         palette3.setBrush(QPalette::Active, QPalette::WindowText, brush);
         palette3.setBrush(QPalette::Active, QPalette::Text, brush);
@@ -229,94 +236,107 @@ public:
         palette3.setBrush(QPalette::Disabled, QPalette::PlaceholderText, brush14);
 #endif
         folderPathLabel_4->setPalette(palette3);
-        folderPathLabel_4->setFont(font2);
+        folderPathLabel_4->setFont(font);
         folderPathLabel_4->setStyleSheet(QString::fromUtf8("color:rgb(180,180,120)"));
         folderPathLabel_4->setFrameShape(QFrame::Box);
+
+        verticalLayout->addWidget(folderPathLabel_4);
+
         progressBar = new QProgressBar(IngestDlg);
         progressBar->setObjectName(QString::fromUtf8("progressBar"));
-        progressBar->setGeometry(QRect(20, 700, 691, 20));
-        progressBar->setFont(font2);
+        progressBar->setGeometry(QRect(20, 760, 831, 20));
+        progressBar->setFont(font);
         progressBar->setValue(0);
         progressBar->setAlignment(Qt::AlignCenter);
-        groupBox_2 = new QGroupBox(IngestDlg);
-        groupBox_2->setObjectName(QString::fromUtf8("groupBox_2"));
-        groupBox_2->setGeometry(QRect(20, 20, 761, 351));
-        groupBox_2->setFont(font1);
-        selectFolderBtn = new QPushButton(groupBox_2);
+        ingestToGroupBox = new QGroupBox(IngestDlg);
+        ingestToGroupBox->setObjectName(QString::fromUtf8("ingestToGroupBox"));
+        ingestToGroupBox->setGeometry(QRect(20, 20, 831, 391));
+        ingestToGroupBox->setFont(font);
+        selectFolderBtn = new QPushButton(ingestToGroupBox);
         selectFolderBtn->setObjectName(QString::fromUtf8("selectFolderBtn"));
         selectFolderBtn->setEnabled(true);
-        selectFolderBtn->setGeometry(QRect(90, 286, 101, 25));
-        QFont font3;
-        font3.setPointSize(13);
-        font3.setBold(false);
-        font3.setWeight(50);
-        selectFolderBtn->setFont(font3);
+        selectFolderBtn->setGeometry(QRect(120, 320, 101, 25));
+        QFont font1;
+        font1.setPointSize(14);
+        font1.setBold(false);
+        font1.setWeight(50);
+        selectFolderBtn->setFont(font1);
         selectFolderBtn->setAutoDefault(false);
         selectFolderBtn->setFlat(false);
-        autoRadio = new QRadioButton(groupBox_2);
+        autoRadio = new QRadioButton(ingestToGroupBox);
         autoRadio->setObjectName(QString::fromUtf8("autoRadio"));
-        autoRadio->setGeometry(QRect(20, 30, 471, 21));
-        autoRadio->setFont(font3);
-        manualRadio = new QRadioButton(groupBox_2);
+        autoRadio->setGeometry(QRect(20, 36, 531, 21));
+        autoRadio->setFont(font1);
+        manualRadio = new QRadioButton(ingestToGroupBox);
         manualRadio->setObjectName(QString::fromUtf8("manualRadio"));
-        manualRadio->setGeometry(QRect(20, 260, 511, 17));
-        manualRadio->setFont(font3);
-        manualFolderLabel = new QLabel(groupBox_2);
+        manualRadio->setGeometry(QRect(20, 284, 511, 17));
+        manualRadio->setFont(font1);
+        manualFolderLabel = new QLabel(ingestToGroupBox);
         manualFolderLabel->setObjectName(QString::fromUtf8("manualFolderLabel"));
-        manualFolderLabel->setGeometry(QRect(210, 290, 461, 20));
-        manualFolderLabel->setFont(font1);
+        manualFolderLabel->setGeometry(QRect(240, 320, 561, 25));
+        manualFolderLabel->setFont(font);
         manualFolderLabel->setStyleSheet(QString::fromUtf8(""));
         manualFolderLabel->setFrameShape(QFrame::Box);
-        autoIngestTab = new QTabWidget(groupBox_2);
+        autoIngestTab = new QTabWidget(ingestToGroupBox);
         autoIngestTab->setObjectName(QString::fromUtf8("autoIngestTab"));
-        autoIngestTab->setGeometry(QRect(40, 60, 701, 181));
-        autoIngestTab->setFont(font1);
+        autoIngestTab->setGeometry(QRect(40, 70, 771, 191));
+        autoIngestTab->setFont(font);
         primaryTab = new QWidget();
         primaryTab->setObjectName(QString::fromUtf8("primaryTab"));
         destinationFolderLabel = new QLabel(primaryTab);
         destinationFolderLabel->setObjectName(QString::fromUtf8("destinationFolderLabel"));
-        destinationFolderLabel->setGeometry(QRect(9, 120, 161, 20));
-        destinationFolderLabel->setFont(font1);
+        destinationFolderLabel->setGeometry(QRect(20, 120, 161, 20));
+        destinationFolderLabel->setFont(font);
         destinationFolderLabel->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         folderLabel = new QLabel(primaryTab);
         folderLabel->setObjectName(QString::fromUtf8("folderLabel"));
-        folderLabel->setGeometry(QRect(190, 120, 491, 20));
-        folderLabel->setFont(font1);
+        folderLabel->setGeometry(QRect(200, 120, 561, 25));
+        folderLabel->setFont(font);
         folderLabel->setStyleSheet(QString::fromUtf8(""));
         folderLabel->setFrameShape(QFrame::Box);
         templateLabel1 = new QLabel(primaryTab);
         templateLabel1->setObjectName(QString::fromUtf8("templateLabel1"));
-        templateLabel1->setGeometry(QRect(30, 50, 140, 20));
-        templateLabel1->setFont(font1);
+        templateLabel1->setGeometry(QRect(41, 50, 140, 20));
+        templateLabel1->setFont(font);
         templateLabel1->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         selectRootFolderBtn = new QPushButton(primaryTab);
         selectRootFolderBtn->setObjectName(QString::fromUtf8("selectRootFolderBtn"));
-        selectRootFolderBtn->setGeometry(QRect(50, 16, 120, 25));
-        selectRootFolderBtn->setFont(font3);
+        selectRootFolderBtn->setGeometry(QRect(61, 16, 120, 25));
+        QSizePolicy sizePolicy1(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        sizePolicy1.setHorizontalStretch(0);
+        sizePolicy1.setVerticalStretch(0);
+        sizePolicy1.setHeightForWidth(selectRootFolderBtn->sizePolicy().hasHeightForWidth());
+        selectRootFolderBtn->setSizePolicy(sizePolicy1);
+        selectRootFolderBtn->setFont(font1);
         selectRootFolderBtn->setAutoDefault(false);
         selectRootFolderBtn->setFlat(false);
         pathTemplatesCB = new QComboBox(primaryTab);
         pathTemplatesCB->setObjectName(QString::fromUtf8("pathTemplatesCB"));
-        pathTemplatesCB->setGeometry(QRect(190, 50, 320, 26));
-        pathTemplatesCB->setFont(font1);
+        pathTemplatesCB->setGeometry(QRect(200, 50, 320, 26));
+        pathTemplatesCB->setFont(font);
         descriptionLineEdit = new QLineEdit(primaryTab);
         descriptionLineEdit->setObjectName(QString::fromUtf8("descriptionLineEdit"));
-        descriptionLineEdit->setGeometry(QRect(185, 90, 491, 20));
-        descriptionLineEdit->setFont(font1);
+        descriptionLineEdit->setGeometry(QRect(195, 88, 561, 25));
+        QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        sizePolicy2.setHorizontalStretch(0);
+        sizePolicy2.setVerticalStretch(0);
+        sizePolicy2.setHeightForWidth(descriptionLineEdit->sizePolicy().hasHeightForWidth());
+        descriptionLineEdit->setSizePolicy(sizePolicy2);
+        descriptionLineEdit->setFont(font);
         folderDescription = new QLabel(primaryTab);
         folderDescription->setObjectName(QString::fromUtf8("folderDescription"));
-        folderDescription->setGeometry(QRect(-1, 91, 171, 20));
-        folderDescription->setFont(font1);
+        folderDescription->setGeometry(QRect(10, 91, 171, 20));
+        folderDescription->setFont(font);
         folderDescription->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         rootFolderLabel = new QLabel(primaryTab);
         rootFolderLabel->setObjectName(QString::fromUtf8("rootFolderLabel"));
-        rootFolderLabel->setGeometry(QRect(190, 20, 491, 20));
-        rootFolderLabel->setFont(font1);
+        rootFolderLabel->setGeometry(QRect(200, 16, 561, 25));
+        rootFolderLabel->setFont(font);
         rootFolderLabel->setFrameShape(QFrame::Box);
         pathTemplatesBtn = new QPushButton(primaryTab);
         pathTemplatesBtn->setObjectName(QString::fromUtf8("pathTemplatesBtn"));
-        pathTemplatesBtn->setGeometry(QRect(530, 50, 151, 25));
-        pathTemplatesBtn->setFont(font3);
+        pathTemplatesBtn->setGeometry(QRect(600, 50, 151, 25));
+        pathTemplatesBtn->setFont(font1);
         pathTemplatesBtn->setToolTipDuration(-3);
         pathTemplatesBtn->setAutoDefault(false);
         pathTemplatesBtn->setFlat(false);
@@ -325,125 +345,133 @@ public:
         backupTab->setObjectName(QString::fromUtf8("backupTab"));
         folderLabel_2 = new QLabel(backupTab);
         folderLabel_2->setObjectName(QString::fromUtf8("folderLabel_2"));
-        folderLabel_2->setGeometry(QRect(190, 120, 491, 20));
-        folderLabel_2->setFont(font1);
+        folderLabel_2->setGeometry(QRect(200, 120, 561, 25));
+        folderLabel_2->setFont(font);
         folderLabel_2->setStyleSheet(QString::fromUtf8(""));
         folderLabel_2->setFrameShape(QFrame::Box);
         templateLabel1_2 = new QLabel(backupTab);
         templateLabel1_2->setObjectName(QString::fromUtf8("templateLabel1_2"));
-        templateLabel1_2->setGeometry(QRect(30, 50, 140, 20));
-        templateLabel1_2->setFont(font1);
+        templateLabel1_2->setGeometry(QRect(-10, 50, 191, 20));
+        templateLabel1_2->setFont(font);
         templateLabel1_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         selectRootFolderBtn_2 = new QPushButton(backupTab);
         selectRootFolderBtn_2->setObjectName(QString::fromUtf8("selectRootFolderBtn_2"));
-        selectRootFolderBtn_2->setGeometry(QRect(50, 16, 120, 25));
-        selectRootFolderBtn_2->setFont(font3);
+        selectRootFolderBtn_2->setGeometry(QRect(61, 16, 120, 25));
+        selectRootFolderBtn_2->setFont(font1);
         selectRootFolderBtn_2->setAutoDefault(false);
         selectRootFolderBtn_2->setFlat(false);
         pathTemplatesCB_2 = new QComboBox(backupTab);
         pathTemplatesCB_2->setObjectName(QString::fromUtf8("pathTemplatesCB_2"));
-        pathTemplatesCB_2->setGeometry(QRect(190, 50, 320, 26));
-        pathTemplatesCB_2->setFont(font1);
+        pathTemplatesCB_2->setGeometry(QRect(200, 50, 320, 26));
+        pathTemplatesCB_2->setFont(font);
         descriptionLineEdit_2 = new QLineEdit(backupTab);
         descriptionLineEdit_2->setObjectName(QString::fromUtf8("descriptionLineEdit_2"));
-        descriptionLineEdit_2->setGeometry(QRect(185, 90, 491, 20));
-        descriptionLineEdit_2->setFont(font1);
+        descriptionLineEdit_2->setGeometry(QRect(195, 90, 561, 25));
+        sizePolicy1.setHeightForWidth(descriptionLineEdit_2->sizePolicy().hasHeightForWidth());
+        descriptionLineEdit_2->setSizePolicy(sizePolicy1);
+        descriptionLineEdit_2->setFont(font);
         folderDescription_2 = new QLabel(backupTab);
         folderDescription_2->setObjectName(QString::fromUtf8("folderDescription_2"));
-        folderDescription_2->setGeometry(QRect(30, 91, 140, 20));
-        folderDescription_2->setFont(font1);
+        folderDescription_2->setGeometry(QRect(-10, 91, 191, 20));
+        folderDescription_2->setFont(font);
         folderDescription_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         destinationFolderLabel_2 = new QLabel(backupTab);
         destinationFolderLabel_2->setObjectName(QString::fromUtf8("destinationFolderLabel_2"));
-        destinationFolderLabel_2->setGeometry(QRect(30, 120, 140, 20));
-        destinationFolderLabel_2->setFont(font1);
+        destinationFolderLabel_2->setGeometry(QRect(-10, 120, 191, 20));
+        destinationFolderLabel_2->setFont(font);
         destinationFolderLabel_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         rootFolderLabel_2 = new QLabel(backupTab);
         rootFolderLabel_2->setObjectName(QString::fromUtf8("rootFolderLabel_2"));
-        rootFolderLabel_2->setGeometry(QRect(190, 20, 491, 20));
-        rootFolderLabel_2->setFont(font1);
+        rootFolderLabel_2->setGeometry(QRect(200, 16, 561, 25));
+        rootFolderLabel_2->setFont(font);
         rootFolderLabel_2->setFrameShape(QFrame::Box);
         pathTemplatesBtn_2 = new QPushButton(backupTab);
         pathTemplatesBtn_2->setObjectName(QString::fromUtf8("pathTemplatesBtn_2"));
-        pathTemplatesBtn_2->setGeometry(QRect(530, 50, 151, 25));
-        pathTemplatesBtn_2->setFont(font3);
+        pathTemplatesBtn_2->setGeometry(QRect(600, 50, 151, 25));
+        QSizePolicy sizePolicy3(QSizePolicy::Minimum, QSizePolicy::Preferred);
+        sizePolicy3.setHorizontalStretch(0);
+        sizePolicy3.setVerticalStretch(0);
+        sizePolicy3.setHeightForWidth(pathTemplatesBtn_2->sizePolicy().hasHeightForWidth());
+        pathTemplatesBtn_2->setSizePolicy(sizePolicy3);
+        pathTemplatesBtn_2->setFont(font1);
         pathTemplatesBtn_2->setToolTipDuration(-3);
         pathTemplatesBtn_2->setAutoDefault(false);
         pathTemplatesBtn_2->setFlat(false);
         autoIngestTab->addTab(backupTab, QString());
-        helpBtn = new QPushButton(groupBox_2);
+        helpBtn = new QPushButton(ingestToGroupBox);
         helpBtn->setObjectName(QString::fromUtf8("helpBtn"));
-        helpBtn->setGeometry(QRect(570, 30, 151, 25));
-        QSizePolicy sizePolicy1(QSizePolicy::Preferred, QSizePolicy::Preferred);
-        sizePolicy1.setHorizontalStretch(0);
-        sizePolicy1.setVerticalStretch(0);
-        sizePolicy1.setHeightForWidth(helpBtn->sizePolicy().hasHeightForWidth());
-        helpBtn->setSizePolicy(sizePolicy1);
-        helpBtn->setFont(font1);
+        helpBtn->setGeometry(QRect(640, 36, 151, 25));
+        sizePolicy.setHeightForWidth(helpBtn->sizePolicy().hasHeightForWidth());
+        helpBtn->setSizePolicy(sizePolicy);
+        QFont font2;
+        font2.setPointSize(13);
+        helpBtn->setFont(font2);
         helpBtn->setAutoDefault(false);
-        selectFolderBtn_2 = new QPushButton(groupBox_2);
+        selectFolderBtn_2 = new QPushButton(ingestToGroupBox);
         selectFolderBtn_2->setObjectName(QString::fromUtf8("selectFolderBtn_2"));
         selectFolderBtn_2->setEnabled(true);
-        selectFolderBtn_2->setGeometry(QRect(90, 316, 101, 25));
-        selectFolderBtn_2->setFont(font3);
+        selectFolderBtn_2->setGeometry(QRect(120, 350, 101, 25));
+        selectFolderBtn_2->setFont(font1);
         selectFolderBtn_2->setAutoDefault(false);
         selectFolderBtn_2->setFlat(false);
-        manualFolderLabel_2 = new QLabel(groupBox_2);
+        manualFolderLabel_2 = new QLabel(ingestToGroupBox);
         manualFolderLabel_2->setObjectName(QString::fromUtf8("manualFolderLabel_2"));
-        manualFolderLabel_2->setGeometry(QRect(210, 320, 461, 20));
-        manualFolderLabel_2->setFont(font1);
+        manualFolderLabel_2->setGeometry(QRect(240, 350, 561, 25));
+        manualFolderLabel_2->setFont(font);
         manualFolderLabel_2->setStyleSheet(QString::fromUtf8(""));
         manualFolderLabel_2->setFrameShape(QFrame::Box);
-        groupBox_4 = new QGroupBox(IngestDlg);
-        groupBox_4->setObjectName(QString::fromUtf8("groupBox_4"));
-        groupBox_4->setGeometry(QRect(20, 390, 761, 101));
-        groupBox_4->setFont(font1);
-        existingSequenceLabel = new QLabel(groupBox_4);
+        filenameGroupBox = new QGroupBox(IngestDlg);
+        filenameGroupBox->setObjectName(QString::fromUtf8("filenameGroupBox"));
+        filenameGroupBox->setGeometry(QRect(20, 430, 831, 101));
+        filenameGroupBox->setFont(font);
+        existingSequenceLabel = new QLabel(filenameGroupBox);
         existingSequenceLabel->setObjectName(QString::fromUtf8("existingSequenceLabel"));
-        existingSequenceLabel->setGeometry(QRect(270, 70, 471, 20));
-        existingSequenceLabel->setFont(font1);
+        existingSequenceLabel->setGeometry(QRect(310, 70, 491, 25));
+        existingSequenceLabel->setFont(font);
         existingSequenceLabel->setStyleSheet(QString::fromUtf8(""));
         existingSequenceLabel->setFrameShape(QFrame::Box);
-        startSeqLabel = new QLabel(groupBox_4);
+        startSeqLabel = new QLabel(filenameGroupBox);
         startSeqLabel->setObjectName(QString::fromUtf8("startSeqLabel"));
-        startSeqLabel->setGeometry(QRect(20, 71, 171, 20));
-        startSeqLabel->setFont(font1);
+        startSeqLabel->setGeometry(QRect(20, 71, 201, 20));
+        startSeqLabel->setFont(font);
         startSeqLabel->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
-        spinBoxStartNumber = new QSpinBox(groupBox_4);
+        spinBoxStartNumber = new QSpinBox(filenameGroupBox);
         spinBoxStartNumber->setObjectName(QString::fromUtf8("spinBoxStartNumber"));
-        spinBoxStartNumber->setGeometry(QRect(210, 70, 51, 22));
-        spinBoxStartNumber->setFont(font1);
+        spinBoxStartNumber->setGeometry(QRect(240, 70, 51, 22));
+        spinBoxStartNumber->setFont(font);
         spinBoxStartNumber->setMinimum(1);
         spinBoxStartNumber->setMaximum(9999);
-        label_5 = new QLabel(groupBox_4);
-        label_5->setObjectName(QString::fromUtf8("label_5"));
-        label_5->setGeometry(QRect(50, 30, 140, 20));
-        label_5->setFont(font1);
-        label_5->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
-        filenameTemplatesCB = new QComboBox(groupBox_4);
+        templateLabel2 = new QLabel(filenameGroupBox);
+        templateLabel2->setObjectName(QString::fromUtf8("templateLabel2"));
+        templateLabel2->setGeometry(QRect(80, 35, 140, 20));
+        templateLabel2->setFont(font);
+        templateLabel2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
+        filenameTemplatesCB = new QComboBox(filenameGroupBox);
         filenameTemplatesCB->setObjectName(QString::fromUtf8("filenameTemplatesCB"));
-        filenameTemplatesCB->setGeometry(QRect(210, 30, 321, 26));
-        filenameTemplatesCB->setFont(font1);
-        filenameTemplatesBtn = new QPushButton(groupBox_4);
+        filenameTemplatesCB->setGeometry(QRect(240, 35, 351, 26));
+        filenameTemplatesCB->setFont(font);
+        filenameTemplatesBtn = new QPushButton(filenameGroupBox);
         filenameTemplatesBtn->setObjectName(QString::fromUtf8("filenameTemplatesBtn"));
-        filenameTemplatesBtn->setGeometry(QRect(570, 30, 161, 25));
-        filenameTemplatesBtn->setFont(font3);
+        filenameTemplatesBtn->setGeometry(QRect(630, 35, 161, 25));
+        sizePolicy3.setHeightForWidth(filenameTemplatesBtn->sizePolicy().hasHeightForWidth());
+        filenameTemplatesBtn->setSizePolicy(sizePolicy3);
+        filenameTemplatesBtn->setFont(font1);
         filenameTemplatesBtn->setAutoDefault(false);
         filenameTemplatesBtn->setFlat(false);
         statsLabel = new QLabel(IngestDlg);
         statsLabel->setObjectName(QString::fromUtf8("statsLabel"));
-        statsLabel->setGeometry(QRect(20, 740, 351, 16));
-        statsLabel->setFont(font1);
+        statsLabel->setGeometry(QRect(20, 800, 351, 31));
+        statsLabel->setFont(font);
         layoutWidget = new QWidget(IngestDlg);
         layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
-        layoutWidget->setGeometry(QRect(520, 730, 251, 43));
+        layoutWidget->setGeometry(QRect(600, 790, 251, 43));
         horizontalLayout = new QHBoxLayout(layoutWidget);
         horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
         cancelBtn = new QPushButton(layoutWidget);
         cancelBtn->setObjectName(QString::fromUtf8("cancelBtn"));
         cancelBtn->setMinimumSize(QSize(93, 0));
-        cancelBtn->setFont(font1);
+        cancelBtn->setFont(font);
         cancelBtn->setAutoDefault(false);
 
         horizontalLayout->addWidget(cancelBtn);
@@ -451,7 +479,7 @@ public:
         okBtn = new QPushButton(layoutWidget);
         okBtn->setObjectName(QString::fromUtf8("okBtn"));
         okBtn->setMinimumSize(QSize(93, 0));
-        okBtn->setFont(font1);
+        okBtn->setFont(font);
         okBtn->setFocusPolicy(Qt::StrongFocus);
         okBtn->setAutoDefault(false);
 
@@ -459,20 +487,28 @@ public:
 
         combinedIncludeJpgChk = new QCheckBox(IngestDlg);
         combinedIncludeJpgChk->setObjectName(QString::fromUtf8("combinedIncludeJpgChk"));
-        combinedIncludeJpgChk->setGeometry(QRect(380, 640, 330, 20));
-        combinedIncludeJpgChk->setFont(font1);
+        combinedIncludeJpgChk->setGeometry(QRect(450, 700, 391, 25));
+        sizePolicy.setHeightForWidth(combinedIncludeJpgChk->sizePolicy().hasHeightForWidth());
+        combinedIncludeJpgChk->setSizePolicy(sizePolicy);
+        combinedIncludeJpgChk->setFont(font);
         ejectChk = new QCheckBox(IngestDlg);
         ejectChk->setObjectName(QString::fromUtf8("ejectChk"));
-        ejectChk->setGeometry(QRect(380, 660, 330, 20));
-        ejectChk->setFont(font1);
+        ejectChk->setGeometry(QRect(450, 730, 391, 25));
+        sizePolicy.setHeightForWidth(ejectChk->sizePolicy().hasHeightForWidth());
+        ejectChk->setSizePolicy(sizePolicy);
+        ejectChk->setFont(font);
         openIngestFolderChk = new QCheckBox(IngestDlg);
         openIngestFolderChk->setObjectName(QString::fromUtf8("openIngestFolderChk"));
-        openIngestFolderChk->setGeometry(QRect(20, 660, 330, 20));
-        openIngestFolderChk->setFont(font1);
+        openIngestFolderChk->setGeometry(QRect(20, 730, 421, 25));
+        sizePolicy.setHeightForWidth(openIngestFolderChk->sizePolicy().hasHeightForWidth());
+        openIngestFolderChk->setSizePolicy(sizePolicy);
+        openIngestFolderChk->setFont(font);
         backupChk = new QCheckBox(IngestDlg);
         backupChk->setObjectName(QString::fromUtf8("backupChk"));
-        backupChk->setGeometry(QRect(20, 640, 311, 20));
-        backupChk->setFont(font1);
+        backupChk->setGeometry(QRect(20, 700, 411, 25));
+        sizePolicy.setHeightForWidth(backupChk->sizePolicy().hasHeightForWidth());
+        backupChk->setSizePolicy(sizePolicy);
+        backupChk->setFont(font);
 
         retranslateUi(IngestDlg);
 
@@ -517,9 +553,9 @@ public:
         progressBar->setToolTip(QString());
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
-        groupBox_2->setToolTip(QString());
+        ingestToGroupBox->setToolTip(QString());
 #endif // QT_CONFIG(tooltip)
-        groupBox_2->setTitle(QCoreApplication::translate("IngestDlg", "Select destination folder", nullptr));
+        ingestToGroupBox->setTitle(QCoreApplication::translate("IngestDlg", "Select destination folder", nullptr));
 #if QT_CONFIG(tooltip)
         selectFolderBtn->setToolTip(QCoreApplication::translate("IngestDlg", "Select and create the primary location for the files to be copied to", nullptr));
 #endif // QT_CONFIG(tooltip)
@@ -621,9 +657,9 @@ public:
 #endif // QT_CONFIG(tooltip)
         manualFolderLabel_2->setText(QString());
 #if QT_CONFIG(tooltip)
-        groupBox_4->setToolTip(QString());
+        filenameGroupBox->setToolTip(QString());
 #endif // QT_CONFIG(tooltip)
-        groupBox_4->setTitle(QCoreApplication::translate("IngestDlg", "File naming and sequencing", nullptr));
+        filenameGroupBox->setTitle(QCoreApplication::translate("IngestDlg", "File naming and sequencing", nullptr));
 #if QT_CONFIG(tooltip)
         existingSequenceLabel->setToolTip(QString());
 #endif // QT_CONFIG(tooltip)
@@ -636,9 +672,9 @@ public:
         spinBoxStartNumber->setToolTip(QString());
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
-        label_5->setToolTip(QString());
+        templateLabel2->setToolTip(QString());
 #endif // QT_CONFIG(tooltip)
-        label_5->setText(QCoreApplication::translate("IngestDlg", "Template:", nullptr));
+        templateLabel2->setText(QCoreApplication::translate("IngestDlg", "Template:", nullptr));
 #if QT_CONFIG(tooltip)
         filenameTemplatesCB->setToolTip(QString());
 #endif // QT_CONFIG(tooltip)
