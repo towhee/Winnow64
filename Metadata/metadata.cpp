@@ -22,6 +22,9 @@ Metadata::Metadata(QObject *parent) : QObject(parent)
     initNikonLensHash();
     initSupportedFiles();    
     report = false;
+    exif = new Exif;    // xxx
+    ifd = new IFD;      // xxx
+    iptc = new IPTC;    // xxx
 }
 
 /* METADATA NOTES
@@ -1019,12 +1022,18 @@ void Metadata::initSonyMakerHash()
     sonyMakerHash[8195] = "Unknown";
     sonyMakerHash[8196] = "Contrast";
     sonyMakerHash[8197] = "Saturation";
-    sonyMakerHash[8198] = "Unknown";
-    sonyMakerHash[8199] = "Unknown";
-    sonyMakerHash[8200] = "Unknown";
-    sonyMakerHash[8201] = "Unknown";
+    sonyMakerHash[8198] = "Sharpness";
+    sonyMakerHash[8199] = "Brightness";
+    sonyMakerHash[8200] = "LongExposureNoiseReduction ";
+    sonyMakerHash[8201] = "HighISONoiseReduction ";
     sonyMakerHash[8202] = "High Definition Range Mode";
     sonyMakerHash[8203] = "Multi Frame Noise Reduction";
+    sonyMakerHash[8212] = "WBShiftAB_GM";
+//    sonyMakerHash[8203] = "";
+//    sonyMakerHash[8203] = "";
+//    sonyMakerHash[8203] = "";
+//    sonyMakerHash[8203] = "";
+    sonyMakerHash[8220] = "AFAreaModeSetting";
     sonyMakerHash[12288] = "Shot Information IFD";
     sonyMakerHash[45056] = "File Format";
     sonyMakerHash[45057] = "Sony Model ID";
@@ -1054,6 +1063,16 @@ void Metadata::initSonyMakerHash()
     sonyMakerHash[45135] = "Dynamic Range Optimizer";
     sonyMakerHash[45138] = "Intelligent Auto";
     sonyMakerHash[45140] = "White balance 2";
+}
+
+void Metadata::initSonyAFAreaModeHash()
+{
+    sonyAFAreaModeHash[0] = "Wide";
+    sonyAFAreaModeHash[1] = "Center";
+    sonyAFAreaModeHash[3] = "Flexible Spot";
+    sonyAFAreaModeHash[9] = "Center";
+    sonyAFAreaModeHash[11] = "Zone";
+    sonyAFAreaModeHash[12] = "Expanded Flexible Spot";
 }
 
 void Metadata::initFujiMakerHash()
@@ -2629,7 +2648,8 @@ quint32 Metadata::readIFD(QString hdr, quint32 offset)
 
     // iterate through IFD0, looking for the subIFD tag
     if (report) {
-        reportMetadataHeader(hdr);
+        MetaReport::header(hdr, rpt);
+//      reportMetadataHeader(hdr);
         rpt << "IFDOffset  Hex: "
             << QString::number(offset, 16).toUpper()
             << "   Dec: " << offset << "\n"
@@ -2656,7 +2676,7 @@ quint32 Metadata::readIFD(QString hdr, quint32 offset)
 
         if (report) {
             if (hdr == "IFD Exif")
-                (exifHash.contains(tagId)) ? tagDescription = exifHash.value(tagId)
+                (ifdHash.contains(tagId)) ? tagDescription = ifdHash.value(tagId)
                     : tagDescription = "Undefined tag";
             else if (hdr == "IFD Nikon Maker Note")
                 (nikonMakerHash.contains(tagId)) ? tagDescription = nikonMakerHash.value(tagId)
@@ -2809,7 +2829,8 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
         offset = nextOffset;
     }
     if (report) {
-        reportMetadataHeader("JPG Segment Hash");
+        MetaReport::header("JPG Segment Hash", rpt);
+//        reportMetadataHeader("JPG Segment Hash");
         rpt << "Segment\t\tOffset\t\tHex\n";
 
         QHashIterator<QString, quint32> i(segmentHash);
@@ -4422,6 +4443,11 @@ bool Metadata::formatJPG(quint32 startOffset)
     G::track(__FUNCTION__);
     #endif
     }
+    if (jpeg == nullptr) jpeg = new Jpeg;
+    jpeg->getMetadata(file, startOffset, imageMetadata, ifd, iptc, exif, report, rpt, xmpString);
+    if (report) reportMetadata();
+    return true;
+
     // init
     iccSegmentOffset = 0;
 
@@ -4467,7 +4493,7 @@ bool Metadata::formatJPG(quint32 startOffset)
         // add condition to check for EOF
     }
 
-    if (report) rpt << "\n startOffset = " << startOffset;
+    if (report) rpt << "\nstartOffset = " << startOffset;
 
     quint32 a = get16(file.read(2));  // magic 42
     a = get32(file.read(4));
@@ -4478,7 +4504,10 @@ bool Metadata::formatJPG(quint32 startOffset)
     lengthFullJPG = static_cast<uint>(file.size());
 
     // read IFD0
+//    QString hdr = "IFD0";
+//    quint32 nextIFDOffset = ifd->readIFD(file, offsetIfd0, imageMetadata, exif->hash, report, rpt, hdr) + startOffset;
     quint32 nextIFDOffset = readIFD("IFD0", offsetIfd0) + startOffset;
+
     quint32 offsetEXIF;
     offsetEXIF = ifdDataHash.value(34665).tagValue + startOffset;
     orientation = static_cast<int>(ifdDataHash.value(274).tagValue);
@@ -4860,7 +4889,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     }
     // check if already loaded
     fPath = fileInfo.filePath();
-//    qDebug() << __FUNCTION__ << "Source =" << source << fPath;
     if (fPath == "") {
         qDebug() << __FUNCTION__ << "NULL FILE REQUESTED FROM "
                  << source;
@@ -4873,6 +4901,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     okToReadXmp = isLoadXmp;
     okToReadXmp = true;
 
+    // read metadata
     bool result = readMetadata(isReport, fPath);
     if (!result) {
         qDebug() << __FUNCTION__ << err << source;
@@ -4882,51 +4911,51 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     }
 
     imageMetadata.isPicked = false;
-    imageMetadata.offsetFullJPG = offsetFullJPG;
-    imageMetadata.lengthFullJPG = lengthFullJPG;
-    imageMetadata.offsetThumbJPG = offsetThumbJPG;
-    imageMetadata.lengthThumbJPG = lengthThumbJPG;
-    imageMetadata.offsetSmallJPG = offsetSmallJPG;
-    imageMetadata.lengthSmallJPG = lengthSmallJPG;
-    imageMetadata.xmpSegmentOffset = xmpSegmentOffset;
-    imageMetadata.xmpNextSegmentOffset = xmpNextSegmentOffset;
-    imageMetadata.isXmp = isXmp;
-    imageMetadata.iccSegmentOffset = iccSegmentOffset;
-    imageMetadata.iccSegmentLength = iccSegmentLength;
-    imageMetadata.iccBuf = iccBuf;
-    imageMetadata.iccSpace = iccSpace;
-    imageMetadata.orientationOffset = orientationOffset;
-    imageMetadata.width = width;
-    imageMetadata.height = height;
-    imageMetadata.dimensions = QString::number(width) + "x" + QString::number(height);
-    imageMetadata.orientation = orientation;
-    imageMetadata.rotationDegrees = rotationDegrees;
-    imageMetadata.createdDate = createdDate;
-    imageMetadata.make = make.trimmed();
-    imageMetadata.model = model.trimmed();
-    imageMetadata.exposureTime = exposureTime;
-    imageMetadata.exposureTimeNum = exposureTimeNum;
-    imageMetadata.aperture = aperture;
-    imageMetadata.apertureNum = apertureNum;
-    imageMetadata.ISO = ISO;
-    imageMetadata.ISONum = ISONum;
-    imageMetadata.focalLength = focalLength;
-    imageMetadata.focalLengthNum = focalLengthNum;
-    imageMetadata.title = title;
-    imageMetadata._title = _title;
-    imageMetadata.rating = rating;
-    imageMetadata._rating = _rating;
-    imageMetadata.label = label;
-    imageMetadata._label = _label;
-    imageMetadata.lens = lens;
-    imageMetadata.creator = creator.trimmed();
-    imageMetadata._creator = _creator;
-    imageMetadata.copyright = copyright;
-    imageMetadata._copyright = _copyright;
-    imageMetadata.email = email;
-    imageMetadata._email = _email;
-    imageMetadata.url = url;
-    imageMetadata._url = _url;
+//    imageMetadata.offsetFullJPG = offsetFullJPG;
+//    imageMetadata.lengthFullJPG = lengthFullJPG;
+//    imageMetadata.offsetThumbJPG = offsetThumbJPG;
+//    imageMetadata.lengthThumbJPG = lengthThumbJPG;
+//    imageMetadata.offsetSmallJPG = offsetSmallJPG;
+//    imageMetadata.lengthSmallJPG = lengthSmallJPG;
+//    imageMetadata.xmpSegmentOffset = xmpSegmentOffset;
+//    imageMetadata.xmpNextSegmentOffset = xmpNextSegmentOffset;
+//    imageMetadata.isXmp = isXmp;
+//    imageMetadata.iccSegmentOffset = iccSegmentOffset;
+//    imageMetadata.iccSegmentLength = iccSegmentLength;
+//    imageMetadata.iccBuf = iccBuf;
+//    imageMetadata.iccSpace = iccSpace;
+//    imageMetadata.orientationOffset = orientationOffset;
+//    imageMetadata.width = width;
+//    imageMetadata.height = height;
+//    imageMetadata.dimensions = QString::number(width) + "x" + QString::number(height);
+//    imageMetadata.orientation = orientation;
+//    imageMetadata.rotationDegrees = rotationDegrees;
+//    imageMetadata.createdDate = createdDate;
+//    imageMetadata.make = make.trimmed();
+//    imageMetadata.model = model.trimmed();
+//    imageMetadata.exposureTime = exposureTime;
+//    imageMetadata.exposureTimeNum = exposureTimeNum;
+//    imageMetadata.aperture = aperture;
+//    imageMetadata.apertureNum = apertureNum;
+//    imageMetadata.ISO = ISO;
+//    imageMetadata.ISONum = ISONum;
+//    imageMetadata.focalLength = focalLength;
+//    imageMetadata.focalLengthNum = focalLengthNum;
+//    imageMetadata.title = title;
+//    imageMetadata._title = _title;
+//    imageMetadata.rating = rating;
+//    imageMetadata._rating = _rating;
+//    imageMetadata.label = label;
+//    imageMetadata._label = _label;
+//    imageMetadata.lens = lens;
+//    imageMetadata.creator = creator.trimmed();
+//    imageMetadata._creator = _creator;
+//    imageMetadata.copyright = copyright;
+//    imageMetadata._copyright = _copyright;
+//    imageMetadata.email = email;
+//    imageMetadata._email = _email;
+//    imageMetadata.url = url;
+//    imageMetadata._url = _url;
     imageMetadata.copyFileNamePrefix = createdDate.toString("yyyy-MM-dd");
 
     QString s = imageMetadata.model;

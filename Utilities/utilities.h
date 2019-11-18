@@ -6,7 +6,6 @@
 class Utilities
 {
 public:
-    Utilities();
     static void setOpacity(QWidget *widget, qreal opacity);
     static QString formatMemory(qulonglong bytes, int precision = 1);
     static QString enquote(QString &s);
@@ -20,8 +19,9 @@ public:
     static quint64 get40(QByteArray c, bool bigEndian = true);
     static quint64 get48(QByteArray c, bool bigEndian = true);
     static quint64 get64(QByteArray c, bool bigEndian = true);
+    static double getReal(QFile &file, quint32 offset, bool bigEndian = true);
     static QString getCString(QFile &file);
-
+    static QString getString(QFile &file, quint32 offset, quint32 length);
 
 public slots:
     static void hideCursor();

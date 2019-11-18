@@ -1,10 +1,5 @@
 #include "utilities.h"
 
-Utilities::Utilities()
-{
-
-}
-
 void Utilities::setOpacity(QWidget *widget, qreal opacity)
 {
     QGraphicsOpacityEffect * effect = new QGraphicsOpacityEffect(widget);
@@ -61,6 +56,8 @@ QString Utilities::centeredRptHdr(QChar padChar, QString title)
     rpt << padChar;
     return hdr;
 }
+
+// numbers: big endian = "MM" = 0x4D4D   little endian = "II" = 0x4949
 
 int Utilities::get4_1st(QByteArray c)
 {
@@ -193,6 +190,18 @@ quint64 Utilities::get64(QByteArray c, bool bigEndian)
     }
 }
 
+double Utilities::getReal(QFile &file, quint32 offset, bool bigEndian)
+{
+    /*
+    In IFD type 5, 10, 11, 12 = rational = real/float
+    */
+        file.seek(offset);
+        quint32 a = get32(file.read(4), bigEndian);
+        quint32 b = get32(file.read(4), bigEndian);
+        if (b == 0) return 0;
+        return static_cast<double>(a) / b;
+}
+
 QString Utilities::getCString(QFile &file)
 {
     quint32 offset = static_cast<quint32>(file.pos());
@@ -210,4 +219,13 @@ QString Utilities::getCString(QFile &file)
         file.seek(offset + 1);
         return "";
     }
+}
+
+QString Utilities::getString(QFile &file, quint32 offset, quint32 length)
+{
+    /*
+    In IFD type 2 = string
+    */
+        file.seek(offset);
+        return(file.read(length));
 }

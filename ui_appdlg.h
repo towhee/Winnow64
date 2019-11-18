@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'appdlg.ui'
 **
-** Created by: Qt User Interface Compiler version 5.13.0
+** Created by: Qt User Interface Compiler version 5.13.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -40,7 +40,7 @@ public:
     {
         if (Appdlg->objectName().isEmpty())
             Appdlg->setObjectName(QString::fromUtf8("Appdlg"));
-        Appdlg->resize(948, 362);
+        Appdlg->resize(948, 374);
         QSizePolicy sizePolicy(QSizePolicy::Maximum, QSizePolicy::MinimumExpanding);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
