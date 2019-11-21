@@ -28,6 +28,8 @@
 #include "ImageFormats/Nikon/nikon.h"
 #include "ImageFormats/Olympus/olympus.h"
 #include "ImageFormats/Panasonic/panasonic.h"
+#include "ImageFormats/Sony/sony.h"
+#include "ImageFormats/Tiff/tiff.h"
 
 class IFDData
 {
@@ -169,6 +171,8 @@ private:
     Nikon *nikon = nullptr;
     Olympus *olympus = nullptr;
     Panasonic *panasonic = nullptr;
+    Sony *sony = nullptr;
+    Tiff *tiff = nullptr;
 
     // hash
     QHash<uint, IFDData> ifdDataHash;

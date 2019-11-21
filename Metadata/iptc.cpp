@@ -14,7 +14,7 @@ void IPTC::read(QFile &file, quint32 &offset, ImageMetadata &m)
     If the IPTC data is in a photoshop TIF file, then the IPTC offset is directly
     to the first IPTC data block so we can skip the search req'd if it was JPG.
     */
-    bool isBigEnd = true;                  // only IFD/EXIF can be little endian
+    bool isBigEnd = true;            // true = default, only IFD/EXIF can be little endian
     bool foundIPTC = false;
     file.seek(offset);
 

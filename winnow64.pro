@@ -14,8 +14,7 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h \
-    ImageFormats/Panasonic/panasonic.h
+HEADERS += Cache/imagecache.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/datamodel.h
@@ -45,6 +44,9 @@ HEADERS += ImageFormats/Heic/Heic.h
 HEADERS += ImageFormats/Jpeg/jpeg.h
 HEADERS += ImageFormats/Nikon/nikon.h
 HEADERS += ImageFormats/Olympus/olympus.h
+HEADERS += ImageFormats/Panasonic/panasonic.h
+HEADERS += ImageFormats/Sony/sony.h
+HEADERS += ImageFormats/Tiff/tiff.h
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
 HEADERS += Main/mainwindow.h
@@ -78,8 +80,7 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/imagecache.cpp \
-    ImageFormats/Panasonic/panasonic.cpp
+SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
@@ -108,6 +109,9 @@ SOURCES += ImageFormats/Heic/Heic.cpp
 SOURCES += ImageFormats/jpeg/jpeg.cpp
 SOURCES += ImageFormats/Nikon/nikon.cpp
 SOURCES += ImageFormats/Olympus/olympus.cpp
+SOURCES += ImageFormats/Panasonic/panasonic.cpp
+SOURCES += ImageFormats/Sony/sony.cpp
+SOURCES += ImageFormats/Tiff/tiff.cpp
 SOURCES += Main/dockwidget.cpp
 SOURCES += Main/global.cpp
 SOURCES += Main/main.cpp
