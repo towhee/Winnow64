@@ -74,9 +74,9 @@ quint8 Utilities::get8(QByteArray c)
     return c[0]&0xFF;
 }
 
-quint16 Utilities::get16(QByteArray c, bool bigEndian)
+quint16 Utilities::get16(QByteArray c, bool isBigEnd)
 {
-    if (bigEndian) {
+    if (isBigEnd) {
         quint16 x = c[0]&0xFF;
         x = static_cast<quint16>((x << 8) | (c[1]&0xFF));
         return x;
@@ -88,9 +88,9 @@ quint16 Utilities::get16(QByteArray c, bool bigEndian)
     }
 }
 
-quint32 Utilities::get24(QByteArray c, bool bigEndian)
+quint32 Utilities::get24(QByteArray c, bool isBigEnd)
 {
-    if (bigEndian) {
+    if (isBigEnd) {
         quint32 x = c[0]&0xFF;
         x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
         x = static_cast<quint32>((x << 8) | (c[2]&0xFF));
@@ -104,9 +104,9 @@ quint32 Utilities::get24(QByteArray c, bool bigEndian)
     }
 }
 
-quint32 Utilities::get32(QByteArray c, bool bigEndian)
+quint32 Utilities::get32(QByteArray c, bool isBigEnd)
 {
-    if (bigEndian) {
+    if (isBigEnd) {
         quint32 x = c[0]&0xFF;
         x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
         x = static_cast<quint32>((x << 8) | (c[2]&0xFF));
@@ -122,9 +122,9 @@ quint32 Utilities::get32(QByteArray c, bool bigEndian)
     }
 }
 
-quint64 Utilities::get40(QByteArray c, bool bigEndian)
+quint64 Utilities::get40(QByteArray c, bool isBigEnd)
 {
-    if (bigEndian) {
+    if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
         x = static_cast<quint64>((x << 8) | (c[2]&0xFF));
@@ -142,9 +142,9 @@ quint64 Utilities::get40(QByteArray c, bool bigEndian)
     }
 }
 
-quint64 Utilities::get48(QByteArray c, bool bigEndian)
+quint64 Utilities::get48(QByteArray c, bool isBigEnd)
 {
-    if (bigEndian) {
+    if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
         x = static_cast<quint64>((x << 8) | (c[2]&0xFF));
@@ -164,9 +164,9 @@ quint64 Utilities::get48(QByteArray c, bool bigEndian)
     }
 }
 
-quint64 Utilities::get64(QByteArray c, bool bigEndian)
+quint64 Utilities::get64(QByteArray c, bool isBigEnd)
 {
-    if (bigEndian) {
+    if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
         x = static_cast<quint64>((x << 8) | (c[2]&0xFF));
@@ -190,14 +190,14 @@ quint64 Utilities::get64(QByteArray c, bool bigEndian)
     }
 }
 
-double Utilities::getReal(QFile &file, quint32 offset, bool bigEndian)
+double Utilities::getReal(QFile &file, quint32 offset, bool isBigEnd)
 {
     /*
     In IFD type 5, 10, 11, 12 = rational = real/float
     */
         file.seek(offset);
-        quint32 a = get32(file.read(4), bigEndian);
-        quint32 b = get32(file.read(4), bigEndian);
+        quint32 a = get32(file.read(4), isBigEnd);
+        quint32 b = get32(file.read(4), isBigEnd);
         if (b == 0) return 0;
         return static_cast<double>(a) / b;
 }
@@ -228,4 +228,10 @@ QString Utilities::getString(QFile &file, quint32 offset, quint32 length)
     */
         file.seek(offset);
         return(file.read(length));
+}
+
+QByteArray Utilities::getByteArray(QFile &file, quint32 offset, quint32 length)
+{
+    file.seek(offset);
+    return(file.read(length));
 }

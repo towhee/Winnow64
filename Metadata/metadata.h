@@ -22,6 +22,12 @@
 
 #include "ImageFormats/Heic/heic.h"
 #include "ImageFormats/Jpeg/jpeg.h"
+#include "ImageFormats/Canon/canon.h"
+#include "ImageFormats/Dng/dng.h"
+#include "ImageFormats/Fuji/fuji.h"
+#include "ImageFormats/Nikon/nikon.h"
+#include "ImageFormats/Olympus/olympus.h"
+#include "ImageFormats/Panasonic/panasonic.h"
 
 class IFDData
 {
@@ -147,7 +153,6 @@ public:
     bool foundTifThumb;
 
     QString nikonLensCode;
-    Jpeg *jpeg = nullptr;
 
 private:
     // Exif
@@ -157,6 +162,13 @@ private:
 
     // formats
 //    Heic *heic = nullptr;
+    Jpeg *jpeg = nullptr;
+    Canon *canon = nullptr;
+    DNG *dng = nullptr;
+    Fuji *fuji = nullptr;
+    Nikon *nikon = nullptr;
+    Olympus *olympus = nullptr;
+    Panasonic *panasonic = nullptr;
 
     // hash
     QHash<uint, IFDData> ifdDataHash;

@@ -366,3 +366,8 @@ ui_helpform.h
 ui_appdlg.h
 ui_aligndlg.h
 ui_aboutdlg.h
+debug/Winnow.exe
+debug/Winnow.pdb
+Lib/lcms2-2.9/CMakeSettings.json
+Makefile.Debug
+Makefile.Release
