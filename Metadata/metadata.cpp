@@ -2010,7 +2010,7 @@ void Metadata::reportMetadata()
     G::track(__FUNCTION__);
     #endif
     }
-    QString createdExif = createdDate.toString("yyyy-MM-dd hh:mm:ss");
+    QString createdExif = imageMetadata.createdDate.toString("yyyy-MM-dd hh:mm:ss");
     rpt << "\n";
     rpt.reset();
     rpt.setFieldAlignment(QTextStream::AlignLeft);
@@ -3465,6 +3465,14 @@ bool Metadata::formatSony()
     G::track(__FUNCTION__);
     #endif
     }
+    if (sony == nullptr) sony = new Sony;
+    if (ifd == nullptr) ifd = new IFD;
+    if (exif == nullptr) exif = new Exif;
+    if (jpeg == nullptr) jpeg = new Jpeg;
+    sony->parse(file, imageMetadata, ifd, exif, jpeg, report, rpt, xmpString);
+    if (report) reportMetadata();
+    return true;
+
     //file.open in readMetadata
     // get endian
     order = get16(file.read(4));
@@ -4049,6 +4057,15 @@ bool Metadata::formatDNG()
 
 bool Metadata::formatTIF()
 {
+    if (tiff == nullptr) tiff = new Tiff;
+    if (ifd == nullptr) ifd = new IFD;
+    if (exif == nullptr) exif = new Exif;
+    if (jpeg == nullptr) jpeg = new Jpeg;
+    tiff->parse(file, imageMetadata, ifd, iptc, exif, jpeg, report, rpt, xmpString);
+    qDebug() << __FUNCTION__ << "imageMetadata.createdDate" << imageMetadata.createdDate;
+    if (report) reportMetadata();
+    return true;
+
     //file.open happens in readMetadata
 
     // set arbitrary order
