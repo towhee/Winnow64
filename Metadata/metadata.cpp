@@ -2015,35 +2015,35 @@ void Metadata::reportMetadata()
     rpt.reset();
     rpt.setFieldAlignment(QTextStream::AlignLeft);
 
-    rpt.setFieldWidth(25); rpt << "offsetFullJPG"       << offsetFullJPG;       rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "lengthFullJPG"       << lengthFullJPG;       rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "offsetThumbJPG"      << offsetThumbJPG;      rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "lengthThumbJPG"      << lengthThumbJPG;      rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "offsetSmallJPG"      << offsetSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "lengthSmallJPG"      << lengthSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "offsetXMPSeg"        << xmpSegmentOffset;    rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "offsetNextXMPSegment"<< xmpNextSegmentOffset;rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "orientation"         << orientation;         rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "width"               << width;               rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "height"              << height;              rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "created"             << createdExif;         rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "make"                << make;                rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "model"               << model;               rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "exposureTime"        << exposureTime;        rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "aperture"            << aperture;            rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "ISO"                 << ISO;                 rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "focalLength"         << focalLength;         rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "title"               << title;               rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "lens"                << lens;                rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "creator"             << creator;             rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "copyright"           << copyright;           rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "email"               << email;               rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "url"                 << url;                 rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "rating"              << rating;              rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "label"               << label;               rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "cameraSN"            << cameraSN;            rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "lensSN"              << lensSN;              rpt.setFieldWidth(0); rpt << "\n";
-    rpt.setFieldWidth(25); rpt << "shutterCount"        << shutterCount;        rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "offsetFullJPG"       << imageMetadata.offsetFullJPG;       rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "lengthFullJPG"       << imageMetadata.lengthFullJPG;       rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "offsetThumbJPG"      << imageMetadata.offsetThumbJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "lengthThumbJPG"      << imageMetadata.lengthThumbJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "offsetSmallJPG"      << imageMetadata.offsetSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "lengthSmallJPG"      << imageMetadata.lengthSmallJPG;      rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "offsetXMPSeg"        << imageMetadata.xmpSegmentOffset;    rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "offsetNextXMPSegment"<< imageMetadata.xmpNextSegmentOffset;rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "orientation"         << imageMetadata.orientation;         rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "width"               << imageMetadata.width;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "height"              << imageMetadata.height;              rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "created"             << createdExif;                       rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "make"                << imageMetadata.make;                rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "model"               << imageMetadata.model;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "exposureTime"        << imageMetadata.exposureTime;        rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "aperture"            << imageMetadata.aperture;            rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "ISO"                 << imageMetadata.ISO;                 rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "focalLength"         << imageMetadata.focalLength;         rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "title"               << imageMetadata.title;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "lens"                << imageMetadata.lens;                rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "creator"             << imageMetadata.creator;             rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "copyright"           << imageMetadata.copyright;           rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "email"               << imageMetadata.email;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "url"                 << imageMetadata.url;                 rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "rating"              << imageMetadata.rating;              rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "label"               << imageMetadata.label;               rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "cameraSN"            << imageMetadata.cameraSN;            rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "lensSN"              << imageMetadata.lensSN;              rpt.setFieldWidth(0); rpt << "\n";
+    rpt.setFieldWidth(25); rpt << "shutterCount"        << imageMetadata.shutterCount;        rpt.setFieldWidth(0); rpt << "\n";
     rpt.setFieldWidth(25); rpt << "nikonLensCode"       << nikonLensCode;       rpt.setFieldWidth(0); rpt << "\n";
 
     if (isXmp && xmpString.length() > 0) {
@@ -2903,13 +2903,19 @@ checked to make sure there is valid data.
     length = 0;
 }
 
-bool Metadata::formatNikon()
+bool Metadata:: formatNikon()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    if (nikon == nullptr) nikon = new Nikon;
+    if (ifd == nullptr) ifd = new IFD;
+    nikon->parse(file, imageMetadata, ifd, exif, report, rpt, xmpString);
+    if (report) reportMetadata();
+    return true;
+
     // moved file.open to readMetadata
 
     // get endian
@@ -3133,6 +3139,11 @@ bool Metadata::formatCanon()
     G::track(__FUNCTION__);
     #endif
     }
+    if (canon == nullptr) canon = new Canon;
+    canon->parse(file, imageMetadata, ifd, exif, report, rpt, xmpString);
+    if (report) reportMetadata();
+    return true;
+
     //file.open in readMetadata
     // get endian
     order = get16(file.read(4));
@@ -3248,9 +3259,8 @@ bool Metadata::formatCanon()
     lensSN = getString(ifdDataHash.value(42037).tagValue,
             ifdDataHash.value(42037).tagCount);
 
-    // Exif: read makernoteIFD
-
-    if (ifdDataHash.contains(37500)) {
+    // read makernoteIFD (info not used at present)
+    if (ifdDataHash.contains(37500) && report) {
         quint32 makerOffset = ifdDataHash.value(37500).tagValue;
         readIFD("IFD Canon Maker Note", makerOffset);
     }
@@ -3310,6 +3320,14 @@ bool Metadata::formatOlympus()
     G::track(__FUNCTION__);
     #endif
     }
+    if (olympus == nullptr) olympus = new Olympus;
+    if (ifd == nullptr) ifd = new IFD;
+    if (exif == nullptr) exif = new Exif;
+    if (jpeg == nullptr) jpeg = new Jpeg;
+    olympus->parse(file, imageMetadata, ifd, exif, jpeg, report, rpt, xmpString);
+    if (report) reportMetadata();
+    return true;
+
     //file.open in readMetadata
     // get endian
     order = get16(file.read(4));
@@ -3592,6 +3610,14 @@ bool Metadata::formatFuji()
     G::track(__FUNCTION__);
     #endif
     }
+    if (fuji == nullptr) fuji = new Fuji;
+    if (jpeg == nullptr) jpeg = new Jpeg;
+    if (iptc == nullptr) iptc = new IPTC;
+    if (ifd == nullptr) ifd = new IFD;
+    fuji->parse(file, imageMetadata, ifd, exif, jpeg, report, rpt, xmpString);
+    if (report) reportMetadata();
+    return true;
+
     //file.open in readMetadata
 
     /* Fuji File Format
@@ -3752,6 +3778,14 @@ bool Metadata::formatFuji()
 
 bool Metadata::formatDNG()
 {
+    if (dng == nullptr) dng = new DNG;
+    if (jpeg == nullptr) jpeg = new Jpeg;
+    if (iptc == nullptr) iptc = new IPTC;
+    if (ifd == nullptr) ifd = new IFD;
+    dng->parse(file, imageMetadata, ifd, iptc, exif, jpeg, report, rpt, xmpString);
+    if (report) reportMetadata();
+    return true;
+
     //file.open happens in readMetadata
 
     // set arbitrary order
@@ -4257,6 +4291,14 @@ bool Metadata::formatPanasonic()
     G::track(__FUNCTION__);
     #endif
     }
+    if (panasonic == nullptr) panasonic = new Panasonic;
+    if (ifd == nullptr) ifd = new IFD;
+    if (exif == nullptr) exif = new Exif;
+    if (jpeg == nullptr) jpeg = new Jpeg;
+    panasonic->parse(file, imageMetadata, ifd, exif, jpeg, report, rpt, xmpString);
+    if (report) reportMetadata();
+    return true;
+
     /* Panasonic RW2 files
 
       Note TIFF magic word is 0x55 instead of 0x2a.
@@ -4444,7 +4486,7 @@ bool Metadata::formatJPG(quint32 startOffset)
     #endif
     }
     if (jpeg == nullptr) jpeg = new Jpeg;
-    jpeg->getMetadata(file, startOffset, imageMetadata, ifd, iptc, exif, report, rpt, xmpString);
+    jpeg->parse(file, startOffset, imageMetadata, ifd, iptc, exif, report, rpt, xmpString);
     if (report) reportMetadata();
     return true;
 
@@ -4675,45 +4717,46 @@ void Metadata::clearMetadata()
     #endif
     #endif
     }
-    offsetFullJPG = 0;
-    lengthFullJPG = 0;
-    offsetThumbJPG = 0;
-    lengthThumbJPG = 0;
-    offsetSmallJPG = 0;
-    lengthSmallJPG = 0;
-    xmpSegmentOffset = 0;
-    orientationOffset = 0;
-    iccSegmentOffset = 0;
-    iccSegmentLength = 0;
-    iccBuf.clear();
-    width = 0;
-    height = 0;
-    orientation = 1;
+    imageMetadata.offsetFullJPG = 0;
+    imageMetadata.lengthFullJPG = 0;
+    imageMetadata.offsetThumbJPG = 0;
+    imageMetadata.lengthThumbJPG = 0;
+    imageMetadata.offsetSmallJPG = 0;
+    imageMetadata.lengthSmallJPG = 0;
+    imageMetadata.xmpSegmentOffset = 0;
+    imageMetadata.orientationOffset = 0;
+    imageMetadata.iccSegmentOffset = 0;
+    imageMetadata.iccSegmentLength = 0;
+    imageMetadata.iccBuf.clear();
+    imageMetadata.width = 0;
+    imageMetadata.height = 0;
+    imageMetadata.orientation = 1;
 //    created = "";
-    model = "";
-    exposureTime = "";
-    exposureTimeNum = 0;
-    aperture = "";
-    apertureNum = 0;
-    ISO = "";
-    ISONum = 0;
-    focalLength = "";
-    focalLengthNum = 0;
-    title = "";
-    lens = "";
-    creator = "";
-    copyright = "";
-    email = "";
-    url = "";
-    err = "";
-    shutterCount = 0;
-    cameraSN = "";
-    lensSN = "";
-    rating = "";
-    label = "";
+    imageMetadata.make = "";
+    imageMetadata.model = "";
+    imageMetadata.exposureTime = "";
+    imageMetadata.exposureTimeNum = 0;
+    imageMetadata.aperture = "";
+    imageMetadata.apertureNum = 0;
+    imageMetadata.ISO = "";
+    imageMetadata.ISONum = 0;
+    imageMetadata.focalLength = "";
+    imageMetadata.focalLengthNum = 0;
+    imageMetadata.title = "";
+    imageMetadata.lens = "";
+    imageMetadata.creator = "";
+    imageMetadata.copyright = "";
+    imageMetadata.email = "";
+    imageMetadata.url = "";
+    imageMetadata.err = "";
+    imageMetadata.shutterCount = 0;
+    imageMetadata.cameraSN = "";
+    imageMetadata.lensSN = "";
+    imageMetadata.rating = "";
+    imageMetadata.label = "";
 
-    ifdDataHash.clear();
-    nikonLensCode = "";
+    ifd->ifdDataHash.clear();
+    nikonLensCode = "";     // rgh how to handle?
 }
 
 void Metadata::testNewFileFormat(const QString &path)

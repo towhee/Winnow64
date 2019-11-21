@@ -5,7 +5,7 @@ BUGS
 - Open with xmp sidecar over-writing old car - cancel for now
 - Ingest date when different dates in ingest file list
 - Losing red setting
-- Filter last day crashing
+- Filter last day crashing, cr2 in _ThumbTest crashing
 - Ingest if image does not have metadata req'd
 - is mouseMovementTimer in imageView req'd
 - Mac check for updates not done yet
@@ -19,6 +19,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Add exposure compensation to metadata
 - Reset to defaults
 - Search
 - Refresh selected images

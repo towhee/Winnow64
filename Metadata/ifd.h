@@ -21,7 +21,10 @@ public:
     IFD();
     quint32 readIFD(QFile &file, quint32 &offset, ImageMetadata &m,
                            QHash<quint32, QString> &hash,
-                           bool report, QTextStream &rpt, QString &hdr);
+                           bool report, QTextStream &rpt, QString &hdr,
+                           bool isBigEnd = false);
+    QList<quint32> getSubIfdOffsets(QFile &file, quint32 subIFDaddr,
+                                    int count, bool isBigEnd = false);
     QHash<uint, IFDData_> ifdDataHash;
 };
 

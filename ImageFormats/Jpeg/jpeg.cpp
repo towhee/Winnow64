@@ -76,41 +76,39 @@ void Jpeg::initSegCodeHash()
 
 bool Jpeg::getDimensions(QFile &file, quint32 offset, ImageMetadata &m)
 {
-    bool bigEndian = true;                  // only IFD/EXIF can be little endian
+    bool isBigEnd = true;                  // only IFD/EXIF can be little endian
     quint32 marker = 0;
     offset += 2;
     while (marker != 0xFFC0) {
         file.seek(offset);                  // APP1 FFE*
-        marker = Utilities::get16(file.read(2), bigEndian);
+        marker = Utilities::get16(file.read(2), isBigEnd);
         if (marker < 0xFF01) {
             return false;
         }
-        offset = Utilities::get16(file.peek(2), bigEndian) + static_cast<quint32>(file.pos());
+        offset = Utilities::get16(file.peek(2), isBigEnd) + static_cast<quint32>(file.pos());
     }
     file.seek(file.pos()+3);
-    m.height = Utilities::get16(file.read(2), bigEndian);
-    m.width = Utilities::get16(file.read(2), bigEndian);
+    m.height = Utilities::get16(file.read(2), isBigEnd);
+    m.width = Utilities::get16(file.read(2), isBigEnd);
     return true;
 }
 
-bool Jpeg::getMetadata(QFile &file,
-                       quint32 startOffset,
-                       ImageMetadata &m,
-                       IFD *ifd, IPTC *iptc,
-                       Exif *exif,
-//                       QHash<QString, quint32> &segmentHash,
-                       bool report,
-                       QTextStream &rpt,
-                       QString &xmpString)
+bool Jpeg::parse(QFile &file,
+                 quint32 startOffset,
+                 ImageMetadata &m,
+                 IFD *ifd, IPTC *iptc,
+                 Exif *exif,
+                 bool report,
+                 QTextStream &rpt,
+                 QString &xmpString)
 {
     // init
     m.iccSegmentOffset = 0;
 
     //file.open happens in readMetadata
-    bool bigEndian = true;
-    order = 0x4D4D;
-//    quint32 startOffset = 0;
-    if (Utilities::get16(file.read(2), bigEndian) != 0xFFD8) {
+    bool isBigEnd = true;
+
+    if (Utilities::get16(file.read(2), isBigEnd) != 0xFFD8) {
         err = "JPG does not start with 0xFFD8";
         qDebug() << __FUNCTION__ << err;
         return false;
@@ -137,27 +135,28 @@ bool Jpeg::getMetadata(QFile &file,
     }
 
     bool foundEndian = false;
+    int count = 0;
     while (!foundEndian) {
-        if (file.pos() > file.size() - 2) return false;
-        quint32 endian = Utilities::get16(file.read(2));
-        if (endian == 0x4949) {
-            bigEndian = false;
+        quint32 order = Utilities::get16(file.read(2));
+        if (order == 0x4949 || order == 0x4D4D) {
+            order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
+            // offsets are from the endian position in JPEGs
+            // therefore must adjust all offsets found in tagValue
+            startOffset = static_cast<quint32>(file.pos()) - 2;
             foundEndian = true;
         }
-        if (endian == 0x4D4D) {
-            bigEndian = true;
-            foundEndian = true;
+        // add condition to check for EOF
+        count++;
+        if (count > 100) {
+            // err endian order not found
+            return false;
         }
     }
-    // offsets are from the endian position in JPEGs
-    // therefore must adjust all offsets found in tagValue
-    startOffset = static_cast<quint32>(file.pos()) - 2;
-    foundEndian = true;
 
     if (report) rpt << "\n startOffset = " << startOffset;
 
-    quint32 a = Utilities::get16(file.read(2), bigEndian);  // magic 42
-    a = Utilities::get32(file.read(4), bigEndian);
+    quint32 a = Utilities::get16(file.read(2), isBigEnd);  // magic 42
+    a = Utilities::get32(file.read(4), isBigEnd);
     quint32 offsetIfd0 = a + startOffset;
 
     // it's a jpg so the whole thing is the full length jpg
@@ -177,7 +176,6 @@ bool Jpeg::getMetadata(QFile &file,
 
     m.make = Utilities::getString(file, ifd->ifdDataHash.value(271).tagValue + startOffset,
                      ifd->ifdDataHash.value(271).tagCount);
-    qDebug() << __FUNCTION__ << "m.make" << m.make;
     m.model = Utilities::getString(file, ifd->ifdDataHash.value(272).tagValue + startOffset,
                       ifd->ifdDataHash.value(272).tagCount);
     m.creator = Utilities::getString(file, ifd->ifdDataHash.value(315).tagValue + startOffset,
@@ -232,7 +230,7 @@ bool Jpeg::getMetadata(QFile &file,
     if (ifd->ifdDataHash.contains(33434)) {
         double x = Utilities::getReal(file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
-                                      bigEndian);
+                                      isBigEnd);
         if (x < 1 ) {
             int t = qRound(1 / x);
             m.exposureTime = "1/" + QString::number(t);
@@ -251,7 +249,7 @@ bool Jpeg::getMetadata(QFile &file,
     if (ifd->ifdDataHash.contains(33437)) {
         double x = Utilities::getReal(file,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
-                                      bigEndian);
+                                      isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
         m.apertureNum = static_cast<float>(qRound(x * 10) / 10.0);
     } else {
@@ -273,7 +271,7 @@ bool Jpeg::getMetadata(QFile &file,
     if (ifd->ifdDataHash.contains(37386)) {
         double x = Utilities::getReal(file,
                                       ifd->ifdDataHash.value(37386).tagValue + startOffset,
-                                      bigEndian);
+                                      isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
         m.focalLength = QString::number(x, 'f', 0) + "mm";
     } else {
@@ -341,7 +339,7 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
 */
     segmentHash.clear();
     isXmp = false;
-    order = 0x4D4D;                  // only IFD/EXIF can be little endian
+    // big endian by default in Utilities: only IFD/EXIF can be little endian
     uint marker = 0xFFFF;
     while (marker > 0xFFBF) {
         file.seek(offset);           // APP1 FFE*
@@ -358,7 +356,7 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
                 segmentHash["XMP"] = static_cast<quint32>(offset);
                 m.xmpSegmentOffset = static_cast<quint32>(offset);
                 m.xmpNextSegmentOffset = static_cast<quint32>(nextOffset);
-                isXmp = true;
+                m.isXmp = true;
             }
         }
         // icc

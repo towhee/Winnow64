@@ -14,7 +14,8 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h
+HEADERS += Cache/imagecache.h \
+    ImageFormats/Panasonic/panasonic.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/datamodel.h
@@ -37,8 +38,13 @@ HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
 HEADERS += Image/thumb.h
 #HEADERS += Image/tiffhandler.h
+HEADERS += ImageFormats/Canon/canon.h
+HEADERS += ImageFormats/Dng/dng.h
+HEADERS += ImageFormats/Fuji/fuji.h
 HEADERS += ImageFormats/Heic/Heic.h
 HEADERS += ImageFormats/Jpeg/jpeg.h
+HEADERS += ImageFormats/Nikon/nikon.h
+HEADERS += ImageFormats/Olympus/olympus.h
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
 HEADERS += Main/mainwindow.h
@@ -72,7 +78,8 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/imagecache.cpp
+SOURCES += Cache/imagecache.cpp \
+    ImageFormats/Panasonic/panasonic.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
@@ -94,8 +101,13 @@ SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
 SOURCES += Image/thumb.cpp
 #SOURCES += Image/tiffhandler.cpp
+SOURCES += ImageFormats/Canon/canon.cpp
+SOURCES += ImageFormats/Dng/dng.cpp
+SOURCES += ImageFormats/Fuji/fuji.cpp
 SOURCES += ImageFormats/Heic/Heic.cpp
 SOURCES += ImageFormats/jpeg/jpeg.cpp
+SOURCES += ImageFormats/Nikon/nikon.cpp
+SOURCES += ImageFormats/Olympus/olympus.cpp
 SOURCES += Main/dockwidget.cpp
 SOURCES += Main/global.cpp
 SOURCES += Main/main.cpp
