@@ -211,84 +211,25 @@ private:
     void initNikonLensHash();
     void initSonyAFAreaModeHash();
 
-    int get4_1st(QByteArray c);
-    int get4_2nd(QByteArray c);
-    uint get8(QByteArray c);
-    quint16 get16(QByteArray c);
-    quint16 get16(quint32 offset);
-    quint32 get32(QByteArray c);
-    quint32 get32(quint32 offset);
-    LONGLONG get64(QByteArray c);
-    double getReal(quint32 offset);
     quint32 findInFile(QString s, quint32 offset, quint32 range);
-    bool readXMP(quint32 offset);
-    void readIPTC(quint32 offset);
-    quint32 readIFD(QString hdr, quint32 offset);
     bool readIRB(quint32 offset);
     void verifyEmbeddedJpg(quint32 &offset, quint32 &length);
-    QList<quint32> getSubIfdOffsets(quint32 subIFDaddr, int count);
-//    quint32 getExifOffset(quint32 offsetIfd0);      //update to use ifdDataHash
-    QString getString(quint32 offset, quint32 length);
-    QString getCString();
-    QString getCString(quint32 offset);
-    QByteArray getByteArray(quint32 offset, quint32 length);
-    void getJpgSegments(qint64 offset);
-    void getJpgICC(qint64 offset);
-    bool getDimensions(quint32 jpgOffset);
     int getNewOrientation(int orientation, int rotation);
 
-    bool nextHeifBox(quint32 &length, QString &type);
-    bool getHeifBox(QString &type, quint32 &offset, quint32 &length);
-    bool ftypBox(quint32 &offset, quint32 &length);
-    bool metaBox(quint32 &offset, quint32 &length);
-    bool hdlrBox(quint32 &offset, quint32 &length);
-    bool pitmBox(quint32 &offset, quint32 &length);
-    bool ilocBox(quint32 &offset, quint32 &length);  //
-    bool iinfBox(quint32 &offset, quint32 &length);  // Item Information Box
-    bool infeBox(quint32 &offset, quint32 &length);  // Item Info Entry
-    bool irefBox(quint32 &offset, quint32 &length);
-    bool sitrBox(quint32 &offset, quint32 &length);  // Single Item Type Reference Box
-    bool sitrBoxL(quint32 &offset, quint32 &length); // Single Item Type Reference Box Large
-    bool iprpBox(quint32 &offset, quint32 &length);
-    bool hvcCBox(quint32 &offset, quint32 &length);
-    bool ispeBox(quint32 &offset, quint32 &length);
-    bool ipmaBox(quint32 &offset, quint32 &length);
-    bool mdatBox(quint32 &offset, quint32 &length);
-
-    QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
-
-    void reportMetadataHeader(QString title);
-    void reportIfdDataHash();
-
-    bool formatNikon();
-    bool formatCanon();
-    bool formatOlympus();
-    bool formatSony();
-    bool formatFuji();
-    bool formatPanasonic();
-    bool formatJPG(quint32 startOffset);
-    bool formatTIF();
-    bool formatDNG();
-//    bool formatHEIF();
-
-//    // heif variables
-//    struct Heif {
-//        quint32 metaOffset;
-//        quint32 metaLength;
-//        quint16 pitmId;
-//        int ilocOffsetSize;
-//        int ilocLengthSize;
-//        int ilocBaseOffsetSize;
-//        int ilocItemCount;
-//        int ilocExtentCount;
-//        quint32 irefOffset;
-//        quint32 irefLength;
-//    } heif;
+    bool parseCanon();
+    bool parseDNG();
+    bool parseFuji();
+    bool parseHEIF();
+    bool parseJPG(quint32 startOffset);
+    bool parseNikon();
+    bool parseOlympus();
+    bool parsePanasonic();
+    bool parseSony();
+    bool parseTIF();
 
 signals:
 
 public slots:
-    bool formatHEIF();
     void loadFromThread(QFileInfo &fileInfo);
     bool loadImageMetadata(const QFileInfo &fileInfo,
                            bool essential = true,
