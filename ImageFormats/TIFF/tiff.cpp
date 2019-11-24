@@ -5,34 +5,33 @@ Tiff::Tiff()
 
 }
 
-bool Tiff::parse(QFile &file,
+bool Tiff::parse(MetadataParameters &p,
            ImageMetadata &m,
            IFD *ifd,
            IPTC *iptc,
            Exif *exif,
-           Jpeg *jpeg,
-           bool report,
-           QTextStream &rpt,
-           QString &xmpString)
+           Jpeg *jpeg)
 {
     //file.open happens in readMetadata
 
     quint32 startOffset = 0;
 
     // first two bytes is the endian order
-    quint16 order = Utilities::get16(file.read(2));
+    quint16 order = Utilities::get16(p.file.read(2));
     if (order != 0x4D4D && order != 0x4949) return false;
 
     bool isBigEnd;
     order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
 
     // should be magic number 42 next
-    if (Utilities::get16(file.read(2), isBigEnd) != 42) return false;
+    if (Utilities::get16(p.file.read(2), isBigEnd) != 42) return false;
 
     // read offset to first IFD
-    QString hdr = "IFD0";
-    quint32 ifdOffset = Utilities::get32(file.read(4), isBigEnd);
-    ifd->readIFD(file, ifdOffset, m, exif->hash, report, rpt, hdr, isBigEnd);
+    quint32 ifdOffset = Utilities::get32(p.file.read(4), isBigEnd);
+    p.hdr = "IFD0";
+    p.offset = ifdOffset;
+    p.hash = &exif->hash;
+    ifd->readIFD(p, m);
 
     m.lengthFullJPG = 1;  // set arbitrary length to avoid error msg as tif do not
                          // have full size embedded jpg
@@ -41,30 +40,30 @@ bool Tiff::parse(QFile &file,
 
     // IFD0: Model
     (ifd->ifdDataHash.contains(272))
-        ? m.model = Utilities::getString(file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount)
+        ? m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount)
         : m.model = "";
 
     // IFD0: Make
     (ifd->ifdDataHash.contains(271))
-        ? m.make = Utilities::getString(file, ifd->ifdDataHash.value(271).tagValue + startOffset,
+        ? m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
         ifd->ifdDataHash.value(271).tagCount)
         : m.make = "";
 
     // IFD0: Title (ImageDescription)
     (ifd->ifdDataHash.contains(270))
-        ? m.title = Utilities::getString(file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+        ? m.title = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
         ifd->ifdDataHash.value(270).tagCount)
         : m.title = "";
 
     // IFD0: Creator (artist)
     (ifd->ifdDataHash.contains(315))
-        ? m.creator = Utilities::getString(file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+        ? m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
         ifd->ifdDataHash.value(315).tagCount)
         : m.creator = "";
 
     // IFD0: Copyright
     (ifd->ifdDataHash.contains(33432))
-            ? m.copyright = Utilities::getString(file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
+            ? m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
                                   ifd->ifdDataHash.value(33432).tagCount)
             : m.copyright = "";
 
@@ -78,7 +77,8 @@ bool Tiff::parse(QFile &file,
         ? m.height = static_cast<uint>(ifd->ifdDataHash.value(257).tagValue)
         : m.height = 0;
 
-    if (!m.width || !m.height) jpeg->getDimensions(file, 0, m);  // rgh does this work??
+    p.offset = 0;
+    if (!m.width || !m.height) jpeg->getDimensions(p, m);  // rgh does this work??
 
     // IFD0: EXIF offset
     quint32 ifdEXIFOffset = 0;
@@ -117,8 +117,9 @@ bool Tiff::parse(QFile &file,
     if (ifdsubIFDOffset) {
 //        startOffset = 4;
         quint32 nextIFDOffset;
-        hdr = "SubIFD 1";
-        nextIFDOffset = ifd->readIFD(file, ifdsubIFDOffset, m, exif->hash, report, rpt, hdr, isBigEnd) + startOffset;
+        p.hdr = "SubIFD 1";
+        p.offset = ifdsubIFDOffset;
+        nextIFDOffset = ifd->readIFD(p, m);
         if(ifd->ifdDataHash.contains(256)) {
             if (ifd->ifdDataHash.value(256).tagValue < thumbWidth) {
                 thumbWidth = ifd->ifdDataHash.value(256).tagValue;
@@ -126,8 +127,9 @@ bool Tiff::parse(QFile &file,
         }
         int count = 2;
         while (nextIFDOffset && count < 5) {
-            QString hdr = "SubIFD " + QString::number(count);
-            nextIFDOffset = ifd->readIFD(file, nextIFDOffset, m, exif->hash, report, rpt, hdr, isBigEnd) + startOffset;
+            p.hdr = "SubIFD " + QString::number(count);
+            p.offset = nextIFDOffset;
+            nextIFDOffset = ifd->readIFD(p, m);
             if(ifd->ifdDataHash.contains(256)) {
                 if (ifd->ifdDataHash.value(256).tagValue < thumbWidth) {
                     thumbWidth = ifd->ifdDataHash.value(256).tagValue;
@@ -139,18 +141,19 @@ bool Tiff::parse(QFile &file,
 
     // EXIF: *******************************************************************
 
-    hdr = "IFD Exif";
-    if (ifdEXIFOffset) ifd->readIFD(file, ifdEXIFOffset, m, exif->hash, report, rpt, hdr, isBigEnd);
+    p.hdr = "IFD Exif";
+    p.offset = ifdEXIFOffset;
+    if (ifdEXIFOffset) ifd->readIFD(p, m);
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(file, ifd->ifdDataHash.value(36868).tagValue,
+    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
         ifd->ifdDataHash.value(36868).tagCount);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue,
                                       isBigEnd);
         if (x < 1 ) {
@@ -169,7 +172,7 @@ bool Tiff::parse(QFile &file,
 
     // EXIF: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -191,7 +194,7 @@ bool Tiff::parse(QFile &file,
 
     // EXIF: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -203,7 +206,7 @@ bool Tiff::parse(QFile &file,
 
     // EXIF: lens model
     (ifd->ifdDataHash.contains(42036))
-            ? m.lens = Utilities::getString(file, ifd->ifdDataHash.value(42036).tagValue,
+            ? m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
                                   ifd->ifdDataHash.value(42036).tagCount)
             : m.lens = "";
 
@@ -216,12 +219,12 @@ bool Tiff::parse(QFile &file,
     // IPTC: *******************************************************************
     // Get title if available
 
-    if (ifdIPTCOffset) iptc->read(file, ifdIPTCOffset, m);
+    if (ifdIPTCOffset) iptc->read(p.file, ifdIPTCOffset, m);
 
     // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
-        Xmp xmp(file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
         m.label = xmp.getItem("Label");       // case is important "Label"
         m.title = xmp.getItem("title");       // case is important "title"
@@ -238,7 +241,7 @@ bool Tiff::parse(QFile &file,
         m._rating = m.rating;
         m._label = m.label;
 
-        if (report) xmpString = xmp.metaAsString();
+        if (p.report) p.xmpString = xmp.metaAsString();
     }
 
     return true;

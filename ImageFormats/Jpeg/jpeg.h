@@ -17,20 +17,15 @@ class Jpeg : public QObject
 
 public:
     Jpeg();
-    bool parse(QFile &file,
-               quint32 startOffset,
+    bool parse(MetadataParameters &p,
                ImageMetadata &m,
                IFD *ifd,
                IPTC *iptc,
-               Exif *exif,
-               bool report,
-               QTextStream &rpt,
-               QString &xmpString);
+               Exif *exif);
     
     void initSegCodeHash();
-    void getJpgSegments(QFile &file, qint64 offset, ImageMetadata &m,
-                        bool &report, QTextStream &rpt);
-    bool getDimensions(QFile &file, quint32 offset, ImageMetadata &m);
+    void getJpgSegments(MetadataParameters &p, ImageMetadata &m);
+    bool getDimensions(MetadataParameters &p, ImageMetadata &m);
 
     QHash<QString, quint32> segmentHash;
 

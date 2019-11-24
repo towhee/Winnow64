@@ -4,37 +4,32 @@ DNG::DNG()
 {
 }
 
-bool DNG::parse(QFile &file,
+bool DNG::parse(MetadataParameters &p,
                 ImageMetadata &m,
-                IFD *ifd, IPTC *iptc,
+                IFD *ifd,
+                IPTC *iptc,
                 Exif *exif,
-                Jpeg *jpeg,
-                bool report,
-                QTextStream &rpt,
-                QString &xmpString)
+                Jpeg *jpeg)
 {
     //file.open happens in readMetadata
 
     quint32 startOffset = 0;
 
     // first two bytes is the endian order
-    quint16 order = Utilities::get16(file.read(2));
+    quint16 order = Utilities::get16(p.file.read(2));
     if (order != 0x4D4D && order != 0x4949) return false;
     bool isBigEnd;
     order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
 
     // should be magic number 42 next
-    if (Utilities::get16(file.read(2), isBigEnd) != 42) return false;
+    if (Utilities::get16(p.file.read(2), isBigEnd) != 42) return false;
 
     // read offset to first IFD
-    quint32 ifdOffset = Utilities::get32(file.read(4), isBigEnd);
-    QString hdr = "IFD0";
-    quint32 nextIFDOffset = ifd->readIFD(file,
-                                         ifdOffset,
-                                         m,
-                                         exif->hash,
-                                         report, rpt, hdr) + startOffset;
-    nextIFDOffset = 0;  // suppress compiler warning
+    quint32 ifdOffset = Utilities::get32(p.file.read(4), isBigEnd);
+    p.hdr = "IFD0";
+    p.offset = ifdOffset;
+    p.hash = &exif->hash;
+    ifd->readIFD(p, m);
 
     m.lengthFullJPG = 1;  // set arbitrary length to avoid error msg as tif do not
                           // have full size embedded jpg
@@ -43,30 +38,30 @@ bool DNG::parse(QFile &file,
 
     // IFD0: Model
     (ifd->ifdDataHash.contains(272))
-        ? m.model = Utilities::getString(file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount)
+        ? m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount)
         : m.model = "";
 
     // IFD0: Make
     (ifd->ifdDataHash.contains(271))
-        ? m.make = Utilities::getString(file, ifd->ifdDataHash.value(271).tagValue + startOffset,
+        ? m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
         ifd->ifdDataHash.value(271).tagCount)
         : m.make = "";
 
     // IFD0: Title (ImageDescription)
     (ifd->ifdDataHash.contains(270))
-        ? m.title = Utilities::getString(file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+        ? m.title = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
         ifd->ifdDataHash.value(270).tagCount)
         : m.title = "";
 
     // IFD0: Creator (artist)
     (ifd->ifdDataHash.contains(315))
-        ? m.creator = Utilities::getString(file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+        ? m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
         ifd->ifdDataHash.value(315).tagCount)
         : m.creator = "";
 
     // IFD0: Copyright
     (ifd->ifdDataHash.contains(33432))
-            ? m.copyright = Utilities::getString(file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
+            ? m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
                                   ifd->ifdDataHash.value(33432).tagCount)
             : m.copyright = "";
 
@@ -80,7 +75,8 @@ bool DNG::parse(QFile &file,
         ? m.height = ifd->ifdDataHash.value(257).tagValue
         : m.height = 0;
 
-    if (!m.width || !m.height) jpeg->getDimensions(file, 0, m);
+    p.offset = 0;
+    if (!m.width || !m.height) jpeg->getDimensions(p, m);
 
     // IFD0: EXIF offset
     quint32 ifdEXIFOffset = 0;
@@ -125,7 +121,7 @@ bool DNG::parse(QFile &file,
         int count = static_cast<int>(ifd->ifdDataHash.value(330).tagCount);
         if (count > 1) {
             quint32 addr = ifd->ifdDataHash.value(330).tagValue;
-            ifdOffsets = ifd->getSubIfdOffsets(file, addr, count);
+            ifdOffsets = ifd->getSubIfdOffsets(p.file, addr, count);
         }
         else ifdOffsets.append(ifd->ifdDataHash.value(330).tagValue);
         qDebug() << __FUNCTION__ << "ifdOffsets" << ifdOffsets;
@@ -138,21 +134,19 @@ bool DNG::parse(QFile &file,
         int largeJpg = 0;
 
         // iterate subIFDs looking for embedded JPGs
-        for(int i = 0; i < ifdOffsets.length(); ++i) {
-            hdr = "SubIFD" + QString::number(i + 1);
-            ifd->readIFD(file,
-                         ifdOffsets[i],
-                         m,
-                         exif->hash,
-                         report, rpt, hdr);
+        for (int i = 0; i < ifdOffsets.length(); ++i) {
+            p.hdr = "SubIFD" + QString::number(i + 1);
+            p.offset = ifdOffsets[i];
+            p.hash = &exif->hash;
+            ifd->readIFD(p, m);
             qDebug() << __FUNCTION__ << "i =" << i+1 << "before checking if contains tagID 273";
             if (ifd->ifdDataHash.contains(273)) {
                 qDebug() << __FUNCTION__ << "i =" << i+1 << "contains tagID 273";
                 // is it a JPG
                 quint32 offset = ifd->ifdDataHash.value(273).tagValue;
-                file.seek(offset);
+                p.file.seek(offset);
 //                quint32 x = get2(file.read(2));
-                if (Utilities::get16(file.read(2), true) != 0xFFD8) break;  // order = 4949 so reverse
+                if (Utilities::get16(p.file.read(2), true) != 0xFFD8) break;  // order = 4949 so reverse
                 // yes it is a JPG
                 jpgInfo.offset = offset;
                 jpgInfo.length = ifd->ifdDataHash.value(279).tagValue;
@@ -192,25 +186,23 @@ bool DNG::parse(QFile &file,
     // EXIF: *******************************************************************
 
     if (ifdEXIFOffset) {
-        hdr = "IFD Exif";
-        ifd->readIFD(file,
-                     ifdEXIFOffset,
-                     m,
-                     exif->hash,
-                     report, rpt, hdr);
+        p.hdr = "IFD Exif";
+        p.offset = ifdEXIFOffset;
+        p.hash = &exif->hash;
+        ifd->readIFD(p, m);
     }
 
     // EXIF: created datetime
     QString createdExif;
     (ifd->ifdDataHash.contains(36868))
-        ? createdExif = Utilities::getString(file, ifd->ifdDataHash.value(36868).tagValue,
+        ? createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
         ifd->ifdDataHash.value(36868).tagCount)
         : createdExif = "";
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
         if (x < 1 ) {
@@ -231,7 +223,7 @@ bool DNG::parse(QFile &file,
 
     // EXIF: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -253,7 +245,7 @@ bool DNG::parse(QFile &file,
 
     // EXIF: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue + startOffset,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -265,7 +257,7 @@ bool DNG::parse(QFile &file,
 
     // EXIF: lens model
     (ifd->ifdDataHash.contains(42036))
-            ? m.lens = Utilities::getString(file, ifd->ifdDataHash.value(42036).tagValue,
+            ? m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
                                   ifd->ifdDataHash.value(42036).tagCount)
             : m.lens = "";
 
@@ -283,7 +275,7 @@ bool DNG::parse(QFile &file,
     // read XMP - no XMP in fuji raw files
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
-        Xmp xmp(file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
         m.label = xmp.getItem("Label");       // case is important "Label"
         m.title = xmp.getItem("title");       // case is important "title"
@@ -300,7 +292,7 @@ bool DNG::parse(QFile &file,
         m._rating = m.rating;
         m._label = m.label;
 
-        if (report) xmpString = xmp.metaAsString();
+        if (p.report) p.xmpString = xmp.metaAsString();
     }
 
     return true;

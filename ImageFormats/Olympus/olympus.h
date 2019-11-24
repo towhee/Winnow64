@@ -17,14 +17,11 @@ class Olympus : public QObject
 
 public:
     Olympus();
-    bool parse(QFile &file,
+    bool parse(MetadataParameters &p,
                ImageMetadata &m,
                IFD *ifd,
                Exif *exif,
-               Jpeg *jpeg,
-               bool report,
-               QTextStream &rpt,
-               QString &xmpString);
+               Jpeg *jpeg);
 private:
     QHash<quint32, QString> olympusMakerHash, olympusCameraSettingsHash;
 };

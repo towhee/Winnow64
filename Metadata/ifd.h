@@ -7,7 +7,7 @@
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
 
-struct IFDData_
+struct IFDData
 {
     quint32 tagType;
     quint32 tagCount;
@@ -19,13 +19,10 @@ class IFD
 {
 public:
     IFD();
-    quint32 readIFD(QFile &file, quint32 &offset, ImageMetadata &m,
-                           QHash<quint32, QString> &hash,
-                           bool report, QTextStream &rpt, QString &hdr,
-                           bool isBigEnd = false);
+    quint32 readIFD(MetadataParameters &p, ImageMetadata &m, bool isBigEnd = false);
     QList<quint32> getSubIfdOffsets(QFile &file, quint32 subIFDaddr,
                                     int count, bool isBigEnd = false);
-    QHash<uint, IFDData_> ifdDataHash;
+    QHash<uint, IFDData> ifdDataHash;
 };
 
 #endif // IFD_H

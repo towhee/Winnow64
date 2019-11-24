@@ -8,7 +8,6 @@
 #include <iomanip>
 //#include <QElapsedTimer>
 //#include <QThread>
-
 #include "Main/global.h"
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
@@ -21,24 +20,26 @@
 #include "ui_metadatareport.h"
 
 #include "ImageFormats/Heic/heic.h"
+
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "ImageFormats/Canon/canon.h"
 #include "ImageFormats/Dng/dng.h"
 #include "ImageFormats/Fuji/fuji.h"
+
 #include "ImageFormats/Nikon/nikon.h"
 #include "ImageFormats/Olympus/olympus.h"
 #include "ImageFormats/Panasonic/panasonic.h"
 #include "ImageFormats/Sony/sony.h"
 #include "ImageFormats/Tiff/tiff.h"
 
-class IFDData
-{
-public:
-    quint32 tagType;
-    quint32 tagCount;
-    quint32 tagValue;
-    short tagReal;
-};
+//class IFDData
+//{
+//public:
+//    quint32 tagType;
+//    quint32 tagCount;
+//    quint32 tagValue;
+//    short tagReal;
+//};
 
 //Q_DECLARE_METATYPE(ImageMetadata)
 typedef TSHash<int, ImageMetadata> MetaHash;
@@ -108,8 +109,10 @@ public:
     uint shutterCount;
     bool metadataLoaded;
 
-    ImageMetadata imageMetadata;            // agregate for mdCacher
+    ImageMetadata imageMetadata;            // agregate for image metadata
     // end variables used to hold data
+
+    MetadataParameters p;
 
     QString fPath;
     QString err;
@@ -147,6 +150,7 @@ public:
     void clearMetadata();
 
     bool writeMetadata(const QString &imageFileName, ImageMetadata m, QByteArray &buffer);
+
 
     QFile file;
     bool okToReadXmp;
@@ -191,11 +195,11 @@ private:
     // metadata cache
     QMap<QString, ImageMetadata> metaCache;
 
-    bool report;
+//    bool report;
     QString xmpString;
     quint32 xmpmetaRoom;
     QString reportString;
-    QTextStream rpt;
+//    QTextStream rpt;
     quint32 order;
 
     void initSupportedFiles();
@@ -219,7 +223,7 @@ private:
     bool parseCanon();
     bool parseDNG();
     bool parseFuji();
-    bool parseHEIF();
+//    bool parseHEIF();
     bool parseJPG(quint32 startOffset);
     bool parseNikon();
     bool parseOlympus();
@@ -230,6 +234,7 @@ private:
 signals:
 
 public slots:
+    bool parseHEIF();
     void loadFromThread(QFileInfo &fileInfo);
     bool loadImageMetadata(const QFileInfo &fileInfo,
                            bool essential = true,

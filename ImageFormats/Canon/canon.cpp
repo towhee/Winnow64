@@ -73,47 +73,41 @@ Canon::Canon()
     canonFileInfoHash[25] = "Flash exposure lock";
 }
 
-bool Canon::parse(QFile &file,
+bool Canon::parse(MetadataParameters &p,
                   ImageMetadata &m,
                   IFD *ifd,
-                  Exif *exif,
-                  bool report,
-                  QTextStream &rpt,
-                  QString &xmpString)
+                  Exif *exif)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    //file.open in Metadata::readMetadata
+    //p.file.open in Metadata::readMetadata
     quint32 startOffset = 0;
 
     // first two bytes is the endian order
-    quint16 order = Utilities::get16(file.read(2));
+    quint16 order = Utilities::get16(p.file.read(2));
     if (order != 0x4D4D && order != 0x4949) return false;
     bool isBigEnd;
     order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
 
     // is canon always offset 16 to IFD0 ???
-    quint32 offsetIfd0 = 16;
-    QString hdr = "IFD0";
-    quint32 nextIFDOffset = ifd->readIFD(file,
-                                         offsetIfd0,
-                                         m,
-                                         exif->hash,
-                                         report, rpt, hdr) + startOffset;
+    p.hdr = "IFD0";
+    p.offset = 16;
+    p.hash = &exif->hash;
+    quint32 nextIFDOffset = ifd->readIFD(p, m) + startOffset;
 
     // pull data reqd from IFD0
     m.offsetFullJPG = ifd->ifdDataHash.value(273).tagValue;
     m.lengthFullJPG = ifd->ifdDataHash.value(279).tagValue;
 //    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
 
-    m.make = Utilities::getString(file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
-    m.model = Utilities::getString(file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
+    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
+    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
-    m.creator = Utilities::getString(file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
-    m.copyright = Utilities::getString(file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
+    m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
+    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
 
     // xmp offset
     m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
@@ -127,12 +121,9 @@ bool Canon::parse(QFile &file,
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
 
     if (nextIFDOffset) {
-        hdr = "IFD1";
-        nextIFDOffset = ifd->readIFD(file,
-                                     nextIFDOffset,
-                                     m,
-                                     exif->hash,
-                                     report, rpt, hdr);
+        p.hdr = "IFD1";
+        p.offset = nextIFDOffset;
+        nextIFDOffset = ifd->readIFD(p, m);
     }
 
     // pull data reqd from IFD1
@@ -141,12 +132,9 @@ bool Canon::parse(QFile &file,
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     if (nextIFDOffset) {
-        hdr = "IFD2";
-        nextIFDOffset = ifd->readIFD(file,
-                                     nextIFDOffset,
-                                     m,
-                                     exif->hash,
-                                     report, rpt, hdr);
+        p.hdr = "IFD2";
+        p.offset = nextIFDOffset;
+        nextIFDOffset = ifd->readIFD(p, m);
     }
 
     // pull small size jpg from IFD2
@@ -154,32 +142,26 @@ bool Canon::parse(QFile &file,
     m.lengthSmallJPG = ifd->ifdDataHash.value(279).tagValue;
 
     // IFD3 not used at present, but does contain details on embedded jpg
-    if (nextIFDOffset && report) {
-        hdr = "IFD3";
-        nextIFDOffset = ifd->readIFD(file,
-                                     nextIFDOffset,
-                                     m,
-                                     exif->hash,
-                                     report, rpt, hdr);
+    if (nextIFDOffset && p.report) {
+        p.hdr = "IFD3";
+        p.offset = nextIFDOffset;
+        ifd->readIFD(p, m);
     }
 
     // read ExifIFD
-    hdr = "IFD Exif";
-    ifd->readIFD(file,
-                 offsetEXIF,
-                 m,
-                 exif->hash,
-                 report, rpt, hdr);
+    p.hdr = "IFD Exif";
+    p.offset = offsetEXIF;
+    ifd->readIFD(p, m);
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(file, ifd->ifdDataHash.value(36868).tagValue,
+    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
         ifd->ifdDataHash.value(36868).tagCount);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
         if (x < 1 ) {
@@ -204,7 +186,7 @@ bool Canon::parse(QFile &file,
     m.height = ifd->ifdDataHash.value(40963).tagValue;
     // aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -225,7 +207,7 @@ bool Canon::parse(QFile &file,
     }
     // focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue + startOffset,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -235,33 +217,31 @@ bool Canon::parse(QFile &file,
         m.focalLengthNum = 0;
     }
     // IFD Exif: lens
-    m.lens = Utilities::getString(file, ifd->ifdDataHash.value(42036).tagValue,
+    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
             ifd->ifdDataHash.value(42036).tagCount);
 
     // IFD Exif: camera serial number
-    m.cameraSN = Utilities::getString(file, ifd->ifdDataHash.value(42033).tagValue,
+    m.cameraSN = Utilities::getString(p.file, ifd->ifdDataHash.value(42033).tagValue,
             ifd->ifdDataHash.value(42033).tagCount);
 
     // IFD Exif: lens serial nember
-    m.lensSN = Utilities::getString(file, ifd->ifdDataHash.value(42037).tagValue,
+    m.lensSN = Utilities::getString(p.file, ifd->ifdDataHash.value(42037).tagValue,
             ifd->ifdDataHash.value(42037).tagCount);
 
     // Exif: read makernoteIFD
 
     if (ifd->ifdDataHash.contains(37500)) {
         quint32 makerOffset = ifd->ifdDataHash.value(37500).tagValue;
-        hdr = "IFD Canon Maker Note";
-        ifd->readIFD(file,
-                     makerOffset,
-                     m,
-                     canonMakerHash,
-                     report, rpt, hdr);
+        p.hdr = "IFD Canon Maker Note";
+        p.offset = makerOffset;
+        p.hash = &canonMakerHash;
+        ifd->readIFD(p, m);
     }
 
     // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
-        Xmp xmp(file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
         m.label = xmp.getItem("Label");       // case is important "Label"
         m.title = xmp.getItem("title");       // case is important "title"
@@ -278,7 +258,7 @@ bool Canon::parse(QFile &file,
         m._rating = m.rating;
         m._label = m.label;
 
-        if (report) xmpString = xmp.metaAsString();
+        if (p.report) p.xmpString = xmp.metaAsString();
     }
 
     return true;
