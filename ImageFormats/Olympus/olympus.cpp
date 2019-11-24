@@ -191,14 +191,11 @@ Olympus::Olympus()
     olympusCameraSettingsHash[2312] = "DateTimeUTC";
 }
 
-bool Olympus::parse(QFile &file,
+bool Olympus::parse(MetadataParameters &p,
                     ImageMetadata &m,
                     IFD *ifd,
                     Exif *exif,
-                    Jpeg *jpeg,
-                    bool report,
-                    QTextStream &rpt,
-                    QString &xmpString)
+                    Jpeg *jpeg)
 {
     {
     #ifdef ISDEBUG
@@ -207,39 +204,42 @@ bool Olympus::parse(QFile &file,
     }
     //file.open in Metadata::readMetadata
     // first two bytes is the endian order (skip next 2 bytes)
-    quint16 order = Utilities::get16(file.read(4));
+    quint16 order = Utilities::get16(p.file.read(4));
     if (order != 0x4D4D && order != 0x4949) return false;
     bool isBigEnd;
     order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
 
     // get offset to first IFD and read it
-    quint32 offsetIfd0 = Utilities::get32(file.read(4), isBigEnd);
+    quint32 offsetIfd0 = Utilities::get32(p.file.read(4), isBigEnd);
 
     // Olympus does not chain IFDs
-    QString hdr = "IFD0";
-    ifd->readIFD(file, offsetIfd0, m, exif->hash, report, rpt, hdr, isBigEnd);
+    p.hdr = "IFD0";
+    p.offset = offsetIfd0;
+    p.hash = &exif->hash;
+    ifd->readIFD(p, m);
 
     // pull data reqd from IFD0
-    m.model = Utilities::getString(file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount).trimmed();
+    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount).trimmed();
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
-    m.creator = Utilities::getString(file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
-    m.copyright = Utilities::getString(file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
+    m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
+    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
 
     // get the offset for ExifIFD and read it
     quint32 offsetEXIF;
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
-    hdr = "IFD Exif";
-    ifd->readIFD(file, offsetEXIF, m, exif->hash, report, rpt, hdr, isBigEnd);
+    p.hdr = "IFD Exif";
+    p.offset = offsetEXIF;
+    ifd->readIFD(p, m);
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(file, ifd->ifdDataHash.value(36868).tagValue,
+    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
         ifd->ifdDataHash.value(36868).tagCount);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // get shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue,
                                       isBigEnd);
         if (x <1 ) {
@@ -257,7 +257,7 @@ bool Olympus::parse(QFile &file,
     }
     // aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -278,7 +278,7 @@ bool Olympus::parse(QFile &file,
     }
     // focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -288,7 +288,7 @@ bool Olympus::parse(QFile &file,
         m.focalLengthNum = 0;
     }
     // lens
-    m.lens = Utilities::getString(file, ifd->ifdDataHash.value(42036).tagValue,
+    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
                 ifd->ifdDataHash.value(42036).tagCount);
 
     // read makernoteIFD
@@ -298,8 +298,10 @@ bool Olympus::parse(QFile &file,
         // The IFD starts 10 or 12 bits after the offset to make room for the
         // string "OLYMPUS II  "
         quint32 offset = makerOffset + 12;
-        hdr = "IFD Olympus Maker Note";
-        ifd->readIFD(file, offset, m, olympusMakerHash, report, rpt, hdr, isBigEnd);        // Get the thumbnail Jpg offset and length
+        p.hdr = "IFD Olympus Maker Note";
+        p.offset = offset;
+        p.hash = &olympusMakerHash;
+        ifd->readIFD(p, m);
         m.offsetThumbJPG = ifd->ifdDataHash.value(256).tagValue + makerOffset;
         m.lengthThumbJPG = ifd->ifdDataHash.value(256).tagCount;
 //        if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
@@ -309,12 +311,14 @@ bool Olympus::parse(QFile &file,
 //            readIFD("IFD Olympus Maker Note: CameraSettingsIFD",
 //                    ifd->ifdDataHash.value(8224).tagValue + makerOffset);
             offset = ifd->ifdDataHash.value(8224).tagValue + makerOffset;
-            hdr = "IFD Olympus Maker Note: CameraSettingsIFD";
-            ifd->readIFD(file, offset, m, olympusMakerHash, report, rpt, hdr, isBigEnd);
+            p.hdr = "IFD Olympus Maker Note: CameraSettingsIFD";
+            p.offset = offset;
+            ifd->readIFD(p, m);
             m.offsetFullJPG = ifd->ifdDataHash.value(257).tagValue + makerOffset;
             m.lengthFullJPG = ifd->ifdDataHash.value(258).tagValue;
 //            if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
-            jpeg->getDimensions(file, m.offsetFullJPG, m);
+            p.offset = m.offsetFullJPG;
+            jpeg->getDimensions(p, m);
         }
     }
 

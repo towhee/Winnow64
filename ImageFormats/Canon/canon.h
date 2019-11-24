@@ -16,13 +16,10 @@ class Canon : public QObject
 
 public:
     Canon();
-    bool parse(QFile &file,
+    bool parse(MetadataParameters &p,
                ImageMetadata &m,
                IFD *ifd,
-               Exif *exif,
-               bool report,
-               QTextStream &rpt,
-               QString &xmpString);
+               Exif *exif);
 private:
     QHash<quint32, QString> canonMakerHash, canonFileInfoHash;
 };

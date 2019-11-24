@@ -9,7 +9,7 @@
 
 #include "Main/global.h"
 #include "Utilities/utilities.h"
-#include "Metadata/metadata.h"
+//#include "Metadata/metadata.h"
 
 class Heic : public QObject
 {

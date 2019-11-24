@@ -15,15 +15,12 @@ class DNG
 {
 public:
     DNG();
-    bool parse(QFile &file,
+    bool parse(MetadataParameters &p,
                ImageMetadata &m,
                IFD *ifd,
                IPTC *iptc,
                Exif *exif,
-               Jpeg *jpeg,
-               bool report,
-               QTextStream &rpt,
-               QString &xmpString);
+               Jpeg *jpeg);
 };
 
 #endif // DNG_H

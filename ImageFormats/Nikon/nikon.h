@@ -17,13 +17,10 @@ class Nikon : public QObject
 
 public:
     Nikon();
-    bool parse(QFile &file,
+    bool parse(MetadataParameters &p,
                ImageMetadata &m,
                IFD *ifd,
-               Exif *exif,
-               bool report,
-               QTextStream &rpt,
-               QString &xmpString);
+               Exif *exif);
 private:
     QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
     QHash<quint32, QString> nikonMakerHash;

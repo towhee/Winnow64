@@ -68,14 +68,11 @@ Fuji::Fuji()
     fujiMakerHash[45585] = "Parallax";
 }
 
-bool Fuji::parse(QFile &file,
+bool Fuji::parse(MetadataParameters &p,
                  ImageMetadata &m,
                  IFD *ifd,
                  Exif *exif,
-                 Jpeg *jpeg,
-                 bool report,
-                 QTextStream &rpt,
-                 QString &xmpString)
+                 Jpeg *jpeg)
 {
     //file.open in Metadata::readMetadata
 
@@ -109,37 +106,38 @@ bool Fuji::parse(QFile &file,
     // Fuji is big endian
     bool isBigEnd = true;
     quint32 startOffset = 0;
-    file.seek(0);
+    p.file.seek(0);
 
     // read first 16 bytes to confirm it is a fuji file
-    if (file.read(16) != "FUJIFILMCCD-RAW ") return false;
+    if (p.file.read(16) != "FUJIFILMCCD-RAW ") return false;
 
     // seek JPEG image offset
-    file.seek(84);
-    m.offsetFullJPG = Utilities::get32(file.read(4));
-    m.lengthFullJPG = Utilities::get32(file.read(4));
+    p.file.seek(84);
+    m.offsetFullJPG = Utilities::get32(p.file.read(4));
+    m.lengthFullJPG = Utilities::get32(p.file.read(4));
 //    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
-    file.seek(m.offsetFullJPG);
+    p.file.seek(m.offsetFullJPG);
 
     // start on embedded JPEG
-    if (Utilities::get16(file.read(2)) != 0xFFD8) return false;
+    if (Utilities::get16(p.file.read(2)) != 0xFFD8) return false;
 
     // build a hash of jpg segment offsets
-    jpeg->getJpgSegments(file, file.pos(), m, report, rpt);
+    p.offset = p.file.pos();
+    jpeg->getJpgSegments(p, m);
 
     // read the EXIF data
-    if (jpeg->segmentHash.contains("EXIF")) file.seek(jpeg->segmentHash["EXIF"]);
+    if (jpeg->segmentHash.contains("EXIF")) p.file.seek(jpeg->segmentHash["EXIF"]);
     else return false;
 
     bool foundEndian = false;
     int count = 0;
     while (!foundEndian) {
-        quint32 order = Utilities::get16(file.read(2));
+        quint32 order = Utilities::get16(p.file.read(2));
         if (order == 0x4949 || order == 0x4D4D) {
             order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
             // offsets are from the endian position in JPEGs
             // therefore must adjust all offsets found in tagValue
-            startOffset = static_cast<quint32>(file.pos()) - 2;
+            startOffset = static_cast<quint32>(p.file.pos()) - 2;
             foundEndian = true;
         }
         // add condition to check for EOF
@@ -150,58 +148,52 @@ bool Fuji::parse(QFile &file,
         }
     }
 
-    if (report) rpt << "\n startOffset = " << startOffset;
+    if (p.report) p.rpt << "\n startOffset = " << startOffset;
 
-    quint32 a = Utilities::get16(file.read(2), isBigEnd);  // magic 42
-    a = Utilities::get32(file.read(4), isBigEnd);
+    quint32 a = Utilities::get16(p.file.read(2), isBigEnd);  // magic 42
+    a = Utilities::get32(p.file.read(4), isBigEnd);
     quint32 offsetIfd0 = a + startOffset;
 
 //    getDimensions(offsetFullJPG);
 
     // read IFD0:
-    QString hdr = "IFD0";
-    quint32 nextIFDOffset = ifd->readIFD(file,
-                                         offsetIfd0,
-                                         m,
-                                         exif->hash,
-                                         report, rpt, hdr) + startOffset;
+    p.hdr = "IFD0";
+    p.offset = offsetIfd0;
+    p.hash = &exif->hash;
+    quint32 nextIFDOffset = ifd->readIFD(p, m) + startOffset;
+
     quint32 offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
-    m.make = Utilities::getString(file, ifd->ifdDataHash.value(271).tagValue + startOffset,
+    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
                      ifd->ifdDataHash.value(271).tagCount);
-    m.model = Utilities::getString(file, ifd->ifdDataHash.value(272).tagValue + startOffset,
+    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset,
                       ifd->ifdDataHash.value(272).tagCount);
-    m.copyright = Utilities::getString(file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
+    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
                           ifd->ifdDataHash.value(33432).tagCount);
 
     // read IFD1
     if (nextIFDOffset) {
-        QString hdr = "IFD1";
-        nextIFDOffset = ifd->readIFD(file,
-                                     nextIFDOffset,
-                                     m,
-                                     exif->hash,
-                                     report, rpt, hdr);
+        p.hdr = "IFD1";
+        p.offset = nextIFDOffset;
+        nextIFDOffset = ifd->readIFD(p, m);
     }
     m.offsetThumbJPG = ifd->ifdDataHash.value(513).tagValue + startOffset;
     m.lengthThumbJPG = ifd->ifdDataHash.value(514).tagValue + startOffset;
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     // read EXIF IFD
-    hdr = "IFD Exif";
-    ifd->readIFD(file,
-                 offsetEXIF,
-                 m,
-                 exif->hash,
-                 report, rpt, hdr);
+    p.hdr = "IFD Exif";
+    p.offset = offsetEXIF;
+    ifd->readIFD(p, m);
 
     m.width = ifd->ifdDataHash.value(40962).tagValue;
     m.height = ifd->ifdDataHash.value(40963).tagValue;
-    if (!m.width || !m.height) jpeg->getDimensions(file, m.offsetFullJPG, m);
+    p.offset = m.offsetFullJPG;
+    if (!m.width || !m.height) jpeg->getDimensions(p, m);
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
         if (x < 1 ) {
@@ -220,7 +212,7 @@ bool Fuji::parse(QFile &file,
 
     // EXIF: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -242,7 +234,7 @@ bool Fuji::parse(QFile &file,
 
     // EXIF: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue + startOffset,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -253,14 +245,16 @@ bool Fuji::parse(QFile &file,
     }
 
     // EXIF: lens model
-    m.lens = Utilities::getString(file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
+    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
                      ifd->ifdDataHash.value(42036).tagCount);
 
     // Exif: read makernoteIFD
     if (ifd->ifdDataHash.contains(37500)) {
         quint32 makerOffset = ifd->ifdDataHash.value(37500).tagValue + startOffset + 12;
-        hdr = "IFD Fuji Maker Note";
-        ifd->readIFD(file, makerOffset, m, fujiMakerHash, report, rpt, hdr);
+        p.hdr = "IFD Fuji Maker Note";
+        p.offset = makerOffset;
+        p.hash = &fujiMakerHash;
+        ifd->readIFD(p, m);
     }
 
     // Fuji files do not contain xmp

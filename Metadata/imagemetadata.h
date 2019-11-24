@@ -75,4 +75,21 @@ public:
 };
 Q_DECLARE_METATYPE(ImageMetadata)
 
+class MetadataParameters
+{
+/*
+This structure holds the parameters that are passed from Metadata to each of the
+image file parsing classes ie parseSony.
+*/
+public:
+    QFile file;
+    quint32 offset;
+    QHash<quint32, QString> *hash;
+    bool report;
+    QTextStream rpt;
+    QString hdr;
+    QString xmpString;
+    bool inclNonEssential;
+};
+
 #endif // IMAGEMETADATA_H

@@ -677,13 +677,10 @@ QByteArray Nikon::nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial
    return bData;
 }
 
-bool Nikon::parse(QFile &file,
+bool Nikon::parse(MetadataParameters &p,
                   ImageMetadata &m,
                   IFD *ifd,
-                  Exif *exif,
-                  bool report,
-                  QTextStream &rpt,
-                  QString &xmpString)
+                  Exif *exif)
 {
     {
     #ifdef ISDEBUG
@@ -691,11 +688,11 @@ bool Nikon::parse(QFile &file,
     #endif
     }
     // moved file.open to readMetadata
-    file.seek(0);
+    p.file.seek(0);
 
     // get endian
     bool isBigEnd;
-    quint32 order = Utilities::get16(file.read(2));
+    quint32 order = Utilities::get16(p.file.read(2));
     if (order == 0x4949 || order == 0x4D4D) {
         order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
     }
@@ -703,19 +700,21 @@ bool Nikon::parse(QFile &file,
         // err, should have been endian order
         return false;
     }
-    file.read(2);       // skip over 0x2A
+    p.file.read(2);       // skip over 0x2A
     // get offset to first IFD and read it
-    quint32 offsetIfd0 = Utilities::get32(file.read(4), isBigEnd);
+    quint32 offsetIfd0 = Utilities::get32(p.file.read(4), isBigEnd);
     // Nikon does not chain IFDs
-    QString hdr = "IFD0";
-    ifd->readIFD(file, offsetIfd0, m, exif->hash, report, rpt, hdr, isBigEnd);
+    p.hdr = "IFD0";
+    p.offset = offsetIfd0;
+    p.hash = &exif->hash;
+    ifd->readIFD(p, m);
 
 
     // pull data reqd from IFD0
-    m.make = Utilities::getString(file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
-    m.model = Utilities::getString(file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
+    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
+    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
-    m.creator = Utilities::getString(file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
+    m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
 
     // xmp offset
     m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
@@ -736,15 +735,16 @@ bool Nikon::parse(QFile &file,
     QList<quint32> ifdOffsets;
     if(ifd->ifdDataHash.contains(330)) {
         if (ifd->ifdDataHash.value(330).tagCount > 1)
-            ifdOffsets = ifd->getSubIfdOffsets(file, ifd->ifdDataHash.value(330).tagValue,
+            ifdOffsets = ifd->getSubIfdOffsets(p.file, ifd->ifdDataHash.value(330).tagValue,
                              static_cast<int>(ifd->ifdDataHash.value(330).tagCount), isBigEnd);
         else ifdOffsets.append(ifd->ifdDataHash.value(330).tagValue);
 
         QString hdr;
         // SubIFD1 contains full size jpg offset and length
         if (ifdOffsets.count() > 0) {
-            hdr = "SubIFD1";
-            ifd->readIFD(file, ifdOffsets[0], m, exif->hash, report, rpt, hdr, isBigEnd);
+            p.hdr = "SubIFD1";
+            p.offset = ifdOffsets[0];
+            ifd->readIFD(p, m);
             // pull data reqd from SubIFD1
             m.offsetFullJPG = ifd->ifdDataHash.value(513).tagValue;
             m.lengthFullJPG = ifd->ifdDataHash.value(514).tagValue;
@@ -758,8 +758,9 @@ bool Nikon::parse(QFile &file,
         // SubIFD2 contains image width and height
 
         if (ifdOffsets.count() > 1) {
-            hdr = "SubIFD2";
-            ifd->readIFD(file, ifdOffsets[1], m, exif->hash, report, rpt, hdr, isBigEnd);
+            p.hdr = "SubIFD2";
+            p.offset = ifdOffsets[1];
+            ifd->readIFD(p, m);
             m.width = ifd->ifdDataHash.value(256).tagValue;
             m.height = ifd->ifdDataHash.value(257).tagValue;
         }
@@ -767,7 +768,9 @@ bool Nikon::parse(QFile &file,
         // SubIFD3 contains small size jpg offset and length
         if (ifdOffsets.count() > 2) {
             hdr = "SubIFD3";
-            ifd->readIFD(file, ifdOffsets[2], m, exif->hash, report, rpt, hdr, isBigEnd);
+            p.hdr = "SubIFD3";
+            p.offset = ifdOffsets[2];
+            ifd->readIFD(p, m);
             m.offsetSmallJPG = ifd->ifdDataHash.value(513).tagValue;
             m.lengthSmallJPG = ifd->ifdDataHash.value(514).tagValue;
 //            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
@@ -775,18 +778,19 @@ bool Nikon::parse(QFile &file,
     }
 
     // read ExifIFD
-    hdr = "IFD Exif";
-    ifd->readIFD(file, offsetEXIF, m, exif->hash, report, rpt, hdr, isBigEnd);
+    p.hdr = "IFD Exif";
+    p.offset = offsetEXIF;
+    ifd->readIFD(p, m);
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(file, ifd->ifdDataHash.value(36868).tagValue,
+    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
                         ifd->ifdDataHash.value(36868).tagCount);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // Exif: get shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue,
                                       isBigEnd);
         if (x < 1 ) {
@@ -804,7 +808,7 @@ bool Nikon::parse(QFile &file,
     }
     // Exif: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -824,7 +828,7 @@ bool Nikon::parse(QFile &file,
     }
     // Exif: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -845,10 +849,10 @@ bool Nikon::parse(QFile &file,
 
         quint32 endian;
         bool foundEndian = false;
-        file.seek(makerOffset);
+        p.file.seek(makerOffset);
         int step = 0;
         while (!foundEndian) {
-            quint32 order = Utilities::get16(file.read(2));
+            quint32 order = Utilities::get16(p.file.read(2));
             if (order == 0x4949 || order == 0x4D4D) {
                 order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
                 // offsets are from the endian position in JPEGs
@@ -862,10 +866,10 @@ bool Nikon::parse(QFile &file,
                break;
             }
         }
-        quint32 makerOffsetBase = static_cast<quint32>(file.pos()) - 2;
+        quint32 makerOffsetBase = static_cast<quint32>(p.file.pos()) - 2;
 
-        if (report) {
-            rpt << "\nMaker Offset = "
+        if (p.report) {
+            p.rpt << "\nMaker Offset = "
                 << makerOffset
                 << " / " << QString::number(makerOffset, 16)
                 << "  Maker offset base = "
@@ -873,22 +877,24 @@ bool Nikon::parse(QFile &file,
                 << " / " << QString::number(makerOffsetBase, 16);
         }
 
-        hdr = "IFD Nikon Maker Note";
         makerOffset = makerOffsetBase + 8;
-        ifd->readIFD(file, makerOffset, m, nikonMakerHash, report, rpt, hdr, isBigEnd);
+        p.hdr = "IFD Nikon Maker Note";
+        p.offset = makerOffset;
+        p.hash = &nikonMakerHash;
+        ifd->readIFD(p, m);
 
         // Get serial number, shutter count and lens type to decrypt the lens info
-        m.cameraSN = Utilities::getString(file, ifd->ifdDataHash.value(29).tagValue + makerOffsetBase,
+        m.cameraSN = Utilities::getString(p.file, ifd->ifdDataHash.value(29).tagValue + makerOffsetBase,
                                        ifd->ifdDataHash.value(29).tagCount);
         m.shutterCount = ifd->ifdDataHash.value(167).tagValue;
         uint lensType = 0;
         lensType = ifd->ifdDataHash.value(131).tagValue;
 
         uint32_t serial = static_cast<uint32_t>(m.cameraSN.toInt());
-        uint32_t count = m.shutterCount;
+        uint32_t count = static_cast<uint32_t>(m.shutterCount);
         QByteArray encryptedLensInfo = "";
         quint32 offset = ifd->ifdDataHash.value(152).tagValue + makerOffsetBase;
-        encryptedLensInfo = Utilities::getByteArray(file, offset,
+        encryptedLensInfo = Utilities::getByteArray(p.file, offset,
                                  ifd->ifdDataHash.value(152).tagCount);
         QByteArray lensInfo = nikonDecrypt(encryptedLensInfo, count, serial);
         // the byte array code is in the middle of the lensInfo byte stream
@@ -903,9 +909,11 @@ bool Nikon::parse(QFile &file,
 
         // Find the preview IFD offset
         if (ifd->ifdDataHash.contains(17)) {
-            hdr = "IFD Nikon Maker Note: PreviewIFD";
+            p.hdr = "IFD Nikon Maker Note: PreviewIFD";
             quint32 offset = ifd->ifdDataHash.value(17).tagValue + makerOffsetBase;
-            ifd->readIFD(file, offset, m, exif->hash, report, rpt, hdr, isBigEnd);
+            p.offset = offset;
+            p.hash = &exif->hash;
+            ifd->readIFD(p, m);
 
             m.offsetThumbJPG = ifd->ifdDataHash.value(513).tagValue + makerOffsetBase;
             m.lengthThumbJPG = ifd->ifdDataHash.value(514).tagValue; // + makerOffsetBase;
@@ -916,7 +924,7 @@ bool Nikon::parse(QFile &file,
     // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
-        Xmp xmp(file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
         m.label = xmp.getItem("Label");       // case is important "Label"
         if (m.title.isEmpty()) m.title = xmp.getItem("title");       // case is important "title"
@@ -933,7 +941,7 @@ bool Nikon::parse(QFile &file,
         m._rating = m.rating;
         m._label = m.label;
 
-        if (report) xmpString = xmp.metaAsString();
+        if (p.report) p.xmpString = xmp.metaAsString();
     }
 
     return true;

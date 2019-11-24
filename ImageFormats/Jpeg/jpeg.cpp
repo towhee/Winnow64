@@ -74,34 +74,30 @@ void Jpeg::initSegCodeHash()
     segCodeHash[0xFFFE] = "JPG15";
 }
 
-bool Jpeg::getDimensions(QFile &file, quint32 offset, ImageMetadata &m)
+bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
 {
     bool isBigEnd = true;                  // only IFD/EXIF can be little endian
     quint32 marker = 0;
-    offset += 2;
+    p.offset += 2;
     while (marker != 0xFFC0) {
-        file.seek(offset);                  // APP1 FFE*
-        marker = Utilities::get16(file.read(2), isBigEnd);
+        p.file.seek(p.offset);                  // APP1 FFE*
+        marker = Utilities::get16(p.file.read(2), isBigEnd);
         if (marker < 0xFF01) {
             return false;
         }
-        offset = Utilities::get16(file.peek(2), isBigEnd) + static_cast<quint32>(file.pos());
+        p.offset = Utilities::get16(p.file.peek(2), isBigEnd) + static_cast<quint32>(p.file.pos());
     }
-    file.seek(file.pos()+3);
-    m.height = Utilities::get16(file.read(2), isBigEnd);
-    m.width = Utilities::get16(file.read(2), isBigEnd);
+    p.file.seek(p.file.pos()+3);
+    m.height = Utilities::get16(p.file.read(2), isBigEnd);
+    m.width = Utilities::get16(p.file.read(2), isBigEnd);
     return true;
 }
 
-bool Jpeg::parse(QFile &file,
-                 quint32 startOffset,
+bool Jpeg::parse(MetadataParameters &p,
                  ImageMetadata &m,
                  IFD *ifd,
                  IPTC *iptc,
-                 Exif *exif,
-                 bool report,
-                 QTextStream &rpt,
-                 QString &xmpString)
+                 Exif *exif)
 {
     // init
     m.iccSegmentOffset = 0;
@@ -109,41 +105,43 @@ bool Jpeg::parse(QFile &file,
     //file.open happens in readMetadata
     bool isBigEnd = true;
 
-    if (Utilities::get16(file.read(2), isBigEnd) != 0xFFD8) {
+    if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
         err = "JPG does not start with 0xFFD8";
         qDebug() << __FUNCTION__ << err;
         return false;
     }
 
     // build a hash of jpg segment offsets
-    getJpgSegments(file, file.pos(), m, report, rpt);
+    p.offset = static_cast<quint32>(p.file.pos());
+    getJpgSegments(p, m);
 
     // check if JFIF
     if (segmentHash.contains("JFIF")) {
         // it's a jpg so the whole thing is the full length jpg and no other
         // metadata available
         m.offsetFullJPG = 0;
-        m.lengthFullJPG = static_cast<uint>(file.size());
+        m.lengthFullJPG = static_cast<uint>(p.file.size());
         return true;
     }
 
     // read the EXIF data
-    if (segmentHash.contains("EXIF")) file.seek(segmentHash["EXIF"]);
+    if (segmentHash.contains("EXIF")) p.file.seek(segmentHash["EXIF"]);
     else {
         err = "JPG does not contain EXIF information";
         qDebug() << __FUNCTION__ << err;
         return false;
     }
 
+    quint32 startOffset;
     bool foundEndian = false;
     int count = 0;
     while (!foundEndian) {
-        quint32 order = Utilities::get16(file.read(2));
+        quint32 order = Utilities::get16(p.file.read(2));
         if (order == 0x4949 || order == 0x4D4D) {
             order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
             // offsets are from the endian position in JPEGs
             // therefore must adjust all offsets found in tagValue
-            startOffset = static_cast<quint32>(file.pos()) - 2;
+            startOffset = static_cast<quint32>(p.file.pos()) - 2;
             foundEndian = true;
         }
         // add condition to check for EOF
@@ -154,45 +152,40 @@ bool Jpeg::parse(QFile &file,
         }
     }
 
-    if (report) rpt << "\n startOffset = " << startOffset;
+    if (p.report) p.rpt << "\n startOffset = " << startOffset;
 
-    quint32 a = Utilities::get16(file.read(2), isBigEnd);  // magic 42
-    a = Utilities::get32(file.read(4), isBigEnd);
+    quint32 a = Utilities::get16(p.file.read(2), isBigEnd);  // magic 42
+    a = Utilities::get32(p.file.read(4), isBigEnd);
     quint32 offsetIfd0 = a + startOffset;
 
     // it's a jpg so the whole thing is the full length jpg
     m.offsetFullJPG = 0;
-    m.lengthFullJPG = static_cast<uint>(file.size());
+    m.lengthFullJPG = static_cast<uint>(p.file.size());
 
     // read IFD0
-    QString hdr = "IFD0";
-    quint32 nextIFDOffset = ifd->readIFD(file,
-                                         offsetIfd0,
-                                         m,
-                                         exif->hash,
-                                         report, rpt, hdr) + startOffset;
+    p.hdr = "IFD0";
+    p.offset = offsetIfd0;
+    p.hash = &exif->hash;
+    quint32 nextIFDOffset = ifd->readIFD(p, m) + startOffset;
     quint32 offsetEXIF;
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
 
-    m.make = Utilities::getString(file, ifd->ifdDataHash.value(271).tagValue + startOffset,
+    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
                      ifd->ifdDataHash.value(271).tagCount);
-    m.model = Utilities::getString(file, ifd->ifdDataHash.value(272).tagValue + startOffset,
+    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset,
                       ifd->ifdDataHash.value(272).tagCount);
-    m.creator = Utilities::getString(file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+    m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
                         ifd->ifdDataHash.value(315).tagCount);
-    m.copyright = Utilities::getString(file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
+    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
                           ifd->ifdDataHash.value(33432).tagCount);
 
     // read IFD1
 //    if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
     if (nextIFDOffset) {
-        hdr = "IFD1";
-        nextIFDOffset = ifd->readIFD(file,
-                                     nextIFDOffset,
-                                     m,
-                                     exif->hash,
-                                     report, rpt, hdr);
+        p.hdr = "IFD1";
+        p.offset = nextIFDOffset;
+        nextIFDOffset = ifd->readIFD(p, m);
     }
     // IFD1: thumbnail offset and length
     m.offsetThumbJPG = ifd->ifdDataHash.value(513).tagValue + 12;
@@ -200,25 +193,23 @@ bool Jpeg::parse(QFile &file,
 
     // read EXIF
 //    readIFD("IFD Exif", offsetEXIF);
-    hdr = "IFD Exif";
-    ifd->readIFD(file,
-                 offsetEXIF,
-                 m,
-                 exif->hash,
-                 report, rpt, hdr);
+    p.hdr = "IFD Exif";
+    p.offset = offsetEXIF;
+    ifd->readIFD(p, m);
 
     m.width = ifd->ifdDataHash.value(40962).tagValue;
     m.height = ifd->ifdDataHash.value(40963).tagValue;
-    if (!m.width || !m.height) getDimensions(file, 0, m);
+    p.offset = 0;
+    if (!m.width || !m.height) getDimensions(p, m);
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(file, ifd->ifdDataHash.value(36868).tagValue + startOffset,
+    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue + startOffset,
         ifd->ifdDataHash.value(36868).tagCount);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
     // try DateTimeOriginal
     if (createdExif.length() == 0) {
-        createdExif = Utilities::getString(file, ifd->ifdDataHash.value(36867).tagValue + startOffset,
+        createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36867).tagValue + startOffset,
             ifd->ifdDataHash.value(36867).tagCount);
         if (createdExif.length() > 0) {
             m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
@@ -229,7 +220,7 @@ bool Jpeg::parse(QFile &file,
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
         if (x < 1 ) {
@@ -248,7 +239,7 @@ bool Jpeg::parse(QFile &file,
 
     // EXIF: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -270,7 +261,7 @@ bool Jpeg::parse(QFile &file,
 
     // EXIF: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue + startOffset,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -281,7 +272,7 @@ bool Jpeg::parse(QFile &file,
     }
 
     // EXIF: lens model
-    m.lens = Utilities::getString(file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
+    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
                      ifd->ifdDataHash.value(42036).tagCount);
 
     /* Read embedded ICC. The default color space is sRGB. If there is an embedded icc profile
@@ -289,21 +280,21 @@ bool Jpeg::parse(QFile &file,
     it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
     if (segmentHash.contains("ICC")) {
         if (m.iccSegmentOffset && m.iccSegmentLength) {
-            m.iccSpace = Utilities::getString(file, m.iccSegmentOffset + 52, 4);
+            m.iccSpace = Utilities::getString(p.file, m.iccSegmentOffset + 52, 4);
             if (m.iccSpace != "sRGB") {
-                file.seek(m.iccSegmentOffset);
-                m.iccBuf = file.read(m.iccSegmentLength);
+                p.file.seek(m.iccSegmentOffset);
+                m.iccBuf = p.file.read(m.iccSegmentLength);
             }
         }
     }
 
     // read IPTC
-    if (segmentHash.contains("IPTC")) iptc->read(file, segmentHash["IPTC"], m);
+    if (segmentHash.contains("IPTC")) iptc->read(p.file, segmentHash["IPTC"], m);
 
     // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
-        Xmp xmp(file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
         m.label = xmp.getItem("Label");       // case is important "Label"
         m.title = xmp.getItem("title");       // case is important "title"
@@ -320,12 +311,11 @@ bool Jpeg::parse(QFile &file,
         m._rating = m.rating;
         m._label = m.label;
 
-        if (report) xmpString = xmp.metaAsString();
+        if (p.report) p.xmpString = xmp.metaAsString();
     }
 }
     
-void Jpeg::getJpgSegments(QFile &file, qint64 offset, ImageMetadata &m,
-                          bool &report, QTextStream &rpt)
+void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
 {
 /*
 The JPG file structure is based around a series of file segments.  The marker at
@@ -343,27 +333,27 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
     // big endian by default in Utilities: only IFD/EXIF can be little endian
     uint marker = 0xFFFF;
     while (marker > 0xFFBF) {
-        file.seek(offset);           // APP1 FFE*
-        marker = static_cast<uint>(Utilities::get16(file.read(2)));
+        p.file.seek(p.offset);           // APP1 FFE*
+        marker = static_cast<uint>(Utilities::get16(p.file.read(2)));
         if (marker < 0xFFC0) break;
-        quint32 pos = static_cast<quint32>(file.pos());
-        quint16 nex = Utilities::get16(file.read(2));
+        quint32 pos = static_cast<quint32>(p.file.pos());
+        quint16 nex = Utilities::get16(p.file.read(2));
         quint32 nextOffset = pos + nex;
         if (marker == 0xFFE1) {
-            QString segName = file.read(4);
-            if (segName == "Exif") segmentHash["EXIF"] = static_cast<quint32>(offset);
-            if (segName == "http") segName += file.read(15);
+            QString segName = p.file.read(4);
+            if (segName == "Exif") segmentHash["EXIF"] = static_cast<quint32>(p.offset);
+            if (segName == "http") segName += p.file.read(15);
             if (segName == "http://ns.adobe.com") {
-                segmentHash["XMP"] = static_cast<quint32>(offset);
-                m.xmpSegmentOffset = static_cast<quint32>(offset);
+                segmentHash["XMP"] = static_cast<quint32>(p.offset);
+                m.xmpSegmentOffset = static_cast<quint32>(p.offset);
                 m.xmpNextSegmentOffset = static_cast<quint32>(nextOffset);
                 m.isXmp = true;
             }
         }
         // icc
         else if (marker == 0xFFE2) {
-            segmentHash["ICC"] = static_cast<quint32>(offset);
-            m.iccSegmentOffset = static_cast<quint32>(offset) + 18;
+            segmentHash["ICC"] = static_cast<quint32>(p.offset);
+            m.iccSegmentOffset = static_cast<quint32>(p.offset) + 18;
             m.iccSegmentLength = static_cast<quint32>(nextOffset) - m.iccSegmentOffset;
             /*qDebug() << __FUNCTION__ << fPath
                      << "offset =" << offset
@@ -374,19 +364,19 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
                      << "iccSegmentLength" << iccSegmentLength;*/
         }
         else if (segCodeHash.contains(marker)) {
-            segmentHash[segCodeHash[marker]] = static_cast<quint32>(offset);
+            segmentHash[segCodeHash[marker]] = static_cast<quint32>(p.offset);
         }
-        offset = nextOffset;
+        p.offset = nextOffset;
     }
-    if (report) {
-        MetaReport::header("JPG Segment Hash", rpt);
-        rpt << "Segment\t\tOffset\t\tHex\n";
+    if (p.report) {
+        MetaReport::header("JPG Segment Hash", p.rpt);
+        p.rpt << "Segment\t\tOffset\t\tHex\n";
 
         QHashIterator<QString, quint32> i(segmentHash);
         while (i.hasNext()) {
             i.next();
-            rpt << i.key() << ":\t\t" << i.value() << "\t\t"
-                << QString::number(i.value(), 16).toUpper() << "\n";
+            p.rpt << i.key() << ":\t\t" << i.value() << "\t\t"
+                  << QString::number(i.value(), 16).toUpper() << "\n";
         }
     }
 }

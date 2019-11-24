@@ -17,15 +17,12 @@ class Tiff : public QObject
 
 public:
     Tiff();
-    bool parse(QFile &file,
+    bool parse(MetadataParameters &p,
                ImageMetadata &m,
                IFD *ifd,
                IPTC *iptc,
                Exif *exif,
-               Jpeg *jpeg,
-               bool report,
-               QTextStream &rpt,
-               QString &xmpString);
+               Jpeg *jpeg);
 private:
 //    QHash<quint32, QString> sonyMakerHash;
 };

@@ -59,26 +59,24 @@ Sony::Sony()
     sonyMakerHash[45140] = "White balance 2";
 }
 
-bool Sony::parse(QFile &file,
-           ImageMetadata &m,
-           IFD *ifd,
-           Exif *exif,
-           Jpeg *jpeg,
-           bool report,
-           QTextStream &rpt,
-           QString &xmpString)
+bool Sony::parse(MetadataParameters &p,
+                 ImageMetadata &m,
+                 IFD *ifd,
+                 Exif *exif)
 {
     //file.open in Metadata::readMetadata
     // first two bytes is the endian order (skip next 2 bytes)
-    quint16 order = Utilities::get16(file.read(4));
+    quint16 order = Utilities::get16(p.file.read(4));
     if (order != 0x4D4D && order != 0x4949) return false;
     bool isBigEnd;
     order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
 
     // get offset to first IFD and read it
-    quint32 offsetIfd0 = Utilities::get32(file.read(4), isBigEnd);
-    QString hdr = "IFD0";
-    quint32 nextIFDOffset = ifd->readIFD(file, offsetIfd0, m, exif->hash, report, rpt, hdr, isBigEnd);
+    quint32 offsetIfd0 = Utilities::get32(p.file.read(4), isBigEnd);
+    p.hdr = "IFD0";
+    p.offset = offsetIfd0;
+    p.hash = &exif->hash;
+    quint32 nextIFDOffset = ifd->readIFD(p, m);
 
     // pull data reqd from IFD0
     m.offsetFullJPG = ifd->ifdDataHash.value(513).tagValue;
@@ -87,15 +85,16 @@ bool Sony::parse(QFile &file,
     m.offsetThumbJPG = ifd->ifdDataHash.value(273).tagValue;
     m.lengthThumbJPG = ifd->ifdDataHash.value(279).tagValue;
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
-    m.model = Utilities::getString(file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
+    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
 
     quint32 offsetEXIF;
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
 
     // IFD 1:
-    hdr = "IFD1";
-    if (nextIFDOffset) ifd->readIFD(file, nextIFDOffset, m, exif->hash, report, rpt, hdr, isBigEnd);
+    p.hdr = "IFD1";
+    p.offset = nextIFDOffset;
+    if (nextIFDOffset) ifd->readIFD(p, m);
 
     m.offsetThumbJPG = ifd->ifdDataHash.value(513).tagValue;
     m.lengthThumbJPG = ifd->ifdDataHash.value(514).tagValue;
@@ -104,17 +103,20 @@ bool Sony::parse(QFile &file,
     /* Sony provides an offset in IFD0 to the offsets for all the subIFDs
        get the offsets for the subIFD and read them */
     QList<quint32> ifdOffsets;
-    ifdOffsets = ifd->getSubIfdOffsets(file, ifd->ifdDataHash.value(330).tagValue,
+    ifdOffsets = ifd->getSubIfdOffsets(p.file, ifd->ifdDataHash.value(330).tagValue,
                                        static_cast<int>(ifd->ifdDataHash.value(330).tagCount),
                                        isBigEnd);
 
     // SubIFD1 contains full size jpg offset and length
-    hdr = "SubIFD0";
+    p.hdr = "SubIFD0";
+    p.offset = ifdOffsets[0];
+    ifd->readIFD(p, m);                 // req'd??
 //     readIFD(hdr, ifdOffsets[0]);     // req'd??
 
     // get the offset for ExifIFD and read it
-    hdr = "IFD Exif";
-    ifd->readIFD(file, offsetEXIF, m, exif->hash, report, rpt, hdr, isBigEnd);
+    p.hdr = "IFD Exif";
+    p.offset = offsetEXIF;
+    ifd->readIFD(p, m);
 
     // IFD EXIF: dimensions
     m.width = ifd->ifdDataHash.value(40962).tagValue;
@@ -122,13 +124,13 @@ bool Sony::parse(QFile &file,
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(file, ifd->ifdDataHash.value(36868).tagValue,
+    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
         ifd->ifdDataHash.value(36868).tagCount);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // Exif: get shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue,
                                       isBigEnd);
         if (x <1 ) {
@@ -147,7 +149,7 @@ bool Sony::parse(QFile &file,
 
     // Exif: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -170,7 +172,7 @@ bool Sony::parse(QFile &file,
 
     // Exif: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(file,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -181,15 +183,17 @@ bool Sony::parse(QFile &file,
     }
 
     // Exif: lens
-    m.lens = Utilities::getString(file, ifd->ifdDataHash.value(42036).tagValue,
+    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
         ifd->ifdDataHash.value(42036).tagCount);
 
     // Exif: read makernoteIFD
 
     if (ifd->ifdDataHash.contains(37500)) {
         quint32 makerOffset = ifd->ifdDataHash.value(37500).tagValue;
-        hdr = "IFD Sony Maker Note";
-        ifd->readIFD(file, makerOffset, m, sonyMakerHash, report, rpt, hdr, isBigEnd);
+        p.hdr = "IFD Sony Maker Note";
+        p.offset = makerOffset;
+        p.hash = &sonyMakerHash;
+        ifd->readIFD(p, m);
     }
 
     // Sony does not embed xmp in raw files
