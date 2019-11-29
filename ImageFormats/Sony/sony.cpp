@@ -91,6 +91,13 @@ bool Sony::parse(MetadataParameters &p,
     quint32 offsetEXIF;
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
 
+    /* Sony provides an offset in IFD0 to subIFDs, but there is only one, which is
+       at the offset ifd->ifdDataHash.value(330).tagValue */
+    quint32 offset = ifd->ifdDataHash.value(330).tagValue;
+    p.hdr = "SubIFD0";
+    p.offset = offset;
+    ifd->readIFD(p, m);                 // req'd??
+
     // IFD 1:
     p.hdr = "IFD1";
     p.offset = nextIFDOffset;
@@ -99,19 +106,6 @@ bool Sony::parse(MetadataParameters &p,
     m.offsetThumbJPG = ifd->ifdDataHash.value(513).tagValue;
     m.lengthThumbJPG = ifd->ifdDataHash.value(514).tagValue;
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
-
-    /* Sony provides an offset in IFD0 to the offsets for all the subIFDs
-       get the offsets for the subIFD and read them */
-    QList<quint32> ifdOffsets;
-    ifdOffsets = ifd->getSubIfdOffsets(p.file, ifd->ifdDataHash.value(330).tagValue,
-                                       static_cast<int>(ifd->ifdDataHash.value(330).tagCount),
-                                       isBigEnd);
-
-    // SubIFD1 contains full size jpg offset and length
-    p.hdr = "SubIFD0";
-    p.offset = ifdOffsets[0];
-    ifd->readIFD(p, m);                 // req'd??
-//     readIFD(hdr, ifdOffsets[0]);     // req'd??
 
     // get the offset for ExifIFD and read it
     p.hdr = "IFD Exif";
