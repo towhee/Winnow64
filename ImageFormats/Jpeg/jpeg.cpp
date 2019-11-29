@@ -374,6 +374,15 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
         case 0xFFC4:
             parseHuffmanTable(p, len);
             break;
+        // Quantization table segment
+        case 0xFFDB:
+            parseQuantizationTable(p, len);
+            break;
+        // Define restart interval
+        case 0xFFDD:
+            restartInterval = Utilities::get16(p.file.read(2));
+//            qDebug() << __FUNCTION__ << "restartInterval" << restartInterval;
+            break;
         case 0xFFE1: {
             QString segName = p.file.read(4);
             if (segName == "Exif") segmentHash["EXIF"] = static_cast<quint32>(p.offset);
@@ -514,7 +523,7 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
             components[i] = component;
          }
     }
-    qDebug() << __FUNCTION__
+/*    qDebug() << __FUNCTION__
              << "marker" << QString::number(marker, 16)
              << "segment" << segCodeHash[marker]
              << "length" << len
@@ -528,7 +537,7 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
                  << "horSampleFactor" << components.at(i).horSampleFactor
                  << "verSampleFactor" << components.at(i).verSampleFactor
                  << "QTableSel" << components.at(i).QTableSel;
-    }
+    }*/
 }
 
 void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
@@ -550,16 +559,15 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
         for (int i = 0; i < 16; i++) {
             dht.codeLengths[i] = Utilities::get8(p.file.read(1));
             total += dht.codeLengths[i];
-//            qDebug() << __FUNCTION__ << i+1 << dht.codeLengths[i];
         }
-//        qDebug() << __FUNCTION__ << "total" << total;
         for (int i = 0; i < total; i++) {
             dht.codes.append(Utilities::get8(p.file.read(1)));
         }
         dhtTable[dhtType] = dht;
     }
 
-/*    QMapIterator<int, DHT> ii(dhtTable);
+/*  Report
+    QMapIterator<int, DHT> ii(dhtTable);
     while (ii.hasNext()) {
         ii.next();
         DHT dht = ii.value();
@@ -583,5 +591,25 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
 
 void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
 {
+    quint32 pos = static_cast<quint32>(p.file.pos());
+    quint32 endOffset = pos + len - 2;
 
+    while (p.file.pos() < endOffset) {
+        QByteArray c = p.file.read(1);
+        int precision = Utilities::get4_1st(c);
+        int tableID = Utilities::get4_2nd(c);
+        QVector<int> q(64);
+        if (precision == 0) {
+            for (int i = 0; i < 64; i++) q[i] = Utilities::get8(p.file.read(1));
+        }
+        else {
+            for (int i = 0; i < 64; i++) q[i] = Utilities::get16(p.file.read(2));
+        }
+        dqt.append(q);
+    }
+
+/*    // report
+    qDebug() << __FUNCTION__ << dqt.length();   // number of tables ie q[0], q[1]
+    qDebug() << __FUNCTION__ << dqt;*/
 }
+
