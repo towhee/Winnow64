@@ -54,7 +54,6 @@ private:
     QVector<Component> components;
 
     // DHT Define Huffman Table
-//    int dhtType;                       // full byte dhtTableID + dhtClass
     struct DHT {
         int tableID;                   // Specifies one of component: 0 for luminance and 1 for chrominance
         int classID;                   // Specifies is it DC element or AC element of table. 0-DC element 1-AC element
@@ -62,6 +61,12 @@ private:
         QVector<uint> codeLengths;
     };
     QMap<int, DHT> dhtTable;
+
+    // Quantization table segment
+    QVector<QVector<int>> dqt;
+
+    // Define restart interval
+    quint16 restartInterval;
 
     QHash<quint32, QString> segCodeHash;
     quint32 order;
