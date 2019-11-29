@@ -1,6 +1,5 @@
 #include "jpeg.h"
-//#include "Main/global.h"
-//#include "Utilities/utilities.h"
+#include <QDebug>
 
 Jpeg::Jpeg()
 {
@@ -13,7 +12,7 @@ void Jpeg::initSegCodeHash()
     segCodeHash[0xFFC1] = "SOF1";
     segCodeHash[0xFFC2] = "SOF2";
     segCodeHash[0xFFC3] = "SOF3";
-    segCodeHash[0xFFC4] = "SOF4";
+    segCodeHash[0xFFC4] = "DHT";    // FOF4 ?
     segCodeHash[0xFFC5] = "SOF5";
     segCodeHash[0xFFC6] = "SOF6";
     segCodeHash[0xFFC7] = "SOF7";
@@ -123,6 +122,10 @@ bool Jpeg::parse(MetadataParameters &p,
         m.lengthFullJPG = static_cast<uint>(p.file.size());
         return true;
     }
+
+    // test
+//    readAppSegments(p);
+//    readFrameHeader(p);  // qDebug() << __FUNCTION__ << subFormat << losslessFormat;
 
     // read the EXIF data
     if (segmentHash.contains("EXIF")) p.file.seek(segmentHash["EXIF"]);
@@ -323,7 +326,7 @@ the start of each segment is FFC0 to FFFE (see initSegCodeHash). The next two
 bytes are the incremental offset to the next segment.
 
 This function walks through all the segments and records their global offsets in
-segmentHash.  segmentHash is used by formatJPG to access the EXIF, IPTC and XMP
+segmentHash.  segmentHash is used by parseJPG to access the EXIF, IPTC and XMP
 segments.
 
 In addition, the XMP offset and nextOffset are set to facilitate editing XMP data.
@@ -337,8 +340,82 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
         marker = static_cast<uint>(Utilities::get16(p.file.read(2)));
         if (marker < 0xFFC0) break;
         quint32 pos = static_cast<quint32>(p.file.pos());
-        quint16 nex = Utilities::get16(p.file.read(2));
-        quint32 nextOffset = pos + nex;
+        quint16 len = Utilities::get16(p.file.read(2));
+        quint32 nextOffset = pos + len;
+
+        // populate segmentCodeHash
+        if (segCodeHash.contains(marker) && marker != 0xFFE1) {
+            segmentHash[segCodeHash[marker]] = static_cast<quint32>(p.offset);
+        }
+
+        switch (marker) {
+        case 0xFFD8:      // SOI = Start Of Image
+            break;
+        case 0xFFD9:      // EOI = End Of Image
+            break;
+        // Start of Frame
+        case 0xFFC0:      // SOF0
+        case 0xFFC1:
+        case 0xFFC2:
+        case 0xFFC3:
+        case 0xFFC5:
+        case 0xFFC6:
+        case 0xFFC7:
+        case 0xFFC8:
+        case 0xFFC9:
+        case 0xFFCA:
+        case 0xFFCB:
+        case 0xFFCC:
+        case 0xFFCE:
+        case 0xFFCF:
+            parseFrameHeader(p, marker, len);
+            break;
+        // Huffman table segment
+        case 0xFFC4:
+            parseHuffmanTable(p, len);
+            break;
+        case 0xFFE1: {
+            QString segName = p.file.read(4);
+            if (segName == "Exif") segmentHash["EXIF"] = static_cast<quint32>(p.offset);
+            if (segName == "http") segName += p.file.read(15);
+            if (segName == "http://ns.adobe.com") {
+                segmentHash["XMP"] = static_cast<quint32>(p.offset);
+                m.xmpSegmentOffset = static_cast<quint32>(p.offset);
+                m.xmpNextSegmentOffset = static_cast<quint32>(nextOffset);
+                m.isXmp = true;
+            }
+            break;
+        }
+        case 0xFFE2: {
+            segmentHash["ICC"] = static_cast<quint32>(p.offset);
+            m.iccSegmentOffset = static_cast<quint32>(p.offset) + 18;
+            m.iccSegmentLength = static_cast<quint32>(nextOffset) - m.iccSegmentOffset;
+            break;
+        }
+        case 0xFFE0:
+//        case 0xFFE1:
+//        case 0xFFE2:
+        case 0xFFE3:
+        case 0xFFE4:
+        case 0xFFE5:
+        case 0xFFE6:
+        case 0xFFE7:
+        case 0xFFE8:
+        case 0xFFE9:
+        case 0xFFEA:
+        case 0xFFEB:
+        case 0xFFEC:
+        case 0xFFED:
+        case 0xFFEE:
+        case 0xFFEF:
+            readAppSegments(p);
+            break;
+        default: {
+        }
+
+        } // end switch
+
+        /*
         if (marker == 0xFFE1) {
             QString segName = p.file.read(4);
             if (segName == "Exif") segmentHash["EXIF"] = static_cast<quint32>(p.offset);
@@ -355,17 +432,11 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
             segmentHash["ICC"] = static_cast<quint32>(p.offset);
             m.iccSegmentOffset = static_cast<quint32>(p.offset) + 18;
             m.iccSegmentLength = static_cast<quint32>(nextOffset) - m.iccSegmentOffset;
-            /*qDebug() << __FUNCTION__ << fPath
-                     << "offset =" << offset
-                     << "pos = " << pos
-                     << "length =" << nex
-                     << "next offset =" << nextOffset
-                     << "iccSegmentOffset" << iccSegmentOffset
-                     << "iccSegmentLength" << iccSegmentLength;*/
         }
         else if (segCodeHash.contains(marker)) {
             segmentHash[segCodeHash[marker]] = static_cast<quint32>(p.offset);
-        }
+        }*/
+
         p.offset = nextOffset;
     }
     if (p.report) {
@@ -375,9 +446,142 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
         QHashIterator<QString, quint32> i(segmentHash);
         while (i.hasNext()) {
             i.next();
-            p.rpt << i.key() << ":\t\t" << i.value() << "\t\t"
+            p.rpt << i.key()
+                  << ":\t\t" << i.value() << "\t\t"
                   << QString::number(i.value(), 16).toUpper() << "\n";
         }
     }
 }
 
+void Jpeg::readAppSegments(MetadataParameters &p)
+{
+    int len;
+    if (segmentHash.contains("APP14")) {
+        p.file.seek(segmentHash["APP14"] + 2);
+        len = Utilities::get16(p.file.read(2));
+        if (len > 6) {
+            p.file.seek(p.file.pos() + len - 4);
+            colorModel =  Utilities::get16(p.file.read(2));
+        }
+    }
+}
+
+void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
+{
+    losslessFormat = false;
+    switch (marker) {
+    case 0xFFC0:      // SOF0
+        subFormat = SubFormat::Baseline_DCT;
+        break;
+    case 0xFFC1:
+        subFormat = SubFormat::Extended_DCT;
+        break;
+    case 0xFFC2:
+        subFormat = SubFormat::Progressive_DCT;
+        break;
+    case 0xFFC3:
+        subFormat = SubFormat::Lossless;
+        losslessFormat = true;
+        break;
+    case 0xFFC9:
+        subFormat = SubFormat::Arithmetric_DCT;
+        break;
+    case 0xFFCA:
+        subFormat = SubFormat::ArithmetricProgressive_DCT;
+        break;
+    case 0xFFCB:
+        subFormat = SubFormat::ArithmetricLossless;
+        losslessFormat = true;
+        break;
+    default:
+        subFormat = SubFormat::UnknownJPEGSubformat;
+    } // end switch
+
+    // get frame header length
+    precision = Utilities::get8(p.file.read(1));
+    lines = Utilities::get16(p.file.read(2));
+    samplesPerLine = Utilities::get16(p.file.read(2));
+    componentsInFrame = Utilities::get8(p.file.read(1));
+    components.resize(componentsInFrame);
+    Component component;
+    if (componentsInFrame) {
+        for (int i = 0; i < componentsInFrame; i++) {
+            component.Id = Utilities::get8(p.file.read(1));
+            QByteArray c = p.file.read(1);
+            component.horSampleFactor = Utilities::get4_1st(c);
+            component.verSampleFactor = Utilities::get4_2nd(c);
+            component.QTableSel = Utilities::get8(p.file.read(1));
+            components[i] = component;
+         }
+    }
+    qDebug() << __FUNCTION__
+             << "marker" << QString::number(marker, 16)
+             << "segment" << segCodeHash[marker]
+             << "length" << len
+             << "precision" << precision
+             << "lines" << lines
+             << "samplesPerLine" << samplesPerLine
+             << "componentsInFrame" << componentsInFrame;
+    for (int i = 0; i < componentsInFrame; i++) {
+        qDebug() << __FUNCTION__ << i
+                 << "Id" << components.at(i).Id
+                 << "horSampleFactor" << components.at(i).horSampleFactor
+                 << "verSampleFactor" << components.at(i).verSampleFactor
+                 << "QTableSel" << components.at(i).QTableSel;
+    }
+}
+
+void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
+{
+    quint32 pos = static_cast<quint32>(p.file.pos());
+    quint32 endOffset = pos + len - 2;
+
+    while (p.file.pos() < endOffset) {
+        DHT dht;
+        int dhtType;
+        dht.codeLengths.resize(16);
+        QByteArray c = p.file.read(1);
+        dhtType = Utilities::get8(c);
+        dht.classID = Utilities::get4_1st(c);
+        dht.tableID = Utilities::get4_2nd(c);
+
+        // get count of codes with bit length i
+        int total = 0;
+        for (int i = 0; i < 16; i++) {
+            dht.codeLengths[i] = Utilities::get8(p.file.read(1));
+            total += dht.codeLengths[i];
+//            qDebug() << __FUNCTION__ << i+1 << dht.codeLengths[i];
+        }
+//        qDebug() << __FUNCTION__ << "total" << total;
+        for (int i = 0; i < total; i++) {
+            dht.codes.append(Utilities::get8(p.file.read(1)));
+        }
+        dhtTable[dhtType] = dht;
+    }
+
+/*    QMapIterator<int, DHT> ii(dhtTable);
+    while (ii.hasNext()) {
+        ii.next();
+        DHT dht = ii.value();
+        qDebug() << __FUNCTION__ << "Huffman table  type =" << QString::number(ii.key(), 16)
+                 << "Class = " << dht.classID
+                 << "table = " << dht.tableID;
+        uint codeCount = 0;
+        for (int i = 0; i < 16; i++) {
+            uint count = dht.codeLengths.at(i);
+            QString codesOfLength = "";
+            for (uint j = 0; j < count; j++) {
+                codesOfLength += QString::number(dht.codes.at(codeCount + j), 16) + " ";
+            }
+            codeCount += count;
+            qDebug() << __FUNCTION__ << i+1
+                     << "Code Count =" << dht.codeLengths.at(i)
+                     << " Codes:" << codesOfLength;
+        }
+    }*/
+}
+
+void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
+{
+
+}
