@@ -114,6 +114,14 @@ bool Jpeg::parse(MetadataParameters &p,
     p.offset = static_cast<quint32>(p.file.pos());
     getJpgSegments(p, m);
 
+    // TEST: read scan data
+    //Scan data bitBuf = "FCFF00E2" "1111110 0111111110 000000011100010"
+    uint val = 510; uint bits = 10; // -897
+
+    int x = huff2Signed(val, bits);
+    qDebug() << __FUNCTION__
+             << "twosComplement()" << val << bits << "=" << x;
+
     // check if JFIF
     if (segmentHash.contains("JFIF")) {
         // it's a jpg so the whole thing is the full length jpg and no other
@@ -367,12 +375,17 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
         case 0xFFCB:
         case 0xFFCC:
         case 0xFFCE:
+        // Start of scan segment
         case 0xFFCF:
             parseFrameHeader(p, marker, len);
             break;
         // Huffman table segment
         case 0xFFC4:
             parseHuffmanTable(p, len);
+            break;
+        // Start of scan segment
+        case 0xFFDA:
+            parseSOSHeader(p, len);
             break;
         // Quantization table segment
         case 0xFFDB:
@@ -381,7 +394,7 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
         // Define restart interval
         case 0xFFDD:
             restartInterval = Utilities::get16(p.file.read(2));
-//            qDebug() << __FUNCTION__ << "restartInterval" << restartInterval;
+            qDebug() << "\n" << __FUNCTION__ << "restartInterval" << restartInterval;
             break;
         case 0xFFE1: {
             QString segName = p.file.read(4);
@@ -523,7 +536,9 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
             components[i] = component;
          }
     }
-/*    qDebug() << __FUNCTION__
+    qDebug() << "\n" << __FUNCTION__ << "Marker"
+             << "0x" + QString::number(marker, 16).toUpper().rightJustified(4, '0');
+    qDebug() << __FUNCTION__
              << "marker" << QString::number(marker, 16)
              << "segment" << segCodeHash[marker]
              << "length" << len
@@ -532,12 +547,14 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
              << "samplesPerLine" << samplesPerLine
              << "componentsInFrame" << componentsInFrame;
     for (int i = 0; i < componentsInFrame; i++) {
-        qDebug() << __FUNCTION__ << i
+        qDebug() << __FUNCTION__
+                 << componentDescription[i]
+                 << i
                  << "Id" << components.at(i).Id
                  << "horSampleFactor" << components.at(i).horSampleFactor
                  << "verSampleFactor" << components.at(i).verSampleFactor
                  << "QTableSel" << components.at(i).QTableSel;
-    }*/
+    }
 }
 
 void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
@@ -545,8 +562,12 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
     quint32 pos = static_cast<quint32>(p.file.pos());
     quint32 endOffset = pos + len - 2;
 
+    qDebug() << "\n";
+    qDebug() << __FUNCTION__ << "DEBUG HUFFMAN DECODING";
     while (p.file.pos() < endOffset) {
         DHT dht;
+        QMap<quint16, quint16> dhtCodeMap;  // code value, value width
+        QMap<int, QMap<quint16, quint16>> dhtLengthMap;
         int dhtType;
         dht.codeLengths.resize(16);
         QByteArray c = p.file.read(1);
@@ -555,38 +576,98 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
         dht.tableID = Utilities::get4_2nd(c);
 
         // get count of codes with bit length i
-        int total = 0;
+        QVector<int> counts;
+        counts.resize(16);
+        quint16 huffVal = 0;
+        // get count of codes for each bit length i
         for (int i = 0; i < 16; i++) {
-            dht.codeLengths[i] = Utilities::get8(p.file.read(1));
-            total += dht.codeLengths[i];
+            counts[i] = Utilities::get8(p.file.read(1));
+//            qDebug() << __FUNCTION__ << "Length =" << i << "Count =" << counts[i];
         }
-        for (int i = 0; i < total; i++) {
-            dht.codes.append(Utilities::get8(p.file.read(1)));
+//        int total = 0;
+        // store the code:value for each bit length
+        /*
+Jpeg::parseHuffmanTable   Table type = " 0" Class = " 0" TableID = " 0"
+Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    0" "               0" HuffCode = "   4" " 4"
+Jpeg::parseHuffmanTable      j = "  1" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    1" "               1" HuffCode = "   5" " 5"
+Jpeg::parseHuffmanTable      j = "  2" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    2" "              10" HuffCode = "   3" " 3"
+Jpeg::parseHuffmanTable      j = "  3" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    3" "              11" HuffCode = "   2" " 2"
+Jpeg::parseHuffmanTable      j = "  4" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    4" "             100" HuffCode = "   6" " 6"
+Jpeg::parseHuffmanTable      j = "  5" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    5" "             101" HuffCode = "   1" " 1"
+Jpeg::parseHuffmanTable      j = "  6" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    6" "             110" HuffCode = "   0" " 0"
+Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  1" HuffBitLength " 4" HuffVal = "   14" "            1110" HuffCode = "   7" " 7"
+Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  1" HuffBitLength " 5" HuffVal = "   30" "           11110" HuffCode = "   8" " 8"
+Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  1" HuffBitLength " 6" HuffVal = "   62" "          111110" HuffCode = "   9" " 9"
+Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  1" HuffBitLength " 7" HuffVal = "  126" "         1111110" HuffCode = "  10" " A"
+Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  1" HuffBitLength " 8" HuffVal = "  254" "        11111110" HuffCode = "  11" " B"
+*/
+                qDebug() << __FUNCTION__
+                 << "  Table type =" << QString::number(dhtType).rightJustified(2)
+                 << "Class =" << QString::number(dht.classID).rightJustified(2)
+                 << "TableID =" << QString::number(dht.tableID).rightJustified(2)
+                 << "counts =" << counts;
+//                     << "Bit Length =" << i;
+        // iterate bit widths
+        for (int i = 0; i < 16; i++) {
+            if (counts.at(i) == 0) continue;
+            dhtCodeMap.clear();
+            // iterate huffman codes for bit width
+            for  (int j = 0; j < counts[i]; j++) {
+                dhtCodeMap[huffVal] = Utilities::get8(p.file.read(1));
+
+                qDebug() << __FUNCTION__
+                         << "     j (item) =" << QString::number(j).rightJustified(3)
+                         << "HuffItemCount" << QString::number(counts[i]).rightJustified(3)
+                         << "HuffBitLength" << QString::number(i+1).rightJustified(2)
+                         << "HuffCode =" << QString::number(huffVal).rightJustified(5)
+                         << QString::number(huffVal, 2).rightJustified(16)
+                         << "HuffValLength ="
+                         << QString::number(dhtCodeMap[huffVal]).rightJustified(4)
+                         << QString::number(dhtCodeMap[huffVal], 16).toUpper().rightJustified(2);
+
+                huffVal++;
+            }
+            if (counts[i]) dhtLengthMap[i + 1] = dhtCodeMap;
+            huffVal <<= 1;
         }
-        dhtTable[dhtType] = dht;
+        // Value = dhtMap[dhtType][length][code]
+        dhtMap[dhtType] = dhtLengthMap;
+
     }
 
-/*  Report
-    QMapIterator<int, DHT> ii(dhtTable);
-    while (ii.hasNext()) {
-        ii.next();
-        DHT dht = ii.value();
-        qDebug() << __FUNCTION__ << "Huffman table  type =" << QString::number(ii.key(), 16)
-                 << "Class = " << dht.classID
-                 << "table = " << dht.tableID;
-        uint codeCount = 0;
-        for (int i = 0; i < 16; i++) {
-            uint count = dht.codeLengths.at(i);
-            QString codesOfLength = "";
-            for (uint j = 0; j < count; j++) {
-                codesOfLength += QString::number(dht.codes.at(codeCount + j), 16) + " ";
-            }
-            codeCount += count;
-            qDebug() << __FUNCTION__ << i+1
-                     << "Code Count =" << dht.codeLengths.at(i)
-                     << " Codes:" << codesOfLength;
-        }
-    }*/
+    return;
+
+    /* Report */
+//    qDebug() << "\n" << __FUNCTION__;
+//    // table, length, code : value
+//    QMapIterator<int, QMap<int, QMap<quint16, quint16>>> i(dhtMap);
+//    // iterate tables
+//    while (i.hasNext()) {
+//        i.next();
+//        qDebug() << __FUNCTION__ << "Table =" << i.key();
+//        // each value from dhtMap = dhtLengthMap
+//        // length, code : value
+//        QMapIterator<int, QMap<quint16, quint16>> ii(i.value());
+//        // iterate lengths for table
+//        while (ii.hasNext()) {
+//            ii.next();
+//            auto length = ii.value();
+//            // code : value
+//            QMapIterator<quint16, quint16> iii(ii.value());
+//            // iterate codes for length
+//            while (iii.hasNext()) {
+//                iii.next();
+//                qDebug() << __FUNCTION__
+////                     << "    Bit Length =" << QString::number(ii.value()).rightJustified(5)
+//                     << "Code =" << QString::number(iii.key()).rightJustified(5)
+//                     << QString::number(iii.key(), 2).rightJustified(18)
+//                     << "Value =" << QString::number(iii.value()).rightJustified(3)
+//                     << QString::number(iii.value(), 16).toUpper().rightJustified(2, '0');
+////                     << QString::number(ii.value(), 2).rightJustified(8);
+//            }
+//        }
+//    }
+
 }
 
 void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
@@ -596,8 +677,9 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
 
     while (p.file.pos() < endOffset) {
         QByteArray c = p.file.read(1);
+//        quint8 table = Utilities::get8(c);
         int precision = Utilities::get4_1st(c);
-        int tableID = Utilities::get4_2nd(c);
+        int table = Utilities::get4_2nd(c);
         QVector<int> q(64);
         if (precision == 0) {
             for (int i = 0; i < 64; i++) q[i] = Utilities::get8(p.file.read(1));
@@ -605,11 +687,85 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
         else {
             for (int i = 0; i < 64; i++) q[i] = Utilities::get16(p.file.read(2));
         }
-        dqt.append(q);
+        dqt[table] = q;
     }
 
-/*    // report
-    qDebug() << __FUNCTION__ << dqt.length();   // number of tables ie q[0], q[1]
-    qDebug() << __FUNCTION__ << dqt;*/
+    // report
+    qDebug() << "\n" << __FUNCTION__;
+    QMapIterator<int, QVector<int>> table(dqt);
+    while (table.hasNext()) {
+        table.next();
+        qDebug() << __FUNCTION__ << "Quantization Table" << table.key()
+                 << dqtDescription[table.key()];
+        int i = 0;
+        for (int r = 0; r < 8; r++) {
+            QString rStr = "";
+            for (int c = 0; c < 8; c++) {
+                rStr += QString::number(dqt[table.key()][i]).rightJustified(4);
+                i++;
+            }
+            qDebug() << __FUNCTION__ << "  "
+                     << "Row" << r << " " << rStr;
+        }
+    }
+
 }
 
+void Jpeg::parseSOSHeader(MetadataParameters &p, quint16 len)
+{
+    scanDataOffset = p.file.pos() + len - 2;
+    sosComponentCount = Utilities::get8(p.file.read(1));
+    for (int i = 0; i < sosComponentCount; i++) {
+        int componentID = Utilities::get8(p.file.read(1));
+        huffTblToUse[componentID] = Utilities::get8(p.file.read(1));
+    }
+
+    // report
+    qDebug() << "\n" << __FUNCTION__
+             << "Scan data offset =" << scanDataOffset
+             << "Number of components =" << sosComponentCount;
+    for (int i = 0; i < sosComponentCount; i++) {
+        qDebug() << __FUNCTION__ << "  "
+        << "ComponentID =" << i
+        << componentDescription[i]
+        << "Huffman table ID =" << huffTblToUse[i];
+//        << dqtDescription[huffTblToUse[i]];
+    }
+
+    p.file.seek(scanDataOffset);
+    quint32 bitBuf = Utilities::get32(p.file.read(4));
+    qDebug() << "\n";
+    qDebug() << __FUNCTION__ << "Scan data bitBuf ="
+             << QString::number(bitBuf, 16).toUpper().rightJustified(8, '0')
+             << QString::number(bitBuf, 2).rightJustified(32, '0');
+
+    p.file.seek(scanDataOffset);
+    QByteArray bytes = p.file.read(4);
+    QBitArray bits = Utilities::bytes2Bits(bytes);
+
+    qDebug() << "\n";
+    int dhtType = 0;
+    // iterate bits until huffman code found
+    for (int huffLength = 1; huffLength < 17; huffLength++) {
+        if (dhtMap[dhtType][huffLength].count()) {
+            auto code = Utilities::bits2Int(bits, huffLength);
+            if (dhtMap[dhtType][huffLength].contains(code)) {
+                qDebug() << __FUNCTION__
+                         << "bit code =" << QString::number(code, 2)
+                         << "value bit length =" << dhtMap[dhtType][huffLength][code];
+//                bits = bits << huffLength;
+                break;
+            }
+        }
+    }
+}
+
+int Jpeg::huff2Signed(uint val, uint bits)
+{
+    if (val >= static_cast<uint>(1 << (bits - 1))) {
+        return static_cast<int>(val);
+    }
+    else {
+        return static_cast<int>(val - ((1 << bits) - 1) );
+    }
+}
