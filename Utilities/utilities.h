@@ -2,6 +2,7 @@
 #define UTILITIES_H
 
 #include <QtWidgets>
+#include <bitset>
 
 class Utilities
 {
@@ -23,10 +24,12 @@ public:
     static QString getCString(QFile &file);
     static QString getString(QFile &file, quint32 offset, quint32 length);
     static QByteArray getByteArray(QFile &file, quint32 offset, quint32 length);
-
+    static void bytes2Bitset32(QByteArray bytes, std::bitset<32> &bits);
+    static QBitArray bytes2Bits(QByteArray bytes);
+    static uint bits2Int(QBitArray bits, int length);
+    static uint extractBits(std::bitset<32> &buf, uint n);
 public slots:
     static void hideCursor();
-
 };
 
 #endif // UTILITIES_H

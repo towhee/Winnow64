@@ -235,3 +235,36 @@ QByteArray Utilities::getByteArray(QFile &file, quint32 offset, quint32 length)
     file.seek(offset);
     return(file.read(length));
 }
+
+QBitArray Utilities::bytes2Bits(QByteArray bytes)
+{
+    QBitArray bits(bytes.count() * 8);
+    for (int i = 0; i < bytes.count(); i++) {
+        for (int b = 0; b < 8; b++) {
+            bits.setBit(i * 8 + b, bytes.at(i) & (1 << (7 - b)));
+        }
+    }
+    return bits;
+}
+
+void Utilities::bytes2Bitset32(QByteArray bytes, std::bitset<32> &bits)
+{
+    bits = get32(bytes);
+//    for (auto i = 0; i < bytes.count(); i++) {
+//        for (auto b = 0; b < 8; b++) {
+//            bits[i * 8 + b] = bytes.at(i) & (1 << (7 - b));
+//        }
+//    }
+}
+
+uint Utilities::bits2Int(QBitArray bits, int length)
+{
+    uint x = 0;
+    for (int i = 0; i < length; i++) x = (x << 1 | bits.at(i));
+    return x;
+}
+
+uint Utilities::extractBits(std::bitset<32> &buf, uint n)
+{
+    return (buf >> (32 - n)).to_ulong();
+}
