@@ -10387,32 +10387,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    metadata->parseHEIF();
-
-    QByteArray bytes = "abcd";
-    QBitArray bits(32);
-    std::bitset<32> b;
-    Utilities::bytes2Bitset32(bytes, b);
-    std::cout << "bits = " << b << std::endl;
-
-    qDebug() << __FUNCTION__ << "QByteArray bytes =" << bytes;
-    for (int i = 0; i < bytes.count(); i++) {
-        for (int b = 0; b < 8; b++) {
-            bits.setBit( i * 8 + b, bytes.at(i) & (1 << (7 - b)));
-        }
-    }
-    qDebug() << __FUNCTION__ << "QBitArray bits =" << bits
-             << "bits.count() =" << bits.count();
-
-//    int length = 3;
-//    QByteArray byte = " ";
-//    byte.fill(0);
-//    int x = 0;
-//    for (int i = 0; i < length; i++) {
-//        x = (x << 1 | bits.at(i));
-//        qDebug() << __FUNCTION__ << i << QString::number(x, 2);
-//    }
-
-//    qDebug() << __FUNCTION__ << "x =" << x;
-
+//    std::bitset<32> bits, x;
+//    x = bits >> 5;
 }
 // End MW
