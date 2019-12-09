@@ -1,7 +1,7 @@
 #ifndef JPEG_H
 #define JPEG_H
 
-#include <QtWidgets>
+//#include <QtWidgets>
 #include "Main/global.h"
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
@@ -10,6 +10,10 @@
 #include "Metadata/iptc.h"
 #include "Metadata/xmp.h"
 #include "Metadata/metareport.h"
+
+#include <iostream>
+#include <bitset>
+#include "Utilities/bit.h"
 
 class Jpeg : public QObject
 {
@@ -35,12 +39,24 @@ private:
     void parseHuffmanTable(MetadataParameters &p, quint16 len);
     void parseQuantizationTable(MetadataParameters &p, quint16 len);
     void parseSOSHeader(MetadataParameters &p, quint16 len);
-    int huff2Signed(uint val, uint bits);
+    void decodeScan(MetadataParameters &p);
+
+    int  huff2Signed(uint val, uint bits);
+
+    void buildMask();
+    void bufAppend(uint &buf, quint8 byte, uint &consumed);
+    uint bufExtract(uint &buf, uint nBits, uint &consumed);
+    uint bufPeek(uint &buf, uint nBits);
+
+    void rptHuff();
+    void rptMCU();
 
     enum ColorModel{CMYK, YCBCR};
     int colorModel;
     enum SubFormat{Baseline_DCT, Extended_DCT, Progressive_DCT, Lossless, Arithmetric_DCT,
                    ArithmetricProgressive_DCT, ArithmetricLossless, UnknownJPEGSubformat};
+    int mcu[3][64];
+
     // SOF
     int subFormat;
     bool losslessFormat;
@@ -57,20 +73,18 @@ private:
     QVector<Component> components;
 
     // DHT Define Huffman Table
+
     struct DHT {
         int tableID;                   // Specifies one of component: 0 for luminance and 1 for chrominance
         int classID;                   // Specifies is it DC element or AC element of table. 0-DC element 1-AC element
-        QVector<uint> codes;
-        QVector<uint> codeLengths;
+//        QVector<uint> codes;
+//        QVector<uint> codeLengths;
     };
-    QVector<QString> dhtClassDescription{"DC Table", "AC Table"};
-    QMap<int, DHT> dhtTable;
-//    QMap<quint 16, quint16> dhtcodeMap;
-    QMap<int, QMap<int, QMap<quint16, quint16>>> dhtMap;    // code, value
 
-    // c++ standard Maps to hold the Huffman tables
-//    typedef std::pair<int, quint16> huffKey;
-//    std::map<huffKey, quint8> huffData[32];
+    QVector<QString> dhtClassDescription{"DC Table", "AC Table"};
+
+    // [DHT Type (Class/TblID)] [Code Length] [Code, CodeValue (length of bits to read)]
+    QMap<int, QMap<uint, QMap<uint, uint>>> dhtMap;    // code, value
 
     // Quantization table segment
     QMap<int, QVector<int>> dqt;
@@ -85,7 +99,10 @@ private:
     // Start of scan SOS
     quint32 scanDataOffset;             // start of scan data after SOS header
     int sosComponentCount;
-    QMap<int, int> huffTblToUse;        // component, huff table
+    int huffTblToUse[4];                // component, huff table
+
+    // decode scan data
+    unsigned mask[32];
 
     QHash<quint32, QString> segCodeHash;
     quint32 order;
