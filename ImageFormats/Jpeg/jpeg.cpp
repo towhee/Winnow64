@@ -389,7 +389,7 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
         // Define restart interval
         case 0xFFDD:
             restartInterval = Utilities::get16(p.file.read(2));
-            qDebug() << "\n" << __FUNCTION__ << "restartInterval" << restartInterval;
+//            qDebug() << "\n" << __FUNCTION__ << "restartInterval" << restartInterval;
             break;
         case 0xFFE1: {
             QString segName = p.file.read(4);
@@ -573,58 +573,38 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
         // get count of codes with bit length i
         QVector<int> counts;
         counts.resize(16);
-        quint16 huffVal = 0;
+        quint16 huffCode = 0;
         // get count of codes for each bit length i
         for (int i = 0; i < 16; i++) {
             counts[i] = Utilities::get8(p.file.read(1));
-//            qDebug() << __FUNCTION__ << "Length =" << i << "Count =" << counts[i];
+//            qDebug() << "Table =" << dhtType << "Length =" << i << "Count =" << counts[i];
         }
-//        int total = 0;
-        // store the code:value for each bit length
         /*
-Jpeg::parseHuffmanTable   Table type = " 0" Class = " 0" TableID = " 0"
-Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    0" "               0" HuffCode = "   4" " 4"
-Jpeg::parseHuffmanTable      j = "  1" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    1" "               1" HuffCode = "   5" " 5"
-Jpeg::parseHuffmanTable      j = "  2" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    2" "              10" HuffCode = "   3" " 3"
-Jpeg::parseHuffmanTable      j = "  3" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    3" "              11" HuffCode = "   2" " 2"
-Jpeg::parseHuffmanTable      j = "  4" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    4" "             100" HuffCode = "   6" " 6"
-Jpeg::parseHuffmanTable      j = "  5" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    5" "             101" HuffCode = "   1" " 1"
-Jpeg::parseHuffmanTable      j = "  6" HuffCodeCount "  7" HuffBitLength " 3" HuffVal = "    6" "             110" HuffCode = "   0" " 0"
-Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  1" HuffBitLength " 4" HuffVal = "   14" "            1110" HuffCode = "   7" " 7"
-Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  1" HuffBitLength " 5" HuffVal = "   30" "           11110" HuffCode = "   8" " 8"
-Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  1" HuffBitLength " 6" HuffVal = "   62" "          111110" HuffCode = "   9" " 9"
-Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  1" HuffBitLength " 7" HuffVal = "  126" "         1111110" HuffCode = "  10" " A"
-Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  1" HuffBitLength " 8" HuffVal = "  254" "        11111110" HuffCode = "  11" " B"
-*/
-                /*qDebug() << __FUNCTION__
-                 << "  Table type =" << QString::number(dhtType, 16).rightJustified(2)
-                 << "Class =" << QString::number(dht.classID).rightJustified(2)
-                 << "TableID =" << QString::number(dht.tableID).rightJustified(2)
-                 << "counts =" << counts;*/
-//                     << "Bit Length =" << i;
+         qDebug() << __FUNCTION__
+         << "  Table type =" << QString::number(dhtType, 16).rightJustified(2)
+         << "Class =" << QString::number(dht.classID).rightJustified(2)
+         << "TableID =" << QString::number(dht.tableID).rightJustified(2)
+         << "counts =" << counts;*/
         // iterate bit widths
         for (int i = 0; i < 16; i++) {
             if (counts.at(i) == 0) continue;
             dhtCodeMap.clear();
             // iterate huffman codes for bit width
             for  (int j = 0; j < counts[i]; j++) {
-                dhtCodeMap[huffVal] = Utilities::get8(p.file.read(1));
+                dhtCodeMap[huffCode] = Utilities::get8(p.file.read(1));
 
-                qDebug() << __FUNCTION__
-//                         << "     j (item) =" << QString::number(j).rightJustified(3)
-//                         << "HuffItemCount" << QString::number(counts[i]).rightJustified(3)
+                /*qDebug() << __FUNCTION__
                          << "HuffBitLength" << QString::number(i+1).rightJustified(2)
                          << "HuffCode =" << QString::number(huffVal).rightJustified(5)
                          << QString::number(huffVal, 2).rightJustified(16)
                          << "HuffValLength ="
-                         << QString::number(dhtCodeMap[huffVal]).rightJustified(4);
-//                         << QString::number(dhtCodeMap[huffVal], 16).toUpper().rightJustified(2);
+                         << QString::number(dhtCodeMap[huffVal]).rightJustified(4);*/
 
-                huffVal++;
+                huffCode++;
             }
             ulong len = static_cast<ulong>(i + 1);
             if (counts[i]) dhtLengthMap[len] = dhtCodeMap;
-            huffVal <<= 1;
+            huffCode <<= 1;
         }
         // Value = dhtMap[dhtType][length][code]
         dhtMap[dhtType] = dhtLengthMap;
@@ -632,38 +612,6 @@ Jpeg::parseHuffmanTable      j = "  0" HuffCodeCount "  1" HuffBitLength " 8" Hu
     }
 
     return;
-
-    /* Report */
-//    qDebug() << "\n" << __FUNCTION__;
-//    // table, length, code : value
-//    QMapIterator<int, QMap<int, QMap<quint16, quint16>>> i(dhtMap);
-//    // iterate tables
-//    while (i.hasNext()) {
-//        i.next();
-//        qDebug() << __FUNCTION__ << "Table =" << i.key();
-//        // each value from dhtMap = dhtLengthMap
-//        // length, code : value
-//        QMapIterator<int, QMap<quint16, quint16>> ii(i.value());
-//        // iterate lengths for table
-//        while (ii.hasNext()) {
-//            ii.next();
-//            auto length = ii.value();
-//            // code : value
-//            QMapIterator<quint16, quint16> iii(ii.value());
-//            // iterate codes for length
-//            while (iii.hasNext()) {
-//                iii.next();
-//                qDebug() << __FUNCTION__
-////                     << "    Bit Length =" << QString::number(ii.value()).rightJustified(5)
-//                     << "Code =" << QString::number(iii.key()).rightJustified(5)
-//                     << QString::number(iii.key(), 2).rightJustified(18)
-//                     << "Value =" << QString::number(iii.value()).rightJustified(3)
-//                     << QString::number(iii.value(), 16).toUpper().rightJustified(2, '0');
-////                     << QString::number(ii.value(), 2).rightJustified(8);
-//            }
-//        }
-//    }
-
 }
 
 void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
@@ -746,8 +694,11 @@ void Jpeg::decodeScan(MetadataParameters &p)
     buildMask();
 
     qDebug();
-    qDebug() << "REPORT HUFFMAN TABLES";
-    rptHuff();
+//    qDebug() << "REPORT HUFFMAN TABLES";
+//    rptHuff();
+
+    qDebug() << "START OF SCAN   Offset =" << scanDataOffset;
+    qDebug();
 
     // bit buffer
     uint buf = 0;
@@ -755,11 +706,9 @@ void Jpeg::decodeScan(MetadataParameters &p)
     // end of scan = 0xFFD9
     bool eos = false;
     // buffer is empty
-    uint consumed = 0;
+    uint consumed = 32;
     // start of scanned data
     p.file.seek(scanDataOffset);
-
-    int dhtType = 0;
 
     // decode MCU, first initialize to zero
     for (int component = 0; component != 3; ++component) {
@@ -769,31 +718,35 @@ void Jpeg::decodeScan(MetadataParameters &p)
     }
     // Luminance Y, Cb, Cr
     for (int c = 0; c != 3; ++c) {
+        int qTbl;
+        c == 0 ?qTbl = 0 : qTbl = 1;
         // each entry in MCU
         for (int m = 0; m != 64; ++m) {
-            // buffer start empty (completely consumed)
-            consumed = 32;
             // backfill buffer while there is room
             while (consumed > 7) {
                 // load another byte
                 if (!eos) {
                     quint8 nextByte = Utilities::get8(p.file.read(1));
-                    qDebug() << __FUNCTION__
-                             << "nextByte =" << QString::number(nextByte, 16);
+                    /*qDebug() << "nextByte =" << QString::number(nextByte, 16).toUpper().rightJustified(0, '0')
+                             << "offset =" << p.file.pos()
+                             << "consumed =" << consumed;*/
+                    bool isMarkerByte = false;
                     if (nextByte == 0xFF) {
-                        uint stuffByte = Utilities::get8(p.file.read(1));
-                        if (stuffByte != 0) {
-                            if (stuffByte == 0xD9) {
+                        uint markerByte = Utilities::get8(p.file.read(1));
+                        if (markerByte != 0) {
+                            qDebug().noquote() << "Marker byte = " << QString::number(markerByte, 16);
+                            isMarkerByte = true;
+                            if (markerByte == 0xD9) {
                                 // End of scan
                                 eos = true;
                             }
                         }
                     }
-                    if (!eos) {
+                    if (!eos && !isMarkerByte) {
                         bufAppend(buf, nextByte, consumed);
-                        qDebug() << __FUNCTION__
+                        /*qDebug() << __FUNCTION__
                                  << "Appended nextByte =" << QString::number(nextByte, 16)
-                                 << "Consumed =" << consumed;
+                                 << "Consumed =" << consumed;*/
 
                     }
                 }
@@ -804,53 +757,91 @@ void Jpeg::decodeScan(MetadataParameters &p)
                      << QString::number(buf, 16)
                      << QString::number(buf, 2);*/
             // which huffTable to use?'
-            int tbl;
-            if (c == 0 && m == 0) tbl = 0x00;      // DC component of Luminance (Y)
-            if (c == 0 && m != 0) tbl = 0x10;      // AC component of Luminance (Y)
-            if (c != 0 && m == 0) tbl = 0x01;      // DC component of Chrominance (Cb & Cr)
-            if (c != 0 && m != 0) tbl = 0x11;      // AC component of Chrominance (Cb & Cr)
+            int tbl = 0;
+            if      (c == 0 && m == 0) tbl = 0x00;      // DC component of Luminance (Y)
+            else if (c == 0 && m != 0) tbl = 0x10;      // AC component of Luminance (Y)
+            else if (c != 0 && m == 0) tbl = 0x01;      // DC component of Chrominance (Cb & Cr)
+            else if (c != 0 && m != 0) tbl = 0x11;      // AC component of Chrominance (Cb & Cr)
 
             // iterate bit buffer until huffman code found
             bool huffFound = false;
             bool allZero = false;
-            uint code;
             for (uint huffLength = 1; huffLength < 17; huffLength++) {
                 if (dhtMap[tbl][huffLength].count()) {
-                    uint code = bufPeek(buf, huffLength);
-                    if (dhtMap[tbl][huffLength].contains(code)) {
-                        qDebug() << __FUNCTION__
-                                 << QString::number(buf, 2)
-                                 << "consumed =" << consumed
-                                 << "c =" << c << "m =" << m
-                                 << "bit length to get =" << dhtMap[tbl][huffLength][code];
+                    uint huffCode = bufPeek(buf, huffLength);
+                    /*qDebug() << QString::number(buf, 2)
+                             << "Peeking for code = "
+                             << QString::number(code, 2)
+                             << "length =" << huffLength;*/
+                    if (dhtMap[tbl][huffLength].contains(huffCode)) {
+                        QString binCode = QString::number(huffCode, 2).rightJustified(huffLength, '0');
+                        /*qDebug().noquote()
+                             << "c =" << c
+                             << "m =" << QString::number(m).rightJustified(2)
+                             << QString::number(buf, 2).rightJustified(32, '0')
+                             << "table =" << QString::number(tbl, 16).rightJustified(2)
+                             << "consumed =" << QString::number(consumed).rightJustified(2)
+                             << "huffLength =" << QString::number(huffLength).rightJustified(2)
+                             << "huffCode =" << QString::number(huffCode).rightJustified(3)
+                             << binCode.leftJustified(16)
+                             << "huffVal =" << dhtMap[tbl][huffLength][huffCode]
+                             << "Signed =" << huff2Signed(dhtMap[tbl][huffLength][huffCode], huffLength);*/
                         // check if valueLength (dhtMap[tbl][huffLength][code]) = zero
                         // if so, all AC are zero, so break out of MCU loop
-                        if (dhtMap[tbl][huffLength][code] == 0) allZero = true;
-                        if (allZero) break;
-
-                        uint value;
-                        if (tbl > 0x01) {
-                            value = bufExtract(buf, huffLength, consumed);
-                            mcu[c][m] = huff2Signed(value, huffLength);
-                        }
-                        else {
-                            // extract code from buffer so can access next bits = value
+                        if (m == 1 && dhtMap[tbl][huffLength][huffCode] == 0) {
+                            allZero = true;
+                            // extract code from buffer (not used as zero huff lookup value)
                             bufExtract(buf, huffLength, consumed);
-                            // extract value from buffer
-                            value = bufExtract(buf, dhtMap[tbl][huffLength][code], consumed);
-                            mcu[c][m] = huff2Signed(value, dhtMap[tbl][huffLength][code]);
+                            break;
                         }
+
+                        uint huffVal;
+                        QString bufSnapShot = QString::number(buf, 2).rightJustified(32, '0');
+                        // extract huffCode from buffer so can access next bits = value
+                        bufExtract(buf, huffLength, consumed);
+                        // extract value from buffer
+                        huffVal = dhtMap[tbl][huffLength][huffCode] & 0xF;
+                        int huffRpt = dhtMap[tbl][huffLength][huffCode] / 0xF;
+                        uint huffResult = bufExtract(buf, huffVal, consumed);
+                        QString binHuffResult = QString::number(huffResult, 2).rightJustified(huffVal, '0');
+                        int huffSignedResult = huff2Signed(huffResult, huffVal);
+
+                        mcu[c][zzmcu[m]] = huffSignedResult * dqt[qTbl][m];
+                        if (huffRpt) {
+                            for (int i = 0; i != huffRpt; ++i) {
+                                m++;
+                                mcu[c][zzmcu[m]] = huffSignedResult * dqt[qTbl][m];
+                            }
+                        }
+
+                        QString sHuffCode = bufSnapShot.left(huffLength) + " ";
+                        QString sHuffResult = bufSnapShot.mid(huffLength, huffVal) + " ";
+                        QString sBufRemainder = bufSnapShot.right(32 - huffLength - huffVal);
+                        QString sBuf = sHuffCode + sHuffResult + sBufRemainder;
+//                        int huffValAndF = huffVal & 0xF;
+                        qDebug().noquote()
+                             << "c =" << c
+                             << "m =" << QString::number(m).rightJustified(2)
+                             << "zigzag =" << QString::number(zzmcu[m]).rightJustified(2)
+                             << "    " << bufSnapShot
+                             << "table =" << QString::number(tbl, 16).rightJustified(2)
+                             << "consumed =" << QString::number(consumed).rightJustified(2)
+                             << "huffLength =" << QString::number(huffLength).rightJustified(2)
+                             << "huffCode =" << QString::number(huffCode).rightJustified(3)
+                             << binCode.leftJustified(12)
+                             << "huffVal =" << QString::number(huffVal).rightJustified(3)
+                             << "rpt =" << QString::number(huffRpt).leftJustified(2)
+                             << "bits =" << binHuffResult.leftJustified(10)
+                             << "huffResult =" << QString::number(huffResult).rightJustified(4)
+                             << "huffSignedResult =" << QString::number(huffSignedResult).rightJustified(4)
+                             << "Q =" << QString::number(dqt[qTbl][m]).leftJustified(2)
+                             << "   " << sBuf;
                         huffFound = true;
-                        qDebug() << __FUNCTION__
-                                 << "bit code =" << QString::number(code, 2)
-                                 << "value bit length =" << dhtMap[dhtType][huffLength][code]
-                                 << "value bits =" << QString::number(value, 2)
-                                 << "signed value =" << mcu[c][m];
                         break;
                     }
                 }
             }
-            qDebug() << __FUNCTION__ << "c =" << c << "m =" << m << "allZero =" << allZero;
+//            qDebug() << __FUNCTION__ << "c =" << c << "m =" << m << "allZero =" << allZero;
             if (allZero) break;
             if (!huffFound) {
                 // err
@@ -880,10 +871,10 @@ void Jpeg::bufAppend(uint &buf, quint8 byte, uint &consumed)
 uint Jpeg::bufExtract(uint &buf, uint nBits, uint &consumed)
 {
     uint val = (buf & mask[nBits]) >> (32 - nBits);
-    if (val) {
+//    if (val) {
         buf <<= nBits;
         consumed += nBits;
-    }
+//    }
     return val;
 }
 
@@ -907,18 +898,21 @@ void Jpeg::rptHuff()
     // iterate tables
     while (i.hasNext()) {
         i.next();
-        qDebug() << "Table =" << i.key();
+        qDebug();
+        qDebug() << "Table =" << "0x" + QString::number(i.key(), 16).rightJustified(2, '0') << i.key();
         QMapIterator<uint, QMap<uint, uint>> ii(i.value());
         while (ii.hasNext()) {
             ii.next();
             QMapIterator<uint, uint> iii(ii.value());
             while (iii.hasNext()) {
                 iii.next();
-                qDebug()
-                   << "    Bit Length =" << QString::number(ii.key()).rightJustified(5)
-                   << "Code =" << QString::number(iii.key()).rightJustified(5)
-                   << QString::number(iii.key(), 2).rightJustified(18)
-                   << "Value bit length =" << QString::number(iii.value()).rightJustified(3)
+                QString binCode = QString::number(iii.key(), 2).rightJustified(ii.key(), '0');
+                qDebug().noquote()
+                   << "    Bit Length =" << QString::number(ii.key()).leftJustified(2)
+                   << "Code =" << QString::number(iii.key()).leftJustified(5)
+                   << binCode.leftJustified(18)
+//                   << QString::number(iii.key(), 2).rightJustified(18)
+                   << "Huff Lookup =" << QString::number(iii.value()).rightJustified(3)
                    << QString::number(iii.value(), 16).toUpper().rightJustified(2, '0');
             }
         }
@@ -929,12 +923,13 @@ void Jpeg::rptMCU()
 {
     QString row = "";
     for (int c = 0; c != 3; ++c) {
-        qDebug() << componentDescription[c];
+        qDebug().noquote() << componentDescription[c];
         for (int m = 0; m != 64; ++m) {
             QString item = QString::number(mcu[c][m]).rightJustified(6);
             row += item;
-            if (m > 0 && (m % 8) == 0) {
-                qDebug() << row;
+//            qDebug() << "c =" << c << "m =" << m << "m % 8 =" << m % 8 << "row =" << row;
+            if (m > 0 && ((m + 1) % 8) == 0) {
+                qDebug().noquote() << row;
                 row = "";
             }
         }

@@ -56,6 +56,25 @@ private:
     enum SubFormat{Baseline_DCT, Extended_DCT, Progressive_DCT, Lossless, Arithmetric_DCT,
                    ArithmetricProgressive_DCT, ArithmetricLossless, UnknownJPEGSubformat};
     int mcu[3][64];
+    int zzmcu[64] = { 0, 1, 8,16, 9, 2, 3,10,
+                     17,24,32,25,18,11, 4, 5,
+                     12,19,26,33,40,48,41,34,
+                     27,20,13, 6, 7,14,21,28,
+                     35,42,49,56,57,50,43,36,
+                     29,22,15,23,30,37,44,51,
+                     58,59,52,45,38,31,39,46,
+                     53,60,61,54,47,55,62,63};
+    /*
+    Sequential,Zigzag
+     0,0	 1,1     2,5     3,6     4,14	 5,15	 6,27	 7,28
+     8,2	 9,4	10,7	11,13	12,16	13,26	14,29	15,42
+    16,3	17,8	18,12	19,17	20,25	21,30	22,41	23,43
+    24,9	25,11	26,18	27,24	28,31	29,40	30,44	31,53
+    32,10	33,19	34,23	35,32	36,39	37,45	38,52	39,54
+    40,20	41,22	42,33	43,38	44,46	45,51	46,55	47,60
+    48,21	49,34	50,37	51,47	52,50	53,56	54,59	55,61
+    56,35	57,36	58,48	59,49	60,57	61,58	62,62	63,63
+    */
 
     // SOF
     int subFormat;
@@ -80,6 +99,13 @@ private:
 //        QVector<uint> codes;
 //        QVector<uint> codeLengths;
     };
+
+    /* huffCode   = binary string       ie 11001 = 25
+       huffLength = length of code      ie 11001 length = 5
+       huffVal    = lookup value for code (usually used to define next #bits)
+       huffResult = value of next huffVal bits
+       huffSignedResult = Twos complement of huffResult
+    */
 
     QVector<QString> dhtClassDescription{"DC Table", "AC Table"};
 
