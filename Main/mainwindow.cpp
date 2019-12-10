@@ -10387,7 +10387,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    metadata->parseHEIF();
-//    std::bitset<32> bits, x;
-//    x = bits >> 5;
+
+    qDebug() << "8 / 16 =" << 8/16;
+
+    qDebug() << "18 / 16 =" << 18/16;
+    qDebug() << "28 / 16 =" << 28/16;
+    qDebug() << "38 / 16 =" << 38/16;
+
 }
 // End MW
