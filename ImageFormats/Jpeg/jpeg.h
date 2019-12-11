@@ -1,7 +1,7 @@
 #ifndef JPEG_H
 #define JPEG_H
 
-//#include <QtWidgets>
+#include <QtWidgets>
 #include "Main/global.h"
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
@@ -12,8 +12,7 @@
 #include "Metadata/metareport.h"
 
 #include <iostream>
-#include <bitset>
-#include "Utilities/bit.h"
+//#include "Utilities/bit.h"
 
 class Jpeg : public QObject
 {
@@ -48,14 +47,21 @@ private:
     uint bufExtract(uint &buf, uint nBits, uint &consumed);
     uint bufPeek(uint &buf, uint nBits);
 
+    void buildIdctLookup();
+
     void rptHuff();
     void rptMCU();
+    void rptIDCT();
+    void rptRGB();
 
     enum ColorModel{CMYK, YCBCR};
     int colorModel;
     enum SubFormat{Baseline_DCT, Extended_DCT, Progressive_DCT, Lossless, Arithmetric_DCT,
                    ArithmetricProgressive_DCT, ArithmetricLossless, UnknownJPEGSubformat};
-    int mcu[3][64];
+    // MCU for 3 channels
+    int   mcu[3][8][8];
+    float idct[3][8][8];
+    int   rgb[3][8][8];
     int zzmcu[64] = { 0, 1, 8,16, 9, 2, 3,10,
                      17,24,32,25,18,11, 4, 5,
                      12,19,26,33,40,48,41,34,
@@ -64,6 +70,38 @@ private:
                      29,22,15,23,30,37,44,51,
                      58,59,52,45,38,31,39,46,
                      53,60,61,54,47,55,62,63};
+
+    const int zz[64][2] = {{0,0}, {0,1}, {1,0}, {2,0}, {1,1}, {0,2},{ 0,3}, {1,2},
+                           {2,1}, {3,0}, {4,0}, {3,1}, {2,2}, {1,3}, {0,4}, {0,5},
+                           {1,4}, {2,3}, {3,2}, {4,1}, {5,0}, {6,0}, {5,1}, {4,2},
+                           {3,3}, {2,4}, {1,5}, {0,6}, {0,7}, {1,6}, {2,5}, {3,4},
+                           {4,3}, {5,2}, {6,1}, {7,0}, {7,1}, {6,2}, {5,3}, {4,4},
+                           {3,5}, {2,6}, {1,7}, {2,7}, {3,6}, {4,5}, {5,4}, {6,3},
+                           {7,2}, {7,3}, {6,4}, {5,5}, {4,6}, {3,7}, {4,7}, {5,6},
+                           {6,5}, {7,4}, {7,5}, {6,6}, {5,7}, {6,7}, {7,6}, {7,7}};
+
+
+    /*
+    const std::pair<const int, const int> zzOrder[64] =
+    {
+        {0,0},
+        {0,1}, {1,0},
+        {2,0}, {1,1}, {0,2},
+        {0,3}, {1,2}, {2,1}, {3,0},
+        {4,0}, {3,1}, {2,2}, {1,3}, {0,4},
+        {0,5}, {1,4}, {2,3}, {3,2}, {4,1}, {5,0},
+        {6,0}, {5,1}, {4,2}, {3,3}, {2,4}, {1,5}, {0,6},
+        {0,7}, {1,6}, {2,5}, {3,4}, {4,3}, {5,2}, {6,1}, {7,0},
+        {7,1}, {6,2}, {5,3}, {4,4}, {3,5}, {2,6}, {1,7},
+        {2,7}, {3,6}, {4,5}, {5,4}, {6,3}, {7,2},
+        {7,3}, {6,4}, {5,5}, {4,6}, {3,7},
+        {4,7}, {5,6}, {6,5}, {7,4},
+        {7,5}, {6,6}, {5,7},
+        {6,7}, {7,6},
+        {7,7}
+    };
+    */
+
     /*
     Sequential,Zigzag
      0,0	 1,1     2,5     3,6     4,14	 5,15	 6,27	 7,28
@@ -96,8 +134,6 @@ private:
     struct DHT {
         int tableID;                   // Specifies one of component: 0 for luminance and 1 for chrominance
         int classID;                   // Specifies is it DC element or AC element of table. 0-DC element 1-AC element
-//        QVector<uint> codes;
-//        QVector<uint> codeLengths;
     };
 
     /* huffCode   = binary string       ie 11001 = 25
@@ -130,6 +166,10 @@ private:
     // decode scan data
     unsigned mask[32];
 
+    // Inverse Discrete Cosine Transform (IDCT)
+    float fIdctLookup[3][8][8][8][8]; // c,y,x,v,u
+    int   iIdctLookup[3][8][8][8][8];
+
     QHash<quint32, QString> segCodeHash;
     quint32 order;
     QString err;
@@ -140,45 +180,19 @@ private:
 #endif // JPEG_H
 
 /*
+iDCT:
+Applying these formulas directly is computationally expensive, especially
+when there have been developed faster algorithms for implementing forward or
+inverse DCT. A notable one called AA&N leaves only 5 multiplies and 29 adds
+to be done in the DCT itself. More info and an implementation of it can be
+found in the free software for JPEG encoders/decoders made by Independent JPEG
+Group (IJG), their C source can be found at www.ijg.org.
 
-signed CimgDecode::HuffmanDc2Signed(unsigned nVal,unsigned nBits)
-{
-    if (nVal >= (unsigned)(1<<(nBits-1))) {
-        return (signed)(nVal);
-    } else {
-        return (signed)( nVal - ((1<<nBits)-1) );
-    }
-}
+Y = 0.299 R + 0.587 G + 0.114 B
+Cb = - 0.1687 R - 0.3313 G + 0.5 B + 128
+Cr = 0.5 R - 0.4187 G - 0.0813 B + 128
 
-void CimgDecode::GenLookupHuffMask()
-{
-    unsigned int nMask;
-    for (unsigned nLen=0;nLen<32;nLen++)
-    {
-        nMask = (1 << (nLen))-1;
-        nMask <<= 32-nLen;
-        m_anHuffMaskLookup[nLen] = nMask;
-    }
-}
-
-// Extract a specified number of bits from a 32-bit holding register
-//
-// INPUT:
-// - nWord				= The 32-bit holding register
-// - nBits				= Number of bits (leftmost) to extract from the holding register
-// PRE:
-// - m_anHuffMaskLookup[]
-// RETURN:
-// - The subset of bits extracted from the holding register
-// NOTE:
-// - This routine is inlined for speed
-//
-inline unsigned CimgDecode::ExtractBits(unsigned nWord,unsigned nBits)
-{
-    unsigned nVal;
-    nVal = (nWord & m_anHuffMaskLookup[nBits]) >> (32-nBits);
-    return nVal;
-}
-
-
+R = Y + 1.402 (Cr-128)
+G = Y - 0.34414 (Cb-128) - 0.71414 (Cr-128)
+B = Y + 1.772 (Cb-128)
 */
