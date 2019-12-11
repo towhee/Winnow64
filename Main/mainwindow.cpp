@@ -10388,11 +10388,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    metadata->parseHEIF();
 
-    qDebug() << "8 / 16 =" << 8/16;
-
-    qDebug() << "18 / 16 =" << 18/16;
-    qDebug() << "28 / 16 =" << 28/16;
-    qDebug() << "38 / 16 =" << 38/16;
+    int a[2][3] = {2,1,0,2,1,0};
 
 }
 // End MW
