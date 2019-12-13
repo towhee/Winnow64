@@ -2,6 +2,8 @@
 #define JPEG_H
 
 #include <QtWidgets>
+#include <QColor>
+#include <QRgb>
 #include "Main/global.h"
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
@@ -50,18 +52,26 @@ private:
     void buildIdctLookup();
 
     void rptHuff();
-    void rptMCU();
-    void rptIDCT();
-    void rptRGB();
+    void rptMCU(int col, int row);
+    void rptIDCT(int col, int row);
+    void rptRGB(int col, int row);
 
     enum ColorModel{CMYK, YCBCR};
     int colorModel;
     enum SubFormat{Baseline_DCT, Extended_DCT, Progressive_DCT, Lossless, Arithmetric_DCT,
                    ArithmetricProgressive_DCT, ArithmetricLossless, UnknownJPEGSubformat};
+    /* image scan mcu row from top left most mcu to bottom right most mcu equivalent
+       to 8 scanlines joined together one after the other in format FFRRGGBBFFRRGGBB ... */
+    QVector<int> scanMcuRow;
+
     // MCU for 3 channels
-    int   mcu[3][8][8];
-    float idct[3][8][8];
-    int   rgb[3][8][8];
+    int mcuRows, mcuCols;        // number of rows and columns of mcu in jpeg
+    int mcu[3][8][8];
+    double idct[3][8][8];
+    int rgb[3][8][8];
+    int dcDiff[3];
+
+    // zigzag transform coordinates
     int zzmcu[64] = { 0, 1, 8,16, 9, 2, 3,10,
                      17,24,32,25,18,11, 4, 5,
                      12,19,26,33,40,48,41,34,
@@ -167,8 +177,9 @@ private:
     unsigned mask[32];
 
     // Inverse Discrete Cosine Transform (IDCT)
-    float fIdctLookup[3][8][8][8][8]; // c,y,x,v,u
+    double fIdctLookup[3][8][8][8][8]; // c,y,x,v,u
     int   iIdctLookup[3][8][8][8][8];
+    double cosine[106];
 
     QHash<quint32, QString> segCodeHash;
     quint32 order;
