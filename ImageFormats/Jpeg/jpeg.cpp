@@ -517,8 +517,10 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
     // get frame header length
     precision = Utilities::get8(p.file.read(1));
     lines = Utilities::get16(p.file.read(2));
+    iHeight = lines;
     mcuRows = (lines / 8) + (lines % 8);
     samplesPerLine = Utilities::get16(p.file.read(2));
+    iWidth = samplesPerLine;
     mcuCols = (samplesPerLine / 8) + (samplesPerLine % 8);
     componentsInFrame = Utilities::get8(p.file.read(1));
     components.resize(componentsInFrame);
@@ -718,25 +720,41 @@ void Jpeg::decodeScan(MetadataParameters &p)
     // bit buffer
     uint buf = 0;
 
-    // dcDiff initialize
-    for (int i = 0; i < 3; i++) dcDiff[i] = 0;
-
     // end of scan = 0xFFD9
     bool eos = false;
+
     // buffer is empty
-    uint consumed = 32;
+    int consumed = 32;
+    // the number of bits from the start of the bit buffer to the reset marker, which is on
+    // a byte boundary, with filler "111..." bits to the byte boundary
+    int bitsToResetMarker = 0;
+
+    // For reporting, the incoming bytes to the bit buffer
+    QString sBytes;
+
+    // Set up for image size
+    mcuRows = lines / 8;
+    mcuCols = samplesPerLine / 8;
+
+
+    // for testing only
+//    mcuRows = 4;
+//    mcuCols = 150;
+    int reportMCU0 = -1;   // row, column
+    int reportMCU1 = -1;   // row, column
+    QImage image(samplesPerLine, lines, QImage::Format_RGB32);
+
     // start of scanned data
     p.file.seek(scanDataOffset);
 
-    // for testing only
-    mcuRows = 1;
-    mcuCols = 150;
-    QPoint reportMCU = QPoint(2, 0);   // row, column
+    // Iterate through scan data MCU blocks row by row
+    int mcuCount = 0;
+    for (int mcuRow = 0; mcuRow < mcuRows; ++mcuRow) {
 
-    QImage image(samplesPerLine, lines, QImage::Format_RGB32);
+        // dcDiff initialize
+        for (int i = 0; i < 3; i++) dcDiff[i] = 0;
 
-    for (int mcuRow = 0; mcuRow != mcuRows; ++mcuRow) {
-        for (int mcuCol = 0; mcuCol != mcuCols; ++mcuCol) {
+        for (int mcuCol = 0; mcuCol < mcuCols; ++mcuCol) {
 
             // decode MCU, first initialize to zero
             for (int c = 0; c != 3; ++c) {
@@ -753,17 +771,21 @@ void Jpeg::decodeScan(MetadataParameters &p)
                 c == 0 ? qTbl = 0 : qTbl = 1;
 
                 // debug reporting
-                if (reportMCU == QPoint(mcuCol, mcuRow)) {
+                if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
                     qDebug();
-                    qDebug() << "MCU" << reportMCU << "COMPONENT" << componentDescription[c];
+                    qDebug() << "MCU" << mcuCount << "COMPONENT" << componentDescription[c];
                 }
+
                 // each entry in MCU
                 for (int m = 0; m < 64; ++m) {
+
                     // backfill buffer while there is room
+                    sBytes = "";
                     while (consumed > 7 && !eos) {
                         // load another byte
                         if (!eos) {
                             quint8 nextByte = Utilities::get8(p.file.read(1));
+                            sBytes += QString::number(nextByte, 2).rightJustified(8, '0') + " ";
                             /*qDebug() << "nextByte =" << QString::number(nextByte, 16).toUpper().rightJustified(0, '0')
                                      << "offset =" << p.file.pos()
                                      << "consumed =" << consumed;*/
@@ -771,9 +793,13 @@ void Jpeg::decodeScan(MetadataParameters &p)
                             if (nextByte == 0xFF) {
                                 uint markerByte = Utilities::get8(p.file.read(1));
                                 if (markerByte != 0) {
-                                    qDebug().noquote() << "Marker byte = " << QString::number(markerByte, 16)
-                                                       << "mcuRow =" << mcuRow << "mcuCol =" << mcuCol;
                                     isMarkerByte = true;
+                                    // adjust bit buf to byte boundary
+                                    bitsToResetMarker = 32 - consumed;
+                                    qDebug().noquote() << QString::number(buf, 2).rightJustified(32, '0')
+                                                       << "Reset Marker byte = " << QString::number(markerByte, 16)
+                                                       << "mcuRow =" << mcuRow << "mcuCol =" << mcuCol
+                                                       << "bitsToMarker =" << bitsToResetMarker;
                                     if (markerByte == 0xD9) {
                                         // End of scan
                                         eos = true;
@@ -793,6 +819,7 @@ void Jpeg::decodeScan(MetadataParameters &p)
                              << "initial buf ="
                              << QString::number(buf, 16)
                              << QString::number(buf, 2);*/
+
                     // which huffTable to use?'
                     int hTbl = 0;
                     if      (c == 0 && m == 0) hTbl = 0x00;      // DC component of Luminance (Y)
@@ -806,65 +833,75 @@ void Jpeg::decodeScan(MetadataParameters &p)
                     for (uint huffLength = 1; huffLength < 17; huffLength++) {
                         if (dhtMap[hTbl][huffLength].count()) {
                             uint huffCode = bufPeek(buf, huffLength);
-                            /*qDebug() << QString::number(buf, 2)
-                                     << "Peeking for code = "
-                                     << QString::number(code, 2)
-                                     << "length =" << huffLength;*/
                             if (dhtMap[hTbl][huffLength].contains(huffCode)) {
                                 QString binCode = QString::number(huffCode, 2).rightJustified(huffLength, '0');
-                                /*
-                                   qDebug().noquote()
-                                     << "c =" << c
-                                     << "m =" << QString::number(m).rightJustified(2)
-                                     << QString::number(buf, 2).rightJustified(32, '0')
-                                     << "table =" << QString::number(tbl, 16).rightJustified(2)
-                                     << "consumed =" << QString::number(consumed).rightJustified(2)
-                                     << "huffLength =" << QString::number(huffLength).rightJustified(2)
-                                     << "huffCode =" << QString::number(huffCode).rightJustified(3)
-                                     << binCode.leftJustified(16)
-                                     << "huffVal =" << dhtMap[tbl][huffLength][huffCode]
-                                     << "Signed =" << huff2Signed(dhtMap[tbl][huffLength][huffCode], huffLength);*/
+
                                 // check if first huffResult (dhtMap[tbl][huffLength][code]) = zero
                                 // if so, all AC for component are zero, so break out of MCU component loop
-//                                if (m != 1 && dhtMap[hTbl][huffLength][huffCode] == 0) {
-//                                    endOfBlock = true;
-//                                    // extract code from buffer (not used as zero huff lookup value)
-//                                    bufExtract(buf, huffLength, consumed);
-//                                    if (reportMCU == QPoint(mcuCol, mcuRow)) qDebug() << "END OF BLOCK";
-//                                    for (int i = m; i != 64; ++i) {
-//                                        int y = zz[m][0];
-//                                        int x = zz[m][1];
-//                                        mcu[c][y][x] = 0;
-//                                    }
-//                                    break;
-//                                }
 
                                 uint huffVal;
                                 QString bufSnapShot = QString::number(buf, 2).rightJustified(32, '0');
+
+                                /* Extract huffCode and huffResult
+                                   huffCode   = binary string                   ie 11001 = 25
+                                   huffLength = bit length of huffCodecode      ie 11001 length = 5
+                                   huffVal    = lookup table value for huffCode (usually used to define next #bits)
+                                   huffResult = value of next huffVal bits
+                                   huffSignedResult = Twos complement of huffResult
+                                */
+
                                 // extract huffCode from buffer so can access next bits = result
                                 bufExtract(buf, huffLength, consumed);
-                                // extract value from buffer
+                                int huffNextBits = dhtMap[hTbl][huffLength][huffCode];
                                 huffVal = dhtMap[hTbl][huffLength][huffCode] & 0xF;
-
-                                // if huffVal == 0 (the bit length to read to get value) then EOB
-                                if (huffVal == 0 && m > 0) {
-                                    endOfBlock = true;
-                                    if (reportMCU == QPoint(mcuCol, mcuRow))
-                                        qDebug() << "END OF BLOCK  c =" << c << "m =" << m
-                                                 << QString::number(buf, 2).rightJustified(32, '0');
-                                    // make sure rest of mcu block = zero
-                                    for (int i = m; i != 64; ++i) {
-                                        int y = zz[m][0];
-                                        int x = zz[m][1];
-                                        mcu[c][y][x] = 0;
-                                    }
-                                    break;
-                                }
-
-                                int huffRepeat = dhtMap[hTbl][huffLength][huffCode] / 0xF;
+                                int huffRepeat = dhtMap[hTbl][huffLength][huffCode] / 16;
                                 uint huffResult = bufExtract(buf, huffVal, consumed);
                                 QString binHuffResult = QString::number(huffResult, 2).rightJustified(huffVal, '0');
                                 int huffSignedResult = huff2Signed(huffResult, huffVal);
+
+                                // reset marker ahead?  Remove 1 bit place markers to byte boundary
+                                if (bitsToResetMarker) {
+                                    bitsToResetMarker -= huffLength + huffVal;
+                                    if (bitsToResetMarker < 8) {
+                                        // check if next bitsToMarker are all ones ie 1111...
+                                        uint markerBuf = buf;
+                                        markerBuf = markerBuf >> (32 - bitsToResetMarker);
+                                        bool alignToByteMarker = false;
+                                        switch (bitsToResetMarker) {
+                                        case 1:
+                                            if (markerBuf == 0b1)  alignToByteMarker = true;
+                                            break;
+                                        case 2:
+                                            if (markerBuf == 0b11)  alignToByteMarker = true;
+                                            break;
+                                        case 3:
+                                            if (markerBuf == 0b111)  alignToByteMarker = true;
+                                            break;
+                                        case 4:
+                                            if (markerBuf == 0b1111)  alignToByteMarker = true;
+                                            break;
+                                        case 5:
+                                            if (markerBuf == 0b11111)  alignToByteMarker = true;
+                                            break;
+                                        case 6:
+                                            if (markerBuf == 0b111111)  alignToByteMarker = true;
+                                            break;
+                                        case 7:
+                                            if (markerBuf == 0b1111111)  alignToByteMarker = true;
+                                        }
+                                        if (alignToByteMarker) {
+                                            buf = buf << bitsToResetMarker;
+                                            consumed += bitsToResetMarker;
+                                            /*
+                                            qDebug() << "Encountered reset marker.  "
+                                                     << "bitsToMarker =" << bitsToMarker
+                                                     << "buf:"
+                                                     << QString::number(huffCode, 2).rightJustified(huffLength, '0');
+                                                     */
+                                            bitsToResetMarker = 0;
+                                        }
+                                    }
+                                }
 
                                 // Repeats
                                 if (huffRepeat) {
@@ -872,17 +909,6 @@ void Jpeg::decodeScan(MetadataParameters &p)
                                         int y = zz[m][0];
                                         int x = zz[m][1];
                                         mcu[c][y][x] = 0;
-
-                                        if (reportMCU == QPoint(mcuCol, mcuRow)) {
-                                            QString szz =  QString::number(zz[m][0]) + "," + QString::number(zz[m][1]);
-                                            QString szrl = "DCT = 0";
-                                            qDebug().noquote()
-                                                 << "c =" << c
-                                                 << "m =" << QString::number(m).rightJustified(2)
-                                                 << "zz(v,u) =" << szz.leftJustified(2)
-                                                 << szrl.rightJustified(211);
-                                        }
-
                                         m++;
                                     }
                                 }
@@ -890,29 +916,43 @@ void Jpeg::decodeScan(MetadataParameters &p)
                                 int y = zz[m][0];
                                 int x = zz[m][1];
                                 mcu[c][y][x] = huffSignedResult * dqt[qTbl][m];
-                                // DC records difference from previous MCU
-                                if (m == 0) {
-                                    mcu[c][y][x] += dcDiff[c];
-                                    dcDiff[c] = mcu[c][y][x];
-                                }
 
-                                if (reportMCU == QPoint(mcuCol, mcuRow)) {
+                                // if huffVal == 0 (the bit length to read to get value) then EOB
+                                QString sEOB = "";
+                                if (huffNextBits == 0 && m > 0) {
+                                    endOfBlock = true;
+                                    sEOB = "EOB";
+                                    // make sure rest of mcu block = zero
+                                    for (int i = m+1; i < 64; ++i) {
+                                        int y = zz[m][0];
+                                        int x = zz[m][1];
+                                        mcu[c][y][x] = 0;
+                                    }
+//                                    break;
+                                }
+                                if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
+                                    int prevConsumed = consumed - huffLength - huffVal;
                                     QString sHuffCode = bufSnapShot.left(huffLength) + " ";
                                     QString sHuffResult = bufSnapShot.mid(huffLength, huffVal) + " ";
-                                    QString sBufRemainder = bufSnapShot.right(32 - huffLength - huffVal);
-                                    QString sBuf = sHuffCode + sHuffResult + sBufRemainder;
+                                    QString sBufRemainder = bufSnapShot.mid(huffLength + huffVal, 32 - prevConsumed - huffLength - huffVal);
+                                    QString sBufConsumed;
+                                    sBufConsumed.fill('_', prevConsumed);
+                                    QString sBuf = sHuffCode + sHuffResult + sBufRemainder + sBufConsumed;
                                     QString sRpt;
                                     huffRepeat == 0 ? sRpt = QString::number(huffRepeat).leftJustified(2) : "--";
+                                    QString sBitsToAlign;
+                                    if (bitsToResetMarker) sBitsToAlign = "bitsToReset =" + QString::number(bitsToResetMarker);
                                     QString szz =  QString::number(zz[m][0]) + "," + QString::number(zz[m][1]);
                                     qDebug().noquote()
                                      << "c =" << c
                                      << "m =" << QString::number(m).rightJustified(2)
-                                     << "zz(v,u) =" << szz.leftJustified(2)
-                                     << "bit buf:" << bufSnapShot
+                                     << "zz =" << szz.leftJustified(2)
+//                                     << "buf:" << bufSnapShot
                                      << "table =" << QString::number(hTbl, 16).leftJustified(2)
                                      << "consumed =" << QString::number(consumed).leftJustified(2)
+//                                     << "byte offset =" << QString::number(byteAlignOffset).leftJustified(4)
                                      << "huffLength =" << QString::number(huffLength).leftJustified(2)
-                                     << "huffCode =" << QString::number(huffCode).leftJustified(3)
+                                     << "huffCode =" << QString::number(huffCode).leftJustified(5)
                                      << binCode.leftJustified(12)
                                      << "huffVal =" << QString::number(dhtMap[hTbl][huffLength][huffCode]).leftJustified(3)
         //                             << "%16" << QString::number(huffVal).rightJustified(3)
@@ -922,14 +962,19 @@ void Jpeg::decodeScan(MetadataParameters &p)
                                      << "huffSignedResult =" << QString::number(huffSignedResult).leftJustified(4)
                                      << "Q =" << QString::number(dqt[qTbl][m]).leftJustified(2)
                                      << "DCT =" << QString::number(dqt[qTbl][m] * huffResult).leftJustified(4)
-                                     << "  " << sBuf;
+                                     << sBuf
+                                     << sBytes
+                                     << sBitsToAlign
+                                     << sEOB;
                                 }
+
+
                                 huffFound = true;
                                 break;
                             }
                         }
                     }
-                    if (endOfBlock || m == 63) break;
+                    if (endOfBlock || m > 63) break;
                     if (!huffFound) {
                         // err
                         qDebug() << __FUNCTION__ << "HUFF CODE NOT FOUND"
@@ -939,15 +984,23 @@ void Jpeg::decodeScan(MetadataParameters &p)
                     }
                 } // end mcu component (Y,Cb,Cr)
 
-                qDebug() << "Processed MCU" << mcuCol << mcuRow << "c =" << c;
+//                qDebug() << "Processed MCU" << mcuCol << mcuRow << "c =" << c;
 
             } // end components and MCU
 
-//            rptMCU(mcuRow, mcuCol);
+            if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
+                rptMCU(mcuCol, mcuRow);
+            }
+
+            // DC records difference from previous MCU
+            for (int c = 0; c != 3; ++c) {
+                mcu[c][0][0] += dcDiff[c];
+                dcDiff[c] = mcu[c][0][0];
+            }
 
 //            // IDCT transform and level shift
-//            float pi = static_cast<float>(3.141592654);                     // 3.141592654
-//            float pi16 = static_cast<float>(3.141592654/16.0);          // 0.196350
+//            float pi = static_cast<float>(3.141592654);
+//            float pi16 = static_cast<float>(3.141592654/16.0);
 //            float sqrtHalf	= static_cast<float>(0.707106781);
             for (int c = 0; c != 3; ++c) {
                 for (uint y = 0; y != 8; ++y) {
@@ -975,7 +1028,6 @@ void Jpeg::decodeScan(MetadataParameters &p)
                     }
                 }
             }
-//            rptIDCT(mcuRow, mcuCol);
 
             // RGB transform
             for (int y = 0; y != 8; ++y) {
@@ -999,24 +1051,36 @@ void Jpeg::decodeScan(MetadataParameters &p)
 //                    qDebug() << "y, x, r, g, b " << y << x << r << g << b;
                 }
             }
-//            rptRGB(mcuRow, mcuCol);
+//            rptRGB(mcuCol, mcuRow);
 
             // testing: add mcu rgb to QImage image
-            for (int x = 0; x != 8;x++) {
-                for (int y = 0; y != 8;y++) {
-                    uint iX = mcuCol * 8 + x;
-                    uint iY = mcuRow * 8 + y;
+            for (int x = 0; x < 8; x++) {
+                for (int y = 0; y < 8; y++) {
+                    int X = mcuCol * 8 + x;
+                    int Y = mcuRow * 8 + y;
                     QRgb px = QColor(rgb[0][y][x], rgb[1][y][x], rgb[2][y][x]).rgb();
-                    image.setPixel(iX, iY, px);
+                    if (X > iWidth || Y > iHeight) {
+                        qDebug() << "Problem"
+                                 << "image width =" << iWidth
+                                 << "height = " << iHeight
+                                 << "mcuCol =" << mcuCol
+                                 << "mcuRow =" << mcuRow
+                                 << "px =" << X
+                                 << "py =" << Y;
+                    }
+                    image.setPixel(X, Y, px);
                 }
             }
 
             // Debug reporting
-            if (reportMCU == QPoint(mcuCol, mcuRow)) {
-                rptMCU(mcuRow, mcuCol);
-                rptIDCT(mcuRow, mcuCol);
-                rptRGB(mcuRow, mcuCol);
+            if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
+                rptIDCT(mcuCol, mcuRow);
+                rptRGB(mcuCol, mcuRow);
             }
+
+            mcuCount++;
+
+//            qDebug() << "Processed MCU" << mcuCol << mcuRow;
 
         } // end row of MCUs
     } // end all rows of MCUs
@@ -1025,7 +1089,7 @@ void Jpeg::decodeScan(MetadataParameters &p)
     image.save("D:/Pictures/_Jpg/test/test.jpg", "JPG");
 }
 
-void Jpeg::bufAppend(uint &buf, quint8 byte, uint &consumed)
+void Jpeg::bufAppend(uint &buf, quint8 byte, int &consumed)
 {
     if (consumed > 7) {
         uint shift = consumed - 8;
@@ -1038,13 +1102,11 @@ void Jpeg::bufAppend(uint &buf, quint8 byte, uint &consumed)
     }
 }
 
-uint Jpeg::bufExtract(uint &buf, uint nBits, uint &consumed)
+uint Jpeg::bufExtract(uint &buf, uint nBits, int &consumed)
 {
     uint val = (buf & mask[nBits]) >> (32 - nBits);
-//    if (val) {
-        buf <<= nBits;
-        consumed += nBits;
-//    }
+    buf <<= nBits;
+    consumed += nBits;
     return val;
 }
 
@@ -1127,7 +1189,8 @@ void Jpeg::rptHuff()
 void Jpeg::rptMCU(int col, int row)
 {
     qDebug();
-    qDebug() << "REPORT MCU col(X) =" << col << "row(Y) =" << row;
+    QString mcuCoord = "[" + QString::number(col) + "," + QString::number(row) + "]";
+    qDebug().noquote() << "REPORT MCU" << mcuCoord;
     for (int c = 0; c != 3; ++c) {
         qDebug().noquote() << componentDescription[c];
         for (int v = 0; v != 8; ++v) {
@@ -1145,13 +1208,14 @@ void Jpeg::rptMCU(int col, int row)
 void Jpeg::rptIDCT(int col, int row)
 {
     qDebug();
-    qDebug() << "REPORT IDCT col(X) =" << col << "row(Y) =" << row;
+    QString mcuCoord = "[" + QString::number(col) + "," + QString::number(row) + "]";
+    qDebug().noquote() << "REPORT IDCT" << mcuCoord;
     for (int c = 0; c != 3; ++c) {
         qDebug().noquote() << componentDescription[c];
         for (int v = 0; v != 8; ++v) {
             QString srow = "";
             for (int u = 0; u != 8; ++u) {
-                QString item = QString::number(idct[c][v][u], 'f', 2).rightJustified(8);
+                QString item = QString::number(idct[c][v][u]/*, 'f', 2*/).rightJustified(8);
                 srow += item;
             }
             qDebug().noquote() << srow;
@@ -1163,22 +1227,18 @@ void Jpeg::rptIDCT(int col, int row)
 void Jpeg::rptRGB(int col, int row)
 {
     qDebug();
-    qDebug() << "REPORT RGB col(X) =" << col << "row(Y) =" << row;
+    QString mcuCoord = "[" + QString::number(col) + "," + QString::number(row) + "]";
+    qDebug().noquote() << "REPORT RGB" << mcuCoord;
     QString srow = "";
     for (int y = 0; y != 8; ++y) {
         for (int x = 0; x != 8; ++x) {
             QString sR = QString::number(rgb[0][y][x], 16).toUpper().leftJustified(2, '0');
             QString sG = QString::number(rgb[1][y][x], 16).toUpper().leftJustified(2, '0');
             QString sB = QString::number(rgb[2][y][x], 16).toUpper().leftJustified(2, '0');
-            QString sRGB = sR + sG + sB + "  ";
-            srow += sRGB;
+            QString xRGB = sR + sG + sB + "  ";
+            srow += xRGB;
         }
-        qDebug().noquote() << " " << srow;
-        srow = "";
-    }
-    qDebug();
-    srow = "";
-    for (int y = 0; y != 8; ++y) {
+        srow += "   ";
         for (int x = 0; x != 8; ++x) {
             QString sR = QString::number(rgb[0][y][x]).toUpper().leftJustified(3);
             QString sG = QString::number(rgb[1][y][x]).toUpper().leftJustified(3);
@@ -1189,4 +1249,17 @@ void Jpeg::rptRGB(int col, int row)
         qDebug().noquote() << " " << srow;
         srow = "";
     }
+//    qDebug();
+//    srow = "";
+//    for (int y = 0; y != 8; ++y) {
+//        for (int x = 0; x != 8; ++x) {
+//            QString sR = QString::number(rgb[0][y][x]).toUpper().leftJustified(3);
+//            QString sG = QString::number(rgb[1][y][x]).toUpper().leftJustified(3);
+//            QString sB = QString::number(rgb[2][y][x]).toUpper().leftJustified(3);
+//            QString sRGB = sR + "," + sG + "," + sB + "  ";
+//            srow += sRGB;
+//        }
+//        qDebug().noquote() << " " << srow;
+//        srow = "";
+//    }
 }
