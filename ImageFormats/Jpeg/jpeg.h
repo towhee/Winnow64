@@ -34,13 +34,16 @@ public:
 
     QHash<QString, quint32> segmentHash;
 
+    void decodeScan(MetadataParameters &p);
+    void decodeScan(QFile &file, QImage &image);
+    void decodeScan(QByteArray &ba, QImage &image);
+
 private:
     void readAppSegments(MetadataParameters &p);
     void parseFrameHeader(MetadataParameters &p, uint marker, quint16 len);
     void parseHuffmanTable(MetadataParameters &p, quint16 len);
     void parseQuantizationTable(MetadataParameters &p, quint16 len);
     void parseSOSHeader(MetadataParameters &p, quint16 len);
-    void decodeScan(MetadataParameters &p);
 
     int  huff2Signed(uint val, uint bits);
 
@@ -55,6 +58,18 @@ private:
     void rptMCU(int col, int row);
     void rptIDCT(int col, int row);
     void rptRGB(int col, int row);
+
+    struct JPG {
+        int width;
+        int height;
+        int subFormat;
+        uint precision;
+        int componentsInFrame;
+        int componentId;
+        int horSampleFactor;
+        int verSampleFactor;
+        int QTableSel;
+    };
 
     enum ColorModel{CMYK, YCBCR};
     int colorModel;
@@ -194,6 +209,16 @@ private:
 #endif // JPEG_H
 
 /*
+
+void	onImage(int height, int width, int* data)
+{
+    QImage image = QImage( width, height, QImage::Format_ARGB32 );
+
+    for (int i = 0; i < height; ++i)
+        memcpy(image.scanLine(i), data + i * width, width * 4);
+}
+
+
 iDCT:
 Applying these formulas directly is computationally expensive, especially
 when there have been developed faster algorithms for implementing forward or

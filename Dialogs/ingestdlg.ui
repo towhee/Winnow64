@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>873</width>
-    <height>861</height>
+    <height>874</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -568,7 +568,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>760</y>
+     <y>780</y>
      <width>831</width>
      <height>20</height>
     </rect>
@@ -1499,7 +1499,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>800</y>
+     <y>820</y>
      <width>351</width>
      <height>31</height>
     </rect>
@@ -1520,7 +1520,7 @@
    <property name="geometry">
     <rect>
      <x>600</x>
-     <y>790</y>
+     <y>810</y>
      <width>251</width>
      <height>43</height>
     </rect>
@@ -1613,7 +1613,7 @@
    <property name="geometry">
     <rect>
      <x>450</x>
-     <y>730</y>
+     <y>725</y>
      <width>391</width>
      <height>25</height>
     </rect>
@@ -1637,7 +1637,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>730</y>
+     <y>725</y>
      <width>421</width>
      <height>25</height>
     </rect>
@@ -1679,6 +1679,30 @@
    </property>
    <property name="text">
     <string>Backup to second location while ingesting</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="includeXmpChk">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>750</y>
+     <width>421</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Include XMP sidecar with Winnow metadata</string>
    </property>
   </widget>
  </widget>

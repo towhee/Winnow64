@@ -54,20 +54,84 @@ void Metadata::initSupportedFiles()
     #endif
     }
     // add raw file types here as they are supported
-    rawFormats << "arw" << "cr2" << "dng" << "nef" << "orf" << "raf" << "sr2" << "rw2";
-    getMetadataFormats << "arw" << "cr2" << "dng" << "nef" << "orf" << "raf" << "sr2" << "rw2"
-                       << "jpg" << "jpeg" << "tif";
-    embeddedICCFormats << "jpg" << "jpeg";
-    sidecarFormats << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2" << "rw2"
-                   << "jpg" << "jpeg";
-    internalXmpFormats << "notyetjpg";
-    xmpWriteFormats << "jpg" << "jpeg" << "arw" << "cr2" << "nef" << "orf" << "raf" << "sr2"
-                    << "rw2";
+    rawFormats          << "arw"
+                        << "cr2"
+                        << "dng"
+                        << "nef"
+                        << "orf"
+                        << "raf"
+                        << "sr2"
+                        << "rw2";
 
-    supportedFormats << "arw" << "bmp" << "cr2" << "cur" << "dds" << "dng" << "gif" << "heic"
-    << "icns" << "ico" << "jpeg" << "jpg" << "jp2" << "jpe" << "mng" << "nef" << "orf" <<
-    "pbm" << "pgm" << "png" << "ppm" << "raf" << "rw2" << "sr2" << "svg" << "svgz" << "tga" <<
-    "tif" << "wbmp" << "webp" << "xbm" << "xpm";
+    getMetadataFormats  << "arw"
+                        << "cr2"
+                        << "dng"
+                        << "nef"
+                        << "orf"
+                        << "raf"
+                        << "sr2"
+                        << "rw2"
+                        << "jpg"
+                        << "jpeg"
+                        << "tif";
+
+    embeddedICCFormats  << "jpg"
+                        << "jpeg";
+
+    sidecarFormats      << "arw"
+                        << "cr2"
+                        << "nef"
+                        << "orf"
+                        << "raf"
+                        << "sr2"
+                        << "rw2"
+                        << "jpg"
+                        << "jpeg";
+
+    internalXmpFormats << "notyetjpg";
+
+    xmpWriteFormats     << "jpg"
+                        << "jpeg"
+                        << "arw"
+                        << "cr2"
+                        << "nef"
+                        << "orf"
+                        << "raf"
+                        << "sr2"
+                        << "rw2";
+
+    supportedFormats    << "arw"
+                        << "bmp"
+                        << "cr2"
+                        << "cur"
+                        << "dds"
+                        << "dng"
+                        << "gif"
+                        << "heic"
+                        << "icns"
+                        << "ico"
+                        << "jpeg"
+                        << "jpg"
+                        << "jp2"
+                        << "jpe"
+                        << "mng"
+                        << "nef"
+                        << "orf"
+                        << "pbm"
+                        << "pgm"
+                        << "png"
+                        << "ppm"
+                        << "raf"
+                        << "rw2"
+                        << "sr2"
+                        << "svg"
+                        << "svgz"
+                        << "tga"
+                        << "tif"
+                        << "wbmp"
+                        << "webp"
+                        << "xbm"
+                        << "xpm";
 }
 
 void Metadata::initOrientationHash()
@@ -194,11 +258,6 @@ metadata is written to buffer and the original image file is copied unchanged.
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
     if (!xmpWriteFormats.contains(suffix)) return false;
-
-//    qDebug() << "Metadata::writeMetadata fPath =" << fPath;
-    // set locals to image data  ie title = metaCache[fPath].title
-//    setMetadata(fPath);  // replaced by dm->getMetadata which supplies ImageMetadata m
-//    reportMetadataCache(fPath);
 
     bool useSidecar = sidecarFormats.contains(suffix);
 

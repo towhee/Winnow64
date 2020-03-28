@@ -1,0 +1,56 @@
+mdat - Media Data
+   Exif metadata
+   thumbnail data (apple 320 x 240 embedded thumbnail)
+   HEVC image data (apple encoded as tiles)
+
+HEVC = h.265
+
+https://en.wikipedia.org/wiki/Coding_tree_unit
+
+Coding tree unit (CTU) is the basic processing unit of the High Efficiency Video Coding (HEVC)
+video standard and conceptually corresponds in structure to macroblock units that were used in
+several previous video standards.  CTU is also referred to as largest coding unit (LCU).
+
+HEVC initially divides the picture into CTUs which are then divided for each luma/chroma
+component into coding tree blocks (CTBs).
+
+A CTB can be 64×64, 32×32, or 16×16 with a larger pixel block size usually increasing the
+coding efficiency. CTBs are then divided into one or more coding units (CUs), so that the CTU
+size is also the largest coding unit size.
+
+   The arrangement of CUs in a CTB is known as a quadtree since a subdivision results in four
+   smaller regions.
+
+   CUs are then divided into prediction units (PUs) of either intra-picture or inter-picture
+   prediction type which can vary in size from 64×64 to 4×4. To limit worst-case memory
+   bandwidth when applying motion compensation in the decoding process, prediction units coded
+   using inter-picture prediction are restricted to a minimum size of 8×4 or 4×8 if they are
+   predicted from a single reference (uniprediction) or 8×8 if they are predicted from two
+   references (biprediction).
+
+   To code the prediction residual, a CU is divided into a quadtree of DCT transform units
+   (TUs). TUs contain coefficients for spatial block transform and quantization. A TU can be
+   32×32, 16×16, 8×8, or 4×4 pixel block sizes.
+
+HEVC uses integer DCT and DST transforms with varied block sizes between 4x4 and 32x32.
+
+--------------------------------------------------------------------------------------------
+dec265
+--------------------------------------------------------------------------------------------
+Stride is number of bytes per line.
+
+init_CABAC_decoder
+decode_slice_unit_sequential (appears to not be called by anything)
+decode_slice_unit_frame_parallel
+decode_image_frame_parallel
+run_main_loop
+thread_main_loop
+main_loop_thread
+start_decoding_thread
+decoder_context::decoder_context (decctx.cc)
+
+de265_decoder_context* ctx = de265_new_decoder();  (dec265.cc)
+main (dec265.cc)
+
+Steps to decode hevc:
+CABAC

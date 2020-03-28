@@ -40,6 +40,7 @@ Files are copied to a destination based on building a file path consisting of:
 IngestDlg::IngestDlg(QWidget *parent,
                      bool &combineRawJpg,
                      bool &autoEjectUsb,
+                     bool &ingestIncludeXmpSidecar,
                      bool &isBackup,
                      bool &gotoIngestFolder,
                      Metadata *metadata,
@@ -64,6 +65,7 @@ IngestDlg::IngestDlg(QWidget *parent,
                      isAuto(isAuto),
                      combineRawJpg(combineRawJpg),
                      autoEjectUsb(autoEjectUsb),
+                     ingestIncludeXmpSidecar(ingestIncludeXmpSidecar),
                      isBackup(isBackup),
                      gotoIngestFolder(gotoIngestFolder),
                      pathTemplatesMap(pathTemplates),
@@ -156,6 +158,8 @@ IngestDlg::IngestDlg(QWidget *parent,
 
     // initialize autoEjectUsb
     ui->ejectChk->setChecked(autoEjectUsb);
+    // initialize ingestIncludeXmpSidecar
+    ui->includeXmpChk->setChecked(ingestIncludeXmpSidecar);
     // initialize use backup as well as primary ingest
     ui->backupChk->setChecked(isBackup);
 //    isBackupChkBox->setChecked(isBackup);
@@ -354,17 +358,18 @@ Each picked image is copied from the source to the destination.
         renameIfExists(destinationPath, destBaseName, dotSuffix);
 
         /* If there is edited xmp data in an eligible file format copy it
-           into a buffer.
-
-           This routine is also used in MW::runExternalApp()
+           into a buffer.  This routine is also used in MW::runExternalApp()
         */
-        ;
+        qDebug() << __FUNCTION__ << sourcePath << suffix
+                 << metadata->sidecarFormats.contains(suffix)
+                 << ingestIncludeXmpSidecar;
+
         if (metadata->writeMetadata(sourcePath, dm->getMetadata(sourcePath), buffer)
-        && metadata->sidecarFormats.contains(suffix)) {
+        && metadata->sidecarFormats.contains(suffix) && ingestIncludeXmpSidecar) {
             // copy image file
-//            QFile sourceFile(sourcePath);
             QFile::copy(sourcePath, destinationPath);
             if(isBackup) QFile::copy(sourcePath, backupPath);
+
             if (metadata->internalXmpFormats.contains(suffix)) {
                 // write xmp data into image file       rgh needs some work!!!
                 QFile newFile(destinationPath);
@@ -394,7 +399,6 @@ Each picked image is copied from the source to the destination.
     }
 //    emit revealIngestLocation(folderPath);
     QDialog::accept();
-//    QDialog::close();
 }
 
 bool IngestDlg::parametersOk()
@@ -1268,6 +1272,16 @@ void IngestDlg::on_ejectChk_stateChanged(int /*arg1*/)
     #endif
     }
     autoEjectUsb = ui->ejectChk->isChecked();
+}
+
+void IngestDlg::on_includeXmpChk_stateChanged(int /*arg1*/)
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    ingestIncludeXmpSidecar = ui->includeXmpChk->isChecked();
 }
 
 void IngestDlg::on_backupChk_stateChanged(int arg1)

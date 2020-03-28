@@ -59,8 +59,10 @@ namespace G
     int propertyWidgetMarginRight = 15;
     QModelIndexList copyCutIdxList;
     QStringList copyCutFileList;
+
     QElapsedTimer t;
     bool isTimer;
+    bool isTest;
 
     QString s(QVariant x)
     // helper function to convert variable values to a string for reporting

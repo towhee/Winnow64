@@ -159,6 +159,8 @@ QTableView. It contains three columns:
 The information items are metadata about the file, such as name or path;
 information about the image, such as aperture or dimensions; and application
 status information, such as number of items picked or current item selected.
+
+If any of the editable fields change then MW::metadataChanged is triggered.
 */
     {
     #ifdef ISDEBUG
@@ -325,7 +327,6 @@ void InfoView::updateInfo(const int &row)
     if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
         metadata->loadImageMetadata(fPath, true, true, false, true, __FUNCTION__);
         metadata->imageMetadata.row = dm->fPathRow[fPath];
-//        metadata->imageMetadata.row = row;
         dm->addMetadataForItem(metadata->imageMetadata);
     }
 

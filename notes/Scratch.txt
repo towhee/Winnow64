@@ -1,59 +1,17 @@
-Creating a path to the destination folder
+Stride is number of bytes per line.
 
-Example:         Windows:    e:\2018\2018-02\2018-02-23_Spring in Paris
-                        Mac:            /users/pictures/Feb/23 Paris
+init_CABAC_decoder
+decode_slice_unit_sequential (appears to not be called by anything)
+decode_slice_unit_frame_parallel
+decode_image_frame_parallel
+run_main_loop
+thread_main_loop
+main_loop_thread
+start_decoding_thread
+decoder_context::decoder_context (decctx.cc)
 
-Root:
+de265_decoder_context* ctx = de265_new_decoder();  (dec265.cc)
+main (dec265.cc)
 
-This is the base location where your images are stored.  The root is entered in the “Ingest Picks” dialog.
-
-            = e:\2018\2018-02\2018-02-23_Spring in Paris
-            = /users/pictures/Feb/23 Paris
-
-Template path:
-
-The path from the root to the destination folder that can be defined by metadata from an image.  It is based on a template in “Edit Template(s)” accessed from the “Ingest Picks” dialog.
-
-            = e:\2018\2018-02\2018-02-23_Spring in Paris
-            = /users/pictures/Feb/23 Paris
-
-Description:
-
-An optional description appended to the template path, entered in the “Ingest Picks” dialog.
-
-            = e:\2018\2018-02\2018-02-23_Spring in Paris
-            = /users/pictures/Feb/23 Paris
-
-The path = Root + Template path + Description
-
-Creating the file names
-
-File names are created in the template editor, based on tokens, including sequence tokens that append digits.
-
-For example, if the image was taken with a Canon camera on Feb 23, 2018 and was the 36th image picked:
-
-Template = {YYYY}-{MM}-{DD}_{XXX} will become 2018-02-23_036.CR2
-
-What is a template and what are tokens
-
-A template is a structure to use to build a file path or a file name.  You can create templates using any descriptive name and create the template using tokens.  Tokens are place holders and the values for the tokens are inserted from the metadata in the images.  For example:
-
-Template name = “Rory template”
-Template = {YYYY}/{YYYY}-{MM}-{DD}
-
-{YYYY} = a token (dragged from token list in token editor)
-
-Where does the metadata come from
-
-The metadata is sourced from the first image picked and all the picked images will be copied to one destination folder.
-
-Slashes and back slashes
-
-Do not use “/” or “\” in the template name.  The template name is used as a key to save the templates between sessions.  Slashes do terrible things to the windows registry.
-
-In the template itself, Windows uses the “\” in file paths while MacOS and Linux use “/”.  Since the “\” is also used for escape sequences I suggest you use the “/”.  Winnow will automatically convert this to a “\” when creating the path to the destination folder in windows.
-
-For example, if the image was taken on Feb 23, 2018:
-
-            Template = {YYYY}/{YYYY}-{MM}-{DD} will become “2018\2018-02\2018-02-23” in windows.
-
+Steps to decode hevc:
+CABAC

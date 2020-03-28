@@ -175,8 +175,10 @@ namespace G
 //    extern qreal devicePixelRatio;
     extern QModelIndexList copyCutIdxList;  // req'd?
     extern QStringList copyCutFileList;     // req'd?
+
     extern QElapsedTimer t;
     extern bool isTimer;
+    extern bool isTest;
 
     extern void track(QString functionName = "", QString comment = "");
     extern void wait(int ms);
