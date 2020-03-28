@@ -3,7 +3,7 @@
 
 Jpeg::Jpeg()
 {
-    initSegCodeHash();
+//    initSegCodeHash();
 }
 
 void Jpeg::initSegCodeHash()
@@ -99,6 +99,7 @@ bool Jpeg::parse(MetadataParameters &p,
                  Exif *exif)
 {
     // init
+    initSegCodeHash();
     m.iccSegmentOffset = 0;
 
     //file.open happens in readMetadata
@@ -115,7 +116,7 @@ bool Jpeg::parse(MetadataParameters &p,
     getJpgSegments(p, m);
 
     // TEST: read scan data
-    decodeScan(p);
+//    decodeScan(p);
 
     // check if JFIF
     if (segmentHash.contains("JFIF")) {
@@ -125,10 +126,6 @@ bool Jpeg::parse(MetadataParameters &p,
         m.lengthFullJPG = static_cast<uint>(p.file.size());
         return true;
     }
-
-    // test
-//    readAppSegments(p);
-//    readFrameHeader(p);  // qDebug() << __FUNCTION__ << subFormat << losslessFormat;
 
     // read the EXIF data
     if (segmentHash.contains("EXIF")) p.file.seek(segmentHash["EXIF"]);
@@ -187,7 +184,6 @@ bool Jpeg::parse(MetadataParameters &p,
                           ifd->ifdDataHash.value(33432).tagCount);
 
     // read IFD1
-//    if (nextIFDOffset) nextIFDOffset = readIFD("IFD1", nextIFDOffset);
     if (nextIFDOffset) {
         p.hdr = "IFD1";
         p.offset = nextIFDOffset;
@@ -198,7 +194,6 @@ bool Jpeg::parse(MetadataParameters &p,
     m.lengthThumbJPG = ifd->ifdDataHash.value(514).tagValue;
 
     // read EXIF
-//    readIFD("IFD Exif", offsetEXIF);
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
     ifd->readIFD(p, m);
@@ -319,6 +314,7 @@ bool Jpeg::parse(MetadataParameters &p,
 
         if (p.report) p.xmpString = xmp.metaAsString();
     }
+    return true;
 }
     
 void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
@@ -389,7 +385,6 @@ In addition, the XMP offset and nextOffset are set to facilitate editing XMP dat
         // Define restart interval
         case 0xFFDD:
             restartInterval = Utilities::get16(p.file.read(2));
-//            qDebug() << "\n" << __FUNCTION__ << "restartInterval" << restartInterval;
             break;
         case 0xFFE1: {
             QString segName = p.file.read(4);
@@ -535,7 +530,7 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
             components[i] = component;
          }
     }
-    qDebug() << "\n" << __FUNCTION__ << "Marker"
+/*    qDebug() << "\n" << __FUNCTION__ << "Marker"
              << "0x" + QString::number(marker, 16).toUpper().rightJustified(4, '0');
     qDebug() << __FUNCTION__
              << "marker" << QString::number(marker, 16)
@@ -554,7 +549,7 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
                  << "horSampleFactor" << components.at(i).horSampleFactor
                  << "verSampleFactor" << components.at(i).verSampleFactor
                  << "QTableSel" << components.at(i).QTableSel;
-    }
+    }*/
 }
 
 void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
@@ -562,8 +557,8 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
     quint32 pos = static_cast<quint32>(p.file.pos());
     quint32 endOffset = pos + len - 2;
 
-    qDebug() << "\n";
-    qDebug() << __FUNCTION__ << "DEBUG HUFFMAN DECODING";
+//    qDebug() << "\n";
+//    qDebug() << __FUNCTION__ << "DEBUG HUFFMAN DECODING";
     while (p.file.pos() < endOffset) {
         DHT dht;
         QMap<uint, uint> dhtCodeMap;  // code value, value width
@@ -640,12 +635,12 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
     }
 
     // report
-    qDebug() << "\n" << __FUNCTION__;
+//    qDebug() << "\n" << __FUNCTION__;
     QMapIterator<int, QVector<int>> table(dqt);
     while (table.hasNext()) {
         table.next();
-        qDebug() << __FUNCTION__ << "Quantization Table" << table.key()
-                 << dqtDescription[table.key()];
+//        qDebug() << __FUNCTION__ << "Quantization Table" << table.key()
+//                 << dqtDescription[table.key()];
         int i = 0;
         for (int r = 0; r < 8; r++) {
             QString rStr = "";
@@ -653,8 +648,8 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
                 rStr += QString::number(dqt[table.key()][i]).rightJustified(4);
                 i++;
             }
-            qDebug() << __FUNCTION__ << "  "
-                     << "Row" << r << " " << rStr;
+//            qDebug() << __FUNCTION__ << "  "
+//                     << "Row" << r << " " << rStr;
         }
     }
 
@@ -670,16 +665,15 @@ void Jpeg::parseSOSHeader(MetadataParameters &p, quint16 len)
     }
 
     // report
-    qDebug() << "\n" << __FUNCTION__
-             << "Scan data offset =" << scanDataOffset
-             << "Number of components =" << sosComponentCount;
-    for (int i = 0; i < sosComponentCount; i++) {
-        qDebug() << __FUNCTION__ << "  "
-        << "ComponentID =" << i
-        << componentDescription[i]
-        << "Huffman table ID =" << huffTblToUse[i];
-//        << dqtDescription[huffTblToUse[i]];
-    }
+//    qDebug() << "\n" << __FUNCTION__
+//             << "Scan data offset =" << scanDataOffset
+//             << "Number of components =" << sosComponentCount;
+//    for (int i = 0; i < sosComponentCount; i++) {
+//        qDebug() << __FUNCTION__ << "  "
+//        << "ComponentID =" << i
+//        << componentDescription[i]
+//        << "Huffman table ID =" << huffTblToUse[i];
+//    }
 
 }
 
@@ -695,6 +689,37 @@ int Jpeg::huff2Signed(uint val, uint bits)
 
 void Jpeg::decodeScan(MetadataParameters &p)
 {
+    p.file.seek(0);
+    QByteArray ba = p.file.readAll();
+//    decodeScan(p, ba);
+}
+
+void Jpeg::decodeScan(QFile &file, QImage &image)
+{
+//    qDebug() << __FUNCTION__ << file.fileName();
+    MetadataParameters p;
+    p.file.setFileName(file.fileName());
+    file.close();
+    if (p.file.open(QIODevice::ReadOnly)) {
+        bool isBigEnd = true;
+        if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
+            err = "JPG does not start with 0xFFD8";
+            qDebug() << __FUNCTION__ << err;
+            return;
+        }
+        p.offset = static_cast<quint32>(p.file.pos());
+        ImageMetadata m;
+        getJpgSegments(p, m);
+
+        p.file.seek(0);
+        QByteArray ba = p.file.readAll();
+        p.file.close();
+        decodeScan(ba, image);
+    }
+}
+
+void Jpeg::decodeScan(QByteArray &ba, QImage &image)
+{
 /*  Decoding steps:
 
     - Decode huffman encoding for each component of each MCU
@@ -707,15 +732,20 @@ void Jpeg::decodeScan(MetadataParameters &p)
     - Convert to RGB
 
     */
+
+    QBuffer buffer(&ba);
+    buffer.open(QIODevice::ReadOnly);
+
     // rgh can we only build once?
-
-//    rptHuff();
-
     buildMask();
     buildIdctLookup();
 
-    qDebug() << "START OF SCAN   Offset =" << scanDataOffset;
-    qDebug();
+//    MetadataParameters p;
+//    ImageMetadata m;
+//    getJpgSegments(p, m);
+    //    rptHuff();
+
+    QImage im(iWidth, iHeight, QImage::Format_ARGB32);
 
     // bit buffer
     uint buf = 0;
@@ -740,12 +770,21 @@ void Jpeg::decodeScan(MetadataParameters &p)
     // for testing only
 //    mcuRows = 4;
 //    mcuCols = 150;
+    bool isReport = false;
     int reportMCU0 = -1;   // row, column
     int reportMCU1 = -1;   // row, column
-    QImage image(samplesPerLine, lines, QImage::Format_RGB32);
+//    QImage image(samplesPerLine, lines, QImage::Format_RGB32);
+
+    if (isReport) {
+        qDebug() << "START OF SCAN   Offset =" << scanDataOffset;
+        qDebug();
+    }
 
     // start of scanned data
-    p.file.seek(scanDataOffset);
+    buffer.seek(scanDataOffset);
+    quint32 offset = scanDataOffset;
+
+    G::track(__FUNCTION__, "Starting to decode scan data");
 
     // Iterate through scan data MCU blocks row by row
     int mcuCount = 0;
@@ -771,7 +810,7 @@ void Jpeg::decodeScan(MetadataParameters &p)
                 c == 0 ? qTbl = 0 : qTbl = 1;
 
                 // debug reporting
-                if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
+                if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1 && isReport) {
                     qDebug();
                     qDebug() << "MCU" << mcuCount << "COMPONENT" << componentDescription[c];
                 }
@@ -784,22 +823,26 @@ void Jpeg::decodeScan(MetadataParameters &p)
                     while (consumed > 7 && !eos) {
                         // load another byte
                         if (!eos) {
-                            quint8 nextByte = Utilities::get8(p.file.read(1));
+//                            quint8 nextByte = Utilities::get8(buffer.read(1));
+//                            quint8 nextByte = buffer.read(1)[0]&0xFF;
+                            quint8 nextByte = ba[offset++]&0xFF;
                             sBytes += QString::number(nextByte, 2).rightJustified(8, '0') + " ";
                             /*qDebug() << "nextByte =" << QString::number(nextByte, 16).toUpper().rightJustified(0, '0')
-                                     << "offset =" << p.file.pos()
+                                     << "offset =" << buffer.pos()
                                      << "consumed =" << consumed;*/
                             bool isMarkerByte = false;
                             if (nextByte == 0xFF) {
-                                uint markerByte = Utilities::get8(p.file.read(1));
+//                                uint markerByte = Utilities::get8(buffer.read(1));
+                                uint markerByte = ba[offset++]&0xFF;
                                 if (markerByte != 0) {
                                     isMarkerByte = true;
                                     // adjust bit buf to byte boundary
                                     bitsToResetMarker = 32 - consumed;
-                                    qDebug().noquote() << QString::number(buf, 2).rightJustified(32, '0')
-                                                       << "Reset Marker byte = " << QString::number(markerByte, 16)
-                                                       << "mcuRow =" << mcuRow << "mcuCol =" << mcuCol
-                                                       << "bitsToMarker =" << bitsToResetMarker;
+                                    if (isReport) qDebug().noquote()
+                                        << QString::number(buf, 2).rightJustified(32, '0')
+                                        << "Reset Marker byte = " << QString::number(markerByte, 16)
+                                        << "mcuRow =" << mcuRow << "mcuCol =" << mcuCol
+                                        << "bitsToMarker =" << bitsToResetMarker;
                                     if (markerByte == 0xD9) {
                                         // End of scan
                                         eos = true;
@@ -928,9 +971,10 @@ void Jpeg::decodeScan(MetadataParameters &p)
                                         int x = zz[m][1];
                                         mcu[c][y][x] = 0;
                                     }
-//                                    break;
                                 }
-                                if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
+
+                                // Report MCU coefficient
+                                if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1 && isReport) {
                                     int prevConsumed = consumed - huffLength - huffVal;
                                     QString sHuffCode = bufSnapShot.left(huffLength) + " ";
                                     QString sHuffResult = bufSnapShot.mid(huffLength, huffVal) + " ";
@@ -947,15 +991,12 @@ void Jpeg::decodeScan(MetadataParameters &p)
                                      << "c =" << c
                                      << "m =" << QString::number(m).rightJustified(2)
                                      << "zz =" << szz.leftJustified(2)
-//                                     << "buf:" << bufSnapShot
                                      << "table =" << QString::number(hTbl, 16).leftJustified(2)
                                      << "consumed =" << QString::number(consumed).leftJustified(2)
-//                                     << "byte offset =" << QString::number(byteAlignOffset).leftJustified(4)
                                      << "huffLength =" << QString::number(huffLength).leftJustified(2)
                                      << "huffCode =" << QString::number(huffCode).leftJustified(5)
                                      << binCode.leftJustified(12)
                                      << "huffVal =" << QString::number(dhtMap[hTbl][huffLength][huffCode]).leftJustified(3)
-        //                             << "%16" << QString::number(huffVal).rightJustified(3)
                                      << "repeat =" << QString::number(huffRepeat).leftJustified(2)
                                      << "bits =" << binHuffResult.leftJustified(10)
                                      << "huffResult =" << QString::number(huffResult).leftJustified(4)
@@ -968,7 +1009,6 @@ void Jpeg::decodeScan(MetadataParameters &p)
                                      << sEOB;
                                 }
 
-
                                 huffFound = true;
                                 break;
                             }
@@ -977,16 +1017,19 @@ void Jpeg::decodeScan(MetadataParameters &p)
                     if (endOfBlock || m > 63) break;
                     if (!huffFound) {
                         // err
-                        qDebug() << __FUNCTION__ << "HUFF CODE NOT FOUND"
-                                 << "buf =" << QString::number(buf, 2).rightJustified(32, '0')
-                                 << "mcuRow =" << mcuRow << "mcuCol =" << mcuCol
-                                 << "c =" << c << "m =" << m;
+                        if (isReport) qDebug()
+                            << __FUNCTION__ << "HUFF CODE NOT FOUND"
+                            << "buf =" << QString::number(buf, 2).rightJustified(32, '0')
+                            << "mcuRow =" << mcuRow << "mcuCol =" << mcuCol
+                            << "c =" << c << "m =" << m;
                     }
                 } // end mcu component (Y,Cb,Cr)
 
 //                qDebug() << "Processed MCU" << mcuCol << mcuRow << "c =" << c;
 
             } // end components and MCU
+
+            if (mcuCount == 10) G::track(__FUNCTION__, "Loaded DCU");
 
             if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
                 rptMCU(mcuCol, mcuRow);
@@ -999,35 +1042,43 @@ void Jpeg::decodeScan(MetadataParameters &p)
             }
 
 //            // IDCT transform and level shift
-//            float pi = static_cast<float>(3.141592654);
-//            float pi16 = static_cast<float>(3.141592654/16.0);
-//            float sqrtHalf	= static_cast<float>(0.707106781);
             for (int c = 0; c != 3; ++c) {
                 for (uint y = 0; y != 8; ++y) {
                     for (uint x = 0; x != 8; ++x) {
                         int sum = 0;
-//                        double sum = 0;
                         for (uint v = 0; v != 8; ++v) {
-//                        for (uint u = 0; u != 8; ++u) {
                             for (uint u = 0; u != 8; ++u) {
-//                            for (uint v = 0; v != 8; ++v) {
                                 sum += iIdctLookup[c][y][x][v][u] * mcu[c][v][u];
-
-//                                sum += fIdctLookup[c][y][x][v][u] * mcu[c][v][u];
-//                                float cu = (u == 0) ? sqrtHalf : 1;
-//                                float cv = (v == 0) ? sqrtHalf : 1;
-//                                float cosProd = std::cos((2*x+1)*u*pi/16.0) * std::cos((2*y+1)*v*pi/16.0);
-//                                sum += cu * cv * cosProd * mcu[c][v][u];
-
                             }
                         }
                         // All coefficients are multiplied by 1024 since they are int
                         sum = sum >> 10;
                         idct[c][y][x] = sum + 128.0;        // rgh also precision 12 then add 2048 instead of 128
-//                        idct[c][y][x] = sum * 0.25 + 128.0;
                     }
                 }
             }
+            /*  Another version of IDCT transform and level shift
+            float pi = static_cast<float>(3.141592654);
+            float pi16 = static_cast<float>(3.141592654/16.0);
+            float sqrtHalf	= static_cast<float>(0.707106781);
+            for (int c = 0; c != 3; ++c) {
+                for (uint y = 0; y != 8; ++y) {
+                    for (uint x = 0; x != 8; ++x) {
+                        double sum = 0;
+                        for (uint v = 0; v != 8; ++v) {
+                            for (uint u = 0; u != 8; ++u) {
+                                sum += fIdctLookup[c][y][x][v][u] * mcu[c][v][u];
+                                float cu = (u == 0) ? sqrtHalf : 1;
+                                float cv = (v == 0) ? sqrtHalf : 1;
+                                float cosProd = std::cos((2*x+1)*u*pi/16.0) * std::cos((2*y+1)*v*pi/16.0);
+                                sum += cu * cv * cosProd * mcu[c][v][u];
+                            }
+                        }
+                        idct[c][y][x] = sum * 0.25 + 128.0;
+                    }
+                }
+            }*/
+            if (mcuCount == 10) G::track(__FUNCTION__, "IDCT transform and level shift");
 
             // RGB transform
             for (int y = 0; y != 8; ++y) {
@@ -1047,11 +1098,10 @@ void Jpeg::decodeScan(MetadataParameters &p)
                     rgb[0][y][x] = r;
                     rgb[1][y][x] = g;
                     rgb[2][y][x] = b;
-
-//                    qDebug() << "y, x, r, g, b " << y << x << r << g << b;
                 }
             }
-//            rptRGB(mcuCol, mcuRow);
+
+            if (mcuCount == 10) G::track(__FUNCTION__, "RGB transform");
 
             // testing: add mcu rgb to QImage image
             for (int x = 0; x < 8; x++) {
@@ -1060,33 +1110,42 @@ void Jpeg::decodeScan(MetadataParameters &p)
                     int Y = mcuRow * 8 + y;
                     QRgb px = QColor(rgb[0][y][x], rgb[1][y][x], rgb[2][y][x]).rgb();
                     if (X > iWidth || Y > iHeight) {
-                        qDebug() << "Problem"
-                                 << "image width =" << iWidth
-                                 << "height = " << iHeight
-                                 << "mcuCol =" << mcuCol
-                                 << "mcuRow =" << mcuRow
-                                 << "px =" << X
-                                 << "py =" << Y;
+                        if (isReport) qDebug() << "Problem"
+                            << "image width =" << iWidth
+                            << "height = " << iHeight
+                            << "mcuCol =" << mcuCol
+                            << "mcuRow =" << mcuRow
+                            << "px =" << X
+                            << "py =" << Y;
                     }
-                    image.setPixel(X, Y, px);
+                    im.setPixel(X, Y, px);
                 }
             }
 
+            if (mcuCount == 10) G::track(__FUNCTION__, "Add mcu pixels to image");
+
             // Debug reporting
-            if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
+            if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1 && isReport) {
                 rptIDCT(mcuCol, mcuRow);
                 rptRGB(mcuCol, mcuRow);
             }
 
             mcuCount++;
 
+            if (mcuCount == 10) G::t.restart();
+//            QString s = QString::number(mcuCount);
+//            G::track(__FUNCTION__, s);
+
 //            qDebug() << "Processed MCU" << mcuCol << mcuRow;
 
         } // end row of MCUs
     } // end all rows of MCUs
 
+    // assign im to image
+    image.operator=(im);
+
     // write image for review
-    image.save("D:/Pictures/_Jpg/test/test.jpg", "JPG");
+//    image.save("D:/Pictures/_Jpg/test/test.jpg", "JPG");
 }
 
 void Jpeg::bufAppend(uint &buf, quint8 byte, int &consumed)
@@ -1126,9 +1185,11 @@ void Jpeg::buildMask()
 
 void Jpeg::buildIdctLookup()
 {
-    double pi = 3.141592654;                     // 3.141592654
-//    double pi16 = 3.141592654/16.0;          // 0.196350
-//    double sqrtHalf	= 0.707106781;
+    double pi = 3.141592654;
+    /*
+    double pi16 = 3.141592654/16.0;          // 0.196350
+    double sqrtHalf	= 0.707106781;
+*/
     for (int i = 0; i != 106; i++) cosine[i] = cos(i*pi/16);
     for (int c = 0; c != 3; ++c) {
         for (uint y = 0; y != 8; ++y) {
@@ -1143,13 +1204,15 @@ void Jpeg::buildIdctLookup()
                         else
                             tmp *= 0.1767766952966368811;
                         iIdctLookup[c][y][x][v][u] = static_cast<int>(tmp);
-//                        fIdctLookup[c][y][x][v][u] = tmp;
-//                        double cu = (u == 0) ? sqrtHalf : 1;
-//                        double cv = (v == 0) ? sqrtHalf : 1;
-//                        double cosProd = std::cos((2*x+1)*u*M_PI/16.0) * std::cos((2*y+1)*v*M_PI/16.0);
-//                        double insideProd = cu * cv * cosProd;
-//                        fIdctLookup[c][y][x][v][u] = insideProd;
-//                        iIdctLookup[c][y][x][v][u] = static_cast<int>(insideProd * (1 << 10));
+                        /*
+                        fIdctLookup[c][y][x][v][u] = tmp;
+                        double cu = (u == 0) ? sqrtHalf : 1;
+                        double cv = (v == 0) ? sqrtHalf : 1;
+                        double cosProd = std::cos((2*x+1)*u*M_PI/16.0) * std::cos((2*y+1)*v*M_PI/16.0);
+                        double insideProd = cu * cv * cosProd;
+                        fIdctLookup[c][y][x][v][u] = insideProd;
+                        iIdctLookup[c][y][x][v][u] = static_cast<int>(insideProd * (1 << 10));
+                        */
                     }
                 }
             }

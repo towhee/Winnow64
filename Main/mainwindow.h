@@ -204,6 +204,7 @@ public:
     bool combineRawJpg;
     bool autoIngestFolderPath;
     bool autoEjectUsb;
+    bool ingestIncludeXmpSidecar;
     bool backupIngest;
     bool gotoIngestFolder;
     QString lastIngestLocation;     // used when exit ingest to show is gotoIngestFolder == true

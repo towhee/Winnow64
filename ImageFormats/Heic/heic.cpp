@@ -50,8 +50,8 @@ bool Heic::getHeifBox(QString &type, quint32 &offset, quint32 &length)
     if (type == "mdat") return mdatBox(offset, length);
     if (type == "idat") return idatBox(offset, length);
     if (type == "dref") return drefBox(offset, length);
-    if (type == "url ") return urlBox(offset, length);
-    if (type == "urn ") return urnBox(offset, length);
+    if (type == "url ") return  urlBox(offset, length);
+    if (type == "urn ") return  urnBox(offset, length);
     if (type == "colr") return colrBox(offset, length);
     if (type == "irot") return irotBox(offset, length);
     if (type == "pixi") return pixiBox(offset, length);

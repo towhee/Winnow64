@@ -9,6 +9,7 @@
 #ifdef Q_OS_WIN
 #include "Utilities/icc.h"
 #endif
+#include "ImageFormats/Jpeg/jpeg.h"
 
 class Pixmap : public QObject
 {

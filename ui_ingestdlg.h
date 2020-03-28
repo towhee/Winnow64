@@ -83,12 +83,13 @@ public:
     QCheckBox *ejectChk;
     QCheckBox *openIngestFolderChk;
     QCheckBox *backupChk;
+    QCheckBox *includeXmpChk;
 
     void setupUi(QDialog *IngestDlg)
     {
         if (IngestDlg->objectName().isEmpty())
             IngestDlg->setObjectName(QString::fromUtf8("IngestDlg"));
-        IngestDlg->resize(873, 861);
+        IngestDlg->resize(873, 874);
         QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
@@ -244,7 +245,7 @@ public:
 
         progressBar = new QProgressBar(IngestDlg);
         progressBar->setObjectName(QString::fromUtf8("progressBar"));
-        progressBar->setGeometry(QRect(20, 760, 831, 20));
+        progressBar->setGeometry(QRect(20, 780, 831, 20));
         progressBar->setFont(font);
         progressBar->setValue(0);
         progressBar->setAlignment(Qt::AlignCenter);
@@ -460,11 +461,11 @@ public:
         filenameTemplatesBtn->setFlat(false);
         statsLabel = new QLabel(IngestDlg);
         statsLabel->setObjectName(QString::fromUtf8("statsLabel"));
-        statsLabel->setGeometry(QRect(20, 800, 351, 31));
+        statsLabel->setGeometry(QRect(20, 820, 351, 31));
         statsLabel->setFont(font);
         layoutWidget = new QWidget(IngestDlg);
         layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
-        layoutWidget->setGeometry(QRect(600, 790, 251, 43));
+        layoutWidget->setGeometry(QRect(600, 810, 251, 43));
         horizontalLayout = new QHBoxLayout(layoutWidget);
         horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
@@ -493,13 +494,13 @@ public:
         combinedIncludeJpgChk->setFont(font);
         ejectChk = new QCheckBox(IngestDlg);
         ejectChk->setObjectName(QString::fromUtf8("ejectChk"));
-        ejectChk->setGeometry(QRect(450, 730, 391, 25));
+        ejectChk->setGeometry(QRect(450, 725, 391, 25));
         sizePolicy.setHeightForWidth(ejectChk->sizePolicy().hasHeightForWidth());
         ejectChk->setSizePolicy(sizePolicy);
         ejectChk->setFont(font);
         openIngestFolderChk = new QCheckBox(IngestDlg);
         openIngestFolderChk->setObjectName(QString::fromUtf8("openIngestFolderChk"));
-        openIngestFolderChk->setGeometry(QRect(20, 730, 421, 25));
+        openIngestFolderChk->setGeometry(QRect(20, 725, 421, 25));
         sizePolicy.setHeightForWidth(openIngestFolderChk->sizePolicy().hasHeightForWidth());
         openIngestFolderChk->setSizePolicy(sizePolicy);
         openIngestFolderChk->setFont(font);
@@ -509,6 +510,12 @@ public:
         sizePolicy.setHeightForWidth(backupChk->sizePolicy().hasHeightForWidth());
         backupChk->setSizePolicy(sizePolicy);
         backupChk->setFont(font);
+        includeXmpChk = new QCheckBox(IngestDlg);
+        includeXmpChk->setObjectName(QString::fromUtf8("includeXmpChk"));
+        includeXmpChk->setGeometry(QRect(20, 750, 421, 25));
+        sizePolicy.setHeightForWidth(includeXmpChk->sizePolicy().hasHeightForWidth());
+        includeXmpChk->setSizePolicy(sizePolicy);
+        includeXmpChk->setFont(font);
 
         retranslateUi(IngestDlg);
 
@@ -701,6 +708,7 @@ public:
         ejectChk->setText(QCoreApplication::translate("IngestDlg", "Eject drive after ingesting", nullptr));
         openIngestFolderChk->setText(QCoreApplication::translate("IngestDlg", "Open ingest folder after ingest", nullptr));
         backupChk->setText(QCoreApplication::translate("IngestDlg", "Backup to second location while ingesting", nullptr));
+        includeXmpChk->setText(QCoreApplication::translate("IngestDlg", "Include XMP sidecar with Winnow metadata", nullptr));
     } // retranslateUi
 
 };

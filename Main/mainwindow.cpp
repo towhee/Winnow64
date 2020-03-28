@@ -204,7 +204,13 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     }
 
     setObjectName("WinnowMainWindow");
+
+    // Check if modifier key pressed while program opening
     isShift = false;
+    if (QGuiApplication::queryKeyboardModifiers()) {
+        isShift = true;
+        qDebug() << __FUNCTION__ << "isShift == true";
+    }
 
     /* testing/debugging
        Note ISDEBUG is in globals.h
@@ -225,6 +231,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     if (setting->contains("cacheSizeMB") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
     loadSettings();    //dependent on bookmarks and actions, infoView
+    qDebug() << __FUNCTION__ << "sortColumn =" << sortColumn;
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
@@ -6116,6 +6123,7 @@ QString MW::diagnostics()
     rpt << "\n" << "combineRawJpg = " << G::s(combineRawJpg);
     rpt << "\n" << "autoIngestFolderPath = " << G::s(autoIngestFolderPath);
     rpt << "\n" << "autoEjectUsb = " << G::s(autoEjectUsb);
+    rpt << "\n" << "ingestIncludeXmpSidecar = " << G::s(ingestIncludeXmpSidecar);
     rpt << "\n" << "backupIngest = " << G::s(backupIngest);
     rpt << "\n" << "gotoIngestFolder = " << G::s(gotoIngestFolder);
     rpt << "\n" << "lastIngestLocation = " << G::s(lastIngestLocation);
@@ -7057,6 +7065,7 @@ re-established when the application is re-opened.
     setting->setValue("lastPrefPage", lastPrefPage);
 //    setting->setValue("mouseClickScroll", mouseClickScroll);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
+    setting->setValue("sortColumn", sortColumn);
 
     // datamodel
     setting->setValue("maxIconSize", G::maxIconSize);
@@ -7080,6 +7089,7 @@ re-established when the application is re-opened.
     // ingest
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
     setting->setValue("autoEjectUSB", autoEjectUsb);
+    setting->setValue("ingestIncludeXmpSidecar", ingestIncludeXmpSidecar);
     setting->setValue("backupIngest", backupIngest);
     setting->setValue("gotoIngestFolder", gotoIngestFolder);
     setting->setValue("ingestRootFolder", ingestRootFolder);
@@ -7370,67 +7380,67 @@ Preferences are located in the prefdlg class and updated here.
        sure the default value is assigned for first time use of the new setting.
     */
 
-    // general
-    lastPrefPage = 0;   // rgh not used anymore
-//        mouseClickScroll = true;
-    combineRawJpg = true;
-    prevMode = "Loupe";
-    G::mode = "Loupe";
+        // general
+        combineRawJpg = true;
+        prevMode = "Loupe";
+        G::mode = "Loupe";
 
-    // appearance
-    G::backgroundShade = 50;
-    G::fontSize = "12";
-    infoOverlayFontSize = 24;
-    classificationBadgeInImageDiameter = 32;
-    classificationBadgeInThumbDiameter = 16;
-    isRatingBadgeVisible = true;
+        // appearance
+        G::backgroundShade = 50;
+        G::fontSize = "12";
+        infoOverlayFontSize = 24;
+        classificationBadgeInImageDiameter = 32;
+        classificationBadgeInThumbDiameter = 16;
+        isRatingBadgeVisible = true;
 
-    // datamodel
-    G::maxIconSize = 256;
+        // datamodel
+        G::maxIconSize = 256;
 
-    // files
-    G::colorManage = true;
-    rememberLastDir = false;
-    checkIfUpdate = true;
-    lastDir = "";
+        // files
+        G::colorManage = true;
+        rememberLastDir = false;
+        checkIfUpdate = true;
+        lastDir = "";
 
-    // ingest
-    autoIngestFolderPath = false;
-    autoEjectUsb = false;
-    gotoIngestFolder = false;
-    backupIngest = false;
-    pathTemplateSelected = 0;
-    pathTemplateSelected2 = 0;
-    filenameTemplateSelected = 0;
+        // ingest
+        autoIngestFolderPath = false;
+        autoEjectUsb = false;
+        ingestIncludeXmpSidecar = true;
+        gotoIngestFolder = false;
+        backupIngest = false;
+        pathTemplateSelected = 0;
+        pathTemplateSelected2 = 0;
+        filenameTemplateSelected = 0;
 
 
-    // preferences
-    isSoloPrefDlg = true;
+        // preferences
+        isSoloPrefDlg = true;
 
-    // slideshow
-    slideShowDelay = 5;
-    isSlideShowRandom = false;
-    isSlideShowWrap = true;
+        // slideshow
+        slideShowDelay = 5;
+        isSlideShowRandom = false;
+        isSlideShowWrap = true;
 
-    // cache
-    cacheSizeMethod = "Moderate";
-    cacheSizePercentOfAvailable = 50;
-    cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.5);
-    isShowCacheStatus = true;
-    isShowCacheThreadActivity = true;
-    progressWidth = 200;
-    cacheWtAhead = 7;
-    isCachePreview = false;
-    cachePreviewWidth = 2000;
-    cachePreviewHeight = 1600;
+        // cache
+        cacheSizeMethod = "Moderate";
+        cacheSizePercentOfAvailable = 50;
+        cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.5);
+        isShowCacheStatus = true;
+        isShowCacheThreadActivity = true;
+        progressWidth = 200;
+        cacheWtAhead = 7;
+        isCachePreview = false;
+        cachePreviewWidth = 2000;
+        cachePreviewHeight = 1600;
 
-    if (!isSettings || simulateJustInstalled) return true;
+        if (!isSettings || simulateJustInstalled) return true;
 
     // end default settings
 
     // Get settings saved from last session
 
     // general
+    sortColumn = setting->value("sortColumn").toInt();
 
     // appearance
     if (setting->contains("backgroundShade")) {
@@ -7459,6 +7469,7 @@ Preferences are located in the prefdlg class and updated here.
     // ingest
     if (setting->contains("autoIngestFolderPath")) autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
     if (setting->contains("autoEjectUSB")) autoEjectUsb = setting->value("autoEjectUSB").toBool();
+    if (setting->contains("ingestIncludeXmpSidecar")) ingestIncludeXmpSidecar = setting->value("ingestIncludeXmpSidecar").toBool();
     if (setting->contains("backupIngest")) backupIngest = setting->value("backupIngest").toBool();
     if (setting->contains("gotoIngestFolder")) gotoIngestFolder = setting->value("gotoIngestFolder").toBool();
     if (setting->contains("ingestRootFolder")) ingestRootFolder = setting->value("ingestRootFolder").toString();
@@ -7841,6 +7852,10 @@ void MW::refreshFolders()
     bool showImageCount = fsTree->getShowImageCount();
     fsTree->refreshModel();
     fsTree->setShowImageCount(showImageCount);
+
+    // make folder panel visible and set focus
+    folderDock->raise();
+    folderDockVisibleAction->setChecked(true);
 }
 
 /*****************************************************************************************
@@ -9006,6 +9021,7 @@ void MW::ingest()
         ingestDlg = new IngestDlg(this,
                                   combineRawJpg,
                                   autoEjectUsb,
+                                  ingestIncludeXmpSidecar,
                                   backupIngest,
                                   gotoIngestFolder,
                                   metadata,
@@ -9139,27 +9155,8 @@ void MW::setCombineRawJpg()
             else dm->setData(typeIdx, "JPG");
         }
     }
-    filters->uncheckTypesFilters();
-    dm->sf->filterChange();
 
-    // rebuild filter for types
-    QMap<QVariant, QString> typesMap;
-    filters->types->takeChildren();
-    for (int row = 0; row < dm->sf->rowCount(); ++row) {
-        QString type = dm->sf->index(row, G::TypeColumn).data().toString();
-        if (!typesMap.contains(type)) typesMap[type] = type;
-    }
-    qDebug() << __FUNCTION__ << typesMap;
-    filters->addCategoryFromData(typesMap, filters->types);
-
-    // trigger update to image list and update image cache
-    filterChange("MW::setCombineRawJpg");
-
-    // resize TableView columns to accomodate new types
-    tableView->resizeColumnToContents(G::TypeColumn);
-
-    // update status bar
-    updateStatusBar();
+    filterChange(__FUNCTION__);
 }
 
 void MW::setCachedStatus(QString fPath, bool isCached)
@@ -9281,31 +9278,18 @@ the rating for all the selected thumbs.
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex ratingIdx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
         dm->sf->setData(ratingIdx, rating, Qt::EditRole);
-
-        // update metadata
-        QModelIndex fPathIdx = dm->sf->index(selection.at(i).row(), G::PathColumn);
-        QString fPath = fPathIdx.data(G::PathRole).toString();
-//        metadata->setRating(fPath, rating);
-
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
             // is this part of a raw+jpg pair
             if(idx.data(G::DupIsJpgRole).toBool()) {
+                // set rating for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
                 ratingIdx = dm->index(rawIdx.row(), G::RatingColumn);
                 dm->setData(ratingIdx, rating, Qt::EditRole);
-
-                // update metadata
-                fPathIdx = dm->index(rawIdx.row(), G::PathColumn);
-                fPath = fPathIdx.data(G::PathRole).toString();
-//                metadata->setRating(fPath, rating);
             }
         }
     }
-
-    // update metadata
-//    metadata->setRating(thumbView->getCurrentFilePath(), rating);
 
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
@@ -9366,25 +9350,15 @@ set the color class for all the selected thumbs.
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex labelIdx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
         dm->sf->setData(labelIdx, colorClass, Qt::EditRole);
-
-        // update metadata
-        QModelIndex fPathIdx = dm->sf->index(selection.at(i).row(), G::PathColumn);
-        QString fPath = fPathIdx.data(G::PathRole).toString();
-//        metadata->setLabel(fPath, colorClass);
-
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
             // is this part of a raw+jpg pair
             if(idx.data(G::DupIsJpgRole).toBool()) {
+                // set color class (label) for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
                 labelIdx = dm->index(rawIdx.row(), G::LabelColumn);
                 dm->setData(labelIdx, colorClass, Qt::EditRole);
-
-                // update metadata
-                fPathIdx = dm->index(rawIdx.row(), G::PathColumn);
-                fPath = fPathIdx.data(G::PathRole).toString();
-//                metadata->setLabel(fPath, colorClass);
             }
         }
     }
@@ -9411,11 +9385,11 @@ This slot is called when there is a data change in InfoView.
 
 If the change was a result of a new image selection then ignore.
 
-If the metadata in the tags section of the InfoView panel has been editied
-(title, creator, copyright, email or url) then all selected image tag(s) are
-updated to the new value(s). Both the data model and metadata are updated. If
-xmp edits are enabled the new tag(s) are embedded in the image metadata, either
-internally or as a sidecar when ingesting.
+If the metadata in the tags section of the InfoView panel has been editied (title, creator,
+copyright, email or url) then all selected image tag(s) are updated to the new value(s) in the
+data model. If xmp edits are enabled the new tag(s) are embedded in the image metadata, either
+internally or as a sidecar when ingesting. If raw+jpg are combined then the raw file rows are
+also updated in the data model.
 */
     {
     #ifdef ISDEBUG
@@ -9446,14 +9420,17 @@ internally or as a sidecar when ingesting.
         // update data model
         QModelIndex idx = dm->sf->index(selection.at(i).row(), col[tagName]);
         dm->sf->setData(idx, tagValue, Qt::EditRole);
-        idx = dm->sf->index(selection.at(i).row(), G::PathColumn);
-        QString fPath = idx.data(G::PathRole).toString();
-        // update metadata
-//        if (tagName == "Title") metadata->setTitle(fPath, tagValue);
-//        if (tagName == "Creator") metadata->setCreator(fPath, tagValue);
-//        if (tagName == "Copyright") metadata->setCopyright(fPath, tagValue);
-//        if (tagName == "Email") metadata->setEmail(fPath, tagValue);
-//        if (tagName == "Url") metadata->setUrl(fPath, tagValue);
+        // check if combined raw+jpg and also set the tag item for the hidden raw file
+        if (combineRawJpg) {
+            QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
+            // is this part of a raw+jpg pair
+            if(idx.data(G::DupIsJpgRole).toBool()) {
+                // set tag item for raw file row as well
+                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
+                idx = dm->index(rawIdx.row(), col[tagName]);
+                dm->setData(idx, tagValue, Qt::EditRole);
+            }
+        }
     }
 }
 
@@ -10387,8 +10364,5 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    metadata->parseHEIF();
-
-    qDebug() << 11 % 8;
-
 }
 // End MW

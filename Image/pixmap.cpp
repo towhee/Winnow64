@@ -128,8 +128,21 @@ bool Pixmap::load(QString &fPath, QImage &image)
             if (imFile.open(QIODevice::ReadOnly)) {
                 // close it to allow qt load to work
                 imFile.close();
-                // directly load the image using qt library
                 success = image.load(fPath);
+                /*
+                G::t.restart();
+                // test load image using jpeg class
+                Jpeg jpeg;
+                if (ext == "jpg" && G::isTest == true) {
+                    jpeg.decodeScan(imFile, image);
+                    G::track(__FUNCTION__, "Completed Rory Load");
+                    success = true;
+                }
+                // directly load the image using qt library
+                else {
+                    success = image.load(fPath);
+                    G::track(__FUNCTION__, "Completed Qt Load");
+                }*/
                 if (!success) {
                     err = "Could not read image" + fPath;
                     break;

@@ -18,6 +18,29 @@ class Heic : public QObject
 public:
     Heic(QFile &file);
 
+    // the numeric values map directly to the values of chroma_format_idc in the h.265 bitstream
+    enum de265_chroma {
+      de265_chroma_mono = 0,
+      de265_chroma_420  = 1,
+      de265_chroma_422  = 2,
+      de265_chroma_444  = 3
+    };
+
+    enum de265_colorspace {
+      de265_colorspace_YCbCr= 0,
+      de265_colorspace_GBR  = 1
+    };
+
+    struct Context {
+        bool is_primary;
+        int w;
+        int h;
+        de265_chroma chroma;
+        int bitDepth_luma;
+        int bitDepth_chroma;
+        quint64 pts;
+    };
+
     quint32 metaOffset;
     quint32 metaLength;
     quint16 pitmId;
@@ -62,3 +85,10 @@ private:
 };
 
 #endif // HEIC_H
+
+/*
+
+Image data appears to be stored in image.h  class decoder_context;
+    template <class DataUnit> class MetaDataArray
+
+*/

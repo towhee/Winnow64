@@ -22,6 +22,7 @@ public:
     explicit IngestDlg(QWidget *parent,
                        bool &combineRawJpg,
                        bool &autoEjectUsb,
+                       bool &ingestIncludeXmpSidecar,
                        bool &isBackup,
                        bool &gotoIngestFolder,
                        Metadata *metadata,
@@ -65,6 +66,7 @@ private slots:
 
     void on_combinedIncludeJpgChk_clicked();
     void on_ejectChk_stateChanged(int);
+    void on_includeXmpChk_stateChanged(int);
     void on_backupChk_stateChanged(int arg1);
     void on_isBackupChkBox_stateChanged(int arg1);
 
@@ -107,6 +109,7 @@ private:
     bool &isAuto;
     bool &combineRawJpg;
     bool &autoEjectUsb;
+    bool &ingestIncludeXmpSidecar;
     bool &isBackup;
     bool &gotoIngestFolder;
     QFileInfoList pickList;
