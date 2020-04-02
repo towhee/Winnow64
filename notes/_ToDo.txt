@@ -1,5 +1,4 @@
 BUGS
-- Image count when combine raw + jpg
 - Refresh current folder loses focus on current image
 - Combine Raw+Jpg can crash
 - Navigating thumbs in large folders while still opening can crash
@@ -21,6 +20,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Remember sort category
 - Add delete / move / copy
 - Add exposure compensation to metadata
 - Reset to defaults
@@ -41,7 +41,11 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
-- Fixed XMP metedata edits for title, creator, copyright, email and url
+- Image count when combine raw + jpg
+- Type filter not summing correctly when toggle raw+jpg on and off
+- Fix raw+jpg when same basename but no raw file
+- Sort is now remembered between sessions
+- Fixed XMP metadata edits for title, creator, copyright, email and url
 - Add option to include XMP sidecar file with Winnow metadata in ingest dialog
 - Set focus on folders dock when refresh folders
 - Do not open previous folder if modifier key pressed while app opening

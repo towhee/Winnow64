@@ -269,6 +269,10 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     // intercept events to thumbView to monitor splitter resize of thumbDock
     qApp->installEventFilter(this);
 
+    // if previous sort was not by filename then sort
+    sortReverseAction->setChecked(setting->value("sortReverse").toBool());
+    if (sortColumn > 0) sortChange();
+
     // process the persistant folder if available
     if (rememberLastDir && !isShift) {
         if (isFolderValid(lastDir, true, true)) {
@@ -286,9 +290,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
-
-    // if no fsTree expansion then invoke getImageCount the first time
-//    fsTree->getImageCount();
 }
 
 void MW::initialize()
@@ -2706,7 +2707,24 @@ void MW::createActions()
     sortGroupAction->addAction(sortTitleAction);
     sortGroupAction->addAction(sortCreatorAction);
 
-    sortFileNameAction->setChecked(true);
+//    sortFileNameAction->setChecked(true);
+
+    if (sortColumn == G::NameColumn) sortFileNameAction->setChecked(true);
+    if (sortColumn == G::TypeColumn) sortFileTypeAction->setChecked(true);
+    if (sortColumn == G::SizeColumn) sortFileSizeAction->setChecked(true);
+    if (sortColumn == G::CreatedColumn) sortCreateAction->setChecked(true);
+    if (sortColumn == G::ModifiedColumn) sortModifyAction->setChecked(true);
+    if (sortColumn == G::PickColumn) sortPickAction->setChecked(true);
+    if (sortColumn == G::LabelColumn) sortLabelAction->setChecked(true);
+    if (sortColumn == G::RatingColumn) sortRatingAction->setChecked(true);
+    if (sortColumn == G::MegaPixelsColumn) sortMegaPixelsAction->setChecked(true);
+    if (sortColumn == G::DimensionsColumn) sortDimensionsAction->setChecked(true);
+    if (sortColumn == G::ApertureColumn) sortApertureAction->setChecked(true);
+    if (sortColumn == G::ShutterspeedColumn) sortShutterSpeedAction->setChecked(true);
+    if (sortColumn == G::ISOColumn) sortISOAction->setChecked(true);
+    if (sortColumn == G::CameraModelColumn) sortModelAction->setChecked(true);
+    if (sortColumn == G::FocalLengthColumn) sortFocalLengthAction->setChecked(true);
+    if (sortColumn == G::TitleColumn) sortTitleAction->setChecked(true);
 
     sortReverseAction = new QAction(tr("Reverse sort order"), this);
     sortReverseAction->setObjectName("reverse");
@@ -4458,6 +4476,7 @@ void MW::createFSTree()
     fsTree = new FSTree(this, metadata);
     fsTree->setMaximumWidth(folderMaxWidth);
     fsTree->setShowImageCount(true);
+    fsTree->combineRawJpg = combineRawJpg;
 //    fsTree->setShowImageCount(setting->value("showImageCount").toBool());
 
     // this works for touchpad tap
@@ -4496,7 +4515,7 @@ void MW::createBookmarks()
     G::track(__FUNCTION__);
     #endif
     }
-    bookmarks = new BookMarks(this, metadata, true /*setting->value("showImageCount").toBool()*/);
+    bookmarks = new BookMarks(this, metadata, true /*showImageCount*/, combineRawJpg);
 
     if (isSettings) {
         setting->beginGroup("Bookmarks");
@@ -4512,6 +4531,7 @@ void MW::createBookmarks()
     }
 
     bookmarks->setMaximumWidth(folderMaxWidth);
+    refreshBookmarks();
 
     // this does work for touchpad tap
     connect(bookmarks, SIGNAL(itemPressed(QTreeWidgetItem *, int)),
@@ -5059,13 +5079,13 @@ and icons are loaded if necessary.
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) return;
 
     // Need all metadata loaded before filtering
     if (!G::allMetadataLoaded) dm->addAllMetadata(true);
 
-//    qDebug() << __FUNCTION__ << "dm->sf->filterChange()";
     // refresh the proxy sort/filter
     dm->sf->filterChange();
 
@@ -5329,8 +5349,8 @@ void MW::sortChange()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << "G::isNewFolderLoaded =" << G::isNewFolderLoaded;
-    if(sortMenuUpdateToMatchTable/* || !G::isNewFolderLoaded*/) return;
+    qDebug() << __FUNCTION__ << "sortColumn =" << sortColumn;
+    if (sortMenuUpdateToMatchTable/* || !G::isNewFolderLoaded*/) return;
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;
     if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;
@@ -7033,7 +7053,7 @@ void MW::removeBookmark()
 void MW::refreshBookmarks()
 {
 /*
-This is run from the bookmarks (fav) panel conext menu to update the image count
+This is run from the bookmarks (fav) panel context menu to update the image count
 for each bookmark folder.
 */
     {
@@ -7066,6 +7086,7 @@ re-established when the application is re-opened.
 //    setting->setValue("mouseClickScroll", mouseClickScroll);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
     setting->setValue("sortColumn", sortColumn);
+    setting->setValue("sortReverse", sortReverseAction->isChecked());
 
     // datamodel
     setting->setValue("maxIconSize", G::maxIconSize);
@@ -9132,8 +9153,11 @@ void MW::setCombineRawJpg()
     G::track(__FUNCTION__);
     #endif
     }
-    // flag used in MW, dm and sf
+    // flag used in MW, dm and sf, fsTree
     combineRawJpg = combineRawJpgAction->isChecked();
+    fsTree->combineRawJpg = combineRawJpg;
+    bookmarks->combineRawJpg = combineRawJpg;
+    refreshBookmarks();
 
     // show appropriate count column in filters
     if (combineRawJpg) {
@@ -9156,6 +9180,9 @@ void MW::setCombineRawJpg()
         }
     }
 
+    // refresh the proxy sort/filter
+    dm->sf->filterChange();
+    dm->rebuildTypeFilter();
     filterChange(__FUNCTION__);
 }
 
@@ -10364,5 +10391,23 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    metadata->parseHEIF();
+
+    QDir dir;
+    dir.setPath(currentViewDir);
+    int n = 0;
+    QListIterator<QFileInfo> i(dir.entryInfoList());
+    while (i.hasNext()) {
+        QFileInfo info = i.next();
+        QString path = info.path();
+        QString baseName = info.baseName();
+        QString suffix = info.suffix().toLower();
+        QString jpgPath = path + "/" + baseName + ".jpg";
+        if (metadata->rawFormats.contains(suffix)) {
+            if (dir.entryInfoList().contains(jpgPath)) continue;
+        }
+        n++;
+//        bool test = dir.entryInfoList().contains(jpgPath);
+        qDebug() << __FUNCTION__ << info.filePath() << jpgPath << n;
+    }
 }
 // End MW

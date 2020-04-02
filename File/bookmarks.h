@@ -10,13 +10,14 @@ class BookMarks : public QTreeWidget
 	Q_OBJECT
 
 public:
-    BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount);
+    BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount, bool &combineRawJpg);
     void reloadBookmarks();
     void select(QString fPath);
     void count();
 
     QSet<QString> bookmarkPaths;
     bool showImageCount;
+    bool &combineRawJpg;
 
 public slots:
 	void removeBookmark();
