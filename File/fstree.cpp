@@ -61,9 +61,12 @@ CLASS FSModel subclassing QFileSystemModel
    to the model and display the image count beside each folder in the TreeView.
 */
 
-FSModel::FSModel(QWidget *parent, Metadata *metadata, QHash<QString, QString> &count)
+FSModel::FSModel(QWidget *parent, Metadata *metadata, QHash<QString, QString> &count,
+                 QHash<QString, QString> &combineCount, bool &combineRawJpg)
                  : QFileSystemModel(parent),
-                   count(count)
+                   combineRawJpg(combineRawJpg),
+                   count(count),
+                   combineCount(combineCount)
 {
     QStringList *fileFilters = new QStringList;
     dir = new QDir();
@@ -119,7 +122,8 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
             QString path = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
-            return count.value(path);
+            if (combineRawJpg) return combineCount.value(path);
+            else return count.value(path);
         }
         if (role == Qt::TextAlignmentRole)
             return static_cast<QVariant>(Qt::AlignRight | Qt::AlignVCenter);
@@ -192,7 +196,7 @@ void FSTree::createModel()
 Create the model and filter in a separate function as it is also used to refresh
 the folders by deleting the model and re-creating it.
 */
-    fsModel = new FSModel(this, metadata, count);
+    fsModel = new FSModel(this, metadata, count, combineCount, combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     fsModel->setRootPath("");
 
@@ -318,10 +322,10 @@ void FSTree::expand(const QModelIndex &idx)
 void FSTree::getImageCount()
 {
 /*
-This function stores the image count (that winnow can read) for each folder that is
-visible (expanded) in the TreeView in a QHash.  The QHash is referenced in the FSModel
-and displayed in a subclass of QFileSystemModel data, where the image count has been
-added as column 4.
+This function stores the image count (that winnow can read) for each folder that is visible
+(expanded) in the TreeView in the QHash count. The QHash is referenced in the FSModel and
+displayed in a subclass of QFileSystemModel data, where the image count has been added as
+column 4.
 */
     {
     #ifdef ISDEBUG
@@ -332,12 +336,33 @@ added as column 4.
     while (idx.isValid())
     {
         QString path = idx.data(QFileSystemModel::FilePathRole).toString();
+
+        // counts is combineRawJpg
+        if (!combineCount.contains(path)) {
+            dir->setPath(path);
+            int n = 0;
+            QListIterator<QFileInfo> i(dir->entryInfoList());
+            while (i.hasNext()) {
+                QFileInfo info = i.next();
+                QString fPath = info.path();
+                QString baseName = info.baseName();
+                QString suffix = info.suffix().toLower();
+                QString jpgPath = fPath + "/" + baseName + ".jpg";
+                if (metadata->rawFormats.contains(suffix)) {
+                    if (dir->entryInfoList().contains(jpgPath)) continue;
+                }
+                n++;
+            }
+            combineCount[path] = QString::number(n, 'f', 0);
+        }
+
+        // counts if not combineRawJpg
         if (!count.contains(path)) {
             dir->setPath(path);
             int n = dir->entryInfoList().size();
             count[path] = QString::number(n, 'f', 0);
         }
-//        qDebug() << __FUNCTION__ << path << count[path];
+
         idx = indexBelow(idx);
     }
 }

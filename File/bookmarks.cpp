@@ -31,8 +31,10 @@ from the windows explorer or mac finder to be added as a bookmark.
 As an abbreviation in the program UI bookmarks are called favs.
 */
 
-BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount)
-    : QTreeWidget(parent)
+BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount,
+                     bool &combineRawJpg)
+                   : QTreeWidget(parent),
+                     combineRawJpg(combineRawJpg)
 {
     {
     #ifdef ISDEBUG
@@ -103,8 +105,23 @@ void BookMarks::count()
      QTreeWidgetItemIterator it(this);
      while (*it) {
          QString path = (*it)->toolTip(0);
+         int count = 0;
          dir->setPath(path);
-         int count = dir->entryInfoList().size();
+         if (combineRawJpg) {
+             QListIterator<QFileInfo> i(dir->entryInfoList());
+             while (i.hasNext()) {
+                 QFileInfo info = i.next();
+                 QString fPath = info.path();
+                 QString baseName = info.baseName();
+                 QString suffix = info.suffix().toLower();
+                 QString jpgPath = fPath + "/" + baseName + ".jpg";
+                 if (metadata->rawFormats.contains(suffix)) {
+                     if (dir->entryInfoList().contains(jpgPath)) continue;
+                 }
+                 count++;
+             }
+         }
+         else count = dir->entryInfoList().size();
          (*it)->setText(1, QString::number(count));
          qDebug() << path << count;
          ++it;

@@ -394,7 +394,7 @@ bool DataModel::addFileData()
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 
     static QStandardItem *item;
-    static int fileIndex;
+    static int i;
     static QPixmap emptyPixMap;
 
     imageFilePathList.clear();
@@ -402,18 +402,25 @@ bool DataModel::addFileData()
     // rgh not working
     emptyPixMap = QPixmap::fromImage(emptyImg).scaled(G::maxIconSize, G::maxIconSize);
 
-    for (fileIndex = 0; fileIndex < fileInfoList.count(); ++fileIndex) {
+    // test if raw file to match jpg when same file names and one is a jpg
+    QString suffix;
+    QString prevRawSuffix = "";
+    QString prevRawBaseName = "";
+    QString baseName = "";
+    QModelIndex prevRawIdx;
+
+    for (i = 0; i < fileInfoList.count(); ++i) {
 
         if (timeToQuit) return false;
 
         // get file info
-        fileInfo = fileInfoList.at(fileIndex);
+        fileInfo = fileInfoList.at(i);
 
         // append hash index of datamodel row for fPath for fast lookups
         QString fPath = fileInfo.filePath();
 
         // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
-        fPathRow[fPath] = fileIndex;
+        fPathRow[fPath] = i;
 
         // string to hold aggregated text for searching
         QString search = fPath;
@@ -437,7 +444,7 @@ bool DataModel::addFileData()
         item = new QStandardItem();
         item->setData("", Qt::DisplayRole);             // column 0 just displays icon
         item->setData(fPath, G::PathRole);
-        QString tip = QString::number(fileIndex) + ": " + fileInfo.absoluteFilePath();
+        QString tip = QString::number(i) + ": " + fileInfo.absoluteFilePath();
         item->setData(tip, Qt::ToolTipRole);
         item->setData(QRect(), G::ThumbRectRole);     // define later when read
         item->setData(false, G::CachedRole);
@@ -472,11 +479,10 @@ bool DataModel::addFileData()
         setData(index(row, G::ErrColumn), "");
 
         /* Save info for duplicated raw and jpg files, which generally are the result of
-        setting raw+jpg in the camera. The datamodel is sorted by file path, except raw
-        files with the same path precede jpg files with duplicate names. Two roles track
-        duplicates: G::DupHideRawRole flags jpg files with duplicate raws and
-        G::DupRawIdxRole points to the duplicate raw file from the jpg data row. For
-        example:
+        setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
+        with the same path precede jpg files with duplicate names. Two roles track duplicates:
+        G::DupHideRawRole flags jpg files with duplicate raws and G::DupRawIdxRole points to
+        the duplicate raw file from the jpg data row. For example:
 
         Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF"  DupHideRawRole = true 	 DupRawIdxRole = (Invalid)
         Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG"  DupHideRawRole = false  DupRawIdxRole = QModelIndex(0,0)) DupRawTypeRole = "ORF"
@@ -484,34 +490,35 @@ bool DataModel::addFileData()
         Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG"  DupHideRawRole = false  DupRawIdxRole = QModelIndex(2,0)  DupRawTypeRole = "ORF"
         */
 
-        if (fileIndex > 0) {
-            QString s1 = fileInfoList.at(fileIndex - 1).completeBaseName();
-            QString s2 = fileInfoList.at(fileIndex).completeBaseName();
-            if (s1 == s2) {
-                if (fileInfoList.at(fileIndex).suffix().toLower() == "jpg") {
-                    QModelIndex prevIdx = index(row - 1, 0);
-                    // hide raw version
-                    setData(prevIdx, true, G::DupHideRawRole);
-                    // point to raw version
-                    setData(index(row, 0), prevIdx, G::DupRawIdxRole);
-                    // set flag to show combined JPG file for filtering when ingesting
-                    setData(index(row, 0), true, G::DupIsJpgRole);
-                    // build combined suffix to show in type column
-                    QString prevType = fileInfoList.at(fileIndex - 1).suffix().toUpper();
-                    setData(index(row, 0), prevType, G::DupRawTypeRole);
-                    if (combineRawJpg)
-                        setData(index(row, G::TypeColumn), "JPG+" + prevType);
-                    else
-                        setData(index(row, G::TypeColumn), "JPG");
-                }
-            }
+        suffix = fileInfoList.at(i).suffix().toLower();
+        baseName = fileInfoList.at(i).completeBaseName();
+        if (metadata->rawFormats.contains(suffix)) {
+            prevRawSuffix = suffix;
+            prevRawBaseName = fileInfoList.at(i).completeBaseName();
+            prevRawIdx = index(i, 0);
         }
+
+        if (suffix == "jpg" && baseName == prevRawBaseName) {
+            // hide raw version
+            setData(prevRawIdx, true, G::DupHideRawRole);
+            // point to raw version
+            setData(index(row, 0), prevRawIdx, G::DupRawIdxRole);
+            // set flag to show combined JPG file for filtering when ingesting
+            setData(index(row, 0), true, G::DupIsJpgRole);
+            // build combined suffix to show in type column
+            setData(index(row, 0), prevRawSuffix.toUpper(), G::DupRawTypeRole);
+            if (combineRawJpg)
+                setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
+            else
+                setData(index(row, G::TypeColumn), "JPG");
+        }
+
         progressBar->updateProgress(row, row + 1, fileInfoList.count(),
                                     G::progressAddFileInfoColor,
                                     "Reading the basic file information for each image");
-        if(row % 100 == 0) qApp->processEvents();
+        if (row % 100 == 0) qApp->processEvents();
 
-        if(row % countInterval == 0 || row == 0) {
+        if (row % countInterval == 0 || row == 0) {
             s = "Adding " + QString::number(row) + " of " +
                 QString::number(fileInfoList.count()) + " images";
             emit msg(s);
@@ -842,6 +849,30 @@ void DataModel::buildFilters()
     filtersBuilt = true;
 }
 
+void DataModel::rebuildTypeFilter()
+{
+/*
+When Raw+Jpg is toggled in the main program MW the file type filter must be rebuilt.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    filters->types->takeChildren();
+    QMap<QVariant, QString> typesMap;
+    int rows = sf->rowCount();
+    for(int row = 0; row < rows; row++) {
+        QString type = sf->index(row, G::TypeColumn).data().toString();
+        if (!typesMap.contains(type)) {
+            typesMap[type] = type;
+            qDebug() << __FUNCTION__ << "Adding" << type;
+        }
+    }
+    filters->addCategoryFromData(typesMap, filters->types);
+    qApp->processEvents();
+}
+
 QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 {
 /*
@@ -980,65 +1011,6 @@ QString DataModel::diagnostics()
         rpt << "\n  " << "err = " << G::s(index(row, G::ErrColumn).data());
         rpt << "\n  " << "shootingInfo = " << G::s(index(row, G::ShootingInfoColumn).data());
     }
-//    for(int row = 0; row < sf->rowCount(); row++) {
-//        rpt << "\n" << "DataModel row = " << G::s(row);
-//        rpt << "\n  " << "File Name = " << G::s(sf->index(row, G::NameColumn).data());
-//        rpt << "\n  " << "File Path = " << G::s(sf->index(row, 0).data(G::PathRole));
-//        rpt << "\n  " << "dupHideRaw = " << G::s(sf->index(row, 0).data(G::DupHideRawRole));
-//        rpt << "\n  " << "dupRawRow = " << G::s(qvariant_cast<QModelIndex>(sf->index(row, 0).data(G::DupRawIdxRole)).row());
-//        rpt << "\n  " << "dupIsJpg = " << G::s(sf->index(row, 0).data(G::DupIsJpgRole));
-//        rpt << "\n  " << "dupRawType = " << G::s(sf->index(row, 0).data(G::DupRawTypeRole));
-//        rpt << "\n  " << "type = " << G::s(sf->index(row, G::TypeColumn).data());
-//        rpt << "\n  " << "bytes = " << G::s(sf->index(row, G::SizeColumn).data());
-//        rpt << "\n  " << "refine = " << G::s(sf->index(row, G::RefineColumn).data());
-//        rpt << "\n  " << "pick = " << G::s(sf->index(row, G::PickColumn).data());
-//        rpt << "\n  " << "ingested = " << G::s(sf->index(row, G::IngestedColumn).data());
-//        rpt << "\n  " << "label = " << G::s(sf->index(row, G::LabelColumn).data());
-//        rpt << "\n  " << "_label = " << G::s(sf->index(row, G::_LabelColumn).data());
-//        rpt << "\n  " << "rating = " << G::s(sf->index(row, G::RatingColumn).data());
-//        rpt << "\n  " << "_rating = " << G::s(sf->index(row, G::_RatingColumn).data());
-//        rpt << "\n  " << "modifiedDate = " << G::s(sf->index(row, G::ModifiedColumn).data());
-//        rpt << "\n  " << "createdDate = " << G::s(sf->index(row, G::CreatedColumn).data());
-//        rpt << "\n  " << "year = " << G::s(sf->index(row, G::YearColumn).data());
-//        rpt << "\n  " << "day = " << G::s(sf->index(row, G::DayColumn).data());
-//        rpt << "\n  " << "megapixels = " << G::s(sf->index(row, G::MegaPixelsColumn).data());
-//        rpt << "\n  " << "width = " << G::s(sf->index(row, G::WidthColumn).data());
-//        rpt << "\n  " << "height = " << G::s(sf->index(row, G::HeightColumn).data());
-//        rpt << "\n  " << "dimensions = " << G::s(sf->index(row, G::DimensionsColumn).data());
-//        rpt << "\n  " << "rotation = " << G::s(sf->index(row, G::RotationColumn).data());
-//        rpt << "\n  " << "apertureNum = " << G::s(sf->index(row, G::ApertureColumn).data());
-//        rpt << "\n  " << "exposureTimeNum = " << G::s(sf->index(row, G::ShutterspeedColumn).data());
-//        rpt << "\n  " << "iso = " << G::s(sf->index(row, G::ISOColumn).data());
-//        rpt << "\n  " << "make = " << G::s(sf->index(row, G::CameraMakeColumn).data());
-//        rpt << "\n  " << "model = " << G::s(sf->index(row, G::CameraModelColumn).data());
-//        rpt << "\n  " << "lens = " << G::s(sf->index(row, G::LensColumn).data());
-//        rpt << "\n  " << "focalLengthNum = " << G::s(sf->index(row, G::FocalLengthColumn).data());
-//        rpt << "\n  " << "title = " << G::s(sf->index(row, G::TitleColumn).data());
-//        rpt << "\n  " << "_title = " << G::s(sf->index(row, G::_TitleColumn).data());
-//        rpt << "\n  " << "creator = " << G::s(sf->index(row, G::CreatorColumn).data());
-//        rpt << "\n  " << "_creator = " << G::s(sf->index(row, G::_CreatorColumn).data());
-//        rpt << "\n  " << "copyright = " << G::s(sf->index(row, G::CopyrightColumn).data());
-//        rpt << "\n  " << "_copyright = " << G::s(sf->index(row, G::_CopyrightColumn).data());
-//        rpt << "\n  " << "email = " << G::s(sf->index(row, G::EmailColumn).data());
-//        rpt << "\n  " << "_email = " << G::s(sf->index(row, G::_EmailColumn).data());
-//        rpt << "\n  " << "url = " << G::s(sf->index(row, G::UrlColumn).data());
-//        rpt << "\n  " << "_url = " << G::s(sf->index(row, G::_UrlColumn).data());
-//        rpt << "\n  " << "offsetFullJPG = " << G::s(sf->index(row, G::OffsetFullJPGColumn).data());
-//        rpt << "\n  " << "lengthFullJPG = " << G::s(sf->index(row, G::LengthFullJPGColumn).data());
-//        rpt << "\n  " << "offsetThumbJPG = " << G::s(sf->index(row, G::OffsetThumbJPGColumn).data());
-//        rpt << "\n  " << "lengthThumbJPG = " << G::s(sf->index(row, G::LengthThumbJPGColumn).data());
-//        rpt << "\n  " << "offsetSmallJPG = " << G::s(sf->index(row, G::OffsetSmallJPGColumn).data());
-//        rpt << "\n  " << "lengthSmallJPG = " << G::s(sf->index(row, G::LengthSmallJPGColumn).data());
-//        rpt << "\n  " << "xmpSegmentOffset = " << G::s(sf->index(row, G::XmpSegmentOffsetColumn).data());
-//        rpt << "\n  " << "xmpNextSegmentOffset = " << G::s(sf->index(row, G::XmpNextSegmentOffsetColumn).data());
-
-//        rpt << "\n  " << "isXmp = " << G::s(sf->index(row, G::IsXMPColumn).data());
-//        rpt << "\n  " << "orientationOffset = " << G::s(sf->index(row, G::OrientationOffsetColumn).data());
-//        rpt << "\n  " << "orientation = " << G::s(sf->index(row, G::OrientationColumn).data());
-//        rpt << "\n  " << "rotationDegrees = " << G::s(sf->index(row, G::RotationDegreesColumn).data());
-//        rpt << "\n  " << "err = " << G::s(sf->index(row, G::ErrColumn).data());
-//        rpt << "\n  " << "shootingInfo = " << G::s(sf->index(row, G::ShootingInfoColumn).data());
-//    }
     rpt << "\n\n" ;
     return reportString;
 }
