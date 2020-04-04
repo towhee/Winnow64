@@ -123,7 +123,7 @@ void BookMarks::count()
          }
          else count = dir->entryInfoList().size();
          (*it)->setText(1, QString::number(count));
-         qDebug() << path << count;
+//         qDebug() << path << count;
          ++it;
      }
 
