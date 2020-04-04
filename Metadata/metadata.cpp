@@ -257,7 +257,10 @@ metadata is written to buffer and the original image file is copied unchanged.
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
-    if (!xmpWriteFormats.contains(suffix)) return false;
+    if (!xmpWriteFormats.contains(suffix)) {
+        qDebug() << __FUNCTION__ << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
+        return false;
+    }
 
     bool useSidecar = sidecarFormats.contains(suffix);
 
@@ -280,7 +283,10 @@ metadata is written to buffer and the original image file is copied unchanged.
         && !copyrightChanged
         && !emailChanged
         && !urlChanged
-        && !orientationChanged ) return false;
+        && !orientationChanged ) {
+        qDebug() << __FUNCTION__ << "Unable to write xmp buffer. No metadata has been edited.";
+        return false;
+    }
 
     // data edited, open image file
     p.file.setFileName(fPath);

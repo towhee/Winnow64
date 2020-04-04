@@ -360,10 +360,6 @@ Each picked image is copied from the source to the destination.
         /* If there is edited xmp data in an eligible file format copy it
            into a buffer.  This routine is also used in MW::runExternalApp()
         */
-        qDebug() << __FUNCTION__ << sourcePath << suffix
-                 << metadata->sidecarFormats.contains(suffix)
-                 << ingestIncludeXmpSidecar;
-
         if (metadata->writeMetadata(sourcePath, dm->getMetadata(sourcePath), buffer)
         && metadata->sidecarFormats.contains(suffix) && ingestIncludeXmpSidecar) {
             // copy image file
@@ -754,10 +750,10 @@ void IngestDlg::updateFolderPath()
     if (ui->autoRadio->isChecked() || isInitializing) {
         baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
                 ? ui->descriptionLineEdit->text() : "";
-        qDebug() << __FUNCTION__
-                 << "rootFolderPath =" << rootFolderPath
-                 << "fromRootToBaseFolder =" << fromRootToBaseFolder
-                 << "baseFolderDescription =" << baseFolderDescription;
+//        qDebug() << __FUNCTION__
+//                 << "rootFolderPath =" << rootFolderPath
+//                 << "fromRootToBaseFolder =" << fromRootToBaseFolder
+//                 << "baseFolderDescription =" << baseFolderDescription;
         folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
 
         ui->folderLabel->setText(folderPath);

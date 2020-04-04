@@ -3,9 +3,7 @@ BUGS
 - Combine Raw+Jpg can crash
 - Navigating thumbs in large folders while still opening can crash
 - Not ingesting all jpgs with raws
-- Open with xmp sidecar over-writing old car - cancel for now
 - Ingest date when different dates in ingest file list
-- Losing red setting
 - Filter last day crashing, cr2 in _ThumbTest crashing
 - Ingest if image does not have metadata req'd
 - is mouseMovementTimer in imageView req'd
@@ -20,7 +18,6 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Remember sort category
 - Add delete / move / copy
 - Add exposure compensation to metadata
 - Reset to defaults
@@ -41,6 +38,7 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- XMP files not being written during ingest if combineRawJpg == true
 - Image count when combine raw + jpg
 - Type filter not summing correctly when toggle raw+jpg on and off
 - Fix raw+jpg when same basename but no raw file

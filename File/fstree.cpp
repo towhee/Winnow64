@@ -323,9 +323,11 @@ void FSTree::getImageCount()
 {
 /*
 This function stores the image count (that winnow can read) for each folder that is visible
-(expanded) in the TreeView in the QHash count. The QHash is referenced in the FSModel and
-displayed in a subclass of QFileSystemModel data, where the image count has been added as
-column 4.
+(expanded) in the TreeView in a QHash. The QHash is referenced in the FSModel and displayed in
+a subclass of QFileSystemModel data, where the image count has been added as column 4.
+
+Two QHash are updated: count for the total eligible image files and combineCount for when
+raw+jpg are combined.
 */
     {
     #ifdef ISDEBUG
@@ -380,7 +382,7 @@ void FSTree::paintEvent(QPaintEvent *event)
 
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
-    qDebug() << "FSTree::mousePressEvent";
+//    qDebug() << "FSTree::mousePressEvent";
     QTreeView::mousePressEvent(event);
 }
 

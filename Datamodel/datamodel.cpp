@@ -563,8 +563,8 @@ Used by InfoString and IngestDlg
 
     ImageMetadata m;
     if (!success) {
-        return m;
         // rgh to finish err proofing this
+        return m;
     }
 
     m.row = row;
@@ -674,6 +674,10 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     folder(s) is being cached or when addAllMetadata is called prior of filtering or
     sorting. The metadata is displayed in tableView, which is created in MW, and in
     InfoView.
+
+    If a folder is opened with combineRawJpg all the metadata for the raw file may not have
+    been loaded, but editable data, (such as rating, label, title, email, url) may have been
+    edited in the jpg file of the raw+jpg pair.  If so, we do not want to overwrite this data.
     */
     {
     #ifdef ISDEBUG
@@ -686,10 +690,12 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
 
     setData(index(row, G::SearchColumn), m.isSearch);
     setData(index(row, G::SearchColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+    if (index(row, G::LabelColumn).data().toString() != "") m.label = index(row, G::LabelColumn).data().toString();
     setData(index(row, G::LabelColumn), m.label);
     setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     search += m.label;
     setData(index(row, G::_LabelColumn), m._label);
+    if (index(row, G::RatingColumn).data().toString() != "") m.rating = index(row, G::RatingColumn).data().toString();
     setData(index(row, G::RatingColumn), m.rating);
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::_RatingColumn), m._rating);
@@ -721,18 +727,23 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     search += m.lens;
     setData(index(row, G::FocalLengthColumn), m.focalLengthNum);
     setData(index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    if (index(row, G::TitleColumn).data().toString() != "") m.title = index(row, G::TitleColumn).data().toString();
     setData(index(row, G::TitleColumn), m.title);
     search += m.title;
     setData(index(row, G::_TitleColumn), m._title);
+    if (index(row, G::CreatorColumn).data().toString() != "") m.creator = index(row, G::CreatorColumn).data().toString();
     setData(index(row, G::CreatorColumn), m.creator);
     search += m.creator;
     setData(index(row, G::_CreatorColumn), m._creator);
+    if (index(row, G::CopyrightColumn).data().toString() != "") m.copyright = index(row, G::CopyrightColumn).data().toString();
     setData(index(row, G::CopyrightColumn), m.copyright);
     search += m.copyright;
     setData(index(row, G::_CopyrightColumn), m._copyright);
+    if (index(row, G::EmailColumn).data().toString() != "") m.email = index(row, G::EmailColumn).data().toString();
     setData(index(row, G::EmailColumn), m.email);
     search += m.email;
     setData(index(row, G::_EmailColumn), m._email);
+    if (index(row, G::UrlColumn).data().toString() != "") m.url = index(row, G::UrlColumn).data().toString();
     setData(index(row, G::UrlColumn), m.url);
     search += m.url;
     setData(index(row, G::_UrlColumn), m._url);

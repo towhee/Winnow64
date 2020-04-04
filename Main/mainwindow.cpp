@@ -231,7 +231,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     if (setting->contains("cacheSizeMB") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
     loadSettings();    //dependent on bookmarks and actions, infoView
-    qDebug() << __FUNCTION__ << "sortColumn =" << sortColumn;
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
@@ -5349,7 +5348,6 @@ void MW::sortChange()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << "sortColumn =" << sortColumn;
     if (sortMenuUpdateToMatchTable/* || !G::isNewFolderLoaded*/) return;
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;
@@ -9153,7 +9151,7 @@ void MW::setCombineRawJpg()
     G::track(__FUNCTION__);
     #endif
     }
-    // flag used in MW, dm and sf, fsTree
+    // flag used in MW, dm and sf, fsTree, bookmarks
     combineRawJpg = combineRawJpgAction->isChecked();
     fsTree->combineRawJpg = combineRawJpg;
     bookmarks->combineRawJpg = combineRawJpg;
@@ -10392,22 +10390,16 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    metadata->parseHEIF();
 
-    QDir dir;
-    dir.setPath(currentViewDir);
-    int n = 0;
-    QListIterator<QFileInfo> i(dir.entryInfoList());
-    while (i.hasNext()) {
-        QFileInfo info = i.next();
-        QString path = info.path();
-        QString baseName = info.baseName();
-        QString suffix = info.suffix().toLower();
-        QString jpgPath = path + "/" + baseName + ".jpg";
-        if (metadata->rawFormats.contains(suffix)) {
-            if (dir.entryInfoList().contains(jpgPath)) continue;
-        }
-        n++;
-//        bool test = dir.entryInfoList().contains(jpgPath);
-        qDebug() << __FUNCTION__ << info.filePath() << jpgPath << n;
-    }
+    QModelIndex idx = dm->sf->index(currentRow, 0);
+    int rawRow = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole)).row();
+//    qDebug() << __FUNCTION__ << "rawRow =" << rawRow;
+//    QModelIndex rawIdx = dm->index(rawRow, 0);
+    QString fPath = dm->index(rawRow, 0).data(G::PathRole).toString();
+    QString rating = dm->index(rawRow,  G::RatingColumn).data().toString();
+    qDebug() << __FUNCTION__ << fPath << "Rating =" << rating;
+
+    ImageMetadata m;
+    m = dm->getMetadata(fPath);
+    qDebug() << " dm->getMetadata(fPath)" << fPath << "Rating =" << m.rating;
 }
 // End MW
