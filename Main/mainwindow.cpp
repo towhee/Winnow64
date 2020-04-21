@@ -317,6 +317,10 @@ void MW::initialize()
     hasGridBeenActivated = true;
     isDragDrop = false;
     setAcceptDrops(true);
+    sortAZStatusLabel = new QLabel;
+    sortAZStatusLabel->setToolTip("Sort from small to large.  Shortcut to toggle: Opt/Alt + S");
+    sortZAStatusLabel = new QLabel;
+    sortZAStatusLabel->setToolTip("Sort from large to small.  Shortcut to toggle: Opt/Alt + S");
     filterStatusLabel = new QLabel;
     filterStatusLabel->setToolTip("The images have been filtered");
     subfolderStatusLabel = new QLabel;
@@ -1664,7 +1668,10 @@ the filter and sort operations cannot commence until all the metadata has been l
 void MW::refreshCurrentAfterReload()
 {
 /*
-
+If any images in the current folder have changed this function will refresh the folder and
+return focus to the same image if it is still available.  The proxy is used as there may be
+filtering or sorting invoked.  If the previous focus image is no longer available then the
+first image in the proxy is selected.
 */
     {
     #ifdef ISDEBUG
@@ -1673,15 +1680,20 @@ void MW::refreshCurrentAfterReload()
     }
     G::isNewFolderLoaded = true;
 
-    int dmRow = dm->fPathRow[refreshCurrentPath];
+    // get the proxy index for the previously selected image (with the focus)
+    QModelIndex sfIdx = dm->proxyIndexFromPath(refreshCurrentPath);
+    int sfRow = 0;
+    // if the previously selected image still exists then get the row
+    if (sfIdx.isValid()) sfRow = sfIdx.row();
+    // reload the image cache
     loadImageCacheForNewFolder();
 
     // wait for thumbView and gridView to be ready for selection and scrolling
     G::wait(300);
 
     // return to selected image before refresh.  This triggers an update to the metadata and
-    // imageg caches
-    thumbView->selectThumb(dmRow);
+    // image caches
+    thumbView->selectThumb(sfRow);
     isRefreshingDM = false;
 }
 
@@ -2350,13 +2362,13 @@ void MW::createActions()
     prefAction->setObjectName("settings");
     prefAction->setShortcutVisibleInContextMenu(true);
     addAction(prefAction);
-    connect(prefAction, &QAction::triggered, [this]() {preferences(-1);} );
+    connect(prefAction, &QAction::triggered, [this]() {preferences("");} );
 
     prefInfoAction = new QAction(tr("Hide or show info fields"), this);
     prefInfoAction->setObjectName("infosettings");
     prefInfoAction->setShortcutVisibleInContextMenu(true);
     addAction(prefInfoAction);
-    connect(prefInfoAction, &QAction::triggered, [this]() {preferences(7);} );
+    connect(prefInfoAction, &QAction::triggered, [this]() {preferences("Metadata panel items");} );
 
     // Go menu
 
@@ -3479,6 +3491,8 @@ void MW::createMenus()
     separatorAction3->setSeparator(true);
     QAction *separatorAction4 = new QAction(this);
     separatorAction4->setSeparator(true);
+    QAction *separatorAction5 = new QAction(this);
+    separatorAction5->setSeparator(true);
 
     // FSTree context menu
     fsTreeActions = new QList<QAction *>;
@@ -3545,8 +3559,10 @@ void MW::createMenus()
     thumbViewActions->append(thumbsEnlargeAction);
     thumbViewActions->append(thumbsShrinkAction);
     thumbViewActions->append(separatorAction3);
-    thumbViewActions->append(saveAsFileAction);
+    thumbViewActions->append(sortReverseAction);
     thumbViewActions->append(separatorAction4);
+    thumbViewActions->append(saveAsFileAction);
+    thumbViewActions->append(separatorAction5);
     thumbViewActions->append(reportMetadataAction);
 
 //    // imageview/tableview/gridview/compareview context menu
@@ -4530,7 +4546,7 @@ void MW::createBookmarks()
     }
 
     bookmarks->setMaximumWidth(folderMaxWidth);
-    refreshBookmarks();
+//    refreshBookmarks();
 
     // this does work for touchpad tap
     connect(bookmarks, SIGNAL(itemPressed(QTreeWidgetItem *, int)),
@@ -4640,12 +4656,22 @@ void MW::createStatusBar()
     updateImageCachingThreadRunStatus(false, true);
 
     // labels to show various status
+    sortAZStatusLabel->setPixmap(QPixmap(":/images/icon16/A-Z.png"));
+    sortAZStatusLabel->setAlignment(Qt::AlignVCenter);
+    statusBar()->addWidget(sortAZStatusLabel);
+
+    sortZAStatusLabel->setPixmap(QPixmap(":/images/icon16/Z-A.png"));
+    sortZAStatusLabel->setAlignment(Qt::AlignVCenter);
+    statusBar()->addWidget(sortZAStatusLabel);
+
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
     filterStatusLabel->setAlignment(Qt::AlignVCenter);
     statusBar()->addWidget(filterStatusLabel);
+
     subfolderStatusLabel->setPixmap(QPixmap(":/images/icon16/subfolders.png"));
     statusBar()->addWidget(subfolderStatusLabel);
     rawJpgStatusLabel->setPixmap(QPixmap(":/images/icon16/link.png"));
+
     statusBar()->addWidget(rawJpgStatusLabel);
     slideShowStatusLabel->setPixmap(QPixmap(":/images/icon16/slideshow.png"));
     statusBar()->addWidget(slideShowStatusLabel);
@@ -4665,27 +4691,45 @@ void MW::updateStatusBar()
     G::track(__FUNCTION__);
     #endif
     }
-    if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel);
-    if (!subfolderStatusLabel->isHidden()) statusBar()->removeWidget(subfolderStatusLabel);
-    if (!rawJpgStatusLabel->isHidden()) statusBar()->removeWidget(rawJpgStatusLabel);
-    if (!slideShowStatusLabel->isHidden()) statusBar()->removeWidget(slideShowStatusLabel);
-    if (!statusLabel->isHidden()) statusBar()->removeWidget(statusLabel);
+    // remove all icons so can add back in proper order // previously used: if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel); // etc
+    statusBar()->removeWidget(sortAZStatusLabel);
+    statusBar()->removeWidget(sortZAStatusLabel);
+    statusBar()->removeWidget(rawJpgStatusLabel);
+    statusBar()->removeWidget(filterStatusLabel);
+    statusBar()->removeWidget(subfolderStatusLabel);
+    statusBar()->removeWidget(slideShowStatusLabel);
+    statusBar()->removeWidget(statusLabel);             // text showing x selected...
+
+    // add back relevant icons
     if (filters->isAnyFilter()) {
         statusBar()->addWidget(filterStatusLabel);
         filterStatusLabel->show();
     }
+
+    if (sortReverseAction->isChecked()) {
+        statusBar()->addWidget(sortZAStatusLabel);
+        sortZAStatusLabel->show();
+    }
+    else {
+        statusBar()->addWidget(sortAZStatusLabel);
+        sortAZStatusLabel->show();
+    }
+
     if (subFoldersAction->isChecked()) {
         statusBar()->addWidget(subfolderStatusLabel);
         subfolderStatusLabel->show();
     }
+
     if (combineRawJpgAction->isChecked()) {
         statusBar()->addWidget(rawJpgStatusLabel);
         rawJpgStatusLabel->show();
     }
+
     if (G::isSlideShow) {
         statusBar()->addWidget(slideShowStatusLabel);
         slideShowStatusLabel->show();
     }
+
     statusBar()->addWidget(statusLabel);
     statusLabel->show();
     if (updateImageCacheWhenFileSelectionChange) progressLabel->setVisible(true);
@@ -4796,7 +4840,6 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
     G::track(__FUNCTION__);
     #endif
     }
-
     // check if null filter
     if (dm->sf->rowCount() == 0) {
         statusLabel->setText("");
@@ -4804,6 +4847,7 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
         k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
         k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
         k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
+        updateStatusBar();
         return;
     }
 
@@ -5078,7 +5122,6 @@ and icons are loaded if necessary.
     G::track(__FUNCTION__);
     #endif
     }
-    G::track(__FUNCTION__);
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) return;
 
@@ -6446,7 +6489,7 @@ void MW::runExternalApp()
     // open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
 }
 
-void MW::preferences(int page)
+void MW::preferences(QString text)
 {
 /*
 
@@ -6456,24 +6499,21 @@ void MW::preferences(int page)
     G::track(__FUNCTION__);
     #endif
     }
-    page = 0;   // suppress compiler warning
     Preferences *pref = new Preferences(this);
+    if (text != "") pref->expandBranch(text);
     preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
     preferencesDlg->exec();
-//    propertiesDock = new DockWidget(tr("  Preferencess  "), this);
-//    propertiesDock->setObjectName("Preferences");
-//    propertiesDock->setWidget(pref);
-//    propertiesDock->setFloating(true);
-//    propertiesDock->setGeometry(2000,600,400,800);
-//    propertiesDock->setVisible(true);
-//    propertiesDock->raise();
-//    return;
 
-//    if(page == -1) page = lastPrefPage;
-//    Prefdlg *prefdlg = new Prefdlg(this, page);
-//    connect(prefdlg, SIGNAL(updatePage(int)),
-//            this, SLOT(setPrefPage(int)));
-//    prefdlg->exec();
+    /* Create a preferences tree as a docking panel:
+    propertiesDock = new DockWidget(tr("  Preferencess  "), this);
+    propertiesDock->setObjectName("Preferences");
+    propertiesDock->setWidget(pref);
+    propertiesDock->setFloating(true);
+    propertiesDock->setGeometry(2000,600,400,800);
+    propertiesDock->setVisible(true);
+    propertiesDock->raise();
+    return;
+    */
 }
 
 void MW::setShowImageCount()
@@ -6557,6 +6597,8 @@ void MW::setBackgroundShade(int shade)
     progressLabel->setStyleSheet(css);
     metadataThreadRunningLabel->setStyleSheet(css);
     imageThreadRunningLabel->setStyleSheet(css);
+    sortAZStatusLabel->setStyleSheet(css);
+    sortZAStatusLabel->setStyleSheet(css);
     filterStatusLabel->setStyleSheet(css);
     subfolderStatusLabel->setStyleSheet(css);
     rawJpgStatusLabel->setStyleSheet(css);
@@ -9182,6 +9224,7 @@ void MW::setCombineRawJpg()
     dm->sf->filterChange();
     dm->rebuildTypeFilter();
     filterChange(__FUNCTION__);
+    updateStatusBar();
 }
 
 void MW::setCachedStatus(QString fPath, bool isCached)
@@ -10072,6 +10115,8 @@ folder images have changed.
     }
     isRefreshingDM = true;
     refreshCurrentPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+    qDebug() << __FUNCTION__ << refreshCurrentPath;
+//    refreshCurrentPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
     folderSelectionChange();
 }
 

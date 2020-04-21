@@ -126,5 +126,7 @@
         <file>images/icon16/slideshow.png</file>
         <file>images/icon16/rawjpeg.png</file>
         <file>Docs/ingestautopath.html</file>
+        <file>images/icon16/A-Z.png</file>
+        <file>images/icon16/Z-A.png</file>
     </qresource>
 </RCC>

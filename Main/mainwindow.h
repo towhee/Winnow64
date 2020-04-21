@@ -348,7 +348,7 @@ private slots:
     void uncheckAllFilters();
     void clearAllFilters();
     void sortChange();
-    void preferences(int page = -1);
+    void preferences(QString text = "");
     void externalAppManager();
     void toggleFullScreen();
     void escapeFullScreen();
@@ -779,6 +779,8 @@ private:
     Ui::message msg;
     QLineEdit *filterBar;
     QLabel *statusLabel;
+    QLabel *sortAZStatusLabel;
+    QLabel *sortZAStatusLabel;
     QLabel *filterStatusLabel;
     QLabel *subfolderStatusLabel;
     QLabel *rawJpgStatusLabel;

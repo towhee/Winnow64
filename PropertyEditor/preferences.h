@@ -12,6 +12,8 @@ class Preferences : public PropertyEditor
 public:
     Preferences(QWidget *parent);
     void resizeColumns();
+    QModelIndex treeIndex(QString text, QModelIndex parent = QModelIndex());
+    void expandBranch(QString text);
 
 public slots:
     void itemChange(QModelIndex idx);
