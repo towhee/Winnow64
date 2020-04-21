@@ -14,13 +14,39 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
             this, &Preferences::itemChange);
 
     resizeColumns();
-//    QFont fnt = this->font();
-//    fnt.setPixelSize(G::fontSize.toInt());
-//    QFontMetrics fm(fnt);
-//    captionColumnWidth = fm.boundingRect("==Incremental amount to load plus lots more room ;*) ==").width();
-//    valueColumnWidth = fm.boundingRect("==Next / Previous Image plus==").width();
-
     addItems();
+}
+
+void Preferences::expandBranch(QString text)
+{
+    /*
+    Expand one preferences tree branch.  This is used to open the preferences for a specific
+    item - for example, in the metadata panel context panel there is an option to show / hide
+    items, which is controlled by the "Metadata panel items" in preferences.
+    */
+    collapseAll();
+    expandRecursively(treeIndex(text));
+}
+
+QModelIndex Preferences::treeIndex(QString text, QModelIndex parent)
+{
+    /*
+    Iterate through the preferences tree looking for the item text, and return the model
+    index for the item.
+    */
+    QModelIndex parentIdx, idx;
+    for (int r = 0; r < model->rowCount(parent); ++r) {
+        idx = model->index(r, 0, parent);
+        if (model->data(idx).toString() == text) {
+           qDebug() << text << idx;
+           return idx;
+        }
+        if( model->hasChildren(idx) ) {
+            treeIndex(text, idx);
+        }
+    }
+    // not found, return invalid index
+    return model->index(-1, -1);
 }
 
 void Preferences::resizeColumns()
@@ -245,6 +271,30 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "infoView->ok") {
         mw->infoView->ok->setData(index, v.toBool());
+    }
+
+    if (source == "fullScreenShowFolders") {
+        mw->fullScreenDocks.isFolders = v.toBool();
+    }
+
+    if (source == "fullScreenShowBookmarks") {
+        mw->fullScreenDocks.isFavs = v.toBool();
+    }
+
+    if (source == "fullScreenShowFilters") {
+        mw->fullScreenDocks.isFilters = v.toBool();
+    }
+
+    if (source == "fullScreenShowMetadata") {
+        mw->fullScreenDocks.isMetadata = v.toBool();
+    }
+
+    if (source == "fullScreenShowThumbs") {
+        mw->fullScreenDocks.isThumbs = v.toBool();
+    }
+
+    if (source == "fullScreenShowStatusBar") {
+        mw->fullScreenDocks.isStatusBar = v.toBool();
     }
 }
 

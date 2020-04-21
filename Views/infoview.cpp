@@ -264,20 +264,16 @@ show flag.
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << G::t.restart() << "\t" << "ShorOrHide List:";
     bool okToShow;
     for(int row = 0; row < ok->rowCount(); row++) {
         QModelIndex parentIdx = ok->index(row, 0);
         okToShow = ok->index(row, 2).data().toBool();
-//        qDebug() << G::t.restart() << "\t" << parentIdx.data().toString() << okToShow;
         setRowHidden(row, QModelIndex(), !okToShow);
         for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
              okToShow = ok->index(childRow, 2, parentIdx).data().toBool();
-//            qDebug() << G::t.restart() << "\t" << ok->index(childRow, 0, parentIdx).data().toString() << okToShow;
             setRowHidden(childRow, parentIdx, !okToShow);
         }
     }
-//    qDebug() << G::t.restart() << "\t" << "ShorOrHide completed\n";
 }
 
 void InfoView::clearInfo()

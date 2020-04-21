@@ -38,6 +38,9 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Open preferences with a branch expanded
+- Preferences for what remains visible in full screen mode were not being saved
+- Added sort direction icon to status panel
 - XMP files not being written during ingest if combineRawJpg == true
 - Image count when combine raw + jpg
 - Type filter not summing correctly when toggle raw+jpg on and off
@@ -174,7 +177,6 @@ DONE/FIXED
 - Reset sorting and filtering when new folder selected
 - Dragging between monitors sometimes loses thumb best fit
 - Zoom % not updating on status bar
-
 - Not remembering mode correctly when opening
 - if current visible in grid should also be visible in loupe when switch
 - Preferences show infoView items missing scrollbar

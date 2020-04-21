@@ -71,6 +71,8 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
     solo();
 
     setContextMenuPolicy(Qt::ActionsContextMenu);
+
+//    pref->expandBranch("Metadata panel items");
 }
 
 void PreferencesDlg::expand()
