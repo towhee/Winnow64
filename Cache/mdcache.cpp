@@ -110,7 +110,7 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
     // list to make debugging easier
     actionList << "NewFolder"
                << "NewFolder2ndPass"
-                << "NewFileSelected"
+               << "NewFileSelected"
                << "Scroll"
                << "SizeChange"
                << "AllMetadata";
@@ -180,7 +180,7 @@ bool MetadataCache::isAllIconLoaded()
     return loaded;
 }
 
-void MetadataCache::loadNewFolder()
+void MetadataCache::loadNewFolder(bool isRefresh)
 {
 /*
 This function is called from MW::folderSelectionChange and will not have any filtering so
@@ -209,6 +209,7 @@ MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
     }
     abort = false;
     G::allMetadataLoaded = false;
+    isRefreshFolder = isRefresh;
     iconsCached.clear();
     foundItemsToLoad = true;
 //    metadataChunkSize = defaultMetadataChunkSize;
@@ -827,7 +828,8 @@ If there has been a file selection change and not a new folder then update image
         }
 
         if (action == Action::NewFolder) {
-            emit selectFirst();
+            if (isRefreshFolder) emit refreshCurrentAfterReload();
+            else emit selectFirst();
             /* make a second pass if more than 250 thumbs visible in gridView or thumbView and
                so can calc best aspect */
             emit loadMetadataCache2ndPass();

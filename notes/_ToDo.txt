@@ -1,10 +1,8 @@
 BUGS
-- Refresh current folder loses focus on current image
-- Combine Raw+Jpg can crash
+- In folders/bookmarks right click on folder reopens the folder
+- Standardize QMessageBox usage, integrated with global styles
 - Navigating thumbs in large folders while still opening can crash
 - Not ingesting all jpgs with raws
-- Ingest date when different dates in ingest file list
-- Filter last day crashing, cr2 in _ThumbTest crashing
 - Ingest if image does not have metadata req'd
 - is mouseMovementTimer in imageView req'd
 - Mac check for updates not done yet
@@ -18,6 +16,7 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Ingest date when different dates in ingest file list
 - Add delete / move / copy
 - Add exposure compensation to metadata
 - Reset to defaults
@@ -38,6 +37,9 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Add tooltips for tableview contents
+- Cannot resize column widths manually
+- Refresh current folder loses focus on current image
 - Open preferences with a branch expanded
 - Preferences for what remains visible in full screen mode were not being saved
 - Added sort direction icon to status panel

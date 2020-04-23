@@ -212,7 +212,6 @@ to prevent jarring changes in perceived scale by the user.
 
         zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
         if (isFirstImageNewFolder) isFit = true;
-//        if (!isFirstImageNewFolder) {
             // check if last image was a zoomFit - if so zoomFit this one too
             // otherwise keep zoom same as previous
             if (isFit) {
@@ -220,7 +219,6 @@ to prevent jarring changes in perceived scale by the user.
             }
             scale();
             isFirstImageNewFolder = false;
-//        }
     }
     return isLoaded;
 }

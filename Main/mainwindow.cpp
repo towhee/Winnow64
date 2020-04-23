@@ -1073,15 +1073,8 @@ void MW::folderSelectionChange()
     While still initializing, the window show event has not happened yet, so the
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
-    if (isRefreshingDM) {
-        refreshCurrentAfterReload();
-    }
-    else {
-        // default sort by file name
-//        thumbView->sortThumbs(1, false);
-        thumbView->selectThumb(0);
-        metadataCacheThread->loadNewFolder();
-    }
+
+    metadataCacheThread->loadNewFolder(isRefreshingDM);
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -1221,7 +1214,7 @@ delegate use of the current index must check the column.
     }
 
     // update caching when folder has been loaded
-    if (G::isNewFolderLoaded ) {
+    if (G::isNewFolderLoaded) {
         updateIconsVisible(true);
         metadataCacheThread->fileSelectionChange(updateImageCacheWhenFileSelectionChange);
     }
@@ -1665,38 +1658,6 @@ the filter and sort operations cannot commence until all the metadata has been l
 //    QApplication::processEvents();
 }
 
-void MW::refreshCurrentAfterReload()
-{
-/*
-If any images in the current folder have changed this function will refresh the folder and
-return focus to the same image if it is still available.  The proxy is used as there may be
-filtering or sorting invoked.  If the previous focus image is no longer available then the
-first image in the proxy is selected.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    G::isNewFolderLoaded = true;
-
-    // get the proxy index for the previously selected image (with the focus)
-    QModelIndex sfIdx = dm->proxyIndexFromPath(refreshCurrentPath);
-    int sfRow = 0;
-    // if the previously selected image still exists then get the row
-    if (sfIdx.isValid()) sfRow = sfIdx.row();
-    // reload the image cache
-    loadImageCacheForNewFolder();
-
-    // wait for thumbView and gridView to be ready for selection and scrolling
-    G::wait(300);
-
-    // return to selected image before refresh.  This triggers an update to the metadata and
-    // image caches
-    thumbView->selectThumb(sfRow);
-    isRefreshingDM = false;
-}
-
 void MW::updateMetadataCacheStatus(int row, bool clear)
 {
     /* Displays a statusbar showing the metadata cache status.
@@ -1947,7 +1908,7 @@ void MW::createActions()
     refreshCurrentAction->setObjectName("refreshFolder");
     refreshCurrentAction->setShortcutVisibleInContextMenu(true);
     addAction(refreshCurrentAction);
-    connect(refreshCurrentAction, &QAction::triggered, this, &MW::refreshCurrent);
+    connect(refreshCurrentAction, &QAction::triggered, this, &MW::refreshCurrentFolder);
 
     openUsbAction = new QAction(tr("Open Usb Folder"), this);
     openUsbAction->setObjectName("openUsbFolder");
@@ -2266,8 +2227,15 @@ void MW::createActions()
     addAction(popPickHistoryAction);
     connect(popPickHistoryAction, &QAction::triggered, this, &MW::popPick);
 
-    // Place keeper for now
-    copyAction = new QAction(tr("Copy to clipboard"), this);
+    // Copy, Cut
+    deleteAction = new QAction(tr("Delete"), this);
+    deleteAction->setObjectName("deleteImages");
+    deleteAction->setShortcutVisibleInContextMenu(true);
+    deleteAction->setShortcut(QKeySequence("Delete"));
+    addAction(deleteAction);
+    connect(deleteAction, &QAction::triggered, this, &MW::deleteFiles);
+
+    copyAction = new QAction(tr("Copy"), this);
     copyAction->setObjectName("copyImages");
     copyAction->setShortcutVisibleInContextMenu(true);
     copyAction->setShortcut(QKeySequence("Ctrl+C"));
@@ -3294,6 +3262,7 @@ void MW::createMenus()
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
     editMenu->addAction(copyAction);
+    editMenu->addAction(deleteAction);
     editMenu->addSeparator();
     editMenu->addAction(rejectAction);
     editMenu->addSeparator();
@@ -3303,8 +3272,6 @@ void MW::createMenus()
 //    editMenu->addAction(filterPickAction);
     editMenu->addAction(popPickHistoryAction);
     editMenu->addSeparator();
-//    editMenu->addAction(copyImagesAction);
-//    editMenu->addSeparator();
     editMenu->addAction(rate0Action);
     editMenu->addAction(rate1Action);
     editMenu->addAction(rate2Action);
@@ -3947,6 +3914,9 @@ void MW::createCaching()
 
     connect(metadataCacheThread, SIGNAL(selectFirst()),
             thumbView, SLOT(selectFirst()));
+
+    connect(metadataCacheThread, SIGNAL(refreshCurrentAfterReload()),
+            this, SLOT(refreshCurrentAfterReload()));
 
     // show progress bar when executing loadEntireMetadataCache
     connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
@@ -10102,7 +10072,7 @@ void MW::openFolder()
     folderSelectionChange();
 }
 
-void MW::refreshCurrent()
+void MW::refreshCurrentFolder()
 {
 /*
 Reloads the current folder and returns to the same image.  This is handy when some of the
@@ -10115,9 +10085,64 @@ folder images have changed.
     }
     isRefreshingDM = true;
     refreshCurrentPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
-    qDebug() << __FUNCTION__ << refreshCurrentPath;
-//    refreshCurrentPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
-    folderSelectionChange();
+    if (dm->hasFolderChanged() && dm->modifiedFiles.count()) {
+        for (int i = 0; i < dm->modifiedFiles.count(); ++i) {
+            QString fPath = dm->modifiedFiles.at(i).filePath();
+            if (!dm->fPathRow.contains(fPath)) continue;
+            int dmRow = dm->fPathRow[fPath];
+            int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
+            qDebug() << __FUNCTION__ << "dmRow =" << dmRow << "sfRow =" << sfRow;
+            // update file size and modified date
+            dm->updateFileData(dm->modifiedFiles.at(i));
+
+            // update metadata
+            QString ext = dm->modifiedFiles.at(i).suffix().toLower();
+            if (metadata->getMetadataFormats.contains(ext)) {
+                if (metadata->loadImageMetadata(dm->modifiedFiles.at(i), true, true, false, true, __FUNCTION__)) {
+                    metadata->imageMetadata.row = dmRow;
+                    dm->addMetadataForItem(metadata->imageMetadata);
+                }
+            }
+
+            // update image cache in case image has changed
+            if (imageCacheThread->imCache.contains(fPath)) imageCacheThread->imCache.remove(fPath);
+            if (dm->currentFilePath == fPath) {
+                if (imageView->loadImage(fPath)) {
+                    updateClassification();
+                }
+            }
+
+            // update thumbnail in case image has changed
+            QImage image;
+            bool thumbLoaded = thumb->loadThumb(fPath, image);
+            if (thumbLoaded) {
+                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+            }
+        }
+        infoView->updateInfo(currentRow);
+    }
+    else folderSelectionChange();
+}
+
+void MW::refreshCurrentAfterReload()
+{
+/*
+This slot is triggered after the metadataCache thread has run and isRefreshingDM = true to
+complete the refresh current folder process by selecting the previously selected thumb.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // get the proxy index for the previously selected image (with the focus)
+    QModelIndex sfIdx = dm->proxyIndexFromPath(refreshCurrentPath);
+    int sfRow = 0;
+    // if the previously selected image still exists then get the row
+    if (sfIdx.isValid()) sfRow = sfIdx.row();
+    thumbView->selectThumb(sfRow);
+    isRefreshingDM = false;
 }
 
 void MW::saveAsFile()
@@ -10136,6 +10161,13 @@ void MW::copy()
 {
     thumbView->copyThumbs();
 //    imageView->copyImage();
+}
+
+void MW::deleteFiles()
+{
+    if (thumbView->deleteThumbs()) {
+        refreshCurrentFolder();
+    }
 }
 
 void MW::openUsbFolder()
@@ -10434,17 +10466,50 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    metadata->parseHEIF();
+    if (dm->hasFolderChanged() && dm->modifiedFiles.count()) {
+        for (int i = 0; i < dm->modifiedFiles.count(); ++i) {
+            QString fPath = dm->modifiedFiles.at(i).filePath();
+            if (!dm->fPathRow.contains(fPath)) continue;
+            int dmRow = dm->fPathRow[fPath];
+            // update file size and modified date
+            dm->updateFileData(dm->modifiedFiles.at(i));
 
-    QModelIndex idx = dm->sf->index(currentRow, 0);
-    int rawRow = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole)).row();
-//    qDebug() << __FUNCTION__ << "rawRow =" << rawRow;
-//    QModelIndex rawIdx = dm->index(rawRow, 0);
-    QString fPath = dm->index(rawRow, 0).data(G::PathRole).toString();
-    QString rating = dm->index(rawRow,  G::RatingColumn).data().toString();
-    qDebug() << __FUNCTION__ << fPath << "Rating =" << rating;
+            // update metadata
+            QString ext = dm->modifiedFiles.at(i).suffix().toLower();
+            if (metadata->getMetadataFormats.contains(ext)) {
+                if (metadata->loadImageMetadata(dm->modifiedFiles.at(i), true, true, false, true, __FUNCTION__)) {
+                    metadata->imageMetadata.row = dmRow;
+                    dm->addMetadataForItem(metadata->imageMetadata);
+                }
+            }
 
-    ImageMetadata m;
-    m = dm->getMetadata(fPath);
-    qDebug() << " dm->getMetadata(fPath)" << fPath << "Rating =" << m.rating;
+            // update image cache in case image has changed
+            if (imageCacheThread->imCache.contains(fPath)) imageCacheThread->imCache.remove(fPath);
+            if (dm->currentFilePath == fPath) {
+                if (imageView->loadImage(fPath)) {
+                    updateClassification();
+                }
+            }
+
+            // update thumbnail in case image has changed
+            QImage image;
+            bool thumbLoaded = thumb->loadThumb(fPath, image);
+            if (thumbLoaded) {
+                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+//                metadataCacheThread->iconMax(pm);
+//                if (!metadataCacheThread->iconsCached.contains(dmRow))
+//                    metadataCacheThread->iconsCached.append(dmRow);
+            }
+
+            // set MetadataLoadedColumn to false so will be reloaded during fileSelectionChange
+//            QModelIndex idx = dm->index(dmRow, G::MetadataLoadedColumn);
+//            dm->setData(idx, "false", Qt::EditRole);
+//            qDebug() << __FUNCTION__ << fPath << row << s;
+
+//            fileSelectionChange(currentSfIdx, currentSfIdx);
+        }
+        infoView->updateInfo(currentRow);
+    }
 }
 // End MW

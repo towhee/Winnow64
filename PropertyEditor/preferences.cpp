@@ -23,6 +23,9 @@ void Preferences::expandBranch(QString text)
     Expand one preferences tree branch.  This is used to open the preferences for a specific
     item - for example, in the metadata panel context panel there is an option to show / hide
     items, which is controlled by the "Metadata panel items" in preferences.
+
+    Note: Even though treeIndex will find any index only root branches work. If the text for a
+    secondary or tertiary branch is sent then all branches expand.
     */
     collapseAll();
     expandRecursively(treeIndex(text));
@@ -34,7 +37,7 @@ QModelIndex Preferences::treeIndex(QString text, QModelIndex parent)
     Iterate through the preferences tree looking for the item text, and return the model
     index for the item.
     */
-    QModelIndex parentIdx, idx;
+    QModelIndex idx;
     for (int r = 0; r < model->rowCount(parent); ++r) {
         idx = model->index(r, 0, parent);
         if (model->data(idx).toString() == text) {
