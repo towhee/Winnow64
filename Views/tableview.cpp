@@ -146,10 +146,14 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::CameraModelColumn) return fm.boundingRect("Nikon D850============").width();
     if (column == G::LensColumn) return fm.boundingRect("Lens======================").width();
     if (column == G::FocalLengthColumn) return fm.boundingRect("=Focal length==").width();
-    if (column == G::TitleColumn) return fm.boundingRect("=Title======================================").width();
+    if (column == G::TitleColumn) return fm.boundingRect("=Title=========================").width();
     if (column == G::CopyrightColumn) return fm.boundingRect("=Copyright=====").width();
     if (column == G::EmailColumn) return fm.boundingRect("=Email================").width();
     if (column == G::UrlColumn) return fm.boundingRect("=Url=======================").width();
+    if (column == G::_TitleColumn) return fm.boundingRect("=Title=========================").width();
+    if (column == G::_CopyrightColumn) return fm.boundingRect("=Copyright=====").width();
+    if (column == G::_EmailColumn) return fm.boundingRect("=Email================").width();
+    if (column == G::_UrlColumn) return fm.boundingRect("=Url=======================").width();
     if (column == G::OffsetFullJPGColumn) return fm.boundingRect("=OffsetFullJPGColumn=").width();
     if (column == G::LengthFullJPGColumn) return fm.boundingRect("=LengthFullJPGColumn=").width();
     if (column == G::OffsetThumbJPGColumn) return fm.boundingRect("=OffsetThumbJPGColumn=").width();
@@ -215,7 +219,7 @@ void TableView::resizeColumns()
 
 void TableView::paintEvent(QPaintEvent *event)
 {
-    resizeColumns();
+//    resizeColumns();      // prevents user changing column widths
     int d = static_cast<int>(G::fontSize.toInt() * G::ptToPx * 1.5);
     setIconSize(QSize(d, d));
 //    setColumnWidth(0, ht + 10);

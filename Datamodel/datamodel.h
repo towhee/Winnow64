@@ -41,8 +41,9 @@ public:
               Filters *filters,
               bool &combineRawJpg);
 
-    bool load(QString &dir, bool includeSubfolders);
+    bool load(QString &dir, bool includeSubfoldersFlag);
     void clear();
+    bool hasFolderChanged();
     void find(QString text);
     ImageMetadata getMetadata(QString fPath);
     void updateImageList();
@@ -50,6 +51,7 @@ public:
 //    void sortThumbs(int sortColumn, bool isReverse);
     QModelIndex proxyIndexFromPath(QString fPath);
     QString diagnostics();
+    bool updateFileData(QFileInfo fileInfo);
 
     SortFilter *sf;
     QHash<QString, int> fPathRow;
@@ -60,6 +62,7 @@ public:
     int currentRow;                     // used in caching to check if new image selected
     bool hasDupRawJpg;
     bool filtersBuilt;
+    QList<QFileInfo> modifiedFiles;
 
     // can be set from keyPressEvent in MW to terminate if recursive folder scan too long
     bool timeToQuit;
@@ -90,6 +93,7 @@ private:
     QList<QStandardItem*> *thumbList;
     QFileInfo fileInfo;
     QImage emptyImg;
+    bool includeSubfolders = false;
 
     bool addFileData();
     void rawPlusJpg();

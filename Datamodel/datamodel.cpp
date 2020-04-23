@@ -274,7 +274,7 @@ void DataModel::find(QString text)
     }
 }
 
-bool DataModel::load(QString &folderPath, bool includeSubfolders)
+bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
 {
 /*
 When a new folder is selected load it into the data model.  This clears the
@@ -345,9 +345,13 @@ Steps:
         }
         if (timeToQuit) return false;
     }
-    if (!includeSubfolders) return addFileData();
+    if (!includeSubfoldersFlag) {
+        includeSubfolders = false;
+        return addFileData();
+    }
 
     // if include subfolders
+    includeSubfolders = true;
     QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
     while (it.hasNext()) {
         if (timeToQuit) return false;
@@ -456,6 +460,7 @@ bool DataModel::addFileData()
         int row = item->index().row();
 
         setData(index(row, G::NameColumn), fileInfo.fileName());
+        setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
         setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
         QString s = fileInfo.suffix().toUpper();
         setData(index(row, G::TypeColumn), s);
@@ -532,6 +537,23 @@ bool DataModel::addFileData()
 
     // resort if previous sort was not based of the path (default sort)
 
+    return true;
+}
+
+bool DataModel::updateFileData(QFileInfo fileInfo)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString fPath = fileInfo.filePath();
+    if (!fPathRow.contains(fPath)) return false;
+    int row = fPathRow[fPath];
+    setData(index(row, G::SizeColumn), fileInfo.size());
+    setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    QString s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
+    setData(index(row, G::ModifiedColumn), s);
     return true;
 }
 
@@ -720,30 +742,37 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::ISOColumn), m.ISONum);
     setData(index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::CameraMakeColumn), m.make);
+    setData(index(row, G::CameraMakeColumn), m.make, Qt::ToolTipRole);
     search += m.make;
     setData(index(row, G::CameraModelColumn), m.model);
+    setData(index(row, G::CameraModelColumn), m.model, Qt::ToolTipRole);
     search += m.model;
     setData(index(row, G::LensColumn), m.lens);
+    setData(index(row, G::LensColumn), m.lens, Qt::ToolTipRole);
     search += m.lens;
     setData(index(row, G::FocalLengthColumn), m.focalLengthNum);
     setData(index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-    if (index(row, G::TitleColumn).data().toString() != "") m.title = index(row, G::TitleColumn).data().toString();
+//    if (index(row, G::TitleColumn).data().toString() != "") m.title = index(row, G::TitleColumn).data().toString();
     setData(index(row, G::TitleColumn), m.title);
+    setData(index(row, G::TitleColumn), m.title, Qt::ToolTipRole);
     search += m.title;
     setData(index(row, G::_TitleColumn), m._title);
-    if (index(row, G::CreatorColumn).data().toString() != "") m.creator = index(row, G::CreatorColumn).data().toString();
+//    if (index(row, G::CreatorColumn).data().toString() != "") m.creator = index(row, G::CreatorColumn).data().toString();
     setData(index(row, G::CreatorColumn), m.creator);
+    setData(index(row, G::CreatorColumn), m.creator, Qt::ToolTipRole);
     search += m.creator;
     setData(index(row, G::_CreatorColumn), m._creator);
-    if (index(row, G::CopyrightColumn).data().toString() != "") m.copyright = index(row, G::CopyrightColumn).data().toString();
+//    if (index(row, G::CopyrightColumn).data().toString() != "") m.copyright = index(row, G::CopyrightColumn).data().toString();
     setData(index(row, G::CopyrightColumn), m.copyright);
+    setData(index(row, G::CopyrightColumn), m.copyright, Qt::ToolTipRole);
     search += m.copyright;
     setData(index(row, G::_CopyrightColumn), m._copyright);
-    if (index(row, G::EmailColumn).data().toString() != "") m.email = index(row, G::EmailColumn).data().toString();
+//    if (index(row, G::EmailColumn).data().toString() != "") m.email = index(row, G::EmailColumn).data().toString();
     setData(index(row, G::EmailColumn), m.email);
+    setData(index(row, G::EmailColumn), m.email, Qt::ToolTipRole);
     search += m.email;
     setData(index(row, G::_EmailColumn), m._email);
-    if (index(row, G::UrlColumn).data().toString() != "") m.url = index(row, G::UrlColumn).data().toString();
+//    if (index(row, G::UrlColumn).data().toString() != "") m.url = index(row, G::UrlColumn).data().toString();
     setData(index(row, G::UrlColumn), m.url);
     search += m.url;
     setData(index(row, G::_UrlColumn), m._url);
@@ -766,9 +795,11 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::ErrColumn), m.err);
     setData(index(row, G::ErrColumn), m.err, Qt::ToolTipRole);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
+    setData(index(row, G::ShootingInfoColumn), m.shootingInfo, Qt::ToolTipRole);
     search += m.shootingInfo;
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
     setData(index(row, G::SearchTextColumn), search.toLower());
+    setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
 
     if (G::buildingFilters) {
         if (row % 1000 == 0 || row == 0) {
@@ -787,6 +818,56 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     if (row == 0) emit updateClassification();
 
     return true;
+}
+
+bool DataModel::hasFolderChanged()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    bool hasChanged = false;
+    modifiedFiles.clear();
+    QList<QFileInfo> fileInfoList2;
+    dir->setPath(currentFolderPath);
+    for (int i = 0; i < dir->entryInfoList().size(); ++i) {
+        fileInfoList2.append(dir->entryInfoList().at(i));
+    }
+    if (includeSubfolders) {
+        QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            it.next();
+            if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
+                dir->setPath(it.filePath());
+                int folderImageCount = dir->entryInfoList().size();
+                // try next subfolder if no images in this folder
+                if (!folderImageCount) continue;
+                // add supported images in folder to image list
+                for (int i = 0; i < folderImageCount; ++i) {
+                    fileInfoList2.append(dir->entryInfoList().at(i));
+                }
+            }
+        }
+    }
+
+    int oldCount = fileInfoList.count();
+    int newCount = fileInfoList2.count();
+    if (newCount < oldCount) return true;
+
+    bool isFileModification = false;
+    for (int i = 0; i < fileInfoList.count(); ++i) {
+        QDateTime t = fileInfoList.at(i).lastModified();
+        QDateTime t2 = fileInfoList2.at(i).lastModified();
+        if (t != t2) {
+            hasChanged = true;
+            isFileModification = true;
+            modifiedFiles.append(fileInfoList2.at(i));
+            qDebug() << __FUNCTION__ << fileInfoList2.at(i).fileName()
+                     << "modified at" << t2;
+        }
+    }
+    return hasChanged;
 }
 
 void DataModel::buildFilters()

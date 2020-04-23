@@ -20,7 +20,7 @@ class MetadataCache : public QThread
 public:
     MetadataCache(QObject *parent, DataModel *dm,
                   Metadata *metadata, ImageCache *imageCacheThread);
-    ~MetadataCache();
+    ~MetadataCache() override;
 
     enum Action {
         NewFolder,
@@ -32,7 +32,7 @@ public:
     };
     QStringList actionList;
 
-    void loadNewFolder();
+    void loadNewFolder(bool isRefresh = false);
     void loadNewFolder2ndPass();
     void scrollChange();
     void sizeChange();
@@ -43,11 +43,13 @@ public:
     bool isAllMetadataLoaded();
     bool isAllIconLoaded();
     void setRange();
+    void iconMax(QPixmap &thumb);
 
     int metadataChunkSize = 250;
     int defaultMetadataChunkSize = 250;
     bool cacheAllMetadata = false;
     bool cacheAllIcons = false;
+    bool isRefreshFolder = false;
 
     // not being used at present
     int metadataCacheAllIfLessThan = 250;
@@ -76,6 +78,7 @@ signals:
     void updateIconBestFit();
     void loadMetadataCache2ndPass();
     void selectFirst();
+    void refreshCurrentAfterReload();
 //    void scrollToCurrent();
     void showCacheStatus(int, bool);            // row, clear progress bar
 
@@ -110,7 +113,6 @@ private:
     void readIconChunk();
     void readMetadataChunk();
     void iconCleanup();
-    void iconMax(QPixmap &thumb);
 
     QElapsedTimer t;
 };

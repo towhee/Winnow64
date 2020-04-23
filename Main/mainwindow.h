@@ -96,7 +96,7 @@ public:
     bool isShift;               // used when opening if shift key pressed
     bool ignoreSelectionChange = false;
 
-    int copyCutCount;   // req'd?
+    int copyCutCount;   // rgh req'd?
     QTextStream rpt;
 
     // QSettings
@@ -378,7 +378,6 @@ private slots:
     // status functions
     void updateStatus(bool keepBase = true, QString s = "");
     void clearStatus();
-    void refreshCurrentAfterReload();
     // caching status functions
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();
@@ -391,6 +390,7 @@ private slots:
     // caching
     void updateImageCachePositionAfterDelay();
     void loadMetadataCache2ndPass();
+    void refreshCurrentAfterReload();
     void updateIconsVisible(bool useCurrentRow);
     bool isCurrentThumbVisible();
     void numberIconsVisibleChange();
@@ -484,7 +484,7 @@ private slots:
     void reportState();
 
     void openFolder();
-    void refreshCurrent();
+    void refreshCurrentFolder();
     void openUsbFolder();
     void saveAsFile();
     void revealFile();
@@ -584,6 +584,7 @@ private:
     QAction *selectAllAction;
     QAction *invertSelectionAction;
     QAction *copyAction;
+    QAction *deleteAction;
     QAction *rejectAction;
     QAction *refineAction;
     QAction *pickAction;                // shortcut "`"
@@ -943,6 +944,7 @@ private:
     void wheelEvent(QWheelEvent *event);
     bool event(QEvent *event);
     void copy();
+    void deleteFiles();
     void showNewImageWarning(QWidget *parent);
     bool removeDirOp(QString dirToDelete);
     void addBookmark(QString path);

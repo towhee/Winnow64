@@ -299,6 +299,7 @@ bool Jpeg::parse(MetadataParameters &p,
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
         m.label = xmp.getItem("Label");       // case is important "Label"
         m.title = xmp.getItem("title");       // case is important "title"
+        qDebug() << __FUNCTION__ << "m.title" << m.title;
         m.cameraSN = xmp.getItem("SerialNumber");
         if (m.lens.isEmpty()) m.lens = xmp.getItem("Lens");
         m.lensSN = xmp.getItem("LensSerialNumber");
