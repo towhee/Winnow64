@@ -224,8 +224,15 @@ int IconViewDelegate::getCellHeightFromAvailHeight(int availHeight)
 
 void IconViewDelegate::setCurrentIndex(QModelIndex current)
 {
+    qDebug() << __FUNCTION__ << current << current.row();
     currentRow = current.row();     // this slot not being used
     qDebug() << "IconViewDelegate::onCurrentChanged" << currentRow;
+}
+
+void IconViewDelegate::setCurrentRow(int row)
+{
+    qDebug() << __FUNCTION__ << row ;
+    currentRow = row;
 }
 
 QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
@@ -343,6 +350,11 @@ textRect         = a rectangle below itemRect
     painter->setPen(border);
     painter->drawRoundedRect(frameRect, 8, 8);
 //    painter->drawRoundedRect(frameRect, 8, 8);
+
+//    qDebug() << __FUNCTION__
+//             << "row =" << row
+//             << "currentRow =" << currentRow
+//             << "selected item =" << option.state.testFlag(QStyle::State_Selected);
 
     // current index item
     if (row == currentRow) {

@@ -1137,7 +1137,7 @@ delegate use of the current index must check the column.
 
     // record current row as it is used to sync everything
     currentRow = current.row();
-    // also record in datamodel so can be accessed by MdCache
+    qDebug() << __FUNCTION__ << "currentRow =" << currentRow;    // also record in datamodel so can be accessed by MdCache
     // proxy index for col 0
     currentSfIdx = dm->sf->index(currentRow, 0);
     dm->currentRow = currentRow;
@@ -5002,32 +5002,58 @@ triggers a sort, which needs to be suppressed while syncing the menu actions wit
     G::track(__FUNCTION__);
     #endif
     }
+//    QString columnName = tableView->model()->headerData(column, Qt::Horizontal).toString();
+//    qDebug() << __FUNCTION__ << column << columnName << sortOrder << sortColumn;
     if (!G::allMetadataLoaded) loadEntireMetadataCache();
 
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
     switch (column) {
-    case 1: sortFileNameAction->setChecked(true); break;
-    case 2: sortPickAction->setChecked(true); break;
-    case 3: sortLabelAction->setChecked(true); break;
-    case 4: sortRatingAction->setChecked(true); break;
-    case 5: sortFileTypeAction->setChecked(true); break;
-    case 6: sortFileSizeAction->setChecked(true); break;
-    case 7: sortCreateAction->setChecked(true); break;
-    case 8: sortModifyAction->setChecked(true); break;
-    case 9: sortCreatorAction->setChecked(true); break;
-    case 10: sortMegaPixelsAction->setChecked(true); break;
-    case 11: sortDimensionsAction->setChecked(true); break;
-    case 12: sortApertureAction->setChecked(true); break;
-    case 13: sortShutterSpeedAction->setChecked(true); break;
-    case 14: sortISOAction->setChecked(true); break;
-    case 15: sortModelAction->setChecked(true); break;
-    case 16: sortLensAction->setChecked(true); break;
-    case 17: sortFocalLengthAction->setChecked(true); break;
-    case 18: sortTitleAction->setChecked(true); break;
+    case G::NameColumn: sortFileNameAction->setChecked(true); break;
+    case G::PickColumn: sortPickAction->setChecked(true); break;
+    case G::LabelColumn: sortLabelAction->setChecked(true); break;
+    case G::RatingColumn: sortRatingAction->setChecked(true); break;
+    case G::TypeColumn: sortFileTypeAction->setChecked(true); break;
+    case G::SizeColumn: sortFileSizeAction->setChecked(true); break;
+    case G::CreatedColumn: sortCreateAction->setChecked(true); break;
+    case G::ModifiedColumn: sortModifyAction->setChecked(true); break;
+    case G::CreatorColumn: sortCreatorAction->setChecked(true); break;
+    case G::MegaPixelsColumn: sortMegaPixelsAction->setChecked(true); break;
+    case G::DimensionsColumn: sortDimensionsAction->setChecked(true); break;
+    case G::ApertureColumn: sortApertureAction->setChecked(true); break;
+    case G::ShutterspeedColumn: sortShutterSpeedAction->setChecked(true); break;
+    case G::ISOColumn: sortISOAction->setChecked(true); break;
+    case G::CameraModelColumn: sortModelAction->setChecked(true); break;
+    case G::LensColumn: sortLensAction->setChecked(true); break;
+    case G::FocalLengthColumn: sortFocalLengthAction->setChecked(true); break;
+    case G::TitleColumn: sortTitleAction->setChecked(true); break;
+    default:
+        // table column clicked and sorted that is not a menu sort item - uncheck all menu items
+        if (sortFileNameAction->isChecked()) sortFileNameAction->setChecked(false);
+        if (sortFileTypeAction->isChecked()) sortFileTypeAction->setChecked(false);
+        if (sortFileSizeAction->isChecked()) sortFileSizeAction->setChecked(false);
+        if (sortCreateAction->isChecked()) sortCreateAction->setChecked(false);
+        if (sortModifyAction->isChecked()) sortModifyAction->setChecked(false);
+        if (sortPickAction->isChecked()) sortPickAction->setChecked(false);
+        if (sortLabelAction->isChecked()) sortLabelAction->setChecked(false);
+        if (sortRatingAction->isChecked()) sortRatingAction->setChecked(false);
+        if (sortMegaPixelsAction->isChecked()) sortMegaPixelsAction->setChecked(false);
+        if (sortDimensionsAction->isChecked()) sortDimensionsAction->setChecked(false);
+        if (sortApertureAction->isChecked()) sortApertureAction->setChecked(false);
+        if (sortShutterSpeedAction->isChecked()) sortShutterSpeedAction->setChecked(false);
+        if (sortISOAction->isChecked()) sortISOAction->setChecked(false);
+        if (sortModelAction->isChecked()) sortModelAction->setChecked(false);
+        if (sortFocalLengthAction->isChecked()) sortFocalLengthAction->setChecked(false);
+        if (sortTitleAction->isChecked()) sortTitleAction->setChecked(false);
     }
     if(sortOrder == Qt::DescendingOrder) sortReverseAction->setChecked(true);
     else sortReverseAction->setChecked(false);
     sortMenuUpdateToMatchTable = false;
+
+    // get the current selected item
+    currentRow = dm->sf->mapFromSource(currentDmIdx).row();
+    thumbView->iconViewDelegate->currentRow = currentRow;
+    gridView->iconViewDelegate->currentRow = currentRow;
+
     resortImageCache();
 }
 
@@ -5361,6 +5387,7 @@ void MW::sortChange()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if (sortMenuUpdateToMatchTable/* || !G::isNewFolderLoaded*/) return;
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;
@@ -5402,6 +5429,11 @@ void MW::sortChange()
     // sync image cache with datamodel filtered proxy
 //    resortImageCache();
     imageCacheThread->rebuildImageCacheParameters(fPath);
+
+    /* if the previous selected image is also part of the filtered datamodel then the
+    selected index does not change and fileSelectionChange will not be signalled.
+    Therefore we call it here to force the update to caching and icons */
+    fileSelectionChange(idx, idx);
 
     scrollToCurrentRow();
 }
@@ -10091,7 +10123,6 @@ folder images have changed.
             if (!dm->fPathRow.contains(fPath)) continue;
             int dmRow = dm->fPathRow[fPath];
             int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
-            qDebug() << __FUNCTION__ << "dmRow =" << dmRow << "sfRow =" << sfRow;
             // update file size and modified date
             dm->updateFileData(dm->modifiedFiles.at(i));
 
@@ -10121,6 +10152,8 @@ folder images have changed.
             }
         }
         infoView->updateInfo(currentRow);
+//        metadataCacheThread->loadNewFolder(true);
+        refreshCurrentAfterReload();
     }
     else folderSelectionChange();
 }
@@ -10136,11 +10169,15 @@ complete the refresh current folder process by selecting the previously selected
     G::track(__FUNCTION__);
     #endif
     }
-    // get the proxy index for the previously selected image (with the focus)
-    QModelIndex sfIdx = dm->proxyIndexFromPath(refreshCurrentPath);
-    int sfRow = 0;
-    // if the previously selected image still exists then get the row
-    if (sfIdx.isValid()) sfRow = sfIdx.row();
+    int dmRow = 0;
+    if (dm->fPathRow.contains(refreshCurrentPath))
+        dmRow = dm->fPathRow[refreshCurrentPath];
+    int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
+    qDebug() << __FUNCTION__ << refreshCurrentPath
+             << "dmRow =" << dmRow
+             << "sfRow =" << sfRow;
+    thumbView->iconViewDelegate->currentRow = sfRow;
+    gridView->iconViewDelegate->currentRow = sfRow;
     thumbView->selectThumb(sfRow);
     isRefreshingDM = false;
 }

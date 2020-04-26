@@ -895,6 +895,7 @@ void IconView::selectThumb(QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << idx;
     if (idx.isValid()) {
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);

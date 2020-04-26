@@ -37,6 +37,8 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Current row not being updated properly when sort via table header click
+- iconView delegate currentIndex not updating after fresh folder
 - Add tooltips for tableview contents
 - Cannot resize column widths manually
 - Refresh current folder loses focus on current image
