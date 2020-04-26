@@ -51,6 +51,7 @@ signals:
 
 public slots:
     void setCurrentIndex(QModelIndex current);
+    void setCurrentRow(int row);
 
 private:
     QObject parent;
