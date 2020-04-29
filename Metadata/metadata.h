@@ -12,6 +12,7 @@
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
 #include "Metadata/iptc.h"
+#include "Metadata/gps.h"
 #include "Metadata/metareport.h"
 #include "Utilities/utilities.h"
 #include "Cache/tshash.h"
@@ -25,7 +26,6 @@
 #include "ImageFormats/Canon/canon.h"
 #include "ImageFormats/Dng/dng.h"
 #include "ImageFormats/Fuji/fuji.h"
-
 #include "ImageFormats/Nikon/nikon.h"
 #include "ImageFormats/Olympus/olympus.h"
 #include "ImageFormats/Panasonic/panasonic.h"
@@ -163,6 +163,7 @@ public:
 private:
     // Exif
     Exif *exif = nullptr;
+    GPS *gps = nullptr;
     IFD *ifd = nullptr;
     IPTC *iptc = nullptr;
 

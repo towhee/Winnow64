@@ -1135,9 +1135,9 @@ delegate use of the current index must check the column.
     QModelIndexList selected = selectionModel->selectedIndexes();
     if (selected.isEmpty() && !G::isInitializing) return;
 
-    // record current row as it is used to sync everything
+    // record current proxy row (dm->sf) as it is used to sync everything
     currentRow = current.row();
-    qDebug() << __FUNCTION__ << "currentRow =" << currentRow;    // also record in datamodel so can be accessed by MdCache
+    // also record in datamodel so can be accessed by MdCache
     // proxy index for col 0
     currentSfIdx = dm->sf->index(currentRow, 0);
     dm->currentRow = currentRow;
@@ -4585,7 +4585,7 @@ void MW::createStatusBar()
 
     // set up pixmap that shows progress in the cache
     if (isSettings && setting->contains("cacheStatusWidth")) progressWidth = setting->value("cacheStatusWidth").toInt();
-    progressPixmap = new QPixmap(1000, 25);
+    progressPixmap = new QPixmap(4000, 25);
     progressPixmap->scaled(progressWidth, 25);
     progressPixmap->fill(widgetCSS.widgetBackgroundColor);
     progressLabel->setPixmap(*progressPixmap);
@@ -5387,7 +5387,6 @@ void MW::sortChange()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     if (sortMenuUpdateToMatchTable/* || !G::isNewFolderLoaded*/) return;
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;

@@ -124,7 +124,7 @@ from the file.
 Previews are used to maximise performance paging through all the images.
 However, to examine an image in detail, the full scale image is much better. As
 soon as the preview has been loaded a timer is started. If the user moves on to
-the next image before a timer interval has happened then the timer is reset.
+the next image before a timer interval has elapsed then the timer is reset.
 Otherwise, when the timer interval occurs (loadFullSizeTimer->setInterval(500))
 then the full scale pixmap from the cache is set as the item pixmap in the
 scene.
@@ -201,7 +201,12 @@ to prevent jarring changes in perceived scale by the user.
         }
     }
 
-    if (isLoaded) {
+    /* When the program is opening or resizing it is possible this function could be called
+    before the central widget has been fully defined, and has a small default size.  If that
+    is the case, ignore, as the function will be called again.
+    Also ignore if the image failed to be loaded into the graphics scene.
+    */
+    if (isLoaded && centralWidget->rect().height() > 50) {
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
@@ -211,14 +216,37 @@ to prevent jarring changes in perceived scale by the user.
                                                     currentImagePath, idx);
 
         zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
-        if (isFirstImageNewFolder) isFit = true;
+
+        /*
+        qDebug() << __FUNCTION__
+                 << "centralWidget->rect() =" << centralWidget->rect()
+                 << "pmItem->boundingRect() =" << pmItem->boundingRect()
+                 << "G::actualDevicePixelRatio =" << G::actualDevicePixelRatio
+                 << "zoomFit =" << zoomFit
+                 << "toggleZoom =" << toggleZoom
+                 << "G::isInitializing =" << G::isInitializing
+                 << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+                 << "isFirstImageNewFolder =" << isFirstImageNewFolder;
+//        */
+
+        /* If this is the first image in a new folder, and the image is smaller than the
+        canvas (central widget window) set the scale to fit window, do not scale the
+        image beyond 100% to fit the window.  */
+        if (!G::isNewFolderLoaded) {
+            isFit = true;
+            zoom = zoomFit;
+            // do not zoom beyond 100% to fit image in window
+            if (zoom > 1) zoom = 1;
+        }
+        else {
             // check if last image was a zoomFit - if so zoomFit this one too
             // otherwise keep zoom same as previous
             if (isFit) {
                 zoom = zoomFit;
             }
-            scale();
-            isFirstImageNewFolder = false;
+        }
+        scale();
+        isFirstImageNewFolder = false;
     }
     return isLoaded;
 }
@@ -291,14 +319,15 @@ If isSlideshow then hide mouse cursor unless is moves.
     #endif
     }
 /*
-    qDebug() << G::t.restart() << "\t" << "isPreview =" << isPreview
+    qDebug() << __FUNCTION__
+             << "isPreview =" << isPreview
              << "isZoom =" << isZoom
              << "isFit =" << isFit
              << "zoom =" << zoom
              << "zoomFit =" << zoomFit
              << "rect().width() =" << rect().width()
              << "sceneRect().width() =" << sceneRect().width();
-             */
+    //  */
 
     matrix.reset();
     if (G::isSlideShow) {
@@ -495,18 +524,22 @@ void ImageView::resizeEvent(QResizeEvent *event)
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
-             << "isFirstImageNewFolder =" << isFirstImageNewFolder;*/
+             << "isFirstImageNewFolder =" << isFirstImageNewFolder;
+    //    */
     if (G::isInitializing) return;
     QGraphicsView::resizeEvent(event);
     zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
     static QRect prevRect;
     static bool wasSceneClipped;
 
-    if (isFirstImageNewFolder) {
+    if (!G::isNewFolderLoaded) {
         zoom = zoomFit;
+        // do not zoom beyond 100% to fit image in window when open new folder
+        if (zoom > 1) zoom = 1;
         scale();
         wasZoomFit = true;
         wasSceneClipped = false;
+        isFirstImageNewFolder = false;
     }
     else {
         bool viewPortIsExpanding = false;

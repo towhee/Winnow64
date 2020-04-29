@@ -575,8 +575,9 @@ bool Metadata::parseJPG(quint32 startOffset)
     if (jpeg == nullptr) jpeg = new Jpeg;
     if (ifd == nullptr) ifd = new IFD;
     if (exif == nullptr) exif = new Exif;
+    if (gps == nullptr) gps = new GPS;
     p.offset = startOffset;
-    jpeg->parse(p, imageMetadata, ifd, iptc, exif);
+    jpeg->parse(p, imageMetadata, ifd, iptc, exif, gps);
     if (p.report) reportMetadata();
     return true;
 }
