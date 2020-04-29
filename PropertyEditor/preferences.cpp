@@ -768,7 +768,7 @@ void Preferences::addItems()
         progressWidthSliderValue->setData("progressWidthSlider", UR_Source);
         progressWidthSliderValue->setData("int", UR_Type);
         progressWidthSliderValue->setData(100, UR_Min);
-        progressWidthSliderValue->setData(800, UR_Max);
+        progressWidthSliderValue->setData(3000, UR_Max);
         progressWidthSliderValue->setData(50, UR_LabelFixedWidth);
         cacheCatItem->setChild(secondGenerationCount, 0, progressWidthSliderCaption);
         cacheCatItem->setChild(secondGenerationCount, 1, progressWidthSliderValue);

@@ -1,5 +1,5 @@
 BUGS
-- In folders/bookmarks right click on folder reopens the folder
+- Folders / Bookmarks current folder not always highlighted
 - Standardize QMessageBox usage, integrated with global styles
 - Navigating thumbs in large folders while still opening can crash
 - Not ingesting all jpgs with raws
@@ -16,13 +16,10 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Ingest date when different dates in ingest file list
-- Add delete / move / copy
 - Add exposure compensation to metadata
 - Reset to defaults
 - Search
-- Refresh selected images
-- Copy image
+- Copy image/pixmap to clipboard
 - TableView freeze columns https://doc.qt.io/qt-5/qtwidgets-itemviews-frozencolumn-example.html
 - Read keywords
 - Remove Windows Registry settings during uninstall
@@ -37,6 +34,10 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- When go to loupe view not default to fill magnification
+- Not getting all metadata from iphone jpg files
+- Add delete files
+- In folders/bookmarks right click on folder reopens the folder
 - Current row not being updated properly when sort via table header click
 - iconView delegate currentIndex not updating after fresh folder
 - Add tooltips for tableview contents

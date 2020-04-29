@@ -15,6 +15,7 @@ QT += concurrent
 QT += xmlpatterns
 
 HEADERS += Cache/imagecache.h \
+   Metadata/gps.h \
    Utilities/bit.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
@@ -82,6 +83,7 @@ HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
 SOURCES += Cache/imagecache.cpp \
+   Metadata/gps.cpp \
    Utilities/bit.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp

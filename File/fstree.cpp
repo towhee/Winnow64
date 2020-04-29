@@ -382,7 +382,8 @@ void FSTree::paintEvent(QPaintEvent *event)
 
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
-//    qDebug() << "FSTree::mousePressEvent";
+    // ignore right mouse clicks (context menu)
+    if (event->button() == Qt::RightButton) return;
     QTreeView::mousePressEvent(event);
 }
 

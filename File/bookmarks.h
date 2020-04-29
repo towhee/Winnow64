@@ -36,7 +36,7 @@ private:
 private slots:
 
 protected:
-//    void mousePressEvent(QMouseEvent *event);       // debugging
+    void mousePressEvent(QMouseEvent *event);
 //    void mouseReleaseEvent(QMouseEvent *event);     // debugging
     void resizeEvent(QResizeEvent *event);
     void paintEvent(QPaintEvent *event);

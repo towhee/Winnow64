@@ -10,6 +10,7 @@
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
 #include "Metadata/iptc.h"
+#include "Metadata/gps.h"
 #include "Metadata/xmp.h"
 #include "Metadata/metareport.h"
 
@@ -26,7 +27,8 @@ public:
                ImageMetadata &m,
                IFD *ifd,
                IPTC *iptc,
-               Exif *exif);
+               Exif *exif,
+               GPS *gps);
     
     void initSegCodeHash();
     void getJpgSegments(MetadataParameters &p, ImageMetadata &m);

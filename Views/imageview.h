@@ -196,7 +196,7 @@ private:
     qreal zoomInc = 0.1;    // 10% delta
     qreal zoomMin = 0.05;   // 5% of original  rgh add to pref
     qreal zoomMax = 8.0;    // 800% of original
-
+//    qreal zoom100Pct;
 };
 
 #endif // IMAGEVIEW_H
