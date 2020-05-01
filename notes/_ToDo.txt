@@ -1,5 +1,4 @@
 BUGS
-- Folders / Bookmarks current folder not always highlighted
 - Standardize QMessageBox usage, integrated with global styles
 - Navigating thumbs in large folders while still opening can crash
 - Not ingesting all jpgs with raws
@@ -34,6 +33,8 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Limit fit 100% option added
+- Progress bar not resizing to smaller space
 - When go to loupe view not default to fill magnification
 - Not getting all metadata from iphone jpg files
 - Add delete files

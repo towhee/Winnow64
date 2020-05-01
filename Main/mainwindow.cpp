@@ -433,7 +433,13 @@ dimensions and a different icc profile (win only).
 void MW::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
+    // re-position zoom dialog
     emit resizeMW(this->geometry(), centralWidget->geometry());
+    // prevent progressBar overlapping in statusBar
+    int availSpace = availableSpaceForProgressBar();
+    if (availSpace < progressWidthBeforeResizeWindow && availSpace > progressWidth)
+        progressWidth = availSpace;
+    updateProgressBarWidth();
 }
 
 void MW::keyPressEvent(QKeyEvent *event)
@@ -3756,20 +3762,20 @@ void MW::enableSelectionDependentMenus()
         nextPickAction->setEnabled(false);
         prevPickAction->setEnabled(false);
         clearAllFiltersAction->setEnabled(false);
-        filterPickAction->setEnabled(false);
-        filterRating1Action->setEnabled(false);
-        filterRating2Action->setEnabled(false);
-        filterRating3Action->setEnabled(false);
-        filterRating4Action->setEnabled(false);
-        filterRating5Action->setEnabled(false);
-        filterRedAction->setEnabled(false);
-        filterYellowAction->setEnabled(false);
-        filterGreenAction->setEnabled(false);
-        filterBlueAction->setEnabled(false);
-        filterPurpleAction->setEnabled(false);
-        filterInvertAction->setEnabled(false);
-        sortGroupAction->setEnabled(false);
-        sortReverseAction->setEnabled(false);
+//        filterPickAction->setEnabled(false);
+//        filterRating1Action->setEnabled(false);
+//        filterRating2Action->setEnabled(false);
+//        filterRating3Action->setEnabled(false);
+//        filterRating4Action->setEnabled(false);
+//        filterRating5Action->setEnabled(false);
+//        filterRedAction->setEnabled(false);
+//        filterYellowAction->setEnabled(false);
+//        filterGreenAction->setEnabled(false);
+//        filterBlueAction->setEnabled(false);
+//        filterPurpleAction->setEnabled(false);
+//        filterInvertAction->setEnabled(false);
+//        sortGroupAction->setEnabled(false);
+//        sortReverseAction->setEnabled(false);
         zoomToAction->setEnabled(false);
         zoomInAction->setEnabled(false);
         zoomOutAction->setEnabled(false);
@@ -4166,6 +4172,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
                               setting->value("classificationBadgeInImageDiameter").toInt());
 
     if (isSettings) {
+        if (setting->contains("limitFit100Pct")) imageView->limitFit100Pct = setting->value("limitFit100Pct").toBool();
         if (setting->contains("useWheelToScroll")) imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
         if (setting->contains("infoOverlayFontSize")) imageView->infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
         if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
@@ -4176,6 +4183,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
         imageView->toggleZoom = tempZoom;
     }
     else {
+        imageView->limitFit100Pct = true;
         imageView->useWheelToScroll = false;
         imageView->toggleZoom = 1;
         imageView->infoOverlayFontSize = infoOverlayFontSize;   // defined in loadSettings
@@ -4604,9 +4612,9 @@ void MW::createStatusBar()
 
     // end progressbar
 
-    QLabel *spacer = new QLabel;
-    spacer->setText(" ");
-    statusBar()->addPermanentWidget(spacer);
+    statusBarSpacer = new QLabel;
+    statusBarSpacer->setText(" ");
+    statusBar()->addPermanentWidget(statusBarSpacer);
 
     // label to show metadataThreadRunning status
     int runLabelWidth = 13;
@@ -4702,8 +4710,62 @@ void MW::updateStatusBar()
 
     statusBar()->addWidget(statusLabel);
     statusLabel->show();
+
+//    qDebug() << __FUNCTION__
+//             << "statusBar" << statusBar()->width()
+//             << "layout spacing" << statusBar()->layout()->spacing()
+//             << "sortZAStatusLabel " << sortZAStatusLabel->width()
+//             << "rawJpgStatusLabel " << rawJpgStatusLabel->width()
+//             << "statusLabel " << statusLabel->width()
+//             << "progressLabel " << progressLabel->width()
+//             << "metadataThreadRunningLabel " << metadataThreadRunningLabel->width()
+//             << "imageThreadRunningLabel " << imageThreadRunningLabel->width()
+//             << "statusBarSpacer " << statusBarSpacer->width()
+//             ;
+//    for (int i = 0; i < statusBar()->children().count(); ++i) {
+//    foreach (auto obj, statusBar()->children()) {
+//        qDebug() << __FUNCTION__
+//                 << obj->objectName();
+//    }
+
     if (updateImageCacheWhenFileSelectionChange) progressLabel->setVisible(true);
     else progressLabel->setVisible(false);
+}
+
+int MW::availableSpaceForProgressBar()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int w = 0;
+    int s = statusBar()->layout()->spacing();
+    if (sortAZStatusLabel->isVisible()) w += s + sortAZStatusLabel->width();
+    if (sortZAStatusLabel->isVisible()) w += s + sortZAStatusLabel->width();
+    if (rawJpgStatusLabel->isVisible()) w += s + rawJpgStatusLabel->width();
+    if (filterStatusLabel->isVisible()) w += s + filterStatusLabel->width();
+    if (subfolderStatusLabel->isVisible()) w += s + subfolderStatusLabel->width();
+    if (slideShowStatusLabel->isVisible()) w += s + slideShowStatusLabel->width();
+    if (statusLabel->isVisible()) w += s + statusLabel->width();
+    if (metadataThreadRunningLabel->isVisible()) w += s + metadataThreadRunningLabel->width();
+    if (imageThreadRunningLabel->isVisible()) w += s + imageThreadRunningLabel->width();
+    if (statusBarSpacer->isVisible()) w += s + statusBarSpacer->width();
+    w += s;
+    return statusBar()->width() - w - 30;
+}
+
+void MW::updateProgressBarWidth()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int availableSpace = availableSpaceForProgressBar();
+    if (availableSpace < progressWidth) progressWidth = availableSpace;
+    progressLabel->setFixedWidth(progressWidth);
+    progressPixmap->scaled(progressWidth, 25);
 }
 
 void MW::setCacheParameters()
@@ -4721,16 +4783,12 @@ parameters.  Any visibility changes are executed.
     imageCacheThread->updateImageCacheParam(cacheSizeMB, isShowCacheStatus, cacheWtAhead,
              isCachePreview, displayHorizontalPixels, displayVerticalPixels);
 
-    progressLabel->setFixedWidth(progressWidth);
-    progressPixmap->scaled(progressWidth, 25);
-
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     if (fPath.length())
         imageCacheThread->updateImageCachePosition(/*fPath*/);
 
     // update visibility if preferences have been changed
     progressLabel->setVisible(isShowCacheThreadActivity);
-//    progressLabel->setVisible(isShowCacheStatus);
 
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
@@ -4828,8 +4886,8 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
     bool thumbUnavailable = dm->index(row, G::LengthThumbJPGColumn).data() == 0;
     if (imageUnavailable || thumbUnavailable) {
         // rgh may want to set the error here as well as report
-        QString err = dm->index(row, G::ErrColumn).data().toString();
-        statusLabel->setText(err);
+//        QString err = dm->index(row, G::ErrColumn).data().toString();
+//        statusLabel->setText(err);
         return;
     }
 
@@ -4858,7 +4916,14 @@ QString fileSym = "📷";
         QString s = QString::number(thumbView->getSelectedCount());
         base += spacer +"Selected: " + s;
         base += spacer + "Picked: " + getPicked();
-        base += spacer;
+
+//        base += spacer;
+//        imageView->isFit ? s = "true" : s = "false";
+//        base += "isFit: " + s;
+
+//        QString err = dm->index(row, G::ErrColumn).data().toString();
+//        base += spacer;
+//        base += err;
     }
 
     status = " " + base + s;
@@ -7126,6 +7191,7 @@ re-established when the application is re-opened.
     setting->setValue("lastPrefPage", lastPrefPage);
 //    setting->setValue("mouseClickScroll", mouseClickScroll);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
+    setting->setValue("limitFit100Pct", imageView->limitFit100Pct);
     setting->setValue("sortColumn", sortColumn);
     setting->setValue("sortReverse", sortReverseAction->isChecked());
 
@@ -7490,6 +7556,7 @@ Preferences are located in the prefdlg class and updated here.
         isShowCacheStatus = true;
         isShowCacheThreadActivity = true;
         progressWidth = 200;
+        progressWidthBeforeResizeWindow = progressWidth;
         cacheWtAhead = 7;
         isCachePreview = false;
         cachePreviewWidth = 2000;
@@ -7566,6 +7633,7 @@ Preferences are located in the prefdlg class and updated here.
     if (setting->contains("isShowCacheStatus")) isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
     if (setting->contains("isShowCacheThreadActivity")) isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
     if (setting->contains("cacheStatusWidth")) progressWidth = setting->value("cacheStatusWidth").toInt();
+    progressWidthBeforeResizeWindow = progressWidth;
     if (setting->contains("cacheWtAhead")) cacheWtAhead = setting->value("cacheWtAhead").toInt();
     if (setting->contains("isCachePreview")) isCachePreview = setting->value("isCachePreview").toBool();
     if (setting->contains("cachePreviewWidth")) cachePreviewWidth = setting->value("cachePreviewWidth").toInt();
@@ -10502,50 +10570,56 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    metadata->parseHEIF();
-    if (dm->hasFolderChanged() && dm->modifiedFiles.count()) {
-        for (int i = 0; i < dm->modifiedFiles.count(); ++i) {
-            QString fPath = dm->modifiedFiles.at(i).filePath();
-            if (!dm->fPathRow.contains(fPath)) continue;
-            int dmRow = dm->fPathRow[fPath];
-            // update file size and modified date
-            dm->updateFileData(dm->modifiedFiles.at(i));
 
-            // update metadata
-            QString ext = dm->modifiedFiles.at(i).suffix().toLower();
-            if (metadata->getMetadataFormats.contains(ext)) {
-                if (metadata->loadImageMetadata(dm->modifiedFiles.at(i), true, true, false, true, __FUNCTION__)) {
-                    metadata->imageMetadata.row = dmRow;
-                    dm->addMetadataForItem(metadata->imageMetadata);
-                }
-            }
+    imageView->limitFit100Pct = !imageView->limitFit100Pct;
+    qDebug() << __FUNCTION__ << imageView->limitFit100Pct;
+    imageView->refresh();
+    return;
 
-            // update image cache in case image has changed
-            if (imageCacheThread->imCache.contains(fPath)) imageCacheThread->imCache.remove(fPath);
-            if (dm->currentFilePath == fPath) {
-                if (imageView->loadImage(fPath)) {
-                    updateClassification();
-                }
-            }
+    int w = 0;
+    int s = statusBar()->layout()->spacing();
+    if (sortAZStatusLabel->isVisible()) w += s + sortAZStatusLabel->width();
+    if (sortZAStatusLabel->isVisible()) w += s + sortZAStatusLabel->width();
+    if (rawJpgStatusLabel->isVisible()) w += s + rawJpgStatusLabel->width();
+    if (filterStatusLabel->isVisible()) w += s + filterStatusLabel->width();
+    if (subfolderStatusLabel->isVisible()) w += s + subfolderStatusLabel->width();
+    if (slideShowStatusLabel->isVisible()) w += s + slideShowStatusLabel->width();
+    if (statusLabel->isVisible()) w += s + statusLabel->width();
+    if (progressLabel->isVisible()) w += s + progressLabel->width();
+    if (metadataThreadRunningLabel->isVisible()) w += s + metadataThreadRunningLabel->width();
+    if (imageThreadRunningLabel->isVisible()) w += s + imageThreadRunningLabel->width();
+    if (statusBarSpacer->isVisible()) w += s + statusBarSpacer->width();
+    w += s;
+    int availableSpace = statusBar()->width() - w;
 
-            // update thumbnail in case image has changed
-            QImage image;
-            bool thumbLoaded = thumb->loadThumb(fPath, image);
-            if (thumbLoaded) {
-                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
-//                metadataCacheThread->iconMax(pm);
-//                if (!metadataCacheThread->iconsCached.contains(dmRow))
-//                    metadataCacheThread->iconsCached.append(dmRow);
-            }
+    qDebug() << __FUNCTION__ << "Before: "
+             << "statusBar" << statusBar()->width()
+             << "layout spacing" << statusBar()->layout()->spacing()
+             << "sortZAStatusLabel " << sortZAStatusLabel->width()
+             << "rawJpgStatusLabel " << rawJpgStatusLabel->width()
+             << "statusLabel " << statusLabel->width()
+             << "progressLabel " << progressLabel->width()
+             << "metadataThreadRunningLabel " << metadataThreadRunningLabel->width()
+             << "imageThreadRunningLabel " << imageThreadRunningLabel->width()
+             << "statusBarSpacer " << statusBarSpacer->width()
+             << "availableSpace " << availableSpace
+             ;
 
-            // set MetadataLoadedColumn to false so will be reloaded during fileSelectionChange
-//            QModelIndex idx = dm->index(dmRow, G::MetadataLoadedColumn);
-//            dm->setData(idx, "false", Qt::EditRole);
-//            qDebug() << __FUNCTION__ << fPath << row << s;
+//    progressWidth = progressLabel->width() + availableSpace;
+//    setCacheParameters();
 
-//            fileSelectionChange(currentSfIdx, currentSfIdx);
-        }
-        infoView->updateInfo(currentRow);
-    }
+//    qDebug() << __FUNCTION__ << "After:  "
+//             << "statusBar" << statusBar()->width()
+//             << "layout spacing" << statusBar()->layout()->spacing()
+//             << "sortZAStatusLabel " << sortZAStatusLabel->width()
+//             << "rawJpgStatusLabel " << rawJpgStatusLabel->width()
+//             << "statusLabel " << statusLabel->width()
+//             << "progressLabel " << progressLabel->width()
+//             << "metadataThreadRunningLabel " << metadataThreadRunningLabel->width()
+//             << "imageThreadRunningLabel " << imageThreadRunningLabel->width()
+//             << "statusBarSpacer " << statusBarSpacer->width()
+//             << "availableSpace " << availableSpace
+//             ;
+
 }
 // End MW

@@ -228,6 +228,7 @@ public:
     int cacheDelay = 100;
     bool isShowCacheThreadActivity;
     int progressWidth;
+    int progressWidthBeforeResizeWindow;
     int cacheWtAhead;
     bool isCachePreview;
     int cachePreviewWidth;
@@ -791,6 +792,7 @@ private:
     QLabel *progressLabel;
     QPixmap *progressPixmap;
     QLabel *centralLabel;
+    QLabel *statusBarSpacer;
     QLabel *metadataThreadRunningLabel;
     QLabel *thumbThreadRunningLabel;
     QLabel *imageThreadRunningLabel;
@@ -926,6 +928,8 @@ private:
     void createGridView();
     void createSelectionModel();
     void createStatusBar();
+    int availableSpaceForProgressBar();
+    void updateProgressBarWidth();
     void updateStatusBar();
     void createMessageView();
     void createAppStyle();

@@ -54,6 +54,7 @@ public:
     ClassificationLabel *classificationLabel;
     QPixmap *pickPixmap;
     bool isFirstImageNewFolder;              // new folder, first image, set zoom = fit
+    bool limitFit100Pct = true;
 
     QString diagnostics();
 
@@ -67,7 +68,9 @@ public slots:
     void zoomToFit();
     void zoomTo(qreal zoomTo);
     void zoomToggle();
+    void setFitZoom();
     void hideCursor();
+    void refresh();
     void setClassificationBadgeImageDiam(int d);
 
 signals:
@@ -179,10 +182,9 @@ private:
 
     bool cursorIsHidden;        // use for slideshow and full screen - review rgh
     bool moveImageLocked;       // control when con drag image around
-    bool ignoreMousePress;
-    bool isZoom;
+    bool isZoomToggled;
+    bool isScrollable;
     bool isFit;
-    bool wasZoomFit;
     bool isMouseDrag;
     bool isTrackpadScroll;
     bool isLeftMouseBtnPressed;
