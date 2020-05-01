@@ -215,38 +215,18 @@ to prevent jarring changes in perceived scale by the user.
         shootingInfo = infoString->parseTokenString(infoString->infoTemplates[current],
                                                     currentImagePath, idx);
 
-        zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
-
-        /*
-        qDebug() << __FUNCTION__
-                 << "centralWidget->rect() =" << centralWidget->rect()
-                 << "pmItem->boundingRect() =" << pmItem->boundingRect()
-                 << "G::actualDevicePixelRatio =" << G::actualDevicePixelRatio
-                 << "zoomFit =" << zoomFit
-                 << "toggleZoom =" << toggleZoom
-                 << "G::isInitializing =" << G::isInitializing
-                 << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
-                 << "isFirstImageNewFolder =" << isFirstImageNewFolder;
-//        */
-
         /* If this is the first image in a new folder, and the image is smaller than the
         canvas (central widget window) set the scale to fit window, do not scale the
         image beyond 100% to fit the window.  */
-        if (!G::isNewFolderLoaded) {
+        zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
+        if (isFirstImageNewFolder) {
             isFit = true;
-            zoom = zoomFit;
-            // do not zoom beyond 100% to fit image in window
-            if (zoom > 1) zoom = 1;
+            isFirstImageNewFolder = false;
         }
-        else {
-            // check if last image was a zoomFit - if so zoomFit this one too
-            // otherwise keep zoom same as previous
-            if (isFit) {
-                zoom = zoomFit;
-            }
+        if (isFit) {
+            setFitZoom();
         }
         scale();
-        isFirstImageNewFolder = false;
     }
     return isLoaded;
 }
@@ -273,7 +253,7 @@ are matched:
         zoom *= (zoomFit / prevZoomFit);
         if (isFit) zoom = zoomFit;
         scale();
-        if (isZoom) setScrollBars(scrollPct);
+        if (isScrollable) setScrollBars(scrollPct);
     }
 }
 
@@ -318,10 +298,10 @@ If isSlideshow then hide mouse cursor unless is moves.
     G::track(__FUNCTION__);
     #endif
     }
-/*
+    /*
     qDebug() << __FUNCTION__
              << "isPreview =" << isPreview
-             << "isZoom =" << isZoom
+             << "isScrollable =" << isScrollable
              << "isFit =" << isFit
              << "zoom =" << zoom
              << "zoomFit =" << zoomFit
@@ -331,27 +311,43 @@ If isSlideshow then hide mouse cursor unless is moves.
 
     matrix.reset();
     if (G::isSlideShow) {
-        zoom = zoomFit;
-        if (zoom > 1) zoom = 1;
+        setFitZoom();
     }
+
+//    if (isFit && zoom > 1) zoom = 1;    //
+//    setFitZoom();
+    qDebug() << __FUNCTION__ << "limitFit100Pct =" << limitFit100Pct;
+
     matrix.scale(zoom, zoom);
     // when resize before first image zoom == inf
     if (zoom > 10) return;
     setMatrix(matrix);
     emit zoomChange(zoom);
-    isZoom = (zoom > zoomFit);
-    isFit = qFuzzyCompare(zoom, zoomFit);
-    if (isZoom) scrollPct = getScrollPct();
-    wasZoomFit = qFuzzyCompare(zoom, zoomFit);
+    isScrollable = (zoom > zoomFit);
+    if (isScrollable) scrollPct = getScrollPct();
 
     if (!G::isSlideShow) {
-        if (isZoom) setCursor(Qt::OpenHandCursor);
-        else setCursor(Qt::ArrowCursor);
+        if (isScrollable) setCursor(Qt::OpenHandCursor);
+        else {
+            if (isFit) setCursor(Qt::ArrowCursor);
+            else setCursor(Qt::PointingHandCursor);
+        }
     }
 
     placeClassificationBadge();
     moveShootingInfo(shootingInfo);
     emit updateStatus(true, "");
+
+    /*
+    qDebug() << __FUNCTION__
+             << "isPreview =" << isPreview
+             << "isScrollable =" << isScrollable
+             << "isFit =" << isFit
+             << "zoom =" << zoom
+             << "zoomFit =" << zoomFit
+             << "rect().width() =" << rect().width()
+             << "sceneRect().width() =" << sceneRect().width();
+//    */
 }
 
 void ImageView::setFullDim()
@@ -529,33 +525,9 @@ void ImageView::resizeEvent(QResizeEvent *event)
     if (G::isInitializing) return;
     QGraphicsView::resizeEvent(event);
     zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
-    static QRect prevRect;
-    static bool wasSceneClipped;
-
-    if (!G::isNewFolderLoaded) {
-        zoom = zoomFit;
-        // do not zoom beyond 100% to fit image in window when open new folder
-        if (zoom > 1) zoom = 1;
+    if (isFit) {
+        setFitZoom();
         scale();
-        wasZoomFit = true;
-        wasSceneClipped = false;
-        isFirstImageNewFolder = false;
-    }
-    else {
-        bool viewPortIsExpanding = false;
-        if (prevRect.width() < rect().width() || prevRect.height() < rect().height())
-            viewPortIsExpanding = true;
-        bool sceneClipped = sceneBiggerThanView();
-        if ((sceneClipped && !isZoom) ||
-                qFuzzyCompare(zoom, zoomFit) ||
-                ((viewPortIsExpanding && !sceneClipped) && wasZoomFit) ||
-                (wasSceneClipped && !sceneClipped)) {
-            zoom = zoomFit;
-            wasZoomFit = true;
-            scale();
-        }
-        wasSceneClipped = sceneClipped;
-        prevRect = rect();
     }
     placeClassificationBadge();
     moveShootingInfo(shootingInfo);
@@ -603,6 +575,17 @@ clicks on the unzoomed image.
     #endif
     }
     toggleZoom = toggleZoomValue;
+}
+
+void ImageView::refresh()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    setFitZoom();
+    scale();
 }
 
 void ImageView::zoomIn()
@@ -655,6 +638,17 @@ on to ImageView::scale(), which in turn makes the proper scale change.
     scale();
 }
 
+void ImageView::setFitZoom()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    zoom = zoomFit;
+    if (limitFit100Pct  && zoom > 1) zoom = 1;
+}
+
 void ImageView::zoomToggle()
 {
 /*
@@ -667,10 +661,8 @@ defaults to 1.0
     G::track(__FUNCTION__);
     #endif
     }
-    if (zoom < zoomFit) zoom = zoomFit;
-    else if (qFuzzyCompare(zoom, zoomFit)) zoom = toggleZoom;
-    else if (isZoom) zoom = zoomFit;
-    scale();
+    isFit = !isFit;
+    isFit ? zoom = zoomFit : zoom = toggleZoom;
 }
 
 void ImageView::rotate(int degrees)
@@ -922,8 +914,8 @@ void ImageView::wheelEvent(QWheelEvent *event)
     }
 
     // if trackpad scrolling set in preferences then default behavior
-    if(useWheelToScroll && isZoom) {
-        qDebug() << __FUNCTION__ << zoom << isZoom;
+    if(useWheelToScroll && isScrollable) {
+        qDebug() << __FUNCTION__ << zoom << isScrollable;
         QGraphicsView::wheelEvent(event);
         isTrackpadScroll = true;
         return;
@@ -996,10 +988,15 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         mousePressPt.setY(event->y());
 
         QGraphicsView::mousePressEvent(event);
-        if (qFuzzyCompare(zoom, zoomFit)) {
-            zoom = toggleZoom;
+
+        if (isFit) {
+            zoomToggle();
             scale();
-            ignoreMousePress = true;
+            isZoomToggled = true;
+            setCursor(Qt::PointingHandCursor);
+        }
+        else {
+            isZoomToggled = false;
         }
 
     }
@@ -1061,23 +1058,26 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) return;
 
     isLeftMouseBtnPressed = false;
+
+    // if mouse dragging then do not toggle zoom
     if (isMouseDrag || isMouseDoubleClick) {
         isMouseDrag = false;
-        if (isZoom) setCursor((Qt::OpenHandCursor));
+        if (isScrollable) setCursor(Qt::OpenHandCursor);
         else setCursor(Qt::ArrowCursor);
         return;
     }
 
-    if (!ignoreMousePress) {
-        if (!isZoom && zoom < zoomFit * 0.99) {
-            zoom = zoomFit;
-        }
-        else {
-            isZoom ? zoom = zoomFit : zoom = toggleZoom;
-        }
+    // if zoomToggle was not executed on mouse press (image was scrollable and zoom in toggled)
+    if (!isZoomToggled) {
+        zoomToggle();
         scale();
+        if (isScrollable) setCursor(Qt::OpenHandCursor);
+        else {
+            if (isFit) setCursor(Qt::ArrowCursor);
+            else setCursor(Qt::PointingHandCursor);
+        }
     }
-    ignoreMousePress = false;
+
     QGraphicsView::mouseReleaseEvent(event);
 }
 
@@ -1120,10 +1120,9 @@ QString ImageView::diagnostics()
     rpt << "\n" << "classificationBadgeDiam = " << G::s(classificationBadgeDiam);
     rpt << "\n" << "cursorIsHidden = " << G::s(cursorIsHidden);
     rpt << "\n" << "moveImageLocked = " << G::s(moveImageLocked);
-    rpt << "\n" << "ignoreMousePress = " << G::s(ignoreMousePress);
-    rpt << "\n" << "isZoom = " << G::s(isZoom);
+    rpt << "\n" << "ignoreMousePress = " << G::s(isZoomToggled);
+    rpt << "\n" << "isZoom = " << G::s(isScrollable);
     rpt << "\n" << "isFit = " << G::s(isFit);
-    rpt << "\n" << "wasZoomFit = " << G::s(wasZoomFit);
     rpt << "\n" << "isMouseDrag = " << G::s(isMouseDrag);
     rpt << "\n" << "isTrackpadScroll = " << G::s(isTrackpadScroll);
     rpt << "\n" << "isLeftMouseBtnPressed = " << G::s(isLeftMouseBtnPressed);

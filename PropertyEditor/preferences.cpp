@@ -207,6 +207,8 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "progressWidthSlider") {
         mw->progressWidth = v.toInt();
+        mw->updateProgressBarWidth();
+        mw->progressWidthBeforeResizeWindow = mw->progressWidth;
         mw->setCacheParameters();
     }
 
@@ -244,6 +246,11 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "checkIfUpdate") {
         mw->checkIfUpdate = v.toBool();
+    }
+
+    if (source == "limitFit100Pct") {
+        mw->imageView->limitFit100Pct = v.toBool();
+        mw->imageView->refresh();
     }
 
     if (source == "useWheelToScroll") {
@@ -391,6 +398,25 @@ void Preferences::addItems()
         generalItem->setChild(secondGenerationCount, 0, checkIfUpdateCaption);
         generalItem->setChild(secondGenerationCount, 1, checkIfUpdateValue);
         valIdx = checkIfUpdateValue->index();
+        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+        secondGenerationCount++;
+        // Type = CHECKBOX
+        // name = limitFit100Pct
+        tooltip = "Limit loupe fit zoom to 100%.";
+        QStandardItem *limitFit100PctCaption = new QStandardItem;
+        limitFit100PctCaption->setToolTip(tooltip);
+        limitFit100PctCaption->setText("Limit loupe fit zoom to 100%");
+        limitFit100PctCaption->setEditable(false);
+        QStandardItem *limitFit100PctValue = new QStandardItem;
+        limitFit100PctValue->setToolTip(tooltip);
+        limitFit100PctValue->setData(mw->imageView->limitFit100Pct, Qt::EditRole);
+        limitFit100PctValue->setData(DT_Checkbox, UR_DelegateType);
+        limitFit100PctValue->setData("limitFit100Pct", UR_Source);
+        limitFit100PctValue->setData("bool", UR_Type);
+        generalItem->setChild(secondGenerationCount, 0, limitFit100PctCaption);
+        generalItem->setChild(secondGenerationCount, 1, limitFit100PctValue);
+        valIdx = limitFit100PctValue->index();
         propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         secondGenerationCount++;
@@ -700,7 +726,7 @@ void Preferences::addItems()
                 thirdGenerationCount++;
                 // Type = CHECKBOX
                 // name = gridViewShowLabel
-                tooltip = "Remember the last folder used in Winnow from the previous session.";
+                tooltip = "Show file name in under thumbnails.";
                 QStandardItem *gridViewShowLabelCaption = new QStandardItem;
                 gridViewShowLabelCaption->setToolTip(tooltip);
                 gridViewShowLabelCaption->setText("Show label");
@@ -768,7 +794,7 @@ void Preferences::addItems()
         progressWidthSliderValue->setData("progressWidthSlider", UR_Source);
         progressWidthSliderValue->setData("int", UR_Type);
         progressWidthSliderValue->setData(100, UR_Min);
-        progressWidthSliderValue->setData(3000, UR_Max);
+        progressWidthSliderValue->setData(1000, UR_Max);
         progressWidthSliderValue->setData(50, UR_LabelFixedWidth);
         cacheCatItem->setChild(secondGenerationCount, 0, progressWidthSliderCaption);
         cacheCatItem->setChild(secondGenerationCount, 1, progressWidthSliderValue);
