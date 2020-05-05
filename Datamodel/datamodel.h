@@ -78,6 +78,7 @@ public slots:
     bool addMetadataForItem(ImageMetadata m);
     void buildFilters();
     void rebuildTypeFilter();
+    void searchStringChange(QString searchString);
 
 private:
     QWidget *mw;

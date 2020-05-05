@@ -870,6 +870,31 @@ bool DataModel::hasFolderChanged()
     return hasChanged;
 }
 
+void DataModel::searchStringChange(QString searchString)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // update datamodel search string match
+    for (int row = 0; row < rowCount(); ++row)  {
+        QString fPath = index(row, 1).data().toString();
+//        qDebug() << __FUNCTION__ << "For row =" << row;
+        if (filters->ignoreSearchStrings.contains(searchString)) {
+//            qDebug() << __FUNCTION__ << "Ignore" << row << fPath << "searchString =" << searchString;
+            setData(index(row, G::SearchColumn), true);
+            filters->searchText->setText(0, filters->defaultSearchString);
+        }
+        else {
+//            qDebug() << __FUNCTION__ << "Test  " << row << fPath << "searchString =" << searchString;
+            QString searchableText = index(row, G::SearchTextColumn).data().toString();
+            setData(index(row, G::SearchColumn), searchableText.contains(searchString));
+        }
+    }
+    filteredItemCount();
+}
+
 void DataModel::buildFilters()
 {
     {
@@ -933,9 +958,7 @@ void DataModel::buildFilters()
 //    s = "Step 4 0f " + buildSteps + ":  Tabulating filtered items ...";
     G::popUp->setPopupText(buildMsg + s);
     qApp->processEvents();
-//    qDebug() << __FUNCTION__ << "filteredItemCount()";
     filteredItemCount();
-//    qDebug() << __FUNCTION__ << "unfilteredItemCount()";
     unfilteredItemCount();
 
     filtersBuilt = true;
@@ -1061,6 +1084,7 @@ QString DataModel::diagnostics()
         rpt << "\n  " << "_label = " << G::s(index(row, G::_LabelColumn).data());
         rpt << "\n  " << "rating = " << G::s(index(row, G::RatingColumn).data());
         rpt << "\n  " << "_rating = " << G::s(index(row, G::_RatingColumn).data());
+        rpt << "\n  " << "search = " << G::s(index(row, G::SearchColumn).data());
         rpt << "\n  " << "modifiedDate = " << G::s(index(row, G::ModifiedColumn).data());
         rpt << "\n  " << "createdDate = " << G::s(index(row, G::CreatedColumn).data());
         rpt << "\n  " << "year = " << G::s(index(row, G::YearColumn).data());
@@ -1102,6 +1126,7 @@ QString DataModel::diagnostics()
         rpt << "\n  " << "rotationDegrees = " << G::s(index(row, G::RotationDegreesColumn).data());
         rpt << "\n  " << "err = " << G::s(index(row, G::ErrColumn).data());
         rpt << "\n  " << "shootingInfo = " << G::s(index(row, G::ShootingInfoColumn).data());
+        rpt << "\n  " << "searchText = " << G::s(index(row, G::SearchTextColumn).data());
     }
     rpt << "\n\n" ;
     return reportString;
@@ -1114,16 +1139,28 @@ void DataModel::filteredItemCount()
     G::track(__FUNCTION__);
     #endif
     }
+//    filters->setChildFlags();     // not working as planned
+    // Search text
+//    QString searchValue = filters->searchText->text(0).toLower();
+//    if (searchValue != "" && searchValue != "Enter search text...") {
+//        int tot = 0;
+//        for (int row = 0; row < sf->rowCount(); ++row) {
+//            QString text = sf->index(row, G::SearchTextColumn).data().toString();
+//            if (text.contains(searchValue)) tot++;
+//        }
+//        filters->searchText->setData(2, Qt::EditRole, QString::number(tot));
+//        filters->searchText->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+//    }
+
+    // Other filter items
     QTreeWidgetItemIterator it(filters);
     while (*it) {
-        if ((*it)->parent()) {
+        if ((*it)->parent()/* && (*it)->parent()->text(0) != "Search"*/) {
             int col = filters->filterCategoryToDmColumn[(*it)->parent()->text(0)];
             QString searchValue = (*it)->text(1);
             int tot = 0;
             for (int row = 0; row < sf->rowCount(); ++row) {
-//                QString value = sf->index(row, col).data().toString();
                 if (sf->index(row, col).data().toString() == searchValue) tot++;
-//                if (value == searchValue) tot++;
             }
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
@@ -1151,24 +1188,30 @@ change.
     QTreeWidgetItemIterator it(filters);
     while (*it) {
         if ((*it)->parent()) {
+            if ((*it) == filters->searchText) {
+            }
             int col = filters->filterCategoryToDmColumn[(*it)->parent()->text(0)];
             QString searchValue = (*it)->text(1);
             int tot = 0;
             int totRawJpgCombined = 0;
             for (int row = 0; row < rowCount(); ++row) {
                 bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
-                QString value = index(row, col).data().toString();
-                if (index(row, col).data().toString() == searchValue) {
+                bool found = false;
+                // always count all for search
+                if ((*it) == filters->searchText) found = true;
+                else found = index(row, col).data().toString() == searchValue;
+                if (found) {
                     tot++;
                     if (combineRawJpg && !hideRaw) totRawJpgCombined++;
                 }
             }
-/*            qDebug() << __FUNCTION__
-                     << (*it)->parent()->text(0)
-                     << (*it)->text(1)
-                     << "Tot Count = " << QString::number(tot)
-                     << "Combined Count = " << QString::number(totRawJpgCombined);
-                     */
+            /*
+            qDebug() << __FUNCTION__
+                 << (*it)->parent()->text(0)
+                 << (*it)->text(1)
+                 << "Tot Count = " << QString::number(tot)
+                 << "Combined Count = " << QString::number(totRawJpgCombined);
+//                 */
             (*it)->setData(3, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
@@ -1220,12 +1263,11 @@ map to columns in the data model ie Picked, Rating, Label ...
     // cycle through the filters and identify matches
     QTreeWidgetItemIterator filter(filters);
     while (*filter) {
-        if ((*filter)->parent()) {
-            /* There is a parent therefore not a top level item so this is one
-            of the items to match ie rating = one. If the item has been checked
-            then compare the checked filter item to the data in the
-            dataModelColumn for the row. If it matches then set isMatch = true.
-            If it does not match them isMatch is still false but the row could
+        if ((*filter)->parent()) {            
+            /* There is a parent therefore not a top level item so this is one of the items to
+            match ie rating = one. If the item has been checked then compare the checked
+            filter item to the data in the dataModelColumn for the row. If it matches then set
+            isMatch = true. If it does not match them isMatch is still false but the row could
             still be accepted if another item in the same category does match.
             */
 

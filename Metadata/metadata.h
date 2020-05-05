@@ -127,6 +127,7 @@ public:
     QStringList embeddedICCFormats;
     QStringList internalXmpFormats;
     QStringList xmpWriteFormats;
+    QStringList iccFormats;
     QStringList supportedFormats;
 /*
     enum tagDataType {

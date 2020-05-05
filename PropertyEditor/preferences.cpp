@@ -212,11 +212,6 @@ void Preferences::itemChange(QModelIndex idx)
         mw->setCacheParameters();
     }
 
-//    if (source == "showCacheStatus") {
-//        mw->isShowCacheStatus = v.toInt();
-//        mw->setCacheParameters();
-//    }
-
     if (source == "slideShowDelay") {
         qDebug() << __FUNCTION__ << v << source;
         mw->slideShowDelay = v.toInt();
@@ -251,11 +246,6 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "limitFit100Pct") {
         mw->imageView->limitFit100Pct = v.toBool();
         mw->imageView->refresh();
-    }
-
-    if (source == "useWheelToScroll") {
-        if (v.toString() == "Next/previous image") mw->imageView->useWheelToScroll = false;
-        else mw->imageView->useWheelToScroll = true;
     }
 
     if (source == "globalFontSize") {
@@ -417,31 +407,6 @@ void Preferences::addItems()
         generalItem->setChild(secondGenerationCount, 0, limitFit100PctCaption);
         generalItem->setChild(secondGenerationCount, 1, limitFit100PctValue);
         valIdx = limitFit100PctValue->index();
-        propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
-
-        secondGenerationCount++;
-        // Type = COMBOBOX
-        // name = useWheelToScroll
-        // parent = generalItem
-        tooltip = "Use the trackpad or mouse wheel to either scroll when zoomed into an image\n"
-                  "or to progress forward and backward through the images.";
-        QStandardItem *useWheelToScrollCaption = new QStandardItem;
-        useWheelToScrollCaption->setToolTip(tooltip);
-        useWheelToScrollCaption->setText("Wheel/trackpad");
-        useWheelToScrollCaption->setEditable(false);
-        QStandardItem *useWheelToScrollValue = new QStandardItem;
-        useWheelToScrollValue->setToolTip(tooltip);
-        if (mw->imageView->useWheelToScroll) s = "Scroll current image when zoomed";
-        if (!mw->imageView->useWheelToScroll) s = "Next/previous image";
-        useWheelToScrollValue->setData(s, Qt::EditRole);
-        useWheelToScrollValue->setData(DT_Combo, UR_DelegateType);
-        useWheelToScrollValue->setData("useWheelToScroll", UR_Source);
-        useWheelToScrollValue->setData("QString", UR_Type);
-        QStringList list0 = {"Next/previous image", "Scroll current image when zoomed"};
-        useWheelToScrollValue->setData(list0, UR_StringList);
-        generalItem->setChild(secondGenerationCount, 0, useWheelToScrollCaption);
-        generalItem->setChild(secondGenerationCount, 1, useWheelToScrollValue);
-        valIdx = useWheelToScrollValue->index();
         propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         secondGenerationCount++;

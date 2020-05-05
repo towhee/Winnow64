@@ -25,6 +25,13 @@ For each top level item the children are the filter choices to filter DataModel-
 and dynamic categories based on existing metadata (File types, Camera Models, Focal
 Lengths, Titles etc).
 
+The tree columns are:
+    0   CheckBox filter item
+    1   The value to filter (hidden)
+    2   The number of proxy rows containing the value
+    3   The number of datamodel rows containing the value
+    4
+
 The dynamic filter options are populated by DataModel on demand when the user filters or
 the filters dock has focus.
 
@@ -46,7 +53,7 @@ datamodel.
     setColumnWidth(2, 50);
     setColumnWidth(3, 50);
     setColumnWidth(4, 50);
-    setHeaderLabels({"", "Value", "Filter", "All", "Raw+Jpg"});
+    setHeaderLabels({"", "Value", "Filter", "Raw+Jpg", "All"});
     header()->setDefaultAlignment(Qt::AlignCenter);
     hideColumn(1);
 
@@ -62,11 +69,17 @@ datamodel.
     categoryBackground.setColorAt(1, QColor(b,b,b));
     categoryFont = this->font();
 
+    defaultSearchString = "Enter search text...";
+    ignoreSearchStrings << "" << defaultSearchString << defaultSearchString.toLower();
+
     createPredefinedFilters();
     createDynamicFilters();
     setCategoryBackground(a, b);
 
     setItemDelegate(new FiltersDelegate(this));
+    setFocusPolicy(Qt::NoFocus);
+
+    filterCategoryToDmColumn["Search"] = G::SearchColumn;
 
     filterCategoryToDmColumn["Refine"] = G::RefineColumn;
     filterCategoryToDmColumn["Picks"] = G::PickColumn;
@@ -87,17 +100,33 @@ datamodel.
 
 void Filters::createPredefinedFilters()
 {
-/* Predefined filters are edited by the user: Picks, Ratings and Color Class.
+/* Predefined filters are edited by the user: Search, Picks, Ratings and Color Class.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    search = new QTreeWidgetItem(this);
+    search->setText(0, "Search");
+    search->setFont(0, categoryFont);
+    search->setText(2, "Filter");
+    search->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+    search->setText(4, "Total");
+    search->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
+    search->setData(0, G::ColumnRole, G::SearchColumn);
+
+    searchText = new QTreeWidgetItem(search);
+    searchText->setText(0, defaultSearchString);
+    searchText->setCheckState(0, Qt::Unchecked);
+    searchText->setData(1, Qt::EditRole, "true");
+    searchText->setFlags(searchText->flags() | Qt::ItemIsEditable);
+
     refine = new QTreeWidgetItem(this);
     refine->setText(0, "Refine");
-    refine->setFont(0, categoryFont);
+//    refine->setFont(0, categoryFont);
     refine->setData(0, G::ColumnRole, G::RefineColumn);
+
     refineFalse = new QTreeWidgetItem(refine);
     refineFalse->setText(0, "False");
     refineFalse->setCheckState(0, Qt::Unchecked);
@@ -109,8 +138,9 @@ void Filters::createPredefinedFilters()
 
     picks = new QTreeWidgetItem(this);
     picks->setText(0, "Picks");
-    picks->setFont(0, categoryFont);
+//    picks->setFont(0, categoryFont);
     picks->setData(0, G::ColumnRole, G::PickColumn);
+
     picksFalse = new QTreeWidgetItem(picks);
     picksFalse->setText(0, "Not Picked");
     picksFalse->setCheckState(0, Qt::Unchecked);
@@ -126,7 +156,7 @@ void Filters::createPredefinedFilters()
 
     ratings = new QTreeWidgetItem(this);
     ratings->setText(0, "Ratings");
-    ratings->setFont(0, categoryFont);
+//    ratings->setFont(0, categoryFont);
     ratings->setData(0, G::ColumnRole, G::RatingColumn);
 
     ratingsNone = new QTreeWidgetItem(ratings);
@@ -156,7 +186,7 @@ void Filters::createPredefinedFilters()
 
     labels = new QTreeWidgetItem(this);
     labels->setText(0, "Color class");
-    labels->setFont(0, categoryFont);
+//    labels->setFont(0, categoryFont);
     labels->setData(0, G::ColumnRole, G::LabelColumn);
 
     labelsNone = new QTreeWidgetItem(labels);
@@ -199,42 +229,42 @@ by addCategoryFromData.
     }
     types = new QTreeWidgetItem(this);
     types->setText(0, "File type");
-    types->setFont(0, categoryFont);
+//    types->setFont(0, categoryFont);
     types->setData(0, G::ColumnRole, G::TypeColumn);
 
     years = new QTreeWidgetItem(this);
     years->setText(0, "Years");
-    years->setFont(0, categoryFont);
+//    years->setFont(0, categoryFont);
     years->setData(0, G::ColumnRole, G::YearColumn);
 
     days = new QTreeWidgetItem(this);
     days->setText(0, "Days");
-    days->setFont(0, categoryFont);
+//    days->setFont(0, categoryFont);
     days->setData(0, G::ColumnRole, G::DayColumn);
 
     models = new QTreeWidgetItem(this);
     models->setText(0, "Camera model");
-    models->setFont(0, categoryFont);
+//    models->setFont(0, categoryFont);
     models->setData(0, G::ColumnRole, G::CameraModelColumn);
 
     lenses = new QTreeWidgetItem(this);
     lenses->setText(0, "Lenses");
-    lenses->setFont(0, categoryFont);
+//    lenses->setFont(0, categoryFont);
     lenses->setData(0, G::ColumnRole, G::LensColumn);
 
     focalLengths = new QTreeWidgetItem(this);
     focalLengths->setText(0, "FocalLengths");
-    focalLengths->setFont(0, categoryFont);
+//    focalLengths->setFont(0, categoryFont);
     focalLengths->setData(0, G::ColumnRole, G::FocalLengthColumn);
 
     titles = new QTreeWidgetItem(this);
     titles->setText(0, "Title");
-    titles->setFont(0, categoryFont);
+//    titles->setFont(0, categoryFont);
     titles->setData(0, G::ColumnRole, G::TitleColumn);
 
     creators = new QTreeWidgetItem(this);
     creators->setText(0, "Creators");
-    creators->setFont(0, categoryFont);
+//    creators->setFont(0, categoryFont);
     creators->setData(0, G::ColumnRole, G::CreatorColumn);
 }
 
@@ -251,6 +281,11 @@ user changes the background shade in preferences.
     }
     categoryBackground.setColorAt(0, QColor(a,a,a));
     categoryBackground.setColorAt(1, QColor(b,b,b));
+
+    search->setBackground(0, categoryBackground);
+    search->setBackground(2, categoryBackground);
+    search->setBackground(3, categoryBackground);
+    search->setBackground(4, categoryBackground);
 
     refine->setBackground(0, categoryBackground);
     refine->setBackground(2, categoryBackground);
@@ -350,6 +385,25 @@ void Filters::checkPicks(bool check)
         picksTrue->setCheckState(0, Qt::Unchecked);
     }
     emit filterChange("Filters::checkPicks");
+}
+
+void Filters::setChildFlags()
+{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    // not helping to removed disabled state
+//    QTreeWidgetItemIterator it(this);
+//    while (*it) {
+//        if ((*it)->parent() && (*it)->parent()->text(0) != "Search") {
+//            qDebug() << __FUNCTION__ << (*it)->text(0);
+//            (*it)->setFlags(Qt::ItemIsEnabled);
+//            (*it)->setDisabled(false);
+//        }
+//        ++it;
+//    }
 }
 
 bool Filters::isAnyFilter()
@@ -526,51 +580,120 @@ createDynamicFilters;
 
 void Filters::itemChangedSignal(QTreeWidgetItem *item, int column)
 {
-    bool isChild = item->parent();
-    bool ok = isChild && column == 0 && G::isNewFolderLoaded && !G::buildingFilters;
-    if (ok) {
-        itemHasChanged = true;
+    /*
+    If the user clicks on the checkbox indicator of any child item then the checkbox state toggles
+    and itemChangedSignal is fired. The itemChangedSignal function sets the itemHasChanged flag to
+    true. Next the itemClickedSignal is fired. Since the itemHasChanged flag is true the function
+    itemClickedSignal only emits a filterChange.
+
+    If the user clicks on the text portion of the checkbox (ie "Purple" in the color class
+    filters) then the checkbox is not toggled and the itemChangedSignal is not fired. The
+    itemClickedSignal is fired and since the itemHasChanged flag is false the checkbox checkstate
+    is manually toggled and a filterChange is emitted.
+
+    If the user clicks on the text portion of the search checkbox then the itemClickedSignal is
+    fired and the itemClickedSignal function detects that the item is searchText and
+    itemHasChanged is false and sets the searchText cell to edit mode. The user makes an edit.
+    This fires the itemChangedSignal. The itemChangedSignal function knows the sender is the item
+    searchText but does not know if the itemchange was a change to the text or the checkbox state.
+    It compares the current search string to the previous value, and if they are different, then
+    the change was the search string.  If the search string is legal then searchStringChange is
+    emitted.  DataModel::searchStringChange receives the signal and updates the datamodel
+    searchColumn match to true or false for each row.  The filteredItemCount is updated.
+    */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (column == 0) {
         /*
         qDebug() << __FUNCTION__
-                 << "G::isNewFolderLoaded" << G::isNewFolderLoaded
-                 << "G::buildingFilters" << G::buildingFilters
-                 << "item->text(column)" << item->text(column)
-                 << "item->parent()" << item->parent()
-                 << "isChild" << isChild
-                 << "column" << column
-                 << "itemHasChanged" << itemHasChanged
-                 << "result" << result;
-                 */
+                 << item->parent()->text(0)
+                 << item->text(0)
+                 << "column =" << column;
+//                 */
+        if (item == searchText) {
+            QString s = searchText->text(0).toLower();
+            if (s == "") {
+                searchText->setText(0, defaultSearchString);
+                return;
+            }
+            // check if the search string has changed
+            if (s != searchString) {
+                /*
+                qDebug() << __FUNCTION__ << "searchText has changed"
+                         << s << searchString;
+//                         */
+                searchString = s;
+                emit searchStringChange(s);
+                return;
+            }
+        }
+
+        // got this far - must be a checkbox value change
+        bool isChild = item->parent();
+        bool ok = isChild && column == 0 && G::isNewFolderLoaded && !G::buildingFilters;
+        if (ok) {
+            itemHasChanged = true;
+            /*
+            qDebug() << __FUNCTION__
+                     << "G::isNewFolderLoaded" << G::isNewFolderLoaded
+                     << "G::buildingFilters" << G::buildingFilters
+                     << "item->text(column)" << item->text(column)
+                     << "item->parent()" << item->parent()
+                     << "isChild" << isChild
+                     << "column" << column
+                     << "itemHasChanged" << itemHasChanged
+                     << "result" << result;
+                     */
+        }
     }
-//    emit filterChange(true);
 }
 
 void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
 {
-/* When the user clicks on a child item checkbox or text execute a filterChange, which filters
-the datamodel based on which filter items are checked.  If the user clicks on the text (ie
-"Purple" in the color class filters) then toggle the checkbox state.  If the user clicks the
-checkbox then the state toggles automatically.
+/*
+If the user clicks on the checkbox indicator of any child item then the checkbox state toggles
+and itemChangedSignal is fired. The itemChangedSignal function sets the itemHasChanged flag to
+true. Next the itemClickedSignal is fired. Since the itemHasChanged flag is true the function
+itemClickedSignal only emits a filterChange.
+
+If the user clicks on the text portion of the checkbox (ie "Purple" in the color class
+filters) then the checkbox is not toggled and the itemChangedSignal is not fired. The
+itemClickedSignal is fired and since the itemHasChanged flag is false the checkbox checkstate
+is manually toggled and a filterChange is emitted.
+
+If the user clicks on the text portion of the search checkbox then the itemClickedSignal is
+fired and the itemClickedSignal function detects that the item is searchText and
+itemHasChanged is false and sets the searchText cell to edit mode. The user makes an edit.
+This fires the itemChangedSignal. The itemChangedSignal function knows the sender is the item
+searchText but does not know if the itemchange was a change to the text or the checkbox state.
+It compares the current search string to the previous value, and if they are different, then
+the change was the search string.  If the search string is legal then searchStringChange is
+emitted.  DataModel::searchStringChange receives the signal and updates the datamodel
+searchColumn match to true or false for each row.  The filteredItemCount is updated.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    if (item->isDisabled()) return;
+
     bool isChild = item->parent();
     if (isChild && column == 0 && G::isNewFolderLoaded && !G::buildingFilters) {
         /*
         qDebug() << __FUNCTION__
-             << "G::isNewFolderLoaded" << G::isNewFolderLoaded
-             << "G::buildingFilters" << G::buildingFilters
-             << "item->text(column)" << item->text(column)
-             << "item->parent()" << item->parent()
-             << "isChild" << isChild
-             << "column" << column
-             << "itemHasChanged" << itemHasChanged
-             << "result" << result;
-             */
-        if (!itemHasChanged) {
+                 << item->parent()->text(0)
+                 << item->text(0)
+                 << "itemHasChanged =" << itemHasChanged;
+//             */
+        if (!itemHasChanged && item->parent()->text(0) == "Search") {
+            editItem(searchText, 0);
+            return;
+        }
+        if (!itemHasChanged && item->parent()->text(0) != "Search") {
             if (item->checkState(0) == Qt::Unchecked) item->setCheckState(0, Qt::Checked);
             else item->setCheckState(0, Qt::Unchecked);
         }
@@ -581,25 +704,41 @@ checkbox then the state toggles automatically.
 
 void Filters::resizeColumns()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QFont font = this->font();
-    font.setPointSize(G::fontSize.toInt());
+//    font.setPointSize(G::fontSize.toInt());
     QFontMetrics fm(font);
     int countColumnWidth = fm.boundingRect("99999").width();
+    int countFilteredColumnWidth = fm.boundingRect("Filter ").width() + 10;
     setColumnWidth(4, countColumnWidth);
     setColumnWidth(3, countColumnWidth);
-    setColumnWidth(2, countColumnWidth);
-    setColumnWidth(0, width() - G::scrollBarThickness - (2 * countColumnWidth) - 10);
+    setColumnWidth(2, countFilteredColumnWidth);
+    setColumnWidth(0, width() - G::scrollBarThickness - countColumnWidth - countFilteredColumnWidth - 10);
 }
 
 void Filters::resizeEvent(QResizeEvent *event)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     resizeColumns();
     QTreeWidget::resizeEvent(event);
 }
 
 void Filters::paintEvent(QPaintEvent *event)
 {
-    resizeColumns();
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+//    resizeColumns();
     QTreeWidget::paintEvent(event);
 }
 

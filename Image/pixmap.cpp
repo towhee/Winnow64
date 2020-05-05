@@ -70,6 +70,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
                     dm->addMetadataForItem(metadata->imageMetadata);
                 else {
                     err = "Could not load" + fPath;
+                    qDebug() << __FUNCTION__ << err;
                     break;
                 }
             }
@@ -79,6 +80,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
             if (offsetFullJpg > 0 && lengthFullJpg > 0) {
                 if (imFile.isOpen()) {
                     err = "File already open" + fPath;
+                    qDebug() << __FUNCTION__ << err;
                     break;
                 }
                 if (imFile.open(QIODevice::ReadOnly)) {
@@ -95,23 +97,26 @@ bool Pixmap::load(QString &fPath, QImage &image)
                         }
                         else {
                             err = "Could not read image from buffer" + fPath;
+                            qDebug() << __FUNCTION__ << err;
                             imFile.close();
                             break;
                         }
                     }
                     else {
                         err = "Illegal offset to image" + fPath;
+                        qDebug() << __FUNCTION__ << err;
                         imFile.close();
-
                         break;
                     }
                 }
                 else {
                     err = "Could not open file for image" + fPath;    // try again
+                    qDebug() << __FUNCTION__ << err;
                 }
             }
             else {
                 err = "Illegal offset to image or no length available" + fPath;
+                qDebug() << __FUNCTION__ << err;
                 break;
             }
 
@@ -125,10 +130,10 @@ bool Pixmap::load(QString &fPath, QImage &image)
         // cooked files like tif, png etc
         do {
             // check if file is locked by another process
-            if (imFile.open(QIODevice::ReadOnly)) {
+             if (imFile.open(QIODevice::ReadOnly)) {
                 // close it to allow qt load to work
                 imFile.close();
-                success = image.load(fPath);
+                success = image.load(fPath);    // crash in
                 /*
                 G::t.restart();
                 // test load image using jpeg class
@@ -145,10 +150,11 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 }*/
                 if (!success) {
                     err = "Could not read image" + fPath;
+                    qDebug() << __FUNCTION__ << err;
                     break;
                 }
                 #ifdef Q_OS_WIN
-                if (G::colorManage) {
+                if (G::colorManage && metadata->iccFormats.contains(ext)) {
                     QByteArray ba = dm->index(row, G::ICCBufColumn).data().toByteArray();
                     ICC::setInProfile(dm->index(row, G::ICCBufColumn).data().toByteArray());
                     ICC::transform(image);
@@ -157,6 +163,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
             }
             else {
                 err = "Could not open file for image" + fPath;    // try again
+                qDebug() << __FUNCTION__ << err; qApp->processEvents();
                 QThread::msleep(msInc);
                 msDelay += msInc;
             }

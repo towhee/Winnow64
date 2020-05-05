@@ -336,6 +336,7 @@ private slots:
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
     void setCachedStatus(QString fPath, bool isCached);
+    void searchTextEdit();
     void setRating();
     void setColorClass();
     void setRotation(int degrees);
@@ -623,6 +624,7 @@ private:
 
     QAction *nextPickAction;
     QAction *prevPickAction;
+    QAction *searchTextEditAction;
     QAction *rate0Action;
     QAction *rate1Action;
     QAction *rate2Action;
@@ -641,6 +643,7 @@ private:
     QAction *clearAllFiltersAction;
     QAction *expandAllAction;
     QAction *collapseAllAction;
+    QAction *filterSearchAction;
     QAction *filterRating1Action;
     QAction *filterRating2Action;
     QAction *filterRating3Action;
@@ -870,7 +873,7 @@ private:
     bool workspaceChange;
     bool isUpdatingState;
 
-    bool isFilterChange = false;        // rgh required?
+    bool isFilterChange = false;        // prevent fileSelectionChange
     bool isRefreshingDM = false;
     QString refreshCurrentPath;
 

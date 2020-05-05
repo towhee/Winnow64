@@ -56,7 +56,9 @@ QString WidgetCSS::css()
             comboBox() +
             spinBox() +
             textEdit() +
-            lineEdit();
+            lineEdit() +
+            checkBox()
+            ;
 }
 
 QString WidgetCSS::widget()
@@ -574,4 +576,22 @@ QString WidgetCSS::lineEdit()
     "QLineEdit:disabled {"
         "color:gray;"
     "}";
+}
+
+QString WidgetCSS::checkBox()
+{
+    return "";
+//    "QCheckBox::indicator {"
+////        "image: url(:/images/checkmark.png);"
+//        "border: 1px solid green;"
+//    "}"
+//    "QCheckBox::indicator:checked:disabled {"
+////        "image: url(:/images/checkmark.png);"
+//        "border: 1px solid red;"
+//    "}"
+////        "QCheckBox::indicator:indeterminate {"
+////    //        "image: url(:/images/checkmark.png);"
+////            "border: 3px solid blue;"
+////        "}"
+//     ;
 }

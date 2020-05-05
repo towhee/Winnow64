@@ -220,6 +220,7 @@ to prevent jarring changes in perceived scale by the user.
         image beyond 100% to fit the window.  */
         zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
         if (isFirstImageNewFolder) {
+//            qDebug() << __FUNCTION__ << "isFirstImageNewFolder";
             isFit = true;
             isFirstImageNewFolder = false;
         }
@@ -314,10 +315,7 @@ If isSlideshow then hide mouse cursor unless is moves.
         setFitZoom();
     }
 
-//    if (isFit && zoom > 1) zoom = 1;    //
-//    setFitZoom();
-    qDebug() << __FUNCTION__ << "limitFit100Pct =" << limitFit100Pct;
-
+    if (isFit) setFitZoom();
     matrix.scale(zoom, zoom);
     // when resize before first image zoom == inf
     if (zoom > 10) return;
@@ -337,6 +335,8 @@ If isSlideshow then hide mouse cursor unless is moves.
     placeClassificationBadge();
     moveShootingInfo(shootingInfo);
     emit updateStatus(true, "");
+
+    isMouseDoubleClick = false;
 
     /*
     qDebug() << __FUNCTION__
@@ -647,6 +647,7 @@ void ImageView::setFitZoom()
     }
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > 1) zoom = 1;
+//    qDebug() << __FUNCTION__ <<
 }
 
 void ImageView::zoomToggle()
@@ -914,14 +915,14 @@ void ImageView::wheelEvent(QWheelEvent *event)
     }
 
     // if trackpad scrolling set in preferences then default behavior
-    if(useWheelToScroll && isScrollable) {
-        qDebug() << __FUNCTION__ << zoom << isScrollable;
-        QGraphicsView::wheelEvent(event);
-        isTrackpadScroll = true;
-        return;
-    }
+//    if(useWheelToScroll && isScrollable) {
+//        qDebug() << __FUNCTION__ << zoom << isScrollable;
+//        QGraphicsView::wheelEvent(event);
+//        isTrackpadScroll = true;
+//        return;
+//    }
 
-    // otherwise trackpad swiping = next/previous image
+    // wheel scrolling / trackpad swiping = next/previous image
     static int delta;
     delta += event->delta();
     int deltaThreshold = 40;
@@ -946,8 +947,14 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
     #endif
     }
     // placeholder function pending use
-    // isMouseDoubleClick = true;
+    qDebug() << __FUNCTION__ << isFit << zoom << zoomFit;
+//    if (isFit && zoom < zoomFit) {
+//        zoom = zoomFit;
+//        scale();
+//        isMouseDoubleClick = true;
+//    }
     QWidget::mouseDoubleClickEvent(event);
+
 }
 
 void ImageView::mousePressEvent(QMouseEvent *event)
@@ -978,6 +985,12 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         emit togglePick();
         return;
     }
+
+    // prevent zooming when double mouse click
+//    if (event->button() == Qt::Dou) {
+//        return;
+//    }
+    if (isMouseDoubleClick) return;
 
     isMouseDoubleClick = false;
     isMouseDrag = false;
@@ -1057,6 +1070,8 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     // prevent zooming when forward and back buttons
     if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) return;
 
+//    if (isMouseDoubleClick) return;
+
     isLeftMouseBtnPressed = false;
 
     // if mouse dragging then do not toggle zoom
@@ -1112,7 +1127,6 @@ QString ImageView::diagnostics()
     rpt << Utilities::centeredRptHdr('=', "ImageView Diagnostics");
     rpt << "\n";
     rpt << "\n" << "isBusy = " << G::s(isBusy);
-    rpt << "\n" << "useWheelToScroll = " << G::s(useWheelToScroll);
     rpt << "\n" << "shootingInfo = " << G::s(shootingInfo);
     rpt << "\n" << "infoOverlayFontSize = " << G::s(infoOverlayFontSize);
     rpt << "\n" << "currentImagePath = " << G::s(currentImagePath);

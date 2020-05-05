@@ -23,12 +23,12 @@ public:
     ~MetadataCache() override;
 
     enum Action {
-        NewFolder,
-        NewFolder2ndPass,
-        NewFileSelected,
-        Scroll,
-        Resize,
-        AllMetadata
+        NewFolder,          // 0
+        NewFolder2ndPass,   // 1
+        NewFileSelected,    // 2
+        Scroll,             // 3
+        Resize,             // 4
+        AllMetadata         // 5
     };
     QStringList actionList;
 
@@ -36,7 +36,7 @@ public:
     void loadNewFolder2ndPass();
     void scrollChange();
     void sizeChange();
-    void fileSelectionChange(bool isRandomSlideShow);
+    void fileSelectionChange(bool okayToImageCache);
     void loadAllMetadata();
     void readMetadataIcon(const QModelIndex &idx);
     void stopMetadateCache();

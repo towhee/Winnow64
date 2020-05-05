@@ -1548,7 +1548,7 @@ Returns true when the scrollbars have been fully rendered.
     QTime t = QTime::currentTime().addMSecs(1000);
     while (QTime::currentTime() < t) {
         if (okToScroll()) {
-            G::wait(250);
+            G::wait(50);
             return true;
         }
         qApp->processEvents(QEventLoop::AllEvents, 50);
