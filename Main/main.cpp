@@ -12,7 +12,6 @@ int main(int argc, char *argv[])
         return -1;
     }
     QCoreApplication::addLibraryPath("./");
-//    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     MW MW;
     MW.show();
     return QApp.exec();

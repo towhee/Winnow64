@@ -15,6 +15,7 @@ namespace ICC
         #endif
         }
         if (buf == nullptr) {
+//            qDebug() << __FUNCTION__ << "null buffer = sRGB";
             hInProfile = cmsCreate_sRGBProfile();
         }
         else {

@@ -1112,10 +1112,13 @@ delegate use of the current index must check the column.
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
-             << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder;*/
+             << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
+             << "isFilterChange =" << isFilterChange
+             << "current =" << current;
+//    */
 
     bool isStart = false;
-    if(!isCurrentFolderOkay) return;
+    if(!isCurrentFolderOkay || G::isInitializing || isFilterChange) return;
 
     if (imageView->isFirstImageNewFolder && G::mode == "Loupe") thumbView->selectThumb(0);
 
@@ -1150,7 +1153,6 @@ delegate use of the current index must check the column.
     currentDmIdx = dm->sf->mapToSource(currentSfIdx);
     // the file path is used as an index in ImageView
     QString fPath = currentSfIdx.data(G::PathRole).toString();
-//    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
 
@@ -2248,6 +2250,12 @@ void MW::createActions()
     addAction(copyAction);
     connect(copyAction, &QAction::triggered, this, &MW::copy);
 
+    searchTextEditAction = new QAction(tr("Edit search text"), this);
+    searchTextEditAction->setObjectName("searchTextEdit");
+    searchTextEditAction->setShortcutVisibleInContextMenu(true);
+    addAction(searchTextEditAction);
+    connect(searchTextEditAction, &QAction::triggered, this, &MW::searchTextEdit);
+
     rate0Action = new QAction(tr("Clear rating"), this);
     rate0Action->setObjectName("Rate0");
     rate0Action->setShortcutVisibleInContextMenu(true);
@@ -2481,6 +2489,12 @@ void MW::createActions()
     collapseAllAction->setShortcutVisibleInContextMenu(true);
     addAction(collapseAllAction);
     connect(collapseAllAction, &QAction::triggered, filters, &Filters::collapseAllFilters);
+
+    filterSearchAction = new QAction(tr("Filter by search text"), this);
+    filterSearchAction->setCheckable(true);
+    filterSearchAction->setShortcutVisibleInContextMenu(true);
+    addAction(filterSearchAction);
+    connect(filterSearchAction, &QAction::triggered, this, &MW::quickFilter);
 
     filterRating1Action = new QAction(tr("Filter by rating 1"), this);
     filterRating1Action->setCheckable(true);
@@ -3278,6 +3292,8 @@ void MW::createMenus()
 //    editMenu->addAction(filterPickAction);
     editMenu->addAction(popPickHistoryAction);
     editMenu->addSeparator();
+    editMenu->addAction(searchTextEditAction);
+    editMenu->addSeparator();
     editMenu->addAction(rate0Action);
     editMenu->addAction(rate1Action);
     editMenu->addAction(rate2Action);
@@ -3334,6 +3350,8 @@ void MW::createMenus()
     filterMenu->addAction(clearAllFiltersAction);
     filterMenu->addSeparator();
     filterMenu->addAction(filterPickAction);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterSearchAction);
     filterMenu->addSeparator();
     filterMenu->addAction(filterRating1Action);
     filterMenu->addAction(filterRating2Action);
@@ -3852,6 +3870,7 @@ void MW::createDataModel()
         filters->showColumn(3);
     }
 
+    connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::msg, this, &MW::setCentralMessage);
 }
@@ -4173,10 +4192,8 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
 
     if (isSettings) {
         if (setting->contains("limitFit100Pct")) imageView->limitFit100Pct = setting->value("limitFit100Pct").toBool();
-        if (setting->contains("useWheelToScroll")) imageView->useWheelToScroll = setting->value("useWheelToScroll").toBool();
         if (setting->contains("infoOverlayFontSize")) imageView->infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
         if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
-//        mouseClickScroll = setting->value("mouseClickScroll").toBool();
         qreal tempZoom = setting->value("toggleZoomValue").toReal();
         if (tempZoom > 3) tempZoom = 1;
         if (tempZoom < 0.25) tempZoom = 1;
@@ -4184,7 +4201,6 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
     }
     else {
         imageView->limitFit100Pct = true;
-        imageView->useWheelToScroll = false;
         imageView->toggleZoom = 1;
         imageView->infoOverlayFontSize = infoOverlayFontSize;   // defined in loadSettings
     }
@@ -4215,14 +4231,12 @@ void MW::createCompareView()
 
     if (isSettings) {
         if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
-//        mouseClickScroll = setting->value("mouseClickScroll").toBool();
         qreal tempZoom = setting->value("toggleZoomValue").toReal();
         if (tempZoom > 3) tempZoom = 1;
         if (tempZoom < 0.25) tempZoom = 1;
         compareImages->toggleZoom = tempZoom;
     }
     else {
-        imageView->useWheelToScroll = false;
         imageView->toggleZoom = 1;
     }
 
@@ -4496,8 +4510,6 @@ void MW::createFilterView()
 
     /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
        for every item in Filters */
-
-//    connect(filters, &Filters::itemClicked, this, &MW::filterChange);
     connect(filters, &Filters::filterChange, this, &MW::filterChange);
 }
 
@@ -4670,13 +4682,13 @@ void MW::updateStatusBar()
     #endif
     }
     // remove all icons so can add back in proper order // previously used: if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel); // etc
-    statusBar()->removeWidget(sortAZStatusLabel);
-    statusBar()->removeWidget(sortZAStatusLabel);
-    statusBar()->removeWidget(rawJpgStatusLabel);
-    statusBar()->removeWidget(filterStatusLabel);
-    statusBar()->removeWidget(subfolderStatusLabel);
-    statusBar()->removeWidget(slideShowStatusLabel);
-    statusBar()->removeWidget(statusLabel);             // text showing x selected...
+    if(sortAZStatusLabel->isVisible()) statusBar()->removeWidget(sortAZStatusLabel);
+    if(sortZAStatusLabel->isVisible()) statusBar()->removeWidget(sortZAStatusLabel);
+    if(rawJpgStatusLabel->isVisible()) statusBar()->removeWidget(rawJpgStatusLabel);
+    if(filterStatusLabel->isVisible()) statusBar()->removeWidget(filterStatusLabel);
+    if(subfolderStatusLabel->isVisible()) statusBar()->removeWidget(subfolderStatusLabel);
+    if(slideShowStatusLabel->isVisible()) statusBar()->removeWidget(slideShowStatusLabel);
+    if(statusLabel->isVisible()) statusBar()->removeWidget(statusLabel);             // text showing x selected...
 
     // add back relevant icons
     if (filters->isAnyFilter()) {
@@ -5169,6 +5181,8 @@ void MW::buildFilters()
     G::popUp->showPopup("Filters completed");
 }
 
+
+
 void MW::filterChange(QString source)
 {
 /*
@@ -5189,7 +5203,9 @@ and icons are loaded if necessary.
     // Need all metadata loaded before filtering
     if (!G::allMetadataLoaded) dm->addAllMetadata(true);
 
-    // refresh the proxy sort/filter
+    // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
+    // scroll event and the metadataCache updates the icons and thumbnails
+    isFilterChange = true;      // prevent unwanted fileSelectionChange()
     dm->sf->filterChange();
 
     // update filter panel image count by filter item
@@ -5198,6 +5214,8 @@ and icons are loaded if necessary.
 
     // recover sort after filtration
     sortChange();
+
+    isFilterChange = false;     // allow fileSelectionChange()
 
     // update the status panel filtration status
     updateStatusBar();
@@ -5209,34 +5227,28 @@ and icons are loaded if necessary.
     }
 
     // get the current selected item
-    /*
-    qDebug() << __FUNCTION__
-             << "thumbView->currentIndex().row() =" << thumbView->currentIndex().row()
-             << "currentDmIdx).row() =" << currentDmIdx.row()
-             << "dm->sf->mapFromSource(currentDmIdx).row() =" << dm->sf->mapFromSource(currentDmIdx).row();
-            */
     currentRow = dm->sf->mapFromSource(currentDmIdx).row();
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
     QModelIndex idx = dm->sf->index(currentRow, 0);
-    selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
 
-    centralLayout->setCurrentIndex(prevCentralView);
+//    centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true);
 
-    // sync image cache with datamodel filtered proxy
+    // sync image cache with datamodel filtered proxy dm->sf
     imageCacheThread->rebuildImageCacheParameters(fPath);
+    /*
+    if (thumbView->waitUntilOkToScroll()) {
+        // setting the selection index also triggers fileSelectionChange()
+        selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
+        thumbView->selectThumb(idx);
+    }
+//    */
 
-    // rgh temp fix 300ms delay before scroll to currentRow
-    G::wait(300);
-    thumbView->selectThumb(currentRow);
-    /* if the previous selected image is also part of the filtered datamodel then the
-    selected index does not change and fileSelectionChange will not be signalled.
-    Therefore we call it here to force the update to caching and icons */
     fileSelectionChange(idx, idx);
 
     source = "";    // suppress compiler warning
@@ -5250,6 +5262,7 @@ void MW::quickFilter()
     #endif
     }
     // checked
+    if (filterSearchAction->isChecked()) filters->searchText->setCheckState(0, Qt::Checked);
     if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Checked);
     if (filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Checked);
     if (filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Checked);
@@ -7212,7 +7225,6 @@ re-established when the application is re-opened.
     setting->setValue("lastDir", currentViewDir);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("combineRawJpg", combineRawJpg);
-    setting->setValue("useWheelToScroll", imageView->useWheelToScroll);
 
     // ingest
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
@@ -7824,6 +7836,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         pick1Action->setShortcut(QKeySequence("P"));
         popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
 
+        searchTextEditAction->setShortcut(QKeySequence("Ctrl+S"));
+
         rate1Action->setShortcut(QKeySequence("1"));
         rate2Action->setShortcut(QKeySequence("2"));
         rate3Action->setShortcut(QKeySequence("3"));
@@ -7868,6 +7882,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         // Filters
         clearAllFiltersAction->setShortcut(QKeySequence("Shift+C"));
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
+
+        filterSearchAction->setShortcut(QKeySequence("Shift+S"));
 
         filterRating1Action->setShortcut(QKeySequence("Shift+1"));
         filterRating2Action->setShortcut(QKeySequence("Shift+2"));
@@ -9309,11 +9325,6 @@ the user then sorts or filters the index could go out of range and the app will 
 Make sure the file path exists in the datamodel. The most likely failure will be if a new
 folder has been selected but the image cache has not been rebuilt.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
 //    int row = dm->fPathRow[fPath];
 //    QModelIndex idx = dm->sf->mapFromSource(dm->index(row, 0));
     QModelIndex idx = dm->proxyIndexFromPath(fPath);
@@ -9322,6 +9333,31 @@ folder has been selected but the image cache has not been rebuilt.
         thumbView->refreshThumb(idx, G::CachedRole);
         gridView->refreshThumb(idx, G::CachedRole);
     }
+    return;
+}
+
+void MW::searchTextEdit()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // set visibility
+    if (!filterDock->isVisible()) {
+        filterDock->setVisible(true);
+    }
+    // set focus
+    if (filterDock->visibleRegion().isEmpty()) {
+        filterDock->raise();
+    }
+    // set menu status for filterDock in window menu
+    filterDockVisibleAction->setChecked(true);
+
+    // Goto item and edit
+    filters->scrollToItem(filters->search);
+    filters->expandItem(filters->search);
+    filters->editItem(filters->searchText, 0);
     return;
 }
 
@@ -10571,10 +10607,9 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    metadata->parseHEIF();
 
-    imageView->limitFit100Pct = !imageView->limitFit100Pct;
-    qDebug() << __FUNCTION__ << imageView->limitFit100Pct;
-    imageView->refresh();
+    filters->labelsGreen->setDisabled(true);
     return;
+
 
     int w = 0;
     int s = statusBar()->layout()->spacing();

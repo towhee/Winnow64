@@ -1,4 +1,6 @@
 BUGS
+- Search text edit appearance
+- Finish statusProgress width correction when new indicators
 - Standardize QMessageBox usage, integrated with global styles
 - Navigating thumbs in large folders while still opening can crash
 - Not ingesting all jpgs with raws
@@ -17,7 +19,6 @@ CODE IMPROVEMENTS
 ENHANCEMENTS
 - Add exposure compensation to metadata
 - Reset to defaults
-- Search
 - Copy image/pixmap to clipboard
 - TableView freeze columns https://doc.qt.io/qt-5/qtwidgets-itemviews-frozencolumn-example.html
 - Read keywords
@@ -33,6 +34,8 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Search
+- Crashing when apply color management to PNG
 - Limit fit 100% option added
 - Progress bar not resizing to smaller space
 - When go to loupe view not default to fill magnification

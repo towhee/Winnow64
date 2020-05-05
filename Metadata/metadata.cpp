@@ -100,6 +100,18 @@ void Metadata::initSupportedFiles()
                         << "sr2"
                         << "rw2";
 
+    iccFormats          << "jpg"
+                        << "jpeg"
+                        << "arw"
+                        << "cr2"
+                        << "nef"
+                        << "orf"
+                        << "raf"
+                        << "rw2"
+                        << "sr2"
+                        << "tif";
+
+
     supportedFormats    << "arw"
                         << "bmp"
                         << "cr2"

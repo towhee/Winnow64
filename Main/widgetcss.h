@@ -70,5 +70,6 @@ public:
     QString spinBox();
     QString textEdit();
     QString lineEdit();
+    QString checkBox();
 };
 #endif // WIDGETCSS_H

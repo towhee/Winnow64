@@ -318,6 +318,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Edit Search Text</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + S</string>
+        </property>
+        <property name="text">
+         <string>Puts focus on search text box</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Rate Image</string>
         </property>
         <property name="text">

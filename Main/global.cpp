@@ -84,6 +84,7 @@ namespace G
         qDebug() << time.rightJustified(15, ' ') << " "
                  << functionName.leftJustified(50, '.') << " "
                  << comment;
+        qApp->processEvents();
     }
 
     PopUp *popUp;

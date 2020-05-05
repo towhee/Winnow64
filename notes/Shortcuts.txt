@@ -40,6 +40,7 @@ Reveal in Explore/Finder     R    ⌘
 Function                     Key  ⌘  ⇧  ⌥   ⌘(ctrl) ⇧(shift)  ⌥(alt)
 --------------------------------------------
 Slideshow                    S
+Edit search text             S    ⌘
 Reverse sort                 S           ⌥
 Table view                   T
 New workspace                W

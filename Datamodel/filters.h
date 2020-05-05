@@ -10,6 +10,8 @@ class Filters : public QTreeWidget
     Q_OBJECT
 public:
     Filters(QWidget *parent);
+    QTreeWidgetItem *search;
+    QTreeWidgetItem *searchText;
     QTreeWidgetItem *refine;
     QTreeWidgetItem *refineFalse;
     QTreeWidgetItem *refineTrue;
@@ -47,9 +49,14 @@ public:
     void removeChildrenDynamicFilters();
     void addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground(const int &a, const int &b);
+    void setChildFlags();
+
+    QStringList ignoreSearchStrings;
+    QString defaultSearchString;
 
 signals:
     void filterChange(QString source);
+    void searchStringChange(QString searchString);
 
 public slots:
 
@@ -75,6 +82,7 @@ private:
     int indentation;
 
     bool itemHasChanged;
+    QString searchString = "";
     void itemChangedSignal(QTreeWidgetItem *item, int column);
     void itemClickedSignal(QTreeWidgetItem *item, int column);
 };
