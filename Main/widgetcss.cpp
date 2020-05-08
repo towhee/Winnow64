@@ -288,8 +288,13 @@ QString WidgetCSS::treeWidget()
         "color: lightgray;"
     "}"
 
+    "QTreeWidget::item:disabled {"
+        "color:" + disabledColor.name() + ";"
+    "}"
+
     "QTreeWidget::item {"
         "height: 24px;"
+        "margin-left: -5px;"  // aligns edit box with cell contents
     "}";
 }
 

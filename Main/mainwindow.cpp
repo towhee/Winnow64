@@ -949,7 +949,7 @@ void MW::folderSelectionChange()
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
     qApp->processEvents();
 
-    // used by SortFilter, set true when ImageCacheThread starts
+    // used by SortFilter/filterChange, set true when ImageCacheThread starts
     G::isNewFolderLoaded = false;
 
     // ImageView set zoom = fit for the first image of a new folder
@@ -3368,7 +3368,7 @@ void MW::createMenus()
     filterMenu->addAction(filterLastDayAction);
     filterMenu->addSeparator();
 //    filterMenu->addAction(filterUpdateAction);
-    filterMenu->addAction(filterInvertAction);
+//    filterMenu->addAction(filterInvertAction);
     filterMenu->addAction(filterLastDayAction);
 
     // Sort Menu
@@ -3515,6 +3515,8 @@ void MW::createMenus()
     filterActions = new QList<QAction *>;
 //    QList<QAction *> *filterActions = new QList<QAction *>;
     filterActions->append(clearAllFiltersAction);
+    filterActions->append(searchTextEditAction);
+//    filterActions->append(filterInvertAction);
 //    filterActions->append(filterUpdateAction);
     filterActions->append(separatorAction);
     filterActions->append(expandAllAction);
@@ -4722,23 +4724,26 @@ void MW::updateStatusBar()
 
     statusBar()->addWidget(statusLabel);
     statusLabel->show();
+    updateProgressBarWidth();
 
-//    qDebug() << __FUNCTION__
-//             << "statusBar" << statusBar()->width()
-//             << "layout spacing" << statusBar()->layout()->spacing()
-//             << "sortZAStatusLabel " << sortZAStatusLabel->width()
-//             << "rawJpgStatusLabel " << rawJpgStatusLabel->width()
-//             << "statusLabel " << statusLabel->width()
-//             << "progressLabel " << progressLabel->width()
-//             << "metadataThreadRunningLabel " << metadataThreadRunningLabel->width()
-//             << "imageThreadRunningLabel " << imageThreadRunningLabel->width()
-//             << "statusBarSpacer " << statusBarSpacer->width()
-//             ;
-//    for (int i = 0; i < statusBar()->children().count(); ++i) {
-//    foreach (auto obj, statusBar()->children()) {
-//        qDebug() << __FUNCTION__
-//                 << obj->objectName();
-//    }
+    /*
+    qDebug() << __FUNCTION__
+             << "statusBar" << statusBar()->width()
+             << "layout spacing" << statusBar()->layout()->spacing()
+             << "sortZAStatusLabel " << sortZAStatusLabel->width()
+             << "rawJpgStatusLabel " << rawJpgStatusLabel->width()
+             << "statusLabel " << statusLabel->width()
+             << "progressLabel " << progressLabel->width()
+             << "metadataThreadRunningLabel " << metadataThreadRunningLabel->width()
+             << "imageThreadRunningLabel " << imageThreadRunningLabel->width()
+             << "statusBarSpacer " << statusBarSpacer->width()
+             ;
+    for (int i = 0; i < statusBar()->children().count(); ++i) {
+    foreach (auto obj, statusBar()->children()) {
+        qDebug() << __FUNCTION__
+                 << obj->objectName();
+    }
+//    */
 
     if (updateImageCacheWhenFileSelectionChange) progressLabel->setVisible(true);
     else progressLabel->setVisible(false);
@@ -5262,7 +5267,7 @@ void MW::quickFilter()
     #endif
     }
     // checked
-    if (filterSearchAction->isChecked()) filters->searchText->setCheckState(0, Qt::Checked);
+    if (filterSearchAction->isChecked()) filters->searchTrue->setCheckState(0, Qt::Checked);
     if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Checked);
     if (filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Checked);
     if (filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Checked);
@@ -6009,10 +6014,10 @@ app is "stranded" on secondary monitors that are not attached.
     folderDock->raise();
     resizeDocks({folderDock}, {350}, Qt::Horizontal);
 
-/*    enable the folder dock (first one in tab)
+    // enable the folder dock (first one in tab)
     QList<QTabBar *> tabList = findChildren<QTabBar *>();
     QTabBar* widgetTabBar = tabList.at(0);
-    widgetTabBar->setCurrentIndex(0);*/
+    widgetTabBar->setCurrentIndex(0);
 
     resizeDocks({thumbDock}, {100}, Qt::Vertical);
 
@@ -9357,7 +9362,7 @@ void MW::searchTextEdit()
     // Goto item and edit
     filters->scrollToItem(filters->search);
     filters->expandItem(filters->search);
-    filters->editItem(filters->searchText, 0);
+    filters->editItem(filters->searchTrue, 0);
     return;
 }
 
@@ -10607,38 +10612,38 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    metadata->parseHEIF();
 
-    filters->labelsGreen->setDisabled(true);
+    qDebug() << __FUNCTION__ << filters->searchString;
     return;
 
 
-    int w = 0;
-    int s = statusBar()->layout()->spacing();
-    if (sortAZStatusLabel->isVisible()) w += s + sortAZStatusLabel->width();
-    if (sortZAStatusLabel->isVisible()) w += s + sortZAStatusLabel->width();
-    if (rawJpgStatusLabel->isVisible()) w += s + rawJpgStatusLabel->width();
-    if (filterStatusLabel->isVisible()) w += s + filterStatusLabel->width();
-    if (subfolderStatusLabel->isVisible()) w += s + subfolderStatusLabel->width();
-    if (slideShowStatusLabel->isVisible()) w += s + slideShowStatusLabel->width();
-    if (statusLabel->isVisible()) w += s + statusLabel->width();
-    if (progressLabel->isVisible()) w += s + progressLabel->width();
-    if (metadataThreadRunningLabel->isVisible()) w += s + metadataThreadRunningLabel->width();
-    if (imageThreadRunningLabel->isVisible()) w += s + imageThreadRunningLabel->width();
-    if (statusBarSpacer->isVisible()) w += s + statusBarSpacer->width();
-    w += s;
-    int availableSpace = statusBar()->width() - w;
+//    int w = 0;
+//    int s = statusBar()->layout()->spacing();
+//    if (sortAZStatusLabel->isVisible()) w += s + sortAZStatusLabel->width();
+//    if (sortZAStatusLabel->isVisible()) w += s + sortZAStatusLabel->width();
+//    if (rawJpgStatusLabel->isVisible()) w += s + rawJpgStatusLabel->width();
+//    if (filterStatusLabel->isVisible()) w += s + filterStatusLabel->width();
+//    if (subfolderStatusLabel->isVisible()) w += s + subfolderStatusLabel->width();
+//    if (slideShowStatusLabel->isVisible()) w += s + slideShowStatusLabel->width();
+//    if (statusLabel->isVisible()) w += s + statusLabel->width();
+//    if (progressLabel->isVisible()) w += s + progressLabel->width();
+//    if (metadataThreadRunningLabel->isVisible()) w += s + metadataThreadRunningLabel->width();
+//    if (imageThreadRunningLabel->isVisible()) w += s + imageThreadRunningLabel->width();
+//    if (statusBarSpacer->isVisible()) w += s + statusBarSpacer->width();
+//    w += s;
+//    int availableSpace = statusBar()->width() - w;
 
-    qDebug() << __FUNCTION__ << "Before: "
-             << "statusBar" << statusBar()->width()
-             << "layout spacing" << statusBar()->layout()->spacing()
-             << "sortZAStatusLabel " << sortZAStatusLabel->width()
-             << "rawJpgStatusLabel " << rawJpgStatusLabel->width()
-             << "statusLabel " << statusLabel->width()
-             << "progressLabel " << progressLabel->width()
-             << "metadataThreadRunningLabel " << metadataThreadRunningLabel->width()
-             << "imageThreadRunningLabel " << imageThreadRunningLabel->width()
-             << "statusBarSpacer " << statusBarSpacer->width()
-             << "availableSpace " << availableSpace
-             ;
+//    qDebug() << __FUNCTION__ << "Before: "
+//             << "statusBar" << statusBar()->width()
+//             << "layout spacing" << statusBar()->layout()->spacing()
+//             << "sortZAStatusLabel " << sortZAStatusLabel->width()
+//             << "rawJpgStatusLabel " << rawJpgStatusLabel->width()
+//             << "statusLabel " << statusLabel->width()
+//             << "progressLabel " << progressLabel->width()
+//             << "metadataThreadRunningLabel " << metadataThreadRunningLabel->width()
+//             << "imageThreadRunningLabel " << imageThreadRunningLabel->width()
+//             << "statusBarSpacer " << statusBarSpacer->width()
+//             << "availableSpace " << availableSpace
+//             ;
 
 //    progressWidth = progressLabel->width() + availableSpace;
 //    setCacheParameters();

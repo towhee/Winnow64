@@ -650,10 +650,11 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
-/*        qDebug() << __FUNCTION__ << "startRow =" << startRow
+//        /*
+        qDebug() << __FUNCTION__ << "startRow =" << startRow
                  << "endRow =" << endRow
                  << "row =" << row;
-*/
+//        */
         // file path and dm source row in case filtered or sorted
         mutex.lock();
         QModelIndex idx = dm->sf->index(row, 0);
@@ -675,6 +676,12 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
                 else {
                     qDebug() << __FUNCTION__ << "Failed to load metadata for" << fPath;
                 }
+            }
+            // cannot read this file type, load empty metadata
+            else {
+                metadata->clearMetadata();
+                metadata->imageMetadata.row = dmRow;
+                dm->addMetadataForItem(metadata->imageMetadata);
             }
         }
         mutex.unlock();

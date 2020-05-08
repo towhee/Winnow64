@@ -42,6 +42,7 @@ public:
     int halfFontSize;
     int scrollBarWidth = 14;
     QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
+    QColor disabledColor = QColor(G::disabledShade,G::disabledShade,G::disabledShade);
     QColor widgetBackgroundColor ;
     QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
     QColor selectionColor = QColor(68,95,118);

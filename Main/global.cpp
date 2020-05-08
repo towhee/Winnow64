@@ -39,6 +39,7 @@ namespace G
     qreal dpi;                          // current logical screen dots per inch
     qreal ptToPx;                       // font points to pixels conversion factor
     int textShade = 190;                // text default luminousity
+    int disabledShade = textShade - 64; // disabled text default luminousity
     int backgroundShade;                // app background luminousity
 
     int actualDevicePixelRatio;
