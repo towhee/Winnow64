@@ -709,15 +709,17 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     static int lastProgressRow = 0;
     int row = m.row;
     QString search = index(row, G::SearchTextColumn).data().toString();
+    if (!metadata->ratings.contains(m.rating)) m.rating = "";
+    if (!metadata->labels.contains(m.label)) m.label = "";
 
     setData(index(row, G::SearchColumn), m.isSearch);
     setData(index(row, G::SearchColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-    if (index(row, G::LabelColumn).data().toString() != "") m.label = index(row, G::LabelColumn).data().toString();
+//    if (index(row, G::LabelColumn).data().toString() != "") m.label = index(row, G::LabelColumn).data().toString();
     setData(index(row, G::LabelColumn), m.label);
     setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     search += m.label;
     setData(index(row, G::_LabelColumn), m._label);
-    if (index(row, G::RatingColumn).data().toString() != "") m.rating = index(row, G::RatingColumn).data().toString();
+//    if (index(row, G::RatingColumn).data().toString() != "") m.rating = index(row, G::RatingColumn).data().toString();
     setData(index(row, G::RatingColumn), m.rating);
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::_RatingColumn), m._rating);
@@ -877,17 +879,18 @@ void DataModel::searchStringChange(QString searchString)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << searchString;
     // update datamodel search string match
     for (int row = 0; row < rowCount(); ++row)  {
         QString fPath = index(row, 1).data().toString();
 //        qDebug() << __FUNCTION__ << "For row =" << row;
         if (filters->ignoreSearchStrings.contains(searchString)) {
 //            qDebug() << __FUNCTION__ << "Ignore" << row << fPath << "searchString =" << searchString;
-            setData(index(row, G::SearchColumn), true);
-            filters->searchText->setText(0, filters->defaultSearchString);
+            setData(index(row, G::SearchColumn), false);
+            filters->searchTrue->setText(0, filters->enterSearchString);
         }
         else {
-//            qDebug() << __FUNCTION__ << "Test  " << row << fPath << "searchString =" << searchString;
+            qDebug() << __FUNCTION__ << "Test  " << row << fPath << "searchString =" << searchString;
             QString searchableText = index(row, G::SearchTextColumn).data().toString();
             setData(index(row, G::SearchColumn), searchableText.contains(searchString));
         }
@@ -1139,23 +1142,9 @@ void DataModel::filteredItemCount()
     G::track(__FUNCTION__);
     #endif
     }
-//    filters->setChildFlags();     // not working as planned
-    // Search text
-//    QString searchValue = filters->searchText->text(0).toLower();
-//    if (searchValue != "" && searchValue != "Enter search text...") {
-//        int tot = 0;
-//        for (int row = 0; row < sf->rowCount(); ++row) {
-//            QString text = sf->index(row, G::SearchTextColumn).data().toString();
-//            if (text.contains(searchValue)) tot++;
-//        }
-//        filters->searchText->setData(2, Qt::EditRole, QString::number(tot));
-//        filters->searchText->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
-//    }
-
-    // Other filter items
     QTreeWidgetItemIterator it(filters);
     while (*it) {
-        if ((*it)->parent()/* && (*it)->parent()->text(0) != "Search"*/) {
+        if ((*it)->parent()) {
             int col = filters->filterCategoryToDmColumn[(*it)->parent()->text(0)];
             QString searchValue = (*it)->text(1);
             int tot = 0;
@@ -1167,6 +1156,8 @@ void DataModel::filteredItemCount()
         }
         ++it;
     }
+    filters->setDisabled(true);
+    filters->setSearchTextColor();
 }
 
 void DataModel::unfilteredItemCount()
@@ -1188,7 +1179,7 @@ change.
     QTreeWidgetItemIterator it(filters);
     while (*it) {
         if ((*it)->parent()) {
-            if ((*it) == filters->searchText) {
+            if ((*it) == filters->searchTrue) {
             }
             int col = filters->filterCategoryToDmColumn[(*it)->parent()->text(0)];
             QString searchValue = (*it)->text(1);
@@ -1198,7 +1189,7 @@ change.
                 bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
                 bool found = false;
                 // always count all for search
-                if ((*it) == filters->searchText) found = true;
+                if ((*it) == filters->searchTrue) found = true;
                 else found = index(row, col).data().toString() == searchValue;
                 if (found) {
                     tot++;
@@ -1270,18 +1261,24 @@ map to columns in the data model ie Picked, Rating, Label ...
             isMatch = true. If it does not match them isMatch is still false but the row could
             still be accepted if another item in the same category does match.
             */
-
             if ((*filter)->checkState(0) != Qt::Unchecked) {
-                isCategoryUnchecked = false;
-                QModelIndex idx = sourceModel()->index(sourceRow, dataModelColumn, sourceParent);
-                QVariant dataValue = idx.data(Qt::EditRole);
-                QVariant filterValue = (*filter)->data(1, Qt::EditRole);
-
-/*                QString itemName = (*filter)->text(0);      // for debugging
-                qDebug() << G::t.restart() << "\t" << itemCategory << itemName
-                         << "Comparing" << dataValue << filterValue << (dataValue == filterValue);
-*/
-                if (dataValue == filterValue) isMatch = true;
+                if ((*filter) == filters->searchTrue &&
+                (*filter)->text(0) == filters->enterSearchString) {
+                    isMatch = true;
+                }
+                else {
+                    isCategoryUnchecked = false;
+                    QModelIndex idx = sourceModel()->index(sourceRow, dataModelColumn, sourceParent);
+                    QVariant dataValue = idx.data(Qt::EditRole);
+                    QVariant filterValue = (*filter)->data(1, Qt::EditRole);
+                    /*
+                    QString itemName = (*filter)->text(0);      // for debugging
+                    qDebug() << G::t.restart() << "\t" << itemCategory << itemName
+                             << "Comparing" << dataValue << filterValue
+                             << (dataValue == filterValue);
+//                    */
+                    if (dataValue == filterValue) isMatch = true;
+                }
             }
         }
         else {

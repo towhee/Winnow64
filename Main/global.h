@@ -156,6 +156,7 @@ namespace G
     extern qreal ptToPx;
     extern int textShade;
     extern int backgroundShade;
+    extern int disabledShade;
 
     extern int actualDevicePixelRatio;
     extern bool allMetadataLoaded;

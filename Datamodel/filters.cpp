@@ -69,8 +69,13 @@ datamodel.
     categoryBackground.setColorAt(1, QColor(b,b,b));
     categoryFont = this->font();
 
-    defaultSearchString = "Enter search text...";
-    ignoreSearchStrings << "" << defaultSearchString << defaultSearchString.toLower();
+    enterSearchString = "Enter search text...";
+    ignoreSearchStrings << "" << enterSearchString << enterSearchString.toLower();
+    int c = G::textShade + 15;
+    int d = G::textShade - 15;
+    searchDefaultTextColor = QColor(c,d,c);
+    searchDefaultTextFont = font();
+    searchDefaultTextFont.setItalic(true);
 
     createPredefinedFilters();
     createDynamicFilters();
@@ -112,15 +117,26 @@ void Filters::createPredefinedFilters()
     search->setFont(0, categoryFont);
     search->setText(2, "Filter");
     search->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+    search->setText(3, "Total");
+    search->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
     search->setText(4, "Total");
     search->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
     search->setData(0, G::ColumnRole, G::SearchColumn);
 
-    searchText = new QTreeWidgetItem(search);
-    searchText->setText(0, defaultSearchString);
-    searchText->setCheckState(0, Qt::Unchecked);
-    searchText->setData(1, Qt::EditRole, "true");
-    searchText->setFlags(searchText->flags() | Qt::ItemIsEditable);
+    searchTrue = new QTreeWidgetItem(search);
+    searchTrue->setText(0, enterSearchString);
+    searchTrue->setCheckState(0, Qt::Checked);
+    searchTrue->setData(1, Qt::EditRole, "true");
+    searchTrue->setFlags(searchTrue->flags() | Qt::ItemIsEditable);
+    searchTrue->setFont(0, searchDefaultTextFont);
+    searchTrue->setForeground(0, searchDefaultTextColor);
+    searchTrue->setToolTip(0, "Search text is not case sensitive");
+    searchTrueIdx = indexFromItem(searchTrue, 0);
+
+    searchFalse = new QTreeWidgetItem(search);
+    searchFalse->setText(0, "No match for search");
+    searchFalse->setCheckState(0, Qt::Unchecked);
+    searchFalse->setData(1, Qt::EditRole, false);
 
     refine = new QTreeWidgetItem(this);
     refine->setText(0, "Refine");
@@ -387,22 +403,51 @@ void Filters::checkPicks(bool check)
     emit filterChange("Filters::checkPicks");
 }
 
-void Filters::setChildFlags()
+void Filters::setSearchNewFolder()
 {
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    searchTrue->setText(0, enterSearchString);
+    searchTrue->setCheckState(0, Qt::Checked);
+}
+
+void Filters::setDisabled(bool disable)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        if ((*it)->parent() && (*it)->parent()->text(0) != "Search") {
+            if (disable) {
+                if ((*it)->text(2) == "0") (*it)->setDisabled(true);
+                else (*it)->setDisabled(false);
+            }
+            else (*it)->setDisabled(false);
+        }
+        ++it;
+    }
+}
+
+void Filters::setSearchTextColor()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+//    if (searchTrue->text(0) == defaultSearchString) {
+//        searchTrue->setFont(0, searchDefaultTextFont);
+//        searchTrue->setForeground(0, searchDefaultTextColor);
 //    }
-//    // not helping to removed disabled state
-//    QTreeWidgetItemIterator it(this);
-//    while (*it) {
-//        if ((*it)->parent() && (*it)->parent()->text(0) != "Search") {
-//            qDebug() << __FUNCTION__ << (*it)->text(0);
-//            (*it)->setFlags(Qt::ItemIsEnabled);
-//            (*it)->setDisabled(false);
-//        }
-//        ++it;
+//    else {
+//        searchTrue->setFont(0, font());
+//        searchTrue->setForeground(0, QColor(G::textShade, G::textShade, G::textShade));
 //    }
 }
 
@@ -417,8 +462,10 @@ This is used to determine the filter status in MW::updateFilterStatus
     #endif
     }
     QTreeWidgetItemIterator it(this);
+    if (searchTrue->checkState(0) == Qt::Checked && searchTrue->text(0) != enterSearchString)
+        return true;
     while (*it) {
-        if ((*it)->parent()) {
+        if ((*it)->parent() && (*it) != searchTrue) {
             if ((*it)->checkState(0) == Qt::Checked) return true;
         }
         ++it;
@@ -431,6 +478,9 @@ void Filters::invertFilters()
     QList<QString> catWithCheckedItems;
     QString cat = "";
     QTreeWidgetItemIterator it(this);
+
+    // enable all items
+    setDisabled(false);
 
     // populate catWithCheckedItems list with only categories that have one or more checked items
     while (*it) {
@@ -469,6 +519,10 @@ void Filters::invertFilters()
         }
         ++it2;
     }
+
+    // disable items with no filter count
+    setDisabled(true);
+
     // emit filterChange();  // this is done im MW::invertFilters - which calls this function
 }
 
@@ -495,6 +549,7 @@ folder is selected to reset the filter criteria.
         }
         ++it;
     }
+    setSearchNewFolder();
 }
 
 void Filters::uncheckAllFilters()
@@ -516,7 +571,7 @@ void Filters::uncheckAllFilters()
         }
         ++it;
     }
-//    emit filterChange("Filters::uncheckAllFilters");
+    setSearchNewFolder();
 }
 
 void Filters::uncheckTypesFilters()
@@ -578,77 +633,110 @@ createDynamicFilters;
     }
 }
 
+//void Filters::dataChanged(const QModelIndex &topLeft,
+//                          const QModelIndex &bottomRight,
+//                          const QVector<int> &roles)
+//{
+//    if (topLeft == searchTrueIdx)
+//        qDebug() << __FUNCTION__ << topLeft << searchTrueIdx << topLeft.data().toString();
+//    else
+//        QAbstractItemView::dataChanged(topLeft, bottomRight, roles);
+
+//}
+
 void Filters::itemChangedSignal(QTreeWidgetItem *item, int column)
 {
-    /*
-    If the user clicks on the checkbox indicator of any child item then the checkbox state toggles
-    and itemChangedSignal is fired. The itemChangedSignal function sets the itemHasChanged flag to
-    true. Next the itemClickedSignal is fired. Since the itemHasChanged flag is true the function
-    itemClickedSignal only emits a filterChange.
+/*
+If the user clicks on the checkbox indicator of any child item then the checkbox state toggles
+and itemChangedSignal is fired. The itemChangedSignal function sets the itemHasChanged flag to
+true. Next the itemClickedSignal is fired. Since the itemHasChanged flag is true the function
+itemClickedSignal only emits a filterChange.
 
-    If the user clicks on the text portion of the checkbox (ie "Purple" in the color class
-    filters) then the checkbox is not toggled and the itemChangedSignal is not fired. The
-    itemClickedSignal is fired and since the itemHasChanged flag is false the checkbox checkstate
-    is manually toggled and a filterChange is emitted.
+If the user clicks on the text portion of the checkbox (ie "Purple" in the color class
+filters) then the checkbox is not toggled and the itemChangedSignal is not fired. The
+itemClickedSignal is fired and since the itemHasChanged flag is false the checkbox checkstate
+is manually toggled and a filterChange is emitted.
 
-    If the user clicks on the text portion of the search checkbox then the itemClickedSignal is
-    fired and the itemClickedSignal function detects that the item is searchText and
-    itemHasChanged is false and sets the searchText cell to edit mode. The user makes an edit.
-    This fires the itemChangedSignal. The itemChangedSignal function knows the sender is the item
-    searchText but does not know if the itemchange was a change to the text or the checkbox state.
-    It compares the current search string to the previous value, and if they are different, then
-    the change was the search string.  If the search string is legal then searchStringChange is
-    emitted.  DataModel::searchStringChange receives the signal and updates the datamodel
-    searchColumn match to true or false for each row.  The filteredItemCount is updated.
-    */
+If the user clicks on the text portion of the search checkbox then the itemClickedSignal is
+fired and the itemClickedSignal function detects that the item is searchText and
+itemHasChanged is false and sets the searchText cell to edit mode. The user makes an edit.
+This fires the itemChangedSignal. The itemChangedSignal function knows the sender is the item
+searchText but does not know if the itemchange was a change to the text or the checkbox state.
+It compares the current search string to the previous value, and if they are different, then
+the change was the search string.  If the search string is legal then searchStringChange is
+emitted.  DataModel::searchStringChange receives the signal and updates the datamodel
+searchColumn match to true or false for each row.  The filteredItemCount is updated.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    if (column == 0) {
-        /*
+    // Only interested in child checkbox items
+    if (column > 0 || !item->parent() || !G::isNewFolderLoaded || G::buildingFilters) return;
+    /*
         qDebug() << __FUNCTION__
                  << item->parent()->text(0)
                  << item->text(0)
-                 << "column =" << column;
+                 << "column =" << column
+                 << "searchString =" << searchString
+                 << "prevSearchString =" << prevSearchString
+                 << "enquoteItem =" << enquoteItem
+                    ;
 //                 */
-        if (item == searchText) {
-            QString s = searchText->text(0).toLower();
-            if (s == "") {
-                searchText->setText(0, defaultSearchString);
-                return;
-            }
-            // check if the search string has changed
-            if (s != searchString) {
-                /*
-                qDebug() << __FUNCTION__ << "searchText has changed"
-                         << s << searchString;
-//                         */
-                searchString = s;
-                emit searchStringChange(s);
-                return;
-            }
-        }
 
-        // got this far - must be a checkbox value change
-        bool isChild = item->parent();
-        bool ok = isChild && column == 0 && G::isNewFolderLoaded && !G::buildingFilters;
-        if (ok) {
-            itemHasChanged = true;
+    /* Enquote the search if:
+         - the search string has been edited
+         - it is not the defaultSearchText or ""
+         - it has not been enquoted                 */
+    bool okToEnquote = item == searchTrue &&
+                       enquoteItem &&
+                       column == 0 &&
+                       searchTrue->text(0).toLower() != prevSearchString &&
+                       searchTrue->text(0) != enterSearchString &&
+                       searchTrue->text(0) != "";
+    if (okToEnquote) {
+        enquoteItem = false;
+        searchString = searchTrue->text(0).toLower();
+        QString displaySearchString = "For: ";
+        displaySearchString += Utilities::enquote(searchString);
+        searchTrue->setText(0, displaySearchString);
+        return;
+    }
+
+    // The search string edit is blank - set to defaultSearchString and update search
+    /*
+    qDebug() << __FUNCTION__
+             << item->parent()->text(0)
+             << item->text(0)
+             << "column =" << column;
+//                 */
+    if (item == searchTrue) {
+        if (searchTrue->text(0) == "") {
+            prevSearchString = searchString;
+            searchString = "";
+            enquoteItem = false;
+            searchTrue->setText(0, enterSearchString);
+            emit searchStringChange(searchString);
+            if (item->checkState(0) == Qt::Unchecked) return;
+            emit filterChange("Filters::itemChangedSignal search text change");
+            return;
+        }
+        // check if the search string has changed
+        if (searchString != prevSearchString) {
             /*
-            qDebug() << __FUNCTION__
-                     << "G::isNewFolderLoaded" << G::isNewFolderLoaded
-                     << "G::buildingFilters" << G::buildingFilters
-                     << "item->text(column)" << item->text(column)
-                     << "item->parent()" << item->parent()
-                     << "isChild" << isChild
-                     << "column" << column
-                     << "itemHasChanged" << itemHasChanged
-                     << "result" << result;
-                     */
+            qDebug() << __FUNCTION__ << "searchText has changed"
+                     << s << searchString;
+//                         */
+            emit searchStringChange(searchString);
+            if (item->checkState(0) == Qt::Unchecked) return;
+            emit filterChange("Filters::itemChangedSignal search text change");
+            return;
         }
     }
+
+    // got this far - must be a checkbox value change
+    itemHasChanged = true;
 }
 
 void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
@@ -679,26 +767,34 @@ searchColumn match to true or false for each row.  The filteredItemCount is upda
     G::track(__FUNCTION__);
     #endif
     }
-    if (item->isDisabled()) return;
+    // Only interested in clicks on the checkbox column
+    if (item->isDisabled() ||
+        column > 0 ||
+        !item->parent() ||
+        !G::isNewFolderLoaded ||
+        G::buildingFilters) return;
 
-    bool isChild = item->parent();
-    if (isChild && column == 0 && G::isNewFolderLoaded && !G::buildingFilters) {
-        /*
-        qDebug() << __FUNCTION__
-                 << item->parent()->text(0)
-                 << item->text(0)
-                 << "itemHasChanged =" << itemHasChanged;
-//             */
-        if (!itemHasChanged && item->parent()->text(0) == "Search") {
-            editItem(searchText, 0);
-            return;
-        }
-        if (!itemHasChanged && item->parent()->text(0) != "Search") {
-            if (item->checkState(0) == Qt::Unchecked) item->setCheckState(0, Qt::Checked);
-            else item->setCheckState(0, Qt::Unchecked);
-        }
-        emit filterChange("Filters::itemClickedSignal");
+    /*
+    qDebug() << __FUNCTION__ << item->text(0)
+             << "isChild" << isChild
+             << "itemHasChanged" << itemHasChanged
+             << "isSearchTrue" << isSearchTrue;
+//    */
+
+    // if clicked on the search text then edit it
+    if (!itemHasChanged && item == searchTrue) {
+        prevSearchString = searchString;
+        enquoteItem = true;
+        editItem(searchTrue, 0);
+        return;
     }
+
+    // clicked on checkbox text (not the indicator) so toggle the check state
+    if (!itemHasChanged && item != searchTrue) {
+        if (item->checkState(0) == Qt::Unchecked) item->setCheckState(0, Qt::Checked);
+        else item->setCheckState(0, Qt::Unchecked);
+    }
+    emit filterChange("Filters::itemClickedSignal");
     itemHasChanged = false;
 }
 

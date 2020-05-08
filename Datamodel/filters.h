@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include "Main/global.h"
+#include "Utilities/utilities.h"
 //#include "Datamodel/datamodel.h"
 
 class Filters : public QTreeWidget
@@ -11,7 +12,8 @@ class Filters : public QTreeWidget
 public:
     Filters(QWidget *parent);
     QTreeWidgetItem *search;
-    QTreeWidgetItem *searchText;
+    QTreeWidgetItem *searchTrue;
+    QTreeWidgetItem *searchFalse;
     QTreeWidgetItem *refine;
     QTreeWidgetItem *refineFalse;
     QTreeWidgetItem *refineTrue;
@@ -49,10 +51,14 @@ public:
     void removeChildrenDynamicFilters();
     void addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground(const int &a, const int &b);
-    void setChildFlags();
+    void setSearchNewFolder();
+    void setDisabled(bool disable);
+    void setSearchTextColor();
 
+    QString searchString = "";
+    QString prevSearchString = "";
     QStringList ignoreSearchStrings;
-    QString defaultSearchString;
+    QString enterSearchString;
 
 signals:
     void filterChange(QString source);
@@ -70,6 +76,11 @@ public slots:
     void checkPicks(bool check);
 //    void resizeColumns();
 
+private slots:
+//    void dataChanged(const QModelIndex &topLeft,
+//                     const QModelIndex &bottomRight,
+//                     const QVector<int> &roles = QVector<int>());
+
 protected:
     void resizeEvent(QResizeEvent *event);
     void paintEvent(QPaintEvent *event);
@@ -79,10 +90,13 @@ private:
     void resizeColumns();
     QLinearGradient categoryBackground;
     QFont categoryFont;
+    QFont searchDefaultTextFont;
+    QColor searchDefaultTextColor;
     int indentation;
+    QModelIndex searchTrueIdx;
 
+    bool enquoteItem = false;
     bool itemHasChanged;
-    QString searchString = "";
     void itemChangedSignal(QTreeWidgetItem *item, int column);
     void itemClickedSignal(QTreeWidgetItem *item, int column);
 };

@@ -129,6 +129,10 @@ public:
     QStringList xmpWriteFormats;
     QStringList iccFormats;
     QStringList supportedFormats;
+
+    QStringList ratings;
+    QStringList labels;
+
 /*
     enum tagDataType {
         "uchar",
@@ -204,6 +208,7 @@ private:
 //    QTextStream rpt;
     quint32 order;
 
+    void initSupportedLabelsRatings();
     void initSupportedFiles();
     void initSegCodeHash();
     void initExifHash();

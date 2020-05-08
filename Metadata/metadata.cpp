@@ -11,7 +11,8 @@ Metadata::Metadata(QObject *parent) : QObject(parent)
     }
     // some initialization
     initOrientationHash();
-    initSupportedFiles();    
+    initSupportedFiles();
+    initSupportedLabelsRatings();
     p.report = false;
 }
 
@@ -45,6 +46,17 @@ TIF data types:
 
 
 */
+
+void Metadata::initSupportedLabelsRatings()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    ratings << "" << "1" << "2" << "3" << "4" << "5";
+    labels << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
+}
 
 void Metadata::initSupportedFiles()
 {
