@@ -40,7 +40,6 @@ Reveal in Explore/Finder     R    ⌘
 Function                     Key  ⌘  ⇧  ⌥   ⌘(ctrl) ⇧(shift)  ⌥(alt)
 --------------------------------------------
 Slideshow                    S
-Edit search text             S    ⌘
 Reverse sort                 S           ⌥
 Table view                   T
 New workspace                W
@@ -49,19 +48,20 @@ Default workspace            W    ⌘  ⇧
 Zoom fit <-> 100%            Z
 Recover prev picks           Z    ⌘      ⌥
 Exit full screen             Esc
-Folder dock                  F3
-Folder dock lock             F3      ⇧
-Fav dock                     F4
-Fav dock lock                F4      ⇧
-Filter dock                  F5
-Filter dock lock             F5      ⇧
+Edit search text             F2
+Folder dock                  F3          ⌥
+Folder dock lock             F3      ⇧   ⌥
+Fav dock                     F4          ⌥
+Fav dock lock                F4      ⇧   ⌥
+Refresh datamodel            F5
 Refresh folders              F5   ⌘
-Refresh datamodel            F5          ⌥
-Metadata dock                F6
-Metadata dock lock           F6      ⇧
-Thumb dock                   F7
-Thumb lock dock              F7      ⇧
-Status bar                   F10
+Filter dock                  F5          ⌥
+Filter dock lock             F5      ⇧   ⌥
+Metadata dock                F6          ⌥
+Metadata dock lock           F6      ⇧   ⌥
+Thumb dock                   F7          ⌥
+Thumb lock dock              F7      ⇧   ⌥
+Status bar                   F10         ⌥
 Preferences                  ,    ⌘
 Pick (toggle)                `
 Filter picks (toggle)        `    ⌘

@@ -874,6 +874,11 @@ bool DataModel::hasFolderChanged()
 
 void DataModel::searchStringChange(QString searchString)
 {
+/*
+When the search string in filters is edited a signal is emitted to run this function.  Where
+there is a match G::SearchColumn is set to true, otherwise false.  Udate the filtered and
+unfiltered counts.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -882,20 +887,17 @@ void DataModel::searchStringChange(QString searchString)
     qDebug() << __FUNCTION__ << searchString;
     // update datamodel search string match
     for (int row = 0; row < rowCount(); ++row)  {
-        QString fPath = index(row, 1).data().toString();
-//        qDebug() << __FUNCTION__ << "For row =" << row;
+        // no search string
         if (filters->ignoreSearchStrings.contains(searchString)) {
-//            qDebug() << __FUNCTION__ << "Ignore" << row << fPath << "searchString =" << searchString;
             setData(index(row, G::SearchColumn), false);
             filters->searchTrue->setText(0, filters->enterSearchString);
         }
+        // there is a search string
         else {
-            qDebug() << __FUNCTION__ << "Test  " << row << fPath << "searchString =" << searchString;
             QString searchableText = index(row, G::SearchTextColumn).data().toString();
             setData(index(row, G::SearchColumn), searchableText.contains(searchString));
         }
     }
-    filteredItemCount();
 }
 
 void DataModel::buildFilters()
@@ -1142,6 +1144,7 @@ void DataModel::filteredItemCount()
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << "filters->searchString" << filters->searchString;
     QTreeWidgetItemIterator it(filters);
     while (*it) {
         if ((*it)->parent()) {
@@ -1157,7 +1160,7 @@ void DataModel::filteredItemCount()
         ++it;
     }
     filters->setDisabled(true);
-    filters->setSearchTextColor();
+//    filters->setSearchTextColor();
 }
 
 void DataModel::unfilteredItemCount()
@@ -1176,22 +1179,37 @@ change.
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << "filters->searchString" << filters->searchString;
     QTreeWidgetItemIterator it(filters);
     while (*it) {
         if ((*it)->parent()) {
-            if ((*it) == filters->searchTrue) {
-            }
             int col = filters->filterCategoryToDmColumn[(*it)->parent()->text(0)];
             QString searchValue = (*it)->text(1);
             int tot = 0;
             int totRawJpgCombined = 0;
             for (int row = 0; row < rowCount(); ++row) {
                 bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
-                bool found = false;
-                // always count all for search
-                if ((*it) == filters->searchTrue) found = true;
-                else found = index(row, col).data().toString() == searchValue;
-                if (found) {
+//                bool found = false;
+//                // always count all for search
+//                if ((*it) == filters->searchTrue) {
+//                    if (filters->searchString == "") {
+//                        found = false;
+//                    }
+//                    else {
+//                        found = index(row, G::SearchTextColumn).data().toString().contains(filters->searchString);
+////                        qDebug() << __FUNCTION__ << row << filters->searchString
+////                                 << index(row, G::SearchTextColumn).data().toString()
+////                                 << found;
+//                    }
+//                }
+//                else {
+//                    found = index(row, col).data().toString() == searchValue;
+//                }
+//                if (found) {
+//                    tot++;
+//                    if (combineRawJpg && !hideRaw) totRawJpgCombined++;
+//                }
+                if (index(row, col).data().toString() == searchValue) {
                     tot++;
                     if (combineRawJpg && !hideRaw) totRawJpgCombined++;
                 }
@@ -1207,9 +1225,59 @@ change.
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
             (*it)->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
+
+            if ((*it) == filters->searchTrue) {
+//                qDebug() << __FUNCTION__ << filters->searchString << tot << totRawJpgCombined;
+            }
         }
         ++it;
     }
+}
+
+void DataModel::unfilteredItemSearchCount()
+{
+/*
+This function counts the number of occurences of each unique item in the datamodel, and also
+if raw+jpg have been combined.  The results as saved in the filters QTreeWidget in columns
+3 (all) and 4 (raw+jpg).
+
+This function is run everytime the search string changes.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+//    qDebug() << __FUNCTION__;
+    int col = G::SearchColumn;
+
+    // get total matches for searchTrue
+    int tot = 0;
+    int totRawJpgCombined = 0;
+    QString matchText = filters->searchTrue->text(1);
+    for (int row = 0; row < rowCount(); ++row) {
+        bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
+        if (index(row, col).data().toString() == matchText) {
+            tot++;
+            if (combineRawJpg && !hideRaw) totRawJpgCombined++;
+        }
+    }
+    filters->searchTrue->setData(3, Qt::EditRole, QString::number(tot));
+    filters->searchTrue->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
+
+    // get total matches for searchTrue
+    tot = 0;
+    totRawJpgCombined = 0;
+    matchText = filters->searchFalse->text(1);
+    for (int row = 0; row < rowCount(); ++row) {
+        bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
+        if (index(row, col).data().toString() == matchText) {
+            tot++;
+            if (combineRawJpg && !hideRaw) totRawJpgCombined++;
+        }
+    }
+    filters->searchFalse->setData(3, Qt::EditRole, QString::number(tot));
+    filters->searchFalse->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
 }
 
 // --------------------------------------------------------------------------------------------

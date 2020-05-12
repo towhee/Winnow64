@@ -941,6 +941,7 @@ void MW::folderSelectionChange()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
      // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
@@ -2154,7 +2155,7 @@ void MW::createActions()
     renameAction = new QAction(tr("Rename selected images"), this);
     renameAction->setObjectName("renameImages");
     renameAction->setShortcutVisibleInContextMenu(true);
-    renameAction->setShortcut(Qt::Key_F2);
+//    renameAction->setShortcut(Qt::Key_F2);
     addAction(renameAction);
 //    connect(renameAction, &QAction::triggered, this, &MW::renameImages);
 
@@ -3555,6 +3556,7 @@ void MW::createMenus()
     thumbViewActions->append(sortReverseAction);
     thumbViewActions->append(separatorAction4);
     thumbViewActions->append(saveAsFileAction);
+    thumbViewActions->append(deleteAction);
     thumbViewActions->append(separatorAction5);
     thumbViewActions->append(reportMetadataAction);
 
@@ -5202,6 +5204,7 @@ and icons are loaded if necessary.
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << "called from:" << source;
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) return;
 
@@ -5215,7 +5218,7 @@ and icons are loaded if necessary.
 
     // update filter panel image count by filter item
     dm->filteredItemCount();
-    dm->unfilteredItemCount();
+    if (source == "Filters::itemChangedSignal search text change") dm->unfilteredItemSearchCount();
 
     // recover sort after filtration
     sortChange();
@@ -5353,8 +5356,9 @@ void MW::clearAllFilters()
 
     if (!G::allMetadataLoaded) loadEntireMetadataCache();
     uncheckAllFilters();
-
-    filterChange("MW::clearAllFilters");
+    filters->searchString = "";
+    dm->searchStringChange("");
+    filterChange("MW::clearAllFilters");    
 }
 
 void MW::filterLastDay()
@@ -7826,7 +7830,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
         subFoldersAction->setShortcut(QKeySequence("B"));
         revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
-        refreshFoldersAction->setShortcut(QKeySequence("Ctrl+F5"));
+        refreshFoldersAction->setShortcut(QKeySequence("F5"));
         collapseFoldersAction->setShortcut(QKeySequence("Alt+C"));
         reportMetadataAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+M"));
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
@@ -7841,7 +7845,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         pick1Action->setShortcut(QKeySequence("P"));
         popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
 
-        searchTextEditAction->setShortcut(QKeySequence("Ctrl+S"));
+        searchTextEditAction->setShortcut(QKeySequence("F2"));
 
         rate1Action->setShortcut(QKeySequence("1"));
         rate2Action->setShortcut(QKeySequence("2"));
@@ -7935,19 +7939,19 @@ void MW::loadShortcuts(bool defaultShortcuts)
         manageWorkspaceAction->setShortcut(QKeySequence("Ctrl+W"));
         defaultWorkspaceAction->setShortcut(QKeySequence("Ctrl+Shift+W"));
 
-        folderDockVisibleAction->setShortcut(QKeySequence("F3"));
-        favDockVisibleAction->setShortcut(QKeySequence("F4"));
-        filterDockVisibleAction->setShortcut(QKeySequence("F5"));
-        metadataDockVisibleAction->setShortcut(QKeySequence("F6"));
-        thumbDockVisibleAction->setShortcut(QKeySequence("F7"));
-        menuBarVisibleAction->setShortcut(QKeySequence("F9"));
-        statusBarVisibleAction->setShortcut(QKeySequence("F10"));
+        folderDockVisibleAction->setShortcut(QKeySequence("Shift+F3"));
+        favDockVisibleAction->setShortcut(QKeySequence("Shift+F4"));
+        filterDockVisibleAction->setShortcut(QKeySequence("Shift+F5"));
+        metadataDockVisibleAction->setShortcut(QKeySequence("Shift+F6"));
+        thumbDockVisibleAction->setShortcut(QKeySequence("Shift+F7"));
+        menuBarVisibleAction->setShortcut(QKeySequence("Shift+F9"));
+        statusBarVisibleAction->setShortcut(QKeySequence("Shift+F10"));
 
-        folderDockLockAction->setShortcut(QKeySequence("Shift+F3"));
-        favDockLockAction->setShortcut(QKeySequence("Shift+F4"));
-        filterDockLockAction->setShortcut(QKeySequence("Shift+F5"));
-        metadataDockLockAction->setShortcut(QKeySequence("Shift+F6"));
-        thumbDockLockAction->setShortcut(QKeySequence("Shift+F7"));
+        folderDockLockAction->setShortcut(QKeySequence("Shift+Alt+F3"));
+        favDockLockAction->setShortcut(QKeySequence("Shift+Alt+F4"));
+        filterDockLockAction->setShortcut(QKeySequence("Shift+Alt+F5"));
+        metadataDockLockAction->setShortcut(QKeySequence("Shift+Alt+F6"));
+        thumbDockLockAction->setShortcut(QKeySequence("Shift+Alt+F7"));
         allDocksLockAction->setShortcut(QKeySequence("Ctrl+L"));
 
         // Help
@@ -9553,7 +9557,6 @@ set the color class for all the selected thumbs.
 
     // update filter counts
     dm->filteredItemCount();
-    dm->unfilteredItemCount();
 }
 
 void MW::metadataChanged(QStandardItem* item)
@@ -10612,54 +10615,10 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    metadata->parseHEIF();
 
-    qDebug() << __FUNCTION__ << filters->searchString;
+    qDebug() << __FUNCTION__
+             << "filters->itemCheckStateHasChanged =" << filters->itemCheckStateHasChanged
+             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded;
     return;
-
-
-//    int w = 0;
-//    int s = statusBar()->layout()->spacing();
-//    if (sortAZStatusLabel->isVisible()) w += s + sortAZStatusLabel->width();
-//    if (sortZAStatusLabel->isVisible()) w += s + sortZAStatusLabel->width();
-//    if (rawJpgStatusLabel->isVisible()) w += s + rawJpgStatusLabel->width();
-//    if (filterStatusLabel->isVisible()) w += s + filterStatusLabel->width();
-//    if (subfolderStatusLabel->isVisible()) w += s + subfolderStatusLabel->width();
-//    if (slideShowStatusLabel->isVisible()) w += s + slideShowStatusLabel->width();
-//    if (statusLabel->isVisible()) w += s + statusLabel->width();
-//    if (progressLabel->isVisible()) w += s + progressLabel->width();
-//    if (metadataThreadRunningLabel->isVisible()) w += s + metadataThreadRunningLabel->width();
-//    if (imageThreadRunningLabel->isVisible()) w += s + imageThreadRunningLabel->width();
-//    if (statusBarSpacer->isVisible()) w += s + statusBarSpacer->width();
-//    w += s;
-//    int availableSpace = statusBar()->width() - w;
-
-//    qDebug() << __FUNCTION__ << "Before: "
-//             << "statusBar" << statusBar()->width()
-//             << "layout spacing" << statusBar()->layout()->spacing()
-//             << "sortZAStatusLabel " << sortZAStatusLabel->width()
-//             << "rawJpgStatusLabel " << rawJpgStatusLabel->width()
-//             << "statusLabel " << statusLabel->width()
-//             << "progressLabel " << progressLabel->width()
-//             << "metadataThreadRunningLabel " << metadataThreadRunningLabel->width()
-//             << "imageThreadRunningLabel " << imageThreadRunningLabel->width()
-//             << "statusBarSpacer " << statusBarSpacer->width()
-//             << "availableSpace " << availableSpace
-//             ;
-
-//    progressWidth = progressLabel->width() + availableSpace;
-//    setCacheParameters();
-
-//    qDebug() << __FUNCTION__ << "After:  "
-//             << "statusBar" << statusBar()->width()
-//             << "layout spacing" << statusBar()->layout()->spacing()
-//             << "sortZAStatusLabel " << sortZAStatusLabel->width()
-//             << "rawJpgStatusLabel " << rawJpgStatusLabel->width()
-//             << "statusLabel " << statusLabel->width()
-//             << "progressLabel " << progressLabel->width()
-//             << "metadataThreadRunningLabel " << metadataThreadRunningLabel->width()
-//             << "imageThreadRunningLabel " << imageThreadRunningLabel->width()
-//             << "statusBarSpacer " << statusBarSpacer->width()
-//             << "availableSpace " << availableSpace
-//             ;
 
 }
 // End MW

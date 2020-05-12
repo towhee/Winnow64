@@ -947,7 +947,7 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
     #endif
     }
     // placeholder function pending use
-    qDebug() << __FUNCTION__ << isFit << zoom << zoomFit;
+//    qDebug() << __FUNCTION__ << isFit << zoom << zoomFit;
 //    if (isFit && zoom < zoomFit) {
 //        zoom = zoomFit;
 //        scale();

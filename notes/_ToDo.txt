@@ -1,4 +1,6 @@
 BUGS
+- update after delete file and filters are on
+- Open app with filters on pbase2048 crashes
 - Standardize QMessageBox usage, integrated with global styles
 - Navigating thumbs in large folders while still opening can crash
 - Not ingesting all jpgs with raws
@@ -8,6 +10,7 @@ BUGS
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
 PERFORMANCE
+- Very large folders loading slowly - add files in chunks
 - filteredItemCount and unfilteredItemCount slow - try treeView instead of treeWidget
 - Tif load slowly
 CODE IMPROVEMENTS
@@ -24,7 +27,6 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 - Check for updates on Mac
-- Detect drive mounting
 - When ingesting confirm all files copied correctly (option)
 - Add completer for title in metadata
 - Get Sony image count, camera SN
