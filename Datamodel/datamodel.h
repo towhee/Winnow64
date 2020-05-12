@@ -48,6 +48,7 @@ public:
     ImageMetadata getMetadata(QString fPath);
     void updateImageList();
     void clearPicks();
+    void remove(QString fPath);
 //    void sortThumbs(int sortColumn, bool isReverse);
     QModelIndex proxyIndexFromPath(QString fPath);
     QString diagnostics();
