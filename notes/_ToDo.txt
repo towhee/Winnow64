@@ -31,9 +31,11 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Release 1.09
 - Update datamodel and image cache after delete file
 - Default workspace not showing dock tabs
 - Finish statusProgress width correction when new indicators
+- Changed panel, refresh folders shortcut keys
 - Search
 - Crashing when apply color management to PNG
 - Limit fit 100% option added
@@ -51,6 +53,7 @@ DONE/FIXED
 - Preferences for what remains visible in full screen mode were not being saved
 - Added sort direction icon to status panel
 - XMP files not being written during ingest if combineRawJpg == true
+- Release 1.08
 - Image count when combine raw + jpg
 - Type filter not summing correctly when toggle raw+jpg on and off
 - Fix raw+jpg when same basename but no raw file
