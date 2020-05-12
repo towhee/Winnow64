@@ -1865,41 +1865,6 @@ Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct
     selectionModel()->select(toggleSelection, QItemSelectionModel::Toggle);
 }
 
-bool IconView::deleteThumbs()        // rgh is this working?
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    copyThumbs();
-    QMessageBox msgBox;
-    int msgBoxWidth = 300;
-    msgBox.setWindowTitle("Delete Images");
-    msgBox.setText("This operation will delete all selected images.");
-    msgBox.setInformativeText("Do you want continue?");
-    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-    msgBox.setDefaultButton(QMessageBox::Cancel);
-    msgBox.setIcon(QMessageBox::Warning);
-    QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-                "QPushButton:default {background-color: rgb(68,95,118);}";
-    msgBox.setStyleSheet(s);
-    QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
-    QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
-    layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
-    int ret = msgBox.exec();
-    if (ret == QMessageBox::Cancel) return false;
-
-    QModelIndexList selection = selectionModel()->selectedRows();
-    if (selection.isEmpty()) return false;
-
-    for (int i = 0; i < selection.count(); ++i) {
-        QString fPath = selection.at(i).data(G::PathRole).toString();
-        QFile::remove(fPath);
-    }
-    return true;
-}
-
 void IconView::copyThumbs()
 {
     {

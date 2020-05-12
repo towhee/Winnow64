@@ -1708,11 +1708,12 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     if (G::isSlideShow && isSlideShowRandom) return;
 
     source = "";    // suppress compiler warning
-/*    qDebug() << "MW::updateImageCacheStatus  Instruction ="
+    /*
+   qDebug() << "MW::updateImageCacheStatus  Instruction ="
              << instruction
              << "row =" << row
              << "source =" << source;
-             */
+//             */
 
     // show cache amount ie "4.2 of 16GB" in info panel
     QString cacheAmount = QString::number(double(imageCacheThread->cache.currMB)/1024,'f',1)
@@ -10307,15 +10308,72 @@ void MW::saveAsFile()
 
 void MW::copy()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     thumbView->copyThumbs();
 //    imageView->copyImage();
 }
 
 void MW::deleteFiles()
 {
-    if (thumbView->deleteThumbs()) {
-        refreshCurrentFolder();
+/*
+Build a QStringList of the selected files, delete from disk, remove from datamodel, remove from
+ImageCache and update the image cache status bar.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
     }
+    QMessageBox msgBox;
+    int msgBoxWidth = 300;
+    msgBox.setWindowTitle("Delete Images");
+    msgBox.setText("This operation will delete all selected images.");
+    msgBox.setInformativeText("Do you want continue?");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+    msgBox.setDefaultButton(QMessageBox::Cancel);
+    msgBox.setIcon(QMessageBox::Warning);
+    QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
+                "QPushButton:default {background-color: rgb(68,95,118);}";
+    msgBox.setStyleSheet(s);
+    QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+    QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
+    layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+    int ret = msgBox.exec();
+    if (ret == QMessageBox::Cancel) return;
+
+    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    if (selection.isEmpty()) return;
+
+    // convert selection to stringlist
+    QStringList sl;
+    for (int i = 0; i < selection.count(); ++i) {
+        QString fPath = selection.at(i).data(G::PathRole).toString();
+        sl.append(fPath);
+    }
+
+    // delete file in folder on disk
+    for (int i = 0; i < sl.count(); ++i) {
+        QString fPath = sl.at(i);
+        qDebug() << __FUNCTION__ << "deleting " << fPath;
+        QFile::remove(fPath);
+    }
+
+    // remove fPath from datamodel dm
+    for (int i = 0; i < sl.count(); ++i) {
+        QString fPath = sl.at(i);
+        dm->remove(fPath);
+    }
+
+    // remove selected from imageCache
+    imageCacheThread->removeFromCache(sl);
+    // update cursor position on progressBar
+    updateImageCacheStatus("Update all rows", currentRow, __FUNCTION__);
+
+    thumbView->selectThumb(thumbView->currentIndex());
 }
 
 void MW::openUsbFolder()
@@ -10613,12 +10671,30 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    metadata->parseHEIF();
+    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    if (selection.isEmpty()) return;
 
-    qDebug() << __FUNCTION__
-             << "filters->itemCheckStateHasChanged =" << filters->itemCheckStateHasChanged
-             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded;
-    return;
+    // convert selection to stringlist
+    QStringList sl;
+    for (int i = 0; i < selection.count(); ++i) {
+        QString fPath = selection.at(i).data(G::PathRole).toString();
+        sl.append(fPath);
+    }
+
+    // remove fPath from datamodel dm
+    for (int i = 0; i < sl.count(); ++i) {
+        QString fPath = sl.at(i);
+        qDebug() << __FUNCTION__ << "removing" << fPath;
+        dm->remove(fPath);
+    }
+
+    // remove selected from imageCache
+    imageCacheThread->removeFromCache(sl);
+    // update cursor position on progressBar
+    updateImageCacheStatus("Update all rows", currentRow, __FUNCTION__);
+
+    thumbView->selectThumb(thumbView->currentIndex());
+
 
 }
 // End MW

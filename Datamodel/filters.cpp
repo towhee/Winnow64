@@ -99,7 +99,6 @@ datamodel.
     filterCategoryToDmColumn["Title"] = G::TitleColumn;
     filterCategoryToDmColumn["Creators"] = G::CreatorColumn;
 
-//    connect(this, &Filters::itemChanged, this, &Filters::itemChangedSignal);
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
 }
 
@@ -134,7 +133,7 @@ void Filters::createPredefinedFilters()
     searchTrueIdx = indexFromItem(searchTrue, 0);
 
     searchFalse = new QTreeWidgetItem(search);
-    searchFalse->setText(0, "No match for search");
+    searchFalse->setText(0, "No match");
     searchFalse->setCheckState(0, Qt::Unchecked);
     searchFalse->setData(1, Qt::EditRole, false);
 
@@ -658,24 +657,22 @@ searchStringChange is emitted. DataModel::searchStringChange receives the signal
 the datamodel searchColumn match to true or false for each row. The filteredItemCount is
 updated.
 */
+    // checkstate has changed
     if (roles.contains(Qt::CheckStateRole)) {
         itemCheckStateHasChanged = true;
-        QTreeWidgetItem *item = itemFromIndex(topLeft);
-        qDebug() << __FUNCTION__ << item->text(0) << roles
-                 << "itemCheckStateHasChanged =" << itemCheckStateHasChanged;
         QTreeWidget::dataChanged(topLeft, bottomRight, roles);
         return;
     }
 
     itemCheckStateHasChanged = false;
 
+    // searchText has changed
     if (roles.contains(Qt::EditRole)) {
         if (topLeft.column() != 0) return;
         QTreeWidgetItem *item = itemFromIndex(topLeft);
         if (item == searchTrue) {
             // no search string
             if (searchTrue->text(0) == "") {
-                prevSearchString = searchString;
                 searchString = "";
                 searchTrue->setText(0, enterSearchString);
                 emit searchStringChange(searchString);
@@ -740,24 +737,24 @@ updated.
         return;
     }
 
-    // clicked on checkbox text (not the indicator) so toggle the check state
-    if (!itemCheckStateHasChanged && item != searchTrue) {
-        itemCheckStateHasChanged = false;
-        if (item->checkState(0) == Qt::Unchecked) item->setCheckState(0, Qt::Checked);
-        else item->setCheckState(0, Qt::Unchecked);
-    }
-    /*
-    qDebug() << __FUNCTION__
-             << "item->parent() =" << item->parent()->text(0)
-             << "item =" << item->text(0)
-             << "itemCheckStateHasChanged =" << itemCheckStateHasChanged;
-//          */
-    // if clicked on the search text then edit it - this triggers Filters::dataChanged
-    if (!itemCheckStateHasChanged && item == searchTrue) {
-        prevSearchString = searchString;
-        enquoteItem = true;
-        editItem(searchTrue, 0);
-        return;
+    if (!itemCheckStateHasChanged) {
+        /*
+        qDebug() << __FUNCTION__
+                 << "item->parent() =" << item->parent()->text(0)
+                 << "item =" << item->text(0)
+                 << "itemCheckStateHasChanged =" << itemCheckStateHasChanged;
+    //          */
+        // clicked on the search text then edit it - this triggers Filters::dataChanged
+        if (item == searchTrue) {
+            editItem(searchTrue, 0);
+            return;
+        }
+        // clicked on checkbox text (not the indicator) so toggle the check state
+        else {
+            itemCheckStateHasChanged = false;
+            if (item->checkState(0) == Qt::Unchecked) item->setCheckState(0, Qt::Checked);
+            else item->setCheckState(0, Qt::Unchecked);
+        }
     }
 
     emit filterChange("Filters::itemClickedSignal");

@@ -56,7 +56,6 @@ public:
     void setSearchTextColor();
 
     QString searchString = "";
-    QString prevSearchString = "";
     QStringList ignoreSearchStrings;
     QString enterSearchString;
     bool itemCheckStateHasChanged = false;
@@ -75,13 +74,11 @@ public slots:
     void expandAllFilters();
     void collapseAllFilters();
     void checkPicks(bool check);
-//    void resizeColumns();
 
 private slots:
     void dataChanged(const QModelIndex &topLeft,
                      const QModelIndex &bottomRight,
                      const QVector<int> &roles = QVector<int>());
-    void itemChangedSignal(QTreeWidgetItem *item, int column);
     void itemClickedSignal(QTreeWidgetItem *item, int column);
 
 protected:
@@ -97,9 +94,6 @@ private:
     QColor searchDefaultTextColor;
     int indentation;
     QModelIndex searchTrueIdx;
-
-    bool enquoteItem = false;
-//    bool itemHasChanged;
 };
 
 #endif // FILTERS_H

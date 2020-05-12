@@ -257,6 +257,33 @@ when combined raw+jpg is activated.
     return s1 < s2;
 }
 
+void DataModel::remove(QString fPath)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // remove row from datamodel
+    int row;
+    for (row = 0; row < rowCount(); ++row) {
+        QString rowPath = index(row, 0).data(G::PathRole).toString();
+        if (rowPath == fPath) {
+            removeRow(row);
+            break;
+        }
+    }
+
+    // remove from fileInfoList
+    int i;
+    for (i = 0; i < fileInfoList.count(); ++i) {
+        if (fileInfoList.at(i).filePath() == fPath) {
+            fileInfoList.removeAt(i);
+            break;
+        }
+    }
+}
+
 void DataModel::find(QString text)
 {
     {
@@ -423,7 +450,7 @@ bool DataModel::addFileData()
         // append hash index of datamodel row for fPath for fast lookups
         QString fPath = fileInfo.filePath();
 
-        // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
+        // build hash to quickly get row from f(row, Path (ie pixmap.cpp, imageCache...)
         fPathRow[fPath] = i;
 
         // string to hold aggregated text for searching

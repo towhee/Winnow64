@@ -1,7 +1,4 @@
 BUGS
-- update after delete file and filters are on
-- Open app with filters on pbase2048 crashes
-- Standardize QMessageBox usage, integrated with global styles
 - Navigating thumbs in large folders while still opening can crash
 - Not ingesting all jpgs with raws
 - Ingest if image does not have metadata req'd
@@ -34,6 +31,7 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Update datamodel and image cache after delete file
 - Default workspace not showing dock tabs
 - Finish statusProgress width correction when new indicators
 - Search

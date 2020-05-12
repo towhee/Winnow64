@@ -149,7 +149,6 @@ public slots:
     void selectNextPick();
     void selectPrevPick();
     void copyThumbs();
-    bool deleteThumbs();
     void sortThumbs(int sortColumn, bool isReverse);
 
 private slots:

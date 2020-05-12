@@ -460,13 +460,29 @@ cache buffer.
     #endif
     }
     for (int i = 0; i < cache.totFiles; ++i) {
-        if (imCache.contains(cacheItemList.at(i).fName)) {
+        if (imCache.contains(cacheItemList.at(i).fPath)) {
             if (!cacheItemList.at(i).isTarget) {
-                imCache.remove(cacheItemList.at(i).fName);
+                imCache.remove(cacheItemList.at(i).fPath);
                 cacheItemList[i].isCached = false;
             }
         }
     }
+}
+
+void ImageCache::removeFromCache(QStringList &pathList)
+{
+    for (int i = 0; i < pathList.count(); ++i) {
+        QString fPath = pathList.at(i);
+        imCache.remove(fPath);
+        for (int j = 0; j < cacheItemList.count(); ++j) {
+            qDebug() << __FUNCTION__ << cacheItemList.at(j).fPath;
+            if (cacheItemList.at(j).fPath == fPath) {
+                cacheItemList.removeAt(j);
+            }
+        }
+        cache.totFiles = cacheItemList.count();
+    }
+    updateImageCachePosition();
 }
 
 QString ImageCache::diagnostics()
@@ -527,7 +543,7 @@ QString ImageCache::reportCache(QString title)
 //    std::cout << reportString.toStdString() << std::flush;
 
     for (int i = 0; i < cache.totFiles; ++i) {
-        int row = dm->fPathRow[cacheItemList.at(i).fName];
+        int row = dm->fPathRow[cacheItemList.at(i).fPath];
 //        rpt.flush();
 //        reportString = "";
         rpt.setFieldWidth(9);
@@ -548,7 +564,7 @@ QString ImageCache::reportCache(QString title)
         rpt << "   ";
         rpt.setFieldAlignment(QTextStream::AlignLeft);
         rpt.setFieldWidth(50);
-        rpt << cacheItemList.at(i).fName;
+        rpt << cacheItemList.at(i).fPath;
         rpt.setFieldWidth(0);
         rpt << "\n";
 
@@ -657,7 +673,7 @@ It is built from dm->sf (sorted and/or filtered datamodel).
            cache status and make future caching decisions for each image  */
         cacheItem.key = i;              // need to be able to sync with imageList
         cacheItem.origKey = i;          // req'd while setting target range
-        cacheItem.fName = fPath;
+        cacheItem.fPath = fPath;
         cacheItem.isCached = false;
         cacheItem.isTarget = false;
         cacheItem.priority = i;
@@ -793,7 +809,7 @@ Apparently there needs to be a slight delay before calling.
     // get cache item key
     cache.key = 0;
     for (int i = 0; i < cacheItemList.count(); i++) {
-        if (cacheItemList.at(i).fName == dm->currentFilePath) {
+        if (cacheItemList.at(i).fPath == dm->currentFilePath) {
             cache.key = i;
             break;
         }
@@ -885,7 +901,7 @@ The image cache is now ready to run by calling updateImageCachePosition().
 
     // assign cache.key and update isCached status in cacheItemList
     for(int row = 0; row < cache.totFiles; ++row) {
-        QString fPath = cacheItemList.at(row).fName;
+        QString fPath = cacheItemList.at(row).fPath;
         fList.append(fPath);
         // get key for current image
         if (fPath == currentImageFullPath) cache.key = row;
@@ -924,7 +940,7 @@ void ImageCache::run()
         }
 
         // check can read image from file
-        QString fPath = cacheItemList.at(cache.toCacheKey).fName;
+        QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
         if (fPath == prevFileName) return;
 
         QImage im;
@@ -942,7 +958,7 @@ void ImageCache::run()
             while (room < roomRqd) {
                 // make some room by removing lowest priority cached image
                 if (nextToDecache()) {
-                    QString s = cacheItemList[cache.toDecacheKey].fName;
+                    QString s = cacheItemList[cache.toDecacheKey].fPath;
                     imCache.remove(s);
                     emit updateCacheOnThumbs(s, false);
                     if (!toDecache.isEmpty()) toDecache.removeFirst();

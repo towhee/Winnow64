@@ -294,7 +294,7 @@ QString WidgetCSS::treeWidget()
 
     "QTreeWidget::item {"
         "height: 24px;"
-        "margin-left: -5px;"  // aligns edit box with cell contents
+        "margin-left: -1px;"  // aligns edit box with cell contents
     "}";
 }
 
