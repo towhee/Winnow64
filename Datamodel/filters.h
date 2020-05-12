@@ -59,6 +59,7 @@ public:
     QString prevSearchString = "";
     QStringList ignoreSearchStrings;
     QString enterSearchString;
+    bool itemCheckStateHasChanged = false;
 
 signals:
     void filterChange(QString source);
@@ -77,9 +78,11 @@ public slots:
 //    void resizeColumns();
 
 private slots:
-//    void dataChanged(const QModelIndex &topLeft,
-//                     const QModelIndex &bottomRight,
-//                     const QVector<int> &roles = QVector<int>());
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>());
+    void itemChangedSignal(QTreeWidgetItem *item, int column);
+    void itemClickedSignal(QTreeWidgetItem *item, int column);
 
 protected:
     void resizeEvent(QResizeEvent *event);
@@ -96,9 +99,7 @@ private:
     QModelIndex searchTrueIdx;
 
     bool enquoteItem = false;
-    bool itemHasChanged;
-    void itemChangedSignal(QTreeWidgetItem *item, int column);
-    void itemClickedSignal(QTreeWidgetItem *item, int column);
+//    bool itemHasChanged;
 };
 
 #endif // FILTERS_H

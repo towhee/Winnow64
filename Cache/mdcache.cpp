@@ -646,11 +646,12 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
     }
     for (int row = start; row < end; ++row) {
         if (abort) {
-//            qDebug() << __FUNCTION__ << "Aborting on row" << row;
+            /*
+            qDebug() << __FUNCTION__ << "Aborting on row" << row;  // */
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
-//        /*
+        /*
         qDebug() << __FUNCTION__ << "startRow =" << startRow
                  << "endRow =" << endRow
                  << "row =" << row;

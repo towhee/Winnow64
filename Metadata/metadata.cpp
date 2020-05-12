@@ -601,9 +601,9 @@ bool Metadata::parseJPG(quint32 startOffset)
     if (exif == nullptr) exif = new Exif;
     if (gps == nullptr) gps = new GPS;
     p.offset = startOffset;
-    jpeg->parse(p, imageMetadata, ifd, iptc, exif, gps);
-    if (p.report) reportMetadata();
-    return true;
+    bool ok = jpeg->parse(p, imageMetadata, ifd, iptc, exif, gps);
+    if (ok && p.report) reportMetadata();
+    return ok;
 }
 
 bool Metadata::parseHEIF()

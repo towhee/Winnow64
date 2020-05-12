@@ -190,7 +190,7 @@
          <string>Refresh Folders</string>
         </property>
         <property name="text">
-         <string>Opt/Alt + R</string>
+         <string>F5</string>
         </property>
         <property name="text">
          <string>Use to update folders, for example when insert USB drive</string>
@@ -321,7 +321,7 @@
          <string>Edit Search Text</string>
         </property>
         <property name="text">
-         <string>Cmd/Ctrl + S</string>
+         <string>F2</string>
         </property>
         <property name="text">
          <string>Puts focus on search text box</string>
@@ -788,7 +788,7 @@
          <string>Files Panel</string>
         </property>
         <property name="text">
-         <string>F3</string>
+         <string>Alt + F3</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -799,7 +799,7 @@
          <string>Favourites Panel</string>
         </property>
         <property name="text">
-         <string>F4</string>
+         <string>Alt + F4</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -810,7 +810,7 @@
          <string>Filters Panel</string>
         </property>
         <property name="text">
-         <string>F5</string>
+         <string>Alt + F5</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -821,7 +821,7 @@
          <string>Metadata Panel</string>
         </property>
         <property name="text">
-         <string>F6</string>
+         <string>Alt + F6</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -832,7 +832,7 @@
          <string>Thumbnails Panel</string>
         </property>
         <property name="text">
-         <string>F7</string>
+         <string>Alt + F7</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -843,7 +843,7 @@
          <string>Application Menu</string>
         </property>
         <property name="text">
-         <string>F9</string>
+         <string>Alt + F9</string>
         </property>
         <property name="text">
          <string>Toggles visibility</string>
@@ -854,7 +854,7 @@
          <string>Application Statusbar</string>
         </property>
         <property name="text">
-         <string>F10</string>
+         <string>Alt + F10</string>
         </property>
         <property name="text">
          <string>Toggles visibility</string>
@@ -872,7 +872,7 @@
           <string>Files Panel Titlebar</string>
          </property>
          <property name="text">
-          <string>Shift +F3</string>
+          <string>Shift + Alt + F3</string>
          </property>
          <property name="text">
           <string>Toggles</string>
@@ -883,7 +883,7 @@
           <string>Favourites Panel Titlebar</string>
          </property>
          <property name="text">
-          <string>Shift +F4</string>
+          <string>Shift + Alt + F4</string>
          </property>
          <property name="text">
           <string>Toggles</string>
@@ -894,7 +894,7 @@
           <string>Filters Panel Titlebar</string>
          </property>
          <property name="text">
-          <string>Shift +F5</string>
+          <string>Shift + Alt + F5</string>
          </property>
          <property name="text">
           <string>Toggles</string>
@@ -905,7 +905,7 @@
           <string>Metadata Panel Titlebar</string>
          </property>
          <property name="text">
-          <string>Shift +F6</string>
+          <string>Shift + Alt + F6</string>
          </property>
          <property name="text">
           <string>Toggles</string>
@@ -916,7 +916,7 @@
           <string>Thumbnails Panel Titlebar</string>
          </property>
          <property name="text">
-          <string>Shift +F7</string>
+          <string>Shift + Alt + F7</string>
          </property>
          <property name="text">
           <string>Toggles</string>
