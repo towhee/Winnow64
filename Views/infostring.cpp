@@ -109,6 +109,7 @@ void InfoString::initTokenList()
             << "Aperture"
             << "ShutterSpeed"
             << "ISO"
+            << "Exposure Compensation"
             << "Model"
             << "Lens"
             << "FocalLength"
@@ -157,6 +158,7 @@ void InfoString::initExampleMap()
     exampleMap["Aperture"] = "f/5.6";
     exampleMap["ShutterSpeed"] = "1/250";
     exampleMap["ISO"] = "400";
+    exampleMap["Exposure Compensation"] = "-1";
     exampleMap["Model"] = "Canon EOS-1D X Mark II";
     exampleMap["Lens"] = "EF600mm f/4 IS II + 1.4x III";
     exampleMap["FocalLength"] = "840mm";
@@ -321,6 +323,8 @@ QString InfoString::tokenValue(QString &token,
         return m.exposureTime;
     if (token == "ISO")
         return m.ISO;
+    if (token == "Exposure Compensation")
+        return m.exposureCompensation;
     if (token == "Model")
         return m.model;
     if (token == "Lens")

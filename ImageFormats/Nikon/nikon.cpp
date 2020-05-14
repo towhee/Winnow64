@@ -796,7 +796,7 @@ bool Nikon::parse(MetadataParameters &p,
         if (x < 1 ) {
             int t = qRound(1/x);
             m.exposureTime = "1/" + QString::number(t);
-            m.exposureTimeNum = static_cast<float>(x);
+            m.exposureTimeNum = x;
         } else {
             int t = static_cast<int>(x);
             m.exposureTime = QString::number(t);
@@ -812,7 +812,7 @@ bool Nikon::parse(MetadataParameters &p,
                                       ifd->ifdDataHash.value(33437).tagValue,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
-        m.apertureNum = static_cast<float>(qRound(x * 10) / 10.0);
+        m.apertureNum = (qRound(x * 10) / 10.0);
     } else {
         m.aperture = "";
         m.apertureNum = 0;
@@ -825,6 +825,18 @@ bool Nikon::parse(MetadataParameters &p,
     } else {
         m.ISO = "";
         m.ISONum = 0;
+    }
+    // EXIF: Exposure compensation
+    if (ifd->ifdDataHash.contains(37380)) {
+        // tagType = 10 signed rational
+        double x = Utilities::getReal_s(p.file,
+                                      ifd->ifdDataHash.value(37380).tagValue,
+                                      isBigEnd);
+        m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
+        m.exposureCompensationNum = x;
+    } else {
+        m.exposureCompensation = "";
+        m.exposureCompensationNum = 0;
     }
     // Exif: focal length
     if (ifd->ifdDataHash.contains(37386)) {

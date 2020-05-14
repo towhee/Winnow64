@@ -1767,8 +1767,8 @@ different position than the current image.
         return;
     }
 
-    // must finish event to update current index in iconView
-    QListView::mousePressEvent(event);
+    // must finish event to update current index in iconView if mouse press on an icon
+    if (indexAt(event->pos()).isValid()) QListView::mousePressEvent(event);
 
     // capture mouse click position for imageView zoom/pan
     if (event->modifiers() == Qt::NoModifier) {
@@ -1781,10 +1781,11 @@ different position than the current image.
         QRect iconRect = idx.data(G::ThumbRectRole).toRect();
         QPoint mousePt = event->pos();
         QPoint iconPt = mousePt - iconRect.topLeft();
-        float xPct = (float)iconPt.x() / iconRect.width();
-        float yPct = (float)iconPt.y() / iconRect.height();
+        float xPct = static_cast<float>(iconPt.x()) / iconRect.width();
+        float yPct = static_cast<float>(iconPt.y()) / iconRect.height();
         /*
-        qDebug() << __FUNCTION__ << iconRect << mousePt << iconPt << xPct << yPct;*/
+        qDebug() << __FUNCTION__ << idx << iconRect << mousePt << iconPt << xPct << yPct;
+//        */
         if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
             //signal sent to ImageView
             emit thumbClick(xPct, yPct);

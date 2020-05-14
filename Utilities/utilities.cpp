@@ -193,13 +193,26 @@ quint64 Utilities::get64(QByteArray c, bool isBigEnd)
 double Utilities::getReal(QFile &file, quint32 offset, bool isBigEnd)
 {
     /*
-    In IFD type 5, 10, 11, 12 = rational = real/float
+    In IFD type 5 = rational unsigned = real/float
     */
         file.seek(offset);
         quint32 a = get32(file.read(4), isBigEnd);
         quint32 b = get32(file.read(4), isBigEnd);
         if (b == 0) return 0;
         return static_cast<double>(a) / b;
+}
+
+double Utilities::getReal_s(QFile &file, quint32 offset, bool isBigEnd)
+{
+    /*
+    In IFD type 10 = rational signed = real/float
+    */
+    file.seek(offset);
+    // read first 32 bits and convert to unsigned int
+    qint32 a = static_cast<int>(get32(file.read(4), isBigEnd));
+    quint32 b = get32(file.read(4), isBigEnd);
+    if (b == 0) return 0;
+    return static_cast<double>(a) / b;
 }
 
 QString Utilities::getCString(QFile &file)

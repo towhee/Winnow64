@@ -243,6 +243,19 @@ bool DNG::parse(MetadataParameters &p,
         m.ISONum = 0;
     }
 
+    // EXIF: Exposure compensation
+    if (ifd->ifdDataHash.contains(37380)) {
+        // tagType = 10 signed rational
+        double x = Utilities::getReal_s(p.file,
+                                      ifd->ifdDataHash.value(37380).tagValue + startOffset,
+                                      isBigEnd);
+        m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
+        m.exposureCompensationNum = x;
+    } else {
+        m.exposureCompensation = "";
+        m.exposureCompensationNum = 0;
+    }
+
     // EXIF: focal length
     if (ifd->ifdDataHash.contains(37386)) {
         double x = Utilities::getReal(p.file,

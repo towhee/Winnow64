@@ -211,6 +211,7 @@ If any of the editable fields change then MW::metadataChanged is triggered.
     ok->setData(ok->index(ShutterSpeedRow, 0, imageInfoIdx), "Shutter speed");
     ok->setData(ok->index(ApertureRow, 0, imageInfoIdx), "Aperture");
     ok->setData(ok->index(ISORow, 0, imageInfoIdx), "ISO");
+    ok->setData(ok->index(ExposureCompensationRow, 0, imageInfoIdx), "Exposure Compensation");
     ok->setData(ok->index(FocalLengthRow, 0, imageInfoIdx), "Focal length");
     ok->setData(ok->index(TitleRow, 0, tagInfoIdx), "Title");
     ok->setData(ok->index(CreatorRow, 0, tagInfoIdx), "Creator");
@@ -353,8 +354,9 @@ void InfoView::updateInfo(const int &row)
     if (value == 0) s = "";
     else {
         if (value < 1.0) {
-            uint t = qRound(1 / value.toDouble());
-            s = "1/" + QString::number(t);
+            double recip = 1 / value.toDouble();
+            if (recip >= 2) s = "1/" + QString::number(qRound(recip));
+            else s = QString::number(value.toDouble(), 'g', 2);
         } else {
             s = QString::number(value.toInt());
         }
@@ -369,6 +371,8 @@ void InfoView::updateInfo(const int &row)
 
     s = dm->sf->index(row, G::ISOColumn).data().toString();
     ok->setData(ok->index(ISORow, 1, imageInfoIdx), s);
+    s = dm->sf->index(row, G::ExposureCompensationColumn).data().toString() + " EV";
+    ok->setData(ok->index(ExposureCompensationRow, 1, imageInfoIdx), s);
     s = dm->sf->index(row, G::FocalLengthColumn).data().toString() + "mm";
     ok->setData(ok->index(FocalLengthRow, 1, imageInfoIdx), s);
     s = dm->sf->index(row, G::TitleColumn).data().toString();

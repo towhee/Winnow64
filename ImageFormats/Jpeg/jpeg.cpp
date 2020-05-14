@@ -229,10 +229,11 @@ bool Jpeg::parse(MetadataParameters &p,
         double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
-        if (x < 1 ) {
-            int t = qRound(1 / x);
-            m.exposureTime = "1/" + QString::number(t);
-            m.exposureTimeNum = static_cast<float>(x);
+        if (x < 1) {
+            double recip = static_cast<double>(1 / x);
+            if (recip >= 2) m.exposureTime = "1/" + QString::number(qRound(recip));
+            else m.exposureTime = "1/" + QString::number(recip, 'g', 2);
+            m.exposureTimeNum = x;
         } else {
             uint t = static_cast<uint>(x);
             m.exposureTime = QString::number(t);
@@ -249,7 +250,7 @@ bool Jpeg::parse(MetadataParameters &p,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
-        m.apertureNum = static_cast<float>(qRound(x * 10) / 10.0);
+        m.apertureNum = (qRound(x * 10) / 10.0);
     } else {
         m.aperture = "";
         m.apertureNum = 0;
@@ -263,6 +264,19 @@ bool Jpeg::parse(MetadataParameters &p,
     } else {
         m.ISO = "";
         m.ISONum = 0;
+    }
+
+    // EXIF: Exposure compensation
+    if (ifd->ifdDataHash.contains(37380)) {
+        // tagType = 10 signed rational
+        double x = Utilities::getReal_s(p.file,
+                                      ifd->ifdDataHash.value(37380).tagValue + startOffset,
+                                      isBigEnd);
+        m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
+        m.exposureCompensationNum = x;
+    } else {
+        m.exposureCompensation = "";
+        m.exposureCompensationNum = 0;
     }
 
     // EXIF: focal length
