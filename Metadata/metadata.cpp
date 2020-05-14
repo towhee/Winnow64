@@ -209,6 +209,7 @@ void Metadata::reportMetadata()
     p.rpt.setFieldWidth(25); p.rpt << "exposureTime"        << imageMetadata.exposureTime;        p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "aperture"            << imageMetadata.aperture;            p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "ISO"                 << imageMetadata.ISO;                 p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "exposureCompensation"<< imageMetadata.exposureCompensation;p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "focalLength"         << imageMetadata.focalLength;         p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "title"               << imageMetadata.title;               p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "lens"                << imageMetadata.lens;                p.rpt.setFieldWidth(0); p.rpt << "\n";
@@ -650,6 +651,8 @@ void Metadata::clearMetadata()
     imageMetadata.apertureNum = 0;
     imageMetadata.ISO = "";
     imageMetadata.ISONum = 0;
+    imageMetadata.exposureCompensation = "";
+    imageMetadata.exposureCompensationNum = 0;
     imageMetadata.focalLength = "";
     imageMetadata.focalLengthNum = 0;
     imageMetadata.title = "";

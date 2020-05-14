@@ -941,7 +941,6 @@ void MW::folderSelectionChange()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
      // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
@@ -1047,6 +1046,7 @@ void MW::folderSelectionChange()
         G::isInitializing = false;
         return;
     }
+
     centralLayout->setCurrentIndex(prevCentralView);    // rgh req'd?
 
     // made it this far, folder must have eligible images and is good-to-go
@@ -9288,8 +9288,21 @@ void MW::setCombineRawJpg()
     G::track(__FUNCTION__);
     #endif
     }
+    if (!G::isNewFolderLoaded) {
+        QString msg = "Folder is still loading.  Try again when the folder has loaded.";
+        G::popUp->showPopup(msg, 1000);
+        return;
+    }
+
+    QString msg;
+
     // flag used in MW, dm and sf, fsTree, bookmarks
     combineRawJpg = combineRawJpgAction->isChecked();
+
+    if (combineRawJpg) msg = "Combining Raw + Jpg pairs.  This could take a moment.";
+    else msg = "Separating Raw + Jpg pairs.  This could take a moment.";
+    G::popUp->showPopup(msg);
+
     fsTree->combineRawJpg = combineRawJpg;
     bookmarks->combineRawJpg = combineRawJpg;
     refreshBookmarks();
@@ -9320,6 +9333,8 @@ void MW::setCombineRawJpg()
     dm->rebuildTypeFilter();
     filterChange(__FUNCTION__);
     updateStatusBar();
+
+    G::popUp->close();
 }
 
 void MW::setCachedStatus(QString fPath, bool isCached)
@@ -10671,30 +10686,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
-    if (selection.isEmpty()) return;
-
-    // convert selection to stringlist
-    QStringList sl;
-    for (int i = 0; i < selection.count(); ++i) {
-        QString fPath = selection.at(i).data(G::PathRole).toString();
-        sl.append(fPath);
-    }
-
-    // remove fPath from datamodel dm
-    for (int i = 0; i < sl.count(); ++i) {
-        QString fPath = sl.at(i);
-        qDebug() << __FUNCTION__ << "removing" << fPath;
-        dm->remove(fPath);
-    }
-
-    // remove selected from imageCache
-    imageCacheThread->removeFromCache(sl);
-    // update cursor position on progressBar
-    updateImageCacheStatus("Update all rows", currentRow, __FUNCTION__);
-
-    thumbView->selectThumb(thumbView->currentIndex());
-
-
+        quint32 a = 4294967284;
+        qint32 b = static_cast<int>(a);
+        qDebug() << __FUNCTION__ << a << b;
 }
 // End MW

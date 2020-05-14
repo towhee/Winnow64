@@ -36,11 +36,13 @@ public:
     QString make = "";
     QString model = "";
     QString exposureTime = "";
-    float exposureTimeNum = 0.0;
+    double exposureTimeNum = 0.0;
     QString aperture = "";
-    float apertureNum = 0.0;
+    double apertureNum = 0.0;
     QString ISO = "";
     int ISONum = 0;
+    double exposureCompensationNum = 0.0;
+    QString exposureCompensation = "0";
     QString focalLength = "";
     int focalLengthNum = 0;
     QString shootingInfo = "";

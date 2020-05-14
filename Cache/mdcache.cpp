@@ -644,6 +644,12 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
         start = 0;
         end = dm->sf->rowCount();
     }
+
+    /*
+    qDebug() << __FUNCTION__ << "startRow =" << startRow
+             << "endRow =" << endRow
+             << "cacheAllMetadata =" << cacheAllMetadata;
+//        */
     for (int row = start; row < end; ++row) {
         if (abort) {
             /*
@@ -651,11 +657,6 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
-        /*
-        qDebug() << __FUNCTION__ << "startRow =" << startRow
-                 << "endRow =" << endRow
-                 << "row =" << row;
-//        */
         // file path and dm source row in case filtered or sorted
         mutex.lock();
         QModelIndex idx = dm->sf->index(row, 0);
@@ -808,7 +809,7 @@ If there has been a file selection change and not a new folder then update image
             action == Action::Scroll ||
             action == Action::Resize ||
             action == Action::NewFolder ||
-            Action::NewFolder2ndPass)
+            action == Action::NewFolder2ndPass)
             if (!G::allMetadataLoaded) readMetadataChunk();
             readIconChunk();
 

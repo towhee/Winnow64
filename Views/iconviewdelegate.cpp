@@ -349,12 +349,12 @@ textRect         = a rectangle below itemRect
     // default thumb border
     painter->setPen(border);
     painter->drawRoundedRect(frameRect, 8, 8);
-//    painter->drawRoundedRect(frameRect, 8, 8);
-
-//    qDebug() << __FUNCTION__
-//             << "row =" << row
-//             << "currentRow =" << currentRow
-//             << "selected item =" << option.state.testFlag(QStyle::State_Selected);
+    /*
+    qDebug() << __FUNCTION__
+             << "row =" << row
+             << "currentRow =" << currentRow
+             << "selected item =" << option.state.testFlag(QStyle::State_Selected);
+//             */
 
     // current index item
     if (row == currentRow) {

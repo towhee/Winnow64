@@ -61,6 +61,7 @@ namespace G
         ApertureColumn,
         ShutterspeedColumn,
         ISOColumn,
+        ExposureCompensationColumn,
         CameraMakeColumn,
         CameraModelColumn,
         LensColumn,

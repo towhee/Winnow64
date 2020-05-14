@@ -128,6 +128,13 @@ public:
     virtual QString displayText(const QVariant & value, const QLocale & locale) const;
 };
 
+class ExposureCompensationItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit ExposureCompensationItemDelegate(QObject* parent = nullptr);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+};
+
 class FileSizeItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
