@@ -93,12 +93,12 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
     int row = dm->fPathRow[fPath];
 
     // Check if metadata has been cached for this image
-    if (dm->index(row, G::OffsetThumbJPGColumn).data().isNull()) {
+    if (dm->index(row, G::OffsetThumbColumn).data().isNull()) {
         metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__);
         dm->addMetadataForItem(metadata->imageMetadata);
     }
-    uint offsetThumb = dm->index(row, G::OffsetThumbJPGColumn).data().toUInt();
-    uint lengthThumb = dm->index(row, G::LengthThumbJPGColumn).data().toUInt();
+    uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
+    uint lengthThumb = dm->index(row, G::LengthThumbColumn).data().toUInt();
 
     QFileInfo info(imFile);
     QString ext = info.suffix().toLower();
@@ -170,8 +170,8 @@ that is faster than loading the entire full resolution image just to get a thumb
         metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__);
         dm->addMetadataForItem(metadata->imageMetadata);
     }
-    uint offsetThumb = dm->index(row, G::OffsetThumbJPGColumn).data().toUInt();
-    uint lengthThumb = dm->index(row, G::LengthThumbJPGColumn).data().toUInt();
+    uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
+    uint lengthThumb = dm->index(row, G::LengthThumbColumn).data().toUInt();
     bool thumbFound = offsetThumb && lengthThumb;
 
     /* A raw file may not have any embedded jpg or be corrupted.  */

@@ -42,7 +42,7 @@ public:
               bool &combineRawJpg);
 
     bool load(QString &dir, bool includeSubfoldersFlag);
-    void clear();
+    void clearDataModel();
     bool hasFolderChanged();
     void find(QString text);
     ImageMetadata getMetadata(QString fPath);

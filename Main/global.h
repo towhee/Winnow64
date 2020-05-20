@@ -81,12 +81,27 @@ namespace G
         _UrlColumn,
 
         // binary helpers
-        OffsetFullJPGColumn,
-        LengthFullJPGColumn,
-        OffsetThumbJPGColumn,
-        LengthThumbJPGColumn,
-        OffsetSmallJPGColumn,
-        LengthSmallJPGColumn,
+        OffsetFullColumn,
+        LengthFullColumn,
+        OffsetThumbColumn,
+        LengthThumbColumn,
+        OffsetSmallColumn,
+        LengthSmallColumn,
+
+        bitsPerSampleFullColumn,
+        photoInterpFullColumn,
+        samplesPerPixelFullColumn,
+        compressionFullColumn,
+        stripByteCountsFullColumn,
+
+        widthThumbColumn,
+        heightThumbColumn,
+        bitsPerSampleThumbColumn,
+        photoInterpThumbColumn,
+        samplesPerPixelThumbColumn,
+        compressionThumbColumn,
+        stripByteCountsThumbColumn,
+
         XmpSegmentOffsetColumn,
         XmpNextSegmentOffsetColumn,
         IsXMPColumn,
@@ -113,8 +128,10 @@ namespace G
         QImage image;
     };
 
-    extern quint32 availableMemoryMB;
-    extern quint32 winnowMemoryBeforeCacheMB;
+    extern int availableMemoryMB;
+    extern int winnowMemoryBeforeCacheMB;
+    extern int metaCacheMB;
+    extern bool memTest;
 
     struct WinScreen {
         QString adaptor;

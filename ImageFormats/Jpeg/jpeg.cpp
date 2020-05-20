@@ -120,8 +120,8 @@ bool Jpeg::parse(MetadataParameters &p,
     if (segmentHash.contains("JFIF")) {
         // it's a jpg so the whole thing is the full length jpg and no other
         // metadata available
-        m.offsetFullJPG = 0;
-        m.lengthFullJPG = static_cast<uint>(p.file.size());
+        m.offsetFull = 0;
+        m.lengthFull = static_cast<uint>(p.file.size());
         return true;
     }
 
@@ -163,8 +163,8 @@ bool Jpeg::parse(MetadataParameters &p,
     quint32 offsetIfd0 = a + startOffset;
 
     // it's a jpg so the whole thing is the full length jpg
-    m.offsetFullJPG = 0;
-    m.lengthFullJPG = static_cast<uint>(p.file.size());
+    m.offsetFull = 0;
+    m.lengthFull = static_cast<uint>(p.file.size());
 
     // read IFD0
     p.hdr = "IFD0";
@@ -195,8 +195,8 @@ bool Jpeg::parse(MetadataParameters &p,
         nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
     }
     // IFD1: thumbnail offset and length
-    m.offsetThumbJPG = ifd->ifdDataHash.value(513).tagValue + 12;
-    m.lengthThumbJPG = ifd->ifdDataHash.value(514).tagValue;
+    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + 12;
+    m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
 
     // read EXIF
     p.hdr = "IFD Exif";
@@ -1120,22 +1120,22 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                     g = std::max(0, std::min(g, 255));
                     b = std::max(0, std::min(b, 255));
 
-                    rgb[0][y][x] = r;
-                    rgb[1][y][x] = g;
-                    rgb[2][y][x] = b;
+                    rgb[0][y][x] = static_cast<uint>(r);
+                    rgb[1][y][x] = static_cast<uint>(g);
+                    rgb[2][y][x] = static_cast<uint>(b);
                 }
             }
 
             if (mcuCount == 10) G::track(__FUNCTION__, "RGB transform");
 
-            // testing: add mcu rgb to QImage image
+            /* testing: add mcu rgb to QImage image using setPixel
             for (int x = 0; x < 8; x++) {
                 for (int y = 0; y < 8; y++) {
                     int X = mcuCol * 8 + x;
                     int Y = mcuRow * 8 + y;
                     QRgb px = QColor(rgb[0][y][x], rgb[1][y][x], rgb[2][y][x]).rgb();
                     if (X > iWidth || Y > iHeight) {
-                        if (isReport) qDebug() << "Problem"
+                        if (isReport) qDebug() << "Problem: "
                             << "image width =" << iWidth
                             << "height = " << iHeight
                             << "mcuCol =" << mcuCol
@@ -1144,6 +1144,17 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                             << "py =" << Y;
                     }
                     im.setPixel(X, Y, px);
+                }
+            }
+//            */
+
+            // testing: add mcu rgb to QImage image using memcpy scalLone
+            for (int x = 0; x < 8; x++) {
+                for (int y = 0; y < 8; y++) {
+                    uint px = (rgb[2][y][x] << 24) +
+                              (rgb[1][y][x] << 16) +
+                              (rgb[0][y][x] << 8) + 255;
+                    scanLine[y].append(px);
                 }
             }
 
@@ -1164,6 +1175,26 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
 //            qDebug() << "Processed MCU" << mcuCol << mcuRow;
 
         } // end row of MCUs
+
+        // add scanLines for this row of mcus
+        for (int y = 0; y < 8; y++) {
+            QByteArray data;
+            QDataStream stream(&data, QIODevice::WriteOnly);
+            for (auto x : scanLine[y])
+                stream << x;
+            int line = mcuRow * 8 + y;
+            if (line < 40)
+            qDebug() << __FUNCTION__
+                     << "mcuRow =" << mcuRow
+                     << "y =" << y
+                     << "line =" << line
+                     << "scanLines[y].length() =" << scanLine[y].length()
+                     << "data.length() =" << data.length()
+                     << "im.bytesPerLine()) =" << im.bytesPerLine();
+            std::memcpy(im.scanLine(line), data, im.bytesPerLine());
+            scanLine[y].clear();
+        }
+
     } // end all rows of MCUs
 
     // assign im to image

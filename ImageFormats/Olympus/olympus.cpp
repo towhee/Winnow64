@@ -314,8 +314,8 @@ bool Olympus::parse(MetadataParameters &p,
         p.offset = offset;
         p.hash = &olympusMakerHash;
         ifd->readIFD(p, m);
-        m.offsetThumbJPG = ifd->ifdDataHash.value(256).tagValue + makerOffset;
-        m.lengthThumbJPG = ifd->ifdDataHash.value(256).tagCount;
+        m.offsetThumb = ifd->ifdDataHash.value(256).tagValue + makerOffset;
+        m.lengthThumb = ifd->ifdDataHash.value(256).tagCount;
 //        if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
         // read CameraSettingsIFD
@@ -326,10 +326,9 @@ bool Olympus::parse(MetadataParameters &p,
             p.hdr = "IFD Olympus Maker Note: CameraSettingsIFD";
             p.offset = offset;
             ifd->readIFD(p, m);
-            m.offsetFullJPG = ifd->ifdDataHash.value(257).tagValue + makerOffset;
-            m.lengthFullJPG = ifd->ifdDataHash.value(258).tagValue;
-//            if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
-            p.offset = m.offsetFullJPG;
+            m.offsetFull = ifd->ifdDataHash.value(257).tagValue + makerOffset;
+            m.lengthFull = ifd->ifdDataHash.value(258).tagValue;
+            p.offset = m.offsetFull;
             jpeg->getDimensions(p, m);
         }
     }

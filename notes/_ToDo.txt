@@ -1,4 +1,8 @@
 BUGS
+- get rid of OffsetSmall, LengthSmall
+- Nikon lens SN
+- Pixmap::load "E:/2020/202004/2020-04-30_Little Qualicum Estuary/2020-04-30_0126.arw" "Illegal offset to image or no length availableE:/2020/202004/2020-04-30_Little Qualicum Estuary/2020-04-30_0126.arw"
+- nefs in F:\2010-2019 √\2012 √\201208 √\2012-08-29_Neck point √ not opening
 - Navigating thumbs in large folders while still opening can crash
 - Ingest if image does not have metadata req'd
 - is mouseMovementTimer in imageView req'd
@@ -12,7 +16,8 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Changing to Raw+Jpg can crash
+- Copy path in Folders and Bookmarks context menu
+- Read HEIF files
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 - Copy image/pixmap to clipboard
@@ -27,6 +32,8 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- DataModel memory + better mem management
+- cache progress bar width not being recalled
 - Include subfolders not working if root folder has no files
 - Lose currentIndex and selection if click in IconView or TableView in empty area
 - Add exposure compensation to metadata

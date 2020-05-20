@@ -161,22 +161,22 @@ void Preferences::itemChange(QModelIndex idx)
         if (s == "Moderate") mb = static_cast<int>(G::availableMemoryMB * 0.50);
         if (s == "Greedy") mb = static_cast<int>(G::availableMemoryMB * 0.90);
         if (mb > 0 && mb < 1000) mb = 1000;
-        if (s == "Percent of available") {
-            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(true);
-            int pct = static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->value();
-            mb = static_cast<int>((G::availableMemoryMB * static_cast<uint>(pct)) / 100);
-        }
-        else {
-            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(false);
-        }
-        if (s == "MB") {
-            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(true);
-            mb = static_cast<SpinBoxEditor*>(cacheSizeMB)->value();
-        }
-        else {
-            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(false);
-            static_cast<SpinBoxEditor*>(cacheSizeMB)->setValue(mb);
-        }
+//        if (s == "Percent of available") {
+//            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(true);
+//            int pct = static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->value();
+//            mb = static_cast<int>((G::availableMemoryMB * static_cast<uint>(pct)) / 100);
+//        }
+//        else {
+//            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(false);
+//        }
+//        if (s == "MB") {
+//            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(true);
+//            mb = static_cast<SpinBoxEditor*>(cacheSizeMB)->value();
+//        }
+//        else {
+//            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(false);
+//            static_cast<SpinBoxEditor*>(cacheSizeMB)->setValue(mb);
+//        }
         mw->cacheSizeMethod = s;
         mw->cacheSizeMB = mb;
         mw->setCacheParameters();
@@ -766,43 +766,43 @@ void Preferences::addItems()
         valIdx = progressWidthSliderValue->index();
         propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
-        // HEADER
-        // Cache:: Metadata subcategory
-        secondGenerationCount++;
-        QStandardItem *metadataCatItem = new QStandardItem;
-        QStandardItem *metadataCatItem1 = new QStandardItem;
-        metadataCatItem->setText("Metadata");
-        metadataCatItem->setEditable(false);
-        metadataCatItem->setData(DT_None, UR_DelegateType);
-        cacheCatItem->setChild(secondGenerationCount, 0, metadataCatItem);
-        cacheCatItem->setChild(secondGenerationCount, 1, metadataCatItem1);
-        thirdGenerationCount = -1;
+//        // HEADER
+//        // Cache:: Metadata subcategory
+//        secondGenerationCount++;
+//        QStandardItem *metadataCatItem = new QStandardItem;
+//        QStandardItem *metadataCatItem1 = new QStandardItem;
+//        metadataCatItem->setText("Metadata");
+//        metadataCatItem->setEditable(false);
+//        metadataCatItem->setData(DT_None, UR_DelegateType);
+//        cacheCatItem->setChild(secondGenerationCount, 0, metadataCatItem);
+//        cacheCatItem->setChild(secondGenerationCount, 1, metadataCatItem1);
+//        thirdGenerationCount = -1;
 
-            thirdGenerationCount++;
-            // Type = COMBO
-            // name = metadataCacheStrategy
-            tooltip = "If you cache the metadata for all the images in the folder(s) it will take\n"
-                      "longer to initially to get started but performance might be better.  Alternatively\n"
-                      "you can incrementally load the metadata as needed, and for larger folders with\n"
-                      "thousands of images this might be quicker.";
-            QStandardItem *metadataCacheStrategyCaption = new QStandardItem;
-            metadataCacheStrategyCaption->setToolTip(tooltip);
-            metadataCacheStrategyCaption->setText("Strategy");
-            metadataCacheStrategyCaption->setEditable(false);
-            QStandardItem *metadataCacheStrategyValue = new QStandardItem;
-            metadataCacheStrategyValue->setToolTip(tooltip);
-            s = "Incremental";
-            if (mw->metadataCacheThread->cacheAllMetadata) s = "All";
-            metadataCacheStrategyValue->setData(s, Qt::EditRole);
-            metadataCacheStrategyValue->setData(DT_Combo, UR_DelegateType);
-            metadataCacheStrategyValue->setData("metadataCacheStrategy", UR_Source);
-            metadataCacheStrategyValue->setData("QString", UR_Type);
-            QStringList list1 = {"All", "Incremental"};
-            metadataCacheStrategyValue->setData(list1, UR_StringList);
-            metadataCatItem->setChild(thirdGenerationCount, 0, metadataCacheStrategyCaption);
-            metadataCatItem->setChild(thirdGenerationCount, 1, metadataCacheStrategyValue);
-            valIdx = metadataCacheStrategyValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+//            thirdGenerationCount++;
+//            // Type = COMBO
+//            // name = metadataCacheStrategy
+//            tooltip = "If you cache the metadata for all the images in the folder(s) it will take\n"
+//                      "longer to initially to get started but performance might be better.  Alternatively\n"
+//                      "you can incrementally load the metadata as needed, and for larger folders with\n"
+//                      "thousands of images this might be quicker.";
+//            QStandardItem *metadataCacheStrategyCaption = new QStandardItem;
+//            metadataCacheStrategyCaption->setToolTip(tooltip);
+//            metadataCacheStrategyCaption->setText("Strategy");
+//            metadataCacheStrategyCaption->setEditable(false);
+//            QStandardItem *metadataCacheStrategyValue = new QStandardItem;
+//            metadataCacheStrategyValue->setToolTip(tooltip);
+//            s = "Incremental";
+//            if (mw->metadataCacheThread->cacheAllMetadata) s = "All";
+//            metadataCacheStrategyValue->setData(s, Qt::EditRole);
+//            metadataCacheStrategyValue->setData(DT_Combo, UR_DelegateType);
+//            metadataCacheStrategyValue->setData("metadataCacheStrategy", UR_Source);
+//            metadataCacheStrategyValue->setData("QString", UR_Type);
+//            QStringList list1 = {"All", "Incremental"};
+//            metadataCacheStrategyValue->setData(list1, UR_StringList);
+//            metadataCatItem->setChild(thirdGenerationCount, 0, metadataCacheStrategyCaption);
+//            metadataCatItem->setChild(thirdGenerationCount, 1, metadataCacheStrategyValue);
+//            valIdx = metadataCacheStrategyValue->index();
+//            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
         // HEADER
         // Cache:: CacheThumbnail subcategory
@@ -814,38 +814,38 @@ void Preferences::addItems()
         cacheCatItem->setChild(secondGenerationCount, 0, cacheThumbnailCatItem);
         thirdGenerationCount = -1;
 
-            thirdGenerationCount++;
-            // Type = COMBO
-            // name = thumbnailCacheStrategy
-            tooltip = "If you cache the thumbnails for all the images in the folder(s) it will take\n"
-                      "longer to initially to get started and can consume huge amounts of memory \n"
-                      "but performance might be better while scrolling.  Alternatively you can\n"
-                      "incrementally load the thumbnails as needed, and for larger folders with\n"
-                      "thousands of images this is usually the better choice.";
-            QStandardItem *thumbnailCacheStrategyCaption = new QStandardItem;
-            thumbnailCacheStrategyCaption->setToolTip(tooltip);
-            thumbnailCacheStrategyCaption->setText("Strategy");
-            thumbnailCacheStrategyCaption->setEditable(false);
-            QStandardItem *thumbnailCacheStrategyValue = new QStandardItem;
-            thumbnailCacheStrategyValue->setToolTip(tooltip);
-            s = "Incremental";
-            if (mw->metadataCacheThread->cacheAllIcons) s = "All";
-            thumbnailCacheStrategyValue->setData(s, Qt::EditRole);
-            thumbnailCacheStrategyValue->setData(DT_Combo, UR_DelegateType);
-            thumbnailCacheStrategyValue->setData("thumbnailCacheStrategy", UR_Source);
-            thumbnailCacheStrategyValue->setData("QString", UR_Type);
-            QStringList list2 = {"All", "Incremental"};
-            thumbnailCacheStrategyValue->setData(list1, UR_StringList);
-            cacheThumbnailCatItem->setChild(thirdGenerationCount, 0, thumbnailCacheStrategyCaption);
-            cacheThumbnailCatItem->setChild(thirdGenerationCount, 1, thumbnailCacheStrategyValue);
-            valIdx = thumbnailCacheStrategyValue->index();
-            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+//            thirdGenerationCount++;
+//            // Type = COMBO
+//            // name = thumbnailCacheStrategy
+//            tooltip = "If you cache the thumbnails for all the images in the folder(s) it will take\n"
+//                      "longer to initially to get started and can consume huge amounts of memory \n"
+//                      "but performance might be better while scrolling.  Alternatively you can\n"
+//                      "incrementally load the thumbnails as needed, and for larger folders with\n"
+//                      "thousands of images this is usually the better choice.";
+//            QStandardItem *thumbnailCacheStrategyCaption = new QStandardItem;
+//            thumbnailCacheStrategyCaption->setToolTip(tooltip);
+//            thumbnailCacheStrategyCaption->setText("Strategy");
+//            thumbnailCacheStrategyCaption->setEditable(false);
+//            QStandardItem *thumbnailCacheStrategyValue = new QStandardItem;
+//            thumbnailCacheStrategyValue->setToolTip(tooltip);
+//            s = "Incremental";
+//            if (mw->metadataCacheThread->cacheAllIcons) s = "All";
+//            thumbnailCacheStrategyValue->setData(s, Qt::EditRole);
+//            thumbnailCacheStrategyValue->setData(DT_Combo, UR_DelegateType);
+//            thumbnailCacheStrategyValue->setData("thumbnailCacheStrategy", UR_Source);
+//            thumbnailCacheStrategyValue->setData("QString", UR_Type);
+//            QStringList list2 = {"All", "Incremental"};
+//            thumbnailCacheStrategyValue->setData(list1, UR_StringList);
+//            cacheThumbnailCatItem->setChild(thirdGenerationCount, 0, thumbnailCacheStrategyCaption);
+//            cacheThumbnailCatItem->setChild(thirdGenerationCount, 1, thumbnailCacheStrategyValue);
+//            valIdx = thumbnailCacheStrategyValue->index();
+//            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
             thirdGenerationCount++;
             // Type = SPINBOX
             // name = metadataChunkSize
             // parent = cacheThumbnailCatItem
-            tooltip = "Enter the number of thumbnails and metadata you want to cache.  If the\n"
+            tooltip = "Enter the number of minimum thumbnails and metadata you want to cache.  If the\n"
                       "grid is displaying a larger number then the larger number will be used\n"
                       "to make sure they are all shown.  You can experiment to see what works\n"
                       "best.  250 is the default amount.";
@@ -949,66 +949,68 @@ void Preferences::addItems()
             imageCacheSizeMethodValue->setData(DT_Combo, UR_DelegateType);
             imageCacheSizeMethodValue->setData("imageCacheSizeMethod", UR_Source);
             imageCacheSizeMethodValue->setData("QString", UR_Type);
-            QStringList list3 = {"Thrifty", "Moderate", "Greedy", "Percent of available","MB"};
+            QStringList list3 = {"Thrifty",
+                                 "Moderate",
+                                 "Greedy"/*, "Percent of available","MB"*/};
             imageCacheSizeMethodValue->setData(list3, UR_StringList);
             imageCatItem->setChild(thirdGenerationCount, 0, imageCacheSizeMethodCaption);
             imageCatItem->setChild(thirdGenerationCount, 1, imageCacheSizeMethodValue);
             valIdx = imageCacheSizeMethodValue->index();
             propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
-            thirdGenerationCount++;
-            // Type = SPINBOX
-            // name = cacheSizePercentOfAvailable
-            // parent = imageCatItem
-            tooltip = "Enter the percent (10% - 90%) of the available memory to assign to\n."
-                      "the image cache.  The result will be shown in the Image cache size (MB) \n"
-                      "row below.";
-            QStandardItem *cacheSizePercentOfAvailableCaption = new QStandardItem;
-            cacheSizePercentOfAvailableCaption->setToolTip(tooltip);
-            cacheSizePercentOfAvailableCaption->setText("Calc cache size based on % of available");
-            cacheSizePercentOfAvailableCaption->setEditable(false);
-            QStandardItem *cacheSizePercentOfAvailableValue = new QStandardItem;
-            cacheSizePercentOfAvailableValue->setToolTip(tooltip);
-            n = static_cast<int>(mw->cacheSizePercentOfAvailable);
-            cacheSizePercentOfAvailableValue->setData(n, Qt::EditRole);
-            cacheSizePercentOfAvailableValue->setData(DT_Spinbox, UR_DelegateType);
-            cacheSizePercentOfAvailableValue->setData("cacheSizePercentOfAvailable", UR_Source);
-            cacheSizePercentOfAvailableValue->setData("int", UR_Type);
-            cacheSizePercentOfAvailableValue->setData(10, UR_Min);
-            cacheSizePercentOfAvailableValue->setData(90, UR_Max);
-            cacheSizePercentOfAvailableValue->setData(50, UR_LineEditFixedWidth);
-            imageCatItem->setChild(thirdGenerationCount, 0, cacheSizePercentOfAvailableCaption);
-            imageCatItem->setChild(thirdGenerationCount, 1, cacheSizePercentOfAvailableValue);
-            valIdx = cacheSizePercentOfAvailableValue->index();
-            cacheSizePercentOfAvailable = propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
-            if (mw->cacheSizeMethod != "Percent of available") static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(false);
+//            thirdGenerationCount++;
+//            // Type = SPINBOX
+//            // name = cacheSizePercentOfAvailable
+//            // parent = imageCatItem
+//            tooltip = "Enter the percent (10% - 90%) of the available memory to assign to\n."
+//                      "the image cache.  The result will be shown in the Image cache size (MB) \n"
+//                      "row below.";
+//            QStandardItem *cacheSizePercentOfAvailableCaption = new QStandardItem;
+//            cacheSizePercentOfAvailableCaption->setToolTip(tooltip);
+//            cacheSizePercentOfAvailableCaption->setText("Calc cache size based on % of available");
+//            cacheSizePercentOfAvailableCaption->setEditable(false);
+//            QStandardItem *cacheSizePercentOfAvailableValue = new QStandardItem;
+//            cacheSizePercentOfAvailableValue->setToolTip(tooltip);
+//            n = static_cast<int>(mw->cacheSizePercentOfAvailable);
+//            cacheSizePercentOfAvailableValue->setData(n, Qt::EditRole);
+//            cacheSizePercentOfAvailableValue->setData(DT_Spinbox, UR_DelegateType);
+//            cacheSizePercentOfAvailableValue->setData("cacheSizePercentOfAvailable", UR_Source);
+//            cacheSizePercentOfAvailableValue->setData("int", UR_Type);
+//            cacheSizePercentOfAvailableValue->setData(10, UR_Min);
+//            cacheSizePercentOfAvailableValue->setData(90, UR_Max);
+//            cacheSizePercentOfAvailableValue->setData(50, UR_LineEditFixedWidth);
+//            imageCatItem->setChild(thirdGenerationCount, 0, cacheSizePercentOfAvailableCaption);
+//            imageCatItem->setChild(thirdGenerationCount, 1, cacheSizePercentOfAvailableValue);
+//            valIdx = cacheSizePercentOfAvailableValue->index();
+//            cacheSizePercentOfAvailable = propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+//            if (mw->cacheSizeMethod != "Percent of available") static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(false);
 
-            thirdGenerationCount++;
-            // Type = SPINBOX
-            // name = cacheSizeMB
-            // parent = imageCatItem
-            tooltip = "The number of megabytes (MB) to allocate to the iamge cache.  You can \n"
-                      "edit this number directly by setting the cache method to MB.  If you \n"
-                      "select another method then the MB will be calculated and displayed here \n"
-                      "and the cell will be disabled.";
-            QStandardItem *cacheSizeMBCaption = new QStandardItem;
-            cacheSizeMBCaption->setToolTip(tooltip);
-            cacheSizeMBCaption->setText("Image cache size (MB) allocated");
-            cacheSizeMBCaption->setEditable(false);
-            QStandardItem *cacheSizeMBValue = new QStandardItem;
-            cacheSizeMBValue->setToolTip(tooltip);
-            cacheSizeMBValue->setData(mw->cacheSizeMB /*/ 1024*/, Qt::EditRole);
-            cacheSizeMBValue->setData(DT_Spinbox, UR_DelegateType);
-            cacheSizeMBValue->setData("cacheSizeMB", UR_Source);
-            cacheSizeMBValue->setData("int", UR_Type);
-            cacheSizeMBValue->setData(1, UR_Min);
-            cacheSizeMBValue->setData(32000, UR_Max);
-            cacheSizeMBValue->setData(50, UR_LineEditFixedWidth);
-            imageCatItem->setChild(thirdGenerationCount, 0, cacheSizeMBCaption);
-            imageCatItem->setChild(thirdGenerationCount, 1, cacheSizeMBValue);
-            valIdx = cacheSizeMBValue->index();
-            cacheSizeMB = propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
-            if (mw->cacheSizeMethod != "MB") static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(false);
+//            thirdGenerationCount++;
+//            // Type = SPINBOX
+//            // name = cacheSizeMB
+//            // parent = imageCatItem
+//            tooltip = "The number of megabytes (MB) to allocate to the image cache.  You can \n"
+//                      "edit this number directly by setting the cache method to MB.  If you \n"
+//                      "select another method then the MB will be calculated and displayed here \n"
+//                      "and the cell will be disabled.";
+//            QStandardItem *cacheSizeMBCaption = new QStandardItem;
+//            cacheSizeMBCaption->setToolTip(tooltip);
+//            cacheSizeMBCaption->setText("Image cache size (MB) allocated");
+//            cacheSizeMBCaption->setEditable(false);
+//            QStandardItem *cacheSizeMBValue = new QStandardItem;
+//            cacheSizeMBValue->setToolTip(tooltip);
+//            cacheSizeMBValue->setData(mw->cacheSizeMB /*/ 1024*/, Qt::EditRole);
+//            cacheSizeMBValue->setData(DT_Spinbox, UR_DelegateType);
+//            cacheSizeMBValue->setData("cacheSizeMB", UR_Source);
+//            cacheSizeMBValue->setData("int", UR_Type);
+//            cacheSizeMBValue->setData(1, UR_Min);
+//            cacheSizeMBValue->setData(32000, UR_Max);
+//            cacheSizeMBValue->setData(50, UR_LineEditFixedWidth);
+//            imageCatItem->setChild(thirdGenerationCount, 0, cacheSizeMBCaption);
+//            imageCatItem->setChild(thirdGenerationCount, 1, cacheSizeMBValue);
+//            valIdx = cacheSizeMBValue->index();
+//            cacheSizeMB = propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+//            if (mw->cacheSizeMethod != "MB") static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(false);
 
             thirdGenerationCount++;
             // Type = COMBOBOX

@@ -99,9 +99,8 @@ bool Canon::parse(MetadataParameters &p,
     quint32 nextIFDOffset = ifd->readIFD(p, m) + startOffset;
 
     // pull data reqd from IFD0
-    m.offsetFullJPG = ifd->ifdDataHash.value(273).tagValue;
-    m.lengthFullJPG = ifd->ifdDataHash.value(279).tagValue;
-//    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
+    m.offsetFull = ifd->ifdDataHash.value(273).tagValue;
+    m.lengthFull = ifd->ifdDataHash.value(279).tagValue;
 
     m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
     m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
@@ -127,8 +126,8 @@ bool Canon::parse(MetadataParameters &p,
     }
 
     // pull data reqd from IFD1
-    m.offsetThumbJPG = ifd->ifdDataHash.value(513).tagValue;
-    m.lengthThumbJPG = ifd->ifdDataHash.value(514).tagValue;
+    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue;
+    m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     if (nextIFDOffset) {
@@ -138,8 +137,8 @@ bool Canon::parse(MetadataParameters &p,
     }
 
     // pull small size jpg from IFD2
-    m.offsetSmallJPG = ifd->ifdDataHash.value(273).tagValue;
-    m.lengthSmallJPG = ifd->ifdDataHash.value(279).tagValue;
+    m.offsetSmall = ifd->ifdDataHash.value(273).tagValue;
+    m.lengthSmall = ifd->ifdDataHash.value(279).tagValue;
 
     // IFD3 not used at present, but does contain details on embedded jpg
     if (nextIFDOffset && p.report) {

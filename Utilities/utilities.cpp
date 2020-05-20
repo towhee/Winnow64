@@ -77,6 +77,9 @@ quint8 Utilities::get8(QByteArray c)
 quint16 Utilities::get16(QByteArray c, bool isBigEnd)
 {
     if (isBigEnd) {
+        // c might be longer than 2 bytes so use last two bytes if big endian
+//        c = c.right(2);
+//        qDebug() << __FUNCTION__ << c.toHex() << a << b << c[a] << c[b];
         quint16 x = c[0]&0xFF;
         x = static_cast<quint16>((x << 8) | (c[1]&0xFF));
         return x;

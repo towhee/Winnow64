@@ -79,12 +79,12 @@ bool Sony::parse(MetadataParameters &p,
     quint32 nextIFDOffset = ifd->readIFD(p, m);
 
     // pull data reqd from IFD0
-    m.offsetFullJPG = ifd->ifdDataHash.value(513).tagValue;
-    m.lengthFullJPG = ifd->ifdDataHash.value(514).tagValue;
-//    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
-    m.offsetThumbJPG = ifd->ifdDataHash.value(273).tagValue;
-    m.lengthThumbJPG = ifd->ifdDataHash.value(279).tagValue;
-//    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
+    m.offsetFull = ifd->ifdDataHash.value(513).tagValue;
+    m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
+//    if (lengthFullJPG) verifyEmbeddedJpg(offsetFull, lengthFull);
+    m.offsetThumb = ifd->ifdDataHash.value(273).tagValue;
+    m.lengthThumb = ifd->ifdDataHash.value(279).tagValue;
+//    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumb, lengthThumb);
     m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
 
@@ -103,8 +103,8 @@ bool Sony::parse(MetadataParameters &p,
     p.offset = nextIFDOffset;
     if (nextIFDOffset) ifd->readIFD(p, m);
 
-    m.offsetThumbJPG = ifd->ifdDataHash.value(513).tagValue;
-    m.lengthThumbJPG = ifd->ifdDataHash.value(514).tagValue;
+    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue;
+    m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     // get the offset for ExifIFD and read it

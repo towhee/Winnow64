@@ -21,8 +21,10 @@ namespace G
     QColor progressTargetColor = QColor(125,125,125);            // Gray
     QColor progressImageCacheColor = QColor(108,150,108);        // Green
 
-    quint32 availableMemoryMB;
-    quint32 winnowMemoryBeforeCacheMB;
+    int availableMemoryMB;
+    int winnowMemoryBeforeCacheMB;
+    int metaCacheMB;
+    bool memTest;
 
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitor
     QString winOutProfilePath;
