@@ -154,8 +154,8 @@ bool Panasonic::parse(MetadataParameters &p,
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
     m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
-    m.offsetFullJPG = ifd->ifdDataHash.value(46).tagValue;
-    m.lengthFullJPG = ifd->ifdDataHash.value(46).tagCount;
+    m.offsetFull = ifd->ifdDataHash.value(46).tagValue;
+    m.lengthFull = ifd->ifdDataHash.value(46).tagCount;
     m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
     m.xmpNextSegmentOffset = ifd->ifdDataHash.value(700).tagCount + m.xmpSegmentOffset;
     m.height = ifd->ifdDataHash.value(49).tagValue;
@@ -238,8 +238,8 @@ bool Panasonic::parse(MetadataParameters &p,
     // check embedded JPG for more metadata (IFD0, IFD1, Exit IFD and Maker notes IFD)
     order = 0x4D4D;
     isBigEnd = true;
-    quint32 startOffset = m.offsetFullJPG;
-    p.file.seek(m.offsetFullJPG);
+    quint32 startOffset = m.offsetFull;
+    p.file.seek(m.offsetFull);
 
     if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) return 0;
 
@@ -286,8 +286,8 @@ bool Panasonic::parse(MetadataParameters &p,
             ifd->readIFD(p, m);
         }
 
-        m.offsetThumbJPG = ifd->ifdDataHash.value(513).tagValue + startOffset;
-        m.lengthThumbJPG = ifd->ifdDataHash.value(514).tagValue;
+        m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + startOffset;
+        m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
 
         // read JPG Exif IFD
         p.hdr = "IFD Exif";

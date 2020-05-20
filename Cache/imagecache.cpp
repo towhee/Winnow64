@@ -271,25 +271,6 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
     // also build a list of files to decache
     int sumMB = 0;
     for (int i = 0; i < cache.totFiles; ++i) {
-        // check if item metadata has been loaded and will be targeted
-//        if (sumMB < cache.maxMB && !cacheItemList.at(i).isMetadata) {
-//            // need to get metadata to calc memory req'd to cached
-
-//            // file path and dm source row in case filtered or sorted
-//            QString fPath = cacheItemList[i].fName;
-//            int dmRow = dm->fPathRow[fPath];
-
-//            // load metadata
-//            QFileInfo fileInfo(fPath);
-//            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-//                metadata->imageMetadata.row = dmRow;
-//                dm->addMetadataForItem(metadata->imageMetadata);
-//                ulong w = dm->sf->index(i, G::WidthColumn).data().toInt();
-//                ulong h = dm->sf->index(i, G::HeightColumn).data().toInt();
-//                cacheItemList[i].sizeMB = (float)w * h / 262144;
-//                cacheItemList[i].isMetadata = w > 0;
-//            }
-//        }
         sumMB += cacheItemList.at(i).sizeMB;
         if (sumMB < cache.maxMB) {
             cacheItemList[i].isTarget = true;
@@ -324,6 +305,10 @@ and the boolean isTarget is assigned for each item in in the cacheItemList.
 
 bool ImageCache::nextToCache()
 {
+/*
+The images to cache are listed in the list toCache as a stack.  The first one on the list is
+the next to cache.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -338,6 +323,10 @@ bool ImageCache::nextToCache()
 
 bool ImageCache::nextToDecache()
 {
+/*
+The images to decache are listed in the list toDeache as a stack.  The first one on the list is
+the next to decache.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -443,6 +432,59 @@ bool ImageCache::cacheUpToDate()
         if (cacheItemList[i].isTarget)
           if (cacheItemList[i].isCached == false) return false;
     return true;
+}
+
+void ImageCache::makeRoom(int room, int roomRqd)
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+    #endif
+    }
+    while (room < roomRqd) {
+        // make some room by removing lowest priority cached image
+        if (nextToDecache()) {
+            QString s = cacheItemList[cache.toDecacheKey].fPath;
+            imCache.remove(s);
+            emit updateCacheOnThumbs(s, false);
+            if (!toDecache.isEmpty()) toDecache.removeFirst();
+            cacheItemList[cache.toDecacheKey].isCached = false;
+            cache.currMB -= cacheItemList[cache.toDecacheKey].sizeMB;
+            room = cache.maxMB - cache.currMB;
+        }
+        else break;
+    }
+}
+
+void ImageCache::memChk()
+{
+/*
+Check to make sure there is still room in system memory (heap) for the image cache. If
+something else (another program) has used the system memory then reduce the size of the cache
+until it still fits.
+*/
+    {
+    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+    #endif
+    }
+    // get available memory
+    #ifdef Q_OS_WIN
+    Win::availableMemory();     // sets G::availableMemoryMB
+    #endif
+
+    #ifdef Q_OS_MAC
+    Mac::availableMemory();     // sets G::availableMemoryMB
+    #endif
+
+    // still fit cache?
+    int roomInCache = cache.maxMB - cache.currMB;
+    if (G::availableMemoryMB < roomInCache) {
+        cache.maxMB = cache.currMB + G::availableMemoryMB;
+    }
 }
 
 void ImageCache::checkForOrphans()
@@ -677,7 +719,7 @@ It is built from dm->sf (sorted and/or filtered datamodel).
         cacheItem.isCached = false;
         cacheItem.isTarget = false;
         cacheItem.priority = i;
-        // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024
+        // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
         float w = dm->sf->index(i, G::WidthColumn).data().toFloat();
         int h = dm->sf->index(i, G::HeightColumn).data().toInt();
         cacheItem.sizeMB = static_cast<int>(w * h / 262144);
@@ -930,7 +972,12 @@ void ImageCache::run()
     G::track(__FUNCTION__);
     #endif
     }
+    // signal MW cache status
     emit updateIsRunning(true, true);
+
+    // check available memory
+    memChk();
+
     static QString prevFileName = "";
     QTime t = QTime::currentTime().addMSecs(500);
     while (nextToCache()) {
@@ -945,7 +992,7 @@ void ImageCache::run()
 
         QImage im;
         if (getImage->load(fPath, im)) {
-            // is there room in cache?
+//          is there room in cache?
             int room = cache.maxMB - cache.currMB;
             int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
             /*
@@ -954,20 +1001,22 @@ void ImageCache::run()
                      << "currMB" << cache.currMB
                      << "room =" << room
                      << "toCache =" << cache.toCacheKey
-                     << "roomRqd =" << roomRqd;*/
-            while (room < roomRqd) {
-                // make some room by removing lowest priority cached image
-                if (nextToDecache()) {
-                    QString s = cacheItemList[cache.toDecacheKey].fPath;
-                    imCache.remove(s);
-                    emit updateCacheOnThumbs(s, false);
-                    if (!toDecache.isEmpty()) toDecache.removeFirst();
-                    cacheItemList[cache.toDecacheKey].isCached = false;
-                    cache.currMB -= cacheItemList[cache.toDecacheKey].sizeMB;
-                    room = cache.maxMB - cache.currMB;
-                }
-                else break;
-            }
+                     << "roomRqd =" << roomRqd;
+//                */
+            makeRoom(room, roomRqd);
+            //            while (room < roomRqd) {
+//                // make some room by removing lowest priority cached image
+//                if (nextToDecache()) {
+//                    QString s = cacheItemList[cache.toDecacheKey].fPath;
+//                    imCache.remove(s);
+//                    emit updateCacheOnThumbs(s, false);
+//                    if (!toDecache.isEmpty()) toDecache.removeFirst();
+//                    cacheItemList[cache.toDecacheKey].isCached = false;
+//                    cache.currMB -= cacheItemList[cache.toDecacheKey].sizeMB;
+//                    room = cache.maxMB - cache.currMB;
+//                }
+//                else break;
+//            }
             imCache.insert(fPath, im);
             emit updateCacheOnThumbs(fPath, true);
 /*            if (cache.usePreview) {

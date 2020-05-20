@@ -212,15 +212,17 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
         qDebug() << __FUNCTION__ << "isShift == true";
     }
 
-    /* testing/debugging
+    /* TESTING / DEBUGGING FLAGS
        Note ISDEBUG is in globals.h
        Deactivate debug reporting by commenting ISDEBUG  */
     G::showAllTableColumns = false;     // show all table fields for debugging
     simulateJustInstalled = false;
     isStressTest = false;
     G::isTimer = true;                  // Global timer
+    G::memTest = false;                 // will not load images
+    G::isTest = true;                   // use RGH JPG reader
 
-    // Initialize some variables etc
+    // Initialize some variables
     initialize();
 
     // platform specific settings
@@ -553,6 +555,8 @@ bool MW::event(QEvent *event)
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
+//    qDebug() << __FUNCTION__ << obj->objectName() << event->type();
+//    return QWidget::eventFilter(obj, event);
 
 // use to show all events being filtered - handy to figure out which to intercept
     if (event->type()        != QEvent::Paint
@@ -603,82 +607,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
     }
-
-    /* ICONVIEW SCROLLING ****************************************************************
-
-    IconView is ready-to-go and can scroll to wherever we want:
-
-    When the user changes modes in MW (ie from Grid to Loupe) a IconView instance (either
-    thumbView or gridView) can change state from hidden to visible. Since hidden widgets
-    cannot be accessed we need to wait until the IconView becomes visible and fully repainted
-    before attempting to scroll to the current index. The IconView scrollBar paint events are
-    monitored and when the last paint event occurs the scrollToCurrent function is called. The
-    last paint event is identified by calculating the maximum of the scrollbar range and
-    comparing it to the paint event, which updates the range each time. With larger datasets
-    (ie 1500+ thumbs) it can take a number of paint events and 100s of ms to complete. A flag
-    is assigned (scrollWhenReady) to show when we need to monitor so not checking needlessly.
-    Unfortunately there does not appear to be any signal or event when ListView is finished
-    hence this cludge.
-    */
-
-//    if(event->type() == QEvent::Paint
-//            && thumbView->scrollWhenReady
-//            && (obj->objectName() == "IconViewVerticalScrollBar"
-//            || obj->objectName() == "IconViewHorizontalScrollBar"))
-//    {
-//        if (obj->objectName() == "IconViewHorizontalScrollBar") {
-//            /*
-//            qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
-//                     << thumbView->horizontalScrollBar()->maximum()
-//                     << thumbView->getHorizontalScrollBarMax();*/
-//            if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
-//                /*
-//                qDebug() << objectName()
-//                 << ": Event Filter sending row =" << currentRow
-//                 << "horizontalScrollBarMax Qt vs Me"
-//                 << thumbView->horizontalScrollBar()->maximum()
-//                 << thumbView->getHorizontalScrollBarMax();*/
-//                thumbView->scrollWhenReady = false;
-//                thumbView->scrollToRow(scrollRow, __FUNCTION__);
-//            }
-//        }
-//        if (obj->objectName() == "IconViewVerticalScrollBar") {
-//             /*
-//             qDebug() << G::t.restart() << "\t" << objectName() << "VerScrollCurrentMax / FinalMax:"
-//                      << thumbView->verticalScrollBar()->maximum()
-//                      << thumbView->getVerticalScrollBarMax();*/
-//             if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
-//                /*
-//                 qDebug() << G::t.restart() << "\t" << objectName()
-//                          << ": Event Filter sending row =" << currentRow
-//                          << "verticalScrollBarMax Qt vs Me"
-//                          << thumbView->verticalScrollBar()->maximum()
-//                          << thumbView->getVerticalScrollBarMax();*/
-//                 thumbView->scrollWhenReady = false;
-//                 thumbView->scrollToRow(scrollRow, __FUNCTION__);
-//             }
-//         }
-//        if (obj->objectName() == "TableViewHorizontalScrollBar") {
-//            qDebug() << "TableViewHorizontalScrollBar";
-//        }
-//    }
-
-//    if(event->type() == QEvent::Paint
-//            && gridView->scrollWhenReady
-//            && (obj->objectName() == "IconViewVerticalScrollBar"))
-//    {
-//         if (gridView->verticalScrollBar()->maximum() > 0.95 * gridView->getVerticalScrollBarMax()){
-//             /*
-//             qDebug() << "XXXXXXXXXXXXXXX      " << objectName()
-//                      << ": Event Filter sending row =" << currentRow
-//                      << "verticalScrollBarMax Qt vs Me"
-//                      << gridView->verticalScrollBar()->maximum()
-//                      << gridView->getVerticalScrollBarMax();
-//             */
-//             gridView->scrollWhenReady = false;
-//             gridView->scrollToRow(scrollRow, __FUNCTION__);
-//         }
-//    }
 
     /* CONTEXT MENU **********************************************************************
 
@@ -1025,6 +953,8 @@ void MW::folderSelectionChange()
 
     uncheckAllFilters();
 
+//    if (G::memTest) return;
+
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         qDebug() << "Datamodel Failed To Load for" << currentViewDir;
         clearAll();
@@ -1081,6 +1011,7 @@ void MW::folderSelectionChange()
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
 
+//    if (!G::memTest)
     metadataCacheThread->loadNewFolder(isRefreshingDM);
 
     // format pickMemSize as bytes, KB, MB or GB
@@ -1117,7 +1048,7 @@ delegate use of the current index must check the column.
              << "isFilterChange =" << isFilterChange
              << "current =" << current;
 //    */
-
+    if (G::memTest) return;
     bool isStart = false;
     if(!isCurrentFolderOkay || G::isInitializing || isFilterChange) return;
 
@@ -1268,11 +1199,12 @@ a bookmark or ejects a drive and the resulting folder does not have any eligible
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
     G::allMetadataLoaded = false;
-    dm->clear();
+    dm->clearDataModel();
     currentRow = 0;
     infoView->clearInfo();
     metadata->clear();
@@ -1480,21 +1412,19 @@ within the cache range.
     #endif
     }
     /*
-       Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
+    Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
     to call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread.
     This was to prevent many scroll calls from bunching up.  The new approach just aborts an
     existing thread and starts over.  It is simpler and faster.  Keeping the old process until
     the new one is proven to work all the time.
       */
-
-//    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconsVisible(false);
 //        if (thumbView->isVisible())
-            thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
+        thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
         metadataCacheThread->scrollChange();
     }
     G::ignoreScrollSignal = false;
@@ -1808,12 +1738,15 @@ memory has been consumed or all the images are cached.
     else
         fPath = indexesList.first().data(G::PathRole).toString();
 
+    qDebug() << __FUNCTION__ << fPath;
+
     // the folder does not have any eligible images (probably from previous session and the
     // drive has been removed or did have "include subfolders" activated
     if (fPath == "") return;
 
     // set image cache parameters and build image cacheItemList
-    imageCacheThread->initImageCache(cacheSizeMB,
+    int netCacheMBSize = cacheSizeMB - G::metaCacheMB;
+    imageCacheThread->initImageCache(netCacheMBSize,
         isShowCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
 
@@ -4541,18 +4474,10 @@ void MW::createBookmarks()
     }
 
     bookmarks->setMaximumWidth(folderMaxWidth);
-//    refreshBookmarks();
 
     // this does work for touchpad tap
     connect(bookmarks, SIGNAL(itemPressed(QTreeWidgetItem *, int)),
             this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
-
-   // this not working for touchpad tap
-//    connect(bookmarks, SIGNAL(itemClicked(QTreeWidgetItem *, int)),
-//            this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
-
-//    connect(removeBookmarkAction, SIGNAL(triggered()),
-//            bookmarks, SLOT(removeBookmark()));
 
     connect(bookmarks, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
             this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
@@ -4782,10 +4707,12 @@ void MW::updateProgressBarWidth()
     G::track(__FUNCTION__);
     #endif
     }
-    int availableSpace = availableSpaceForProgressBar();
-    if (availableSpace < progressWidth) progressWidth = availableSpace;
-    progressLabel->setFixedWidth(progressWidth);
-    progressPixmap->scaled(progressWidth, 25);
+    if (dm->rowCount() && progressLabel->isVisible()) {
+        int availableSpace = availableSpaceForProgressBar();
+        if (availableSpace < progressWidth) progressWidth = availableSpace;
+        progressLabel->setFixedWidth(progressWidth);
+        progressPixmap->scaled(progressWidth, 25);
+    }
 }
 
 void MW::setCacheParameters()
@@ -4799,9 +4726,10 @@ parameters.  Any visibility changes are executed.
     G::track(__FUNCTION__);
     #endif
     }
-
-    imageCacheThread->updateImageCacheParam(cacheSizeMB, isShowCacheStatus, cacheWtAhead,
-             isCachePreview, displayHorizontalPixels, displayVerticalPixels);
+    int netCacheMBSize = cacheSizeMB - static_cast<int>( G::metaCacheMB);
+    imageCacheThread->updateImageCacheParam(netCacheMBSize,
+             isShowCacheStatus, cacheWtAhead, isCachePreview,
+             displayHorizontalPixels, displayVerticalPixels);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     if (fPath.length())
@@ -4902,8 +4830,8 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
     // check for file error first
     QString fPath = thumbView->getCurrentFilePath();
     int row = dm->fPathRow[fPath];
-    bool imageUnavailable = dm->index(row, G::LengthFullJPGColumn).data() == 0;
-    bool thumbUnavailable = dm->index(row, G::LengthThumbJPGColumn).data() == 0;
+    bool imageUnavailable = dm->index(row, G::LengthFullColumn).data() == 0;
+    bool thumbUnavailable = dm->index(row, G::LengthThumbColumn).data() == 0;
     if (imageUnavailable || thumbUnavailable) {
         // rgh may want to set the error here as well as report
 //        QString err = dm->index(row, G::ErrColumn).data().toString();
@@ -4928,8 +4856,14 @@ QString fileSym = "📁";
 QString fileSym = "📷";
 */
 
+    // update G::availableMemory
+    Win::availableMemory();
+    double availMemGB = static_cast<double>(G::availableMemoryMB) / 1024;
+    QString mem = QString::number(availMemGB, 'f', 1) + " GB";
+
     // image of total: fileCount
     if (keepBase && isCurrentFolderOkay) {
+        base += "Mem: " + mem + spacer;
         if (G::mode == "Loupe" || G::mode == "Compare")
             base += "Zoom: " + getZoom();
         base += spacer + "Pos: " + getPosition();
@@ -10679,6 +10613,12 @@ void MW::test2()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+    qDebug() << __FUNCTION__;
+    QString s = "D:/Pictures/Zenfolio/pbase2048";
+    dm->load(s, false);
+    G::isInitializing = false;
+
+    return;
 
     QString fPath = "D:/Pictures/_DNG/DngNikonD850FromLightroom.dng";
     metadata->testNewFileFormat(fPath);
@@ -10686,8 +10626,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-        quint32 a = 4294967284;
-        qint32 b = static_cast<int>(a);
-        qDebug() << __FUNCTION__ << a << b;
+    char c[] = {0x40, 0x49, 0x0F, 0x20};
+    QByteArray ba = QByteArray::fromRawData(c, sizeof(c));
+    QDataStream str(&ba, QIODevice::ReadOnly);
+    str.setByteOrder(QDataStream::BigEndian);
+    QByteArray ab;
+    QString s;
+    str >> s;
+    qDebug() << __FUNCTION__ << ba.toHex() << s << ab.toHex();
 }
 // End MW

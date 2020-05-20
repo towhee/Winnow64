@@ -15,6 +15,7 @@
 #include "Metadata/metareport.h"
 
 #include <iostream>
+#include <stdio.h>
 //#include "Utilities/bit.h"
 
 class Jpeg : public QObject
@@ -79,7 +80,9 @@ private:
                    ArithmetricProgressive_DCT, ArithmetricLossless, UnknownJPEGSubformat};
     /* image scan mcu row from top left most mcu to bottom right most mcu equivalent
        to 8 scanlines joined together one after the other in format FFRRGGBBFFRRGGBB ... */
-    QVector<int> scanMcuRow;
+    typedef QVector<uint> scanMcuRow;
+//    QVector<QVector<uint>> scanLines;
+    scanMcuRow scanLine[8];
 
     // image width and height in pixels
     int iWidth, iHeight;
@@ -88,7 +91,7 @@ private:
     int mcuRows, mcuCols;        // number of rows and columns of mcu in jpeg
     int mcu[3][8][8];
     double idct[3][8][8];
-    int rgb[3][8][8];
+    uint rgb[3][8][8];
     int dcDiff[3];
 
     // zigzag transform coordinates

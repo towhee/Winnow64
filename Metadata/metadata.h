@@ -57,12 +57,12 @@ public:
     // variables used to hold data before insertion into QMap metaCache
     int row;                // datamodel row
     bool isPicked;
-    quint32 offsetFullJPG;
-    quint32 lengthFullJPG;
-    quint32 offsetThumbJPG;
-    quint32 lengthThumbJPG;
-    quint32 offsetSmallJPG;
-    quint32 lengthSmallJPG;
+    quint32 offsetFull;
+    quint32 lengthFull;
+    quint32 offsetThumb;
+    quint32 lengthThumb;
+    quint32 offsetSmall;
+    quint32 lengthSmall;
     quint32 xmpSegmentOffset;
     quint32 xmpNextSegmentOffset;
     bool isXmp;
@@ -191,7 +191,6 @@ private:
         nikonMakerHash, sonyMakerHash, fujiMakerHash, canonMakerHash,
         panasonicMakerHash, canonFileInfoHash;
     QHash<QString, quint32> segmentHash;
-//    QHash<QByteArray, QString> nikonLensHash;
     QHash<QString, QString> nikonLensHash;
     QHash<int, QString> sonyAFAreaModeHash;
     QHash<int, QString> orientationDescription;

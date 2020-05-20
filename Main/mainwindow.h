@@ -62,7 +62,6 @@
 //#include "Lib/zlib/zlib.h"
 //#include "lcms2.h"
 
-//#if defined(Q_OS_WIN)
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
 #endif

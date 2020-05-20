@@ -52,7 +52,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     int totDelay = 500;     // milliseconds
     int msDelay = 0;        // total incremented delay
-    uint msInc = 10;         // amount to increment each try
+    uint msInc = 10;        // amount to increment each try
 
     uint offsetFullJpg = 0;
     uint lengthFullJpg = 0;
@@ -65,7 +65,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
         // raw files handled by Qt
         do {
             // Check if metadata has been cached for this image
-            if (dm->index(row, G::OffsetFullJPGColumn).data().isNull()) {
+            if (dm->index(row, G::OffsetFullColumn).data().isNull()) {
                 if (metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__))
                     dm->addMetadataForItem(metadata->imageMetadata);
                 else {
@@ -74,8 +74,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
                     break;
                 }
             }
-            offsetFullJpg = dm->index(row, G::OffsetFullJPGColumn).data().toUInt();
-            lengthFullJpg = dm->index(row, G::LengthFullJPGColumn).data().toUInt();
+            offsetFullJpg = dm->index(row, G::OffsetFullColumn).data().toUInt();
+            lengthFullJpg = dm->index(row, G::LengthFullColumn).data().toUInt();
             // try to read the file
             if (offsetFullJpg > 0 && lengthFullJpg > 0) {
                 if (imFile.isOpen()) {
@@ -133,9 +133,35 @@ bool Pixmap::load(QString &fPath, QImage &image)
              if (imFile.open(QIODevice::ReadOnly)) {
                 // close it to allow qt load to work
                 imFile.close();
-                success = image.load(fPath);    // crash in
+                if (ext == "tif") {
+                    ImageMetadata m = dm->getMetadata(fPath);
+                    Tiff tiff;
+                    success = tiff.decode(m, imFile, image, true);
+                }
+                else success = image.load(fPath);    // crash in
                 /*
                 G::t.restart();
+
+                if (ext == "tif" && G::isTest == true) {
+                    if (imFile.open(QIODevice::ReadOnly)) {
+                        offsetFullJpg = dm->index(row, G::OffsetFullColumn).data().toUInt();
+                        lengthFullJpg = dm->index(row, G::LengthFullColumn).data().toUInt();
+                        int w = dm->index(row, G::WidthColumn).data().toInt();
+                        int h = dm->index(row, G::HeightColumn).data().toInt();
+                        bool seekSuccess = imFile.seek(offsetFullJpg);
+                        if (seekSuccess) {
+                            QByteArray buf = imFile.read(lengthFullJpg);
+                            Tiff tiff;
+                            qDebug() << __FUNCTION__
+                                     << "offsetFullJpg =" << offsetFullJpg
+                                     << "lengthFullJpg =" << lengthFullJpg;
+                            tiff.decodeScan(buf, image, w , h);
+                            success = true;
+//                            success = image.load(fPath);
+                        }
+                    }
+                }
+
                 // test load image using jpeg class
                 Jpeg jpeg;
                 if (ext == "jpg" && G::isTest == true) {
@@ -147,18 +173,20 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 else {
                     success = image.load(fPath);
                     G::track(__FUNCTION__, "Completed Qt Load");
-                }*/
+                }
+//                */
                 if (!success) {
                     err = "Could not read image" + fPath;
                     qDebug() << __FUNCTION__ << err;
                     break;
                 }
+
                 #ifdef Q_OS_WIN
                 if (G::colorManage && metadata->iccFormats.contains(ext)) {
                     QByteArray ba = dm->index(row, G::ICCBufColumn).data().toByteArray();
                     ICC::setInProfile(dm->index(row, G::ICCBufColumn).data().toByteArray());
                     ICC::transform(image);
-                    }
+                }
                 #endif
             }
             else {

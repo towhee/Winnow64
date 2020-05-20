@@ -31,7 +31,7 @@ bool DNG::parse(MetadataParameters &p,
     p.hash = &exif->hash;
     ifd->readIFD(p, m);
 
-    m.lengthFullJPG = 1;  // set arbitrary length to avoid error msg as tif do not
+    m.lengthFull = 1;  // set arbitrary length to avoid error msg as tif do not
                           // have full size embedded jpg
 
     // IFD0: *******************************************************************
@@ -173,12 +173,12 @@ bool DNG::parse(MetadataParameters &p,
         if (jpgs.length() > 0) {
             m.width = static_cast<uint>(jpgs.at(largeJpg).width);
             m.height = static_cast<uint>(jpgs.at(largeJpg).height);
-            m.offsetFullJPG = static_cast<uint>(jpgs.at(largeJpg).offset);
-            m.lengthFullJPG = static_cast<uint>(jpgs.at(largeJpg).length);
-            m.offsetSmallJPG = static_cast<uint>(jpgs.at(smallJpg).offset);
-            m.lengthSmallJPG = static_cast<uint>(jpgs.at(smallJpg).length);
-            m.offsetThumbJPG = static_cast<uint>(jpgs.at(smallJpg).offset);
-            m.lengthThumbJPG = static_cast<uint>(jpgs.at(smallJpg).length);
+            m.offsetFull = static_cast<uint>(jpgs.at(largeJpg).offset);
+            m.lengthFull = static_cast<uint>(jpgs.at(largeJpg).length);
+            m.offsetSmall = static_cast<uint>(jpgs.at(smallJpg).offset);
+            m.lengthSmall = static_cast<uint>(jpgs.at(smallJpg).length);
+            m.offsetThumb = static_cast<uint>(jpgs.at(smallJpg).offset);
+            m.lengthThumb = static_cast<uint>(jpgs.at(smallJpg).length);
         }
     }
 

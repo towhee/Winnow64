@@ -11,14 +11,31 @@ into the datamodel dm->addMetadataForItem(ImageMetadata m).
 */
 public:
     int row = 0;                            // datamodel row
+    bool isBigEnd = false;
     bool isPicked = false;                  //rgh required?
     bool isSearch = false;
-    quint32 offsetFullJPG = 0;
-    quint32 lengthFullJPG = 0;
-    quint32 offsetThumbJPG = 0;
-    quint32 lengthThumbJPG = 0;
-    quint32 offsetSmallJPG = 0;
-    quint32 lengthSmallJPG = 0;
+    quint32 offsetFull = 0;
+    quint32 lengthFull = 0;
+    quint32 offsetThumb = 0;
+    quint32 lengthThumb = 0;
+    quint32 offsetSmall = 0;
+    quint32 lengthSmall = 0;
+
+    // need for TIFF
+    int bitsPerSampleFull = 0;
+    int photoInterpFull = 0;
+    int samplesPerPixelFull = 0;
+    int compressionFull = 0;
+    quint32 stripByteCountsFull = 0;
+
+    int widthThumb = 0;
+    int heightThumb = 0;
+    int bitsPerSampleThumb = 0;
+    int photoInterpThumb = 0;
+    int samplesPerPixelThumb = 0;
+    int compressionThumb = 0;
+    quint32 stripByteCountsThumb = 0;
+
     quint32 xmpSegmentOffset = 0;
     quint32 xmpNextSegmentOffset = 0;
     bool isXmp = false;
@@ -29,8 +46,9 @@ public:
     quint32 orientationOffset = 0;
     int orientation = 0;
     int rotationDegrees = 0;                // additional rotation from edit
-    uint width = 0;
-    uint height = 0;
+    int width = 0;
+    int height = 0;
+
     QString dimensions = "";
     QDateTime createdDate;
     QString make = "";
@@ -74,6 +92,7 @@ public:
     bool imageUnavailable = false;          // no embedded preview
     QString err = "";
     QString searchStr = "";
+    QByteArray nikonLensCode = nullptr;
 };
 Q_DECLARE_METATYPE(ImageMetadata)
 

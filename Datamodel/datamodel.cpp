@@ -192,12 +192,26 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::_EmailColumn, new QStandardItem("_Email")); horizontalHeaderItem(G::_EmailColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_UrlColumn, new QStandardItem("_Url")); horizontalHeaderItem(G::_UrlColumn)->setData(true, G::GeekRole);
 
-    setHorizontalHeaderItem(G::OffsetFullJPGColumn, new QStandardItem("OffsetFullJPG")); horizontalHeaderItem(G::OffsetFullJPGColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::LengthFullJPGColumn, new QStandardItem("LengthFullJPG")); horizontalHeaderItem(G::LengthFullJPGColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::OffsetThumbJPGColumn, new QStandardItem("OffsetThumbJPG")); horizontalHeaderItem(G::OffsetThumbJPGColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::LengthThumbJPGColumn, new QStandardItem("LengthThumbJPF")); horizontalHeaderItem(G::LengthThumbJPGColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::OffsetSmallJPGColumn, new QStandardItem("OffsetSmallJPG")); horizontalHeaderItem(G::OffsetSmallJPGColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::LengthSmallJPGColumn, new QStandardItem("LengthSmallJPG")); horizontalHeaderItem(G::LengthSmallJPGColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::OffsetFullColumn, new QStandardItem("OffsetFull")); horizontalHeaderItem(G::OffsetFullColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::LengthFullColumn, new QStandardItem("LengthFull")); horizontalHeaderItem(G::LengthFullColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::OffsetThumbColumn, new QStandardItem("OffsetThumb")); horizontalHeaderItem(G::OffsetThumbColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::LengthThumbColumn, new QStandardItem("LengthThumb")); horizontalHeaderItem(G::LengthThumbColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::OffsetSmallColumn, new QStandardItem("OffsetSmall")); horizontalHeaderItem(G::OffsetSmallColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::LengthSmallColumn, new QStandardItem("LengthSmall")); horizontalHeaderItem(G::LengthSmallColumn)->setData(true, G::GeekRole);
+
+    setHorizontalHeaderItem(G::bitsPerSampleFullColumn, new QStandardItem("bitsPerSampleFull")); horizontalHeaderItem(G::bitsPerSampleFullColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::photoInterpFullColumn, new QStandardItem("photoInterpFull")); horizontalHeaderItem(G::photoInterpFullColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::samplesPerPixelFullColumn, new QStandardItem("samplesPerPixelFull")); horizontalHeaderItem(G::samplesPerPixelFullColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::compressionFullColumn, new QStandardItem("compressionFull")); horizontalHeaderItem(G::compressionFullColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::stripByteCountsFullColumn, new QStandardItem("stripByteCountsFull")); horizontalHeaderItem(G::stripByteCountsFullColumn)->setData(true, G::GeekRole);
+
+    setHorizontalHeaderItem(G::widthThumbColumn, new QStandardItem("widthThumb")); horizontalHeaderItem(G::widthThumbColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::heightThumbColumn, new QStandardItem("heightThumb")); horizontalHeaderItem(G::heightThumbColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::bitsPerSampleThumbColumn, new QStandardItem("bitsPerSampleThumb")); horizontalHeaderItem(G::bitsPerSampleThumbColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::photoInterpThumbColumn, new QStandardItem("photoInterpThumb")); horizontalHeaderItem(G::photoInterpThumbColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::samplesPerPixelThumbColumn, new QStandardItem("samplesPerPixelThumb")); horizontalHeaderItem(G::samplesPerPixelThumbColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::compressionThumbColumn, new QStandardItem("compressionThumb")); horizontalHeaderItem(G::compressionThumbColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::stripByteCountsThumbColumn, new QStandardItem("stripByteCountsThumb")); horizontalHeaderItem(G::stripByteCountsThumbColumn)->setData(true, G::GeekRole);
 
     setHorizontalHeaderItem(G::XmpSegmentOffsetColumn, new QStandardItem("XmpSegmentOffset")); horizontalHeaderItem(G::XmpSegmentOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::XmpNextSegmentOffsetColumn, new QStandardItem("XmpNextSegmentOffset")); horizontalHeaderItem(G::XmpNextSegmentOffsetColumn)->setData(true, G::GeekRole);
@@ -224,21 +238,25 @@ DataModel::DataModel(QWidget *parent,
     emptyImg.load(":/images/no_image.png");
 }
 
-void DataModel::clear()
+void DataModel::clearDataModel()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
-    }
+    }    
     // clear the model
     removeRows(0, rowCount());
+    setRowCount(0);
+//    setColumnCount(0);
     // clear the fPath index of datamodel rows
     fPathRow.clear();
     // clear all items for filters based on data content ie file types, camera model
     filters->removeChildrenDynamicFilters();
     // reset remaining criteria without signalling filter change as no new data yet
     filters->clearAll();
+    // clear list of fileInfo
+    fileInfoList.clear();
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -332,7 +350,7 @@ Steps:
     filtersBuilt = false;
 
     //  clear the model
-    clear();
+    clearDataModel();
 
     // do some initializing
     fileFilters->clear();
@@ -342,13 +360,11 @@ Steps:
     dir->setFilter(QDir::Files);
     dir->setPath(currentFolderPath);
 
-    fileInfoList.clear();
-
     timeToQuit = false;
     imageCount = 0;
     countInterval = 1000;
-    QString escapeClause = "Press \"Esc\" to stop.\n\n";
-    QString scanning = "Searching for eligible images.  ";
+    QString step = "Step 1 0f 2: Searching for eligible images.\n\n";
+    QString escapeClause = "\n\nPress \"Esc\" to stop.";
     QString root;
     if (dir->isRoot()) root = "Drive ";
     else root = "Folder ";
@@ -366,9 +382,10 @@ Steps:
         fileInfoList.append(dir->entryInfoList().at(i));
         imageCount++;
         if (imageCount % countInterval == 0 && imageCount > 0) {
-            QString s = escapeClause + scanning +
+            QString s = step +
                         QString::number(imageCount) + " found so far in " +
-                        QString::number(folderCount) + " folders";
+                        QString::number(folderCount) + " folders" +
+                        escapeClause;
             emit msg(s);
             qApp->processEvents();
         }
@@ -399,9 +416,10 @@ Steps:
                 imageCount++;
                 // report file progress within folder
                 if (imageCount % countInterval == 0 && imageCount > 0) {
-                    QString s = escapeClause + scanning +
-                            QString::number(imageCount) + " found so far in " +
-                            QString::number(folderCount) + " folders";
+                    QString s = step +
+                                QString::number(imageCount) + " found so far in " +
+                                QString::number(folderCount) + " folders" +
+                                escapeClause;
                     emit msg(s);
                     qApp->processEvents();
                 }
@@ -423,6 +441,9 @@ bool DataModel::addFileData()
     // make sure if raw+jpg pair that raw file is first to make combining easier
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 
+    QString step = "Step 2 0f 2: Loading eligible images.\n\n";
+    QString escapeClause = "\n\nPress \"Esc\" to stop.";
+
     // test if raw file to match jpg when same file names and one is a jpg
     QString suffix;
     QString prevRawSuffix = "";
@@ -441,7 +462,7 @@ bool DataModel::addFileData()
 
         // append hash index of datamodel row for fPath for fast lookups
         QString fPath = fileInfo.filePath();
-        // build hash to quickly get row from f(row, Path (ie pixmap.cpp, imageCache...)
+        // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
         fPathRow[fPath] = row;
 
         // string to hold aggregated text for searching
@@ -518,8 +539,10 @@ bool DataModel::addFileData()
         }
 
         if (row % 1000 == 0) {
-            QString s = QString::number(row) + " of " + QString::number(rowCount()) +
-                        " added to the datamodel";
+            QString s = step +
+                        QString::number(row) + " of " + QString::number(rowCount()) +
+                        " loaded." +
+                        escapeClause;
             emit msg(s);
             qApp->processEvents();
         }
@@ -623,12 +646,30 @@ Used by InfoString and IngestDlg
     m._url = index(row, G::_UrlColumn).data().toString();
     m.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
 
-    m.offsetFullJPG = index(row, G::OffsetFullJPGColumn).data().toUInt();
-    m.lengthFullJPG = index(row, G::LengthFullJPGColumn).data().toUInt();
-    m.offsetThumbJPG = index(row, G::OffsetThumbJPGColumn).data().toUInt();
-    m.lengthThumbJPG = index(row, G::LengthThumbJPGColumn).data().toUInt();
-    m.offsetSmallJPG = index(row, G::OffsetSmallJPGColumn).data().toUInt();
-    m.lengthSmallJPG = index(row, G::LengthSmallJPGColumn).data().toUInt();
+    m.offsetFull = index(row, G::OffsetFullColumn).data().toUInt();
+    m.lengthFull = index(row, G::LengthFullColumn).data().toUInt();
+    m.offsetThumb = index(row, G::OffsetThumbColumn).data().toUInt();
+    m.lengthThumb = index(row, G::LengthThumbColumn).data().toUInt();
+    m.offsetSmall = index(row, G::OffsetSmallColumn).data().toUInt();
+    m.lengthSmall = index(row, G::LengthSmallColumn).data().toUInt();
+
+    // update only for tiffs
+//    if (index(row, G::TypeColumn).data().toString() == "tif") {
+        m.bitsPerSampleFull = index(row, G::bitsPerSampleFullColumn).data().toInt();
+        m.photoInterpFull = index(row, G::photoInterpFullColumn).data().toInt();
+        m.samplesPerPixelFull = index(row, G::samplesPerPixelFullColumn).data().toInt();
+        m.compressionFull = index(row, G::compressionFullColumn).data().toInt();
+        m.stripByteCountsFull = index(row, G::stripByteCountsFullColumn).data().toUInt();
+
+        m.widthThumb = index(row, G::widthThumbColumn).data().toInt();
+        m.heightThumb = index(row, G::heightThumbColumn).data().toInt();
+        m.bitsPerSampleThumb = index(row, G::bitsPerSampleThumbColumn).data().toInt();
+        m.photoInterpThumb = index(row, G::photoInterpThumbColumn).data().toInt();
+        m.samplesPerPixelThumb = index(row, G::samplesPerPixelThumbColumn).data().toInt();
+        m.compressionThumb = index(row, G::compressionThumbColumn).data().toInt();
+        m.stripByteCountsThumb = index(row, G::stripByteCountsThumbColumn).data().toUInt();
+//    }
+
     m.xmpSegmentOffset = index(row, G::XmpSegmentOffsetColumn).data().toUInt();
     m.xmpNextSegmentOffset = index(row, G::XmpNextSegmentOffsetColumn).data().toUInt();
     m.orientationOffset = index(row, G::OrientationOffsetColumn).data().toUInt();
@@ -772,12 +813,27 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::UrlColumn), m.url);
     search += m.url;
     setData(index(row, G::_UrlColumn), m._url);
-    setData(index(row, G::OffsetFullJPGColumn), m.offsetFullJPG);
-    setData(index(row, G::LengthFullJPGColumn), m.lengthFullJPG);
-    setData(index(row, G::OffsetThumbJPGColumn), m.offsetThumbJPG);
-    setData(index(row, G::LengthThumbJPGColumn), m.lengthThumbJPG);
-    setData(index(row, G::OffsetSmallJPGColumn), m.offsetSmallJPG);
-    setData(index(row, G::LengthSmallJPGColumn), m.lengthSmallJPG);
+    setData(index(row, G::OffsetFullColumn), m.offsetFull);
+    setData(index(row, G::LengthFullColumn), m.lengthFull);
+    setData(index(row, G::OffsetThumbColumn), m.offsetThumb);
+    setData(index(row, G::LengthThumbColumn), m.lengthThumb);
+    setData(index(row, G::OffsetSmallColumn), m.offsetSmall);
+    setData(index(row, G::LengthSmallColumn), m.lengthSmall);
+
+    setData(index(row, G::bitsPerSampleFullColumn), m.bitsPerSampleFull);
+    setData(index(row, G::photoInterpFullColumn), m.photoInterpFull);
+    setData(index(row, G::samplesPerPixelFullColumn), m.samplesPerPixelFull);
+    setData(index(row, G::compressionFullColumn), m.compressionFull);
+    setData(index(row, G::stripByteCountsFullColumn), m.stripByteCountsFull);
+
+    setData(index(row, G::widthThumbColumn), m.widthThumb);
+    setData(index(row, G::heightThumbColumn), m.heightThumb);
+    setData(index(row, G::bitsPerSampleThumbColumn), m.bitsPerSampleThumb);
+    setData(index(row, G::photoInterpThumbColumn), m.photoInterpThumb);
+    setData(index(row, G::samplesPerPixelThumbColumn), m.samplesPerPixelThumb);
+    setData(index(row, G::compressionThumbColumn), m.compressionThumb);
+    setData(index(row, G::stripByteCountsThumbColumn), m.stripByteCountsThumb);
+
     setData(index(row, G::XmpSegmentOffsetColumn), m.xmpSegmentOffset);
     setData(index(row, G::XmpNextSegmentOffsetColumn), m.xmpNextSegmentOffset);
     setData(index(row, G::IsXMPColumn), m.isXmp);
@@ -1110,12 +1166,12 @@ QString DataModel::diagnostics()
         rpt << "\n  " << "_email = " << G::s(index(row, G::_EmailColumn).data());
         rpt << "\n  " << "url = " << G::s(index(row, G::UrlColumn).data());
         rpt << "\n  " << "_url = " << G::s(index(row, G::_UrlColumn).data());
-        rpt << "\n  " << "offsetFullJPG = " << G::s(index(row, G::OffsetFullJPGColumn).data());
-        rpt << "\n  " << "lengthFullJPG = " << G::s(index(row, G::LengthFullJPGColumn).data());
-        rpt << "\n  " << "offsetThumbJPG = " << G::s(index(row, G::OffsetThumbJPGColumn).data());
-        rpt << "\n  " << "lengthThumbJPG = " << G::s(index(row, G::LengthThumbJPGColumn).data());
-        rpt << "\n  " << "offsetSmallJPG = " << G::s(index(row, G::OffsetSmallJPGColumn).data());
-        rpt << "\n  " << "lengthSmallJPG = " << G::s(index(row, G::LengthSmallJPGColumn).data());
+        rpt << "\n  " << "offsetFull = " << G::s(index(row, G::OffsetFullColumn).data());
+        rpt << "\n  " << "lengthFull = " << G::s(index(row, G::LengthFullColumn).data());
+        rpt << "\n  " << "offsetThumb = " << G::s(index(row, G::OffsetThumbColumn).data());
+        rpt << "\n  " << "lengthThumb = " << G::s(index(row, G::LengthThumbColumn).data());
+        rpt << "\n  " << "offsetSmall = " << G::s(index(row, G::OffsetSmallColumn).data());
+        rpt << "\n  " << "lengthSmall = " << G::s(index(row, G::LengthSmallColumn).data());
         rpt << "\n  " << "xmpSegmentOffset = " << G::s(index(row, G::XmpSegmentOffsetColumn).data());
         rpt << "\n  " << "xmpNextSegmentOffset = " << G::s(index(row, G::XmpNextSegmentOffsetColumn).data());
 
