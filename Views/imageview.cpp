@@ -231,7 +231,7 @@ to prevent jarring changes in perceived scale by the user.
         scale();
     }
     QImage im = pmItem->pixmap().toImage();
-    qDebug() << __FUNCTION__ << fPath << "im.pixelColor(0,0) =" << im.pixelColor(0,0);
+//    qDebug() << __FUNCTION__ << fPath << "im.pixelColor(0,0) =" << im.pixelColor(0,0);
     return isLoaded;
 }
 

@@ -192,12 +192,14 @@ void Metadata::reportMetadata()
     p.rpt.reset();
     p.rpt.setFieldAlignment(QTextStream::AlignLeft);
 
-    p.rpt.setFieldWidth(25); p.rpt << "offsetFull"          << imageMetadata.offsetFull;       p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "lengthFull"          << imageMetadata.lengthFull;       p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "offsetThumb"         << imageMetadata.offsetThumb;      p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "lengthThumb"         << imageMetadata.lengthThumb;      p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "offsetSmall"         << imageMetadata.offsetSmall;      p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "lengthSmall"         << imageMetadata.lengthSmall;      p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetFull"          << imageMetadata.offsetFull;          p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "lengthFull"          << imageMetadata.lengthFull;          p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetThumb"         << imageMetadata.offsetThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "lengthThumb"         << imageMetadata.lengthThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetSmall"         << imageMetadata.offsetSmall;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "lengthSmall"         << imageMetadata.lengthSmall;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "isBigEndian"         << imageMetadata.isBigEnd;            p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetifd0Seg"       << imageMetadata.ifd0Offset;          p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetXMPSeg"        << imageMetadata.xmpSegmentOffset;    p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetNextXMPSegment"<< imageMetadata.xmpNextSegmentOffset;p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "orientation"         << imageMetadata.orientation;         p.rpt.setFieldWidth(0); p.rpt << "\n";
@@ -634,6 +636,8 @@ void Metadata::clearMetadata()
     imageMetadata.lengthThumb = 0;
     imageMetadata.offsetSmall = 0;
     imageMetadata.lengthSmall = 0;
+    imageMetadata.isBigEnd = false;
+    imageMetadata.ifd0Offset = 0;
     imageMetadata.xmpSegmentOffset = 0;
     imageMetadata.orientationOffset = 0;
     imageMetadata.iccSegmentOffset = 0;

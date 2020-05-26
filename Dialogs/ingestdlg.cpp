@@ -360,7 +360,7 @@ Each picked image is copied from the source to the destination.
         /* If there is edited xmp data in an eligible file format copy it
            into a buffer.  This routine is also used in MW::runExternalApp()
         */
-        if (metadata->writeMetadata(sourcePath, dm->getMetadata(sourcePath), buffer)
+        if (metadata->writeMetadata(sourcePath, dm->imMetadata(sourcePath), buffer)
         && metadata->sidecarFormats.contains(suffix) && ingestIncludeXmpSidecar) {
             // copy image file
             QFile::copy(sourcePath, destinationPath);
@@ -662,7 +662,7 @@ QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
     #endif
     }
     QString fPath = info.absoluteFilePath();
-    ImageMetadata m = dm->getMetadata(fPath);
+    ImageMetadata m = dm->imMetadata(fPath);
     createdDate = m.createdDate;
 //    qDebug() << __FUNCTION__ << fPath << createdDate;
     QString s;

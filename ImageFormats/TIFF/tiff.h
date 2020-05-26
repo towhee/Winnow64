@@ -24,25 +24,27 @@ public:
                IPTC *iptc,
                Exif *exif,
                Jpeg *jpeg);
+    bool parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
+    bool decode(ImageMetadata &m, QString &fPath, QImage &image, int maxDim = 0);
 
-    bool decode(ImageMetadata &m, QFile &file, QImage &image, bool mainImage);
 private:
-//    DataModel *dm;
-    int w = 0;
-    int h = 0;
     int bitsPerSample = 0;
     int photoInterp = 0;
     int samplesPerPixel = 0;
-    quint32 stripByteCounts = 0;
+    int rowsPerStrip = 0;
     int compression = 0;
-    quint32 offset = 0;
-    quint32 length = 0;
+    QVector<quint32> stripOffsets;
+    QVector<quint32> stripByteCounts;
+    int planarConfiguration = 1;
 
     enum TiffType {
-        unknown = 0,
-        tiff16bit_II = 1,
-        tiff16bit_MM = 2
+        unknown,
+        tiff8bit,
+        tiff16bit
     };
+
+    void toRRGGBBAA(QImage *im);
+    void invertEndian16(QImage *im);
 };
 
 #endif // TIFF_H

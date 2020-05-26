@@ -148,3 +148,7 @@ newImage(newImageBlob,Geometry(pixmapGraphic.width(),pixmapGraphic.height()),"jp
 
 image = newImage;
 }
+
+// working with char and uchar
+char *buffer;
+buffer = new char[length];

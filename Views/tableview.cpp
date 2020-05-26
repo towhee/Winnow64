@@ -165,20 +165,14 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::OffsetSmallColumn) return fm.boundingRect("=OffsetSmallColumn=").width();
     if (column == G::LengthSmallColumn) return fm.boundingRect("=LengthSmallColumn=").width();
 
-    if (column == G::bitsPerSampleFullColumn) return fm.boundingRect("=bitsPerSampleFullColumn=").width();
-    if (column == G::photoInterpFullColumn) return fm.boundingRect("=photoInterpFullColumn=").width();
-    if (column == G::samplesPerPixelFullColumn) return fm.boundingRect("=samplesPerPixelFullColumn=").width();
-    if (column == G::compressionFullColumn) return fm.boundingRect("=compressionFullColumn=").width();
-    if (column == G::stripByteCountsFullColumn) return fm.boundingRect("=stripByteCountsFullColumn=").width();
+//    if (column == G::bitsPerSampleColumn) return fm.boundingRect("=bitsPerSampleFullColumn=").width();
+//    if (column == G::photoInterpColumn) return fm.boundingRect("=photoInterpFullColumn=").width();
+    if (column == G::samplesPerPixelColumn) return fm.boundingRect("=samplesPerPixelFullColumn=").width();
+//    if (column == G::compressionColumn) return fm.boundingRect("=compressionFullColumn=").width();
+//    if (column == G::stripByteCountsColumn) return fm.boundingRect("=stripByteCountsFullColumn=").width();
 
-    if (column == G::widthThumbColumn) return fm.boundingRect("=widthThumbColumn=").width();
-    if (column == G::heightThumbColumn) return fm.boundingRect("=heightThumbColumn=").width();
-    if (column == G::bitsPerSampleThumbColumn) return fm.boundingRect("=bitsPerSampleThumbColumn=").width();
-    if (column == G::photoInterpThumbColumn) return fm.boundingRect("=photoInterpThumbColumn=").width();
-    if (column == G::samplesPerPixelThumbColumn) return fm.boundingRect("=samplesPerPixelThumbColumn=").width();
-    if (column == G::compressionThumbColumn) return fm.boundingRect("=compressionThumbColumn=").width();
-    if (column == G::stripByteCountsThumbColumn) return fm.boundingRect("=stripByteCountsThumbColumn=").width();
-
+    if (column == G::isBigEndianColumn) return fm.boundingRect("=isBigEndian=").width();
+    if (column == G::ifd0OffsetColumn) return fm.boundingRect("=ifd0OffsetColumn=").width();
     if (column == G::XmpSegmentOffsetColumn) return fm.boundingRect("=XmpSegmentOffsetColumn=").width();
     if (column == G::XmpNextSegmentOffsetColumn) return fm.boundingRect("=XmpNextSegmentOffsetColumn=").width();
     if (column == G::IsXMPColumn) return fm.boundingRect("=IsXMPColumn=").width();

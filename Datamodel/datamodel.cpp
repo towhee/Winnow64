@@ -199,20 +199,15 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::OffsetSmallColumn, new QStandardItem("OffsetSmall")); horizontalHeaderItem(G::OffsetSmallColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::LengthSmallColumn, new QStandardItem("LengthSmall")); horizontalHeaderItem(G::LengthSmallColumn)->setData(true, G::GeekRole);
 
-    setHorizontalHeaderItem(G::bitsPerSampleFullColumn, new QStandardItem("bitsPerSampleFull")); horizontalHeaderItem(G::bitsPerSampleFullColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::photoInterpFullColumn, new QStandardItem("photoInterpFull")); horizontalHeaderItem(G::photoInterpFullColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::samplesPerPixelFullColumn, new QStandardItem("samplesPerPixelFull")); horizontalHeaderItem(G::samplesPerPixelFullColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::compressionFullColumn, new QStandardItem("compressionFull")); horizontalHeaderItem(G::compressionFullColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::stripByteCountsFullColumn, new QStandardItem("stripByteCountsFull")); horizontalHeaderItem(G::stripByteCountsFullColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::bitsPerSampleColumn, new QStandardItem("bitsPerSampleFull")); horizontalHeaderItem(G::bitsPerSampleColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::photoInterpColumn, new QStandardItem("photoInterpFull")); horizontalHeaderItem(G::photoInterpColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::samplesPerPixelColumn, new QStandardItem("samplesPerPixelFull")); horizontalHeaderItem(G::samplesPerPixelColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::compressionColumn, new QStandardItem("compressionFull")); horizontalHeaderItem(G::compressionColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::stripByteCountsColumn, new QStandardItem("stripByteCountsFull")); horizontalHeaderItem(G::stripByteCountsColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::planarConfigurationFullColumn, new QStandardItem("planarConfigurationFull")); horizontalHeaderItem(G::planarConfigurationFullColumn)->setData(true, G::GeekRole);
 
-    setHorizontalHeaderItem(G::widthThumbColumn, new QStandardItem("widthThumb")); horizontalHeaderItem(G::widthThumbColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::heightThumbColumn, new QStandardItem("heightThumb")); horizontalHeaderItem(G::heightThumbColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::bitsPerSampleThumbColumn, new QStandardItem("bitsPerSampleThumb")); horizontalHeaderItem(G::bitsPerSampleThumbColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::photoInterpThumbColumn, new QStandardItem("photoInterpThumb")); horizontalHeaderItem(G::photoInterpThumbColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::samplesPerPixelThumbColumn, new QStandardItem("samplesPerPixelThumb")); horizontalHeaderItem(G::samplesPerPixelThumbColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::compressionThumbColumn, new QStandardItem("compressionThumb")); horizontalHeaderItem(G::compressionThumbColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::stripByteCountsThumbColumn, new QStandardItem("stripByteCountsThumb")); horizontalHeaderItem(G::stripByteCountsThumbColumn)->setData(true, G::GeekRole);
-
+    setHorizontalHeaderItem(G::isBigEndianColumn, new QStandardItem("isBigEndian")); horizontalHeaderItem(G::isBigEndianColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ifd0OffsetColumn, new QStandardItem("ifd0Offset")); horizontalHeaderItem(G::ifd0OffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::XmpSegmentOffsetColumn, new QStandardItem("XmpSegmentOffset")); horizontalHeaderItem(G::XmpSegmentOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::XmpNextSegmentOffsetColumn, new QStandardItem("XmpNextSegmentOffset")); horizontalHeaderItem(G::XmpNextSegmentOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IsXMPColumn, new QStandardItem("IsXMP")); horizontalHeaderItem(G::IsXMPColumn)->setData(true, G::GeekRole);
@@ -433,6 +428,9 @@ Steps:
 
 bool DataModel::addFileData()
 {
+/*
+Load the information from the operating system contained in QFileInfo first
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -568,7 +566,7 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     return true;
 }
 
-ImageMetadata DataModel::getMetadata(QString fPath)
+ImageMetadata DataModel::imMetadata(QString fPath)
 {
 /*
 Used by InfoString and IngestDlg
@@ -655,21 +653,17 @@ Used by InfoString and IngestDlg
 
     // update only for tiffs
 //    if (index(row, G::TypeColumn).data().toString() == "tif") {
-        m.bitsPerSampleFull = index(row, G::bitsPerSampleFullColumn).data().toInt();
-        m.photoInterpFull = index(row, G::photoInterpFullColumn).data().toInt();
-        m.samplesPerPixelFull = index(row, G::samplesPerPixelFullColumn).data().toInt();
-        m.compressionFull = index(row, G::compressionFullColumn).data().toInt();
-        m.stripByteCountsFull = index(row, G::stripByteCountsFullColumn).data().toUInt();
+//        m.bitsPerSample = index(row, G::bitsPerSampleColumn).data().toInt();
+//        m.photoInterp = index(row, G::photoInterpColumn).data().toInt();
+        m.samplesPerPixel = index(row, G::samplesPerPixelColumn).data().toInt();
+//        m.compression = index(row, G::compressionColumn).data().toInt();
+//        m.stripByteCounts = index(row, G::stripByteCountsColumn).data().toUInt();
+//        m.planarConfiguration = index(row, G::stripByteCountsColumn).data().toUInt();
 
-        m.widthThumb = index(row, G::widthThumbColumn).data().toInt();
-        m.heightThumb = index(row, G::heightThumbColumn).data().toInt();
-        m.bitsPerSampleThumb = index(row, G::bitsPerSampleThumbColumn).data().toInt();
-        m.photoInterpThumb = index(row, G::photoInterpThumbColumn).data().toInt();
-        m.samplesPerPixelThumb = index(row, G::samplesPerPixelThumbColumn).data().toInt();
-        m.compressionThumb = index(row, G::compressionThumbColumn).data().toInt();
-        m.stripByteCountsThumb = index(row, G::stripByteCountsThumbColumn).data().toUInt();
 //    }
 
+    m.isBigEnd = index(row, G::isBigEndianColumn).data().toBool();
+    m.ifd0Offset = index(row, G::ifd0OffsetColumn).data().toUInt();
     m.xmpSegmentOffset = index(row, G::XmpSegmentOffsetColumn).data().toUInt();
     m.xmpNextSegmentOffset = index(row, G::XmpNextSegmentOffsetColumn).data().toUInt();
     m.orientationOffset = index(row, G::OrientationOffsetColumn).data().toUInt();
@@ -722,18 +716,56 @@ to run as a separate thread and can be executed directly.
              << currentFolderPath;
 }
 
+bool DataModel::readMetadataForItem(int row)
+{
+/*
+Reads the image metadata into the datamodel for the row.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString fPath = index(row, 0).data(G::PathRole).toString();
+
+    // load metadata
+    if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
+        QFileInfo fileInfo(fPath);
+
+        // only read metadata from files that we know how to
+        QString ext = fileInfo.suffix().toLower();
+        if (metadata->getMetadataFormats.contains(ext)) {
+//                qDebug() << __FUNCTION__ << fPath << ext;
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+                metadata->imageMetadata.row = row;
+                addMetadataForItem(metadata->imageMetadata);
+            }
+            else {
+                qDebug() << __FUNCTION__ << "Failed to load metadata for" << fPath;
+                return false;
+            }
+        }
+        // cannot read this file type, load empty metadata
+        else {
+            metadata->clearMetadata();
+            metadata->imageMetadata.row = row;
+            addMetadataForItem(metadata->imageMetadata);
+        }
+    }
+    return true;
+}
+
 bool DataModel:: addMetadataForItem(ImageMetadata m)
 {
-    /*
-    This function is called after the metadata for each eligible image in the selected
-    folder(s) is being cached or when addAllMetadata is called prior of filtering or
-    sorting. The metadata is displayed in tableView, which is created in MW, and in
-    InfoView.
+/*
+This function is called after the metadata for each eligible image in the selected folder(s)
+is being cached or when addAllMetadata is called prior of filtering or sorting. The metadata
+is displayed in tableView, which is created in MW, and in InfoView.
 
-    If a folder is opened with combineRawJpg all the metadata for the raw file may not have
-    been loaded, but editable data, (such as rating, label, title, email, url) may have been
-    edited in the jpg file of the raw+jpg pair.  If so, we do not want to overwrite this data.
-    */
+If a folder is opened with combineRawJpg all the metadata for the raw file may not have been
+loaded, but editable data, (such as rating, label, title, email, url) may have been edited in
+the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -820,20 +852,15 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::OffsetSmallColumn), m.offsetSmall);
     setData(index(row, G::LengthSmallColumn), m.lengthSmall);
 
-    setData(index(row, G::bitsPerSampleFullColumn), m.bitsPerSampleFull);
-    setData(index(row, G::photoInterpFullColumn), m.photoInterpFull);
-    setData(index(row, G::samplesPerPixelFullColumn), m.samplesPerPixelFull);
-    setData(index(row, G::compressionFullColumn), m.compressionFull);
-    setData(index(row, G::stripByteCountsFullColumn), m.stripByteCountsFull);
+//    setData(index(row, G::bitsPerSampleColumn), m.bitsPerSample);
+//    setData(index(row, G::photoInterpColumn), m.photoInterp);
+    setData(index(row, G::samplesPerPixelColumn), m.samplesPerPixel); // reqd for err trapping
+//    setData(index(row, G::compressionColumn), m.compression);
+//    setData(index(row, G::stripByteCountsColumn), m.stripByteCounts);
+//    setData(index(row, G::planarConfigurationFullColumn), m.stripByteCounts);
 
-    setData(index(row, G::widthThumbColumn), m.widthThumb);
-    setData(index(row, G::heightThumbColumn), m.heightThumb);
-    setData(index(row, G::bitsPerSampleThumbColumn), m.bitsPerSampleThumb);
-    setData(index(row, G::photoInterpThumbColumn), m.photoInterpThumb);
-    setData(index(row, G::samplesPerPixelThumbColumn), m.samplesPerPixelThumb);
-    setData(index(row, G::compressionThumbColumn), m.compressionThumb);
-    setData(index(row, G::stripByteCountsThumbColumn), m.stripByteCountsThumb);
-
+    setData(index(row, G::isBigEndianColumn), m.isBigEnd);
+    setData(index(row, G::ifd0OffsetColumn), m.ifd0Offset);
     setData(index(row, G::XmpSegmentOffsetColumn), m.xmpSegmentOffset);
     setData(index(row, G::XmpNextSegmentOffsetColumn), m.xmpNextSegmentOffset);
     setData(index(row, G::IsXMPColumn), m.isXmp);
@@ -849,7 +876,7 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo, Qt::ToolTipRole);
     search += m.shootingInfo;
-    setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
+    setData(index(row, G::MetadataLoadedColumn), true);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
 
@@ -1172,6 +1199,8 @@ QString DataModel::diagnostics()
         rpt << "\n  " << "lengthThumb = " << G::s(index(row, G::LengthThumbColumn).data());
         rpt << "\n  " << "offsetSmall = " << G::s(index(row, G::OffsetSmallColumn).data());
         rpt << "\n  " << "lengthSmall = " << G::s(index(row, G::LengthSmallColumn).data());
+        rpt << "\n  " << "isBigEndian = " << G::s(index(row, G::isBigEndianColumn).data());
+        rpt << "\n  " << "ifd0Offset = " << G::s(index(row, G::ifd0OffsetColumn).data());
         rpt << "\n  " << "xmpSegmentOffset = " << G::s(index(row, G::XmpSegmentOffsetColumn).data());
         rpt << "\n  " << "xmpNextSegmentOffset = " << G::s(index(row, G::XmpNextSegmentOffsetColumn).data());
 
