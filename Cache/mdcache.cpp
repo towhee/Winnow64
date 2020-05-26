@@ -690,6 +690,9 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
         mutex.lock();
         QModelIndex idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
+
+        dm->readMetadataForItem(dmRow);
+        /*
         QString fPath = idx.data(G::PathRole).toString();
 
         // load metadata
@@ -699,7 +702,6 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
             // only read metadata from files that we know how to
             QString ext = fileInfo.suffix().toLower();
             if (metadata->getMetadataFormats.contains(ext)) {
-//                qDebug() << __FUNCTION__ << fPath << ext;
                 if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
                     metadata->imageMetadata.row = dmRow;
                     dm->addMetadataForItem(metadata->imageMetadata);
@@ -715,6 +717,7 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
                 dm->addMetadataForItem(metadata->imageMetadata);
             }
         }
+        */
         mutex.unlock();
         qApp->processEvents();
     }

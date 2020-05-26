@@ -219,7 +219,7 @@ setMetadata must be called first to set metadata variables for the current
 image.
 */
     QFileInfo info(fPath);
-    m = dm->getMetadata(fPath);
+    m = dm->imMetadata(fPath);
     QString s;
     int tokenEnd;
     int i = 0;

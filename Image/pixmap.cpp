@@ -50,6 +50,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
     bool success = false;
     QString err = "";       // type of error
 
+    bool moreThanOnce = false;
     int totDelay = 500;     // milliseconds
     int msDelay = 0;        // total incremented delay
     uint msInc = 10;        // amount to increment each try
@@ -59,23 +60,23 @@ bool Pixmap::load(QString &fPath, QImage &image)
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
     QFile imFile(fPath);
-    int row = dm->fPathRow[fPath];
+    int dmRow = dm->fPathRow[fPath];
+
+    // is metadata loaded
+    if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
+        if (!dm->readMetadataForItem(dmRow)) {
+            err = "Could not load metadata" + fPath;
+            dm->setData(dm->index(dmRow, G::ErrColumn), err);
+            qDebug() << __FUNCTION__ << err << fPath;
+            return false;
+        }
+    }
 
     if (metadata->rawFormats.contains(ext)) {
         // raw files handled by Qt
         do {
-            // Check if metadata has been cached for this image
-            if (dm->index(row, G::OffsetFullColumn).data().isNull()) {
-                if (metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__))
-                    dm->addMetadataForItem(metadata->imageMetadata);
-                else {
-                    err = "Could not load" + fPath;
-                    qDebug() << __FUNCTION__ << err;
-                    break;
-                }
-            }
-            offsetFullJpg = dm->index(row, G::OffsetFullColumn).data().toUInt();
-            lengthFullJpg = dm->index(row, G::LengthFullColumn).data().toUInt();
+            offsetFullJpg = dm->index(dmRow, G::OffsetFullColumn).data().toUInt();
+            lengthFullJpg = dm->index(dmRow, G::LengthFullColumn).data().toUInt();
             // try to read the file
             if (offsetFullJpg > 0 && lengthFullJpg > 0) {
                 if (imFile.isOpen()) {
@@ -122,7 +123,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
             QThread::msleep(msInc);
             msDelay += msInc;
-            break;
+//            break;
         }
         while (msDelay < totDelay && !success);
     }
@@ -134,69 +135,42 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 // close it to allow qt load to work
                 imFile.close();
                 if (ext == "tif") {
-                    ImageMetadata m = dm->getMetadata(fPath);
-                    Tiff tiff;
-                    success = tiff.decode(m, imFile, image, true);
-                }
-                else success = image.load(fPath);    // crash in
-                /*
-                G::t.restart();
-
-                if (ext == "tif" && G::isTest == true) {
-                    if (imFile.open(QIODevice::ReadOnly)) {
-                        offsetFullJpg = dm->index(row, G::OffsetFullColumn).data().toUInt();
-                        lengthFullJpg = dm->index(row, G::LengthFullColumn).data().toUInt();
-                        int w = dm->index(row, G::WidthColumn).data().toInt();
-                        int h = dm->index(row, G::HeightColumn).data().toInt();
-                        bool seekSuccess = imFile.seek(offsetFullJpg);
-                        if (seekSuccess) {
-                            QByteArray buf = imFile.read(lengthFullJpg);
-                            Tiff tiff;
-                            qDebug() << __FUNCTION__
-                                     << "offsetFullJpg =" << offsetFullJpg
-                                     << "lengthFullJpg =" << lengthFullJpg;
-                            tiff.decodeScan(buf, image, w , h);
-                            success = true;
-//                            success = image.load(fPath);
-                        }
+                    int samplesPerPixel = dm->index(dmRow, G::samplesPerPixelColumn).data().toInt();
+                    if (samplesPerPixel > 3) {
+                        err = "Could not read tiff because " + QString::number(samplesPerPixel)
+                              + " samplesPerPixel > 3";
+                        break;
                     }
                 }
-
-                // test load image using jpeg class
-                Jpeg jpeg;
-                if (ext == "jpg" && G::isTest == true) {
-                    jpeg.decodeScan(imFile, image);
-                    G::track(__FUNCTION__, "Completed Rory Load");
-                    success = true;
+                if (ext == "tif" && G::isTest == true) {
+                    ImageMetadata m = dm->imMetadata(fPath);
+                    Tiff tiff;
+                    success = tiff.decode(m, fPath, image);
                 }
-                // directly load the image using qt library
                 else {
                     success = image.load(fPath);
-                    G::track(__FUNCTION__, "Completed Qt Load");
+                    if (success) image.convertTo(QImage::Format_RGB32);
                 }
-//                */
                 if (!success) {
-                    err = "Could not read image" + fPath;
-                    qDebug() << __FUNCTION__ << err;
+                    err = "Could not read image " + fPath;
+//                    qDebug() << __FUNCTION__ << err;
                     break;
                 }
 
                 #ifdef Q_OS_WIN
                 if (G::colorManage && metadata->iccFormats.contains(ext)) {
-                    QByteArray ba = dm->index(row, G::ICCBufColumn).data().toByteArray();
-                    ICC::setInProfile(dm->index(row, G::ICCBufColumn).data().toByteArray());
+                    ICC::setInProfile(dm->index(dmRow, G::ICCBufColumn).data().toByteArray());
                     ICC::transform(image);
                 }
                 #endif
             }
             else {
-                err = "Could not open file for image" + fPath;    // try again
-                qDebug() << __FUNCTION__ << err; qApp->processEvents();
+                err = "Could not open file for image";    // try again
                 QThread::msleep(msInc);
                 msDelay += msInc;
             }
         }
-        while (msDelay < totDelay && !success);
+        while (moreThanOnce/*msDelay < totDelay && !success*/);
     }
 
     // rotate if portrait image
@@ -206,8 +180,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     if (metadata->getMetadataFormats.contains(ext)) {
         QTransform trans;
-        int orientation = dm->index(row, G::OrientationColumn).data().toInt();
-        int rotationDegrees = dm->index(row, G::RotationDegreesColumn).data().toInt();
+        int orientation = dm->index(dmRow, G::OrientationColumn).data().toInt();
+        int rotationDegrees = dm->index(dmRow, G::RotationDegreesColumn).data().toInt();
         int degrees;
         if (orientation) {
             switch(orientation) {
@@ -233,10 +207,9 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     // record any errors
     if (!success) {
-        dm->setData(dm->index(row, G::ErrColumn), err);
+        dm->setData(dm->index(dmRow, G::ErrColumn), err);
         qDebug() << __FUNCTION__ << fPath << err;
     }
-//    if (!success) metadata->setErr(fPath, err);
 
     #ifdef ISDEBUG
     G::track(__FUNCTION__, "Completed load image");

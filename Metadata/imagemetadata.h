@@ -22,20 +22,14 @@ public:
     quint32 lengthSmall = 0;
 
     // need for TIFF
-    int bitsPerSampleFull = 0;
-    int photoInterpFull = 0;
-    int samplesPerPixelFull = 0;
-    int compressionFull = 0;
-    quint32 stripByteCountsFull = 0;
+//    int bitsPerSample = 0;
+//    int photoInterp = 0;
+    int samplesPerPixel = 0;
+//    int compression = 0;
+//    quint32 stripByteCounts = 0;
+//    int planarConfiguration = 1;
 
-    int widthThumb = 0;
-    int heightThumb = 0;
-    int bitsPerSampleThumb = 0;
-    int photoInterpThumb = 0;
-    int samplesPerPixelThumb = 0;
-    int compressionThumb = 0;
-    quint32 stripByteCountsThumb = 0;
-
+    quint32 ifd0Offset = 0;
     quint32 xmpSegmentOffset = 0;
     quint32 xmpNextSegmentOffset = 0;
     bool isXmp = false;

@@ -4,7 +4,9 @@
 #include <QObject>
 #include <QtWidgets>
 #include "Metadata/metadata.h"
+#include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
+#include "ImageFormats/Tiff/tiff.h"
 
 class Thumb : public QObject
 {
@@ -19,7 +21,8 @@ private:
     QString err;
     QSize thumbMax;
 
-    bool loadFromData(QString &fPath, QImage &image);
+    bool loadFromJpgData(QString &fPath, QImage &image);
+    bool loadFromTiffData(QString &fPath, QImage &image);
     bool loadFromEntireFile(QString &fPath, QImage &image);
     void checkOrientation(QString &fPath, QImage &image);
 

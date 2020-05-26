@@ -33,6 +33,7 @@ bool Tiff::parse(MetadataParameters &p,
 
     // read offset to first IFD
     quint32 ifdOffset = Utilities::get32(p.file.read(4), isBigEnd);
+    m.ifd0Offset = ifdOffset;
     p.hdr = "IFD0";
     p.offset = ifdOffset;
     p.hash = &exif->hash;
@@ -47,11 +48,13 @@ bool Tiff::parse(MetadataParameters &p,
     (ifd->ifdDataHash.contains(273))
         ? m.offsetFull = static_cast<uint>(ifd->ifdDataHash.value(273).tagValue)
         : m.offsetFull = 0;
+    m.offsetThumb = m.offsetFull;       // For now.  Add search for smaller frame in tif
 
     // IFD0: Length of main image byte stream
     (ifd->ifdDataHash.contains(279))
         ? m.lengthFull = static_cast<uint>(ifd->ifdDataHash.value(279).tagValue)
         : m.lengthFull = 0;
+    m.lengthThumb = m.lengthFull;       // For now.  Add search for smaller frame in tif
 
     // IFD0: Model
     (ifd->ifdDataHash.contains(272))
@@ -92,32 +95,37 @@ bool Tiff::parse(MetadataParameters &p,
         ? m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue)
         : m.height = 0;
 
-    // IFD0: bitsPerSampleFull
-    m.bitsPerSampleFull = 0;
-    if (ifd->ifdDataHash.contains(258)) {
-        p.file.seek(static_cast<int>(ifd->ifdDataHash.value(258).tagValue));
-        m.bitsPerSampleFull = Utilities::get16(p.file.read(2), isBigEnd);
-    }
+//    // IFD0: bitsPerSampleFull
+//    m.bitsPerSample = 0;
+//    if (ifd->ifdDataHash.contains(258)) {
+//        p.file.seek(static_cast<int>(ifd->ifdDataHash.value(258).tagValue));
+//        m.bitsPerSample = Utilities::get16(p.file.read(2), isBigEnd);
+//    }
 
-    // IFD0: photoInterpFull
-    (ifd->ifdDataHash.contains(262))
-            ? m.photoInterpFull = static_cast<int>(ifd->ifdDataHash.value(262).tagValue)
-            : m.photoInterpFull = 0;
+//    // IFD0: photoInterpFull
+//    (ifd->ifdDataHash.contains(262))
+//            ? m.photoInterp = static_cast<int>(ifd->ifdDataHash.value(262).tagValue)
+//            : m.photoInterp = 0;
 
     // IFD0: samplesPerPixelFull
     (ifd->ifdDataHash.contains(277))
-            ? m.samplesPerPixelFull = static_cast<int>(ifd->ifdDataHash.value(277).tagValue)
-            : m.samplesPerPixelFull = 0;
+            ? m.samplesPerPixel = static_cast<int>(ifd->ifdDataHash.value(277).tagValue)
+            : m.samplesPerPixel = 0;
 
-    // IFD0: compressionFull
-    (ifd->ifdDataHash.contains(259))
-            ? m.compressionFull = static_cast<int>(ifd->ifdDataHash.value(259).tagValue)
-            : m.compressionFull = 0;
+//    // IFD0: compressionFull
+//    (ifd->ifdDataHash.contains(259))
+//            ? m.compression = static_cast<int>(ifd->ifdDataHash.value(259).tagValue)
+//            : m.compression = 0;
 
-    // IFD0: stripByteCountsFull
-    (ifd->ifdDataHash.contains(279))
-            ? m.stripByteCountsFull = ifd->ifdDataHash.value(279).tagValue
-            : m.stripByteCountsFull = 0;
+//    // IFD0: stripByteCountsFull
+//    (ifd->ifdDataHash.contains(279))
+//            ? m.stripByteCounts = ifd->ifdDataHash.value(279).tagValue
+//            : m.stripByteCounts = 0;
+
+//    // IFD0: planarConfigurationFull
+//    (ifd->ifdDataHash.contains(284))
+//            ? m.stripByteCounts = ifd->ifdDataHash.value(284).tagValue
+//            : m.stripByteCounts = 0;
 
     p.offset = 0;
     if (!m.width || !m.height) jpeg->getDimensions(p, m);  // rgh does this work??
@@ -141,6 +149,12 @@ bool Tiff::parse(MetadataParameters &p,
     quint32 ifdIPTCOffset = 0;
     if (ifd->ifdDataHash.contains(33723))
         ifdIPTCOffset = ifd->ifdDataHash.value(33723).tagValue;
+
+    // IFD0: ICC offset
+    if (ifd->ifdDataHash.contains(34675)) {
+        m.iccSegmentOffset = ifd->ifdDataHash.value(34675).tagValue;
+        m.iccSegmentLength = ifd->ifdDataHash.value(34675).tagCount;
+    }
 
     // IFD0: XMP offset
     quint32 ifdXMPOffset = 0;
@@ -264,6 +278,17 @@ bool Tiff::parse(MetadataParameters &p,
                                   ifd->ifdDataHash.value(42036).tagCount)
             : m.lens = "";
 
+    /* Read embedded ICC. The default color space is sRGB. If there is an embedded icc profile
+    and it is sRGB then no point in saving the byte array of the profile since we already have
+    it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
+    if (m.iccSegmentOffset && m.iccSegmentLength) {
+        m.iccSpace = Utilities::getString(p.file, m.iccSegmentOffset + 16, 4);
+        if (m.iccSpace != "sRGB") {
+            p.file.seek(m.iccSegmentOffset);
+            m.iccBuf = p.file.read(m.iccSegmentLength);
+        }
+    }
+
     // Photoshop: **************************************************************
     // Get embedded JPG if available
 
@@ -301,106 +326,233 @@ bool Tiff::parse(MetadataParameters &p,
     return true;
 }
 
-bool Tiff::decode(ImageMetadata &m, QFile &file, QImage &image, bool mainImage)
+bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 {
-    if (mainImage || !m.bitsPerSampleThumb) {
-        w = m.width;
-        h = m.height;
-        bitsPerSample = m.bitsPerSampleFull;
-        photoInterp = m.photoInterpFull;
-        samplesPerPixel = m.samplesPerPixelFull;
-        compression = m.compressionFull;
-        stripByteCounts = m.stripByteCountsFull;
-        offset = m.offsetFull;
-        length = m.lengthFull;
+    ifd->readIFD(p, m, m.isBigEnd);
+    if (ifd->ifdDataHash.contains(273)) {
+        int offsetCount = ifd->ifdDataHash.value(273).tagCount;
+        stripOffsets.resize(offsetCount);
+        if (offsetCount == 1) {
+            stripOffsets[0] = static_cast<uint>(ifd->ifdDataHash.value(273).tagValue);
+        }
+        else {
+            quint32 offset = ifd->ifdDataHash.value(273).tagValue;
+            p.file.seek(offset);
+            for (int i = 0; i < offsetCount; ++i) {
+                stripOffsets[i] = Utilities::get32(p.file.read(4), m.isBigEnd);
+            }
+        }
     }
-    else {
-        w = m.widthThumb;
-        h = m.heightThumb;
-        bitsPerSample = m.bitsPerSampleThumb;
-        photoInterp = m.photoInterpThumb;
-        samplesPerPixel = m.samplesPerPixelThumb;
-        compression = m.compressionThumb;
-        stripByteCounts = m.stripByteCountsThumb;
-        offset = m.offsetThumb;
-        length = m.lengthThumb;
+    else return false;
+
+    if (ifd->ifdDataHash.contains(279)) {
+        int offsetCount = ifd->ifdDataHash.value(279).tagCount;
+        stripByteCounts.resize(offsetCount);
+        if (offsetCount == 1) {
+            stripByteCounts[0] = static_cast<uint>(ifd->ifdDataHash.value(279).tagValue);
+        }
+        else {
+            quint32 offset = ifd->ifdDataHash.value(279).tagValue;
+            p.file.seek(offset);
+            for (int i = 0; i < offsetCount; ++i) {
+                stripByteCounts[i] = Utilities::get32(p.file.read(4), m.isBigEnd);
+            }
+        }
+    }
+    else return false;
+
+    // IFD0: bitsPerSample
+    if (ifd->ifdDataHash.contains(258)) {
+        p.file.seek(static_cast<int>(ifd->ifdDataHash.value(258).tagValue));
+        bitsPerSample = Utilities::get16(p.file.read(2), m.isBigEnd);
+    }
+    else return false;
+
+    // IFD0: photoInterp
+    (ifd->ifdDataHash.contains(262))
+            ? photoInterp = static_cast<int>(ifd->ifdDataHash.value(262).tagValue)
+            : photoInterp = 0;
+
+    // IFD0: samplesPerPixel
+    (ifd->ifdDataHash.contains(277))
+            ? samplesPerPixel = static_cast<int>(ifd->ifdDataHash.value(277).tagValue)
+            : samplesPerPixel = 0;
+
+    // IFD0: rowsPerStrip
+    (ifd->ifdDataHash.contains(278))
+            ? rowsPerStrip = static_cast<int>(ifd->ifdDataHash.value(278).tagValue)
+            : rowsPerStrip = m.height;
+
+    // IFD0: compression
+    (ifd->ifdDataHash.contains(259))
+            ? compression = static_cast<int>(ifd->ifdDataHash.value(259).tagValue)
+            : compression = 1;
+
+    // IFD0: planarConfiguration
+    (ifd->ifdDataHash.contains(284))
+            ? planarConfiguration = ifd->ifdDataHash.value(284).tagValue
+            : planarConfiguration = 1;
+
+    return true;
+}
+
+bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
+{
+    QElapsedTimer t;
+    t.restart();
+
+    MetadataParameters p;
+    Exif *exif = new Exif;
+    IFD *ifd = new IFD;
+    p.file.setFileName(fPath);
+    p.file.open(QIODevice::ReadOnly);
+    p.report = false;
+    p.hdr = "IFD0";
+    p.offset = m.ifd0Offset;
+    p.hash = &exif->hash;
+    parseForDecoding(p, m, ifd);
+
+    // cancel if there is compression or planar format
+    if (compression > 1 || planarConfiguration > 1 || samplesPerPixel > 3) return false;
+
+    // width and height of thumbnail to be created
+    int w = m.width;                      // width of thumb to create
+    int h = m.height;                     // height of thumb to create
+    int nth = 1;
+
+    if (newSize) {
+        if (m.width > m.height) {
+            if (newSize > m.width) newSize = m.width;
+            w = newSize;
+            h = w * m.height / m.width;
+        }
+        else {
+            if (newSize > m.height) newSize = m.height;
+            h = newSize;
+            w = h * m.width / m.height;
+        }
+        nth = m.width / w;                           // sample every nth horizontal pixel
     }
 
-    QImage im(w, h, QImage::Format_RGBX64);
+    int bytesPerPixel = bitsPerSample / 8 * samplesPerPixel;
+    int bytesPerLine = bytesPerPixel * m.width;
 
-    file.open(QIODevice::ReadOnly);
-    // first two bytes is the endian order
-    quint16 order = Utilities::get16(file.read(2));
-    if (order != 0x4D4D && order != 0x4949) return false;
-    bool isBigEnd;
-    order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
+    QImage *im;
 
     // define TIFF type
     TiffType tiffType;
     if (bitsPerSample == 16) {
-        if (isBigEnd) tiffType = tiff16bit_MM;
-        else tiffType = tiff16bit_II;
+        if (planarConfiguration < 2) {
+            tiffType = tiff16bit;
+            im = new QImage(w, h, QImage::Format_RGBX64);
+        }
+        else {
+            qDebug() << __FUNCTION__ << "Failed m.planarConfiguration != 1" << p.file.fileName();
+            return false;
+        }
+    }
+    else if (bitsPerSample == 8) {
+        tiffType = tiff8bit;
+        im = new QImage(w, h, QImage::Format_RGB888);
     }
     else {
-        tiffType = unknown;
-//        return false;
+        qDebug() << __FUNCTION__ << "bitsPerSample =" << bitsPerSample << p.file.fileName();
+        return false;
     }
 
-    qDebug() << __FUNCTION__ << file.fileName()
-             << "bitsPerSample =" << bitsPerSample
-             << "w =" << w
-             << "h =" << h
-             << "photoInterp =" << photoInterp
-             << "samplesPerPixel =" << samplesPerPixel
-             << "compression =" << compression
-             << "stripByteCounts =" << stripByteCounts
-             << "offset =" << offset
-             << "length =" << length
-             << "isBigEnd =" << isBigEnd
-             << "tiffType =" << tiffType;
-
-    file.seek(offset);
-
-    QByteArray ba, a, r, g, b;
-    a = QByteArray::fromHex("FFFF");
-
-    int bytesPerLine = im.bytesPerLine();
-
-    switch(tiffType) {
-        case tiff16bit_II:
-        for (int line = 0; line < h; ++line) {
-            ba.clear();
-            for (int x = 0; x < w; ++x) {
-                ba += file.read(6) + a;
+    if (newSize) {
+        int newBytesPerLine = w * bytesPerPixel;
+        QByteArray ba;
+        quint32 fOffset = 0;
+        // read every nth pixel to create new smaller image (thumbnail)
+        int y = 0;
+        int line = 0;
+        for (int strip = 0; strip < stripOffsets.count();++strip) {
+            for (int row = 0; row < rowsPerStrip; row++) {
+                if (y % nth == 0) {
+                    fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerLine);
+                    ba.clear();
+                    for (int x = 0; x < w; x++) {
+                        p.file.seek(fOffset);
+                        ba += p.file.read(bytesPerPixel);
+                        fOffset += static_cast<uint>(nth * bytesPerPixel);
+                    }
+                    if (line < h) {
+                        std::memcpy(im->scanLine(line), ba, static_cast<size_t>(newBytesPerLine));
+                    }
+                    line++;
+                }
+                y++;
+                if (line > h) break;
             }
-    //        qDebug() << __FUNCTION__ << line << ba.length() << bytesPerLine;
-            std::memcpy(im.scanLine(line), ba, bytesPerLine);
+            if (line > h) break;
         }
-        break;
-    case tiff16bit_MM:
-        QByteArray b;
-        for (int line = 0; line < h; ++line) {
-            ba.clear();
-            for (int x = 0; x < w; ++x) {
-                b = file.read(2);
-                ba += b[1];
-                ba += b[0];
-                b = file.read(2);
-                ba += b[1];
-                ba += b[0];
-                b = file.read(2);
-                ba += b[1];
-                ba += b[0];
-                ba +=  a;
-                if (line == 0 && x == 0)
-                  qDebug() << __FUNCTION__ << ba;
-            }
-            std::memcpy(im.scanLine(line), ba, bytesPerLine);
+        if (tiffType == tiff16bit) {
+            if (m.isBigEnd) invertEndian16(im);
+            toRRGGBBAA(im);
         }
-        break;
+        // convert to standard QImage format for display in Winnow
+        im->convertTo(QImage::Format_RGB32);
+        image.operator=(*im);
+        return true;
     }
-    im.convertTo(QImage::Format_RGB32);
-    image.operator=(im);
 
+    // read entire image
+    quint32 fOffset = 0;
+    int line = 0;
+    for (int strip = 0; strip < stripOffsets.count(); ++strip) {
+        for (int row = 0; row < rowsPerStrip; row++) {
+            fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerLine);
+            p.file.seek(fOffset);
+            std::memcpy(im->scanLine(line),
+                        p.file.read(bytesPerLine),
+//                        p.file.map(fOffset, bytesPerLine),
+                        static_cast<size_t>(bytesPerLine));
+            line++;
+        }
+    }
+    if (tiffType == tiff16bit) {
+        if (m.isBigEnd) invertEndian16(im);
+        toRRGGBBAA(im);
+    }
+    // convert to standard QImage format for display in Winnow
+    im->convertTo(QImage::Format_RGB32);
+    image.operator=(*im);
     return true;
+}
+
+void Tiff::toRRGGBBAA(QImage *im)
+{
+    uchar *scanline = im->bits();
+    const int h = im->height();
+    const int w = im->width();
+    const qsizetype bpl = im->bytesPerLine();
+    for (int y = 0; y < h; ++y) {
+        quint16 *n = reinterpret_cast<quint16 *>(scanline);
+        for (int x = w - 1; x >= 0; --x) {
+            n[x * 4 + 3] = 0xffff;
+            n[x * 4 + 2] = n[x * 3 + 2];
+            n[x * 4 + 1] = n[x * 3 + 1];
+            n[x * 4 + 0] = n[x * 3 + 0];
+        }
+        scanline += bpl;
+    }
+}
+
+void Tiff::invertEndian16(QImage *im)
+{
+    uchar *scanline = im->bits();
+    const int h = im->height();
+    const int w = im->width();
+    const qsizetype bpl = im->bytesPerLine();
+    for (int y = 0; y < h; ++y) {
+        quint16 *n = reinterpret_cast<quint16 *>(scanline);
+        for (int x = 0; x < w; ++x) {
+            for (int b = 0; b < 3; ++b) {
+                int o = x * 3 + b;
+                n[o] = (n[o] >> 8) | (n[o] << 8);
+            }
+        }
+        scanline += bpl;
+    }
 }

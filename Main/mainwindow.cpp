@@ -220,7 +220,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     isStressTest = false;
     G::isTimer = true;                  // Global timer
     G::memTest = false;                 // will not load images
-    G::isTest = true;                   // use RGH JPG reader
+    G::isTest = false;                  // use RGH JPG reader
 
     // Initialize some variables
     initialize();
@@ -1737,8 +1737,6 @@ memory has been consumed or all the images are cached.
         fPath = dm->sf->index(0, G::PathColumn).data().toString();
     else
         fPath = indexesList.first().data(G::PathRole).toString();
-
-    qDebug() << __FUNCTION__ << fPath;
 
     // the folder does not have any eligible images (probably from previous session and the
     // drive has been removed or did have "include subfolders" activated
@@ -10626,13 +10624,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    char c[] = {0x40, 0x49, 0x0F, 0x20};
-    QByteArray ba = QByteArray::fromRawData(c, sizeof(c));
-    QDataStream str(&ba, QIODevice::ReadOnly);
-    str.setByteOrder(QDataStream::BigEndian);
-    QByteArray ab;
-    QString s;
-    str >> s;
-    qDebug() << __FUNCTION__ << ba.toHex() << s << ab.toHex();
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        int offset = dm->index(row, G::OffsetFullColumn).data().toInt();
+        qDebug() << row
+                 << dm->index(row, G::MetadataLoadedColumn).data().toBool()
+                 << offset;
+    }
 }
 // End MW
