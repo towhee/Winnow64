@@ -78,7 +78,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
     return success;
 }
 
-bool Thumb::loadFromData(QString &fPath, QImage &image)
+bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
 {
     {
     #ifdef ISDEBUG
@@ -93,12 +93,12 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
     int row = dm->fPathRow[fPath];
 
     // Check if metadata has been cached for this image
-    if (dm->index(row, G::OffsetThumbJPGColumn).data().isNull()) {
+    if (dm->index(row, G::OffsetThumbColumn).data().isNull()) {
         metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__);
         dm->addMetadataForItem(metadata->imageMetadata);
     }
-    uint offsetThumb = dm->index(row, G::OffsetThumbJPGColumn).data().toUInt();
-    uint lengthThumb = dm->index(row, G::LengthThumbJPGColumn).data().toUInt();
+    uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
+    uint lengthThumb = dm->index(row, G::LengthThumbColumn).data().toUInt();
 
     QFileInfo info(imFile);
     QString ext = info.suffix().toLower();
@@ -139,6 +139,21 @@ bool Thumb::loadFromData(QString &fPath, QImage &image)
     return success;
 }
 
+bool Thumb::loadFromTiffData(QString &fPath, QImage &image)
+{
+    QFile imFile(fPath);
+    // check if file is locked by another process
+     if (imFile.open(QIODevice::ReadOnly)) {
+        // close it to allow qt load to work
+        imFile.close();
+     }
+
+     // Attempt to decode tiff thumbnail by sampling tiff raw data
+     ImageMetadata m = dm->imMetadata(fPath);
+     Tiff tiff;
+     return tiff.decode(m, fPath, image, G::maxIconSize);
+}
+
 bool Thumb::loadThumb(QString &fPath, QImage &image)
 {
 /*
@@ -156,11 +171,12 @@ that is faster than loading the entire full resolution image just to get a thumb
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.suffix().toLower();
 
+    bool moreThanOnce = false;
     bool success = false;
     err = "";
     int row = dm->fPathRow[fPath];
 
-    // The image type might not have metadata we can read
+    // The image type might not have metadata we can read, so load entire image and resize
     if (!metadata->getMetadataFormats.contains(ext)) {
         return loadFromEntireFile(fPath, image);
     }
@@ -170,8 +186,10 @@ that is faster than loading the entire full resolution image just to get a thumb
         metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__);
         dm->addMetadataForItem(metadata->imageMetadata);
     }
-    uint offsetThumb = dm->index(row, G::OffsetThumbJPGColumn).data().toUInt();
-    uint lengthThumb = dm->index(row, G::LengthThumbJPGColumn).data().toUInt();
+
+    // Is there an embedded thumbnail?
+    uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
+    uint lengthThumb = dm->index(row, G::LengthThumbColumn).data().toUInt();
     bool thumbFound = offsetThumb && lengthThumb;
 
     /* A raw file may not have any embedded jpg or be corrupted.  */
@@ -185,23 +203,45 @@ that is faster than loading the entire full resolution image just to get a thumb
     QImageReader (thumbReader) to read the entire jpg and then scaling it
     down. However, not all images have embedded thumbs so make a quick check.
     */
-    if (thumbFound) {
-        success = loadFromData(fPath, image);
-        if (!success) {
-//            err = "Failed to load thumb for " + fPath;
+    do {
+        if (thumbFound) {
+            if (ext == "tif") {
+                // test for too many samples which causes libTiff to crash
+                int samplesPerPixel = dm->index(row, G::samplesPerPixelColumn).data().toInt();
+                if (samplesPerPixel > 3) {
+                    err = "Could not read tiff because " + QString::number(samplesPerPixel)
+                          + " samplesPerPixel > 3";
+                    success = false;
+                    break;
+                }
+                // try to get thumb ourselves
+                success = loadFromTiffData(fPath, image);
+                if (!success) {
+                    qDebug() << __FUNCTION__ << "loadFromTiffData Failed, trying loadFromEntireFile" << fPath;
+                    success = loadFromEntireFile(fPath, image);
+                    if (!success) {
+                        err = "Failed to load thumb";
+                    }
+                }
+            }
+            else success = loadFromJpgData(fPath, image);
+            if (!success) {
+                err = "Failed to load thumb";
+            }
         }
-    }
-    else  {
-        // read the image file (supported by Qt), scaling to thumbnail size
-        if(loadFromEntireFile(fPath, image)) {
-              success = true;
+        else  {
+            // read the image file (supported by Qt), scaling to thumbnail size
+            if(loadFromEntireFile(fPath, image)) {
+                  success = true;
+                  if (success) image.convertTo(QImage::Format_RGB32);
+            }
+            // check if file is locked by another process
+            else {
+                err = "Could not open file";    // try again
+            }
         }
-        // check if file is locked by another process
-        else {
-//            err = "Could not open file for image";    // try again
-//            if (G::isThreadTrackingOn) track(fPath, err);
-        }
-    }
+    } while(moreThanOnce);
+
     if (err != "") {
         qDebug() << __FUNCTION__ << err;
         dm->setData(dm->index(row, G::ErrColumn), err);

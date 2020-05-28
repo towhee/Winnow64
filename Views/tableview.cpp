@@ -62,6 +62,9 @@ TableView::TableView(DataModel *dm)
     ISOItemDelegate *isoItemDelegate = new ISOItemDelegate;
     setItemDelegateForColumn(G::ISOColumn, isoItemDelegate);
 
+    ExposureCompensationItemDelegate *exposureCompensationItemDelegate = new ExposureCompensationItemDelegate;
+    setItemDelegateForColumn(G::ExposureCompensationColumn, exposureCompensationItemDelegate);
+
     FocalLengthItemDelegate *focalLengthItemDelegate = new FocalLengthItemDelegate;
     setItemDelegateForColumn(G::FocalLengthColumn, focalLengthItemDelegate);
 
@@ -142,6 +145,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::ApertureColumn) return fm.boundingRect("=Aperture=").width();
     if (column == G::ShutterspeedColumn) return fm.boundingRect("=1/8000 sec=").width();
     if (column == G::ISOColumn) return fm.boundingRect("999999").width();
+    if (column == G::ExposureCompensationColumn) return fm.boundingRect("==-2 EV===").width();
     if (column == G::CameraMakeColumn) return fm.boundingRect("Nikon ========").width();
     if (column == G::CameraModelColumn) return fm.boundingRect("Nikon D850============").width();
     if (column == G::LensColumn) return fm.boundingRect("Lens======================").width();
@@ -154,12 +158,21 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::_CopyrightColumn) return fm.boundingRect("=Copyright=====").width();
     if (column == G::_EmailColumn) return fm.boundingRect("=Email================").width();
     if (column == G::_UrlColumn) return fm.boundingRect("=Url=======================").width();
-    if (column == G::OffsetFullJPGColumn) return fm.boundingRect("=OffsetFullJPGColumn=").width();
-    if (column == G::LengthFullJPGColumn) return fm.boundingRect("=LengthFullJPGColumn=").width();
-    if (column == G::OffsetThumbJPGColumn) return fm.boundingRect("=OffsetThumbJPGColumn=").width();
-    if (column == G::LengthThumbJPGColumn) return fm.boundingRect("=LengthThumbJPGColumn=").width();
-    if (column == G::OffsetSmallJPGColumn) return fm.boundingRect("=OffsetSmallJPGColumn=").width();
-    if (column == G::LengthSmallJPGColumn) return fm.boundingRect("=LengthSmallJPGColumn=").width();
+    if (column == G::OffsetFullColumn) return fm.boundingRect("=OffsetFullColumn=").width();
+    if (column == G::LengthFullColumn) return fm.boundingRect("=LengthFullColumn=").width();
+    if (column == G::OffsetThumbColumn) return fm.boundingRect("=OffsetThumbColumn=").width();
+    if (column == G::LengthThumbColumn) return fm.boundingRect("=LengthThumbColumn=").width();
+//    if (column == G::OffsetSmallColumn) return fm.boundingRect("=OffsetSmallColumn=").width();
+//    if (column == G::LengthSmallColumn) return fm.boundingRect("=LengthSmallColumn=").width();
+
+//    if (column == G::bitsPerSampleColumn) return fm.boundingRect("=bitsPerSampleFullColumn=").width();
+//    if (column == G::photoInterpColumn) return fm.boundingRect("=photoInterpFullColumn=").width();
+    if (column == G::samplesPerPixelColumn) return fm.boundingRect("=samplesPerPixelFullColumn=").width();
+//    if (column == G::compressionColumn) return fm.boundingRect("=compressionFullColumn=").width();
+//    if (column == G::stripByteCountsColumn) return fm.boundingRect("=stripByteCountsFullColumn=").width();
+
+    if (column == G::isBigEndianColumn) return fm.boundingRect("=isBigEndian=").width();
+    if (column == G::ifd0OffsetColumn) return fm.boundingRect("=ifd0OffsetColumn=").width();
     if (column == G::XmpSegmentOffsetColumn) return fm.boundingRect("=XmpSegmentOffsetColumn=").width();
     if (column == G::XmpNextSegmentOffsetColumn) return fm.boundingRect("=XmpNextSegmentOffsetColumn=").width();
     if (column == G::IsXMPColumn) return fm.boundingRect("=IsXMPColumn=").width();
@@ -233,7 +246,8 @@ void TableView::mousePressEvent(QMouseEvent *event)
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) return;
     G::fileSelectionChangeSource = "TableMouseClick";
-    QTableView::mousePressEvent(event);
+    // propogate mouse press if pressed in a table row, otherwise do nothing
+    if (indexAt(event->pos()).isValid()) QTableView::mousePressEvent(event);
 }
 
 void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)
@@ -408,8 +422,9 @@ QString ExposureTimeItemDelegate::displayText(const QVariant& value, const QLoca
 
     QString exposureTime;
     if (value < 1.0) {
-        uint t = qRound(1 / value.toDouble());
-        exposureTime = "1/" + QString::number(t);
+        double recip = 1 / value.toDouble();
+        if (recip >= 2) exposureTime = "1/" + QString::number(qRound(recip));
+        else exposureTime = QString::number(value.toDouble(), 'g', 2);
     } else {
         exposureTime = QString::number(value.toInt());
     }
@@ -440,6 +455,18 @@ QString ISOItemDelegate::displayText(const QVariant& value, const QLocale& /*loc
         return QString();
 
     return QString::number(value.toDouble(), 'f', 0);
+}
+
+ExposureCompensationItemDelegate::ExposureCompensationItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString ExposureCompensationItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+    if (value == 0)
+        return QString();
+
+    return "   " + QString::number(value.toDouble(), 'f', 1) + " EV   ";
 }
 
 FileSizeItemDelegate::FileSizeItemDelegate(QObject* parent): QStyledItemDelegate(parent)
