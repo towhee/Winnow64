@@ -7,7 +7,6 @@ BUGS
 PERFORMANCE
 CODE IMPROVEMENTS
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
-- Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
 - Read HEIF files
@@ -19,8 +18,6 @@ ENHANCEMENTS
 - Read xmp sidecars when open folder
 - When ingesting confirm all files copied correctly (option)
 - Add completer for title in metadata
-- Get Sony image count, camera SN
-- Add zoom increment amount to preferences
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
