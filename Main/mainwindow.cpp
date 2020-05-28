@@ -4873,13 +4873,14 @@ QString fileSym = "📷";
 */
 
     // update G::availableMemory
+#ifdef Q_OS_WIN
     Win::availableMemory();
     double availMemGB = static_cast<double>(G::availableMemoryMB) / 1024;
     QString mem = QString::number(availMemGB, 'f', 1) + " GB";
-
+#endif
     // image of total: fileCount
     if (keepBase && isCurrentFolderOkay) {
-        base += "Mem: " + mem + spacer;
+//        base += "Mem: " + mem + spacer;
         if (G::mode == "Loupe" || G::mode == "Compare")
             base += "Zoom: " + getZoom();
         base += spacer + "Pos: " + getPosition();
