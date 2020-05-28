@@ -5,6 +5,7 @@
 #include <QtWidgets>
 #include <QHash>
 #include "Metadata/metadata.h"
+#include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
 #ifdef Q_OS_WIN
 #include "Utilities/icc.h"

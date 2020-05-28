@@ -371,3 +371,7 @@ debug/Winnow.pdb
 Lib/lcms2-2.9/CMakeSettings.json
 Makefile.Debug
 Makefile.Release
+*.exe
+*.pdb
+Makefile.Debug
+Makefile.Release
